@@ -11,22 +11,17 @@
 #define CONFIG_TYPE_LONG    3
 #define CONFIG_TYPE_DOUBLE  4
 #define CONFIG_TYPE_BOOL    5
+#define CONFIG_TYPE_LINELIST 6
 
-#define CONFIG_LINE_MAXLEN 4096
-
-struct config_line {
-  char *key;
-  char *value;
-  struct config_line *next;
-};
+#define CONFIG_LINE_T_MAXLEN 4096
 
 static FILE *config_open(const unsigned char *filename);
 static int config_close(FILE *f);
-static struct config_line *config_get_commandlines(int argc, char **argv);
-static struct config_line *config_get_lines(FILE *f);
-static void config_free_lines(struct config_line *front);
-static int config_compare(struct config_line *c, char *key, int type, void *arg);
-static int config_assign(or_options_t *options, struct config_line *list);
+static struct config_line_t *config_get_commandlines(int argc, char **argv);
+static struct config_line_t *config_get_lines(FILE *f);
+static void config_free_lines(struct config_line_t *front);
+static int config_compare(struct config_line_t *c, char *key, int type, void *arg);
+static int config_assign(or_options_t *options, struct config_line_t *list);
 
 /* open configuration file for reading */
 static FILE *config_open(const unsigned char *filename) {
@@ -44,9 +39,9 @@ static int config_close(FILE *f) {
   return fclose(f);
 }
 
-static struct config_line *config_get_commandlines(int argc, char **argv) {
-  struct config_line *new;
-  struct config_line *front = NULL;
+static struct config_line_t *config_get_commandlines(int argc, char **argv) {
+  struct config_line_t *new;
+  struct config_line_t *front = NULL;
   char *s;
   int i = 1;
 
@@ -57,7 +52,7 @@ static struct config_line *config_get_commandlines(int argc, char **argv) {
       continue;
     }
 
-    new = tor_malloc(sizeof(struct config_line));
+    new = tor_malloc(sizeof(struct config_line_t));
     s = argv[i];
     while(*s == '-')
       s++;
@@ -73,31 +68,39 @@ static struct config_line *config_get_commandlines(int argc, char **argv) {
   return front;
 }
 
+static struct config_line_t *
+config_line_prepend(struct config_line_t *front,
+                    const char *key,
+                    const char *val)
+{
+  struct config_line_t *newline;
+  newline = tor_malloc(sizeof(struct config_line_t));
+  newline->key = tor_strdup(key);
+  newline->value = tor_strdup(val);
+  newline->next = front;
+  return newline;
+}
+
 /* parse the config file and strdup into key/value strings. Return list,
  * or NULL if parsing the file failed.
  * Warn and ignore mangled lines. */
-static struct config_line *config_get_lines(FILE *f) {
-  struct config_line *new;
-  struct config_line *front = NULL;
-  char line[CONFIG_LINE_MAXLEN];
+static struct config_line_t *config_get_lines(FILE *f) {
+
+  struct config_line_t *front = NULL;
+  char line[CONFIG_LINE_T_MAXLEN];
   int result;
   char *key, *value;
 
   while( (result=parse_line_from_file(line,sizeof(line),f,&key,&value)) > 0) {
-    new = tor_malloc(sizeof(struct config_line));
-    new->key = tor_strdup(key);
-    new->value = tor_strdup(value);
-
-    new->next = front;
-    front = new;
+    front = config_line_prepend(front, key, value);
   }
   if(result < 0)
     return NULL;
   return front;
 }
 
-static void config_free_lines(struct config_line *front) {
-  struct config_line *tmp;
+static void config_free_lines(struct config_line_t *front) {
+  struct config_line_t *tmp;
 
   while(front) {
     tmp = front;
@@ -109,7 +112,7 @@ static void config_free_lines(struct config_line *front) {
   }
 }
 
-static int config_compare(struct config_line *c, char *key, int type, void *arg) {
+static int config_compare(struct config_line_t *c, char *key, int type, void *arg) {
   int i;
 
   if(strncasecmp(c->key,key,strlen(c->key)))
@@ -137,6 +140,13 @@ static int config_compare(struct config_line *c, char *key, int type, void *arg)
     case CONFIG_TYPE_DOUBLE:
       *(double *)arg = atof(c->value);
       break;
+    case CONFIG_TYPE_LINELIST:
+      /* Note: this reverses the order that the lines appear in.  That's
+       * just fine, since we build up the list of lines reversed in the
+       * first place. */
+      *(struct config_line_t**)arg =
+        config_line_prepend(*(struct config_line_t**)arg, c->key, c->value);
+      break;
   }
   return 1;
 }
@@ -145,7 +155,7 @@ static int config_compare(struct config_line *c, char *key, int type, void *arg)
  * For each item, convert as appropriate and assign to 'options'.
  * If an item is unrecognized, return -1 immediately,
  * else return 0 for success. */
-static int config_assign(or_options_t *options, struct config_line *list) {
+static int config_assign(or_options_t *options, struct config_line_t *list) {
 
   while(list) {
     if(
@@ -202,7 +212,9 @@ static int config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "TrafficShaping", CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
 
     config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User) ||
-    config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting)
+    config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting) ||
+    config_compare(list, "HiddenServiceDir", CONFIG_TYPE_LINELIST, &options->RendConfigLines) ||
+    config_compare(list, "HiddenServicePort", CONFIG_TYPE_LINELIST, &options->RendConfigLines)
     ) {
       /* then we're ok. it matched something. */
     } else {
@@ -414,6 +426,7 @@ static void free_options(or_options_t *options) {
   tor_free(options->RecommendedVersions);
   tor_free(options->User);
   tor_free(options->Group);
+  config_free_lines(options->RendConfigLines);
 }
 
 static void init_options(or_options_t *options) {
@@ -440,11 +453,12 @@ static void init_options(or_options_t *options) {
   options->BandwidthRate = 800000; /* at most 800kB/s total sustained incoming */
   options->BandwidthBurst = 10000000; /* max burst on the token bucket */
   options->NumCpus = 1;
+  options->RendConfigLines = NULL;
 }
 
 /* return 0 if success, <0 if failure. */
 int getconfig(int argc, char **argv, or_options_t *options) {
-  struct config_line *cl;
+  struct config_line_t *cl;
   FILE *cf;
   char *fname;
   int i;
@@ -629,6 +643,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(options->KeepalivePeriod < 1) {
     log(LOG_WARN,"KeepalivePeriod option must be positive.");
+    result = -1;
+  }
+
+  if (rend_config_services(options) < 0) {
     result = -1;
   }
 

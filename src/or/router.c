@@ -44,7 +44,11 @@ crypto_pk_env_t *get_identity_key(void) {
 
 /************************************************************/
 
-static crypto_pk_env_t *init_key_from_file(const char *fname)
+/* Try to read an RSA key from 'fname'.  If 'fname' doesn't exist, create a new
+ * RSA key and save it in 'fname'.  Return the read/created key, or NULL on
+ * error.
+ */
+crypto_pk_env_t *init_key_from_file(const char *fname)
 {
   crypto_pk_env_t *prkey = NULL;
   int fd = -1;
