@@ -47,6 +47,56 @@ int connection_or_reached_eof(connection_t *conn) {
   return 0;
 }
 
+/** Read conn's inbuf. If the http response from the proxy is all
+ * here, make sure it's good news, and begin the tls handshake. If
+ * it's bad news, close the connection and return -1. Else return 0
+ * and hope for better luck next time.
+ */
+static int
+connection_or_read_proxy_response(connection_t *conn) {
+
+  char *headers;
+  int status_code;
+  time_t date_header;
+  int compression;
+
+  switch (fetch_from_buf_http(conn->inbuf,
+                              &headers, MAX_HEADERS_SIZE,
+                              NULL, NULL, 10000)) {
+    case -1: /* overflow */
+      log_fn(LOG_WARN,"Your https proxy sent back an oversized response. Closing.");
+      return -1;
+    case 0:
+      log_fn(LOG_INFO,"https proxy response not all here yet. Waiting.");
+      return 0;
+    /* case 1, fall through */
+  }
+
+  if (parse_http_response(headers, &status_code, &date_header,
+                          &compression) < 0) {
+    log_fn(LOG_WARN,"Unparseable headers (connecting to '%s'). Closing.",
+           conn->address);
+    tor_free(headers);
+    return -1;
+  }
+
+  if (status_code == 200) {
+    log_fn(LOG_INFO,"https connect successful (to '%s')! Launching tls.",
+           conn->address);
+    if (connection_tls_start_handshake(conn, 0) < 0) {
+      /* TLS handshaking error of some kind. */
+      connection_mark_for_close(conn);
+      return -1;
+    }
+    return 0;
+  }
+  /* else, bad news on the status code */
+  log_fn(LOG_WARN,"The https proxy sent back a bad status code %d. Closing.",
+         status_code);
+  connection_mark_for_close(conn);
+  return -1;
+}
+
 /** Handle any new bytes that have come in on connection <b>conn</b>.
  * If conn is in 'open' state, hand it to
  * connection_or_process_cells_from_inbuf()
@@ -57,9 +107,14 @@ int connection_or_process_inbuf(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
 
-  if (conn->state != OR_CONN_STATE_OPEN)
-    return 0; /* don't do anything */
-  return connection_or_process_cells_from_inbuf(conn);
+  switch(conn->state) {
+    case OR_CONN_STATE_PROXY_READING:
+      return connection_or_read_proxy_response(conn);
+    case OR_CONN_STATE_OPEN:
+      return connection_or_process_cells_from_inbuf(conn);
+    default:
+      return 0; /* don't do anything */
+  }
 }
 
 /** Connection <b>conn</b> has finished writing and has no bytes left on
@@ -76,15 +131,22 @@ int connection_or_finished_flushing(connection_t *conn) {
 
   assert_connection_ok(conn,0);
 
-  if (conn->state != OR_CONN_STATE_OPEN) {
-    log_fn(LOG_WARN,"BUG: called in unexpected state %d",conn->state);
+  switch(conn->state) {
+    case OR_CONN_STATE_PROXY_FLUSHING:
+      log_fn(LOG_DEBUG,"finished sending CONNECT to proxy.");
+      conn->state = OR_CONN_STATE_PROXY_READING;
+      connection_stop_writing(conn);
+      break;
+    case OR_CONN_STATE_OPEN:
+      connection_stop_writing(conn);
+      break;
+    default:
+      log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
 #ifdef TOR_FRAGILE
-    tor_assert(0);
+      tor_assert(0);
 #endif
-    return -1;
+      return -1;
   }
-
-  connection_stop_writing(conn);
   return 0;
 }
 
@@ -98,6 +160,20 @@ int connection_or_finished_connecting(connection_t *conn)
 
   log_fn(LOG_INFO,"OR connect() to router at %s:%u finished.",
          conn->address,conn->port);
+
+  if (get_options()->HttpsProxy) {
+    char buf[1024];
+    char addrbuf[INET_NTOA_BUF_LEN];
+    struct in_addr in;
+
+    in.s_addr = htonl(conn->addr);
+    tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
+    tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.0\r\n\r\n",
+                 addrbuf, conn->port);
+    connection_write_to_buf(buf, strlen(buf), conn);
+    conn->state = OR_CONN_STATE_PROXY_FLUSHING;
+    return 0;
+  }
 
   if (connection_tls_start_handshake(conn, 0) < 0) {
     /* TLS handshaking error of some kind. */
@@ -212,10 +288,11 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
                                     const char *id_digest) {
   connection_t *conn;
   routerinfo_t *me;
+  or_options_t *options = get_options();
 
   tor_assert(id_digest);
 
-  if (server_mode(get_options()) && (me=router_get_my_routerinfo()) &&
+  if (server_mode(options) && (me=router_get_my_routerinfo()) &&
       !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
     log_fn(LOG_WARN,"Bug: Client asked me to connect to myself! Refusing.");
     return NULL;
@@ -238,9 +315,16 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
   conn->state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED);
 
+  if (options->HttpsProxy) {
+    /* we shouldn't connect directly. use the https proxy instead. */
+    addr = options->HttpsProxyAddr;
+    port = options->HttpsProxyPort;
+  }
+
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
-      router_mark_as_down(conn->identity_digest);
+      if (!options->HttpsProxy)
+        router_mark_as_down(conn->identity_digest);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       connection_free(conn);
       return NULL;
@@ -252,12 +336,11 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
     /* case 1: fall through */
   }
 
-  if (connection_tls_start_handshake(conn, 0) >= 0)
-    return conn;
-
-  /* failure */
-  connection_mark_for_close(conn);
-  return NULL;
+  if (connection_or_finished_connecting(conn) < 0) {
+    /* already marked for close */
+    return NULL;
+  }
+  return conn;
 }
 
 /** Begin the tls handshake with <b>conn</b>. <b>receiving</b> is 0 if
