@@ -1,4 +1,4 @@
-Changes that will be in 0.0.7pre1:
+Changes so far in 0.0.7pre1:
   o Bugfixes:
     - Fix an epipe bug: sometimes when directory connections failed
       to connect, we would give them a chance to flush before closing
@@ -14,10 +14,32 @@ Changes that will be in 0.0.7pre1:
       exit nodes.
     - Stop warning when the first onion decrypt attempt fails; they
       will sometimes legitimately fail now that we rotate keys.
+    - Override unaligned-access-ok check when $host_cpu is ia64 or
+      arm. Apparently they allow it but the kernel whines.
+    - Dirservers try to reconnect periodically too, in case connections
+      have failed
+    - Remember which nodes are dirservers when you startup, and if a
+      random OR enables his dirport, don't automatically assume he's
+      a trusted dirserver.
+    - Limit the number of intro circuits we'll attempt to build for a
+      hidden service per 15-minute period.
+    - Fix some memory leaks.
+    - Allow backslash in Win32 filenames.
   o Features:
     - Doxygen markup on all functions.
-    - Rearranged functions more clearly; there are several new source
-      files.
+    - Make directory functions update routerlist, not replace it. So
+      now directory skew is not so critical a problem.
+    - Remove the upper limit on number of descriptors in a dirserver's
+      directory (not that we were anywhere close).
+    - Allow multiple logfiles at different severity ranges.
+    - Allow *BindAddress to specify ":port" rather than setting *Port
+      separately. Allow multiple instances of each BindAddress config
+      option, so you can bind to multiple interfaces if you want.
+    - Allow multiple exit policy lines, which are processed in order.
+      Now we don't need that huge line with all the commas in it.
+    - Enable accept/reject policies on SOCKS connections, so you can bind
+      to 0.0.0.0 but still control who can use your OP.
+
 
 Changes in version 0.0.6.2 - 2004-05-16
   o Our integrity-checking digest was checking only the most recent cell,
