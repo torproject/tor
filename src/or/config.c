@@ -176,6 +176,7 @@ static int add_single_log_option(or_options_t *options, int minSeverity,
                                  int maxSeverity,
                                  const char *type, const char *fname);
 static int normalize_log_options(or_options_t *options);
+static int validate_data_directory(or_options_t *options);
 
 /*
  * Functions to read and write the global options pointer.
@@ -1828,7 +1829,7 @@ get_data_directory(void)
 
 static int
 validate_data_directory(or_options_t *options) {
-  const char *d;
+  const char *d = options->DataDirectory;
 
   if (!options->DataDirectory) {
 #ifdef MS_WINDOWS
