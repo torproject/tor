@@ -1373,6 +1373,25 @@ static void do_list_fingerprint(void)
   }
 }
 
+/** DOCDOC **/
+static void do_hash_password(void)
+{
+
+  char output[256];
+  char key[S2K_SPECIFIER_LEN+DIGEST_LEN];
+
+  crypto_rand(key, S2K_SPECIFIER_LEN-1);
+  key[S2K_SPECIFIER_LEN-1] = (uint8_t)96; /* Hash 64 K of data. */
+  secret_to_key(key+S2K_SPECIFIER_LEN, DIGEST_LEN,
+                options.command_arg, strlen(options.command_arg),
+                key);
+  if (base64_encode(output, sizeof(output), key, sizeof(key))<0) {
+    log_fn(LOG_ERR, "Unable to compute base64");
+  } else {
+    printf("%s",output);
+  }
+}
+
 #ifdef MS_WINDOWS_SERVICE
 void nt_service_control(DWORD request)
 {
@@ -1448,6 +1467,9 @@ int tor_main(int argc, char *argv[]) {
     break;
   case CMD_LIST_FINGERPRINT:
     do_list_fingerprint();
+    break;
+  case CMD_HASH_PASSWORD:
+    do_hash_password();
     break;
   default:
     log_fn(LOG_ERR, "Illegal command number %d: internal error.",

@@ -47,6 +47,10 @@ extern or_options_t options;
 
 static uint32_t global_event_mask = 0;
 
+#define AUTHENTICATION_COOKIE_LEN 32
+static int authentication_cookie_is_set = 0;
+static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
+
 static void update_global_event_mask(void);
 static void send_control_message(connection_t *conn, uint16_t type,
                                  uint16_t len, const char *body);
@@ -216,13 +220,34 @@ static int handle_control_setevents(connection_t *conn, uint16_t len,
 static int handle_control_authenticate(connection_t *conn, uint16_t len,
                                        const char *body)
 {
-  if (0/* XXXX009 NM */) {
-    send_control_done(conn);
-    conn->state = CONTROL_CONN_STATE_OPEN;
-  } else {
-    send_control_error(conn, ERR_FAILED_AUTHENTICATION,"Authentication failed");
+  if (len == AUTHENTICATION_COOKIE_LEN &&
+      authentication_cookie_is_set &&
+      !memcmp(authentication_cookie, body, len)) {
+    goto ok;
+  } else if (options.HashedControlPassword) {
+    char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
+    char received[DIGEST_LEN];
+    if (base64_decode(expected,sizeof(expected),
+                      options.HashedControlPassword,
+                      strlen(options.HashedControlPassword))<0) {
+      /* XXXX009 NM we should warn sooner. */
+      log_fn(LOG_WARN,"Couldn't decode HashedControlPassword: invalid base64");
+      goto err;
+    }
+    secret_to_key(received,DIGEST_LEN,body,len,expected);
+    if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
+      goto ok;
   }
+
+ err:
+  send_control_error(conn, ERR_FAILED_AUTHENTICATION,"Authentication failed");
   return 0;
+ ok:
+  log_fn(LOG_INFO, "Authenticated control connection (%d)", conn->s);
+  send_control_done(conn);
+  conn->state = CONTROL_CONN_STATE_OPEN;
+  return 0;
+
 }
 
 int connection_control_finished_flushing(connection_t *conn) {
@@ -389,6 +414,25 @@ void control_event_logmsg(int severity, const char *msg)
 
   len = strlen(msg);
   send_control_event(EVENT_WARNING, (uint16_t)(len+1), msg);
+}
+
+int init_cookie_authentication(void)
+{
+  char fname[512];
+
+  /* XXXX009 NM add config option to disable this. */
+
+  tor_snprintf(fname, sizeof(fname), "%s/control_auth_cookie",
+               get_data_directory(&options));
+  crypto_rand(authentication_cookie, AUTHENTICATION_COOKIE_LEN);
+  authentication_cookie_is_set = 1;
+  if (write_bytes_to_file(fname, authentication_cookie,
+                          AUTHENTICATION_COOKIE_LEN, 1)) {
+    log_fn(LOG_WARN,"Error writing authentication cookie.");
+    return -1;
+  }
+
+  return 0;
 }
 
 /*

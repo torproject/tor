@@ -852,8 +852,10 @@ typedef struct exit_redirect_t {
 typedef struct {
   /** What should the tor process actually do? */
   enum {
-    CMD_RUN_TOR=0, CMD_LIST_FINGERPRINT
+    CMD_RUN_TOR=0, CMD_LIST_FINGERPRINT, CMD_HASH_PASSWORD,
   } command;
+  const char *command_arg; /**< Argument for command-line option. */
+
   struct config_line_t *LogOptions; /**< List of configuration lines
                                      * for logfiles */
 
@@ -949,6 +951,8 @@ typedef struct {
   int AccountingMaxKB; /**< How many KB do we allow per accounting
                         * interval before hibernation?  0 for "never
                         * hibernate." */
+  char *HashedControlPassword; /**< Base64-encoded hash of a password for
+                                * the control system. */
 } or_options_t;
 
 /* XXX are these good enough defaults? */
@@ -1240,6 +1244,8 @@ int control_event_stream_status(connection_t *conn, stream_status_event_t e);
 int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, const char *msg);
+
+int init_cookie_authentication(void);
 
 /********************************* cpuworker.c *****************************/
 

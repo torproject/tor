@@ -101,6 +101,7 @@ static config_var_t config_vars[] = {
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
   VAR("Group",               STRING,   Group,                NULL),
+  VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
   VAR("HttpProxy",           STRING,   HttpProxy,            NULL),
   VAR("HiddenServiceDir",    LINELIST, RendConfigLines,      NULL),
   VAR("HiddenServicePort",   LINELIST, RendConfigLines,      NULL),
@@ -183,12 +184,13 @@ config_get_commandlines(int argc, char **argv)
   int i = 1;
 
   while (i < argc-1) {
-    if (!strcmp(argv[i],"-f")) {
-//      log(LOG_DEBUG,"Commandline: skipping over -f.");
-      i += 2; /* this is the config file option. ignore it. */
+    if (!strcmp(argv[i],"-f") ||
+        !strcmp(argv[i],"--hash-password")) {
+      i += 2; /* command-line option with argument. ignore them. */
       continue;
     } else if (!strcmp(argv[i],"--list-fingerprint")) {
       i += 1; /* command-line option. ignore it. */
+      continue;
     }
 
     new = tor_malloc(sizeof(struct config_line_t));
@@ -803,7 +805,12 @@ getconfig(int argc, char **argv, or_options_t *options)
       ++i;
     } else if (!strcmp(argv[i],"--list-fingerprint")) {
       options->command = CMD_LIST_FINGERPRINT;
+    } else if (!strcmp(argv[i],"--hash-password")) {
+      options->command = CMD_HASH_PASSWORD;
+      options->command_arg = tor_strdup(argv[i+1]);
+      ++i;
     }
+
   }
 
   if (using_default_torrc) {

@@ -153,6 +153,10 @@ int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
 void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 
+#define S2K_SPECIFIER_LEN 9
+void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
+                   size_t secret_len, const char *s2k_specifier);
+
 #endif
 
 /*
