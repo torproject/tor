@@ -85,6 +85,8 @@ int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest);
 int crypto_rand(unsigned int n, unsigned char *to);
 int crypto_pseudo_rand(unsigned int n, unsigned char *to);
 
+#define CRYPTO_PSEUDO_RAND_INT(v) crypto_pseudo_rand(sizeof(v),(char*)&(v))
+
 /* errors */
 char *crypto_perror();
 #endif

@@ -118,7 +118,8 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
 try_again:
   log(LOG_DEBUG,"get_unique_aci_by_addr_port() trying to get a unique aci");
 
-  crypto_pseudo_rand(2, (unsigned char *)&test_aci);
+  if (CRYPTO_PSEUDO_RAND_INT(test_aci))
+    return -1;
 
   if(aci_type == ACI_TYPE_LOWER && test_aci >= (1<<15))
     test_aci -= (1<<15);

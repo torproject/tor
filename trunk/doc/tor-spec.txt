@@ -228,8 +228,8 @@ which reveals the downstream node.
 
         ACI (anonymous circuit identifier)    [2 bytes]
         Command                               [1 byte]
-        Length                                [1 byte]
         Sequence number (unused, set to 0)    [4 bytes]
+        Length                                [1 byte]
         Payload (padded with 0 bytes)         [248 bytes]
                                          [Total size: 256 bytes]
 

@@ -119,15 +119,18 @@ int ap_handshake_process_socks(connection_t *conn) {
 
 int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
   cell_t cell;
+  uint16_t topic_id;
 
   memset(&cell, 0, sizeof(cell_t));
   /* deliver the dest_addr in a data cell */
   cell.command = CELL_DATA;
   cell.aci = circ->n_aci;
-  cell.topic_command = TOPIC_COMMAND_BEGIN;
-  crypto_pseudo_rand(2, (char*)&cell.topic_id);
+  SET_CELL_TOPIC_COMMAND(cell, TOPIC_COMMAND_BEGIN);
+  if (CRYPTO_PSEUDO_RAND_INT(topic_id))
+    return -1;
+  SET_CELL_TOPIC_ID(cell, topic_id);
   /* FIXME check for collisions */
-  ap_conn->topic_id = cell.topic_id;
+  ap_conn->topic_id = topic_id;
 
   snprintf(cell.payload+4, CELL_PAYLOAD_SIZE-4, "%s:%d", ap_conn->dest_addr, ap_conn->dest_port);
   cell.length = strlen(cell.payload+TOPIC_HEADER_SIZE)+1+TOPIC_HEADER_SIZE;

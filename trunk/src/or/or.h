@@ -198,12 +198,12 @@ typedef struct {
   unsigned char length; /* of payload if data cell, else value of sendme */
   uint32_t seq; /* sequence number */
 
-  /* The following 2 fields are only set when command is CELL_DATA */
-  unsigned char topic_command;
-  uint16_t topic_id;
-
   unsigned char payload[CELL_PAYLOAD_SIZE];
 } cell_t;
+#define CELL_TOPIC_COMMAND(c)         (*(uint8_t*)((c).payload))
+#define SET_CELL_TOPIC_COMMAND(c,cmd) (*(uint8_t*)((c).payload) = (cmd))
+#define CELL_TOPIC_ID(c)              ntohs(*(uint16_t*)((c).payload+2))
+#define SET_CELL_TOPIC_ID(c,id)      (*(uint16_t*)((c).payload+2) = htons(id))
 
 #define SOCKS4_REQUEST_GRANTED          90
 #define SOCKS4_REQUEST_REJECT           91

@@ -311,15 +311,14 @@ int chooselen(double cw)
 {
   int len = 2;
   int retval = 0;
-  unsigned char coin;
+  uint8_t coin;
   
   if ((cw < 0) || (cw >= 1)) /* invalid parameter */
     return -1;
   
   while(1)
   {
-    retval = crypto_pseudo_rand(1, &coin);
-    if (retval)
+    if (CRYPTO_PSEUDO_RAND_INT(coin))
       return -1;
     
     if (coin > cw*255) /* don't extend */
@@ -378,7 +377,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
   oldchoice = rarray_len;
   for(i=0;i<*routelen;i++) {
     log(LOG_DEBUG,"new_route(): Choosing hop %u.",i);
-    if(crypto_pseudo_rand(sizeof(unsigned int),(unsigned char *)&choice)) {
+    if (CRYPTO_PSEUDO_RAND_INT(choice)) {
       free((void *)route);
       return NULL;
     }
