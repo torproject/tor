@@ -1,4 +1,4 @@
-/* Copyright 2004 Nick Mathewson */
+/* Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
