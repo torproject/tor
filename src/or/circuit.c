@@ -625,7 +625,8 @@ void circuit_about_to_close_connection(connection_t *conn) {
 
       if(!conn->has_sent_end) {
         log_fn(LOG_INFO,"Edge connection hasn't sent end yet? Bug.");
-        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+        if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
+          log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
       }
 
       if(conn == circ->p_streams) {

@@ -265,7 +265,8 @@ void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
            address);
     while(resolve->pending_connections) {
       pend = resolve->pending_connections;
-      connection_edge_end(pend->conn, END_STREAM_REASON_MISC, NULL);
+      if(connection_edge_end(pend->conn, END_STREAM_REASON_MISC, NULL) < 0)
+        log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
       resolve->pending_connections = pend->next;
       free(pend);
     }
@@ -327,9 +328,10 @@ static void dns_found_answer(char *address, uint32_t addr) {
   while(resolve->pending_connections) {
     pend = resolve->pending_connections;
     pend->conn->addr = resolve->addr;
-    if(resolve->state == CACHE_STATE_FAILED)
-      connection_edge_end(pend->conn, END_STREAM_REASON_RESOLVEFAILED, NULL);
-    else
+    if(resolve->state == CACHE_STATE_FAILED) {
+      if(connection_edge_end(pend->conn, END_STREAM_REASON_RESOLVEFAILED, NULL) < 0)
+        log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
+    } else
       connection_exit_connect(pend->conn);
     resolve->pending_connections = pend->next;
     free(pend);
