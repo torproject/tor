@@ -29,12 +29,12 @@ add_fingerprint_to_dir(const char *nickname, const char *fp)
   for (i = 0; i < n_fingerprints; ++i) {
     if (!strcasecmp(fingerprint_list[i].nickname,nickname)) {
       free(fingerprint_list[i].fingerprint);
-      fingerprint_list[i].fingerprint = strdup(fp);
+      fingerprint_list[i].fingerprint = tor_strdup(fp);
       return;
     }
   }
-  fingerprint_list[n_fingerprints].nickname = strdup(nickname);
-  fingerprint_list[n_fingerprints].fingerprint = strdup(fp);
+  fingerprint_list[n_fingerprints].nickname = tor_strdup(nickname);
+  fingerprint_list[n_fingerprints].fingerprint = tor_strdup(fp);
   ++n_fingerprints;
 }
 
@@ -83,8 +83,8 @@ dirserv_parse_fingerprint_file(const char *fname)
       }
     }
     if(i == n_fingerprints_tmp) { /* not a duplicate */
-      fingerprint_list_tmp[n_fingerprints_tmp].nickname = strdup(nickname);
-      fingerprint_list_tmp[n_fingerprints_tmp].fingerprint = strdup(fingerprint);
+      fingerprint_list_tmp[n_fingerprints_tmp].nickname = tor_strdup(nickname);
+      fingerprint_list_tmp[n_fingerprints_tmp].fingerprint = tor_strdup(fingerprint);
       ++n_fingerprints_tmp;
     }
   }
@@ -427,7 +427,7 @@ size_t dirserv_get_directory(const char **directory)
     /* Now read the directory we just made in order to update our own
      * router lists.  This does more signature checking than is strictly
      * necessary, but safe is better than sorry. */
-    new_directory = strdup(the_directory);
+    new_directory = tor_strdup(the_directory);
     /* use a new copy of the dir, since get_dir_from_string scribbles on it */
     if (router_get_dir_from_string(new_directory, get_identity_key())) {
       log_fn(LOG_ERR, "We just generated a directory we can't parse. Dying.");

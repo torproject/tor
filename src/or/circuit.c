@@ -58,14 +58,11 @@ void circuit_remove(circuit_t *circ) {
 
 circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circuit_t *circ; 
-  struct timeval now;
-
-  my_gettimeofday(&now);
 
   circ = (circuit_t *)tor_malloc(sizeof(circuit_t));
   memset(circ,0,sizeof(circuit_t)); /* zero it out */
 
-  circ->timestamp_created = now.tv_sec;
+  circ->timestamp_created = time(NULL);
 
   circ->p_aci = p_aci;
   circ->p_conn = p_conn;

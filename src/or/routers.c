@@ -606,7 +606,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
     log_fn(LOG_WARNING, "Invalid recommended-software line");
     goto err;
   }
-  versions = strdup(tok.val.cmd.args[0]);
+  versions = tor_strdup(tok.val.cmd.args[0]);
   
   NEXT_TOK();
   TOK_IS(K_RUNNING_ROUTERS, "running-routers");
@@ -801,8 +801,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
     log_fn(LOG_WARNING,"Wrong # of arguments to \"router\"");
     goto err;
   }
-  if (!(router->nickname = strdup(ARGS[0])))
-    goto err;
+  router->nickname = tor_strdup(ARGS[0]);
   if (strlen(router->nickname) > MAX_NICKNAME_LEN) {
     log_fn(LOG_WARNING,"Router nickname too long.");
     goto err;
@@ -814,8 +813,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   }
   
   /* read router.address */
-  if (!(router->address = strdup(ARGS[1])))
-    goto err;
+  router->address = tor_strdup(ARGS[1]);
   router->addr = 0;
 
   /* Read router->or_port */
@@ -975,8 +973,8 @@ static int router_add_exit_policy(routerinfo_t *router,
   if(!colon)
     goto policy_read_failed;
   *colon = 0;
-  newe->address = strdup(arg);
-  newe->port = strdup(colon+1);
+  newe->address = tor_strdup(arg);
+  newe->port = tor_strdup(colon+1);
 
   log_fn(LOG_DEBUG,"%s %s:%s",
       newe->policy_type == EXIT_POLICY_REJECT ? "reject" : "accept",
@@ -1064,8 +1062,8 @@ int router_rebuild_descriptor(void) {
     address = localhostname;
   }
   ri = tor_malloc(sizeof(routerinfo_t));
-  ri->address = strdup(address);
-  ri->nickname = strdup(options.Nickname);
+  ri->address = tor_strdup(address);
+  ri->nickname = tor_strdup(options.Nickname);
   /* No need to set addr. */
   ri->or_port = options.ORPort;
   ri->ap_port = options.APPort;
@@ -1205,7 +1203,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   s[written+1] = 0;
 
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-  s_tmp = s_dup = strdup(s);
+  s_tmp = s_dup = tor_strdup(s);
   ri_tmp = router_get_entry_from_string(&s_tmp);
   if (!ri_tmp) {
     log_fn(LOG_ERR, "We just generated a router descriptor we can't parse: <<%s>>", 

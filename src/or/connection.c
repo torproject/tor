@@ -73,9 +73,7 @@ static int connection_init_accepted_conn(connection_t *conn);
 
 connection_t *connection_new(int type) {
   connection_t *conn;
-  struct timeval now;
-
-  my_gettimeofday(&now);
+  time_t now = time(NULL);
 
   conn = (connection_t *)tor_malloc(sizeof(connection_t));
   memset(conn,0,sizeof(connection_t)); /* zero it out to start */
@@ -84,9 +82,9 @@ connection_t *connection_new(int type) {
   conn->inbuf = buf_new();
   conn->outbuf = buf_new();
 
-  conn->timestamp_created = now.tv_sec;
-  conn->timestamp_lastread = now.tv_sec;
-  conn->timestamp_lastwritten = now.tv_sec;
+  conn->timestamp_created = now;
+  conn->timestamp_lastread = now;
+  conn->timestamp_lastwritten = now;
 
   return conn;
 }
@@ -195,7 +193,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type) {
   newconn = connection_new(new_type);
   newconn->s = news;
 
-  newconn->address = strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
+  newconn->address = tor_strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
   newconn->addr = ntohl(remote.sin_addr.s_addr);
   newconn->port = ntohs(remote.sin_port);
 
@@ -309,10 +307,8 @@ int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16
 }
 
 int connection_handle_read(connection_t *conn) {
-  struct timeval now;
 
-  my_gettimeofday(&now);
-  conn->timestamp_lastread = now.tv_sec;
+  conn->timestamp_lastread = time(NULL);
 
   switch(conn->type) {
     case CONN_TYPE_OR_LISTENER:
@@ -433,15 +429,13 @@ int connection_flush_buf(connection_t *conn) {
 
 /* return -1 if you want to break the conn, else return 0 */
 int connection_handle_write(connection_t *conn) {
-  struct timeval now;
 
   if(connection_is_listener(conn)) {
     log_fn(LOG_WARNING,"Got a listener socket. Can't happen!");
     return -1;
   }
 
-  my_gettimeofday(&now);
-  conn->timestamp_lastwritten = now.tv_sec;
+  conn->timestamp_lastwritten = time(NULL);
 
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
     if(conn->state == OR_CONN_STATE_HANDSHAKING) {

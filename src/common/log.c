@@ -40,7 +40,7 @@ static INLINE void format_msg(char *buf, size_t buf_len,
 
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
   
-  my_gettimeofday(&now);
+  tor_gettimeofday(&now);
   t = (time_t)now.tv_sec;
   
   n = strftime(buf, buf_len, "%b %d %H:%M:%S", localtime(&t));

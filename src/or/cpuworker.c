@@ -184,7 +184,7 @@ static int spawn_cpuworker(void) {
 
   /* set up conn so it's got all the data we need to remember */
   conn->s = fd[0];
-  conn->address = strdup("localhost");
+  conn->address = tor_strdup("localhost");
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_WARNING,"connection_add failed. Giving up.");

@@ -577,7 +577,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
   n_stream = connection_new(CONN_TYPE_EXIT);
 
   memcpy(n_stream->stream_id, cell->payload + RELAY_HEADER_SIZE, STREAM_ID_SIZE);
-  n_stream->address = strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
+  n_stream->address = tor_strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
   n_stream->port = atoi(colon+1);
   n_stream->state = EXIT_CONN_STATE_RESOLVING;
   n_stream->s = -1; /* not yet valid */
