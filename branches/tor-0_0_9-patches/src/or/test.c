@@ -1164,11 +1164,11 @@ test_dir_format(void)
   cp = buf;
   test_eq(dirserv_add_descriptor((const char**)&cp), 1);
   get_options()->Nickname = tor_strdup("DirServer");
-  test_assert(!dirserv_dump_directory_to_string(buf,8192,pk3));
-  cp = buf;
-  test_assert(!router_parse_routerlist_from_directory(buf, &dir1, pk3, 1));
+  test_assert(!dirserv_dump_directory_to_string(&cp,pk3));
+  test_assert(!router_parse_routerlist_from_directory(cp, &dir1, pk3, 1));
   test_eq(2, smartlist_len(dir1->routers));
   dirserv_free_fingerprint_list();
+  tor_free(cp);
 
   tor_free(pk1_str);
   tor_free(pk2_str);

@@ -1331,7 +1331,7 @@ int dirserv_add_descriptor(const char **desc);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors(void);
 void dirserv_remove_old_servers(int age);
-int dirserv_dump_directory_to_string(char *s, size_t maxlen,
+int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
 size_t dirserv_get_directory(const char **cp, int compress);
