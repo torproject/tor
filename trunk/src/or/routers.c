@@ -2,13 +2,6 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/**
- * routers.c 
- * Routines for loading the list of routers and their public RSA keys.
- *
- * Matej Pfajfar <mp292@cam.ac.uk>
- */
-
 #define OR_PUBLICKEY_END_TAG "-----END RSA PUBLIC KEY-----\n"
 
 #include "or.h"
@@ -30,6 +23,8 @@ static routerinfo_t **make_rarray(routerinfo_t* list, int *len);
 static char *eat_whitespace(char *s);
 static char *find_whitespace(char *s);
 static routerinfo_t *router_get_entry_from_string(char **s);
+static void router_add_exit_policy(routerinfo_t *router, char *string);
+static void router_free_exit_policy(routerinfo_t *router);
 
 /****************************************************************************/
 
@@ -49,7 +44,7 @@ int learn_my_address(struct sockaddr_in *me) {
     log(LOG_ERR,"Error obtaining local host info.");
     return -1;
   }
-  memset((void *)me,0,sizeof(struct sockaddr_in));
+  memset(me,0,sizeof(struct sockaddr_in));
   me->sin_family = AF_INET;
   memcpy((void *)&me->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
   me->sin_port = htons(options.ORPort);
@@ -418,6 +413,7 @@ static routerinfo_t *router_get_entry_from_string(char **s) {
   }
   memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
 
+/* Bug: if find_whitespace returns a '#', we'll squish it. */
 #define NEXT_TOKEN(s, next)    \
   *s = eat_whitespace(*s);     \
   next = find_whitespace(*s);  \
@@ -504,17 +500,40 @@ static routerinfo_t *router_get_entry_from_string(char **s) {
 //  test_write_pkey(router->pkey);  
 
   *s = next+1;
+  while(**s != '\n') {
+    /* pull in a line of exit policy */
+    next = strchr(*s, '\n');
+    if(!next)
+      goto router_read_failed;
+    *next = 0;
+    router_add_exit_policy(router, *s);
+    *s = next+1;
+  }
 
-  /* success */
-  return(router);
+  return router;
+
 
 router_read_failed:
   if(router->address)
     free(router->address);
   if(router->pkey)
     crypto_free_pk_env(router->pkey);
+  router_free_exit_policy(router);
   free(router);
   return NULL;
+}
+
+static void router_free_exit_policy(routerinfo_t *router) {
+  struct exit_policy_t *tmpe;
+
+  while(router->exit_policy) {
+    tmpe = router->exit_policy;
+    router->exit_policy = tmpe->next;
+    free(tmpe->string);
+    free(tmpe->address);
+    free(tmpe->port);
+    free(tmpe);
+  }
 }
 
 #if 0
@@ -532,6 +551,70 @@ void test_write_pkey(crypto_pk_env_t *pkey) {
 }
 #endif
 
+static void router_add_exit_policy(routerinfo_t *router, char *string) {
+  struct exit_policy_t *tmpe, *newe;
+  char *n;
+
+  string = eat_whitespace(string);
+  if(!*string) /* it was all whitespace or comment */
+    return;
+
+  newe = malloc(sizeof(struct exit_policy_t));
+  memset(newe,0,sizeof(struct exit_policy_t));
+
+  newe->string = strdup(string);
+  if(!strncasecmp(string,"reject ",strlen("reject "))) {
+    newe->policy_type = EXIT_POLICY_REJECT;
+  } else if(!strncasecmp(string,"accept ",strlen("accept "))) {
+    newe->policy_type = EXIT_POLICY_ACCEPT;
+  } else {
+    goto policy_read_failed;
+  }
+
+  string = eat_whitespace(string + strlen("reject "));
+  if(!*string) {
+    goto policy_read_failed;
+  }
+
+  n = strchr(string,':');
+  if(!n)
+    goto policy_read_failed;
+  *n = 0;
+  newe->address = strdup(string);
+  string = n+1;
+  n = find_whitespace(string);
+  *n = 0;
+  newe->port = strdup(string);
+
+  log(LOG_DEBUG,"router_add_exit_policy(): type %d, address '%s', port '%s'.",
+      newe->policy_type, newe->address, newe->port);
+
+  /* now link newe onto the end of exit_policy */
+
+  if(!router->exit_policy) {
+    router->exit_policy = newe;
+    return;
+  }
+
+  for(tmpe=router->exit_policy; tmpe->next; tmpe=tmpe->next) ;
+  tmpe->next = newe;
+
+  return;
+
+policy_read_failed:
+  assert(newe->string);
+  log(LOG_INFO,"router_add_exit_policy(): Couldn't parse line '%s'. Dropping", newe->string);
+  if(newe->string)
+    free(newe->string);
+  if(newe->address)
+    free(newe->address);
+  if(newe->port)
+    free(newe->port);
+  free(newe);
+  return;
+
+}
+
 /*
   Local Variables:
   mode:c
@@ -539,3 +622,4 @@ void test_write_pkey(crypto_pk_env_t *pkey) {
   c-basic-offset:2
   End:
 */
+
