@@ -168,6 +168,15 @@ void connection_free_all(void) {
     connection_free(carray[i]);
 }
 
+void connection_about_to_close_connection(connection_t *conn)
+{
+  if(conn->type == CONN_TYPE_DIR)
+    if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
+      rend_client_desc_fetched(conn->rend_query, 0);
+
+
+}
+
 /** Close the underlying socket for <b>conn</b>, so we don't try to
  * flush it. Must be used in conjunction with (right before)
  * connection_mark_for_close().
@@ -218,11 +227,8 @@ _connection_mark_for_close(connection_t *conn, char reason)
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
     case CONN_TYPE_CPUWORKER:
-      /* No special processing needed. */
-      break;
     case CONN_TYPE_DIR:
-      if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
-        rend_client_desc_fetched(conn->rend_query, 0);
+      /* No special processing needed immediately. */
       break;
     case CONN_TYPE_OR:
       /* Remember why we're closing this connection. */

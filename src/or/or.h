@@ -954,6 +954,7 @@ extern char *conn_type_to_string[];
 connection_t *connection_new(int type);
 void connection_free(connection_t *conn);
 void connection_free_all(void);
+void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);
 int _connection_mark_for_close(connection_t *conn, char reason);
 
