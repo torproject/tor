@@ -553,12 +553,47 @@ static void listener_close_if_present(int type) {
 }
 
 static int retry_listeners(int type, struct config_line_t *cfg,
-                           int port_option, const char *default_addr)
+                           int port_option, const char *default_addr,
+                           int force)
 {
+  if (!force) {
+    int want, have, n_conn, i;
+    struct config_line_t *c;
+    connection_t *conn;
+    connection_t **carray;
+    /* How many should there be? */
+    if (cfg && port_option) {
+      want = 0;
+      for (c = cfg; c; c = c->next)
+        ++want;
+    } else if (port_option) {
+      want = 1;
+    } else {
+      want = 0;
+    }
+
+    /* How many are there actually? */    
+    have = 0;
+    get_connection_array(&carray,&n_conn);
+    for(i=0;i<n_conn;i++) {
+      conn = carray[i];
+      if (conn->type == type && !conn->marked_for_close)
+        ++have;
+    }
+
+    /* If we have the right number of listeners, do nothing. */
+    if (have == want)
+      return 0;
+
+    /* Otherwise, warn the user and relaunch. */
+    log_fn(LOG_WARN,"We have %d %s(s) open, but we want %d; relaunching.",
+           have, conn_type_to_string[type], want);
+  }
+  
   listener_close_if_present(type);
   if (port_option) {
     if (!cfg) {
-      if (connection_create_listener(default_addr, (uint16_t) port_option,
+           if (connection_create_listener(default_addr, (uint16_t) port_option,
                                      type)<0)
         return -1;
     } else {
@@ -572,18 +607,21 @@ static int retry_listeners(int type, struct config_line_t *cfg,
   return 0;
 }
 
-/** (Re)launch listeners for each port you should have open.
+/** (Re)launch listeners for each port you should have open.  If
+ * <b>force</b> is true, close and relaunch all listeners. If <b>force</b>
+ * is false, then only relaunch listeners when we have the wrong number of
+ * connections for a given type.
  */
-int retry_all_listeners(void) {
+int retry_all_listeners(int force) {
 
   if (retry_listeners(CONN_TYPE_OR_LISTENER, options.ORBindAddress,
-                      options.ORPort, "0.0.0.0")<0)
+                      options.ORPort, "0.0.0.0", force)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options.DirBindAddress,
-                      options.DirPort, "0.0.0.0")<0)
+                      options.DirPort, "0.0.0.0", force)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options.SocksBindAddress,
-                      options.SocksPort, "127.0.0.1")<0)
+                      options.SocksPort, "127.0.0.1", force)<0)
     return -1;
 
   return 0;
