@@ -132,7 +132,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
       if (options.FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR &&
           !options.HttpProxy) {
         tor_snprintf(buf,sizeof(buf),"%d",ds->dir_port);
-        if (!smartlist_string_isin(options.FirewallPorts, buf))
+        if (!smartlist_string_isin(options.FirewallPorts ?
+            options.FirewallPorts : config_get_default_firewallports(), buf))
           continue;
       }
       directory_initiate_command_trusted_dir(ds, purpose, payload, payload_len);
