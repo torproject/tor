@@ -129,13 +129,15 @@ void rotate_onion_key(void)
     log(LOG_ERR, "Couldn't write generated key to %s.", fname);
     goto error;
   }
+  log_fn(LOG_INFO, "Rotating onion key");
   tor_mutex_acquire(key_lock);
   if (lastonionkey)
     crypto_free_pk_env(lastonionkey);
-  log_fn(LOG_INFO, "Rotating onion key");
   lastonionkey = onionkey;
-  set_onion_key(prkey);
+  onionkey = prkey;
+  onionkey_set_at = time(NULL);
   tor_mutex_release(key_lock);
+  mark_my_descriptor_dirty();
   return;
  error:
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
