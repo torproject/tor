@@ -131,13 +131,15 @@ Rendezvous service:
         o Communication
             o OPs remember which circuits are used for which rendezvous
               points, and can look up circuits by location-hidden service
-            - OPs send/handle BEGIN cells for location-hidden services
-            . End-to-end communication for location-hidden services
+            o OPs send/handle BEGIN cells for location-hidden services
+            o End-to-end communication for location-hidden services
         - a section in the man pages: how to configure hidden services
-        - let bob use himself as a rendezvous point
+        o let bob use himself as a rendezvous point
+        - let bob choose himself as intro point
         - let bob replenish his intro points and republish
         - alice retries introduction and rendezvous a few times?
         - should alice ever try to refresh her service desc cache entries?
+          should she expire them after e.g. 15 mins?
         - race condition: alice has the serverdesc in her cache, she opens
           the circs, serverdesc expires and is flushed, then she goes
           to send the intro cell. should serverdesc cache have a
