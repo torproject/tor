@@ -245,7 +245,7 @@ int connection_tls_continue_handshake(connection_t *conn) {
   return 0;
 }
 
-static int digest_is_nonzero(const char *id) {
+static int digest_is_zero(const char *id) {
   char ZERO_DIGEST[DIGEST_LEN];
   memset(ZERO_DIGEST, 0, DIGEST_LEN);
   return !memcmp(ZERO_DIGEST, id, DIGEST_LEN);
@@ -315,7 +315,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     return -1;
   }
 
-  if (digest_is_nonzero(conn->identity_digest)) {
+  if (!digest_is_zero(conn->identity_digest)) {
     /* I initiated this connection. */
     if (strcasecmp(conn->nickname, nickname)) {
       log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
