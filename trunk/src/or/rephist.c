@@ -310,7 +310,7 @@ void write_rep_history(const char *filename)
 #endif
 
 #define NUM_SECS_ROLLING_MEASURE 10
-#define NUM_SECS_BW_SUM_IS_VALID (12*60*60) /* half a day */
+#define NUM_SECS_BW_SUM_IS_VALID (24*60*60) /* one day */
 #define NUM_SECS_BW_SUM_INTERVAL (15*60)
 #define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
 
