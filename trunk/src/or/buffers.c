@@ -159,9 +159,9 @@ void buf_free(buf_t *buf) {
 }
 
 /** Read from socket <b>s</b>, writing onto end of <b>buf</b>.  Read at most
- * <b>at_most</b> bytes, resizing the buffer as necessary.  If read()
+ * <b>at_most</b> bytes, resizing the buffer as necessary.  If recv()
  * returns 0, set <b>*reached_eof</b> to 1 and return 0. Return -1 on error;
- * else return the number of bytes read.  Return 0 if read() would
+ * else return the number of bytes read.  Return 0 if recv() would
  * block.
  */
 int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {

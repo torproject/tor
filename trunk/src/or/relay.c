@@ -1009,7 +1009,7 @@ circuit_resume_edge_reading_helper(connection_t *conn,
 /** Check if the package window for <b>circ</b> is empty (at
  * hop <b>layer_hint</b> if it's defined).
  *
- * If yes, tell edge streams to stop reading and return -1.
+ * If yes, tell edge streams to stop reading and return 1.
  * Else return 0.
  */
 static int
@@ -1017,13 +1017,19 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
 {
   connection_t *conn = NULL;
 
-  log_fn(LOG_DEBUG,"considering");
-  if(!layer_hint && circ->package_window <= 0) {
-    log_fn(LOG_DEBUG,"yes, not-at-origin. stopped.");
-    for(conn = circ->n_streams; conn; conn=conn->next_stream)
-      connection_stop_reading(conn);
-    return -1;
-  } else if(layer_hint && layer_hint->package_window <= 0) {
+  if (!layer_hint) {
+    log_fn(LOG_DEBUG,"considering circ->package_window %d", circ->package_window);
+    if (circ->package_window <= 0) {
+      log_fn(LOG_DEBUG,"yes, not-at-origin. stopped.");
+      for(conn = circ->n_streams; conn; conn=conn->next_stream)
+        connection_stop_reading(conn);
+      return 1;
+    }
+    return 0;
+  }
+  /* else, layer hint is defined, use it */
+  log_fn(LOG_DEBUG,"considering layer_hint->package_window %d", layer_hint->package_window);
+  if (layer_hint->package_window <= 0) {
     log_fn(LOG_DEBUG,"yes, at-origin. stopped.");
     for(conn = circ->n_streams; conn; conn=conn->next_stream)
       if(conn->cpath_layer == layer_hint)
@@ -1031,7 +1037,7 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
     for(conn = circ->p_streams; conn; conn=conn->next_stream)
       if(conn->cpath_layer == layer_hint)
         connection_stop_reading(conn);
-    return -1;
+    return 1;
   }
   return 0;
 }
