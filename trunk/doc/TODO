@@ -40,8 +40,8 @@ N  . Windows installer
      - Call script to correct windows versions as appropriate.
      - Make the text documentation use windows-style newlines.
      - Make torrc.sample say to put torrc into application data\tor
-R  - Review website; make important info more prominent.
-R  - merge in the contributed tor.sh
+   o Review website; make important info more prominent.
+   o merge in the contributed tor.sh
 
 
 

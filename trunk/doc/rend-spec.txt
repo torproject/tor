@@ -4,7 +4,7 @@ $Id$
  bytes, and maybe have a fixed length for nicknames in the
  descriptor too -RD]
 
-Tor Rendezvous Spec
+                    Tor Rendezvous Specification
 
 0. Overview and preliminaries
 
