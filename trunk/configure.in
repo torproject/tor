@@ -171,7 +171,7 @@ return *(int*)(&s[1]); }]])],
        [tor_cv_unaligned_ok=yes],
        [tor_cv_unaligned_ok=no],
        [tor_cv_unaligned_ok=cross])])
-if test tor_cv_unaligned_ok = yes; then
+if test $tor_cv_unaligned_ok = yes; then
   AC_DEFINE([UNALIGNED_INT_ACCESS_OK], 1,
             [Define to 1 iff unaligned int access is allowed])
 fi
