@@ -379,18 +379,14 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     uint32_t answer;
     /* Reply to resolves immediately if we can. */
     if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
+      log_fn(LOG_WARN,"Address to be resolved is too large. Failing.");
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
-      conn->socks_request->has_finished = 1;
-      conn->has_sent_end = 1;
-      connection_mark_for_close(conn);
-      conn->hold_open_until_flushed = 1;
-      return 0;
+      return -1;
     }
     answer = htonl(client_dns_lookup_entry(socks->address));
     if (answer) {
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                              (char*)&answer);
-      conn->socks_request->has_finished = 1;
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
@@ -401,6 +397,10 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   /* this call _modifies_ socks->address iff it's a hidden-service request */
   if (rend_parse_rendezvous_address(socks->address) < 0) {
     /* normal request */
+    if (socks->port == 0) {
+      log_fn(LOG_WARN,"Application asked to connect to port 0. Refusing.");
+      return -1;
+    }
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     return connection_ap_handshake_attach_circuit(conn);
   } else {
@@ -411,12 +411,9 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
       /* if it's a resolve request, fail it right now, rather than
        * building all the circuits and then realizing it won't work. */
+      log_fn(LOG_WARN,"Resolve requests to hidden services not allowed. Failing.");
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
-      conn->socks_request->has_finished = 1;
-      conn->has_sent_end = 1;
-      connection_mark_for_close(conn);
-      conn->hold_open_until_flushed = 1;
-      return 0;
+      return -1;
     }
 
     strlcpy(conn->rend_query, socks->address, sizeof(conn->rend_query));
@@ -626,6 +623,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   return fd[1];
 }
 
+/* DOCDOC */
 void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
@@ -678,6 +676,7 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
   connection_ap_handshake_socks_reply(conn, buf, replylen,
                                       (answer_type == RESOLVED_TYPE_IPV4 ||
                                       answer_type == RESOLVED_TYPE_IPV6) ? 1 : -1);
+  conn->socks_request->has_finished = 1;
 }
 
 /** Send a socks reply to stream <b>conn</b>, using the appropriate

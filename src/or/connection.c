@@ -180,6 +180,15 @@ void connection_free_all(void) {
     connection_free(carray[i]);
 }
 
+/** Do any cleanup needed:
+ *   - Directory conns that failed to fetch a rendezvous descriptor
+ *     need to inform pending rendezvous streams.
+ *   - OR conns need to call rep_hist_note_*() to record status.
+ *   - AP conns need to send a socks reject if necessary.
+ *   - Exit conns need to call connection_dns_remove() if necessary.
+ *   - AP and Exit conns need to send an end cell if they can.
+ *   - DNS conns need to fail any resolves that are pending on them.
+ */
 void connection_about_to_close_connection(connection_t *conn)
 {
 
@@ -268,15 +277,7 @@ void connection_close_immediate(connection_t *conn)
 }
 
 /** Mark <b>conn</b> to be closed next time we loop through
- * conn_close_if_marked() in main.c. Do any cleanup needed:
- *   - Directory conns that fail to fetch a rendezvous descriptor need
- *     to inform pending rendezvous streams.
- *   - OR conns need to call rep_hist_note_*() to record status.
- *   - AP conns need to send a socks reject if necessary.
- *   - Exit conns need to call connection_dns_remove() if necessary.
- *   - AP and Exit conns need to send an end cell if they can.
- *   - DNS conns need to fail any resolves that are pending on them.
- */
+ * conn_close_if_marked() in main.c. */
 int
 _connection_mark_for_close(connection_t *conn)
 {
