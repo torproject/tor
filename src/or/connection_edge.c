@@ -91,6 +91,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
+    case AP_CONN_STATE_RESOLVE_WAIT:
       log_fn(LOG_INFO,"data from edge while in '%s' state. Leaving it on buffer.",
                       conn_state_to_string[conn->type][conn->state]);
       return 0;
