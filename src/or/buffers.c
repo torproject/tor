@@ -28,7 +28,7 @@ void buf_free(char *buf) {
   free(buf);
 }
 
-/* read from socket s, writing onto buf+buf_datalen. If at_most is >= 0 then
+/* read from socket s, writing onto buf+buf_datalen.
  * read at most 'at_most' bytes, and in any case don't read more than will fit based on buflen.
  * If read() returns 0, set *reached_eof to 1 and return 0. If you want to tear
  * down the connection return -1, else return the number of bytes read.
@@ -41,9 +41,8 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
 
   /* this is the point where you would grow the buffer, if you want to */
 
-  if(at_most < 0 || *buflen - *buf_datalen < at_most)
+  if(at_most > *buflen - *buf_datalen)
     at_most = *buflen - *buf_datalen; /* take the min of the two */
-    /* (note that this only modifies at_most inside this function) */
 
   if(at_most == 0)
     return 0; /* we shouldn't read anything */

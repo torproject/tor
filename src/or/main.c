@@ -11,6 +11,7 @@ static void dumpstats(void); /* dump stats to stdout */
 /********* START VARIABLES **********/
 
 or_options_t options; /* command-line and config-file options */
+int global_read_bucket; /* max number of bytes I can read this second */
 
 static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
@@ -367,10 +368,25 @@ static int prepare_for_poll(int *timeout) {
       time_to_new_circuit = now.tv_sec + options.NewCircuitPeriod;
     }
 
+    if(global_read_bucket < 9*options.TotalBandwidth) {
+      global_read_bucket += options.TotalBandwidth;
+      log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
+    }
+
     /* do housekeeping for each connection */
     for(i=0;i<nfds;i++) {
       tmpconn = connection_array[i];
-      connection_increment_receiver_bucket(tmpconn);
+      if(connection_receiver_bucket_should_increase(tmpconn)) {
+        tmpconn->receiver_bucket += tmpconn->bandwidth;
+//        log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, tmpconn->receiver_bucket);
+      }
+
+      if(tmpconn->wants_to_read == 1 /* it's marked to turn reading back on now */
+         && global_read_bucket > 0 /* and we're allowed to read */
+         && tmpconn->receiver_bucket != 0) { /* and either an edge conn or non-empty bucket */
+        tmpconn->wants_to_read = 0;
+        connection_start_reading(tmpconn);
+      }
 
       /* check connections to see whether we should send a keepalive, expire, or wait */
       if(!connection_speaks_cells(tmpconn))
@@ -811,6 +827,7 @@ int tor_main(int argc, char *argv[]) {
   if(getconfig(argc,argv,&options))
     exit(1);
   log_set_severity(options.loglevel);     /* assign logging severity level from options */
+  global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
 
   if(options.Daemon)
     daemonize();

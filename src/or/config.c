@@ -188,6 +188,7 @@ void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "KeepalivePeriod", CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
     config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_INT, &options->NewCircuitPeriod) ||
+    config_compare(list, "TotalBandwidth",  CONFIG_TYPE_INT, &options->TotalBandwidth) ||
 
     config_compare(list, "OnionRouter",     CONFIG_TYPE_BOOL, &options->OnionRouter) ||
     config_compare(list, "Daemon",          CONFIG_TYPE_BOOL, &options->Daemon) ||
@@ -216,18 +217,17 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   const char *cmd;
   int result = 0;
 
-/* give reasonable defaults for each option */
+/* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
-  options->Daemon = 0;
   options->LogLevel = "debug";
   options->loglevel = LOG_DEBUG;
   options->CoinWeight = 0.8;
-  options->LinkPadding = 0;
   options->MaxConn = 900;
   options->DirFetchPeriod = 600;
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 10;
   options->NewCircuitPeriod = 60; /* once a minute */
+  options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
 //  options->ReconnectPeriod = 6001;
 
 /* get config lines from /etc/torrc and assign them */

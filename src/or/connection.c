@@ -8,6 +8,8 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+extern int global_read_bucket;
+
 char *conn_type_to_string[] = {
   "",            /* 0 */
   "OP listener", /* 1 */
@@ -265,6 +267,7 @@ int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16
 int connection_read_to_buf(connection_t *conn) {
   int read_result;
   struct timeval now;
+  int at_most = global_read_bucket;
 
   if(connection_speaks_cells(conn)) {
     assert(conn->receiver_bucket >= 0);
@@ -277,21 +280,25 @@ int connection_read_to_buf(connection_t *conn) {
 
   conn->timestamp_lastread = now.tv_sec;
 
-  read_result = read_to_buf(conn->s, conn->receiver_bucket, &conn->inbuf, &conn->inbuflen,
+  if(conn->receiver_bucket >= 0 && at_most > conn->receiver_bucket)
+    at_most = conn->receiver_bucket;
+
+  read_result = read_to_buf(conn->s, at_most, &conn->inbuf, &conn->inbuflen,
                             &conn->inbuf_datalen, &conn->inbuf_reached_eof);
 //  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
-  if(read_result >= 0 && connection_speaks_cells(conn)) {
-//    log(LOG_DEBUG,"connection_read_to_buf(): Read %d, bucket now %d.",read_result,conn->receiver_bucket);
-    conn->receiver_bucket -= read_result;
-    if(conn->receiver_bucket <= 0) {
-
-//      log(LOG_DEBUG,"connection_read_to_buf() stopping reading, receiver bucket full.");
+  if(read_result >= 0) {
+    global_read_bucket -= read_result; assert(global_read_bucket >= 0);
+    if(connection_speaks_cells(conn))
+      conn->receiver_bucket -= read_result;
+    if(conn->receiver_bucket == 0 || global_read_bucket == 0) {
+      log_fn(LOG_DEBUG,"buckets (%d, %d) exhausted. Pausing.", global_read_bucket, conn->receiver_bucket);
+      conn->wants_to_read = 1;
       connection_stop_reading(conn);
 
       /* If we're not in 'open' state here, then we're never going to finish the
        * handshake, because we'll never increment the receiver_bucket. But we
        * can't check for that here, because the buf we just read might have enough
-       * on it to finish the handshake. So we check for that in check_conn_read().
+       * on it to finish the handshake. So we check for that in conn_read().
        */
     }
   }
@@ -350,24 +357,10 @@ int connection_receiver_bucket_should_increase(connection_t *conn) {
   if(!connection_speaks_cells(conn))
     return 0; /* edge connections don't use receiver_buckets */
 
-  if(conn->receiver_bucket > 10*conn->bandwidth)
+  if(conn->receiver_bucket > 9*conn->bandwidth)
     return 0;
 
   return 1;
-}
-
-void connection_increment_receiver_bucket(connection_t *conn) {
-  assert(conn);
-
-  if(connection_receiver_bucket_should_increase(conn)) {
-    /* yes, the receiver_bucket can become overfull here. But not by much. */
-    conn->receiver_bucket += conn->bandwidth*1.1;
-//    log(LOG_DEBUG,"connection_increment_receiver_bucket(): Bucket now %d.",conn->receiver_bucket);
-    if(connection_state_is_open(conn)) {
-      /* if we're in state 'open', then start reading again */
-      connection_start_reading(conn);
-    }
-  }
 }
 
 int connection_is_listener(connection_t *conn) {
@@ -392,6 +385,8 @@ int connection_state_is_open(connection_t *conn) {
 void connection_send_cell(connection_t *conn) {
   cell_t cell;
   int bytes_in_full_flushlen;
+
+  assert(0); /* this function has decayed. rewrite before using. */
 
   /* this function only gets called if options.LinkPadding is 1 */
   assert(options.LinkPadding == 1);
