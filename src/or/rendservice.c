@@ -492,7 +492,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
 
   memcpy(newcirc->rend_query, oldcirc->rend_query, REND_SERVICE_ID_LEN+1);
   memcpy(newcirc->rend_pk_digest, oldcirc->rend_pk_digest, DIGEST_LEN);
-  memcpy(newcirc->rend_splice, oldcirc->rend_splice, REND_COOKIE_LEN);
+  memcpy(newcirc->rend_cookie, oldcirc->rend_cookie, REND_COOKIE_LEN);
 }
 
 /* Launch a circuit to serve as an introduction point.
