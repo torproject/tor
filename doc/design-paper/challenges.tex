@@ -33,23 +33,23 @@ Tor is a low-latency anonymous communication overlay network designed
 to be practical and usable for protecting TCP streams over the
 Internet~\cite{tor-design}. We have been operating a publicly deployed
 Tor network since October 2003 that has grown to over a hundred volunteer
-nodes and carries an average over 70 megabits of traffic per second.
+nodes and carries on average over 70 megabits of traffic per second.
 
 Tor has a weaker threat model than many anonymity designs in the
-literature, because our foremost goal is to deploy
+literature, because our foremost goal is to deploy a
 practical and useful network for interactive (low-latency) communications.
-Subject to this restriction, we try
+Subject to this restriction, we try to
 provide as much anonymity as we can. In particular, because we
 support interactive communications without impractically expensive padding,
 we fall prey to a variety
-of intra-network~\cite{danezis-oakland,flow-correlation04,bar} and
+of intra-network~\cite{attack-tor-oak05,flow-correlation04,bar} and
 end-to-end~\cite{danezis-pet2004,SS03} anonymity-breaking attacks.
 
-Tor defends against a user against adversaries so long as they are unable to
-observe her connections as they enter and leave the Tor network.
-Therefore, Tor's
-defense lies in having a diverse enough network to prevent adversaries
-that are unlikely to be in the right places to attack users.
+Tor is secure so long as adversaries are unable to
+observe connections as they both enter and leave the Tor network.
+Therefore, Tor's defense lies in having a diverse enough set of servers
+that most real-world
+adversaries are unlikely to be in the right places to attack users.
 Specifically,
 Tor aims to resist observers and insiders by distributing each transaction
 over several nodes in the network.  This ``distributed trust'' approach
@@ -74,10 +74,11 @@ their popular Java Anon Proxy anonymizing client. This wide variety of
 interests helps maintain both the stability and the security of the
 network.
 
-Tor's principal research strategy in attempting to deploy a network that
+%awk
+Tor's principal research strategy, in attempting to deploy a network that is
 practical, useful, and anonymous, has been to insist, when trade-offs arise
-between these properties, on remaining useful enough to attract as many users
-as possible, and practical enough to support them.  Subject to these
+between these properties, on remaining useful enough to attract many users,
+and practical enough to support them.  Subject to these
 constraints, we aim to maximize anonymity.  This is not the only possible
 direction in anonymity research: designs exist that provide more anonymity
 than Tor at the expense of significantly increased resource requirements, or
@@ -93,7 +94,10 @@ volunteer anonymity network will need to address.
 
 While~\cite{tor-design} gives an overall view of the Tor design and goals,
 this paper describes the policy and technical issues that Tor faces are
-we continue deployment. We aim to lay a research agenda for others to
+we continue deployment. Rather than trying to provide complete solutions
+to every problem here, we try to lay out the assumptions and constraints
+that we have observed through deploying Tor in the wild. In doing so, we
+aim to create a research agenda for others to
 help in addressing these issues. Section~\ref{sec:what-is-tor} gives an
 overview of the Tor
 design and ours goals. Sections~\ref{sec:crossroads-policy}
@@ -216,6 +220,8 @@ load.  Finally, more scalable designs like Tarzan~\cite{tarzan} and
 MorphMix~\cite{morphmix} have been proposed in the literature, but
 have not yet been fielded. We direct the interested reader to Section
 2 of~\cite{tor-design} for a more indepth review of related work.
+
+%six-four. crowds. i2p.
 
 
 have a serious discussion of morphmix's assumptions, since they would
@@ -493,8 +499,8 @@ we become able to transport IP packets. We also need a way to compactly
 characterize the exit policies and let clients parse them to decide
 which nodes will allow which packets to exit.
 \item \emph{The Tor-internal name spaces would need to be redesigned.} We
-support hidden service \tt{.onion} addresses, and other special addresses
-like \tt{.exit} (see Section \ref{subsec:}), by intercepting the addresses
+support hidden service {\tt{.onion}} addresses, and other special addresses
+like {\tt{.exit}} (see Section \ref{subsec:}), by intercepting the addresses
 when they are passed to the Tor client.
 \end{enumerate}
 
@@ -764,18 +770,52 @@ dispersal. But hard for Alice to know how to act. Many questions remain.
 
 \subsection{The China problem}
 
-We have lots of users in Iran and similar (we stopped
-logging, so it's hard to know now, but many Persian sites on how to use
-Tor), and they seem to be doing ok. But the China problem is bigger. Cite
-Stefan's paper, and talk about how we need to route through clients,
-and we maybe we should start with a time-release IP publishing system +
-advogato based reputation system, to bound the number of IPs leaked to the
-adversary.
+Citizens in a variety of countries, such as most recently China and
+Iran, are periodically blocked from accessing various sites outside
+their country. These users try to find any tools available to allow
+them to get-around these firewalls. Some anonymity networks, such as
+Six-Four~\cite{six-four}, are designed specifically with this goal in
+mind; others like the Anonymizer~\cite{anonymizer} are paid by sponsors
+such as Voice of America to set up a network to encourage `Internet
+freedom'~\cite{voice-of-america-anonymizer}. Even though Tor wasn't
+designed with ubiquitous access to the network in mind, thousands of
+users across the world are trying to use it for exactly this purpose.
+% Academic and NGO organizations, peacefire, \cite{berkman}, etc
 
-\cite{infranet}
-\cite{koepsell-wpes2004}
-\cite{advogato}
-\cite{berkman}
+Anti-censorship networks designed to bridge country-level blocks face
+a variety of challenges. One of these is that they need to find a set
+of exit nodes---servers on the `free' side that are willing to relay
+arbitrary traffic from users to their final destination. Anonymizing
+networks including Tor are well-suited to this task, since we have
+already gathered a set of exit nodes that are willing to tolerate some
+political heat.
+
+The other main challenge is how to distribute a list of reachable relays
+to the users inside the country, and give them software to use them,
+without letting the authorities also enumerate this list and block each
+relay. Anonymizer solves this by buying lots of seemingly-unrelated IP
+addresses (or having them donated), and tells a few users about the new
+addresses, abandoning old ones that have been `used up'. Distributed
+anonymizing networks again have an advantage here, in that we already
+have tens of thousands of separate IP addresses whose users might
+volunteer to provide this service now that they've installed and use
+the software for their own privacy~\cite{koepsell-wpes2004}. Because
+the Tor protocol separates routing from network discovery (see Section
+\ref{do-we-discuss-this?}), volunteers could configure their Tor clients
+to generate server descriptors and send them to a special directory
+server that gives them out to dissidents who need to get around blocks.
+
+Of course, this passes the buck in terms of preventing the adversary
+from enumerating all the volunteer relays and blocking them preemptively.
+Perhaps a tiered-trust system could be built where a few individuals are
+given relay IPs, and they recommend other individuals by telling them
+those addresses, thus providing a built-in incentive to avoid letting the
+adversary learn the addresses. Max-flow trust algorithms~\cite{advogato}
+might help to bound the number of IPs leaked to the adversary. Groups
+like the W3C are looking into using Tor as a component in a system to
+help address censorship; we wish them luck.
+
+%\cite{infranet}
 
 \subsection{Non-clique topologies}
 
@@ -800,7 +840,7 @@ allocating which nodes go to which network along the lines of
 able to gain any advantage in network splitting that they do not
 already have in joining a network.
 
-The attacks in \cite{attack-tor-oak04} show that certain types of
+The attacks in \cite{attack-tor-oak05} show that certain types of
 brute force attacks are in fact feasible; however they make the
 above point stronger not weaker. The attacks do not appear to be
 significantly more difficult to mount against a network that is
@@ -871,6 +911,26 @@ they are running clients.
 
 
 \bibliographystyle{plain} \bibliography{tor-design}
+
+\appendix
+
+\begin{figure}[t]
+%\unitlength=1in
+\centering
+%\begin{picture}(6.0,2.0)
+%\put(3,1){\makebox(0,0)[c]{\epsfig{figure=graphnodes,width=6in}}}
+%\end{picture}
+\mbox{\epsfig{figure=graphnodes,width=5in}}
+\caption{Number of servers over time. Lowest line is number of exit nodes that allow connections to port 80. Middle line is total number of verified (registered) servers. The line above that represents servers that are not yet registered.}
+\label{fig:graphnodes}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\mbox{\epsfig{figure=graphtraffic,width=5in}}
+\caption{The sum of traffic reported by each server over time. The bottom pair show average throughput, and the top pair represent the largest 15 minute burst in each 4 hour period.}
+\label{fig:graphtraffic}
+\end{figure}
 
 \end{document}
 
