@@ -205,6 +205,13 @@ void close_temp_logs(void)
   }
 }
 
+void mark_logs_temp(void)
+{
+  logfile_t *lf;
+  for (lf = logfiles; lf; lf = lf->next)
+    lf->is_temporary = 1;
+}
+
 /**
  * Add a log handler to send messages to <b>filename</b>. If opening
  * the logfile fails, -1 is returned and errno is set appropriately

@@ -608,6 +608,7 @@ static int do_hup(void) {
 
   log_fn(LOG_NOTICE,"Received sighup. Reloading config.");
   has_completed_circuit=0;
+  mark_logs_temp(); /* Close current logs once new logs are open. */
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
   if (init_from_config(0, NULL) < 0) {
