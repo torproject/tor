@@ -364,13 +364,13 @@ connection_tls_finish_handshake(connection_t *conn) {
   }
   log_fn(LOG_DEBUG,"The router's cert is valid.");
   crypto_pk_get_digest(identity_rcvd, digest_rcvd);
-  crypto_free_pk_env(identity_rcvd);
 
   if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
     conn->circ_id_type = CIRC_ID_TYPE_LOWER;
   } else {
     conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
   }
+  crypto_free_pk_env(identity_rcvd);
 
   router = router_get_by_nickname(nickname);
   if(router && /* we know this nickname */
