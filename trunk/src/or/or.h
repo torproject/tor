@@ -110,9 +110,9 @@
 #define MAX_NICKNAME_LEN 32
 #define MAX_DIR_SIZE 50000 /* XXX, big enough? */
 
-#define ACI_TYPE_LOWER 0
-#define ACI_TYPE_HIGHER 1
-#define ACI_TYPE_BOTH 2
+#define CIRC_ID_TYPE_LOWER 0
+#define CIRC_ID_TYPE_HIGHER 1
+#define CIRC_ID_TYPE_BOTH 2
 
 #define _CONN_TYPE_MIN 3
 #define CONN_TYPE_OR_LISTENER 3
@@ -235,11 +235,11 @@
 
 #define SOCKS4_NETWORK_LEN 8
 
-typedef uint16_t aci_t;
+typedef uint16_t circ_id_t;
 
 /* cell definition */
 typedef struct { 
-  aci_t aci; /* Anonymous Connection Identifier */
+  circ_id_t circ_id;
   unsigned char command;
   unsigned char length; /* of payload if relay cell */
   uint32_t seq; /* sequence number */
@@ -295,8 +295,8 @@ struct connection_t {
 
 /* Used only by OR connections: */
   tor_tls *tls;
-  uint16_t next_aci; /* Which ACI do we try to use next on this connection? 
-                      * This is always in the range 0..1<<15-1.*/
+  circ_id_t next_circ_id; /* Which circ_id do we try to use next on this connection? 
+                           * This is always in the range 0..1<<15-1.*/
 
   /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
   uint32_t bandwidth; /* connection bandwidth. */
@@ -404,8 +404,8 @@ struct circuit_t {
   int package_window;
   int deliver_window;
 
-  aci_t p_aci; /* circuit identifiers */
-  aci_t n_aci;
+  circ_id_t p_circ_id; /* circuit identifiers */
+  circ_id_t n_circ_id;
 
   crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
   crypto_cipher_env_t *n_crypto;
@@ -501,11 +501,11 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 
 void circuit_add(circuit_t *circ);
 void circuit_remove(circuit_t *circ);
-circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn);
+circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn);
 void circuit_free(circuit_t *circ);
 
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
-circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn);
+circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest_open(void);
 
@@ -592,7 +592,7 @@ int connection_receiver_bucket_should_increase(connection_t *conn);
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
-int connection_send_destroy(aci_t aci, connection_t *conn);
+int connection_send_destroy(circ_id_t circ_id, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
 int connection_finished_flushing(connection_t *conn);
@@ -684,7 +684,7 @@ int main(int argc, char *argv[]);
 
 /********************************* onion.c ***************************/
 
-int decide_aci_type(char *local_nick, char *remote_nick);
+int decide_circ_id_type(char *local_nick, char *remote_nick);
 
 int onion_pending_add(circuit_t *circ);
 circuit_t *onion_next_task(void);

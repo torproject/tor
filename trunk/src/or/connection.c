@@ -639,22 +639,23 @@ int connection_state_is_open(connection_t *conn) {
   return 0;
 }
 
-int connection_send_destroy(aci_t aci, connection_t *conn) {
+int connection_send_destroy(circ_id_t circ_id, connection_t *conn) {
   cell_t cell;
 
   assert(conn);
 
   if(!connection_speaks_cells(conn)) {
-     log_fn(LOG_INFO,"Aci %d: At an edge. Marking connection for close.", aci);
+     log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.", 
+            circ_id);
      connection_edge_end(conn, END_STREAM_REASON_DESTROY, conn->cpath_layer);
      /* if they already sent a destroy, they know. XXX can just close? */
      return 0;
   }
 
   memset(&cell, 0, sizeof(cell_t));
-  cell.aci = aci;
+  cell.circ_id = circ_id;
   cell.command = CELL_DESTROY;
-  log_fn(LOG_INFO,"Sending destroy (aci %d).",aci);
+  log_fn(LOG_INFO,"Sending destroy (circID %d).", circ_id);
   connection_or_write_cell_to_buf(&cell, conn);
   return 0;
 }

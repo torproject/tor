@@ -127,11 +127,11 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
 
   memset(&cell, 0, sizeof(cell_t));
   if(fromconn && fromconn->type == CONN_TYPE_AP) {
-    cell.aci = circ->n_aci;
+    cell.circ_id = circ->n_circ_id;
     cell_direction = CELL_DIRECTION_OUT;
   } else {
     /* NOTE: if !fromconn, we assume that it's heading towards the OP */
-    cell.aci = circ->p_aci;
+    cell.circ_id = circ->p_circ_id;
     cell_direction = CELL_DIRECTION_IN;
   }
 
@@ -290,7 +290,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return 0;
       }
       if(circ->n_conn) {
-        connection_send_destroy(circ->n_aci, circ->n_conn);
+        connection_send_destroy(circ->n_circ_id, circ->n_conn);
         circ->n_conn = NULL;
       }
       log_fn(LOG_DEBUG, "Processed 'truncate', replying.");
@@ -575,7 +575,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   circ->dirty = 1;
 
   /* add it into the linked list of streams on this circuit */
-  log_fn(LOG_DEBUG,"attaching new conn to circ. n_aci %d.", circ->n_aci);
+  log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
   conn->next_stream = circ->p_streams;
   circ->p_streams = conn;
 
@@ -621,7 +621,7 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   ap_conn->state = AP_CONN_STATE_OPEN;
   tor_free(ap_conn->socks_request);
   ap_conn->socks_request = NULL;
-  log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_aci %d",ap_conn->s,circ->n_aci);
+  log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
   return 0;
 }
 

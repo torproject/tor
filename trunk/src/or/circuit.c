@@ -8,7 +8,7 @@ extern or_options_t options; /* command-line and config-file options */
 
 static void circuit_free_cpath(crypt_path_t *cpath);
 static void circuit_free_cpath_node(crypt_path_t *victim);
-static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type);  
+static circ_id_t get_unique_circ_id_by_addr_port(uint32_t addr, uint16_t port, int circ_id_type);  
 
 unsigned long stats_n_relay_cells_relayed = 0;
 unsigned long stats_n_relay_cells_delivered = 0;
@@ -56,7 +56,7 @@ void circuit_remove(circuit_t *circ) {
   }
 }
 
-circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
+circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ; 
 
   circ = (circuit_t *)tor_malloc(sizeof(circuit_t));
@@ -64,14 +64,14 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
 
   circ->timestamp_created = time(NULL);
 
-  circ->p_aci = p_aci;
+  circ->p_circ_id = p_circ_id;
   circ->p_conn = p_conn;
 
   circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
 
-  /* ACIs */
-  circ->p_aci = p_aci;
-  /* circ->n_aci remains 0 because we haven't identified the next hop yet */
+  /* CircIDs */
+  circ->p_circ_id = p_circ_id;
+  /* circ->n_circ_id remains 0 because we haven't identified the next hop yet */
 
   circ->package_window = CIRCWINDOW_START;
   circ->deliver_window = CIRCWINDOW_START;
@@ -117,31 +117,31 @@ static void circuit_free_cpath_node(crypt_path_t *victim) {
   free(victim);
 }
 
-/* return 0 if can't get a unique aci. */
-static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
-  aci_t test_aci;
+/* return 0 if can't get a unique circ_id. */
+static circ_id_t get_unique_circ_id_by_addr_port(uint32_t addr, uint16_t port, int circ_id_type) {
+  circ_id_t test_circ_id;
   connection_t *conn;
   uint16_t high_bit;
 
-  high_bit = (aci_type == ACI_TYPE_HIGHER) ? 1<<15 : 0;
+  high_bit = (circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   conn = connection_exact_get_by_addr_port(addr,port);
   /* XXX race condition: if conn is marked_for_close it won't be noticed */
   if (!conn)
     return (1|high_bit); /* No connection exists; conflict is impossible. */
 
   do {
-    /* Sequentially iterate over test_aci=1...1<<15-1 until we find an
-     * aci such that (high_bit|test_aci) is not already used. */
-    /* XXX Will loop forever if all aci's in our range are used.
+    /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find an
+     * circID such that (high_bit|test_circ_id) is not already used. */
+    /* XXX Will loop forever if all circ_id's in our range are used.
      * This matters because it's an external DoS vulnerability. */
-    test_aci = conn->next_aci++;
-    if (test_aci == 0 || test_aci >= 1<<15) {
-      test_aci = 1;
-      conn->next_aci = 2;
+    test_circ_id = conn->next_circ_id++;
+    if (test_circ_id == 0 || test_circ_id >= 1<<15) {
+      test_circ_id = 1;
+      conn->next_circ_id = 2;
     }
-    test_aci |= high_bit;
-  } while(circuit_get_by_aci_conn(test_aci, conn));
-  return test_aci;
+    test_circ_id |= high_bit;
+  } while(circuit_get_by_circ_id_conn(test_circ_id, conn));
+  return test_circ_id;
 }
 
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *circ, uint32_t naddr, uint16_t nport) {
@@ -158,12 +158,12 @@ circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *circ, uint32_t naddr, uin
   return NULL;
 }
 
-circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn) {
+circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn) {
   circuit_t *circ;
   connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->p_aci == aci) {
+    if(circ->p_circ_id == circ_id) {
       if(circ->p_conn == conn)
         return circ;
       for(tmpconn = circ->p_streams; tmpconn; tmpconn = tmpconn->next_stream) {
@@ -171,7 +171,7 @@ circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn) {
           return circ;
       }
     }
-    if(circ->n_aci == aci) {
+    if(circ->n_circ_id == circ_id) {
       if(circ->n_conn == conn)
         return circ;
       for(tmpconn = circ->n_streams; tmpconn; tmpconn = tmpconn->next_stream) {
@@ -208,8 +208,8 @@ circuit_t *circuit_get_newest_open(void) {
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if(circ->cpath && circ->state == CIRCUIT_STATE_OPEN && circ->n_conn && (!bestcirc ||
       bestcirc->timestamp_created < circ->timestamp_created)) {
-      log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.", circ->n_conn->address, circ->n_port, circ->n_aci);
-      assert(circ->n_aci);
+      log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.", circ->n_conn->address, circ->n_port, circ->n_circ_id);
+      assert(circ->n_circ_id);
       bestcirc = circ;
     }
   }
@@ -309,8 +309,8 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
 
       log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+2));
       if(crypto_cipher_encrypt(circ->p_crypto, in, inlen, out)) {
-        log_fn(LOG_WARN,"Onion encryption failed for ACI %u: %s",
-            circ->p_aci, crypto_perror());
+        log_fn(LOG_WARN,"Onion encryption failed for circID %u: %s",
+               circ->p_circ_id, crypto_perror());
         return -1;
       }
       memcpy(in,out,inlen);
@@ -341,8 +341,8 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
     } else { /* we're in the middle. Just one crypt. */
 
       if(crypto_cipher_decrypt(circ->n_crypto,in, inlen, out)) {
-        log_fn(LOG_WARN,"Decryption failed for ACI %u: %s",
-               circ->n_aci, crypto_perror());
+        log_fn(LOG_WARN,"Decryption failed for circID %u: %s",
+               circ->n_circ_id, crypto_perror());
         return -1;
       }
       memcpy(in,out,inlen);
@@ -455,7 +455,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
 
   cell.length = RELAY_HEADER_SIZE;
   if(edge_type == EDGE_AP) { /* i'm the AP */
-    cell.aci = circ->n_aci;
+    cell.circ_id = circ->n_circ_id;
     while(layer_hint->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
       log_fn(LOG_DEBUG,"deliver_window %d, Queueing sendme forward.", layer_hint->deliver_window);
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
@@ -464,7 +464,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
       }
     }
   } else if(edge_type == EDGE_EXIT) { /* i'm the exit */
-    cell.aci = circ->p_aci;
+    cell.circ_id = circ->p_circ_id;
     while(circ->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
       log_fn(LOG_DEBUG,"deliver_window %d, Queueing sendme back.", circ->deliver_window);
       circ->deliver_window += CIRCWINDOW_INCREMENT;
@@ -487,14 +487,14 @@ void circuit_close(circuit_t *circ) {
   }
   circuit_remove(circ);
   if(circ->n_conn)
-    connection_send_destroy(circ->n_aci, circ->n_conn);
+    connection_send_destroy(circ->n_circ_id, circ->n_conn);
   for(conn=circ->n_streams; conn; conn=conn->next_stream) {
-    connection_send_destroy(circ->n_aci, conn); 
+    connection_send_destroy(circ->n_circ_id, conn); 
   }
   if(circ->p_conn)
-    connection_send_destroy(circ->n_aci, circ->p_conn);
+    connection_send_destroy(circ->n_circ_id, circ->p_conn);
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
-    connection_send_destroy(circ->p_aci, conn); 
+    connection_send_destroy(circ->p_circ_id, conn); 
   }
   if(options.SocksPort && youngest == circ) { /* check this after we've sent the destroys, to reduce races */
     /* our current circuit just died. Launch another one pronto. */
@@ -572,21 +572,21 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if(circ->p_conn == conn)
-      log(severity, "Conn %d has App-ward circuit:  aci %d (other side %d), state %d (%s)",
-        conn->poll_index, circ->p_aci, circ->n_aci, circ->state, circuit_state_to_string[circ->state]);
+      log(severity, "Conn %d has App-ward circuit:  circID %d (other side %d), state %d (%s)",
+        conn->poll_index, circ->p_circ_id, circ->n_circ_id, circ->state, circuit_state_to_string[circ->state]);
     for(tmpconn=circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream) {
       if(tmpconn == conn) {
-        log(severity,"Conn %d has App-ward circuit:  aci %d (other side %d), state %d (%s)",
-          conn->poll_index, circ->p_aci, circ->n_aci, circ->state, circuit_state_to_string[circ->state]);
+        log(severity,"Conn %d has App-ward circuit:  circID %d (other side %d), state %d (%s)",
+          conn->poll_index, circ->p_circ_id, circ->n_circ_id, circ->state, circuit_state_to_string[circ->state]);
       }
     }
     if(circ->n_conn == conn)
-      log(severity,"Conn %d has Exit-ward circuit: aci %d (other side %d), state %d (%s)",
-        conn->poll_index, circ->n_aci, circ->p_aci, circ->state, circuit_state_to_string[circ->state]);
+      log(severity,"Conn %d has Exit-ward circuit: circID %d (other side %d), state %d (%s)",
+        conn->poll_index, circ->n_circ_id, circ->p_circ_id, circ->state, circuit_state_to_string[circ->state]);
     for(tmpconn=circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream) {
       if(tmpconn == conn) {
-        log(severity,"Conn %d has Exit-ward circuit: aci %d (other side %d), state %d (%s)",
-          conn->poll_index, circ->n_aci, circ->p_aci, circ->state, circuit_state_to_string[circ->state]);
+        log(severity,"Conn %d has Exit-ward circuit: circID %d (other side %d), state %d (%s)",
+          conn->poll_index, circ->n_circ_id, circ->p_circ_id, circ->state, circuit_state_to_string[circ->state]);
       }
     }
   }
@@ -603,7 +603,7 @@ void circuit_expire_unused_circuits(void) {
     tmpcirc = circ;
     circ = circ->next;
     if(tmpcirc != youngest && !tmpcirc->p_conn && !tmpcirc->p_streams) {
-      log_fn(LOG_DEBUG,"Closing n_aci %d",tmpcirc->n_aci);
+      log_fn(LOG_DEBUG,"Closing n_circ_id %d",tmpcirc->n_circ_id);
       circuit_close(tmpcirc);
     }
   }
@@ -647,7 +647,7 @@ int circuit_establish_circuit(void) {
   connection_t *n_conn;
   circuit_t *circ;
 
-  circ = circuit_new(0, NULL); /* sets circ->p_aci and circ->p_conn */
+  circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
   circ->cpath = onion_generate_cpath(&firsthop);
   if(!circ->cpath) {
@@ -728,11 +728,11 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
 
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
-    circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, ACI_TYPE_BOTH);
+    circ->n_circ_id = get_unique_circ_id_by_addr_port(circ->n_addr, circ->n_port, CIRC_ID_TYPE_BOTH);
 
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_CREATE;
-    cell.aci = circ->n_aci;
+    cell.circ_id = circ->n_circ_id;
     cell.length = DH_ONIONSKIN_LEN;
 
     if(onion_skin_create(circ->n_conn->onion_pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
@@ -769,7 +769,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_RELAY; 
-    cell.aci = circ->n_aci;
+    cell.circ_id = circ->n_circ_id;
     SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_EXTEND);
     SET_CELL_STREAM_ID(cell, ZERO_STREAM);
 
@@ -798,7 +798,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
  */
 int circuit_extend(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;
-  aci_t aci_type;
+  int circ_id_type;
   cell_t newcell;
 
   if(circ->n_conn) {
@@ -830,19 +830,19 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   circ->n_conn = n_conn;
   log_fn(LOG_DEBUG,"n_conn is %s:%u",n_conn->address,n_conn->port);
 
-  aci_type = decide_aci_type(options.Nickname, n_conn->nickname);
+  circ_id_type = decide_circ_id_type(options.Nickname, n_conn->nickname);
 
-  log_fn(LOG_DEBUG,"aci_type = %u.",aci_type);
-  circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
-  if(!circ->n_aci) {
-    log_fn(LOG_WARN,"failed to get unique aci.");
+  log_fn(LOG_DEBUG,"circ_id_type = %u.",circ_id_type);
+  circ->n_circ_id = get_unique_circ_id_by_addr_port(circ->n_addr, circ->n_port, circ_id_type);
+  if(!circ->n_circ_id) {
+    log_fn(LOG_WARN,"failed to get unique circID.");
     return -1;
   }
-  log_fn(LOG_DEBUG,"Chosen ACI %u.",circ->n_aci);
+  log_fn(LOG_DEBUG,"Chosen circID %u.",circ->n_circ_id);
 
   memset(&newcell, 0, sizeof(cell_t));
   newcell.command = CELL_CREATE;
-  newcell.aci = circ->n_aci;
+  newcell.circ_id = circ->n_circ_id;
   newcell.length = DH_ONIONSKIN_LEN;
 
   memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6, DH_ONIONSKIN_LEN);
