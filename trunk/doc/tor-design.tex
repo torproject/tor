@@ -85,7 +85,9 @@ a wide area Onion Routing network,
 % how long is briefly? a day, a month? -RD
 the only long-running and publicly accessible
 implementation was a fragile proof-of-concept that ran on a single
-machine. Many critical design and deployment issues were never resolved,
+machine (which nonethless processed several tens of thousands of connections
+daily from thousands of global users).
+Many critical design and deployment issues were never resolved,
 and the design has not been updated in several years.
 Here we describe Tor, a protocol for asynchronous, loosely
 federated onion routers that provides the following improvements over
@@ -646,22 +648,28 @@ simplicity that `bad' nodes are compromised in the sense spelled out
 above. We assume that all adversary components, regardless of their
 capabilities are collaborating and are connected in an offline clique.
 
-We do not assume any hostile users, except in the context of
+Users are assumed to vary widely in both the duration and number of
+times they are connected to the Tor network. They can also be assumed
+to vary widely in the volume and shape of the traffic they send and
+receive. Hostile users are, by definition, limited to creating and
+varying their own connections into or through a Tor network. They may
+attack their own connections to try to gain identity information of
+the responder in a rendezvous connection. They may also try to attack
+sites through the Onion Routing network; however we will consider
+this abuse rather than an attack per se (see
+Section~\ref{subsec:exitpolicies}). Other than these, a hostile user's
+motivation to attack his own connections is limited to the network
+effects of such actions, e.g., DoS. Thus, in this case, we can view a
+hostile user as simply an extreme case of the ordinary user; although
+ordinary users are not likely to engage in, e.g., IP spoofing, to gain
+their objectives.
+
+% We do not assume any hostile users, except in the context of
+%
 % This sounds horrible. What do you mean we don't assume any hostile
 % users? Surely we can tolerate some? -RD
 %
-% This could be phrased better. All I meant was that we are not
-% going to try to model or quantify any attacks on anonymity
-% by users of the system by trying to vary their
-% activity. Yes, we tolerate some, but if ordinary usage can
-% vary widely, there is nothing added by considering malicious
-% attempts specifically,
-% except if they are attempts to expose someone at the far end of a
-% session we initiate, e.g., the rendezvous server case. -PS
-rendezvous points. Nonetheless, we assume that users vary widely in
-both the duration and number of times they are connected to the Tor
-network. They can also be assumed to vary widely in the volume and
-shape of the traffic they send and receive.
+% Better? -PS
 
 
 [XXX what else?]
@@ -764,8 +772,8 @@ a hash of $K=g^{xy}$. The goal is to get unilateral entity authentication
 (Alice knows she's handshaking with Bob, Bob doesn't care who it is ---
 recall that Alice has no key and is trying to remain anonymous) and
 unilateral key authentication (Alice and Bob agree on a key, and Alice
-knows Bob is the only other person who could know it). We also want
-perfect forward secrecy, key freshness, etc.
+knows Bob is the only other person who could know it --- if he is
+honest, etc.). We also want perfect forward secrecy, key freshness, etc.
 
 \begin{equation}
 \begin{aligned}
@@ -776,7 +784,7 @@ perfect forward secrecy, key freshness, etc.
 
 The second step shows both that it was Bob
 who received $g^x$, and that it was Bob who came up with $y$. We use
-PK encryption in the first step (rather than, eg, using the first two
+PK encryption in the first step (rather than, e.g., using the first two
 steps of STS, which has a signature in the second step) because we
 don't have enough room in a single cell for a public key and also a
 signature. Preliminary analysis with the NRL protocol analyzer shows
@@ -797,6 +805,7 @@ Once Alice has established the circuit (so she shares a key with each
 OR on the circuit), she can send relay cells.
 %The stream ID in the relay header indicates to which stream the cell belongs.
 % Nick: should i include the above line?
+% Paul says yes. -PS
 Alice can address each relay cell to any of the ORs on the circuit. To
 construct a relay cell destined for a given OR, she iteratively
 encrypts the cell payload (that is, the relay header and payload)
@@ -903,7 +912,7 @@ of the current value of the hash.
 
 The attacker must be able to guess all previous bytes between Alice
 and Bob on that circuit (including the pseudorandomness from the key
-negotiation), plus the bytes in the current cell, to remove modify the
+negotiation), plus the bytes in the current cell, to remove or modify the
 cell. The computational overhead isn't so bad, compared to doing an AES
 crypt at each hop in the circuit. We use only four bytes per cell to
 minimize overhead; the chance that an adversary will correctly guess a
