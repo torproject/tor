@@ -22,7 +22,7 @@ extern or_options_t options; /* command-line and config-file options */
 /****************************************************************************/
 
 /* Enumeration of possible token types.  The ones starting with K_ correspond
- * to directory 'keywords'.  _SIGNATURE and _PUBLIC_KEY are self-explanitory.
+ * to directory 'keywords'.  _SIGNATURE and _PUBLIC_KEY are self-explanatory.
  * _ERR is an error in the tokenizing process, _EOF is an end-of-file marker,
  * and _NIL is used to encode not-a-token.
  */
@@ -64,10 +64,9 @@ typedef struct directory_token_t {
 
 /****************************************************************************/
 
-
-
 /* static function prototypes */
-static int router_set_routerlist_from_string(const char *s);
+static int
+router_set_routerlist_from_string(const char *s);
 static int
 router_get_list_from_string_impl(const char **s, routerlist_t **dest,
                                  int n_good_nicknames,
@@ -75,23 +74,24 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
 static int
 router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
                                           crypto_pk_env_t *pkey);
-static int router_add_exit_policy(routerinfo_t *router,
-                                  directory_token_t *tok);
-static int router_resolve_routerlist(routerlist_t *dir);
+static int
+router_add_exit_policy(routerinfo_t *router, directory_token_t *tok);
+static int
+router_resolve_routerlist(routerlist_t *dir);
 
-
-
-static int _router_get_next_token(const char **s, directory_token_t *tok);
+static int
+_router_get_next_token(const char **s, directory_token_t *tok);
 #ifdef DEBUG_ROUTER_TOKENS
-static int router_get_next_token(const char **s, directory_token_t *tok);
+static int
+router_get_next_token(const char **s, directory_token_t *tok);
 #else
 #define router_get_next_token _router_get_next_token
 #endif
-static int router_get_hash_impl(const char *s, char *digest,
-                                const char *start_str,
-                                const char *end_str);
-static void router_release_token(directory_token_t *tok);
-
+static int
+router_get_hash_impl(const char *s, char *digest,
+                     const char *start_str, const char *end_str);
+static void
+router_release_token(directory_token_t *tok);
 
 /****************************************************************************/
 
@@ -262,7 +262,6 @@ int router_set_routerlist_from_file(char *routerfile)
   return 0;
 }
 
-
 /* Helper function: read routerinfo elements from s, and throw out the
  * ones that don't parse and resolve.  Replace the current
  * routerlist. */
@@ -296,8 +295,8 @@ int router_get_router_hash(const char *s, char *digest)
                               "router ","router-signature");
 }
 
-/* return 0 if myversion is in versionlist. Else return -1.  (versionlist
- * contains a comma-separated list of versions.) */
+/* return 0 if myversion is in versionlist. Else return -1.
+ * (versionlist contains a comma-separated list of versions.) */
 int compare_recommended_versions(const char *myversion,
                                  const char *versionlist) {
   int len_myversion = strlen(myversion);
@@ -319,8 +318,7 @@ int compare_recommended_versions(const char *myversion,
 }
 
 /* Replace the current routerlist with the routers stored in the directory
- * 's'.  If pkey is provided, make sure that 's' is signed with pkey.
- */
+ * 's'.  If pkey is provided, make sure that 's' is signed with pkey. */
 int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
 {
   if (router_get_routerlist_from_directory_impl(s, &routerlist, pkey)) {
@@ -344,7 +342,6 @@ int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
       exit(0);
     }
   }
-
   return 0;
 }
 
@@ -394,17 +391,6 @@ router_resolve_routerlist(routerlist_t *rl)
   }
 
   return 0;
-}
-
-/* Addr is 0 for "IP unknown".
- *
- * Returns -1 for 'rejected', 0 for accepted, 1 for 'maybe' (since IP is
- * unknown.
- */
-int router_supports_exit_address(uint32_t addr, uint16_t port,
-                                 routerinfo_t *router)
-{
-  return router_compare_addr_to_exit_policy(addr, port, router->exit_policy);
 }
 
 /* Addr is 0 for "IP unknown".
@@ -716,7 +702,8 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->onion_pkey = router->identity_pkey = router->link_pkey = NULL;
 
-  if (N_ARGS != 6) {
+/* XXXBC move to <7 once we require bandwidthburst */
+  if (N_ARGS < 6) {
     log_fn(LOG_WARN,"Wrong # of arguments to \"router\"");
     goto err;
   }
@@ -749,11 +736,21 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
   router->dir_port = atoi(ARGS[4]);
 
   /* Router->bandwidth */
-  router->bandwidth = atoi(ARGS[5]);
-  if (!router->bandwidth) {
-    log_fn(LOG_WARN,"bandwidth unreadable or 0. Failing.");
+  router->bandwidthrate = atoi(ARGS[5]);
+  if (!router->bandwidthrate) {
+    log_fn(LOG_WARN,"bandwidthrate unreadable or 0. Failing.");
     goto err;
   }
+
+#if XXXBC
+  router->bandwidthburst = atoi(ARGS[6]);
+  if (!router->bandwidthburst) {
+    log_fn(LOG_WARN,"bandwidthburst unreadable or 0. Failing.");
+    goto err;
+  }
+#else
+  router->bandwidthburst = 10*router->bandwidthrate;
+#endif
 
   log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidth %u.",
     router->or_port, router->socks_port, router->dir_port,

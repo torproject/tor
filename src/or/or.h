@@ -389,7 +389,8 @@ typedef struct {
   int is_running;
 
   /* link info */
-  uint32_t bandwidth;
+  uint32_t bandwidthrate;
+  uint32_t bandwidthburst;
   struct exit_policy_t *exit_policy;
 } routerinfo_t;
 
@@ -505,7 +506,8 @@ typedef struct {
   int KeepalivePeriod;
   int MaxOnionsPending;
   int NewCircuitPeriod;
-  int TotalBandwidth;
+  int BandwidthRate;
+  int BandwidthBurst;
   int NumCpus;
   int loglevel;
 } or_options_t;
@@ -800,8 +802,6 @@ int router_get_router_hash(const char *s, char *digest);
 int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey);
 routerinfo_t *router_get_entry_from_string(const char **s);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
-int router_supports_exit_address(uint32_t addr, uint16_t port,
-                                 routerinfo_t *router);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy);
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
