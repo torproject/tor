@@ -634,7 +634,8 @@ int connection_read_to_buf(connection_t *conn) {
     switch(result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
-        log_fn(LOG_INFO,"tls error. breaking.");
+        log_fn(LOG_INFO,"tls error. breaking (nickname %s).",
+               conn->nickname ? conn->nickname : "not set yet");
         return -1; /* XXX deal with close better */
       case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
