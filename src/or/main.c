@@ -784,7 +784,7 @@ int tor_main(int argc, char *argv[]) {
   add_stream_log(LOG_INFO, "<stdout>", stdout);
 
   if(getconfig(argc,argv,&options)) {
-    log_fn(LOG_ERR,"Reading config file failed. exiting.");
+    log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");
     return -1;
   }
   log_set_severity(options.loglevel); /* assign logging severity level from options */

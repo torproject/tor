@@ -191,6 +191,10 @@ static void config_assign(or_options_t *options, struct config_line *list) {
   }  
 }
 
+void print_usage(void) {
+
+}
+
 /* return 0 if success, <0 if failure. */
 int getconfig(int argc, char **argv, or_options_t *options) {
   struct config_line *cl;
@@ -214,6 +218,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->NewCircuitPeriod = 60; /* once a minute */
   options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
   options->NumCpus = 1;
+
+  if(argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
+    print_usage();
+    exit(0);
+  }
 
 /* learn config file name, get config lines, assign them */
   i = 1;
