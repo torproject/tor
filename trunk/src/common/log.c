@@ -49,14 +49,22 @@ static INLINE void format_msg(char *buf, size_t buf_len,
   my_gettimeofday(&now);
   t = (time_t)now.tv_sec;
   
-  n  = strftime(buf, buf_len, "%b %d %H:%M:%S", localtime(&t));
+  n = strftime(buf, buf_len, "%b %d %H:%M:%S", localtime(&t));
   n += snprintf(buf+n, buf_len-n,
-		".%.3ld [%s] ", 
-		(long)now.tv_usec / 1000, sev_to_string(severity));
-  if (funcname)
+                ".%.3ld [%s] ", 
+                (long)now.tv_usec / 1000, sev_to_string(severity));
+  if(n > buf_len)
+    n = buf_len; /* the *nprintf funcs return how many bytes they
+                  * _would_ print, if the output is truncated */
+  if (funcname) {
     n += snprintf(buf+n, buf_len-n, "%s(): ", funcname);
+    if(n > buf_len)
+      n = buf_len;
+  }
 
   n += vsnprintf(buf+n,buf_len-n,format,ap);
+  if(n > buf_len)
+    n = buf_len;
   buf[n]='\n';
   buf[n+1]='\0';
 }
