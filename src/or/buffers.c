@@ -395,19 +395,16 @@ int fetch_from_buf_http(buf_t *buf,
  *   socks4a: "socksheader username\0 destaddr\0"
  *   socks5 phase one: "version #methods methods"
  *   socks5 phase two: "version command 0 addresstype..."
- * If it's a complete and valid handshake, and destaddr fits in addr_out,
- *   then pull the handshake off the buf, assign to addr_out and port_out,
- *   and return 1.
+ * If it's a complete and valid handshake, and destaddr fits in
+ *   MAX_SOCKS_ADDR_LEN bytes, then pull the handshake off the buf,
+ *   assign to *req, and return 1.
  * If it's invalid or too big, return -1.
  * Else it's not all there yet, leave buf alone and return 0.
  * If you want to specify the socks reply, write it into *reply
  *   and set *replylen, else leave *replylen alone.
  * If returning 0 or -1, *addr_out and *port_out are undefined.
  */
-int fetch_from_buf_socks(buf_t *buf, char *socks_version,
-                         char *reply, int *replylen,
-                         char *addr_out, int max_addrlen,
-                         uint16_t *port_out) {
+int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   unsigned char len;
   char *tmpbuf=NULL;
   uint32_t destip;
@@ -421,25 +418,25 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
 
     case 5: /* socks5 */
 
-      if(*socks_version != 5) { /* we need to negotiate a method */
+      if(req->socks_version != 5) { /* we need to negotiate a method */
         unsigned char nummethods = (unsigned char)*(buf->mem+1);
-        assert(!*socks_version);
+        assert(!req->socks_version);
         log_fn(LOG_DEBUG,"socks5: learning offered methods");
         if(buf->datalen < 2+nummethods)
           return 0;
         if(!nummethods || !memchr(buf->mem+2, 0, nummethods)) {
           log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
-          *replylen = 2; /* 2 bytes of response */
-          *reply = 5; /* socks5 reply */
-          *(reply+1) = 0xFF; /* reject all methods */
+          req->replylen = 2; /* 2 bytes of response */
+          req->reply[0] = 5; /* socks5 reply */
+          req->reply[1] = 0xFF; /* reject all methods */
           return -1;
         }          
         buf_remove_from_front(buf,2+nummethods);/* remove packet from buf */
 
-        *replylen = 2; /* 2 bytes of response */
-        *reply = 5; /* socks5 reply */
-        *(reply+1) = 0; /* choose the 'no auth' method */
-        *socks_version = 5; /* remember that we've already negotiated auth */
+        req->replylen = 2; /* 2 bytes of response */
+        req->reply[0] = 5; /* socks5 reply */
+        req->reply[1] = 0; /* choose the 'no auth' method */
+        req->socks_version = 5; /* remember that we've already negotiated auth */
         log_fn(LOG_DEBUG,"socks5: accepted method 0");
         return 0;
       }
@@ -459,13 +456,13 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           destip = ntohl(*(uint32_t*)(buf->mem+4));
           in.s_addr = htonl(destip);
           tmpbuf = inet_ntoa(in);
-          if(strlen(tmpbuf)+1 > max_addrlen) {
+          if(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
             log_fn(LOG_WARN,"socks5 IP takes %d bytes, which doesn't fit in %d",
-                   strlen(tmpbuf)+1,max_addrlen);
+                   strlen(tmpbuf)+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
-          strcpy(addr_out,tmpbuf);
-          *port_out = ntohs(*(uint16_t*)(buf->mem+8));
+          strcpy(req->addr,tmpbuf);
+          req->port = ntohs(*(uint16_t*)(buf->mem+8));
           buf_remove_from_front(buf, 10);
           return 1;
         case 3: /* fqdn */
@@ -473,14 +470,14 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           len = (unsigned char)*(buf->mem+4);
           if(buf->datalen < 7+len) /* addr/port there? */
             return 0; /* not yet */
-          if(len+1 > max_addrlen) {
+          if(len+1 > MAX_SOCKS_ADDR_LEN) {
             log_fn(LOG_WARN,"socks5 hostname is %d bytes, which doesn't fit in %d",
-                   len+1,max_addrlen);
+                   len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
-          memcpy(addr_out,buf->mem+5,len);
-          addr_out[len] = 0;
-          *port_out = ntohs(*(uint16_t*)(buf->mem+5+len));
+          memcpy(req->addr,buf->mem+5,len);
+          req->addr[len] = 0;
+          req->port = ntohs(*(uint16_t*)(buf->mem+5+len));
           buf_remove_from_front(buf, 5+len+2);
           return 1;
         default: /* unsupported */
@@ -490,7 +487,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
       assert(0);
     case 4: /* socks4 */
 
-       *socks_version = 4;
+      req->socks_version = 4;
       if(buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */
         return 0; /* not yet */
 
@@ -499,9 +496,9 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
         return -1;
       }
 
-      *port_out = ntohs(*(uint16_t*)(buf->mem+2));
+      req->port = ntohs(*(uint16_t*)(buf->mem+2));
       destip = ntohl(*(uint32_t*)(buf->mem+4));
-      if(!*port_out || !destip) {
+      if(!req->port || !destip) {
         log_fn(LOG_WARN,"socks4: Port or DestIP is zero.");
         return -1;
       }
@@ -509,7 +506,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
         log_fn(LOG_DEBUG,"socks4: destip not in form 0.0.0.x.");
         in.s_addr = htonl(destip);
         tmpbuf = inet_ntoa(in);
-        if(strlen(tmpbuf)+1 > max_addrlen) {
+        if(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
           log_fn(LOG_WARN,"socks4 addr (%d bytes) too long.", strlen(tmpbuf));
           return -1;
         }
@@ -530,13 +527,13 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           log_fn(LOG_DEBUG,"Destaddr not here yet.");
           return 0;
         }
-        if(max_addrlen <= next-startaddr) {
+        if(MAX_SOCKS_ADDR_LEN <= next-startaddr) {
           log_fn(LOG_WARN,"Destaddr too long.");
           return -1;
         }
       }
       log_fn(LOG_DEBUG,"Everything is here. Success.");
-      strcpy(addr_out, socks4_prot == socks4 ? tmpbuf : startaddr);
+      strcpy(req->addr, socks4_prot == socks4 ? tmpbuf : startaddr);
       buf_remove_from_front(buf, next-buf->mem+1); /* next points to the final \0 on inbuf */
       return 1;
 

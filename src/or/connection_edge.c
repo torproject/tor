@@ -7,8 +7,8 @@
 extern or_options_t options; /* command-line and config-file options */
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ,
-                                              char *destaddr, uint16_t destport);
+static int connection_ap_handshake_attach_circuit(connection_t *conn);
+static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                                int replylen, char success);
 
@@ -465,6 +465,31 @@ repeat_connection_edge_package_raw_inbuf:
   goto repeat_connection_edge_package_raw_inbuf;
 }
 
+/* Tell any APs that are waiting for a new circuit that one is available */
+void connection_ap_attach_pending(void)
+{
+  connection_t *conn;
+  int r;
+
+  while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
+                                              AP_CONN_STATE_CIRCUIT_WAIT))) {
+    r = connection_ap_handshake_attach_circuit(conn);
+    if (r == 0) {
+      /* r==0: We're attached; do nothing. */
+    } else if (r>0) {
+      /* r>0: There was no circuit to attach to: stop the loop. */
+      break;
+    } else {
+      /* r<0: There was an error sending the begin cell; other pending  
+       *   AP connections may succeed.
+       */
+      /* XXX Is this right? How do we say that the connection failed?
+       * Should I close it?  mark it for close? -NM */
+      connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+    }
+  }
+}
+
 static void connection_edge_consider_sending_sendme(connection_t *conn) {
   circuit_t *circ;
  
@@ -491,23 +516,23 @@ static void connection_edge_consider_sending_sendme(connection_t *conn) {
 }
 
 static int connection_ap_handshake_process_socks(connection_t *conn) {
-  circuit_t *circ;
-  char destaddr[200]; /* XXX why 200? but not 256, because it won't fit in a cell */
-  char reply[256];
-  uint16_t destport;
-  int replylen=0;
+  socks_request_t *socks;
   int sockshere;
 
   assert(conn);
+  assert(conn->type == CONN_TYPE_AP);
+  assert(conn->state == AP_CONN_STATE_SOCKS_WAIT);
+  assert(conn->socks_request);
+  socks = conn->socks_request;
 
   log_fn(LOG_DEBUG,"entered.");
 
-  sockshere = fetch_from_buf_socks(conn->inbuf, &conn->socks_version, reply, &replylen,
-                                   destaddr, sizeof(destaddr), &destport);
+  sockshere = fetch_from_buf_socks(conn->inbuf, socks);
+  conn->socks_version = socks->socks_version;
   if(sockshere == -1 || sockshere == 0) {
-    if(replylen) { /* we should send reply back */
+    if(socks->replylen) { /* we should send reply back */
       log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
-      connection_ap_handshake_socks_reply(conn, reply, replylen, 0);
+      connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen, 0);
     } else if(sockshere == -1) { /* send normal reject */
       log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
       connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
@@ -517,13 +542,35 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     return sockshere;
   } /* else socks handshake is done, continue processing */
 
+  conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+  if (connection_ap_handshake_attach_circuit(conn)<0)
+    return -1;
+  return 0;
+}
+
+/* Try to find a live circuit.  If we don't find one, tell 'conn' to
+ * stop reading and return 1.  Otherwise, associate the CONN_TYPE_AP
+ * connection 'conn' with the newest live circuit, and start sending a
+ * BEGIN cell down the circuit.  Returns 0 on success, and -1 on
+ * error.
+ */
+static int connection_ap_handshake_attach_circuit(connection_t *conn) {
+  circuit_t *circ;
+  
+  assert(conn);
+  assert(conn->type == CONN_TYPE_AP);
+  assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  assert(conn->socks_request);
+  
   /* find the circuit that we should use, if there is one. */
   circ = circuit_get_newest_open();
 
   if(!circ) {
-    log_fn(LOG_INFO,"No circuit ready. Closing.");
-    return -1;
+    log_fn(LOG_INFO,"No circuit ready for edge connection; delaying.");
+    connection_stop_reading(conn); /* XXX Is this correct? -NM */
+    return 1;
   }
+  connection_start_reading(conn); /* XXX Is this correct? -NM */
 
   circ->dirty = 1;
 
@@ -536,7 +583,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
   conn->cpath_layer = circ->cpath->prev;
 
-  if(connection_ap_handshake_send_begin(conn, circ, destaddr, destport) < 0) {
+  if(connection_ap_handshake_send_begin(conn, circ) < 0) {
     circuit_close(circ);
     return -1;
   }
@@ -545,10 +592,14 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 }
 
 /* deliver the destaddr:destport in a relay cell */
-static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ,
-                                              char *destaddr, uint16_t destport) {
+static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
+{
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
+
+  assert(ap_conn->type == CONN_TYPE_AP);
+  assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  assert(ap_conn->socks_request);
 
   if(crypto_pseudo_rand(STREAM_ID_SIZE, ap_conn->stream_id) < 0)
     return -1;
@@ -557,7 +608,7 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   memcpy(payload, ap_conn->stream_id, STREAM_ID_SIZE);
   payload_len = STREAM_ID_SIZE + 1 +
     snprintf(payload+STREAM_ID_SIZE,CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE-STREAM_ID_SIZE,
-             "%s:%d", destaddr, destport);
+             "%s:%d", ap_conn->socks_request->addr, ap_conn->socks_request->port);
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",*(int *)ap_conn->stream_id);
 
@@ -568,6 +619,8 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_OPEN;
+  tor_free(ap_conn->socks_request);
+  ap_conn->socks_request = NULL;
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_aci %d",ap_conn->s,circ->n_aci);
   return 0;
 }

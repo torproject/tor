@@ -160,7 +160,7 @@
 /* the AP state values must be disjoint from the EXIT state values */
 #define _AP_CONN_STATE_MIN 4
 #define AP_CONN_STATE_SOCKS_WAIT 4
-#define AP_CONN_STATE_OR_WAIT 5
+#define AP_CONN_STATE_CIRCUIT_WAIT 5
 #define AP_CONN_STATE_OPEN 6
 #define _AP_CONN_STATE_MAX 6
 
@@ -254,6 +254,7 @@ typedef struct {
 #define ZERO_STREAM "\0\0\0\0\0\0\0\0"
 
 typedef struct buf_t buf_t;
+typedef struct socks_request_t socks_request_t;
 
 struct connection_t { 
 
@@ -304,7 +305,6 @@ struct connection_t {
                         */
 
 /* Used only by edge connections: */
-  char socks_version;
   char stream_id[STREAM_ID_SIZE];
   struct connection_t *next_stream; /* points to the next stream at this edge, if any */
   struct crypt_path_t *cpath_layer; /* a pointer to which node in the circ this conn exits at */
@@ -315,6 +315,10 @@ struct connection_t {
   int done_receiving;
   char has_sent_end; /* for debugging: set once we've set the stream end,
                         and check in circuit_about_to_close_connection() */
+  
+  /* Used only by AP connections */
+  char socks_version;
+  socks_request_t *socks_request;
 };
 
 typedef struct connection_t connection_t;
@@ -455,6 +459,17 @@ typedef struct {
   int loglevel;
 } or_options_t;
 
+#define MAX_SOCKS_REPLY_LEN 256
+/* Not 256; addresses must fit in a begin cell. */
+#define MAX_SOCKS_ADDR_LEN 200
+struct socks_request_t {
+  char socks_version;
+  int replylen;
+  char reply[MAX_SOCKS_REPLY_LEN];
+  char addr[MAX_SOCKS_ADDR_LEN];
+  uint16_t port;
+};
+
 /* all the function prototypes go here */
 
 /********************************* buffers.c ***************************/
@@ -480,10 +495,7 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
                         char *headers_out, int max_headerlen,
                         char *body_out, int max_bodylen);
-int fetch_from_buf_socks(buf_t *buf, char *socks_version,
-                         char *reply, int *replylen,
-                         char *addr_out, int max_addrlen,
-                         uint16_t *port_out);
+int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 
 /********************************* circuit.c ***************************/
 
@@ -602,6 +614,8 @@ int connection_edge_finished_flushing(connection_t *conn);
 int connection_edge_package_raw_inbuf(connection_t *conn);
 
 void connection_exit_connect(connection_t *conn);
+
+void connection_ap_attach_pending(void);
 
 extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;
