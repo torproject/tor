@@ -673,10 +673,15 @@ static int dnsworker_main(void *data) {
   tor_free(data);
 
   for (;;) {
+    int r;
 
-    if (recv(fd, &address_len, 1, 0) != 1) {
-      log_fn(LOG_INFO,"dnsworker exiting because tor process closed connection (either pruned idle dnsworker or died).");
-      log_fn(LOG_INFO,"Error on %d was %s", fd, tor_socket_strerror(tor_socket_errno(fd)));
+    if ((r = recv(fd, &address_len, 1, 0)) != 1) {
+      if (r == 0) {
+        log_fn(LOG_INFO,"DNS worker exiting because Tor process closed connection (either pruned idle dnsworker or died).");
+      } else {
+        log_fn(LOG_INFO,"DNS worker exiting because of error on connection to Tor process.");
+        log_fn(LOG_INFO,"(Error on %d was %s)", fd, tor_socket_strerror(tor_socket_errno(fd)));
+      }
       spawn_exit();
     }
 
