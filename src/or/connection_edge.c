@@ -718,24 +718,22 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires)
    void *_val;
    addressmap_entry_t *val;
 
-   for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter);
-        iter = strmap_iter_next(addressmap,iter)) {
+   for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter); ) {
      strmap_iter_get(iter, &key, &_val);
      val = _val;
      if (val->expires >= min_expires && val->expires <= max_expires) {
-       if (sl) {
+       if (!sl) {
+         addressmap_ent_remove(key, val);
+         iter = strmap_iter_next_rmv(addressmap,iter);
+         continue;
+       } else {
          size_t len = strlen(key)+strlen(val->new_address)+2;
          char *line = tor_malloc(len);
          tor_snprintf(line, len, "%s %s", key, val->new_address);
          smartlist_add(sl, line);
-         iter = strmap_iter_next(addressmap,iter);
-       } else {
-         addressmap_ent_remove(key, val);
-         iter = strmap_iter_next_rmv(addressmap,iter);
        }
-     } else {
-       iter = strmap_iter_next(addressmap,iter);
      }
+     iter = strmap_iter_next(addressmap,iter);
    }
 }
 
