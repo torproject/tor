@@ -794,11 +794,11 @@ int router_load_routerlist_from_string(const char *s, int trusted)
  * pkey; else check against the pkey of the signing directory server. */
 int router_load_routerlist_from_directory(const char *s,
                                           crypto_pk_env_t *pkey,
-                                          int check_version)
+                                          int dir_is_recent)
 {
   routerlist_t *new_list = NULL;
   if (router_parse_routerlist_from_directory(s, &new_list, pkey,
-                                             check_version)) {
+                                             dir_is_recent)) {
     log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;
   }
@@ -823,7 +823,8 @@ int router_load_routerlist_from_directory(const char *s,
     dirserv_load_from_directory_string(s);
   } else {
     /* Remember the directory. */
-    dirserv_set_cached_directory(s, routerlist->published_on);
+    if(dir_is_recent)
+      dirserv_set_cached_directory(s, routerlist->published_on);
   }
   return 0;
 }
