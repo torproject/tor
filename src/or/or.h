@@ -205,8 +205,9 @@ struct connection_t {
 
 /* Used by all types: */
 
-  unsigned char type;
+  uint8_t type;
   int state;
+  uint8_t wants_to_read;
   int s; /* our socket */
   int poll_index;
   int marked_for_close;
@@ -665,15 +666,6 @@ void connection_start_reading(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
-void check_conn_read(int i);
-void check_conn_marked(int i);
-void check_conn_write(int i);
-
-int prepare_for_poll(int *timeout);
-
-int do_main_loop(void);
-
-void dumpstats(void);
 int dump_signed_directory_to_string(char *s, int maxlen, 
                                     crypto_pk_env_t *private_key);
 /* Exported for debugging */

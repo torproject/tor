@@ -4,6 +4,10 @@
 
 #include "or.h"
 
+/********* START PROTOTYPES **********/
+
+static void dumpstats(void); /* dump stats to stdout */
+
 /********* START VARIABLES **********/
 
 or_options_t options; /* command-line and config-file options */
@@ -233,83 +237,79 @@ void connection_start_writing(connection_t *conn) {
 }
 
 
-void check_conn_read(int i) {
+static void conn_read(int i) {
   int retval;
   connection_t *conn;
 
-  if(poll_array[i].revents & POLLIN) { /* something to read */
+  conn = connection_array[i];
+  assert(conn);
+//  log_fn(LOG_DEBUG,"socket %d has something to read.",conn->s);
 
-    conn = connection_array[i];
-    assert(conn);
-//    log(LOG_DEBUG,"check_conn_read(): socket %d has something to read.",conn->s);
-
-    if (conn->type == CONN_TYPE_OR_LISTENER) {
-      retval = connection_or_handle_listener_read(conn);
-    } else if (conn->type == CONN_TYPE_AP_LISTENER) {
-      retval = connection_ap_handle_listener_read(conn);
-    } else if (conn->type == CONN_TYPE_DIR_LISTENER) {
-      retval = connection_dir_handle_listener_read(conn);
-    } else {
-      retval = connection_read_to_buf(conn);
-      if (retval < 0 && conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
-         /* it's a directory server and connecting failed: forget about this router */
-         router_forget_router(conn->addr,conn->port); /* FIXME i don't think this function works. */
-      }
-      if (retval >= 0) { /* all still well */
-        retval = connection_process_inbuf(conn);
-//      log(LOG_DEBUG,"check_conn_read(): connection_process_inbuf returned %d.",retval);
-        if(retval >= 0 && !connection_state_is_open(conn) && conn->receiver_bucket == 0) {
-          log(LOG_DEBUG,"check_conn_read(): receiver bucket reached 0 before handshake finished. Closing.");
-          retval = -1;
-        }
+  if (conn->type == CONN_TYPE_OR_LISTENER) {
+    retval = connection_or_handle_listener_read(conn);
+  } else if (conn->type == CONN_TYPE_AP_LISTENER) {
+    retval = connection_ap_handle_listener_read(conn);
+  } else if (conn->type == CONN_TYPE_DIR_LISTENER) {
+    retval = connection_dir_handle_listener_read(conn);
+  } else {
+    retval = connection_read_to_buf(conn);
+    if (retval < 0 && conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
+       /* it's a directory server and connecting failed: forget about this router */
+       router_forget_router(conn->addr,conn->port); /* FIXME i don't think this function works. */
+    }
+    if (retval >= 0) { /* all still well */
+      retval = connection_process_inbuf(conn);
+//    log_fn(LOG_DEBUG,"connection_process_inbuf returned %d.",retval);
+      if(retval >= 0 && !connection_state_is_open(conn) && conn->receiver_bucket == 0) {
+        log(LOG_DEBUG,"conn_read(): receiver bucket reached 0 before handshake finished. Closing.");
+        retval = -1;
       }
     }
+  }
 
-    if(retval < 0) { /* this connection is broken. remove it */
-      log(LOG_INFO,"check_conn_read(): Connection broken, removing."); 
-      connection_remove(conn);
-      connection_free(conn);
-      if(i<nfds) { /* we just replaced the one at i with a new one.
-                      process it too. */
-        check_conn_read(i);
-      }
+  if(retval < 0) { /* this connection is broken. remove it */
+    log_fn(LOG_INFO,"Connection broken, removing."); 
+    connection_remove(conn);
+    connection_free(conn);
+    if(i<nfds) { /* we just replaced the one at i with a new one.
+                    process it too. */
+      if(poll_array[i].revents & POLLIN) /* something to read */
+        conn_read(i);
     }
   }
 }
 
-void check_conn_write(int i) {
+static void conn_write(int i) {
   int retval;
   connection_t *conn;
 
-  if(poll_array[i].revents & POLLOUT) { /* something to write */
+  conn = connection_array[i];
+//  log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
 
-    conn = connection_array[i];
-//    log(LOG_DEBUG,"check_conn_write(): socket %d wants to write.",conn->s);
-
-    if(connection_is_listener(conn)) {
-      log(LOG_DEBUG,"check_conn_write(): Got a listener socket. Can't happen!");
-      retval = -1;
-    } else {
-      /* else it's an OP, OR, or exit */
-      retval = connection_flush_buf(conn); /* conns in CONNECTING state will fall through... */
-      if(retval == 0) { /* it's done flushing */
-        retval = connection_finished_flushing(conn); /* ...and get handled here. */
-      }
+  if(connection_is_listener(conn)) {
+    log_fn(LOG_DEBUG,"Got a listener socket. Can't happen!");
+    retval = -1;
+  } else {
+    /* else it's an OP, OR, or exit */
+    retval = connection_flush_buf(conn); /* conns in CONNECTING state will fall through... */
+    if(retval == 0) { /* it's done flushing */
+      retval = connection_finished_flushing(conn); /* ...and get handled here. */
     }
+  }
 
-    if(retval < 0) { /* this connection is broken. remove it. */
-      log(LOG_DEBUG,"check_conn_write(): Connection broken, removing.");
-      connection_remove(conn);
-      connection_free(conn);
-      if(i<nfds) { /* we just replaced the one at i with a new one.
-                      process it too. */
-        check_conn_write(i);
-      }
+  if(retval < 0) { /* this connection is broken. remove it. */
+    log_fn(LOG_DEBUG,"Connection broken, removing.");
+    connection_remove(conn);
+    connection_free(conn);
+    if(i<nfds) { /* we just replaced the one at i with a new one.
+                    process it too. */
+      if(poll_array[i].revents & POLLOUT) /* something to write */
+        conn_write(i);
     }
   }
 }
 
-void check_conn_marked(int i) {
+static void check_conn_marked(int i) {
   connection_t *conn;
 
   conn = connection_array[i];
@@ -329,7 +329,7 @@ void check_conn_marked(int i) {
   }
 }
 
-int prepare_for_poll(int *timeout) {
+static int prepare_for_poll(int *timeout) {
   int i;
 //  connection_t *conn = NULL;
   connection_t *tmpconn;
@@ -446,7 +446,7 @@ int prepare_for_poll(int *timeout) {
   }
 #endif
 
-int do_main_loop(void) {
+static int do_main_loop(void) {
   int i;
   int timeout;
   int poll_result;
@@ -536,11 +536,13 @@ int do_main_loop(void) {
     if(poll_result > 0) { /* we have at least one connection to deal with */
       /* do all the reads first, so we can detect closed sockets */
       for(i=0;i<nfds;i++)
-        check_conn_read(i); /* this also blows away broken connections */
+        if(poll_array[i].revents & POLLIN) /* something to read */
+          conn_read(i); /* this also blows away broken connections */
 
       /* then do the writes */
       for(i=0;i<nfds;i++)
-        check_conn_write(i);
+        if(poll_array[i].revents & POLLOUT) /* something to write */
+          conn_write(i);
 
       /* any of the conns need to be closed now? */
       for(i=0;i<nfds;i++)
@@ -571,7 +573,7 @@ static void catch(int the_signal) {
   }
 }
 
-void dumpstats(void) { /* dump stats to stdout */
+static void dumpstats(void) { /* dump stats to stdout */
   int i;
   connection_t *conn;
   struct timeval now;
