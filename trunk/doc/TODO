@@ -178,6 +178,8 @@ Mid-term:
           get circuit_launch_new to do the right thing.
         - Rotate tls-level connections -- make new ones, expire old ones.
           So we get actual key rotation, not just symmetric key rotation
+        - And learn to transfer a circuit from one conn to another, so we
+          can empty conns to expire them.
         o Are there anonymity issues with sequential streamIDs? Sequential
           circIDs? Eg an attacker can learn how many there have been.
           The fix is to initialize them randomly rather than at 1.
@@ -237,12 +239,14 @@ NICK    . Daemonize and package
                 o Handle multihomed servers (config variable to set IP)
 
 In the distant future:
+        D tunnel tor cell protocol over http, for people who need to
+          do http
+        D better transport than tcp: reliable is necessary, but
+          out-of-order delivery is fine (to some extent).
         D Load balancing between router twins
                 D Keep track of load over links/nodes, to
                   know who's hosed
 SPEC!!  D Non-clique topologies
-        D Implement our own memory management, at least for common structs
-          (Not ever necessary?)
         D Advanced directory servers
                 D Automated reputation management
 SPEC!!          D Figure out how to do threshold directory servers
