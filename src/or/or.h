@@ -112,6 +112,9 @@
 /* default cipher function */
 #define ONION_DEFAULT_CIPHER ONION_CIPHER_DES
 
+#define RECEIVE_WINDOW_START 100
+#define RECEIVE_WINDOW_INCREMENT 10
+
 typedef uint16_t aci_t;
 
 typedef struct
@@ -240,6 +243,8 @@ typedef struct
   uint16_t n_port;
   connection_t *p_conn;
   connection_t *n_conn;
+  int n_receive_window;
+  int p_receive_window;
 
   aci_t p_aci; /* connection identifiers */
   aci_t n_aci;
@@ -370,6 +375,7 @@ void circuit_about_to_close_connection(connection_t *conn);
 void command_process_cell(cell_t *cell, connection_t *conn);
 
 void command_process_create_cell(cell_t *cell, connection_t *conn);
+void command_process_sendme_cell(cell_t *cell, connection_t *conn);
 void command_process_data_cell(cell_t *cell, connection_t *conn);
 void command_process_destroy_cell(cell_t *cell, connection_t *conn);
 
@@ -402,6 +408,8 @@ int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
 
+int connection_outbuf_too_full(connection_t *conn);
+int connection_wants_to_flush(connection_t *conn);
 int connection_flush_buf(connection_t *conn);
 
 int connection_write_to_buf(char *string, int len, connection_t *conn);
@@ -413,6 +421,7 @@ void connection_increment_receiver_bucket (connection_t *conn);
 void connection_increment_send_timeval(connection_t *conn);
 void connection_init_timeval(connection_t *conn);
 
+int connection_speaks_cells(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
 int connection_send_destroy(aci_t aci, connection_t *conn);
@@ -423,6 +432,7 @@ int connection_process_inbuf(connection_t *conn);
 int connection_package_raw_inbuf(connection_t *conn);
 int connection_process_cell_from_inbuf(connection_t *conn);
 
+int connection_consider_sending_sendme(connection_t *conn);
 int connection_finished_flushing(connection_t *conn);
 
 /********************************* connection_ap.c ****************************/
@@ -513,13 +523,14 @@ connection_t *connect_to_router_as_op(routerinfo_t *router);
 void connection_watch_events(connection_t *conn, short events);
 void connection_stop_reading(connection_t *conn);
 void connection_start_reading(connection_t *conn);
+void connection_stop_writing(connection_t *conn);
+void connection_start_writing(connection_t *conn);
 
 void check_conn_read(int i);
 void check_conn_marked(int i);
 void check_conn_write(int i);
 
 int prepare_for_poll(int *timeout);
-void increment_receiver_buckets(void);
 
 int do_main_loop(void);
 

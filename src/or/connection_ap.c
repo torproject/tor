@@ -343,14 +343,17 @@ int connection_ap_process_data_cell(cell_t *cell, connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_AP);
 
-  if(conn->state == AP_CONN_STATE_OPEN) {
-    log(LOG_DEBUG,"connection_ap_process_data_cell(): In state 'open', writing to buf.");
-    return connection_write_to_buf(cell->payload, cell->length, conn);
+  if(conn->state != AP_CONN_STATE_OPEN) {
+    /* we should not have gotten this cell */
+    log(LOG_DEBUG,"connection_ap_process_data_cell(): Got a data cell when not in 'open' state. Closing.");
+    return -1;
   }
 
-  /* else we shouldn't have gotten this cell */
-  log(LOG_DEBUG,"connection_ap_process_data_cell(): Got a data cell when not in 'open' state. Closing.");
-  return -1;
+  log(LOG_DEBUG,"connection_ap_process_data_cell(): In state 'open', writing to buf.");
+
+  if(connection_write_to_buf(cell->payload, cell->length, conn) < 0)
+    return -1;
+  return connection_consider_sending_sendme(conn);
 }     
 
 int connection_ap_finished_flushing(connection_t *conn) {
@@ -360,7 +363,8 @@ int connection_ap_finished_flushing(connection_t *conn) {
   switch(conn->state) {
     case AP_CONN_STATE_OPEN:
       /* FIXME down the road, we'll clear out circuits that are pending to close */
-      connection_watch_events(conn, POLLIN);
+      connection_stop_writing(conn);
+      connection_consider_sending_sendme(conn);
       return 0;
     default:
       log(LOG_DEBUG,"Bug: connection_ap_finished_flushing() called in unexpected state.");
@@ -377,7 +381,7 @@ int connection_ap_create_listener(RSA *prkey, struct sockaddr_in *local) {
 }
 
 int connection_ap_handle_listener_read(connection_t *conn) {
-  log(LOG_NOTICE,"AP: Received a connection request. Waiting for keys.");
+  log(LOG_NOTICE,"AP: Received a connection request. Waiting for SS.");
   return connection_handle_listener_read(conn, CONN_TYPE_AP, AP_CONN_STATE_SS_WAIT);
 } 
 

@@ -26,26 +26,26 @@ void buf_free(char *buf) {
 
 int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_datalen, int *reached_eof) {
 
-  /* read from socket s, writing onto buf+buf_datalen. Read at most
-   * 'at_most' bytes, and also don't read more than will fit based on buflen.
+  /* read from socket s, writing onto buf+buf_datalen. If at_most is >= 0 then
+   * read at most 'at_most' bytes, and in any case don't read more than will fit based on buflen.
    * If read() returns 0, set *reached_eof to 1 and return 0. If you want to tear
    * down the connection return -1, else return the number of bytes read.
    */
 
   int read_result;
 
-  assert(buf && *buf && buflen && buf_datalen && reached_eof && (s>=0) && (at_most >= 0));
+  assert(buf && *buf && buflen && buf_datalen && reached_eof && (s>=0));
 
   /* this is the point where you would grow the buffer, if you want to */
 
-  if(*buflen - *buf_datalen < at_most)
+  if(at_most < 0 || *buflen - *buf_datalen < at_most)
     at_most = *buflen - *buf_datalen; /* take the min of the two */
     /* (note that this only modifies at_most inside this function) */
 
   if(at_most == 0)
     return 0; /* we shouldn't read anything */
 
-  log(LOG_DEBUG,"read_to_buf(): reading at most %d bytes.",at_most);
+//  log(LOG_DEBUG,"read_to_buf(): reading at most %d bytes.",at_most);
   read_result = read(s, *buf+*buf_datalen, at_most);
   if (read_result < 0) {
     if(errno!=EAGAIN) { /* it's a real error */
@@ -58,7 +58,7 @@ int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_data
     return 0;
   } else { /* we read some bytes */
     *buf_datalen += read_result;
-    log(LOG_DEBUG,"read_to_buf(): Read %d bytes. %d on inbuf.",read_result, *buf_datalen);
+//    log(LOG_DEBUG,"read_to_buf(): Read %d bytes. %d on inbuf.",read_result, *buf_datalen);
     return read_result;
   }
 
@@ -90,8 +90,8 @@ int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_flushlen, size_t *b
     *buf_datalen -= write_result;
     *buf_flushlen -= write_result;
     memmove(*buf, *buf+write_result, *buf_datalen);
-    log(LOG_DEBUG,"flush_buf(): flushed %d bytes, %d ready to flush, %d remain.",
-        write_result,*buf_flushlen,*buf_datalen);
+//    log(LOG_DEBUG,"flush_buf(): flushed %d bytes, %d ready to flush, %d remain.",
+//       write_result,*buf_flushlen,*buf_datalen);
     return *buf_flushlen;
   }
 }
@@ -114,7 +114,7 @@ int write_to_buf(char *string, size_t string_len,
 
   memcpy(*buf+*buf_datalen, string, string_len);
   *buf_datalen += string_len;
-  log(LOG_DEBUG,"write_to_buf(): added %d bytes to buf (now %d total).",string_len, *buf_datalen);
+//  log(LOG_DEBUG,"write_to_buf(): added %d bytes to buf (now %d total).",string_len, *buf_datalen);
   return *buf_datalen;
 
 }

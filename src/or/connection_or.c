@@ -97,7 +97,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       return 0;
     case OR_CONN_STATE_OPEN:
       /* FIXME down the road, we'll clear out circuits that are pending to close */
-      connection_watch_events(conn, POLLIN);
+      connection_stop_writing(conn);
       return 0;
     default:
       log(LOG_DEBUG,"Bug: connection_or_finished_flushing() called in unexpected state.");
@@ -187,9 +187,8 @@ connection_t *connection_or_connect(routerinfo_t *router, RSA *prkey, struct soc
         return NULL;
       }
 
-      /* i think only pollout is needed, but i'm curious if pollin ever gets caught -RD */
       log(LOG_DEBUG,"connection_or_connect() : connect in progress.");
-      connection_watch_events(conn, POLLOUT | POLLIN);
+      connection_watch_events(conn, POLLIN | POLLOUT); /* writable indicates finish, readable indicates broken link */
       *result = 1; /* connecting */
       return conn;
 

@@ -57,6 +57,9 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circ->p_aci = p_aci;
   /* circ->n_aci remains 0 because we haven't identified the next hop yet */
 
+  circ->n_receive_window = RECEIVE_WINDOW_START;
+  circ->p_receive_window = RECEIVE_WINDOW_START;
+
   circuit_add(circ);
 
   return circ;
