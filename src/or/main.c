@@ -111,7 +111,25 @@ int connection_remove(connection_t *conn) {
   return 0;  
 }
 
-connection_t *connection_get_by_addr_port(uint32_t addr, uint16_t port) {
+connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
+  int i;
+  connection_t *conn;
+
+  /* first check if it's there exactly */
+  conn = connection_exact_get_by_addr_port(addr,port);
+  if(conn)
+    return conn;
+
+  /* now check if any of the other open connections are a twin for this one */
+
+  /* XXX */
+
+  /* guess not */
+  return NULL;
+
+}
+
+connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i;
   connection_t *conn;
 

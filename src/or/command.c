@@ -91,7 +91,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
   }
 
   if(circ->n_addr && circ->n_port) { /* must send create cells to the next router */
-    n_conn = connection_get_by_addr_port(circ->n_addr,circ->n_port);
+    n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
     if(!n_conn || n_conn->type != CONN_TYPE_OR) {
       /* i've disabled making connections through OPs, but it's definitely
        * possible here. I'm not sure if it would be a bug or a feature. -RD

@@ -583,7 +583,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Router identified as %s:%u.",
       router->address,ntohs(router->or_port));
 
-  if(connection_get_by_addr_port(addr,port)) {
+  if(connection_exact_get_by_addr_port(addr,port)) {
     log(LOG_DEBUG,"or_handshake_server_process_auth(): That router is already connected. Dropping.");
     return -1;
   }

@@ -202,7 +202,7 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
 
   log(LOG_DEBUG,"ap_handshake_establish_circuit(): Looking for firsthop '%s:%u'",
       firsthop->address,ntohs(firsthop->or_port));
-  n_conn = connection_get_by_addr_port(firsthop->addr,firsthop->or_port);
+  n_conn = connection_twin_get_by_addr_port(firsthop->addr,firsthop->or_port);
   if(!n_conn) { /* not currently connected */
     if(global_role & ROLE_OR_CONNECT_ALL) { /* we would be connected if he were up. but he's not. */
       log(LOG_DEBUG,"ap_handshake_establish_circuit(): Route's firsthop isn't connected.");
