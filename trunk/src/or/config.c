@@ -311,7 +311,7 @@ options_act(void) {
   }
 
   /* Set up accounting */
-  if (get_options()->AccountingMaxKB)
+  if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
   if(retry_all_listeners(1) < 0) {
