@@ -332,16 +332,9 @@ handle_control_setevents(connection_t *conn, uint16_t len, const char *body)
 int
 decode_hashed_password(char *buf, const char *hashed)
 {
-  size_t len = strlen(hashed)+2;
-  char *base64 = tor_malloc(len);
   char decoded[64];
-  int r;
-  if (tor_snprintf(base64, len, "%s\n", hashed)<0)
-    return -1;
-  if ((r =  base64_decode(decoded, sizeof(decoded),
-                          base64, strlen(base64))) !=
-      S2K_SPECIFIER_LEN+DIGEST_LEN) {
-    printf("BB %d\n",r);
+  if (base64_decode(decoded, sizeof(decoded), hashed, strlen(hashed))
+      != S2K_SPECIFIER_LEN+DIGEST_LEN) {
     return -1;
   }
   if (buf)
