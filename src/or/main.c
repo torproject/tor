@@ -465,7 +465,7 @@ int clique_mode(void) {
 /** Return true iff we are trying to be a server.
  */
 int server_mode(void) {
-  return (options.ORPort != 0);
+  return (options.ORPort != 0 || options.ORBindAddress);
 }
 
 /** Remember if we've advertised ourselves to the dirservers. */
@@ -479,7 +479,7 @@ int advertised_server_mode(void) {
 
 /** Return true iff we are trying to be a socks proxy. */
 int proxy_mode(void) {
-  return (options.SocksPort != 0);
+  return (options.SocksPort != 0 || options.SocksBindAddress);
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per
