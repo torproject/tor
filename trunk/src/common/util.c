@@ -1116,7 +1116,7 @@ int tor_socket_errno(int sock)
  */
 #ifdef MS_WINDOWS
 #define E(code, s) { code, (s " [" #code " ]") }
-struct { int code; char *msg; } windows_socket_errors = {
+struct { int code; const char *msg; } windows_socket_errors[] = {
   E(WSAEINTR, "Interrupted function call"),
   E(WSAEACCES, "Permission denied"),
   E(WSAEFAULT, "Bad address"),
@@ -1128,19 +1128,19 @@ struct { int code; char *msg; } windows_socket_errors = {
   E(WSAENOTSOCK, "Socket operation on nonsocket"),
   E(WSAEDESTADDRREQ, "Destination address required"),
   E(WSAEMSGSIZE, "Message too long"),
-  E(WASEPROTOTYPE, "Protocol wrong for socket"),
+  E(WSAEPROTOTYPE, "Protocol wrong for socket"),
   E(WSAENOPROTOOPT, "Bad protocol option"),
   E(WSAEPROTONOSUPPORT, "Protocol not supported"),
   E(WSAESOCKTNOSUPPORT, "Socket type not supported"),
   /* What's the difference between NOTSUPP and NOSUPPORT? :) */
-  E(WASEOPNOTSUPP, "Operation not supported"),
+  E(WSAEOPNOTSUPP, "Operation not supported"),
   E(WSAEPFNOSUPPORT,  "Protocol family not supported"),
   E(WSAEAFNOSUPPORT, "Address family not supported by protocol family"),
   E(WSAEADDRINUSE, "Address already in use"),
   E(WSAEADDRNOTAVAIL, "Cannot assign requested address"),
   E(WSAENETDOWN, "Network is down"),
   E(WSAENETUNREACH, "Network is unreachable"),
-  E(WSAENETRESET, "Network dropped connection on reset")
+  E(WSAENETRESET, "Network dropped connection on reset"),
   E(WSAECONNABORTED, "Software caused connection abort"),
   E(WSAECONNRESET, "Connection reset by peer"),
   E(WSAENOBUFS, "No buffer space avaialable"),
@@ -1156,8 +1156,10 @@ struct { int code; char *msg; } windows_socket_errors = {
   E(WSASYSNOTREADY, "Network subsystem is unavailable"),
   E(WSAVERNOTSUPPORTED, "Winsock.dll out of range"),
   E(WSANOTINITIALISED, "Successful WSAStartup not yet performed"),
-  E(WSAEDISCONN, "Graceful shutdown no in progress"),
+  E(WSAEDISCON, "Graceful shutdown now in progress"),
+#ifdef WSATYPE_NOT_FOUND
   E(WSATYPE_NOT_FOUND, "Class type not found"),
+#endif
   E(WSAHOST_NOT_FOUND, "Host not found"),
   E(WSATRY_AGAIN, "Nonauthoritative host not found"),
   E(WSANO_RECOVERY, "This is a nonrecoverable error"),
