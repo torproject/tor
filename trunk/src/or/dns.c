@@ -337,9 +337,7 @@ static void dns_found_answer(char *address, uint32_t addr) {
       if(connection_edge_end(pend->conn, END_STREAM_REASON_RESOLVEFAILED, NULL) < 0)
         log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
     } else {
-      /* XXX should call assert_connection_ok here */
-      assert(pend->conn->type >= _CONN_TYPE_MIN);
-      assert(pend->conn->type <= _CONN_TYPE_MAX);
+      assert_connection_ok(pend->conn, time(NULL));
       connection_exit_connect(pend->conn);
     }
     resolve->pending_connections = pend->next;
