@@ -360,6 +360,8 @@ static void run_connection_housekeeping(int i, time_t now) {
         connection_mark_for_close(conn);
         conn->hold_open_until_flushed = 1; /* give it a last chance */
       }
+    } else {
+      connection_mark_for_close(conn);
     }
     return;
   }
