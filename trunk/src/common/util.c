@@ -989,7 +989,8 @@ get_uname(void)
 #endif
   if (!uname_result_is_set) {
 #ifdef HAVE_UNAME
-    if (!uname((&u))) {
+    if (uname(&u) != -1) {
+      /* (linux says 0 is success, solaris says 1 is success) */
       snprintf(uname_result, 255, "%s %s %s",
                u.sysname, u.nodename, u.machine);
       uname_result[255] = '\0';
