@@ -32,11 +32,13 @@ errors. (You can minimize this window, but do not close it.)
 
 <p>Tor comes configured as a client by default. It uses a built-in
 default configuration file, and most people won't need to change any of
-the settings.</p>
+the settings. Tor is now installed.</p>
 
 <p>After installing Tor, you should install <a
-href="http://www.privoxy.org/">privoxy</a>, which is a filtering web proxy
-that integrates well with Tor. Privoxy will appear in your system tray:
+href="http://www.privoxy.org/">Privoxy</a> (click on 'recent releases',
+then scroll down to the Win32 installer packages). Privoxy is a filtering
+web proxy that integrates well with Tor. It will appear in your system
+tray:
 </p>
 
 <img alt="privoxy icon in the system tray" src="http://tor.freehaven.net/img/GCS_004.jpg" />
@@ -62,14 +64,16 @@ thing, to hide your SSL traffic:</p>
 <img alt="privoxy points to tor" src="http://tor.freehaven.net/img/GCS_002.jpg" />
 
 <p>Using privoxy is <b>necessary</b> because <a
-href="http://tor.freehaven.net/cvs/tor/doc/CLIENTS">Mozilla leaks your
-DNS requests when it uses a socks proxy directly</a>. Privoxy also gives
-you good html scrubbing.</p>
+href="http://tor.freehaven.net/cvs/tor/doc/CLIENTS">browsers leak your
+DNS requests when they use a socks proxy directly</a>, which is bad for
+your anonymity. Privoxy also removes certain dangerous headers from your
+web requests, and also blocks obnoxious ad sites like Doubleclick.</p>
 
 <p>To test if it's working, go to <a
-href="http://www.junkbusters.com/cgi-bin/privacy">http://www.junkbusters.com/cgi-bin/privacy</a>
-and see what IP it says you're coming from.
-</p>
+href="http://peertech.org/privacy-knoppix/">this site</a> and see
+what IP it says you're coming from. (If it's down, you can try the
+<a href="http://www.junkbusters.com/cgi-bin/privacy">junkbusters</a>
+site instead.)</p>
 
 <p>
 If you have a personal firewall, be sure to allow local connections to
