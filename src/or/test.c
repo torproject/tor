@@ -260,7 +260,6 @@ test_crypto()
   env1 = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
   test_neq(env1, 0);
   test_eq(crypto_cipher_generate_key(env1), 0);
-  test_eq(crypto_cipher_set_iv(env1, ""), 0);
   test_eq(crypto_cipher_encrypt_init_cipher(env1), 0);
   for(i = 0; i < 1024; ++i) {
     data1[i] = (char) i*73;
@@ -283,8 +282,6 @@ test_crypto()
   test_neq(env2, 0);
   j = crypto_cipher_generate_key(env1);
   crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
-  crypto_cipher_set_iv(env1, "12345678901234567890");
-  crypto_cipher_set_iv(env2, "12345678901234567890");
   crypto_cipher_encrypt_init_cipher(env1);
   crypto_cipher_decrypt_init_cipher(env2);
 
@@ -318,7 +315,6 @@ test_crypto()
   env2 = crypto_new_cipher_env();
   test_neq(env2, 0);
   crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
-  crypto_cipher_set_iv(env2, "12345678901234567890");
   crypto_cipher_encrypt_init_cipher(env2);
   for (j = 0; j < 1024-16; j += 17) {
     crypto_cipher_encrypt(env2, data1+j, 17, data3+j);
