@@ -909,7 +909,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     smartlist_subtract(sl,excludedexits);
     if (options.StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
-    router = smartlist_choose(sl);
+    router = routerlist_sl_choose_by_bandwidth(sl);
   } else {
     /* Either there are no pending connections, or no routers even seem to
      * possibly support any of them.  Choose a router at random. */
@@ -923,7 +923,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     smartlist_subtract(sl,excludedexits);
     if (options.StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
-    router = smartlist_choose(sl);
+    router = routerlist_sl_choose_by_bandwidth(sl);
   }
 
   smartlist_free(preferredexits);
