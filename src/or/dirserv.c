@@ -376,6 +376,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
 
   for (i = 0; i < n_descriptors; ++i) {
     strncat(cp, descriptor_list[i]->descriptor, descriptor_list[i]->desc_len);
+    /* XXX Nick: do strncat and friends null-terminate? man page is ambiguous. */
     cp += descriptor_list[i]->desc_len;
     assert(!*cp);
   }
@@ -400,6 +401,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
       ((int)digest[2])&0xff,((int)digest[3])&0xff);
 
   strncpy(cp, "-----BEGIN SIGNATURE-----\n", maxlen-i);
+  cp[maxlen-i-1] = 0;
 
   i = strlen(s);
   cp = s+i;
