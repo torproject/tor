@@ -8,7 +8,7 @@ NAME=tor
 DESC="tor daemon"
 TORPID=/var/run/tor/tor.pid
 DEFAULTSFILE=/etc/default/$NAME
-WAITFORDAEMON=10
+WAITFORDAEMON=35
 ARGS=""
 MAX_FILEDESCRIPTORS=4096
 
@@ -64,7 +64,7 @@ case "$1" in
 	if test ! -f $TORPID -o -z "$pid"
 	then
 		echo "not running (there is no $TORPID)."
-	elif start-stop-daemon --stop --quiet --pidfile $TORPID --exec $DAEMON
+	elif start-stop-daemon --stop --signal INT --quiet --pidfile $TORPID --exec $DAEMON
 	then
 		wait_for_deaddaemon $pid
 		echo "$NAME."
