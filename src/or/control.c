@@ -516,7 +516,7 @@ control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
   set_uint32(msg+1, htonl(circ->global_identifier));
   strlcpy(msg+5,path,path_len+1);
 
-  send_control_event(EVENT_STREAM_STATUS, (uint16_t)(path_len+6), msg);
+  send_control_event(EVENT_CIRCUIT_STATUS, (uint16_t)(path_len+6), msg);
   tor_free(path);
   tor_free(msg);
   return 0;
@@ -529,17 +529,20 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
 {
   char *msg;
   size_t len;
+  char buf[256];
   tor_assert(conn->type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
 
   if (!EVENT_IS_INTERESTING(EVENT_STREAM_STATUS))
     return 0;
 
-  len = strlen(conn->socks_request->address);
+  tor_snprintf(buf, sizeof(buf), "%s:%d",
+               conn->socks_request->address, conn->socks_request->port),
+  len = strlen(buf);
   msg = tor_malloc(5+len+1);
   msg[0] = (uint8_t) tp;
   set_uint32(msg+1, htonl(conn->s)); /* ???? Is this a security problem? */
-  strlcpy(msg+5, conn->socks_request->address, len+1);
+  strlcpy(msg+5, buf, len+1);
 
   send_control_event(EVENT_STREAM_STATUS, (uint16_t)(5+len+1), msg);
   tor_free(msg);
