@@ -507,8 +507,7 @@ routerlist_remove_old_routers(int age)
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     router = smartlist_get(routerlist->routers, i);
     if (router->published_on <= cutoff &&
-/* XXX008 don't get fooled by cached dir ports */
-      !router->dir_port) {
+      !router->is_trusted_dir) {
       /* Too old.  Remove it. But never remove dirservers! */
       log_fn(LOG_INFO,"Forgetting obsolete routerinfo for node %s.", router->nickname);
       routerinfo_free(router);
