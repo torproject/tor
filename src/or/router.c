@@ -651,6 +651,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
   tor_free(onion_pkey);
   tor_free(identity_pkey);
+  tor_free(bandwidth_usage);
 
   if(result < 0 || result >= maxlen) {
     /* apparently different glibcs do different things on snprintf error.. so check both */
