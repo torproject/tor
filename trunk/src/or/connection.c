@@ -224,6 +224,12 @@ _connection_mark_for_close(connection_t *conn, char reason)
       ;
     }
   conn->marked_for_close = 1;
+
+  /* in case we're going to be held-open-til-flushed, reset
+   * the number of seconds since last successful write, so
+   * we get our whole 15 seconds */
+  conn->timestamp_lastwritten = time(NULL);
+
   return retval;
 }
 
