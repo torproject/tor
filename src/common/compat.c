@@ -569,7 +569,7 @@ get_uname(void)
         } else {
           for (i=0; win_version_table[i].major>=0; ++i) {
             if (win_version_table[i].major == info.dwMajorVersion &&
-                win_version_table[i].minor == info.dwMinorversion) {
+                win_version_table[i].minor == info.dwMinorVersion) {
               plat = win_version_table[i].version;
               break;
             }
@@ -580,10 +580,12 @@ get_uname(void)
         } else {
           if (info.dwMajorVersion > 5 ||
               (info.dwMajorVersion==5 && info.dwMinorVersion>2))
-            tor_snprintf("Very recent version of Windows [major=%d,minor=%d]",
+            tor_snprintf(uname_result, sizeof(uname_result),
+                         "Very recent version of Windows [major=%d,minor=%d]",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion);
           else
-            tor_snprintf("Unrecognized version of Windows [major=%d,minor=%d]",
+            tor_snprintf(uname_result, sizeof(uname_result),
+                         "Unrecognized version of Windows [major=%d,minor=%d]",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion);
         }
 #else
