@@ -20,11 +20,11 @@ Bugs:
         o When it can't resolve any dirservers, it is useless from then on.
           We should make it reload the RouterFile if it has no dirservers.
         o Sometimes it picks a middleman node as the exit for a circuit.
-        - if you specify a non-dirserver as exitnode or entrynode, when it
+        o if you specify a non-dirserver as exitnode or entrynode, when it
           makes the first few circuits it hasn't yet fetched the directory,
           so it warns that it doesn't know the node.
-        - make 'make test' exit(1) if a test fails.
-        - fix buffer unit test so it passes
+        o make 'make test' exit(1) if a test fails.
+        . fix buffer unit test so it passes
 
 Short-term:
         - put IP into the descriptor, so clients don't need to resolve things
@@ -71,7 +71,7 @@ Short-term:
         o Remember address and port when beginning. 
         - Extend by nickname/hostname/something, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
-        - remove per-connection rate limiting
+        X remove per-connection rate limiting
         - Make it harder to circumvent bandwidth caps: look at number of bytes
           sent across sockets, not number sent inside TLS stream.
 
@@ -128,7 +128,7 @@ NICK            . Handle half-open connections
                         . oprofile (installed in RH >8.0)
 NICK    . Daemonize and package
                 o Teach it to fork and background
-                - Red Hat spec file
+                . Red Hat spec file
                 o Debian spec file equivalent
         . Portability
                 . Which .h files are we actually using?
