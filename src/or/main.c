@@ -727,7 +727,7 @@ static void dumpstats(int severity) {
     log(severity,"Average outgoing cell fullness: %2.3f%%",
            100*(((double)stats_n_data_bytes_packaged) / 
                 (stats_n_data_cells_packaged*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
-  if (stats_n_data_cells_packaged)
+  if (stats_n_data_cells_received)
     log(severity,"Average incoming cell fullness: %2.3f%%",
            100*(((double)stats_n_data_bytes_received) / 
                 (stats_n_data_cells_received*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
