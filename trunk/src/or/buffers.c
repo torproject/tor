@@ -544,7 +544,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
     case 'C': /* connect */
       strcpy(req->reply,
 "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
-"Content-Type: text/html; charset=iso-8859-1\r\n"
+"Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
 "<html>\n"
 "<head>\n"
 "<title>Tor is not an HTTP Proxy</title>\n"
@@ -553,7 +553,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 "It appears you have configured your web browser to use Tor as an HTTP Proxy.\n"
 "This is not correct: Tor provides a SOCKS proxy. Please configure your\n"
 "client accordingly.\n"
-"See <a href=\"http://freehaven.net/tor/cvs/INSTALL\">http://freehaven.net/tor/cvs/INSTALL</a for more information.\n"
+"See <a href=\"http://freehaven.net/tor/cvs/INSTALL\">http://freehaven.net/tor/cvs/INSTALL</a> for more information.\n"
 "<!-- Plus this comment, to make the body response more than 512 bytes, so IE will be willing to display it. Comment comment comment comment comment comment comment comment comment comment comment comment.-->\n"
 "</body>\n"
 "</html>\n"
@@ -561,7 +561,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       req->replylen = strlen(req->reply)+1;
       /* fall through */
     default: /* version is not socks4 or socks5 */
-      log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an httpd proxy.)",
+      log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an http proxy.)",
              *(buf->mem));
       return -1;
   }
