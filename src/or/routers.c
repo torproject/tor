@@ -77,6 +77,37 @@ routerinfo_t *router_pick_directory_server(void) {
   return dirserver;
 }
 
+routerinfo_t *router_pick_randomly_from_running(void) {
+  int i,j;
+  int num_running=0;
+
+  if(!directory)
+    return NULL;
+
+  for(i=0;i<directory->n_routers;i++) {
+    if(directory->routers[i]->is_running)
+      num_running++;
+  }
+
+  if(!num_running) {
+    log_fn(LOG_INFO,"No routers are running. Returning NULL.");
+    return NULL;
+  }
+  j = crypto_pseudo_rand_int(num_running);
+  for (i=0;i<directory->n_routers;i++) {
+    if (directory->routers[i]->is_running) {
+      if (j)
+        --j;
+      else {
+        log_fn(LOG_DEBUG, "Chose server '%s'", directory->routers[i]->nickname);
+        return directory->routers[i];
+      }
+    }
+  }
+  assert(0);
+  return NULL;
+}
+
 void router_upload_desc_to_dirservers(void) {
   int i;
   routerinfo_t *router;

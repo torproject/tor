@@ -730,15 +730,14 @@ cpath_build_state_t *onion_new_cpath_build_state(void);
 
 /********************************* routers.c ***************************/
 
-int learn_my_address(struct sockaddr_in *me);
 void router_retry_connections(void);
 routerinfo_t *router_pick_directory_server(void);
+routerinfo_t *router_pick_randomly_from_running(void);
 void router_upload_desc_to_dirservers(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 routerinfo_t *router_get_by_nickname(char *nickname);
 void router_get_directory(directory_t **pdirectory);
-int router_is_me(uint32_t addr, uint16_t port);
 void router_mark_as_down(char *nickname);
 int router_get_list_from_file(char *routerfile);
 int router_get_router_hash(char *s, char *digest);

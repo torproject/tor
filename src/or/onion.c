@@ -439,20 +439,14 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
 {
   int cur_len;
   crypt_path_t *cpath, *hop;
-  routerinfo_t **rarray, *r;
+  routerinfo_t *r;
   routerinfo_t *choice;
-  int rarray_len;
   int i;
-  directory_t *dir;
   int n_failures;
 
   assert(head_ptr);
   assert(router_out);
 
-  router_get_directory(&dir);
-  rarray = dir->routers;
-  rarray_len = dir->n_routers;
-  
   if (!*head_ptr) {
     cur_len = 0;
   } else {
@@ -486,14 +480,26 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   /* XXX through each of these, don't pick nodes that are down */
   if(cur_len == 0) { /* picking entry node */
     log_fn(LOG_DEBUG, "Contemplating first hop: random choice.");
-    choice = rarray[crypto_pseudo_rand_int(rarray_len)];
+    choice = router_pick_randomly_from_running();
+    if(!choice) {
+      log_fn(LOG_WARN,"No routers are running while picking entry node. Failing.");
+      return -1;
+    }
   } else if (cur_len == state->desired_path_len - 1) { /* Picking last node */
     log_fn(LOG_DEBUG, "Contemplating last hop: choice already made.");
     choice = router_get_by_nickname(state->chosen_exit);
-    /* XXX check if null */
+    if(!choice) {
+      log_fn(LOG_WARN,"Our chosen exit %s is no longer in the directory? Failing.",
+             state->chosen_exit);
+      return -1;
+    }
   } else {
     log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
-    choice = rarray[crypto_pseudo_rand_int(rarray_len)];
+    choice = router_pick_randomly_from_running();
+    if(!choice) {
+      log_fn(LOG_WARN,"No routers are running while picking intermediate node. Failing.");
+      return -1;
+    }
   }
   log_fn(LOG_DEBUG,"Contemplating router %s for hop %d (exit is %s)",
          choice->nickname, cur_len, state->chosen_exit);
