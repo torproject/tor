@@ -48,6 +48,7 @@ N  - Make millisecond accuracy work on win32
    - Solve the MSVC nuisance where __FILE__ contains the full path.
      People are getting confused about why their errors are coming from
      C:\Documents and Settings\Nick Mathewson\My Documents\src\tor .
+   - GPSLocation optional config string.
 
 Tier two:
 
