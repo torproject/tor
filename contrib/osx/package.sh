@@ -129,7 +129,7 @@ groff doc/tor.1 -T ps -m man | ps2pdf - $DOC/tor-reference.pdf
 groff doc/tor-resolve.1 -T ps -m man | ps2pdf - $DOC/tor-resolve.pdf
 
 mkdir $DOC/Advanced
-cp doc/tor-spec.txt doc/rend-spec.txt doc/control-spec.txt doc/socks-extensions.txt $DOC/Advanced
+cp doc/tor-spec.txt doc/rend-spec.txt doc/control-spec.txt doc/socks-extensions.txt doc/version-spec.txt $DOC/Advanced
 cp doc/CLIENTS $DOC/Advanced/CLIENTS.txt
 cp doc/HACKING $DOC/Advanced/HACKING.txt
 cp ChangeLog $DOC/Advanced/ChangeLog.txt

@@ -1790,37 +1790,7 @@ void clear_trusted_dir_servers(void);
 /** Structure to hold parsed Tor versions.  This is a little messier
  * than we would like it to be, because we changed version schemes with 0.1.0.
  *
- * Before 0.1.0, versions were of the format:
- *     MAJOR.MINOR.MICRO(status(PATCHLEVEL))?(-cvs)?
- * where MAJOR, MINOR, MICRO, and PATCHLEVEL are numbers, status is one of
- * "pre" (for an alpha release), "rc" (for a release candidate), or "." for a
- * release.  As a special case, "a.b.c" was equivalent to "a.b.c.0".  We
- * compare the elements in order (major, minor, micro, status, patchlevel,
- * cvs), with "cvs" preceding non-cvs.
- *
- * We would start each development branch with a final version in mind: say,
- * "0.0.8".  Our first pre-release would be "0.0.8pre1", followed by (for
- * example) "0.0.8pre2-cvs", "0.0.8pre2", "0.0.8pre3-cvs", "0.0.8rc1",
- * "0.0.8rc2-cvs", and "0.0.8rc2".  Finally, we'd release 0.0.8.  The stable
- * CVS branch would then be versioned "0.0.8.1-cvs", and any eventual bugfix
- * release would be "0.0.8.1".
- *
- * After 0.1.0, versions are of the format:
- *    MAJOR.MINOR.MICRO(.PATCHLEVEL([-.]status_tag)?)?
- * As before, MAJOR, MINOR, MICRO, and PATCHLEVEL are numbers, with an absent
- * number equivalent to 0.  All versions _should_ be distinguishable purely by
- * those four numbers; the status tag is purely informational.  If we *do*
- * encounter two versions that differ only by status tag, we compare them
- * lexically.
- *
- * Now, we start each development branch with (say) 0.1.1.1-alpha.
- * The patchlevel increments consistently as the status tag changes,
- * for example, as in: 0.1.1.2-alpha, 0.1.1.3-alpha, 0.1.1.4-rc
- * 0.1.1.5-rc, Eventually, we release 0.1.1.6.  The next patch release
- * is 0.1.1.7.
- *
- * Between these releases, CVS is versioned with a -cvs tag: after
- * 0.1.1.1-alpha comes 0.1.1.1-alpha-cvs, and so on.
+ * See version-spec.txt for the whole business.
  */
 typedef struct tor_version_t {
   int major;
