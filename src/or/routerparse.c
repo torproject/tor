@@ -1487,7 +1487,7 @@ int tor_version_parse(const char *s, tor_version_t *out)
   if (*cp == '-' || *cp == '.')
     ++cp;
   strlcpy(out->status_tag, cp, sizeof(out->status_tag));
-  if (0==strcmp(cp, "cvs") && out->major == 0 && out->minor == 0) {
+  if (0==strcmp(cp, "cvs")) {
     out->cvs = IS_CVS;
   } else {
     out->cvs = IS_NOT_CVS;
