@@ -88,7 +88,6 @@ void rotate_onion_key(void)
 crypto_pk_env_t *init_key_from_file(const char *fname)
 {
   crypto_pk_env_t *prkey = NULL;
-  int fd = -1;
   FILE *file = NULL;
 
   if (!(prkey = crypto_new_pk_env())) {
@@ -130,8 +129,6 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
  error:
   if (prkey)
     crypto_free_pk_env(prkey);
-  if (fd >= 0 && !file)
-    close(fd);
   if (file)
     fclose(file);
   return NULL;
