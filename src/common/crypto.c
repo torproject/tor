@@ -213,7 +213,7 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
     case CRYPTO_PK_RSA:
     if (env->key)
       RSA_free((RSA *)env->key);
-    env->key = (unsigned char *)RSA_generate_key(1024,65535, NULL, NULL);
+    env->key = (unsigned char *)RSA_generate_key(1024,65537, NULL, NULL);
     if (!env->key)
       return -1;
     break;
