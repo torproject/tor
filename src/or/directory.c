@@ -284,14 +284,13 @@ parse_http_url(char *headers, char **url)
   s = (char *)eat_whitespace_no_nl(s);
   if (!*s) return -1;
   start = s; /* this is it, assuming it's valid */
-  s = (char *)find_whitespace(s);
+  s = (char *)find_whitespace(start);
   if (!*s) return -1;
-  *s = 0;
   if(s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */
     *url = tor_malloc(s - start + 5);
     strcpy(*url,"/tor");
-    strlcpy(*url+4, start, s-start+1);
-    *url[s-start+4] = 0; /* null terminate it */
+    strlcpy((*url)+4, start, s-start+1);
+    (*url)[s-start+4] = 0; /* null terminate it */
   } else {
     *url = tor_strndup(start, s-start);
   }
