@@ -131,9 +131,9 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, siz
 
       choice = choice % (rarray_len);
       log(LOG_DEBUG,"new_route() : Chosen router %u.",choice);
-      if (choice == oldchoice) /* same router */
-      {
-	/* try again  */
+      if (choice == oldchoice ||
+        (oldchoice < rarray_len && !pkey_cmp(rarray[choice]->pkey, rarray[oldchoice]->pkey))) {
+        /* same router, or router twin. try again. */
 	i--;
 	continue;
       }

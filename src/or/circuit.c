@@ -287,14 +287,14 @@ int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
     return -1;
 
   if(crypt_type == 'e') {
-    log(LOG_DEBUG,"circuit_crypt(): Encrypting %d bytes.",inlen);
+//    log(LOG_DEBUG,"circuit_crypt(): Encrypting %d bytes.",inlen);
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
       /* 'e' means we're preparing to send it out. */
       for (i=0; i < circ->cpathlen; i++) /* moving from last to first hop 
                                           * Remember : cpath is in reverse order, i.e. last hop first
                                           */
       { 
-        log(LOG_DEBUG,"circuit_crypt() : Encrypting via cpath: Processing hop %u",circ->cpathlen-i);
+//        log(LOG_DEBUG,"circuit_crypt() : Encrypting via cpath: Processing hop %u",circ->cpathlen-i);
         thishop = circ->cpath[i];
     
         /* encrypt */
@@ -317,13 +317,13 @@ int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
       memcpy(in,out,inlen);
     }
   } else if(crypt_type == 'd') {
-    log(LOG_DEBUG,"circuit_crypt(): Decrypting %d bytes.",inlen);
+//    log(LOG_DEBUG,"circuit_crypt(): Decrypting %d bytes.",inlen);
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
       for (i=circ->cpathlen-1; i >= 0; i--) /* moving from first to last hop 
                                        * Remember : cpath is in reverse order, i.e. last hop first
                                        */
       { 
-        log(LOG_DEBUG,"circuit_crypt() : Decrypting via cpath: Processing hop %u",circ->cpathlen-i);
+//        log(LOG_DEBUG,"circuit_crypt() : Decrypting via cpath: Processing hop %u",circ->cpathlen-i);
         thishop = circ->cpath[i];
 
         /* encrypt */

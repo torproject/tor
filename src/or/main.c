@@ -91,6 +91,22 @@ int connection_remove(connection_t *conn) {
   return 0;  
 }
 
+int pkey_cmp(RSA *a, RSA *b) {
+  /* return 0 if a and b are "the same key". Return non-0 otherwise. */
+
+  int result;
+
+  if(!a || !b)
+    return -1;
+
+  assert(a->n && a->e && b->n && b->e);
+
+  result = BN_cmp(a->n, b->n);
+  if(result)
+    return result;
+  return BN_cmp(a->e, b->e);
+}
+
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
   /* Find a connection to the router described by addr and port,
    *   or alternately any router which knows its key.
@@ -99,16 +115,29 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
    */
   int i;
   connection_t *conn;
+  routerinfo_t *router;
 
   /* first check if it's there exactly */
   conn = connection_exact_get_by_addr_port(addr,port);
   if(conn && connection_state_is_open(conn)) {
+    log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found exact match.");
     return conn;
   }
 
   /* now check if any of the other open connections are a twin for this one */
 
-  /* XXX */
+  router = router_get_by_addr_port(addr,port);
+  if(!router)
+    return NULL;
+
+  for(i=0;i<nfds;i++) {
+    conn = connection_array[i];
+    assert(conn);
+    if(connection_state_is_open(conn) && !pkey_cmp(conn->pkey, router->pkey)) {
+      log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
+      return conn;
+    }
+  }
 
   /* guess not */
   return NULL;

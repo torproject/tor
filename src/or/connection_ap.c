@@ -195,8 +195,6 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
   free(route); /* we don't need it anymore */
 
   circ = circuit_new(0, conn); /* sets circ->p_aci and circ->p_conn */
-  circ->n_addr = firsthop->addr;
-  circ->n_port = firsthop->or_port;
   circ->state = CIRCUIT_STATE_OR_WAIT;
   circ->onion = onion;
   circ->onionlen = onionlen;
@@ -207,6 +205,8 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
       firsthop->address,ntohs(firsthop->or_port));
   n_conn = connection_twin_get_by_addr_port(firsthop->addr,firsthop->or_port);
   if(!n_conn) { /* not currently connected */
+    circ->n_addr = firsthop->addr;
+    circ->n_port = firsthop->or_port;
     if(global_role & ROLE_OR_CONNECT_ALL) { /* we would be connected if he were up. but he's not. */
       log(LOG_DEBUG,"ap_handshake_establish_circuit(): Route's firsthop isn't connected.");
       circuit_close(circ); 
@@ -221,11 +221,13 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
       return -1;
     }   
     conn->state = AP_CONN_STATE_OR_WAIT;
-    connection_watch_events(conn, 0); /* Stop listening for input from the AP! */
+    connection_stop_reading(conn); /* Stop listening for input from the AP! */
     return 0; /* return success. The onion/circuit/etc will be taken care of automatically
                * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
                */ 
-  } else { /* it's already open. use it. */
+  } else { /* it (or a twin) is already open. use it. */
+    circ->n_addr = n_conn->addr;
+    circ->n_port = n_conn->port;
     return ap_handshake_send_onion(conn, n_conn, circ);
   }
 }
@@ -237,12 +239,12 @@ int ap_handshake_n_conn_open(connection_t *or_conn) {
   log(LOG_DEBUG,"ap_handshake_n_conn_open(): Starting.");
   circ = circuit_get_by_naddr_nport(or_conn->addr, or_conn->port);
   if(!circ)
-    return 0; /* i'm ok with that */
+    return 0; /* i'm ok with that. no need to close the connection or anything. */
 
   if(circ->p_conn->state != AP_CONN_STATE_OR_WAIT) {
     log(LOG_DEBUG,"Bug: ap_handshake_n_conn_open() got an ap_conn not in OR_WAIT state.");
   }
-  connection_watch_events(or_conn, POLLIN); /* resume listening for reads */
+  connection_start_reading(circ->p_conn); /* resume listening for reads */
   log(LOG_DEBUG,"ap_handshake_n_conn_open(): Found circ, sending onion.");
   return ap_handshake_send_onion(circ->p_conn, or_conn, circ);
 }
@@ -332,7 +334,7 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
 
   /* now we want to give the AP a "0" byte, because it wants to hear
    * back from us */
-  connection_write_to_buf(&zero, 1, ap_conn);
+  connection_write_to_buf(&zero, 1, ap_conn); /* this does connection_start_writing() too */
 
   return 0;
 }
