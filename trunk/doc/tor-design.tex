@@ -1455,31 +1455,16 @@ current evidence of their practicality.}
 
 \subsubsection*{Active attacks}
 
-\emph{Compromise keys.}
-If a TLS session key is compromised, an attacker
-can view all the cells on TLS connection until the key is
-renegotiated.  (These cells are themselves encrypted.)  If a TLS
-private key is compromised, the attacker can fool others into
-thinking that he is the affected OR, but still cannot accept any
-connections. \\
-If a circuit session key is compromised, the
-attacker can unwrap a single layer of encryption from the relay
-cells traveling along that circuit.  (Only nodes on the circuit can
-see these cells.) If an onion private key is compromised, the attacker
-can impersonate the OR in circuits, but only if the attacker has
-also compromised the OR's TLS private key, or is running the
-previous OR in the circuit.  (This compromise affects newly created
-circuits, but because of perfect forward secrecy, the attacker
-cannot hijack old circuits without compromising their session keys.)
-In any case, periodic key rotation limits the window of opportunity
-for compromising these keys. \\
-Only by
-compromising a node's identity key can an attacker replace that
-node indefinitely, by sending new forged descriptors to the
-directory servers.  Finally, an attacker who can compromise a
-directory server's identity key can influence every client's view
-of the network---but only to the degree made possible by gaining a
-vote with the rest of the the directory servers.
+\emph{Compromise keys.} An attacker who learns the TLS session key can see
+the (still encrypted) relay cells on that circuit; learning the circuit
+session key lets him unwrap one layer of the encryption. An attacker
+who learns an OR's TLS private key can impersonate that OR, but he must
+also learn the onion key to decrypt \emph{create} cells (and because of
+perfect forward secrecy, he cannot hijack already established circuits
+without also compromising their session keys). Periodic key rotation
+limits the window of opportunity for these attacks. On the other hand,
+an attacker who learns a node's identity key can replace that node
+indefinitely by sending new forged descriptors to the directory servers.
 
 \emph{Iterated compromise.} A roving adversary who can
 compromise ORs (by system intrusion, legal coersion, or extralegal
