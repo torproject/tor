@@ -683,11 +683,24 @@ connection_dir_client_reached_eof(connection_t *conn)
   return 0;
 }
 
+int connection_dir_reached_eof(connection_t *conn) {
+  int retval;
+  if(conn->state != DIR_CONN_STATE_CLIENT_READING) {
+    log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
+    connection_close_immediate(conn); /* it was an error; give up on flushing */
+    connection_mark_for_close(conn);
+    return -1;
+  }
+
+  retval = connection_dir_client_reached_eof(conn);
+  connection_mark_for_close(conn);
+  return retval;
+}
+
 /** Read handler for directory connections.  (That's connections <em>to</em>
  * directory servers and connections <em>at</em> directory servers.)
  */
 int connection_dir_process_inbuf(connection_t *conn) {
-  int retval;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
@@ -697,18 +710,6 @@ int connection_dir_process_inbuf(connection_t *conn) {
    * write their response (when it's finished flushing, they mark for
    * close).
    */
-  if(conn->inbuf_reached_eof) {
-    if(conn->state != DIR_CONN_STATE_CLIENT_READING) {
-      log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
-      connection_close_immediate(conn); /* it was an error; give up on flushing */
-      connection_mark_for_close(conn);
-      return -1;
-    }
-
-    retval = connection_dir_client_reached_eof(conn);
-    connection_mark_for_close(conn);
-    return retval;
-  } /* endif 'reached eof' */
 
   /* If we're on the dirserver side, look for a command. */
   if(conn->state == DIR_CONN_STATE_SERVER_COMMAND_WAIT) {

@@ -559,8 +559,18 @@ int connection_dns_finished_flushing(connection_t *conn) {
   return 0;
 }
 
-/** Read handler: called when we get data from a dnsworker.  If the
- * connection is closed, mark the dnsworker as dead.  Otherwise, see
+int connection_dns_reached_eof(connection_t *conn) {
+  log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
+  if(conn->state == DNSWORKER_STATE_BUSY) {
+    dns_cancel_pending_resolve(conn->address);
+    num_dnsworkers_busy--;
+  }
+  num_dnsworkers--;
+  connection_mark_for_close(conn);
+  return 0;
+}
+
+/** Read handler: called when we get data from a dnsworker. See
  * if we have a complete answer.  If so, call dns_found_answer on the
  * result.  If not, wait.  Returns 0. */
 int connection_dns_process_inbuf(connection_t *conn) {
@@ -569,17 +579,6 @@ int connection_dns_process_inbuf(connection_t *conn) {
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DNSWORKER);
-
-  if(conn->inbuf_reached_eof) {
-    log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
-    if(conn->state == DNSWORKER_STATE_BUSY) {
-      dns_cancel_pending_resolve(conn->address);
-      num_dnsworkers_busy--;
-    }
-    num_dnsworkers--;
-    connection_mark_for_close(conn);
-    return 0;
-  }
 
   if(conn->state != DNSWORKER_STATE_BUSY) {
     log_fn(LOG_WARN,"Bug: poll() indicated than an idle dns worker was readable. Please report.");

@@ -87,6 +87,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_receiver_bucket_should_increase(connection_t *conn);
 static int connection_finished_flushing(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
+static int connection_reached_eof(connection_t *conn);
 static int connection_read_to_buf(connection_t *conn, int *max_to_read);
 static int connection_process_inbuf(connection_t *conn, int package_partial);
 static int connection_bucket_read_limit(connection_t *conn);
@@ -856,6 +857,9 @@ loop_again:
   if (connection_process_inbuf(conn, 1) < 0) {
     return -1;
   }
+  if (conn->inbuf_reached_eof && connection_reached_eof(conn) < 0) {
+    return -1;
+  }
   return 0;
 }
 
@@ -1294,7 +1298,7 @@ static int connection_process_inbuf(connection_t *conn, int package_partial) {
     case CONN_TYPE_CONTROL:
       return connection_control_process_inbuf(conn);
     default:
-      log_fn(LOG_WARN,"got unexpected conn->type %d.", conn->type);
+      log_fn(LOG_WARN,"got unexpected conn type %d.", conn->type);
       return -1;
   }
 }
@@ -1326,7 +1330,7 @@ static int connection_finished_flushing(connection_t *conn) {
     case CONN_TYPE_CONTROL:
       return connection_control_finished_flushing(conn);
     default:
-      log_fn(LOG_WARN,"got unexpected conn->type %d.", conn->type);
+      log_fn(LOG_WARN,"got unexpected conn type %d.", conn->type);
       return -1;
   }
 }
@@ -1349,7 +1353,29 @@ static int connection_finished_connecting(connection_t *conn)
     case CONN_TYPE_DIR:
       return connection_dir_finished_connecting(conn);
     default:
-      tor_assert(0);
+      log_fn(LOG_WARN,"got unexpected conn type %d.", conn->type);
+      return -1;
+  }
+}
+
+static int connection_reached_eof(connection_t *conn)
+{
+  switch (conn->type) {
+    case CONN_TYPE_OR:
+      return connection_or_reached_eof(conn);
+    case CONN_TYPE_AP:
+    case CONN_TYPE_EXIT:
+      return connection_edge_reached_eof(conn);
+    case CONN_TYPE_DIR:
+      return connection_dir_reached_eof(conn);
+    case CONN_TYPE_DNSWORKER:
+      return connection_dns_reached_eof(conn);
+    case CONN_TYPE_CPUWORKER:
+      return connection_cpu_reached_eof(conn);
+    case CONN_TYPE_CONTROL:
+      return connection_control_reached_eof(conn);
+    default:
+      log_fn(LOG_WARN,"got unexpected conn type %d.", conn->type);
       return -1;
   }
 }
