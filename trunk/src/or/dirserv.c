@@ -713,7 +713,6 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
 {
   time_t now;
   cached_dir_t *d;
-  tor_assert(!get_options()->AuthoritativeDir);
   now = time(NULL);
   d = is_running_routers ? &cached_runningrouters : &cached_directory;
   if (when<=d->published) {
