@@ -198,9 +198,10 @@ dirserv_add_descriptor(const char **desc)
     log(LOG_WARNING, "no descriptor found.");
     goto err;
   }
-  end = strstr(start+6, "\nrouter ");
-  if (end) {
+  if ((end = strstr(start+6, "\nrouter "))) {
     ++end; /* Include NL. */
+  } else if ((end = strstr(start+6, "\ndirectory-signature"))) {
+    ++end;
   } else {
     end = start+strlen(start);
   }
@@ -336,6 +337,9 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
     log_fn(LOG_WARNING,"couldn't sign digest");
     return -1;
   }
+  log(LOG_DEBUG,"generated directory digest begins with %02x:%02x:%02x:%02x",
+      ((int)digest[0])&0xff,((int)digest[1])&0xff,
+      ((int)digest[2])&0xff,((int)digest[3])&0xff);
   
   strncpy(cp, 
           "-----BEGIN SIGNATURE-----\n", maxlen-i);
