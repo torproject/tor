@@ -245,3 +245,8 @@ CFLAGS="$CFLAGS -Wall -g -O2"
 echo "confdir: $CONFDIR"
 
 AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/Makefile src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile)
+
+if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
+  ./contrib/updateVersions.pl
+fi
+
