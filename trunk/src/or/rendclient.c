@@ -54,6 +54,7 @@ void rend_client_desc_fetched(char *query, int success) {
       continue;
     /* great, this guy was waiting */
     if(success) {
+      log_fn(LOG_INFO,"Rend desc retrieved. Launching rend circ.");
       conn->purpose = AP_PURPOSE_RENDPOINT_WAIT;
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
@@ -65,6 +66,37 @@ void rend_client_desc_fetched(char *query, int success) {
       connection_mark_for_close(conn,0);
     }
   }
+}
+
+int rend_cmp_service_ids(char *one, char *two) {
+  return strcasecmp(one,two);
+}
+
+/* If address is of the form "y.onion" with a well-formed handle y,
+ * then put a '\0' after y, lower-case it, and return 0.
+ * Else return -1 and change nothing.
+ */
+int rend_parse_rendezvous_address(char *address) {
+  char *s;
+  char query[REND_SERVICE_ID_LEN+1];
+
+  s = strrchr(address,'.');
+  if(!s) return -1; /* no dot */
+  if (strcasecmp(s+1,"onion"))
+    return -1; /* not .onion */
+
+  *s = 0; /* null terminate it */
+  if(strlcpy(query, address, REND_SERVICE_ID_LEN+1) >= REND_SERVICE_ID_LEN+1)
+    goto failed;
+  tor_strlower(query);
+  if(rend_valid_service_id(query)) {
+    tor_strlower(address);
+    return 0; /* success */
+  }
+failed:
+  /* otherwise, return to previous state and return -1 */
+  *s = '.';
+  return -1;
 }
 
 /*

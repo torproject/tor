@@ -189,7 +189,8 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
 
   if(num_acceptable_routers < 2) {
-    log_fn(LOG_INFO,"Not enough acceptable routers. Discarding this circuit.");
+    log_fn(LOG_INFO,"Not enough acceptable routers (%d). Discarding this circuit.",
+           num_acceptable_routers);
     return -1;
   }
 
@@ -356,6 +357,7 @@ cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
   } else { /* we have to decide one */
     exit = choose_good_exit_server(purpose, rl);
     if(!exit) {
+      log_fn(LOG_WARN,"failed to choose an exit server");
       tor_free(info);
       return NULL;
     }

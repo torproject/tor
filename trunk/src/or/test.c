@@ -828,6 +828,8 @@ test_dir_format()
 
 void test_rend_fns()
 {
+  char address1[] = "fooaddress.onion";
+  char address2[] = "aaaaaaaaaaaaaaaa.onion";
   rend_service_descriptor_t *d1, *d2;
   char *encoded;
   int len;
@@ -855,6 +857,9 @@ void test_rend_fns()
   test_streq(d2->intro_points[0], "tom");
   test_streq(d2->intro_points[1], "crow");
   test_streq(d2->intro_points[2], "joel");
+
+  test_eq(-1, rend_parse_rendezvous_address(address1));
+  test_eq( 0, rend_parse_rendezvous_address(address2));
 
   rend_service_descriptor_free(d1);
   rend_service_descriptor_free(d2);

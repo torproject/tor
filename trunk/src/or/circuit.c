@@ -258,6 +258,8 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
  *
  * circ_purpose specifies what sort of circuit we must have.
  * If circ_purpose is not GENERAL, then conn must be defined.
+ * If circ_purpose is C_ESTABLISH_REND, then it's also ok
+ * to return a C_REND_JOINED circ.
  */
 circuit_t *circuit_get_newest(connection_t *conn,
                               int must_be_open, uint8_t circ_purpose) {
@@ -272,7 +274,12 @@ circuit_t *circuit_get_newest(connection_t *conn,
     if (circ->marked_for_close)
       continue;
 
-    if (circ->purpose != circ_purpose)
+    /* if this isn't our purpose, skip. except, if our purpose is
+     * establish_rend, keep going if circ is rend_joined.
+     */
+    if (circ->purpose != circ_purpose &&
+      (circ_purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
+       circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED))
       continue;
 
 #if 0

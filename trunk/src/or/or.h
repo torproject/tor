@@ -1039,6 +1039,9 @@ void rend_client_rendcirc_is_ready(connection_t *apconn, circuit_t *circ);
 void rend_client_rendezvous(connection_t *apconn, circuit_t *circ);
 void rend_client_desc_fetched(char *query, int success);
 
+int rend_cmp_service_ids(char *one, char *two);
+int rend_parse_rendezvous_address(char *address);
+
 /********************************* rendcommon.c ***************************/
 
 typedef struct rend_service_descriptor_t {
@@ -1055,14 +1058,12 @@ int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                                    int *len_out);
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, int len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
-int rend_cmp_service_ids(char *one, char *two);
 
 void rend_cache_init(void);
 void rend_cache_clean(void);
 int rend_cache_lookup(char *query, const char **desc, int *desc_len);
 int rend_cache_store(char *desc, int desc_len);
 
-int rend_parse_rendezvous_address(char *address);
 
 /********************************* rendservice.c ***************************/
 
