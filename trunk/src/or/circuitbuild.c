@@ -1147,7 +1147,8 @@ circuit_append_new_hop(circuit_t *circ, char *nickname, const char *exit_digest)
   memcpy(circ->build_state->chosen_exit_digest, exit_digest, DIGEST_LEN);
   ++circ->build_state->desired_path_len;
   if (circuit_send_next_onion_skin(circ)<0) {
-    log_fn(LOG_WARN, "Couldn't extend circuit to new point '%s'.",                                    circ->build_state->chosen_exit_name);
+    log_fn(LOG_WARN, "Couldn't extend circuit to new point '%s'.",
+           circ->build_state->chosen_exit_name);
     circuit_mark_for_close(circ);
     return -1;
   }
