@@ -831,8 +831,27 @@ void router_update_status_from_smartlist(routerinfo_t *router,
 {
   int n_names, i, running, approved;
   const char *name;
-  running = approved = 0;
+#if 1
+  char *cp;
+  int n;
+  n = 0;
+  for (i=0; i<smartlist_len(running_list); ++i) {
+    name = smartlist_get(running_list, i);
+    n += strlen(name) + 1;
+  }
+  cp = tor_malloc(n+2);
+  cp[0] = '\0';
+  for (i=0; i<smartlist_len(running_list); ++i) {
+    name = smartlist_get(running_list, i);
+    strlcat(cp, name, n);
+    strlcat(cp, " ", n);
+  }
+  log_fn(LOG_DEBUG, "Updating status of %s from list \"%s\"", 
+         router->nickname, cp);
+  tor_free(cp);
+#endif
 
+  running = approved = 0;
   n_names = smartlist_len(running_list);
   for (i=0; i<n_names; ++i) {
     name = smartlist_get(running_list, i);
