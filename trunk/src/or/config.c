@@ -324,7 +324,8 @@ options_act(void) {
   /* Close the temporary log we used while starting up, if it isn't already
    * gone. */
   close_temp_logs();
-  add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
+  add_callback_log(LOG_ERR, LOG_ERR, control_event_logmsg);
+  adjust_event_log_severity();
 
   options->_ConnLimit =
     set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);

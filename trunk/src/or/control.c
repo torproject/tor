@@ -74,9 +74,14 @@ const char control_c_id[] = "$Id$";
 #define EVENT_STREAM_STATUS   0x0002
 #define EVENT_OR_CONN_STATUS  0x0003
 #define EVENT_BANDWIDTH_USED  0x0004
-#define EVENT_WARNING         0x0005
+#define EVENT_LOG_OBSOLETE    0x0005
 #define EVENT_NEW_DESC        0x0006
-#define _EVENT_MAX            0x0006
+#define EVENT_DEBUG_MSG       0x0007
+#define EVENT_INFO_MSG        0x0008
+#define EVENT_NOTICE_MSG      0x0009
+#define EVENT_WARN_MSG        0x000A
+#define EVENT_ERR_MSG         0x000B
+#define _EVENT_MAX            0x000B
 
 /** Array mapping from message type codes to human-readable message
  * type names.  */
@@ -167,13 +172,38 @@ control_cmd_to_string(uint16_t cmd)
   return (cmd<=_CONTROL_CMD_MAX_RECOGNIZED) ? CONTROL_COMMANDS[cmd] : "Unknown";
 }
 
+static INLINE int
+event_to_log_severity(int event)
+{
+  switch (event) {
+    case EVENT_DEBUG_MSG: return LOG_DEBUG;
+    case EVENT_INFO_MSG: return LOG_INFO;
+    case EVENT_NOTICE_MSG: return LOG_NOTICE;
+    case EVENT_WARN_MSG: return LOG_WARN;
+    case EVENT_ERR_MSG: return LOG_ERR;
+    default: return -1;
+  }
+}
+
+static INLINE int
+log_severity_to_event(int severity)
+{
+  switch (severity) {
+    case LOG_DEBUG: return EVENT_DEBUG_MSG;
+    case LOG_INFO: return EVENT_INFO_MSG;
+    case LOG_NOTICE: return EVENT_NOTICE_MSG;
+    case LOG_WARN: return EVENT_WARN_MSG;
+    case LOG_ERR: return EVENT_ERR_MSG;
+    default: return -1;
+  }
+}
+
 /** Set <b>global_event_mask</b> to the bitwise OR of each live control
  * connection's event_mask field. */
 static void update_global_event_mask(void)
 {
   connection_t **conns;
   int n_conns, i;
-
   global_event_mask = 0;
   get_connection_array(&conns, &n_conns);
   for (i = 0; i < n_conns; ++i) {
@@ -182,6 +212,35 @@ static void update_global_event_mask(void)
       global_event_mask |= conns[i]->event_mask;
     }
   }
+
+  adjust_event_log_severity();
+}
+
+void adjust_event_log_severity(void) {
+  int i;
+  int min_log_event=EVENT_ERR_MSG, max_log_event=EVENT_DEBUG_MSG;
+
+  for (i = EVENT_DEBUG_MSG; i <= EVENT_ERR_MSG; ++i) {
+    if (EVENT_IS_INTERESTING(i)) {
+      min_log_event = i;
+      break;
+    }
+  }
+  for (i = EVENT_ERR_MSG; i >= EVENT_DEBUG_MSG; --i) {
+    if (EVENT_IS_INTERESTING(i)) {
+      max_log_event = i;
+      break;
+    }
+  }
+  if (EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE)) {
+    if (min_log_event > EVENT_NOTICE_MSG)
+      min_log_event = EVENT_NOTICE_MSG;
+    if (max_log_event < EVENT_ERR_MSG)
+      max_log_event = EVENT_ERR_MSG;
+  }
+  change_callback_log_severity(event_to_log_severity(min_log_event),
+                               event_to_log_severity(max_log_event),
+                               control_event_logmsg);
 }
 
 /** Send a message of type <b>type</b> containing <b>len</b> bytes
@@ -1098,14 +1157,20 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 void
 control_event_logmsg(int severity, const char *msg)
 {
-  size_t len;
-  if (severity > LOG_NOTICE) /* Less important than notice? ignore for now. */
-    return;
-  if (!EVENT_IS_INTERESTING(EVENT_WARNING))
-    return;
+  int oldlog = EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE) &&
+    (severity == LOG_NOTICE || severity == LOG_WARN || severity == LOG_ERR);
+  int event = log_severity_to_event(severity);
 
-  len = strlen(msg);
-  send_control_event(EVENT_WARNING, (uint32_t)(len+1), msg);
+  if (event<0 || !EVENT_IS_INTERESTING(event))
+    event = 0;
+
+  if (oldlog || event) {
+    size_t len = strlen(msg);
+    if (event)
+      send_control_event(event, (uint32_t)(len+1), msg);
+    if (oldlog)
+      send_control_event(EVENT_LOG_OBSOLETE, (uint32_t)(len+1), msg);
+  }
 }
 
 /** Called whenever we receive new router descriptors: tell any
