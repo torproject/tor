@@ -394,6 +394,7 @@ int router_compare_to_my_exit_policy(connection_t *conn)
 int router_is_me(routerinfo_t *router)
 {
   tor_assert(router);
+  /* XXXX008 should compare identity instead? */
   return options.Nickname && !strcasecmp(router->nickname, options.Nickname);
 }
 

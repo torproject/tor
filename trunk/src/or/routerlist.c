@@ -207,19 +207,46 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
+/* DOCDOC */
+static INLINE int router_hex_digest_matches(routerinfo_t *router,
+                                     const char *hexdigest)
+{
+  char digest[DIGEST_LEN];
+  tor_assert(hexdigest);
+  if (hexdigest[0] == '$')
+    ++hexdigest;
+
+  if (base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0)
+    return 0;
+  else
+    return (!memcmp(digest, router->identity_digest, DIGEST_LEN));
+}
+
+/* DOCDOC */
+int router_nickname_matches(routerinfo_t *router, const char *nickname)
+{
+  if (nickname[0]!='$' && !strcasecmp(router->nickname, nickname))
+    return 1;
+  else
+    return router_hex_digest_matches(router, nickname);
+}
+
 /** Return the router in our routerlist whose (case-insensitive)
  * nickname or (case-sensitive) hexadecimal key digest is
  * <b>nickname</b>.  Return NULL if no such router is known.
  */
 routerinfo_t *router_get_by_nickname(const char *nickname)
 {
-  int i, maybedigest;
+  int i, maybedigest, mustbedigest;
   routerinfo_t *router;
   char digest[DIGEST_LEN];
 
   tor_assert(nickname);
   if (!routerlist)
     return NULL;
+  if (nickname[0] == '$')
+    return router_get_by_hexdigest(nickname);
+
   maybedigest = (strlen(nickname) == HEX_DIGEST_LEN) &&
     (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
 
@@ -242,6 +269,8 @@ routerinfo_t *router_get_by_hexdigest(const char *hexdigest) {
   tor_assert(hexdigest);
   if (!routerlist)
     return NULL;
+  if (hexdigest[0]=='$')
+    ++hexdigest;
   if (strlen(hexdigest) != HEX_DIGEST_LEN ||
       base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN) < 0)
     return NULL;
@@ -326,10 +355,10 @@ void routerlist_free(routerlist_t *rl)
 }
 
 /** Mark the router named <b>nickname</b> as non-running in our routerlist. */
-void router_mark_as_down(char *nickname) {
+void router_mark_as_down(const char *digest) {
   routerinfo_t *router;
-  tor_assert(nickname);
-  router = router_get_by_nickname(nickname);
+  tor_assert(digest);
+  router = router_get_by_digest(digest);
   if(!router) /* we don't seem to know about him in the first place */
     return;
   log_fn(LOG_DEBUG,"Marking %s as down.",router->nickname);
@@ -350,6 +379,7 @@ int router_add_to_routerlist(routerinfo_t *router) {
    */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     r = smartlist_get(routerlist->routers, i);
+    /* XXXX008 should just compare digests instead. */
     if (!strcasecmp(router->nickname, r->nickname)) {
       if (!crypto_pk_cmp_keys(router->identity_pkey, r->identity_pkey)) {
         if (router->published_on > r->published_on) {
@@ -377,6 +407,8 @@ int router_add_to_routerlist(routerinfo_t *router) {
           return -1;
         }
       } else {
+        /* XXXX008 It's okay to have two keys for a nickname as soon as
+         * all the 007 clients are dead. */
         log_fn(LOG_WARN, "Identity key mismatch for router '%s'",
                router->nickname);
         routerinfo_free(router);
@@ -698,13 +730,16 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
     router = smartlist_get(list->routers, i);
     for (j=0; j<n_names; ++j) {
       name = smartlist_get(rr->running_routers, j);
-      if (!strcasecmp(name, router->nickname)) {
-        router->is_running = 1;
-        break;
-      }
-      if (*name == '!' && strcasecmp(name+1, router->nickname)) {
-        router->is_running = 0;
-        break;
+      if (*name != '!') {
+        if (router_nickname_matches(router, name)) {
+          router->is_running = 1;
+          break;
+        }
+      } else { /* *name == '!' */
+        if (router_nickname_matches(router, name)) {
+          router->is_running = 0;
+          break;
+        }
       }
     }
   }

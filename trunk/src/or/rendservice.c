@@ -437,7 +437,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
 
   /* Launch a circuit to alice's chosen rendezvous point.
    */
-  launched = circuit_launch_new(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
+  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
   log_fn(LOG_INFO,
         "Accepted intro; launching circuit to '%s' (cookie %s) for service %s",
          rp_nickname, hexcookie, serviceid);
@@ -487,18 +487,18 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   if (!oldcirc->build_state ||
       oldcirc->build_state->failure_count > MAX_REND_FAILURES) {
     log_fn(LOG_INFO,"Attempt to build circuit to %s for rendezvous has failed too many times; giving up.",
-           oldcirc->build_state->chosen_exit);
+           oldcirc->build_state->chosen_exit_name);
     return;
   }
 
   log_fn(LOG_INFO,"Reattempting rendezvous circuit to %s",
-         oldcirc->build_state->chosen_exit);
+         oldcirc->build_state->chosen_exit_name);
 
-  newcirc = circuit_launch_new(CIRCUIT_PURPOSE_S_CONNECT_REND,
-                               oldcirc->build_state->chosen_exit);
+  newcirc = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND,
+                               oldcirc->build_state->chosen_exit_name);
   if (!newcirc) {
     log_fn(LOG_WARN,"Couldn't relaunch rendezvous circuit to %s",
-           oldcirc->build_state->chosen_exit);
+           oldcirc->build_state->chosen_exit_name);
     return;
   }
   oldstate = oldcirc->build_state;
@@ -525,7 +525,7 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
          nickname, service->service_id);
 
   ++service->n_intro_circuits_launched;
-  launched = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname);
+  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname);
   if (!launched) {
     log_fn(LOG_WARN, "Can't launch circuit to establish introduction at '%s'",
            nickname);
@@ -715,8 +715,8 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
     tor_assert(circ->cpath);
-    if (circ->build_state->chosen_exit &&
-        !strcasecmp(circ->build_state->chosen_exit, router->nickname)) {
+    if (circ->build_state->chosen_exit_name &&
+        !strcasecmp(circ->build_state->chosen_exit_name, router->nickname)) {
       return circ;
     }
   }
@@ -725,8 +725,8 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
     tor_assert(circ->cpath);
-    if (circ->build_state->chosen_exit &&
-        !strcasecmp(circ->build_state->chosen_exit, router->nickname)) {
+    if (circ->build_state->chosen_exit_name &&
+        !strcasecmp(circ->build_state->chosen_exit_name, router->nickname)) {
       return circ;
     }
   }

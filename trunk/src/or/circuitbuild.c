@@ -21,7 +21,7 @@ extern circuit_t *global_circuitlist;
 static int
 circuit_deliver_create_cell(circuit_t *circ, char *payload);
 static cpath_build_state_t *
-onion_new_cpath_build_state(uint8_t purpose, const char *exit_nickname);
+onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest);
 static int
 onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
                    *state, routerinfo_t **router_out);
@@ -75,7 +75,7 @@ void circuit_log_path(int severity, circuit_t *circ) {
   tor_assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
 
   snprintf(s, sizeof(buf)-1, "circ (length %d, exit %s): ",
-          circ->build_state->desired_path_len, circ->build_state->chosen_exit);
+          circ->build_state->desired_path_len, circ->build_state->chosen_exit_name);
   hop=circ->cpath;
   do {
     s = buf + strlen(buf);
@@ -148,7 +148,7 @@ circuit_dump_details(int severity, circuit_t *circ, int poll_index,
   if(CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
     if(circ->state == CIRCUIT_STATE_BUILDING)
       log(severity,"Building: desired len %d, planned exit node %s.",
-          circ->build_state->desired_path_len, circ->build_state->chosen_exit);
+          circ->build_state->desired_path_len, circ->build_state->chosen_exit_name);
     for(hop=circ->cpath;hop->next != circ->cpath; hop=hop->next)
       log(severity,"hop: state %d, addr 0x%.8x, port %d", hop->state,
           (unsigned int)hop->addr,
@@ -185,7 +185,7 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
   }
 }
 
-/** Build a new circuit for <b>purpose</b>. If <b>exit_nickname</b>
+/** Build a new circuit for <b>purpose</b>. If <b>exit_digest</b>
  * is defined, then use that as your exit router, else choose a suitable
  * exit node.
  *
@@ -193,14 +193,14 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
  * it's not open already.
  */
 circuit_t *circuit_establish_circuit(uint8_t purpose,
-                                     const char *exit_nickname) {
+                                     const char *exit_digest) {
   routerinfo_t *firsthop;
   connection_t *n_conn;
   circuit_t *circ;
 
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
-  circ->build_state = onion_new_cpath_build_state(purpose, exit_nickname);
+  circ->build_state = onion_new_cpath_build_state(purpose, exit_digest);
   circ->purpose = purpose;
 
   if (! circ->build_state) {
@@ -302,6 +302,10 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
   tor_assert(circ && circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
   tor_assert(payload);
 
+  /* XXXX008 How can we keep a good upgrade path here?  We should
+   * compare keys, not nicknames...but older servers will compare nicknames.
+   * Should we check server version from the most recent directory? Hm.
+   */
   circ_id_type = decide_circ_id_type(options.Nickname,
                                      circ->n_conn->nickname);
   circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
@@ -345,7 +349,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
 
-    router = router_get_by_nickname(circ->n_conn->nickname);
+    router = router_get_by_digest(circ->n_conn->identity_digest);
     if (!router) {
       log_fn(LOG_WARN,"Couldn't find routerinfo for %s",
              circ->n_conn->nickname);
@@ -945,22 +949,29 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
  * return it.
  */
 static cpath_build_state_t *
-onion_new_cpath_build_state(uint8_t purpose, const char *exit_nickname)
+onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
 {
   routerlist_t *rl;
   int r;
   cpath_build_state_t *info;
   routerinfo_t *exit;
-
   router_get_routerlist(&rl);
   r = new_route_len(options.PathlenCoinWeight, purpose, rl->routers);
   if (r < 0)
     return NULL;
   info = tor_malloc_zero(sizeof(cpath_build_state_t));
   info->desired_path_len = r;
-  if(exit_nickname) { /* the circuit-builder pre-requested one */
-    log_fn(LOG_INFO,"Using requested exit node '%s'", exit_nickname);
-    info->chosen_exit = tor_strdup(exit_nickname);
+  if(exit_digest) { /* the circuit-builder pre-requested one */
+    memcpy(info->chosen_exit_digest, exit_digest, DIGEST_LEN);
+    exit = router_get_by_digest(exit_digest);
+    if (exit) {
+      info->chosen_exit_name = tor_strdup(exit->nickname);
+    } else {
+      info->chosen_exit_name = tor_malloc(HEX_DIGEST_LEN+1);
+      base16_encode(info->chosen_exit_name, HEX_DIGEST_LEN+1,
+                    exit_digest, DIGEST_LEN);
+    }
+    log_fn(LOG_INFO,"Using requested exit node '%s'", info->chosen_exit_name);
   } else { /* we have to decide one */
     exit = choose_good_exit_server(purpose, rl);
     if(!exit) {
@@ -968,7 +979,8 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_nickname)
       tor_free(info);
       return NULL;
     }
-    info->chosen_exit = tor_strdup(exit->nickname);
+    memcpy(info->chosen_exit_digest, exit->identity_digest, DIGEST_LEN);
+    info->chosen_exit_name = tor_strdup(exit->nickname);
   }
   return info;
 }
@@ -1091,12 +1103,12 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
 
   if(cur_len == state->desired_path_len - 1) { /* Picking last node */
     log_fn(LOG_DEBUG, "Contemplating last hop: choice already made: %s",
-           state->chosen_exit);
-    choice = router_get_by_nickname(state->chosen_exit);
+           state->chosen_exit_name);
+    choice = router_get_by_digest(state->chosen_exit_digest);
     smartlist_free(excludednodes);
     if(!choice) {
       log_fn(LOG_WARN,"Our chosen exit %s is no longer in the directory? Discarding this circuit.",
-             state->chosen_exit);
+             state->chosen_exit_name);
       return -1;
     }
   } else if(cur_len == 0) { /* picking first node */
@@ -1104,7 +1116,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
     sl = smartlist_create();
     add_nickname_list_to_smartlist(sl,options.EntryNodes);
     /* XXX one day, consider picking chosen_exit knowing what's in EntryNodes */
-    remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+    remove_twins_from_smartlist(sl,router_get_by_digest(state->chosen_exit_digest));
     remove_twins_from_smartlist(sl,router_get_my_routerinfo());
     smartlist_subtract(sl,excludednodes);
     choice = smartlist_choose(sl);
@@ -1112,7 +1124,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
     if(!choice) {
       sl = smartlist_create();
       router_add_running_routers_to_smartlist(sl);
-      remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+      remove_twins_from_smartlist(sl,router_get_by_digest(state->chosen_exit_digest));
       remove_twins_from_smartlist(sl,router_get_my_routerinfo());
       smartlist_subtract(sl,excludednodes);
       choice = smartlist_choose(sl);
@@ -1127,7 +1139,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
     log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
     sl = smartlist_create();
     router_add_running_routers_to_smartlist(sl);
-    remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+    remove_twins_from_smartlist(sl,router_get_by_digest(state->chosen_exit_digest));
     remove_twins_from_smartlist(sl,router_get_my_routerinfo());
     for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
       r = router_get_by_digest(cpath->identity_digest);
@@ -1145,7 +1157,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
   }
 
   log_fn(LOG_DEBUG,"Chose router %s for hop %d (exit is %s)",
-         choice->nickname, cur_len, state->chosen_exit);
+         choice->nickname, cur_len, state->chosen_exit_name);
 
   hop = tor_malloc_zero(sizeof(crypt_path_t));
 

@@ -420,6 +420,17 @@ test_crypto()
   test_eq(i,0);
   test_streq(data2, "772w2rfobvomsywe");
 
+  /* Base16 tests */
+  strcpy(data1, "6chrs\xff");
+  i = base16_encode(data2, 13, data1, 6);
+  test_eq(i,0);
+  test_streq(data2, "3663687273FF");
+
+  strcpy(data1, "f0d678affc000100");
+  i = base16_decode(data2, 8, data1, 16);
+  test_eq(i,0);
+  test_memeq(data2, "\xf0\xd6\x78\xaf\xfc\x00\x01\x00",8);
+
   free(data1);
   free(data2);
   free(data3);

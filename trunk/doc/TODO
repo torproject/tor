@@ -54,8 +54,9 @@ NICK  pre1:
           o extend cells need ip:port:identitykeyhash.
 	  . Lookup routers and connections by key digest; accept hex
             key digest in place of nicknames.
-          - Audit all uses of lookup-by-hostname and lookup-by-addr-port
+          . Audit all uses of lookup-by-hostname and lookup-by-addr-port
             to search by digest when appropriate.
+	  - Rep-hist functions
           - also use this in intro points and rendezvous points, and
             hidserv descs.  [XXXX This isn't enough.]
           - figure out what to do about ip:port:differentkey

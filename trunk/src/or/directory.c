@@ -149,7 +149,7 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
     /* then we want to connect directly */
     switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
       case -1:
-        router_mark_as_down(conn->nickname); /* don't try him again */
+        router_mark_as_down(conn->identity_digest); /* don't try him again */
         connection_free(conn);
         return;
       case 1:
