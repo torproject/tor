@@ -241,12 +241,18 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
     if(cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to exit.");
-      return connection_edge_process_relay_cell(cell, circ, conn, EDGE_EXIT, NULL);
+      if (connection_edge_process_relay_cell(cell, circ, conn, EDGE_EXIT, NULL) < 0) {
+        log_fn(LOG_WARN,"connection_edge_process_relay_cell (at exit) failed.");
+        return -1;
+      }
     }
     if(cell_direction == CELL_DIRECTION_IN) {
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to AP.");
-      return connection_edge_process_relay_cell(cell, circ, conn, EDGE_AP, layer_hint);
+      if (connection_edge_process_relay_cell(cell, circ, conn, EDGE_AP, layer_hint) < 0) {
+        log_fn(LOG_WARN,"connection_edge_process_relay_cell (at AP) failed.");
+        return -1;
+      }
     }
   }
 
@@ -257,8 +263,9 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   else
     conn = circ->p_conn;
 
-  if(!conn) { //|| !connection_speaks_cells(conn)) {
-    log_fn(LOG_INFO,"Didn't recognize cell (%d), but circ stops here! Dropping.", *(int *)(cell->payload+1));
+  if(!conn) {
+    log_fn(LOG_INFO,"Didn't recognize cell (%d), but circ stops here! Dropping.",
+           *(int *)(cell->payload+1));
     return 0;
   }
 
@@ -459,6 +466,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
       log_fn(LOG_DEBUG,"deliver_window %d, Queueing sendme forward.", layer_hint->deliver_window);
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
       if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, layer_hint) < 0) {
+        log_fn(LOG_WARN,"At AP: circuit_deliver_relay_cell failed.");
         return -1;
       }
     }
@@ -468,6 +476,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
       log_fn(LOG_DEBUG,"deliver_window %d, Queueing sendme back.", circ->deliver_window);
       circ->deliver_window += CIRCWINDOW_INCREMENT;
       if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_IN, layer_hint) < 0) {
+        log_fn(LOG_WARN,"At exit: circuit_deliver_relay_cell failed.");
         return -1;
       }
     }
