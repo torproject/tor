@@ -421,7 +421,7 @@ The tor process stores keys and other data here.
 .BR tsocks (1),
 .BR torify (1)
 
-.BR http://freehaven.net/tor/
+.BR http://tor.eff.org/
 
 .SH BUGS
 Plenty, probably. It's still in alpha. Please report them.
