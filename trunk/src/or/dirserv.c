@@ -557,7 +557,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
   char signature[128];
   char published[33];
   time_t published_on;
-  int i, identity_pkeylen;
+  int i;
   eos = s+maxlen;
 
   if (!descriptor_list)
@@ -565,14 +565,15 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
 
   if (list_running_servers(&cp))
     return -1;
-#if 0
-  /* PEM-encode the identity key key */
-  if(crypto_pk_write_public_key_to_string(private_key,
-                                        &identity_pkey,&identity_pkeylen)<0) {
+
+  /* ASN.1-encode the public key.  This is a temporary measure; once
+   * everyone is running 0.0.9pre3 or later, we can shift to using a
+   * PEM-encoded key instead.
+   */
+  if(crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     return -1;
   }
-#endif
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   format_iso_time(published, published_on);
@@ -580,8 +581,9 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
            "signed-directory\n"
            "published %s\n"
            "recommended-software %s\n"
-           "running-routers %s\n\n",
-           published, options.RecommendedVersions, cp);
+           "running-routers %s\n"
+           "opt dir-signing-key %s\n\n",
+           published, options.RecommendedVersions, cp, identity_pkey);
 
   tor_free(cp);
   tor_free(identity_pkey);

@@ -365,6 +365,20 @@ test_crypto()
   test_assert(! crypto_pk_write_public_key_to_string(pk1, &cp, &i));
   test_assert(! crypto_pk_read_public_key_from_string(pk2, cp, i));
   test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
+  tor_free(cp);
+
+  /* Check DER encoding */
+  i=crypto_pk_DER64_encode_public_key(pk1, &cp);
+  test_assert(i>0);
+  test_assert(cp);
+  test_assert(!strchr(cp, ' '));
+  test_assert(!strchr(cp, '\n'));
+  test_eq(0, crypto_pk_cmp_keys(pk1, pk1));
+  crypto_free_pk_env(pk2);
+  pk2 = crypto_pk_DER64_decode_public_key(cp);
+  test_assert(pk2);
+  test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
+  tor_free(cp);
 
   test_eq(128, crypto_pk_keysize(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
@@ -1095,6 +1109,7 @@ main(int c, char**v){
 //  puts("========================== Buffers =========================");
 //  test_buffers();
   puts("\n========================== Crypto ==========================");
+  // add_stream_log(LOG_DEBUG, LOG_ERR, "<stdout>", stdout);
   test_crypto();
   test_crypto_dh();
   puts("\n========================= Util ============================");
@@ -1105,7 +1120,6 @@ main(int c, char**v){
   test_onion();
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
-  /* add_stream_log(LOG_DEBUG, LOG_ERR, "<stdout>", stdout); */
   test_dir_format();
   puts("\n========================= Rendezvous functionality ========");
   test_rend_fns();
