@@ -42,7 +42,16 @@ router_resolve_directory(directory_t *dir);
 int learn_my_address(struct sockaddr_in *me) {
   /* local host information */
   char localhostname[512];
-  struct hostent *localhost;
+  static struct hostent *localhost;
+  static int already_learned=0;
+
+  if(already_learned) {
+    memset(me,0,sizeof(struct sockaddr_in));
+    me->sin_family = AF_INET;
+    memcpy((void *)&me->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
+    me->sin_port = htons((uint16_t) options.ORPort);
+    return 0;
+  }
 
   /* obtain local host information */
   if(gethostname(localhostname,512) < 0) {
@@ -65,6 +74,7 @@ int learn_my_address(struct sockaddr_in *me) {
     /* We're a loopback IP but we're not called localhost.  Uh oh! */
     log_fn(LOG_WARNING, "Got a loopback address: /etc/hosts may be wrong");
   }
+  already_learned=1;
   return 0;
 }
 
@@ -977,7 +987,6 @@ int router_compare_to_exit_policy(connection_t *conn) {
   }
 
   return 0; /* accept all by default. */
-
 }
 
 /*

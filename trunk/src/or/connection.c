@@ -230,7 +230,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
       conn->state = AP_CONN_STATE_SOCKS_WAIT;
       break;
     case CONN_TYPE_DIR:
-      conn->state = DIR_CONN_STATE_COMMAND_WAIT;
+      conn->state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
       break;
   }
   return 0;
@@ -438,7 +438,8 @@ int connection_handle_read(connection_t *conn) {
   }
 
   if(connection_read_to_buf(conn) < 0) {
-    if(conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
+    if(conn->type == CONN_TYPE_DIR && 
+      (conn->state == DIR_CONN_STATE_CONNECTING_GET || DIR_CONN_STATE_CONNECTING_POST)) {
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_forget_router(conn->addr,conn->port); 
@@ -524,6 +525,13 @@ int connection_read_to_buf(connection_t *conn) {
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
   return fetch_from_buf(string, len, &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen);
+}
+
+int connection_fetch_from_buf_http(connection_t *conn,
+                                   char *headers_out, int max_headerlen,
+                                   char *body_out, int max_bodylen) {
+  return fetch_from_buf_http(conn->inbuf,&conn->inbuf_datalen,
+                             headers_out, max_headerlen, body_out, max_bodylen);
 }
 
 int connection_find_on_inbuf(char *string, int len, connection_t *conn) {
