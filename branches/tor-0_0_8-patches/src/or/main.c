@@ -962,11 +962,13 @@ static void dumpstats(int severity) {
   if (stats_n_seconds_uptime)
     log(severity,
 #ifdef MS_WINDOWS
-        "Average bandwidth used: %I64u/%ld = %d bytes/sec",
+        "Average bandwidth used: %I64u/%ld = %d bytes/sec", 
+          stats_n_bytes_read,
 #else
         "Average bandwidth used: %llu/%ld = %d bytes/sec",
+          (long long unsigned int)stats_n_bytes_read,
 #endif
-        stats_n_bytes_read, stats_n_seconds_uptime,
+        stats_n_seconds_uptime,
         (int) (stats_n_bytes_read/stats_n_seconds_uptime));
 
   rep_hist_dump_stats(now,severity);
