@@ -310,6 +310,12 @@ redirection is to be performed on a given set of addresses by using the
 special target string "pass", which prevents subsequent rules from being
 considered.
 .TP
+\fBShutdownWaitLength\fR\fINUM\fP
+When we get a SIGINT and we're a server, we begin shutting down: we close
+listeners and start refusing new circuits. After \fBNUM\fP seconds,
+we exit. If we get a second SIGINT, we exit immediately.  (Default:
+30 seconds)
+.TP
 \fBDirPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor uploads its server
 descriptors to the directory servers.  This information is also

@@ -82,7 +82,7 @@ R     - revised circ selection stuff.
       - If we never get a CONNECTED back, we should put the stream back in
         CONTROLLER_WAIT, not in CIRCUIT_WAIT.
     - Tests for new controller features
-R . HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
+R o HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     other ORs.)
   o Changes for forward compatibility
     o If a version is later than the last in its series, but a version
