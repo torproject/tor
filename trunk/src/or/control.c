@@ -777,7 +777,7 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
   connection_t *ap_conn;
   uint32_t conn_id;
   if (len < 6) {
-    send_control_error(conn, ERR_SYNTAX, "attachstream message too short");
+    send_control_error(conn, ERR_SYNTAX, "redirectstream message too short");
     return 0;
   }
   conn_id = ntohl(get_uint32(body));
@@ -789,7 +789,7 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
                        "No AP connection found with given ID");
     return 0;
   }
-  strlcpy(ap_conn->socks_request->address, body+1,
+  strlcpy(ap_conn->socks_request->address, body+4,
           sizeof(ap_conn->socks_request->address));
 
   send_control_done(conn);
