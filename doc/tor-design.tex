@@ -102,6 +102,8 @@ each successive hop in the circuit. Onion replay detection is no longer
 necessary, and the process of building circuits is more reliable, since
 the initiator knows when a hop fails and can then try extending to a new node.
 
+% Perhaps mention that not all of these are things that we invented. -NM
+
 \item \textbf{Separation of protocol cleaning from anonymity:}
 The original Onion Routing design required a separate ``application
 proxy'' for each
@@ -144,6 +146,9 @@ experience \cite{freedom21-security} suggest that this level of resource
 use is not practical or economical; and even full link padding is still
 vulnerable to active attacks \cite{defensive-dropping}.
 %[An upcoming FC04 paper. I'll add a cite when it's out. -RD]
+
+%Say that: although some less resource-heavy traffic shaping approaches may 
+%help resist certain attacks, we aren't getting on the bandwagon yet?  -NM.
 
 \item \textbf{Leaky-pipe circuit topology:} Through in-band
   signalling within the
@@ -249,10 +254,12 @@ principal directions.  Some have attempted to maximize anonymity at
 the cost of introducing comparatively large and variable latencies,
 for example, Babel\cite{babel}, Mixmaster\cite{mixmaster-spec}, and
 Mixminion\cite{minion-design}.  Because of this
-decision, such \emph{high-latency} networks are well-suited for anonymous
+trade-off, such \emph{high-latency} networks are well-suited for anonymous
 email, but introduce too much lag for interactive tasks such as web browsing,
 internet chat, or SSH connections.
 
+% Parts of this graf belongs later in expository order.  Some of the
+% sentences seem superficially unrelated. 
 Tor belongs to the second category: \emph{low-latency} designs that
 attempt to anonymize interactive network traffic.  Because such
 traffic tends to involve a relatively large numbers of packets, it is
@@ -272,8 +279,8 @@ been run for many years (the Java Anon Proxy, aka Web MIXes,
 \cite{web-mix}).
 
 Another low latency design that was proposed independently and at
-about the same time as Onion Routing was PipeNet \cite{pipenet}.
-This provided anonymity protections that were stronger than Onion Routing's,
+about the same time as the original Onion Routing was PipeNet \cite{pipenet}.
+It provided anonymity protections that were stronger than Onion Routing's,
 but at the cost of allowing a single user to shut down the network simply
 by not sending. It was also never implemented or formally published.
 
@@ -291,10 +298,11 @@ requires public-key cryptography, whereas relaying packets along a tunnel is
 comparatively inexpensive.  Because a tunnel crosses several servers, no
 single server can learn the user's communication partners.
 
-Systems such as earlier versions of Freedom and Onion Routing
-build the anonymous channel all at once (using an onion). Later
-designs of Freedom and Onion Routing as described herein build
-the channel in stages as does AnonNet
+%[Ouch: We haven't said what an onion is yet, but we use the word here! -NM]
+Systems such as earlier versions of Freedom and the original Onion Routing
+build the anonymous channel all at once (using an onion). 
+Later designs of Freedom and Tor as described herein build
+the channel in stages, as does AnonNet
 \cite{anonnet}. Amongst other things, this makes perfect forward
 secrecy feasible.
 
@@ -322,7 +330,7 @@ recipients.
 Distributed-trust anonymizing systems differ in how they prevent attackers
 from controlling too many servers and thus compromising too many user paths.
 Some protocols rely on a centrally maintained set of well-known anonymizing
-servers.  Current Tor design falls into this category.
+servers.  The current Tor design falls into this category.
 Others (such as Tarzan and MorphMix) allow unknown users to run
 servers, while using a limited resource (DHT space for Tarzan; IP space for
 MorphMix) to prevent an attacker from owning too much of the network.
@@ -371,7 +379,7 @@ cebolla\\
 
 
 \subsection{Goals}
-% Are these really our goals? ;) -NM
+% Reformat this section like ``Adversary Model'' is formatted. -NM
 Like other low-latency anonymity designs, Tor seeks to frustrate
 attackers from linking communication partners, or from linking
 multiple communications to or from a single point.  Within this
@@ -392,7 +400,9 @@ Second, the system must be {\bf usable}.  A hard-to-use system has
 fewer users --- and because anonymity systems hide users among users, a
 system with fewer users provides less anonymity.  Thus, usability is
 not only a convenience, but is a security requirement for anonymity
-systems.
+systems.  In order to be usable, Tor should with most of a
+user's unmodified aplication; shouldn't introduce prohibitive delays; and 
+[XXX what else?].
 
 Third, the protocol must be {\bf extensible}, so that it can serve as
 a test-bed for future research in low-latency anonymity systems.
@@ -401,29 +411,29 @@ a danger that differing choices of extensions will render users
 distinguishable.  Thus, implementations should not permit different
 protocol extensions to coexist in a single deployed network.)
 
+% We should mention that there's a specification someplace: the spec makes us 
+% easier to extend too. -NM
+
 The protocol's design and security parameters must be {\bf
 conservative}.  Additional features impose implementation and
 complexity costs. [XXX Say that we don't want to try to come up with
 speculative solutions to problems we don't KNOW how to solve? -NM]
 
-[XXX mention something about robustness?  But we really aren't that
-  robust.  We just assume that tunneled protocols tolerate connection
-  loss. -NM]
-
 \subsection{Non-goals}
 In favoring conservative, deployable designs, we have explicitly
 deferred a number of goals --- not because they are not desirable in
-anonymity systems --- but because solving them is either solved
+anonymity systems --- but because they are either solved
 elsewhere, or an area of active research without a generally accepted
 solution.
 
 Unlike Tarzan or Morphmix, Tor does not attempt to scale to completely
 decentralized peer-to-peer environments with thousands of short-lived
-servers. 
+servers, many of which may be controlled by an adversary.
 
 Tor does not claim to provide a definitive solution to end-to-end
 timing or intersection attacks for users who do not run their own
 Onion Routers.
+% Mention would-be approaches. -NM
 % Does that mean we do claim to solve intersection attack for
 % the enclave-firewall model? -RD
 
@@ -497,7 +507,7 @@ The basic adversary components we consider are:
 %  for later. -PS
 
   
-\item[Compromised Tor-node:] can arbitrarily manipulate the
+\item{Hostile Tor node:] can arbitrarily manipulate the
   connections under its control, as well as creating new connections
   (that pass through itself).
 \end{description}
@@ -543,6 +553,7 @@ line refers to the immediately following SubSection.-PS]
 
 \SubSection{Known attacks against low-latency anonymity systems}
 \label{subsec:known-attacks}
+% Should be merged into ``Threat model'' and reiterated in Attacks. -NM
 
 We discuss each of these attacks in more detail below, along with the
 aspects of the Tor design that provide defense. We provide a summary
@@ -563,10 +574,13 @@ compromise entire path,
 selectively DOS servers,
 introduce timing into messages,
 directory attacks,
-tagging attacks
+tagging attacks,
+smear attacks,
+entrapment attacks
 
 
 \SubSection{Assumptions}
+% Should be merged into ``Threat model''.
 
 For purposes of this paper, we assume all directory servers are honest
 % No longer true, see subsec:dirservers below -RD
@@ -763,11 +777,15 @@ addresses and ports the router will permit stream connections. On one end
 of the spectrum are \emph{open exit} nodes that will connect anywhere;
 on the other end are \emph{middleman} nodes that only relay traffic to
 other Tor nodes, and \emph{private exit} nodes that only connect locally
-or to addresses internal to that node's organization. This private exit
+or to addresses internal to that node's organization. 
+This private exit
 node configuration is more secure for clients --- the adversary cannot
 see plaintext traffic leaving the network (e.g. to a webserver), so he
 is less sure of Alice's destination. More generally, nodes can require
 a variety of forms of traffic authentication \cite{onion-discex00}.
+Most onnion routers will function as \emph{limited exits} that permit
+connections to the world at large, but restrict access to certain abuse-prone
+addresses and services.
 
 Tor offers more reliability than the high-latency fire-and-forget
 anonymous email networks, because the sender opens a TCP stream
@@ -795,6 +813,7 @@ even occurs to people that it wasn't you.
 
 Preventing abuse of open exit nodes is an unsolved problem. Princeton's
 CoDeeN project \cite{darkside} gives us a glimpse of what we're in for.
+% This is more speculative than a description of our design. 
 
 but their solutions, which mainly involve rate limiting and blacklisting
 nodes which do bad things, don't translate directly to Tor. Rate limiting
@@ -845,7 +864,7 @@ in-band network status updates: each router flooded a signed statement
 to its neighbors, which propagated it onward. But anonymizing networks
 have different security goals than typical link-state routing protocols.
 For example, we worry more about delays (accidental or intentional)
-which cause different parts of the network to have different pictures
+that can cause different parts of the network to have different pictures
 of link-state and topology. We also worry about attacks to deceive a
 client about the router membership list, topology, or current network
 state. Such \emph{partitioning attacks} on client knowledge help an
@@ -925,6 +944,7 @@ all the other onion routers (or even elsewhere). Thus directory servers
 are not a performance bottleneck when we have many users, and also they
 won't aid traffic analysis by forcing clients to periodically announce
 their existence to any central point.
+% Mention Hydra as an example of non-clique topologies. -NM, from RD
 
 \Section{Rendezvous points: location privacy}
 \label{sec:rendezvous}
@@ -1162,6 +1182,11 @@ it could give you a bad IP that sends you somewhere else.
 \item foo
 \end{itemize}
 
+\item \textbf{Attacks against rendezvous points}
+\begin{itemize}
+\item foo
+\end{itemize}
+
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1208,6 +1233,7 @@ gain experience in deploying an anonymizing overlay network, and learn
 from having actual users. We are now at the point where we can start
 deploying a wider network. We will see what happens!
 % ok, so that's hokey. fix it. -RD
+\item \emph{Further specification review:} Foo.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
