@@ -529,7 +529,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     do {
       assert(thishop);
 
-      log_fn(LOG_INFO,"crypting a layer of the relay cell.");
+      log_fn(LOG_DEBUG,"crypting a layer of the relay cell.");
       if(relay_crypt_one_payload(thishop->f_crypto, cell->payload, 1) < 0) {
         return -1;
       }
