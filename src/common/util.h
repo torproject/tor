@@ -87,6 +87,7 @@ char *tor_strndup(const char *s, size_t n);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
 void tor_strlower(char *s);
 int strcmpstart(const char *s1, const char *s2);
+int tor_strstrip(char *s, const char *strip);
 
 /* Some platforms segfault when you try to access a multi-byte type
  * that isn't aligned to a word boundary.  The macros and/or functions

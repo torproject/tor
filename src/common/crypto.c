@@ -463,48 +463,67 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   return r;
 }
 
-int crypto_pk_DER64_encode_key(crypto_pk_env_t *env, char **out)
+/** Allocate a new string in *<b>out</b>, containing the public portion of the
+ * RSA key in <b>env</b>, encoded first with DER, then in base-64.  Return the
+ * length of the encoded representation on success, and -1 on failure.
+ *
+ * <i>This function is for temporary use only.  We need a simple
+ * one-line representation for keys to work around a bug in parsing
+ * directories containing "opt keyword\n-----BEGIN OBJECT----" entries
+ * in versions of Tor up to 0.0.9pre2.</i>
+ */
+int crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **out)
 {
   int len;
-  char *s, *sp;
+  char buf[PK_BYTES*2]; /* Too long, but hey, stacks are big. */
   tor_assert(env && out);
-  len = i2d_RSAPublicKey(env->key, NULL);
+  len = crypto_pk_asn1_encode(env, buf, sizeof(buf));
   if (len < 0) {
     return -1;
   }
-  s = sp = tor_malloc(len+1);
-  i2d_RSAPublicKey(env->key, &sp); /* modifies sp */
   *out = tor_malloc(len * 2); /* too long, but safe. */
-  if (base64_encode(*out, len*2, s, len) < 0) {
+  if (base64_encode(*out, len*2, buf, len) < 0) {
     log_fn(LOG_WARN, "Error base64-encoding DER-encoded key");
     tor_free(*out);
-    tor_free(s);
     return -1;
   }
-  tor_free(s);
-  return len;
+  /* Remove spaces */
+  tor_strstrip(*out, " \r\n\t");
+  return strlen(*out);
 }
 
-int crypto_pk_DER64_decode_key(crypto_pk_env_t *env, const char *in)
+/** Decode a base-64 encoded DER representation of an RSA key from <b>in</b>,
+ * and store the result in <b>env</b>.  Return 0 on success, -1 on failure.
+ *
+ * <i>This function is for temporary use only.  We need a simple
+ * one-line representation for keys to work around a bug in parsing
+ * directories containing "opt keyword\n-----BEGIN OBJECT----" entries
+ * in versions of Tor up to 0.0.9pre2.</i>
+ */
+crypto_pk_env_t *crypto_pk_DER64_decode_public_key(const char *in)
 {
-  char *buf, *bufp;
-  RSA *rsa;
+  char buf1[PK_BYTES*2 + PK_BYTES/64 + 2];
+  char buf[PK_BYTES*2];
   int len;
-  tor_assert(env && in);
+  int i;
+  tor_assert(in);
   len = strlen(in);
-  buf = bufp = tor_malloc(len+1);
-  if (base64_decode(buf, len+1, in, len)<0) {
-    tor_free(buf);
-    log_fn(LOG_WARN,"Error base-64 decoding key");
-    return -1;
+
+  if (strlen(in) > PK_BYTES*2) {
+    return NULL;
   }
-  rsa = d2i_RSAPublicKey(NULL, &bufp, strlen(buf));
-  tor_free(buf);
-  if (!rsa)
-    return -1;
-  if (env->key) RSA_free(env->key);
-  env->key = rsa;
-  return 0;
+  /* base64_decode doesn't work unless we insert linebreaks every 64
+   * characters.  how dumb. */
+  for(i=0;i*64<len;i+=1) {
+    strncpy(buf1+(64+1)*i, in+64*i, 64);
+    strcpy(buf1+(64+1)*i + 64, "\n");
+  }
+  len = base64_decode(buf, sizeof(buf), buf1, strlen(buf1));
+  if (len<0) {
+    log_fn(LOG_WARN,"Error base-64 decoding key");
+    return NULL;
+  }
+  return crypto_pk_asn1_decode(buf, len);
 }
 
 /** Return true iff <b>env</b> has a valid key.
