@@ -117,6 +117,7 @@ static void update_global_event_mask(void);
 static void send_control_message(connection_t *conn, uint16_t type,
                                  uint16_t len, const char *body);
 static void send_control_done(connection_t *conn);
+static void send_control_done2(connection_t *conn, const char *msg, size_t len);
 static void send_control_error(connection_t *conn, uint16_t error,
                                const char *message);
 static void send_control_event(uint16_t event, uint16_t len, const char *body);
@@ -190,6 +191,11 @@ static void
 send_control_done(connection_t *conn)
 {
   send_control_message(conn, CONTROL_CMD_DONE, 0, NULL);
+}
+
+static void send_control_done2(connection_t *conn, const char *msg, size_t len)
+{
+  send_control_message(conn, CONTROL_CMD_DONE, len, msg);
 }
 
 /** Send an error message with error code <b>error</b> and body
@@ -445,7 +451,46 @@ handle_control_signal(connection_t *conn, uint16_t len,
 static int
 handle_control_mapaddress(connection_t *conn, uint16_t len, const char *body)
 {
-  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  smartlist_t *elts;
+  smartlist_t *lines;
+  smartlist_t *reply;
+  char *r;
+  size_t sz;
+  lines = smartlist_create();
+  elts = smartlist_create();
+  reply = smartlist_create();
+  smartlist_split_string(lines, body, "\n",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(lines, const char *, line,
+  {
+    smartlist_split_string(elts, body, " ", 0, 2);
+    if (smartlist_len(elts) == 2) {
+      const char *from = smartlist_get(elts,0);
+      const char *to = smartlist_get(elts,1);
+      if (!is_plausible_address(from)) {
+        log_fn(LOG_WARN,"Skipping invalid argument '%s' in MapAddress msg",from);
+      } else if (!is_plausible_address(to)) {
+        log_fn(LOG_WARN,"Skipping invalid argument '%s' in AddressMap msg",to);
+      } else {
+        addressmap_register(from, tor_strdup(to), 0);
+        smartlist_add(reply, tor_strdup(line));
+      }
+    } else {
+      log_fn(LOG_WARN, "Skipping MapAddress line with wrong number of items.");
+    }
+    SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
+    smartlist_clear(elts);
+  });
+  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+  smartlist_free(lines);
+  smartlist_free(elts);
+
+  r = smartlist_join_strings(reply, "\n", 1, &sz);
+  send_control_done2(conn,sz,r);
+
+  SMARTLIST_FOREACH(reply, char *, cp, tor_free(cp));
+  smartlist_free(reply);
+  tor_free(r);
   return 0;
 }
 
@@ -455,7 +500,12 @@ handle_getinfo_helper(const char *question)
   if (!strcmp(question, "version")) {
     return tor_strdup(VERSION);
   } else if (!strcmpstart(question, "desc/id/")) {
-    return NULL; /* XXXX */
+    routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
+    if (!ri)
+      return NULL;
+    if (!ri->signed_descriptor)
+      return NULL;
+    return tor_strdup(ri->signed_descriptor);
   } else if (!strcmp(question, "desc/all-ids")) {
     routerlist_t *rl;
     char *answer, *cp;
@@ -540,7 +590,14 @@ static int
 handle_control_postdescriptor(connection_t *conn, uint16_t len,
                               const char *body)
 {
-  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  if (router_load_single_router(body)<0) {
+    /* XXXX a more specific error would be nice. */
+    send_control_error(conn,ERR_UNSPECIFIED,
+                       "Could not parse descriptor or add it");
+    return 0;
+  }
+
+  send_control_done(conn);
   return 0;
 }
 

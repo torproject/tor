@@ -1266,6 +1266,21 @@ tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len)
                       (int)(uint8_t)((a    )&0xff));
 }
 
+/* DOCDOC */
+int
+is_plausible_address(const char *name)
+{
+  const char *cp;
+  tor_assert(name);
+  /* We could check better here. */
+  for (cp=name; *cp; cp++) {
+    if (*cp != '.' && *cp != '-' && !TOR_ISALNUM(*cp))
+      return 0;
+  }
+
+  return 1;
+}
+
 /* =====
  * Process helpers
  * ===== */

@@ -620,6 +620,8 @@ typedef struct addr_policy_t {
 
 /** Information about another onion router in the network. */
 typedef struct {
+  char *signed_descriptor; /**< The original signed descriptor for this router*/
+
   char *address; /**< Location of OR: either a hostname or an IP address. */
   char *nickname; /**< Human-readable OR name. */
 
@@ -654,6 +656,14 @@ typedef struct {
                                  * claims are its family. */
 } routerinfo_t;
 
+/** Contents of a running-routers list */
+typedef struct running_routers_t {
+  time_t published_on; /**< When was the list marked as published? */
+  /** Which ORs are on the list?  Entries may be prefixed with ! and $. */
+  smartlist_t *running_routers;
+  int is_running_routers_format; /**< Are we using the old entry format? */
+} running_routers_t;
+
 /** Contents of a directory of onion routers. */
 typedef struct {
   /** List of routerinfo_t */
@@ -665,17 +675,12 @@ typedef struct {
    */
   time_t published_on;
   time_t running_routers_updated_on;
+  /** DOCDOC
+   */
+  running_routers_t *running_routers;
   /** Which router is claimed to have signed it? */
   char *signing_router;
 } routerlist_t;
-
-/** Contents of a running-routers list */
-typedef struct running_routers_t {
-  time_t published_on; /**< When was the list marked as published? */
-  /** Which ORs are on the list?  Entries may be prefixed with ! and $. */
-  smartlist_t *running_routers;
-  int is_running_routers_format; /**< Are we using the old entry format? */
-} running_routers_t;
 
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
@@ -1696,6 +1701,7 @@ void free_trusted_dir_servers(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
+int router_load_single_router(const char *s);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                         int dir_is_recent, int dir_is_cached);
 int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
@@ -1708,6 +1714,7 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
 
 int router_exit_policy_rejects_all(routerinfo_t *router);
 void running_routers_free(running_routers_t *rr);
+void routerlist_set_runningrouters(routerlist_t *list, running_routers_t *rr);
 void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr);
 int routers_update_status_from_entry(smartlist_t *routers,

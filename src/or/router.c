@@ -427,8 +427,6 @@ int router_is_clique_mode(routerinfo_t *router) {
 
 /** My routerinfo. */
 static routerinfo_t *desc_routerinfo = NULL;
-/** String representation of my descriptor, signed by me. */
-static char descriptor[8192];
 /** Boolean: do we need to regenerate the above? */
 static int desc_is_dirty = 1;
 /** Boolean: do we need to regenerate the above? */
@@ -527,8 +525,8 @@ const char *router_get_my_descriptor(void) {
     if (router_rebuild_descriptor(1))
       return NULL;
   }
-  log_fn(LOG_DEBUG,"my desc is '%s'",descriptor);
-  return descriptor;
+  log_fn(LOG_DEBUG,"my desc is '%s'",desc_routerinfo->signed_descriptor);
+  return desc_routerinfo->signed_descriptor;
 }
 
 /** Rebuild a fresh routerinfo and signed server descriptor for this
@@ -579,14 +577,17 @@ int router_rebuild_descriptor(int force) {
     smartlist_split_string(ri->declared_family, options->MyFamily, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   }
+  ri->signed_descriptor = tor_malloc(8192);
+  if (router_dump_router_to_string(ri->signed_descriptor, 8192,
+                                   ri, get_identity_key())<0) {
+    log_fn(LOG_WARN, "Couldn't dump router to string.");
+    return -1;
+  }
 
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
-  if (router_dump_router_to_string(descriptor, 8192, ri, get_identity_key())<0) {
-    log_fn(LOG_WARN, "Couldn't dump router to string.");
-    return -1;
-  }
+
   desc_is_dirty = 0;
   desc_needs_upload = 1;
   return 0;

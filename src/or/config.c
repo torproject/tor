@@ -123,7 +123,7 @@ static config_var_t config_vars[] = {
   VAR("ExcludeNodes",        STRING,   ExcludeNodes,         NULL),
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
   VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
-  VAR("AddressMap",          LINELIST, AddressMap,           NULL),
+  VAR("MapAddress",          LINELIST, AddressMap,           NULL),
   VAR("FascistFirewall",     BOOL,     FascistFirewall,      "0"),
   VAR("FirewallPorts",       CSV,      FirewallPorts,        "80,443"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
@@ -1824,9 +1824,18 @@ config_register_addressmaps(or_options_t *options) {
     if (smartlist_len(elts) >= 2) {
       from = smartlist_get(elts,0);
       to = smartlist_get(elts,1);
-      addressmap_register(from, tor_strdup(to), 0);
+      if (!is_plausible_address(from)) {
+        log_fn(LOG_WARN,"Skipping invalid argument '%s' to MapAddress",from);
+      } else if (!is_plausible_address(to)) {
+        log_fn(LOG_WARN,"Skipping invalid argument '%s' to MapAddress",to);
+      } else {
+        addressmap_register(from, tor_strdup(to), 0);
+        if (smartlist_len(elts)>2) {
+          log_fn(LOG_WARN,"Ignoring extra arguments to MapAddress.");
+        }
+      }
     } else {
-      log_fn(LOG_WARN,"AddressMap '%s' has too few arguments. Ignoring.", opt->value);
+      log_fn(LOG_WARN,"MapAddress '%s' has too few arguments. Ignoring.", opt->value);
     }
     SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
     smartlist_clear(elts);

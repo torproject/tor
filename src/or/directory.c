@@ -723,9 +723,11 @@ connection_dir_client_reached_eof(connection_t *conn)
       return -1;
     }
     router_get_routerlist(&rl);
-    if (rl)
-      routerlist_update_from_runningrouters(rl,rrs);
-    running_routers_free(rrs);
+    if (rl) {
+      routerlist_set_runningrouters(rl,rrs);
+    } else {
+      running_routers_free(rrs);
+    }
   }
 
   if (conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {

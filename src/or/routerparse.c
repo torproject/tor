@@ -312,6 +312,7 @@ router_parse_routerlist_from_directory(const char *str,
   char digest[DIGEST_LEN];
   routerlist_t *new_dir = NULL;
   char *versions = NULL;
+  int nickname_list_is_running_routers;
   smartlist_t *good_nickname_list = NULL;
   time_t published_on;
   int i, r;
@@ -426,6 +427,7 @@ router_parse_routerlist_from_directory(const char *str,
     }
   }
 
+  nickname_list_is_running_routers = (tok->tp == K_RUNNING_ROUTERS);
   good_nickname_list = smartlist_create();
   for (i=0; i<tok->n_args; ++i) {
     smartlist_add(good_nickname_list, tok->args[i]);
@@ -459,6 +461,11 @@ router_parse_routerlist_from_directory(const char *str,
 
   new_dir->software_versions = versions; versions = NULL;
   new_dir->published_on = published_on;
+  new_dir->running_routers = tor_malloc_zero(sizeof(running_routers_t));
+  new_dir->running_routers->published_on = published_on;
+  new_dir->running_routers->running_routers = good_nickname_list;
+  new_dir->running_routers->is_running_routers_format =
+    nickname_list_is_running_routers;
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
@@ -475,15 +482,15 @@ router_parse_routerlist_from_directory(const char *str,
   if (new_dir)
     routerlist_free(new_dir);
   tor_free(versions);
+  if (good_nickname_list) {
+    SMARTLIST_FOREACH(good_nickname_list, char *, n, tor_free(n));
+    smartlist_free(good_nickname_list);
+  }
  done:
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
     smartlist_free(tokens);
-  }
-  if (good_nickname_list) {
-    SMARTLIST_FOREACH(good_nickname_list, char *, n, tor_free(n));
-    smartlist_free(good_nickname_list);
   }
   return r;
 }
@@ -802,6 +809,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
+  router->signed_descriptor = tor_strndup(s, end-s);
   ports_set = bw_set = 0;
 
   if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {

@@ -249,28 +249,11 @@ dirserv_free_fingerprint_list()
  *    Descriptor list
  */
 
-/** A directory server's view of a server descriptor.  Contains both
- * parsed and unparsed versions. */
-typedef struct descriptor_entry_t {
-  char *nickname;
-  time_t published;
-  size_t desc_len;
-  char *descriptor;
-  int verified;
-  routerinfo_t *router;
-} descriptor_entry_t;
-
-/** List of all server descriptors that this dirserv is holding. */
+/** List of routerinfo_t for all server descriptors that this dirserv
+ * is holding.
+ * XXXX This should eventually get coalesced into routerlist.c
+ */
 static smartlist_t *descriptor_list = NULL;
-
-/** Release the storage held by <b>desc</b> */
-static void free_descriptor_entry(descriptor_entry_t *desc)
-{
-  tor_free(desc->descriptor);
-  tor_free(desc->nickname);
-  routerinfo_free(desc->router);
-  tor_free(desc);
-}
 
 /** Release all storage that the dirserv is holding for server
  * descriptors. */
@@ -279,8 +262,8 @@ dirserv_free_descriptors()
 {
   if (!descriptor_list)
     return;
-  SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
-                    free_descriptor_entry(d));
+  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+                    routerinfo_free(ri));
   smartlist_clear(descriptor_list);
 }
 
@@ -319,12 +302,10 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 int
 dirserv_add_descriptor(const char **desc, const char **msg)
 {
-  descriptor_entry_t *ent = NULL;
-  routerinfo_t *ri = NULL;
+  routerinfo_t *ri = NULL, *ri_old=NULL;
   int i, r, found=-1;
   char *start, *end;
   char *desc_tmp = NULL;
-  const char *cp;
   size_t desc_len;
   time_t now;
   int verified=1; /* whether we knew its fingerprint already */
@@ -346,10 +327,10 @@ dirserv_add_descriptor(const char **desc, const char **msg)
     end = start+strlen(start);
   }
   desc_len = end-start;
-  cp = desc_tmp = tor_strndup(start, desc_len);
+  desc_tmp = tor_strndup(start, desc_len); /* Is this strndup still needed???*/
 
   /* Check: is the descriptor syntactically valid? */
-  ri = router_parse_entry_from_string(cp, NULL);
+  ri = router_parse_entry_from_string(desc_tmp, NULL);
   tor_free(desc_tmp);
   if (!ri) {
     log(LOG_WARN, "Couldn't parse descriptor");
@@ -402,15 +383,15 @@ dirserv_add_descriptor(const char **desc, const char **msg)
 
   /* Do we already have an entry for this router? */
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
-    ent = smartlist_get(descriptor_list, i);
-    if (!strcasecmp(ri->nickname, ent->nickname)) {
+    ri_old = smartlist_get(descriptor_list, i);
+    if (!strcasecmp(ri->nickname, ri_old->nickname)) {
       found = i;
       break;
     }
   }
   if (found >= 0) {
     /* if so, decide whether to update it. */
-    if (ent->published >= ri->published_on) {
+    if (ri_old->published_on >= ri->published_on) {
       /* We already have a newer or equal-time descriptor */
       log_fn(LOG_INFO,"We already have a new enough desc for nickname '%s'. Not adding.",ri->nickname);
       *msg = "We already have a newer descriptor.";
@@ -419,10 +400,10 @@ dirserv_add_descriptor(const char **desc, const char **msg)
       *desc = end;
       return verified;
     }
-    /* We don't have a newer one; we'll update this one. */
+    /* We don't alrady have a newer one; we'll update this one. */
     log_fn(LOG_INFO,"Dirserv updating desc for nickname '%s'",ri->nickname);
     *msg = verified?"Verified server updated":"Unverified server updated. (Have you sent us your key fingerprint?)";
-    free_descriptor_entry(ent);
+    routerinfo_free(ri_old);
     smartlist_del_keeporder(descriptor_list, found);
   } else {
     /* Add at the end. */
@@ -430,14 +411,8 @@ dirserv_add_descriptor(const char **desc, const char **msg)
     *msg = verified?"Verified server added":"Unverified server added. (Have you sent us your key fingerprint?)";
   }
 
-  ent = tor_malloc(sizeof(descriptor_entry_t));
-  ent->nickname = tor_strdup(ri->nickname);
-  ent->published = ri->published_on;
-  ent->desc_len = desc_len;
-  ent->descriptor = tor_strndup(start,desc_len);
-  ent->router = ri;
-  ent->verified = verified;
-  smartlist_add(descriptor_list, ent);
+  ri->is_verified = verified;
+  smartlist_add(descriptor_list, ri);
 
   *desc = end;
   directory_set_dirty();
@@ -453,16 +428,16 @@ static void
 directory_remove_unrecognized(void)
 {
   int i;
-  descriptor_entry_t *ent;
+  routerinfo_t *ent;
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ent = smartlist_get(descriptor_list, i);
-    if (dirserv_router_fingerprint_is_known(ent->router)<=0) {
+    if (dirserv_router_fingerprint_is_known(ent)<=0) {
       log(LOG_INFO, "Router '%s' is no longer recognized",
           ent->nickname);
-      free_descriptor_entry(ent);
+      routerinfo_free(ent);
       smartlist_del(descriptor_list, i--);
     }
   }
@@ -510,28 +485,27 @@ dirserv_load_from_directory_string(const char *dir)
  * as running iff <b>is_live</b> is true.
  */
 static char *
-list_single_server_status(descriptor_entry_t *desc, int is_live,
+list_single_server_status(routerinfo_t *desc, int is_live,
                           int rr_format)
 {
   char buf[MAX_NICKNAME_LEN+HEX_DIGEST_LEN+4]; /* !nickname=$hexdigest\0 */
   char *cp;
 
   tor_assert(desc);
-  tor_assert(desc->router);
 
   cp = buf;
   if (!is_live) {
     *cp++ = '!';
   }
-  if (desc->verified) {
+  if (desc->is_verified) {
     strlcpy(cp, desc->nickname, sizeof(buf)-(cp-buf));
     cp += strlen(cp);
     if (!rr_format)
       *cp++ = '=';
   }
-  if (!desc->verified || !rr_format) {
+  if (!desc->is_verified || !rr_format) {
     *cp++ = '$';
-    base16_encode(cp, HEX_DIGEST_LEN+1, desc->router->identity_digest,
+    base16_encode(cp, HEX_DIGEST_LEN+1, desc->identity_digest,
                   DIGEST_LEN);
   }
   return tor_strdup(buf);
@@ -556,20 +530,19 @@ list_server_status(char **running_routers_out, char **router_status_out)
   rr_entries = smartlist_create();
   rs_entries = smartlist_create();
 
-  SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
+  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
   {
     int is_live;
     connection_t *conn;
-    tor_assert(d->router);
     conn = connection_get_by_identity_digest(
-                    d->router->identity_digest, CONN_TYPE_OR);
+                    ri->identity_digest, CONN_TYPE_OR);
     /* Treat a router as alive if
      *    - It's me, and I'm not hibernating.
      * or - we're connected to it. */
-    is_live = (router_is_me(d->router) && !we_are_hibernating()) ||
+    is_live = (router_is_me(ri) && !we_are_hibernating()) ||
       (conn && conn->state == OR_CONN_STATE_OPEN);
-    smartlist_add(rr_entries, list_single_server_status(d, is_live, 1));
-    smartlist_add(rs_entries, list_single_server_status(d, is_live, 0));
+    smartlist_add(rr_entries, list_single_server_status(ri, is_live, 1));
+    smartlist_add(rs_entries, list_single_server_status(ri, is_live, 0));
   });
 
   if (running_routers_out)
@@ -593,16 +566,16 @@ dirserv_remove_old_servers(int age)
 {
   int i;
   time_t cutoff;
-  descriptor_entry_t *ent;
+  routerinfo_t *ent;
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
   cutoff = time(NULL) - age;
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ent = smartlist_get(descriptor_list, i);
-    if (ent->published <= cutoff) {
+    if (ent->published_on <= cutoff) {
       /* descriptor_list[i] is too old.  Remove it. */
-      free_descriptor_entry(ent);
+      routerinfo_free(ent);
       smartlist_del(descriptor_list, i--);
       directory_set_dirty();
     }
@@ -677,8 +650,8 @@ dirserv_dump_directory_to_string(char **dir_out,
 
   buf_len = 2048+strlen(recommended_versions)+strlen(running_routers)+
     strlen(router_status);
-  SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
-                    buf_len += strlen(d->descriptor));
+  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+                    buf_len += strlen(ri->signed_descriptor));
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
      function, though strictly speaking we shouldn't be able to exceed
@@ -702,8 +675,8 @@ dirserv_dump_directory_to_string(char **dir_out,
   i = strlen(buf);
   cp = buf+i;
 
-  SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
-    if (strlcat(buf, d->descriptor, buf_len) >= buf_len)
+  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+    if (strlcat(buf, ri->signed_descriptor, buf_len) >= buf_len)
       goto truncated);
 
   /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
@@ -1010,8 +983,8 @@ dirserv_free_all(void)
     fingerprint_list = NULL;
   }
   if (descriptor_list) {
-    SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t*, d,
-                      free_descriptor_entry(d));
+    SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+                      routerinfo_free(ri));
     smartlist_free(descriptor_list);
     descriptor_list = NULL;
   }
