@@ -229,8 +229,9 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len)
   circuit_t *rend_circ;
   char hexid[9];
 
+  base16_encode(hexid,9,request,request_len<4?request_len:4);
+
   if (request_len>=4) {
-    base16_encode(hexid,9,request,4);
     log_fn(LOG_INFO, "Got request for rendezvous from circuit %d to cookie %s",
            circ->p_circ_id, hexid);
   }
