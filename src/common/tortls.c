@@ -277,8 +277,8 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
  * should be NULL.  Return -1 if failure, else 0.
  *
  * You can call this function multiple times.  Each time you call it,
- * it generates new certificates; all new connections will be begin
- * with the new SSL context.
+ * it generates new certificates; all new connections will use
+ * the new SSL context.
  */
 int
 tor_tls_context_new(crypto_pk_env_t *identity,
@@ -652,6 +652,7 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
   STACK_OF(X509) *chain = NULL;
   EVP_PKEY *id_pkey = NULL;
   RSA *rsa;
+  int num_in_chain;
   time_t now, t;
   int r = -1, i;
 
@@ -661,12 +662,18 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
     goto done;
   if (!(chain = SSL_get_peer_cert_chain(tls->ssl)))
     goto done;
-  if (sk_X509_num(chain) != 2) {
+  num_in_chain = sk_X509_num(chain);
+  log_fn(LOG_DEBUG,"Number of certs in chain: %d", num_in_chain);
+  /* 1 means we're receiving (server-side), and it's just the id_cert.
+   * 2 means we're connecting (client-side), and it's both the link
+   * cert and the id_cert.
+   */
+  if (num_in_chain < 1) {
     log_fn(LOG_WARN,"Unexpected number of certificates in chain (%d)",
-           sk_X509_num(chain));
+           num_in_chain);
     goto done;
   }
-  for (i=0; i<2; ++i) {
+  for (i=0; i<num_in_chain; ++i) {
     id_cert = sk_X509_value(chain, i);
     if (X509_cmp(id_cert, cert) != 0)
       break;
