@@ -211,8 +211,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->loglevel = LOG_DEBUG;
   options->CoinWeight = 0.8;
   options->LinkPadding = 0;
-  options->DirRebuildPeriod = 600;
-  options->DirFetchPeriod = 6000;
+  options->DirRebuildPeriod = 300;
+  options->DirFetchPeriod = 600;
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 10;
 //  options->ReconnectPeriod = 6001;

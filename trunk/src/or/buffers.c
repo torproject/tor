@@ -51,7 +51,7 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
     /* if no linkpadding: do a rudimentary round-robin so one
      * connection can't hog an outgoing connection
      */
-    at_most = 10*sizeof(cell_t);
+    at_most = 10*sizeof(cell_t); /* FIXME should be 10* size of usable payload */
   }
 
 //  log(LOG_DEBUG,"read_to_buf(): reading at most %d bytes.",at_most);

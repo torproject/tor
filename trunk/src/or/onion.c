@@ -23,17 +23,6 @@ int decide_aci_type(uint32_t local_addr, uint16_t local_port,
    return ACI_TYPE_LOWER; 
 }
 
-struct data_queue_t {
-  cell_t *cell;
-  struct data_queue_t *next;
-};
-
-struct onion_queue_t {
-  circuit_t *circ;
-  struct data_queue_t *data_cells;
-  struct onion_queue_t *next;
-};
-
 /* global (within this file) variables used by the next few functions */
 static struct onion_queue_t *ol_list=NULL;
 static struct onion_queue_t *ol_tail=NULL;
@@ -150,12 +139,7 @@ void onion_pending_remove(circuit_t *circ) {
 
 }
 
-/* a data cell has arrived for a circuit which is still pending. Find
- * the right entry in ol_list, and add it to the end of the 'data_cells'
- * list.
- */
-void onion_pending_data_add(circuit_t *circ, cell_t *cell) {
-  struct onion_queue_t *tmpo;
+struct data_queue_t *data_queue_add(struct data_queue_t *list, cell_t *cell) {
   struct data_queue_t *tmpd, *newd;
 
   newd = malloc(sizeof(struct data_queue_t));
@@ -163,15 +147,25 @@ void onion_pending_data_add(circuit_t *circ, cell_t *cell) {
   newd->cell = malloc(sizeof(cell_t));
   memcpy(newd->cell, cell, sizeof(cell_t));
 
+  if(!list) {
+    return newd;
+  }
+  for(tmpd = list; tmpd->next; tmpd=tmpd->next) ;
+  /* now tmpd->next is null */
+  tmpd->next = newd;
+  return list;
+}
+
+/* a data cell has arrived for a circuit which is still pending. Find
+ * the right entry in ol_list, and add it to the end of the 'data_cells'
+ * list.
+ */
+void onion_pending_data_add(circuit_t *circ, cell_t *cell) {
+  struct onion_queue_t *tmpo;
+
   for(tmpo=ol_list; tmpo; tmpo=tmpo->next) {
     if(tmpo->circ == circ) {
-      if(!tmpo->data_cells) {
-        tmpo->data_cells = newd;
-        return;
-      }
-      for(tmpd = tmpo->data_cells; tmpd->next; tmpd=tmpd->next) ;
-      /* now tmpd->next is null */
-      tmpd->next = newd;
+      tmpo->data_cells = data_queue_add(tmpo->data_cells, cell);
       return;
     }
   }
@@ -286,6 +280,8 @@ static int onion_process(circuit_t *circ) {
       return -1;
     }
   } else { /* this is destined for an exit */
+    log(LOG_DEBUG,"command_process_create_cell(): create cell reached exit. Circuit established.");
+#if 0
     log(LOG_DEBUG,"command_process_create_cell(): Creating new exit connection.");
     n_conn = connection_new(CONN_TYPE_EXIT);
     if(!n_conn) {
@@ -302,6 +298,7 @@ static int onion_process(circuit_t *circ) {
       return -1;
     }
     circ->n_conn = n_conn;
+#endif
   }
   return 0;
 }
@@ -522,7 +519,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       /* set crypto functions */
       hop->backf = *(layer+1) >> 4;
       hop->forwf = *(layer+1) & 0x0f;
-	
+
       /* calculate keys */
       crypto_SHA_digest(layer+12,16,hop->digest3);
       log(LOG_DEBUG,"create_onion() : First SHA pass performed.");
@@ -533,14 +530,14 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       log(LOG_DEBUG,"create_onion() : Keys generated.");
       /* set IV to zero */
       memset((void *)iv,0,16);
-	
+
       /* initialize cipher engines */
       if (! (hop->f_crypto = create_onion_cipher(hop->forwf, hop->digest3, iv, 1))) { 
         /* cipher initialization failed */
         log(LOG_ERR,"Could not create a crypto environment.");
         goto error;
       }
-	
+
       if (! (hop->b_crypto = create_onion_cipher(hop->backf, hop->digest2, iv, 0))) { 
         /* cipher initialization failed */
         log(LOG_ERR,"Could not create a crypto environment.");
@@ -731,7 +728,7 @@ void pad_onion(unsigned char *onion, uint32_t onionlen, int n)
 
 
 /* red black tree using Niels' tree.h. I used
-http://www.openbsd.org/cgi-bin/cvsweb/src/regress/sys/sys/tree/rb/rb-test.c?rev=1.2&content-type=text/x-cvsweb-markup
+http://www.openbsd.org/cgi-bin/cvsweb/src/regress/sys/sys/tree/rb/
 as my guide */
 
 #include "tree.h"

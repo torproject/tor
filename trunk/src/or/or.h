@@ -43,7 +43,7 @@
 #include "../common/version.h"
 
 #define MAXCONNECTIONS 200 /* upper bound on max connections.
-			      can be overridden by config file */
+                              can be lowered by config file */
 
 #define MAX_BUF_SIZE (640*1024)
 #define DEFAULT_BANDWIDTH_OP 102400
@@ -71,8 +71,11 @@
 #define CONN_TYPE_AP 7
 #define CONN_TYPE_DIR_LISTENER 8
 #define CONN_TYPE_DIR 9
+#define CONN_TYPE_DNSMASTER 10
 
 #define LISTENER_STATE_READY 0
+
+#define DNSMASTER_STATE_OPEN 0
 
 #define OP_CONN_STATE_AWAITING_KEYS 0
 #define OP_CONN_STATE_OPEN 1
@@ -96,8 +99,8 @@
 #define OR_CONN_STATE_SERVER_NONCE_WAIT 8 /* waiting for confirmation of nonce */
 #define OR_CONN_STATE_OPEN 9 /* ready to send/receive cells. */
 
-#define EXIT_CONN_STATE_CONNECTING_WAIT 0 /* waiting for standard structure or dest info */
-#define EXIT_CONN_STATE_CONNECTING 1
+#define EXIT_CONN_STATE_RESOLVING 0 /* waiting for response from dnsmaster */
+#define EXIT_CONN_STATE_CONNECTING 1 /* waiting for connect() to finish */
 #define EXIT_CONN_STATE_OPEN 2
 #if 0
 #define EXIT_CONN_STATE_CLOSE 3 /* flushing the buffer, then will close */
@@ -123,6 +126,16 @@
 //                                       (or if just one was sent, waiting for that one */
 //#define CIRCUIT_STATE_CLOSE 4 /* both acks received, connection is dead */ /* NOT USED */
 
+#define TOPIC_COMMAND_BEGIN 1
+#define TOPIC_COMMAND_DATA 2
+#define TOPIC_COMMAND_END 3
+#define TOPIC_COMMAND_CONNECTED 4
+#define TOPIC_COMMAND_SENDME 5
+
+#define TOPIC_HEADER_SIZE 4
+
+#define TOPIC_STATE_RESOLVING
+
 /* available cipher functions */
 #define ONION_CIPHER_IDENTITY 0
 #define ONION_CIPHER_DES 1
@@ -131,8 +144,16 @@
 /* default cipher function */
 #define ONION_DEFAULT_CIPHER ONION_CIPHER_DES
 
-#define RECEIVE_WINDOW_START 1000
-#define RECEIVE_WINDOW_INCREMENT 100
+#define CELL_DIRECTION_IN 1
+#define CELL_DIRECTION_OUT 2
+#define EDGE_EXIT 3 /* make direction and edge values not overlap, to help catch bugs */
+#define EDGE_AP 4
+
+#define CIRCWINDOW_START 1000
+#define CIRCWINDOW_INCREMENT 100
+
+#define TOPICWINDOW_START 500
+#define TOPICWINDOW_INCREMENT 50
 
 /* cell commands */
 #define CELL_PADDING 0
@@ -142,7 +163,6 @@
 #define CELL_ACK 4
 #define CELL_NACK 5
 #define CELL_SENDME 6
-#define CELL_CONNECTED 7
 
 #define CELL_PAYLOAD_SIZE 120
 #define CELL_NETWORK_SIZE 128
@@ -191,7 +211,7 @@ typedef struct {
    /* dest host follows, terminated by a NULL */
 } socks4_t;
 
-typedef struct { 
+struct connection_t { 
 
 /* Used by all types: */
 
@@ -223,8 +243,8 @@ typedef struct {
 
   uint32_t bandwidth; /* connection bandwidth */
   int receiver_bucket; /* when this hits 0, stop receiving. Every second we
-		       	* add 'bandwidth' to this, capping it at 10*bandwidth.
-		       	*/
+                        * add 'bandwidth' to this, capping it at 10*bandwidth.
+                        */
   struct timeval send_timeval; /* for determining when to send the next cell */
 
   /* link encryption */
@@ -239,8 +259,10 @@ typedef struct {
 
 /* used by exit and ap: */
 
-//  ss_t ss; /* standard structure */
-//  int ss_received; /* size of ss, received so far */
+  uint32_t topic_id;
+  struct connection_t *next_topic;
+  int n_receive_topicwindow;
+  int p_receive_topicwindow;
 
   char socks_version; 
   char read_username;
@@ -251,18 +273,14 @@ typedef struct {
   char dest_tmp[512];
   int dest_tmplen;
   
-#if 0 /* obsolete, we now use conn->bandwidth */
-  /* link info */
-  uint32_t min;
-  uint32_t max;
-#endif
-
   char *address; /* strdup into this, because free_connection frees it */
   crypto_pk_env_t *pkey; /* public RSA key for the other side */
 
   char nonce[8];
  
-} connection_t;
+};
+
+typedef struct connection_t connection_t;
 
 /* config stuff we know about the other ORs in the network */
 typedef struct {
@@ -302,21 +320,24 @@ typedef struct {
   
 } crypt_path_t;
 
+struct data_queue_t {
+  cell_t *cell;
+  struct data_queue_t *next;
+};
+
 /* per-anonymous-connection struct */
 typedef struct {
-#if 0
-  uint32_t p_addr; /* all in network order */
-  uint16_t p_port;
-#endif
   uint32_t n_addr;
   uint16_t n_port;
   connection_t *p_conn;
   connection_t *n_conn;
-  int n_receive_window;
-  int p_receive_window;
+  int n_receive_circwindow;
+  int p_receive_circwindow;
 
   aci_t p_aci; /* connection identifiers */
   aci_t n_aci;
+
+  struct data_queue_t *data_queue; /* for queueing cells at the edges */
 
   unsigned char p_f; /* crypto functions */
   unsigned char n_f;
@@ -337,6 +358,12 @@ typedef struct {
 
   void *next;
 } circuit_t;
+
+struct onion_queue_t {
+  circuit_t *circ;
+  struct data_queue_t *data_cells;
+  struct onion_queue_t *next;
+};
 
 #if 0
 typedef struct
@@ -399,7 +426,7 @@ int write_to_buf(char *string, int string_len,
    */
 
 int fetch_from_buf(char *string, int string_len,
-		                 char **buf, int *buflen, int *buf_datalen);
+                   char **buf, int *buflen, int *buf_datalen);
   /* if there is string_len bytes in buf, write them onto string,
    * then memmove buf back (that is, remove them from buf)
    */
@@ -429,12 +456,19 @@ circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
-int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int crypt_type);
+int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type);
+int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, int crypt_type);
 int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type);
+
+void circuit_resume_edge_reading(circuit_t *circ, int edge_type);
+int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type);
+int circuit_consider_sending_sendme(circuit_t *circ, int edge_type);
 
 int circuit_init(circuit_t *circ, int aci_type);
 void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t **cpath, int cpathlen);
+
+
 
 void circuit_close(circuit_t *circ);
 
@@ -525,7 +559,7 @@ int connection_process_inbuf(connection_t *conn);
 int connection_package_raw_inbuf(connection_t *conn);
 int connection_process_cell_from_inbuf(connection_t *conn);
 
-int connection_consider_sending_sendme(connection_t *conn);
+int connection_consider_sending_sendme(connection_t *conn, int edge_type);
 int connection_finished_flushing(connection_t *conn);
 
 /********************************* connection_ap.c ****************************/
@@ -537,15 +571,16 @@ int ap_handshake_process_socks(connection_t *conn);
 int ap_handshake_create_onion(connection_t *conn);
 
 int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int routelen, char *onion,
-		                                   int onionlen, crypt_path_t **cpath);
+                                   int onionlen, crypt_path_t **cpath);
 
 void ap_handshake_n_conn_open(connection_t *or_conn);
 
 int ap_handshake_send_onion(connection_t *ap_conn, connection_t *or_conn, circuit_t *circ);
+int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 int ap_handshake_socks_reply(connection_t *conn, char result);
 int connection_ap_send_connected(connection_t *conn);
-int connection_ap_process_data_cell(cell_t *cell, connection_t *conn);
+int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ);
 
 int connection_ap_finished_flushing(connection_t *conn);
 
@@ -558,10 +593,10 @@ int connection_ap_handle_listener_read(connection_t *conn);
 int connection_exit_process_inbuf(connection_t *conn);
 int connection_exit_package_inbuf(connection_t *conn);
 int connection_exit_send_connected(connection_t *conn);
-int connection_exit_process_data_cell(cell_t *cell, connection_t *conn);
+int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ);
 
 int connection_exit_finished_flushing(connection_t *conn);
-
+int connection_exit_connect(connection_t *conn);
 
 /********************************* connection_op.c ***************************/
 
@@ -610,6 +645,13 @@ int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_create_listener(struct sockaddr_in *bindaddr);
 int connection_dir_handle_listener_read(connection_t *conn);
 
+/********************************* dns.c ***************************/
+
+int connection_dns_finished_flushing(connection_t *conn);
+int connection_dns_process_inbuf(connection_t *conn);
+int dns_tor_to_master(char *address);
+int dns_master_start(void);
+
 /********************************* main.c ***************************/
 
 void setprivatekey(crypto_pk_env_t *k);
@@ -622,6 +664,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 
 connection_t *connection_get_by_type(int type);
+connection_t *connection_get_pendingresolve_by_address(char *address);
 
 void connection_watch_events(connection_t *conn, short events);
 void connection_stop_reading(connection_t *conn);
@@ -651,6 +694,7 @@ int onion_pending_add(circuit_t *circ);
 int onion_pending_check(void);
 void onion_pending_process_one(void);
 void onion_pending_remove(circuit_t *circ);
+struct data_queue_t *data_queue_add(struct data_queue_t *list, cell_t *cell);
 void onion_pending_data_add(circuit_t *circ, cell_t *cell);
 
 /* uses a weighted coin with weight cw to choose a route length */
