@@ -812,7 +812,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "opt uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
-                    "signing-key\n%s%s%s",
+                    "signing-key\n%s%s%s%s",
     router->nickname,
     router->address,
     router->or_port,
@@ -825,7 +825,8 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,
     onion_pkey, identity_pkey,
-    family_line, bandwidth_usage);
+    family_line, bandwidth_usage,
+    we_are_hibernating() ? "opt hibernating 1\n" : "");
   tor_free(family_line);
   tor_free(onion_pkey);
   tor_free(identity_pkey);
