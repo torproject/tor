@@ -757,6 +757,7 @@ static void add_single_log(struct config_line_t *level_opt,
       add_stream_log(levelMin, levelMax, "<stderr>", stderr);
       log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", file_opt->value,
              strerror(errno));
+      return;
     }
     log_fn(LOG_NOTICE, "Successfully opened LogFile '%s', redirecting output.",
            file_opt->value);
@@ -775,8 +776,10 @@ void config_init_logs(or_options_t *options)
   struct config_line_t *opt = options->LogOptions;
 
   /* Special case if nothing is specified. */
-  if(!opt)
+  if(!opt) {
     add_single_log(NULL, NULL, options->RunAsDaemon);
+    /* don't return yet, in case we want to do a debuglogfile below */
+  }
 
   /* Special case for if first option is LogLevel. */
   if (opt && !strcasecmp(opt->key, "LogLevel")) {
