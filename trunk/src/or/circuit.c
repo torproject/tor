@@ -1235,6 +1235,9 @@ void circuit_expire_old_circuits(void) {
         !circ->p_streams /* nothing attached */ ) {
       log_fn(LOG_DEBUG,"Closing n_circ_id %d (dirty %d secs ago, purp %d)",circ->n_circ_id,
              (int)(now - circ->timestamp_dirty), circ->purpose);
+      /* (only general and purpose_c circs can get dirty) */
+      tor_assert(!circ->n_streams);
+      tor_assert(circ->purpose <= CIRCUIT_PURPOSE_C_REND_JOINED);
       circuit_mark_for_close(circ);
     } else if (!circ->timestamp_dirty && CIRCUIT_IS_ORIGIN(circ) &&
                circ->state == CIRCUIT_STATE_OPEN &&
