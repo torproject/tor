@@ -253,6 +253,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   write_result = send(s, buf->mem, *buf_flushlen, 0);
   if (write_result < 0) {
     if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
+      assert(errno != EPIPE); /* get a stack trace to find epipe bugs */
       return -1;
     }
 #ifdef MS_WINDOWS
