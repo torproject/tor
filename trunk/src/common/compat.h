@@ -82,6 +82,10 @@ int tor_snprintf(char *str, size_t size, const char *format, ...)
      CHECK_PRINTF(3,4);
 int tor_vsnprintf(char *str, size_t size, const char *format, va_list args);
 
+#define TOR_ISSPACE(c)   isspace((int)(unsigned char)(c))
+#define TOR_ISXDIGIT(c) isxdigit((int)(unsigned char)(c))
+#define TOR_ISDIGIT(c)   isdigit((int)(unsigned char)(c))
+
 /* ===== Time compatibility */
 #if !defined(HAVE_GETTIMEOFDAY) && !defined(HAVE_STRUCT_TIMEVAL_TV_SEC)
 struct timeval {

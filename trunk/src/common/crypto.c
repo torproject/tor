@@ -974,11 +974,12 @@ int
 crypto_pk_check_fingerprint_syntax(const char *s)
 {
   int i;
+  const unsigned char *cp = s;
   for (i = 0; i < FINGERPRINT_LEN; ++i) {
     if ((i%5) == 4) {
-      if (!isspace((int)s[i])) return 0;
+      if (!TOR_ISSPACE(cp[i])) return 0;
     } else {
-      if (!isxdigit((int)s[i])) return 0;
+      if (!TOR_ISXDIGIT(cp[i])) return 0;
     }
   }
   if (s[FINGERPRINT_LEN]) return 0;
