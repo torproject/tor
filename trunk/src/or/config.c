@@ -669,7 +669,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     using_default_torrc = 1;
   } else {
     char *fn = expand_filename("~/.torrc");
-    if (file_status(fn)==FN_FILE) {
+    if (fn && file_status(fn)==FN_FILE) {
       fname = fn;
     } else {
       tor_free(fn);
