@@ -4,6 +4,13 @@ tor (0.1.0.0-alpha-cvs-1) UNRELEASED; urgency=low
   * Forward port 06_add_compile_time_defaults.
   * Add libevent-dev to build-depends.
   * Update URL to tor in debian/control and debian/copyright.
+  * Add a snippet to disable epoll in etc/default/tor, commented out.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu,  3 Feb 2005 12:20:07 +0100
+
+tor (0.0.9.4-1) unstable; urgency=low
+
+  * New upstream version.
   * Set ulimit for file descriptors to 4096 in our init
     script.
   * Use SIGINT to shutdown tor.  That way - if you are a server -
@@ -11,9 +18,8 @@ tor (0.1.0.0-alpha-cvs-1) UNRELEASED; urgency=low
     give existing connections a grace period of 30 seconds in
     which they might complete their task.  If you just run a
     client it should make no difference.
-  * Add a snippet to disable epoll in etc/default/tor, commented out.
 
- -- Peter Palfrader <weasel@debian.org>  Thu,  3 Feb 2005 12:20:07 +0100
+ -- Peter Palfrader <weasel@debian.org>  Fri,  4 Feb 2005 00:20:25 +0100
 
 tor (0.0.9.3-1) unstable; urgency=low
 
