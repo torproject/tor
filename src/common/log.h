@@ -81,7 +81,14 @@ void _log_fn(int severity, const char *funcname, const char *format, ...)
 #define log_fn(severity, args...) \
   _log_fn(severity, __PRETTY_FUNCTION__, args)
 #else
-#define log_fn _log
+/* We don't have GCC's varargs macros, so use a global variable to pass the
+ * function name to log_fn */
+extern const char *_log_fn_function_name;
+void _log_fn(int severity, const char *format, ...);
+/* We abuse the comma operator here, since we can't use the standard
+ * do {...} while(0) trick to wrap this macro, since the macro can't take
+ * arguments. */
+#define log_fn (_log_fn_function_name=__FUNCTION__),_log_fn
 #endif
 #define log _log /* hack it so we don't conflict with log() as much */
 
