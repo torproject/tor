@@ -283,6 +283,9 @@ struct connection_t {
   uint8_t wants_to_read; /* should we start reading again once
                           * the bandwidth throttler allows it?
                           */
+  uint8_t wants_to_write; /* should we start writing again once
+                           * the bandwidth throttler allows reads?
+                           */
   int s; /* our socket */
   int poll_index; /* index of this conn into the poll_array */
   int marked_for_close; /* should we close this conn on the next
@@ -642,7 +645,9 @@ int connection_state_is_open(connection_t *conn);
 
 int connection_send_destroy(aci_t aci, connection_t *conn);
 int connection_send_connected(aci_t aci, connection_t *conn);
+#ifndef USE_TLS
 int connection_encrypt_cell(char *cellp, connection_t *conn);
+#endif
 int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
@@ -751,6 +756,7 @@ connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 
 void connection_watch_events(connection_t *conn, short events);
+int connection_is_reading(connection_t *conn);
 void connection_stop_reading(connection_t *conn);
 void connection_start_reading(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
