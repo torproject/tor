@@ -34,13 +34,13 @@ int connection_edge_reached_eof(connection_t *conn) {
   }
   return 0;
 #else
-  if(buf_datalen(conn->inbuf)) {
+  if (buf_datalen(conn->inbuf)) {
     /* it still has stuff to process. don't let it die yet. */
     return 0;
   }
   log_fn(LOG_INFO,"conn (fd %d) reached eof (stream size %d). Closing.", conn->s, (int)conn->stream_size);
   connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
-  if(!conn->marked_for_close) {
+  if (!conn->marked_for_close) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */
     connection_mark_for_close(conn);
@@ -65,9 +65,9 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
-  switch(conn->state) {
+  switch (conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
-      if(connection_ap_handshake_process_socks(conn) < 0) {
+      if (connection_ap_handshake_process_socks(conn) < 0) {
         conn->has_sent_end = 1; /* no circ yet */
         connection_mark_for_close(conn);
         conn->hold_open_until_flushed = 1;
@@ -76,12 +76,12 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
       return 0;
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      if(conn->package_window <= 0) {
+      if (conn->package_window <= 0) {
         /* XXX this is still getting called rarely :( */
         log_fn(LOG_WARN,"called with package_window %d. Tell Roger.", conn->package_window);
         return 0;
       }
-      if(connection_edge_package_raw_inbuf(conn, package_partial) < 0) {
+      if (connection_edge_package_raw_inbuf(conn, package_partial) < 0) {
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         connection_mark_for_close(conn);
         return -1;
@@ -108,7 +108,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
   tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
-  if(conn->marked_for_close)
+  if (conn->marked_for_close)
     return 0; /* already marked; probably got an 'end' */
   log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
          circ_id);
@@ -133,13 +133,13 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   size_t payload_len=1;
   circuit_t *circ;
 
-  if(conn->has_sent_end) {
+  if (conn->has_sent_end) {
     log_fn(LOG_WARN,"It appears I've already sent the end. Are you calling me twice?");
     return -1;
   }
 
   payload[0] = reason;
-  if(reason == END_STREAM_REASON_EXITPOLICY) {
+  if (reason == END_STREAM_REASON_EXITPOLICY) {
     /* this is safe even for rend circs, because they never fail
      * because of exitpolicy */
     set_uint32(payload+1, htonl(conn->addr));
@@ -147,7 +147,7 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   }
 
   circ = circuit_get_by_conn(conn);
-  if(circ && !circ->marked_for_close) {
+  if (circ && !circ->marked_for_close) {
     log_fn(LOG_DEBUG,"Marking conn (fd %d) and sending end.",conn->s);
     connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
                                  payload, payload_len, cpath_layer);
@@ -173,7 +173,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
-  switch(conn->state) {
+  switch (conn->state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_stop_writing(conn);
@@ -208,16 +208,16 @@ int connection_edge_finished_connecting(connection_t *conn)
 
   conn->state = EXIT_CONN_STATE_OPEN;
   connection_watch_events(conn, POLLIN); /* stop writing, continue reading */
-  if(connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
+  if (connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
     connection_start_writing(conn);
   /* deliver a 'connected' relay cell back through the circuit. */
-  if(connection_edge_is_rendezvous_stream(conn)) {
-    if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
+  if (connection_edge_is_rendezvous_stream(conn)) {
+    if (connection_edge_send_command(conn, circuit_get_by_conn(conn),
                                     RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
   } else {
     *(uint32_t*)connected_payload = htonl(conn->addr);
-    if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
+    if (connection_edge_send_command(conn, circuit_get_by_conn(conn),
          RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
   }
@@ -260,12 +260,12 @@ void connection_ap_expire_beginning(void) {
       continue;
     conn->num_retries++;
     circ = circuit_get_by_conn(conn);
-    if(!circ) { /* it's vanished? */
+    if (!circ) { /* it's vanished? */
       log_fn(LOG_INFO,"Conn is in connect-wait, but lost its circ.");
       connection_mark_for_close(conn);
       continue;
     }
-    if(circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
+    if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (now - conn->timestamp_lastread > 45) {
         log_fn(LOG_WARN,"Rend stream is %d seconds late. Giving up.",
                (int)(now - conn->timestamp_lastread));
@@ -275,7 +275,7 @@ void connection_ap_expire_beginning(void) {
       continue;
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
-    if(conn->num_retries >= MAX_STREAM_RETRIES) {
+    if (conn->num_retries >= MAX_STREAM_RETRIES) {
       log_fn(LOG_WARN,"Stream is %d seconds late. Giving up.",
              15*conn->num_retries);
       circuit_log_path(LOG_WARN, circ);
@@ -300,7 +300,7 @@ void connection_ap_expire_beginning(void) {
       /* give our stream another 15 seconds to try */
       conn->timestamp_lastread += 15;
       /* attaching to a dirty circuit is fine */
-      if(connection_ap_handshake_attach_circuit(conn)<0) {
+      if (connection_ap_handshake_attach_circuit(conn)<0) {
         /* it will never work */
         /* Don't need to send end -- we're not connected */
         conn->has_sent_end = 1;
@@ -327,7 +327,7 @@ void connection_ap_attach_pending(void)
         conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
-    if(connection_ap_handshake_attach_circuit(conn) < 0) {
+    if (connection_ap_handshake_attach_circuit(conn) < 0) {
       /* -1 means it will never work */
       /* Don't send end; there is no 'other side' yet */
       conn->has_sent_end = 1;
@@ -362,12 +362,12 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   log_fn(LOG_DEBUG,"entered.");
 
   sockshere = fetch_from_buf_socks(conn->inbuf, socks);
-  if(sockshere == -1 || sockshere == 0) {
-    if(socks->replylen) { /* we should send reply back */
+  if (sockshere == -1 || sockshere == 0) {
+    if (socks->replylen) { /* we should send reply back */
       log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
       connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen, 0);
       socks->replylen = 0; /* zero it out so we can do another round of negotiation */
-    } else if(sockshere == -1) { /* send normal reject */
+    } else if (sockshere == -1) { /* send normal reject */
       log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
       connection_ap_handshake_socks_reply(conn, NULL, 0, -1);
     } else {
@@ -423,19 +423,19 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     log_fn(LOG_INFO,"Got a hidden service request for ID '%s'", conn->rend_query);
     /* see if we already have it cached */
     r = rend_cache_lookup_entry(conn->rend_query, &entry);
-    if(r<0) {
+    if (r<0) {
       log_fn(LOG_WARN,"Invalid service descriptor %s", conn->rend_query);
       return -1;
     }
-    if(r==0) {
+    if (r==0) {
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
       log_fn(LOG_INFO, "Unknown descriptor %s. Fetching.", conn->rend_query);
       rend_client_refetch_renddesc(conn->rend_query);
       return 0;
     }
-    if(r>0) {
+    if (r>0) {
 #define NUM_SECONDS_BEFORE_REFETCH (60*15)
-      if(time(NULL) - entry->received < NUM_SECONDS_BEFORE_REFETCH) {
+      if (time(NULL) - entry->received < NUM_SECONDS_BEFORE_REFETCH) {
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         log_fn(LOG_INFO, "Descriptor is here and fresh enough. Great.");
         return connection_ap_handshake_attach_circuit(conn);
@@ -460,15 +460,15 @@ static uint16_t get_unique_stream_id_by_circ(circuit_t *circ) {
 
 again:
   test_stream_id = circ->next_stream_id++;
-  if(++attempts > 1<<16) {
+  if (++attempts > 1<<16) {
     /* Make sure we don't loop forever if all stream_id's are used. */
     log_fn(LOG_WARN,"No unused stream IDs. Failing.");
     return 0;
   }
   if (test_stream_id == 0)
     goto again;
-  for(tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
-    if(tmpconn->stream_id == test_stream_id)
+  for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
+    if (tmpconn->stream_id == test_stream_id)
       goto again;
   return test_stream_id;
 }
@@ -498,7 +498,7 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
     return -1;
   }
 
-  if(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+  if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
     in.s_addr = htonl(client_dns_lookup_entry(ap_conn->socks_request->address));
     string_addr = in.s_addr ? inet_ntoa(in) : NULL;
 
@@ -514,7 +514,7 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
 
-  if(connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
+  if (connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
                                payload, payload_len, ap_conn->cpath_layer) < 0)
     return -1; /* circuit is closed, don't continue */
 
@@ -557,7 +557,7 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
 
-  if(connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_RESOLVE,
+  if (connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_RESOLVE,
                            string_addr, payload_len, ap_conn->cpath_layer) < 0)
     return -1; /* circuit is closed, don't continue */
 
@@ -579,7 +579,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
 
   log_fn(LOG_INFO,"Making AP bridge to %s:%d ...",address,port);
 
-  if(tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
+  if (tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
     log(LOG_WARN,"Couldn't construct socketpair (%s). Network down? Delaying.",
         tor_socket_strerror(tor_socket_errno(-1)));
     return -1;
@@ -605,7 +605,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   conn->addr = 0;
   conn->port = 0;
 
-  if(connection_add(conn) < 0) { /* no space, forget it */
+  if (connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn); /* this closes fd[0] */
     tor_close_socket(fd[1]);
     return -1;
@@ -637,7 +637,7 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
 
   if (answer_type == RESOLVED_TYPE_IPV4) {
     uint32_t a = get_uint32(answer);
-    if(a)
+    if (a)
       client_dns_set_entry(conn->socks_request->address, ntohl(a));
   }
 
@@ -696,17 +696,17 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          size_t replylen, int status) {
   char buf[256];
 
-  if(status) /* it's either 1 or -1 */
+  if (status) /* it's either 1 or -1 */
     control_event_stream_status(conn,
                        status==1 ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
 
-  if(replylen) { /* we already have a reply in mind */
+  if (replylen) { /* we already have a reply in mind */
     connection_write_to_buf(reply, replylen, conn);
     return;
   }
   tor_assert(conn->socks_request);
   tor_assert(status == 1 || status == -1);
-  if(conn->socks_request->socks_version == 4) {
+  if (conn->socks_request->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
 #define SOCKS4_GRANTED          90
 #define SOCKS4_REJECT           91
@@ -714,7 +714,7 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     /* leave version, destport, destip zero */
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, conn);
   }
-  if(conn->socks_request->socks_version == 5) {
+  if (conn->socks_request->socks_version == 5) {
     buf[0] = 5; /* version 5 */
 #define SOCKS5_SUCCESS          0
 #define SOCKS5_GENERIC_ERROR    1
@@ -759,7 +759,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
    * begin because it's malformed.
    */
 
-  if(!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
+  if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
     log_fn(LOG_WARN,"relay begin cell has no \\0. Dropping.");
     return 0;
   }
@@ -783,7 +783,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
 
-  if(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
+  if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     log_fn(LOG_DEBUG,"begin is for rendezvous. configuring stream.");
     n_stream->address = tor_strdup("(rendezvous)");
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
@@ -791,7 +791,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
             sizeof(n_stream->rend_query));
     tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);
-    if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
+    if (rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_INFO,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
       connection_free(n_stream);
@@ -816,13 +816,13 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_stream->state = EXIT_CONN_STATE_RESOLVEFAILED;
   /* default to failed, change in dns_resolve if it turns out not to fail */
 
-  if(we_are_hibernating()) {
+  if (we_are_hibernating()) {
     connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
     connection_free(n_stream);
   }
 
   /* send it off to the gethostbyname farm */
-  switch(dns_resolve(n_stream)) {
+  switch (dns_resolve(n_stream)) {
     case 1: /* resolve worked */
 
       /* add it into the linked list of n_streams on this circuit */
@@ -877,7 +877,7 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
   circ->resolving_streams = dummy_conn;
 
   /* send it off to the gethostbyname farm */
-  switch(dns_resolve(dummy_conn)) {
+  switch (dns_resolve(dummy_conn)) {
     case 1: /* The result was cached; a resolved cell was sent. */
     case -1:
       circuit_detach_stream(circuit_get_by_conn(dummy_conn), dummy_conn);
@@ -933,7 +933,7 @@ connection_exit_connect(connection_t *conn) {
   }
 
   log_fn(LOG_DEBUG,"about to try connecting");
-  switch(connection_connect(conn, conn->address, addr, port)) {
+  switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
       connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED, conn->cpath_layer);
       circuit_detach_stream(circuit_get_by_conn(conn), conn);
@@ -950,14 +950,14 @@ connection_exit_connect(connection_t *conn) {
   }
 
   conn->state = EXIT_CONN_STATE_OPEN;
-  if(connection_wants_to_flush(conn)) { /* in case there are any queued data cells */
+  if (connection_wants_to_flush(conn)) { /* in case there are any queued data cells */
     log_fn(LOG_WARN,"tell roger: newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
   connection_watch_events(conn, POLLIN);
 
   /* also, deliver a 'connected' cell back through the circuit. */
-  if(connection_edge_is_rendezvous_stream(conn)) { /* rendezvous stream */
+  if (connection_edge_is_rendezvous_stream(conn)) { /* rendezvous stream */
     /* don't send an address back! */
     connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
                                  NULL, 0, conn->cpath_layer);
@@ -974,7 +974,7 @@ connection_exit_connect(connection_t *conn) {
  */
 int connection_edge_is_rendezvous_stream(connection_t *conn) {
   tor_assert(conn);
-  if(*conn->rend_query) /* XXX */
+  if (*conn->rend_query) /* XXX */
     return 1;
   return 0;
 }
@@ -1000,7 +1000,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
     return tor_version_as_new_as(exit->platform, "0.0.9pre1");
   }
   addr = client_dns_lookup_entry(conn->socks_request->address);
-  if(router_compare_addr_to_addr_policy(addr,
+  if (router_compare_addr_to_addr_policy(addr,
      conn->socks_request->port, exit->exit_policy) < 0)
     return 0;
   return 1;
@@ -1035,7 +1035,7 @@ int socks_policy_permits_address(uint32_t addr)
 {
   int a;
 
-  if(!socks_policy) /* 'no socks policy' means 'accept' */
+  if (!socks_policy) /* 'no socks policy' means 'accept' */
     return 1;
   a = router_compare_addr_to_addr_policy(addr, 1, socks_policy);
   if (a==-1)
@@ -1193,7 +1193,7 @@ void client_dns_clean(void)
 {
   time_t now;
 
-  if(!client_dns_size)
+  if (!client_dns_size)
     return;
   now = time(NULL);
   strmap_foreach(client_dns_map, (strmap_foreach_fn)_remove_if_expired, &now);

@@ -61,7 +61,7 @@ int router_reload_router_list(void)
     if (router_load_routerlist_from_directory(s, NULL, is_recent) < 0) {
       log_fn(LOG_WARN, "Cached directory at '%s' was unparseable; ignoring.", filename);
     }
-    if(routerlist &&
+    if (routerlist &&
        ((routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2)
         || is_recent)) {
       /* XXX use new onion key lifetime when 0.0.8 servers are obsolete */
@@ -96,7 +96,7 @@ routerinfo_t *router_pick_directory_server(int requireothers,
     return NULL;
 
   choice = router_pick_directory_server_impl(requireothers, fascistfirewall);
-  if(choice)
+  if (choice)
     return choice;
 
   log_fn(LOG_INFO,"No reachable router entries for dirservers. Trying them all again.");
@@ -104,13 +104,13 @@ routerinfo_t *router_pick_directory_server(int requireothers,
   mark_all_trusteddirservers_up();
   /* try again */
   choice = router_pick_directory_server_impl(requireothers, fascistfirewall);
-  if(choice)
+  if (choice)
     return choice;
 
   log_fn(LOG_INFO,"Still no %s router entries. Reloading and trying again.",
          get_options()->FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
-  if(router_reload_router_list()) {
+  if (router_reload_router_list()) {
     return NULL;
   }
   /* give it one last try */
@@ -123,7 +123,7 @@ trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
   trusted_dir_server_t *choice;
 
   choice = router_pick_trusteddirserver_impl(requireothers, fascistfirewall);
-  if(choice)
+  if (choice)
     return choice;
 
   log_fn(LOG_INFO,"No trusted dirservers are reachable. Trying them all again.");
@@ -131,13 +131,13 @@ trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
   mark_all_trusteddirservers_up();
   /* try again */
   choice = router_pick_trusteddirserver_impl(requireothers, fascistfirewall);
-  if(choice)
+  if (choice)
     return choice;
 
   log_fn(LOG_WARN,"Still no dirservers %s. Reloading and trying again.",
          get_options()->FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
-  if(router_reload_router_list()) {
+  if (router_reload_router_list()) {
     return NULL;
   }
   /* give it one last try */
@@ -156,21 +156,21 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall)
   smartlist_t *sl;
   char buf[16];
 
-  if(!routerlist)
+  if (!routerlist)
     return NULL;
 
-  if(get_options()->HttpProxy)
+  if (get_options()->HttpProxy)
     fascistfirewall = 0;
 
   /* Find all the running dirservers we know about. */
   sl = smartlist_create();
-  for(i=0;i< smartlist_len(routerlist->routers); i++) {
+  for (i=0;i< smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(!router->is_running || !router->dir_port)
+    if (!router->is_running || !router->dir_port)
       continue;
-    if(requireothers && router_is_me(router))
+    if (requireothers && router_is_me(router))
       continue;
-    if(fascistfirewall) {
+    if (fascistfirewall) {
       tor_snprintf(buf,sizeof(buf),"%d",router->dir_port);
       if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
         continue;
@@ -196,7 +196,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
   if (!trusted_dir_servers)
     return NULL;
 
-  if(get_options()->HttpProxy)
+  if (get_options()->HttpProxy)
     fascistfirewall = 0;
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
@@ -220,9 +220,9 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
 
 /** Go through and mark the auth dirservers as up */
 static void mark_all_trusteddirservers_up(void) {
-  if(routerlist) {
+  if (routerlist) {
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
-                 if(router_digest_is_trusted_dir(router->identity_digest)) {
+                 if (router_digest_is_trusted_dir(router->identity_digest)) {
                    tor_assert(router->dir_port > 0);
                    router->is_running = 1;
                    router->status_set_at = time(NULL);
@@ -286,7 +286,7 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
   routerinfo_t *router;
   smartlist_t *nickname_list;
 
-  if(!list)
+  if (!list)
     return; /* nothing to do */
   tor_assert(sl);
 
@@ -324,7 +324,7 @@ router_nickname_is_in_list(routerinfo_t *router, const char *list)
   smartlist_t *nickname_list;
   int v = 0;
 
-  if(!list)
+  if (!list)
     return 0; /* definitely not */
   tor_assert(router);
 
@@ -348,12 +348,12 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
   routerinfo_t *router;
   int i;
 
-  if(!routerlist)
+  if (!routerlist)
     return;
 
-  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+  for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(router->is_running &&
+    if (router->is_running &&
        (router->is_verified ||
        (allow_unverified &&
         !router_is_unreliable_router(router, preferuptime, preferbandwidth)))) {
@@ -370,12 +370,12 @@ routerlist_find_my_routerinfo(void) {
   routerinfo_t *router;
   int i;
 
-  if(!routerlist)
+  if (!routerlist)
     return NULL;
 
-  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+  for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(router_is_me(router))
+    if (router_is_me(router))
       return router;
   }
   return NULL;
@@ -390,9 +390,9 @@ routerlist_find_my_routerinfo(void) {
 int
 router_is_unreliable_router(routerinfo_t *router, int need_uptime, int need_bw)
 {
-  if(need_uptime && router->uptime < ROUTER_REQUIRED_MIN_UPTIME)
+  if (need_uptime && router->uptime < ROUTER_REQUIRED_MIN_UPTIME)
     return 1;
-  if(need_bw && router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
+  if (need_bw && router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
     return 1;
   return 0;
 }
@@ -405,7 +405,7 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
 
   for (i = 0; i < smartlist_len(sl); ++i) {
     router = smartlist_get(sl, i);
-    if(router_is_unreliable_router(router, 1, 0)) {
+    if (router_is_unreliable_router(router, 1, 0)) {
       log(LOG_DEBUG, "Router '%s' has insufficient uptime; deleting.",
           router->nickname);
       smartlist_del(sl, i--);
@@ -427,7 +427,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
     router = smartlist_get(sl, i);
     this_bw = (router->bandwidthcapacity < router->bandwidthrate) ?
                router->bandwidthcapacity : router->bandwidthrate;
-    if(this_bw > 800000)
+    if (this_bw > 800000)
       this_bw = 800000; /* if they claim something huge, don't believe it */
     p = tor_malloc(sizeof(uint32_t));
     *p = this_bw;
@@ -435,18 +435,18 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
     total_bw += this_bw;
 //    log_fn(LOG_INFO,"Recording bw %d for node %s.", this_bw, router->nickname);
   }
-  if(!total_bw)
+  if (!total_bw)
     return smartlist_choose(sl);
   rand_bw = crypto_pseudo_rand_int(total_bw);
 //  log_fn(LOG_INFO,"Total bw %d. Randomly chose %d.", total_bw, rand_bw);
   tmp = 0;
-  for(i=0; ; i++) {
+  for (i=0; ; i++) {
     tor_assert(i < smartlist_len(sl));
     p = smartlist_get(bandwidths, i);
     tmp += *p;
     router = smartlist_get(sl, i);
 //    log_fn(LOG_INFO,"Considering %s. tmp = %d.", router->nickname, tmp);
-    if(tmp >= rand_bw)
+    if (tmp >= rand_bw)
       break;
   }
   SMARTLIST_FOREACH(bandwidths, uint32_t*, p, tor_free(p));
@@ -479,32 +479,32 @@ routerinfo_t *router_choose_random_node(const char *preferred,
   sl = smartlist_create();
   add_nickname_list_to_smartlist(sl,preferred,1);
   smartlist_subtract(sl,excludednodes);
-  if(excludedsmartlist)
+  if (excludedsmartlist)
     smartlist_subtract(sl,excludedsmartlist);
-  if(preferuptime)
+  if (preferuptime)
     routerlist_sl_remove_unreliable_routers(sl);
-  if(preferbandwidth)
+  if (preferbandwidth)
     choice = routerlist_sl_choose_by_bandwidth(sl);
   else
     choice = smartlist_choose(sl);
   smartlist_free(sl);
-  if(!choice && !strict) {
+  if (!choice && !strict) {
     sl = smartlist_create();
     router_add_running_routers_to_smartlist(sl, allow_unverified,
                                             preferuptime, preferbandwidth);
     smartlist_subtract(sl,excludednodes);
-    if(excludedsmartlist)
+    if (excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
-    if(preferuptime)
+    if (preferuptime)
       routerlist_sl_remove_unreliable_routers(sl);
-    if(preferbandwidth)
+    if (preferbandwidth)
       choice = routerlist_sl_choose_by_bandwidth(sl);
     else
       choice = smartlist_choose(sl);
     smartlist_free(sl);
   }
   smartlist_free(excludednodes);
-  if(!choice)
+  if (!choice)
     log_fn(LOG_WARN,"No available nodes when trying to choose node. Failing.");
   return choice;
 }
@@ -519,7 +519,7 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   if (!routerlist)
     return NULL;
 
-  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+  for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
     if ((router->addr == addr) && (router->or_port == port))
       return router;
@@ -577,7 +577,7 @@ routerinfo_t *router_get_by_nickname(const char *nickname)
   maybedigest = (strlen(nickname) == HEX_DIGEST_LEN) &&
     (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
 
-  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+  for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
     if (0 == strcasecmp(router->nickname, nickname) ||
         (maybedigest && 0 == memcmp(digest, router->identity_digest,
@@ -624,7 +624,7 @@ routerinfo_t *router_get_by_digest(const char *digest) {
   tor_assert(digest);
   if (!routerlist) return NULL;
 
-  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+  for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
     if (0 == memcmp(router->identity_digest, digest, DIGEST_LEN))
       return router;
@@ -717,7 +717,7 @@ void router_mark_as_down(const char *digest) {
                       d->is_running = 0);
 
   router = router_get_by_digest(digest);
-  if(!router) /* we don't seem to know about him in the first place */
+  if (!router) /* we don't seem to know about him in the first place */
     return;
   log_fn(LOG_DEBUG,"Marking router '%s' as down.",router->nickname);
   if (router_is_me(router))
@@ -777,8 +777,8 @@ router_add_to_routerlist(routerinfo_t *router) {
          * make new ones with the new key.
          */
         connection_t *conn;
-        while((conn = connection_get_by_identity_digest(r->identity_digest,
-                                                        CONN_TYPE_OR))) {
+        while ((conn = connection_get_by_identity_digest(r->identity_digest,
+                                                         CONN_TYPE_OR))) {
           log_fn(LOG_INFO,"Closing conn to obsolete router '%s'", r->nickname);
           connection_mark_for_close(conn);
         }
@@ -936,7 +936,7 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
   struct in_addr in;
   struct addr_policy_t *tmpe;
 
-  for(tmpe=policy; tmpe; tmpe=tmpe->next) {
+  for (tmpe=policy; tmpe; tmpe=tmpe->next) {
 //    log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
     maybe = 0;
     if (!addr) {
@@ -973,7 +973,7 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
       in.s_addr = htonl(addr);
       log_fn(LOG_DEBUG,"Address %s:%d matches policy '%s'",
              inet_ntoa(in), port, tmpe->string);
-      if(tmpe->policy_type == ADDR_POLICY_ACCEPT) {
+      if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
         /* If we already hit a clause that might trigger a 'reject', than we
          * can't be sure of this certain 'accept'.*/
         return maybe_reject ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_ACCEPTED;
@@ -1037,7 +1037,7 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
     return;
 
   all_routers = smartlist_create();
-  if(me) /* learn if the dirservers think I'm verified */
+  if (me) /* learn if the dirservers think I'm verified */
     smartlist_add(all_routers, me);
 
   smartlist_add_all(all_routers,list->routers);

@@ -42,7 +42,7 @@
 #define RESPONSE_LEN 8
 #define log_sock_error(act, _s)                             \
   do { log_fn(LOG_ERR, "Error while %s: %s", act,           \
-              tor_socket_strerror(tor_socket_errno(_s))); } while(0)
+              tor_socket_strerror(tor_socket_errno(_s))); } while (0)
 
 static int
 build_socks4a_resolve_request(char **out,

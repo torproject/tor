@@ -195,7 +195,7 @@ void rep_hist_note_disconnect(const char* id, time_t when)
 void rep_hist_note_connection_died(const char* id, time_t when)
 {
   or_history_t *hist;
-  if(!id) {
+  if (!id) {
     /* XXXX009 Well, everybody has an ID now. Hm. */
     /* If conn has no nickname, it's either an OP, or it is an OR
      * which didn't complete its handshake (or did and was unapproved).

@@ -32,7 +32,7 @@ int onion_pending_add(circuit_t *circ) {
   tmp = tor_malloc_zero(sizeof(struct onion_queue_t));
   tmp->circ = circ;
 
-  if(!ol_tail) {
+  if (!ol_tail) {
     tor_assert(!ol_list);
     tor_assert(!ol_length);
     ol_list = tmp;
@@ -44,7 +44,7 @@ int onion_pending_add(circuit_t *circ) {
   tor_assert(ol_list);
   tor_assert(!ol_tail->next);
 
-  if(ol_length >= get_options()->MaxOnionsPending) {
+  if (ol_length >= get_options()->MaxOnionsPending) {
     log_fn(LOG_WARN,"Already have %d onions queued. Closing.", ol_length);
     tor_free(tmp);
     return -1;
@@ -62,7 +62,7 @@ int onion_pending_add(circuit_t *circ) {
 circuit_t *onion_next_task(void) {
   circuit_t *circ;
 
-  if(!ol_list)
+  if (!ol_list)
     return NULL; /* no onions pending, we're done */
 
   tor_assert(ol_list->circ);
@@ -79,28 +79,28 @@ circuit_t *onion_next_task(void) {
 void onion_pending_remove(circuit_t *circ) {
   struct onion_queue_t *tmpo, *victim;
 
-  if(!ol_list)
+  if (!ol_list)
     return; /* nothing here. */
 
   /* first check to see if it's the first entry */
   tmpo = ol_list;
-  if(tmpo->circ == circ) {
+  if (tmpo->circ == circ) {
     /* it's the first one. remove it from the list. */
     ol_list = tmpo->next;
-    if(!ol_list)
+    if (!ol_list)
       ol_tail = NULL;
     ol_length--;
     victim = tmpo;
   } else { /* we need to hunt through the rest of the list */
-    for( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
-    if(!tmpo->next) {
+    for ( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
+    if (!tmpo->next) {
       log_fn(LOG_DEBUG,"circ (p_circ_id %d) not in list, probably at cpuworker.",circ->p_circ_id);
       return;
     }
     /* now we know tmpo->next->circ == circ */
     victim = tmpo->next;
     tmpo->next = victim->next;
-    if(ol_tail == victim)
+    if (ol_tail == victim)
       ol_tail = tmpo;
     ol_length--;
   }
@@ -295,7 +295,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   if (len < 0)
     return -1;
 
-  if(memcmp(key_material, handshake_reply+DH_KEY_LEN, 20)) {
+  if (memcmp(key_material, handshake_reply+DH_KEY_LEN, 20)) {
     /* H(K) does *not* match. Something fishy. */
     tor_free(key_material);
     log_fn(LOG_WARN,"Digest DOES NOT MATCH on onion handshake. Bug or attack.");

@@ -34,7 +34,7 @@ typedef struct logfile_t {
 
 /** Helper: map a log severity to descriptive string. */
 static INLINE const char *sev_to_string(int severity) {
-  switch(severity) {
+  switch (severity) {
     case LOG_DEBUG:   return "debug";
     case LOG_INFO:    return "info";
     case LOG_NOTICE:  return "notice";
@@ -136,7 +136,7 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
   }
 
   r = tor_vsnprintf(buf+n,buf_len-n,format,ap);
-  if(r < 0) {
+  if (r < 0) {
     n = buf_len-2;
     strlcpy(buf+buf_len-TRUNCATED_STR_LEN-1, TRUNCATED_STR,
             buf_len-(buf_len-TRUNCATED_STR_LEN-1));
@@ -162,7 +162,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
 
   assert(format);
   lf = logfiles;
-  while(lf) {
+  while (lf) {
     if (severity > lf->loglevel || severity < lf->max_loglevel) {
       lf = lf->next;
       continue;
@@ -188,7 +188,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
       lf = lf->next;
       continue;
     }
-    if(fputs(buf, lf->file) == EOF ||
+    if (fputs(buf, lf->file) == EOF ||
        fflush(lf->file) == EOF) { /* error */
       /* don't log the error! Blow away this log entry and continue. */
       logfile_t *victim = lf;
@@ -234,7 +234,7 @@ void _log_fn(int severity, const char *format, ...)
 void close_logs()
 {
   logfile_t *victim;
-  while(logfiles) {
+  while (logfiles) {
     victim = logfiles;
     logfiles = logfiles->next;
     close_log(victim);
@@ -247,7 +247,7 @@ void close_logs()
 void reset_logs()
 {
   logfile_t *lf = logfiles;
-  while(lf) {
+  while (lf) {
     if (reset_log(lf)) {
       /* error. don't log it. delete the log entry and continue. */
       logfile_t *victim = lf;
@@ -266,10 +266,10 @@ void reset_logs()
  */
 static void delete_log(logfile_t *victim) {
   logfile_t *tmpl;
-  if(victim == logfiles)
+  if (victim == logfiles)
     logfiles = victim->next;
   else {
-    for(tmpl = logfiles; tmpl && tmpl->next != victim; tmpl=tmpl->next) ;
+    for (tmpl = logfiles; tmpl && tmpl->next != victim; tmpl=tmpl->next) ;
     tor_assert(tmpl);
     tor_assert(tmpl->next == victim);
     tmpl->next = victim->next;

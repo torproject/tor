@@ -34,7 +34,7 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
  * within circuit_new.
  */
 static void circuit_add(circuit_t *circ) {
-  if(!global_circuitlist) { /* first one */
+  if (!global_circuitlist) { /* first one */
     global_circuitlist = circ;
     circ->next = NULL;
   } else {
@@ -115,7 +115,7 @@ static void circuit_free(circuit_t *circ) {
     crypto_free_digest_env(circ->n_digest);
   if (circ->p_digest)
     crypto_free_digest_env(circ->p_digest);
-  if(circ->build_state) {
+  if (circ->build_state) {
     tor_free(circ->build_state->chosen_exit_name);
     if (circ->build_state->pending_final_cpath)
       circuit_free_cpath_node(circ->build_state->pending_final_cpath);
@@ -134,12 +134,12 @@ static void circuit_free(circuit_t *circ) {
 static void circuit_free_cpath(crypt_path_t *cpath) {
   crypt_path_t *victim, *head=cpath;
 
-  if(!cpath)
+  if (!cpath)
     return;
 
   /* it's a doubly linked list, so we have to notice when we've
    * gone through it once. */
-  while(cpath->next && cpath->next != head) {
+  while (cpath->next && cpath->next != head) {
     victim = cpath;
     cpath = victim->next;
     circuit_free_cpath_node(victim);
@@ -151,15 +151,15 @@ static void circuit_free_cpath(crypt_path_t *cpath) {
 /** Deallocate space associated with the cpath node <b>victim</b>. */
 static void
 circuit_free_cpath_node(crypt_path_t *victim) {
-  if(victim->f_crypto)
+  if (victim->f_crypto)
     crypto_free_cipher_env(victim->f_crypto);
-  if(victim->b_crypto)
+  if (victim->b_crypto)
     crypto_free_cipher_env(victim->b_crypto);
-  if(victim->f_digest)
+  if (victim->f_digest)
     crypto_free_digest_env(victim->f_digest);
-  if(victim->b_digest)
+  if (victim->b_digest)
     crypto_free_digest_env(victim->b_digest);
-  if(victim->handshake_state)
+  if (victim->handshake_state)
     crypto_dh_free(victim->handshake_state);
   tor_free(victim);
 }
@@ -174,27 +174,27 @@ circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn) {
   circuit_t *circ;
   connection_t *tmpconn;
 
-  for(circ=global_circuitlist;circ;circ = circ->next) {
+  for (circ=global_circuitlist;circ;circ = circ->next) {
     if (circ->marked_for_close)
       continue;
 
-    if(circ->p_circ_id == circ_id) {
-      if(circ->p_conn == conn)
+    if (circ->p_circ_id == circ_id) {
+      if (circ->p_conn == conn)
         return circ;
-      for(tmpconn = circ->p_streams; tmpconn; tmpconn = tmpconn->next_stream) {
-        if(tmpconn == conn)
+      for (tmpconn = circ->p_streams; tmpconn; tmpconn = tmpconn->next_stream) {
+        if (tmpconn == conn)
           return circ;
       }
     }
-    if(circ->n_circ_id == circ_id) {
-      if(circ->n_conn == conn)
+    if (circ->n_circ_id == circ_id) {
+      if (circ->n_conn == conn)
         return circ;
-      for(tmpconn = circ->n_streams; tmpconn; tmpconn = tmpconn->next_stream) {
-        if(tmpconn == conn)
+      for (tmpconn = circ->n_streams; tmpconn; tmpconn = tmpconn->next_stream) {
+        if (tmpconn == conn)
           return circ;
       }
-      for(tmpconn = circ->resolving_streams; tmpconn; tmpconn = tmpconn->next_stream) {
-        if(tmpconn == conn)
+      for (tmpconn = circ->resolving_streams; tmpconn; tmpconn = tmpconn->next_stream) {
+        if (tmpconn == conn)
           return circ;
       }
     }
@@ -211,22 +211,22 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   circuit_t *circ;
   connection_t *tmpconn;
 
-  for(circ=global_circuitlist;circ;circ = circ->next) {
+  for (circ=global_circuitlist;circ;circ = circ->next) {
     if (circ->marked_for_close)
       continue;
 
-    if(circ->p_conn == conn)
+    if (circ->p_conn == conn)
       return circ;
-    if(circ->n_conn == conn)
+    if (circ->n_conn == conn)
       return circ;
-    for(tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
-      if(tmpconn == conn)
+    for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
+      if (tmpconn == conn)
         return circ;
-    for(tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream)
-      if(tmpconn == conn)
+    for (tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream)
+      if (tmpconn == conn)
         return circ;
-    for(tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream)
-      if(tmpconn == conn)
+    for (tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream)
+      if (tmpconn == conn)
         return circ;
   }
   return NULL;
@@ -265,7 +265,7 @@ circuit_get_next_by_pk_and_purpose(circuit_t *start,
   else
     circ = start->next;
 
-  for( ; circ; circ = circ->next) {
+  for ( ; circ; circ = circ->next) {
     if (circ->marked_for_close)
       continue;
     if (circ->purpose != purpose)
@@ -297,8 +297,8 @@ int circuit_count_building(uint8_t purpose) {
   circuit_t *circ;
   int num=0;
 
-  for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(CIRCUIT_IS_ORIGIN(circ) &&
+  for (circ=global_circuitlist;circ;circ = circ->next) {
+    if (CIRCUIT_IS_ORIGIN(circ) &&
        circ->state != CIRCUIT_STATE_OPEN &&
        circ->purpose == purpose &&
        !circ->marked_for_close)
@@ -316,8 +316,8 @@ circuit_get_youngest_clean_open(uint8_t purpose) {
   circuit_t *circ;
   circuit_t *youngest=NULL;
 
-  for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(CIRCUIT_IS_ORIGIN(circ) && circ->state == CIRCUIT_STATE_OPEN &&
+  for (circ=global_circuitlist;circ;circ = circ->next) {
+    if (CIRCUIT_IS_ORIGIN(circ) && circ->state == CIRCUIT_STATE_OPEN &&
        !circ->marked_for_close && circ->purpose == purpose &&
        !circ->timestamp_dirty &&
        (!youngest || youngest->timestamp_created < circ->timestamp_created))
@@ -348,7 +348,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
   if (circ->marked_for_close)
     return -1;
 
-  if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
+  if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(circ);
   }
   /* If the circuit ever became OPEN, we sent it to the reputation history
@@ -356,7 +356,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
    * links worked and which didn't.
    */
   if (circ->state != CIRCUIT_STATE_OPEN) {
-    if(CIRCUIT_IS_ORIGIN(circ)) {
+    if (CIRCUIT_IS_ORIGIN(circ)) {
       circuit_build_failed(circ); /* take actions if necessary */
     }
     circuit_rep_hist_note_result(circ);
@@ -373,20 +373,20 @@ int _circuit_mark_for_close(circuit_t *circ) {
     rend_client_remove_intro_point(circ->build_state->chosen_exit_name, circ->rend_query);
   }
 
-  if(circ->n_conn)
+  if (circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);
-  for(conn=circ->n_streams; conn; conn=conn->next_stream)
+  for (conn=circ->n_streams; conn; conn=conn->next_stream)
     connection_edge_destroy(circ->n_circ_id, conn);
-  while(circ->resolving_streams) {
+  while (circ->resolving_streams) {
     conn = circ->resolving_streams;
     circ->resolving_streams = conn->next_stream;
     connection_dns_remove(conn); /* remove it from resolve lists */
     log_fn(LOG_INFO,"Freeing resolving-conn.");
     connection_free(conn);
   }
-  if(circ->p_conn)
+  if (circ->p_conn)
     connection_send_destroy(circ->p_circ_id, circ->p_conn);
-  for(conn=circ->p_streams; conn; conn=conn->next_stream)
+  for (conn=circ->p_streams; conn; conn=conn->next_stream)
     connection_edge_destroy(circ->p_circ_id, conn);
 
   circ->marked_for_close = 1;
@@ -406,7 +406,7 @@ void assert_cpath_layer_ok(const crypt_path_t *cp)
 {
 //  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
 //  tor_assert(cp->port);
-  switch(cp->state)
+  switch (cp->state)
     {
     case CPATH_STATE_OPEN:
       tor_assert(cp->f_crypto);

@@ -190,7 +190,7 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
     goto error;
   }
 
-  switch(file_status(fname)) {
+  switch (file_status(fname)) {
   case FN_DIR:
   case FN_ERROR:
     log(LOG_ERR, "Can't read key from %s", fname);
@@ -314,7 +314,7 @@ int init_keys(void) {
     log_fn(LOG_ERR, "Error initializing descriptor.");
     return -1;
   }
-  if(authdir_mode(options)) {
+  if (authdir_mode(options)) {
     /* We need to add our own fingerprint so it gets recognized. */
     if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
       log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
@@ -345,12 +345,12 @@ int init_keys(void) {
   strlcat(fingerprint, "\n", sizeof(fingerprint));
   if (write_str_to_file(keydir, fingerprint, 0))
     return -1;
-  if(!authdir_mode(options))
+  if (!authdir_mode(options))
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
   tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
   log_fn(LOG_INFO,"Loading approved fingerprints from %s...",keydir);
-  if(dirserv_parse_fingerprint_file(keydir) < 0) {
+  if (dirserv_parse_fingerprint_file(keydir) < 0) {
     log_fn(LOG_ERR, "Error loading fingerprints");
     return -1;
   }
@@ -363,10 +363,10 @@ int init_keys(void) {
   tor_snprintf(keydir,sizeof(keydir),"%s/cached-directory", datadir);
   log_fn(LOG_INFO,"Loading cached directory from %s...",keydir);
   cp = read_file_to_str(keydir,0);
-  if(!cp) {
+  if (!cp) {
     log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
   } else {
-    if(dirserv_load_from_directory_string(cp) < 0) {
+    if (dirserv_load_from_directory_string(cp) < 0) {
       log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
       tor_free(cp);
       return -1;
@@ -397,11 +397,11 @@ void router_retry_connections(void) {
   if (!rl) return;
   for (i=0;i < smartlist_len(rl->routers);i++) {
     router = smartlist_get(rl->routers, i);
-    if(router_is_me(router))
+    if (router_is_me(router))
       continue;
-    if(!clique_mode(options) && !router_is_clique_mode(router))
+    if (!clique_mode(options) && !router_is_clique_mode(router))
       continue;
-    if(!connection_get_by_identity_digest(router->identity_digest,
+    if (!connection_get_by_identity_digest(router->identity_digest,
                                           CONN_TYPE_OR)) {
       /* not in the list */
       log_fn(LOG_DEBUG,"connecting to OR at %s:%u.",router->address,router->or_port);
@@ -411,7 +411,7 @@ void router_retry_connections(void) {
 }
 
 int router_is_clique_mode(routerinfo_t *router) {
-  if(router_digest_is_trusted_dir(router->identity_digest))
+  if (router_digest_is_trusted_dir(router->identity_digest))
     return 1;
   return 0;
 }
@@ -495,7 +495,7 @@ int router_is_me(routerinfo_t *router)
 {
   routerinfo_t *me = router_get_my_routerinfo();
   tor_assert(router);
-  if(!me || memcmp(me->identity_digest, router->identity_digest, DIGEST_LEN))
+  if (!me || memcmp(me->identity_digest, router->identity_digest, DIGEST_LEN))
     return 0;
   return 1;
 }
@@ -539,7 +539,7 @@ int router_rebuild_descriptor(int force) {
   if (!desc_is_dirty && !force)
     return 0;
 
-  if(resolve_my_address(options->Address, &addr) < 0) {
+  if (resolve_my_address(options->Address, &addr) < 0) {
     log_fn(LOG_WARN,"options->Address didn't resolve into an IP.");
     return -1;
   }
@@ -565,7 +565,7 @@ int router_rebuild_descriptor(int force) {
   ri->bandwidthburst = (int)options->BandwidthBurst;
   ri->bandwidthcapacity = router_get_bandwidth_capacity();
   router_add_exit_policy_from_config(ri);
-  if(desc_routerinfo) /* inherit values */
+  if (desc_routerinfo) /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;
   if (options->MyFamily) {
     ri->declared_family = smartlist_create();
@@ -649,14 +649,14 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   /* PEM-encode the onion key */
-  if(crypto_pk_write_public_key_to_string(router->onion_pkey,
+  if (crypto_pk_write_public_key_to_string(router->onion_pkey,
                                           &onion_pkey,&onion_pkeylen)<0) {
     log_fn(LOG_WARN,"write onion_pkey to string failed!");
     return -1;
   }
 
   /* PEM-encode the identity key key */
-  if(crypto_pk_write_public_key_to_string(router->identity_pkey,
+  if (crypto_pk_write_public_key_to_string(router->identity_pkey,
                                           &identity_pkey,&identity_pkeylen)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     tor_free(onion_pkey);
@@ -709,7 +709,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   tor_free(identity_pkey);
   tor_free(bandwidth_usage);
 
-  if(result < 0 || (size_t)result >= maxlen) {
+  if (result < 0 || (size_t)result >= maxlen) {
     /* apparently different glibcs do different things on tor_snprintf error.. so check both */
     return -1;
   }
@@ -725,13 +725,13 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   /* Write the exit policy to the end of 's'. */
-  for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
+  for (tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
     in.s_addr = htonl(tmpe->addr);
     /* Write: "accept 1.2.3.4" */
     result = tor_snprintf(s+written, maxlen-written, "%s %s",
         tmpe->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
         tmpe->msk == 0 ? "*" : inet_ntoa(in));
-    if(result < 0 || result+written > maxlen) {
+    if (result < 0 || result+written > maxlen) {
       /* apparently different glibcs do different things on tor_snprintf error.. so check both */
       return -1;
     }

@@ -175,17 +175,17 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
   if (buf_ensure_capacity(buf,buf->datalen+at_most))
     return -1;
 
-  if(at_most + buf->datalen > buf->len)
+  if (at_most + buf->datalen > buf->len)
     at_most = buf->len - buf->datalen; /* take the min of the two */
 
-  if(at_most == 0)
+  if (at_most == 0)
     return 0; /* we shouldn't read anything */
 
 //  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
   read_result = recv(s, buf->mem+buf->datalen, at_most, 0);
   if (read_result < 0) {
     int e = tor_socket_errno(s);
-    if(!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
+    if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
       return -1;
     }
     return 0; /* would block. */
@@ -250,13 +250,13 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   tor_assert(s>=0);
   tor_assert(*buf_flushlen <= buf->datalen);
 
-  if(*buf_flushlen == 0) /* nothing to flush */
+  if (*buf_flushlen == 0) /* nothing to flush */
     return 0;
 
   write_result = send(s, buf->mem, *buf_flushlen, 0);
   if (write_result < 0) {
     int e = tor_socket_errno(s);
-    if(!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
+    if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
       return -1;
     }
     log_fn(LOG_DEBUG,"write() would block, returning.");
@@ -378,12 +378,12 @@ int fetch_from_buf_http(buf_t *buf,
   bodylen = buf->datalen - headerlen;
   log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
 
-  if(max_headerlen <= headerlen) {
+  if (max_headerlen <= headerlen) {
     log_fn(LOG_WARN,"headerlen %d larger than %d. Failing.", (int)headerlen,
            (int)max_headerlen-1);
     return -1;
   }
-  if(max_bodylen <= bodylen) {
+  if (max_bodylen <= bodylen) {
     log_fn(LOG_WARN,"bodylen %d larger than %d. Failing.", (int)bodylen, (int)max_bodylen-1);
     return -1;
   }
@@ -400,22 +400,22 @@ int fetch_from_buf_http(buf_t *buf,
     contentlen = i;
     /* if content-length is malformed, then our body length is 0. fine. */
     log_fn(LOG_DEBUG,"Got a contentlen of %d.",(int)contentlen);
-    if(bodylen < contentlen) {
+    if (bodylen < contentlen) {
       log_fn(LOG_DEBUG,"body not all here yet.");
       return 0; /* not all there yet */
     }
-    if(bodylen > contentlen) {
+    if (bodylen > contentlen) {
       bodylen = contentlen;
       log_fn(LOG_DEBUG,"bodylen reduced to %d.",(int)bodylen);
     }
   }
   /* all happy. copy into the appropriate places, and return 1 */
-  if(headers_out) {
+  if (headers_out) {
     *headers_out = tor_malloc(headerlen+1);
     memcpy(*headers_out,buf->mem,headerlen);
     (*headers_out)[headerlen] = 0; /* null terminate it */
   }
-  if(body_out) {
+  if (body_out) {
     tor_assert(body_used);
     *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
@@ -457,18 +457,18 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
    * then log a warning to let him know that it might be unwise. */
   static int have_warned_about_unsafe_socks = 0;
 
-  if(buf->datalen < 2) /* version and another byte */
+  if (buf->datalen < 2) /* version and another byte */
     return 0;
-  switch(*(buf->mem)) { /* which version of socks? */
+  switch (*(buf->mem)) { /* which version of socks? */
 
     case 5: /* socks5 */
 
-      if(req->socks_version != 5) { /* we need to negotiate a method */
+      if (req->socks_version != 5) { /* we need to negotiate a method */
         unsigned char nummethods = (unsigned char)*(buf->mem+1);
         tor_assert(!req->socks_version);
-        if(buf->datalen < 2u+nummethods)
+        if (buf->datalen < 2u+nummethods)
           return 0;
-        if(!nummethods || !memchr(buf->mem+2, 0, nummethods)) {
+        if (!nummethods || !memchr(buf->mem+2, 0, nummethods)) {
           log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
           req->replylen = 2; /* 2 bytes of response */
           req->reply[0] = 5; /* socks5 reply */
@@ -486,26 +486,26 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       }
       /* we know the method; read in the request */
       log_fn(LOG_DEBUG,"socks5: checking request");
-      if(buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
+      if (buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
         return 0; /* not yet */
       req->command = (unsigned char) *(buf->mem+1);
-      if(req->command != SOCKS_COMMAND_CONNECT &&
+      if (req->command != SOCKS_COMMAND_CONNECT &&
          req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
         log_fn(LOG_WARN,"socks5: command %d not recognized. Rejecting.",
                req->command);
         return -1;
       }
-      switch(*(buf->mem+3)) { /* address type */
+      switch (*(buf->mem+3)) { /* address type */
         case 1: /* IPv4 address */
           log_fn(LOG_DEBUG,"socks5: ipv4 address type");
-          if(buf->datalen < 10) /* ip/port there? */
+          if (buf->datalen < 10) /* ip/port there? */
             return 0; /* not yet */
 
           destip = ntohl(*(uint32_t*)(buf->mem+4));
           in.s_addr = htonl(destip);
           tmpbuf = inet_ntoa(in);
-          if(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
+          if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
             log_fn(LOG_WARN,"socks5 IP takes %d bytes, which doesn't fit in %d. Rejecting.",
                    (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
             return -1;
@@ -513,7 +513,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           strlcpy(req->address,tmpbuf,sizeof(req->address));
           req->port = ntohs(*(uint16_t*)(buf->mem+8));
           buf_remove_from_front(buf, 10);
-          if(!have_warned_about_unsafe_socks) {
+          if (!have_warned_about_unsafe_socks) {
             log_fn(LOG_WARN,"Your application (using socks5 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
 //            have_warned_about_unsafe_socks = 1; // (for now, warn every time)
           }
@@ -521,9 +521,9 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         case 3: /* fqdn */
           log_fn(LOG_DEBUG,"socks5: fqdn address type");
           len = (unsigned char)*(buf->mem+4);
-          if(buf->datalen < 7u+len) /* addr/port there? */
+          if (buf->datalen < 7u+len) /* addr/port there? */
             return 0; /* not yet */
-          if(len+1 > MAX_SOCKS_ADDR_LEN) {
+          if (len+1 > MAX_SOCKS_ADDR_LEN) {
             log_fn(LOG_WARN,"socks5 hostname is %d bytes, which doesn't fit in %d. Rejecting.",
                    len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
@@ -543,11 +543,11 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       /* http://archive.socks.permeo.com/protocol/socks4a.protocol */
 
       req->socks_version = 4;
-      if(buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */
+      if (buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */
         return 0; /* not yet */
 
       req->command = (unsigned char) *(buf->mem+1);
-      if(req->command != SOCKS_COMMAND_CONNECT &&
+      if (req->command != SOCKS_COMMAND_CONNECT &&
          req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
         log_fn(LOG_WARN,"socks4: command %d not recognized. Rejecting.",
@@ -557,15 +557,15 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 
       req->port = ntohs(*(uint16_t*)(buf->mem+2));
       destip = ntohl(*(uint32_t*)(buf->mem+4));
-      if((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
+      if ((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
         log_fn(LOG_WARN,"socks4: Port or DestIP is zero. Rejecting.");
         return -1;
       }
-      if(destip >> 8) {
+      if (destip >> 8) {
         log_fn(LOG_DEBUG,"socks4: destip not in form 0.0.0.x.");
         in.s_addr = htonl(destip);
         tmpbuf = inet_ntoa(in);
-        if(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
+        if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
           log_fn(LOG_WARN,"socks4 addr (%d bytes) too long. Rejecting.",
                  (int)strlen(tmpbuf));
           return -1;
@@ -576,25 +576,25 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 
       next = memchr(buf->mem+SOCKS4_NETWORK_LEN, 0,
                     buf->datalen-SOCKS4_NETWORK_LEN);
-      if(!next) {
+      if (!next) {
         log_fn(LOG_DEBUG,"socks4: Username not here yet.");
         return 0;
       }
       tor_assert(next < buf->mem+buf->datalen);
 
       startaddr = NULL;
-      if(socks4_prot != socks4a && !have_warned_about_unsafe_socks) {
+      if (socks4_prot != socks4a && !have_warned_about_unsafe_socks) {
         log_fn(LOG_WARN,"Your application (using socks4 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
       }
-      if(socks4_prot == socks4a && next+1 < buf->mem+buf->datalen) {
+      if (socks4_prot == socks4a && next+1 < buf->mem+buf->datalen) {
         startaddr = next+1;
         next = memchr(startaddr, 0, buf->mem+buf->datalen-startaddr);
-        if(!next) {
+        if (!next) {
           log_fn(LOG_DEBUG,"socks4: Destaddr not here yet.");
           return 0;
         }
-        if(MAX_SOCKS_ADDR_LEN <= next-startaddr) {
+        if (MAX_SOCKS_ADDR_LEN <= next-startaddr) {
           log_fn(LOG_WARN,"socks4: Destaddr too long. Rejecting.");
           return -1;
         }

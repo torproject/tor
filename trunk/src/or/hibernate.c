@@ -640,7 +640,7 @@ static int hibernate_soft_limit_reached(void)
 static void hibernate_begin(int new_state, time_t now) {
   connection_t *conn;
 
-  if(hibernate_state == HIBERNATE_STATE_EXITING) {
+  if (hibernate_state == HIBERNATE_STATE_EXITING) {
     /* we've been called twice now. close immediately. */
     log(LOG_NOTICE,"Second sigint received; exiting now.");
     tor_cleanup();
@@ -648,9 +648,9 @@ static void hibernate_begin(int new_state, time_t now) {
   }
 
   /* close listeners. leave control listener(s). */
-  while((conn = connection_get_by_type(CONN_TYPE_OR_LISTENER)) ||
-        (conn = connection_get_by_type(CONN_TYPE_AP_LISTENER)) ||
-        (conn = connection_get_by_type(CONN_TYPE_DIR_LISTENER))) {
+  while ((conn = connection_get_by_type(CONN_TYPE_OR_LISTENER)) ||
+         (conn = connection_get_by_type(CONN_TYPE_AP_LISTENER)) ||
+         (conn = connection_get_by_type(CONN_TYPE_DIR_LISTENER))) {
     log_fn(LOG_INFO,"Closing listener type %d", conn->type);
     connection_mark_for_close(conn);
   }
@@ -658,7 +658,7 @@ static void hibernate_begin(int new_state, time_t now) {
   /* XXX kill intro point circs */
   /* XXX upload rendezvous service descriptors with no intro points */
 
-  if(new_state == HIBERNATE_STATE_EXITING) {
+  if (new_state == HIBERNATE_STATE_EXITING) {
     log(LOG_NOTICE,"Interrupt: will shut down in %d seconds. Interrupt again to exit now.", SHUTDOWN_WAIT_LENGTH);
     hibernate_end_time = time(NULL) + SHUTDOWN_WAIT_LENGTH;
   } else { /* soft limit reached */
@@ -715,9 +715,9 @@ hibernate_go_dormant(time_t now) {
    * running, and download directories so we can detect if we're obsolete.
    * Leave control conns because we still want to be controllable.
    */
-  while((conn = connection_get_by_type(CONN_TYPE_OR)) ||
-        (conn = connection_get_by_type(CONN_TYPE_AP)) ||
-        (conn = connection_get_by_type(CONN_TYPE_EXIT))) {
+  while ((conn = connection_get_by_type(CONN_TYPE_OR)) ||
+         (conn = connection_get_by_type(CONN_TYPE_AP)) ||
+         (conn = connection_get_by_type(CONN_TYPE_EXIT))) {
     log_fn(LOG_INFO,"Closing conn type %d", conn->type);
     connection_mark_for_close(conn);
   }
@@ -763,7 +763,7 @@ void consider_hibernation(time_t now) {
    * elapses. */
   if (hibernate_state == HIBERNATE_STATE_EXITING) {
     tor_assert(hibernate_end_time);
-    if(hibernate_end_time <= now) {
+    if (hibernate_end_time <= now) {
       log(LOG_NOTICE,"Clean shutdown finished. Exiting.");
       tor_cleanup();
       exit(0);
@@ -771,7 +771,7 @@ void consider_hibernation(time_t now) {
     return; /* if exiting soon, don't worry about bandwidth limits */
   }
 
-  if(hibernate_state == HIBERNATE_STATE_DORMANT) {
+  if (hibernate_state == HIBERNATE_STATE_DORMANT) {
     /* We've been hibernating because of bandwidth accounting. */
     tor_assert(hibernate_end_time);
     if (hibernate_end_time > now && accounting_enabled) {

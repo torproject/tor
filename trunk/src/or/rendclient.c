@@ -64,7 +64,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   tor_assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
   tor_assert(!rend_cmp_service_ids(introcirc->rend_query, rendcirc->rend_query));
 
-  if(rend_cache_lookup_entry(introcirc->rend_query, &entry) < 1) {
+  if (rend_cache_lookup_entry(introcirc->rend_query, &entry) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
            introcirc->rend_query);
     goto err;
@@ -191,7 +191,7 @@ rend_client_introduction_acked(circuit_t *circ,
     log_fn(LOG_INFO,"Received ack. Telling rend circ.");
     rendcirc = circuit_get_by_rend_query_and_purpose(
                circ->rend_query, CIRCUIT_PURPOSE_C_REND_READY);
-    if(rendcirc) { /* remember the ack */
+    if (rendcirc) { /* remember the ack */
       rendcirc->purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
     }
     /* close the circuit: we won't need it anymore. */
@@ -204,7 +204,7 @@ rend_client_introduction_acked(circuit_t *circ,
      * points. If any remain, extend to a new one and try again.
      * If none remain, refetch the service descriptor.
      */
-    if(rend_client_remove_intro_point(circ->build_state->chosen_exit_name,
+    if (rend_client_remove_intro_point(circ->build_state->chosen_exit_name,
                                       circ->rend_query) > 0) {
       /* There are introduction points left. re-extend the circuit to
        * another intro point and try again. */
@@ -242,7 +242,7 @@ rend_client_introduction_acked(circuit_t *circ,
 void
 rend_client_refetch_renddesc(const char *query)
 {
-  if(connection_get_by_type_rendquery(CONN_TYPE_DIR, query)) {
+  if (connection_get_by_type_rendquery(CONN_TYPE_DIR, query)) {
     log_fn(LOG_INFO,"Would fetch a new renddesc here (for %s), but one is already in progress.", query);
   } else {
     /* not one already; initiate a dir rend desc lookup */
@@ -282,7 +282,7 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
     }
   }
 
-  if(!ent->parsed->n_intro_points) {
+  if (!ent->parsed->n_intro_points) {
     log_fn(LOG_INFO,"No more intro points remain for %s. Re-fetching descriptor.", query);
     rend_client_refetch_renddesc(query);
     return 0;
@@ -298,7 +298,7 @@ int
 rend_client_rendezvous_acked(circuit_t *circ, const char *request, size_t request_len)
 {
   /* we just got an ack for our establish-rendezvous. switch purposes. */
-  if(circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
+  if (circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
     log_fn(LOG_WARN,"Got a rendezvous ack when we weren't expecting one. Closing circ.");
     circuit_mark_for_close(circ);
     return -1;
@@ -315,7 +315,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
   crypt_path_t *hop;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
 
-  if( (circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
+  if ( (circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
        circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
       || !circ->build_state->pending_final_cpath) {
     log_fn(LOG_WARN,"Got rendezvous2 cell from Bob, but not expecting it. Closing.");
@@ -388,7 +388,7 @@ void rend_client_desc_fetched(char *query, int status) {
     if (rend_cmp_service_ids(conn->rend_query, query))
       continue;
     /* great, this guy was waiting */
-    if(status!=0 ||
+    if (status!=0 ||
        rend_cache_lookup_entry(conn->rend_query, &entry) == 1) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
@@ -418,7 +418,7 @@ char *rend_client_get_random_intro(char *query) {
   char *nickname;
   rend_cache_entry_t *entry;
 
-  if(rend_cache_lookup_entry(query, &entry) < 1) {
+  if (rend_cache_lookup_entry(query, &entry) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.", query);
     return NULL;
   }
@@ -426,11 +426,11 @@ char *rend_client_get_random_intro(char *query) {
   sl = smartlist_create();
 
   /* add the intro point nicknames */
-  for(i=0;i<entry->parsed->n_intro_points;i++)
+  for (i=0;i<entry->parsed->n_intro_points;i++)
     smartlist_add(sl,entry->parsed->intro_points[i]);
 
   choice = smartlist_choose(sl);
-  if(!choice) {
+  if (!choice) {
     smartlist_free(sl);
     return NULL;
   }
@@ -448,15 +448,15 @@ int rend_parse_rendezvous_address(char *address) {
   char query[REND_SERVICE_ID_LEN+1];
 
   s = strrchr(address,'.');
-  if(!s) return -1; /* no dot */
+  if (!s) return -1; /* no dot */
   if (strcasecmp(s+1,"onion"))
     return -1; /* not .onion */
 
   *s = 0; /* null terminate it */
-  if(strlcpy(query, address, REND_SERVICE_ID_LEN+1) >= REND_SERVICE_ID_LEN+1)
+  if (strlcpy(query, address, REND_SERVICE_ID_LEN+1) >= REND_SERVICE_ID_LEN+1)
     goto failed;
   tor_strlower(query);
-  if(rend_valid_service_id(query)) {
+  if (rend_valid_service_id(query)) {
     tor_strlower(address);
     return 0; /* success */
   }

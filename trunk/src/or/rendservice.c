@@ -266,7 +266,7 @@ static void rend_service_update_descriptor(rend_service_t *service)
   d->intro_points = tor_malloc(sizeof(char*)*n);
   for (i=0; i < n; ++i) {
     router = router_get_by_nickname(smartlist_get(service->intro_nodes, i));
-    if(!router) {
+    if (!router) {
       log_fn(LOG_WARN,"Router '%s' not found. Skipping.",
              (char*)smartlist_get(service->intro_nodes, i));
       continue;
@@ -457,12 +457,12 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
 
   /* Launch a circuit to alice's chosen rendezvous point.
    */
-  for(i=0;i<MAX_REND_FAILURES;i++) {
+  for (i=0;i<MAX_REND_FAILURES;i++) {
     launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
     if (launched)
       break;
   }
-  if(!launched) { /* give up */
+  if (!launched) { /* give up */
     log_fn(LOG_WARN,"Giving up launching first hop of circuit to rendezvous point '%s' for service %s",
            rp_nickname, serviceid);
     goto err;
@@ -514,7 +514,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   oldstate = oldcirc->build_state;
   tor_assert(oldstate);
 
-  if(oldstate->pending_final_cpath == NULL) {
+  if (oldstate->pending_final_cpath == NULL) {
     log_fn(LOG_INFO,"Skipping relaunch of circ that failed on its first hop. Initiator will retry.");
     return;
   }

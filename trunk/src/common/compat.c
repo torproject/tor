@@ -158,7 +158,7 @@ int replace_file(const char *from, const char *to)
 #ifndef MS_WINDOWS
   return rename(from,to);
 #else
-  switch(file_status(to))
+  switch (file_status(to))
     {
     case FN_NOENT:
       break;
@@ -318,11 +318,11 @@ int set_max_file_descriptors(unsigned int required_min) {
            strerror(errno));
     return -1;
   }
-  if(required_min > rlim.rlim_max) {
+  if (required_min > rlim.rlim_max) {
     log_fn(LOG_WARN,"We need %u file descriptors available, and we're limited to %lu. Please change your ulimit.", required_min, (unsigned long int)rlim.rlim_max);
     return -1;
   }
-  if(required_min > rlim.rlim_cur) {
+  if (required_min > rlim.rlim_cur) {
     log_fn(LOG_INFO,"Raising max file descriptors from %lu to %lu.",
            (unsigned long int)rlim.rlim_cur, (unsigned long int)rlim.rlim_max);
   }

@@ -103,7 +103,7 @@ DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
  */
 static INLINE int
 crypto_get_rsa_padding_overhead(int padding) {
-  switch(padding)
+  switch (padding)
     {
     case RSA_NO_PADDING: return 0;
     case RSA_PKCS1_OAEP_PADDING: return 42;
@@ -116,7 +116,7 @@ crypto_get_rsa_padding_overhead(int padding) {
  */
 static INLINE int
 crypto_get_rsa_padding(int padding) {
-  switch(padding)
+  switch (padding)
     {
     case PK_NO_PADDING: return RSA_NO_PADDING;
     case PK_PKCS1_PADDING: return RSA_PKCS1_PADDING;
@@ -238,7 +238,7 @@ void crypto_free_pk_env(crypto_pk_env_t *env)
 {
   tor_assert(env);
 
-  if(--env->refs > 0)
+  if (--env->refs > 0)
     return;
 
   if (env->key)
@@ -398,7 +398,7 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size
   /* Now you can treat b as if it were a file.  Just use the
    * PEM_*_bio_* functions instead of the non-bio variants.
    */
-  if(!PEM_write_bio_RSAPublicKey(b, env->key)) {
+  if (!PEM_write_bio_RSAPublicKey(b, env->key)) {
     crypto_log_errors(LOG_WARN, "writing public key to string");
     return -1;
   }
@@ -435,7 +435,7 @@ int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src,
     RSA_free(env->key);
   env->key = PEM_read_bio_RSAPublicKey(b, NULL, NULL, NULL);
   BIO_free(b);
-  if(!env->key) {
+  if (!env->key) {
     crypto_log_errors(LOG_WARN, "reading public key from string");
     return -1;
   }
@@ -1346,7 +1346,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
     goto error;
   secret_tmp = tor_malloc(crypto_dh_get_bytes(dh)+1);
   result = DH_compute_key(secret_tmp, pubkey_bn, dh->dh);
-  if(result < 0) {
+  if (result < 0) {
     log_fn(LOG_WARN,"DH_compute_key() failed.");
     goto error;
   }
@@ -1368,7 +1368,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
   if (pubkey_bn)
     BN_free(pubkey_bn);
   tor_free(secret_tmp);
-  if(result < 0)
+  if (result < 0)
     return result;
   else
     return secret_len;
@@ -1486,7 +1486,7 @@ int crypto_pseudo_rand_int(unsigned int max) {
    * range.
    */
   cutoff = UINT_MAX - (UINT_MAX%max);
-  while(1) {
+  while (1) {
     crypto_pseudo_rand((unsigned char*) &val, sizeof(val));
     if (val < cutoff)
       return val % max;
@@ -1498,7 +1498,7 @@ int crypto_pseudo_rand_int(unsigned int max) {
 void *smartlist_choose(const smartlist_t *sl) {
   size_t len;
   len = smartlist_len(sl);
-  if(len)
+  if (len)
     return smartlist_get(sl,crypto_pseudo_rand_int(len));
   return NULL; /* no elements to choose from */
 }

@@ -81,7 +81,7 @@ static int relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell) {
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, calculated_integrity, 4);
 
-  if(memcmp(received_integrity, calculated_integrity, 4)) {
+  if (memcmp(received_integrity, calculated_integrity, 4)) {
 //    log_fn(LOG_INFO,"Recognized=0 but bad digest. Not recognizing.");
 // (%d vs %d).", received_integrity, calculated_integrity);
     /* restore digest to its old form */
@@ -110,7 +110,7 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
 
   relay_header_unpack(&rh, in);
 //  log_fn(LOG_DEBUG,"before crypt: %d",rh.recognized);
-  if(( encrypt_mode && crypto_cipher_encrypt(cipher, out, in, CELL_PAYLOAD_SIZE)) ||
+  if (( encrypt_mode && crypto_cipher_encrypt(cipher, out, in, CELL_PAYLOAD_SIZE)) ||
      (!encrypt_mode && crypto_cipher_decrypt(cipher, out, in, CELL_PAYLOAD_SIZE))) {
     log_fn(LOG_WARN,"Error during relay encryption");
     return -1;
@@ -143,14 +143,14 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   if (circ->marked_for_close)
     return 0;
 
-  if(relay_crypt(circ, cell, cell_direction, &layer_hint, &recognized) < 0) {
+  if (relay_crypt(circ, cell, cell_direction, &layer_hint, &recognized) < 0) {
     log_fn(LOG_WARN,"relay crypt failed. Dropping connection.");
     return -1;
   }
 
-  if(recognized) {
+  if (recognized) {
     conn = relay_lookup_conn(circ, cell, cell_direction);
-    if(cell_direction == CELL_DIRECTION_OUT) {
+    if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending away from origin.");
       if (connection_edge_process_relay_cell(cell, circ, conn, NULL) < 0) {
@@ -158,7 +158,7 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
         return -1;
       }
     }
-    if(cell_direction == CELL_DIRECTION_IN) {
+    if (cell_direction == CELL_DIRECTION_IN) {
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to origin.");
       if (connection_edge_process_relay_cell(cell, circ, conn, layer_hint) < 0) {
@@ -170,7 +170,7 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   /* not recognized. pass it on. */
-  if(cell_direction == CELL_DIRECTION_OUT) {
+  if (cell_direction == CELL_DIRECTION_OUT) {
     cell->circ_id = circ->n_circ_id; /* switch it */
     conn = circ->n_conn;
   } else {
@@ -178,7 +178,7 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     conn = circ->p_conn;
   }
 
-  if(!conn) {
+  if (!conn) {
     if (circ->rend_splice && cell_direction == CELL_DIRECTION_OUT) {
       tor_assert(circ->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
       tor_assert(circ->rend_splice->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
@@ -229,25 +229,25 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
   tor_assert(cell_direction == CELL_DIRECTION_IN ||
              cell_direction == CELL_DIRECTION_OUT);
 
-  if(cell_direction == CELL_DIRECTION_IN) {
-    if(CIRCUIT_IS_ORIGIN(circ)) { /* We're at the beginning of the circuit.
+  if (cell_direction == CELL_DIRECTION_IN) {
+    if (CIRCUIT_IS_ORIGIN(circ)) { /* We're at the beginning of the circuit.
                                      We'll want to do layered decrypts. */
       tor_assert(circ->cpath);
       thishop = circ->cpath;
-      if(thishop->state != CPATH_STATE_OPEN) {
+      if (thishop->state != CPATH_STATE_OPEN) {
         log_fn(LOG_WARN,"Relay cell before first created cell? Closing.");
         return -1;
       }
       do { /* Remember: cpath is in forward order, that is, first hop first. */
         tor_assert(thishop);
 
-        if(relay_crypt_one_payload(thishop->b_crypto, cell->payload, 0) < 0)
+        if (relay_crypt_one_payload(thishop->b_crypto, cell->payload, 0) < 0)
           return -1;
 
         relay_header_unpack(&rh, cell->payload);
-        if(rh.recognized == 0) {
+        if (rh.recognized == 0) {
           /* it's possibly recognized. have to check digest to be sure. */
-          if(relay_digest_matches(thishop->b_digest, cell)) {
+          if (relay_digest_matches(thishop->b_digest, cell)) {
             *recognized = 1;
             *layer_hint = thishop;
             return 0;
@@ -255,24 +255,24 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
         }
 
         thishop = thishop->next;
-      } while(thishop != circ->cpath && thishop->state == CPATH_STATE_OPEN);
+      } while (thishop != circ->cpath && thishop->state == CPATH_STATE_OPEN);
       log_fn(LOG_WARN,"in-cell at OP not recognized. Closing.");
       return -1;
     } else { /* we're in the middle. Just one crypt. */
-      if(relay_crypt_one_payload(circ->p_crypto, cell->payload, 1) < 0)
+      if (relay_crypt_one_payload(circ->p_crypto, cell->payload, 1) < 0)
         return -1;
 //      log_fn(LOG_DEBUG,"Skipping recognized check, because we're not the OP.");
     }
   } else /* cell_direction == CELL_DIRECTION_OUT */ {
     /* we're in the middle. Just one crypt. */
 
-    if(relay_crypt_one_payload(circ->n_crypto, cell->payload, 0) < 0)
+    if (relay_crypt_one_payload(circ->n_crypto, cell->payload, 0) < 0)
       return -1;
 
     relay_header_unpack(&rh, cell->payload);
     if (rh.recognized == 0) {
       /* it's possibly recognized. have to check digest to be sure. */
-      if(relay_digest_matches(circ->n_digest, cell)) {
+      if (relay_digest_matches(circ->n_digest, cell)) {
         *recognized = 1;
         return 0;
       }
@@ -293,9 +293,9 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
   connection_t *conn; /* where to send the cell */
   crypt_path_t *thishop; /* counter for repeated crypts */
 
-  if(cell_direction == CELL_DIRECTION_OUT) {
+  if (cell_direction == CELL_DIRECTION_OUT) {
     conn = circ->n_conn;
-    if(!conn) {
+    if (!conn) {
       log_fn(LOG_WARN,"outgoing relay cell has n_conn==NULL. Dropping.");
       return 0; /* just drop it */
     }
@@ -307,7 +307,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
       tor_assert(thishop);
 
       log_fn(LOG_DEBUG,"crypting a layer of the relay cell.");
-      if(relay_crypt_one_payload(thishop->f_crypto, cell->payload, 1) < 0) {
+      if (relay_crypt_one_payload(thishop->f_crypto, cell->payload, 1) < 0) {
         return -1;
       }
 
@@ -316,12 +316,12 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
 
   } else { /* incoming cell */
     conn = circ->p_conn;
-    if(!conn) {
+    if (!conn) {
       log_fn(LOG_WARN,"incoming relay cell has p_conn==NULL. Dropping.");
       return 0; /* just drop it */
     }
     relay_set_digest(circ->p_digest, cell);
-    if(relay_crypt_one_payload(circ->p_crypto, cell->payload, 1) < 0)
+    if (relay_crypt_one_payload(circ->p_crypto, cell->payload, 1) < 0)
       return -1;
   }
   ++stats_n_relay_cells_relayed;
@@ -340,29 +340,29 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
 
   relay_header_unpack(&rh, cell->payload);
 
-  if(!rh.stream_id)
+  if (!rh.stream_id)
     return NULL;
 
   /* IN or OUT cells could have come from either direction, now
    * that we allow rendezvous *to* an OP.
    */
 
-  for(tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream) {
-    if(rh.stream_id == tmpconn->stream_id) {
+  for (tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream) {
+    if (rh.stream_id == tmpconn->stream_id) {
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
-      if(cell_direction == CELL_DIRECTION_OUT ||
+      if (cell_direction == CELL_DIRECTION_OUT ||
          connection_edge_is_rendezvous_stream(tmpconn))
         return tmpconn;
     }
   }
-  for(tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream) {
-    if(rh.stream_id == tmpconn->stream_id) {
+  for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream) {
+    if (rh.stream_id == tmpconn->stream_id) {
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
       return tmpconn;
     }
   }
-  for(tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream) {
-    if(rh.stream_id == tmpconn->stream_id) {
+  for (tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream) {
+    if (rh.stream_id == tmpconn->stream_id) {
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
       return tmpconn;
     }
@@ -411,7 +411,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   relay_header_t rh;
   int cell_direction;
 
-  if(!circ) {
+  if (!circ) {
     log_fn(LOG_WARN,"no circ. Closing conn.");
     tor_assert(fromconn);
     fromconn->has_sent_end = 1; /* no circ to send to */
@@ -421,7 +421,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_RELAY;
-  if(cpath_layer) {
+  if (cpath_layer) {
     cell.circ_id = circ->n_circ_id;
     cell_direction = CELL_DIRECTION_OUT;
   } else {
@@ -431,17 +431,17 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
 
   memset(&rh, 0, sizeof(rh));
   rh.command = relay_command;
-  if(fromconn)
+  if (fromconn)
     rh.stream_id = fromconn->stream_id; /* else it's 0 */
   rh.length = payload_len;
   relay_header_pack(cell.payload, &rh);
-  if(payload_len)
+  if (payload_len)
     memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
 
   log_fn(LOG_DEBUG,"delivering %d cell %s.", relay_command,
          cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
-  if(circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer) < 0) {
+  if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer) < 0) {
     log_fn(LOG_WARN,"circuit_package_relay_cell failed. Closing.");
     circuit_mark_for_close(circ);
     return -1;
@@ -455,15 +455,15 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
  */
 static const char *
 connection_edge_end_reason(char *payload, uint16_t length) {
-  if(length < 1) {
+  if (length < 1) {
     log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
     return "MALFORMED";
   }
-  if(*payload < _MIN_END_STREAM_REASON || *payload > _MAX_END_STREAM_REASON) {
+  if (*payload < _MIN_END_STREAM_REASON || *payload > _MAX_END_STREAM_REASON) {
     log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
     return "MALFORMED";
   }
-  switch(*payload) {
+  switch (*payload) {
     case END_STREAM_REASON_MISC:           return "misc error";
     case END_STREAM_REASON_RESOLVEFAILED:  return "resolve failed";
     case END_STREAM_REASON_CONNECTFAILED:  return "connect failed";
@@ -496,16 +496,16 @@ connection_edge_process_relay_cell_not_open(
   int reason;
   routerinfo_t *exitrouter;
 
-  if(rh->command == RELAY_COMMAND_END) {
+  if (rh->command == RELAY_COMMAND_END) {
     reason = *(cell->payload+RELAY_HEADER_SIZE);
     /* We have to check this here, since we aren't connected yet. */
     if (rh->length >= 5 && reason == END_STREAM_REASON_EXITPOLICY) {
-      if(conn->type != CONN_TYPE_AP) {
+      if (conn->type != CONN_TYPE_AP) {
         log_fn(LOG_WARN,"Got an end because of exitpolicy, but we're not an AP. Closing.");
         return -1;
       }
       addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
-      if(addr) {
+      if (addr) {
         log_fn(LOG_INFO,"Address %s refused due to exit policy. Retrying.",
                conn->socks_request->address);
       } else {
@@ -519,11 +519,11 @@ connection_edge_process_relay_cell_not_open(
 
       /* check if he *ought* to have allowed it */
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
-      if(!exitrouter) {
+      if (!exitrouter) {
         log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
         return 0; /* this circuit is screwed and doesn't know it yet */
       }
-      if(connection_ap_can_use_exit(conn, exitrouter)) {
+      if (connection_ap_can_use_exit(conn, exitrouter)) {
         log_fn(LOG_WARN,"Exitrouter %s seems to be more restrictive than its exit policy. Not using this router as exit for now,", exitrouter->nickname);
         addr_policy_free(exitrouter->exit_policy);
         exitrouter->exit_policy =
@@ -532,7 +532,7 @@ connection_edge_process_relay_cell_not_open(
 
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       circuit_detach_stream(circ,conn);
-      if(connection_ap_handshake_attach_circuit(conn) >= 0)
+      if (connection_ap_handshake_attach_circuit(conn) >= 0)
         return 0;
       log_fn(LOG_INFO,"Giving up on retrying (from exitpolicy); conn can't be handled.");
       /* else, conn will get closed below */
@@ -549,7 +549,7 @@ connection_edge_process_relay_cell_not_open(
         circ->timestamp_dirty -= get_options()->NewCircuitPeriod;
         /* make sure not to expire/retry the stream quite yet */
         conn->timestamp_lastread = time(NULL);
-        if(connection_ap_handshake_attach_circuit(conn) >= 0)
+        if (connection_ap_handshake_attach_circuit(conn) >= 0)
           return 0;
         /* else, conn will get closed below */
         log_fn(LOG_INFO,"Giving up on retrying (from resolvefailed); conn can't be handled.");
@@ -560,15 +560,15 @@ connection_edge_process_relay_cell_not_open(
     }
     log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
       connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh->length));
-    if(CIRCUIT_IS_ORIGIN(circ))
+    if (CIRCUIT_IS_ORIGIN(circ))
       circuit_log_path(LOG_INFO,circ);
     conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
     connection_mark_for_close(conn);
     return 0;
   }
 
-  if(conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
-    if(conn->state != AP_CONN_STATE_CONNECT_WAIT) {
+  if (conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
+    if (conn->state != AP_CONN_STATE_CONNECT_WAIT) {
       log_fn(LOG_WARN,"Got 'connected' while not in state connect_wait. Dropping.");
       return 0;
     }
@@ -578,7 +578,7 @@ connection_edge_process_relay_cell_not_open(
            (int)(time(NULL) - conn->timestamp_lastread));
     if (rh->length >= 4) {
       addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
-      if(!addr) {
+      if (!addr) {
         log_fn(LOG_INFO,"...but it claims the IP address was 0.0.0.0. Closing.");
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         connection_mark_for_close(conn);
@@ -597,7 +597,7 @@ connection_edge_process_relay_cell_not_open(
     }
     return 0;
   }
-  if(conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_RESOLVED) {
+  if (conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_RESOLVED) {
     if (conn->state != AP_CONN_STATE_RESOLVE_WAIT) {
       log_fn(LOG_WARN,"Got a 'resolved' cell while not in state resolve_wait. Dropping.");
       return 0;
@@ -654,14 +654,14 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
 
-  if(conn &&
+  if (conn &&
      conn->state != AP_CONN_STATE_OPEN &&
      conn->state != EXIT_CONN_STATE_OPEN) {
     return connection_edge_process_relay_cell_not_open(
              &rh, cell, circ, conn, layer_hint);
   }
 
-  switch(rh.command) {
+  switch (rh.command) {
     case RELAY_COMMAND_DROP:
       log_fn(LOG_INFO,"Got a relay-level padding cell. Dropping.");
       return 0;
@@ -671,7 +671,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         log_fn(LOG_WARN,"relay begin request unsupported at AP. Dropping.");
         return 0;
       }
-      if(conn) {
+      if (conn) {
         log_fn(LOG_WARN,"begin cell for known stream. Dropping.");
         return 0;
       }
@@ -679,7 +679,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_DATA:
       ++stats_n_data_cells_received;
-      if((layer_hint && --layer_hint->deliver_window < 0) ||
+      if ((layer_hint && --layer_hint->deliver_window < 0) ||
          (!layer_hint && --circ->deliver_window < 0)) {
         log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
@@ -691,18 +691,18 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
       circuit_consider_sending_sendme(circ, layer_hint);
 
-      if(!conn) {
+      if (!conn) {
         log_fn(LOG_INFO,"data cell dropped, unknown stream.");
         return 0;
       }
 
-      if(--conn->deliver_window < 0) { /* is it below 0 after decrement? */
+      if (--conn->deliver_window < 0) { /* is it below 0 after decrement? */
         log_fn(LOG_WARN,"(relay data) conn deliver_window below 0. Killing.");
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
       stats_n_data_bytes_received += rh.length;
-      if(conn->type == CONN_TYPE_AP) {
+      if (conn->type == CONN_TYPE_AP) {
         conn->stream_size += rh.length;
         log_fn(LOG_DEBUG,"%d: stream size now %d.", conn->s, (int)conn->stream_size);
       }
@@ -711,7 +711,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case RELAY_COMMAND_END:
-      if(!conn) {
+      if (!conn) {
         log_fn(LOG_INFO,"end cell (%s) dropped, unknown stream.",
           connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
         return 0;
@@ -734,7 +734,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 #else
       /* We just *got* an end; no reason to send one. */
       conn->has_sent_end = 1;
-      if(!conn->marked_for_close) {
+      if (!conn->marked_for_close) {
         /* only mark it if not already marked. it's possible to
          * get the 'end' right around when the client hangs up on us. */
         connection_mark_for_close(conn);
@@ -743,18 +743,18 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 #endif
       return 0;
     case RELAY_COMMAND_EXTEND:
-      if(conn) {
+      if (conn) {
         log_fn(LOG_WARN,"'extend' for non-zero stream. Dropping.");
         return 0;
       }
       return circuit_extend(cell, circ);
     case RELAY_COMMAND_EXTENDED:
-      if(!layer_hint) {
+      if (!layer_hint) {
         log_fn(LOG_WARN,"'extended' unsupported at non-origin. Dropping.");
         return 0;
       }
       log_fn(LOG_DEBUG,"Got an extended cell! Yay.");
-      if(circuit_finish_handshake(circ, cell->payload+RELAY_HEADER_SIZE) < 0) {
+      if (circuit_finish_handshake(circ, cell->payload+RELAY_HEADER_SIZE) < 0) {
         log_fn(LOG_WARN,"circuit_finish_handshake failed.");
         return -1;
       }
@@ -764,11 +764,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
       return 0;
     case RELAY_COMMAND_TRUNCATE:
-      if(layer_hint) {
+      if (layer_hint) {
         log_fn(LOG_WARN,"'truncate' unsupported at origin. Dropping.");
         return 0;
       }
-      if(circ->n_conn) {
+      if (circ->n_conn) {
         connection_send_destroy(circ->n_circ_id, circ->n_conn);
         circ->n_conn = NULL;
       }
@@ -777,22 +777,22 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                    NULL, 0, NULL);
       return 0;
     case RELAY_COMMAND_TRUNCATED:
-      if(!layer_hint) {
+      if (!layer_hint) {
         log_fn(LOG_WARN,"'truncated' unsupported at non-origin. Dropping.");
         return 0;
       }
       circuit_truncated(circ, layer_hint);
       return 0;
     case RELAY_COMMAND_CONNECTED:
-      if(conn) {
+      if (conn) {
         log_fn(LOG_WARN,"'connected' unsupported while open. Closing circ.");
         return -1;
       }
       log_fn(LOG_INFO,"'connected' received, no conn attached anymore. Ignoring.");
       return 0;
     case RELAY_COMMAND_SENDME:
-      if(!conn) {
-        if(layer_hint) {
+      if (!conn) {
+        if (layer_hint) {
           layer_hint->package_window += CIRCWINDOW_INCREMENT;
           log_fn(LOG_DEBUG,"circ-level sendme at origin, packagewindow %d.",
                  layer_hint->package_window);
@@ -825,7 +825,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       connection_exit_begin_resolve(cell, circ);
       return 0;
     case RELAY_COMMAND_RESOLVED:
-      if(conn) {
+      if (conn) {
         log_fn(LOG_WARN,"'resolved' unsupported while open. Closing circ.");
         return -1;
       }
@@ -870,15 +870,15 @@ int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial) {
 repeat_connection_edge_package_raw_inbuf:
 
   circ = circuit_get_by_conn(conn);
-  if(!circ) {
+  if (!circ) {
     log_fn(LOG_INFO,"conn has no circuits! Closing.");
     return -1;
   }
 
-  if(circuit_consider_stop_edge_reading(circ, conn->cpath_layer))
+  if (circuit_consider_stop_edge_reading(circ, conn->cpath_layer))
     return 0;
 
-  if(conn->package_window <= 0) {
+  if (conn->package_window <= 0) {
     log_fn(LOG_INFO,"called with package_window %d. Skipping.", conn->package_window);
     connection_stop_reading(conn);
     return 0;
@@ -909,11 +909,11 @@ repeat_connection_edge_package_raw_inbuf:
     log_fn(LOG_DEBUG,"%d: Stream size now %d.", conn->s, (int)conn->stream_size);
   }
 
-  if(connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
+  if (connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
                                payload, length, conn->cpath_layer) < 0)
     return 0; /* circuit is closed, don't continue */
 
-  if(!conn->cpath_layer) { /* non-rendezvous exit */
+  if (!conn->cpath_layer) { /* non-rendezvous exit */
     tor_assert(circ->package_window > 0);
     circ->package_window--;
   } else { /* we're an AP, or an exit on a rendezvous circ */
@@ -921,7 +921,7 @@ repeat_connection_edge_package_raw_inbuf:
     conn->cpath_layer->package_window--;
   }
 
-  if(--conn->package_window <= 0) { /* is it 0 after decrement? */
+  if (--conn->package_window <= 0) { /* is it 0 after decrement? */
     connection_stop_reading(conn);
     log_fn(LOG_DEBUG,"conn->package_window reached 0.");
     circuit_consider_stop_edge_reading(circ, conn->cpath_layer);
@@ -942,21 +942,21 @@ repeat_connection_edge_package_raw_inbuf:
 void connection_edge_consider_sending_sendme(connection_t *conn) {
   circuit_t *circ;
 
-  if(connection_outbuf_too_full(conn))
+  if (connection_outbuf_too_full(conn))
     return;
 
   circ = circuit_get_by_conn(conn);
-  if(!circ) {
+  if (!circ) {
     /* this can legitimately happen if the destroy has already
      * arrived and torn down the circuit */
     log_fn(LOG_INFO,"No circuit associated with conn. Skipping.");
     return;
   }
 
-  while(conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
+  while (conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
     log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", (int)conn->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
-    if(connection_edge_send_command(conn, circ, RELAY_COMMAND_SENDME,
+    if (connection_edge_send_command(conn, circ, RELAY_COMMAND_SENDME,
                                     NULL, 0, conn->cpath_layer) < 0) {
       log_fn(LOG_WARN,"connection_edge_send_command failed. Returning.");
       return; /* the circuit's closed, don't continue */
@@ -976,7 +976,7 @@ circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
   log_fn(LOG_DEBUG,"resuming");
 
   /* have to check both n_streams and p_streams, to handle rendezvous */
-  if(circuit_resume_edge_reading_helper(circ->n_streams, circ, layer_hint) >= 0)
+  if (circuit_resume_edge_reading_helper(circ->n_streams, circ, layer_hint) >= 0)
     circuit_resume_edge_reading_helper(circ->p_streams, circ, layer_hint);
 }
 
@@ -989,8 +989,8 @@ circuit_resume_edge_reading_helper(connection_t *conn,
                                    circuit_t *circ,
                                    crypt_path_t *layer_hint) {
 
-  for( ; conn; conn=conn->next_stream) {
-    if((!layer_hint && conn->package_window > 0) ||
+  for ( ; conn; conn=conn->next_stream) {
+    if ((!layer_hint && conn->package_window > 0) ||
        (layer_hint && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
       /* handle whatever might still be on the inbuf */
@@ -999,7 +999,7 @@ circuit_resume_edge_reading_helper(connection_t *conn,
       /* If the circuit won't accept any more data, return without looking
        * at any more of the streams. Any connections that should be stopped
        * have already been stopped by connection_edge_package_raw_inbuf. */
-      if(circuit_consider_stop_edge_reading(circ, layer_hint))
+      if (circuit_consider_stop_edge_reading(circ, layer_hint))
         return -1;
     }
   }
@@ -1021,7 +1021,7 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
     log_fn(LOG_DEBUG,"considering circ->package_window %d", circ->package_window);
     if (circ->package_window <= 0) {
       log_fn(LOG_DEBUG,"yes, not-at-origin. stopped.");
-      for(conn = circ->n_streams; conn; conn=conn->next_stream)
+      for (conn = circ->n_streams; conn; conn=conn->next_stream)
         connection_stop_reading(conn);
       return 1;
     }
@@ -1031,11 +1031,11 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
   log_fn(LOG_DEBUG,"considering layer_hint->package_window %d", layer_hint->package_window);
   if (layer_hint->package_window <= 0) {
     log_fn(LOG_DEBUG,"yes, at-origin. stopped.");
-    for(conn = circ->n_streams; conn; conn=conn->next_stream)
-      if(conn->cpath_layer == layer_hint)
+    for (conn = circ->n_streams; conn; conn=conn->next_stream)
+      if (conn->cpath_layer == layer_hint)
         connection_stop_reading(conn);
-    for(conn = circ->p_streams; conn; conn=conn->next_stream)
-      if(conn->cpath_layer == layer_hint)
+    for (conn = circ->p_streams; conn; conn=conn->next_stream)
+      if (conn->cpath_layer == layer_hint)
         connection_stop_reading(conn);
     return 1;
   }
@@ -1053,14 +1053,14 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 {
 //  log_fn(LOG_INFO,"Considering: layer_hint is %s",
 //         layer_hint ? "defined" : "null");
-  while((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <
+  while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <
          CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
     log_fn(LOG_DEBUG,"Queueing circuit sendme.");
-    if(layer_hint)
+    if (layer_hint)
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
     else
       circ->deliver_window += CIRCWINDOW_INCREMENT;
-    if(connection_edge_send_command(NULL, circ, RELAY_COMMAND_SENDME,
+    if (connection_edge_send_command(NULL, circ, RELAY_COMMAND_SENDME,
                                     NULL, 0, layer_hint) < 0) {
       log_fn(LOG_WARN,"connection_edge_send_command failed. Circuit's closed.");
       return; /* the circuit's closed, don't continue */

@@ -24,7 +24,7 @@
  * calling assert() normally.
  */
 #ifdef NDEBUG
-#define tor_assert(expr) do {} while(0)
+#define tor_assert(expr) do {} while (0)
 #else
 #define tor_assert(expr) do {                                 \
  if (!(expr)) {                                               \
@@ -41,7 +41,7 @@ void *tor_malloc_zero(size_t size);
 void *tor_realloc(void *ptr, size_t size);
 char *tor_strdup(const char *s);
 char *tor_strndup(const char *s, size_t n);
-#define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
+#define tor_free(p) do { if (p) {free(p); (p)=NULL;} } while (0)
 
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"

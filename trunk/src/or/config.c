@@ -253,8 +253,8 @@ options_act(void) {
   }
 
   /* Setuid/setgid as appropriate */
-  if(options->User || options->Group) {
-    if(switch_id(options->User, options->Group) != 0) {
+  if (options->User || options->Group) {
+    if (switch_id(options->User, options->Group) != 0) {
       return -1;
     }
   }
@@ -301,14 +301,14 @@ options_act(void) {
   }
 
   /* Finish backgrounding the process */
-  if(options->RunAsDaemon) {
+  if (options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon();
   }
 
   /* Write our pid to the pid file. If we do not have write permissions we
    * will log a warning */
-  if(options->PidFile)
+  if (options->PidFile)
     write_pidfile(options->PidFile);
 
   /* Update address policies. */
@@ -331,7 +331,7 @@ options_act(void) {
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
-  if(retry_all_listeners(1) < 0) {
+  if (retry_all_listeners(1) < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
@@ -401,7 +401,7 @@ config_get_commandlines(int argc, char **argv)
     new = tor_malloc(sizeof(struct config_line_t));
     s = argv[i];
 
-    while(*s == '-')
+    while (*s == '-')
       s++;
 
     new->key = tor_strdup(expand_abbrev(s, 1));
@@ -530,7 +530,7 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
   }
 
   lvalue = ((char*)options) + var->var_offset;
-  switch(var->type) {
+  switch (var->type) {
 
   case CONFIG_TYPE_UINT:
     i = tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
@@ -668,7 +668,7 @@ config_get_assigned_option(or_options_t *options, const char *key)
 
   result = tor_malloc_zero(sizeof(struct config_line_t));
   result->key = tor_strdup(var->name);
-  switch(var->type)
+  switch (var->type)
     {
     case CONFIG_TYPE_STRING:
       if (*(char**)value) {
@@ -970,7 +970,7 @@ options_free(or_options_t *options)
 
   for (i=0; config_vars[i].name; ++i) {
     lvalue = ((char*)options) + config_vars[i].var_offset;
-    switch(config_vars[i].type) {
+    switch (config_vars[i].type) {
       case CONFIG_TYPE_MEMUNIT:
       case CONFIG_TYPE_INTERVAL:
       case CONFIG_TYPE_UINT:
@@ -1037,9 +1037,9 @@ options_dup(or_options_t *old)
 
   newopts = tor_malloc_zero(sizeof(or_options_t));
   for (i=0; config_vars[i].name; ++i) {
-    if(config_vars[i].type == CONFIG_TYPE_LINELIST_S)
+    if (config_vars[i].type == CONFIG_TYPE_LINELIST_S)
       continue;
-    if(config_vars[i].type == CONFIG_TYPE_OBSOLETE)
+    if (config_vars[i].type == CONFIG_TYPE_OBSOLETE)
       continue;
     line = config_get_assigned_option(old, config_vars[i].name);
     if (line) {
@@ -1064,7 +1064,7 @@ options_init(or_options_t *options)
 
   for (i=0; config_vars[i].name; ++i) {
     var = &config_vars[i];
-    if(!var->initvalue)
+    if (!var->initvalue)
       continue; /* defaults to NULL or 0 */
     option_reset(options, var);
   }
@@ -1431,7 +1431,7 @@ opt_streq(const char *s1, const char *s2)
 static int
 options_transition_allowed(or_options_t *old, or_options_t *new_val) {
 
-  if(!old)
+  if (!old)
     return 0;
 
   if (!opt_streq(old->PidFile, new_val->PidFile)) {
@@ -2105,7 +2105,7 @@ normalize_data_directory(or_options_t *options) {
   return 0;
 #else
   const char *d = options->DataDirectory;
-  if(!d)
+  if (!d)
     d = "~/.tor";
 
  if (strncmp(d,"~/",2) == 0) {
@@ -2293,7 +2293,7 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
     *ok = 1;
     return v;
   }
-  while(isspace(*cp))
+  while (isspace(*cp))
     ++cp;
   for ( ;u->unit;++u) {
     if (!strcasecmp(u->unit, cp)) {

@@ -18,9 +18,9 @@ for $fn (@ARGV) {
             print "Space\@EOL:$fn:$.\n";
         }
 	## Warn about control keywords without following space.
-	#if (/\s(?:if|while|for|switch)\(/) {
-	#    print "      KW(:$fn:$.\n";
-	#}
+	if (/\s(?:if|while|for|switch)\(/) {
+	    print "      KW(:$fn:$.\n";
+	}
 	## Warn about multiple empty lines.
         if ($lastnil && /^$/) {
             print " DoubleNL:$fn:$.\n";
