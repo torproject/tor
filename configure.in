@@ -143,7 +143,7 @@ AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h poll.h sys/stat.h sy
 
 dnl These headers are not essential
 
-AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h)
+AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h zlib.h)
 
 AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime)
 AC_REPLACE_FUNCS(strlcat strlcpy)

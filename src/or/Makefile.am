@@ -12,7 +12,7 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	tor_main.c
 
-tor_LDADD = ../common/libor.a
+tor_LDADD = ../common/libor.a -lz
 
 test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
@@ -22,7 +22,7 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	test.c
 
-test_LDADD = ../common/libor.a
+test_LDADD = ../common/libor.a -lz
 
 noinst_HEADERS = or.h tree.h
 
