@@ -914,7 +914,6 @@ void connection_exit_connect(connection_t *conn) {
     log_fn(LOG_WARN,"tell roger: newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
-//   connection_process_inbuf(conn);
   connection_watch_events(conn, POLLIN);
 
   /* also, deliver a 'connected' cell back through the circuit. */
