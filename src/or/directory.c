@@ -820,11 +820,15 @@ int connection_dir_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-static char answer200[] = "HTTP/1.0 200 OK\r\n\r\n";
-static char answer400[] = "HTTP/1.0 400 Bad request\r\n\r\n";
-static char answer403[] = "HTTP/1.0 403 Unapproved server\r\n\r\n";
-static char answer404[] = "HTTP/1.0 404 Not found\r\n\r\n";
-static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
+static void
+write_http_status_line(connection_t *conn, int status,
+                       const char *reason_phrase)
+{
+  char buf[128];
+  if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n\r\n")<0)
+    return;
+  connection_write_to_buf(buf, strlen(buf), conn);
+}
 
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
@@ -846,7 +850,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   conn->state = DIR_CONN_STATE_SERVER_WRITING;
 
   if (parse_http_url(headers, &url) < 0) {
-    connection_write_to_buf(answer400, strlen(answer400), conn);
+    write_http_status_line(conn, 400, "Bad request");
     return 0;
   }
   log_fn(LOG_INFO,"rewritten url as '%s'.", url);
@@ -859,7 +863,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
 
     if (dlen == 0) {
       log_fn(LOG_NOTICE,"My directory is empty. Closing.");
-      connection_write_to_buf(answer503, strlen(answer503), conn);
+      write_http_status_line(conn, 503, "Directory unavailable");
       return 0;
     }
 
@@ -881,7 +885,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     tor_free(url);
     dlen = dirserv_get_runningrouters(&cp, deflated);
     if (!dlen) { /* we failed to create/cache cp */
-      connection_write_to_buf(answer503, strlen(answer503), conn);
+      write_http_status_line(conn, 503, "Directory unavailable");
       return 0;
     }
 
@@ -906,7 +910,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
        * if we're gone to the site recently, and 404 if we haven't.
        *
        * Reject. */
-      connection_write_to_buf(answer400, strlen(answer400), conn);
+      write_http_status_line(conn, 400, "Nonauthorative directory does not not store rendezvous descriptors.");
       tor_free(url);
       return 0;
     }
@@ -920,10 +924,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
         connection_write_to_buf(descp, desc_len, conn);
         break;
       case 0: /* well-formed but not present */
-        connection_write_to_buf(answer404, strlen(answer404), conn);
+        write_http_status_line(conn, 404, "Not found");
         break;
       case -1: /* not well-formed */
-        connection_write_to_buf(answer400, strlen(answer400), conn);
+        write_http_status_line(conn, 400, "Bad request");
         break;
     }
     tor_free(url);
@@ -931,7 +935,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   }
 
   /* we didn't recognize the url */
-  connection_write_to_buf(answer404, strlen(answer404), conn);
+  write_http_status_line(conn, 404, "Not found");
   tor_free(url);
   return 0;
 }
@@ -955,12 +959,12 @@ directory_handle_command_post(connection_t *conn, char *headers,
   if (!authdir_mode(get_options())) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
-    connection_write_to_buf(answer400, strlen(answer400), conn);
+    write_http_status_line(conn, 400, "Not authoritative server");
     return 0;
   }
 
   if (parse_http_url(headers, &url) < 0) {
-    connection_write_to_buf(answer400, strlen(answer400), conn);
+    write_http_status_line(conn, 400, "Bad request");
     return 0;
   }
   log_fn(LOG_INFO,"rewritten url as '%s'.", url);
@@ -970,15 +974,15 @@ directory_handle_command_post(connection_t *conn, char *headers,
     switch (dirserv_add_descriptor(&cp)) {
       case -1:
         /* malformed descriptor, or something wrong */
-        connection_write_to_buf(answer400, strlen(answer400), conn);
+        write_http_status_line(conn, 400, "Malformed or unacceptable server descriptor");
         break;
       case 0:
         /* descriptor was well-formed but server has not been approved */
-        connection_write_to_buf(answer403, strlen(answer403), conn);
+        write_http_status_line(conn, 200, "Unverified server descriptor accepted");
         break;
       case 1:
         dirserv_get_directory(&cp, 0); /* rebuild and write to disk */
-        connection_write_to_buf(answer200, strlen(answer200), conn);
+        write_http_status_line(conn, 200, "Verified server descriptor accepted");
         break;
     }
     tor_free(url);
@@ -988,15 +992,15 @@ directory_handle_command_post(connection_t *conn, char *headers,
   if (!strcmpstart(url,"/tor/rendezvous/publish")) {
     /* rendezvous descriptor post */
     if (rend_cache_store(body, body_len) < 0)
-      connection_write_to_buf(answer400, strlen(answer400), conn);
+      write_http_status_line(conn, 400, "Invalid service descriptor rejected");
     else
-      connection_write_to_buf(answer200, strlen(answer200), conn);
+      write_http_status_line(conn, 200, "Service descriptor stored");
     tor_free(url);
     return 0;
   }
 
   /* we didn't recognize the url */
-  connection_write_to_buf(answer404, strlen(answer404), conn);
+  write_http_status_line(conn, 404, "Not found");
   tor_free(url);
   return 0;
 }
