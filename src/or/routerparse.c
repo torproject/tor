@@ -39,6 +39,7 @@ typedef enum {
   K_DIRCACHEPORT,
   K_CONTACT,
   K_NETWORK_STATUS,
+  K_UPTIME,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -111,6 +112,7 @@ static struct {
   { "dircacheport",        K_DIRCACHEPORT,        ARGS,    NO_OBJ,  RTR_ONLY },
   { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ,  ANY },
   { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR_ONLY },
+  { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR_ONLY },
   { NULL, -1 }
 };
 
@@ -642,6 +644,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
   directory_token_t *tok;
   int t;
+  long lng;
   int ports_set, bw_set;
 
   if (!end) {
@@ -743,6 +746,14 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     if(tok->n_args > 2)
       router->bandwidthcapacity = atoi(tok->args[2]);
     bw_set = 1;
+  }
+
+  if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
+    if (tok->n_args != 1) {
+      log_fn(LOG_WARN, "Unrecognized number of args on K_UPTIME; skipping.");
+    } else {
+      router->uptime = atol(tok->args[0]);
+    }
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
