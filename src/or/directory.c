@@ -314,7 +314,7 @@ directory_send_command(connection_t *conn, const char *platform,
   char hoststring[128];
   char url[128];
   int use_newer = 0;
-  char *httpcommand = NULL;
+  const char *httpcommand = NULL;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);

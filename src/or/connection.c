@@ -16,7 +16,7 @@ extern or_options_t options; /* command-line and config-file options */
 extern int shutting_down; /* whether we should refuse new connections */
 
 /** Array of strings to make conn-\>type human-readable. */
-char *conn_type_to_string[] = {
+const char *conn_type_to_string[] = {
   "",            /* 0 */
   "OP listener", /* 1 */
   "OP",          /* 2 */
@@ -32,7 +32,7 @@ char *conn_type_to_string[] = {
 };
 
 /** Array of string arrays to make {conn-\>type,conn-\>state} human-readable. */
-char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
+const char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
   { NULL }, /* no type associated with 0 */
   { NULL }, /* op listener, obsolete */
   { NULL }, /* op, obsolete */

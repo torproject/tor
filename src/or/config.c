@@ -28,8 +28,8 @@ typedef enum config_type_t {
 
 /* An abbreviation for a configuration option allowed on the command line */
 typedef struct config_abbrev_t {
-  char *abbreviated;
-  char *full;
+  const char *abbreviated;
+  const char *full;
   int commandline_only;
 } config_abbrev_t;
 
@@ -48,13 +48,13 @@ static config_abbrev_t config_abbrevs[] = {
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
   { "l",        "LogLevel" , 1},
-  { NULL, NULL },
+  { NULL, NULL , 0},
 };
 #undef PLURAL
 
 /* A variable allowed in the configuration file or on the command line */
 typedef struct config_var_t {
-  char *name; /**< The full keyword (case insensitive) */
+  const char *name; /**< The full keyword (case insensitive) */
   config_type_t type; /**< How to interpret the type and turn it into a value */
   off_t var_offset; /**< Offset of the corresponding member of or_options_t */
 } config_var_t;
@@ -411,8 +411,8 @@ config_assign_defaults(or_options_t *options)
   options->SocksPort = 9050;
 
   options->AllowUnverifiedNodes = smartlist_create();
-  smartlist_add(options->AllowUnverifiedNodes, "middle");
-  smartlist_add(options->AllowUnverifiedNodes, "rendezvous");
+  smartlist_add(options->AllowUnverifiedNodes, tor_strdup("middle"));
+  smartlist_add(options->AllowUnverifiedNodes, tor_strdup("rendezvous"));
 
   config_free_lines(options->ExitPolicy);
   options->ExitPolicy = NULL;
@@ -571,6 +571,11 @@ free_options(or_options_t *options)
     SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
     smartlist_free(options->FirewallPorts);
     options->FirewallPorts = NULL;
+  }
+  if (options->AllowUnverifiedNodes) {
+    SMARTLIST_FOREACH(options->AllowUnverifiedNodes, char *, cp, tor_free(cp));
+    smartlist_free(options->AllowUnverifiedNodes);
+    options->AllowUnverifiedNodes = NULL;
   }
 }
 

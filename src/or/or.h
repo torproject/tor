@@ -478,8 +478,8 @@ struct connection_t {
   int marked_for_close; /**< Boolean: should we close this conn on the next
                          * iteration of the main loop?
                          */
-  char *marked_for_close_file; /**< For debugging: in which file were we marked
-                                * for close? */
+  const char *marked_for_close_file; /**< For debugging: in which file were
+                                      * we marked for close? */
   int hold_open_until_flushed; /**< Despite this connection's being marked
                                 * for close, do we flush it before closing it?
                                 */
@@ -708,8 +708,8 @@ struct circuit_t {
 
   int marked_for_close; /**< Should we close this circuit at the end of the
                          * main loop? */
-  char *marked_for_close_file; /**< For debugging: in which file was this
-                                * circuit marked for close? */
+  const char *marked_for_close_file; /**< For debugging: in which file was this
+                                      * circuit marked for close? */
 
   /** The IPv4 address of the OR that is next in this circuit. */
   uint32_t n_addr;
@@ -990,7 +990,7 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
 /********************************* circuitlist.c ***********************/
 
-extern char *circuit_state_to_string[];
+extern const char *circuit_state_to_string[];
 void circuit_close_all_marked(void);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 void circuit_free_cpath_node(crypt_path_t *victim);
@@ -1071,8 +1071,8 @@ const char *get_data_directory(or_options_t *options);
 #define CONN_TYPE_TO_STRING(t) (((t) < _CONN_TYPE_MIN || (t) > _CONN_TYPE_MAX) ? \
   "Unknown" : conn_type_to_string[(t)])
 
-extern char *conn_type_to_string[];
-extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
+extern const char *conn_type_to_string[];
+extern const char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 connection_t *connection_new(int type);
 void connection_free(connection_t *conn);
@@ -1443,7 +1443,8 @@ routerinfo_t *routerlist_find_my_routerinfo(void);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
 int router_is_unreliable_router(routerinfo_t *router, int need_uptime, int need_bw);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
-routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
+routerinfo_t *router_choose_random_node(const char *preferred,
+                                        const char *excluded,
                                         struct smartlist_t *excludedsmartlist,
                                         int preferuptime, int preferbandwidth,
                                         int allow_unverified, int strict);

@@ -16,9 +16,6 @@ static int init_from_config(int argc, char **argv);
 
 /********* START VARIABLES **********/
 
-/* declared in connection.c */
-extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
-
 or_options_t options; /**< Command-line and config-file options. */
 int global_read_bucket; /**< Max number of bytes I can read this second. */
 int global_write_bucket; /**< Max number of bytes I can write this second. */
