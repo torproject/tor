@@ -734,7 +734,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       connection_exit_connect(n_stream);
       return 0;
     case -1: /* resolve failed */
-      log_fn(LOG_WARN,"Resolve failed (%s).", n_stream->address);
+      log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
       connection_edge_end(n_stream, END_STREAM_REASON_RESOLVEFAILED, NULL);
     /* case 0, resolve added to pending list */
   }
