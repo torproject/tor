@@ -144,6 +144,8 @@ void router_set_bandwidth_capacity(int bw) {
 }
 /** Return the value we tucked away above, or zero by default. */
 int router_get_bandwidth_capacity(void) {
+  if (we_are_hibernating())
+    return 0;
   return bw_capacity;
 }
 
