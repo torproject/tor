@@ -191,21 +191,6 @@ circuit building, users can notice failed
 nodes while building circuits and route around them.  Additionally,
 liveness information from directories allows users to avoid
 unreliable nodes in the first place.
-%We further provide a
-%simple mechanism that allows connections to be established despite recent
-%node failure or slightly dated information from a directory server. Tor
-%permits onion routers to have \emph{router twins}---nodes that share
-%the same private decryption key. Note that because connections now have
-%perfect forward secrecy, an onion router still cannot read the traffic
-%on a connection established through its twin even while that connection
-%is active. Also, which nodes are twins can change dynamically depending
-%on current circumstances, and twins may or may not be under the same
-%administrative authority.
-%
-%[Commented out; Router twins provide no real increase in robustness
-%to failed nodes.  If a non-twinned node goes down, the
-%circuit-builder notices this and routes around it.  Circuit-building
-%is offline, so there shouldn't even be a latency hit. -NM]
 
 \item \textbf{Variable exit policies:} Tor provides a consistent
 mechanism for
@@ -491,14 +476,6 @@ adversary. Instead, we expect an adversary who can observe some fraction
 of network traffic; who can generate, modify, delete, or delay traffic
 on the network; who can operate onion routers of its own; and who can
 compromise some fraction of the onion routers on the network.
-
-%Large adversaries will be able to compromise a considerable fraction
-%of the network. (In some circumstances---for example, if the Tor
-%network is running on a hardened network where all operators have
-%had background checks---the number of compromised nodes could be quite
-%small.) Compromised nodes can arbitrarily manipulate the connections that
-%pass through them, as well as creating new connections that pass through
-%themselves.  They can observe traffic, and record it for later analysis.
 
 In low-latency anonymity systems that use layered encryption, the
 adversary's typical goal is to observe both the initiator and the
@@ -1105,7 +1082,6 @@ simplifying assumption that all participants agree on who the
 directory servers are. Second, Mixminion needs to predict node
 behavior, whereas Tor only needs a threshold consensus of the current
 state of the network.
-% Cite dir-spec or dir-agreement?
 
 Tor directory servers build a consensus directory through a simple
 four-round broadcast protocol.  In round one, each server dates and
@@ -1126,7 +1102,8 @@ signature is not included on the final directory.
 
 The rebroadcast steps ensure that a directory server is heard by
 either all of the other servers or none of them, assuming that any two
-directory servers can talk directly, or via a third directory server (some of the
+directory servers can talk directly, or via a third directory server
+(some of the
 links between directory servers may be down). Broadcasts are feasible
 because there are relatively few directory servers (currently 3, but we expect
 to transition to 9 as the network scales). The actual local algorithm
@@ -1150,8 +1127,6 @@ Thus directory servers are not a performance
 bottleneck when we have many users, and do not aid traffic analysis by
 forcing clients to periodically announce their existence to any
 central point.
-% Mention Hydra as an example of non-clique topologies. -NM, from RD
-
 
 \Section{Rendezvous points: location privacy}
 \label{sec:rendezvous}
@@ -1343,18 +1318,15 @@ and its resistance to attacks.
   outgoing TCP connections by drop-in libraries such as tsocks.
   
 \item[Flexibility:] Tor's design and implementation is fairly modular,
-  so that,
-  for example, a scalable P2P replacement for the directory servers
-  would not substantially impact other aspects of the system.  Tor
-  runs on top of TCP, so design options that could not easily do so
-  would be difficult to test on the current network. However, most
+  so that, for example, a scalable P2P replacement for the directory
+  servers would not substantially impact other aspects of the system.
+  Tor runs on top of TCP, so design options that could not easily do
+  so would be difficult to test on the current network. However, most
   low-latency protocols are designed to run over TCP. We are currently
-  discussing with the designers of MorphMix interoperability of the
-  two systems, which seems to be relatively straightforward. This will
-  allow testing and direct comparison of the two rather different
-  designs.
-  % Do we want to say this?  I don't think we should talk about this
-  % kind of discussion till we have more positive results.
+  working with the designers of MorphMix to render our two systems
+  interoperable. So for, this seems to be relatively straightforward.
+  Interoperability will allow testing and direct comparison of the two
+  rather different designs.
   
 \item[Simple design:] Tor opts for practicality when there is no
   clear resolution of anonymity tradeoffs or practical means to
@@ -1874,7 +1846,8 @@ a unified deployable system. But there are still several attacks that
 work quite well, as well as a number of sustainability and run-time
 issues remaining to be ironed out. In particular:
 
-% Many of these (Scalability, cover traffic) are duplicates from open problems.
+% Many of these (Scalability, cover traffic, morphmix) 
+% are duplicates from open problems.
 %
 \begin{tightlist}
 \item \emph{Scalability:} Tor's emphasis on design simplicity and
@@ -1919,10 +1892,10 @@ issues remaining to be ironed out. In particular:
   and development where we can start deploying a wider network.  Once
   we have are ready for actual users, we will doubtlessly be better
   able to evaluate some of our design decisions, including our
-  robustness/latency tradeoffs, our abuse-prevention mechanisms, and
+  robustness/latency tradeoffs, our performance trade-offs (including
+  cell size), our abuse-prevention mechanisms, and
   our overall usability.
 % XXX work with morphmix spec
-% XXX small cells vs large cells
 \end{tightlist}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
