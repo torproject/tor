@@ -281,8 +281,8 @@ int fetch_from_buf_socks(char *buf, int *buf_datalen,
   /* an inlined socks4_unpack() */
   socks4_info.version = *buf;
   socks4_info.command = *(buf+1);
-  socks4_info.destport = *(uint16_t*)(buf+2); 
-  socks4_info.destip = *(uint32_t*)(buf+4);
+  socks4_info.destport = ntohs(*(uint16_t*)(buf+2));
+  socks4_info.destip = ntohl(*(uint32_t*)(buf+4));
 
   if(socks4_info.version != 4) {
     log_fn(LOG_NOTICE,"Unrecognized version %d.",socks4_info.version);
@@ -294,7 +294,7 @@ int fetch_from_buf_socks(char *buf, int *buf_datalen,
     return -1;
   }
 
-  port = ntohs(socks4_info.destport);
+  port = socks4_info.destport;
   if(!port) {
     log_fn(LOG_NOTICE,"Port is zero.");
     return -1;
