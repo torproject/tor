@@ -549,7 +549,7 @@ int router_rebuild_descriptor(int force) {
   ri->address = tor_strdup(inet_ntoa(in));
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
-  ri->or_port = hibernating ? 0 : options->ORPort;
+  ri->or_port = options->ORPort;
   ri->socks_port = hibernating ? 0 : options->SocksPort;
   ri->dir_port = hibernating ? 0 : options->DirPort;
   ri->published_on = time(NULL);
