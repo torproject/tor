@@ -245,7 +245,7 @@ const char *hex_str(const char *from, int fromlen)
   static char buf[65];
   if (fromlen>(sizeof(buf)-1)/2)
     fromlen = (sizeof(buf)-1)/2;
-  base16_encode(buf,64,from,fromlen);
+  base16_encode(buf,sizeof(buf),from,fromlen);
   return buf;
 }
 
