@@ -26,28 +26,40 @@ typedef enum config_type_t {
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
 } config_type_t;
 
-/*DOCDOC*/
+/* An abbreviation for a configuration option allowed on the command line */
 typedef struct config_abbrev_t {
   char *abbreviated;
   char *full;
 } config_abbrev_t;
 
+/* A list of command-line abbreviations. */
 static config_abbrev_t config_abbrevs[] = {
   { "l", "LogLevel" },
   { NULL, NULL },
 };
 
+/* A variable allowed in the configuration file or on the command line */
 typedef struct config_var_t {
-  char *name;
-  config_type_t type;
-  off_t var_offset;
+  char *name; /**< The full keyword (case insensitive) */
+  config_type_t type; /**< How to interpret the type and turn it into a value */
+  off_t var_offset; /**< Offset of the corresponding member of or_options_t */
 } config_var_t;
 
+/** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
 #define STRUCT_OFFSET(tp, member) ((off_t) &(((tp*)0)->member))
+/** An entry for config_vars: "The option <b>name</b> has type
+ * CONFIG_TYPE_<b>conftype</b>, and corresponds to
+ * or_options_t.<b>member</b>"
+ */
 #define VAR(name,conftype,member) \
   { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member) }
+/** An entry for config_vars: "The option <b>name</b> is obsolete." */
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0 }
 
+/** Array of configuration options.  Until we disallow nonstandard
+ * abbreviations, order is significant, since the first matching option will
+ * be chosen first.
+ */
 static config_var_t config_vars[] = {
   VAR("Address",             STRING,   Address),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes),
@@ -112,14 +124,13 @@ static config_var_t config_vars[] = {
 #undef VAR
 #undef OBSOLETE
 
-
 /** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
 static struct config_line_t *config_get_commandlines(int argc, char **argv);
 static int config_get_lines(FILE *f, struct config_line_t **result);
 static void config_free_lines(struct config_line_t *front);
-static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg);
+static int config_assign_line(or_options_t *options, struct config_line_t *c);
 static int config_assign(or_options_t *options, struct config_line_t *list);
 static int parse_dir_server_line(const char *line);
 static int parse_redirect_line(or_options_t *options,
@@ -127,7 +138,8 @@ static int parse_redirect_line(or_options_t *options,
 static const char *expand_abbrev(const char *option);
 static config_var_t *config_find_option(const char *key);
 
-/** DOCDOC */
+/** If <b>option</b> is an official abbreviation for a longer option,
+ * return the longer option.  Otherwise return <b>option</b> */
 static const char *
 expand_abbrev(const char *option)
 {
@@ -233,22 +245,33 @@ config_free_lines(struct config_line_t *front)
   }
 }
 
+/** If <b>key</b> is a configuration option, return the corresponding
+ * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
+ * warn, and return the corresponding config_var_t.  Otherwise return NULL.
+ */
 static config_var_t *config_find_option(const char *key)
 {
   int i;
+  /* First, check for an exact (case-insensitive) match */
   for (i=0; config_vars[i].name; ++i) {
-    if (!strcasecmp(key, config_vars[i].name)) {
+    if (!strcasecmp(key, config_vars[i].name))
       return &config_vars[i];
-    } else if (!strncasecmp(key, config_vars[i].name, strlen(key))) {
+  }
+  /* If none, check for an abbreviated match */
+  for (i=0; config_vars[i].name; ++i) {
+    if (!strncasecmp(key, config_vars[i].name, strlen(key))) {
       log_fn(LOG_WARN, "The abbreviation '%s' is deprecated. "
           "Tell Nick and Roger to make it official, or just use '%s' instead",
              key, config_vars[i].name);
       return &config_vars[i];
     }
   }
+  /* Okay, unrecogized options */
   return NULL;
 }
 
+/** If <b>c</b> is a syntactically valid configuration line, update
+ * <b>options</b> with its value and return 0.  Otherwise return -1. */
 static int
 config_assign_line(or_options_t *options, struct config_line_t *c)
 {
