@@ -42,7 +42,7 @@
 int
 tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 {
-        int i;
+        unsigned int i;
         for (i=0;i<nfds;++i) {
                 tor_assert(ufds[i].fd >= 0);
         }
