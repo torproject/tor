@@ -635,7 +635,6 @@ static time_t cached_directory_published = 0;
 void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;
-  size_t z_len;
   char filename[512];
   tor_assert(!options.AuthoritativeDir);
   now = time(NULL);
@@ -650,7 +649,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
     cached_directory = tor_strdup(directory);
     cached_directory_len = strlen(cached_directory);
     tor_free(cached_directory_z);
-    if (tor_gzip_compress(&cached_directory_z, &z_len,
+    if (tor_gzip_compress(&cached_directory_z, &cached_directory_z_len,
                           cached_directory, cached_directory_len,
                           ZLIB_METHOD)) {
       log_fn(LOG_WARN,"Error compressing cached directory");
