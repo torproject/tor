@@ -273,7 +273,7 @@ dirserv_add_descriptor(const char **desc)
   }
   
   (*desc_ent_ptr) = tor_malloc(sizeof(descriptor_entry_t));
-  (*desc_ent_ptr)->nickname = strdup(ri->nickname);
+  (*desc_ent_ptr)->nickname = tor_strdup(ri->nickname);
   (*desc_ent_ptr)->published = ri->published_on;
   (*desc_ent_ptr)->desc_len = desc_len;
   (*desc_ent_ptr)->descriptor = tor_malloc(desc_len+1);
@@ -373,8 +373,8 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   snprintf(s, maxlen,
            "signed-directory\n"
            "published %s\n"
-           "recommended-software "RECOMMENDED_SOFTWARE_VERSIONS"\n"
-           "running-routers %s\n\n", published, cp);
+           "recommended-software %s\n"
+           "running-routers %s\n\n", published, options.RecommendedVersions, cp);
   free(cp);
   i = strlen(s);
   cp = s+i;

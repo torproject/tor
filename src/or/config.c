@@ -190,6 +190,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
 
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
     config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
+    config_compare(list, "RecommendedVersions", CONFIG_TYPE_STRING, &options->RecommendedVersions) ||
 
     config_compare(list, "SocksPort",      CONFIG_TYPE_INT, &options->SocksPort) ||
     config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
@@ -242,6 +243,7 @@ void free_options(or_options_t *options) {
   tor_free(options->SocksBindAddress);
   tor_free(options->ORBindAddress);
   tor_free(options->DirBindAddress);
+  tor_free(options->RecommendedVersions);
   tor_free(options->User);
   tor_free(options->Group);
 }
@@ -256,6 +258,7 @@ void init_options(or_options_t *options) {
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
   options->DirBindAddress = tor_strdup("0.0.0.0");
+  options->RecommendedVersions = tor_strdup("none");
   options->loglevel = LOG_INFO;
   options->PidFile = tor_strdup("tor.pid");
   options->DataDirectory = NULL;
@@ -276,7 +279,27 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   char *fname;
   int i;
   int result = 0;
+  static int first_load = 1;
+  static char **backup_argv;
+  static int backup_argc;
+  char *previous_pidfile = NULL;
+  int previous_runasdaemon = 0;
+  int previous_onionrouter = -1;
 
+  if(first_load) { /* first time we're called. save commandline args */
+    backup_argv = argv;
+    backup_argc = argc;
+    first_load = 0;
+  } else { /* we're reloading. need to clean up old ones first. */
+    argv = backup_argv;
+    argc = backup_argc;
+
+    /* record some previous values, so we can fail if they change */
+    previous_pidfile = tor_strdup(options->PidFile);
+    previous_runasdaemon = options->RunAsDaemon;
+    previous_onionrouter = options->OnionRouter;
+    free_options(options);
+  }
   init_options(options); 
 
   if(argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
@@ -314,6 +337,24 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   config_free_lines(cl);
 
 /* Validate options */
+
+  /* first check if some of the previous options have changed but aren't allowed to */
+  if(previous_pidfile && strcmp(previous_pidfile,options->PidFile)) {
+    log_fn(LOG_WARN,"During reload, PidFile changed from %s to %s. Failing.",
+           previous_pidfile, options->PidFile);
+    return -1;
+  }
+  tor_free(previous_pidfile);
+
+  if(previous_runasdaemon && !options->RunAsDaemon) {
+    log_fn(LOG_WARN,"During reload, change from RunAsDaemon=1 to =0 not allowed. Failing.");
+    return -1;
+  }
+  if(previous_onionrouter >= 0 && previous_onionrouter != options->OnionRouter) {
+    log_fn(LOG_WARN,"During reload, OnionRouter changed from %d to %d. Failing.",
+           previous_onionrouter, options->OnionRouter);
+    return -1;
+  }
 
   if(options->LogLevel) {
     if(!strcmp(options->LogLevel,"err"))

@@ -7,6 +7,7 @@
 /********* START PROTOTYPES **********/
 
 static void dumpstats(int severity); /* log stats */
+static int init_from_config(int argc, char **argv);
 
 /********* START VARIABLES **********/
 
@@ -29,8 +30,8 @@ static int nfds=0; /* number of connections currently active */
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
 static int please_dumpstats=0; /* whether we should dump stats during the loop */
-static int please_reset =0; /* whether we just got a sighup */
-static int please_reap_children=0; /* whether we should waitpid for exited children*/
+static int please_reset=0; /* whether we just got a sighup */
+static int please_reap_children=0; /* whether we should waitpid for exited children */
 #endif /* signal stuff */
 
 /* private keys */
@@ -567,6 +568,44 @@ static int init_keys(void)
   return 0;
 }
 
+static int init_from_config(int argc, char **argv) {
+  static int have_daemonized=0;
+
+  if(getconfig(argc,argv,&options)) {
+    log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");
+    return -1;
+  }
+  log_set_severity(options.loglevel); /* assign logging severity level from options */
+  close_logs(); /* we'll close, then open with correct loglevel if necessary */
+  if(!options.LogFile && !options.RunAsDaemon)
+    add_stream_log(options.loglevel, "<stdout>", stdout);
+  if(options.DebugLogFile)
+    add_file_log(LOG_DEBUG, options.DebugLogFile);
+  if(options.LogFile)
+    add_file_log(options.loglevel, options.LogFile);
+
+  global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
+  stats_prev_global_read_bucket = global_read_bucket;
+
+  /* write our pid to the pid file */
+  write_pidfile(options.PidFile);
+  /* XXX Is overwriting the pidfile ok? I think it is. -RD */
+
+  /* now that we've written the pid file, we can switch the user and group. */
+  if(options.User || options.Group) {
+    if(switch_id(options.User, options.Group) != 0) {
+      return -1;
+    }
+  }
+
+  if(options.RunAsDaemon && !have_daemonized) {
+    daemonize();
+    have_daemonized = 1;
+  }
+
+  return 0;
+}
+
 static int do_main_loop(void) {
   int i;
   int timeout;
@@ -607,6 +646,13 @@ static int do_main_loop(void) {
       please_dumpstats = 0;
     }
     if(please_reset) {
+      log_fn(LOG_INFO,"Hupped. Reloading config.");
+      /* first, reload config variables, in case they've changed */
+      if (init_from_config(0, NULL) < 0) {
+        /* no need to provide argc/v, they've been cached inside init_from_config */
+        exit(1);
+      }
+
       /* fetch a new directory */
       if(options.DirPort) {
 
@@ -624,9 +670,6 @@ static int do_main_loop(void) {
       } else {
         directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
       }
-
-      /* close and reopen the log files */
-      reset_logs();
 
       please_reset = 0;
     }
@@ -753,34 +796,8 @@ int tor_main(int argc, char *argv[]) {
   add_stream_log(LOG_INFO, "<stdout>", stdout);
   log_fn(LOG_WARN,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
 
-  if(getconfig(argc,argv,&options)) {
-    log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");
+  if (init_from_config(argc,argv) < 0)
     return -1;
-  }
-  log_set_severity(options.loglevel); /* assign logging severity level from options */
-  close_logs(); /* close stdout, then open with correct loglevel if necessary */
-  if(!options.LogFile && !options.RunAsDaemon)
-    add_stream_log(options.loglevel, "<stdout>", stdout);
-  if(options.DebugLogFile)
-    add_file_log(LOG_DEBUG, options.DebugLogFile);
-  if(options.LogFile)
-    add_file_log(options.loglevel, options.LogFile);
-
-  global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
-  stats_prev_global_read_bucket = global_read_bucket;
-
-  /* write our pid to the pid file */
-  write_pidfile(options.PidFile);
-
-  /* now that we've written the pid file, we can switch the user and group. */
-  if(options.User || options.Group) {
-    if(switch_id(options.User, options.Group) != 0) {
-      return -1;
-    }
-  }
-
-  if(options.RunAsDaemon)
-    daemonize();
 
   if(options.OnionRouter) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */

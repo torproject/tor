@@ -341,7 +341,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   dns_found_answer(conn->address, answer);
 
   free(conn->address);
-  conn->address = strdup("<idle>");
+  conn->address = tor_strdup("<idle>");
   conn->state = DNSWORKER_STATE_IDLE;
   num_dnsworkers_busy--;
 

@@ -101,8 +101,6 @@
 #include "../common/log.h"
 #include "../common/util.h"
 
-#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre13,0.0.2pre14"
-
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */
 
@@ -438,6 +436,7 @@ typedef struct {
   char *SocksBindAddress;
   char *ORBindAddress;
   char *DirBindAddress;
+  char *RecommendedVersions;
   char *User;
   char *Group;
   double CoinWeight;
@@ -457,7 +456,6 @@ typedef struct {
   int NewCircuitPeriod;
   int TotalBandwidth;
   int NumCpus;
-  int Role;
   int loglevel;
 } or_options_t;
 

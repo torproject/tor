@@ -684,7 +684,6 @@ test_dir_format()
   test_eq(-1, compare_recommended_versions("a", "ab,abd,abde,abc,abcde"));
   test_eq(-1, compare_recommended_versions("abb", "ab,abd,abde,abc,abcde"));
   test_eq(-1, compare_recommended_versions("a", ""));
-  test_eq(0, compare_recommended_versions(VERSION, RECOMMENDED_SOFTWARE_VERSIONS));
 }
 
 int 
