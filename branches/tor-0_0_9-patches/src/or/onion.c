@@ -15,13 +15,17 @@ const char onion_c_id[] = "$Id$";
 
 struct onion_queue_t {
   circuit_t *circ;
+  time_t when_added;
   struct onion_queue_t *next;
 };
 
-/** global (within this file) variables used by the next few functions */
+/** 5 seconds on the onion queue til we just send back a destroy */
+#define ONIONQUEUE_WAIT_CUTOFF 5
+
+/** Global (within this file) variables used by the next few functions */
 static struct onion_queue_t *ol_list=NULL;
 static struct onion_queue_t *ol_tail=NULL;
-/** length of ol_list */
+/** Length of ol_list */
 static int ol_length=0;
 
 /** Add <b>circ</b> to the end of ol_list and return 0, except
@@ -29,9 +33,11 @@ static int ol_length=0;
  */
 int onion_pending_add(circuit_t *circ) {
   struct onion_queue_t *tmp;
+  time_t now = time(NULL);
 
   tmp = tor_malloc_zero(sizeof(struct onion_queue_t));
   tmp->circ = circ;
+  tmp->when_added = now;
 
   if (!ol_tail) {
     tor_assert(!ol_list);
@@ -54,6 +60,13 @@ int onion_pending_add(circuit_t *circ) {
   ol_length++;
   ol_tail->next = tmp;
   ol_tail = tmp;
+  while ((int)(now - ol_list->when_added) >= ONIONQUEUE_WAIT_CUTOFF) {
+    /* cull elderly requests. */
+    circ = ol_list->circ;
+    onion_pending_remove(ol_list->circ);
+    log_fn(LOG_INFO,"Circuit create request is too old; cancelling due to overload.");
+    circuit_mark_for_close(circ);
+  }
   return 0;
 }
 
