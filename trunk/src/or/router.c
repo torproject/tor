@@ -98,8 +98,11 @@ crypto_pk_env_t *get_identity_key(void) {
 void rotate_onion_key(void)
 {
   char fname[512];
+  char fname_prev[512];
   crypto_pk_env_t *prkey;
-  sprintf(fname,"%s/keys/onion.key",get_data_directory(&options));
+  sprintf(fname,"%s/keys/secret_onion_key",get_data_directory(&options));
+  sprintf(fname_prev,"%s/keys/secret_onion_key.old",
+          get_data_directory(&options));
   if (!(prkey = crypto_new_pk_env())) {
     log(LOG_ERR, "Error creating crypto environment.");
     goto error;
@@ -107,6 +110,10 @@ void rotate_onion_key(void)
   if (crypto_pk_generate_key(prkey)) {
     log(LOG_ERR, "Error generating onion key");
     goto error;
+  }
+  if (file_status(fname) == FN_FILE) {
+    if (replace_file(fname, fname_prev))
+      goto error;
   }
   if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
     log(LOG_ERR, "Couldn't write generated key to %s.", fname);
@@ -144,15 +151,9 @@ static crypto_pk_env_t *
 init_key_from_file_name_changed(const char *fname_old,
                                 const char *fname_new)
 {
-  int fs;
 
-  fs = file_status(fname_new);
-  if (fs == FN_FILE)
-    /* The new filename is there. */
-    return init_key_from_file(fname_new);
-  fs = file_status(fname_old);
-  if (fs != FN_FILE)
-    /* There is no key under either name. */
+  if (file_status(fname_new) == FN_FILE || file_status(fname_old) != FN_FILE)
+    /* The new filename is there, or both are, or neither is. */
     return init_key_from_file(fname_new);
 
   /* The old filename exists, and the new one doesn't.  Rename and load. */
@@ -284,6 +285,12 @@ int init_keys(void) {
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_onion_key(prkey);
+  sprintf(keydir,"%s/keys/secret_onion_key.old",datadir);
+  if (file_status(keydir) == FN_FILE) {
+    prkey = init_key_from_file(keydir);
+    if (prkey)
+      lastonionkey = prkey;
+  }
 
   /* 3. Initialize link key and TLS context. */
   if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
@@ -620,7 +627,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
   /* How busy have we been? */
   bandwidth_usage = rep_hist_get_bandwidth_lines();
-  
+
   /* Generate the easy portion of the router descriptor. */
   result = snprintf(s, maxlen,
                     "router %s %s %d %d %d\n"
