@@ -94,7 +94,7 @@
 #include "../common/log.h"
 #include "../common/util.h"
 
-#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre8"
+#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre7,0.0.2pre8"
 
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */
@@ -191,8 +191,6 @@
 
 #define RELAY_HEADER_SIZE 8
 
-#define RELAY_STATE_RESOLVING
-
 /* default cipher function */
 #define DEFAULT_CIPHER CRYPTO_CIPHER_AES_CTR
 /* Used to en/decrypt onion skins */
@@ -224,24 +222,8 @@
 #define CELL_PAYLOAD_SIZE 248
 #define CELL_NETWORK_SIZE 256
 
-/* enumeration of types which option values can take */
-#define CONFIG_TYPE_STRING  0
-#define CONFIG_TYPE_CHAR    1
-#define CONFIG_TYPE_INT     2
-#define CONFIG_TYPE_LONG    3
-#define CONFIG_TYPE_DOUBLE  4
-#define CONFIG_TYPE_BOOL    5
-
-#define CONFIG_LINE_MAXLEN 1024
-
 /* legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
-
-struct config_line {
-  char *key;
-  char *value;
-  struct config_line *next;
-};
 
 typedef uint16_t aci_t;
 
@@ -320,9 +302,10 @@ struct connection_t {
                   */
   crypto_pk_env_t *pkey; /* public RSA key for the other side */
 
-#ifndef TOR_TLS
 /* Used only by OR connections: */
-
+#ifdef TOR_TLS
+  tor_tls *tls;
+#else
   /* link encryption */
   crypto_cipher_env_t *f_crypto;
   crypto_cipher_env_t *b_crypto;
@@ -440,10 +423,6 @@ struct circuit_t {
   uint8_t dirty; /* whether this circuit has been used yet */
 
   uint8_t state;
-
-//  unsigned char *onion; /* stores the onion when state is CONN_STATE_OPEN_WAIT */
-//  uint32_t onionlen; /* total onion length */
-//  uint32_t recvlen; /* length of the onion so far */
 
   void *next;
 };
@@ -583,24 +562,6 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn);
 void command_process_connected_cell(cell_t *cell, connection_t *conn);
 
 /********************************* config.c ***************************/
-
-/* open configuration file for reading */
-FILE *config_open(const unsigned char *filename);
-
-/* close configuration file */
-int config_close(FILE *f);
-
-struct config_line *config_get_commandlines(int argc, char **argv);
-
-/* parse the config file and strdup into key/value strings. Return list.
- *  *  * Warn and ignore mangled lines. */
-struct config_line *config_get_lines(FILE *f);
-
-void config_free_lines(struct config_line *front);
-
-int config_compare(struct config_line *c, char *key, int type, void *arg);
-
-void config_assign(or_options_t *options, struct config_line *list);
 
 /* return 0 if success, <0 if failure. */
 int getconfig(int argc, char **argv, or_options_t *options);
