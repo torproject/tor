@@ -159,6 +159,8 @@ Rendezvous service:
         - preemptively build n-1 hops of intro circs?
         - (n)ack introduction requests?
         - cannibalize general circs?
+        - how to set up multiple locations for a hidden service?
+        - make bob publish only established intro circs?
 
 On-going
         . Better comments for functions!
