@@ -501,7 +501,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   cf = config_open(fname);
   if(!cf) {
     if(using_default_torrc == 1) {
-      log(LOG_WARN, "Configuration file '%s' not found. Using defaults.",fname);
+      log(LOG_WARN, "Configuration file '%s' not found, using defaults (this is fine).",fname);
       /* XXX change this WARN to INFO once we start using this feature */
       if(config_assign_default(options) < 0)
         return -1;
