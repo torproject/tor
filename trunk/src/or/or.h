@@ -171,15 +171,20 @@
 #define _AP_CONN_STATE_MAX 8
 
 #define _DIR_CONN_STATE_MIN 1
-#define DIR_CONN_STATE_CONNECTING_FETCH 1
-#define DIR_CONN_STATE_CONNECTING_UPLOAD 2
-#define DIR_CONN_STATE_CLIENT_SENDING_FETCH 3
-#define DIR_CONN_STATE_CLIENT_SENDING_UPLOAD 4
-#define DIR_CONN_STATE_CLIENT_READING_FETCH 5
-#define DIR_CONN_STATE_CLIENT_READING_UPLOAD 6
-#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 7
-#define DIR_CONN_STATE_SERVER_WRITING 8
-#define _DIR_CONN_STATE_MAX 8
+#define DIR_CONN_STATE_CONNECTING 1
+#define DIR_CONN_STATE_CLIENT_SENDING 2
+#define DIR_CONN_STATE_CLIENT_READING 3
+#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 4
+#define DIR_CONN_STATE_SERVER_WRITING 5
+#define _DIR_CONN_STATE_MAX 5
+
+#define _DIR_PURPOSE_MIN 1
+#define DIR_PURPOSE_FETCH_DIR 1
+#define DIR_PURPOSE_FETCH_HIDSERV 2
+#define DIR_PURPOSE_UPLOAD_DIR 3
+#define DIR_PURPOSE_UPLOAD_HIDSERV 4
+#define DIR_PURPOSE_SERVER 5
+#define _DIR_PURPOSE_MAX 5
 
 #define CIRCUIT_STATE_BUILDING 0 /* I'm the OP, still haven't done all my handshakes */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1 /* waiting to process the onionskin */
@@ -331,6 +336,7 @@ struct connection_t {
 
   uint8_t type;
   uint8_t state;
+  uint8_t purpose; /* only used for DIR types currently */
   uint8_t wants_to_read; /* should we start reading again once
                           * the bandwidth throttler allows it?
                           */
@@ -830,7 +836,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 
 /********************************* directory.c ***************************/
 
-void directory_initiate_command(routerinfo_t *router, int command);
+void directory_initiate_command(routerinfo_t *router, int purpose, const char *payload);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 

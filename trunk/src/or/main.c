@@ -329,7 +329,7 @@ static void run_scheduled_events(time_t now) {
       /* NOTE directory servers do not currently fetch directories.
        * Hope this doesn't bite us later. */
       directory_initiate_command(router_pick_directory_server(),
-                                 DIR_CONN_STATE_CONNECTING_FETCH);
+                                 DIR_PURPOSE_FETCH_DIR, NULL);
     } else {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
@@ -519,7 +519,8 @@ static int do_hup(void) {
     }
   } else {
     /* fetch a new directory */
-    directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
+    directory_initiate_command(router_pick_directory_server(),
+                               DIR_PURPOSE_FETCH_DIR, NULL);
   }
   if(options.ORPort) {
     router_rebuild_descriptor();
