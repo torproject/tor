@@ -38,9 +38,9 @@ static int directory_handle_command(connection_t *conn);
 extern or_options_t options; /* command-line and config-file options */
 
 /** URL for publishing rendezvous descriptors. */
-char rend_publish_string[] = "/rendezvous/publish";
+char rend_publish_string[] = "/tor/rendezvous/publish";
 /** Prefix for downloading rendezvous descriptors. */
-char rend_fetch_url[] = "/rendezvous/";
+char rend_fetch_url[] = "/tor/rendezvous/";
 
 #define MAX_HEADERS_SIZE 50000
 #define MAX_BODY_SIZE 500000
@@ -209,17 +209,25 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
  */
 static void directory_send_command(connection_t *conn, int purpose,
                                    const char *payload, int payload_len) {
-  char fetchwholedir[] = "GET / HTTP/1.0\r\n\r\n";
-  char fetchwholedir_z[] = "GET /dir.z HTTP/1.0\r\n\r\n";
-  char fetchrunninglist[] = "GET /running-routers HTTP/1.0\r\n\r\n";
+  char fetchwholedir[] = "GET / HTTP/1.0\r\n\r\n"; /* deprecated */
+  char fetchwholedir_z[] = "GET /tor/dir.z HTTP/1.0\r\n\r\n";
+  char fetchrunninglist[] = "GET /tor/running-routers HTTP/1.0\r\n\r\n";
   char tmp[8192];
+  routerinfo_t *router;
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
+
+  router = router_get_by_digest(conn->identity_digest);
+  tor_assert(router); /* the func that calls us found it, so we should too */
 
   switch(purpose) {
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(payload == NULL);
-      connection_write_to_buf(fetchwholedir, strlen(fetchwholedir), conn);
+      if (!strcmpstart(router->platform, "Tor 0.0.7") ||
+          !strcmpstart(router->platform, "Tor 0.0.8"))
+        connection_write_to_buf(fetchwholedir, strlen(fetchwholedir), conn);
+      else
+        connection_write_to_buf(fetchwholedir_z, strlen(fetchwholedir_z), conn);
       break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       tor_assert(payload == NULL);
@@ -227,7 +235,7 @@ static void directory_send_command(connection_t *conn, int purpose,
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(payload);
-      snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n",
+      snprintf(tmp, sizeof(tmp), "POST /tor/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n",
                payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       connection_write_to_buf(payload, payload_len, conn);
@@ -256,14 +264,15 @@ static void directory_send_command(connection_t *conn, int purpose,
 }
 
 /** Parse an HTTP request string <b>headers</b> of the form "\%s \%s HTTP/1..."
- * If it's well-formed, point *<b>url</b> to the second \%s,
- * null-terminate it (this modifies headers!) and return 0.
+ * If it's well-formed, strdup the second \%s into *<b>url</b>, and
+ * null-terminate it. If the url doesn't start with "/tor/", rewrite it
+ * so it does. Return 0.
  * Otherwise, return -1.
  */
 static int
 parse_http_url(char *headers, char **url)
 {
-  char *s, *tmp;
+  char *s, *start;
 
   s = (char *)eat_whitespace_no_nl(headers);
   if (!*s) return -1;
@@ -271,11 +280,18 @@ parse_http_url(char *headers, char **url)
   if (!*s) return -1;
   s = (char *)eat_whitespace_no_nl(s);
   if (!*s) return -1;
-  tmp = s; /* this is it, assuming it's valid */
+  start = s; /* this is it, assuming it's valid */
   s = (char *)find_whitespace(s);
   if (!*s) return -1;
   *s = 0;
-  *url = tmp;
+  if(s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */
+    *url = tor_malloc(s - start + 5);
+    strcpy(*url,"/tor");
+    strlcpy(*url+4, start, s-start+1);
+    *url[s-start+4] = 0; /* null terminate it */
+  } else {
+    *url = tor_strndup(start, s-start);
+  }
   return 0;
 }
 
@@ -559,7 +575,7 @@ static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
- * conn-\>outbuf.  If the request is unrecognized, send a 404.
+ * conn-\>outbuf.  If the request is unrecognized, send a 400.
  * Always return 0. */
 static int
 directory_handle_command_get(connection_t *conn, char *headers,
@@ -580,9 +596,11 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmp(url,"/") || !strcmp(url,"/dir.z")) { /* directory fetch */
-    int deflated = !strcmp(url,"/dir.z");
+  if(!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* directory fetch */
+    int deflated = !strcmp(url,"/tor/dir.z");
     dlen = dirserv_get_directory(&cp, deflated);
+
+    tor_free(url);
 
     if(dlen == 0) {
       log_fn(LOG_WARN,"My directory is empty. Closing.");
@@ -602,7 +620,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmp(url,"/running-routers")) { /* running-routers fetch */
+  if(!strcmp(url,"/tor/running-routers")) { /* running-routers fetch */
+    tor_free(url);
     if(!authdir_mode()) {
       /* XXX008 for now, we don't cache running-routers. Reject. */
       connection_write_to_buf(answer400, strlen(answer400), conn);
@@ -635,6 +654,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
        *
        * Reject. */
       connection_write_to_buf(answer400, strlen(answer400), conn);
+      tor_free(url);
       return 0;
     }
     switch(rend_cache_lookup_desc(url+strlen(rend_fetch_url), &descp, &desc_len)) {
@@ -653,11 +673,13 @@ directory_handle_command_get(connection_t *conn, char *headers,
         connection_write_to_buf(answer400, strlen(answer400), conn);
         break;
     }
+    tor_free(url);
     return 0;
   }
 
   /* we didn't recognize the url */
   connection_write_to_buf(answer404, strlen(answer404), conn);
+  tor_free(url);
   return 0;
 }
 
@@ -665,7 +687,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
  * request.  Look for an uploaded server descriptor or rendezvous
  * service descriptor.  On finding one, process it and write a
  * response into conn-\>outbuf.  If the request is unrecognized, send a
- * 404.  Always return 0. */
+ * 400.  Always return 0. */
 static int
 directory_handle_command_post(connection_t *conn, char *headers,
                                          char *body, int body_len)
@@ -690,7 +712,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
   }
   log_fn(LOG_INFO,"url '%s' posted to us.", url);
 
-  if(!strcmp(url,"/")) { /* server descriptor post */
+  if(!strcmp(url,"/tor/")) { /* server descriptor post */
     cp = body;
     switch(dirserv_add_descriptor(&cp)) {
       case -1:
@@ -706,6 +728,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
         connection_write_to_buf(answer200, strlen(answer200), conn);
         break;
     }
+    tor_free(url);
     return 0;
   }
 
@@ -715,11 +738,13 @@ directory_handle_command_post(connection_t *conn, char *headers,
       connection_write_to_buf(answer400, strlen(answer400), conn);
     else
       connection_write_to_buf(answer200, strlen(answer200), conn);
+    tor_free(url);
     return 0;
   }
 
   /* we didn't recognize the url */
   connection_write_to_buf(answer404, strlen(answer404), conn);
+  tor_free(url);
   return 0;
 }
 
