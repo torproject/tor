@@ -35,7 +35,7 @@ static routerinfo_t *router_get_entry_from_string(char **s);
 
 /****************************************************************************/
 
-void router_retry_connections(crypto_pk_env_t *prkey, struct sockaddr_in *local) {
+void router_retry_connections(struct sockaddr_in *local) {
   int i;
   routerinfo_t *router;
 
@@ -43,7 +43,7 @@ void router_retry_connections(crypto_pk_env_t *prkey, struct sockaddr_in *local)
     router = router_array[i];
     if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
       log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,router->or_port);
-      connection_or_connect_as_or(router, prkey, local);
+      connection_or_connect_as_or(router, local);
     }
   }
 }

@@ -123,8 +123,7 @@ RETURN VALUE: 0 on success, non-zero on error
    options->DirRebuildPeriod = 600;
    options->DirFetchPeriod = 6000;
 //   options->ReconnectPeriod = 6001;
-   options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN |
-                   ROLE_DIR_LISTEN | ROLE_DIR_SERVER;
+   options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 
    code = poptGetNextOpt(optCon);         /* first we handle command-line args */
    if ( code == -1 )

@@ -122,14 +122,21 @@ int connection_dir_process_inbuf(connection_t *conn) {
       return -1;
     }
     /* eof reached, kill it, but first process the_directory and learn about new routers. */
-    log(LOG_DEBUG,"connection_dir_process_inbuf(): conn reached eof. Processing directory.");
-    log(LOG_DEBUG,"connection_dir_process_inbuf(): Received directory (size %d) '%s'", directorylen, the_directory);
+//    log(LOG_DEBUG,"connection_dir_process_inbuf(): conn reached eof. Processing directory.");
+    log(LOG_DEBUG,"connection_dir_process_inbuf(): Received directory (size %d)\n%s", directorylen, the_directory);
     if(directorylen == 0) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): Empty directory. Ignoring.");
       return -1;
     }
     if(router_get_list_from_string(the_directory, options.ORPort) < 0) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): ...but parsing failed. Ignoring.");
+    }
+    if(options.Role & ROLE_OR_CONNECT_ALL) { /* connect to them all */
+      struct sockaddr_in local; /* local address */
+      if(learn_local(&local) < 0)
+        return -1;
+      local.sin_port = htons(options.ORPort);
+      router_retry_connections(&local);
     }
     return -1;
   }
@@ -240,9 +247,9 @@ int connection_dir_finished_flushing(connection_t *conn) {
   return 0;
 }
 
-int connection_dir_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local) {
+int connection_dir_create_listener(struct sockaddr_in *local) {
   log(LOG_DEBUG,"connection_create_dir_listener starting");
-  return connection_create_listener(prkey, local, CONN_TYPE_DIR_LISTENER);
+  return connection_create_listener(local, CONN_TYPE_DIR_LISTENER);
 }
 
 int connection_dir_handle_listener_read(connection_t *conn) {

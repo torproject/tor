@@ -135,8 +135,6 @@ void connection_free(connection_t *conn) {
 
   if (conn->pkey)
     crypto_free_pk_env(conn->pkey);
-  if (conn->prkey)
-    crypto_free_pk_env(conn->prkey);
 
   if(conn->s > 0) {
     log(LOG_INFO,"connection_free(): closing fd %d.",conn->s);
@@ -145,7 +143,7 @@ void connection_free(connection_t *conn) {
   free(conn);
 }
 
-int connection_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local, int type) {
+int connection_create_listener(struct sockaddr_in *local, int type) {
   connection_t *conn;
   int s;
   int one=1;
@@ -188,8 +186,6 @@ int connection_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local
 
   /* remember things so you can tell the baby sockets */
   memcpy(&conn->local,local,sizeof(struct sockaddr_in));
-  if(prkey)
-    conn->prkey = crypto_pk_dup_key(prkey);
 
   log(LOG_DEBUG,"connection_create_listener(): Listening on local port %u.",ntohs(local->sin_port));
 
@@ -228,8 +224,6 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
 
   /* learn things from parent, so we can perform auth */
   memcpy(&newconn->local,&conn->local,sizeof(struct sockaddr_in));
-  if(conn->prkey)
-    newconn->prkey = crypto_pk_dup_key(conn->prkey);
   newconn->address = strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
 
   if(connection_add(newconn) < 0) { /* no space, forget it */
@@ -244,8 +238,8 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   return 0;
 }
 
-/* private function, to create the 'local' variable used below */
-static int learn_local(struct sockaddr_in *local) {
+/* create the 'local' variable used below */
+int learn_local(struct sockaddr_in *local) {
   /* local host information */
   char localhostname[512];
   struct hostent *localhost;
@@ -269,7 +263,7 @@ static int learn_local(struct sockaddr_in *local) {
   return 0;
 }
 
-int retry_all_connections(int role, crypto_pk_env_t *prkey, uint16_t or_listenport,
+int retry_all_connections(int role, uint16_t or_listenport,
   uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
 
   /* start all connections that should be up but aren't */
@@ -282,33 +276,33 @@ int retry_all_connections(int role, crypto_pk_env_t *prkey, uint16_t or_listenpo
   local.sin_port = htons(or_listenport);
 
   if(role & ROLE_OR_CONNECT_ALL) {
-    router_retry_connections(prkey, &local);
+    router_retry_connections(&local);
   }
 
   if(role & ROLE_OR_LISTEN) {
     if(!connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
-      connection_or_create_listener(prkey, &local);
+      connection_or_create_listener(&local);
     }
   }
       
   if(role & ROLE_OP_LISTEN) {
     local.sin_port = htons(op_listenport);
     if(!connection_get_by_type(CONN_TYPE_OP_LISTENER)) {
-      connection_op_create_listener(prkey, &local);
+      connection_op_create_listener(&local);
     }
   }
 
   if(role & ROLE_AP_LISTEN) {
     local.sin_port = htons(ap_listenport);
     if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
-      connection_ap_create_listener(NULL, &local); /* no need to tell it the private key. */
+      connection_ap_create_listener(&local);
     }
   }
 
   if(role & ROLE_DIR_LISTEN) {
     local.sin_port = htons(dir_listenport);
     if(!connection_get_by_type(CONN_TYPE_DIR_LISTENER)) {
-      connection_dir_create_listener(NULL, &local); /* no need to tell it the private key. */
+      connection_dir_create_listener(&local);
     }
   }
  
