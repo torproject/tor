@@ -1,5 +1,5 @@
 #! /bin/sh -e
-## 02_tor_manpage_in_section_8.dpatch by  <weasel@debian.org>
+## 03_tor_manpage_in_section_8.dpatch by  <weasel@debian.org>
 ##
 ## All lines beginning with `## DP:' are a description of the patch.
 ## DP: No description.

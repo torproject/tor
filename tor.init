@@ -6,11 +6,10 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/sbin/tor
 NAME=tor
 DESC="tor daemon"
-TORLOG=/var/log/tor/log
 TORPID=/var/run/tor/tor.pid
 DEFAULTSFILE=/etc/default/$NAME
 WAITFORDAEMON=10
-ARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1"
+ARGS=""
 
 test -x $DAEMON || exit 0
 
