@@ -1054,7 +1054,7 @@ static int directory_handle_command(connection_t *conn) {
                               &headers, MAX_HEADERS_SIZE,
                               &body, &body_len, MAX_BODY_SIZE)) {
     case -1: /* overflow */
-      log_fn(LOG_WARN,"Invalid input. Closing.");
+      log_fn(LOG_WARN,"Invalid input from address '%s'. Closing.", conn->address);
       return -1;
     case 0:
       log_fn(LOG_DEBUG,"command not all here yet.");
