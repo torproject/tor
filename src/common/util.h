@@ -66,8 +66,8 @@ void tv_add(struct timeval *a, struct timeval *b);
 int tv_cmp(struct timeval *a, struct timeval *b);
 time_t tor_timegm (struct tm *tm);
 
-int write_all(int fd, const char *buf, size_t count);
-int read_all(int fd, char *buf, size_t count);
+int write_all(int fd, const char *buf, size_t count, int isSocket);
+int read_all(int fd, char *buf, size_t count, int isSocket);
 
 void set_socket_nonblocking(int socket);
 

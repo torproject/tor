@@ -282,12 +282,15 @@ time_t tor_timegm (struct tm *tm) {
 
 /* a wrapper for write(2) that makes sure to write all count bytes.
  * Only use if fd is a blocking fd. */
-int write_all(int fd, const char *buf, size_t count) {
+int write_all(int fd, const char *buf, size_t count, int isSocket) {
   size_t written = 0;
   int result;
 
   while(written != count) {
-    result = write(fd, buf+written, count-written);
+    if (isSocket)
+      result = send(fd, buf+written, count-written, 0);
+    else
+      result = write(fd, buf+written, count-written);
     if(result<0)
       return -1;
     written += result;
@@ -297,12 +300,15 @@ int write_all(int fd, const char *buf, size_t count) {
 
 /* a wrapper for read(2) that makes sure to read all count bytes.
  * Only use if fd is a blocking fd. */
-int read_all(int fd, char *buf, size_t count) {
+int read_all(int fd, char *buf, size_t count, int isSocket) {
   size_t numread = 0;
   int result;
 
   while(numread != count) {
-    result = read(fd, buf+numread, count-numread);
+    if (isSocket) 
+      result = recv(fd, buf+numread, count-numread, 0);
+    else
+      result = read(fd, buf+numread, count-numread);
     if(result<=0)
       return -1;
     numread += result;
@@ -615,7 +621,7 @@ char *read_file_to_str(const char *filename) {
 
   string = tor_malloc(statbuf.st_size+1);
 
-  if(read_all(fd,string,statbuf.st_size) != statbuf.st_size) {
+  if(read_all(fd,string,statbuf.st_size,0) != statbuf.st_size) {
     log_fn(LOG_WARN,"Couldn't read all %ld bytes of file '%s'.",
            (long)statbuf.st_size,filename);
     free(string);
