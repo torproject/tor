@@ -450,7 +450,28 @@ static int do_main_loop(void) {
   }
 
 #ifdef USE_TLS
-  make the tls context here 
+  if(options.OnionRouter) {
+    struct stat statbuf;
+    if(stat(options.CertFile, &statbuf) < 0) {
+      log_fn(LOG_INFO,"CertFile %s is missing. Generating.", options.CertFile);
+      if(tor_tls_write_certificate(options.CertFile,
+                                   get_privatekey(),
+                                   options.Nickname) < 0) {
+        log_fn(LOG_ERR,"Couldn't write CertFile %s. Dying.", options.CertFile);
+        return -1;
+      }
+    }
+
+    if(tor_tls_context_new(certfile, get_privatekey(), 1) < 0) {
+      log_fn(LOG_ERR,"Error creating tls context.");
+      return -1;
+    }
+  } else { /* just a proxy, the context is easy */
+    if(tor_tls_context_new(NULL, NULL, 0) < 0) {
+      log_fn(LOG_ERR,"Error creating tls context.");
+      return -1;
+    }
+  }
 #endif
 
   /* start up the necessary connections based on which ports are
