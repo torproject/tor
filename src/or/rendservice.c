@@ -354,6 +354,8 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   crypt_path_t *cpath = NULL;
   char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
+  int version;
+  int nickname_field_len;
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);
@@ -367,7 +369,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   }
 
   /* min key length plus digest length plus nickname length */
-  if (request_len < DIGEST_LEN+REND_COOKIE_LEN+(MAX_NICKNAME_LEN+1)+
+  if (request_len < DIGEST_LEN+REND_COOKIE_LEN+(HEX_DIGEST_LEN+2)+
       DH_KEY_LEN+42){
     log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell on circ %d",
            circuit->n_circ_id);
@@ -401,19 +403,29 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     log_fn(LOG_WARN, "Couldn't decrypt INTRODUCE2 cell");
     return -1;
   }
-  ptr=memchr(buf,0,MAX_NICKNAME_LEN+1);
-  if (!ptr || ptr == buf) {
+  if (*buf == 1) {
+    rp_nickname = buf+1;
+    nickname_field_len = HEX_DIGEST_LEN+2;
+    version = 1;
+  } else {
+    nickname_field_len = MAX_NICKNAME_LEN+1;
+    rp_nickname = buf;
+    version = 0;
+  }
+  ptr=memchr(rp_nickname,0,nickname_field_len);
+  if (!ptr || ptr == rp_nickname) {
     log_fn(LOG_WARN, "Couldn't find a null-padded nickname in INTRODUCE2 cell");
     return -1;
   }
-  if ((int)strspn(buf,LEGAL_NICKNAME_CHARACTERS) != ptr-buf) {
-    log_fn(LOG_WARN, "Nickname in INTRODUCE2 cell contains illegal character.");
+  if ((version == 0 && !is_legal_nickname(rp_nickname)) ||
+      (version == 1 && !is_legal_nickname_or_hexdigest(rp_nickname)) ||
+      (int)strspn(buf,LEGAL_NICKNAME_CHARACTERS) != ptr-buf) {
+    log_fn(LOG_WARN, "Bad nickname in INTRODUCE2 cell.");
     return -1;
   }
-  /* Okay, now we know that the nickname is at the start of the buffer. */
-  rp_nickname = buf;
-  ptr = buf+(MAX_NICKNAME_LEN+1);
-  len -= (MAX_NICKNAME_LEN+1);
+  /* Okay, now we know that a nickname is at the start of the buffer. */
+  ptr = rp_nickname+nickname_field_len;
+  len -= nickname_field_len;
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
     log_fn(LOG_WARN, "Bad length for INTRODUCE2 cell.");
     return -1;
