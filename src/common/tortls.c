@@ -518,12 +518,12 @@ tor_tls_verify(tor_tls *tls)
     return NULL;
   
   now = time(NULL);
-  t = now - CERT_ALLOW_SKEW;
+  t = now + CERT_ALLOW_SKEW;
   if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
     log_fn(LOG_WARN,"Certificate becomes valid in the future: possible clock skew.");
     goto done;
   }
-  t = now + CERT_ALLOW_SKEW;
+  t = now - CERT_ALLOW_SKEW;
   if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
     log_fn(LOG_WARN,"Certificate already expired; possible clock skew.");
     goto done;
