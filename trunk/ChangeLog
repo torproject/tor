@@ -1,3 +1,26 @@
+Changes in version 0.0.2pre23 - 2004-02-29
+  o New features:
+    - Print a statement when the first circ is finished, so the user
+      knows it's working.
+    - If a relay cell is unrecognized at the end of the circuit,
+      send back a destroy. (So attacks to mutate cells are more
+      clearly thwarted.)
+    - New config option 'excludenodes' to avoid certain nodes for circuits.
+    - When it daemonizes, it chdir's to the DataDirectory rather than "/",
+      so you can collect coredumps there.
+ o Bugfixes:
+    - Fix a bug in tls flushing where sometimes data got wedged and
+      didn't flush until more data got sent. Hopefully this bug was
+      a big factor in the random delays we were seeing.
+    - Make 'connected' cells include the resolved IP, so the client
+      dns cache actually gets populated.
+    - Disallow changing from ORPort=0 to ORPort>0 on hup.
+    - When we time-out on a stream and detach from the circuit, send an
+      end cell down it first.
+    - Only warn about an unknown router (in exitnodes, entrynodes,
+      excludenodes) after we've fetched a directory.
+
+
 Changes in version 0.0.2pre22 - 2004-02-26
   o New features:
     - Servers publish less revealing uname information in descriptors.
