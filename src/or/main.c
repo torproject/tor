@@ -502,6 +502,7 @@ static void run_scheduled_events(time_t now) {
   static long time_to_fetch_directory = 0;
   static time_t last_uploaded_services = 0;
   static time_t last_rotated_certificate = 0;
+  static time_t time_to_check_listeners = 0;
   int i;
 
   /** 0. See if we've been asked to shut down and our timeout has
@@ -595,6 +596,12 @@ static void run_scheduled_events(time_t now) {
   /** 3c. And expire connections that we've held open for too long.
    */
   connection_expire_held_open();
+
+  /** 3d. And every 60 secionds, we relaunch listeners if any died. */
+  if (time_to_check_listeners < now) {
+    retry_all_listeners(0); /* 0 means "only if some died." */
+    time_to_check_listeners = now+60;
+  }
 
   /** 4. Every second, we try a new circuit if there are no valid
    *    circuits. Every NewCircuitPeriod seconds, we expire circuits
@@ -744,7 +751,7 @@ static int do_hup(void) {
     log_fn(LOG_ERR,"Error reloading rendezvous service keys");
     return -1;
   }
-  if(retry_all_listeners() < 0) {
+  if(retry_all_listeners(1) < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
@@ -808,7 +815,7 @@ static int do_main_loop(void) {
   }
 
   /* start up the necessary listeners based on which ports are non-zero. */
-  if(retry_all_listeners() < 0) {
+  if(retry_all_listeners(1) < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }

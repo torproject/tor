@@ -1093,7 +1093,7 @@ int _connection_mark_for_close(connection_t *conn);
 void connection_expire_held_open(void);
 
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
-int retry_all_listeners(void);
+int retry_all_listeners(int force);
 
 void connection_bucket_init(void);
 void connection_bucket_refill(struct timeval *now);
