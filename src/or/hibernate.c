@@ -610,8 +610,8 @@ read_bandwidth_usage(void)
          (char*)smartlist_get(elts,1),
          (unsigned long)n_seconds_active_in_interval,
          (unsigned long)((uint64_t)expected_bandwidth_usage*1024/60),
-         n_bytes_read_in_interval,
-         n_bytes_written_in_interval);
+         U64_PRINTF_ARG(n_bytes_read_in_interval),
+         U64_PRINTF_ARG(n_bytes_written_in_interval));
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
   smartlist_free(elts);
 
