@@ -431,10 +431,10 @@ the message.
       Reason    [1 octet]
       Flags     [1 octet]
 
-  Tells the server to close the specified stream.  The reason should be one
-  of the Tor RELAY_END reasons given in tor-spec.txt.  If the LSB of the
-  flags field is nonzero, and the stream wants to write data, Tor tries to
-  hold the stream open for a while until it can be flushed.
+  Tells the server to close the specified stream.  The reason should be
+  one of the Tor RELAY_END reasons given in tor-spec.txt.  Flags is not
+  used currently.  Tor may hold the stream open for a while to flush
+  any data that is pending.
 
 3.21 CLOSECIRCUIT (Type 0x0014)
 
