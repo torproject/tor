@@ -119,7 +119,7 @@ Tor uses the standard and near-ubiquitous SOCKS
 \cite{socks4,socks5} proxy interface, allowing us to support most TCP-based
 programs without modification.  This design change allows Tor to
 use the filtering features of privacy-enhancing
-application-level proxies such as Privoxy without having to
+application-level proxies such as Privoxy \cite{privoxy} without having to
 incorporate those features itself.
 
 \item \textbf{Many TCP streams can share one circuit:} The original
@@ -285,7 +285,7 @@ internet chat, or SSH connections.
 
 Tor belongs to the second category: \emph{low-latency} designs that attempt
 to anonymize interactive network traffic.  Because these protocols typically
-involve a large number of packets that much be delivered quickly, it is
+involve a large number of packets that must be delivered quickly, it is
 difficult for them to prevent an attacker who can eavesdrop both ends of the
 interactive communication from points from correlating the timing and volume
 of traffic entering the anonymity network with traffic leaving it.  These
@@ -379,7 +379,7 @@ Some systems, such as Crowds \cite{crowds-tissec}, do not rely changing the
 appearance of packets to hide the path; rather they try to prevent an
 intermediary from knowing when whether it is talking to an ultimate
 initiator, or just another intermediary.  Crowds uses no public-key
-encryption encryption, but the responder and all data are visible to all
+encryption, but the responder and all data are visible to all
 nodes on the path so that anonymity of connection initiator depends on
 filtering all identifying information from the data stream. Crowds only
 supports HTTP traffic.
@@ -485,7 +485,7 @@ research lacking a generally accepted solution.
   % the enclave-firewall model? -RD
   % I don't think we should. -NM
 \item[No protocol normalization:] Tor does not provide \emph{protocol
-  normalization} Privoxy or the Anonymizer.  In order to make clients
+  normalization} like Privoxy or the Anonymizer.  In order to make clients
   indistinguishable when they complex and variable protocols such as HTTP,
   Tor must be layered with a filtering proxy such as Privoxy to hide
   differences between clients, expunge protocol features that leak identity,
