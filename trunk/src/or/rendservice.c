@@ -530,7 +530,7 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
  *  sends a RELAY_ESTABLISH_INTRO cell.
  */
 void
-rend_service_intro_is_ready(circuit_t *circuit)
+rend_service_intro_has_opened(circuit_t *circuit)
 {
   rend_service_t *service;
   int len, r;
@@ -618,7 +618,7 @@ rend_service_intro_established(circuit_t *circuit, const char *request, int requ
  *  RELAY_COMMAND_RENDEZVOUS1 cell.
  */
 void
-rend_service_rendezvous_is_ready(circuit_t *circuit)
+rend_service_rendezvous_has_opened(circuit_t *circuit)
 {
   rend_service_t *service;
   char buf[RELAY_PAYLOAD_SIZE];

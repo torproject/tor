@@ -12,7 +12,7 @@
 /** Called when we've established a circuit to an introduction point:
  * send the introduction request. */
 void
-rend_client_introcirc_is_open(circuit_t *circ)
+rend_client_introcirc_has_opened(circuit_t *circ)
 {
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
@@ -133,7 +133,7 @@ err:
 /** Called when a rendezvous circuit is open; sends a establish
  * rendezvous circuit as appropriate. */
 void
-rend_client_rendcirc_is_open(circuit_t *circ)
+rend_client_rendcirc_has_opened(circuit_t *circ)
 {
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
   tor_assert(CIRCUIT_IS_ORIGIN(circ));

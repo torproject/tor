@@ -614,6 +614,8 @@ struct crypt_path_t {
                        * at this step? */
 };
 
+#define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
+
 #define DH_KEY_LEN DH_BYTES
 #define ONIONSKIN_CHALLENGE_LEN (PKCS1_OAEP_PADDING_OVERHEAD+\
                                  CIPHER_KEY_LEN+\
@@ -859,11 +861,36 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 
 void assert_buf_ok(buf_t *buf);
 
-/********************************* circuit.c ***************************/
+/********************************* circuitbuild.c **********************/
+
+void circuit_log_path(int severity, circuit_t *circ);
+void circuit_rep_hist_note_result(circuit_t *circ);
+void circuit_dump_by_conn(connection_t *conn, int severity);
+circuit_t *circuit_establish_circuit(uint8_t purpose,
+                                     const char *exit_nickname);
+void circuit_n_conn_open(connection_t *or_conn);
+int circuit_send_next_onion_skin(circuit_t *circ);
+int circuit_extend(cell_t *cell, circuit_t *circ);
+int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
+int circuit_finish_handshake(circuit_t *circ, char *reply);
+int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
+int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
+void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
+
+/********************************* circuitlist.c ***********************/
 
 extern char *circuit_state_to_string[];
-circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 void circuit_close_all_marked(void);
+circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
+void circuit_free_cpath_node(crypt_path_t *victim);
+circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
+circuit_t *circuit_get_by_conn(connection_t *conn);
+circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose);
+circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
+                                         const char *digest, uint8_t purpose);
+circuit_t *circuit_get_rendezvous(const char *cookie);
+int circuit_count_building(uint8_t purpose);
+circuit_t *circuit_get_youngest_clean_open(uint8_t purpose);
 int _circuit_mark_for_close(circuit_t *circ);
 
 #define circuit_mark_for_close(c)                                       \
@@ -877,44 +904,26 @@ int _circuit_mark_for_close(circuit_t *circ);
     }                                                                   \
   } while (0)
 
+void assert_cpath_layer_ok(const crypt_path_t *cp);
+void assert_circuit_ok(const circuit_t *c);
 
-circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
-circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_best(connection_t *conn,
-                            int must_be_open, uint8_t purpose);
-circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose);
-circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *circuit,
-                                              const char *servid, uint8_t purpose);
-circuit_t *circuit_get_rendezvous(const char *cookie);
+/********************************* circuituse.c ************************/
 
 void circuit_expire_building(time_t now);
-int circuit_count_building(uint8_t purpose);
 int circuit_stream_is_being_handled(connection_t *conn);
 void circuit_build_needed_circs(time_t now);
-
-void circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
-int circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
-void circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint);
-
 void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
-
-void circuit_log_path(int severity, circuit_t *circ);
-void circuit_dump_by_conn(connection_t *conn, int severity);
-
-void circuit_expire_unused_circuits(void);
+void circuit_has_opened(circuit_t *circ);
+void circuit_build_failed(circuit_t *circ);
 circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname);
-void circuit_increment_failure_count(void);
 void circuit_reset_failure_count(void);
-void circuit_n_conn_open(connection_t *or_conn);
-int circuit_send_next_onion_skin(circuit_t *circ);
-int circuit_extend(cell_t *cell, circuit_t *circ);
-#define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
+int connection_ap_handshake_attach_circuit(connection_t *conn);
+
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data,int reverse);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 
-void assert_cpath_ok(const crypt_path_t *c);
 void assert_cpath_layer_ok(const crypt_path_t *c);
 void assert_circuit_ok(const circuit_t *c);
 
@@ -945,6 +954,7 @@ int getconfig(int argc, char **argv, or_options_t *options);
   "Unknown" : conn_type_to_string[(t)])
 
 extern char *conn_type_to_string[];
+extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 connection_t *connection_new(int type);
 void connection_free(connection_t *conn);
@@ -1006,23 +1016,12 @@ void assert_connection_ok(connection_t *conn, time_t now);
 
 /********************************* connection_edge.c ***************************/
 
-void relay_header_pack(char *dest, const relay_header_t *src);
-void relay_header_unpack(relay_header_t *dest, const char *src);
 int connection_edge_process_inbuf(connection_t *conn);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
-int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
-                                 int relay_command, const char *payload,
-                                 int payload_len, crypt_path_t *cpath_layer);
-int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
-                                       connection_t *conn,
-                                       crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
 int connection_edge_finished_connecting(connection_t *conn);
 
-int connection_edge_package_raw_inbuf(connection_t *conn);
-
-int connection_ap_handshake_attach_circuit(connection_t *conn);
 int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 int connection_ap_make_bridge(char *address, uint16_t port);
@@ -1030,18 +1029,17 @@ int connection_ap_make_bridge(char *address, uint16_t port);
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          int replylen, char success);
 
+int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 void connection_exit_connect(connection_t *conn);
 int connection_edge_is_rendezvous_stream(connection_t *conn);
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
 
-extern uint64_t stats_n_data_cells_packaged;
-extern uint64_t stats_n_data_bytes_packaged;
-extern uint64_t stats_n_data_cells_received;
-extern uint64_t stats_n_data_bytes_received;
-
 void client_dns_init(void);
+uint32_t client_dns_lookup_entry(const char *address);
+int client_dns_incr_failures(const char *address);
+void client_dns_set_entry(const char *address, uint32_t val);
 void client_dns_clean(void);
 
 /********************************* connection_or.c ***************************/
@@ -1077,6 +1075,7 @@ int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
 
 /********************************* dirserv.c ***************************/
+
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
 int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
@@ -1123,18 +1122,9 @@ int main(int argc, char *argv[]);
 
 /********************************* onion.c ***************************/
 
-int decide_circ_id_type(char *local_nick, char *remote_nick);
-
 int onion_pending_add(circuit_t *circ);
 circuit_t *onion_next_task(void);
 void onion_pending_remove(circuit_t *circ);
-
-int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
-
-
-void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
-int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state,
-                       routerinfo_t **router_out);
 
 int onion_skin_create(crypto_pk_env_t *router_key,
                       crypto_dh_env_t **handshake_state_out,
@@ -1152,9 +1142,6 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                              char *key_out,
                              int key_out_len);
 
-cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
-                                                 const char *exit_nickname);
-
 /********************************* relay.c ***************************/
 
 extern unsigned long stats_n_relay_cells_relayed;
@@ -1164,6 +1151,19 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction);
 int circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
+
+void relay_header_pack(char *dest, const relay_header_t *src);
+void relay_header_unpack(relay_header_t *dest, const char *src);
+int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
+                                 int relay_command, const char *payload,
+                                 int payload_len, crypt_path_t *cpath_layer);
+int connection_edge_package_raw_inbuf(connection_t *conn);
+void connection_edge_consider_sending_sendme(connection_t *conn);
+
+extern uint64_t stats_n_data_cells_packaged;
+extern uint64_t stats_n_data_bytes_packaged;
+extern uint64_t stats_n_data_cells_received;
+extern uint64_t stats_n_data_bytes_received;
 
 /********************************* rephist.c ***************************/
 
@@ -1179,8 +1179,8 @@ void rep_hist_dump_stats(time_t now, int severity);
 
 /********************************* rendclient.c ***************************/
 
-void rend_client_introcirc_is_open(circuit_t *circ);
-void rend_client_rendcirc_is_open(circuit_t *circ);
+void rend_client_introcirc_has_opened(circuit_t *circ);
+void rend_client_rendcirc_has_opened(circuit_t *circ);
 int rend_client_introduction_acked(circuit_t *circ, const char *request, int request_len);
 void rend_client_refetch_renddesc(const char *query);
 int rend_client_remove_intro_point(char *failed_intro, const char *query);
@@ -1237,9 +1237,9 @@ void rend_services_init(void);
 void rend_services_introduce(void);
 void rend_services_upload(int force);
 
-void rend_service_intro_is_ready(circuit_t *circuit);
+void rend_service_intro_has_opened(circuit_t *circuit);
 int rend_service_intro_established(circuit_t *circuit, const char *request, int request_len);
-void rend_service_rendezvous_is_ready(circuit_t *circuit);
+void rend_service_rendezvous_has_opened(circuit_t *circuit);
 int rend_service_introduce(circuit_t *circuit, const char *request, int request_len);
 void rend_service_relaunch_rendezvous(circuit_t *oldcirc);
 int rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ);
@@ -1277,6 +1277,8 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
 routerinfo_t *router_pick_directory_server(void);
 struct smartlist_t;
+void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list);
+void router_add_running_routers_to_smartlist(struct smartlist_t *sl);
 routerinfo_t *router_choose_random_node(routerlist_t *dir,
                                         char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist);
