@@ -7,6 +7,11 @@
 #ifndef __AES_H
 #define __AES_H
 
+/**
+ * \file aes.h
+ * \brief Headers for aes.c
+ */
+
 #include "../common/torint.h"
 
 struct aes_cnt_cipher;

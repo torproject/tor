@@ -5,7 +5,7 @@
 /**
  * \file util.h
  * \brief Headers for util.c
- */
+ **/
 
 #ifndef __UTIL_H
 #define __UTIL_H

@@ -10,6 +10,11 @@
 
 #ifndef __LOG_H
 
+/**
+ * \file log.h
+ * \brief Headers for log.c
+ */
+
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>
 #define LOG_WARN LOG_WARNING
