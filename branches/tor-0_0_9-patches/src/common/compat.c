@@ -361,6 +361,7 @@ int set_max_file_descriptors(int *maxconn) {
   return 0; /* hope we'll be ok */
 #else
   struct rlimit rlim;
+  int most;
 
   if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     log_fn(LOG_WARN, "Could not get maximum number of file descriptors: %s",
@@ -371,17 +372,19 @@ int set_max_file_descriptors(int *maxconn) {
     log_fn(LOG_WARN,"We need %u file descriptors available, and we're limited to %lu. Please change your ulimit -n.", 1024, (unsigned long int)rlim.rlim_max);
     return -1;
   }
-  if (rlim.rlim_max > rlim.rlim_cur) {
-    log_fn(LOG_INFO,"Raising max file descriptors from %lu to %lu.",
-           (unsigned long int)rlim.rlim_cur, (unsigned long int)rlim.rlim_max);
+  most = ((rlim.rlim_max > INT_MAX) ? INT_MAX : rlim.rlim_max);
+  if (most > rlim.rlim_cur) {
+    log_fn(LOG_INFO,"Raising max file descriptors from %lu to %d.",
+           (unsigned long int)rlim.rlim_cur, most);
   }
-  rlim.rlim_cur = rlim.rlim_max;
+  rlim.rlim_cur = most;
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     log_fn(LOG_WARN, "Could not set maximum number of file descriptors: %s",
            strerror(errno));
     return -1;
   }
-  *maxconn = (rlim.rlim_max - 32); /* leave some overhead for logs, etc */
+  /* leave some overhead for logs, etc, and don't overflow INT_MAX */
+  *maxconn = most - 32;
   return 0;
 #endif
 }
