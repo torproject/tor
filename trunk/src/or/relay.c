@@ -476,16 +476,13 @@ connection_edge_end_reason_str(char *payload, uint16_t length) {
   }
 }
 
-/** Translate the <b>payload</b> of length <b>length</b>, which
- * came from a relay 'end' cell, into an appropriate SOCKS5 reply code.
+/** Translate <b>reason</b> (as from a relay 'end' cell) into an
+ * appropriate SOCKS5 reply code.
  */
-static socks5_reply_status_t
-connection_edge_end_reason_socks5_response(char *payload, uint16_t length) {
-  if (length < 1) {
-    log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
-    return SOCKS5_GENERAL_ERROR;
-  }
-  switch (*payload) {
+socks5_reply_status_t
+connection_edge_end_reason_socks5_response(int reason)
+{
+  switch (reason) {
     case END_STREAM_REASON_MISC:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_RESOLVEFAILED:
@@ -511,7 +508,7 @@ connection_edge_end_reason_socks5_response(char *payload, uint16_t length) {
     case END_STREAM_REASON_TORPROTOCOL:
       return SOCKS5_GENERAL_ERROR;
     default:
-      log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
+      log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",reason);
       return SOCKS5_GENERAL_ERROR;
   }
 }
@@ -817,9 +814,14 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                             rh.length),
              conn->stream_id, (int)conn->stream_size);
       if (conn->socks_request && !conn->socks_request->has_finished) {
-        socks5_reply_status_t status =
-          connection_edge_end_reason_socks5_response(
-                              cell->payload+RELAY_HEADER_SIZE, rh.length);
+        socks5_reply_status_t status;
+        if (rh.length < 1) {
+          log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
+          status = SOCKS5_GENERAL_ERROR;
+        } else {
+          status = connection_edge_end_reason_socks5_response(
+                        *(uint8_t*)cell->payload+RELAY_HEADER_SIZE);
+        }
         connection_ap_handshake_socks_reply(conn, NULL, 0, status);
       }
 #ifdef HALF_OPEN

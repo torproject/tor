@@ -417,6 +417,29 @@ the message.
   after a new stream event is received, and before attaching this stream to
   a circuit.
 
+3.20 CLOSESTREAM (Type 0x0013)
+
+  Sent from the client to the server.  The message body contains three
+  fields:
+      Stream ID [4 octets]
+      Reason    [1 octet]
+      Flags     [1 octet]
+
+  Tells the server to close the specified stream.  The reason should be one
+  of the Tor RELAY_END reasons given in tor-spec.txt.  If the LSB of the
+  flags field is nonzero, and the stream wants to write data, Tor tries to
+  hold the stream open for a while until it can be flushed.
+
+3.21 CLOSECIRCUIT (Type 0x0014)
+
+  Sent from the client to the server.  The message body contains two
+  fields:
+     Circuit ID [4 octets]
+     Flags      [1 octet]
+
+  Tells the server to close the specified circuit.  If the LSB of the flags
+  field is nonzero, do not close the circuit unless it is unused.
+
 4. Implementation notes
 
 4.1. There are four ways we could authenticate, for now:

@@ -48,8 +48,10 @@ const char control_c_id[] = "$Id$";
 #define CONTROL_CMD_POSTDESCRIPTOR 0x000F
 #define CONTROL_CMD_FRAGMENTHEADER 0x0010
 #define CONTROL_CMD_FRAGMENT       0x0011
-#define CONTROL_CMD_REDIRECTSTREAM  0x0012
-#define _CONTROL_CMD_MAX_RECOGNIZED 0x0012
+#define CONTROL_CMD_REDIRECTSTREAM 0x0012
+#define CONTROL_CMD_CLOSESTREAM    0x0013
+#define CONTROL_CMD_CLOSECIRCUIT   0x0014
+#define _CONTROL_CMD_MAX_RECOGNIZED 0x0014
 
 /* Recognized error codes. */
 #define ERR_UNSPECIFIED             0x0000
@@ -152,6 +154,10 @@ static int handle_control_postdescriptor(connection_t *conn, uint32_t len,
                                          const char *body);
 static int handle_control_redirectstream(connection_t *conn, uint32_t len,
                                          const char *body);
+static int handle_control_closestream(connection_t *conn, uint32_t len,
+                                      const char *body);
+static int handle_control_closecircuit(connection_t *conn, uint32_t len,
+                                       const char *body);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
  * human-readable string equivalent. */
@@ -772,7 +778,72 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
   send_control_done(conn);
   return 0;
 }
+static int
+handle_control_closestream(connection_t *conn, uint32_t len,
+                           const char *body)
+{
+  uint32_t conn_id;
+  connection_t *ap_conn;
+  uint8_t reason;
+  int hold_open;
 
+  if (len < 6) {
+    send_control_error(conn, ERR_SYNTAX, "closestream message too short");
+    return 0;
+  }
+
+  conn_id = ntohl(get_uint32(body));
+  reason = *(uint8_t*)(body+4);
+  hold_open = (*(uint8_t*)(body+5)) & 1;
+
+  if (!(ap_conn = connection_get_by_global_id(conn_id))
+      || ap_conn->state != CONN_TYPE_AP
+      || !ap_conn->socks_request) {
+    send_control_error(conn, ERR_NO_STREAM,
+                       "No AP connection found with given ID");
+    return 0;
+  }
+
+  if (!ap_conn->socks_request->has_finished) {
+    socks5_reply_status_t status =
+      connection_edge_end_reason_socks5_response(reason);
+    connection_ap_handshake_socks_reply(ap_conn, NULL, 0, status);
+  }
+  if (hold_open)
+    ap_conn->hold_open_until_flushed = 1;
+  connection_mark_for_close(ap_conn);
+
+  send_control_done(conn);
+  return 0;
+}
+static int
+handle_control_closecircuit(connection_t *conn, uint32_t len,
+                            const char *body)
+{
+  uint32_t circ_id;
+  circuit_t *circ;
+  int safe;
+
+  if (len < 5) {
+    send_control_error(conn, ERR_SYNTAX, "closecircuit message too short");
+    return 0;
+  }
+  circ_id = ntohl(get_uint32(body));
+  safe = (*(uint8_t*)(body+4)) & 1;
+
+  if (!(circ = circuit_get_by_global_id(circ_id))) {
+    send_control_error(conn, ERR_NO_CIRC,
+                       "No circuit found with given ID");
+    return 0;
+  }
+
+  if (!safe || !circ->p_streams) {
+    circuit_mark_for_close(circ);
+  }
+
+  send_control_done(conn);
+  return 0;
+}
 
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
@@ -880,6 +951,14 @@ connection_control_process_inbuf(connection_t *conn) {
       break;
     case CONTROL_CMD_REDIRECTSTREAM:
       if (handle_control_redirectstream(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_CLOSESTREAM:
+      if (handle_control_closestream(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_CLOSECIRCUIT:
+      if (handle_control_closecircuit(conn, body_len, body))
         return -1;
       break;
     case CONTROL_CMD_ERROR:
