@@ -69,7 +69,7 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
     return 0;
   } else { /* we read some bytes */
     *buf_datalen += read_result;
-//    log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",read_result, *buf_datalen);
+    log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",read_result, *buf_datalen);
     return read_result;
   }
 }
@@ -88,6 +88,7 @@ int read_to_buf_tls(tor_tls *tls, int at_most, char **buf, int *buflen, int *buf
   if (r<0) 
     return r;
   *buf_datalen += r;
+  log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",r, *buf_datalen);
   return r;
 } 
 
@@ -147,6 +148,8 @@ int flush_buf_tls(tor_tls *tls, char **buf, int *buflen, int *buf_flushlen, int 
   *buf_datalen -= r;
   *buf_flushlen -= r;
   memmove(*buf, *buf+r, *buf_datalen);
+  log_fn(LOG_DEBUG,"flushed %d bytes, %d ready to flush, %d remain.",
+    r,*buf_flushlen,*buf_datalen);
   return r;
 }
 
@@ -168,7 +171,7 @@ int write_to_buf(char *string, int string_len,
 
   memcpy(*buf+*buf_datalen, string, string_len);
   *buf_datalen += string_len;
-//  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",string_len, *buf_datalen);
+  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",string_len, *buf_datalen);
   return *buf_datalen;
 }
 

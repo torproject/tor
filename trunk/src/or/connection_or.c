@@ -144,13 +144,12 @@ int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
   return connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
 }
 
+/* if there's a whole cell there, pull it off and process it. */
 int connection_process_cell_from_inbuf(connection_t *conn) {
-  /* check if there's a whole cell there.
-   *    * if yes, pull it off, decrypt it if we're not doing TLS, and process it.
-   *       */
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
  
+  log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d.",conn->s,conn->inbuf_datalen);
   if(conn->inbuf_datalen < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
  
@@ -159,7 +158,6 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   /* retrieve cell info from buf (create the host-order struct from the network-order string) */
   cell_unpack(&cell, buf);
  
-//  log_fn(LOG_DEBUG,"Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
   command_process_cell(&cell, conn);
  
   return connection_process_inbuf(conn); /* process the remainder of the buffer */

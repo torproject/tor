@@ -230,7 +230,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
 int getconfig(int argc, char **argv, or_options_t *options) {
   struct config_line *cl;
   FILE *cf;
-  char fname[256];
+  char *fname;
   int i;
   int result = 0;
 
@@ -247,40 +247,29 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
   options->NumCpus = 1;
   options->CertFile = "default.cert";
-//  options->ReconnectPeriod = 6001;
-
-/* get config lines from /etc/torrc and assign them */
-#define rcfile "torrc"
-  snprintf(fname,256,"/etc/%s",rcfile);
-
-  cf = config_open(fname);
-  if(cf) {
-    /* we got it open. pull out the config lines. */
-    cl = config_get_lines(cf);
-    config_assign(options,cl);
-    config_free_lines(cl);
-    config_close(cf);
-  }
-  /* if we failed to open it, ignore */
 
 /* learn config file name, get config lines, assign them */
   i = 1;
   while(i < argc-1 && strcmp(argv[i],"-f")) {
-//    log(LOG_DEBUG,"examining arg %d (%s), it's not -f.",i,argv[i]);
     i++;
   }
   if(i < argc-1) { /* we found one */
-    log(LOG_DEBUG,"Opening specified config file '%s'",argv[i+1]);
-    cf = config_open(argv[i+1]);
-    if(!cf) { /* it's defined but not there. that's no good. */
-      log(LOG_ERR, "Unable to open configuration file '%s'.",argv[i+1]);
-      return -1;
-    }
-    cl = config_get_lines(cf);
-    config_assign(options,cl);
-    config_free_lines(cl);
-    config_close(cf);
+    fname = argv[i+1];
+  } else { /* didn't find one, try /etc/torrc */
+    fname = "/etc/torrc";
   }
+  log(LOG_DEBUG,"Opening config file '%s'",fname);
+
+  cf = config_open(fname);
+  if(!cf) { /* it's defined but not there. that's no good. */
+    log(LOG_ERR, "Unable to open configuration file '%s'.",fname);
+    return -1;
+  }
+
+  cl = config_get_lines(cf);
+  config_assign(options,cl);
+  config_free_lines(cl);
+  config_close(cf);
  
 /* go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
@@ -334,7 +323,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(options->OnionRouter && options->Nickname == NULL) {
     log_fn(LOG_ERR,"Nickname required for OnionRouter, but not found.");
-    return -1;
+    result = -1;
   }
 
   if(options->DirPort > 0 && options->SigningPrivateKeyFile == NULL) {

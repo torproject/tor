@@ -118,7 +118,7 @@
 #define CONN_TYPE_DIR 9
 #define CONN_TYPE_DNSWORKER 10
 #define CONN_TYPE_CPUWORKER 11
-#define _CONN_TYPE_MAX 3
+#define _CONN_TYPE_MAX 11
 
 #define LISTENER_STATE_READY 0
 
@@ -490,9 +490,9 @@ int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 
-void assert_cpath_ok(crypt_path_t *c);
-void assert_cpath_layer_ok(crypt_path_t *c);
-void assert_circuit_ok(circuit_t *c);
+void assert_cpath_ok(const crypt_path_t *c);
+void assert_cpath_layer_ok(const crypt_path_t *c);
+void assert_circuit_ok(const circuit_t *c);
 
 /********************************* command.c ***************************/
 
