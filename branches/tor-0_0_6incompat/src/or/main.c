@@ -337,6 +337,7 @@ static void run_connection_housekeeping(int i, time_t now) {
 static void run_scheduled_events(time_t now) {
   static long time_to_fetch_directory = 0;
   static time_t last_uploaded_services = 0;
+  static time_t last_rotated_certificate = 0;
   int i;
 
 
@@ -354,7 +355,20 @@ static void run_scheduled_events(time_t now) {
     router_upload_dir_desc_to_dirservers();
   }
 
-  /* 1b. Every DirFetchPostPeriod seconds, we get a new directory and upload
+  /* 1b. Every MAX_LINK_KEY_LIFETIME seconds, we change our TLS context. */
+  if (!last_rotated_certificate)
+    last_rotated_certificate = now;
+  if (options.ORPort && last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
+    if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
+                            MAX_SSL_KEY_LIFETIME) < 0) {
+      log_fn(LOG_WARN, "Error reinitializing TLS context");
+    }
+    last_rotated_certificate = now;
+    /* XXXX We should rotate TLS connections as well; this code doesn't change
+     * XXXX them at all. */
+  }
+
+  /* 1c. Every DirFetchPostPeriod seconds, we get a new directory and upload
    *    our descriptor (if any). */
   if(time_to_fetch_directory < now) {
     /* it's time to fetch a new directory and/or post our descriptor */

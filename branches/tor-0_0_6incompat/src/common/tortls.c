@@ -23,8 +23,8 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 
-/* How long do certificates live? (sec) */
-#define CERT_LIFETIME  (365*24*60*60)
+/* How long do identity certificates live? (sec) */
+#define IDENTITY_CERT_LIFETIME  (365*24*60*60)
 /* How much clock skew do we tolerate when checking certificates? (sec) */
 #define CERT_ALLOW_SKEW (90*60)
 
@@ -46,7 +46,8 @@ struct tor_tls_st {
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         crypto_pk_env_t *rsa_sign,
                                         const char *cname,
-                                        const char *cname_sign);
+                                        const char *cname_sign,
+                                        unsigned int lifetime);
 
 /* global tls context, keep it here because nobody else needs to touch it */
 static tor_tls_context *global_tls_context = NULL;
@@ -139,7 +140,8 @@ X509 *
 tor_tls_create_certificate(crypto_pk_env_t *rsa,
                            crypto_pk_env_t *rsa_sign,
                            const char *cname,
-                           const char *cname_sign)
+                           const char *cname_sign,
+                           unsigned int cert_lifetime)
 {
   time_t start_time, end_time;
   EVP_PKEY *sign_pkey = NULL, *pkey=NULL;
@@ -187,7 +189,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
   if (!X509_time_adj(X509_get_notBefore(x509),0,&start_time))
     goto error;
-  end_time = start_time + CERT_LIFETIME;
+  end_time = start_time + cert_lifetime;
   if (!X509_time_adj(X509_get_notAfter(x509),0,&end_time))
     goto error;
   if (!X509_set_pubkey(x509, pkey))
@@ -236,7 +238,8 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
  */
 int
 tor_tls_context_new(crypto_pk_env_t *identity,
-                    int isServer, const char *nickname)
+                    int isServer, const char *nickname,
+                    unsigned int key_lifetime)
 {
   crypto_pk_env_t *rsa = NULL;
   crypto_dh_env_t *dh = NULL;
@@ -253,8 +256,10 @@ tor_tls_context_new(crypto_pk_env_t *identity,
       goto error;
     if (crypto_pk_generate_key(rsa)<0)
       goto error;
-    cert = tor_tls_create_certificate(rsa, identity, nickname, nn2);
-    idcert = tor_tls_create_certificate(identity, identity, nn2, nn2);
+    cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
+                                      key_lifetime);
+    idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
+                                        IDENTITY_CERT_LIFETIME);
     if (!cert || !idcert) {
       log(LOG_WARN, "Error creating certificate");
       goto error;

@@ -151,7 +151,7 @@ int init_keys(void) {
   /* OP's don't need keys.  Just initialize the TLS context.*/
   if (!options.ORPort) {
     assert(!options.DirPort);
-    if (tor_tls_context_new(NULL, 0, NULL)<0) {
+    if (tor_tls_context_new(NULL, 0, NULL, 0)<0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
       return -1;
     }
@@ -185,7 +185,10 @@ int init_keys(void) {
   set_onion_key(prkey);
 
   /* 3. Initialize link key and TLS context. */
-  if (tor_tls_context_new(get_identity_key(), 1, options.Nickname) < 0) {
+  /* XXXX use actual rotation interval as cert lifetime, once we do
+   *  connection rotation. */
+  if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
+                          MAX_SSL_KEY_LIFETIME) < 0) {
     log_fn(LOG_ERR, "Error initializing TLS context");
     return -1;
   }
