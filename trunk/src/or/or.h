@@ -512,7 +512,6 @@ circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn);
 void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t *cpath);
 
-circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest(connection_t *conn, int must_be_open);

@@ -203,8 +203,8 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   log_fn(LOG_DEBUG, "Other side claims to be '%s'", nickname);
   pk = tor_tls_verify(conn->tls);
   if(!pk) {
-    log_fn(LOG_WARN,"Other side (%s:%d) has a cert but it's invalid. Closing.",
-           conn->address, conn->port);
+    log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a cert but it's invalid. Closing.",
+           nickname, conn->address, conn->port);
     return -1;
   }
   router = router_get_by_link_pk(pk);
@@ -230,7 +230,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
     connection_or_init_conn_from_router(conn, router);
     crypto_free_pk_env(pk);
-  } 
+  }
   if (strcmp(conn->nickname, nickname)) {
     log_fn(LOG_WARN,"Other side claims to be '%s', but we wanted '%s'",
            nickname, conn->nickname);
@@ -239,8 +239,8 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   if (!options.OnionRouter) {
     /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+    circuit_n_conn_open(conn); /* send the pending creates, if any. */
   }
-  circuit_n_conn_open(conn); /* send the pending creates, if any. */
   return 0;
 }
 

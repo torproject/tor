@@ -254,15 +254,17 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
   n_maybe_supported = tor_malloc(sizeof(int)*dir->n_routers);
   for (i = 0; i < dir->n_routers; ++i) {   /* iterate over routers */
     n_supported[i] = n_maybe_supported[i] = 0;
+    if(!dir->routers[i]->is_running)
+      continue; /* skip routers which are known to be down */
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
       if (carray[j]->type != CONN_TYPE_AP || 
           carray[j]->state == AP_CONN_STATE_CIRCUIT_WAIT ||
           carray[j]->marked_for_close)
-        continue; /* Skip everything by open APs in CIRCUIT_WAIT */
+        continue; /* Skip everything but APs in CIRCUIT_WAIT */
       switch (connection_ap_can_use_exit(carray[j], dir->routers[i])) 
         {
         case -1:
-          break;
+          break; /* would be rejected; try next connection */
         case 0:
           ++n_supported[i];
           ; /* Fall through: If it is supported, it is also maybe supported. */
@@ -308,6 +310,7 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
       }
     }
     /* This point should never be reached. */
+    assert(0);
   }
   /* If any routers _maybe_ support pending connections, choose one at
    * random, as above.  */
@@ -324,9 +327,11 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
       }
     }
     /* This point should never be reached. */
+    assert(0);
   }
   /* Either there are no pending connections, or no routers even seem to
    * possibly support any of them.  Choose a router at random. */
+  /* XXX should change to not choose non-running routers */
   tor_free(n_supported); tor_free(n_maybe_supported);
   i = crypto_pseudo_rand_int(dir->n_routers);
   log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[i]->nickname);
@@ -355,6 +360,10 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
 
   for(i=0;i<rarray_len;i++) {
     log_fn(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
+    if(rarray[i]->is_running == 0) {
+      log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
+      goto next_i_loop;
+    }
     if(options.OnionRouter) {
       conn = connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port);
       if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {
