@@ -81,11 +81,6 @@ const char util_c_id[] = "$Id$";
 #include <fcntl.h>
 #endif
 
-/* used by inet_addr, not defined on solaris anywhere!? */
-#ifndef INADDR_NONE
-#define INADDR_NONE ((unsigned long) -1)
-#endif
-
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif

@@ -75,6 +75,11 @@ const char compat_c_id[] = "$Id$";
 #include "strlcat.c"
 #endif
 
+/* used by inet_addr, not defined on solaris anywhere!? */
+#ifndef INADDR_NONE
+#define INADDR_NONE ((unsigned long) -1)
+#endif
+
 /** Replacement for snprintf.  Differs from platform snprintf in two
  * ways: First, always NUL-terminates its output.  Second, always
  * returns -1 if the result is truncated.  (Note that this return
