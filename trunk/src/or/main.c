@@ -529,6 +529,12 @@ static int do_hup(void) {
   if (init_from_config(0, NULL) < 0) {
     exit(1);
   }
+  /* reload keys as needed for rendezvous services. */
+  if (rend_service_init_keys()<0) {
+    log_fn(LOG_ERR,"Error reloading rendezvous service keys");
+    exit(1);
+  }
+  /* XXX also call rend_services_init ?? */
   if(retry_all_connections() < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
