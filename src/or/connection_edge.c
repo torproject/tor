@@ -383,7 +383,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     /* not a hidden-service request (i.e. normal or .exit) */
 
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
-      uint32_t answer;
+      uint32_t answer = 0;
       struct in_addr in;
       /* Reply to resolves immediately if we can. */
       if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
