@@ -620,6 +620,11 @@ void connection_ap_expire_beginning(void) {
       continue;
     conn->num_retries++;
     circ = circuit_get_by_conn(conn);
+    if(!circ) { /* it's vanished? */
+      log_fn(LOG_INFO,"Conn is in connect-wait, but lost its circ.");
+      connection_mark_for_close(conn,0);
+      continue;
+    }
     if(circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (now - conn->timestamp_lastread > 45) {
         log_fn(LOG_WARN,"Rend stream is %d seconds late. Giving up.",
