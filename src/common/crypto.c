@@ -9,6 +9,7 @@
 #include <openssl/pem.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <openssl/opensslv.h>
 
 #include <stdlib.h>
 #include <assert.h>
@@ -16,6 +17,24 @@
 #include "crypto.h"
 #include "config.h"
 #include "log.h"
+
+#if OPENSSL_VERSION_NUMBER < 0x00905000l
+#error "We require openssl >= 0.9.5"
+#elif OPENSSL_VERSION_NUMBER < 0x00906000l
+#define OPENSSL_095
+#endif
+
+/*
+ * Certain functions that return a success code in OpenSSL 0.9.6 return void
+ * (and don't indicate errors) in OpenSSL version 0.9.5.
+ *
+ * [OpenSSL 0.9.5 matters, because it ships with Redhat 6.2.]
+ */
+#ifdef OPENSSL_095
+#define RETURN_SSL_OUTCOME(exp) (exp); return 0
+#else
+#define RETURN_SSL_OUTCOME(exp) return !(exp)
+#endif
 
 int crypto_global_init() 
 {
@@ -478,11 +497,11 @@ int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
 
   switch(env->type) {
     case CRYPTO_CIPHER_IDENTITY:
-      return !(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_enc_null(), env->key, env->iv));
+      RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_enc_null(), env->key, env->iv));
     case CRYPTO_CIPHER_DES:
-      return !(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_des_ofb(), env->key, env->iv));
+      RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_des_ofb(), env->key, env->iv));
     case CRYPTO_CIPHER_RC4:
-      return !(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_rc4(), env->key, env->iv));
+      RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_rc4(), env->key, env->iv));
     default:
       return -1;
   }
@@ -496,11 +515,11 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
   
   switch(env->type) {
     case CRYPTO_CIPHER_IDENTITY:
-    return !(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_enc_null(), env->key, env->iv));
+      RETURN_SSL_OUTCOME(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_enc_null(), env->key, env->iv));
     case CRYPTO_CIPHER_DES:
-    return !(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_des_ofb(), env->key, env->iv));
+      RETURN_SSL_OUTCOME(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_des_ofb(), env->key, env->iv));
     case CRYPTO_CIPHER_RC4:
-    return !(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_rc4(), env->key, env->iv));
+      RETURN_SSL_OUTCOME(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_rc4(), env->key, env->iv));
     default:
     return -1;
   }
@@ -514,7 +533,7 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigne
   
   assert(env && from && to);
   
-  return !(EVP_EncryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
+  RETURN_SSL_OUTCOME(EVP_EncryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
 }
 
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to)
@@ -523,7 +542,7 @@ int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigne
   
   assert(env && from && to);
   
-  return !(EVP_DecryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
+  RETURN_SSL_OUTCOME(EVP_DecryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
 }
 
 /* SHA-1 */
