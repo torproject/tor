@@ -720,7 +720,7 @@ int rend_services_init(void) {
 
     /* If there's no need to republish, stop here. */
     now = time(NULL);
-    if (!changed &&
+    if (!changed && service->desc &&
         service->desc->timestamp+MAX_SERVICE_PUBLICATION_INTERVAL >= now)
       continue;
 
