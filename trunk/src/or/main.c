@@ -628,8 +628,8 @@ static int init_from_config(int argc, char **argv) {
   }
 
   /* write our pid to the pid file, if we do not have write permissions we will log a warning */
-  write_pidfile(options.PidFile);
-  /* XXX Is overwriting the pidfile ok? I think it is. -RD */
+  if(options.PidFile)
+    write_pidfile(options.PidFile);
 
   return 0;
 }
@@ -750,7 +750,8 @@ static void catch(int the_signal) {
       log(LOG_ERR,"Catching signal %d, exiting cleanly.", the_signal);
       /* we don't care if there was an error when we unlink, nothing
          we could do about it anyways */
-      unlink(options.PidFile);
+      if(options.PidFile)
+        unlink(options.PidFile);
       exit(0);
     case SIGHUP:
       please_reset = 1;

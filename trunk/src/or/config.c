@@ -259,7 +259,7 @@ void init_options(or_options_t *options) {
   options->DirBindAddress = tor_strdup("0.0.0.0");
   options->RecommendedVersions = tor_strdup("none");
   options->loglevel = LOG_INFO;
-  options->PidFile = tor_strdup("tor.pid");
+  options->PidFile = NULL; // tor_strdup("tor.pid");
   options->DataDirectory = NULL;
   options->PathlenCoinWeight = 0.3;
   options->MaxConn = 900;
