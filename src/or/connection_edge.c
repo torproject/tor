@@ -812,6 +812,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       }
       rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
     }
+    control_event_stream_status(conn, STREAM_EVENT_NEW);
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     return connection_ap_handshake_attach_circuit(conn);
   } else {
