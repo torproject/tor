@@ -367,6 +367,7 @@ tor_parse_long(const char *s, int base, long min, long max,
   return 0;
 }
 
+#if 0
 unsigned long
 tor_parse_ulong(const char *s, int base, unsigned long min,
                 unsigned long max, int *ok, char **next)
@@ -393,6 +394,7 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   if (next) *next = endptr;
   return 0;
 }
+#endif
 
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
@@ -873,7 +875,9 @@ char *read_file_to_str(const char *filename, int bin) {
  * that is whitespace or comment.
  * Return 1 if success, 0 if no more lines, -1 if error.
  */
-int parse_line_from_file(char *line, size_t maxlen, FILE *f, char **key_out, char **value_out) {
+int
+parse_line_from_file(char *line, size_t maxlen, FILE *f,
+                     char **key_out, char **value_out) {
   char *s, *key, *end, *value;
 
 try_next_line:

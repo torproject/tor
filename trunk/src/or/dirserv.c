@@ -651,7 +651,7 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
     log_fn(LOG_WARN,"couldn't compute digest");
     return -1;
   }
-  if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
+  if (crypto_pk_private_sign(private_key, signature, digest, 20) < 0) {
     log_fn(LOG_WARN,"couldn't sign digest");
     return -1;
   }
@@ -840,7 +840,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
     log_fn(LOG_WARN,"couldn't compute digest");
     goto err;
   }
-  if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
+  if (crypto_pk_private_sign(private_key, signature, digest, 20) < 0) {
     log_fn(LOG_WARN,"couldn't sign digest");
     goto err;
   }

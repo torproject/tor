@@ -71,7 +71,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
     strlcpy(cp, ipoint, *len_out-(cp-*str_out));
     cp += strlen(ipoint)+1;
   }
-  i = crypto_pk_private_sign_digest(key, *str_out, cp-*str_out, cp);
+  i = crypto_pk_private_sign_digest(key, cp, *str_out, cp-*str_out);
   if (i<0) {
     tor_free(*str_out);
     return -1;

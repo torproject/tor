@@ -47,7 +47,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   /* Next 20 bytes: Hash of handshake_digest | "INTRODUCE" */
   memcpy(buf, circ->handshake_digest, DIGEST_LEN);
   memcpy(buf+DIGEST_LEN, "INTRODUCE", 9);
-  if (crypto_digest(buf, DIGEST_LEN+9, expected_digest)<0) {
+  if (crypto_digest(expected_digest, buf, DIGEST_LEN+9) < 0) {
     log_fn(LOG_WARN, "Error computing digest");
     goto err;
   }

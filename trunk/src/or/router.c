@@ -747,7 +747,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   if (router_get_router_hash(s, digest) < 0)
     return -1;
 
-  if (crypto_pk_private_sign(ident_key, digest, 20, signature) < 0) {
+  if (crypto_pk_private_sign(ident_key, signature, digest, 20) < 0) {
     log_fn(LOG_WARN, "Error signing digest");
     return -1;
   }
