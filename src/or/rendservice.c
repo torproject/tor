@@ -704,7 +704,7 @@ int rend_services_init(void) {
                                          service->intro_exclude_nodes,
                                          exclude_routers);
       if (!router) {
-        log_fn(LOG_WARN, "Can't establish more than %d introduction points",
+        log_fn(LOG_WARN, "Could only establish %d introduction points",
                smartlist_len(service->intro_nodes));
         break;
       }
