@@ -260,7 +260,7 @@ get_recommended_software_from_directory(const char *str)
       /* We belong to a series with recommended members, and we are newer than
        * any recommended member. We're probably okay. */
       if (!warned_too_new) {
-        log(LOG_WARN, "This version of Tor (%s) is newer than any in the same series on the reccomended list (%s)",
+        log(LOG_WARN, "This version of Tor (%s) is newer than any in the same series on the recommended list (%s)",
             myversion, versionlist);
         warned_too_new = 1;
       }
@@ -281,7 +281,7 @@ get_recommended_software_from_directory(const char *str)
       /* We belong to a series with no recommended members, and it's
        * newer than any recommended series. We're probably okay. */
       if (!warned_too_new) {
-        log(LOG_WARN, "This version of Tor (%s) is newer than any on the reccomended list (%s)",
+        log(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
             myversion, versionlist);
         warned_too_new = 1;
       }
