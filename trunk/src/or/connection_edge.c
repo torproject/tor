@@ -974,10 +974,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
          exit->nickname, conn->socks_request->address,
          conn->socks_request->port);
   if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
-    /* 0.0.7 servers and earlier don't support DNS resolution.  0.0.8 servers
-     * have buggy resolve support. Once there are more 0.0.9 servers, change
-     * this to 0.0.9pre1. XXX */
-    return tor_version_as_new_as(exit->platform, "0.0.8");
+    return tor_version_as_new_as(exit->platform, "0.0.9pre1");
   }
   addr = client_dns_lookup_entry(conn->socks_request->address);
   if(router_compare_addr_to_exit_policy(addr,
