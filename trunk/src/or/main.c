@@ -344,10 +344,10 @@ int prepare_for_poll(int *timeout) {
       if(!connection_state_is_open(tmpconn))
         continue; /* only conns in state 'open' have a valid send_timeval */ 
       while(tv_cmp(&tmpconn->send_timeval,&now) <= 0) { /* send_timeval has already passed, let it send a cell */
-        log(LOG_DEBUG,"prepare_for_poll(): doing backlogged connection_send_cell on socket %d (%d ms old)",tmpconn->s,
-          (now.tv_sec - tmpconn->send_timeval.tv_sec)*1000 +
-          (now.tv_usec - tmpconn->send_timeval.tv_usec)/1000
-        );
+//        log(LOG_DEBUG,"prepare_for_poll(): doing backlogged connection_send_cell on socket %d (%d ms old)",tmpconn->s,
+//         (now.tv_sec - tmpconn->send_timeval.tv_sec)*1000 +
+//         (now.tv_usec - tmpconn->send_timeval.tv_usec)/1000
+//        );
         connection_send_cell(tmpconn);
       }
       if(!conn || tv_cmp(&tmpconn->send_timeval, &soonest) < 0) { /* this is the best choice so far */
@@ -424,11 +424,13 @@ int do_main_loop(void) {
     /* poll until we have an event, or it's time to do something */
     poll_result = poll(poll_array, nfds, timeout);
 
+#if 0 /* let catch() handle things like ^c, and otherwise don't worry about it */
     if(poll_result < 0) {
       log(LOG_ERR,"do_main_loop(): poll failed.");
       if(errno != EINTR) /* let the program survive things like ^z */
         return -1;
     }
+#endif
 
     if(poll_result > 0) { /* we have at least one connection to deal with */
       /* do all the reads first, so we can detect closed sockets */
