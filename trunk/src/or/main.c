@@ -44,7 +44,15 @@ static int nfds=0; /**< Number of connections currently active. */
 static int please_dumpstats=0; /**< Whether we should dump stats during the loop. */
 static int please_reset=0; /**< Whether we just got a sighup. */
 static int please_reap_children=0; /**< Whether we should waitpid for exited children. */
+static int please_shutdown=0; /**< Whether we should shut down Tor. */
 #endif /* signal stuff */
+
+/** We should exit if shutting_down != 0 and now <= shutting_down.
+ * If it's non-zero, don't accept any new circuits or connections.
+ * This gets assigned when we receive a sig_int, and if we receive a
+ * second one we exit immediately. */
+int shutting_down=0;
+#define SHUTDOWN_WAIT_LENGTH 30 /* seconds */
 
 /** We set this to 1 when we've fetched a dir, to know whether to complain
  * yet about unrecognized nicknames in entrynodes, exitnodes, etc.
@@ -479,6 +487,14 @@ static void run_scheduled_events(time_t now) {
   static time_t last_rotated_certificate = 0;
   int i;
 
+  /** 0. See if we've been asked to shut down and our timeout has
+   * expired. If so, exit now.
+   */
+  if(shutting_down && shutting_down <= now) {
+    log(LOG_NOTICE,"Clean shutdown finished. Exiting.");
+    exit(0);
+  }
+
   /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
    *  shut down and restart all cpuworkers, and update the directory if
    *  necessary.
@@ -782,8 +798,18 @@ static int do_main_loop(void) {
 #ifdef MS_WINDOWS /* Do service stuff only on windows. */
         if (service_status.dwCurrentState != SERVICE_RUNNING) {
       return 0;
-    } 
+    }
 #else /* do signal stuff only on unix */
+    if(please_shutdown) {
+      if(shutting_down) { /* we've already been asked. do it now. */
+        log(LOG_NOTICE,"Second sigint received; exiting now.");
+        exit(0);
+      } else {
+        log(LOG_NOTICE,"Interrupt: will shut down in %d seconds. Interrupt again to exit now.", SHUTDOWN_WAIT_LENGTH);
+        shutting_down = time(NULL) + SHUTDOWN_WAIT_LENGTH;
+      }
+      please_shutdown = 0;
+    }
     if(please_dumpstats) {
       /* prefer to log it at INFO, but make sure we always see it */
       dumpstats(get_min_log_level()>LOG_INFO ? get_min_log_level() : LOG_INFO);
@@ -842,15 +868,13 @@ static void catch(int the_signal) {
   switch(the_signal) {
 //    case SIGABRT:
     case SIGTERM:
-    case SIGINT:
       log(LOG_ERR,"Catching signal %d, exiting cleanly.", the_signal);
-      /* we don't care if there was an error when we unlink, nothing
-         we could do about it anyways */
-      if(options.PidFile)
-        unlink(options.PidFile);
       exit(0);
+    case SIGINT:
+      please_shutdown = 1;
+      break;
     case SIGPIPE:
-      log(LOG_INFO,"Caught sigpipe. Ignoring.");
+      log(LOG_NOTICE,"Caught sigpipe. Ignoring.");
       break;
     case SIGHUP:
       please_reset = 1;
@@ -947,6 +971,10 @@ int network_init(void)
  */
 void exit_function(void)
 {
+  /* Remove our pid file. We don't care if there was an error when we
+   * unlink, nothing we could do about it anyways. */
+  if(options.PidFile)
+    unlink(options.PidFile);
 #ifdef MS_WINDOWS
   WSACleanup();
 #endif
@@ -988,10 +1016,10 @@ int tor_init(int argc, char *argv[]) {
   sigemptyset(&action.sa_mask);
 
   action.sa_handler = catch;
-  sigaction(SIGINT,  &action, NULL);
-  sigaction(SIGTERM, &action, NULL);
-  sigaction(SIGPIPE, &action, NULL);
-  sigaction(SIGUSR1, &action, NULL);
+  sigaction(SIGINT,  &action, NULL); /* do a controlled slow shutdown */
+  sigaction(SIGTERM, &action, NULL); /* to terminate now */
+  sigaction(SIGPIPE, &action, NULL); /* otherwise sigpipe kills us */
+  sigaction(SIGUSR1, &action, NULL); /* dump stats */
   sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
   sigaction(SIGCHLD, &action, NULL); /* handle dns/cpu workers that exit */
 }

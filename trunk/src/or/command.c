@@ -16,6 +16,7 @@
 #include "or.h"
 
 extern or_options_t options; /* command-line and config-file options */
+extern int shutting_down; /* whether we should refuse create cells */
 
 /** Keep statistics about how many of each type of cell we've received. */
 unsigned long stats_n_padding_cells_processed = 0;
@@ -125,6 +126,12 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
  */
 static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
+
+  if(shutting_down) {
+    log_fn(LOG_INFO,"Received create cell but we're shutting down. Sending back destroy.");
+    connection_send_destroy(cell->circ_id, conn);
+    return;
+  }
 
   circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
 

@@ -315,7 +315,7 @@ void write_rep_history(const char *filename)
 #define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
 
 /**
- * Struture to track bandwidth use, and remember the maxima for a given
+ * Structure to track bandwidth use, and remember the maxima for a given
  * time period.
  */
 typedef struct bw_array_t {
@@ -338,7 +338,7 @@ typedef struct bw_array_t {
   int maxima[NUM_TOTALS];
 } bw_array_t;
 
-/** Shift the current period of b foreward by one.
+/** Shift the current period of b forward by one.
  */
 static void commit_max(bw_array_t *b) {
   /* Store maximum from current period. */
@@ -351,7 +351,7 @@ static void commit_max(bw_array_t *b) {
   b->max_total = 0;
 }
 
-/** Shift the current observation time of 'b' foreward by one second.
+/** Shift the current observation time of 'b' forward by one second.
  */
 static INLINE void advance_obs(bw_array_t *b) {
   int nextidx;
