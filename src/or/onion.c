@@ -179,71 +179,37 @@ static int chooselen(double cw) {
   return len;
 }
 
-/* returns an array of pointers to routent that define a new route through the OR network
- * int cw is the coin weight to use when choosing the route 
- * order of routers is from last to first
- */
-static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen) {
-  int i;
+static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   int num_acceptable_routers;
-  unsigned int *route;
-  unsigned int oldchoice, choice;
+  int routelen;
 
-  assert((cw >= 0) && (cw < 1) && (rarray) && (routelen) ); /* valid parameters */
+  assert((cw >= 0) && (cw < 1) && (rarray) ); /* valid parameters */
 
-  *routelen = chooselen(cw);
-  if (*routelen == -1) {
+  routelen = chooselen(cw);
+  if (routelen == -1) {
     log_fn(LOG_WARN,"Choosing route length failed.");
-    return NULL;
+    return -1;
   }
-  log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",*routelen, rarray_len);
+  log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",routelen, rarray_len);
 
   num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
 
   if(num_acceptable_routers < 2) {
     log_fn(LOG_INFO,"Not enough acceptable routers. Failing.");
-    return NULL;
+    return -1;
   }
 
-  if(num_acceptable_routers < *routelen) {
-    log_fn(LOG_INFO,"Not enough routers: cutting routelen from %d to %d.",*routelen, num_acceptable_routers);
-    *routelen = num_acceptable_routers;
+  if(num_acceptable_routers < routelen) {
+    log_fn(LOG_INFO,"Not enough routers: cutting routelen from %d to %d.",routelen, num_acceptable_routers);
+    routelen = num_acceptable_routers;
   }
 
-  if(*routelen < 1) {
+  if (routelen < 1) {
     log_fn(LOG_WARN,"Didn't find any acceptable routers. Failing.");
-    return NULL;
+    return -1;
   }
 
-  /* allocate memory for the new route */
-  route = (unsigned int *)tor_malloc(*routelen * sizeof(unsigned int));
- 
-  oldchoice = rarray_len;
-  for(i=0;i<*routelen;i++) {
-//    log_fn(LOG_DEBUG,"Choosing hop %u.",i);
-    if (CRYPTO_PSEUDO_RAND_INT(choice)) {
-      free(route);
-      return NULL;
-    }
-
-    choice = choice % rarray_len;
-    log_fn(LOG_DEBUG,"Contemplating router %u.",choice);
-    if(choice == oldchoice ||
-       (oldchoice < rarray_len && !crypto_pk_cmp_keys(rarray[choice]->onion_pkey, rarray[oldchoice]->onion_pkey)) ||
-      (options.OnionRouter && !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port))) {
-      /* Same router as last choice, or router twin,
-       *   or no routers with that key are connected to us.
-       * Try again. */
-      log_fn(LOG_DEBUG,"Picked a router %d that won't work as next hop.",choice);
-      i--;
-      continue;  
-    }
-    log_fn(LOG_DEBUG,"Chosen router %u for hop %u.",choice,i);
-    oldchoice = choice;
-    route[i] = choice;
-  }
-   
-  return route;
+  return routelen;
 }
 
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
@@ -276,76 +242,117 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
   return num;
 }
 
+/* XXX This function should be replaced by calls to onion_extend_cpath */
 crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
-  int routelen; /* length of the route */
-  unsigned int *route; /* hops in the route as an array of indexes into rarray */
+  int routelen;
   crypt_path_t *cpath=NULL;
+  int r;
   directory_t *dir;
   routerinfo_t **rarray;
   int rarray_len;
-  int i;
-  crypt_path_t *hop;
-  routerinfo_t *router;
-  struct in_addr netaddr;
+
+  assert(firsthop);
+  *firsthop = NULL;
 
   router_get_directory(&dir);
   rarray = dir->routers;
   rarray_len = dir->n_routers;
-
-  /* choose a route */
-  route = new_route(options.CoinWeight, rarray, rarray_len, &routelen);
-  if (!route) {
-    log_fn(LOG_INFO,"Error choosing a route through the OR network.");
-    return NULL;
-  }
-  log_fn(LOG_DEBUG,"Chosen a route of length %u: ",routelen);
-
-  *firsthop = rarray[route[routelen-1]];
-  assert(*firsthop); /* should always be defined */
-
-  for(i=0; i<routelen; i++) {
-    netaddr.s_addr = htonl((rarray[route[i]])->addr);
-
-    log_fn(LOG_DEBUG,"%u : %s:%u, %u/%u",routelen-i,
-        inet_ntoa(netaddr),
-        (rarray[route[i]])->or_port,
-        (int) (rarray[route[i]])->onion_pkey,
-        crypto_pk_keysize((rarray[route[i]])->onion_pkey));
-  }
-
-  /* create the cpath layer by layer, starting at the last hop */
-  for (i=0;i<routelen;i++) {
-    router = rarray[route[i]];
-
-    /* build up the crypt_path */
-    hop = (crypt_path_t *)tor_malloc(sizeof(crypt_path_t));
-    memset(hop, 0, sizeof(crypt_path_t));
-
-    /* link hop into the cpath, at the front */
-    hop->next = cpath;
-    hop->prev = NULL;
-    hop->state = CPATH_STATE_CLOSED;
-    if(cpath) {
-      cpath->prev = hop;
+  
+  routelen = new_route_len(options.CoinWeight, rarray, rarray_len);
+  if (routelen < 0) return NULL;
+  
+  while (1) {
+    r = onion_extend_cpath(&cpath, routelen, cpath ? NULL : firsthop);
+    if (r < 0) {
+      if (cpath) circuit_free_cpath(cpath);
+      return NULL;
+    } else if (r == 1) {
+      break;
     }
-    cpath = hop;
+    /* r == 0; keep on chugging. */
+  }
+  return cpath;
+}
 
-    hop->port = rarray[route[i]]->or_port;
-    hop->addr = rarray[route[i]]->addr;
+int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **router_out)
+{
+  int cur_len;
+  crypt_path_t *cpath, *hop;
+  routerinfo_t **rarray, *r;
+  unsigned int choice;
+  int rarray_len;
+  int i;
+  directory_t *dir;
 
-    hop->package_window = CIRCWINDOW_START;
-    hop->deliver_window = CIRCWINDOW_START;
+  assert(head_ptr);
+  if (router_out)
+    *router_out = NULL;
 
-    log_fn(LOG_DEBUG,"Building hop %u of crypt path.",i+1);
+  router_get_directory(&dir);
+  rarray = dir->routers;
+  rarray_len = dir->n_routers;
+  
+  if (!*head_ptr) {
+    cur_len = 0;
+  } else {
+    cur_len = 1;
+    for (cpath = *head_ptr; cpath->next != *head_ptr; cpath = cpath->next) {
+      ++cur_len;
+    }
+  }
+  if (cur_len >= path_len) { return 1; }
+  log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len, path_len);
+
+ again:
+  if (CRYPTO_PSEUDO_RAND_INT(choice)) {
+    return -1;
+  }
+  choice %= rarray_len;
+  log_fn(LOG_DEBUG,"Contemplating router %s for hop %d",
+         rarray[choice]->nickname, cur_len);
+  for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
+    r = router_get_by_addr_port(cpath->addr, cpath->port);
+    if ((r && !crypto_pk_cmp_keys(r->onion_pkey, rarray[choice]->onion_pkey))
+        || (cpath->addr == rarray[choice]->addr && 
+            cpath->port == rarray[choice]->or_port)
+        || (options.OnionRouter && 
+            !(connection_twin_get_by_addr_port(rarray[choice]->addr,
+                                               rarray[choice]->or_port)))) {
+      log_fn(LOG_DEBUG, "Picked an already-selected router for hop %d; retrying.",
+             cur_len);
+      goto again;
+    }
+  }
+  
+  /* Okay, so we haven't used 'choice' before. */
+  hop = (crypt_path_t *)tor_malloc(sizeof(crypt_path_t));
+  memset(hop, 0, sizeof(crypt_path_t));
+
+  /* link hop into the cpath, at the end. */
+  if (*head_ptr) {
+    hop->next = (*head_ptr);
+    hop->prev = (*head_ptr)->prev;
+    (*head_ptr)->prev->next = hop;
+    (*head_ptr)->prev = hop;
+  } else {
+    *head_ptr = hop;
+    hop->prev = hop->next = hop;
   }
 
-  /* now link cpath->prev to the end of cpath */
-  for(hop=cpath; hop->next; hop=hop->next) ;
-  hop->next = cpath;
-  cpath->prev = hop;
+  hop->state = CPATH_STATE_CLOSED;
+  
+  hop->port = rarray[choice]->or_port;
+  hop->addr = rarray[choice]->addr;
+  
+  hop->package_window = CIRCWINDOW_START;
+  hop->deliver_window = CIRCWINDOW_START;
 
-  free(route);
-  return cpath;
+  log_fn(LOG_DEBUG, "Extended circuit path with %s for hop %d", 
+         rarray[choice]->nickname, cur_len);
+  
+  if (router_out)
+    *router_out = rarray[choice];
+  return 0;
 }
 
 /*----------------------------------------------------------------------*/
@@ -425,7 +432,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   if (crypto_cipher_encrypt(cipher, pubkey+pkbytes, dhbytes+16-pkbytes,
                             onion_skin_out+pkbytes))
     goto err;
-
+  
   free(pubkey);
   crypto_free_cipher_env(cipher);
   *handshake_state_out = dh;
@@ -564,3 +571,5 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   c-basic-offset:2
   End:
 */
+
+
