@@ -293,8 +293,9 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
   routerinfo_t *router;
   smartlist_t *nickname_list;
 
+  if(!list)
+    return; /* nothing to do */
   tor_assert(sl);
-  tor_assert(list);
 
   nickname_list = smartlist_create();
 
@@ -330,8 +331,9 @@ router_nickname_is_in_list(routerinfo_t *router, const char *list)
   smartlist_t *nickname_list;
   int v = 0;
 
+  if(!list)
+    return 0; /* definitely not */
   tor_assert(router);
-  tor_assert(list);
 
   nickname_list = smartlist_create();
   smartlist_split_string(nickname_list, list, ",",

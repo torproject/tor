@@ -250,7 +250,7 @@ int connection_control_process_inbuf(connection_t *conn) {
       log_fn(LOG_WARN, "Received client-only '%s' command; ignoring.",
              control_cmd_to_string(command_type));
       send_control_error(conn, ERR_UNRECOGNIZED_TYPE,
-                         "Command type only valid from server tor client");
+                         "Command type only valid from server to tor client");
       break;
     default:
       log_fn(LOG_WARN, "Received unrecognized command type %d; ignoring.",
