@@ -39,6 +39,8 @@ typedef enum {
   K_OPT,
   K_BANDWIDTH,
   K_PORTS,
+  K_DIRCACHEPORT,
+  K_CONTACT,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -109,7 +111,8 @@ static struct {
   { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR_ONLY },
   { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ,  ANY },
   { "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK,  ANY },
-
+  { "dircacheport",        K_DIRCACHEPORT,        ARGS,    NO_OBJ,  RTR_ONLY },
+  { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ,  ANY },
   { NULL, -1 }
 };
 
@@ -587,6 +590,17 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     ports_set = 1;
   }
 
+  tok = find_first_by_keyword(tokens, K_DIRCACHEPORT);
+  if (tok) {
+    if (router->dir_port)
+      log_fn(LOG_WARN,"Redundant dircacheport line");
+    if (tok->n_args != 1) {
+      log_fn(LOG_WARN,"Wrong # of arguments to \"dircacheport\"");
+      goto err;
+    }
+    router->dir_port = atoi(tok->args[0]);
+  }
+
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
   if (tok && bw_set) {
     log_fn(LOG_WARN,"Redundant bandwidth line");
@@ -898,7 +912,7 @@ token_free(directory_token_t *tok)
 static directory_token_t *
 get_next_token(const char **s, where_syntax where) {
   const char *next, *obstart;
-  int i, done, allocated;
+  int i, done, allocated, is_opt;
   directory_token_t *tok;
   arg_syntax a_syn;
   obj_syntax o_syn = NO_OBJ;
@@ -923,7 +937,17 @@ get_next_token(const char **s, where_syntax where) {
     tok->error = "Unexpected EOF"; return tok;
   }
   /* It's a keyword... but which one? */
-  for (i = 0 ; token_table[i].t ; ++i) {
+  is_opt = !strncmp("opt", *s, next-*s);
+  if (is_opt) {
+    *s = eat_whitespace(next);
+    next = NULL;
+    if (**s)
+      next = find_whitespace(*s);
+    if (!**s || !next) {
+      RET_ERR("opt without keyword");
+    }
+  }
+  for (i = 0; token_table[i].t ; ++i) {
     if (!strncmp(token_table[i].t, *s, next-*s)) {
       /* We've found the keyword. */
       tok->tp = token_table[i].v;
@@ -979,16 +1003,29 @@ get_next_token(const char **s, where_syntax where) {
     }
   }
   if (tok->tp == _ERR) {
-    tok->tp = _UNRECOGNIZED;
-    next = strchr(*s, '\n');
-    if (!next) {
-      RET_ERR("Unexpected EOF");
+    if (is_opt) {
+      tok->tp = K_OPT;
+      *s = eat_whitespace_no_nl(next);
+      next = strchr(*s,'\n');
+      if (!next)
+        RET_ERR("Unexpected EOF");
+      tok->args = tor_malloc(sizeof(char*));
+      tok->args[0] = tor_strndup(*s,next-*s);
+      tok->n_args = 1;
+      *s = eat_whitespace_no_nl(next+1);
+      a_syn = OBJ_OK;
+    } else {
+      tok->tp = _UNRECOGNIZED;
+      next = strchr(*s, '\n');
+      if (!next) {
+        RET_ERR("Unexpected EOF");
+      }
+      tok->args = tor_malloc(sizeof(char*));
+      tok->args[0] = tor_strndup(*s,next-*s);
+      tok->n_args = 1;
+      *s = next+1;
+      o_syn = OBJ_OK;
     }
-    tok->args = tor_malloc(sizeof(char*));
-    tok->args[0] = tor_strndup(*s,next-*s);
-    tok->n_args = 1;
-    *s = next+1;
-    o_syn = OBJ_OK;
   }
   *s = eat_whitespace(*s);
   if (strncmp(*s, "-----BEGIN ", 11)) {

@@ -188,9 +188,12 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     /* string options */
     config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
+    config_compare(list, "AuthoritativeDirectory",CONFIG_TYPE_BOOL, &options->AuthoritativeDir) ||
 
     config_compare(list, "BandwidthRate",  CONFIG_TYPE_INT, &options->BandwidthRate) ||
     config_compare(list, "BandwidthBurst", CONFIG_TYPE_INT, &options->BandwidthBurst) ||
+
+    config_compare(list, "ContactInfo", CONFIG_TYPE_STRING, &options->ContactInfo) ||
 
     config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
@@ -627,10 +630,12 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
+#if 0
   if(options->ORPort && options->DataDirectory == NULL) {
     log(LOG_WARN,"DataDirectory option required if ORPort is set, but not found.");
     result = -1;
   }
+#endif
 
   if (options->ORPort) {
     if (options->Nickname == NULL) {
@@ -672,6 +677,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(options->DirPort && options->RecommendedVersions == NULL) {
     log(LOG_WARN,"Directory servers must configure RecommendedVersions.");
+    result = -1;
+  }
+
+  if(options->AuthoritativeDir && !options->DirPort) {
+    log(LOG_WARN,"Running as authoritative directory, but no DirPort set.");
     result = -1;
   }
 
@@ -878,6 +888,33 @@ void exit_policy_free(struct exit_policy_t *p) {
     tor_free(e->string);
     tor_free(e);
   }
+}
+
+const char *get_data_directory(or_options_t *options) {
+  const char *d;
+  char buf[1024];
+  const char *home;
+  size_t n;
+  if (options->DataDirectory)
+    d = options->DataDirectory;
+  else
+    d = "~/.tor";
+
+  if (!strncmp(d,"~/",2)) {
+    home = getenv("HOME");
+    if (!home) {
+      log_fn(LOG_ERR, "Couldn't find $HOME environment variable for data directory %s", d);
+      exit(1);
+    }
+    n = snprintf(buf,1020,"%s/%s",home,d+2);
+    if (n>=1020) {
+      log_fn(LOG_ERR, "Overlong data directory name.");
+      exit(1);
+    }
+    tor_free(options->DataDirectory);
+    options->DataDirectory = tor_strdup(buf);
+  }
+  return options->DataDirectory;
 }
 
 /*

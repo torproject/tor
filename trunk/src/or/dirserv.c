@@ -576,6 +576,23 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
 /** Most recently generated encoded signed directory. */
 static char *the_directory = NULL;
 static int the_directory_len = -1;
+static char *cached_directory = NULL;
+static time_t cached_directory_published = 0;
+static int cached_directory_len = -1;
+
+void dirserv_set_cached_directory(const char *directory, time_t when)
+{
+  time_t now;
+  if (!options.AuthoritativeDir)
+    return;
+  now = time(NULL);
+  if (when>cached_directory_published &&
+      when<now+ROUTER_ALLOW_SKEW) {
+    tor_free(cached_directory);
+    cached_directory = tor_strdup(directory);
+    cached_directory_len = strlen(cached_directory);
+  }
+}
 
 /** Set *<b>directory</b> to the most recently generated encoded signed
  * directory, generating a new one as necessary. */
@@ -583,6 +600,15 @@ size_t dirserv_get_directory(const char **directory)
 {
   char *new_directory;
   char filename[512];
+  if (!options.AuthoritativeDir) {
+    if (cached_directory) {
+      *directory = cached_directory;
+      return (size_t) cached_directory_len;
+    } else {
+      /* no directory yet retrieved */
+      return 0;
+    }
+  }
   if (the_directory_is_dirty) {
     new_directory = tor_malloc(MAX_DIR_SIZE);
     if (dirserv_dump_directory_to_string(new_directory, MAX_DIR_SIZE,

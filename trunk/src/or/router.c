@@ -532,8 +532,10 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->address,
     router->or_port,
     router->socks_port,
-    router->dir_port,
-    /* XXX008 only use dir_port here if authoritative server, else use opt line below */
+    /* Due to an 0.0.7 bug, we can't actually say that we have a dirport unles
+     * we're an authoritative directory.
+     */
+    router->is_trusted_dir ? router->dir_port : 0,
     router->platform,
     published,
     (int) router->bandwidthrate,
@@ -549,6 +551,24 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   }
   /* From now on, we use 'written' to remember the current length of 's'. */
   written = result;
+
+  if (router->dir_port && !router->is_trusted_dir) {
+    /* dircacheport wasn't recognized before 0.0.8pre.  (When 0.0.7 is gone,
+     * we can fold this back into dirport anyway.)
+    result = snprintf(s+written,maxlen-written, "opt dircacheport %d\n",
+                      router->dir_port);
+    if (result<0 || result+written > maxlen)
+      return -1;
+    written += result;
+  }
+
+  if (options.ContactInfo && strlen(options.ContactInfo)) {
+    result = snprintf(s+written,maxlen-written, "opt contact %s\n",
+                      options.ContactInfo);
+    if (result<0 || result+written > maxlen)
+      return -1;
+    written += result;
+  }
 
   /* Write the exit policy to the end of 's'. */
   for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
