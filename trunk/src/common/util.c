@@ -298,7 +298,7 @@ struct strmap_t {
 };
 
 static int compare_strmap_entries(struct strmap_entry_t *a,
-				 struct strmap_entry_t *b)
+                                 struct strmap_entry_t *b)
 {
   return strcmp(a->key, b->key);
 }
@@ -444,8 +444,8 @@ void* strmap_remove_lc(strmap_t *map, const char *key)
  *   strmap_foreach(map, upcase_and_remove_empty_vals, NULL);
  */
 void strmap_foreach(strmap_t *map,
-		    void* (*fn)(const char *key, void *val, void *data),
-		    void *data)
+                    void* (*fn)(const char *key, void *val, void *data),
+                    void *data)
 {
   strmap_entry_t *ptr, *next;
   assert(map && fn);
@@ -1298,3 +1298,11 @@ int tor_inet_aton(const char *c, struct in_addr* addr)
   return 1;
 #endif
 }
+
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

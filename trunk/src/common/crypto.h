@@ -20,6 +20,9 @@
 #define PK_PKCS1_PADDING      60001
 #define PK_PKCS1_OAEP_PADDING 60002
 
+#define PKCS1_PADDING_OVERHEAD 11
+#define PKCS1_OAEP_PADDING_OVERHEAD 42
+
 typedef struct crypto_pk_env_t crypto_pk_env_t;
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
 typedef struct crypto_digest_env_t crypto_digest_env_t;

@@ -4,6 +4,8 @@
 
 #include "or.h"
 
+/* Free the storage held by held by 'desc'.
+ */
 void rend_service_descriptor_free(rend_service_descriptor_t *desc)
 {
   int i;
@@ -18,6 +20,9 @@ void rend_service_descriptor_free(rend_service_descriptor_t *desc)
   tor_free(desc);
 }
 
+/* Encode a service descriptor for 'desc', and sign it with 'key'. Stores
+ * the descriptor in *str_out, and sets *len_out to its length.
+ */
 int
 rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                                crypto_pk_env_t *key,
@@ -120,6 +125,9 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
   return NULL;
 }
 
+/* Sets out to the first 10 bytes of the digest of 'pk', base32 encoded.
+ * NUL-terminates out.
+ */
 int rend_get_service_id(crypto_pk_env_t *pk, char *out)
 {
   char buf[DIGEST_LEN];
@@ -136,18 +144,22 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out)
 #define REND_CACHE_MAX_SKEW 60*60
 
 typedef struct rend_cache_entry_t {
-  int len;
-  char *desc;
-  rend_service_descriptor_t *parsed;
+  int len; /* Length of desc */
+  char *desc; /* Service descriptor */
+  rend_service_descriptor_t *parsed; /* Parsed vvalue of 'desc' */
 } rend_cache_entry_t;
 
 static strmap_t *rend_cache = NULL;
 
+/* Initializes the service descriptor cache.
+ */
 void rend_cache_init(void)
 {
   rend_cache = strmap_new();
 }
 
+/* Removes all old entries from the service descriptor cache.
+ */
 void rend_cache_clean(void)
 {
   strmap_iter_t *iter;

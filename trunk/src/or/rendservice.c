@@ -16,6 +16,8 @@ typedef struct rend_service_port_config_t {
   uint32_t real_address;
 } rend_service_port_config_t;
 
+/* Try to maintain this many intro points per service if possible.
+ */
 #define NUM_INTRO_POINTS 3
 
 /* Represents a single hidden service running at this OP.
@@ -34,27 +36,32 @@ typedef struct rend_service_t {
   rend_service_descriptor_t *desc;
 } rend_service_t;
 
-/* A list of rend_service_t.
+/* A list of rend_service_t's for services run on this OP.
  */
 static smartlist_t *rend_service_list = NULL;
 
-static void rend_service_free(rend_service_t *config)
+/* Release the storage held by 'service'.
+ */
+static void rend_service_free(rend_service_t *service)
 {
-  if (!config) return;
-  tor_free(config->directory);
-  SMARTLIST_FOREACH(config->ports, void*, p, tor_free(p));
-  smartlist_free(config->ports);
-  if (config->private_key)
-    crypto_free_pk_env(config->private_key);
-  tor_free(config->intro_prefer_nodes);
-  tor_free(config->intro_exclude_nodes);
-  SMARTLIST_FOREACH(config->intro_nodes, void*, p, tor_free(p));
-  smartlist_free(config->intro_nodes);
-  if (config->desc)
-    rend_service_descriptor_free(config->desc);
-  tor_free(config);
+  if (!service) return;
+  tor_free(service->directory);
+  SMARTLIST_FOREACH(service->ports, void*, p, tor_free(p));
+  smartlist_free(service->ports);
+  if (service->private_key)
+    crypto_free_pk_env(service->private_key);
+  tor_free(service->intro_prefer_nodes);
+  tor_free(service->intro_exclude_nodes);
+  SMARTLIST_FOREACH(service->intro_nodes, void*, p, tor_free(p));
+  smartlist_free(service->intro_nodes);
+  if (service->desc)
+    rend_service_descriptor_free(service->desc);
+  tor_free(service);
 }
 
+/* Release all the storage held in rend_service_list, and allocate a new,
+ * empty rend_service_list.
+ */
 static void rend_service_free_all(void)
 {
   if (!rend_service_list) {
@@ -67,6 +74,8 @@ static void rend_service_free_all(void)
   rend_service_list = smartlist_create();
 }
 
+/* Validate 'service' and add it to rend_service_list if possible.
+ */
 static void add_service(rend_service_t *service)
 {
   int i;
@@ -94,7 +103,10 @@ static void add_service(rend_service_t *service)
   }
 }
 
-/* Format: VirtualPort (IP|RealPort|IP:RealPort)?
+/* Parses a real-port to virtual-port mapping and returns a new
+ * rend_service_port_config_t.
+ *
+ * The format is: VirtualPort (IP|RealPort|IP:RealPort)?
  *    IP defaults to 127.0.0.1; RealPort defaults to VirtualPort.
  */
 static rend_service_port_config_t *parse_port_config(const char *string)
@@ -117,7 +129,7 @@ static rend_service_port_config_t *parse_port_config(const char *string)
   if (!*string) {
     /* No addr:port part; use default. */
     realport = virtport;
-    addr.s_addr = htonl(0x7F000001u);
+    addr.s_addr = htonl(0x7F000001u); /* 127.0.0.1 */
   } else {
     colon = strchr(string, ':');
     if (colon) {
@@ -256,8 +268,8 @@ int rend_service_init_keys(void)
       return -1;
 
     /* Load key */
-    if (strlcpy(fname,s->directory,512) >= 512 ||
-        strlcat(fname,"/private_key",512) >= 512) {
+    if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
+        strlcat(fname,"/private_key",sizeof(fname)) >= sizeof(fname)) {
       log_fn(LOG_WARN, "Directory name too long: '%s'", s->directory);
       return -1;
     }
@@ -274,8 +286,8 @@ int rend_service_init_keys(void)
       log_fn(LOG_WARN, "Couldn't compute hash of public key");
       return -1;
     }
-    if (strlcpy(fname,s->directory,512) >= 512 ||
-        strlcat(fname,"/hostname",512) >= 512) {
+    if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
+        strlcat(fname,"/hostname",sizeof(fname)) >= sizeof(fname)) {
       log_fn(LOG_WARN, "Directory name too long: '%s'", s->directory);
       return -1;
     }
@@ -286,11 +298,14 @@ int rend_service_init_keys(void)
   return 0;
 }
 
+/* Return the service whose public key has a digest of 'digest'. Return
+ * NULL if no such service exists.
+ */
 static rend_service_t *
 rend_service_get_by_pk_digest(const char* digest)
 {
   SMARTLIST_FOREACH(rend_service_list, rend_service_t*, s,
-                    if (!memcmp(s->pk_digest,digest,20)) return s);
+                    if (!memcmp(s->pk_digest,digest,DIGEST_LEN)) return s);
   return NULL;
 }
 
@@ -326,9 +341,9 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     return -1;
   }
 
-  /* XXX NM this is wrong, right? */
   /* min key length plus digest length plus nickname length */
-  if (request_len < 148) {
+  if (request_len < DIGEST_LEN+REND_COOKIE_LEN+(MAX_NICKNAME_LEN+1)+
+      DH_KEY_LEN+42){
     log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell on circ %d",
            circuit->n_circ_id);
     return -1;
@@ -374,7 +389,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   rp_nickname = buf;
   ptr = buf+(MAX_NICKNAME_LEN+1);
   len -= (MAX_NICKNAME_LEN+1);
-  if (len != 20+128) {
+  if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
     log_fn(LOG_WARN, "Bad length for INTRODUCE2 cell.");
     return -1;
   }
@@ -415,9 +430,9 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
 
   cpath->handshake_state = dh;
   dh = NULL;
-  if (circuit_init_cpath_crypto(cpath,keys+20,1)<0)
+  if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1)<0)
     goto err;
-  memcpy(cpath->handshake_digest, keys, 20);
+  memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
 
   return 0;
  err:
@@ -460,9 +475,8 @@ rend_service_intro_is_ready(circuit_t *circuit)
   rend_service_t *service;
   int len, r;
   char buf[RELAY_PAYLOAD_SIZE];
-  char auth[DIGEST_LEN + 10];
+  char auth[DIGEST_LEN + 9];
   char hexid[9];
-  char hexdigest[DIGEST_LEN*2+1];
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   assert(circuit->cpath);
@@ -485,15 +499,9 @@ rend_service_intro_is_ready(circuit_t *circuit)
   set_uint16(buf, len);
   len += 2;
   memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
-  /* XXXX remove me once we've debugged this; this info should not be logged.
-   */
-  hex_encode(circuit->cpath->prev->handshake_digest, DIGEST_LEN, hexdigest);
-  log_fn(LOG_INFO,"Handshake information is: %s", hexdigest);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
   if (crypto_digest(auth, DIGEST_LEN+9, buf+len))
     goto err;
-  hex_encode(buf+len, DIGEST_LEN, hexdigest);
-  log_fn(LOG_INFO,"Authentication is: %s", hexdigest);
   len += 20;
   r = crypto_pk_private_sign_digest(service->private_key, buf, len, buf+len);
   if (r<0) {
@@ -597,6 +605,10 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
  * Manage introduction points
  ******/
 
+/* Return the introduction circuit ending at 'router' for the service
+ * whose public key is 'pk_digest'.  Return NULL if no such service is
+ * found.
+ */
 static circuit_t *
 find_intro_circuit(routerinfo_t *router, const char *pk_digest)
 {

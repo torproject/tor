@@ -5,7 +5,7 @@
 #include "or.h"
 
 /* Respond to an ESTABLISH_INTRO cell by setting the circuit's purpose and
- * rendevous service.
+ * service pk digest..
  */
 int
 rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
@@ -85,7 +85,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
 
   /* Now, set up this circuit. */
   circ->purpose = CIRCUIT_PURPOSE_INTRO_POINT;
-  memcpy(circ->rend_pk_digest, pk_digest, 20);
+  memcpy(circ->rend_pk_digest, pk_digest, DIGEST_LEN);
 
   log_fn(LOG_INFO,
          "Established introduction point on circuit %d for service %s",
@@ -116,7 +116,8 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
     goto err;
   }
 
-  if (request_len < 246) {
+  if (request_len < (DIGEST_LEN+(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+
+                     DH_KEY_LEN+CIPHER_KEY_LEN+PKCS1_OAEP_PADDING_OVERHEAD)) {
     log_fn(LOG_WARN,
            "Impossibly short INTRODUCE1 cell on circuit %d; dropping.",
            circ->p_circ_id);
@@ -237,7 +238,8 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len)
   /* Send the RENDEZVOUS2 cell to Alice. */
   if (connection_edge_send_command(NULL, rend_circ,
                                    RELAY_COMMAND_RENDEZVOUS2,
-                                   request+20, request_len-20, NULL)) {
+                                   request+REND_COOKIE_LEN,
+                                   request_len-REND_COOKIE_LEN, NULL)) {
     log_fn(LOG_WARN, "Unable to send RENDEZVOUS2 cell to OP on circuit %d",
            rend_circ->p_circ_id);
     goto err;
@@ -250,7 +252,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len)
 
   circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
   rend_circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
-  memset(circ->rend_cookie, 0, 20);
+  memset(circ->rend_cookie, 0, REND_COOKIE_LEN);
 
   rend_circ->rend_splice = circ;
   circ->rend_splice = rend_circ;
