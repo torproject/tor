@@ -10,13 +10,17 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 
 ##################### Below is just for servers #####################
 
+## NOTE: If you enable these, you won't be able to use tor as a client
+## or server until you've been added to the directory and can
+## authenticate to the other nodes. See the README for details.
+
 ## The directory for keeping all the keys/etc for this server
 #DataDirectory @LOCALSTATEDIR@/lib/tor
 
 #Nickname moria # A unique handle for this server
 #Address moria.seul.org # The fqdn for this server
 
-#ORPort 9001 # where to listen for cell-speaking connections
+#ORPort 9001 # where to listen for tor connections
 #ORBindAddress 0.0.0.0 # accept connections from anywhere
 
 ## A comma-separated list of exit policies. If you want to *replace*
