@@ -2,6 +2,10 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/*****
+ * dns.c: Resolve hostnames in separate processes.
+ *****/
+
 /* See http://elvin.dstc.com/ListArchive/elvin-dev/archive/2001/09/msg00027.html
  * for some approaches to asynchronous dns. We will want to switch once one of
  * them becomes more commonly available.
@@ -12,12 +16,19 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+/* Longest hostname we're willing to resolve. */
 #define MAX_ADDRESSLEN 256
 
+/* Maximum DNS processes to spawn. */
 #define MAX_DNSWORKERS 50
+/* Minimum DNS processes to spawn. */
 #define MIN_DNSWORKERS 3
+
+/* If more than this many processes are idle, shut down the extras. */
 #define MAX_IDLE_DNSWORKERS 10
 
+/* Possible outcomes from hostname lookup: permanent failure,
+ * transient (retryable) failure, and success */
 #define DNS_RESOLVE_FAILED_TRANSIENT 1
 #define DNS_RESOLVE_FAILED_PERMANENT 2
 #define DNS_RESOLVE_SUCCEEDED 3
@@ -25,11 +36,16 @@ extern or_options_t options; /* command-line and config-file options */
 int num_dnsworkers=0;
 int num_dnsworkers_busy=0;
 
+/* Linked list of connections waiting for a DNS answer. */
 struct pending_connection_t {
   struct connection_t *conn;
   struct pending_connection_t *next;
 };
 
+/* A DNS request: possibly completed, possibly pending; cached_resolve
+ * structs are stored at the OR side in a splay tree, and as a linked
+ * list from oldest to newest.
+ */
 struct cached_resolve {
   SPLAY_ENTRY(cached_resolve) node;
   char address[MAX_ADDRESSLEN]; /* the hostname to be resolved */
@@ -38,7 +54,7 @@ struct cached_resolve {
 #define CACHE_STATE_PENDING 0
 #define CACHE_STATE_VALID 1
 #define CACHE_STATE_FAILED 2
-  uint32_t expire; /* remove untouched items from cache after some time? */
+  uint32_t expire; /* remove items from cache after this time */
   struct pending_connection_t *pending_connections;
   struct cached_resolve *next;
 };
@@ -51,8 +67,11 @@ int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static void spawn_enough_dnsworkers(void);
 
+/* Splay tree of cached_resolve objects */
 static SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
 
+/* Function to compare hashed resolves on their addresses; used to
+ * implement splay trees. */
 static int compare_cached_resolves(struct cached_resolve *a,
                                    struct cached_resolve *b) {
   /* make this smarter one day? */
@@ -62,10 +81,12 @@ static int compare_cached_resolves(struct cached_resolve *a,
 SPLAY_PROTOTYPE(cache_tree, cached_resolve, node, compare_cached_resolves);
 SPLAY_GENERATE(cache_tree, cached_resolve, node, compare_cached_resolves);
 
+/* Initialize the DNS cache */
 static void init_cache_tree(void) {
   SPLAY_INIT(&cache_root);
 }
 
+/* Initialize the DNS subsystem; called by the OR process. */
 void dns_init(void) {
   init_cache_tree();
   spawn_enough_dnsworkers();
@@ -74,6 +95,8 @@ void dns_init(void) {
 static struct cached_resolve *oldest_cached_resolve = NULL; /* linked list, */
 static struct cached_resolve *newest_cached_resolve = NULL; /* oldest to newest */
 
+/* Remove every cached_resolve whose 'expire' time is before 'now'
+ * from the cache. */
 static void purge_expired_resolves(uint32_t now) {
   struct cached_resolve *resolve;
 
@@ -178,6 +201,9 @@ int dns_resolve(connection_t *exitconn) {
   return assign_to_dnsworker(exitconn);
 }
 
+/* Find or spawn a dns worker process to handle resolving
+ * exitconn->address; tell that dns worker to begin resolving.
+ */
 static int assign_to_dnsworker(connection_t *exitconn) {
   connection_t *dnsconn;
   unsigned char len;
@@ -210,6 +236,8 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   return 0;
 }
 
+/* Remove 'conn' from the list of connections waiting for conn->address.
+ */
 void connection_dns_remove(connection_t *conn)
 {
   struct pending_connection_t *pend, *victim;
@@ -251,6 +279,8 @@ void connection_dns_remove(connection_t *conn)
   }
 }
 
+/* Log an error and abort if conn is waiting for a DNS resolve.
+ */
 void assert_connection_edge_not_dns_pending(connection_t *conn) {
   struct pending_connection_t *pend;
   struct cached_resolve *resolve;
@@ -264,6 +294,8 @@ void assert_connection_edge_not_dns_pending(connection_t *conn) {
   }
 }
 
+/* Log an error and abort if any connection waiting for a DNS resolve is
+ * corrupted. */
 void assert_all_pending_dns_resolves_ok(void) {
   struct pending_connection_t *pend;
   struct cached_resolve *resolve;
@@ -277,8 +309,9 @@ void assert_all_pending_dns_resolves_ok(void) {
   }
 }
 
-/* Cancel all pending connections. Then cancel the resolve itself,
- * and remove the 'struct cached_resolve' from the cache.
+/* Mark all connections waiting for 'address' for close.  Then cancel
+ * the resolve for 'address' itself, and remove any cached results for
+ * 'address' from the cache.
  */
 void dns_cancel_pending_resolve(char *address) {
   struct pending_connection_t *pend;
@@ -314,6 +347,8 @@ void dns_cancel_pending_resolve(char *address) {
   dns_purge_resolve(resolve);
 }
 
+/* Remove 'resolve' from the cache.
+ */
 static void dns_purge_resolve(struct cached_resolve *resolve) {
   struct cached_resolve *tmp;
 
@@ -338,6 +373,12 @@ static void dns_purge_resolve(struct cached_resolve *resolve) {
   tor_free(resolve);
 }
 
+/* Called on the OR side when a DNS worker tells us the outcome of a DNS
+ * resolve: tell all pending connections about the result of the lookup, and
+ * cache the value.  ('address' is a NUL-terminated string containing the
+ * address to look up; 'addr' is an IPv4 address in host order; 'outcome' is
+ * one of DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
+ */
 static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   struct pending_connection_t *pend;
   struct cached_resolve search;
@@ -356,6 +397,8 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   }
 
   if (resolve->state != CACHE_STATE_PENDING) {
+    /* XXXX Maybe update addr? or check addr for consistency? Or let
+     * VALID replace FAILED? */
     log_fn(LOG_WARN, "Resolved '%s' which was already resolved; ignoring",
            address);
     tor_assert(resolve->pending_connections == NULL);
@@ -401,12 +444,21 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
 
 /******************************************************************/
 
+/*****
+ * Connection between OR and dnsworker
+ *****/
+
+/* Write handler: called when we've pushed a request to a dnsworker. */
 int connection_dns_finished_flushing(connection_t *conn) {
   tor_assert(conn && conn->type == CONN_TYPE_DNSWORKER);
   connection_stop_writing(conn);
   return 0;
 }
 
+/* Read handler: called when we get data from a dnsworker.  If the
+ * connection is closed, mark the dnsworker as dead.  Otherwise, see
+ * if we have a complete answer.  If so, call dns_found_answer on the
+ * result.  If not, wait.  Returns 0. */
 int connection_dns_process_inbuf(connection_t *conn) {
   char success;
   uint32_t addr;
@@ -447,6 +499,23 @@ int connection_dns_process_inbuf(connection_t *conn) {
   return 0;
 }
 
+/* Implementation for DNS workers; this code runs in a separate
+ * execution context.  It takes as its argument an fdarray as returned
+ * by socketpair(), and communicates via fdarray[1].  The protocol is
+ * as follows:
+ *     The OR says:
+ *           ADDRESSLEN [1 byte]
+ *           ADDRESS    [ADDRESSLEN bytes]
+ *     The DNS worker does the lookup, and replies:
+ *           OUTCOME    [1 byte]
+ *           IP         [4 bytes]
+ *
+ * OUTCOME is one of DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
+ * IP is in host order.
+ *
+ * The dnsworker runs indefinitely, until its connection is closed or an error
+ * occurs.
+ */
 int dnsworker_main(void *data) {
   char address[MAX_ADDRESSLEN];
   unsigned char address_len;
@@ -498,6 +567,8 @@ int dnsworker_main(void *data) {
   return 0; /* windows wants this function to return an int */
 }
 
+/* Launch a new DNS worker; return 0 on success, -1 on failure.
+ */
 static int spawn_dnsworker(void) {
   int fd[2];
   connection_t *conn;
@@ -532,6 +603,8 @@ static int spawn_dnsworker(void) {
   return 0; /* success */
 }
 
+/* If we have too many or too few DNS workers, spawn or kill some.
+ */
 static void spawn_enough_dnsworkers(void) {
   int num_dnsworkers_needed; /* aim to have 1 more than needed,
                            * but no less than min and no more than max */

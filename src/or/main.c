@@ -2,6 +2,10 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/*****
+ * main.c: Tor main loop and startup functions.
+ *****/
+
 #include "or.h"
 
 /********* PROTOTYPES **********/
@@ -11,18 +15,26 @@ static int init_from_config(int argc, char **argv);
 
 /********* START VARIABLES **********/
 
+/* declared in connection.c */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 or_options_t options; /* command-line and config-file options */
 int global_read_bucket; /* max number of bytes I can read this second */
 
+/* What was the read bucket before the last call to prepare_for_pool?
+ * (used to determine how many bytes we've read). */
 static int stats_prev_global_read_bucket;
+/* How many bytes have we read since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
+/* How many seconds have we been running? */
 static long stats_n_seconds_reading = 0;
 
+/* Array of all open connections; each element corresponds to the element of
+ * poll_array in the same position.  The first nfds elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
 
+/* Array of pollfd objects for calls to poll(). */
 static struct pollfd poll_array[MAXCONNECTIONS];
 
 static int nfds=0; /* number of connections currently active */
@@ -33,14 +45,14 @@ static int please_reset=0; /* whether we just got a sighup */
 static int please_reap_children=0; /* whether we should waitpid for exited children */
 #endif /* signal stuff */
 
-int has_fetched_directory=0;
 /* we set this to 1 when we've fetched a dir, to know whether to complain
  * yet about unrecognized nicknames in entrynodes, exitnodes, etc.
  * Also, we don't try building circuits unless this is 1. */
+int has_fetched_directory=0;
 
-int has_completed_circuit=0;
 /* we set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working. */
+int has_completed_circuit=0;
 
 /********* END VARIABLES ************/
 
@@ -52,6 +64,10 @@ int has_completed_circuit=0;
 *
 ****************************************************************************/
 
+/* Add 'conn' to the array of connections that we can poll on.  The
+ * connection's socket must be set; the connection starts out
+ * non-reading and non-writing.
+ */
 int connection_add(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->s >= 0);
@@ -112,11 +128,17 @@ int connection_remove(connection_t *conn) {
   return 0;
 }
 
+/* Set *array to an array of all connections, and *n to the length
+ * of the array.  *array and *n must not be modified.
+ */
 void get_connection_array(connection_t ***array, int *n) {
   *array = connection_array;
   *n = nfds;
 }
 
+/* Set the event mask on 'conn' to 'events'.  (The form of the event mask is
+ * as for poll().)
+ */
 void connection_watch_events(connection_t *conn, short events) {
 
   tor_assert(conn && conn->poll_index < nfds);
@@ -124,10 +146,12 @@ void connection_watch_events(connection_t *conn, short events) {
   poll_array[conn->poll_index].events = events;
 }
 
+/* Return true iff the 'conn' is listening for read events. */
 int connection_is_reading(connection_t *conn) {
   return poll_array[conn->poll_index].events & POLLIN;
 }
 
+/* Tell the main loop to stop notifying 'conn' of any read events. */
 void connection_stop_reading(connection_t *conn) {
 
   tor_assert(conn && conn->poll_index < nfds);
@@ -137,6 +161,7 @@ void connection_stop_reading(connection_t *conn) {
     poll_array[conn->poll_index].events -= POLLIN;
 }
 
+/* Tell the main loop to start notifying 'conn' of any read events. */
 void connection_start_reading(connection_t *conn) {
 
   tor_assert(conn && conn->poll_index < nfds);
@@ -144,10 +169,12 @@ void connection_start_reading(connection_t *conn) {
   poll_array[conn->poll_index].events |= POLLIN;
 }
 
+/* Return true iff the 'conn' is listening for write events. */
 int connection_is_writing(connection_t *conn) {
   return poll_array[conn->poll_index].events & POLLOUT;
 }
 
+/* Tell the main loop to stop notifying 'conn' of any write events. */
 void connection_stop_writing(connection_t *conn) {
 
   tor_assert(conn && conn->poll_index < nfds);
@@ -156,6 +183,7 @@ void connection_stop_writing(connection_t *conn) {
     poll_array[conn->poll_index].events -= POLLOUT;
 }
 
+/* Tell the main loop to start notifying 'conn' of any write events. */
 void connection_start_writing(connection_t *conn) {
 
   tor_assert(conn && conn->poll_index < nfds);
@@ -163,6 +191,10 @@ void connection_start_writing(connection_t *conn) {
   poll_array[conn->poll_index].events |= POLLOUT;
 }
 
+/* Called when the connection at connection_array[i] has a read event:
+ * checks for validity, catches numerous errors, and dispatches to
+ * connection_handle_read.
+ */
 static void conn_read(int i) {
   connection_t *conn = connection_array[i];
 
@@ -200,6 +232,10 @@ static void conn_read(int i) {
   assert_all_pending_dns_resolves_ok();
 }
 
+/* Called when the connection at connection_array[i] has a write event:
+ * checks for validity, catches numerous errors, and dispatches to
+ * connection_handle_write.
+ */
 static void conn_write(int i) {
   connection_t *conn;
 
@@ -227,6 +263,15 @@ static void conn_write(int i) {
   assert_all_pending_dns_resolves_ok();
 }
 
+/* If the connection at connection_array[i] is marked for close, then:
+ *    - If it has data that it wants to flush, try to flush it.
+ *    - If it _still_ has data to flush, and conn->hold_open_until_flushed is
+ *      true, then leave the connection open and return.
+ *    - Otherwise, remove the connection from connection_array and from
+ *      all other lists, close it, and free it.
+ * If we remove the connection, then call conn_closed_if_marked at the new
+ * connection at position i.
+ */
 static void conn_close_if_marked(int i) {
   connection_t *conn;
   int retval;
@@ -280,8 +325,7 @@ static void conn_close_if_marked(int i) {
   }
 }
 
-/* This function is called whenever we successfully pull
- * down a directory */
+/* This function is called whenever we successfully pull down a directory */
 void directory_has_arrived(void) {
 
   log_fn(LOG_INFO, "A directory has arrived.");
@@ -304,11 +348,13 @@ static void run_connection_housekeeping(int i, time_t now) {
   cell_t cell;
   connection_t *conn = connection_array[i];
 
+  /* Expire any directory connections that haven't sent anything for 5 min */
   if(conn->type == CONN_TYPE_DIR &&
      !conn->marked_for_close &&
      conn->timestamp_lastwritten + 5*60 < now) {
     log_fn(LOG_WARN,"Expiring wedged directory conn (purpose %d)", conn->purpose);
     connection_mark_for_close(conn,0);
+    /* XXXX Does this next part make sense, really? */
     conn->hold_open_until_flushed = 1; /* give it a last chance */
     return;
   }
@@ -317,6 +363,8 @@ static void run_connection_housekeeping(int i, time_t now) {
   if(!connection_speaks_cells(conn))
     return;
 
+  /* If we haven't written to an OR connection for a while, then either nuke
+     the connection or send a keepalive, depending. */
   if(now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
     if((!options.ORPort && !circuit_get_by_conn(conn)) ||
        (!connection_state_is_open(conn))) {
@@ -450,6 +498,10 @@ static void run_scheduled_events(time_t now) {
     conn_close_if_marked(i);
 }
 
+/* Called every time we're about to call tor_poll.  Increments statistics,
+ * and adjusts token buckets.  Returns the number of milliseconds to use for
+ * the poll() timeout.
+ */
 static int prepare_for_poll(void) {
   static long current_second = 0; /* from previous calls to gettimeofday */
   connection_t *conn;
@@ -458,8 +510,8 @@ static int prepare_for_poll(void) {
 
   tor_gettimeofday(&now);
 
-  /* Check how much bandwidth we've consumed,
-   * and increment the token buckets. */
+  /* Check how much bandwidth we've consumed, and increment the token
+   * buckets. */
   stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
   connection_bucket_refill(&now);
   stats_prev_global_read_bucket = global_read_bucket;
@@ -486,23 +538,30 @@ static int prepare_for_poll(void) {
   return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 }
 
+/* Configure the Tor process from the command line arguments and from the
+ * configuration file.
+ */
 static int init_from_config(int argc, char **argv) {
+  /* read the configuration file. */
   if(getconfig(argc,argv,&options)) {
     log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");
     return -1;
   }
   close_logs(); /* we'll close, then open with correct loglevel if necessary */
 
+  /* Setuid/setgid as appropriate */
   if(options.User || options.Group) {
     if(switch_id(options.User, options.Group) != 0) {
       return -1;
     }
   }
 
+  /* Start backgrounding the process, if requested. */
   if (options.RunAsDaemon) {
     start_daemon(options.DataDirectory);
   }
 
+  /* Configure the log(s) */
   if(!options.LogFile && !options.RunAsDaemon)
     add_stream_log(options.loglevel, "<stdout>", stdout);
   if(options.LogFile) {
@@ -520,21 +579,26 @@ static int init_from_config(int argc, char **argv) {
     log_fn(LOG_DEBUG, "Successfully opened DebugLogFile '%s'.", options.DebugLogFile);
   }
 
+  /* Set up our buckets */
   connection_bucket_init();
   stats_prev_global_read_bucket = global_read_bucket;
 
+  /* Finish backgrounding the process */
   if(options.RunAsDaemon) {
     /* XXXX Can we delay this any more? */
     finish_daemon();
   }
 
-  /* write our pid to the pid file, if we do not have write permissions we will log a warning */
+  /* Write our pid to the pid file. if we do not have write permissions we
+   * will log a warning */
   if(options.PidFile)
     write_pidfile(options.PidFile);
 
   return 0;
 }
 
+/* Called when we get a SIGHUP: reload configuration files and keys,
+ * retry all connections, re-upload all descriptors, and so on. */
 static int do_hup(void) {
   char keydir[512];
 
@@ -580,6 +644,7 @@ static int do_hup(void) {
   return 0;
 }
 
+/* Tor main loop. */
 static int do_main_loop(void) {
   int i;
   int timeout;
@@ -675,6 +740,7 @@ static int do_main_loop(void) {
   }
 }
 
+/* Unix signal handler. */
 static void catch(int the_signal) {
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */

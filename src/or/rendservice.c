@@ -2,8 +2,9 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/* This module implements the hidden-service side of rendezvous functionality.
- */
+/*****
+ * rendservice.c: The hidden-service side of rendezvous functionality.
+ *****/
 
 #include "or.h"
 
@@ -27,14 +28,15 @@ typedef struct rend_service_port_config_t {
 typedef struct rend_service_t {
   /* Fields specified in config file */
   char *directory; /* where in the filesystem it stores it */
-  smartlist_t *ports;
-  char *intro_prefer_nodes;
-  char *intro_exclude_nodes;
+  smartlist_t *ports; /* List of rend_service_port_config_t */
+  char *intro_prefer_nodes; /* comma-separated list of nicknames */
+  char *intro_exclude_nodes; /* comma-separated list of nicknames */
   /* Other fields */
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN+1];
   char pk_digest[DIGEST_LEN];
-  smartlist_t *intro_nodes; /* list of nicknames for intro points we _want_ */
+  smartlist_t *intro_nodes; /* list of nicknames for intro points we have,
+                             * or are trying to establish. */
   rend_service_descriptor_t *desc;
   int desc_is_dirty;
 } rend_service_t;
@@ -457,7 +459,11 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   return -1;
 }
 
+
 #define MAX_REND_FAILURES 3
+/* Called when we fail building a rendezvous circuit at some point other
+ * than the last hop: launches a new circuit to the same rendezvous point.
+ */
 void
 rend_service_relaunch_rendezvous(circuit_t *oldcirc)
 {
@@ -495,10 +501,11 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   memcpy(newcirc->rend_cookie, oldcirc->rend_cookie, REND_COOKIE_LEN);
 }
 
-/* Launch a circuit to serve as an introduction point.
+/* Launch a circuit to serve as an introduction point for the service
+ * 'service' at the introduction point 'nickname'
  */
 static int
-rend_service_launch_establish_intro(rend_service_t *service, char *nickname)
+rend_service_launch_establish_intro(rend_service_t *service, const char *nickname)
 {
   circuit_t *launched;
 
@@ -578,7 +585,9 @@ rend_service_intro_is_ready(circuit_t *circuit)
   circuit_mark_for_close(circuit);
 }
 
-/* Handle an INTRO_ESTABLISHED cell. */
+/* Called when we get an INTRO_ESTABLISHED cell; mark the circuit as a
+ * live introduction point, and note that the service descriptor is
+ * now out-of-date.*/
 int
 rend_service_intro_established(circuit_t *circuit, const char *request, int request_len)
 {
@@ -603,7 +612,7 @@ rend_service_intro_established(circuit_t *circuit, const char *request, int requ
   return -1;
 }
 
-/* Called once a circuit to a rendezvous point is ready: sends a
+/* Called once a circuit to a rendezvous point is established: sends a
  *  RELAY_COMMAND_RENDEZVOUS1 cell.
  */
 void
@@ -711,6 +720,10 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   return NULL;
 }
 
+/* If the directory servers don't have an up-to-date descriptor for
+ * 'service', Encode and sign the service descriptor for 'service',
+ * and upload it to all the dirservers.
+ */
 static void
 upload_service_descriptor(rend_service_t *service)
 {
@@ -827,6 +840,11 @@ void rend_services_introduce(void) {
   smartlist_free(exclude_routers);
 }
 
+/* Regenerate and upload rendezvous service descriptors for all
+ * services.  If 'force' is false, skip services where we've already
+ * uploaded an up-to-date copy; if 'force' is true, regenerate and
+ * upload everything.
+ */
 void
 rend_services_upload(int force)
 {
@@ -842,6 +860,9 @@ rend_services_upload(int force)
   }
 }
 
+/* Log the status of introduction points for all rendezvous services
+ * at log severity 'serverity'.
+ */
 void
 rend_service_dump_stats(int severity)
 {
@@ -872,9 +893,10 @@ rend_service_dump_stats(int severity)
   }
 }
 
-/* This is a beginning rendezvous stream. Look up conn->port,
- * and assign the actual conn->addr and conn->port. Return -1
- * if failure, or 0 for success.
+/* 'conn' is a rendezvous exit stream. Look up the hidden service for
+ * 'circ', and look up the port and address based on conn->port.
+ * Assign the actual conn->addr and conn->port. Return -1 if failure,
+ * or 0 for success.
  */
 int
 rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
