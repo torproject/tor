@@ -353,9 +353,9 @@ int connection_read_to_buf(connection_t *conn) {
   } else {
     /* do a rudimentary round-robin so one connection can't hog a thickpipe */
     if(connection_speaks_cells(conn)) {
-      at_most = 10*(CELL_NETWORK_SIZE);
+      at_most = 30*(CELL_NETWORK_SIZE);
     } else {
-      at_most = 10*(CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE);
+      at_most = 30*(CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE);
     }
 
     if(at_most > global_read_bucket)
@@ -644,7 +644,8 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
 
   if(!connection_speaks_cells(conn)) {
      log_fn(LOG_INFO,"Aci %d: At an edge. Marking connection for close.", aci);
-/*ENDCLOSE*/ conn->marked_for_close = 1;
+     connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+     /* if they already sent a destroy, they know. XXX can just close? */
      return 0;
   }
 

@@ -310,6 +310,8 @@ struct connection_t {
 
   int done_sending; /* for half-open connections; not used currently */
   int done_receiving;
+  char has_sent_end; /* for debugging: set once we've set the stream end,
+                        and check in circuit_about_to_close_connection() */
 };
 
 typedef struct connection_t connection_t;
@@ -581,6 +583,9 @@ void assert_connection_ok(connection_t *conn, time_t now);
 /********************************* connection_edge.c ***************************/
 
 int connection_edge_process_inbuf(connection_t *conn);
+void connection_edge_end(connection_t *conn, void *payload, int payload_len,
+                         crypt_path_t *cpath_layer);
+
 void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
                                   void *payload, int payload_len, crypt_path_t *cpath_layer);
 

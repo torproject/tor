@@ -46,7 +46,7 @@ setup_directory() {
 
 void
 test_buffers() {
-#define MAX_BUF_SIZE 640*1024
+#define MAX_BUF_SIZE 1024*1024
   char str[256];
   char str2[256];
 
@@ -61,7 +61,7 @@ test_buffers() {
   if (!(buf = buf_new()))
     test_fail();
 
-  test_eq(buf_capacity(buf), 2*1024);
+  test_eq(buf_capacity(buf), 512*1024);
   test_eq(buf_datalen(buf), 0);
 
   /****
@@ -77,7 +77,7 @@ test_buffers() {
   s = open("/tmp/tor_test/data", O_RDONLY, 0);
   eof = 0;
   i = read_to_buf(s, 10, buf, &eof);
-  test_eq(buf_capacity(buf), 2*1024);
+  test_eq(buf_capacity(buf), 512*1024);
   test_eq(buf_datalen(buf), 10);
   test_eq(eof, 0);
   test_eq(i, 10);
@@ -85,7 +85,7 @@ test_buffers() {
 
   /* Test reading 0 bytes. */
   i = read_to_buf(s, 0, buf, &eof);
-  test_eq(buf_capacity(buf), MAX_BUF_SIZE);
+  test_eq(buf_capacity(buf), 512*1024);
   test_eq(buf_datalen(buf), 10);
   test_eq(eof, 0);
   test_eq(i, 0);
@@ -103,7 +103,7 @@ test_buffers() {
   /* Now test when buffer is filled with more data to read. */
   buf2 = buf_new_with_capacity(32);
   i = read_to_buf(s, 128, buf2, &eof);
-  test_eq(buf_capacity(buf2), 32);
+  test_eq(buf_capacity(buf2), 128);
   test_eq(buf_datalen(buf2), 32);
   test_eq(eof, 0);
   test_eq(i, 32);

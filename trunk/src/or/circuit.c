@@ -512,51 +512,58 @@ void circuit_about_to_close_connection(connection_t *conn) {
   circuit_t *circ;
   connection_t *prevconn;
 
-  if(!connection_speaks_cells(conn)) {
-    /* it's an edge conn. need to remove it from the linked list of
-     * conn's for this circuit. Send an 'end' relay command.
-     * But don't kill the circuit.
-     */
-
-    circ = circuit_get_by_conn(conn);
-    if(!circ)
+  switch(conn->type) {
+    case CONN_TYPE_OR:
+      /* We must close all the circuits on it. */
+      while((circ = circuit_get_by_conn(conn))) {
+        if(circ->n_conn == conn) /* it's closing in front of us */
+          circ->n_conn = NULL;
+        if(circ->p_conn == conn) /* it's closing behind us */
+          circ->p_conn = NULL;
+        circuit_close(circ);
+      }  
       return;
+    case CONN_TYPE_AP:
+    case CONN_TYPE_EXIT:
 
-    if(conn == circ->p_streams) {
-      circ->p_streams = conn->next_stream;
-      goto send_end;
-    }
-    if(conn == circ->n_streams) {
-      circ->n_streams = conn->next_stream;
-      goto send_end;
-    }
-    for(prevconn = circ->p_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
-    if(prevconn && prevconn->next_stream) {
-      prevconn->next_stream = conn->next_stream;
-      goto send_end;
-    }
-    for(prevconn = circ->n_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
-    if(prevconn && prevconn->next_stream) {
-      prevconn->next_stream = conn->next_stream;
-      goto send_end;
-    }
-    log_fn(LOG_ERR,"edge conn not in circuit's list?");
-    assert(0); /* should never get here */
-send_end:
-    connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
-                                 NULL, 0, conn->cpath_layer);
-    return;
-  }
+      /* It's an edge conn. Need to remove it from the linked list of
+       * conn's for this circuit. Confirm that 'end' relay command has
+       * been sent. But don't kill the circuit.
+       */
 
-  /* this connection speaks cells. We must close all the circuits on it. */
-  while((circ = circuit_get_by_conn(conn))) {
-    if(circ->n_conn == conn) /* it's closing in front of us */
-      circ->n_conn = NULL;
-    if(circ->p_conn == conn) /* it's closing behind us */
-      circ->p_conn = NULL;
-    circuit_close(circ);
-  }  
+      circ = circuit_get_by_conn(conn);
+      if(!circ)
+        return;
+
+      if(!conn->has_sent_end) {
+        log_fn(LOG_INFO,"Edge connection hasn't sent end yet? Bug.");
+        connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
+                                     NULL, 0, conn->cpath_layer);
+      }
+
+      if(conn == circ->p_streams) {
+        circ->p_streams = conn->next_stream;
+        return;
+      }
+      if(conn == circ->n_streams) {
+        circ->n_streams = conn->next_stream;
+        return;
+      }
+      for(prevconn = circ->p_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+      if(prevconn && prevconn->next_stream) {
+        prevconn->next_stream = conn->next_stream;
+        return;
+      }
+      for(prevconn = circ->n_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+      if(prevconn && prevconn->next_stream) {
+        prevconn->next_stream = conn->next_stream;
+        return;
+      }
+      log_fn(LOG_ERR,"edge conn not in circuit's list?");
+      assert(0); /* should never get here */
+  } /* end switch */
 }
+
 
 /* FIXME this now leaves some out */
 void circuit_dump_by_conn(connection_t *conn, int severity) {
@@ -903,7 +910,11 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
     for(stream = circ->p_streams; stream; stream=stream->next_stream) {
       if(stream->cpath_layer == victim) {
         log_fn(LOG_INFO, "Marking stream %d for close.", *(int*)stream->stream_id);
-/*ENDCLOSE*/    stream->marked_for_close = 1;
+        /* no need to send 'end' relay cells,
+         * because the other side's already dead
+         */
+        stream->marked_for_close = 1;
+        stream->has_sent_end = 1;
       }
     }
 

@@ -26,27 +26,34 @@ int connection_edge_process_inbuf(connection_t *conn) {
     /* eof reached; we're done reading, but we might want to write more. */ 
     conn->done_receiving = 1;
     shutdown(conn->s, 0); /* XXX check return, refactor NM */
-    if (conn->done_sending)
-/*ENDCLOSE*/  conn->marked_for_close = 1;
-
-    /* XXX Factor out common logic here and in circuit_about_to_close NM */
-    connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_END,
-                                 NULL, 0, conn->cpath_layer);
+    if (conn->done_sending) {
+      connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+    } else {
+      connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_END,
+                                   NULL, 0, conn->cpath_layer);
+    }
     return 0;
 #else 
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
-/*ENDCLOSE*/ return -1;
+    connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+    return -1;
 #endif
   }
 
   switch(conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
-/*ENDCLOSE*/  return connection_ap_handshake_process_socks(conn);
+      if(connection_ap_handshake_process_socks(conn) < 0) {
+        connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+        return -1;
+      }
+      return 0;
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      if(connection_edge_package_raw_inbuf(conn) < 0)
-/*ENDCLOSE*/  return -1;
+      if(connection_edge_package_raw_inbuf(conn) < 0) {
+        connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+        return -1;
+      }
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
       log_fn(LOG_INFO,"text from server while in 'connecting' state at exit. Leaving it on buffer.");
@@ -54,6 +61,25 @@ int connection_edge_process_inbuf(connection_t *conn) {
   }
 
   return 0;
+}
+
+void connection_edge_end(connection_t *conn, void *payload, int payload_len,
+                         crypt_path_t *cpath_layer) {
+  circuit_t *circ = circuit_get_by_conn(conn);
+
+  if(conn->has_sent_end) {
+    log_fn(LOG_WARN,"It appears I've already sent the end. Are you calling me twice?");
+    return;
+  }
+
+  if(circ) {
+    log_fn(LOG_DEBUG,"Marking conn (fd %d) and sending end.",conn->s);
+    connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
+                                 payload, payload_len, cpath_layer);
+  }
+
+  conn->marked_for_close = 1;
+  conn->has_sent_end = 1;
 }
 
 void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
@@ -128,6 +154,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       return 0;
     } else {
       log_fn(LOG_WARN,"Got an unexpected relay cell, not in 'open' state. Closing.");
+      connection_edge_end(conn, NULL, 0, conn->cpath_layer);
       return -1;
     }
   }
@@ -148,12 +175,15 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
          (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
         log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
+        connection_edge_end(conn, NULL, 0, conn->cpath_layer);
         return -1;
       }
       log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
 
-      if(circuit_consider_sending_sendme(circ, edge_type, layer_hint) < 0)
+      if(circuit_consider_sending_sendme(circ, edge_type, layer_hint) < 0) {
+        conn->has_sent_end = 1; /* we failed because conn is broken. can't send end. */
         return -1;
+      }
 
       if(!conn) {
         log_fn(LOG_INFO,"relay cell dropped, unknown stream %d.",*(int*)conn->stream_id);
@@ -181,10 +211,14 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 #ifdef HALF_OPEN
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
-      if (conn->done_receiving)
-/*ENDCLOSE*/  conn->marked_for_close = 1;
+      if (conn->done_receiving) {
+        conn->marked_for_close = 1;
+        conn->has_sent_end = 1; /* no need to send end, we just got one! */
+      }
+#else
+      conn->marked_for_close = 1;
+      conn->has_sent_end = 1; /* no need to send end, we just got one! */
 #endif
-/*ENDCLOSE*/  conn->marked_for_close = 1;
       break;
     case RELAY_COMMAND_EXTEND:
       if(conn) {
@@ -233,7 +267,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       log_fn(LOG_INFO,"Connected! Notifying application.");
       if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
-/*ENDCLOSE*/    conn->marked_for_close = 1;
+        log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
+        connection_edge_end(conn, NULL, 0, conn->cpath_layer);
       }
       break;
     case RELAY_COMMAND_SENDME:
@@ -529,9 +564,13 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
   return 0; /* if socks_version isn't 4 or 5, don't send anything */
 }
 
-/*ENDCLOSE*/ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
+static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_stream;
   char *colon;
+
+  /* XXX currently we don't send an end cell back if we drop the
+   * begin because it's malformed.
+   */
 
   if(!memchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE,0,
              cell->length-RELAY_HEADER_SIZE-STREAM_ID_SIZE)) {
@@ -578,6 +617,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
       /* else fall through */
     case -1: /* resolve failed */
       log_fn(LOG_WARN,"Resolve or connect failed (%s).", n_stream->address);
+      connection_edge_end(n_stream, NULL, 0, NULL);
       connection_remove(n_stream);
       connection_free(n_stream);
     case 0: /* resolve added to pending list */
