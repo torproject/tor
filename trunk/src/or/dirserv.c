@@ -11,6 +11,8 @@
 
 /** How far in the future do we allow a router to get? (seconds) */
 #define ROUTER_ALLOW_SKEW (30*60)
+/** How many seconds do we wait before regenerating the directory? */
+#define DIR_REGEN_SLACK_TIME 10
 
 extern or_options_t options; /**< command-line and config-file options */
 
@@ -422,8 +424,12 @@ directory_remove_unrecognized(void)
 void
 directory_set_dirty()
 {
-  the_directory_is_dirty = 1;
-  runningrouters_is_dirty = 1;
+  time_t now = time(NULL);
+
+  if(!the_directory_is_dirty)
+    the_directory_is_dirty = now;
+  if(!runningrouters_is_dirty)
+    runningrouters_is_dirty = now;
 }
 
 /** Load all descriptors from a directory stored in the string
@@ -672,7 +678,8 @@ size_t dirserv_get_directory(const char **directory, int deflate)
       return 0;
     }
   }
-  if (the_directory_is_dirty) {
+  if (the_directory_is_dirty &&
+      the_directory_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
     if (dirserv_regenerate_directory())
       return 0;
   } else {
@@ -792,7 +799,8 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
  * size of the directory on success, and 0 on failure. */
 size_t dirserv_get_runningrouters(const char **rr)
 {
-  if (runningrouters_is_dirty) {
+  if (runningrouters_is_dirty &&
+      runningrouters_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
     if(generate_runningrouters(get_identity_key())) {
       log_fn(LOG_ERR, "Couldn't generate running-routers list?");
       return 0;
