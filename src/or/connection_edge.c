@@ -132,18 +132,18 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
 
   if(!circ) {
     log_fn(LOG_WARN,"no circ. Closing.");
-    return 0;
+    return -1;
   }
 
   if(!fromconn || relay_command == RELAY_COMMAND_BEGIN) /* XXX more */
     is_control_cell = 1;
 
   memset(&cell, 0, sizeof(cell_t));
-  if(fromconn && fromconn->type == CONN_TYPE_AP) {
+//  if(fromconn && fromconn->type == CONN_TYPE_AP) {
+  if(cpath_layer) {
     cell.circ_id = circ->n_circ_id;
     cell_direction = CELL_DIRECTION_OUT;
   } else {
-    /* NOTE: if !fromconn, we assume that it's heading towards the OP */
     cell.circ_id = circ->p_circ_id;
     cell_direction = CELL_DIRECTION_IN;
   }
@@ -159,6 +159,12 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
   if(payload_len) {
     memcpy(cell.payload+RELAY_HEADER_SIZE,payload,payload_len);
   }
+
+  if(cell_direction == CELL_DIRECTION_OUT) /* AP */
+    relay_set_digest(cpath_layer->f_digest, &cell);
+  else /* exit */
+    relay_set_digest(circ->p_digest, &cell);
+
   log_fn(LOG_DEBUG,"delivering %d cell %s.", relay_command,
          cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
@@ -231,11 +237,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
 
-      if(circuit_consider_sending_sendme(circ, edge_type, layer_hint) < 0) {
-        log_fn(LOG_WARN,"circuit_consider_sending_sendme() failed.");
-        conn->has_sent_end = 1; /* we failed because conn is broken. can't send end. */
-        return -1;
-      }
+      circuit_consider_sending_sendme(circ, edge_type, layer_hint);
 
       if(!conn) {
         log_fn(LOG_INFO,"relay cell dropped, unknown stream %d.",*(int*)conn->stream_id);
@@ -247,7 +249,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
-//      printf("New text for buf (%d bytes): '%s'", cell->length - RELAY_HEADER_SIZE, cell->payload + RELAY_HEADER_SIZE);
       stats_n_data_bytes_received += CELL_RELAY_LENGTH(*cell);
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                               CELL_RELAY_LENGTH(*cell), conn);
@@ -416,7 +417,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       /* deliver a 'connected' relay cell back through the circuit. */
       *(uint32_t*)connected_payload = htonl(conn->addr);
       if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
-         RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
+         RELAY_COMMAND_CONNECTED, NULL, 0, NULL) < 0)
         return 0; /* circuit is closed, don't continue */
       assert(conn->package_window > 0);
       return connection_edge_process_inbuf(conn); /* in case the server has written anything */
@@ -541,10 +542,10 @@ void connection_ap_attach_pending(void)
 
 static void connection_edge_consider_sending_sendme(connection_t *conn) {
   circuit_t *circ;
- 
+
   if(connection_outbuf_too_full(conn))
     return;
- 
+
   circ = circuit_get_by_conn(conn);
   if(!circ) {
     /* this can legitimately happen if the destroy has already
@@ -552,7 +553,7 @@ static void connection_edge_consider_sending_sendme(connection_t *conn) {
     log_fn(LOG_INFO,"No circuit associated with conn. Skipping.");
     return;
   }
- 
+
   while(conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
     log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
@@ -828,7 +829,7 @@ void connection_exit_connect(connection_t *conn) {
   /* also, deliver a 'connected' cell back through the circuit. */
   *((uint32_t*) connected_payload) = htonl(conn->addr);
   connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
-                               connected_payload, 4, conn->cpath_layer);
+                               connected_payload, 4, NULL);
 }
 
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
