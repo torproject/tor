@@ -345,16 +345,16 @@ int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
 /** Close any log handlers added by add_temp_log or marked by mark_logs_temp */
 void close_temp_logs(void)
 {
-  logfile_t *lf, **p;
-  for (p = &logfiles; *p; ) {
-    if ((*p)->is_temporary) {
-      lf = *p;
-      *p = (*p)->next;
-      close_log(lf);
-      tor_free(lf->filename);
-      tor_free(lf);
+  logfile_t *victim, *lf;
+  for (lf = logfiles; lf; ) {
+    if (lf->is_temporary) {
+      victim = lf;
+      lf = lf->next;
+      close_log(victim);
+      tor_free(victim->filename);
+      tor_free(victim);
     } else {
-      p = &((*p)->next);
+      lf = lf->next;
     }
   }
 }
