@@ -132,14 +132,14 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   memcpy(cell.payload, payload, ONIONSKIN_REPLY_LEN);
 
   log_fn(LOG_INFO,"init digest forward %d, backward %d.",
-         *(uint32_t*)(keys), *(uint32_t*)(keys+20));
+         (int)*(uint32_t*)(keys), (int)*(uint32_t*)(keys+20));
   circ->n_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
   crypto_digest_add_bytes(circ->n_digest, keys, 20);
   circ->p_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
   crypto_digest_add_bytes(circ->p_digest, keys+20, 20);
 
   log_fn(LOG_DEBUG,"init cipher forward %d, backward %d.",
-         *(uint32_t*)(keys+40), *(uint32_t*)(keys+40+16));
+         (int)*(uint32_t*)(keys+40), (int)*(uint32_t*)(keys+40+16));
   if (!(circ->n_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys+40,iv,0))) {
     log_fn(LOG_WARN,"Cipher initialization failed (n).");
