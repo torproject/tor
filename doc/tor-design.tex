@@ -239,7 +239,8 @@ work for the Onion Routing project in Section~\ref{sec:conclusion}.
 \Section{Related work}
 \label{sec:related-work}
 
-Modern anonymity systems date to Chaum's Mix-Net\cite{chaum-mix}. Chaum
+Modern anonymity systems date to Chaum's Mix-Net design
+\cite{chaum-mix}. Chaum
 proposed hiding the correspondence between sender and recipient by
 wrapping messages in layers of public key cryptography, and relaying them
 through a path composed of ``Mixes.''  These mixes in turn decrypt, delay,
@@ -249,8 +250,8 @@ path towards their destinations.
 Subsequent relay-based anonymity designs have diverged in two
 principal directions.  Some have attempted to maximize anonymity at
 the cost of introducing comparatively large and variable latencies,
-including Babel\cite{babel}, Mixmaster\cite{mixmaster-spec}, and
-Mixminion\cite{minion-design}.  Because of this
+including Babel \cite{babel}, Mixmaster \cite{mixmaster-spec}, and
+Mixminion \cite{minion-design}.  Because of this
 decision, these \emph{high-latency} networks are well-suited for anonymous
 email, but introduce too much lag for interactive tasks such as web browsing,
 internet chat, or SSH connections.
@@ -318,15 +319,12 @@ ISDN \cite{isdn-mixes}.
 
 In P2P designs like Tarzan \cite{tarzan:ccs02} and MorphMix
 \cite{morphmix:fc04}, all participants both generate traffic and relay
-traffic for others. Rather than aiming to hide the originator within a
-group of other originators, these systems instead aim to prevent a peer
-or observer from knowing whether a given peer originated the request
+traffic for others. These systems aim to prevent a peer
+or observer from knowing whether a given peer originated a request
 or just relayed it from another peer. While Tarzan and MorphMix use
 layered encryption as above, Crowds \cite{crowds-tissec} simply assumes
 an adversary who cannot observe the initiator: it uses no public-key
-encryption, so nodes on a circuit can read that circuit's traffic. The
-anonymity of the initiator relies on filtering all identifying information
-from the data stream.
+encryption, so nodes on a circuit can read that circuit's traffic.
 
 Hordes \cite{hordes-jcs} is based on Crowds but also uses multicast
 responses to hide the initiator. Herbivore \cite{herbivore} and P5
@@ -334,23 +332,21 @@ responses to hide the initiator. Herbivore \cite{herbivore} and P5
 and efficiency trade-offs to make broadcast more practical.
 These systems are designed primarily for communication between peers,
 although Herbivore users can make external connections by
-requesting a peer to serve as a proxy.  Allowing easy connections to
-nonparticipating responders or recipients is important for usability,
-for example so users can visit nonparticipating Web sites or exchange
-mail with nonparticipating recipients.
+requesting a peer to serve as a proxy.
 
 Systems like Freedom and the original Onion Routing build the circuit
 all at once, using a layered ``onion'' of public-key encrypted messages,
 each layer of which provides a set of session keys and the address of the
 next server in the circuit. Tor as described herein, Tarzan, MorphMix,
 Cebolla \cite{cebolla}, and AnonNet \cite{anonnet} build the circuit
-in stages, extending it one hop at a time. This approach makes perfect
-forward secrecy feasible.
+in stages, extending it one hop at a time.
+Section~\ref{subsubsec:constructing-a-circuit} describes how this
+approach makes perfect forward secrecy feasible.
 
 Circuit-based anonymity designs must choose which protocol layer
 to anonymize. They may choose to intercept IP packets directly, and
-relay them whole (stripping the source address) as the contents of
-the circuit \cite{freedom2-arch,tarzan:ccs02}.  Alternatively, like
+relay them whole (stripping the source address) along the circuit
+\cite{freedom2-arch,tarzan:ccs02}.  Alternatively, like
 Tor, they may accept TCP streams and relay the data in those streams
 along the circuit, ignoring the breakdown of that data into TCP frames
 \cite{morphmix:fc04,anonnet}. Finally, they may accept application-level
@@ -374,12 +370,11 @@ they avoid the well-known inefficiencies of tunneling TCP over TCP
 Distributed-trust anonymizing systems need to prevent attackers from
 adding too many servers and thus compromising too many user paths.
 Tor relies on a small set of well-known directory servers, run by
-independent parties, to make
-decisions about which nodes can join. Tarzan
-and MorphMix allow unknown users to run servers, and limit an attacker
-from becoming too much of the network based on a limited resource such
-as number of IPs controlled. Crowds suggests requiring written, notarized
-requests from potential crowd members.
+independent parties, to make decisions about which nodes can
+join. Tarzan and MorphMix allow unknown users to run servers, and use
+a limited resource (like IP addresses) to prevent an attacker from
+controlling too much of the network.  Crowds suggests requiring
+written, notarized requests from potential crowd members.
 
 Anonymous communication is essential for censorship-resistant
 systems like Eternity \cite{eternity}, Free~Haven \cite{freehaven-berk},
@@ -409,15 +404,16 @@ liability burden on operators (for example, by allowing attackers to
 implicate onion routers in illegal activities); and designs that are
 difficult or expensive to implement (for example, by requiring kernel
 patches, or separate proxies for every protocol).  This requirement also
-precludes systems in which users who do not benefit from anonymity are
-required to run special software in order to communicate with anonymous
-parties. (We do not meet this goal for the current rendezvous design,
+precludes systems in which non-anonymous parties (such as websites)
+must run our software.  (We do not meet this goal for the current
+rendezvous design,
 however; see Section~\ref{sec:rendezvous}.)
 
 \textbf{Usability:} A hard-to-use system has fewer users---and because
 anonymity systems hide users among users, a system with fewer users
-provides less anonymity.  Usability is not only a convenience for Tor:
-it is a security requirement \cite{econymics,back01}. Tor should not
+provides less anonymity.  Usability is thus not only a convenience for Tor:
+it is a security requirement \cite{econymics,back01}. Tor should
+therefore not
 require modifying applications; should not introduce prohibitive delays;
 and should require the user to make as few configuration decisions
 as possible.
@@ -443,7 +439,7 @@ approaches to protecting anonymity.
 \label{subsec:non-goals}
 In favoring simple, deployable designs, we have explicitly deferred
 several possible goals, either because they are solved elsewhere, or because
-they are an open research question.
+their solution is an open research problem.
 
 \textbf{Not Peer-to-peer:} Tarzan and MorphMix aim to scale to completely
 decentralized peer-to-peer environments with thousands of short-lived
@@ -478,7 +474,7 @@ they communicate.
 A global passive adversary is the most commonly assumed threat when
 analyzing theoretical anonymity designs. But like all practical
 low-latency systems, Tor does not protect against such a strong
-adversary. Instead, we expect an adversary who can observe some fraction
+adversary. Instead, we assume an adversary who can observe some fraction
 of network traffic; who can generate, modify, delete, or delay traffic
 on the network; who can operate onion routers of its own; and who can
 compromise some fraction of the onion routers on the network.
@@ -486,9 +482,9 @@ compromise some fraction of the onion routers on the network.
 In low-latency anonymity systems that use layered encryption, the
 adversary's typical goal is to observe both the initiator and the
 receiver. Passive attackers can confirm a suspicion that Alice is
-talking to Bob if the timing and volume properties of the traffic on the
-connection are unique enough; active attackers are even more effective
-because they can induce timing signatures on the traffic. Tor provides
+talking to Bob if the timing and volume patterns of the traffic on the
+connection are distinct enough; active attackers can induce timing
+signatures on the traffic to \emph{force} distinct patterns. Tor provides
 some defenses against these \emph{traffic confirmation} attacks, for
 example by encouraging users to run their own onion routers, but it does
 not provide complete protection. Rather, we aim to prevent \emph{traffic
@@ -499,7 +495,7 @@ Our adversary might try to link an initiator Alice with any of her
 communication partners, or he might try to build a profile of Alice's
 behavior. He might mount passive attacks by observing the edges of the
 network and correlating traffic entering and leaving the network---either
-because of relationships in packet timing; relationships in the volume
+by relationships in packet timing; relationships in the volume
 of data sent; or relationships in any externally visible user-selected
 options. The adversary can also mount active attacks by compromising
 routers or keys; by replaying traffic; by selectively denying service
@@ -628,6 +624,7 @@ to each other by a given exit node. Also, because circuits are built
 in the background, failed routers do not affect user experience.
 
 \subsubsection{Constructing a circuit}
+\label{subsubsec:constructing-a-circuit}
 
 Users construct a circuit incrementally, negotiating a symmetric key with
 each hop one at a time. To begin creating a new circuit, the user
