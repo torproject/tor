@@ -144,6 +144,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         return 0;
       default:
         log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
+        connection_close_immediate(conn); /* it was an error; give up on flushing */
         connection_mark_for_close(conn,0);
         return -1;
     }
