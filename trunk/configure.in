@@ -8,7 +8,7 @@ CFLAGS="-Wall -O2"
 AC_ARG_ENABLE(debug,
 [  --enable-debug          compiles with debugging info],
 [if test x$enableval = xyes; then
-    CFLAGS="-Wall -ggdb -O2"
+    CFLAGS="-Wall -g -O2"
 fi])
 
 AC_PROG_CC
@@ -133,7 +133,7 @@ LIBS="$saved_LIBS -lcrypto"
 
 dnl The warning message here is no longer strictly accurate.
 
-AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h poll.h sys/poll.h sys/types.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h stdint.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h poll.h sys/poll.h sys/types.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h stdint.h zlib.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
 
 AC_OUTPUT(Makefile src/Makefile src/common/Makefile src/orkeygen/Makefile src/or/Makefile)
 
