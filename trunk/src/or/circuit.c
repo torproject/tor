@@ -323,8 +323,8 @@ static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
 
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, integrity, 4);
-  log_fn(LOG_DEBUG,"Putting digest of %u %u %u %u into relay cell.",
-    integrity[0], integrity[1], integrity[2], integrity[3]);
+//  log_fn(LOG_DEBUG,"Putting digest of %u %u %u %u into relay cell.",
+//    integrity[0], integrity[1], integrity[2], integrity[3]);
   relay_header_unpack(&rh, cell->payload);
   memcpy(rh.integrity, integrity, 4);
   relay_header_pack(cell->payload, &rh);
@@ -346,15 +346,15 @@ static int relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell) {
   memset(rh.integrity, 0, 4);
   relay_header_pack(cell->payload, &rh);
 
-  log_fn(LOG_DEBUG,"Reading digest of %u %u %u %u from relay cell.",
-    received_integrity[0], received_integrity[1],
-    received_integrity[2], received_integrity[3]);
+//  log_fn(LOG_DEBUG,"Reading digest of %u %u %u %u from relay cell.",
+//    received_integrity[0], received_integrity[1],
+//    received_integrity[2], received_integrity[3]);
 
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, calculated_integrity, 4);
 
   if(memcmp(received_integrity, calculated_integrity, 4)) {
-    log_fn(LOG_INFO,"Recognized=0 but bad digest. Not recognizing.");
+//    log_fn(LOG_INFO,"Recognized=0 but bad digest. Not recognizing.");
 // (%d vs %d).", received_integrity, calculated_integrity);
     /* restore digest to its old form */
     crypto_digest_assign(digest, backup_digest);
@@ -374,7 +374,7 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
   relay_header_t rh;
 
   relay_header_unpack(&rh, in);
-  log_fn(LOG_DEBUG,"before crypt: %d",rh.recognized);
+//  log_fn(LOG_DEBUG,"before crypt: %d",rh.recognized);
   if(( encrypt_mode && crypto_cipher_encrypt(cipher, in, CELL_PAYLOAD_SIZE, out)) ||
      (!encrypt_mode && crypto_cipher_decrypt(cipher, in, CELL_PAYLOAD_SIZE, out))) {
     log_fn(LOG_WARN,"Error during crypt: %s", crypto_perror());
@@ -382,7 +382,7 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
   }
   memcpy(in,out,CELL_PAYLOAD_SIZE);
   relay_header_unpack(&rh, in);
-  log_fn(LOG_DEBUG,"after crypt: %d",rh.recognized);
+//  log_fn(LOG_DEBUG,"after crypt: %d",rh.recognized);
   return 0;
 }
 
@@ -438,7 +438,7 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   if(!conn) {
-    log_fn(LOG_WARN,"Didn't recognize cell, but circ stops here! Dropping.");
+    log_fn(LOG_WARN,"Didn't recognize cell, but circ stops here! Closing circ.");
     return -1;
   }
 
@@ -462,7 +462,7 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, char cell_direction,
                          We'll want to do layered crypts. */
       thishop = circ->cpath;
       if(thishop->state != CPATH_STATE_OPEN) {
-        log_fn(LOG_WARN,"Relay cell before first created cell?");
+        log_fn(LOG_WARN,"Relay cell before first created cell? Closing.");
         return -1;
       }
       do { /* Remember: cpath is in forward order, that is, first hop first. */
@@ -483,12 +483,12 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, char cell_direction,
 
         thishop = thishop->next;
       } while(thishop != circ->cpath && thishop->state == CPATH_STATE_OPEN);
-      log_fn(LOG_WARN,"in-cell at OP not recognized. Dropping.");
-      return 0;
+      log_fn(LOG_WARN,"in-cell at OP not recognized. Closing.");
+      return -1;
     } else { /* we're in the middle. Just one crypt. */
       if(relay_crypt_one_payload(circ->p_crypto, cell->payload, 1) < 0)
         return -1;
-      log_fn(LOG_DEBUG,"Skipping recognized check, because we're not the OP.");
+//      log_fn(LOG_DEBUG,"Skipping recognized check, because we're not the OP.");
     }
   } else /* cell_direction == CELL_DIRECTION_OUT */ {
     /* we're in the middle. Just one crypt. */
@@ -510,10 +510,8 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, char cell_direction,
 
 /*
 package a relay cell:
-  - if from AP: encrypt it to the right conn if 'recognized' doesn't
-    conflict, else insert dummies first as appropriate
-  - if from exit: encrypt it
-  - connection_or_write_cell_to_buf to the right conn
+ 1) encrypt it to the right conn
+ 2) connection_or_write_cell_to_buf to the right conn
 */
 int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
@@ -526,7 +524,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
   if(cell_direction == CELL_DIRECTION_OUT) {
     conn = circ->n_conn;
     if(!conn) {
-      log_fn(LOG_INFO,"outgoing relay cell has n_conn==NULL. Dropping.");
+      log_fn(LOG_WARN,"outgoing relay cell has n_conn==NULL. Dropping.");
       return 0; /* just drop it */
     }
     relay_set_digest(layer_hint->f_digest, cell);
@@ -547,7 +545,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
   } else { /* incoming cell */
     conn = circ->p_conn;
     if(!conn) {
-      log_fn(LOG_INFO,"incoming relay cell has p_conn==NULL. Dropping.");
+      log_fn(LOG_WARN,"incoming relay cell has p_conn==NULL. Dropping.");
       return 0; /* just drop it */
     }
     relay_set_digest(circ->p_digest, cell);
@@ -580,7 +578,7 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
       return tmpconn;
     }
-    log_fn(LOG_DEBUG,"considered stream %d, not it.",tmpconn->stream_id);
+//    log_fn(LOG_DEBUG,"considered stream %d, not it.",tmpconn->stream_id);
   }
   return NULL; /* probably a begin relay cell */
 }
@@ -645,7 +643,7 @@ void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_
       circ->deliver_window += CIRCWINDOW_INCREMENT;
     if(connection_edge_send_command(NULL, circ, RELAY_COMMAND_SENDME,
                                     NULL, 0, layer_hint) < 0) {
-      log_fn(LOG_WARN,"connection_edge_send_command failed. Returning.");
+      log_fn(LOG_WARN,"connection_edge_send_command failed. Circuit's closed.");
       return; /* the circuit's closed, don't continue */
     }
   }
@@ -942,7 +940,7 @@ void circuit_n_conn_open(connection_t *or_conn) {
         log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
         circuit_close(circ);
         continue;
-          /* XXX could this be bad, eg if next_onion_skin failed because conn died? */
+        /* XXX could this be bad, eg if next_onion_skin failed because conn died? */
       }
     }
   }
@@ -1038,11 +1036,11 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
 
   n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
   if(!n_conn || n_conn->type != CONN_TYPE_OR) {
-    /* i've disabled making connections through OPs, but it's definitely
-     * possible here. I'm not sure if it would be a bug or a feature. -RD
-     */
-    /* note also that this will close circuits where the onion has the same
-     * router twice in a row in the path. i think that's ok. -RD
+    /* I've disabled making connections through OPs, but it's definitely
+     * possible here. I'm not sure if it would be a bug or a feature.
+     *
+     * Note also that this will close circuits where the onion has the same
+     * router twice in a row in the path. I think that's ok.
      */
     struct in_addr in;
     in.s_addr = htonl(circ->n_addr);
@@ -1060,7 +1058,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
 
   circ_id_type = decide_circ_id_type(options.Nickname, n_conn->nickname);
 
-  log_fn(LOG_DEBUG,"circ_id_type = %u.",circ_id_type);
+//  log_fn(LOG_DEBUG,"circ_id_type = %u.",circ_id_type);
   circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
   if(!circ->n_circ_id) {
     log_fn(LOG_WARN,"failed to get unique circID.");
@@ -1108,7 +1106,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   crypto_dh_free(hop->handshake_state); /* don't need it anymore */
   hop->handshake_state = NULL;
 
-  log_fn(LOG_INFO,"hop init digest forward %u, backward %u.",
+  log_fn(LOG_DEBUG,"hop init digest forward %u, backward %u.",
          (unsigned)*(uint32_t*)keys, (unsigned)*(uint32_t*)(keys+20));
   hop->f_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
   crypto_digest_add_bytes(hop->f_digest, keys, 20);
@@ -1130,7 +1128,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
 
   hop->state = CPATH_STATE_OPEN;
   log_fn(LOG_INFO,"finished");
-  circuit_log_path(LOG_WARN,circ);
+  circuit_log_path(LOG_INFO,circ);
   return 0;
 }
 

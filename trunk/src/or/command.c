@@ -32,7 +32,7 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn,
   tor_gettimeofday(&end);
   time_passed = tv_udiff(&start, &end) ;
 
-  if (time_passed > 5000) { /* more than 5ms */
+  if (time_passed > 10000) { /* more than 10ms */
     log_fn(LOG_INFO,"That call just took %ld ms.",time_passed/1000);
   }
   *time += time_passed;
@@ -112,7 +112,7 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
     circuit_close(circ);
     return;
   }
-  log_fn(LOG_INFO,"success: handed off onionskin.");
+  log_fn(LOG_DEBUG,"success: handed off onionskin.");
 }
 
 static void command_process_created_cell(cell_t *cell, connection_t *conn) {
@@ -145,7 +145,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
       return;
     }
   } else { /* pack it into an extended relay cell, and send it. */
-    log_fn(LOG_INFO,"Converting created cell to extended relay cell, sending.");
+    log_fn(LOG_DEBUG,"Converting created cell to extended relay cell, sending.");
     connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTENDED,
                                  cell->payload, ONIONSKIN_REPLY_LEN, NULL);
   }

@@ -419,7 +419,6 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       if(req->socks_version != 5) { /* we need to negotiate a method */
         unsigned char nummethods = (unsigned char)*(buf->mem+1);
         assert(!req->socks_version);
-        log_fn(LOG_DEBUG,"socks5: learning offered methods");
         if(buf->datalen < 2+nummethods)
           return 0;
         if(!nummethods || !memchr(buf->mem+2, 0, nummethods)) {
@@ -443,7 +442,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       if(buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
         return 0; /* not yet */
       if(*(buf->mem+1) != 1) { /* not a connect? we don't support it. */
-        log_fn(LOG_WARN,"socks5: command %d not '1'.",*(buf->mem+1));
+        log_fn(LOG_WARN,"socks5: command %d not '1'. Rejecting.",*(buf->mem+1));
         return -1;
       }
       switch(*(buf->mem+3)) { /* address type */
@@ -455,7 +454,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           in.s_addr = htonl(destip);
           tmpbuf = inet_ntoa(in);
           if(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
-            log_fn(LOG_WARN,"socks5 IP takes %d bytes, which doesn't fit in %d",
+            log_fn(LOG_WARN,"socks5 IP takes %d bytes, which doesn't fit in %d. Rejecting.",
                    (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
             return -1;
           }
@@ -469,7 +468,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           if(buf->datalen < 7+len) /* addr/port there? */
             return 0; /* not yet */
           if(len+1 > MAX_SOCKS_ADDR_LEN) {
-            log_fn(LOG_WARN,"socks5 hostname is %d bytes, which doesn't fit in %d",
+            log_fn(LOG_WARN,"socks5 hostname is %d bytes, which doesn't fit in %d. Rejecting.",
                    len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
@@ -479,7 +478,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           buf_remove_from_front(buf, 5+len+2);
           return 1;
         default: /* unsupported */
-          log_fn(LOG_WARN,"socks5: unsupported address type %d",*(buf->mem+3));
+          log_fn(LOG_WARN,"socks5: unsupported address type %d. Rejecting.",*(buf->mem+3));
           return -1;
       }
       assert(0);
@@ -490,14 +489,14 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         return 0; /* not yet */
 
       if(*(buf->mem+1) != 1) { /* not a connect? we don't support it. */
-        log_fn(LOG_WARN,"socks4: command %d not '1'.",*(buf->mem+1));
+        log_fn(LOG_WARN,"socks4: command %d not '1'. Rejecting.",*(buf->mem+1));
         return -1;
       }
 
       req->port = ntohs(*(uint16_t*)(buf->mem+2));
       destip = ntohl(*(uint32_t*)(buf->mem+4));
       if(!req->port || !destip) {
-        log_fn(LOG_WARN,"socks4: Port or DestIP is zero.");
+        log_fn(LOG_WARN,"socks4: Port or DestIP is zero. Rejecting.");
         return -1;
       }
       if(destip >> 8) {
@@ -505,7 +504,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         in.s_addr = htonl(destip);
         tmpbuf = inet_ntoa(in);
         if(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
-          log_fn(LOG_WARN,"socks4 addr (%d bytes) too long.",
+          log_fn(LOG_WARN,"socks4 addr (%d bytes) too long. Rejecting.",
                  (int)strlen(tmpbuf));
           return -1;
         }
@@ -515,7 +514,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 
       next = memchr(buf->mem+SOCKS4_NETWORK_LEN, 0, buf->datalen);
       if(!next) {
-        log_fn(LOG_DEBUG,"Username not here yet.");
+        log_fn(LOG_DEBUG,"socks4: Username not here yet.");
         return 0;
       }
 
@@ -523,15 +522,15 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       if(socks4_prot == socks4a) {
         next = memchr(startaddr, 0, buf->mem+buf->datalen-startaddr);
         if(!next) {
-          log_fn(LOG_DEBUG,"Destaddr not here yet.");
+          log_fn(LOG_DEBUG,"socks4: Destaddr not here yet.");
           return 0;
         }
         if(MAX_SOCKS_ADDR_LEN <= next-startaddr) {
-          log_fn(LOG_WARN,"Destaddr too long.");
+          log_fn(LOG_WARN,"socks4: Destaddr too long. Rejecting.");
           return -1;
         }
       }
-      log_fn(LOG_DEBUG,"Everything is here. Success.");
+      log_fn(LOG_DEBUG,"socks4: Everything is here. Success.");
       strcpy(req->address, socks4_prot == socks4 ? tmpbuf : startaddr);
       /* XXX on very old netscapes (socks4) the next line triggers an
        * assert, because next-buf->mem+1 is greater than buf->datalen.
