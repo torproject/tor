@@ -1,3 +1,10 @@
+tor (0.0.8+0.0.9pre5-3) unreleased; urgency=low
+
+  * unreleased
+  * Install control-spec.txt into usr/share/doc/tor/.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 13 Nov 2004 03:50:34 +0100
+
 tor (0.0.8+0.0.9pre5-2) unstable; urgency=low
 
   * Symlink tor(8) manpage to torrc(5).
