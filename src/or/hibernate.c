@@ -545,7 +545,6 @@ hibernate_end_time_elapsed(time_t now)
  * to start/stop hibernating.
  */
 void consider_hibernation(time_t now) {
-  connection_t *conn;
 
   /* If we're in 'exiting' mode, then we just shutdown after the interval
    * elapses. */

@@ -69,7 +69,7 @@
 #include "log.h"
 #include "util.h"
 
-/* Inline the strl functions if the plaform doesn't have them. */
+/* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY
 #include "strlcpy.c"
 #endif
