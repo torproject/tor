@@ -7,15 +7,18 @@ tor (0.0.8+0.0.9pre5-2) unreleased; urgency=low
     file (/var/log/tor/log) in the debian patch of the manpage.
   * Do not patch the default torrc to include settings we really want.
     Instead modify the compiled in default options.  Those settings are
-    
+
     - RunAsDaemon is enabled by default.
     - PidFile is set to /var/run/tor/tor.pid.  No default upstream.
     - default logging goes to /var/log/tor/log instead of stdout.
     - DataDirectory is set to /var/lib/tor by default.  No default upstream.
-    
-    This is also documented in the new debian/README.Debian.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 18:11:26 +0100
+    This is also documented in the new debian/README.Debian.
+  * Remove /usr/bin/tor-control.py from the binary package, it is
+    not really useful yet, and wasn't meant to be installed by
+    default.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 18:20:04 +0100
 
 tor (0.0.8+0.0.9pre5-1) unstable; urgency=low
 
