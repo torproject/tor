@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "crypto.h"
 #include "../or/or.h"
@@ -290,10 +291,10 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, unsigned char
   if (strspn(keyfile,CONFIG_LEGAL_FILENAME_CHARACTERS) == strlen(keyfile)) /* filename contains legal characters only */
   {
     /* open the keyfile */
-    f_pr=fopen(keyfile,"r");
+    f_pr=fopen(keyfile,"rb");
     if (!f_pr)
       return -1;
-      
+    
     /* read the private key */
     retval = crypto_pk_read_private_key_from_file(env, f_pr);
     fclose(f_pr);
@@ -460,8 +461,9 @@ int crypto_pk_set_key(crypto_pk_env_t *env, unsigned char *key)
     case CRYPTO_PK_RSA:
     if (!env->key)
       return -1;
-    memcpy((void *)env->key, (void *)key, sizeof(RSA));
     /* XXX BUG XXX you can't memcpy an RSA, it's got a bunch of subpointers */
+    assert(0);
+    memcpy((void *)env->key, (void *)key, sizeof(RSA));
     break;
     default :
     return -1;
@@ -530,9 +532,11 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int from
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
   assert(env && from && to);
-  
+
   switch(env->type) {
-    case CRYPTO_PK_RSA:
+  case CRYPTO_PK_RSA:
+    if (!(((RSA*)env->key)->p))
+      return -1;
     return RSA_private_decrypt(fromlen, from, to, (RSA *)env->key, padding);
     default:
     return -1;

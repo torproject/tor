@@ -174,7 +174,7 @@ void compression_free(z_stream *stream)
   int r;
   r = deflateEnd(stream);
   if (r != Z_OK)
-    log(LOG_ERR, "while closing zlib: %d (%s)", r, stream->msg);
+    log(LOG_ERR, "while closing compression: %d (%s)", r, stream->msg);
   free(stream);
 }
 
@@ -183,7 +183,7 @@ void decompression_free(z_stream *stream)
   int r;
   r = inflateEnd(stream);
   if (r != Z_OK)
-    log(LOG_ERR, "while closing zlib: %d (%s)", r, stream->msg);
+    log(LOG_ERR, "while closing decompression: %d (%s)", r, stream->msg);
   free(stream);
 }
 

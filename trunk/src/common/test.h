@@ -88,6 +88,16 @@
     return;                                                     \
   } STMT_END
 
+#define test_memneq(expr1, expr2, len)                           \
+  STMT_BEGIN if(memcmp(expr1,expr2,len)) { printf("."); } else {    \
+    printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n", \
+      __FILE__,                                                 \
+      __LINE__,                                                 \
+      __PRETTY_FUNCTION__,                                      \
+      #expr1, #expr2);                                          \
+    return;                                                     \
+  } STMT_END
+
 #endif
 
 /*
