@@ -123,10 +123,24 @@ void connection_free(connection_t *conn) {
   free(conn);
 }
 
-int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
+int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
+  struct sockaddr_in bindaddr; /* where to bind */
+  struct hostent *rent;
   connection_t *conn;
-  int s;
+  int s; /* the socket we're going to make */
   int one=1;
+
+  memset(&bindaddr,0,sizeof(struct sockaddr_in));
+  bindaddr.sin_family = AF_INET;
+  bindaddr.sin_port = htons(bindport);
+  rent = gethostbyname(bindaddress);
+  if (!rent) {
+    log_fn(LOG_WARN,"Can't resolve BindAddress %s",bindaddress);
+    return -1;
+  }
+  if(rent->h_length != 4)
+    return -1; /* XXX complain */
+  memcpy(&(bindaddr.sin_addr.s_addr),rent->h_addr,rent->h_length);
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) { 
@@ -134,17 +148,15 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
     return -1;
   }
 
-  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&one, sizeof(one));
+  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
-  if(bind(s,(struct sockaddr *)bindaddr,sizeof(*bindaddr)) < 0) {
-    log(LOG_WARN,"Could not bind to port %u: %s",ntohs(bindaddr->sin_port),
-        strerror(errno));
+  if(bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
+    log_fn(LOG_WARN,"Could not bind to port %u: %s",bindport,strerror(errno));
     return -1;
   }
 
   if(listen(s,SOMAXCONN) < 0) {
-    log(LOG_WARN,"Could not listen on port %u: %s",ntohs(bindaddr->sin_port),
-        strerror(errno));
+    log_fn(LOG_WARN,"Could not listen on port %u: %s",bindport,strerror(errno));
     return -1;
   }
 
@@ -159,7 +171,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
     return -1;
   }
 
-  log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string[type], ntohs(bindaddr->sin_port));
+  log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string[type], bindport);
 
   conn->state = LISTENER_STATE_READY;
   connection_start_reading(conn);
@@ -275,37 +287,28 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 }
 
 /* start all connections that should be up but aren't */
-int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
-  struct sockaddr_in bindaddr; /* where to bind */
+int retry_all_connections(void) {
 
-  if(or_listenport) {
+  if(options.ORPort) {
     router_retry_connections();
   }
 
-  memset(&bindaddr,0,sizeof(struct sockaddr_in));
-  bindaddr.sin_family = AF_INET;
-  bindaddr.sin_addr.s_addr = htonl(INADDR_ANY); /* anyone can connect */
-
-  if(or_listenport) {
-    bindaddr.sin_port = htons(or_listenport);
-    if(!connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
-      connection_create_listener(&bindaddr, CONN_TYPE_OR_LISTENER);
-    }
+  if(options.ORPort && !connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
+    if(connection_create_listener(options.ORBindAddress, options.ORPort,
+                                  CONN_TYPE_OR_LISTENER) < 0)
+      return -1;
   }
 
-  if(dir_listenport) {
-    bindaddr.sin_port = htons(dir_listenport);
-    if(!connection_get_by_type(CONN_TYPE_DIR_LISTENER)) {
-      connection_create_listener(&bindaddr, CONN_TYPE_DIR_LISTENER);
-    }
+  if(options.DirPort && !connection_get_by_type(CONN_TYPE_DIR_LISTENER)) {
+    if(connection_create_listener(options.DirBindAddress, options.DirPort,
+                                  CONN_TYPE_DIR_LISTENER) < 0)
+      return -1;
   }
  
-  if(ap_listenport) {
-    bindaddr.sin_port = htons(ap_listenport);
-    bindaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); /* the AP listens only on localhost! */
-    if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
-      connection_create_listener(&bindaddr, CONN_TYPE_AP_LISTENER);
-    }
+  if(options.SocksPort && !connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
+    if(connection_create_listener(options.SocksBindAddress, options.SocksPort,
+                                  CONN_TYPE_AP_LISTENER) < 0)
+      return -1;
   }
 
   return 0;

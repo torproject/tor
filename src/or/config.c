@@ -151,41 +151,51 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     /* order matters here! abbreviated arguments use the first match. */
 
     /* string options */
-    config_compare(list, "LogLevel",       CONFIG_TYPE_STRING, &options->LogLevel) ||
-    config_compare(list, "LogFile",        CONFIG_TYPE_STRING, &options->LogFile) ||
+    config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
+
+    config_compare(list, "CoinWeight",     CONFIG_TYPE_DOUBLE, &options->CoinWeight) ||
+
     config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
-    config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
-    config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
-    config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
-    config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
+    config_compare(list, "DirPort",        CONFIG_TYPE_INT, &options->DirPort) ||
+    config_compare(list, "DirBindAddress", CONFIG_TYPE_STRING, &options->DirBindAddress) ||
+    config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_INT, &options->DirFetchPostPeriod) ||
+
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
-    config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
-    config_compare(list, "ORBindAddress",  CONFIG_TYPE_STRING, &options->ORBindAddress) ||
-    config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User) ||
+
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
-    /* int options */
-    config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
-    config_compare(list, "SocksPort",       CONFIG_TYPE_INT, &options->SocksPort) ||
-    config_compare(list, "ORPort",          CONFIG_TYPE_INT, &options->ORPort) ||
-    config_compare(list, "DirPort",         CONFIG_TYPE_INT, &options->DirPort) ||
-    config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_INT, &options->DirFetchPostPeriod) ||
-    config_compare(list, "KeepalivePeriod", CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
+    config_compare(list, "IgnoreVersion",  CONFIG_TYPE_BOOL, &options->IgnoreVersion) ||
+
+    config_compare(list, "KeepalivePeriod",CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
+
+    config_compare(list, "LogLevel",       CONFIG_TYPE_STRING, &options->LogLevel) ||
+    config_compare(list, "LogFile",        CONFIG_TYPE_STRING, &options->LogFile) ||
+    config_compare(list, "LinkPadding",    CONFIG_TYPE_BOOL, &options->LinkPadding) ||
+
+    config_compare(list, "MaxConn",        CONFIG_TYPE_INT, &options->MaxConn) ||
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
+
+    config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
     config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_INT, &options->NewCircuitPeriod) ||
-    config_compare(list, "TotalBandwidth",  CONFIG_TYPE_INT, &options->TotalBandwidth) ||
-    config_compare(list, "NumCpus",         CONFIG_TYPE_INT, &options->NumCpus) ||
+    config_compare(list, "NumCpus",        CONFIG_TYPE_INT, &options->NumCpus) ||
 
-    config_compare(list, "OnionRouter",     CONFIG_TYPE_BOOL, &options->OnionRouter) ||
-    config_compare(list, "TrafficShaping",  CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
-    config_compare(list, "LinkPadding",     CONFIG_TYPE_BOOL, &options->LinkPadding) ||
-    config_compare(list, "IgnoreVersion",   CONFIG_TYPE_BOOL, &options->IgnoreVersion) ||
-    config_compare(list, "RunAsDaemon",     CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
+    config_compare(list, "ORPort",         CONFIG_TYPE_INT, &options->ORPort) ||
+    config_compare(list, "ORBindAddress",  CONFIG_TYPE_STRING, &options->ORBindAddress) ||
+    config_compare(list, "OnionRouter",    CONFIG_TYPE_BOOL, &options->OnionRouter) ||
 
-    /* float options */
-    config_compare(list, "CoinWeight",     CONFIG_TYPE_DOUBLE, &options->CoinWeight)
+    config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
 
+    config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
+    config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
+
+    config_compare(list, "SocksPort",      CONFIG_TYPE_INT, &options->SocksPort) ||
+    config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
+
+    config_compare(list, "TotalBandwidth", CONFIG_TYPE_INT, &options->TotalBandwidth) ||
+    config_compare(list, "TrafficShaping", CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
+
+    config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User)
     ) {
       /* then we're ok. it matched something. */
     } else {
@@ -196,8 +206,22 @@ static void config_assign(or_options_t *options, struct config_line *list) {
   }  
 }
 
+/* prints the usage of tor. */
 void print_usage(void) {
-
+  printf("tor -f <torrc> [args]\n"
+         "-d <file>\t\tDebug file\n"
+         "-e <policy>\t\tExit policy\n"
+         "-l <level>\t\tLog level\n"
+         "-m <max>\t\tMax number of connections\n"
+         "-s <IP>\t\t\tAddress to bind to for Socks\n"
+         );
+  /* split things up to be ANSI compliant */
+  printf("-n <nick>\t\tNickname of router\n"
+         "-o <port>\t\tOR port to bind to\n"
+         "-p <file>\t\tPID file\n"
+         "-r <file>\t\tRouter config file\n"
+         "-t <bandwidth>\t\tTotal bandwidth\n"
+         );
 }
 
 void free_options(or_options_t *options) {
@@ -212,6 +236,7 @@ void free_options(or_options_t *options) {
   tor_free(options->ExitPolicy);
   tor_free(options->SocksBindAddress);
   tor_free(options->ORBindAddress);
+  tor_free(options->DirBindAddress);
   tor_free(options->User);
   tor_free(options->Group);
 }
@@ -223,6 +248,7 @@ void init_options(or_options_t *options) {
   options->ExitPolicy = tor_strdup("reject 127.0.0.1:*");
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
+  options->DirBindAddress = tor_strdup("0.0.0.0");
   options->loglevel = LOG_INFO;
   options->PidFile = tor_strdup("tor.pid");
   options->DataDirectory = NULL;

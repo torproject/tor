@@ -101,7 +101,7 @@
 #include "../common/log.h"
 #include "../common/util.h"
 
-#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre8,0.0.2pre9,0.0.2pre10,0.0.2pre11,0.0.2pre12,0.0.2pre13,0.0.2pre14"
+#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre13,0.0.2pre14"
 
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */
@@ -420,41 +420,42 @@ struct circuit_t {
 typedef struct circuit_t circuit_t;
 
 typedef struct {
-   char *LogLevel;
-   char *LogFile;
-   char *DebugLogFile;
-   char *DataDirectory;
-   char *RouterFile;
-   char *Nickname;
-   char *Address;
-   char *PidFile;
-   char *ExitPolicy;
-   char *SocksBindAddress;
-   char *ORBindAddress;
-   char *User;
-   char *Group;
-   double CoinWeight;
-   int ORPort;
-   int SocksPort;
-   int DirPort;
-   int MaxConn;
-   int OnionRouter;
-   int TrafficShaping;
-   int LinkPadding;
-   int IgnoreVersion;
-   int RunAsDaemon;
-   int DirRebuildPeriod;
-   int DirFetchPostPeriod;
-   int KeepalivePeriod;
-   int MaxOnionsPending;
-   int NewCircuitPeriod;
-   int TotalBandwidth;
-   int NumCpus;
-   int Role;
-   int loglevel;
+  char *LogLevel;
+  char *LogFile;
+  char *DebugLogFile;
+  char *DataDirectory;
+  char *RouterFile;
+  char *Nickname;
+  char *Address;
+  char *PidFile;
+  char *ExitPolicy;
+  char *SocksBindAddress;
+  char *ORBindAddress;
+  char *DirBindAddress;
+  char *User;
+  char *Group;
+  double CoinWeight;
+  int ORPort;
+  int SocksPort;
+  int DirPort;
+  int MaxConn;
+  int OnionRouter;
+  int TrafficShaping;
+  int LinkPadding;
+  int IgnoreVersion;
+  int RunAsDaemon;
+  int DirRebuildPeriod;
+  int DirFetchPostPeriod;
+  int KeepalivePeriod;
+  int MaxOnionsPending;
+  int NewCircuitPeriod;
+  int TotalBandwidth;
+  int NumCpus;
+  int Role;
+  int loglevel;
 } or_options_t;
 
-    /* all the function prototypes go here */
+/* all the function prototypes go here */
 
 /********************************* buffers.c ***************************/
 
@@ -546,10 +547,10 @@ int getconfig(int argc, char **argv, or_options_t *options);
 connection_t *connection_new(int type);
 void connection_free(connection_t *conn);
 
-int connection_create_listener(struct sockaddr_in *bindaddr, int type);
+int connection_create_listener(char *bindaddress, uint16_t bindport, int type);
 
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
-int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
+int retry_all_connections(void);
 
 int connection_handle_read(connection_t *conn);
 int connection_read_to_buf(connection_t *conn);
