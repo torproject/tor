@@ -8,11 +8,11 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;
   char *colon;
 
-  if(!memchr(cell->payload + RELAY_HEADER_SIZE,0,cell->length - RELAY_HEADER_SIZE)) {
+  if(!memchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE,0,cell->length-RELAY_HEADER_SIZE-STREAM_ID_SIZE)) {
     log(LOG_WARNING,"connection_exit_begin_conn(): relay begin cell has no \\0. Dropping.");
     return 0;
   }
-  colon = strchr(cell->payload + RELAY_HEADER_SIZE, ':');
+  colon = strchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE, ':');
   if(!colon) {
     log(LOG_WARNING,"connection_exit_begin_conn(): relay begin cell has no colon. Dropping.");
     return 0;
@@ -31,10 +31,8 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     return 0;
   }
 
-//  cell->payload[0] = 0;
-  n_conn->stream_id = CELL_STREAM_ID(*cell);
-
-  n_conn->address = strdup(cell->payload + RELAY_HEADER_SIZE);
+  memcpy(n_conn->stream_id, cell->payload + RELAY_HEADER_SIZE, STREAM_ID_SIZE);
+  n_conn->address = strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
   n_conn->port = atoi(colon+1);
   n_conn->state = EXIT_CONN_STATE_RESOLVING;
   n_conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */

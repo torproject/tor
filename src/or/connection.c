@@ -706,7 +706,7 @@ repeat_connection_package_raw_inbuf:
 
   if(conn->type == CONN_TYPE_EXIT) {
     cell.aci = circ->p_aci;
-    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_EXIT) < 0) {
+    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_EXIT, NULL) < 0) {
       log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell_from_edge (backward) failed. Closing.");
       circuit_close(circ);
       return 0;
@@ -721,7 +721,7 @@ repeat_connection_package_raw_inbuf:
   } else { /* send it forward. we're an AP */
     assert(conn->type == CONN_TYPE_AP);
     cell.aci = circ->n_aci;
-    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
+    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_AP, conn->cpath_layer) < 0) {
       log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell_from_edge (forward) failed. Closing.");
       circuit_close(circ);
       return 0;
@@ -763,7 +763,7 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
       log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme back.", conn->outbuf_flushlen);
       conn->p_receive_streamwindow += STREAMWINDOW_INCREMENT;
       cell.aci = circ->p_aci;
-      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type) < 0) {
+      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, NULL) < 0) {
         log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell_from_edge (backward) failed. Closing.");
         circuit_close(circ);
         return 0;
@@ -775,7 +775,7 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
       log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme forward.", conn->outbuf_flushlen);
       conn->n_receive_streamwindow += STREAMWINDOW_INCREMENT;
       cell.aci = circ->n_aci;
-      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type) < 0) {
+      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, conn->cpath_layer) < 0) {
         log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell_from_edge (forward) failed. Closing.");
         circuit_close(circ);
         return 0;
