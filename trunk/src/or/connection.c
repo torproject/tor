@@ -199,7 +199,7 @@ void connection_about_to_close_connection(connection_t *conn)
           rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
       } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
         rep_hist_note_disconnect(conn->identity_digest, time(NULL));
-      } else {
+      } else if(conn->identity_digest) {
         rep_hist_note_connection_died(conn->identity_digest, time(NULL));
       }
       break;

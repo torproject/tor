@@ -798,8 +798,11 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
   int n_connections;
   int best_support = -1;
   int n_best_support=0;
-  smartlist_t *sl, *preferredexits, *excludedexits;
+  smartlist_t *sl, *preferredexits, *preferredentries, *excludedexits;
   routerinfo_t *router;
+
+  preferredentries = smartlist_create();
+  add_nickname_list_to_smartlist(preferredentries,options.EntryNodes);
 
   get_connection_array(&carray, &n_connections);
 
@@ -849,6 +852,12 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it rejects all.",
              router->nickname, i);
       continue; /* skip routers that reject all */
+    }
+    if(smartlist_len(preferredentries)==1 &&
+       router == (routerinfo_t*)smartlist_get(preferredentries, 0)) {
+      n_supported[i] = -1;
+      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it's our only preferred entry node.", router->nickname, i);
+      continue;
     }
     n_supported[i] = 0;
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
@@ -917,6 +926,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
   }
 
   smartlist_free(preferredexits);
+  smartlist_free(preferredentries);
   smartlist_free(excludedexits);
   smartlist_free(sl);
   tor_free(n_supported);
@@ -926,7 +936,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
   }
   if (options.StrictExitNodes)
     log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
-  
+
   return NULL;
 }
 
@@ -943,7 +953,6 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
 static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
 {
   routerinfo_t *r;
-  /* XXX one day, consider picking chosen_exit knowing what's in EntryNodes */
   switch(purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       return choose_good_exit_server_general(dir);
