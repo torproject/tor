@@ -726,9 +726,15 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  /* XXX008 if AuthDir and !ORPort then fail */
+  if(options->AuthoritativeDir && !options->ORPort) {
+    log(LOG_WARN,"Running as authoritative directory, but no ORPort set.");
+    result = -1;
+  }
 
-  /* XXX008 if AuthDir and ClientOnly then fail */
+  if(options->AuthoritativeDir && options->ClientOnly) {
+    log(LOG_WARN,"Running as authoritative directory, but ClientOnly also set.");
+    result = -1;
+  }
 
   if(options->SocksPort >= 1 &&
      (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {

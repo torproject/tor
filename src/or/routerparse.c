@@ -330,7 +330,7 @@ router_parse_routerlist_from_directory(const char *str,
     log_fn(LOG_WARN, "Unable to compute digest of directory");
     goto err;
   }
-  log(LOG_DEBUG,"Received directory hashes to %s",hex_str(digest,4));
+  log_fn(LOG_DEBUG,"Received directory hashes to %s",hex_str(digest,4));
 
   if ((end = strstr(str,"\nrouter "))) {
     ++end;
@@ -573,7 +573,6 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
 {
   routerinfo_t *router;
   smartlist_t *routers;
-  int rarray_len = 0;
   const char *end;
 
   tor_assert(s && *s);
@@ -609,7 +608,7 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
       router->status_set_at = time(NULL);
     }
     smartlist_add(routers, router);
-    log_fn(LOG_DEBUG,"just added router #%d.",rarray_len);
+    log_fn(LOG_DEBUG,"just added router #%d.",smartlist_len(routers));
   }
 
   if (*dest)
