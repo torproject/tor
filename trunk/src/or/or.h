@@ -1116,6 +1116,7 @@ struct config_line_t *config_get_assigned_option(or_options_t *options,
                                                  const char *key);
 struct config_line_t *config_line_prepend(struct config_line_t *front,
                                           const char *key, const char *val);
+char *config_dump_options(or_options_t *options, int minimal);
 
 /********************************* connection.c ***************************/
 

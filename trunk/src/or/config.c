@@ -160,6 +160,8 @@ static config_var_t config_vars[] = {
 
 static void option_reset(or_options_t *options, config_var_t *var);
 static void options_free(or_options_t *options);
+static int option_is_same(or_options_t *o1, or_options_t *o2,
+                          config_var_t *var);
 static or_options_t *options_dup(or_options_t *old);
 static int options_validate(or_options_t *options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
@@ -310,6 +312,18 @@ options_act(void) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
+
+#if 0
+  {
+    char *smin, *smax;
+    smin = config_dump_options(options, 1);
+    smax = config_dump_options(options, 0);
+    log_fn(LOG_DEBUG, "These are our options:\n%s",smax);
+    log_fn(LOG_DEBUG, "We changed these options:\n%s",smin);
+    tor_free(smin);
+    tor_free(smax);
+  }
+#endif
 
   return 0;
 }
@@ -938,6 +952,71 @@ options_free(or_options_t *options)
   }
 }
 
+/** Return true iff the option <b>var</b> has the same value in <b>o1</b>
+ * and <b>o2</b>.  Must not be called for LINELIST_S or OBSOLETE options.
+ */
+static int
+option_is_same(or_options_t *o1, or_options_t *o2, config_var_t *var)
+{
+  void *v1, *v2;
+  tor_assert(o1);
+  tor_assert(o2);
+  tor_assert(var);
+
+  v1 = ((char*)o1) + var-> var_offset;
+  v2 = ((char*)o2) + var-> var_offset;
+  switch (var->type) 
+    {
+    case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_BOOL:
+      return (*(int*)v1) == (*(int*)v2);
+    case CONFIG_TYPE_STRING: {
+      const char *s1 = *(const char**)v1;
+      const char *s2 = *(const char**)v2;
+      return (!s1 && !s2) || (s1 && s2 && !strcmp(s1, s2));
+    }
+    case CONFIG_TYPE_DOUBLE:
+      return (*(double*)v1) == (*(double*)v2);
+    case CONFIG_TYPE_CSV: {
+      smartlist_t *sl1 = *(smartlist_t**)v1;
+      smartlist_t *sl2 = *(smartlist_t**)v2;
+      int i;
+      if ((sl1 && !sl2) || (!sl1 && sl2))
+        return 0;
+      else if (!sl1 && !sl2)
+        return 1;
+      else if (smartlist_len(sl1) != smartlist_len(sl2))
+        return 0;
+      for (i=0;i<smartlist_len(sl1);++i) {
+        if (strcmp(smartlist_get(sl1,i), smartlist_get(sl2,i)))
+          return 0;
+      }
+      return 1;
+    }
+    case CONFIG_TYPE_LINELIST:
+    case CONFIG_TYPE_LINELIST_V: {
+      struct config_line_t *cl1 = *(struct config_line_t**)v1;
+      struct config_line_t *cl2 = *(struct config_line_t**)v2;
+      while (cl1 && cl2) {
+        if (strcasecmp(cl1->key,cl2->key) || strcmp(cl1->value,cl2->value))
+          return 0;
+        cl1 = cl1->next;
+        cl2 = cl2->next;
+      }
+      if (!cl1 && !cl2)
+        return 1;
+      else
+        return 0;
+    }
+    case CONFIG_TYPE_LINELIST_S:
+    case CONFIG_TYPE_OBSOLETE:
+    default:
+      log_fn(LOG_ERR,"Internal error: can't compare configuration option '%s'",
+             var->name);
+      tor_assert(0);
+    }
+}
+
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
 static or_options_t *
 options_dup(or_options_t *old)
@@ -979,6 +1058,50 @@ options_init(or_options_t *options)
       continue; /* defaults to NULL or 0 */
     option_reset(options, var);
   }
+}
+
+/** Return a string containing a possible configuration file that would give
+ * the configuration in <b>options</b>.  If <b>minimal</b> is true, do not
+ * include options that are the same as Tor's defaults.
+ */
+char *
+config_dump_options(or_options_t *options, int minimal)
+{
+  smartlist_t *elements;
+  or_options_t *defaults;
+  struct config_line_t *line;
+  char *result;
+  int i;
+
+  defaults = tor_malloc_zero(sizeof(or_options_t));
+  options_init(defaults);
+  options_validate(defaults); /* ??? will this work? */
+
+  elements = smartlist_create();
+  for (i=0; config_vars[i].name; ++i) {
+    if (config_vars[i].type == CONFIG_TYPE_OBSOLETE ||
+        config_vars[i].type == CONFIG_TYPE_LINELIST_S)
+      continue;
+    if (minimal && option_is_same(options, defaults, &config_vars[i]))
+      continue;
+    line = config_get_assigned_option(options, config_vars[i].name);
+    for (; line; line = line->next) {
+      size_t len = strlen(line->key) + strlen(line->value) + 3;
+      char *tmp;
+      tmp = tor_malloc(len);
+      if (tor_snprintf(tmp, len, "%s %s\n", line->key, line->value)<0) {
+        log_fn(LOG_ERR, "Internal error writing log option");
+        tor_assert(0);
+      }
+      smartlist_add(elements, tmp);
+    }
+    config_free_lines(line);
+  }
+
+  result = smartlist_join_strings(elements, "", 0, NULL);
+  SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
+  smartlist_free(elements);
+  return result;
 }
 
 /** Return 0 if every setting in <b>options</b> is reasonable.  Else
