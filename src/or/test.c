@@ -466,11 +466,11 @@ test_onion_handshake() {
 
   /* client-side */
   crypto_dh_env_t *c_dh = NULL;
-  char c_buf[208];
+  char c_buf[DH_ONIONSKIN_LEN];
   char c_keys[40];
 
   /* server-side */
-  char s_buf[192];
+  char s_buf[DH_KEY_LEN];
   char s_keys[40];
 
   /* shared */
@@ -480,11 +480,11 @@ test_onion_handshake() {
   test_assert(! crypto_pk_generate_key(pk));
 
   /* client handshake 1. */
-  memset(c_buf, 0, 208);
+  memset(c_buf, 0, DH_ONIONSKIN_LEN);
   test_assert(! onion_skin_create(pk, &c_dh, c_buf));
 
   /* server handshake */
-  memset(s_buf, 0, 192);
+  memset(s_buf, 0, DH_KEY_LEN);
   memset(s_keys, 0, 40);
   test_assert(! onion_skin_server_handshake(c_buf, pk, s_buf, s_keys, 40));
   

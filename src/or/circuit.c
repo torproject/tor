@@ -777,7 +777,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_CREATE;
     cell.aci = circ->n_aci;
-    cell.length = 208;
+    cell.length = DH_ONIONSKIN_LEN;
 
     if(onion_skin_create(circ->n_conn->pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
       log(LOG_INFO,"circuit_send_next_onion_skin(): onion_skin_create (first hop) failed.");
@@ -816,7 +816,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_EXTEND);
     SET_CELL_STREAM_ID(cell, ZERO_STREAM);
 
-    cell.length = RELAY_HEADER_SIZE + 6 + 208;
+    cell.length = RELAY_HEADER_SIZE + 6 + DH_ONIONSKIN_LEN;
     *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
     *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
     if(onion_skin_create(router->pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
@@ -883,9 +883,9 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   memset(&newcell, 0, sizeof(cell_t));
   newcell.command = CELL_CREATE;
   newcell.aci = circ->n_aci;
-  newcell.length = 208;
+  newcell.length = DH_ONIONSKIN_LEN;
 
-  memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6, 208);
+  memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6, DH_ONIONSKIN_LEN);
 
   if(connection_write_cell_to_buf(&newcell, circ->n_conn) < 0) {
     return -1;

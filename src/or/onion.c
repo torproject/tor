@@ -184,7 +184,7 @@ static int onionskin_process(circuit_t *circ) {
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_CREATED;
   cell.aci = circ->p_aci;
-  cell.length = 192;
+  cell.length = DH_KEY_LEN;
 
   circ->state = CIRCUIT_STATE_OPEN;
 
@@ -436,7 +436,7 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
 int
 onion_skin_create(crypto_pk_env_t *dest_router_key,
                   crypto_dh_env_t **handshake_state_out,
-                  char *onion_skin_out) /* Must be 208 bytes long */
+                  char *onion_skin_out) /* Must be DH_ONIONSKIN_LEN bytes long */
 {
   char iv[16];
   char *pubkey = NULL;
@@ -445,7 +445,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   int dhbytes, pkbytes;
 
   *handshake_state_out = NULL;
-  memset(onion_skin_out, 0, 208);
+  memset(onion_skin_out, 0, DH_ONIONSKIN_LEN);
   memset(iv, 0, 16);
 
   if (!(dh = crypto_dh_new()))
@@ -453,7 +453,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   
   dhbytes = crypto_dh_get_bytes(dh);
   pkbytes = crypto_pk_keysize(dest_router_key);
-  assert(dhbytes+16 == 208);
+  assert(dhbytes+16 == DH_ONIONSKIN_LEN);
   if (!(pubkey = malloc(dhbytes+16)))
     goto err;
 
@@ -512,13 +512,13 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
  * reply, and key_out_len bytes of key material, stored in key_out.
  */
 int
-onion_skin_server_handshake(char *onion_skin, /* 208 bytes long */
+onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
                             crypto_pk_env_t *private_key,
-                            char *handshake_reply_out, /* 192 bytes long */
+                            char *handshake_reply_out, /* DH_KEY_LEN bytes long */
                             char *key_out,
                             int key_out_len)
 {
-  char buf[208];
+  char buf[DH_ONIONSKIN_LEN];
   char iv[16];
   crypto_dh_env_t *dh = NULL;
   crypto_cipher_env_t *cipher = NULL;
@@ -539,7 +539,7 @@ onion_skin_server_handshake(char *onion_skin, /* 208 bytes long */
 
   cipher = crypto_create_init_cipher(CRYPTO_CIPHER_3DES, buf, iv, 0);
 
-  if (crypto_cipher_decrypt(cipher, onion_skin+pkbytes, 208-pkbytes,
+  if (crypto_cipher_decrypt(cipher, onion_skin+pkbytes, DH_ONIONSKIN_LEN-pkbytes,
                             buf+pkbytes))
     goto err;
 
@@ -550,13 +550,13 @@ onion_skin_server_handshake(char *onion_skin, /* 208 bytes long */
 #endif
   
   dh = crypto_dh_new();
-  if (crypto_dh_get_public(dh, handshake_reply_out, 192))
+  if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN))
     goto err;
 
-  if (crypto_dh_compute_secret(dh, buf+16, 192, buf))
+  if (crypto_dh_compute_secret(dh, buf+16, DH_KEY_LEN, buf))
     goto err;
 
-  memcpy(key_out, buf+192-key_out_len, key_out_len);
+  memcpy(key_out, buf+DH_KEY_LEN-key_out_len, key_out_len);
 
   crypto_free_cipher_env(cipher);
   crypto_dh_free(dh);
@@ -577,20 +577,20 @@ onion_skin_server_handshake(char *onion_skin, /* 208 bytes long */
  */
 int
 onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
-                            char *handshake_reply,/* Must be 192 bytes long*/
+                            char *handshake_reply,/* Must be DH_KEY_LEN bytes long*/
                             char *key_out,
                             int key_out_len) 
 {
-  char key_material[192];
-  assert(crypto_dh_get_bytes(handshake_state) == 192);
+  char key_material[DH_KEY_LEN];
+  assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
   
-  memset(key_material, 0, 192);
+  memset(key_material, 0, DH_KEY_LEN);
 
-  if (crypto_dh_compute_secret(handshake_state, handshake_reply, 192,
+  if (crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
                                key_material))
     return -1;
   
-  memcpy(key_out, key_material+192-key_out_len, key_out_len);
+  memcpy(key_out, key_material+DH_KEY_LEN-key_out_len, key_out_len);
 
   return 0;
 }
