@@ -289,6 +289,15 @@ int strcmpstart(const char *s1, const char *s2)
   return strncmp(s1, s2, n);
 }
 
+/* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
+ * strcasecmp.
+ */
+int strcasecmpstart(const char *s1, const char *s2)
+{
+  size_t n = strlen(s2);
+  return strncasecmp(s1, s2, n);
+}
+
 /* Compares the last strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
@@ -299,6 +308,18 @@ int strcmpend(const char *s1, const char *s2)
     return strcmp(s1,s2);
   else
     return strncmp(s1+(n1-n2), s2, n2);
+}
+
+/* Compares the last strlen(s2) characters of s1 with s2.  Returns as for
+ * strcasecmp.
+ */
+int strcasecmpend(const char *s1, const char *s2)
+{
+  size_t n1 = strlen(s1), n2 = strlen(s2);
+  if (n2>n1)
+    return strcasecmp(s1,s2);
+  else
+    return strncasecmp(s1+(n1-n2), s2, n2);
 }
 
 /** Return a pointer to the first char of s that is not whitespace and
