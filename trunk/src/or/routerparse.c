@@ -390,14 +390,6 @@ router_parse_routerlist_from_directory(const char *str,
   }
   tok->n_args = 0; /* Don't free the strings in good_nickname_lst yet. */
 
-  /* Determine if my routerinfo is considered verified. */
-  {
-    routerinfo_t *me = router_get_my_routerinfo();
-    if(me)
-      router_update_status_from_smartlist(me, published_on,
-                                          good_nickname_list);
-  }
-
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
   str = end;
@@ -425,6 +417,21 @@ router_parse_routerlist_from_directory(const char *str,
   }
   if (check_directory_signature(digest, smartlist_get(tokens,0), pkey)<0) {
     goto err;
+  }
+
+  /* Determine if my routerinfo is considered verified. */
+  {
+    static int have_warned_about_unverified_status = 0;
+    routerinfo_t *me = router_get_my_routerinfo();
+    if(me) {
+      router_update_status_from_smartlist(me, published_on,
+                                          good_nickname_list);
+      if(me->is_verified == 0 && !have_warned_about_unverified_status) {
+        log_fn(LOG_WARN,"Dirserver %s lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", "");
+        /* XXX008 can we print the name of the dirserver above? how to get it */
+        have_warned_about_unverified_status = 1;
+      }
+    }
   }
 
   if (*dest)
