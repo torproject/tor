@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define  specver 0
+%define specver 1
 
 ## Things users may want to change
 #
@@ -58,12 +58,18 @@
 %define ostag suse
 %endif
 
-# Using the build date ensures that every build really does get
-# a different release number.
-%define  blddate %(date -u +"%Y%m%d%H%M")
 
-# ... and here it is.
+# Using the build date ensures that every build really does get
+# a different release number.  We use this trick for CVS versions.
+# For release versions, we don't want or need it.
+%define is_cvs_version %(echo %{native_version} | grep 'cvs' > /dev/null && echo 1 || echo 0)
+
+%if %{is_cvs_version}
+%define blddate %(date -u +"%Y%m%d%H%M")
 %define release %{pkgspec}.%{specver}.%{ostag}.%{blddate}
+%else
+%define release %{pkgspec}.%{specver}.%{ostag}
+%endif
 
 ## General-purpose macros
 #
