@@ -628,11 +628,11 @@ typedef struct crypt_path_t crypt_path_t;
 
 /** Information used to build a circuit. */
 typedef struct {
-  /** intended length of the final circuit. */
+  /** Intended length of the final circuit. */
   int desired_path_len;
-  /** nickname of planned exit node. */
+  /** Nickname of planned exit node. */
   char *chosen_exit;
-  /** crypt_path_t to append after rendezvous: used for rendezvous. */
+  /** The crypt_path_t to append after rendezvous: used for rendezvous. */
   struct crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
   int failure_count;
