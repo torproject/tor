@@ -16,6 +16,9 @@
 #include <signal.h>
 #include <netdb.h>
 #include <ctype.h>
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
 #ifdef HAVE_SYS_POLL_H
 #include <sys/poll.h>
 #elif HAVE_POLL_H

@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.9  2002/09/10 13:32:27  nickm
+ * "You got BSD in my MacOS!" "You got MacOS in my BSD!" Anyway, MacOS works again.
+ *
  * Revision 1.8  2002/09/09 04:10:58  arma
  * port to actual BSD
  *
@@ -53,6 +56,8 @@
  *
  */
 
+#include "orconfig.h"
+#undef VERSION
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -71,6 +76,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
 
 #include "../common/log.h"
 #include "../common/config.h"
