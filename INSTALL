@@ -1,7 +1,7 @@
 Quickstart version for users:
 
 0) Download the absolute newest version. No, really.
-  http://freehaven.net/tor/dist/
+  http://tor.eff.org/dist/
 1) tar xvf it, and then cd into the directory.
 2) ./configure
 3) make

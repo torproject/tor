@@ -17,11 +17,11 @@ doesn't work for you.
 
 Do you want to run a tor server?
 
-  See http://freehaven.net/tor/doc/tor-doc.html#server
+  See http://tor.eff.org/doc/tor-doc.html#server
 
 Do you want to run a hidden service?
 
-  See http://freehaven.net/tor/doc/tor-doc.html#hidden-service
+  See http://tor.eff.org/doc/tor-doc.html#hidden-service
 
 Configuring tsocks:
 
