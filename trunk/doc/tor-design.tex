@@ -119,25 +119,25 @@ application-level proxies such as Privoxy \cite{privoxy}, without trying
 to duplicate those features itself.
 
 \textbf{No mixing, padding, or traffic shaping yet:} Onion
-Routing originally called for batching and reordering cells arriving from
-each source, and assumed padding between ORs and, in a
-later design, between onion proxies (users) and onion routers
+Routing originally called for batching and reordering cells as they arrived,
+assumed padding between ORs, and in
+later designs added padding between onion proxies (users) and ORs
 \cite{or-ih96,or-jsac98}.  Tradeoffs between padding protection
 and cost were discussed, but no general padding scheme was suggested.
-It was theorized, \cite{or-pet00}, but not described how \emph{traffic
- shaping} would generally be used.  Recent research \cite{econymics}
+It was theorized \cite{or-pet00} but not described how \emph{traffic
+ shaping} would be used.  Recent research \cite{econymics}
 and deployment experience \cite{freedom21-security} suggest that this
 level of resource use is not practical or economical; and even full
 link padding is still vulnerable \cite{defensive-dropping}. Thus,
 until we have a proven and convenient design for traffic shaping or
-low-latency mixing that will improve anonymity against a realistic
+low-latency mixing that improves anonymity against a realistic
 adversary, we leave these strategies out.
 
 \textbf{Many TCP streams can share one circuit:} Onion Routing originally
 built a separate circuit for each
-application-level request, requiring
-multiple public key operations for every request, and also presenting
-a threat to anonymity from building so many different circuits; see
+application-level request, but this required
+multiple public key operations for every request, and also presented
+a threat to anonymity from building so many circuits; see
 Section~\ref{sec:maintaining-anonymity}.  Tor multiplexes multiple TCP
 streams along each circuit to improve efficiency and anonymity.
 
@@ -157,7 +157,7 @@ congestion control uses end-to-end acks to maintain anonymity
 while allowing nodes at the edges of the network to detect congestion
 or flooding and send less data until the congestion subsides.
 
-\textbf{Directory servers:} Earlier Onion Routing design
+\textbf{Directory servers:} Earlier Onion Routing designs
 planned to flood link-state information through the network---an approach
 that can be unreliable and open to partitioning attacks or
 deception. Tor takes a simplified view toward distributing link-state
@@ -174,9 +174,9 @@ is comfortable with allowing different types of traffic to exit the Tor
 network from his node.
 
 \textbf{End-to-end integrity checking:} The original Onion Routing
-design did no integrity checking on data. Any OR on the
+design did no integrity checking on data. Any node on the
 circuit could change the contents of data cells as they passed by---for
-example, to alter a connection request on the fly so it would connect
+example, to alter a connection request so it would connect
 to a different webserver, or to `tag' encrypted traffic and look for
 corresponding corrupted traffic at the network edges \cite{minion-design}.
 Tor hampers these attacks by checking data integrity before it leaves
@@ -200,8 +200,8 @@ to connect with hidden servers; reply onions are no longer required.
 
 
 Unlike Freedom \cite{freedom2-arch}, Tor only tries to anonymize
-TCP streams. It does not require patches (or built-in support) in an
-operating system's network stack, which has been valuable to Tor's
+TCP streams. Not requiring patches (or built-in support) in an
+operating system's network stack has been valuable to Tor's
 portability and deployability.
 
 We have implemented most of the above features. Our source code is
@@ -429,8 +429,7 @@ deployability, readability, and ease of security analysis. Tor aims to
 deploy a simple and stable system that integrates the best well-understood
 approaches to protecting anonymity.\\
 
-\noindent{\large\bf Non-goals}\\
-\label{subsec:non-goals}
+\noindent{\large\bf Non-goals}\label{subsec:non-goals}\\
 In favoring simple, deployable designs, we have explicitly deferred
 several possible goals, either because they are solved elsewhere, or because
 they are not yet solved.
@@ -472,8 +471,8 @@ A global passive adversary is the most commonly assumed threat when
 analyzing theoretical anonymity designs. But like all practical
 low-latency systems, Tor does not protect against such a strong
 adversary. Instead, we assume an adversary who can observe some fraction
-of network traffic; who can generate, modify, delete, or delay traffic
-on the network; who can operate onion routers of its own; and who can
+of network traffic; who can generate, modify, delete, or delay
+traffic;  who can operate onion routers of its own; and who can
 compromise some fraction of the onion routers.
 
 In low-latency anonymity systems that use layered encryption, the
@@ -623,10 +622,8 @@ to each other through a given exit node. Also, because circuits are built
 in the background, OPs can recover from failed circuit creation
 without delaying streams and thereby harming user experience.\\
 
-\noindent{\large\bf Constructing a circuit}\\
+\noindent{\large\bf Constructing a circuit}\label{subsubsec:constructing-a-circuit}\\
 %\subsubsection{Constructing a circuit}
-\label{subsubsec:constructing-a-circuit}
-%
 A user's OP constructs circuits incrementally, negotiating a
 symmetric key with each OR on the circuit, one hop at a time. To begin
 creating a new circuit, the OP (call her Alice) sends a
@@ -1220,8 +1217,8 @@ identity even in the presence of router failure. Bob's service must
 not be tied to a single OR, and Bob must be able to tie his service
 to new ORs. \textbf{Smear-resistant:}
 A social attacker who offers an illegal or disreputable location-hidden
-service should not be able to ``frame'' a rendezvous router---that is,
-make observers believe that the router created that service.
+service should not be able to ``frame'' a rendezvous router by 
+making observers believe the router created that service.
 %slander-resistant? defamation-resistant?
 \textbf{Application-transparent:} Although we require users
 to run special software to access location-hidden servers, we must not
