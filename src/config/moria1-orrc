@@ -3,7 +3,6 @@ DataDirectory moria1
 Nickname moria1
 
 ORPort 9001
-APPort 9021
 DirPort 9031
 
 OnionRouter 1
