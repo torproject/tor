@@ -542,8 +542,53 @@ get_uname(void)
     } else
 #endif
       {
+#ifdef MS_WINDOWS
+        OSVERSIONINFO info;
+        int i;
+        const char *plat = NULL;
+        static struct {
+          int major; int minor; const char *version;
+        } win_version_table[] = {
+          { 5, 2, "Windows Server 2003" },
+          { 5, 1, "Windows XP" },
+          { 5, 0, "Windows 2000" },
+          /* { 4, 0, "Windows NT 4.0" }, */
+          { 4, 90, "Windows Me" },
+          { 4, 10, "Windows 98" },
+          /* { 4, 0, "Windows 95" } */
+          { 3, 51, "Windows NT 3.51" },
+          { -1, -1, NULL }
+        };
+        info.dwOSVersionInfoSize = sizeof(info);
+        GetVersionEx(&info);
+        if (info.dwMajorVersion == 4 && info.dwMinorVersion == 0) {
+          if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)
+            plat = "Windows NT 4.0";
+          else
+            plat = "Windows 95";
+        } else {
+          for (i=0; win_version_table[i].major>=0; ++i) {
+            if (win_version_table[i].major == info.dwMajorVersion &&
+                win_version_table[i].minor == info.dwMinorversion) {
+              plat = win_version_table[i].version;
+              break;
+            }
+          }
+        }
+        if (plat) {
+          strlcpy(uname_result, plat, sizeof(uname_result));
+        } else {
+          if (info.dwMajorVersion > 5 ||
+              (info.dwMajorVersion==5 && info.dwMinorVersion>2))
+            tor_snprintf("Very recent version of Windows [major=%d,minor=%d]",
+                         (int)info.dwMajorVersion,(int)info.dwMinorVersion);
+          else
+            tor_snprintf("Unrecognized version of Windows [major=%d,minor=%d]",
+                         (int)info.dwMajorVersion,(int)info.dwMinorVersion);
+        }
+#else
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
-/* XXX win32 doesn't have uname, but we can still ifdef windows sprint "windows" */
+#endif
       }
     uname_result_is_set = 1;
   }
