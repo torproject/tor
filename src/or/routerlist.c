@@ -869,18 +869,21 @@ router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
   tmp[len+1]='\0';
   if (router_get_next_token(&cp, &tok)) {
     log_fn(LOG_WARN, "Error reading exit policy: %s", tok.val.error);
-    free(tmp);
-    return -1;
+    goto err;
   }
   if (tok.tp != K_ACCEPT && tok.tp != K_REJECT) {
     log_fn(LOG_WARN, "Expected 'accept' or 'reject'.");
-    free(tmp);
-    return -1;
+    goto err;
   }
 
   /* Now that we've gotten an exit policy, add it to the router. */
   r = router_add_exit_policy(router, &tok);
+  goto done;
+ err:
+  r = -1;
+ done:
   free(tmp);
+  router_release_token(&tok);
   return r;
 }
 
