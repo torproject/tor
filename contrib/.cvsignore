@@ -1,4 +1,5 @@
 Makefile
 Makefile.in
 tor.sh
+torctl
 torify
