@@ -18,6 +18,20 @@
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
+#ifdef HAVE_SYS_LIMITS_H
+#include <sys/limits.h>
+#endif
+#ifdef HAVE_MACHINE_LIMITS_H
+#ifndef __FreeBSD__
+  /* FreeBSD has a bug where it complains that this file is obsolete,
+     and I should migrate to using sys/limits. It complains even when
+     I include both. */
+#include <machine/limits.h>
+#endif
+#endif
 
 
 #if (SIZEOF_INT8_T != 0)
@@ -178,6 +192,31 @@ typedef uint32_t uintptr_t;
 #endif
 #ifndef HAVE_UINT64_T
 #error "Missing type uint64_t"
+#endif
+
+/* XXXX This assumes a sane (2's-complement) representation.  But if you
+ *  aren't 2's complement, and you don't define LONG_MAX, then you're so
+ *  bizarre that I want nothing to do with you. */
+#ifndef LONG_MAX
+#if (SIZEOF_LONG == 4)
+#define LONG_MAX 0x7fffffffL
+#elif (SIZEOF_LONG == 8)
+#define LONG_MAX 0x7fffffffffffffffL
+#else
+#error "Can't define LONG_MAX"
+#endif
+#endif
+
+#ifndef UINT_MAX
+#if (SIZEOF_INT == 2)
+#define UINT_MAX 0xffffu
+#elif (SIZEOF_INT == 4)
+#define UINT_MAX 0xffffffffu
+#elif (SIZEOF_INT == 8)
+#define UINT_MAX 0xffffffffffffffffu
+#else
+#error "Can't define UINT_MAX"
+#endif
 #endif
 
 #endif /* __TORINT_H */

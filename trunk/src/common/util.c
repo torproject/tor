@@ -874,12 +874,6 @@ tv_udiff(struct timeval *start, struct timeval *end)
   long udiff;
   long secdiff = end->tv_sec - start->tv_sec;
 
-/* XXX some SunOS machines don't have LONG_MAX defined in the includes
- * we use. Surely there is a better fix... */
-#ifndef LONG_MAX
-#define LONG_MAX 2147483647L
-#endif
-
   if (secdiff+1 > LONG_MAX/1000000) {
     log_fn(LOG_WARN, "comparing times too far apart.");
     return LONG_MAX;
