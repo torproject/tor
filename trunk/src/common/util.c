@@ -1458,6 +1458,7 @@ try_next_line:
 char *expand_filename(const char *filename)
 {
   tor_assert(filename);
+  /* XXXX Should eventually check for ~username/ */
   if (!strncmp(filename,"~/",2)) {
     const char *home = getenv("HOME");
     char *result;

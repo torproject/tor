@@ -55,7 +55,7 @@ NICK      - Possible to get autoconf to easily install things into ~/.tor?
             to search by digest when appropriate.
           o make sure to use addr/port in cpuworker tasks, because
             OPs don't have keys.
-NICK      - and fix the function comments in rephist
+          o and fix the function comments in rephist
           o Rep-hist functions need to store info by keyid
           - also use this in intro points and rendezvous points, and
             hidserv descs.  [XXXX This isn't enough.]

@@ -228,7 +228,10 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-/* DOCDOC */
+/** Return true iff the digest of <b>router</b>'s identity key,
+ * encoded in hexadecimal, matches <b>hexdigest</b> (which is
+ * optionally prefixed with a single dollar sign).  Return false if
+ * <b>hexdigest</b> is malformed, or it doesn't match.  */
 static INLINE int router_hex_digest_matches(routerinfo_t *router,
                                      const char *hexdigest)
 {
@@ -237,13 +240,17 @@ static INLINE int router_hex_digest_matches(routerinfo_t *router,
   if (hexdigest[0] == '$')
     ++hexdigest;
 
-  if (base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0)
+  if (strlen(hexdigest) != HEX_DIGEST_LEN ||
+      base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0)
     return 0;
   else
     return (!memcmp(digest, router->identity_digest, DIGEST_LEN));
 }
 
-/* DOCDOC */
+/* Return true if <b>router</b>'s nickname matches <b>nickname</b>
+ * (case-insensitive), or if <b>router's</b> identity key digest
+ * matches a hexadecimal value stored in <b>nickname</b>.  Return
+ * false otherwise.*/
 int router_nickname_matches(routerinfo_t *router, const char *nickname)
 {
   if (nickname[0]!='$' && !strcasecmp(router->nickname, nickname))
@@ -720,7 +727,7 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
     == ADDR_POLICY_REJECTED;
 }
 
-/* DODCDOC */
+/* Release all space held in <b>rr</b>. */
 void running_routers_free(running_routers_t *rr)
 {
   tor_assert(rr);
@@ -731,7 +738,8 @@ void running_routers_free(running_routers_t *rr)
   tor_free(rr);
 }
 
-/* DOCDOC*/
+/* Update the running/not-running status of every router in <b>list</b>, based
+ * on the contents of <b>rr</b>. */
 void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr)
 {
