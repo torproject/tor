@@ -354,7 +354,7 @@ void routerlist_free(routerlist_t *rl)
   tor_free(rl);
 }
 
-/** Mark the router named <b>nickname</b> as non-running in our routerlist. */
+/** Mark the router with ID <b>digest</b> as non-running in our routerlist. */
 void router_mark_as_down(const char *digest) {
   routerinfo_t *router;
   tor_assert(digest);

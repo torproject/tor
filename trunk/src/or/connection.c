@@ -829,7 +829,9 @@ int connection_handle_write(connection_t *conn) {
         log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
-        /* Previously we tested conn->nickname; is this right? */
+        /* it's safe to pass OPs to router_mark_as_down(), since it just
+         * ignores unrecognized routers
+         */
         if (conn->type == CONN_TYPE_OR)
           router_mark_as_down(conn->identity_digest);
         return -1;
