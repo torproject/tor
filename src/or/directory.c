@@ -275,16 +275,18 @@ int connection_dir_process_inbuf(connection_t *conn) {
       switch(status_code) {
         case 200:
           if(rend_cache_store(body, body_len) < 0) {
-            log_fn(LOG_WARN,"Failed to store rendezvous descriptor. Abandoning stream.");
-            /* alice's ap_stream is just going to have to time out. */
+            log_fn(LOG_WARN,"Failed to store rendezvous descriptor.");
+            /* alice's ap_stream will notice when connection_mark_for_close
+             * cleans it up */
           } else {
             /* success. notify pending connections about this. */
             rend_client_desc_fetched(conn->rend_query, 1);
+            conn->purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
           }
           break;
         case 404:
-          /* not there. also notify pending connections. */
-          rend_client_desc_fetched(conn->rend_query, 0);
+          /* not there. pending connections will be notified when
+           * connection_mark_for_close cleans it up. */
           break;
         case 400:
           log_fn(LOG_WARN,"http status 400 (bad request). Dirserver didn't like our rendezvous query?");
