@@ -605,8 +605,8 @@ get_uname(void)
 #ifdef HAVE_UNAME
     if (uname(&u) != -1) {
       /* (linux says 0 is success, solaris says 1 is success) */
-      tor_snprintf(uname_result, sizeof(uname_result), "%s %s %s",
-               u.sysname, u.nodename, u.machine);
+      tor_snprintf(uname_result, sizeof(uname_result), "%s %s",
+               u.sysname, u.machine);
     } else
 #endif
       {
