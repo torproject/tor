@@ -720,6 +720,7 @@ test_dir_format()
   ex2.next = NULL;
   r2.address = "tor.tor.tor";
   r2.addr = 0x0a030201u; /* 10.3.2.1 */
+  r2.platform = tor_strdup(platform);
   r2.published_on = 5;
   r2.or_port = 9005;
   r2.socks_port = 0;
