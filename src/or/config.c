@@ -2237,6 +2237,7 @@ struct unit_table_t {
 };
 
 static struct unit_table_t memory_units[] = {
+  { "",          1 },
   { "b",         1<< 0 },
   { "byte",      1<< 0 },
   { "bytes",     1<< 0 },
@@ -2257,6 +2258,7 @@ static struct unit_table_t memory_units[] = {
 };
 
 static struct unit_table_t time_units[] = {
+  { "",         1 },
   { "second",   1 },
   { "seconds",  1 },
   { "minute",   60 },
