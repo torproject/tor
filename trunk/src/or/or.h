@@ -352,12 +352,6 @@ struct crypt_path_t {
 
 typedef struct crypt_path_t crypt_path_t;
 
-struct relay_queue_t {
-  cell_t *cell;
-  crypt_path_t *layer_hint;
-  struct relay_queue_t *next;
-};
-
 /* struct for a path (circuit) through the network */
 typedef struct {
   uint32_t n_addr;
@@ -371,8 +365,6 @@ typedef struct {
 
   aci_t p_aci; /* connection identifiers */
   aci_t n_aci;
-
-  struct relay_queue_t *relay_queue; /* for queueing cells at the edges */
 
   crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
   crypto_cipher_env_t *n_crypto;
@@ -394,7 +386,6 @@ typedef struct {
 
 struct onion_queue_t {
   circuit_t *circ;
-  struct relay_queue_t *relay_cells;
   struct onion_queue_t *next;
 };
 
@@ -749,8 +740,6 @@ int onion_pending_add(circuit_t *circ);
 int onion_pending_check(void);
 void onion_pending_process_one(void);
 void onion_pending_remove(circuit_t *circ);
-struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell, crypt_path_t *layer_hint);
-void onion_pending_relay_add(circuit_t *circ, cell_t *cell);
 
 /* uses a weighted coin with weight cw to choose a route length */
 int chooselen(double cw);

@@ -167,8 +167,7 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   }
 
   if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
-    log(LOG_DEBUG,"command_process_relay_cell(): circuit in create_wait. Queueing relay cell.");
-    onion_pending_relay_add(circ, cell);
+    log(LOG_DEBUG,"command_process_relay_cell(): circuit in create_wait. Dropping.");
     return;
   }
 
