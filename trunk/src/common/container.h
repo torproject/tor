@@ -32,7 +32,10 @@ int smartlist_len(const smartlist_t *sl);
 #define SPLIT_IGNORE_BLANK 0x02
 int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
                            int flags, int max);
-char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate);
+char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate,
+                             size_t *len_out);
+char *smartlist_join_strings2(smartlist_t *sl, const char *join,
+                              size_t join_len, int terminate, size_t *len_out);
 
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
   do {                                                          \
