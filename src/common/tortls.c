@@ -44,20 +44,22 @@ static int tls_library_is_initialized = 0;
 /* These functions are declared in crypto.c but not exported. */
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
-char *crypto_perror(); 
 
 static void
-tls_log_error(int severity, char *doing)
+tls_log_error(int severity, const char *doing, int err)
 {
+  const char *msg = (const char*)ERR_reason_error_string(err);
+  if (!err) msg = "(null)";
   if (doing) {
-    log(severity, "TLS error while %s: %s", doing, crypto_perror());
+    log(severity, "TLS error while %s: %s", doing, msg);
   } else {
-    log(severity, "TLS error: %s",crypto_perror());
+    log(severity, "TLS error: %s", msg);
   }
 }
 
 static int
-tor_tls_get_error(tor_tls *tls, int r, int extra)
+tor_tls_get_error(tor_tls *tls, int r, int extra, 
+		  const char *doing, int severity)
 {
   int err = SSL_get_error(tls->ssl, r);
   switch (err) {
@@ -68,10 +70,15 @@ tor_tls_get_error(tor_tls *tls, int r, int extra)
     case SSL_ERROR_WANT_WRITE:
       return TOR_TLS_WANTWRITE;
     case SSL_ERROR_SYSCALL:
+      /* This is oververbose XXX */
+      tls_log_error(severity, doing, err);
       return extra ? _TOR_TLS_SYSCALL : TOR_TLS_ERROR;
     case SSL_ERROR_ZERO_RETURN:
+      /* This is oververbose XXX */
+      tls_log_error(severity, doing, err);
       return extra ? _TOR_TLS_ZERORETURN : TOR_TLS_ERROR;
     default:
+      tls_log_error(severity, doing, err);
       return TOR_TLS_ERROR;
   }
 }
@@ -80,6 +87,7 @@ static void
 tor_tls_init() {
   if (!tls_library_is_initialized) {
     SSL_library_init();
+    crypto_global_init();
     tls_library_is_initialized = 1;
   }
 }
@@ -289,16 +297,15 @@ tor_tls_read(tor_tls *tls, char *cp, int len)
   r = SSL_read(tls->ssl, cp, len);
   if (r > 0)
     return r;
-  err = tor_tls_get_error(tls, r, 1);
+  err = tor_tls_get_error(tls, r, 1, "reading", LOG_ERR);
   if (err == _TOR_TLS_SYSCALL) {
-    tls_log_error(LOG_ERR, "reading");
+    log(LOG_ERR, "TLS error while reading: syscall error");
     return TOR_TLS_ERROR;
   } else if (err == _TOR_TLS_ZERORETURN) {
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
   } else {
     assert(err != TOR_TLS_DONE);
-    tls_log_error(LOG_ERR, "reading");
     return err;
   }
 }
@@ -317,13 +324,11 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
   if (n == 0)
     return 0;
   r = SSL_write(tls->ssl, cp, n);
-  err = tor_tls_get_error(tls, r, 1);
+  err = tor_tls_get_error(tls, r, 1, "writing", LOG_ERR);
   assert(err != _TOR_TLS_ZERORETURN);
   if (err == TOR_TLS_DONE) {
     return r;
   } else {
-    if (err != TOR_TLS_WANTREAD && err != TOR_TLS_WANTWRITE) 
-      tls_log_error(LOG_ERR, "writing");
     return err;
   }  
 }
@@ -343,11 +348,9 @@ tor_tls_handshake(tor_tls *tls)
   } else {
     r = SSL_connect(tls->ssl);
   }
-  r = tor_tls_get_error(tls,r,0);
+  r = tor_tls_get_error(tls,r,0, "handshaking", LOG_ERR);
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN; 
-  } else if (r != TOR_TLS_WANTREAD && r != TOR_TLS_WANTWRITE) {
-    tls_log_error(LOG_ERR, "handshaking");
   }
   return r;
 }
@@ -371,15 +374,13 @@ tor_tls_shutdown(tor_tls *tls)
       do {
 	r = SSL_read(tls->ssl, buf, 128);
       } while (r>0);
-      err = tor_tls_get_error(tls, r, 1);
+      err = tor_tls_get_error(tls, r, 1, "reading to shut down", LOG_ERR);
       if (err == _TOR_TLS_ZERORETURN) {
 	tls->state = TOR_TLS_ST_GOTCLOSE;
 	/* fall through... */
       } else {
 	if (err == _TOR_TLS_SYSCALL)
 	  err = TOR_TLS_ERROR;
-	if (err != TOR_TLS_WANTREAD && err != TOR_TLS_WANTWRITE) 
-	  tls_log_error(LOG_ERR, "shutting down");
 	return err;
       }
     }
@@ -390,7 +391,7 @@ tor_tls_shutdown(tor_tls *tls)
       tls->state = TOR_TLS_ST_CLOSED;
       return TOR_TLS_DONE;
     }
-    err = tor_tls_get_error(tls, r, 1);
+    err = tor_tls_get_error(tls, r, 1, "shutting down", LOG_ERR);
     if (err == _TOR_TLS_SYSCALL) {
       /* The underlying TCP connection closed while we were shutting down. */
       tls->state = TOR_TLS_ST_CLOSED; 
@@ -410,8 +411,6 @@ tor_tls_shutdown(tor_tls *tls)
       tls->state = TOR_TLS_ST_SENTCLOSE;
       /* fall through ... */
     } else {
-      if (err != TOR_TLS_WANTREAD && err != TOR_TLS_WANTWRITE) 
-	tls_log_error(LOG_ERR, "shutting down");
       return err;
     }
   } /* end loop */
