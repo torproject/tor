@@ -112,7 +112,7 @@ void onion_pending_remove(circuit_t *circ) {
 }
 
 /* given a response payload and keys, initialize, then send a created cell back */
-int onionskin_process(circuit_t *circ, unsigned char *payload, unsigned char *keys) {
+int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys) {
   unsigned char iv[16];
   cell_t cell;
 

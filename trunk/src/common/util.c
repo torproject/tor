@@ -103,6 +103,21 @@ int write_all(int fd, const void *buf, size_t count) {
   return count;
 }
 
+/* a wrapper for read(2) that makes sure to read all count bytes.
+ * Only use if fd is a blocking socket. */
+int read_all(int fd, void *buf, size_t count) {
+  int numread = 0;
+  int result;
+
+  while(numread != count) {
+    result = read(fd, buf+numread, count-numread);
+    if(result<=0)
+      return -1;
+    numread += result;
+  }
+  return count;
+}
+
 void set_socket_nonblocking(int socket)
 {
 #ifdef MS_WINDOWS

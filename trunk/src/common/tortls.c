@@ -421,7 +421,7 @@ tor_tls_verify(tor_tls *tls)
   time_t now;
   crypto_pk_env_t *r = NULL;
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
-    return 0;
+    return NULL;
   
   now = time(NULL);
   if (X509_cmp_time(X509_get_notBefore(cert), &now) > 0)
@@ -453,3 +453,4 @@ tor_tls_verify(tor_tls *tls)
     RSA_free(rsa);
   return r;
 }
+

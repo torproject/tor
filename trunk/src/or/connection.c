@@ -585,8 +585,8 @@ int connection_handle_write(connection_t *conn) {
         }
         /* else no problem, we're already reading */
         return 0;
-      case TOR_TLS_DONE:
-      /* for TOR_TLS_DONE, fall through to check if the flushlen
+      /* case TOR_TLS_DONE:
+       * for TOR_TLS_DONE, fall through to check if the flushlen
        * is empty, so we can stop writing.
        */  
     }

@@ -5,13 +5,12 @@
 #include "or.h"
 extern or_options_t options; /* command-line and config-file options */
 
-#define MAX_QUESTIONLEN 256
-
 #define MAX_CPUWORKERS 17
-#define MIN_CPUWORKERS 2
+#define MIN_CPUWORKERS 1
 
-#define LEN_ONION_RESPONSE (1+DH_KEY_LEN+32)
-#define LEN_HANDSHAKE_RESPONSE (somethingelse)
+#define TAG_LEN 8
+#define LEN_ONION_QUESTION (1+TAG_LEN+DH_ONIONSKIN_LEN)
+#define LEN_ONION_RESPONSE (1+TAG_LEN+DH_KEY_LEN+32)
 
 int num_cpuworkers=0;
 int num_cpuworkers_busy=0;
@@ -19,7 +18,7 @@ int num_cpuworkers_busy=0;
 int cpuworker_main(void *data);
 static int spawn_cpuworker(void);
 static void spawn_enough_cpuworkers(void);
-static int process_pending_task(connection_t *cpuworker);
+static void process_pending_task(connection_t *cpuworker);
 
 void cpu_init(void) {
   spawn_enough_cpuworkers();
@@ -31,16 +30,42 @@ int connection_cpu_finished_flushing(connection_t *conn) {
   return 0;
 }
 
+static void tag_pack(char *tag, uint32_t addr, uint16_t port, aci_t aci) {
+  struct in_addr in;
+
+  *(uint32_t *)tag = addr;
+  *(uint16_t *)(tag+4) = port;
+  *(aci_t *)(tag+6) = aci;
+
+  in.s_addr = htonl(addr);
+  log_fn(LOG_DEBUG,"onion was from %s:%d, aci %d.", inet_ntoa(in), port, aci);
+}
+
+static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, aci_t *aci) {
+  struct in_addr in;
+
+  *addr = *(uint32_t *)tag;
+  *port = *(uint16_t *)(tag+4);
+  *aci = *(aci_t *)(tag+6);
+
+  in.s_addr = htonl(*addr);
+  log_fn(LOG_DEBUG,"onion was from %s:%d, aci %d.", inet_ntoa(in), *port, *aci);
+}
+
 int connection_cpu_process_inbuf(connection_t *conn) {
-  unsigned char buf[MAX_QUESTIONLEN];
+  unsigned char buf[LEN_ONION_RESPONSE];
+  uint32_t addr;
+  uint16_t port;
+  aci_t aci;
+  connection_t *p_conn;
+  circuit_t *circ;
 
   assert(conn && conn->type == CONN_TYPE_CPUWORKER);
 
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_ERR,"Read eof. Worker dying.");
     if(conn->state != CPUWORKER_STATE_IDLE) {
-      circuit_close(conn->circ);
-      conn->circ = NULL;
+      /* XXX the circ associated with this cpuworker will wait forever. Oops. */
       num_cpuworkers_busy--;
     }
     num_cpuworkers--;
@@ -48,45 +73,57 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   }
 
   if(conn->state == CPUWORKER_STATE_BUSY_ONION) {
-    assert(conn->circ);
     if(conn->inbuf_datalen < LEN_ONION_RESPONSE) /* entire answer available? */
       return 0; /* not yet */
     assert(conn->inbuf_datalen == LEN_ONION_RESPONSE);
 
     connection_fetch_from_buf(buf,LEN_ONION_RESPONSE,conn);
 
-    /* XXX conn->circ might already have been closed. Serious bug. Suck. */
-    if(*buf == 0 || conn->circ->p_conn == NULL ||
-       onionskin_process(conn->circ, buf+1, buf+1+DH_KEY_LEN) < 0) {
-      log_fn(LOG_DEBUG,"decoding onion, onionskin_process, or p_conn failed. Closing.");
-      circuit_close(conn->circ);
-    } else {
-      log_fn(LOG_DEBUG,"onionskin_process succeeded. Yay.");
-    }
-    conn->circ = NULL;
-  } else {
-    assert(conn->state == CPUWORKER_STATE_BUSY_HANDSHAKE);
+    /* parse out the circ it was talking about */
+    tag_unpack(buf+1, &addr, &port, &aci);
+    circ = NULL;
+    p_conn = connection_exact_get_by_addr_port(addr,port);
+    if(p_conn)
+      circ = circuit_get_by_aci_conn(aci, p_conn);
 
+    if(!circ) {
+      log_fn(LOG_DEBUG,"processed onion for a circ that's gone. Dropping.");
+      goto done_processing;
+    }
+    assert(circ->p_conn);
+    if(*buf == 0) {
+      log_fn(LOG_DEBUG,"decoding onionskin failed. Closing.");
+      circuit_close(circ);
+      goto done_processing;
+    }
+    if(onionskin_answer(circ, buf+1+TAG_LEN, buf+1+TAG_LEN+DH_KEY_LEN) < 0) {
+      log_fn(LOG_DEBUG,"onionskin_answer failed. Closing.");
+      circuit_close(circ);
+      goto done_processing;
+    }
+    log_fn(LOG_DEBUG,"onionskin_answer succeeded. Yay.");
+  } else {
     assert(0); /* don't ask me to do handshakes yet */
   }
 
+done_processing:
   conn->state = CPUWORKER_STATE_IDLE;
   num_cpuworkers_busy--;
-  process_pending_task(conn); /* discard return value */
+  process_pending_task(conn);
   return 0;
 }
 
 int cpuworker_main(void *data) {
-  unsigned char question[MAX_QUESTIONLEN];
+  unsigned char question[DH_ONIONSKIN_LEN];
   unsigned char question_type;
   int *fdarray = data;
   int fd;
-  int len;
 
   /* variables for onion processing */
   unsigned char keys[32];
-  unsigned char response[DH_KEY_LEN];
-  unsigned char buf[MAX_QUESTIONLEN];
+  unsigned char reply_to_proxy[DH_KEY_LEN];
+  unsigned char buf[LEN_ONION_RESPONSE];
+  char tag[TAG_LEN];
 
   close(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
@@ -97,22 +134,21 @@ int cpuworker_main(void *data) {
       log_fn(LOG_INFO,"read type failed. Exiting.");
       spawn_exit();
     }
-    assert(question_type == CPUWORKER_TASK_ONION ||
-           question_type == CPUWORKER_TASK_HANDSHAKE); 
+    assert(question_type == CPUWORKER_TASK_ONION);
 
-    if(question_type == CPUWORKER_TASK_ONION)
-      len = DH_ONIONSKIN_LEN;
-    else
-      len = 0; /* XXX */
+    if(read_all(fd, tag, TAG_LEN) != TAG_LEN) {
+      log_fn(LOG_INFO,"read tag failed. Exiting.");
+      spawn_exit();
+    }
 
-    if(read(fd, question, len) != len) {
-      log(LOG_INFO,"cpuworker_main(): read question failed. Exiting.");
+    if(read_all(fd, question, DH_ONIONSKIN_LEN) != DH_ONIONSKIN_LEN) {
+      log_fn(LOG_INFO,"read question failed. Exiting.");
       spawn_exit();
     }
 
     if(question_type == CPUWORKER_TASK_ONION) {
       if(onion_skin_server_handshake(question, get_privatekey(),
-        response, keys, 32) < 0) {
+        reply_to_proxy, keys, 32) < 0) {
         /* failure */
         log_fn(LOG_ERR,"onion_skin_server_handshake failed.");
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
@@ -120,16 +156,15 @@ int cpuworker_main(void *data) {
         /* success */
         log_fn(LOG_DEBUG,"onion_skin_server_handshake succeeded.");
         buf[0] = 1; /* 1 means success */
-        memcpy(buf+1,response,DH_KEY_LEN);
-        memcpy(buf+1+DH_KEY_LEN,keys,32);
+        memcpy(buf+1,tag,TAG_LEN);
+        memcpy(buf+1+TAG_LEN,reply_to_proxy,DH_KEY_LEN);
+        memcpy(buf+1+TAG_LEN+DH_KEY_LEN,keys,32);
       }
       if(write_all(fd, buf, LEN_ONION_RESPONSE) != LEN_ONION_RESPONSE) {
         log_fn(LOG_INFO,"writing response buf failed. Exiting.");
         spawn_exit();
       }
-      log_fn(LOG_DEBUG,"finished writing response/keys.");
-    } else { /* we've been asked to do a handshake. not implemented yet. */
-      spawn_exit();
+      log_fn(LOG_DEBUG,"finished writing response.");
     }
   }
   return 0; /* windows wants this function to return an int */
@@ -174,7 +209,7 @@ static int spawn_cpuworker(void) {
 }
 
 static void spawn_enough_cpuworkers(void) {
-  int num_cpuworkers_needed = options.NumCpus + 1;
+  int num_cpuworkers_needed = options.NumCpus;
 
   if(num_cpuworkers_needed < MIN_CPUWORKERS)
     num_cpuworkers_needed = MIN_CPUWORKERS;
@@ -191,7 +226,7 @@ static void spawn_enough_cpuworkers(void) {
 }
 
 
-static int process_pending_task(connection_t *cpuworker) {
+static void process_pending_task(connection_t *cpuworker) {
   circuit_t *circ;
 
   assert(cpuworker);
@@ -200,8 +235,9 @@ static int process_pending_task(connection_t *cpuworker) {
 
   circ = onion_next_task();
   if(!circ)
-    return 0;
-  return assign_to_cpuworker(cpuworker, CPUWORKER_TASK_ONION, circ);
+    return;
+  if(assign_to_cpuworker(cpuworker, CPUWORKER_TASK_ONION, circ) < 0)
+    log_fn(LOG_DEBUG,"assign_to_cpuworker failed. Ignoring.");
 }
 
 /* if cpuworker is defined, assert that he's idle, and use him. else,
@@ -213,6 +249,9 @@ static int process_pending_task(connection_t *cpuworker) {
 int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
                         void *task) {
   circuit_t *circ;
+  char tag[TAG_LEN];
+
+  assert(question_type == CPUWORKER_TASK_ONION);
 
   if(question_type == CPUWORKER_TASK_ONION) {
     circ = task;
@@ -229,11 +268,17 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 
     assert(cpuworker);
 
-    cpuworker->circ = circ;
+    if(!circ->p_conn) {
+      log_fn(LOG_DEBUG,"circ->p_conn gone. Failing circ.");
+      return -1;
+    }
+    tag_pack(tag, circ->p_conn->addr, circ->p_conn->port, circ->p_aci);
+
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;
     num_cpuworkers_busy++;
 
     if(connection_write_to_buf(&question_type, 1, cpuworker) < 0 ||
+       connection_write_to_buf(tag, sizeof(tag), cpuworker) < 0 ||
        connection_write_to_buf(circ->onionskin, DH_ONIONSKIN_LEN, cpuworker) < 0) {
       log_fn(LOG_NOTICE,"Write failed. Closing worker and failing circ.");
       cpuworker->marked_for_close = 1;
