@@ -149,13 +149,12 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   }
 }
 
-/** Pick a random running router from a routerlist <b>dir</b>.  If any node
+/** Return a random running router from the routerlist.  If any node
  * named in <b>preferred</b> is available, pick one of those.  Never pick a
  * node named in <b>excluded</b>, or whose routerinfo is in
  * <b>excludedsmartlist</b>, even if they are the only nodes available.
  */
-routerinfo_t *router_choose_random_node(routerlist_t *dir,
-                                        char *preferred, char *excluded,
+routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         smartlist_t *excludedsmartlist)
 {
   smartlist_t *sl, *excludednodes;
