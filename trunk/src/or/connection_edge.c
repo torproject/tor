@@ -237,9 +237,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
     if(rh.command == RELAY_COMMAND_END) {
-      circuit_log_path(LOG_INFO,circ);
       log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
+      if(CIRCUIT_IS_ORIGIN(circ))
+        circuit_log_path(LOG_INFO,circ);
       conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
       connection_mark_for_close(conn, 0);
       /* XXX This is where we should check if reason is EXITPOLICY, and reattach */
