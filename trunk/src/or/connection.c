@@ -110,6 +110,8 @@ void connection_free(connection_t *conn) {
     crypto_free_pk_env(conn->link_pkey);
   if (conn->identity_pkey)
     crypto_free_pk_env(conn->identity_pkey);
+  if (conn->nickname) 
+    free(conn->nickname);
 
   if(conn->s > 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);

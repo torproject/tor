@@ -741,11 +741,12 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
   
   result = snprintf(s, maxlen, 
-                    "router %s %d %d %d %d\n"
+                    "router %s %s %d %d %d %d\n"
                     "published %s\n"
                     "onion-key\n%s"
                     "link-key\n%s"
                     "signing-key\n%s",
+    router->nickname,                   
     router->address,
     router->or_port,
     router->ap_port,
@@ -805,126 +806,36 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   return written+1;
 }
 
-static int 
-build_directory(directory_t *dir) {
-  routerinfo_t **routers = NULL;
+int 
+list_running_servers(char **nicknames_out)
+{
+  char *nickname_lst[MAX_ROUTERS_IN_DIR];
   connection_t *conn;
-  routerinfo_t *router;
-  int i, n = 0;
-
-  routers = (routerinfo_t **)tor_malloc(sizeof(routerinfo_t*) * (nfds+1));
-  if (my_routerinfo) {
-    log(LOG_INFO, "build_directory(): adding self (%s:%d)", 
-        my_routerinfo->address, my_routerinfo->or_port);
-    routers[n++] = my_routerinfo;
-  }
-  for(i = 0; i<nfds; ++i) {
+  char *cp;
+  int n = 0, i;
+  int length;
+  *nicknames_out = NULL;
+  if (my_routerinfo)
+    nickname_lst[n++] = my_routerinfo->nickname;
+  for (i = 0; i<nfds; ++i) {
     conn = connection_array[i];
-
-    if(conn->type != CONN_TYPE_OR)
-      continue; /* we only want to list ORs */
-    if(conn->state != OR_CONN_STATE_OPEN)
-      continue; /* we only want to list ones that successfully handshaked */
-    router = router_get_by_addr_port(conn->addr,conn->port);
-    if(!router) {
-      /* XXX this legitimately happens when conn is an OP. How to detect this? */
-      log(LOG_INFO,"build_directory(): couldn't find router %d:%d!",
-          conn->addr,conn->port);
-      continue;
-    }
-    log(LOG_INFO, "build_directory(): adding router (%s:%d)",
-        router->address, router->or_port);
-    routers[n++] = router;
+    if (conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN)
+      continue; /* only list successfully handshaked OR's. */
+    nickname_lst[n++] = conn->nickname;
   }
-  dir->routers = routers;
-  dir->n_routers = n;
-  return 0;
-}
-
-int
-dump_signed_directory_to_string(char *s, int maxlen,
-                                crypto_pk_env_t *private_key)
-{
-  directory_t dir;
-  if (build_directory(&dir)) {
-    log(LOG_WARNING,"dump_signed_directory_to_string(): build_directory failed.");
-    return -1;
+  length = n + 1; /* spaces + EOS + 1. */
+  for (i = 0; i<n; ++i) {
+    length += strlen(nickname_lst[i]);
   }
-  return dump_signed_directory_to_string_impl(s, maxlen, &dir, private_key);
-}
-
-int
-dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
-                                     crypto_pk_env_t *private_key)
-{
-  char *cp, *eos;
-  char digest[20];
-  char signature[128];
-  int i, written;
-  routerinfo_t *router;
-  eos = s+maxlen;
-  strncpy(s, 
-          "signed-directory\n"
-          "recommended-software "
-          RECOMMENDED_SOFTWARE_VERSIONS
-          "\n"
-          , maxlen);
-  
-  i = strlen(s);
-  cp = s+i;
-  for (i = 0; i < dir->n_routers; ++i) {
-    router = dir->routers[i];
-    /* XXX This is wrong; we shouldn't sign routers, but rather propagate
-     * XXX the original router blocks, unaltered.
-     */
-    written = dump_router_to_string(cp, eos-cp, router, private_key);
-
-    if(written < 0) { 
-      log(LOG_WARNING,"dump_signed_directory_to_string(): tried to exceed string length.");
-      cp[maxlen-1] = 0; /* make sure it's null terminated */
-      free(dir->routers);
-      return -1;
-    }
-    cp += written;
+  *nicknames_out = tor_malloc(length);
+  cp = *nicknames_out;
+  for (i = 0; i<n; ++i) {
+    if (i)
+      strcat(cp, " ");
+    strcat(cp, nickname_lst[i]);
+    while (*cp) 
+      ++cp;
   }
-  free(dir->routers); /* not needed anymore */
-
-  /* These multiple strlen calls are inefficient, but dwarfed by the RSA
-     signature.
-  */
-  i = strlen(s);
-  strncat(s, "directory-signature\n", maxlen-i);
-  i = strlen(s);
-  cp = s + i;
-  
-  if (crypto_SHA_digest(s, i, digest)) {
-    log(LOG_WARNING,"dump_signed_directory_to_string(): couldn't compute digest");
-    return -1;
-  }
-  if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
-    log(LOG_WARNING,"dump_signed_directory_to_string(): couldn't sign digest");
-    return -1;
-  }
-  
-  strncpy(cp, 
-          "-----BEGIN SIGNATURE-----\n", maxlen-i);
-          
-  i = strlen(s);
-  cp = s+i;
-  if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
-    log_fn(LOG_WARNING," couldn't base64-encode signature");
-    return -1;
-  }
-
-  i = strlen(s);
-  cp = s+i;
-  strncat(cp, "-----END SIGNATURE-----\n", maxlen-i);
-  i = strlen(s);
-  if (i == maxlen) {
-    log(LOG_WARNING,"dump_signed_directory_to_string(): tried to exceed string length.");
-    return -1;
-  }
-
   return 0;
 }
 

@@ -102,6 +102,7 @@
 #define MAX_BUF_SIZE (640*1024)
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 32
+#define MAX_DIR_SIZE 50000 /* XXX, big enough? */
 
 #define ACI_TYPE_LOWER 0
 #define ACI_TYPE_HIGHER 1
@@ -214,6 +215,8 @@
 
 /* legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
+/* legal characters in a nickname */
+#define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 /* structure of a socks client operation */
 typedef struct {
@@ -282,6 +285,7 @@ struct connection_t {
   crypto_pk_env_t *onion_pkey; /* public RSA key for the other side's onions */
   crypto_pk_env_t *link_pkey; /* public RSA key for the other side's TLS */
   crypto_pk_env_t *identity_pkey; /* public RSA key for the other side's signing */
+  char *nickname;
 
 /* Used only by OR connections: */
   tor_tls *tls;
@@ -335,6 +339,8 @@ typedef struct {
   crypto_pk_env_t *link_pkey;  /* public RSA key for TLS */
   crypto_pk_env_t *identity_pkey;  /* public RSA key for signing */
  
+  int is_running;
+
   /* link info */
   uint32_t bandwidth;
   struct exit_policy_t *exit_policy;
@@ -345,6 +351,7 @@ typedef struct {
   routerinfo_t **routers;
   int n_routers;
   char *software_versions;
+  time_t published_on;
 } directory_t;
 
 struct crypt_path_t { 
@@ -582,7 +589,6 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 /********************************* directory.c ***************************/
 
 void directory_initiate_command(routerinfo_t *router, int command);
-void directory_set_dirty(void);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 
@@ -618,12 +624,8 @@ void connection_start_reading(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
-int dump_signed_directory_to_string(char *s, int maxlen, 
-                                    crypto_pk_env_t *private_key);
-/* Exported for debugging */
-int dump_signed_directory_to_string_impl(char *s, int maxlen, 
-                                         directory_t *dir, 
-                                         crypto_pk_env_t *private_key); 
+int list_running_servers(char **nicknames_out);
+
 const char *router_get_my_descriptor(void);
 
 int main(int argc, char *argv[]);
@@ -676,7 +678,7 @@ int router_get_router_hash(char *s, char *digest);
 /* Reads a list of known routers, unsigned. */
 int router_get_list_from_string(char *s);
 /* Exported for debugging */
-int router_get_list_from_string_impl(char **s, directory_t **dest);
+int router_get_list_from_string_impl(char **s, directory_t **dest, int n_good_nicknames, const char *good_nickname_lst[]);
 /* Reads a signed directory. */
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey);
 /* Exported or debugging */
@@ -685,6 +687,19 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 routerinfo_t *router_get_entry_from_string(char **s);
 int router_compare_to_exit_policy(connection_t *conn);
 void routerinfo_free(routerinfo_t *router);
+
+/********************************* dirserv.c ***************************/
+int dirserv_parse_fingerprint_file(const char *fname);
+int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
+void dirserv_free_fingerprint_list();
+int dirserv_add_descriptor(const char **desc);
+int dirserv_init_from_directory_string(const char *dir);
+void dirserv_free_descriptors();
+int dirserv_dump_directory_to_string(char *s, int maxlen,
+                                     crypto_pk_env_t *private_key);
+void directory_set_dirty();
+size_t dirserv_get_directory(const char **cp);
+
 
 #endif
 
