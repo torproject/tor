@@ -274,8 +274,8 @@ void connection_ap_expire_beginning(void) {
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
     if (conn->num_retries >= MAX_STREAM_RETRIES) {
-      log_fn(LOG_WARN,"Stream is %d seconds late. Giving up.",
-             15*conn->num_retries); /* XXX this number is not accurate */
+      log_fn(LOG_WARN,"Stream is %d seconds old. Giving up.",
+             (int)(now - conn->timestamp_created));
       circuit_log_path(LOG_WARN, circ);
       connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
       connection_mark_for_close(conn);

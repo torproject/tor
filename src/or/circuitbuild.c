@@ -179,22 +179,11 @@ void circuit_rep_hist_note_result(circuit_t *circ) {
 static void
 circuit_dump_details(int severity, circuit_t *circ, int poll_index,
                      const char *type, int this_circid, int other_circid) {
-  struct crypt_path_t *hop;
-  log(severity,"Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d",
+  log(severity,"Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d:",
       poll_index, type, this_circid, other_circid, circ->state,
       circuit_state_to_string[circ->state], (int)circ->timestamp_created);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
-    if (circ->state == CIRCUIT_STATE_BUILDING)
-      log(severity,"Building: desired len %d, planned exit node %s.",
-          circ->build_state->desired_path_len, circ->build_state->chosen_exit_name);
-    hop = circ->cpath;
-    do {
-      if (!hop) break;
-      log(severity,"hop: state %d, addr 0x%.8x, port %d", hop->state,
-          (unsigned int)hop->addr,
-          (int)hop->port);
-      hop = hop->next;
-    } while (hop != circ->cpath);
+    circuit_log_path(severity, circ);
   }
 }
 
@@ -206,6 +195,8 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
   connection_t *tmpconn;
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
+    if (circ->marked_for_close)
+      continue;
     if (circ->p_conn == conn)
       circuit_dump_details(severity, circ, conn->poll_index, "App-ward",
                            circ->p_circ_id, circ->n_circ_id);
@@ -223,6 +214,13 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
         circuit_dump_details(severity, circ, conn->poll_index, "Exit-ward",
                              circ->n_circ_id, circ->p_circ_id);
       }
+    }
+    if (!circ->n_conn &&
+        circ->n_addr == conn->addr &&
+        circ->n_port == conn->port &&
+        !memcmp(conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
+      circuit_dump_details(severity, circ, conn->poll_index, "Pending",
+                           circ->n_circ_id, circ->p_circ_id);
     }
   }
 }

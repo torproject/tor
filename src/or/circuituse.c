@@ -758,6 +758,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 static void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
   /* add it into the linked list of streams on this circuit */
   log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
+  apconn->timestamp_lastread = time(NULL); /* reset it, so we can measure circ timeouts */
   apconn->next_stream = circ->p_streams;
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = apconn;
