@@ -53,7 +53,12 @@ For September:
             - modular introduction mechanism
             - allow non-clique topology
 
-Other details and small things:
+Other details and small and hard things:
+        - tor should be able to have a pool of outgoing IP addresses
+          that it is able to rotate through. (maybe)
+        - tie into squid
+        - buffer size pool, to let a few buffers grow huge or many buffers
+          grow a bit
         - hidserv offerers shouldn't need to define a SocksPort
         - when the client fails to pick an intro point for a hidserv,
           it should refetch the hidserv desc.
