@@ -334,7 +334,7 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
   if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
     return choose_good_exit_server_general(dir);
   else
-    return router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes);
+    return router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, NULL);
 }
 
 cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
