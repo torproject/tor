@@ -45,8 +45,8 @@ static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
   new_len = buf->len*2;
   while (new_len < capacity)
     new_len *= 2;
-  log_fn(LOG_DEBUG,"Growing buffer from %ld to %ld bytes.",
-         buf->len, new_len);
+  log_fn(LOG_DEBUG,"Growing buffer from %d to %d bytes.",
+         (int)buf->len, (int)new_len);
   buf_resize(buf,new_len);
   return 0;
 }
@@ -63,9 +63,9 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
   new_len = buf->len / 2;
   while (buf->datalen < new_len/4 && new_len/2 > MIN_BUF_SHRINK_SIZE) 
     new_len /= 2;
-  log_fn(LOG_DEBUG,"Shrinking buffer from %ld to %ld bytes.",
-         buf->len, new_len);
-  buf_resize(buf->buf, new_len);
+  log_fn(LOG_DEBUG,"Shrinking buffer from %d to %d bytes.",
+         (int)buf->len, (int)new_len);
+  buf_resize(buf, new_len);
 }
 
 /* Remove the first 'n' bytes from buf.
