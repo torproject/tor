@@ -1,9 +1,9 @@
 confdir = $(sysconfdir)/tor
 
-EXTRA_DIST = tor-tsocks.conf
+EXTRA_DIST = tor-tsocks.conf torify.1
 
 conf_DATA = tor-tsocks.conf
 
 bin_SCRIPTS = torify
 
-dist_man_MANS = torify.1
+man_MANS = torify.1
