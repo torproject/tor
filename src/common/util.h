@@ -52,7 +52,7 @@ void smartlist_remove(smartlist_t *sl, void *element);
 int smartlist_isin(smartlist_t *sl, void *element);
 int smartlist_overlap(smartlist_t *sl1, smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2);
-void smartlist_subtract(smartlist_t *sl1, smartlist *sl2);
+void smartlist_subtract(smartlist_t *sl1, smartlist_t *sl2);
 void *smartlist_choose(smartlist_t *sl);
 
 const char *eat_whitespace(const char *s);

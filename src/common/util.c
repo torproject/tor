@@ -130,7 +130,7 @@ void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2) {
 }
 
 /* remove all elements of sl2 from sl1 */
-void smartlist_subtract(smartlist_t *sl1, smartlist *sl2) {
+void smartlist_subtract(smartlist_t *sl1, smartlist_t *sl2) {
   int i;
   for(i=0; i < sl2->num_used; i++)
     smartlist_remove(sl1, sl2->list[i]);
