@@ -1,9 +1,9 @@
 $Id$ 
 
-TOR (The Onion Router) Spec
+TOR Spec
 
 Note: This is an attempt to specify TOR as it exists as implemented in
-early March, 2003.  It is not recommended that others implement this
+early June, 2003.  It is not recommended that others implement this
 design as it stands; future versions of TOR will implement improved
 protocols.
 
@@ -18,22 +18,23 @@ protocols.
 
    All numeric values are encoded in network (big-endian) order.
 
-   Unless otherwise specified, all symmetric ciphers are DES in OFB
-   mode, with an IV of all 0 bytes.  All asymmetric ciphers are RSA
-   with 1024-bit keys, and exponents of 65537.
+   Unless otherwise specified, all symmetric ciphers are 3DES in OFB
+   mode, with an IV of all 0 bytes.  Asymmetric ciphers are either RSA
+   with 1024-bit keys and exponents of 65537, or DH with the safe prime
+   from rfc2409, section 6.2, whose hex representation is:
+
+     "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
+     "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
+     "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
+     "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
+     "49286651ECE65381FFFFFFFFFFFFFFFF"
 
    [We will move to AES once we can assume everybody will have it. -RD]
 
 1. System overview
 
-[Something to start with here. Do feel free to change/expand. -RD]
-
-Tor is an implementation of version 2 of Onion Routing.
-
-Onion Routing is a connection-oriented anonymizing communication
-service. Users build a layered block of asymmetric encryptions
-(an "onion") which describes a source-routed path through a set of
-nodes. Those nodes build a "virtual circuit" through the network, in which
+Tor is a connection-oriented anonymizing communication service. Users
+build a path known as a "virtual circuit" through the network, in which
 each node knows its predecessor and successor, but no others. Traffic
 flowing down the circuit is unwrapped by a symmetric key at each node,
 which reveals the downstream node.
@@ -42,11 +43,12 @@ which reveals the downstream node.
 
 2. Connections
 
-2.1. Establishing OR-to-OR connections
+2.1. Establishing OR connections
 
    When one onion router opens a connection to another, the initiating
    OR (called the 'client') and the listening OR (called the 'server')
    perform the following handshake.
+[or when an op wants to connect to or]
 
    Before the handshake begins, the client and server know one
    another's (1024-bit) public keys, IPV4 addresses, and ports.
@@ -59,6 +61,7 @@ which reveals the downstream node.
 
         The client then generates a 'Client authentication' message [M]
         containing: 
+           The number 2 to signify OR handshake   [2 bytes]
            The client's published IPV4 address    [4 bytes]
            The client's published port            [2 bytes]
            The server's published IPV4 address    [4 bytes]
@@ -66,19 +69,11 @@ which reveals the downstream node.
            The forward key (K_f)                  [16 bytes]
            The backward key (K_f)                 [16 bytes]
            The maximum bandwidth (bytes/s)        [4 bytes]
-                                               [Total: 48 bytes] 
+                                               [Total: 50 bytes] 
 
-        The client then RSA-encrypts the message with the server's
-        public key, and PKCS1 padding to given an encrypted message
+        The client then RSA-encrypts [M] with the server's public key
+        and PKCS1 padding to give an encrypted message.
 
-        [Commentary: 1024 bytes is probably too short, and this protocol can't
-        support IPv6. -NM]
-        [1024 is too short for a high-latency remailer; but perhaps it's
-         fine for us, given our need for speed and also given our greater
-         vulnerability to other attacks? Onions are infrequent enough now
-         that maybe we could handle it; but I worry it will impact
-         scalability, and handling more users is important.-RD]
- 
         The client then opens a TCP connection to the server, sends
         the 128-byte RSA-encrypted data to the server, and waits for a
         reply.
@@ -88,7 +83,7 @@ which reveals the downstream node.
         Upon receiving a TCP connection, the server waits to receive
         128 bytes from the client.  It decrypts the message with its 
         private key, and checks the PKCS1 padding.  If the padding is
-        incorrect, or if the message's length is other than 32 bytes,
+        incorrect, or if the message's length is other than 50 bytes,
         the server closes the TCP connection and stops handshaking.
 
         The server then checks the list of known ORs for one with the
@@ -119,7 +114,7 @@ which reveals the downstream node.
 
         Once the client has received 128 bytes, it decrypts them with
         its public key, and checks the PKCS1 padding.  If the padding
-        is invalid, or the decrypted message's length is other than 40
+        is invalid, or the decrypted message's length is other than 56
         bytes, the client closes the TCP connection.
 
         The client checks that the addresses and keys in the reply
@@ -155,6 +150,7 @@ which reveals the downstream node.
 
 2.2. Establishing OP-to-OR connections
 
+[wrap this with the above]
    When an Onion Proxy (OP) needs to establish a connection to an OR,
    the handshake is simpler because the OR does not need to verify the
    OP's identity.  The OP and OR establish the following steps:
@@ -166,10 +162,11 @@ which reveals the downstream node.
         [K_b] for the 'backward' stream from OR to OP).
 
         The OP generates a message [M] in the following format:
-           Maximum bandwidth (bytes/s)      [4 bytes]
-           Forward key [K_f]                [16 bytes]
-           Backward key [K_b]               [16 bytes]
-                                        [Total: 32 bytes]
+           The number 1 to signify OP handshake [2 bytes]
+           Maximum bandwidth (bytes/s)          [4 bytes]
+           Forward key [K_f]                    [16 bytes]
+           Backward key [K_b]                   [16 bytes]
+                                            [Total: 38 bytes]
 
         The OP encrypts M with the OR's public key and PKCS1 padding,
         opens a TCP connection to the OR's TCP port, and sends the
@@ -183,10 +180,10 @@ which reveals the downstream node.
          and the op_port variable specified the OP port. -RD]
         it waits for 128 bytes of data, and decrypts the resulting
         data with its private key, checking the PKCS1 padding.  If the
-        padding is invalid, or the message is not 20 bytes long, the
+        padding is invalid, or the message is not 38 bytes long, the
         OR closes the connection.
 
-        Otherwise, the connection is established, and the O is ready
+        Otherwise, the connection is established, and the OR is ready
         to receive cells.  
 
         The server sets its keys for this connection, setting K_f to
@@ -236,19 +233,20 @@ which reveals the downstream node.
    The 'Command' field holds one of the following values:
          0 -- PADDING     (Padding)                 (See Sec 6.2)
          1 -- CREATE      (Create a circuit)        (See Sec 4)
-         2 -- DATA        (End-to-end data)         (See Sec 5)
-         3 -- DESTROY     (Stop using a circuit)    (See Sec 4)
-         4 -- SENDME      (For flow control)        (See Sec 6.1)
+         2 -- CREATED     (Acknowledge create)      (See Sec 4)
+         3 -- RELAY       (End-to-end data)         (See Sec 5)
+         4 -- DESTROY     (Stop using a circuit)    (See Sec 4)
 
    The interpretation of 'Length' and 'Payload' depend on the type of
    the cell.
-      PADDING: Length is 0; Payload is 248 bytes of 0's. 
-      CREATE: Length is a value between 1 and 248; the first 'length'
-        bytes of payload contain a portion of an onion.
-      DATA: Length is a value between 4 and 248; the first 'length'
+      PADDING: Neither field is used.
+      CREATE: Length is 144; the payload contains the first phase of the
+        DH handshake.
+      CREATED: Length is 128; the payload contains the second phase of
+        the DH handshake.
+      RELAY: Length is a value between 8 and 248; the first 'length'
         bytes of payload contain useful data.
       DESTROY: Neither field is used.
-      SENDME: Length encodes a window size, payload is unused.
 
    Unused fields are filled with 0 bytes.  The payload is padded with
    0 bytes.
@@ -260,17 +258,24 @@ which reveals the downstream node.
    CREATE and DESTROY cells are used to manage circuits; see section
    4 below.
 
-   DATA cells are used to send commands and data along a circuit; see
+   RELAY cells are used to send commands and data along a circuit; see
    section 5 below.
 
-   SENDME cells are used for flow control; see section 6 below.
-
-4. Onions and circuit management
+4. Circuit management
 
 4.1. Setting up circuits
 
-   An onion is a multi-layered structure, with one layer for each node
-   in a circuit.  Each (unencrypted) layer has the following fields:
+   Users set up circuits incrementally, one hop at a time. To create
+   a new circuit, users send a CREATE cell to the first node, with the
+   first half of the DH handshake; that node responds with a CREATED cell
+   with the second half of the DH handshake. To extend a circuit past
+   the first hop, the user sends an EXTEND relay cell (see section 5)
+   which instructs the last node in the circuit to send a CREATE cell
+   to extend the circuit.
+
+   CREATE cells contain the following:
+
+         [this stuff now wrong; haven't fixed the rest of the file either.]
 
          Version                  [1 byte]
          Port                     [2 bytes]
@@ -278,8 +283,6 @@ which reveals the downstream node.
          Expiration time          [4 bytes]
          Key seed material        [16 bytes]
                              [Total: 27 bytes]
-
-     The value of Version is currently 2.
 
      The port and address field denote the IPV4 address and port of
      the next onion router in the circuit, or are set to 0 for the
@@ -414,9 +417,9 @@ which reveals the downstream node.
    Edge nodes process the length and payload fields of DATA cells as
    described in section 5 below.
 
-5. Application connections and topic management
+5. Application connections and stream management
 
-5.1. Topics and TCP streams
+5.1. Streams
 
    Within a circuit, the OP and the exit node use the contents of DATA
    packets to tunnel TCP connections ("Topics") across circuits.
