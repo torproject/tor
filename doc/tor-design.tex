@@ -50,8 +50,8 @@
 
 \begin{abstract}
 We present Tor, a connection-based low-latency anonymous communication
-system. It is intended as an update and replacement for onion routing
-and addresses many limitations in the original onion routing design.
+system. It is intended as an update and replacement for Onion Routing
+and addresses many limitations in the original Onion Routing design.
 Tor works in a real-world Internet environment,
 requires little synchronization or coordination between nodes, and
 protects against known anonymity-breaking attacks as well
@@ -73,10 +73,10 @@ and instant messaging. Users choose a path through the network and
 build a \emph{virtual circuit}, in which each node in the path knows its
 predecessor and successor, but no others. Traffic flowing down the circuit
 is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
-at each node, revealing the downstream node. The original onion routing
+at each node, revealing the downstream node. The original Onion Routing
 project published several design and analysis papers
 \cite{or-jsac98,or-discex00,or-ih96,or-pet00}. While there was briefly
-a wide area onion routing network,
+a wide area Onion Routing network,
 % how long is briefly? a day, a month? -RD
 the only long-running and publicly accessible
 implementation was a fragile proof-of-concept that ran on a single
@@ -84,11 +84,13 @@ machine. Many critical design and deployment issues were never implemented,
 and the design has not been updated in several years.
 Here we describe Tor, a protocol for asynchronous, loosely
 federated onion routers that provides the following improvements over
-the old onion routing design:
+the old Onion Routing design:
+
+% Also itemize improvements over Freedom.
 
 \begin{tightlist}
 
-\item \textbf{Perfect forward secrecy:} The original onion routing
+\item \textbf{Perfect forward secrecy:} The original Onion Routing
 design is vulnerable to a single hostile node recording traffic and later
 forcing successive nodes in the circuit to decrypt it. Rather than using
 onions to lay the circuits, Tor uses an incremental or \emph{telescoping}
@@ -98,7 +100,7 @@ necessary, and the process of building circuits is more reliable, since
 the initiator knows which hop failed and can try extending to a new node.
 
 \item \textbf{Applications talk to the onion proxy via Socks:}
-The original onion routing design required a separate proxy for each
+The original Onion Routing design required a separate proxy for each
 supported application protocol, resulting in a lot of extra code --- most
 of which was never written, so most applications were not supported.
 Tor uses the unified and standard Socks
@@ -106,15 +108,15 @@ Tor uses the unified and standard Socks
 program without modification.
 
 \item \textbf{Many applications can share one circuit:} The original
-onion routing design built one circuit for each request. Aside from the
+Onion Routing design built one circuit for each request. Aside from the
 performance issues of doing public key operations for every request, it
 also turns out that regular communications patterns mean building lots
 of circuits, which can endanger anonymity.
-The very first onion routing design \cite{or-ih96} protected against
+The very first Onion Routing design \cite{or-ih96} protected against
 this to some extent by hiding network access behind an onion
 router/firewall that was also forwarding traffic from other nodes.
 However, even if this meant complete protection, many users can
-benefit from onion routing for which neither running one's own node
+benefit from Onion Routing for which neither running one's own node
 nor such firewall configurations are adequately convenient to be
 feasible. Those users, especially if they engage in certain unusual
 communication behaviors, may be identifiable \cite{wright03}. To
@@ -123,7 +125,7 @@ connections down each circuit, but still rotates the circuit
 periodically to avoid too much linkability from requests on a single
 circuit.
 
-\item \textbf{No mixing or traffic shaping:} The original onion routing
+\item \textbf{No mixing or traffic shaping:} The original Onion Routing
 design called for full link padding both between onion routers and between
 onion proxies (that is, users) and onion routers \cite{or-jsac98}. The
 later analysis paper \cite{or-pet00} suggested \emph{traffic shaping}
@@ -187,11 +189,18 @@ are critical in a volunteer-based distributed infrastructure, because
 each operator is comfortable with allowing different types of traffic
 to exit the Tor network from his node.
 
+\item \textbf{Implementable in user-space}.
+
 \item \textbf{Rendezvous points and location-protected servers:} Tor
 provides an integrated mechanism for responder-anonymity
-location-protected servers
+location-protected servers.
+[XXX Mention that reply onions are out because they're brittle don't give PFS.]
 
 \end{tightlist}
+
+[XXX carefully mention implementation, emphasizing that experience
+deploying isn't there yet, and not all features are implemented.
+Mention that it runs, is kinda alpha, kinda deployed, runs on win32.]
 
 We review previous work in Section \ref{sec:background}, describe
 our goals and assumptions in Section \ref{sec:assumptions},
@@ -242,8 +251,8 @@ been run for many years (the Java Anon Proxy, aka Web MIXes,
 \cite{web-mix}).
 
 Another low latency design that was proposed independently and at
-about the same time as onion routing was PipeNet \cite{pipenet}.
-This provided anonymity protections that were stronger than onion routing's,
+about the same time as Onion Routing was PipeNet \cite{pipenet}.
+This provided anonymity protections that were stronger than Onion Routing's,
 but at the cost of allowing a single user to shut down the network simply
 by not sending. It was also never implemented or formally published.
 
@@ -261,7 +270,7 @@ requires public-key cryptography, whereas relaying packets along a tunnel is
 comparatively inexpensive.  Because a tunnel crosses several servers, no
 single server can learn the user's communication partners.
 
-Systems such as earlier versions of Freedom and onion routing
+Systems such as earlier versions of Freedom and Onion Routing
 build the anonymous channel all at once (using an onion). Later
 designs of Freedom and onion routing as described herein build
 the channel in stages as does AnonNet
@@ -307,28 +316,18 @@ jondos on any one net- work (using IP address), the attacker would be
 forced to launch jondos using many different identities and on many
 different networks to succeed'' \cite{crowds-tissec}.
 
-
-Many systems have been designed for censorship resistant publishing.
-The first of these was the Eternity Service \cite{eternity}. Since
-then, there have been many alternatives and refinements, of which we note
-but a few
-\cite{eternity,gap-pets03,freenet-pets00,freehaven-berk,publius,tangler,taz}.
-From the beginning, traffic analysis resistant communication has been
-recognized as an important element of censorship resistance because of
-the relation between the ability to censor material and the ability to
-find its distribution source.
-
-Tor is not primarily for censorship resistance but for anonymous
-communication. However, Tor's rendezvous points, which enable
-connections between mutually anonymous entities, also facilitate
-connections to hidden servers.  These building blocks to censorship
-resistance and other capabilities are described in
-Section~\ref{sec:rendezvous}.
-
+Tor is not primarily designed for censorship resistance but rather
+for anonymous communication. However, Tor's rendezvous points, which
+enable connections between mutually anonymous entities, also
+facilitate connections to hidden servers.  These building blocks to
+censorship resistance and other capabilities are described in
+Section~\ref{sec:rendezvous}.  Location-hidden servers are an
+essential component for anonymous publishing systems such as
+Publius\cite{publius}, Free Haven\cite{freehaven-berk}, and
+Tangler\cite{tangler}.
 
 [XXX I'm considering the subsection as ended here for now. I'm leaving the
 following notes in case we want to revisit any of them. -PS]
-
 
 Channel-based anonymizing systems also differ in their use of dummy traffic.
 [XXX]
@@ -338,25 +337,11 @@ communication.  Crowds and [XXX] provide anonymity for HTTP requests; [...]
 
 [XXX Mention error recovery?]
 
-
-
-anonymizer\\
-pipenet\\
-freedom v1\\
-freedom v2\\
-onion routing v1\\
+STILL NOT MENTIONED:
 isdn-mixes\\
-crowds\\
-real-time mixes, web mixes\\
-anonnet (marc rennhard's stuff)\\
-morphmix\\
-P5\\
-gnunet\\
+real-time mixes\\
 rewebbers\\
-tarzan\\
-herbivore\\
-hordes\\
-cebolla (?)\\
+cebolla\\
 
 [XXX Close by mentioning where Tor fits.]
 
@@ -379,7 +364,8 @@ provide); designs that place a heavy liability burden on operators
 (for example, by allowing attackers to implicate operators in illegal
 activities); and designs that are difficult or expensive to implement
 (for example, by requiring kernel patches to many operating systems,
-or ).
+or ).  [Only anon people need to run special software!  Look at minion
+reviews]  
 
 Second, the system must be {\bf usable}.  A hard-to-use system has
 fewer users --- and because anonymity systems hide users among users, a
@@ -599,6 +585,50 @@ shape of the traffic they send and receive.
 \Section{The Tor Design}
 \label{sec:design}
 
+high-level intro: overlay network of onion routers with long-term TLS
+connections.  (Every OR connects to every other.) Users run local
+software (onion proxies) that establish path over network and
+construct virtual circuit.  (USers know about all ORs from Directory.)
+OPs accept TCP streams and multiplex them across virtual circuit.  OR
+on the other side of the cirucuit connects to the destinations of the
+TCP streams and continues to relay TCP sessions.
+
+Describe connection protocol.  Link-to-link rate limiting.  Link
+padding.
+
+Describe cells.  Control versus Relay.  Cell structure.
+
+Describe how circuits work and how relay cells get passed along,
+decrypted etc.  This will include mentioning leaky-pipe circuit
+topology and end-to-end integrity checking.  (Mention tagging.)
+
+Describe how circuits get built, extended, truncated.
+
+Describe how TCP connections get opened.  (Mention DNS issues)
+Descibe closing TCP connections and 2-END handshake to mirror TCP
+close handshake.
+
+Describe how data is transmitted.
+
+Describe circuit-level and stream-level congestion control issues and
+solutions.
+
+Describe circuit-level and stream-level fairness issues; cite Marc's
+anonnet stuff.
+
+Describe DoS prevention.
+
+Mention twins, what the do, what they can't.
+
+How we should do sequencing and acking like TCP so that we can better
+tolerate lost data cells.
+
+[XXX mention that designers have to choose what you send across your
+  circuit: wrapped IP packets, wrapped stream data, etc.  [Disspell
+  TCP-over-TCP misconception.]]
+
+[XXX Mention that OR-to-OR connections should be highly reliable.  If
+  they aren't, everything can stall.]
 
 \Section{Other design decisions}
 
@@ -681,6 +711,12 @@ The JAP cascade model is really nice because they only need one node to
 take the heat per cascade. On the other hand, a hydra scheme could work
 better (it's still hard to watch all the clients).
 
+Discuss importance of public perception, and how abuse affects it.
+``Usability is a security parameter''.  ``Public Perception is also a
+security parameter.''
+
+Discuss smear attacks.
+
 \SubSection{Directory Servers}
 \label{subsec:dirservers}
 
@@ -705,6 +741,14 @@ port as an HTTP server, both so participants can fetch current network
 state and router lists (a \emph{directory}), and so other onion routers
 can upload a signed summary of their keys, address, bandwidth, exit
 policy, etc (\emph{server descriptors}.
+
+[[mention that descriptors are signed with long-term keys; ORs publish
+    regularly to dirservers; policies for generating directories; key
+    rotation (link, onion, identity); Everybody already know directory
+    keys; how to approve new nodes (advogato, sybil, captcha (RTT));
+    policy for handling connections with unknown ORs; diff-based
+    retrieval; diff-based consesus; separate liveness from descriptor
+    list]]
 
 Of course, a variety of attacks remain. An adversary who controls a
 directory server can track certain clients by providing different
@@ -878,8 +922,22 @@ is also designed with authentication/authorization in mind -- if the
 client doesn't include the right cookie with its request for service,
 the server doesn't even acknowledge its existence.
 
+\Section{Analysis}
+
+How well do we resist chosen adversary?
+
+How well do we meet stated goals?
+
+Mention jurisdictional arbitrage.
+
+Pull attacks and defenses into analysis as a subsection
+
 \Section{Maintaining anonymity sets}
 \label{sec:maintaining-anonymity}
+
+[Put as much of this as a part of open issuses as is possible.]
+
+[what's an anonymity set?]
 
 packet counting attacks work great against initiators. need to do some
 level of obfuscation for that. standard link padding for passive link
@@ -921,12 +979,15 @@ confirmation? does the hydra (many inputs, few outputs) topology work
 better? are we going to get a hydra anyway because most nodes will be
 middleman nodes?
 
-using a circuit many times is good because it's less cpu work
-  good because of predecessor attacks with path rebuilding
+using a circuit many times is good because it's less cpu work.
+  good because of predecessor attacks with path rebuilding.
   bad because predecessor attacks can be more likely to link you with a
-    previous circuit since you're so verbose
+    previous circuit since you're so verbose.
   bad because each thing you do on that circuit is linked to the other
-    things you do on that circuit
+    things you do on that circuit.
+  how often to rotate?
+  how to decide when to exit from middle?
+  when to truncate and re-extend versus when to start new circuit?
 
 Because Tor runs over TCP, when one of the servers goes down it seems
 that all the circuits (and thus streams) going over that server must
@@ -939,6 +1000,12 @@ done browsing, so we would expect a much higher churn rate than for
 onion routing. Are there ways of allowing streams to survive the loss
 of a node in the path?
 
+discuss topologies. Cite George's non-freeroutes paper.  Maybe this
+graf goes elsewhere.
+
+discuss attracting users; incentives; usability.
+
+Choosing paths and path lengths.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -983,6 +1050,8 @@ it could give you a bad IP that sends you somewhere else.
 
 \Section{Future Directions and Open Problems}
 \label{sec:conclusion}
+
+% Mention that we need to do TCP over tor for reliability.
 
 Tor brings together many innovations into
 a unified deployable system. But there are still several attacks that
@@ -1048,7 +1117,7 @@ deploying a wider network. We will see what happens!
 %         since Middle English.]
 %     'nymserver'
 %     'Cypherpunk', 'Cypherpunks', 'Cypherpunk remailer'
+%     'Onion Routing design', 'onion router' [note capitalization]
 %
 %     'Whenever you are tempted to write 'Very', write 'Damn' instead, so
 %     your editor will take it out for you.'  -- Misquoted from Mark Twain
-
