@@ -1,0 +1,20 @@
+# Configuration file for or
+
+# List of routers
+RouterFile ../config/routers.or
+
+# Private key
+PrivateKeyFile moria2-private
+
+CoinWeight 0.0
+
+ORPort 9002
+OPPort 9012
+APPort 9022
+
+# Maximum number of connections.
+MaxConn 100
+
+# Which traffic shaping policy to use.
+# 
+TrafficShaping 1
