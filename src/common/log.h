@@ -46,8 +46,10 @@
 #define CHECK_PRINTF(formatIdx, firstArg)
 #endif
 
-void add_stream_log(int loglevel, const char *name, FILE *stream);
-int add_file_log(int severity, const char *filename);
+int parse_log_level(const char *level);
+void add_stream_log(int severityMin, int severityMax, const char *name, FILE *stream);
+int add_file_log(int severityMin, int severityMax, const char *filename);
+int get_min_log_level(void);
 void close_logs();
 void reset_logs();
 

@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include "orconfig.h"
 #include "./util.h"
 #include "./log.h"
@@ -162,14 +163,14 @@ void reset_logs()
 
 /** Add a log handler to send all messages of severity <b>loglevel</b>
  * or higher to <b>stream</b>. */
-void add_stream_log(int loglevel, const char *name, FILE *stream)
+void add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *stream)
 {
   logfile_t *lf;
   lf = tor_malloc(sizeof(logfile_t));
   lf->filename = name;
   lf->needs_close = 0;
-  lf->loglevel = loglevel;
-  lf->max_loglevel = LOG_ERR;
+  lf->loglevel = loglevelMin;
+  lf->max_loglevel = loglevelMax;
   lf->file = stream;
   lf->next = logfiles;
   logfiles = lf;
@@ -180,15 +181,42 @@ void add_stream_log(int loglevel, const char *name, FILE *stream)
  * the logfile fails, -1 is returned and errno is set appropriately
  * (by fopen).
  */
-int add_file_log(int loglevel, const char *filename)
+int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
 {
   FILE *f;
   f = fopen(filename, "a");
   if (!f) return -1;
-  add_stream_log(loglevel, filename, f);
+  add_stream_log(loglevelMin, loglevelMax, filename, f);
   logfiles->needs_close = 1;
   return 0;
 }
+
+/** If <b>level</b> is a valid log severity, return the corresponding
+ * numeric value.  Otherwise, return -1. */
+int parse_log_level(const char *level) {
+  if (!strcasecmp(level, "err"))
+    return LOG_ERR;
+  else if (!strcasecmp(level, "notice"))
+    return LOG_NOTICE;
+  else if (!strcasecmp(level, "info"))
+    return LOG_INFO;
+  else if (!strcasecmp(level, "debug"))
+    return LOG_DEBUG;
+  else
+    return -1;
+}
+
+int get_min_log_level(void)
+{
+  logfile_t *lf;
+  int min = LOG_ERR;
+  for (lf = logfiles; lf; lf = lf->next) {
+    if (lf->loglevel < min)
+      min = lf->loglevel;
+  }
+  return min;
+}
+
 
 /*
   Local Variables:

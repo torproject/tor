@@ -566,22 +566,7 @@ static int init_from_config(int argc, char **argv) {
   }
 
   /* Configure the log(s) */
-  if(!options.LogFile && !options.RunAsDaemon)
-    add_stream_log(options.loglevel, "<stdout>", stdout);
-  if(options.LogFile) {
-    if (add_file_log(options.loglevel, options.LogFile) != 0) {
-      /* opening the log file failed!  Use stderr and log a warning */
-      add_stream_log(options.loglevel, "<stderr>", stderr);
-      log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", options.LogFile, strerror(errno));
-    }
-    log_fn(LOG_NOTICE, "Successfully opened LogFile '%s', redirecting output.",
-           options.LogFile);
-  }
-  if(options.DebugLogFile) {
-    if (add_file_log(LOG_DEBUG, options.DebugLogFile) != 0)
-      log_fn(LOG_WARN, "Cannot write to DebugLogFile '%s': %s.", options.DebugLogFile, strerror(errno));
-    log_fn(LOG_DEBUG, "Successfully opened DebugLogFile '%s'.", options.DebugLogFile);
-  }
+  config_init_logs(&options);
 
   /* Set up our buckets */
   connection_bucket_init();
@@ -696,7 +681,7 @@ static int do_main_loop(void) {
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
     if(please_dumpstats) {
       /* prefer to log it at INFO, but make sure we always see it */
-      dumpstats(options.loglevel>LOG_INFO ? options.loglevel : LOG_INFO);
+      dumpstats(get_min_log_level()>LOG_INFO ? get_min_log_level() : LOG_INFO);
       please_dumpstats = 0;
     }
     if(please_reset) {
@@ -867,7 +852,7 @@ void exit_function(void)
 int tor_main(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
-  add_stream_log(LOG_INFO, "<stdout>", stdout);
+  add_stream_log(LOG_INFO, LOG_ERR, "<stdout>", stdout);
   log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
 
   if (network_init()<0) {
