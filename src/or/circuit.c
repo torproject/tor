@@ -223,22 +223,22 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
 
   if(leastdirty &&
      leastdirty->timestamp_dirty+options.NewCircuitPeriod > time(NULL)) {
-    log_fn(LOG_DEBUG,"Choosing in-use circuit %s:%d:%d.",
-           leastdirty->n_conn->address, leastdirty->n_port, leastdirty->n_circ_id);
+/*    log_fn(LOG_DEBUG,"Choosing in-use circuit %s:%d:%d.",
+           leastdirty->n_conn->address, leastdirty->n_port, leastdirty->n_circ_id); */
     return leastdirty;
   }
   if(newest) {
-    log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.",
-           newest->n_conn->address, newest->n_port, newest->n_circ_id);
+/*    log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.",
+           newest->n_conn->address, newest->n_port, newest->n_circ_id); */
     return newest;
   }
   return NULL;
 }
 
-#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 2
+#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 3
 /* circuits that were born at the end of their second might be expired
- * after 2.1 seconds; circuits born at the beginning might be expired
- * after closer to 3 seconds.
+ * after 3.1 seconds; circuits born at the beginning might be expired
+ * after closer to 4 seconds.
  */
 
 /* close all circuits that start at us, aren't open, and were born
@@ -281,7 +281,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint) {
   connection_t *conn=NULL;
   char recognized=0;
-  char buf[256];
+  char buf[1+CELL_PAYLOAD_SIZE];
 
   assert(cell && circ);
   assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN); 
@@ -690,30 +690,22 @@ void circuit_expire_unused_circuits(void) {
   }
 }
 
-/* Number of failures so far this second; should only be touched by 
+/* Number of consecutive failures so far; should only be touched by
  * circuit_launch_new and circuit_*_failure_count.
- */ 
+ */
 static int n_circuit_failures = 0; 
 
-/* failure_status code: negative means reset failures to 0. Other values mean
- * add that value to the current number of failures, then if we don't have too
- * many failures on record, try to make a new circuit.
- *
- * Return -1 if you aren't going to try to make a circuit, 0 if you did try.
- */
+/* Return -1 if you aren't going to try to make a circuit, 0 if you did try. */
 int circuit_launch_new(void) {
 
   if(!options.SocksPort) /* we're not an application proxy. no need for circuits. */
     return -1;
 
-  if(n_circuit_failures > 5) {
+  if(n_circuit_failures > 5) /* too many failed circs in a row. don't try. */
     return -1;
-  }
 
-  if(circuit_establish_circuit() < 0) {
-    ++n_circuit_failures;
-    return 0;
-  }
+  /* try a circ. if it fails, circuit_close will increment n_circuit_failures */
+  circuit_establish_circuit();
 
   return 0;
 }
