@@ -11,7 +11,6 @@ extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 static int connection_ap_handshake_process_socks(connection_t *conn);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
-static int connection_exit_set_rendezvous_addr_port(connection_t *conn);
 static void connection_edge_consider_sending_sendme(connection_t *conn);
 
 static uint32_t client_dns_lookup_entry(const char *address);
