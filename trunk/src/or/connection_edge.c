@@ -538,11 +538,13 @@ void connection_ap_expire_beginning(void) {
     if (conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CONNECTING)
       continue;
-    if (now - conn->timestamp_lastread > 30) {
-      log_fn(LOG_WARN,"Stream is %d seconds late. Closing.",
+    if (now - conn->timestamp_lastread >= 15) {
+      log_fn(LOG_WARN,"Stream is %d seconds late. Retrying.",
              (int)(now - conn->timestamp_lastread));
-      /* XXX here is where it should move back into 'pending' state */
-      conn->marked_for_close = 1;
+      /* move it back into 'pending' state. It's possible it will
+       * reattach to this same circuit, but that's good enough for now.
+       */
+      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     }
   }
 }
