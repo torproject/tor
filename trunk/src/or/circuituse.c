@@ -717,6 +717,18 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     return 1; /* we're happy */
   }
 
+  if (!has_fetched_directory) {
+    if (!connection_get_by_type(CONN_TYPE_DIR)) {
+      log_fn(LOG_NOTICE,"Application request when we're believed to be offline. Optimistically trying again.");
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
+    }
+    /* the stream will be dealt with when has_fetched_directory becomes
+     * 1, or when all directory attempts fail and directory_all_unreachable()
+     * kills it.
+     */
+    return 0;
+  }
+
   /* Do we need to check exit policy? */
   if (!is_resolve && !connection_edge_is_rendezvous_stream(conn)) {
     addr = client_dns_lookup_entry(conn->socks_request->address);
