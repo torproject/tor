@@ -474,7 +474,7 @@ addressmap_virtaddress_ent_free(void *_ent) {
 static void
 addressmap_virtaddress_remove(const char *addr, addressmap_entry_t *ent)
 {
-  if (ent && address_is_in_virtual_range(ent->new_address)) {
+  if (ent && ent->new_address && address_is_in_virtual_range(ent->new_address)) {
     virtaddress_entry_t *ve =
       strmap_get(virtaddress_reversemap, ent->new_address);
     /*log_fn(LOG_NOTICE,"remove reverse mapping for %s",ent->new_address);*/
