@@ -1,3 +1,29 @@
+Changes in version 0.0.9.3 - 2005-01-21
+  o Bugfixes on 0.0.9:
+    - Backport the cpu use fixes from main branch, so busy servers won't
+      need as much processor time.
+    - Work better when we go offline and then come back, or when we
+      run Tor at boot before the network is up. We do this by
+      optimistically trying to fetch a new directory whenever an
+      application request comes in and we think we're offline -- the
+      human is hopefully a good measure of when the network is back.
+    - Backport some minimal hidserv bugfixes: keep rend circuits open as
+      long as you keep using them; actually publish hidserv descriptors
+      shortly after they change, rather than waiting 20-40 minutes.
+    - Enable Mac startup script by default.
+    - Fix duplicate dns_cancel_pending_resolve reported by Giorgos Pallas.
+    - When you update AllowUnverifiedNodes or FirewallPorts via the
+      controller's setconf feature, we were always appending, never
+      resetting.
+    - When you update HiddenServiceDir via setconf, it was screwing up
+      the order of reading the lines, making it fail.
+    - Do not rewrite a cached directory back to the cache; otherwise we
+      will think it is recent and not fetch a newer one on startup.
+    - Workaround for webservers that lie about Content-Encoding: Tor
+      now tries to autodetect compressed directories and compression
+      itself. This lets us Proxypass dir fetches through apache.
+
+
 Changes in version 0.0.9.2 - 2005-01-04
   o Bugfixes on 0.0.9 (crashes and asserts):
     - Fix an assert on startup when the disk is full and you're logging
