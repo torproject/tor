@@ -568,9 +568,15 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->ORPort && options->Nickname == NULL) {
-    log_fn(LOG_WARN,"Nickname required if ORPort is set, but not found.");
-    result = -1;
+  if (options->ORPort) {
+    if (options->Nickname == NULL) {
+      log_fn(LOG_WARN,"Nickname required if ORPort is set, but not found.");
+      result = -1;
+    } else if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
+               strlen(options->Nickname)) {
+      log_fn(LOG_WARN, "Nickname '%s' contains illegal characters.", options->Nickname);
+      result = -1;
+    }
   }
 
   if(options->ORPort) { /* get an IP for ourselves */
