@@ -161,6 +161,10 @@ static rend_service_port_config_t *parse_port_config(const char *string)
       log_fn(LOG_WARN, "Unparseable of missing port in hidden service port configuration.");
       return NULL;
     }
+    if (realport < 1 || realport > 65535) {
+      log_fn(LOG_WARN, "Port out of range");
+      return NULL;
+    }
     addr = 0x7F000001u; /* Default to 127.0.0.1 */
   }
 

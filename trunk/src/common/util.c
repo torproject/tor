@@ -2052,7 +2052,7 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
   if (colon) {
     _address = tor_strndup(addrport, colon-addrport);
     _port = atoi(colon+1);
-    if (_port<1 || _port>65536) {
+    if (_port<1 || _port>65535) {
       log_fn(LOG_WARN, "Port '%s' out of range", colon+1);
       _port = 0;
       ok = 0;
