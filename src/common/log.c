@@ -29,7 +29,7 @@ typedef struct logfile_t {
   int max_loglevel; /**< Highest severity level to send to this stream. */
   int is_temporary; /**< Boolean: close after initializing logging subsystem.*/
   int is_syslog; /**< Boolean: send messages to syslog. */
-  log_callback callback; /**< If not num, send messages to this function. */
+  log_callback callback; /**< If not NULL, send messages to this function. */
 } logfile_t;
 
 /** Helper: map a log severity to descriptive string. */
@@ -311,7 +311,7 @@ int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
   lf = tor_malloc_zero(sizeof(logfile_t));
   lf->loglevel = loglevelMin;
   lf->max_loglevel = loglevelMax;
-  lf->filename = tor_strdup("callback>");
+  lf->filename = tor_strdup("<callback>");
   lf->callback = cb;
   lf->next = logfiles;
   logfiles = lf;
