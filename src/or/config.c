@@ -64,6 +64,7 @@ static config_abbrev_t config_abbrevs[] = {
   { "BandwidthRateBytes", "BandwidthRate", 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0},
+  { "MaxConn", "ConnLimit", 0},
   { NULL, NULL , 0},
 };
 #undef PLURAL
@@ -141,7 +142,7 @@ static config_var_t config_vars[] = {
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
   VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("LinkPadding"),
-  VAR("MaxConn",             UINT,     MaxConn,              "1024"),
+  VAR("ConnLimit",           UINT,     ConnLimit,            "1024"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
   VAR("MonthlyAccountingStart",UINT,   _MonthlyAccountingStart,"0"),
   VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
@@ -312,7 +313,9 @@ options_act(void) {
   close_temp_logs();
   add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
 
-  if (set_max_file_descriptors(options->MaxConn) < 0)
+  options->_ConnLimit =
+    set_max_file_descriptors(options->ConnLimit, MAXCONNECTIONS);
+  if (options->_ConnLimit < 0)
     return -1;
 
   {
@@ -1342,16 +1345,6 @@ options_validate(or_options_t *options)
   if (options->SocksPort >= 1 &&
       (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {
     log(LOG_WARN, "PathlenCoinWeight option must be >=0.0 and <1.0.");
-    result = -1;
-  }
-
-  if (options->MaxConn < 1) {
-    log(LOG_WARN, "MaxConn option must be a non-zero positive integer.");
-    result = -1;
-  }
-
-  if (options->MaxConn > MAXCONNECTIONS) {
-    log(LOG_WARN, "MaxConn option must be at most %d.", MAXCONNECTIONS);
     result = -1;
   }
 
