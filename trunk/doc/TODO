@@ -11,50 +11,95 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-      bug fixes, necessary:
-        - Why is the first entry of kill -USR1 a router with a 0 key?
-        - why does common/util.c build-depend on or/or.h ?
+      0.0.8:
+NICK    - Why is the first entry of kill -USR1 a router with a 0 key?
+NICK    - why does common/util.c build-depend on or/or.h ?
+NICK?   - Tors deal appropriately when a newly-verified router has the
+          same nickname as another router they know about
+NICK?   - Add '[...truncated]' or similar to truncated log entries (like the directory
+          in connection_dir_process_inbuf()).
+NICK?   - put ip:port:keyhash in intro points, rendezvous points,
+          and hidserv descriptors.
+* implement parsing and stuff, but don't switch over the cells until
+  sometime in the future.
+NICK    - unify similar config entries that need to be split. put them
+          into a smartlist, and have things take a smartlist.
 
-      bug fixes, might be handy:
-        - put expiry date on onion-key, so people don't keep trying
-          old ones that they could know are expired?
-        - should the running-routers list put unverified routers at the
-          end?
-        - make advertised_server_mode() ORs fetch dirs more often.
-        - if a begin failed due to exit policy, but we believe the IP
+        o if a begin failed due to exit policy, but we believe the IP
           should have been allowed, switch that router to exitpolicy
           reject *:* until we get our next directory.
-        - Tors deal appropriately when a newly-verified router has the
-          same nickname as another router they know about
-        - ORs use uniquer default nicknames
-        - Handle full buffers without totally borking
-        - Add '[...truncated]' or similar to truncated log entries (like the directory
-          in connection_dir_process_inbuf()).
+        o tor-resolve needs a man page
+        - "AllowUnverifiedRouters" config option
+NICK      - Parse it into 3 bits
+ARMA      - Consider it when picking nodes for your path
+ARMA    - if there's only one entrynode preference and multiple exit node
+          choices, don't pick the desired entrynode as exit.
+        o 'fascistfirewall' option to pick dirservers on port 80 and
+          ORs on port 443.
+NICK      - extend it to take a range of ports
+ARMA    - don't replace options->Address with the resolved one at startup.
+          keep the old one and also have a new one.
+ARMA    - detect our address right before we make a routerinfo each time?
+ARMA    - external IP vs bind-IP
+NICK    - parse uptime into router->uptime
+        o clients choose nodes proportional to advertised bandwidth
+        o and/or while avoiding unreliable nodes, depending on goals
 
-      protocol changes and design work:
-        - put ip:port in intro points, rendezvous points, and hidserv
-          descriptors.
         - figure out what to do when somebody asks to extend to
           ip:port:differentkey
+* reject it. assuming this is as dumb as it sounds.
+        - make loglevel info less noisy
+        - defining an ORPort isn't necessary anymore, if you use
+          ORAddress:port. Same with DirPort, SocksPort.
+* fix is-a-server macro to look at *bindaddress too.
+
+
+
+
+
+      bug fixes, might be handy:
+        - the directory servers complain a lot about people using the
+          old key. does 0.0.7 use dirservers before it's pulled down
+          the directory?
+        - put expiry date on onion-key, so people don't keep trying
+          old ones that they could know are expired?
+* Leave on todo list, see if pre3 onion fixes helped enough.          
+        - should the running-routers list put unverified routers at the
+          end?
+* Cosmetic, don't do it yet.
+        - make advertised_server_mode() ORs fetch dirs more often.
+* not necessary yet.
+        - Add a notion of nickname->Pubkey binding that's not 'verification'
+* eventually, only when needed
+        - ORs use uniquer default nicknames
+* Don't worry about this for now
+        - Handle full buffers without totally borking
+* do this eventually, no rush.
 
       more features, easy:
         - check the date in the http headers, compare for clock skew.
+* nick should do this
         - requiredentrynode vs preferredentrynode
+* nick can do this, and will figure out what it should be called
         - per-month byte allowances
-        - tor-resolve needs a man page
-        - "AllowUnverifiedRouters" config option
-          - Parse it into a bitvector
-          - Consider it when picking nodes for your path
+* nick will spec something.
         - have a pool of circuits available, cannibalize them
           for your purposes (e.g. rendezvous, etc).
+* hold off on that.
+        - node 'groups' that are known to be in the same zone of control
+* nick and roger will talk about it
+        - do resolve before trying to attach the stream
+* don't do this for now.
+        - if destination IP is running a tor node, extend a circuit there
+          before sending begin.
+* don't do this for now. figure out how enclaves work. but do enclaves soon.
 
       more features, complex:
-        - defining an ORPort isn't necessary anymore, if you use
-          ORAddress:port. Same with DirPort, SocksPort.
         - compress the directory. client sends http header
           "accept-transfer-encoding: gzip", server might send http header
           "transfer-encoding: gzip". ta-da.
           - grow a zlib dependency. keep a cached compressed directory.
+* nick will look into this. not critical priority.
         - Switch dirservers entries to config lines:
           - read in and parse each TrustedDir config line.
           - stop reading dirservers file.
@@ -67,15 +112,19 @@ ARMA    - arma claims
             options.TrustedDirs, and make sure there's a descriptor
             with that nickname, whose key hashes to the fingerprint,
             and who correctly signed the directory.
+* nick will do the above
           - when fetching a directory, if you want a trusted one,
             choose from the trusteddir list.
             - which means keeping track of which ones are "up"
           - if you don't need a trusted one, choose from the routerinfo
             list if you have one, else from the trusteddir list.
+* roger will do the above
         - add a listener for a ui
+* nick chats with weasel
           - and a basic gui
         - Have clients and dirservers preserve reputation info over
           reboots.
+* continue not doing until we have something we need to preserve
         - users can set their bandwidth, or we auto-detect it:
           - advertised bandwidth defaults to 10KB
           o advertised bandwidth is the min of max seen in each direction
@@ -90,11 +139,12 @@ ARMA    - arma claims
           - start counting again if your IP ever changes.
           - never regenerate identity keys, for now.
           - you can set a bit for not-being-an-OR.
-        - clients choose nodes proportional to advertised bandwidth
+* no need to do this yet. few people define their ORPort.
         - authdirserver lists you as running iff:
           - he can connect to you
           - he has successfully extended to you
           - you have sufficient mean-time-between-failures
+* keep doing nothing for now.
 
       blue sky:
         - Possible to get autoconf to easily install things into ~/.tor?
@@ -103,6 +153,7 @@ ARMA    - arma claims
         . rename/rearrange functions for what file they're in
         - generalize our transport: add transport.c in preparation for
           http, airhook, etc transport.
+NICK    - investigate sctp for alternate transport.
 
 For September:
 NICK    . Windows port
@@ -117,28 +168,39 @@ NICK    . Windows port
           - installer
 
         - Docs
-          - FAQ
+          . FAQ
           o overview of tor. how does it work, what's it do, pros and
             cons of using it, why should I use it, etc.
           - a howto tutorial with examples
+* put a stub on the wiki
           o tutorial: how to set up your own tor network
             - (need to not hardcode dirservers file in config.c)
+* this will be solved when we put dirservers in config lines
+          - port forwarding howto for ipchains, etc
+* roger add to wiki of requests
           . correct, update, polish spec
           - document the exposed function api?
           o document what we mean by socks.
 
 NICK    . packages
           . rpm
+* nick will look at the spec file
           - find a long-term rpm maintainer
+* roger will start guilting people
 
         - code
           - better warn/info messages
           o let tor do resolves.
           o extend socks4 to do resolves?
           o make script to ask tor for resolves
+          - write howto for setting up tsocks, socat.
+            - including on osx and win32
+          - freecap handling
           - tsocks
             o gather patches, submit to maintainer
+* send him a reminder mail and see what's up.
             - intercept gethostbyname and others
+* add this to tsocks
             o do resolve via tor
           - redesign and thorough code revamp, with particular eye toward:
             - support half-open tcp connections
@@ -152,6 +214,7 @@ Other details and small and hard things:
           that it is able to rotate through. (maybe)
         - tie into squid
         - hidserv offerers shouldn't need to define a SocksPort
+* figure out what breaks for this, and do it.
         - when the client fails to pick an intro point for a hidserv,
           it should refetch the hidserv desc.
         . should maybe make clients exit(1) when bad things happen?
