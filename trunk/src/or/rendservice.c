@@ -588,6 +588,9 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
     goto err;
   }
 
+  crypto_dh_free(hop->handshake_state);
+  hop->handshake_state = NULL;
+
   /* Append the cpath entry. */
   hop->state = CPATH_STATE_OPEN;
   onion_append_to_cpath(&circuit->cpath, hop);

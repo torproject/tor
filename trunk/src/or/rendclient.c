@@ -204,6 +204,9 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
     goto err;
   }
 
+  crypto_dh_free(hop->handshake_state);
+  hop->handshake_state = NULL;
+
   /* All is well. Extend the circuit. */
   circ->purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
   hop->state = CPATH_STATE_OPEN;
