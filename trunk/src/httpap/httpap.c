@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.4  2002/07/19 18:48:19  arma
+ * slightly less noisy
+ *
  * Revision 1.3  2002/07/12 18:14:16  montrose
  * removed loglevel from global namespace. severity level is set using log() with a NULL format argument now. example: log(LOG_ERR,NULL);
  *
@@ -417,7 +420,7 @@ int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in re
 	  close(new_sock);
 	  break;
 	}
-	log(LOG_DEBUG,"handle_connection() : Received %u bytes from the onion proxy.",retval);
+//	log(LOG_DEBUG,"handle_connection() : Received %u bytes from the onion proxy.",retval);
 	
 	retval = write_tout(new_sock, buf, retval, conn_toutp);
 	if (retval <= 0)
