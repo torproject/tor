@@ -55,33 +55,18 @@ R       - learn from ben about his openssl-reinitialization-trick to
           - have a config entry to specify where to go
         D nt services on win32.
 
-      0.0.8:
+      0.0.9 and beyond:
         - fix sprintf's to snprintf's?
-        o Make it work on win32 with no $home
-                o Don't crash.
-                o Put files someplace reasonable.
-        o Why is the first entry of kill -USR1 a router with a 0 key?
-        o Tors deal appropriately when a newly-verified router has the
-          same nickname as another router they know about
-        X put ip:port:keyhash in intro points, rendezvous points,
-          and hidserv descriptors.
         . Make intro points and rendezvous points accept $KEYID in addition
           to nicknames.
                 o Specify
                 o Implement parsing
                 - Generate new formats (Not till 007 is dead)
-NICK    . unify similar config entries that need to be split. put them
-          into a smartlist, and have things take a smartlist.
-
-        - figure out what to do when somebody asks to extend to
-          ip:port:differentkey
-* reject it. assuming this is as dumb as it sounds.
+        - christian grothoff's attack of infinite-length circuit.
+          the solution is to have a separate 'extend-data' cell type
+          which is used for the first N data cells, and only
+          extend-data cells can be extend requests.
         - make loglevel info less noisy
-
-      bug fixes, might be handy:
-        - the directory servers complain a lot about people using the
-          old key. does 0.0.7 use dirservers before it's pulled down
-          the directory?
         - put expiry date on onion-key, so people don't keep trying
           old ones that they could know are expired?
 * Leave on todo list, see if pre3 onion fixes helped enough.
@@ -96,28 +81,15 @@ NICK    . unify similar config entries that need to be split. put them
 * Don't worry about this for now
         - Handle full buffers without totally borking
 * do this eventually, no rush.
-
-      more features, easy:
-        - per-month byte allowances
-* nick will spec something.
         - have a pool of circuits available, cannibalize them
           for your purposes (e.g. rendezvous, etc).
-* hold off on that.
-        - node 'groups' that are known to be in the same zone of control
-* nick and roger will talk about it
         - do resolve before trying to attach the stream
 * don't do this for now.
         - if destination IP is running a tor node, extend a circuit there
           before sending begin.
 * don't do this for now. figure out how enclaves work. but do enclaves soon.
-        - Track max ten-second b/w ever seen, to show operator
 
       more features, complex:
-        - compress the directory. client sends http header
-          "accept-transfer-encoding: gzip", server might send http header
-          "transfer-encoding: gzip". ta-da.
-          - grow a zlib dependency. keep a cached compressed directory.
-* nick will look into this. not critical priority.
         - Switch dirservers entries to config lines:
           - read in and parse each TrustedDir config line.
           - stop reading dirservers file.
@@ -143,13 +115,7 @@ NICK    . unify similar config entries that need to be split. put them
         - Have clients and dirservers preserve reputation info over
           reboots.
 * continue not doing until we have something we need to preserve
-        - users can set their bandwidth, or we auto-detect it:
-          - advertised bandwidth defaults to 10KB
-          o advertised bandwidth is the min of max seen in each direction
-            in the past N seconds.
-            o calculate this
-          o not counting "local" connections
-          - round detected bandwidth up to nearest 10KB
+        - round detected bandwidth up to nearest 10KB?
         - client software not upload descriptor until:
           - you've been running for an hour
           - it's sufficiently satisfied with its bandwidth
