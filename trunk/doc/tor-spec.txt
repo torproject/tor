@@ -1,26 +1,23 @@
-$Id$
+sw$Id$
 
 Tor Spec
 
 Note: This is an attempt to specify Tor as it exists as implemented in
-early June, 2003.  It is not recommended that others implement this
+early March, 2004.  It is not recommended that others implement this
 design as it stands; future versions of Tor will implement improved
 protocols.
 
+This is not a design document; most design criteria are not examined.  For
+more information on why Tor acts as it does, see tor-design.pdf.
+
 TODO: (very soon)
-      - Specify truncate/truncated payloads?
-      - Specify RELAY_END payloads. [It's 1 byte of reason, then X bytes of
-        data, right? -NM]
-        [Right, where X=4 and it's an IP, currently. -RD]
-      - Sendme w/stream0 is circuit sendme
-      - Integrate -NM and -RD comments
       - EXTEND cells should have hostnames or nicknames, so that OPs never
         resolve OR hostnames.  Else DNS servers can give different answers to
         different OPs, and compromise their anonymity.
+         - Alternatively, directories should include IPs.
+      - REASON_CONNECTFAILED should include an IP.
+      - Copy prose from tor-design to make everything more readable.
 
-EVEN LATER:
-      - Do TCP-style sequencing and ACKing of DATA cells so that we can afford
-        to lose some data cells. [Actually, we'll probably never do this. -RD]
 
 0. Notation:
 
@@ -28,7 +25,10 @@ EVEN LATER:
    SK -- a private key
    K  -- a key for a symmetric cypher
 
-   a|b -- concatenation of 'a' with 'b'.
+   a|b -- concatenation of 'a' and 'b'.
+
+   [A0 B1 C2] -- a three-byte sequence, containing the bytes with
+   hexadecimal values A0, B1, and C2, in that order.
 
    All numeric values are encoded in network (big-endian) order.
 
@@ -42,7 +42,6 @@ EVEN LATER:
      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
      "49286651ECE65381FFFFFFFFFFFFFFFF"
-
 
 1. System overview
 
@@ -62,14 +61,16 @@ EVEN LATER:
    without authenticating itself.  The second is as another OR, which
    allows mutual authentication.
 
-   Tor uses TLS for link encryption, using the cipher suite
-   "TLS_DHE_RSA_WITH_AES_128_CBC_SHA".
-   [That's cool, except it's not what we use currently. We use
-    3DES because most people don't have openssl 0.9.7 and thus
-    don't have AES. -RD]
-   An OR always sends a
-   self-signed X.509 certificate whose commonName is the server's
-   nickname, and whose public key is in the server directory.
+   Tor uses TLS for link encryption.  All implementations MUST support
+   the TLS ciphersuite "TLS_EDH_RSA_WITH_DES_192_CBC3_SHA", and SHOULD
+   support "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" if it is available.
+   Implementations MAY support other ciphersuites, but MUST NOT
+   support any suite without ephemeral keys, symmetric keys of at
+   least 128 bits, and digests of at least 160 bits.
+
+   An OR always sends a self-signed X.509 certificate whose commonName
+   is the server's nickname, and whose public key is in the server
+   directory.
 
    All parties receiving certificates must confirm that the public
    key is as it appears in the server directory, and close the
@@ -79,13 +80,17 @@ EVEN LATER:
    (specified below) to one another.  Cells are sent serially.  All
    cells are 512 bytes long.  Cells may be sent embedded in TLS
    records of any size or divided across TLS records, but the framing
-   of TLS records must not leak information about the type or
-   contents of the cells.
+   of TLS records MUST NOT leak information about the type or contents
+   of the cells.
 
-   OR-to-OR connections are never deliberately closed.  An OP should
-   close a connection to an OR if there are no circuits running over
-   the connection, and an amount of time (KeepalivePeriod, defaults to
-   5 minutes) has passed.
+   OR-to-OR connections are never deliberately closed.  When an OR
+   starts or receives a new directory, it tries to open new
+   connections to any OR it is not already connected to.
+
+   OR-to-OP connections are not permanent. An OP should close a
+   connection to an OR if there are no circuits running over the
+   connection, and an amount of time (KeepalivePeriod, defaults to 5
+   minutes) has passed.
 
 3. Cell Packet format
 
@@ -93,10 +98,13 @@ EVEN LATER:
    proxies is a fixed-width "cell".  Each cell contains the following
    fields:
 
-        CircID                                [2 bytes]
+        CircID                               [2 bytes]
         Command                               [1 byte]
         Payload (padded with 0 bytes)         [509 bytes]
                                          [Total size: 512 bytes]
+
+   The CircID field determines which circuit, if any, the cell is
+   associated with.
 
    The 'Command' field holds one of the following values:
          0 -- PADDING     (Padding)                 (See Sec 6.2)
@@ -106,17 +114,18 @@ EVEN LATER:
          4 -- DESTROY     (Stop using a circuit)    (See Sec 4)
 
    The interpretation of 'Payload' depends on the type of the cell.
-      PADDING: Unused.
+      PADDING: Payload is unused.
       CREATE:  Payload contains the handshake challenge.
       CREATED: Payload contains the handshake response.
       RELAY:   Payload contains the relay header and relay body.
-      DESTROY: Unused.
+      DESTROY: Payload is unused.
+   Upon receiving any other value for the command field, an OR must
+   drop the cell.
 
    The payload is padded with 0 bytes.
 
-   PADDING cells are currently used to implement connection
-   keepalive.  ORs and OPs send one another a PADDING cell every few
-   minutes.
+   PADDING cells are currently used to implement connection keepalive.
+   ORs and OPs send one another a PADDING cell every few minutes.
 
    CREATE, CREATED, and DESTROY cells are used to manage circuits;
    see section 4 below.
@@ -124,17 +133,16 @@ EVEN LATER:
    RELAY cells are used to send commands and data along a circuit; see
    section 5 below.
 
-
 4. Circuit management
 
 4.1. CREATE and CREATED cells
 
    Users set up circuits incrementally, one hop at a time. To create a
-   new circuit, users send a CREATE cell to the first node, with the
+   new circuit, OPs send a CREATE cell to the first node, with the
    first half of the DH handshake; that node responds with a CREATED
    cell with the second half of the DH handshake plus the first 20 bytes
    of derivative key data (see section 4.2). To extend a circuit past
-   the first hop, the user sends an EXTEND relay cell (see section 5)
+   the first hop, the OP sends an EXTEND relay cell (see section 5)
    which instructs the last node in the circuit to send a CREATE cell
    to extend the circuit.
 
@@ -159,6 +167,19 @@ EVEN LATER:
    The port and address field denote the IPV4 address and port of the
    next onion router in the circuit.
 
+   The payload for a CREATED cell, or the relay payload for an
+   EXTENDED cell, contains:
+         DH data (g^y)                 [128 bytes]
+         Derivative key data (KH)      [20 bytes]   <see 4.2 below>
+
+   The CircID for a CREATE cell is an arbitrarily chosen 2-byte
+   integer, selected by the node (OP or OR) that sends the CREATE
+   cell.  To prevent CircID collisions, when one OR sends a CREATE
+   cell to another, it chooses from only one half of the possible
+   values based on the ORs' nicknames: if the sending OR has a
+   lexicographically earlier nickname, it chooses a CircID with a high
+   bit of 0; otherwise, it chooses a CircID with a high bit of 1.
+
 4.2. Setting circuit keys
 
    Once the handshake between the OP and an OR is completed, both
@@ -167,7 +188,7 @@ EVEN LATER:
    First, the server represents g^xy as a big-endian unsigned integer.
    Next, the server computes 60 bytes of key data as K = SHA1(g^xy |
    [00]) | SHA1(g^xy | [01]) | SHA1(g^xy | [02]) where "00" is a single
-   octet whose value is zero, "01" is a single octet whose value is
+   octet whose value is zero, [01] is a single octet whose value is
    one, etc.  The first 20 bytes of K form KH, the next 16 bytes of K
    form Kf, and the next 16 bytes of K form Kb.
 
@@ -179,23 +200,22 @@ EVEN LATER:
 4.3. Creating circuits
 
    When creating a circuit through the network, the circuit creator
-   performs the following steps:
+   (OP) performs the following steps:
 
-      1. Choose a chain of N onion routers (R_1...R_N) to constitute
-         the path, such that no router appears in the path twice.
-         [this is wrong, now we choose the last hop and then choose
-          new hops lazily -RD]
+      1. Choose an onion router as an exit node (R_N), such that the onion
+         router's exit policy does not exclude all pending streams
+         that need a circuit.
 
-      2. If not already connected to the first router in the chain,
+      2. Choose a chain of (N-1) chain of N onion routers
+         (R_1...R_N-1) to constitute the path, such that no router
+         appears in the path twice.
+
+      3. If not already connected to the first router in the chain,
          open a new connection to that router.
 
-      3. Choose a circID not already in use on the connection with the
-         first router in the chain.  If we are an onion router and our
-         nickname is lexicographically greater than the nickname of the
-         other side, then let the high bit of the circID be 1, else 0.
-
-      4. Send a CREATE cell along the connection, to be received by
-         the first onion router.
+      4. Choose a circID not already in use on the connection with the
+         first router in the chain; send a CREATE cell along the
+         connection, to be received by the first onion router.
 
       5. Wait until a CREATED cell is received; finish the handshake
          and extract the forward key Kf_1 and the backward key Kb_1.
@@ -203,8 +223,8 @@ EVEN LATER:
       6. For each subsequent onion router R (R_2 through R_N), extend
          the circuit to R.
 
-   To extend the circuit by a single onion router R_M, the circuit
-   creator performs these steps:
+   To extend the circuit by a single onion router R_M, the OP performs
+   these steps:
 
       1. Create an onion skin, encrypting the RSA-encrypted part with
          R's public key.
@@ -212,29 +232,27 @@ EVEN LATER:
       2. Encrypt and send the onion skin in a relay EXTEND cell along
          the circuit (see section 5).
 
-      3. When a relay EXTENDED cell is received, calculate the shared
-         keys.  The circuit is now extended.
+      3. When a relay EXTENDED cell is received, verify KH, and
+         calculate the shared keys.  The circuit is now extended.
 
-   When an onion router receives an EXTEND relay cell, it sends a
-   CREATE cell to the next onion router, with the enclosed onion skin
-   as its payload.  The initiating onion router chooses some circID not
-   yet used on the connection between the two onion routers.  (But see
-   section 4.3. above, concerning choosing circIDs. [What? This
-   is 4.3. Maybe we mean to remind about lexicographic order of
-   nicknames? -RD])
+   When an onion router receives an EXTEND relay cell, it sends a CREATE
+   cell to the next onion router, with the enclosed onion skin as its
+   payload.  The initiating onion router chooses some circID not yet
+   used on the connection between the two onion routers.  (But see
+   section 4.1. above, concerning choosing circIDs based on
+   lexicographic order of nicknames.)
 
    As an extension (called router twins), if the desired next onion
    router R in the circuit is down, and some other onion router R'
-   has the same key as R, then it's ok to extend to R' rather than R.
+   has the same public keys as R, then it's ok to extend to R' rather than R.
 
    When an onion router receives a CREATE cell, if it already has a
    circuit on the given connection with the given circID, it drops the
-   cell.  Otherwise, after receiving the CREATE cell, it completes
-   the DH handshake, and replies with a CREATED cell, containing g^y
-   as its [128 byte] payload.  Upon receiving a CREATED cell, an onion
-   router packs it payload into an EXTENDED relay cell (see section 5),
-   and sends that cell up the circuit.  Upon receiving the EXTENDED
-   relay cell, the OP can retrieve g^y.
+   cell.  Otherwise, after receiving the CREATE cell, it completes the
+   DH handshake, and replies with a CREATED cell.  Upon receiving a
+   CREATED cell, an onion router packs it payload into an EXTENDED relay
+   cell (see section 5), and sends that cell up the circuit.  Upon
+   receiving the EXTENDED relay cell, the OP can retrieve g^y.
 
    (As an optimization, OR implementations may delay processing onions
    until a break in traffic allows time to do so without harming
@@ -260,8 +278,10 @@ EVEN LATER:
    After a DESTROY cell has been processed, an OR ignores all data or
    destroy cells for the corresponding circuit.
 
-   [This next paragraph is never used, and should perhaps go away. -RD]
-   To tear down part of a circuit, the OP sends a RELAY_TRUNCATE cell
+   (The rest of this section is not currently used; on errors, circuits
+   are destroyed, not truncated.)
+
+   To tear down part of a circuit, the OP may send a RELAY_TRUNCATE cell
    signaling a given OR (Stream ID zero).  That OR sends a DESTROY
    cell to the next node in the circuit, and replies to the OP with a
    RELAY_TRUNCATED cell.
@@ -272,11 +292,6 @@ EVEN LATER:
    RELAY_TRUNCATED cell towards the OP; the node farther from the OP
    should send a DESTROY cell down the circuit.
 
-   [We'll have to reevaluate this section once we figure out cleaner
-    circuit/connection killing conventions. Possibly the right answer
-    is to not use most of the extensions. -RD]
-   [Correct. We should specify that OPs must not send truncate cells. -RD]
-
 4.5. Routing relay cells
 
    When an OR receives a RELAY cell, it checks the cell's circID and
@@ -284,57 +299,46 @@ EVEN LATER:
    connection.  If not, the OR drops the RELAY cell.
 
    Otherwise, if the OR is not at the OP edge of the circuit (that is,
-   either an 'exit node' or a non-edge node), it de/encrypts the length
-   field and the payload with AES/CTR, as follows:
+   either an 'exit node' or a non-edge node), it de/encrypts the payload
+   with AES/CTR, as follows:
         'Forward' relay cell (same direction as CREATE):
             Use Kf as key; encrypt.
         'Back' relay cell (opposite direction from CREATE):
             Use Kb as key; decrypt.
-   [This part is now wrong. There's a 'recognized' field. If it crypts
-    to 0, then check the digest. Speaking of which, there's a digest
-    field. We should mention this. -RD]
-   If the OR recognizes the stream ID on the cell (it is either the ID
-   of an open stream or the signaling (zero) ID), the OR processes the
-   contents of the relay cell.  Otherwise, it passes the decrypted
-   relay cell along the circuit if the circuit continues, or drops the
-   cell if it's the end of the circuit. [Getting an unrecognized
-   relay cell at the end of the circuit must be allowed for now;
-   we can reexamine this once we've designed full tcp-style close
-   handshakes. -RD [No longer true, an unrecognized relay cell at
-   the end is met with a destroy cell. -RD]]
 
-   Otherwise, if the data cell is coming from the OP edge of the
-   circuit, the OP decrypts the length and payload fields with AES/CTR as
-   follows:
-         OP sends data cell to node R_M:
-            For I=1...M, decrypt with Kf_I.
+   The OR then decides whether it recognizes the relay cell, by
+   inspecting the payload as described in section 5.1 below.  If the OR
+   recognizes the cell, it processes the contents of the relay cell.
+   Otherwise, it passes the decrypted relay cell along the circuit if
+   the circuit continues.  If the OR at the end of the circuit
+   encounters an unrecognized relay cell, an error has occurred: the OR
+   sends a DESTROY cell to tear down the circuit.
 
-   Otherwise, if the data cell is arriving at the OP edge if the
-   circuit, the OP encrypts the length and payload fields with AES/CTR as
-   follows:
+   When a relay cell arrives at an OP, it the OP encrypts the length and
+   payload fields with AES/CTR as follows:
          OP receives data cell:
             For I=N...1,
-                Encrypt with Kb_I.  If the stream ID is a recognized
-                stream for R_I, or if the stream ID is the signaling
-                ID (zero), then stop and process the payload.
+                Encrypt with Kb_I.  If the payload is recognized (see
+                section 5.1), then stop and process the payload.
 
    For more information, see section 5 below.
 
 5. Application connections and stream management
 
-5.1. Streams
+5.1. Relay cells
 
    Within a circuit, the OP and the exit node use the contents of
    RELAY packets to tunnel end-to-end commands and TCP connections
    ("Streams") across circuits.  End-to-end commands can be initiated
    by either edge; streams are initiated by the OP.
 
-   The first 8 bytes of each relay cell are reserved as follows:
+   The payload of each unencrypted RELAY cell consists of:
          Relay command           [1 byte]
-         Stream ID               [7 bytes]
-
-   [command 1 byte, recognized 2 bytes, streamid 2 bytes, digest 4 bytes,
-    length 2 bytes == 11 bytes of header -RD]
+         'Recognized'            [2 bytes]
+         StreamID               [2 bytes]
+         Digest                  [4 bytes]
+         Length                  [2 bytes]
+         Data                    [498 bytes]
 
    The relay commands are:
          1 -- RELAY_BEGIN
@@ -348,41 +352,81 @@ EVEN LATER:
          9 -- RELAY_TRUNCATED
         10 -- RELAY_DROP
 
-   All RELAY cells pertaining to the same tunneled stream have the
-   same stream ID.  Stream ID's are chosen randomly by the OP.  A
-   stream ID is considered "recognized" on a circuit C by an OP or an
-   OR if it already has an existing stream established on that
-   circuit, or if the stream ID is equal to the signaling stream ID,
-   which is all zero: [00 00 00 00 00 00 00]
+   The 'Recognized' field in any unencrypted relay payload is always set
+   to zero; the 'digest' field is computed as the first four bytes of a
+   SHA-1 digest of the rest of the RELAY cell's payload, taken with the
+   digest field set to zero.
 
-   [This next paragraph is wrong: to begin a new stream, it simply
-    uses the new streamid. No need to send it separately. -RD]
-   To create a new anonymized TCP connection, the OP sends a
-   RELAY_BEGIN data cell with a payload encoding the address and port
-   of the destination host.  The stream ID is zero.  The payload format is:
-         NEWSTREAMID | ADDRESS | ':' | PORT | '\000'
-   where NEWSTREAMID is the newly generated Stream ID to use for
-   this stream, ADDRESS may be a DNS hostname, or an IPv4 address in
+   When the 'recognized' field of a RELAY cell is zero, and the digest
+   is correct, the cell is considered "recognized" for the purposes of
+   decryption (see section 4.5 above).
+
+   All RELAY cells pertaining to the same tunneled stream have the
+   same stream ID.  StreamIDs are chosen randomly by the OP.  RELAY
+   cells that affect the entire circuit rather than a particular
+   stream use a StreamID of zero.
+
+   The 'Length' field of a relay cell contains the number of bytes in
+   the relay payload which contain real payload data.  The remainder of
+   the payload is padded with random bytes.
+
+5.2. Opening streams and transferring data
+
+   To open a new anonymized TCP connection, the OP chooses an open
+   circuit to an exit that may be able to connect to the destination
+   address, selects an arbitrary StreamID not yet used on that circuit,
+   and constructs a RELAY_BEGIN cell with a payload encoding the address
+   and port of the destination host.  The payload format is:
+
+         ADDRESS | ':' | PORT | [00]
+
+   where  ADDRESS is be a DNS hostname, or an IPv4 address in
    dotted-quad format; and where PORT is encoded in decimal.
 
-   Upon receiving this packet, the exit node resolves the address as
-   necessary, and opens a new TCP connection to the target port.  If
-   the address cannot be resolved, or a connection can't be
-   established, the exit node replies with a RELAY_END cell.
-   Otherwise, the exit node replies with a RELAY_CONNECTED cell.
+   [What is the [00] for? -NM]
+
+   Upon receiving this cell, the exit node resolves the address as
+   necessary, and opens a new TCP connection to the target port.  If the
+   address cannot be resolved, or a connection can't be established, the
+   exit node replies with a RELAY_END cell.  (See 5.4 below.)
+   Otherwise, the exit node replies with a RELAY_CONNECTED cell, whose
+   payload is the 4-byte IP address to which the connection was made.
 
    The OP waits for a RELAY_CONNECTED cell before sending any data.
    Once a connection has been established, the OP and exit node
    package stream data in RELAY_DATA cells, and upon receiving such
    cells, echo their contents to the corresponding TCP stream.
+   RELAY_DATA cells sent to unrecognized streams are dropped.
 
    Relay RELAY_DROP cells are long-range dummies; upon receiving such
    a cell, the OR or OP must drop it.
 
-5.2. Closing streams
+5.3. Closing streams
 
-   [Note -- TCP streams can only be half-closed for reading.  Our
-   Bickford's conversation was incorrect. -NM]
+   When an anonymized TCP connection is closed, or an edge node
+   encounters error on any stream, it sends a 'RELAY_END' cell along the
+   circuit (if possible) and closes the TCP connection immediately.  If
+   an edge node receives a 'RELAY_END' cell for any stream, it closes
+   the TCP connection completely, and sends nothing more along the
+   circuit for that stream.
+
+   The payload of a RELAY_END cell begins with a single 'reason' byte to
+   describe why the stream is closing, plus optional data (depending on
+   the reason.)  The values are:
+
+       1 -- REASON_MISC           (catch-all for unlisted reasons)
+       2 -- REASON_RESOLVEFAILED  (couldn't look up hostname)
+       3 -- REASON_CONNECTFAILED  (couldn't connect to host/port)
+       4 -- REASON_EXITPOLICY     (OR refuses to connect to host or port)
+       5 -- REASON_DESTROY        (circuit is being destroyed [???-NM])
+       6 -- REASON_DONE           (anonymized TCP connection was closed)
+       7 -- REASON_TIMEOUT        (OR timed out while connecting [???-NM])
+
+   (With REASON_EXITPOLICY, the 4-byte IP address forms the optional
+   data; no other reason currently has extra data.)
+
+
+   *** [The rest of this section describes unimplemented functionality.]
 
    Because TCP connections can be half-open, we follow an equivalent
    to TCP's FIN/FIN-ACK/ACK protocol to close streams.
@@ -394,25 +438,21 @@ EVEN LATER:
    onion router.
 
    A stream begins in the 'OPEN' state.  Upon receiving a 'FIN' from
-   the corresponding TCP connection, the edge node sends a 'RELAY_END'
+   the corresponding TCP connection, the edge node sends a 'RELAY_FIN'
    cell along the circuit and changes its state to 'DONE_PACKAGING'.
-   Upon receiving a 'RELAY_END' cell, an edge node sends a 'FIN' to
+   Upon receiving a 'RELAY_FIN' cell, an edge node sends a 'FIN' to
    the corresponding TCP connection (e.g., by calling
    shutdown(SHUT_WR)) and changing its state to 'DONE_DELIVERING'.
 
    When a stream in already in 'DONE_DELIVERING' receives a 'FIN', it
-   also sends a 'RELAY_END' along the circuit, and changes its state
+   also sends a 'RELAY_FIN' along the circuit, and changes its state
    to 'CLOSED'.  When a stream already in 'DONE_PACKAGING' receives a
-   'RELAY_END' cell, it sends a 'FIN' and changes its state to
+   'RELAY_FIN' cell, it sends a 'FIN' and changes its state to
    'CLOSED'.
 
-   [Note: Please rename 'RELAY_END2'. :) -NM ]
+   If an edge node encounters an error on any stream, it sends a
+   'RELAY_END' cell (if possible) and closes the stream immediately.
 
-   If an edge node encounters an error on any stram, it sends a
-   'RELAY_END2' cell along the circuit (if possible) and closes the
-   TCP connection immediately.  If an edge node receives a
-   'RELAY_END2' cell for any stream, it closes the TCP connection
-   completely, and sends nothing along the circuit.
 
 6. Flow control
 
