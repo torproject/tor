@@ -56,8 +56,8 @@ build_socks4a_resolve_request(char **out,
 
   len = 8 + strlen(username) + 1 + strlen(hostname) + 1;
   *out = tor_malloc(len);
-  (*out)[0] = 4;     /* SOCKS version 4 */
-  (*out)[1] = 0xF0;  /* Command: resolve. */
+  (*out)[0] = 4;      /* SOCKS version 4 */
+  (*out)[1] = '\xF0'; /* Command: resolve. */
   set_uint16((*out)+2, htons(0)); /* port: 0. */
   set_uint32((*out)+4, htonl(0x00000001u)); /* addr: 0.0.0.1 */
   strcpy((*out)+8, username);
