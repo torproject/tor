@@ -661,10 +661,9 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
     signing_pkey_tag = "signing-key\n";
   }
   
-  result = snprintf(s, maxlen, "router %s %d %d %d %d %d\n%s%s%s",
+  result = snprintf(s, maxlen, "router %s %d %d %d %d\n%s%s%s",
     router->address,
     router->or_port,
-    router->op_port,
     router->ap_port,
     router->dir_port,
     router->bandwidth,
