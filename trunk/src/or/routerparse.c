@@ -454,7 +454,6 @@ router_parse_routerlist_from_directory(const char *str,
                                           good_nickname_list);
       if(me->is_verified == 0 && !have_warned_about_unverified_status) {
         log_fn(LOG_WARN,"Dirserver %s lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
-        /* XXX008 can we print the name of the dirserver above? how to get it */
         have_warned_about_unverified_status = 1;
       }
     }
@@ -559,43 +558,44 @@ static int check_directory_signature(const char *digest,
                                       crypto_pk_env_t *pkey)
 {
   char signed_digest[PK_BYTES];
-  if (tok->n_args == 1) {
-    routerinfo_t *r = router_get_by_nickname(tok->args[0]);
-    log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
-    if (r && r->is_trusted_dir) {
-      pkey = r->identity_pkey;
-    } else if (!r && pkey) {
-      /* pkey provided for debugging purposes. */
-    } else if (!r) {
-      log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
-             tok->args[0]);
-      return -1;
-    } else if (r && !r->is_trusted_dir) {
-      log_fn(LOG_WARN, "Directory was signed by non-trusted server %s",
-             tok->args[0]);
-      return -1;
-    }
-  } else {
+  routerinfo_t *r;
+
+  if (tok->n_args != 1) {
     log_fn(LOG_WARN, "Too many or too few arguments to directory-signature");
+    return -1;
+  }
+
+  r = router_get_by_nickname(tok->args[0]);
+  log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
+  if (r && r->is_trusted_dir) {
+    pkey = r->identity_pkey;
+  } else if (!r && pkey) {
+    /* pkey provided for debugging purposes. */
+  } else if (!r) {
+    log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
+           tok->args[0]);
+    return -1;
+  } else if (r && !r->is_trusted_dir) {
+    log_fn(LOG_WARN, "Directory was signed by non-trusted server %s",
+           tok->args[0]);
     return -1;
   }
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
     log_fn(LOG_WARN, "Bad object type or length on directory signature");
     return -1;
   }
-  if (pkey) {
-    if (crypto_pk_public_checksig(pkey, tok->object_body, 128, signed_digest)
-        != 20) {
-      log_fn(LOG_WARN, "Error reading directory: invalid signature.");
-      return -1;
-    }
-    log_fn(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
-    if (memcmp(digest, signed_digest, 20)) {
-      log_fn(LOG_WARN, "Error reading directory: signature does not match.");
-      return -1;
-    }
-  } else {
-    /* XXXX008 freak out, unless testing. */
+
+  tor_assert(pkey);
+
+  if (crypto_pk_public_checksig(pkey, tok->object_body, 128, signed_digest)
+      != 20) {
+    log_fn(LOG_WARN, "Error reading directory: invalid signature.");
+    return -1;
+  }
+  log_fn(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
+  if (memcmp(digest, signed_digest, 20)) {
+    log_fn(LOG_WARN, "Error reading directory: signature does not match.");
+    return -1;
   }
   return 0;
 }
