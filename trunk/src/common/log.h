@@ -33,7 +33,7 @@
 /** Warn-level severity: for messages that only appear when something has gone
  * wrong. */
 #define LOG_WARN    3
-/** Warn-level severity: for messages that only appear when something has gone
+/** Error-level severity: for messages that only appear when something has gone
  * very wrong, and the Tor process can no longer proceed. */
 #define LOG_ERR     4
 #endif
