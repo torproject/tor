@@ -548,7 +548,13 @@ get_uname(void)
 }
       
 void daemonize(void) {
-#ifndef MS_WINDOWS
+#ifdef HAVE_DAEMON
+  if (daemon(0 /* chdir to / */,
+	     0 /* Redirect std* to /dev/null */)) {
+    log_fn(LOG_ERR, "Daemon returned an error: %s", strerror(errno));
+    exit(1);
+  }
+#elif ! defined(MS_WINDOWS)
   /* Fork; parent exits. */
   if (fork())
     exit(0);
