@@ -7,7 +7,6 @@
 /********* START PROTOTYPES **********/
 
 static void dumpstats(void); /* dump stats to stdout */
-static int init_descriptor(void);
 
 /********* START VARIABLES **********/
 

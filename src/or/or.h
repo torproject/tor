@@ -636,8 +636,7 @@ int main(int argc, char *argv[]);
 
 /********************************* onion.c ***************************/
 
-int decide_aci_type(uint32_t local_addr, uint16_t local_port,
-                    uint32_t remote_addr, uint16_t remote_port);
+int decide_aci_type(char *local_nick, char *remote_nick);
 
 int onion_pending_add(circuit_t *circ);
 circuit_t *onion_next_task(void);

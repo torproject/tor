@@ -200,7 +200,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->LogLevel = "debug";
   options->loglevel = LOG_DEBUG;
   options->DataDirectory = NULL;
-  options->CoinWeight = 0.8;
+  options->CoinWeight = 0.1;
   options->MaxConn = 900;
   options->DirFetchPostPeriod = 600;
   options->KeepalivePeriod = 300;

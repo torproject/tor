@@ -8,17 +8,17 @@ extern or_options_t options; /* command-line and config-file options */
 
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
 
-int decide_aci_type(uint32_t local_addr, uint16_t local_port,
-                    uint32_t remote_addr, uint16_t remote_port) {
-
-  if(local_addr > remote_addr)
-    return ACI_TYPE_HIGHER;
-  if(local_addr < remote_addr)
+int decide_aci_type(char *local_nick, char *remote_nick) {
+  int result;
+ 
+  assert(remote_nick);
+  if(!local_nick)
     return ACI_TYPE_LOWER;
-  if(local_port > remote_port)
-    return ACI_TYPE_HIGHER;
-   /* else */
-   return ACI_TYPE_LOWER; 
+  result = strcmp(local_nick, remote_nick);
+  assert(result);
+  if(result < 0)
+    return ACI_TYPE_LOWER;
+  return ACI_TYPE_HIGHER;
 }
 
 struct onion_queue_t {

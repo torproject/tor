@@ -94,9 +94,8 @@ connection_t *connection_or_connect(routerinfo_t *router) {
 
   assert(router);
 
-  if(router_is_me(router->addr, router->or_port)) {
-    /* this is me! don't connect to me. XXX use nickname/key */
-    log(LOG_DEBUG,"connection_or_connect(): This is me. Skipping.");
+  if(options.Nickname && !strcmp(router->nickname,options.Nickname)) {
+    log_fn(LOG_WARNING,"You asked me to connect to myself! Failing.");
     return NULL;
   }
 
