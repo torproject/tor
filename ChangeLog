@@ -1,3 +1,191 @@
+Changes in version 0.1.0.1-rc1 - 2005-03-xx
+
+  o New features:
+    - Add reachability testing. Your Tor server will automatically try
+      to see if its ORPort and DirPort are reachable from the outside,
+      and it won't upload its descriptor until it decides they are.
+    - Handle unavailable hidden services better. Handle slow or busy
+      hidden services better.
+    - Add support for CONNECTing through https proxies, with "HttpsProxy"
+      config option.
+    - New exit policy: accept most low-numbered ports, rather than
+      rejecting most low-numbered ports.
+    - More Tor controller support (still experimental). See
+      http://tor.eff.org/doc/control-spec.txt for all the new features,
+      including signals to emulate unix signals from any platform;
+      redirectstream; extendcircuit; mapaddress; getinfo; postdescriptor;
+      closestream; closecircuit; etc.
+    - Make nt services work and start on startup on win32 (based on
+      patch by Matt Edman).
+    - Add a new AddressMap config directive to rewrite incoming socks
+      addresses. This lets you, for example, declare an implicit
+      required exit node for certain sites.
+    - Add a new TrackHostExits config directive to trigger addressmaps
+      for certain incoming socks addresses -- for sites that break when
+      your exit keeps changing.
+    - Redo the client-side dns cache so it's just an addressmap too.
+    - Notice when our IP changes, and reset stats/uptime/reachability.
+    - When an application is using socks5, give him the whole variety of
+      potential socks5 responses (connect refused, host unreachable, etc),
+      rather than just "success" or "failure".
+    - A more sane version numbering system. See
+      http://tor.eff.org/cvs/tor/doc/version-spec.txt for details.
+    - New contributed script "exitlist": a simple python script to
+      parse directories and find tor nodes that exit to listed
+      nodes/ports.
+    - New contributed script "privoxy-tor-toggle" to toggle whether
+      privoxy uses tor. Seems to be configured for debian by default.
+    - Report HTTP reasons to when getting a response from directory
+      servers -- so you can actually know what went wrong.
+    - New config option MaxAdvertisedBandwidth which lets you advertise
+      a low bandwidthrate (to not attract as many circuits) while still
+      allowing a higher bandwidthrate in reality.
+
+  o Robustness/stability fixes:
+    - Make Tor use Niels Provos's libevent instead of its current
+      poll-but-sometimes-select mess.  This will let us use faster async
+      cores (like epoll, kpoll, and /dev/poll), and hopefully work better
+      on Windows too.
+    - pthread support now too. This was forced because when we forked,
+      we ended up wasting a lot of duplicate ram over time. Also switch
+      to foo_r versions of some library calls to allow reentry and
+      threadsafeness.
+    - Better handling for heterogeneous / unreliable nodes:
+      - Annotate circuits w/ whether they aim to contain high uptime nodes
+        and/or high capacity nodes. When building circuits, choose
+        appropriate nodes.
+      - This means that every single node in an intro rend circuit,
+        not just the last one, will have a minimum uptime.
+      - New config option LongLivedPorts to indicate application streams
+        that will want high uptime circuits.
+      - When attaching a stream to a circuit, pay attention to its
+        requirements.
+      - Servers reset uptime when a dir fetch entirely fails. This
+        hopefully reflects stability of the server's network connectivity.
+      - If somebody starts his tor server in Jan 2004 and then fixes his
+        clock, don't make his published uptime be a year.
+      - Reset published uptime when you wake up from hibernation.
+    - Introduce a notion of 'internal' circs, which are chosen without
+      regard to the exit policy of the last hop. Intro and rendezvous
+      circs must be internal circs, to avoid leaking information. Resolve
+      and connect streams can use internal circs if they want.
+    - New circuit pooling algorithm: make sure to have enough circs around
+      to satisfy any predicted ports, and also make sure to have 2 internal
+      circs around if we've required internal circs lately (with high
+      uptime if we've seen that lately).
+    - Split NewCircuitPeriod option into NewCircuitPeriod (30 secs),
+      which describes how often we retry making new circuits if current
+      ones are dirty, and MaxCircuitDirtiness (10 mins), which describes
+      how long we're willing to make use of an already-dirty circuit.
+    - Cannibalize GENERAL circs to be C_REND, C_INTRO, S_INTRO, and S_REND
+      circ as necessary, if there are any completed ones lying around
+      when we try to launch one.
+    - Make hidden services try to establish a rendezvous for 30 seconds,
+      rather than for n (where n=3) attempts to build a circuit.
+    - Change SHUTDOWN_WAIT_LENGTH from a fixed 30 secs to a config option
+      "ShutdownWaitLength".
+    - Try to be more zealous about calling connection_edge_end when
+      things go bad with edge conns in connection.c.
+    - Revise tor-spec to add more/better stream end reasons.
+    - Revise all calls to connection_edge_end to avoid sending "misc",
+      and to take errno into account where possible.
+
+  o Bug fixes:
+    - Fix several double-mark-for-close bugs, e.g. where we were finding
+      a conn for a cell even if that conn is already marked for close.
+    - Make sequence of log messages when starting on win32 with no config
+      file more reasonable.
+    - When choosing an exit node for a new non-internal circ, don't take
+      into account whether it'll be useful for any pending x.onion
+      addresses -- it won't.
+    - Turn addr_policy_compare from a tristate to a quadstate; this should
+      help address our "Ah, you allow 1.2.3.4:80. You are a good choice
+      for google.com" problem.
+    - Make "platform" string in descriptor more accurate for Win32 servers,
+      so it's not just "unknown platform".
+    - Fix an edge case in parsing config options (thanks weasel)
+      if they say "--" on the commandline, it's not an option
+    - Reject odd-looking addresses at the client (e.g. addresses that
+      contain a colon), rather than having the server drop them because
+      they're malformed.
+    - tor-resolve requests were ignoring .exit if there was a working circuit
+      they could use instead.
+    - REUSEADDR on normal platforms means you can rebind to the port
+      right after somebody else has let it go. But REUSEADDR on win32
+      means to let you bind to the port _even when somebody else
+      already has it bound_. So, don't do that on Win32.
+    - Change version parsing logic: a version is "obsolete" if it is not
+      recommended and (1) there is a newer recommended version in the
+      same series, or (2) there are no recommended versions in the same
+      series, but there are some recommended versions in a newer series.
+      A version is "new" if it is newer than any recommended version in
+      the same series.
+
+  o Helpful fixes:
+    - Require BandwidthRate to be at least 20kB/s for servers
+    - When a dirserver causes you to give a warn, mention which dirserver
+      it was.
+    - New config option DirAllowPrivateAddresses for authdirservers.
+      Now by default they refuse router descriptors that have non-IP or
+      private-IP addresses.
+    - Stop publishing socksport in the directory, since it's not
+      actually meant to be public. For compatibility, publish a 0 there
+      for now.
+    - Change DirFetchPeriod/StatusFetchPeriod to have a special "Be
+      smart" value, that is low for servers and high for clients.
+    - If our clock jumps forward by 100 seconds or more, assume something
+      has gone wrong with our network and abandon all not-yet-used circs.
+    - Warn when exit policy implicitly allows local addresses.
+    - If we get an incredibly skewed timestamp from a dirserver mirror
+      that isn't a verified OR, don't warn -- it's probably him that's
+      wrong.
+    - Since we ship our own privoxy on os x, tweak it so it doesn't write
+      cookies to disk and doesn't log each web request to disk. (Thanks
+      to Brett Carrington for pointing this out.)
+    - When a client asks us for a dir mirror and we don't have one,
+      launch an attempt to get a fresh one.
+    - If we're hibernating and we get a sigint, exit immediately.
+    - Add --with-dmalloc ./configure option, to track memory leaks.
+    - And try to free all memory on closing, so we can detect what
+      we're leaking.
+    - Cache local dns resolves correctly even when they're .exit
+      addresses.
+    - Give a better warning when some other server advertises an
+      ORPort that is actually an apache running ssl.
+    - Add "opt hibernating 1" to server descriptor to make it clearer
+      whether the server is hibernating.
+
+
+Changes in version 0.0.9.6 - 2005-03-24
+  o Bugfixes on 0.0.9.x (crashes and asserts):
+    - Add new end stream reasons to maintainance branch. Fix bug where
+      reason (8) could trigger an assert.  Prevent bug from recurring.
+    - Apparently win32 stat wants paths to not end with a slash.
+    - Fix assert triggers in assert_cpath_layer_ok(), where we were
+      blowing away the circuit that conn->cpath_layer points to, then
+      checking to see if the circ is well-formed. Backport check to make
+      sure we dont use the cpath on a closed connection.
+    - Prevent circuit_resume_edge_reading_helper() from trying to package
+      inbufs for marked-for-close streams.
+    - Don't crash on hup if your options->address has become unresolvable.
+    - Some systems (like OS X) sometimes accept() a connection and tell
+      you the remote host is 0.0.0.0:0. If this happens, due to some
+      other mis-features, we get confused; so refuse the conn for now.
+
+  o Bugfixes on 0.0.9.x (other):
+    - Fix harmless but scary "Unrecognized content encoding" warn message.
+    - Add new stream error reason: TORPROTOCOL reason means "you are not
+      speaking a version of Tor I understand; say bye-bye to your stream."
+    - Be willing to cache directories from up to ROUTER_MAX_AGE seconds
+      into the future, now that we are more tolerant of skew. This
+      resolves a bug where a Tor server would refuse to cache a directory
+      because all the directories it gets are too far in the future;
+      yet the Tor server never logs any complaints about clock skew.
+    - Mac packaging magic: make man pages useable, and do not overwrite
+      existing torrc files.
+    - Make OS X log happily to /var/log/tor/tor.log
+
+
 Changes in version 0.0.9.5 - 2005-02-22
   o Bugfixes on 0.0.9.x:
     - Fix an assert race at exit nodes when resolve requests fail.
