@@ -31,7 +31,7 @@ diff -urNad cvs/src/config/torrc.sample.in /tmp/dpep.5IEZdW/cvs/src/config/torrc
  # Logs go to stdout unless redirected by something else, like one of
  # the below lines, or --logfile on the command line.
 +### Send all messages of level 'notice' or higher to @LOCALSTATEDIR@/log/tor/log
-+Log warn file @LOCALSTATEDIR@/log/tor/log
++Log notice file @LOCALSTATEDIR@/log/tor/log
  ### Send all messages of level 'warn' or higher to @LOCALSTATEDIR@/log/tor/warnings
  #Log warn file @LOCALSTATEDIR@/log/tor/warnings
  ### Send all debug and info messages to @LOCALSTATEDIR@/log/tor/debug
