@@ -297,13 +297,13 @@ int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
   return 0;
 }
 
-connection_t *connection_connect_to_router_as_op(routerinfo_t *router, crypto_pk_env_t *prkey, uint16_t local_or_port) {
+connection_t *connection_connect_to_router_as_op(routerinfo_t *router, uint16_t local_or_port) {
   struct sockaddr_in local; /* local address */
 
   if(learn_local(&local) < 0)
     return NULL;
   local.sin_port = htons(local_or_port);
-  return connection_or_connect_as_op(router, prkey, &local);
+  return connection_or_connect_as_op(router, &local);
 }
 
 int connection_read_to_buf(connection_t *conn) {
@@ -356,7 +356,7 @@ int connection_write_to_buf(char *string, int len, connection_t *conn) {
   if(!len)
     return 0;
 
-  if( (conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_OR) ||
+  if( (!connection_speaks_cells(conn)) ||
       (!connection_state_is_open(conn)) ||
       (options.LinkPadding == 0) ) {
     /* connection types other than or and op, or or/op not in 'open' state, should flush immediately */
@@ -528,8 +528,9 @@ int connection_encrypt_cell(cell_t *cellp, connection_t *conn) {
   }
 #if 0
   printf("Sending: Cell header crypttext: ");
+  px = (char *)&newcell;
   for(x=0;x<8;x++) {
-    printf("%u ",newheader[x]);
+    printf("%u ",px[x]);
   }
   printf("\n");
 #endif

@@ -198,8 +198,9 @@ unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, 
 
 
 
+/* FIXME can we cut this function out? */
 connection_t *connect_to_router_as_op(routerinfo_t *router) {
-  return connection_connect_to_router_as_op(router, prkey, options.ORPort);
+  return connection_connect_to_router_as_op(router, options.ORPort);
 }
 
 void connection_watch_events(connection_t *conn, short events) {
@@ -418,16 +419,18 @@ int do_main_loop(void) {
     return -1;
   }
 
-  /* load the private key */
-  prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
-  if (!prkey) {
-    log(LOG_ERR,"Error creating a crypto environment.");
-    return -1;
-  }
-  if (crypto_pk_read_private_key_filename(prkey, options.PrivateKeyFile))
-  {
-    log(LOG_ERR,"Error loading private key.");
-    return -1;
+  /* load the private key, if we're supposed to have one */
+  if(ROLE_IS_OR(global_role)) {
+    prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
+    if (!prkey) {
+      log(LOG_ERR,"Error creating a crypto environment.");
+      return -1;
+    }
+    if (crypto_pk_read_private_key_filename(prkey, options.PrivateKeyFile))
+    {
+      log(LOG_ERR,"Error loading private key.");
+      return -1;
+    }
   }
 
   /* start-up the necessary connections based on global_role. This is where we

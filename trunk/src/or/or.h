@@ -56,6 +56,8 @@
 #define ROLE_OP_LISTEN 4
 #define ROLE_AP_LISTEN 8
 
+#define ROLE_IS_OR(role) ((role & ROLE_OR_LISTEN) || (role & ROLE_OR_CONNECT_ALL) || (role & ROLE_OP_LISTEN))
+
 #define CONN_TYPE_OP_LISTENER 1
 #define CONN_TYPE_OP 2
 #define CONN_TYPE_OR_LISTENER 3
@@ -413,7 +415,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
 /* start all connections that should be up but aren't */
 int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
 		  crypto_pk_env_t *prkey, uint16_t or_port, uint16_t op_port, uint16_t ap_port);
-connection_t *connection_connect_to_router_as_op(routerinfo_t *router, crypto_pk_env_t *prkey, uint16_t local_or_port);
+connection_t *connection_connect_to_router_as_op(routerinfo_t *router, uint16_t local_or_port);
 
 int connection_read_to_buf(connection_t *conn);
 
@@ -509,7 +511,7 @@ int or_handshake_server_process_nonce(connection_t *conn);
 
 connection_t *connect_to_router_as_or(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local);
 connection_t *connection_or_connect_as_or(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local);
-connection_t *connection_or_connect_as_op(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local);
+connection_t *connection_or_connect_as_op(routerinfo_t *router, struct sockaddr_in *local);
 
 int connection_or_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
 int connection_or_handle_listener_read(connection_t *conn);

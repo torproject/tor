@@ -218,21 +218,25 @@ connection_t *connection_or_connect(routerinfo_t *router, crypto_pk_env_t *prkey
  *
  */
 
-connection_t *connection_or_connect_as_op(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local) {
+connection_t *connection_or_connect_as_op(routerinfo_t *router, struct sockaddr_in *local) {
   connection_t *conn;
   int result=0; /* so connection_or_connect() can tell us what happened */
 
-  assert(router && prkey && local);
+  assert(router && local);
 
   if(router->addr == local->sin_addr.s_addr && router->or_port == ntohs(local->sin_port)) {
     /* this is me! don't connect to me. */
+    log(LOG_WARNING,"connection_or_connect_as_op(): You just asked me to connect to myself.");
     return NULL;
   }
 
   /* this function should never be called if we're already connected to router, but */
-  /* FIXME we should check here if we're already connected, and return the conn */
+  /* check first to be sure */
+  conn = connection_exact_get_by_addr_port(router->addr,router->or_port);
+  if(conn)
+    return conn;
 
-  conn = connection_or_connect(router, prkey, local, router->op_port, &result);
+  conn = connection_or_connect(router, NULL, local, router->op_port, &result);
   if(!conn)
     return NULL;
 
@@ -276,6 +280,7 @@ int or_handshake_op_send_keys(connection_t *conn) {
   *(uint32_t *)message = htonl(bandwidth);
   memcpy((void *)(message + 4), (void *)conn->f_crypto->key, 8);
   memcpy((void *)(message + 12), (void *)conn->b_crypto->key, 8);
+
 #if 0
   printf("f_session_key: ");
   for(x=0;x<8;x++) {
