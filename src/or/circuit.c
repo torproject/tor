@@ -9,6 +9,9 @@ extern or_options_t options; /* command-line and config-file options */
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
 static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction);
+static int circuit_resume_edge_reading_helper(connection_t *conn,
+                                              circuit_t *circ,
+                                              crypt_path_t *layer_hint);
 static void circuit_free_cpath_node(crypt_path_t *victim);
 static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
 static void circuit_rep_hist_note_result(circuit_t *circ);
@@ -603,17 +606,17 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     conn = relay_lookup_conn(circ, cell, cell_direction);
     if(cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
-      log_fn(LOG_DEBUG,"Sending to exit.");
-      if (connection_edge_process_relay_cell(cell, circ, conn, EDGE_EXIT, NULL) < 0) {
-        log_fn(LOG_WARN,"connection_edge_process_relay_cell (at exit) failed.");
+      log_fn(LOG_DEBUG,"Sending away from origin.");
+      if (connection_edge_process_relay_cell(cell, circ, conn, NULL) < 0) {
+        log_fn(LOG_WARN,"connection_edge_process_relay_cell (away from origin) failed.");
         return -1;
       }
     }
     if(cell_direction == CELL_DIRECTION_IN) {
       ++stats_n_relay_cells_delivered;
-      log_fn(LOG_DEBUG,"Sending to AP.");
-      if (connection_edge_process_relay_cell(cell, circ, conn, EDGE_AP, layer_hint) < 0) {
-        log_fn(LOG_WARN,"connection_edge_process_relay_cell (at AP) failed.");
+      log_fn(LOG_DEBUG,"Sending to origin.");
+      if (connection_edge_process_relay_cell(cell, circ, conn, layer_hint) < 0) {
+        log_fn(LOG_WARN,"connection_edge_process_relay_cell (at origin) failed.");
         return -1;
       }
     }
@@ -793,61 +796,68 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
   return NULL; /* probably a begin relay cell */
 }
 
-void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
-  connection_t *conn;
-
-  assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
+void circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint) {
 
   log_fn(LOG_DEBUG,"resuming");
 
-  if(edge_type == EDGE_EXIT)
-    conn = circ->n_streams;
-  else
-    conn = circ->p_streams;
+  /* have to check both n_streams and p_streams, to handle rendezvous */
+  if(circuit_resume_edge_reading_helper(circ->n_streams, circ, layer_hint) >= 0)
+    circuit_resume_edge_reading_helper(circ->p_streams, circ, layer_hint);
+}
+
+static int
+circuit_resume_edge_reading_helper(connection_t *conn,
+                                   circuit_t *circ,
+                                   crypt_path_t *layer_hint) {
 
   for( ; conn; conn=conn->next_stream) {
-    if((edge_type == EDGE_EXIT && conn->package_window > 0) ||
-       (edge_type == EDGE_AP   && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
+    if((!layer_hint && conn->package_window > 0) ||
+       (layer_hint && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
-      connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+      /* handle whatever might still be on the inbuf */
+      connection_edge_package_raw_inbuf(conn);
 
       /* If the circuit won't accept any more data, return without looking
        * at any more of the streams. Any connections that should be stopped
        * have already been stopped by connection_edge_package_raw_inbuf. */
-      if(circuit_consider_stop_edge_reading(circ, edge_type, layer_hint))
-        return;
+      if(circuit_consider_stop_edge_reading(circ, layer_hint))
+        return -1;
     }
   }
+  return 0;
 }
 
-/* returns 1 if the window is empty, else 0. If it's empty, tell edge conns to stop reading. */
-int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
+/* returns -1 if the window is empty, else 0.
+ * If it's empty, tell edge conns to stop reading. */
+int circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint) {
   connection_t *conn = NULL;
 
-  assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
-  assert(edge_type == EDGE_EXIT || layer_hint);
-
   log_fn(LOG_DEBUG,"considering");
-  if(edge_type == EDGE_EXIT && circ->package_window <= 0)
-    conn = circ->n_streams;
-  else if(edge_type == EDGE_AP && layer_hint->package_window <= 0)
-    conn = circ->p_streams;
-  else
-    return 0;
-
-  for( ; conn; conn=conn->next_stream)
-    if(!layer_hint || conn->cpath_layer == layer_hint)
+  if(!layer_hint && circ->package_window <= 0) {
+    log_fn(LOG_DEBUG,"yes, not-at-origin. stopped.");
+    for(conn = circ->n_streams; conn; conn=conn->next_stream)
       connection_stop_reading(conn);
-
-  log_fn(LOG_DEBUG,"yes. stopped.");
-  return 1;
+    return -1;
+  } else if(layer_hint && layer_hint->package_window <= 0) {
+    log_fn(LOG_DEBUG,"yes, at-origin. stopped.");
+    for(conn = circ->n_streams; conn; conn=conn->next_stream)
+      if(conn->cpath_layer == layer_hint)
+        connection_stop_reading(conn);
+    for(conn = circ->p_streams; conn; conn=conn->next_stream)
+      if(conn->cpath_layer == layer_hint)
+        connection_stop_reading(conn);
+    return -1;
+  }
+  return 0;
 }
 
-void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
-  while((edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window) <
+void circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint) {
+//  log_fn(LOG_INFO,"Considering: layer_hint is %s",
+//         layer_hint ? "defined" : "null");
+  while((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <
          CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
     log_fn(LOG_DEBUG,"Queueing circuit sendme.");
-    if(edge_type == EDGE_AP)
+    if(layer_hint)
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
     else
       circ->deliver_window += CIRCWINDOW_INCREMENT;

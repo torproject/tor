@@ -219,7 +219,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
 /* an incoming relay cell has arrived. return -1 if you want to tear down the
  * circuit, else 0. */
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
-                                       connection_t *conn, int edge_type,
+                                       connection_t *conn,
                                        crypt_path_t *layer_hint) {
   static int num_seen=0;
   uint32_t addr;
@@ -283,7 +283,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       log_fn(LOG_INFO,"Got a relay-level padding cell. Dropping.");
       return 0;
     case RELAY_COMMAND_BEGIN:
-      if (edge_type == EDGE_AP &&
+      if (layer_hint &&
           circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
         log_fn(LOG_WARN,"relay begin request unsupported at AP. Dropping.");
         return 0;
@@ -296,16 +296,16 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_DATA:
       ++stats_n_data_cells_received;
-      if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
-         (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
+      if((layer_hint && --layer_hint->deliver_window < 0) ||
+         (!layer_hint && --circ->deliver_window < 0)) {
         log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
         connection_mark_for_close(conn, END_STREAM_REASON_MISC);
         return -1;
       }
-      log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ?
+      log_fn(LOG_DEBUG,"circ deliver_window now %d.", layer_hint ?
              layer_hint->deliver_window : circ->deliver_window);
 
-      circuit_consider_sending_sendme(circ, edge_type, layer_hint);
+      circuit_consider_sending_sendme(circ, layer_hint);
 
       if(!conn) {
         log_fn(LOG_INFO,"data cell dropped, unknown stream.");
@@ -373,8 +373,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
       return circuit_extend(cell, circ);
     case RELAY_COMMAND_EXTENDED:
-      if(edge_type == EDGE_EXIT) {
-        log_fn(LOG_WARN,"'extended' unsupported at exit. Dropping.");
+      if(!layer_hint) {
+        log_fn(LOG_WARN,"'extended' unsupported at non-origin. Dropping.");
         return 0;
       }
       log_fn(LOG_DEBUG,"Got an extended cell! Yay.");
@@ -388,8 +388,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
       return 0;
     case RELAY_COMMAND_TRUNCATE:
-      if(edge_type == EDGE_AP) {
-        log_fn(LOG_WARN,"'truncate' unsupported at AP. Dropping.");
+      if(layer_hint) {
+        log_fn(LOG_WARN,"'truncate' unsupported at origin. Dropping.");
         return 0;
       }
       if(circ->n_conn) {
@@ -401,33 +401,31 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                    NULL, 0, NULL);
       return 0;
     case RELAY_COMMAND_TRUNCATED:
-      if(edge_type == EDGE_EXIT) {
-        log_fn(LOG_WARN,"'truncated' unsupported at exit. Dropping.");
+      if(!layer_hint) {
+        log_fn(LOG_WARN,"'truncated' unsupported at non-origin. Dropping.");
         return 0;
       }
       circuit_truncated(circ, layer_hint);
       return 0;
     case RELAY_COMMAND_CONNECTED:
       if(conn) {
-        log_fn(LOG_WARN,"'connected' unsupported while open. Closing conn.");
+        log_fn(LOG_WARN,"'connected' unsupported while open. Closing circ.");
         return -1;
       }
       log_fn(LOG_INFO,"'connected' received, no conn attached anymore. Ignoring.");
       return 0;
     case RELAY_COMMAND_SENDME:
       if(!conn) {
-        if(edge_type == EDGE_AP) {
-          assert(layer_hint);
+        if(layer_hint) {
           layer_hint->package_window += CIRCWINDOW_INCREMENT;
-          log_fn(LOG_DEBUG,"circ-level sendme at AP, packagewindow %d.",
+          log_fn(LOG_DEBUG,"circ-level sendme at origin, packagewindow %d.",
                  layer_hint->package_window);
-          circuit_resume_edge_reading(circ, EDGE_AP, layer_hint);
+          circuit_resume_edge_reading(circ, layer_hint);
         } else {
-          assert(!layer_hint);
           circ->package_window += CIRCWINDOW_INCREMENT;
-          log_fn(LOG_DEBUG,"circ-level sendme at exit, packagewindow %d.",
+          log_fn(LOG_DEBUG,"circ-level sendme at non-origin, packagewindow %d.",
                  circ->package_window);
-          circuit_resume_edge_reading(circ, EDGE_EXIT, layer_hint);
+          circuit_resume_edge_reading(circ, layer_hint);
         }
         return 0;
       }
@@ -533,7 +531,7 @@ repeat_connection_edge_package_raw_inbuf:
     return -1;
   }
 
-  if(circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer))
+  if(circuit_consider_stop_edge_reading(circ, conn->cpath_layer))
     return 0;
 
   if(conn->package_window <= 0) {
@@ -564,11 +562,10 @@ repeat_connection_edge_package_raw_inbuf:
                                payload, length, conn->cpath_layer) < 0)
     return 0; /* circuit is closed, don't continue */
 
-  if(conn->type == CONN_TYPE_EXIT) {
+  if(!conn->cpath_layer) { /* non-rendezvous exit */
     assert(circ->package_window > 0);
     circ->package_window--;
-  } else { /* we're an AP */
-    assert(conn->type == CONN_TYPE_AP);
+  } else { /* we're an AP, or an exit on a rendezvous circ */
     assert(conn->cpath_layer->package_window > 0);
     conn->cpath_layer->package_window--;
   }
@@ -576,7 +573,7 @@ repeat_connection_edge_package_raw_inbuf:
   if(--conn->package_window <= 0) { /* is it 0 after decrement? */
     connection_stop_reading(conn);
     log_fn(LOG_DEBUG,"conn->package_window reached 0.");
-    circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer);
+    circuit_consider_stop_edge_reading(circ, conn->cpath_layer);
     return 0; /* don't process the inbuf any more */
   }
   log_fn(LOG_DEBUG,"conn->package_window is now %d",conn->package_window);

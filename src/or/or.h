@@ -271,9 +271,9 @@
 
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
-#define EDGE_EXIT CONN_TYPE_EXIT
-#define EDGE_AP CONN_TYPE_AP
-#define CELL_DIRECTION(x) ((x) == EDGE_EXIT ? CELL_DIRECTION_IN : CELL_DIRECTION_OUT)
+//#define EDGE_EXIT CONN_TYPE_EXIT
+//#define EDGE_AP CONN_TYPE_AP
+//#define CELL_DIRECTION(x) ((x) == EDGE_EXIT ? CELL_DIRECTION_IN : CELL_DIRECTION_OUT)
 
 #ifdef TOR_PERF
 #define CIRCWINDOW_START 10000
@@ -721,9 +721,9 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 int circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
 
-void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
-int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
-void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
+void circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
+int circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
+void circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint);
 
 void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
@@ -850,7 +850,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
                                  int payload_len, crypt_path_t *cpath_layer);
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
-                                       connection_t *conn, int edge_type,
+                                       connection_t *conn,
                                        crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
 
