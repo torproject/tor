@@ -594,7 +594,7 @@ static void run_scheduled_events(time_t now) {
       router_retry_connections();
     }
 
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     time_to_fetch_directory = now + options->DirFetchPeriod;
     if (time_to_fetch_running_routers < now + options->StatusFetchPeriod) {
       time_to_fetch_running_routers = now + options->StatusFetchPeriod;
@@ -606,7 +606,7 @@ static void run_scheduled_events(time_t now) {
 
   if (time_to_fetch_running_routers < now) {
     if (!authdir_mode(options)) {
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL);
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
     time_to_fetch_running_routers = now + options->StatusFetchPeriod;
   }
@@ -768,7 +768,7 @@ static int do_hup(void) {
     }
   }
   /* Fetch a new directory. Even authdirservers do this. */
-  directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
   if (server_mode(options)) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */

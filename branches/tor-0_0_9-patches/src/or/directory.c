@@ -143,9 +143,12 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
  * connection purpose 'purpose' requesting 'resource'.  The purpose
  * should be one of 'DIR_PURPOSE_FETCH_DIR',
  * 'DIR_PURPOSE_FETCH_RENDDESC', 'DIR_PURPOSE_FETCH_RUNNING_LIST.'
+ * If <b>retry_if_no_servers</b>, then if all the possible servers seem
+ * down, mark them up and try again.
  */
 void
-directory_get_from_dirserver(uint8_t purpose, const char *resource)
+directory_get_from_dirserver(uint8_t purpose, const char *resource,
+                             int retry_if_no_servers)
 {
   routerinfo_t *r = NULL;
   trusted_dir_server_t *ds = NULL;
@@ -155,30 +158,34 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource)
       purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     if (advertised_server_mode()) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_trusteddirserver(1, fascistfirewall);
+      ds = router_pick_trusteddirserver(1, fascistfirewall,
+                                        retry_if_no_servers);
     } else {
       /* anybody with a non-zero dirport will do */
       r = router_pick_directory_server(1, fascistfirewall,
-                                purpose==DIR_PURPOSE_FETCH_RUNNING_LIST);
+                                purpose==DIR_PURPOSE_FETCH_RUNNING_LIST,
+                                       retry_if_no_servers);
       if (!r) {
         log_fn(LOG_INFO, "No router found for %s; falling back to dirserver list",
                purpose == DIR_PURPOSE_FETCH_RUNNING_LIST
                ? "status list" : "directory");
-        ds = router_pick_trusteddirserver(1, fascistfirewall);
+        ds = router_pick_trusteddirserver(1, fascistfirewall,
+                                          retry_if_no_servers);
       }
     }
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
     /* only ask authdirservers, any of them will do */
     /* Never use fascistfirewall; we're going via Tor. */
-    ds = router_pick_trusteddirserver(0, 0);
+    ds = router_pick_trusteddirserver(0, 0, retry_if_no_servers);
   }
 
   if (r)
     directory_initiate_command_router(r, purpose, resource, NULL, 0);
   else if (ds)
     directory_initiate_command_trusted_dir(ds, purpose, resource, NULL, 0);
-  else
+  else {
     log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
+  }
 }
 
 /** Launch a new connection to the directory server <b>router</b> to upload or
@@ -211,6 +218,22 @@ directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
 {
   directory_initiate_command(dirserv->address, dirserv->addr,dirserv->dir_port,
                NULL, dirserv->digest, purpose, resource, payload, payload_len);
+}
+
+/** Called when we are unable to complete our connection to a
+ * directory server: Mark the router as down and try again if possible.
+ */
+int
+connection_dir_connect_failed(connection_t *conn)
+{
+  router_mark_as_down(conn->identity_digest); /* don't try him again */
+  if (conn->purpose == DIR_PURPOSE_FETCH_DIR ||
+      conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+    log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying",
+           conn->address);
+    directory_get_from_dirserver(conn->purpose, NULL,
+                                 0 /* don't retry_if_no_servers */);
+  }
 }
 
 /** Helper for directory_initiate_command(router|trusted_dir): send the
@@ -282,12 +305,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     /* then we want to connect directly */
     switch (connection_connect(conn, conn->address, addr, dir_port)) {
       case -1:
-        router_mark_as_down(conn->identity_digest); /* don't try him again */
-        if (purpose == DIR_PURPOSE_FETCH_DIR &&
-            !all_trusted_directory_servers_down()) {
-          log_fn(LOG_INFO,"Giving up on dirserver '%s'; trying another.", conn->address);
-          directory_get_from_dirserver(purpose, NULL);
-        }
+        connection_dir_connect_failed(conn);
         connection_free(conn);
         return;
       case 1:
