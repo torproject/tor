@@ -837,8 +837,8 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
  * space).
  *
  * Fingerprints are computed as the SHA1 digest of the ASN.1 encoding
- * of the public key, converted to hexadecimal, with a space after every
- * four digits.
+ * of the public key, converted to hexadecimal, in upper case, with a
+ * space after every four digits.
  */
 int
 crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
@@ -1430,6 +1430,62 @@ base32_encode(char *dest, int destlen, const char *src, int srclen)
     dest[i] = BASE32_CHARS[u];
   }
   dest[i] = '\0';
+  return 0;
+}
+
+int base16_encode(char *dest, int destlen, const char *src, int srclen)
+{
+  const char *end;
+  char *cp;
+
+  if (destlen < srclen*2+1)
+    return -1;
+
+  cp = dest;
+  end = src+srclen;
+  while (src<end) {
+    sprintf(cp,"%02X",*(const uint8_t*)src);
+    ++src;
+    cp += 2;
+  }
+  *dest = '\0';
+  return 0;
+}
+
+static const char HEX_DIGITS[] = "0123456789ABCDEFabcdef";
+
+static INLINE int hex_decode_digit(char c)
+{
+  const char *cp;
+  int n;
+  cp = strchr(HEX_DIGITS, c);
+  if (!cp)
+    return -1;
+  n = cp-HEX_DIGITS;
+  if (n<=15)
+    return n; /* digit or uppercase */
+  else
+    return n-6; /* lowercase */
+}
+
+int base16_decode(char *dest, int destlen, const char *src, int srclen)
+{
+  const char *end;
+  int v1,v2;
+  if ((srclen % 2) != 0)
+    return -1;
+  if (destlen < srclen/2)
+    return -1;
+  end = src+srclen;
+  while (src<end) {
+    v1 = hex_decode_digit(*src);
+    v2 = hex_decode_digit(*(src+1));
+    if(v1<0||v2<0)
+      return -1;
+    *(uint8_t*)dest = (v1<<4)|v2;
+    ++dest;
+  }
+  *dest = '\0';
   return 0;
 }
 

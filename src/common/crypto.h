@@ -37,6 +37,8 @@
 /** Length of encoded public key fingerprints, including space; but not
  * including terminating NUL. */
 #define FINGERPRINT_LEN 49
+/** Length of hex encoding of SHA1 digest, not including final NUL. */
+#define HEX_DIGEST_LEN 40
 
 typedef struct crypto_pk_env_t crypto_pk_env_t;
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
@@ -91,6 +93,8 @@ int base64_encode(char *dest, int destlen, const char *src, int srclen);
 int base64_decode(char *dest, int destlen, const char *src, int srclen);
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
 int base32_encode(char *dest, int destlen, const char *src, int srclen);
+int base16_encode(char *dest, int destlen, const char *src, int srclen);
+int base16_decode(char *dest, int destlen, const char *src, int srclen);
 
 /* Key negotiation */
 crypto_dh_env_t *crypto_dh_new();

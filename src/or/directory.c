@@ -137,6 +137,7 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
   conn->nickname = tor_strdup(router->nickname);
   tor_assert(router->identity_pkey);
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
+  crypto_pk_get_digest(conn->identity_pkey, conn->identity_digest);
 
   conn->purpose = purpose;
 
