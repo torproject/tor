@@ -769,8 +769,11 @@ access the IRC network from Tor.  In practice this would not
 significantly impede abuse if creating new accounts were easily automatable;
 this is why services use IP blocking.  In order to deter abuse, pseudonymous
 identities need to require a significant switching cost in resources or human
-time.
-% XXX Mention captchas?
+time.  Some popular webmail applications
+impose cost with Reverse Turing Tests, but these may not be costly enough to
+deter abusers.  Freedom solved this using blind signatures to limit
+the number of pseudonyms for each paying account, but Tor has neither the
+ability nor the desire to collect payment.
 
 %One approach, similar to that taken by Freedom, would be to bootstrap some
 %non-anonymous costly identification mechanism to allow access to a
@@ -927,9 +930,11 @@ quality of those choices.
 \subsection{Enclaves and helper nodes}
 \label{subsec:helper-nodes}
 
-It has long been thought that the best anonymity comes from running your
-own node~\cite{tor-design,or-ih96,or-pet00}. This is called using Tor in an
-\emph{enclave} configuration. By running Tor clients only on Tor nodes
+It has long been thought that users can improve their
+anonymity by running their
+own node~\cite{tor-design,or-ih96,or-pet00}, and using it in an
+\emph{enclave} configuration, where all their circuits begin at the node
+under their control.  By running Tor clients only on Tor nodes
 at the enclave perimeter, enclave configuration can also permit anonymity
 protection even when policy or other requirements prevent individual machines
 within the enclave from running Tor clients~\cite{or-jsac98,or-discex00}.
@@ -972,7 +977,7 @@ to choose a compromised node around
 every $dc/n$ days. Statistically over time this approach only helps
 if she is better at choosing honest helper nodes than at choosing
 honest nodes.  Worse, an attacker with the ability to DoS nodes could
-force users to switch helper nodes more frequently and/or remove
+force users to switch helper nodes more frequently, or remove
 other candidate helpers.
 
 %Do general DoS attacks have anonymity implications? See e.g. Adam
@@ -1003,16 +1008,17 @@ other candidate helpers.
 
 Tor's \emph{rendezvous points}
 let users provide TCP services to other Tor users without revealing
-the service's location. Since this feature is relatively recent, we describe here
+the service's location. Since this feature is relatively recent, we describe
+here
 a couple of our early observations from its deployment.
 
 First, our implementation of hidden services seems less hidden than we'd
-like, since they are configured on a single client and get used over
-and over---particularly because an external adversary can induce them to
-produce traffic. They seem the ideal use case for our above discussion
-of helper nodes. This insecurity means that they may not be suitable as
+like, since they build a different rendezvous circuit for each user,
+and an external adversary can induce them to
+produce traffic. This insecurity means that they may not be suitable as
 a building block for Free Haven~\cite{freehaven-berk} or other anonymous
-publishing systems that aim to provide long-term security.
+publishing systems that aim to provide long-term security, though helper
+nodes, as discussed above, would seem to help.
 
 \emph{Hot-swap} hidden services, where more than one location can
 provide the service and loss of any one location does not imply a
@@ -1035,10 +1041,10 @@ News sites like Bloggers Without Borders (www.b19s.org) are advertising
 a hidden-service address on their front page. Doing this can provide
 increased robustness if they use the dual-IP approach we describe
 in~\cite{tor-design},
-but in practice they do it firstly to increase visibility
-of the Tor project and their support for privacy, and secondly to offer
+but in practice they do it first to increase visibility
+of the Tor project and their support for privacy, and second to offer
 a way for their users, using unmodified software, to get end-to-end
-encryption and end-to-end authentication to their website.
+encryption and authentication to their website.
 
 \subsection{Location diversity and ISP-class adversaries}
 \label{subsec:routing-zones}
@@ -1083,7 +1089,9 @@ and MorphMix~\cite{morphmix:fc04} suggest that we compare IP prefixes to
 determine location diversity; but the above paper showed that in practice
 many of the Mixmaster nodes that share a single AS have entirely different
 IP prefixes. When the network has scaled to thousands of nodes, does IP
-prefix comparison become a more useful approximation?
+prefix comparison become a more useful approximation?  Alternatively, can
+relevant parts of the routing tables be summarized centrally and delivered to
+clients in a less verbose format?
 %
 Second, we can take advantage of caching certain content at the
 exit nodes, to limit the number of requests that need to leave the
@@ -1097,40 +1105,40 @@ to avoid choosing endpoints in similar locations, how much are we hurting
 anonymity against larger real-world adversaries who can take advantage
 of knowing our algorithm?
 %
-Lastly, can we use this knowledge to figure out which gaps in our network
-would most improve our robustness to this class of attack, and go recruit
+Fourth, can we use this knowledge to figure out which gaps in our network
+most effect our robustness to this class of attack, and go recruit
 new nodes with those ASes in mind?
 
 %Tor's security relies in large part on the dispersal properties of its
 %network. We need to be more aware of the anonymity properties of various
 %approaches so we can make better design decisions in the future.
 
-\subsection{The China problem}
+\subsection{The Anti-censorship problem}
 \label{subsec:china}
 
 Citizens in a variety of countries, such as most recently China and
-Iran, are periodically blocked from accessing various sites outside
+Iran, are blocked from accessing various sites outside
 their country. These users try to find any tools available to allow
 them to get-around these firewalls. Some anonymity networks, such as
 Six-Four~\cite{six-four}, are designed specifically with this goal in
 mind; others like the Anonymizer~\cite{anonymizer} are paid by sponsors
-such as Voice of America to set up a network to encourage Internet
+such as Voice of America to encourage Internet
 freedom. Even though Tor wasn't
 designed with ubiquitous access to the network in mind, thousands of
-users across the world are trying to use it for exactly this purpose.
+users across the world are now using it for exactly this purpose.
 % Academic and NGO organizations, peacefire, \cite{berkman}, etc
 
 Anti-censorship networks hoping to bridge country-level blocks face
 a variety of challenges. One of these is that they need to find enough
 exit nodes---servers on the `free' side that are willing to relay
-arbitrary traffic from users to their final destinations. Anonymizing
+traffic from users to their final destinations. Anonymizing
 networks including Tor are well-suited to this task, since we have
 already gathered a set of exit nodes that are willing to tolerate some
 political heat.
 
 The other main challenge is to distribute a list of reachable relays
 to the users inside the country, and give them software to use them,
-without letting the authorities also enumerate this list and block each
+without letting the censors also enumerate this list and block each
 relay. Anonymizer solves this by buying lots of seemingly-unrelated IP
 addresses (or having them donated), abandoning old addresses as they are
 `used up', and telling a few users about the new ones. Distributed
@@ -1144,14 +1152,14 @@ to generate node descriptors and send them to a special directory
 server that gives them out to dissidents who need to get around blocks.
 
 Of course, this still doesn't prevent the adversary
-from enumerating all the volunteer relays and blocking them preemptively.
+from enumerating and preemtively blocking the volunteer relays.
 Perhaps a tiered-trust system could be built where a few individuals are
 given relays' locations, and they recommend other individuals by telling them
 those addresses, thus providing a built-in incentive to avoid letting the
 adversary intercept them. Max-flow trust algorithms~\cite{advogato}
 might help to bound the number of IP addresses leaked to the adversary. Groups
 like the W3C are looking into using Tor as a component in an overall system to
-help address censorship; we wish them luck.
+help address censorship; we wish them success.
 
 %\cite{infranet}
 
@@ -1161,17 +1169,15 @@ help address censorship; we wish them luck.
 Tor is running today with hundreds of nodes and tens of thousands of
 users, but it will certainly not scale to millions.
 
-Scaling Tor involves three main challenges.  First is safe node
-discovery, both bootstrapping -- how a Tor client can robustly find an
-initial node list -- and ongoing -- how a Tor client can learn about
-a fair sample of honest nodes and not let the adversary control his
-circuits (see Section~\ref{subsec:trust-and-discovery}).  Second is detecting and handling the speed
-and reliability of the variety of nodes we must use if we want to
-accept many nodes (see Section~\ref{subsec:performance}).
-Since the speed and reliability of a circuit is limited by its worst link,
-we must learn to track and predict performance.  Finally, in order to get
-a large set of nodes in the first place, we must address incentives
-for users to carry traffic for others.
+Scaling Tor involves three main challenges.  First is safe node discovery,
+both while bootstrapping (how does Tor client robustly find an initial node
+list?) and later (how does Tor client can learn about a fair sample of honest
+nodes and not let the adversary control his circuits?)  Second is detecting
+and handling the speed and reliability of the variety of nodes as the network
+becomes increasingly heterogeneous: since the speed and reliability of a
+circuit is limited by its worst link, we must learn to track and predict
+performance.  Third, in order to get a large set of nodes in the first
+place, we must address incentives for users to carry traffic for others.
 
 \subsection{Incentives by Design}
 
@@ -1179,35 +1185,36 @@ There are three behaviors we need to encourage for each Tor node: relaying
 traffic; providing good throughput and reliability while doing it;
 and allowing traffic to exit the network from that node.
 
-We encourage these behaviors through \emph{indirect} incentives, that
-is, designing the system and educating users in such a way that users
+We encourage these behaviors through \emph{indirect} incentives: that
+is, by designing the system and educating users in such a way that users
 with certain goals will choose to relay traffic.  One
-main incentive for running a Tor node is social benefit: volunteers
-altruistically donate their bandwidth and time.  We also keep public
-rankings of the throughput and reliability of nodes, much like
-seti@home.  We further explain to users that they can get plausible
+main incentive for running a Tor node is social: volunteers
+altruistically donate their bandwidth and time.  We encourage this with
+public rankings of the throughput and reliability of nodes, much like
+seti@home.  We further explain to users that they can get
 deniability for any traffic emerging from the same address as a Tor
 exit node, and they can use their own Tor node
-as entry or exit point and be confident it's not run by the adversary.
-Further, users may run a node simply because they need such a network 
-to be persistently available and usable.
-And, the value of supporting this exceeds any countervening costs.
-Finally, we can improve the usability and feature set of the software:
+as an entry or exit point and be confident it's not run by an adversary.
+Further, users may run a node simply because they need such a network
+to be persistently available and usable, and the value of supporting this
+exceeds any countervening costs.
+Finally, we can encourage operators by improving the usability and feature
+set of the software:
 rate limiting support and easy packaging decrease the hassle of
 maintaining a node, and our configurable exit policies allow each
 operator to advertise a policy describing the hosts and ports to which
 he feels comfortable connecting.
 
-To date these appear to have been adequate. As the system scales or as
-new issues emerge, however, we may also need to provide
+To date these incentives appear to have been adequate. As the system scales
+or as new issues emerge, however, we may also need to provide
  \emph{direct} incentives:
 providing payment or other resources in return for high-quality service.
 Paying actual money is problematic: decentralized e-cash systems are
 not yet practical, and a centralized collection system not only reduces
 robustness, but also has failed in the past (the history of commercial
 anonymizing networks is littered with failed attempts).  A more promising
-option is to use a tit-for-tat incentive scheme: provide better service
-to nodes that have provided good service to you.
+option is to use a tit-for-tat incentive scheme, where nodes provide better
+service to nodes that have provided good service for them.
 
 Unfortunately, such an approach introduces new anonymity problems.
 There are many surprising ways for nodes to game the incentive and
@@ -1217,7 +1224,7 @@ fairness of provided anonymity. An adversary can attract more traffic
 by performing well or can provide targeted differential performance to
 individual users to undermine their anonymity. Typically a user who
 chooses evenly from all options is most resistant to an adversary
-targeting him, but that approach precludes the efficient use
+targeting him, but that approach hampers the efficient use
 of heterogeneous nodes.
 
 %When a node (call him Steve) performs well for Alice, does Steve gain
@@ -1232,13 +1239,12 @@ A possible solution is a simplified approach to the tit-for-tat
 incentive scheme based on two rules: (1) each node should measure the
 service it receives from adjacent nodes, and provide service relative
 to the received service, but (2) when a node is making decisions that
-affect its own security (e.g. when building a circuit for its own
+affect its own security (such as building a circuit for its own
 application connections), it should choose evenly from a sufficiently
 large set of nodes that meet some minimum service threshold
 \cite{casc-rep}.  This approach allows us to discourage bad service
 without opening Alice up as much to attacks.  All of this requires
 further study.
-
 
 %XXX rewrite the above so it sounds less like a grant proposal and
 %more like a "if somebody were to try to solve this, maybe this is a
