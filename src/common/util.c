@@ -360,6 +360,14 @@ int smartlist_isin(const smartlist_t *sl, void *element) {
   return 0;
 }
 
+int smartlist_string_isin(const smartlist_t *sl, const char *element) {
+  int i;
+  for(i=0; i < sl->num_used; i++)
+    if(strcmp((const char*)sl->list[i],element)==0)
+      return 1;
+  return 0;
+}
+
 /** Return true iff some element E of sl2 has smartlist_isin(sl1,E).
  */
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
