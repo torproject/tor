@@ -769,8 +769,11 @@ void rend_services_introduce(void) {
 
     /* Find out which introduction points we have in progress for this service. */
     for (j=0;j< smartlist_len(service->intro_nodes); ++j) {
-      router = router_get_by_nickname(smartlist_get(service->intro_nodes,j));
+      intro = smartlist_get(service->intro_nodes, j);
+      router = router_get_by_nickname(intro);
       if (!router || !find_intro_circuit(router,service->pk_digest)) {
+        log_fn(LOG_INFO,"Giving up on %s as intro point for %s.",
+                intro, service->service_id);
         smartlist_del(service->intro_nodes,j--);
         changed = service->desc_is_dirty = 1;
       }
@@ -794,15 +797,16 @@ void rend_services_introduce(void) {
                                          service->intro_exclude_nodes,
                                          exclude_routers);
       if (!router) {
-        log_fn(LOG_WARN, "Could only establish %d introduction points",
-               smartlist_len(service->intro_nodes));
+        log_fn(LOG_WARN, "Could only establish %d introduction points for %s",
+               smartlist_len(service->intro_nodes), service->service_id);
         break;
       }
       changed = 1;
       smartlist_add(intro_routers, router);
       smartlist_add(exclude_routers, router);
       smartlist_add(service->intro_nodes, tor_strdup(router->nickname));
-      log_fn(LOG_INFO,"Picked router %s as an intro point.", router->nickname);
+      log_fn(LOG_INFO,"Picked router %s as an intro point for %s.", router->nickname,
+             service->service_id);
     }
 
     /* Reset exclude_routers to include obsolete routers only for the next
@@ -818,7 +822,8 @@ void rend_services_introduce(void) {
       intro = smartlist_get(service->intro_nodes, j);
       r = rend_service_launch_establish_intro(service, intro);
       if (r<0) {
-        log_fn(LOG_WARN, "Error launching circuit to node %s", intro);
+        log_fn(LOG_WARN, "Error launching circuit to node %s for service %s",
+               intro, service->service_id);
       }
     }
   }

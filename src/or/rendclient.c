@@ -208,13 +208,13 @@ rend_client_introduction_acked(circuit_t *circ,
         nickname = rend_client_get_random_intro(circ->rend_query);
         assert(nickname);
         if (!router_get_by_nickname(nickname)) {
-          log_fn(LOG_WARN, "Advertised intro point '%s' is not known. Closing.",
-                 nickname);
+          log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
+                 nickname, circ->rend_query);
           circuit_mark_for_close(circ);
           return -1;
         }
-        log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d)",
-               nickname, circ->rend_query, circ->n_circ_id);
+        log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d, %d choices left)",
+               nickname, circ->rend_query, circ->n_circ_id, ent->parsed->n_intro_points);
         circ->state = CIRCUIT_STATE_BUILDING;
         tor_free(circ->build_state->chosen_exit);
         circ->build_state->chosen_exit = tor_strdup(nickname);
