@@ -861,7 +861,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 void connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
 
-  if(router_compare_to_my_exit_policy(conn) < 0) {
+  if(router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
     if(connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, NULL) < 0)
       log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
