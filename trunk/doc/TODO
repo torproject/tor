@@ -1,10 +1,10 @@
-rename ACI to CircID
-rotate tls-level connections -- make new ones, expire old ones.
-dirserver shouldn't put you in running-routers list if you haven't
-  uploaded a descriptor recently
-look at having smallcells and largecells
-separate trying to rebuild a circuit because you have none from trying to rebuild a
-  circuit because the current one is stale
+Issues identified while writing paper:
+    - Rotate tls-level connections -- make new ones, expire old ones.
+    - Dirserver shouldn't put you in running-routers list if you haven't
+      uploaded a descriptor recently
+    - Look at having smallcells and largecells
+    - separate trying to rebuild a circuit because you have none from trying 
+      to rebuild a circuit because the current one is stale
 
 <nickm> If I compromise a node, and streamIDs are sequential, I learn
 how many streams have been open and closed on this circuit at this point.
@@ -27,6 +27,7 @@ ARMA    - arma claims
         X Abandoned
 
 Short-term:
+        - Rename ACI to circID
         . integrate rep_ok functions, see what breaks
         - update tor faq
         o obey SocksBindAddress, ORBindAddress

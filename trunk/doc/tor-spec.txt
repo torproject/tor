@@ -8,18 +8,18 @@ design as it stands; future versions of Tor will implement improved
 protocols.
 
 TODO: (very soon)
-      - Specify truncate/truncated
+      - Specify truncate/truncated payloads?
+      - Specify RELAY_END payloads. [It's 1 byte of reason, then X bytes of
+        data, right?]
       - Sendme w/stream0 is circuit sendme
       - Integrate -NM and -RD comments
       - EXTEND cells should have hostnames or nicknames, so that OPs never
         resolve OR hostnames.  Else DNS servers can give different answers to
         different OPs, and compromise their anonymity.
-      - Rename ACI to circID
 
 EVEN LATER:
       - Do TCP-style sequencing and ACKing of DATA cells so that we can afford
         to lose some data cells.
-      - 
 
 0. Notation:
 
@@ -85,7 +85,7 @@ which reveals the downstream node.
    proxies is a fixed-width "cell".  Each cell contains the following
    fields:
 
-        ACI (anonymous circuit identifier)    [2 bytes]
+        CircID                                [2 bytes]
         Command                               [1 byte]
         Length                                [1 byte]
         Sequence number (unused, set to 0)    [4 bytes]
@@ -184,10 +184,10 @@ which reveals the downstream node.
       2. If not already connected to the first router in the chain,
          open a new connection to that router.
 
-      3. Choose an ACI not already in use on the connection with the
+      3. Choose a circID not already in use on the connection with the
          first router in the chain.  If we are an onion router and our
          nickname is lexicographically greater than the nickname of the
-         other side, then let the high bit of the ACI be 1, else 0.
+         other side, then let the high bit of the circID be 1, else 0.
 
       4. Send a CREATE cell along the connection, to be received by
          the first onion router.
@@ -212,16 +212,16 @@ which reveals the downstream node.
 
    When an onion router receives an EXTEND relay cell, it sends a
    CREATE cell to the next onion router, with the enclosed onion skin
-   as its payload.  The initiating onion router chooses some ACI not
+   as its payload.  The initiating onion router chooses some circID not
    yet used on the connection between the two onion routers.  (But see
-   section 4.3. above, concerning choosing ACIs.)
+   section 4.3. above, concerning choosing circIDs.)
 
    As an extension (called router twins), if the desired next onion
    router R in the circuit is down, and some other onion router R'
    has the same key as R, then it's ok to extend to R' rather than R.
 
    When an onion router receives a CREATE cell, if it already has a
-   circuit on the given connection with the given ACI, it drops the
+   circuit on the given connection with the given circID, it drops the
    cell.  Otherwise, sometime after receiving the CREATE cell, it completes
    the DH handshake, and replies with a CREATED cell, containing g^y
    as its [128 byte] payload.  Upon receiving a CREATED cell, an onion
@@ -242,7 +242,7 @@ which reveals the downstream node.
 
    To tear down a circuit completely, an OR or OP sends a DESTROY
    cell to the adjacent nodes on that circuit, using the appropriate
-   direction's ACI.
+   direction's circID.
 
    Upon receiving an outgoing DESTROY cell, an OR frees resources
    associated with the corresponding circuit. If it's not the end of
@@ -269,7 +269,7 @@ which reveals the downstream node.
 
 4.5. Routing data cells
 
-   When an OR receives a RELAY cell, it checks the cell's ACI and
+   When an OR receives a RELAY cell, it checks the cell's circID and
    determines whether it has a corresponding circuit along that
    connection.  If not, the OR drops the RELAY cell.
 
