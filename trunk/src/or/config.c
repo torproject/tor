@@ -160,8 +160,7 @@ static config_var_t config_vars[] = {
 
 static void option_reset(or_options_t *options, config_var_t *var);
 static void options_free(or_options_t *options);
-static int option_is_same(or_options_t *o1, or_options_t *o2,
-                          config_var_t *var);
+static int option_is_same(or_options_t *o1, or_options_t *o2,const char *name);
 static or_options_t *options_dup(or_options_t *old);
 static int options_validate(or_options_t *options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
@@ -180,6 +179,7 @@ static int add_single_log_option(or_options_t *options, int minSeverity,
                                  const char *type, const char *fname);
 static int normalize_log_options(or_options_t *options);
 static int validate_data_directory(or_options_t *options);
+static int write_configuration_file(const char *fname, or_options_t *options);
 
 /*
  * Functions to read and write the global options pointer.
@@ -187,6 +187,8 @@ static int validate_data_directory(or_options_t *options);
 
 /** Command-line and config-file options. */
 static or_options_t *global_options=NULL;
+/** Name of ost recently read torrc file. */
+static char *config_fname = NULL;
 
 /** Return the currently configured options. */
 or_options_t *
@@ -319,7 +321,7 @@ options_act(void) {
     smin = config_dump_options(options, 1);
     smax = config_dump_options(options, 0);
     log_fn(LOG_DEBUG, "These are our options:\n%s",smax);
-    log_fn(LOG_DEBUG, "We changed these options:\n%s",smin);
+    log_fn(LOG_DEBUGS, "We changed these options:\n%s",smin);
     tor_free(smin);
     tor_free(smax);
   }
@@ -962,66 +964,27 @@ options_free(or_options_t *options)
  * and <b>o2</b>.  Must not be called for LINELIST_S or OBSOLETE options.
  */
 static int
-option_is_same(or_options_t *o1, or_options_t *o2, config_var_t *var)
+option_is_same(or_options_t *o1, or_options_t *o2, const char *name)
 {
-  void *v1, *v2;
-  tor_assert(o1);
-  tor_assert(o2);
-  tor_assert(var);
-
-  v1 = ((char*)o1) + var-> var_offset;
-  v2 = ((char*)o2) + var-> var_offset;
-  switch (var->type)
-    {
-    case CONFIG_TYPE_UINT:
-    case CONFIG_TYPE_BOOL:
-      return (*(int*)v1) == (*(int*)v2);
-    case CONFIG_TYPE_STRING: {
-      const char *s1 = *(const char**)v1;
-      const char *s2 = *(const char**)v2;
-      return (!s1 && !s2) || (s1 && s2 && !strcmp(s1, s2));
+  struct config_line_t *c1, *c2;
+  int r = 1;
+  c1 = config_get_assigned_option(o1, name);
+  c2 = config_get_assigned_option(o2, name);
+  while (c1 && c2) {
+    if (strcasecmp(c1->key, c2->key) ||
+        strcmp(c1->value, c2->value)) {
+      r = 0;
+      break;
     }
-    case CONFIG_TYPE_DOUBLE:
-      return (*(double*)v1) == (*(double*)v2);
-    case CONFIG_TYPE_CSV: {
-      smartlist_t *sl1 = *(smartlist_t**)v1;
-      smartlist_t *sl2 = *(smartlist_t**)v2;
-      int i;
-      if ((sl1 && !sl2) || (!sl1 && sl2))
-        return 0;
-      else if (!sl1 && !sl2)
-        return 1;
-      else if (smartlist_len(sl1) != smartlist_len(sl2))
-        return 0;
-      for (i=0;i<smartlist_len(sl1);++i) {
-        if (strcmp(smartlist_get(sl1,i), smartlist_get(sl2,i)))
-          return 0;
-      }
-      return 1;
-    }
-    case CONFIG_TYPE_LINELIST:
-    case CONFIG_TYPE_LINELIST_V: {
-      struct config_line_t *cl1 = *(struct config_line_t**)v1;
-      struct config_line_t *cl2 = *(struct config_line_t**)v2;
-      while (cl1 && cl2) {
-        if (strcasecmp(cl1->key,cl2->key) || strcmp(cl1->value,cl2->value))
-          return 0;
-        cl1 = cl1->next;
-        cl2 = cl2->next;
-      }
-      if (!cl1 && !cl2)
-        return 1;
-      else
-        return 0;
-    }
-    case CONFIG_TYPE_LINELIST_S:
-    case CONFIG_TYPE_OBSOLETE:
-    default:
-      log_fn(LOG_ERR,"Internal error: can't compare configuration option '%s'",
-             var->name);
-      tor_assert(0);
-      return 0; /* unreached */
-    }
+    c1 = c1->next;
+    c2 = c2->next;
+  }
+  if (r && (c1 || c2)) {
+    r = 0;
+  }
+  config_free_lines(c1);
+  config_free_lines(c2);
+  return r;
 }
 
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
@@ -1089,7 +1052,7 @@ config_dump_options(or_options_t *options, int minimal)
     if (config_vars[i].type == CONFIG_TYPE_OBSOLETE ||
         config_vars[i].type == CONFIG_TYPE_LINELIST_S)
       continue;
-    if (minimal && option_is_same(options, defaults, &config_vars[i]))
+    if (minimal && option_is_same(options, defaults, config_vars[i].name))
       continue;
     line = config_get_assigned_option(options, config_vars[i].name);
     for (; line; line = line->next) {
@@ -1591,14 +1554,13 @@ init_from_config(int argc, char **argv)
     if (using_default_torrc == 1) {
       log(LOG_NOTICE, "Configuration file '%s' not present, "
           "using reasonable defaults.", fname);
-      tor_free(fname);
+      tor_free(fname); /* sets fname to NULL */
     } else {
       log(LOG_WARN, "Unable to open configuration file '%s'.", fname);
       tor_free(fname);
       goto err;
     }
   } else { /* it opened successfully. use it. */
-    tor_free(fname);
     retval = config_get_lines(cf, &cl);
     tor_free(cf);
     if (retval < 0)
@@ -1628,8 +1590,11 @@ init_from_config(int argc, char **argv)
     log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
+  tor_free(config_fname);
+  config_fname = fname;
   return 0;
  err:
+  tor_free(fname);
   options_free(newoptions);
   return -1;
 }
@@ -2100,6 +2065,82 @@ validate_data_directory(or_options_t *options) {
   }
 #endif
   return 0;
+}
+
+#define GENERATED_FILE_PREFIX "# This file was generated by Tor; if you edit it, comments will not be preserved"
+
+/** Save a configuration file for the configuration in <b>options</b>
+ * into the file <b>fname</b>.  If the file already exists, and
+ * doesn't begin with GENERATED_FILE_PREFIX, rename it.  Otherwise
+ * replace it.  Return 0 on success, -1 on failure. */
+static int
+write_configuration_file(const char *fname, or_options_t *options)
+{
+  char fn_tmp[1024];
+  char *new_val=NULL, *new_conf=NULL;
+  int rename_old = 0, r;
+  size_t len;
+
+  if (fname && file_status(fname) == FN_FILE) {
+    char *old_val = read_file_to_str(fname, 0);
+    if (strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
+      rename_old = 1;
+    }
+    tor_free(old_val);
+  }
+
+  if (!(new_conf = config_dump_options(options, 1))) {
+    log_fn(LOG_WARN, "Couldn't get configuration string");
+    goto err;
+  }
+
+  len = strlen(new_conf)+128;
+  new_val = tor_malloc(len);
+  tor_snprintf(new_val, len, "%s\n\n%s", GENERATED_FILE_PREFIX, new_conf);
+
+  if (rename_old) {
+    int i = 1;
+    while (1) {
+      if (tor_snprintf(fn_tmp, sizeof(fn_tmp), "%s.orig.%d", fname, i)<0) {
+        log_fn(LOG_WARN, "Filename too long");
+        goto err;
+      }
+      if (file_status(fn_tmp) != FN_FILE)
+        break;
+      ++i;
+    }
+    log_fn(LOG_NOTICE, "Renaming old configuration file to %s", fn_tmp);
+    rename(fname, fn_tmp);
+  }
+
+  write_str_to_file(fname, new_val, 0);
+
+  r = 0;
+  goto done;
+ err:
+  r = -1;
+ done:
+  tor_free(new_val);
+  tor_free(new_conf);
+  return r;
+}
+
+/**
+ * Save the current configuration file value to disk.  Return 0 on
+ * success, -1 on failure.
+ **/
+int
+save_current_config(void)
+{
+  char *fn;
+  if (config_fname) {
+    /* XXX This fails if we can't write to our configuration file.
+     *   Arguably, we should try falling back to datadirectory or something.
+     *   But just as arguably, we shouldn't. */
+    return write_configuration_file(config_fname, get_options());
+  }
+  fn = get_default_conf_file();
+  return write_configuration_file(fn, get_options());
 }
 
 /*
