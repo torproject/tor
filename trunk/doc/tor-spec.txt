@@ -1,10 +1,10 @@
 $Id$ 
 
-TOR Spec
+Tor Spec
 
-Note: This is an attempt to specify TOR as it exists as implemented in
+Note: This is an attempt to specify Tor as it exists as implemented in
 early June, 2003.  It is not recommended that others implement this
-design as it stands; future versions of TOR will implement improved
+design as it stands; future versions of Tor will implement improved
 protocols.
 
 TODO: (very soon)
@@ -499,3 +499,10 @@ and signed with the directory server's signing key.
 lists nodes that are connected currently
 speaks http on a socket, spits out directory on request
 
+-----------
+(for emacs)
+  Local Variables:
+  mode:text
+  indent-tabs-mode:nil
+  fill-column:77
+  End:
