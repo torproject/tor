@@ -420,9 +420,6 @@ If this signal exists on your platform, Tor catches and ignores it.
 .I @CONFDIR@/torrc
 The configuration file, which contains "option value" pairs.
 .TP
-.I @CONFDIR@/dirservers
-A list of directory servers, to bootstrap into the network.
-.TP
 .I @LOCALSTATEDIR@/lib/tor/
 The tor process stores keys and other data here.
 
