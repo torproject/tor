@@ -500,6 +500,8 @@ typedef struct {
   char *chosen_exit;
   /* cpath to append after rendezvous. */
   struct crypt_path_t *pending_final_cpath;
+  /* How many times has building a circuit for this task failed? */
+  int failure_count;
 } cpath_build_state_t;
 
 /* struct for a path (circuit) through the network */
@@ -1095,6 +1097,7 @@ void rend_service_intro_is_ready(circuit_t *circuit);
 int rend_service_intro_established(circuit_t *circuit, const char *request, int request_len);
 void rend_service_rendezvous_is_ready(circuit_t *circuit);
 int rend_service_introduce(circuit_t *circuit, const char *request, int request_len);
+void rend_service_relaunch_rendezvous(circuit_t *oldcirc);
 int rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ);
 void rend_service_dump_stats(int severity);
 
