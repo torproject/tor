@@ -501,7 +501,7 @@ static void* _squareAndRemoveK4(const char *key, void*val, void *data)
     ++(*ip);
     return NULL;
   }
-  v = (int)val;
+  v = (intptr_t)val;
   return (void*)(v*v);
 }
 
