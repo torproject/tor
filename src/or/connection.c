@@ -207,7 +207,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   /* learn things from parent, so we can perform auth */
   memcpy(&newconn->local,&conn->local,sizeof(struct sockaddr_in));
   newconn->prkey = conn->prkey;
-  newconn->address = strdup(inet_ntoa(*(struct in_addr *)&remote.sin_addr.s_addr)); /* remember the remote address */
+  newconn->address = strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
 
   if(connection_add(newconn) < 0) { /* no space, forget it */
     connection_free(newconn);
@@ -232,6 +232,7 @@ static int learn_local(struct sockaddr_in *local) {
     log(LOG_ERR,"Error obtaining local hostname.");
     return -1;
   }
+  log(LOG_DEBUG,"learn_local: localhostname is '%s'.",localhostname);
   localhost = gethostbyname(localhostname);
   if (!localhost) {
     log(LOG_ERR,"Error obtaining local host info.");
@@ -239,8 +240,8 @@ static int learn_local(struct sockaddr_in *local) {
   }
   memset((void *)local,0,sizeof(struct sockaddr_in));
   local->sin_family = AF_INET;
-  local->sin_addr.s_addr = INADDR_ANY;
   memcpy((void *)&local->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
+  log(LOG_DEBUG,"learn_local: chose address as '%s'.",inet_ntoa(local->sin_addr));
 
   return 0;
 }
