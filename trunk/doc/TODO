@@ -5,6 +5,7 @@ rename ACI to CircID
 rotate tls-level connections -- make new ones, expire old ones.
 dirserver shouldn't put you in running-routers list if you haven't
   uploading a descriptor recently
+look at having smallcells and largecells
 
 Legend:
 SPEC!!  - Not specified
