@@ -774,6 +774,7 @@ void tor_mutex_free(tor_mutex_t *m)
 }
 #else
 struct tor_mutex_t {
+  int _unused;
 };
 tor_mutex_t *tor_mutex_new(void) { return NULL; }
 void tor_mutex_acquire(tor_mutex_t *m) { }

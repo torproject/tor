@@ -53,6 +53,10 @@
 #define __FUNCTION__ "???"
 #endif
 
+#if defined(__sgi) && !defined(__GNUC__) && defined(__c99)
+#define __FUNCTION__ __func__
+#endif
+
 /* ===== String compatibility */
 #ifdef MS_WINDOWS
 /* Windows names string functions differently from most other platforms. */
