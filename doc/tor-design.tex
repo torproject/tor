@@ -936,7 +936,7 @@ reaches 0, it stops reading from streams destined for that OR.
 
 \textbf{Stream-level throttling}:
 The stream-level congestion control mechanism is similar to the
-circuit-level mechanism above. ORs and OPs use \emph{relay sendme} cells
+circuit-level mechanism. ORs and OPs use \emph{relay sendme} cells
 to implement end-to-end flow control for individual streams across
 circuits. Each stream begins with a packaging window (currently 500 cells),
 and increments the window by a fixed value (50) upon receiving a \emph{relay
@@ -949,6 +949,11 @@ to be flushed is under some threshold (currently 10 cells' worth).
 Currently, non-data relay cells do not affect the windows. Thus we
 avoid potential deadlock issues, for example, arising because a stream
 can't send a \emph{relay sendme} cell when its packaging window is empty.
+
+These arbitrarily chosen parameters 
+%are probably not optimal; more
+%research remains to find which parameters 
+seem to give tolerable throughput and delay; more research remains.
 
 \Section{Other design decisions}
 
