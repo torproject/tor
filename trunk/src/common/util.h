@@ -34,6 +34,7 @@
 
 #define xfree(p) do {if(p) {free(p); (p)=NULL;}} while(0) /* XXX use everywhere? */
 void *tor_malloc(size_t size);
+void *tor_realloc(void *ptr, size_t size);
 char *tor_strdup(const char *s);
 void tor_gettimeofday(struct timeval *timeval);
 
