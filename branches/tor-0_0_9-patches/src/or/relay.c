@@ -412,6 +412,12 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   relay_header_t rh;
   int cell_direction;
 
+  if (fromconn && fromconn->marked_for_close) {
+    log_fn(LOG_WARN,"Bug: called on conn that's already marked for close at %s:%d.",
+           fromconn->marked_for_close_file, fromconn->marked_for_close);
+    return 0;
+  }
+
   if (!circ) {
     log_fn(LOG_WARN,"no circ. Closing conn.");
     tor_assert(fromconn);
