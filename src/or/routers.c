@@ -15,7 +15,7 @@
 #include "or.h"
 
 /* private function, to determine whether the current entry in the router list is actually us */
-static int routers_is_us(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport)
+static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport)
 {
   /* local host information */
   char localhostname[512];
@@ -71,7 +71,7 @@ void delete_routerlist(routerinfo_t *list)
   return;
 }
 
-/* create an NULL-terminated array of pointers pointing to elements of a router list */
+/* create a NULL-terminated array of pointers pointing to elements of a router list */
 /* this is done in two passes through the list - inefficient but irrelevant as this is
  * only done once when op/or start up */
 routerinfo_t **make_rarray(routerinfo_t* list, size_t *len)
@@ -128,26 +128,22 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
   char *errtest; /* detecting errors in strtoul() calls */
   struct hostent *rent;
 
-  if ((!routerfile) || (!lenp))
-    return NULL;
+  assert(routerfile && lenp);
   
-  if (strcspn(routerfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0)
-  {
+  if (strcspn(routerfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
     log(LOG_ERR,"Filename %s contains illegal characters.",routerfile);
     return NULL;
   }
   
   /* open the router list */
   rf = fopen(routerfile,"r");
-  if (!rf)
-  {
+  if (!rf) {
     log(LOG_ERR,"Could not open %s.",routerfile);
     return NULL;
   }
   
-  retp= fgets(line,512,rf);
-  while (retp)
-  {
+  retp = fgets(line,512,rf);
+  while (retp) {
     log(LOG_DEBUG,"getrouters():Line :%s",line);
     token = (char *)strtok(line,OR_ROUTERLIST_SEPCHARS);
     if (token)
@@ -163,15 +159,6 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
 	  delete_routerlist(routerlist);
 	  return NULL;
 	}
-	
-#if 0
-	router->conn_bufs = NULL; /* no output buffers */
-	router->last_conn_buf = NULL;
-	router->next_to_service = 0;
-	
-	router->s = -1; /* to signify this router is as yet unconnected */
-	router->celllen = 0; /* cell buffer is empty */
-#endif
 	
 	/* read the address */
 	router->address = malloc(strlen(token)+1);
@@ -315,7 +302,7 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
 			  }
 			  
 			  /* check that this router doesn't actually represent us */
-			  retval = routers_is_us(router->addr, router->or_port, or_listenport);
+			  retval = router_is_me(router->addr, router->or_port, or_listenport);
 			  if (!retval) { /* this isn't us, continue */
 			    router->next = NULL;
 			    /* save the entry into the routerlist linked list */
@@ -332,7 +319,7 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
 			    RSA_free(router->pkey);
 			    free((void *)router);
 			  }
-			  else /* routers_is_us() returned an error */
+			  else /* router_is_me() returned an error */
 			  {
 			    free((void *)router->address);
 			    RSA_free(router->pkey);
@@ -430,3 +417,4 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
   fclose(rf);
   return make_rarray(routerlist, lenp);
 }
+

@@ -262,15 +262,15 @@ int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
   }
 
   if(conn->type == CONN_TYPE_EXIT) { /* send payload directly */
-    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to exit.");
+//    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to exit.");
     return connection_exit_process_data_cell(cell, conn);
   }
   if(conn->type == CONN_TYPE_AP) { /* send payload directly */
-    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to AP.");
+//    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to AP.");
     return connection_ap_process_data_cell(cell, conn);
   }
   /* else send it as a cell */
-  log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to connection.");
+//  log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to connection.");
   return connection_write_cell_to_buf(cell, conn);
 }
 

@@ -16,7 +16,7 @@ int connection_ap_process_inbuf(connection_t *conn) {
     return -1;
   }
 
-  log(LOG_DEBUG,"connection_ap_process_inbuf(): state %d.",conn->state);
+//  log(LOG_DEBUG,"connection_ap_process_inbuf(): state %d.",conn->state);
 
   switch(conn->state) {
     case AP_CONN_STATE_SS_WAIT:
@@ -329,6 +329,7 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
 
   circ->state = CIRCUIT_STATE_OPEN;
   ap_conn->state = AP_CONN_STATE_OPEN;
+  log(LOG_INFO,"ap_handshake_send_onion(): Address/port sent, ap socket %d, n_aci %d",ap_conn->s,circ->n_aci);
 
   /* FIXME should set circ->expire to something here */
 
@@ -351,7 +352,7 @@ int connection_ap_process_data_cell(cell_t *cell, connection_t *conn) {
     return -1;
   }
 
-  log(LOG_DEBUG,"connection_ap_process_data_cell(): In state 'open', writing to buf.");
+//  log(LOG_DEBUG,"connection_ap_process_data_cell(): In state 'open', writing to buf.");
 
   if(connection_write_to_buf(cell->payload, cell->length, conn) < 0)
     return -1;
