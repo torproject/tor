@@ -6,26 +6,89 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+void command_time_process_cell(cell_t *cell, connection_t *conn,
+                               int *num, int *time,
+                               void (*func)(cell_t *, connection_t *)) {
+  struct timeval start, end;
+  int time_passed; 
+
+  *num += 1;
+
+  if(gettimeofday(&start,NULL) < 0) {
+    log(LOG_ERR,"command_time_process_cell(): gettimeofday failed.");
+    return;
+  }
+
+  (*func)(cell, conn);
+
+  if(gettimeofday(&end,NULL) < 0) {
+    log(LOG_ERR,"command_time_process_cell(): gettimeofday failed.");
+    return;
+  }
+
+  if(end.tv_usec < start.tv_usec) {
+    end.tv_sec--;
+    end.tv_usec += 1000000;
+  }
+  time_passed = ((end.tv_sec - start.tv_sec)*1000000) + (end.tv_usec - start.tv_usec);
+  if(time_passed > 5000) { /* more than 5ms */
+    log(LOG_INFO,"command_time_process_cell(): That call just took %d ms.",time_passed/1000);
+  }
+  *time += time_passed;
+}
+
 void command_process_cell(cell_t *cell, connection_t *conn) {
+  static int num_create=0, num_data=0, num_destroy=0, num_sendme=0, num_connected=0;
+  static int create_time=0, data_time=0, destroy_time=0, sendme_time=0, connected_time=0;
+  static long current_second = 0; /* from previous calls to gettimeofday */
+  struct timeval now;
+
+  if(gettimeofday(&now,NULL) < 0) {
+    log(LOG_ERR,"command_process_cell(): gettimeofday failed.");
+    return;
+  }
+
+  if(now.tv_sec > current_second) { /* the second has rolled over */
+    /* print stats */
+    log(LOG_INFO,"At end of second:"); 
+    log(LOG_INFO,"Create:    %d (%d ms)", num_create, create_time/1000);
+    log(LOG_INFO,"Data:      %d (%d ms)", num_data, data_time/1000);
+    log(LOG_INFO,"Destroy:   %d (%d ms)", num_destroy, destroy_time/1000);
+    log(LOG_INFO,"Sendme:    %d (%d ms)", num_sendme, sendme_time/1000);
+    log(LOG_INFO,"Connected: %d (%d ms)", num_connected, connected_time/1000);
+
+    /* zero out stats */
+    num_create = num_data = num_destroy = num_sendme = num_connected = 0;
+    create_time = data_time = destroy_time = sendme_time = connected_time = 0;
+
+    /* remember which second it is, for next time */
+    current_second = now.tv_sec; 
+  }
 
   switch(cell->command) {
     case CELL_PADDING:
       /* do nothing */
       break;
     case CELL_CREATE:
-      command_process_create_cell(cell, conn);
+      log(LOG_INFO,"Starting to process create cell.");
+      command_time_process_cell(cell, conn, &num_create, &create_time,
+                                command_process_create_cell);
       break;
     case CELL_DATA:
-      command_process_data_cell(cell, conn);
+      command_time_process_cell(cell, conn, &num_data, &data_time,
+                                command_process_data_cell);
       break;
     case CELL_DESTROY:
-      command_process_destroy_cell(cell, conn);
+      command_time_process_cell(cell, conn, &num_destroy, &destroy_time,
+                                command_process_destroy_cell);
       break;
     case CELL_SENDME:
-      command_process_sendme_cell(cell, conn);
+      command_time_process_cell(cell, conn, &num_sendme, &sendme_time,
+                                command_process_sendme_cell);
       break;
     case CELL_CONNECTED:
-      command_process_connected_cell(cell, conn);
+      command_time_process_cell(cell, conn, &num_connected, &connected_time,
+                                command_process_connected_cell);
       break;
     default:
       log(LOG_DEBUG,"Cell of unknown type (%d) received. Dropping.", cell->command);
@@ -134,7 +197,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
   conn->onions_handled_this_second++;
   log(LOG_DEBUG,"command_process_create_cell(): Processing onion %d for this second.",conn->onions_handled_this_second);
   if(conn->onions_handled_this_second > options.OnionsPerSecond) {
-    log(LOG_DEBUG,"command_process_create_cell(): Received too many onions (now %d) this second. Closing.", conn->onions_handled_this_second);
+    log(LOG_INFO,"command_process_create_cell(): Received too many onions (now %d) this second. Closing.", conn->onions_handled_this_second);
     circuit_close(circ);
     return;
   }
@@ -223,7 +286,10 @@ void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
 
   /* at this point both circ->n_conn and circ->p_conn are guaranteed to be set */
 
-  assert(cell->length == RECEIVE_WINDOW_INCREMENT);
+  if(cell->length != RECEIVE_WINDOW_INCREMENT) {
+    log(LOG_WARNING,"command_process_sendme_cell(): non-standard sendme value %d.",cell->length);
+  }
+//  assert(cell->length == RECEIVE_WINDOW_INCREMENT);
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     circ->n_receive_window += cell->length;

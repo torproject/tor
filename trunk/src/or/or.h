@@ -130,8 +130,8 @@
 /* default cipher function */
 #define ONION_DEFAULT_CIPHER ONION_CIPHER_DES
 
-#define RECEIVE_WINDOW_START 100
-#define RECEIVE_WINDOW_INCREMENT 10
+#define RECEIVE_WINDOW_START 1000
+#define RECEIVE_WINDOW_INCREMENT 100
 
 /* cell commands */
 #define CELL_PADDING 0
