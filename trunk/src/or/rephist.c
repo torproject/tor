@@ -237,6 +237,7 @@ void rep_hist_dump_stats(time_t now, int severity)
   double uptime;
   char buffer[2048];
   size_t len;
+  int r;
   unsigned long upt, downt;
   routerinfo_t *r;
 
@@ -279,14 +280,14 @@ void rep_hist_dump_stats(time_t now, int severity)
           name2 = "(unknown)";
 
         link_history = (link_history_t*) link_history_p;
-/* XXX009 tor_snprintf can return -1 for error also. need to detect. */
-        len += tor_snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
+        
+        r = tor_snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
                         link_history->n_extend_ok,
                         link_history->n_extend_ok+link_history->n_extend_fail);
-        if (len >= 2048) {
-          buffer[2047]='\0';
+        if (r<0)
           break;
-        }
+        else
+          len += r;
       }
       log(severity, "%s", buffer);
     }
