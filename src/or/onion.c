@@ -6,16 +6,11 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-struct cpath_build_state_t {
-  int desired_path_len;
-  char *chosen_exit; /* nicknames */
-};
-
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
 
 int decide_circ_id_type(char *local_nick, char *remote_nick) {
   int result;
- 
+
   assert(remote_nick);
   if(!local_nick)
     return CIRC_ID_TYPE_LOWER;
@@ -306,8 +301,7 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
       }
     }
   }
-  tor_free(n_supported);
-  tor_free(n_maybe_supported);
+  tor_free(n_supported); tor_free(n_maybe_supported);
   i = crypto_pseudo_rand_int(dir->n_routers);
   log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[i]->nickname);
   return dir->routers[i];
@@ -324,7 +318,6 @@ cpath_build_state_t *onion_new_cpath_build_state(void) {
     return NULL;
   info = tor_malloc(sizeof(cpath_build_state_t));
   info->desired_path_len = r;
-  /* XXX This is leaked */
   info->chosen_exit = tor_strdup(choose_good_exit_server(dir)->nickname);
   return info;
 }
@@ -413,6 +406,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   } else if (cur_len == state->desired_path_len - 1) { /* Picking last node */
     log_fn(LOG_DEBUG, "Contemplating last hop: choice already made.");
     choice = router_get_by_nickname(state->chosen_exit);
+    /* XXX check if null */
   } else {
     log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
     choice = rarray[crypto_pseudo_rand_int(rarray_len)];

@@ -63,7 +63,7 @@ routerinfo_t *router_pick_directory_server(void) {
       return router;
   }
 
-  log_fn(LOG_WARN,"No dirservers are up. Giving them all another chance.");
+  log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
   /* no running dir servers found? go through and mark them all as up,
    * and we'll cycle through the list again. */
   for(i=0;i<directory->n_routers;i++) {

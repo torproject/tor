@@ -101,7 +101,7 @@ void connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_la
   payload[0] = reason;
   if(reason == END_STREAM_REASON_EXITPOLICY) {
     *(uint32_t *)(payload+1) = htonl(conn->addr);
-    payload_len += 6;
+    payload_len += 4;
   }
 
   circ = circuit_get_by_conn(conn);
@@ -250,12 +250,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
          *(cell->payload+RELAY_HEADER_SIZE) == END_STREAM_REASON_EXITPOLICY) {
         /* No need to close the connection. We'll hold it open while
          * we try a new exit node.
-         * cell->payload+RELAY_HEADER_SIZE+1 holds the addr and then
-         * port of the destination. Which is good, because we've
-         * forgotten it.
+         * cell->payload+RELAY_HEADER_SIZE+1 holds the destination addr.
          */
         addr = ntohl(*cell->payload+RELAY_HEADER_SIZE+1);
-        client_dns_set_entry(conn->socks_request->addr, addr);
+        client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         /* XXX Build another circuit as required */
         return 0;
@@ -324,7 +322,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       log_fn(LOG_INFO,"Connected! Notifying application.");
       if (cell->length-RELAY_HEADER_SIZE == 4) {
         addr = htonl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
-        client_dns_set_entry(conn->socks_request->addr, addr);
+        client_dns_set_entry(conn->socks_request->address, addr);
       }
       if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
         log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
@@ -620,19 +618,18 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   assert(ap_conn->type == CONN_TYPE_AP);
   assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(ap_conn->socks_request);
-  assert(ap_conn->socks_request->addr);
 
   crypto_pseudo_rand(STREAM_ID_SIZE, ap_conn->stream_id);
   /* FIXME check for collisions */
 
-  in.s_addr = client_dns_lookup_entry(ap_conn->socks_request->addr);
+  in.s_addr = client_dns_lookup_entry(ap_conn->socks_request->address);
   string_addr = in.s_addr ? inet_ntoa(in) : NULL;
 
   memcpy(payload, ap_conn->stream_id, STREAM_ID_SIZE);
   payload_len = STREAM_ID_SIZE + 1 +
     snprintf(payload+STREAM_ID_SIZE,CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE-STREAM_ID_SIZE,
              "%s:%d", 
-             string_addr ? string_addr : ap_conn->socks_request->addr, 
+             string_addr ? string_addr : ap_conn->socks_request->address,
              ap_conn->socks_request->port);
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",*(int *)ap_conn->stream_id);
@@ -786,8 +783,8 @@ void connection_exit_connect(connection_t *conn) {
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 {
   uint32_t addr;
-  
-  addr = client_dns_lookup_entry(conn->socks_request->addr);
+
+  addr = client_dns_lookup_entry(conn->socks_request->address);
   return router_supports_exit_address(addr, conn->port, exit);
 }
 
@@ -896,7 +893,7 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   }
 }
 
-static void client_dns_clean()
+static void client_dns_clean(void)
 {
   struct client_dns_entry **expired_entries;
   int n_expired_entries = 0;
@@ -905,8 +902,8 @@ static void client_dns_clean()
   int i;
 
   expired_entries = tor_malloc(client_dns_size * 
-                               sizeof(struct client_dns_entry *));   
-  
+                               sizeof(struct client_dns_entry *));
+
   now = time(NULL);
   SPLAY_FOREACH(ent, client_dns_tree, &client_dns_root) {
     if (ent->expires < now) {

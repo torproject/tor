@@ -802,6 +802,9 @@ int tor_main(int argc, char *argv[]) {
   if(options.OnionRouter) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
+  if(options.SocksPort) {
+    client_dns_init(); /* init the client dns cache */
+  }
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
   signal (SIGINT,  catch); /* catch kills so we can exit cleanly */
