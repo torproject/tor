@@ -599,6 +599,7 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   smartlist_split_string(questions, body, "\n",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   answers = smartlist_create();
+  msg_len = 0;
   SMARTLIST_FOREACH(questions, const char *, q,
   {
     ans = handle_getinfo_helper(q);
