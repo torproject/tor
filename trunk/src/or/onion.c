@@ -242,7 +242,9 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
    * We use this for log messages now, but in the future we may depend on it.
    */
   for (i = 0; i < n_connections; ++i) {
-    if (carray[i]->type == CONN_TYPE_AP && carray[i]->state == AP_CONN_STATE_CIRCUIT_WAIT)
+    if (carray[i]->type == CONN_TYPE_AP &&
+        carray[i]->state == AP_CONN_STATE_CIRCUIT_WAIT &&
+        !carray[i]->marked_for_close)
       ++n_pending_connections;
   }
   log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
@@ -259,34 +261,46 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
   for (i = 0; i < dir->n_routers; ++i) { /* iterate over routers */
     if(!dir->routers[i]->is_running) {
       n_supported[i] = n_maybe_supported[i] = -1;
+      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- directory says it's not running.",
+             dir->routers[i]->nickname, i);
       continue; /* skip routers that are known to be down */
     }
     if(router_exit_policy_rejects_all(dir->routers[i])) {
       n_supported[i] = n_maybe_supported[i] = -1;
+      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it rejects all.",
+             dir->routers[i]->nickname, i);
       continue; /* skip routers that reject all */
     }
     n_supported[i] = n_maybe_supported[i] = 0;
     ++n_running_routers;
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
       if (carray[j]->type != CONN_TYPE_AP ||
-          carray[j]->state == AP_CONN_STATE_CIRCUIT_WAIT ||
+          carray[j]->state != AP_CONN_STATE_CIRCUIT_WAIT ||
           carray[j]->marked_for_close)
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
       switch (connection_ap_can_use_exit(carray[j], dir->routers[i])) 
         {
         case -1:
+          log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
+                 dir->routers[i]->nickname, i);
           break; /* would be rejected; try next connection */
         case 0:
           ++n_supported[i];
+          log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
+                 dir->routers[i]->nickname, i, n_supported[i]);
           ; /* Fall through: If it is supported, it is also maybe supported. */
         case 1:
           ++n_maybe_supported[i];
+          log_fn(LOG_DEBUG,"%s is maybe supported. n_maybe_supported[%d] now %d.",
+                 dir->routers[i]->nickname, i, n_maybe_supported[i]);
         }
     } /* End looping over connections. */
     if (n_supported[i] > best_support) { 
       /* If this router is better than previous ones, remember its index
        * and goodness, and start counting how many routers are this good. */
       best_support = n_supported[i]; best_support_idx = i; n_best_support=1;
+      log_fn(LOG_DEBUG,"%s is new best supported option so far.",
+             dir->routers[i]->nickname);
     } else if (n_supported[i] == best_support) {
       /* If this router is _as good_ as the best one, just increment the
        * count of equally good routers.*/
@@ -296,6 +310,8 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
     if (n_maybe_supported[i] > best_maybe_support) {
       best_maybe_support = n_maybe_supported[i]; best_maybe_support_idx = i;
       n_best_maybe_support = 1;
+      log_fn(LOG_DEBUG,"%s is new best maybe-supported option so far.",
+             dir->routers[i]->nickname);
     } else if (n_maybe_supported[i] == best_maybe_support) {
       ++n_best_maybe_support;
     }
