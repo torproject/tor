@@ -3,11 +3,11 @@ TESTS = test_config
 
 noinst_PROGRAMS = test_config
 
-bin_PROGRAMS = tor
+bin_PROGRAMS = or
 
-tor_LDADD = -L../common -lor
+or_LDADD = -L../common -lor
 
-tor_SOURCES = buffers.c cell.c circuit.c command.c connection.c \
+or_SOURCES = buffers.c cell.c circuit.c command.c connection.c \
              connection_exit.c connection_ap.c connection_op.c connection_or.c config.c \
              main.c onion.c routers.c
 

@@ -8,7 +8,7 @@ Read the README file first, so you can get familiar with the basics.
 
 1. The pieces.
 
-1.1. Routers. Onion routers, as far as the 'or' program is concerned,
+1.1. Routers. Onion routers, as far as the 'tor' program is concerned,
 are a bunch of data items that are loaded into the router_array when
 the program starts. After it's loaded, the router information is never
 changed. When a new OR connection is started (see below), the relevant
