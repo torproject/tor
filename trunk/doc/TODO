@@ -32,6 +32,8 @@ Bugs:
         . fix buffer unit test so it passes
 
 Short-term:
+        - should retry exitpolicy end streams even if the end cell didn't
+          resolve the address for you
         o add in 'notice' log level
         X make recommendedversions different for clients and servers.
           e.g. C0.0.3 vs S0.0.3?
