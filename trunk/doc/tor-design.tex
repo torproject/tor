@@ -1391,17 +1391,17 @@ Below we summarize a variety of attacks, and discuss how well our
 design withstands them.\\
 
 \noindent{\large\bf Passive attacks}\\
-\emph{Observing user traffic patterns.} Observing the connection
-from the user will not reveal her destination or data, but it will
+\emph{Observing user traffic patterns.} Observing a user's connection
+will not reveal her destination or data, but it will
 reveal traffic patterns (both sent and received). Profiling via user
-connection patterns is hampered because multiple application streams may
-be operating simultaneously or in series over a single circuit. Thus,
-further processing is necessary to discern even these usage patterns.
+connection patterns requires further processing, because multiple
+application streams may be operating simultaneously or in series over
+a single circuit.
   
 \emph{Observing user content.} While content at the user end is encrypted,
-connections to responders may not be (further, the responding website
-itself may be hostile). Filtering content is not a primary goal of Onion
-Routing; nonetheless, Tor can directly use Privoxy and related
+connections to responders may not be (indeed, the responding website
+itself may be hostile). While filtering content is not a primary goal
+of Onion Routing, Tor can directly use Privoxy and related
 filtering services to anonymize application data streams.
 
 \emph{Option distinguishability.} We allow clients to choose local
@@ -1413,19 +1413,18 @@ in the minority may lose more anonymity by appearing distinct than they
 gain by optimizing their behavior \cite{econymics}.
 
 \emph{End-to-end timing correlation.}  Tor only minimally hides
-end-to-end timing correlations. An attacker watching patterns of
+such correlations. An attacker watching patterns of
 traffic at the initiator and the responder will be
 able to confirm the correspondence with high probability. The
 greatest protection currently available against such confirmation is to hide
 the connection between the onion proxy and the first Tor node,
-by running the onion proxy locally or 
-behind a firewall.  This approach
+by running the OP on the Tor node or behind a firewall. This approach
 requires an observer to separate traffic originating at the onion
 router from traffic passing through it: a global observer can do this,
 but it might be beyond a limited observer's capabilities.
   
 \emph{End-to-end size correlation.} Simple packet counting
-without timing correlation will also be effective in confirming
+will also be effective in confirming
 endpoints of a stream. However, even without padding, we have some
 limited protection: the leaky pipe topology means different numbers
 of packets may enter one end of a circuit than exit at the other.
@@ -1440,26 +1439,18 @@ correlations, the adversary may build up a database of
 targeted websites. He can later confirm a user's connection to a given
 site simply by consulting the database. This attack has
 been shown to be effective against SafeWeb \cite{hintz-pet02}.
-% But
-%Tor is not as vulnerable as SafeWeb to this attack: there is the
-%possibility that multiple streams are exiting the circuit at
-%different places concurrently.  
-%   XXX How does that help? Roger and I don't know. -NM
 It may be less effective against Tor, since
+streams are multiplexed within the same circuit, and
 fingerprinting will be limited to
-the granularity of cells, currently 256 bytes.  Further potential
-defenses include 
-larger cell sizes and/or padding schemes to group websites
-into large sets. But this remains an open problem.  Link
-padding or long-range dummies may also make fingerprints harder to
-detect.\footnote{Note that
-this fingerprintin attack should not be confused with the latency attacks
-of \cite{back01}. Those require a fingerprint of the latencies of
-all circuits through the network, combined with those from the
-network edges to the targeted user and the responder website. While
-these are in principle feasible and surprises are always possible,
-they constitute a much more complicated attack, and there is no
-current evidence of their practicality.}\\
+the granularity of cells (currently 256 bytes). Additional
+defenses could include 
+larger cell sizes, padding schemes to group websites
+into large sets, and link
+padding or long-range dummies.\footnote{Note that this fingerprinting
+attack should not be confused with the much more complicated latency
+attacks of \cite{back01}, which require a fingerprint of the latencies
+of all circuits through the network, combined with those from the
+network edges to the target user and the responder website.}\\
 
 \noindent{\large\bf Active attacks}\\
 \emph{Compromise keys.} An attacker who learns the TLS session key can
