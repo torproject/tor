@@ -563,15 +563,15 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
   tor_assert(!(cpath->f_crypto || cpath->b_crypto ||
              cpath->f_digest || cpath->b_digest));
 
-  log_fn(LOG_DEBUG,"hop init digest forward 0x%.8x, backward 0x%.8x.",
-         (unsigned int)*(uint32_t*)key_data, (unsigned int)*(uint32_t*)(key_data+20));
+//  log_fn(LOG_DEBUG,"hop init digest forward 0x%.8x, backward 0x%.8x.",
+//         (unsigned int)*(uint32_t*)key_data, (unsigned int)*(uint32_t*)(key_data+20));
   cpath->f_digest = crypto_new_digest_env();
   crypto_digest_add_bytes(cpath->f_digest, key_data, DIGEST_LEN);
   cpath->b_digest = crypto_new_digest_env();
   crypto_digest_add_bytes(cpath->b_digest, key_data+DIGEST_LEN, DIGEST_LEN);
 
-  log_fn(LOG_DEBUG,"hop init cipher forward 0x%.8x, backward 0x%.8x.",
-         (unsigned int)*(uint32_t*)(key_data+40), (unsigned int)*(uint32_t*)(key_data+40+16));
+//  log_fn(LOG_DEBUG,"hop init cipher forward 0x%.8x, backward 0x%.8x.",
+//         (unsigned int)*(uint32_t*)(key_data+40), (unsigned int)*(uint32_t*)(key_data+40+16));
   if (!(cpath->f_crypto =
         crypto_create_init_cipher(key_data+(2*DIGEST_LEN),1))) {
     log(LOG_WARN,"forward cipher initialization failed.");
@@ -825,8 +825,8 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
         !circuit_stream_is_being_handled(carray[i]))
       ++n_pending_connections;
   }
-  log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
-         n_pending_connections);
+//  log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
+//         n_pending_connections);
   /* Now we count, for each of the routers in the directory, how many
    * of the pending connections could possibly exit from that
    * router (n_supported[i]). (We can't be sure about cases where we
@@ -837,7 +837,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     router = smartlist_get(dir->routers, i);
     if (router_is_me(router)) {
       n_supported[i] = -1;
-      log_fn(LOG_DEBUG,"Skipping node %s -- it's me.", router->nickname);
+//      log_fn(LOG_DEBUG,"Skipping node %s -- it's me.", router->nickname);
       /* XXX there's probably a reverse predecessor attack here, but
        * it's slow. should we take this out? -RD
        */
@@ -845,8 +845,8 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     }
     if (!router->is_running) {
       n_supported[i] = -1;
-      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- directory says it's not running.",
-             router->nickname, i);
+//      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- directory says it's not running.",
+//             router->nickname, i);
       continue; /* skip routers that are known to be down */
     }
     if (!router->is_verified &&
@@ -854,20 +854,20 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
          router_is_unreliable_router(router, 1, 1))) {
       /* if it's unverified, and either we don't want it or it's unsuitable */
       n_supported[i] = -1;
-      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- unverified router.",
-             router->nickname, i);
+//      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- unverified router.",
+//             router->nickname, i);
       continue; /* skip unverified routers */
     }
     if (router_exit_policy_rejects_all(router)) {
       n_supported[i] = -1;
-      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it rejects all.",
-             router->nickname, i);
+//      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it rejects all.",
+//             router->nickname, i);
       continue; /* skip routers that reject all */
     }
     if (smartlist_len(preferredentries)==1 &&
         router == (routerinfo_t*)smartlist_get(preferredentries, 0)) {
       n_supported[i] = -1;
-      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it's our only preferred entry node.", router->nickname, i);
+//      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it's our only preferred entry node.", router->nickname, i);
       continue;
     }
     n_supported[i] = 0;
@@ -879,19 +879,19 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
       if (connection_ap_can_use_exit(carray[j], router)) {
         ++n_supported[i];
-        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
-               router->nickname, i, n_supported[i]);
+//        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
+//               router->nickname, i, n_supported[i]);
       } else {
-        log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
-               router->nickname, i);
+//        log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
+//               router->nickname, i);
       }
     } /* End looping over connections. */
     if (n_supported[i] > best_support) {
       /* If this router is better than previous ones, remember its index
        * and goodness, and start counting how many routers are this good. */
       best_support = n_supported[i]; n_best_support=1;
-      log_fn(LOG_DEBUG,"%s is new best supported option so far.",
-             router->nickname);
+//      log_fn(LOG_DEBUG,"%s is new best supported option so far.",
+//             router->nickname);
     } else if (n_supported[i] == best_support) {
       /* If this router is _as good_ as the best one, just increment the
        * count of equally good routers.*/
@@ -1032,19 +1032,19 @@ static int count_acceptable_routers(smartlist_t *routers) {
   n = smartlist_len(routers);
   for (i=0;i<n;i++) {
     r = smartlist_get(routers, i);
-    log_fn(LOG_DEBUG,"Contemplating whether router %d (%s) is a new option...",
-           i, r->nickname);
+//    log_fn(LOG_DEBUG,"Contemplating whether router %d (%s) is a new option...",
+//           i, r->nickname);
     if (r->is_running == 0) {
-      log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
+//      log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
       goto next_i_loop;
     }
     if (r->is_verified == 0) {
-      log_fn(LOG_DEBUG,"Nope, the directory says %d is not verified.",i);
+//      log_fn(LOG_DEBUG,"Nope, the directory says %d is not verified.",i);
       /* XXXX009 But unverified routers *are* sometimes acceptable. */
       goto next_i_loop;
     }
     num++;
-    log_fn(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
+//    log_fn(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
     next_i_loop:
       ; /* C requires an explicit statement after the label */
   }

@@ -725,7 +725,7 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
       router->status_set_at = time(NULL);
     }
     smartlist_add(routers, router);
-    log_fn(LOG_DEBUG,"just added router #%d.",smartlist_len(routers));
+//    log_fn(LOG_DEBUG,"just added router #%d.",smartlist_len(routers));
   }
 
   if (good_nickname_list) {
@@ -945,9 +945,9 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     router->platform = tor_strdup("<unknown>");
   }
 
-  log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidthrate %u, bandwidthburst %u.",
-    router->or_port, router->socks_port, router->dir_port,
-    (unsigned) router->bandwidthrate, (unsigned) router->bandwidthburst);
+//  log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidthrate %u, bandwidthburst %u.",
+//    router->or_port, router->socks_port, router->dir_port,
+//    (unsigned) router->bandwidthrate, (unsigned) router->bandwidthburst);
 
   goto done;
   return router;
@@ -1052,8 +1052,8 @@ router_parse_addr_policy(directory_token_t *tok) {
   newe = tor_malloc_zero(sizeof(struct addr_policy_t));
 
   newe->string = tor_malloc(8+strlen(arg));
-  tor_snprintf(newe->string, 8+strlen(arg), "%s %s",
-           (tok->tp == K_REJECT) ? "reject" : "accept", arg);
+//  tor_snprintf(newe->string, 8+strlen(arg), "%s %s",
+//           (tok->tp == K_REJECT) ? "reject" : "accept", arg);
   newe->policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
     : ADDR_POLICY_ACCEPT;
 
@@ -1063,10 +1063,10 @@ router_parse_addr_policy(directory_token_t *tok) {
 
   in.s_addr = htonl(newe->addr);
   address = tor_strdup(inet_ntoa(in));
-  in.s_addr = htonl(newe->msk);
-  log_fn(LOG_DEBUG,"%s %s/%s:%d-%d",
-         newe->policy_type == ADDR_POLICY_REJECT ? "reject" : "accept",
-         address, inet_ntoa(in), newe->prt_min, newe->prt_max);
+//  in.s_addr = htonl(newe->msk);
+//  log_fn(LOG_DEBUG,"%s %s/%s:%d-%d",
+//         newe->policy_type == ADDR_POLICY_REJECT ? "reject" : "accept",
+//         address, inet_ntoa(in), newe->prt_min, newe->prt_max);
   tor_free(address);
 
   return newe;
