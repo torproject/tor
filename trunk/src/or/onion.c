@@ -434,22 +434,24 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
 /* creates a new onion from route, stores it and its length into buf and len respectively */
 unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath)
 {
-  int i,j;
+  int i;
   char *layerp;
-  crypt_path_t *hop = NULL;
+  crypt_path_t *hop;
   unsigned char *buf;
   routerinfo_t *router;
   unsigned char iv[16];
   struct in_addr netaddr;
   onion_layer_t layer;
 
-  assert(rarray && route && len && routelen);
+  assert(rarray && route && len && routelen && cpath);
+
+  *cpath = NULL;
 
   /* calculate the size of the onion */
   *len = routelen * ONION_LAYER_SIZE + ONION_PADDING_SIZE;
   /* 28 bytes per layer + 100 bytes padding for the innermost layer */
   log(LOG_DEBUG,"create_onion() : Size of the onion is %u.",*len);
-    
+
   /* allocate memory for the onion */
   buf = malloc(*len);
   if(!buf) {
@@ -457,7 +459,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
     return NULL;
   }
   log(LOG_DEBUG,"create_onion() : Allocated memory for the onion.");
-    
+
   for(i=0; i<routelen; i++) {
     netaddr.s_addr = htonl((rarray[route[i]])->addr);
 
@@ -467,29 +469,20 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
         (rarray[route[i]])->pkey,
         crypto_pk_keysize((rarray[route[i]])->pkey));
   }
-    
+
   layerp = buf + *len - ONION_LAYER_SIZE - ONION_PADDING_SIZE; /* pointer to innermost layer */
   /* create the onion layer by layer, starting with the innermost */
   for (i=0;i<routelen;i++) {
     router = rarray[route[i]];
-      
-//      log(LOG_DEBUG,"create_onion() : %u",router);
-//      log(LOG_DEBUG,"create_onion() : This router is %s:%u",inet_ntoa(*((struct in_addr *)&router->addr)),router->or_port);
-//      log(LOG_DEBUG,"create_onion() : Key pointer = %u.",router->pkey);
-//      log(LOG_DEBUG,"create_onion() : Key size = %u.",crypto_pk_keysize(router->pkey)); 
-    
 
     layer.version = OR_VERSION;
-    if (i) /* not last hop */
+    if (i) { /* not last hop */
       layer.port = rarray[route[i-1]]->or_port;
-    else
-      layer.port = 0;
-
-    /* Dest Addr */
-    if (i) /* not last hop */
       layer.addr = rarray[route[i-1]]->addr;
-    else
+    } else {
+      layer.port = 0;
       layer.addr = 0;
+    }
 
     /* Expiration Time */
     layer.expire = (uint32_t)(time(NULL) + 86400); /* NOW + 1 day */
@@ -503,47 +496,53 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
     onion_pack(layerp, &layer);
 
 //      log(LOG_DEBUG,"create_onion() : Onion layer %u built : %u, %u, %u, %s, %u.",i+1,layer->zero,layer->backf,layer->forwf,inet_ntoa(*((struct in_addr *)&layer->addr)),layer->port);
-      
+
     /* build up the crypt_path */
-    if(cpath) {
-      cpath[i] = (crypt_path_t *)malloc(sizeof(crypt_path_t));
-      if(!cpath[i]) {
-        log(LOG_ERR,"Error allocating memory.");
-        goto error;
-      }
-      
-      log(LOG_DEBUG,"create_onion() : Building hop %u of crypt path.",i+1);
-      hop = cpath[i];
-
-      /* calculate keys */
-      crypto_SHA_digest(layer.keyseed,16,hop->digest3);
-      log(LOG_DEBUG,"create_onion() : First SHA pass performed.");
-      crypto_SHA_digest(hop->digest3,20,hop->digest2);
-      log(LOG_DEBUG,"create_onion() : Second SHA pass performed.");
-      crypto_SHA_digest(hop->digest2,20,hop->digest3);
-      log(LOG_DEBUG,"create_onion() : Third SHA pass performed.");
-      log(LOG_DEBUG,"create_onion() : Keys generated.");
-      /* set IV to zero */
-      memset((void *)iv,0,16);
-
-      /* initialize cipher engines */
-      if (! (hop->f_crypto = 
-             crypto_create_init_cipher(DEFAULT_CIPHER, hop->digest3, iv, 1))) {
-        /* cipher initialization failed */
-        log(LOG_ERR,"Could not create a crypto environment.");
-        goto error;
-      }
-
-      if (! (hop->b_crypto = 
-             crypto_create_init_cipher(DEFAULT_CIPHER, hop->digest2, iv, 0))) {
-        /* cipher initialization failed */
-        log(LOG_ERR,"Could not create a crypto environment.");
-        goto error;
-      }
- 
-      log(LOG_DEBUG,"create_onion() : Built corresponding crypt path hop.");
+    hop = (crypt_path_t *)malloc(sizeof(crypt_path_t));
+    if(!hop) {
+      log(LOG_ERR,"Error allocating memory.");
+      goto error;
     }
-      
+
+    /* link hop into the cpath, at the front */
+    hop->next = *cpath;
+    hop->prev = NULL;
+    hop->state = CPATH_STATE_OPEN; /* change when we move to incremental paths */
+    if(*cpath) {
+      (*cpath)->prev = hop;
+    }
+    *cpath = hop;
+
+    log(LOG_DEBUG,"create_onion() : Building hop %u of crypt path.",i+1);
+
+    /* calculate keys */
+    crypto_SHA_digest(layer.keyseed,16,hop->digest3);
+    log(LOG_DEBUG,"create_onion() : First SHA pass performed.");
+    crypto_SHA_digest(hop->digest3,20,hop->digest2);
+    log(LOG_DEBUG,"create_onion() : Second SHA pass performed.");
+    crypto_SHA_digest(hop->digest2,20,hop->digest3);
+    log(LOG_DEBUG,"create_onion() : Third SHA pass performed.");
+    log(LOG_DEBUG,"create_onion() : Keys generated.");
+    /* set IV to zero */
+    memset((void *)iv,0,16);
+
+    /* initialize cipher engines */
+    if (! (hop->f_crypto = 
+           crypto_create_init_cipher(DEFAULT_CIPHER, hop->digest3, iv, 1))) {
+      /* cipher initialization failed */
+      log(LOG_ERR,"Could not create a crypto environment.");
+      goto error;
+    }
+
+    if (! (hop->b_crypto = 
+           crypto_create_init_cipher(DEFAULT_CIPHER, hop->digest2, iv, 0))) {
+      /* cipher initialization failed */
+      log(LOG_ERR,"Could not create a crypto environment.");
+      goto error;
+    }
+
+    log(LOG_DEBUG,"create_onion() : Built corresponding crypt path hop.");
+
     /* padding if this is the innermost layer */
     if (!i) {
       if (crypto_pseudo_rand(ONION_PADDING_SIZE, layerp + ONION_LAYER_SIZE)) { /* error */
@@ -552,7 +551,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       }
       log(LOG_DEBUG,"create_onion() : This is the innermost layer. Adding 100 bytes of padding.");
     }
-      
+
     /* encrypt */
 
     if(encrypt_onion(layerp,ONION_PADDING_SIZE+(i+1)*ONION_LAYER_SIZE,router->pkey,layer.keyseed) < 0) {
@@ -560,25 +559,22 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       goto error;
     }
     log(LOG_DEBUG,"create_onion() : Encrypted layer.");
-      
+
     /* calculate pointer to next layer */
     layerp = buf + (routelen-i-2)*ONION_LAYER_SIZE;
   }
 
+  /* now link cpath->prev to the end of cpath */
+  for(hop=*cpath; hop->next; hop=hop->next) ;
+  hop->next = *cpath;
+  (*cpath)->prev = hop;
+
   return buf;
 
  error:
-  if (buf)
+  if(buf)
     free(buf);
-  if (cpath) {
-    for (j=0;j<i;j++) {
-      if(cpath[i]->f_crypto)
-        crypto_free_cipher_env(cpath[i]->f_crypto);
-      if(cpath[i]->b_crypto)
-        crypto_free_cipher_env(cpath[i]->b_crypto);
-      free((void *)cpath[i]);
-    }
-  }
+  circuit_free_cpath(*cpath);
   return NULL;
 }
 

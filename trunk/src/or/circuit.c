@@ -89,8 +89,7 @@ void circuit_free(circuit_t *circ) {
 
   if(circ->onion)
     free(circ->onion);
-  if(circ->cpath)
-    circuit_free_cpath(circ->cpath, circ->cpathlen);
+  circuit_free_cpath(circ->cpath);
   while(circ->relay_queue) {
     tmpd = circ->relay_queue;
     circ->relay_queue = tmpd->next;
@@ -101,13 +100,29 @@ void circuit_free(circuit_t *circ) {
   free(circ);
 }
 
-void circuit_free_cpath(crypt_path_t **cpath, int cpathlen) {
-  int i;
+void circuit_free_cpath(crypt_path_t *cpath) {
+  crypt_path_t *victim, *head=cpath;
 
-  for(i=0;i<cpathlen;i++)
-    free(cpath[i]);
+  if(!cpath)
+    return;
 
-  free(cpath);
+  /* it's a doubly linked list, so we have to notice when we've
+   * gone through it once. */
+  while(cpath->next && cpath->next != head) {
+    victim = cpath;
+    cpath = victim->next;
+    circuit_free_cpath_node(victim);
+  }
+
+  circuit_free_cpath_node(cpath);
+}
+
+void circuit_free_cpath_node(crypt_path_t *victim) {
+  if(victim->f_crypto)
+    crypto_free_cipher_env(victim->f_crypto);
+  if(victim->b_crypto)
+    crypto_free_cipher_env(victim->b_crypto);
+  free(victim);
 }
 
 /* return 0 if can't get a unique aci. */
@@ -250,22 +265,17 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
-circuit_t *circuit_get_newest_by_edge_type(char edge_type) {
+circuit_t *circuit_get_newest_ap(void) {
   circuit_t *circ, *bestcirc=NULL;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(edge_type == EDGE_AP && (!circ->p_conn || circ->p_conn->type == CONN_TYPE_AP)) {
+    if(!circ->p_conn || circ->p_conn->type == CONN_TYPE_AP) {
       if(circ->state == CIRCUIT_STATE_OPEN && (!bestcirc ||
         bestcirc->timestamp_created < circ->timestamp_created)) {
-        log(LOG_DEBUG,"circuit_get_newest_by_edge_type(): Choosing n_aci %d.", circ->n_aci);
+        log(LOG_DEBUG,"circuit_get_newest_ap(): Choosing n_aci %d.", circ->n_aci);
         assert(circ->n_aci);
         bestcirc = circ;
       }
-    }
-    if(edge_type == EDGE_EXIT && (!circ->n_conn || circ->n_conn->type == CONN_TYPE_EXIT)) {
-      if(circ->state == CIRCUIT_STATE_OPEN && (!bestcirc ||
-        bestcirc->timestamp_created < circ->timestamp_created))
-        bestcirc = circ;
     }
   }
   return bestcirc;
@@ -346,7 +356,6 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction
 
 int circuit_crypt(circuit_t *circ, char *in, int inlen, char cell_direction) {
   char *out;
-  int i;
   crypt_path_t *thishop;
 
   assert(circ && in);
@@ -357,12 +366,10 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char cell_direction) {
 
   if(cell_direction == CELL_DIRECTION_IN) { 
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
-      for (i=circ->cpathlen-1; i >= 0; i--) /* moving from first to last hop 
-                                       * Remember : cpath is in reverse order, i.e. last hop first
-                                       */
-      { 
-        thishop = circ->cpath[i];
-
+      thishop = circ->cpath;
+      /* Remember: cpath is in forward order, that is, first hop first. */
+      do {
+        assert(thishop);
         /* decrypt */
         if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
           log(LOG_ERR,"Error performing decryption:%s",crypto_perror());
@@ -372,7 +379,8 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char cell_direction) {
 
         /* copy ciphertext back to buf */
         memcpy(in,out,inlen);
-      }
+        thishop = thishop->next;
+      } while(thishop != circ->cpath);
     } else { /* we're in the middle. Just one crypt. */
       if(crypto_cipher_encrypt(circ->p_crypto,in, inlen, out)) {
         log(LOG_ERR,"circuit_encrypt(): Encryption failed for ACI : %u (%s).",
@@ -384,12 +392,10 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char cell_direction) {
     }
   } else if(cell_direction == CELL_DIRECTION_OUT) { 
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
-      for (i=0; i < circ->cpathlen; i++) /* moving from last to first hop 
-                                          * Remember : cpath is in reverse order, i.e. last hop first
-                                          */
-      { 
-        thishop = circ->cpath[i];
-    
+      thishop = circ->cpath->prev;
+      /* moving from last to first hop */
+      do {
+        assert(thishop);
         /* encrypt */
         if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, (unsigned char *)out)) {
           log(LOG_ERR,"Error performing encryption:%s",crypto_perror());
@@ -399,7 +405,8 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char cell_direction) {
 
         /* copy ciphertext back to buf */
         memcpy(in,out,inlen);
-      }
+        thishop = thishop->prev;
+      } while(thishop != circ->cpath->prev);
     } else { /* we're in the middle. Just one crypt. */
       if(crypto_cipher_decrypt(circ->n_crypto,in, inlen, out)) {
         log(LOG_ERR,"circuit_crypt(): Decryption failed for ACI : %u (%s).",
@@ -524,7 +531,7 @@ void circuit_close(circuit_t *circ) {
 
   assert(circ);
   if(options.APPort) {
-    youngest = circuit_get_newest_by_edge_type(EDGE_AP);
+    youngest = circuit_get_newest_ap();
     log(LOG_DEBUG,"circuit_close(): youngest %d, circ %d.",youngest,circ);
   }
   circuit_remove(circ);
@@ -623,7 +630,7 @@ void circuit_expire_unused_circuits(void) {
   circuit_t *circ, *tmpcirc;
   circuit_t *youngest;
 
-  youngest = circuit_get_newest_by_edge_type(EDGE_AP);
+  youngest = circuit_get_newest_ap();
 
   circ = global_circuitlist;
   while(circ) {
@@ -674,7 +681,7 @@ int circuit_create_onion(void) {
   unsigned int *route; /* hops in the route as an array of indexes into rarray */
   unsigned char *onion; /* holds the onion */
   int onionlen; /* onion length in host order */
-  crypt_path_t **cpath; /* defines the crypt operations that need to be performed on incoming/outgoing data */
+  crypt_path_t *cpath; /* defines the crypt operations that need to be performed on incoming/outgoing data */
 
   /* choose a route */
   route = (unsigned int *)router_new_route(&routelen);
@@ -684,30 +691,21 @@ int circuit_create_onion(void) {
   }
   log(LOG_DEBUG,"circuit_create_onion(): Chosen a route of length %u : ",routelen);
 
-  /* allocate memory for the crypt path */
-  cpath = malloc(routelen * sizeof(crypt_path_t *));
-  if (!cpath) { 
-    log(LOG_ERR,"circuit_create_onion(): Error allocating memory for cpath.");
-    free(route);
-    return -1;
-  }
-
   /* create an onion and calculate crypto keys */
-  onion = router_create_onion(route,routelen,&onionlen,cpath);
+  onion = router_create_onion(route,routelen,&onionlen, &cpath);
   if (!onion) {
     log(LOG_ERR,"circuit_create_onion(): Error creating an onion.");
     free(route);
-    free(cpath); /* it's got nothing in it, since !onion */
     return -1;
   }
   log(LOG_DEBUG,"circuit_create_onion(): Created an onion of size %u bytes.",onionlen);
-  log(LOG_DEBUG,"circuit_create_onion(): Crypt path :");
+//  log(LOG_DEBUG,"circuit_create_onion(): Crypt path :");
 
   return circuit_establish_circuit(route, routelen, onion, onionlen, cpath);
 }
 
 int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
-                                   int onionlen, crypt_path_t **cpath) {
+                                   int onionlen, crypt_path_t *cpath) {
   routerinfo_t *firsthop;
   connection_t *n_conn;
   circuit_t *circ;
@@ -722,7 +720,6 @@ int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
   circ->onion = onion;
   circ->onionlen = onionlen;
   circ->cpath = cpath;
-  circ->cpathlen = routelen;
 
   log(LOG_DEBUG,"circuit_establish_circuit(): Looking for firsthop '%s:%u'",
       firsthop->address,firsthop->or_port);

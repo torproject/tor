@@ -94,7 +94,7 @@ int ap_handshake_process_socks(connection_t *conn) {
   }
 
   /* find the circuit that we should use, if there is one. */
-  circ = circuit_get_newest_by_edge_type(EDGE_AP);
+  circ = circuit_get_newest_ap();
 
   if(!circ) {
     log(LOG_INFO,"ap_handshake_process_socks(): No circuit ready. Closing.");
