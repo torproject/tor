@@ -295,7 +295,7 @@ void connection_about_to_close_connection(connection_t *conn)
       break;
     case CONN_TYPE_EXIT:
       if (conn->state == EXIT_CONN_STATE_RESOLVING) {
-        circ = circuit_get_by_conn(conn);
+        circ = circuit_get_by_edge_conn(conn);
         if (circ)
           circuit_detach_stream(circ, conn);
         connection_dns_remove(conn);
@@ -1209,7 +1209,7 @@ void connection_write_to_buf(const char *string, size_t len, connection_t *conn)
       /* if it failed, it means we have our package/delivery windows set
          wrong compared to our max outbuf size. close the whole circuit. */
       log_fn(LOG_WARN,"write_to_buf failed. Closing circuit (fd %d).", conn->s);
-      circuit_mark_for_close(circuit_get_by_conn(conn));
+      circuit_mark_for_close(circuit_get_by_edge_conn(conn));
     } else {
       log_fn(LOG_WARN,"write_to_buf failed. Closing connection (fd %d).", conn->s);
       connection_mark_for_close(conn);

@@ -156,7 +156,7 @@ static void purge_expired_resolves(uint32_t now) {
         pendconn = pend->conn;
         connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT,
                             pendconn->cpath_layer);
-        circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
+        circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
         connection_free(pendconn);
         tor_free(pend);
       }
@@ -192,7 +192,7 @@ static void send_resolved_cell(connection_t *conn, uint8_t answer_type)
     default:
       tor_assert(0);
     }
-  connection_edge_send_command(conn, circuit_get_by_conn(conn),
+  connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
                                RELAY_COMMAND_RESOLVED, buf, buflen,
                                conn->cpath_layer);
 }
@@ -274,7 +274,7 @@ int dns_resolve(connection_t *exitconn) {
                exitconn->s, exitconn->address);
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
-        circ = circuit_get_by_conn(exitconn);
+        circ = circuit_get_by_edge_conn(exitconn);
         if (circ)
           circuit_detach_stream(circ, exitconn);
         if (!exitconn->marked_for_close)
@@ -455,7 +455,7 @@ void dns_cancel_pending_resolve(char *address) {
       connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT,
                           pendconn->cpath_layer);
     }
-    circ = circuit_get_by_conn(pendconn);
+    circ = circuit_get_by_edge_conn(pendconn);
     if (circ)
       circuit_detach_stream(circ, pendconn);
     connection_free(pendconn);
@@ -553,11 +553,11 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
       if (pendconn->purpose == EXIT_PURPOSE_CONNECT) {
         connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED, pendconn->cpath_layer);
         /* This detach must happen after we send the end cell. */
-        circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
+        circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       } else {
         send_resolved_cell(pendconn, RESOLVED_TYPE_ERROR);
         /* This detach must happen after we send the resolved cell. */
-        circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
+        circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       }
       connection_free(pendconn);
     } else {
@@ -565,7 +565,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
         /* prevent double-remove. */
         pend->conn->state = EXIT_CONN_STATE_CONNECTING;
 
-        circ = circuit_get_by_conn(pend->conn);
+        circ = circuit_get_by_edge_conn(pend->conn);
         tor_assert(circ);
         /* unlink pend->conn from resolving_streams, */
         circuit_detach_stream(circ, pend->conn);
@@ -580,7 +580,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
          * but it does the right thing. */
         pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
         send_resolved_cell(pendconn, RESOLVED_TYPE_IPV4);
-        circ = circuit_get_by_conn(pendconn);
+        circ = circuit_get_by_edge_conn(pendconn);
         tor_assert(circ);
         circuit_detach_stream(circ, pendconn);
         connection_free(pendconn);
