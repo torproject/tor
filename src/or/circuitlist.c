@@ -389,12 +389,20 @@ void circuit_mark_all_unused_circs(void) {
  *   - If circ->rend_splice is set (we are the midpoint of a joined
  *     rendezvous stream), then mark the other circuit to close as well.
  */
-int _circuit_mark_for_close(circuit_t *circ) {
+void _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
+{
   connection_t *conn;
 
   assert_circuit_ok(circ);
-  if (circ->marked_for_close)
-    return -1;
+  tor_assert(line);
+  tor_assert(file);
+
+  if (circ->marked_for_close) {
+    log(LOG_WARN,"Duplicate call to circuit_mark_for_close at %s:%d"
+        " (first at %s:%d)", line, file,
+        circ->marked_for_close_file, circ->marked_for_close);
+    return;
+  }
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(circ);
@@ -441,7 +449,8 @@ int _circuit_mark_for_close(circuit_t *circ) {
   for (conn=circ->p_streams; conn; conn=conn->next_stream)
     connection_edge_destroy(circ->p_circ_id, conn);
 
-  circ->marked_for_close = 1;
+  circ->marked_for_close = line;
+  circ->marked_for_close_file = file;
 
   if (circ->rend_splice && !circ->rend_splice->marked_for_close) {
     /* do this after marking this circuit, to avoid infinite recursion. */

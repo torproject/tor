@@ -1177,19 +1177,10 @@ circuit_t *circuit_get_rendezvous(const char *cookie);
 circuit_t *circuit_get_clean_open(uint8_t purpose, int need_uptime,
                                   int need_capacity, int internal);
 void circuit_mark_all_unused_circs(void);
-int _circuit_mark_for_close(circuit_t *circ);
+void _circuit_mark_for_close(circuit_t *circ, int line, const char *file);
 
-#define circuit_mark_for_close(c)                                       \
-  do {                                                                  \
-    if (_circuit_mark_for_close(c)<0) {                                 \
-      log(LOG_WARN,"Duplicate call to circuit_mark_for_close at %s:%d (first at %s:%d)", \
-          _SHORT_FILE_,__LINE__,                                        \
-          c->marked_for_close_file,c->marked_for_close);                \
-    } else {                                                            \
-      c->marked_for_close_file = _SHORT_FILE_;                          \
-      c->marked_for_close = __LINE__;                                   \
-    }                                                                   \
-  } while (0)
+#define circuit_mark_for_close(c) \
+  _circuit_mark_for_close((c), __LINE__, _SHORT_FILE_)
 
 void assert_cpath_layer_ok(const crypt_path_t *cp);
 void assert_circuit_ok(const circuit_t *c);
@@ -1267,19 +1258,10 @@ void connection_free(connection_t *conn);
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);
-int _connection_mark_for_close(connection_t *conn);
+void _connection_mark_for_close(connection_t *conn,int line, const char *file);
 
-#define connection_mark_for_close(c)                                    \
-  do {                                                                  \
-    if (_connection_mark_for_close(c)<0) {                              \
-      log(LOG_WARN,"Duplicate call to connection_mark_for_close at %s:%d (first at %s:%d)", \
-          _SHORT_FILE_,__LINE__,                                        \
-          c->marked_for_close_file,c->marked_for_close);                \
-    } else {                                                            \
-      c->marked_for_close_file = _SHORT_FILE_;                          \
-      c->marked_for_close = __LINE__;                                   \
-    }                                                                   \
-  } while (0)
+#define connection_mark_for_close(c) \
+  _connection_mark_for_close((c), __LINE__, _SHORT_FILE_)
 
 void connection_expire_held_open(void);
 
@@ -1325,8 +1307,7 @@ int connection_or_nonopen_was_started_here(connection_t *conn);
 /********************************* connection_edge.c ***************************/
 
 #define connection_mark_unattached_ap(conn, endreason) \
-  do { _connection_mark_unattached_ap(conn, endreason, __LINE__, _SHORT_FILE_);\
-  } while (0)
+  _connection_mark_unattached_ap((conn), (endreason), __LINE__, _SHORT_FILE_)
 
 void _connection_mark_unattached_ap(connection_t *conn, int endreason,
                                     int line, const char *file);

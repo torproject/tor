@@ -336,28 +336,31 @@ void connection_close_immediate(connection_t *conn)
 
 /** Mark <b>conn</b> to be closed next time we loop through
  * conn_close_if_marked() in main.c. */
-int
-_connection_mark_for_close(connection_t *conn)
+void
+_connection_mark_for_close(connection_t *conn, int line, const char *file)
 {
   assert_connection_ok(conn,0);
+  tor_assert(line);
+  tor_assert(file);
 
   if (conn->marked_for_close) {
-    log(LOG_WARN, "Bug: Double mark-for-close on connection.");
+    log(LOG_WARN, "Duplicate call to connection_mark_for_close at %s:%d"
+        " (first at %s:%d)", file, line, conn->marked_for_close_file,
+        conn->marked_for_close);
 #ifdef TOR_FRAGILE
     tor_assert(0);
 #endif
-    return -1;
+    return;
   }
 
-  conn->marked_for_close = 1;
+  conn->marked_for_close = line;
+  conn->marked_for_close_file = file;
   add_connection_to_closeable_list(conn);
 
   /* in case we're going to be held-open-til-flushed, reset
    * the number of seconds since last successful write, so
    * we get our whole 15 seconds */
   conn->timestamp_lastwritten = time(NULL);
-
-  return 0;
 }
 
 /** Find each connection that has hold_open_until_flushed set to
