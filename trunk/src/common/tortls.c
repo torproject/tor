@@ -601,6 +601,45 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
   return -1;
 }
 
+static void log_cert_lifetime(X509 *cert, const char *problem)
+{
+  BIO *bio = NULL;
+  BUF_MEM *buf;
+  char *s1=NULL, *s2=NULL;
+
+  if (problem)
+    log_fn(LOG_WARN,"Certificate %s: is your system clock set incorrectly?",
+           problem);
+
+  if (!(bio = BIO_new(BIO_s_mem()))) {
+    log_fn(LOG_WARN, "Couldn't allocate BIO!"); goto end;
+  }
+  if (!(ASN1_TIME_print(bio, X509_get_notBefore(cert)))) {
+    tls_log_errors(LOG_WARN, "printing certificate lifetime");
+    goto end;
+  }
+  BIO_get_mem_ptr(bio, &buf);
+  s1 = tor_strndup(buf->data, buf->length);
+
+  BIO_reset(bio);
+  if (!(ASN1_TIME_print(bio, X509_get_notAfter(cert)))) {
+    tls_log_errors(LOG_WARN, "printing certificate lifetime");
+    goto end;
+  }
+  BIO_get_mem_ptr(bio, &buf);
+  s2 = tor_strndup(buf->data, buf->length);
+
+  log_fn(LOG_WARN, "   (certificate lifetime runs from %s through %s)",s1,s2);
+
+ end:
+  if (bio)
+    BIO_free(bio);
+  if (s1)
+    tor_free(s1);
+  if (s2)
+    tor_free(s2);
+}
+
 /** If the provided tls connection is authenticated and has a
  * certificate that is currently valid and signed, then set
  * *<b>identity_key</b> to the identity certificate's key and return
@@ -640,12 +679,12 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
   now = time(NULL);
   t = now + CERT_ALLOW_SKEW;
   if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
-    log_fn(LOG_WARN,"Certificate becomes valid in the future: is your system clock set incorrectly?");
+    log_cert_lifetime(cert, "not yet valid");
     goto done;
   }
   t = now - CERT_ALLOW_SKEW;
   if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
-    log_fn(LOG_WARN,"Certificate already expired; is your system clock set incorrectly?");
+    log_cert_lifetime(cert, "already expired");
     goto done;
   }
 
