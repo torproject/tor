@@ -63,6 +63,7 @@ static config_abbrev_t config_abbrevs[] = {
   { "BandwidthRateBytes", "BandwidthRate", 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0},
+  { "MaxConn", "ConnLimit", 0},
   { NULL, NULL , 0},
 };
 #undef PLURAL
@@ -136,7 +137,7 @@ static config_var_t config_vars[] = {
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
   VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("LinkPadding"),
-  VAR("MaxConn",             UINT,     _MaxConn,             "1024"),
+  VAR("ConnLimit",           UINT,     ConnLimit,            "1024"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
   VAR("MonthlyAccountingStart",UINT,   _MonthlyAccountingStart,"0"),
   VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
@@ -287,24 +288,10 @@ options_act(void) {
   close_temp_logs();
   add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
 
-  if (options->_MaxConn < 1) {
-    options->_MaxConn = 1024;
-  }
-
-  if (set_max_file_descriptors(&options->_MaxConn) < 0)
+  options->_ConnLimit =
+    set_max_file_descriptors(options->ConnLimit, MAXCONNECTIONS);
+  if (options->_ConnLimit < 0)
     return -1;
-
-#ifdef USE_FAKE_POLL
-  if (options->_MaxConn > 1024) {
-    log(LOG_INFO, "Systems without a working poll() can't set MaxConn higher than 1024 in Tor 0.0.9.x. Capping.");
-    options->_MaxConn = 1024;
-  }
-#endif
-
-  if (options->_MaxConn > MAXCONNECTIONS) {
-    log(LOG_INFO, "MaxConn must be at most %d. Capping it.", MAXCONNECTIONS);
-    options->_MaxConn = MAXCONNECTIONS;
-  }
 
   {
     smartlist_t *sl = smartlist_create();

@@ -352,13 +352,14 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 #endif
 }
 
+#define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond _ConnLimit */
+
 /** Get the maximum allowed number of file descriptors. (Some systems
  * have a low soft limit.) Make sure we set it to at least
- * 1024. Return 0 if we can, or -1 if we fail. */
-int set_max_file_descriptors(int *maxconn) {
+ * <b>*limit</b>. Return a new limit if we can, or -1 if we fail. */
+int set_max_file_descriptors(int limit, int cap) {
 #ifndef HAVE_GETRLIMIT
   log_fn(LOG_INFO,"This platform is missing getrlimit(). Proceeding.");
-  return 0; /* hope we'll be ok */
 #else
   struct rlimit rlim;
   int most;
@@ -368,11 +369,11 @@ int set_max_file_descriptors(int *maxconn) {
            strerror(errno));
     return -1;
   }
-  if (rlim.rlim_max < 1024) {
-    log_fn(LOG_WARN,"We need %u file descriptors available, and we're limited to %lu. Please change your ulimit -n.", 1024, (unsigned long int)rlim.rlim_max);
+  if (rlim.rlim_max < limit) {
+    log_fn(LOG_WARN,"We need %d file descriptors available, and we're limited to %lu. Please change your ulimit -n.", limit, (unsigned long int)rlim.rlim_max);
     return -1;
   }
-  most = ((rlim.rlim_max > INT_MAX) ? INT_MAX : rlim.rlim_max);
+  most = ((rlim.rlim_max > cap) ? cap : rlim.rlim_max);
   if (most > rlim.rlim_cur) {
     log_fn(LOG_INFO,"Raising max file descriptors from %lu to %d.",
            (unsigned long int)rlim.rlim_cur, most);
@@ -383,10 +384,26 @@ int set_max_file_descriptors(int *maxconn) {
            strerror(errno));
     return -1;
   }
-  /* leave some overhead for logs, etc, and don't overflow INT_MAX */
-  *maxconn = most - 32;
-  return 0;
+  /* leave some overhead for logs, etc, */
+  limit = most;
 #endif
+
+#ifdef USE_FAKE_POLL
+  if (limit > 1024) {
+    log(LOG_INFO, "Systems without a working poll() can't set ConnLimit higher than %d in Tor 0.0.9.x. Capping.", 1024);
+    limit = 1024;
+  }
+#endif
+
+  if (limit > cap) { /* this won't be checked above if ndef getrlimit */
+    log(LOG_INFO, "ConnLimit must be at most %d. Capping it.", cap);
+    limit = cap;
+  }
+  if (limit < ULIMIT_BUFFER) {
+    log_fn(LOG_WARN,"ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
+    return -1;
+  }
+  return limit - ULIMIT_BUFFER;
 }
 
 /** Call setuid and setgid to run as <b>user</b>:<b>group</b>.  Return 0 on
