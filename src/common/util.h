@@ -61,11 +61,10 @@ void set_uint32(char *cp, uint32_t v);
 typedef struct {
   void **list;
   int num_used;
-  int max;
   int capacity;
 } smartlist_t;
 
-smartlist_t *smartlist_create(int max_elements);
+smartlist_t *smartlist_create(int capacity);
 void smartlist_free(smartlist_t *sl);
 void smartlist_grow_capacity(smartlist_t *sl, int n);
 void smartlist_add(smartlist_t *sl, void *element);
