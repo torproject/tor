@@ -398,7 +398,8 @@ int dnsworker_main(void *data) {
   for(;;) {
 
     if(read(fd, &address_len, 1) != 1) {
-      log_fn(LOG_INFO,"read length failed. Child exiting.");
+//      log_fn(LOG_INFO,"read length failed. Child exiting.");
+      log_fn(LOG_INFO,"dnsworker exiting because tor process died.");
       spawn_exit();
     }
     assert(address_len > 0);
