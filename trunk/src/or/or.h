@@ -58,6 +58,8 @@
 #define ROLE_OR_CONNECT_ALL 2
 #define ROLE_OP_LISTEN 4
 #define ROLE_AP_LISTEN 8
+#define ROLE_DIR_LISTEN 16
+#define ROLE_DIR_SERVER 32
 
 #define ROLE_IS_OR(role) ((role & ROLE_OR_LISTEN) || (role & ROLE_OR_CONNECT_ALL) || (role & ROLE_OP_LISTEN))
 
@@ -68,6 +70,8 @@
 #define CONN_TYPE_EXIT 5
 #define CONN_TYPE_AP_LISTENER 6
 #define CONN_TYPE_AP 7
+#define CONN_TYPE_DIR_LISTENER 8
+#define CONN_TYPE_DIR 9
 
 #define LISTENER_STATE_READY 0
 
@@ -104,6 +108,12 @@
 #define AP_CONN_STATE_SOCKS_WAIT 0
 #define AP_CONN_STATE_OR_WAIT 1
 #define AP_CONN_STATE_OPEN 2
+
+#define DIR_CONN_STATE_CONNECTING 0
+#define DIR_CONN_STATE_SENDING_COMMAND 1
+#define DIR_CONN_STATE_READING 2
+#define DIR_CONN_STATE_COMMAND_WAIT 3
+#define DIR_CONN_STATE_WRITING 4
 
 #define CIRCUIT_STATE_OPEN_WAIT 0 /* receiving/processing the onion */
 #define CIRCUIT_STATE_OR_WAIT 1 /* I'm at the beginning of the path, my firsthop is still connecting */
@@ -342,9 +352,12 @@ typedef struct
    int ORPort;
    int OPPort;
    int APPort;
+   int DirPort;
    int MaxConn;
    int TrafficShaping;
    int LinkPadding;
+   int DirRebuildPeriod;
+   int DirFetchPeriod;
    int Role;
    int loglevel;
 } or_options_t;
@@ -441,8 +454,8 @@ int connection_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local
 int connection_handle_listener_read(connection_t *conn, int new_type, int new_state);
 
 /* start all connections that should be up but aren't */
-int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
-		  crypto_pk_env_t *prkey, uint16_t or_port, uint16_t op_port, uint16_t ap_port);
+int retry_all_connections(int role, crypto_pk_env_t *prkey, uint16_t or_listenport, 
+  uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
 connection_t *connection_connect_to_router_as_op(routerinfo_t *router, uint16_t local_or_port);
 
 int connection_read_to_buf(connection_t *conn);
@@ -548,6 +561,18 @@ connection_t *connection_or_connect_as_op(routerinfo_t *router, struct sockaddr_
 int connection_or_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
 int connection_or_handle_listener_read(connection_t *conn);
 
+/********************************* directory.c ***************************/
+
+void directory_initiate_fetch(routerinfo_t *router);
+int directory_send_command(connection_t *conn);
+void directory_rebuild(void);
+int connection_dir_process_inbuf(connection_t *conn);
+int directory_handle_command(connection_t *conn);
+int directory_handle_reading(connection_t *conn);
+int connection_dir_finished_flushing(connection_t *conn);
+int connection_dir_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
+int connection_dir_handle_listener_read(connection_t *conn);
+
 /********************************* main.c ***************************/
 
 int connection_add(connection_t *conn);
@@ -559,10 +584,6 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 
 connection_t *connection_get_by_type(int type);
 
-routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
-unsigned int *router_new_route(int *routelen);
-unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
-routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen);
 connection_t *connect_to_router_as_op(routerinfo_t *router);
 
 void connection_watch_events(connection_t *conn, short events);
@@ -582,6 +603,7 @@ int do_main_loop(void);
 void catchint();
 void catchusr1();
 void dumpstats(void);
+void dump_directory_to_string(char *s, int maxlen);
 
 int main(int argc, char *argv[]);
 
@@ -625,6 +647,13 @@ tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, track
 
 /********************************* routers.c ***************************/
 
-routerinfo_t **router_get_list_from_file(char *routerfile, int *len, uint16_t or_listenport);
+void router_retry_connections(crypto_pk_env_t *prkey, struct sockaddr_in *local);
+routerinfo_t *router_pick_directory_server(void);
+routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
+unsigned int *router_new_route(int *routelen);
+unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
+routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen);
+int router_get_list_from_file(char *routerfile, uint16_t or_listenport);
+int router_get_list_from_string(char *s, uint16_t or_listenport);
 
 #endif

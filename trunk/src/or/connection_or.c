@@ -66,7 +66,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, &e, &len) < 0)  { /* not yet */
         if(errno != EINPROGRESS){
           /* yuck. kill it. */
-          log(LOG_DEBUG,"connection_or_finished_flushing(): in-progress connect failed. Removing.");	
+          log(LOG_DEBUG,"connection_or_finished_flushing(): in-progress connect failed. Removing.");
           return -1;
         } else {
           return 0; /* no change, see if next time is better */

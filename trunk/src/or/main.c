@@ -21,10 +21,6 @@ static int please_dumpstats=0; /* whether we should dump stats during the loop *
 /* private key */
 static crypto_pk_env_t *prkey;
 
-/* router array */
-static routerinfo_t **router_array = NULL;
-static int rarray_len = 0;
-
 /********* END VARIABLES ************/
 
 /****************************************************************************
@@ -154,44 +150,6 @@ connection_t *connection_get_by_type(int type) {
 
 
 
-/* the next 4 functions should move to routers.c once we get it
- * cleaned up more. The router_array and rarray_len variables should
- * move there too.
- */
-
-routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
-  int i;
-  routerinfo_t *router;
-
-  assert(router_array);
-
-  for(i=0;i<rarray_len;i++) {
-    router = router_array[i];
-    if ((router->addr == addr) && (router->or_port == port))
-      return router;
-  }
-
-  return NULL;
-}
-
-routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen) {
-  return router_array[route[routelen-1]];
-}
-
-/* a wrapper around new_route. put all these in routers.c perhaps? */
-unsigned int *router_new_route(int *routelen) {
-  return new_route(options.CoinWeight, router_array, rarray_len, routelen);
-}
-
-/* a wrapper around create_onion */
-unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath) {
-  return create_onion(router_array,rarray_len,route,routelen,len,cpath);
-}
-
-
-
-
-
 /* FIXME can we cut this function out? */
 connection_t *connect_to_router_as_op(routerinfo_t *router) {
   return connection_connect_to_router_as_op(router, options.ORPort);
@@ -252,12 +210,13 @@ void check_conn_read(int i) {
       retval = connection_or_handle_listener_read(conn);
     } else if (conn->type == CONN_TYPE_AP_LISTENER) {
       retval = connection_ap_handle_listener_read(conn);
+    } else if (conn->type == CONN_TYPE_DIR_LISTENER) {
+      retval = connection_dir_handle_listener_read(conn);
     } else {
-      /* else it's an OP, OR, or exit */
       retval = connection_read_to_buf(conn);
       if (retval >= 0) { /* all still well */
         retval = connection_process_inbuf(conn);
-//	log(LOG_DEBUG,"check_conn_read(): connection_process_inbuf returned %d.",retval);
+//      log(LOG_DEBUG,"check_conn_read(): connection_process_inbuf returned %d.",retval);
         if(retval >= 0 && !connection_state_is_open(conn) && conn->receiver_bucket == 0) {
           log(LOG_DEBUG,"check_conn_read(): receiver bucket reached 0 before handshake finished. Closing.");
           retval = -1;
@@ -286,8 +245,7 @@ void check_conn_write(int i) {
     conn = connection_array[i];
 //    log(LOG_DEBUG,"check_conn_write(): socket %d wants to write.",conn->s);
 
-    if(conn->type == CONN_TYPE_OP_LISTENER ||
-       conn->type == CONN_TYPE_OR_LISTENER) {
+    if(connection_is_listener(conn)) {
       log(LOG_DEBUG,"check_conn_write(): Got a listener socket. Can't happen!");
       retval = -1;
     } else {
@@ -337,6 +295,8 @@ int prepare_for_poll(int *timeout) {
   connection_t *tmpconn;
   struct timeval now, soonest;
   static int current_second = 0; /* from previous calls to gettimeofday */
+  static int time_to_rebuild_directory = 0;
+  static int time_to_fetch_directory = 0;
   int ms_until_conn;
 
   *timeout = -1; /* set it to never timeout, possibly overridden below */
@@ -352,6 +312,34 @@ int prepare_for_poll(int *timeout) {
   if(gettimeofday(&now,NULL) < 0)
     return -1;
 
+  if(options.Role & ROLE_DIR_SERVER) {
+    if(time_to_rebuild_directory < now.tv_sec) {
+      /* it's time to rebuild our directory */
+      if(time_to_rebuild_directory == 0) { 
+        /* we just started up. if we build a directory now it will be meaningless. */
+        log(LOG_DEBUG,"prepare_for_poll(): Delaying initial dir build for 15 seconds.");
+        time_to_rebuild_directory = now.tv_sec + 15; /* try in 15 seconds */
+      } else {
+        directory_rebuild();
+        time_to_rebuild_directory = now.tv_sec + options.DirRebuildPeriod;
+      }
+    }
+    *timeout = 1000*(time_to_rebuild_directory - now.tv_sec) + (1000 - (now.tv_usec / 1000));
+//    log(LOG_DEBUG,"prepare_for_poll(): DirBuild timeout is %d",*timeout);
+  }
+
+  if(!(options.Role & ROLE_DIR_SERVER)) {
+    if(time_to_fetch_directory < now.tv_sec) {
+      /* it's time to fetch a new directory */
+      /* NOTE directory servers do not currently fetch directories.
+       * Hope this doesn't bite us later.
+       */
+      directory_initiate_fetch(router_pick_directory_server());
+      time_to_fetch_directory = now.tv_sec + options.DirFetchPeriod;
+    }
+    *timeout = 1000*(time_to_fetch_directory - now.tv_sec) + (1000 - (now.tv_usec / 1000));
+  }
+
   if(need_to_refill_buckets) {
     if(now.tv_sec > current_second) { /* the second has already rolled over! */
 //      log(LOG_DEBUG,"prepare_for_poll(): The second has rolled over, immediately refilling.");
@@ -359,8 +347,8 @@ int prepare_for_poll(int *timeout) {
         connection_increment_receiver_bucket(connection_array[i]);
       current_second = now.tv_sec; /* remember which second it is, for next time */
     }
+    /* this timeout is definitely sooner than either of the above two */
     *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
-//    log(LOG_DEBUG,"prepare_for_poll(): %d milliseconds til next second.",*timeout);
   }
 
   if(options.LinkPadding) {
@@ -406,9 +394,7 @@ int do_main_loop(void) {
   int poll_result;
 
   /* load the routers file */
-  router_array = router_get_list_from_file(options.RouterFile,&rarray_len, options.ORPort);
-  if (!router_array)
-  {
+  if(router_get_list_from_file(options.RouterFile, options.ORPort) < 0) {
     log(LOG_ERR,"Error loading router list.");
     return -1;
   }
@@ -429,8 +415,8 @@ int do_main_loop(void) {
 
   /* start-up the necessary connections based on global_role. This is where we
    * try to connect to all the other ORs, and start the listeners */
-  retry_all_connections(options.Role, router_array, rarray_len, prkey, 
-		        options.ORPort, options.OPPort, options.APPort);
+  retry_all_connections(options.Role, prkey, options.ORPort,
+                        options.OPPort, options.APPort, options.DirPort);
 
   for(;;) {
     if(please_dumpstats) {
@@ -496,7 +482,7 @@ void dumpstats (void) { /* dump stats to stdout */
   int i;
   connection_t *conn;
   extern char *conn_type_to_string[];
-  extern char *conn_state_to_string[][10];
+  extern char *conn_state_to_string[][15];
 
   printf("Dumping stats:\n");
 
@@ -513,6 +499,53 @@ void dumpstats (void) { /* dump stats to stdout */
   }
 
   please_dumpstats = 0;
+}
+
+void dump_directory_to_string(char *s, int maxlen) {
+  int i;
+  connection_t *conn;
+  char *pkey;
+  int pkeylen;
+  int written;
+  routerinfo_t *router;
+
+  for(i=0;i<nfds;i++) {
+    conn = connection_array[i];
+
+    if(conn->type != CONN_TYPE_OR)
+      continue; /* we only want to list ORs */
+    router = router_get_by_addr_port(conn->addr,conn->port);
+    if(!router) {
+      log(LOG_ERR,"dump_directory_to_string(): couldn't find router %d:%d!",conn->addr,conn->port);
+      return;
+    }
+    if(crypto_pk_write_public_key_to_string(router->pkey,&pkey,&pkeylen)<0) {
+      log(LOG_ERR,"dump_directory_to_string(): write pkey to string failed!");
+      return;
+    }
+    written = snprintf(s, maxlen, "%s %d %d %d %d %d\n%s\n",
+      router->address,
+      router->or_port,
+      router->op_port,
+      router->ap_port,
+      router->dir_port,
+      router->bandwidth,
+      pkey);
+
+    free(pkey);
+
+    if(written < 0 || written > maxlen) { 
+      /* apparently different glibcs do different things on error.. so check both */
+      log(LOG_ERR,"dump_directory_to_string(): tried to exceed string length.");
+      s[maxlen-1] = 0; /* make sure it's null terminated */
+      return;
+    }
+  
+    maxlen -= written;
+    s += written;
+
+  }
+
 }
 
 int main(int argc, char *argv[]) {

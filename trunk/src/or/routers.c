@@ -13,7 +13,16 @@
 
 #include "or.h"
 
+/****************************************************************************/
+
+/* router array */
+static routerinfo_t **router_array = NULL;
+static int rarray_len = 0;
+
 extern int global_role; /* from main.c */
+extern or_options_t options; /* command-line and config-file options */
+
+/****************************************************************************/
 
 /* static function prototypes */
 static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport);
@@ -22,6 +31,67 @@ static routerinfo_t **make_rarray(routerinfo_t* list, int *len);
 static char *eat_whitespace(char *s);
 static char *find_whitespace(char *s);
 static routerinfo_t *router_get_entry_from_string(char **s);
+
+/****************************************************************************/
+
+void router_retry_connections(crypto_pk_env_t *prkey, struct sockaddr_in *local) {
+  int i;
+  routerinfo_t *router;
+
+  for (i=0;i<rarray_len;i++) {
+    router = router_array[i];
+    if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
+      log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,router->or_port);
+      connection_or_connect_as_or(router, prkey, local);
+    }
+  }
+}
+
+routerinfo_t *router_pick_directory_server(void) {
+  /* currently, pick the first router with a positive dir_port */
+  int i;
+  routerinfo_t *router;
+  
+  if(!router_array)
+    return NULL;
+
+  for(i=0;i<rarray_len;i++) {
+    router = router_array[i];
+    if(router->dir_port > 0)
+      return router;
+  }
+
+  return NULL;
+}
+
+routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
+  int i;
+  routerinfo_t *router;
+
+  assert(router_array);
+
+  for(i=0;i<rarray_len;i++) {
+    router = router_array[i];
+    if ((router->addr == addr) && (router->or_port == port))
+      return router;
+  }
+
+  return NULL;
+}
+
+routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen) {
+  return router_array[route[routelen-1]];
+}
+
+/* a wrapper around new_route. put all these in routers.c perhaps? */
+unsigned int *router_new_route(int *routelen) {
+  return new_route(options.CoinWeight, router_array, rarray_len, routelen);
+}
+
+/* a wrapper around create_onion */
+unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath) {
+  return create_onion(router_array,rarray_len,route,routelen,len,cpath);
+}
 
 /* private function, to determine whether the current entry in the router list is actually us */
 static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport)
@@ -58,8 +128,8 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
     a = (struct in_addr *)addr;
 
     tmp1 = strdup(inet_ntoa(*a)); /* can't call inet_ntoa twice in the same
-				     printf, since it overwrites its static
-				     memory each time */
+                                     printf, since it overwrites its static
+                                     memory each time */
     log(LOG_DEBUG,"router_is_me(): Comparing '%s' to '%s'.",tmp1,
        inet_ntoa( *((struct in_addr *)&or_address) ) );
     free(tmp1);
@@ -151,64 +221,87 @@ static routerinfo_t **make_rarray(routerinfo_t* list, int *len)
 
 
 /* load the router list */
-routerinfo_t **router_get_list_from_file(char *routerfile, int *len, uint16_t or_listenport)
+int router_get_list_from_file(char *routerfile, uint16_t or_listenport)
 {
-  routerinfo_t *routerlist=NULL;
-  routerinfo_t *router;
   int fd; /* router file */
   struct stat statbuf;
   char *string;
-  char *tmps;
 
-  assert(routerfile && len);
+  assert(routerfile);
   
   if (strcspn(routerfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
     log(LOG_ERR,"router_get_list_from_file(): Filename %s contains illegal characters.",routerfile);
-    return NULL;
+    return -1;
   }
   
   if(stat(routerfile, &statbuf) < 0) {
     log(LOG_ERR,"router_get_list_from_file(): Could not stat %s.",routerfile);
-    return NULL;
+    return -1;
   }
 
   /* open the router list */
   fd = open(routerfile,O_RDONLY,0);
   if (fd<0) {
     log(LOG_ERR,"router_get_list_from_file(): Could not open %s.",routerfile);
-    return NULL;
+    return -1;
   }
 
   string = malloc(statbuf.st_size+1);
   if(!string) {
     log(LOG_ERR,"router_get_list_from_file(): Out of memory.");
-    return NULL;
+    return -1;
   }
 
   if(read(fd,string,statbuf.st_size) != statbuf.st_size) {
     log(LOG_ERR,"router_get_list_from_file(): Couldn't read all %d bytes of file '%s'.",statbuf.st_size,routerfile);
-    return NULL;
+    free(string);
+    close(fd);
+    return -1;
   }
   close(fd);
   
   string[statbuf.st_size] = 0; /* null terminate it */
-  tmps = string;
-  while(*tmps) { /* while not at the end of the string */
-    router = router_get_entry_from_string(&tmps);
+
+  if(router_get_list_from_string(string, or_listenport) < 0) {
+    log(LOG_ERR,"router_get_list_from_file(): The routerfile itself was corrupt.");
+    free(string);
+    return -1;
+  }
+
+  free(string);
+  return 0;
+} 
+
+int router_get_list_from_string(char *s, uint16_t or_listenport) {
+  routerinfo_t *routerlist=NULL;
+  routerinfo_t *router;
+  routerinfo_t **new_router_array;
+  int new_rarray_len;
+
+  assert(s);
+
+  while(*s) { /* while not at the end of the string */
+    router = router_get_entry_from_string(&s);
     if(router == NULL) {
       routerlist_free(routerlist);
-      free(string);
-      return NULL;
+      return -1;
     }
     if(!router_is_me(router->addr, router->or_port, or_listenport)) {
       router->next = routerlist;
       routerlist = router;
     }
-    tmps = eat_whitespace(tmps);
+    s = eat_whitespace(s);
   }
-  free(string);
-  return make_rarray(routerlist, len);
-} 
+ 
+  new_router_array = make_rarray(routerlist, &new_rarray_len);
+  if(new_router_array) { /* success! replace the old one */
+    rarray_free(router_array); /* free the old one first */
+    router_array = new_router_array;
+    rarray_len = new_rarray_len;
+    return 0;
+  }
+  return -1;
+}
 
 /* return the first char of s that is not whitespace and not a comment */
 static char *eat_whitespace(char *s) {
@@ -322,7 +415,7 @@ static routerinfo_t *router_get_entry_from_string(char **s) {
   next = strchr(next, '\n');
   assert(next); /* can't fail, we just checked it was here */
   *next = 0;
-  log(LOG_DEBUG,"Key about to be read is: '%s'",*s);
+//  log(LOG_DEBUG,"Key about to be read is: '%s'",*s);
   if((crypto_pk_read_public_key_from_string(router->pkey, *s, strlen(*s))<0)) {
     log(LOG_ERR,"router_get_entry_from_string(): Couldn't read pk from string");
     goto router_read_failed;

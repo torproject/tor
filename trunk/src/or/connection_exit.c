@@ -179,8 +179,8 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
         /* also, deliver a 'connected' cell back through the circuit. */
         return connection_exit_send_connected(conn);
       } else {
-	log(LOG_DEBUG,"connection_exit_process_data_cell(): in connecting_wait, but I've already received everything. Closing.");
-	return -1;
+        log(LOG_DEBUG,"connection_exit_process_data_cell(): in connecting_wait, but I've already received everything. Closing.");
+        return -1;
       }
       return 0;
     case EXIT_CONN_STATE_CONNECTING:

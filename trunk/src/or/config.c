@@ -85,6 +85,8 @@ RETURN VALUE: 0 on success, non-zero on error
          0, "onion proxy port",                                "<port>" },
       { "ORPort",          'p',  POPT_ARG_INT,     &options->ORPort,
          0, "onion router port",                               "<port>" },
+      { "DirPort",         'd',  POPT_ARG_INT,     &options->DirPort,
+         0, "directory server port",                           "<port>" },
       { "PrivateKeyFile",  'k',  POPT_ARG_STRING,  &options->PrivateKeyFile,
          0, "maximum number of incoming connections",          "<file>" },
       { "RouterFile",      'r',  POPT_ARG_STRING,  &options->RouterFile,
@@ -92,8 +94,14 @@ RETURN VALUE: 0 on success, non-zero on error
       { "TrafficShaping",  't',  POPT_ARG_INT,     &options->TrafficShaping,
          0, "which traffic shaping policy to use",             "<policy>" },
       { "LinkPadding",     'P',  POPT_ARG_INT,     &options->LinkPadding,
-	 0, "whether to use link padding",                     "<padding>" },
-      { "Role",            'g',  POPT_ARG_INT,     &options->Role,
+         0, "whether to use link padding",                     "<padding>" },
+      { "DirRebuildPeriod",'D',  POPT_ARG_INT,     &options->DirRebuildPeriod,
+         0, "how many seconds between directory rebuilds",     "<rebuildperiod>" },
+      { "DirFetchPeriod",  'F',  POPT_ARG_INT,     &options->DirFetchPeriod,
+         0, "how many seconds between directory fetches",     "<fetchperiod>" },
+//      { "ReconnectPeriod", 'e',  POPT_ARG_INT,     &options->ReconnectPeriod,
+//         0, "how many seconds between retrying all OR connections", "<reconnectperiod>" },
+      { "Role",            'R',  POPT_ARG_INT,     &options->Role,
          0, "4-bit global role id",                            "<role>" },
       { "Verbose",         'v',  POPT_ARG_NONE,    &Verbose,
          0, "display options selected before execution",       NULL },
@@ -112,7 +120,11 @@ RETURN VALUE: 0 on success, non-zero on error
    options->loglevel = LOG_DEBUG;
    options->CoinWeight = 0.8;
    options->LinkPadding = 0;
-   options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
+   options->DirRebuildPeriod = 600;
+   options->DirFetchPeriod = 6000;
+//   options->ReconnectPeriod = 6001;
+   options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN |
+                   ROLE_DIR_LISTEN | ROLE_DIR_SERVER;
 
    code = poptGetNextOpt(optCon);         /* first we handle command-line args */
    if ( code == -1 )
@@ -151,14 +163,17 @@ RETURN VALUE: 0 on success, non-zero on error
       printf("RouterFile=%s, PrivateKeyFile=%s\n",
              options->RouterFile,
              options->PrivateKeyFile);
-      printf("ORPort=%d, OPPort=%d, APPort=%d\n",
+      printf("ORPort=%d, OPPort=%d, APPort=%d DirPort=%d\n",
              options->ORPort,options->OPPort,
-             options->APPort);
+             options->APPort,options->DirPort);
       printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d, LinkPadding=%d\n",
              options->CoinWeight,
              options->MaxConn,
              options->TrafficShaping,
              options->LinkPadding);
+      printf("DirRebuildPeriod=%d, DirFetchPeriod=%d\n",
+             options->DirRebuildPeriod,
+             options->DirFetchPeriod);
    }
 
    /* Validate options */
@@ -188,9 +203,9 @@ RETURN VALUE: 0 on success, non-zero on error
       }
    }
 
-   if ( options->Role < 0 || options->Role > 15 )
+   if ( options->Role < 0 || options->Role > 63 )
    {
-      log(LOG_ERR,"Role option must be an integer between 0 and 15 (inclusive).");
+      log(LOG_ERR,"Role option must be an integer between 0 and 63 (inclusive).");
       code = -1;
    }
 
@@ -224,6 +239,12 @@ RETURN VALUE: 0 on success, non-zero on error
       code = -1;
    }
 
+   if ( (options->Role & ROLE_DIR_LISTEN) && options->DirPort < 1 )
+   {
+      log(LOG_ERR,"DirPort option required and must be a positive integer value.");
+      code = -1;
+   }
+
    if ( (options->Role & ROLE_AP_LISTEN) &&
         (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0) )
    {
@@ -252,6 +273,18 @@ RETURN VALUE: 0 on success, non-zero on error
    if ( options->LinkPadding != 0 && options->LinkPadding != 1 )
    {
       log(LOG_ERR,"LinkPadding option must be either 0 or 1.");
+      code = -1;
+   }
+
+   if ( options->DirRebuildPeriod < 1)
+   {
+      log(LOG_ERR,"DirRebuildPeriod option must be positive.");
+      code = -1;
+   }
+
+   if ( options->DirFetchPeriod < 1)
+   {
+      log(LOG_ERR,"DirFetchPeriod option must be positive.");
       code = -1;
    }
 
