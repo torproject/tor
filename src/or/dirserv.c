@@ -741,14 +741,14 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 }
 
 /** Set *<b>rr</b> to the most recently generated encoded signed
- * running-routers list, generating a new one as necessary. */
+ * running-routers list, generating a new one as necessary.  Return the
+ * size of the directory on success, and 0 on failure. */
 size_t dirserv_get_runningrouters(const char **rr)
-/* XXX008 Bug: size_t is unsigned, but we're returning -1 to mean error */
 {
   if (runningrouters_is_dirty) {
     if(generate_runningrouters(get_identity_key())) {
       log_fn(LOG_ERR, "Couldn't generate running-routers list?");
-      return -1;
+      return 0;
     }
   }
   *rr = runningrouters_string;
