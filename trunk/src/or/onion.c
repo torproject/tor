@@ -187,34 +187,15 @@ char **parse_nickname_list(char *list, int *num) {
   return out;  
 }
 
-/* uses a weighted coin with weight cw to choose a route length */
-static int chooselen(double cw) {
-  int len = 2;
-  
-  if ((cw < 0) || (cw >= 1)) /* invalid parameter */
-    return -1;
-  
-  while(1)
-  {
-    if (crypto_pseudo_rand_int(255) > cw*255) /* don't extend */
-      break;
-    else
-      len++;
-  }
-  
-  return len;
-}
-
 static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   int num_acceptable_routers;
   int routelen;
 
-  assert((cw >= 0) && (cw < 1) && (rarray) ); /* valid parameters */
+  assert((cw >= 0) && (cw < 1) && rarray); /* valid parameters */
 
-  routelen = chooselen(cw);
-  if (routelen == -1) {
-    log_fn(LOG_WARN,"Choosing route length failed.");
-    return -1;
+  for(routelen=3; ; routelen++) { /* 3, increment until coinflip says we're done */
+    if (crypto_pseudo_rand_int(255) >= cw*255) /* don't extend */
+      break;
   }
   log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",routelen, rarray_len);
 
@@ -242,7 +223,7 @@ int onion_new_route_len(void) {
   directory_t *dir;
 
   router_get_directory(&dir);
-  return new_route_len(options.CoinWeight, dir->routers, dir->n_routers);
+  return new_route_len(options.PathlenCoinWeight, dir->routers, dir->n_routers);
 }
 
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {

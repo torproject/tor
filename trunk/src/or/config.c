@@ -153,8 +153,6 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     /* string options */
     config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
 
-    config_compare(list, "CoinWeight",     CONFIG_TYPE_DOUBLE, &options->CoinWeight) ||
-
     config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
     config_compare(list, "DirPort",        CONFIG_TYPE_INT, &options->DirPort) ||
@@ -187,10 +185,11 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "OnionRouter",    CONFIG_TYPE_BOOL, &options->OnionRouter) ||
 
     config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
+    config_compare(list, "PathlenCoinWeight",CONFIG_TYPE_DOUBLE, &options->PathlenCoinWeight) ||
 
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
     config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
-    config_compare(list, "RecommendedVersions", CONFIG_TYPE_STRING, &options->RecommendedVersions) ||
+    config_compare(list, "RecommendedVersions",CONFIG_TYPE_STRING, &options->RecommendedVersions) ||
 
     config_compare(list, "SocksPort",      CONFIG_TYPE_INT, &options->SocksPort) ||
     config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
@@ -262,7 +261,7 @@ void init_options(or_options_t *options) {
   options->loglevel = LOG_INFO;
   options->PidFile = tor_strdup("tor.pid");
   options->DataDirectory = NULL;
-  options->CoinWeight = 0.1;
+  options->PathlenCoinWeight = 0.3;
   options->MaxConn = 900;
   options->DirFetchPostPeriod = 600;
   options->KeepalivePeriod = 300;
@@ -338,7 +337,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
 /* Validate options */
 
-  /* first check if some of the previous options have changed but aren't allowed to */
+  /* first check if any of the previous options have changed but aren't allowed to */
   if(previous_pidfile && strcmp(previous_pidfile,options->PidFile)) {
     log_fn(LOG_WARN,"During reload, PidFile changed from %s to %s. Failing.",
            previous_pidfile, options->PidFile);
@@ -412,8 +411,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   }
 
   if(options->SocksPort > 1 &&
-     (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0)) {
-    log(LOG_WARN,"CoinWeight option must be >=0.0 and <1.0.");
+     (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {
+    log(LOG_WARN,"PathlenCoinWeight option must be >=0.0 and <1.0.");
     result = -1;
   }
 
