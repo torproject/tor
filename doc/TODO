@@ -12,8 +12,8 @@ ARMA    - arma claims
         X Abandoned
 
 
-        - Use a stronger cipher
-NICK            - 3des for now
+        . Use a stronger cipher
+                o 3des for now
                 - aes when we everybody has openssl 0.9.7
         . Topics / circuits
                 o Implement topics

@@ -132,13 +132,18 @@
 #define TOPIC_STATE_RESOLVING
 
 /* available cipher functions */
+#if 0
 #define ONION_CIPHER_IDENTITY 0
 #define ONION_CIPHER_DES 1
 #define ONION_CIPHER_RC4 2
 #define ONION_CIPHER_3DES 3
+#endif
 
 /* default cipher function */
+#if 0
 #define ONION_DEFAULT_CIPHER ONION_CIPHER_3DES
+#endif
+#define DEFAULT_CIPHER CRYPTO_CIPHER_3DES
 
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
@@ -325,8 +330,6 @@ typedef struct {
 } routerinfo_t;
 
 typedef struct { 
-  unsigned int forwf;
-  unsigned int backf;
   char digest2[20]; /* second SHA output for onion_layer_t.keyseed */
   char digest3[20]; /* third SHA output for onion_layer_t.keyseed */
 
@@ -355,9 +358,6 @@ typedef struct {
 
   struct data_queue_t *data_queue; /* for queueing cells at the edges */
 
-  unsigned char p_f; /* crypto functions */
-  unsigned char n_f;
-
   crypto_cipher_env_t *p_crypto; /* crypto environments */
   crypto_cipher_env_t *n_crypto;
 
@@ -383,7 +383,19 @@ struct onion_queue_t {
   struct onion_queue_t *next;
 };
 
-#define ONION_LAYER_SIZE 28
+#define ONION_KEYSEED_LEN 16
+
+typedef struct {
+  uint8_t version; 
+  uint16_t port;
+  uint32_t addr;
+  uint32_t expire;
+  unsigned char keyseed[ONION_KEYSEED_LEN];
+} onion_layer_t;
+/* ugly hack XXXX */
+#define ONION_KEYSEED_OFFSET 11
+
+#define ONION_LAYER_SIZE 27
 #define ONION_PADDING_SIZE (128-ONION_LAYER_SIZE)
 
 typedef struct {
@@ -490,7 +502,7 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type);
 int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type);
 int circuit_consider_sending_sendme(circuit_t *circ, int edge_type);
 
-int circuit_init(circuit_t *circ, int aci_type);
+int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer);
 void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t **cpath, int cpathlen);
 
@@ -737,23 +749,23 @@ int chooselen(double cw);
  */
 unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen);
 
-/* create a cipher by onion cipher type. */
-crypto_cipher_env_t *create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode);
-
 /* creates a new onion from route, stores it and its length into bufp and lenp respectively */
 unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
  * DES OFB with the key as defined in the outter layer */
-int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey);
+int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey, char *keyseed);
 
-/* decrypts the first 128 bytes using RSA and prkey, decrypts the rest with DES OFB with key1 */
-int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prkey);
+/* decrypts the first 128 bytes using RSA and prkey, decrypts the rest with DES OFB with key1. Writes the first layer into 'layer' */
+int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prkey, onion_layer_t *layer);
 
 /* delete first n bytes of the onion and pads the end with n bytes of random data */
 void pad_onion(unsigned char *onion, uint32_t onionlen, int n);
 
 void init_tracked_tree(void);
+
+void onion_pack(char *dest, onion_layer_t *src);
+void onion_unpack(onion_layer_t *dest, char *src);
 
 /********************************* routers.c ***************************/
 

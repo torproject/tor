@@ -217,28 +217,29 @@ static int onion_process(circuit_t *circ) {
   int retval;
   aci_t aci_type;
   struct sockaddr_in me; /* my router identity */
+  onion_layer_t layer;
 
   if(learn_my_address(&me) < 0)
     return -1;
 
   /* decrypt it in-place */
-  if(decrypt_onion(circ->onion,circ->onionlen,getprivatekey()) < 0) {
+  if(decrypt_onion(circ->onion,circ->onionlen,getprivatekey(),&layer) < 0) {
     log(LOG_DEBUG,"command_process_create_cell(): decrypt_onion() failed, closing circuit.");
     return -1;
   }
   log(LOG_DEBUG,"command_process_create_cell(): Onion decrypted.");
 
   /* check freshness */
-  if (ntohl(*(uint32_t *)(circ->onion+8)) < (uint32_t)time(NULL)) /* expired onion */
+  if (layer.expire < (uint32_t)time(NULL)) /* expired onion */ /*XXXX*/
   { 
     log(LOG_NOTICE,"I have just received an expired onion. This could be a replay attack.");
     return -1;
   }
 
   aci_type = decide_aci_type(ntohl(me.sin_addr.s_addr), ntohs(me.sin_port),
-             ntohl(*(uint32_t *)(circ->onion+4)),ntohs(*(uint16_t *)(circ->onion+2)));
+                             layer.addr, layer.port);
       
-  if(circuit_init(circ, aci_type) < 0) { 
+  if(circuit_init(circ, aci_type, &layer) < 0) { 
     log(LOG_ERR,"process_onion(): init_circuit() failed.");
     return -1;
   }
@@ -335,7 +336,7 @@ int chooselen(double cw)
  */
 unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen)
 {
-  int i, j;
+  int i;
   int num_acceptable_routers;
   unsigned int *route;
   unsigned int oldchoice, choice;
@@ -431,40 +432,17 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
   return num;
 }
 
-
-crypto_cipher_env_t *
-create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode)
-{
-  switch (cipher_type) {
-    case ONION_CIPHER_DES:
-      cipher_type = CRYPTO_CIPHER_DES;
-      break;
-    case ONION_CIPHER_3DES:
-      cipher_type = CRYPTO_CIPHER_3DES;
-      break;
-    case ONION_CIPHER_RC4 :
-      cipher_type = CRYPTO_CIPHER_RC4;
-      break;
-    case ONION_CIPHER_IDENTITY :
-      cipher_type = CRYPTO_CIPHER_IDENTITY;
-      break;
-    default:
-      log(LOG_ERR, "Unknown cipher type %d", cipher_type);
-      return NULL;
-  }
-  return crypto_create_init_cipher(cipher_type, key, iv, encrypt_mode);
-}
-
 /* creates a new onion from route, stores it and its length into buf and len respectively */
 unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath)
 {
   int i,j;
-  char *layer;
+  char *layerp;
   crypt_path_t *hop = NULL;
   unsigned char *buf;
   routerinfo_t *router;
   unsigned char iv[16];
   struct in_addr netaddr;
+  onion_layer_t layer;
 
   assert(rarray && route && len && routelen);
 
@@ -491,7 +469,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
         crypto_pk_keysize((rarray[route[i]])->pkey));
   }
     
-  layer = buf + *len - ONION_LAYER_SIZE - ONION_PADDING_SIZE; /* pointer to innermost layer */
+  layerp = buf + *len - ONION_LAYER_SIZE - ONION_PADDING_SIZE; /* pointer to innermost layer */
   /* create the onion layer by layer, starting with the innermost */
   for (i=0;i<routelen;i++) {
     router = rarray[route[i]];
@@ -500,32 +478,31 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
 //      log(LOG_DEBUG,"create_onion() : This router is %s:%u",inet_ntoa(*((struct in_addr *)&router->addr)),router->or_port);
 //      log(LOG_DEBUG,"create_onion() : Key pointer = %u.",router->pkey);
 //      log(LOG_DEBUG,"create_onion() : Key size = %u.",crypto_pk_keysize(router->pkey)); 
-      
-    *layer = OR_VERSION;
-    /* Back F + Forw F both use DES OFB*/
-    *(layer+1) = (ONION_DEFAULT_CIPHER << 4) /* for backf */ +
-                 ONION_DEFAULT_CIPHER; /* for forwf */
+    
 
-    /* Dest Port */
+    layer.version = OR_VERSION;
     if (i) /* not last hop */
-      *(uint16_t *)(layer+2) = htons(rarray[route[i-1]]->or_port);
+      layer.port = rarray[route[i-1]]->or_port;
     else
-      *(uint16_t *)(layer+2) = htons(0);
+      layer.port = 0;
 
     /* Dest Addr */
     if (i) /* not last hop */
-      *(uint32_t *)(layer+4) = htonl(rarray[route[i-1]]->addr);
+      layer.addr = rarray[route[i-1]]->addr;
     else
-      *(uint32_t *)(layer+4) = htonl(0);
+      layer.addr = 0;
 
     /* Expiration Time */
-    *(uint32_t *)(layer+8) = htonl((uint32_t)(time(NULL) + 86400)); /* NOW + 1 day */
-
+    layer.expire = (uint32_t)(time(NULL) + 86400); /* NOW + 1 day */
+  
     /* Key Seed Material */
-    if(crypto_rand(16, layer+12)) { /* error */
+    if(crypto_rand(16, layer.keyseed)) { /* error */
       log(LOG_ERR,"Error generating random data.");
       goto error;
     }
+
+    onion_pack(layerp, &layer);
+
 //      log(LOG_DEBUG,"create_onion() : Onion layer %u built : %u, %u, %u, %s, %u.",i+1,layer->zero,layer->backf,layer->forwf,inet_ntoa(*((struct in_addr *)&layer->addr)),layer->port);
       
     /* build up the crypt_path */
@@ -538,12 +515,9 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       
       log(LOG_DEBUG,"create_onion() : Building hop %u of crypt path.",i+1);
       hop = cpath[i];
-      /* set crypto functions */
-      hop->backf = *(layer+1) >> 4;
-      hop->forwf = *(layer+1) & 0x0f;
 
       /* calculate keys */
-      crypto_SHA_digest(layer+12,16,hop->digest3);
+      crypto_SHA_digest(layer.keyseed,16,hop->digest3);
       log(LOG_DEBUG,"create_onion() : First SHA pass performed.");
       crypto_SHA_digest(hop->digest3,20,hop->digest2);
       log(LOG_DEBUG,"create_onion() : Second SHA pass performed.");
@@ -554,13 +528,15 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       memset((void *)iv,0,16);
 
       /* initialize cipher engines */
-      if (! (hop->f_crypto = create_onion_cipher(hop->forwf, hop->digest3, iv, 1))) { 
+      if (! (hop->f_crypto = 
+             crypto_create_init_cipher(DEFAULT_CIPHER, hop->digest3, iv, 1))) {
         /* cipher initialization failed */
         log(LOG_ERR,"Could not create a crypto environment.");
         goto error;
       }
 
-      if (! (hop->b_crypto = create_onion_cipher(hop->backf, hop->digest2, iv, 0))) { 
+      if (! (hop->b_crypto = 
+             crypto_create_init_cipher(DEFAULT_CIPHER, hop->digest2, iv, 0))) {
         /* cipher initialization failed */
         log(LOG_ERR,"Could not create a crypto environment.");
         goto error;
@@ -571,7 +547,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       
     /* padding if this is the innermost layer */
     if (!i) {
-      if (crypto_pseudo_rand(ONION_PADDING_SIZE, layer + ONION_LAYER_SIZE)) { /* error */
+      if (crypto_pseudo_rand(ONION_PADDING_SIZE, layerp + ONION_LAYER_SIZE)) { /* error */
         log(LOG_ERR,"Error generating pseudo-random data.");
         goto error;
       }
@@ -580,14 +556,14 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       
     /* encrypt */
 
-    if(encrypt_onion(layer,ONION_PADDING_SIZE+(i+1)*ONION_LAYER_SIZE,router->pkey) < 0) {
+    if(encrypt_onion(layerp,ONION_PADDING_SIZE+(i+1)*ONION_LAYER_SIZE,router->pkey,layer.keyseed) < 0) {
       log(LOG_ERR,"Error encrypting onion layer.");
       goto error;
     }
     log(LOG_DEBUG,"create_onion() : Encrypted layer.");
       
     /* calculate pointer to next layer */
-    layer = buf + (routelen-i-2)*ONION_LAYER_SIZE;
+    layerp = buf + (routelen-i-2)*ONION_LAYER_SIZE;
   }
 
   return buf;
@@ -609,7 +585,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
  * DES OFB with the key as defined in the outter layer */
-int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey) {
+int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey, char* keyseed) {
   unsigned char *tmpbuf = NULL; /* temporary buffer for crypto operations */
   unsigned char digest[20]; /* stores SHA1 output - 160 bits */
   unsigned char iv[8];
@@ -631,7 +607,7 @@ int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey
   log(LOG_DEBUG,"encrypt_onion() : allocated %u bytes of memory for the encrypted onion (at %u).",onionlen,tmpbuf);
   
   /* get key1 = SHA1(KeySeed) */
-  if (crypto_SHA_digest(onion+12,16,digest)) {
+  if (crypto_SHA_digest(keyseed,16,digest)) {
     log(LOG_ERR,"Error computing SHA1 digest.");
     goto error;
   }
@@ -675,7 +651,7 @@ int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey
 }
 
 /* decrypts the first 128 bytes using RSA and prkey, decrypts the rest with DES OFB with key1 */
-int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prkey) {
+int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prkey, onion_layer_t *layer) {
   void *tmpbuf = NULL; /* temporary buffer for crypto operations */
   unsigned char digest[20]; /* stores SHA1 output - 160 bits */
   unsigned char iv[8];
@@ -702,8 +678,10 @@ int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prke
   }
   log(LOG_DEBUG,"decrypt_onion() : RSA decryption complete.");
     
+  onion_unpack(layer, onion);
+
   /* get key1 = SHA1(KeySeed) */
-  if (crypto_SHA_digest(tmpbuf+12,16,digest)) {
+  if (crypto_SHA_digest(layer->keyseed,16,digest)) {
     log(LOG_ERR,"Error computing SHA1 digest.");
     goto error;
   }
@@ -826,6 +804,28 @@ static int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
   log(LOG_DEBUG,"find_tracked_onion(): Remembered new onion (expires %d)", to->expire);
  
   return 0;
+}
+
+void
+onion_pack(char *dest, onion_layer_t *src)
+{
+  assert((src->version & 0x80) == 0);
+  
+  *(uint8_t*)dest = src->version;
+  *(uint16_t*)(dest+1) = htons(src->port);
+  *(uint32_t*)(dest+3) = htonl(src->addr);
+  *(uint32_t*)(dest+7) = htonl(src->expire);
+  memcpy(dest+11, src->keyseed, ONION_KEYSEED_LEN);
+}
+
+void
+onion_unpack(onion_layer_t *dest, char *src)
+{
+  dest->version = *(uint8_t*)src;
+  dest->port = ntohs(*(uint16_t*)(src+1));
+  dest->addr = ntohl(*(uint32_t*)(src+3));
+  dest->expire = ntohl(*(uint32_t*)(src+7));
+  memcpy(dest->keyseed, src+11, ONION_KEYSEED_LEN);
 }
 
 /*
