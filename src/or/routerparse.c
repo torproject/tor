@@ -1053,6 +1053,10 @@ router_parse_exit_policy(directory_token_t *tok) {
     bits = (int) strtol(mask, &endptr, 10);
     if (!*endptr) {
       /* strtol handled the whole mask. */
+      if (bits < 0 || bits > 32) {
+        log_fn(LOG_WARN, "Bad number of mask bits on exit policy; rejecting.");
+        goto policy_read_failed;
+      }
       newe->msk = ~((1<<(32-bits))-1);
     } else if (tor_inet_aton(mask, &in) != 0) {
       newe->msk = ntohl(in.s_addr);
@@ -1082,6 +1086,10 @@ router_parse_exit_policy(directory_token_t *tok) {
       goto policy_read_failed;
     } else {
       newe->prt_max = newe->prt_min;
+    }
+    if (newe->prt_min > newe->prt_max) {
+      log_fn(LOG_WARN,"Insane port range on exit policy; rejecting.");
+      goto policy_read_failed;
     }
   }
 
