@@ -401,7 +401,9 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
   uint16_t usePort;
   uint32_t addr;
   int s; /* the socket we're going to make */
+#ifndef MS_WINDOWS
   int one=1;
+#endif
 
   memset(&bindaddr,0,sizeof(struct sockaddr_in));
   if (parse_addr_port(bindaddress, NULL, &addr, &usePort)<0) {
@@ -425,7 +427,13 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
     return -1;
   }
 
+#ifndef MS_WINDOWS
+  /* REUSEADDR on normal places means you can rebind to the port
+   * right after somebody else has let it go. But REUSEADDR on win32
+   * means to let you bind to the port _even when somebody else
+   * already has it bound_. So, don't do that on Win32. */
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
+#endif
 
   if (bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
     log_fn(LOG_WARN,"Could not bind to port %u: %s",usePort,
