@@ -2307,7 +2307,6 @@ validate_data_directory(or_options_t *options) {
 static int
 write_configuration_file(const char *fname, or_options_t *options)
 {
-  char fn_tmp[1024];
   char *old_val=NULL, *new_val=NULL, *new_conf=NULL;
   int rename_old = 0, r;
   size_t len;
@@ -2340,9 +2339,14 @@ write_configuration_file(const char *fname, or_options_t *options)
 
   if (rename_old) {
     int i = 1;
+    size_t fn_tmp_len = strlen(fname)+32;
+    char *fn_tmp;
+    tor_assert(fn_tmp_len > strlen(fname)); /*check for overflow*/
+    fn_tmp = tor_malloc(fn_tmp_len);
     while (1) {
-      if (tor_snprintf(fn_tmp, sizeof(fn_tmp), "%s.orig.%d", fname, i)<0) {
-        log_fn(LOG_WARN, "Filename too long");
+      if (tor_snprintf(fn_tmp, fn_tmp_len, "%s.orig.%d", fname, i)<0) {
+        log_fn(LOG_WARN, "tor_snprintf failed inexplicably");
+        tor_free(fn_tmp);
         goto err;
       }
       if (file_status(fn_tmp) == FN_NOENT)
@@ -2351,6 +2355,7 @@ write_configuration_file(const char *fname, or_options_t *options)
     }
     log_fn(LOG_NOTICE, "Renaming old configuration file to %s", fn_tmp);
     rename(fname, fn_tmp);
+    tor_free(fn_tmp);
   }
 
   write_str_to_file(fname, new_val, 0);
