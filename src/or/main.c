@@ -77,11 +77,13 @@ int connection_add(connection_t *conn) {
     return -1;
   }
 
+  tor_assert(conn->poll_index == -1); /* can only connection_add once */
   conn->poll_index = nfds;
   connection_array[nfds] = conn;
 
-  /* zero these out here, because otherwise we'll inherit values from the previously freed one */
   poll_array[nfds].fd = conn->s;
+
+  /* zero these out here, because otherwise we'll inherit values from the previously freed one */
   poll_array[nfds].events = 0;
   poll_array[nfds].revents = 0;
 
@@ -105,12 +107,8 @@ int connection_remove(connection_t *conn) {
 
   log_fn(LOG_INFO,"removing socket %d (type %s), nfds now %d",
          conn->s, CONN_TYPE_TO_STRING(conn->type), nfds-1);
-  /* if it's an edge conn, remove it from the list
-   * of conn's on this circuit. If it's not on an edge,
-   * flush and send destroys for all circuits on this conn
-   */
-  circuit_about_to_close_connection(conn);
 
+  tor_assert(conn->poll_index >= 0);
   current_index = conn->poll_index;
   if(current_index == nfds-1) { /* this is the end */
     nfds--;
@@ -141,20 +139,20 @@ void get_connection_array(connection_t ***array, int *n) {
  */
 void connection_watch_events(connection_t *conn, short events) {
 
-  tor_assert(conn && conn->poll_index < nfds);
+  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
 
   poll_array[conn->poll_index].events = events;
 }
 
 /* Return true iff the 'conn' is listening for read events. */
 int connection_is_reading(connection_t *conn) {
+  tor_assert(conn && conn->poll_index >= 0);
   return poll_array[conn->poll_index].events & POLLIN;
 }
 
 /* Tell the main loop to stop notifying 'conn' of any read events. */
 void connection_stop_reading(connection_t *conn) {
-
-  tor_assert(conn && conn->poll_index < nfds);
+  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
 
   log(LOG_DEBUG,"connection_stop_reading() called.");
   if(poll_array[conn->poll_index].events & POLLIN)
@@ -163,9 +161,7 @@ void connection_stop_reading(connection_t *conn) {
 
 /* Tell the main loop to start notifying 'conn' of any read events. */
 void connection_start_reading(connection_t *conn) {
-
-  tor_assert(conn && conn->poll_index < nfds);
-
+  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
   poll_array[conn->poll_index].events |= POLLIN;
 }
 
@@ -177,7 +173,7 @@ int connection_is_writing(connection_t *conn) {
 /* Tell the main loop to stop notifying 'conn' of any write events. */
 void connection_stop_writing(connection_t *conn) {
 
-  tor_assert(conn && conn->poll_index < nfds);
+  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
 
   if(poll_array[conn->poll_index].events & POLLOUT)
     poll_array[conn->poll_index].events -= POLLOUT;
@@ -185,15 +181,13 @@ void connection_stop_writing(connection_t *conn) {
 
 /* Tell the main loop to start notifying 'conn' of any write events. */
 void connection_start_writing(connection_t *conn) {
-
-  tor_assert(conn && conn->poll_index < nfds);
-
+  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
   poll_array[conn->poll_index].events |= POLLOUT;
 }
 
-/* Called when the connection at connection_array[i] has a read event:
- * checks for validity, catches numerous errors, and dispatches to
- * connection_handle_read.
+/* Called when the connection at connection_array[i] has a read event,
+ * or it has pending tls data waiting to be read: checks for validity,
+ * catches numerous errors, and dispatches to connection_handle_read.
  */
 static void conn_read(int i) {
   connection_t *conn = connection_array[i];
@@ -314,6 +308,11 @@ static void conn_close_if_marked(int i) {
              conn->marked_for_close);
     }
   }
+  /* if it's an edge conn, remove it from the list
+   * of conn's on this circuit. If it's not on an edge,
+   * flush and send destroys for all circuits on this conn
+   */
+  circuit_about_to_close_connection(conn);
   connection_remove(conn);
   if(conn->type == CONN_TYPE_EXIT) {
     assert_connection_edge_not_dns_pending(conn);

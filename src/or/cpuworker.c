@@ -167,7 +167,7 @@ done_processing:
  * Read and writes from fdarray[1].  Reads requests, writes answers.
  *
  *   Request format:
- *          Task type           [1 byte, always ONIONSKIN_CHALLENGE_LEN]
+ *          Task type           [1 byte, always CPUWORKER_TASK_ONION]
  *          Opaque tag          TAG_LEN
  *          Onionskin challenge ONIONSKIN_CHALLENGE_LEN
  *   Response format:

@@ -62,10 +62,10 @@ typedef enum {
 typedef struct directory_token_t {
   directory_keyword tp;        /* Type of the token. */
   int n_args;                  /* Number of elements in args */
-  char **args;                 /* Array of aguments from keyword line. */
+  char **args;                 /* Array of arguments from keyword line. */
   char *object_type;           /* -----BEGIN [object_type]-----*/
-  int object_size;             /* Bytes in object_boody */
-  char *object_body;           /* Contents of object, base65-decoded. */
+  int object_size;             /* Bytes in object_body */
+  char *object_body;           /* Contents of object, base64-decoded. */
   crypto_pk_env_t *key;        /* For public keys only. */
   char *error;                 /* For _ERR tokens only. */
 } directory_token_t;
@@ -85,11 +85,11 @@ typedef enum {
 typedef enum {
   NO_OBJ,      /*    (1) no object, ever */
   NEED_OBJ,    /*    (2) object is required */
-  NEED_KEY,    /*    (3) object is requierd, and must be a public key. */
+  NEED_KEY,    /*    (3) object is required, and must be a public key. */
   OBJ_OK,      /* or (4) object is optional. */
 } obj_syntax;
 
-/* Rules for where a keyword can apper. */
+/* Rules for where a keyword can appear. */
 typedef enum {
   ANY = 0,    /* Appears in router descriptor or in directory sections. */
   DIR_ONLY,   /* Appears only in directory. */
@@ -208,7 +208,7 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
   log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
 
   /* No running dir servers found? go through and mark them all as up,
-   * and next time, we'll cycle through the list again. */
+   * so we cycle through the list again. */
   for(i=0; i < smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
     if(router->dir_port > 0) {
@@ -587,7 +587,7 @@ router_resolve_routerlist(routerlist_t *rl)
  * don't know the IP of the target address.
  *
  * Returns -1 for 'rejected', 0 for accepted, 1 for 'maybe' (since IP is
- * unknown.
+ * unknown).
  */
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy)
@@ -674,6 +674,7 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
 /* Parse a date of the format 'YYYY-MM-DD hh:mm:ss" and store the result into
  * *t.
  */
+/* XXX this should go in util.c, yes? -RD */
 static int parse_time(const char *cp, time_t *t)
 {
   struct tm st_tm;

@@ -528,6 +528,7 @@ struct circuit_t {
   connection_t *n_conn; /* for the OR conn, if there is one */
   connection_t *p_streams;
   connection_t *n_streams;
+  connection_t *resolving_streams;
   uint16_t next_stream_id;
   int package_window;
   int deliver_window;
@@ -812,7 +813,7 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
-connection_t *connection_get_by_type_rendquery(int type, char *rendquery);
+connection_t *connection_get_by_type_rendquery(int type, const char *rendquery);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 #define connection_has_pending_tls_data(conn) \
