@@ -119,6 +119,7 @@ connection_or_init_conn_from_address(connection_t *conn,
                                      const char *id_digest)
 {
   routerinfo_t *r;
+  struct in_addr in;
   r = router_get_by_digest(id_digest);
   if (r) {
     connection_or_init_conn_from_router(conn,r);
@@ -132,14 +133,17 @@ connection_or_init_conn_from_address(connection_t *conn,
   conn->nickname = tor_malloc(HEX_DIGEST_LEN+1);
   base16_encode(conn->nickname, HEX_DIGEST_LEN+1,
                 conn->identity_digest, DIGEST_LEN);
-  /* Do something about address? Or is it already set? XXXX NMNM */
+  tor_free(conn->address);
+  in.s_addr = htonl(addr);
+  conn->address = tor_strdup(inet_ntoa(in));
 }
 
-/** Launch a new OR connection to <b>router</b>.
+/** Launch a new OR connection to <b>addr</b>:<b>port</b> and expect to
+ * handshake with an OR with identity digest <b>id_digest</b>.
  *
- * If <b>router</b> is me, do nothing. If we're already connected to <b>router</b>,
- * return that connection. If the connect is in progress, set conn's
- * state to 'connecting' and return. If connect to <b>router</b> succeeds, call
+ * If <b>id_digest</b> is me, do nothing. If we're already connected to it,
+ * return that connection. If the connect() is in progress, set conn's
+ * state to 'connecting' and return. If connect() succeeds, call
  * connection_tls_start_handshake() on it.
  *
  * This function is called from router_retry_connections(), for
@@ -148,30 +152,30 @@ connection_or_init_conn_from_address(connection_t *conn,
  *
  * Return the launched conn, or NULL if it failed.
  */
-connection_t *connection_or_connect(routerinfo_t *router) {
+connection_t *connection_or_connect(uint32_t addr, uint16_t port,
+                                    const char *id_digest) {
   connection_t *conn;
 
-  tor_assert(router);
+  tor_assert(id_digest);
 
-  if(router_is_me(router)) {
-    log_fn(LOG_WARN,"You asked me to connect to myself! Failing.");
+  if(0) { /* XXX008 if I'm an OR and id_digest is my digest */
+    log_fn(LOG_WARN,"Request to connect to myself! Failing.");
     return NULL;
   }
 
-  /* this function should never be called if we're already connected to router, but */
-  /* check first to be sure */
-  conn = connection_get_by_identity_digest(router->identity_digest,
-                                           CONN_TYPE_OR);
+  /* this function should never be called if we're already connected to
+   * id_digest, but check first to be sure */
+  conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
   if(conn)
     return conn;
 
   conn = connection_new(CONN_TYPE_OR);
 
   /* set up conn so it's got all the data we need to remember */
-  connection_or_init_conn_from_router(conn, router);
+  connection_or_init_conn_from_address(conn, addr, port, id_digest);
   conn->state = OR_CONN_STATE_CONNECTING;
 
-  switch(connection_connect(conn, router->address, router->addr, router->or_port)) {
+  switch(connection_connect(conn, conn->address, addr, port)) {
     case -1:
       connection_free(conn);
       return NULL;
@@ -252,7 +256,7 @@ int connection_tls_continue_handshake(connection_t *conn) {
  *
  * If either of us is an OP, set bandwidth to the default OP bandwidth.
  *
- * If all is successful and he's an OR, then call circuit_n_conn_open()
+ * If all is successful and he's an OR, then call circuit_n_conn_done()
  * to handle events that have been pending on the tls handshake
  * completion, and set the directory to be dirty (only matters if I'm
  * a dirserver).
@@ -284,6 +288,10 @@ connection_tls_finish_handshake(connection_t *conn) {
   log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be '%s'", conn->address,
          conn->port, nickname);
   router = router_get_by_nickname(nickname);
+  /* XXX008 here we need to tolerate unknown routers, so ORs can
+   * connect to us even when we don't know they're verified. This
+   * should probably be a call to router_get_by_digest() now, since
+   * we can't trust the nickname some guy shows up with. */
   if (!router) {
     log_fn(LOG_INFO, "Unrecognized router with nickname '%s' at %s:%d",
            nickname, conn->address, conn->port);
@@ -316,7 +324,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
   }
   directory_set_dirty();
-  circuit_n_conn_open(conn); /* send the pending creates, if any. */
+  circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
   /* Note the success */
   rep_hist_note_connect_succeeded(nickname, time(NULL));
   return 0;

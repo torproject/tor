@@ -454,6 +454,8 @@ void assert_circuit_ok(const circuit_t *c)
 
   if (c->n_conn)
     tor_assert(c->n_conn->type == CONN_TYPE_OR);
+    /* XXX008 have to memcpy id_digest when we attach n_conn */
+    tor_assert(!memcmp(c->n_conn->identity_digest, c->n_conn_id_digest, DIGEST_LEN));
   if (c->p_conn)
     tor_assert(c->p_conn->type == CONN_TYPE_OR);
   for (conn = c->p_streams; conn; conn = conn->next_stream)

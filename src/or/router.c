@@ -321,7 +321,7 @@ void router_retry_connections(void) {
                                           CONN_TYPE_OR)) {
       /* not in the list */
       log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
-      connection_or_connect(router);
+      connection_or_connect(router->addr, router->or_port, router->identity_digest);
     }
   }
 }
