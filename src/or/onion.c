@@ -51,7 +51,7 @@ int onion_pending_add(circuit_t *circ) {
   assert(!ol_tail->next);
 
   if(ol_length >= options.MaxOnionsPending) {
-    log_fn(LOG_INFO,"Already have %d onions queued. Closing.", ol_length);
+    log_fn(LOG_WARNING,"Already have %d onions queued. Closing.", ol_length);
     free(tmp);
     return -1;
   }
@@ -141,13 +141,13 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 
   if (!(circ->n_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,0))) {
-    log_fn(LOG_ERR,"Cipher initialization failed (n).");
+    log_fn(LOG_WARNING,"Cipher initialization failed (n).");
     return -1;
   }
 
   if (!(circ->p_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys+16,iv,1))) {
-    log_fn(LOG_ERR,"Cipher initialization failed (p).");
+    log_fn(LOG_WARNING,"Cipher initialization failed (p).");
     return -1;
   }
 
@@ -195,25 +195,25 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
 
   *routelen = chooselen(cw);
   if (*routelen == -1) {
-    log(LOG_ERR,"Choosing route length failed.");
+    log_fn(LOG_WARNING,"Choosing route length failed.");
     return NULL;
   }
-  log(LOG_DEBUG,"new_route(): Chosen route length %d.",*routelen);
+  log_fn(LOG_DEBUG,"Chosen route length %d.",*routelen);
 
   num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
 
   if(num_acceptable_routers < 2) {
-    log(LOG_INFO,"new_route(): Not enough acceptable routers. Failing.");
+    log_fn(LOG_INFO,"Not enough acceptable routers. Failing.");
     return NULL;
   }
 
   if(num_acceptable_routers < *routelen) {
-    log(LOG_NOTICE,"new_route(): Cutting routelen from %d to %d.",*routelen, num_acceptable_routers);
+    log_fn(LOG_INFO,"Not enough routers: cutting routelen from %d to %d.",*routelen, num_acceptable_routers);
     *routelen = num_acceptable_routers;
   }
 
   if(*routelen < 1) {
-    log(LOG_ERR,"new_route(): Didn't find any acceptable routers. Failing.");
+    log_fn(LOG_WARNING,"Didn't find any acceptable routers. Failing.");
     return NULL;
   }
 
@@ -229,18 +229,18 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
     }
 
     choice = choice % rarray_len;
-    log(LOG_DEBUG,"new_route(): Contemplating router %u.",choice);
+    log_fn(LOG_DEBUG,"Contemplating router %u.",choice);
     if(choice == oldchoice ||
        (oldchoice < rarray_len && !crypto_pk_cmp_keys(rarray[choice]->onion_pkey, rarray[oldchoice]->onion_pkey)) ||
       (options.OnionRouter && !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port))) {
       /* Same router as last choice, or router twin,
        *   or no routers with that key are connected to us.
        * Try again. */
-      log(LOG_DEBUG,"new_route(): Picked a router %d that won't work as next hop.",choice);
+      log_fn(LOG_DEBUG,"Picked a router %d that won't work as next hop.",choice);
       i--;
       continue;  
     }
-    log(LOG_DEBUG,"new_route(): Chosen router %u for hop %u.",choice,i);
+    log_fn(LOG_DEBUG,"Chosen router %u for hop %u.",choice,i);
     oldchoice = choice;
     route[i] = choice;
   }
@@ -254,23 +254,23 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
   connection_t *conn;
 
   for(i=0;i<rarray_len;i++) {
-    log(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
+    log_fn(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
     if(options.OnionRouter) {
       conn = connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port);
       if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {
-        log(LOG_DEBUG,"Nope, %d is not connected.",i);
+        log_fn(LOG_DEBUG,"Nope, %d is not connected.",i);
         goto next_i_loop;
       }
     }
     for(j=0;j<i;j++) {
       if(!crypto_pk_cmp_keys(rarray[i]->onion_pkey, rarray[j]->onion_pkey)) {
         /* these guys are twins. so we've already counted him. */
-        log(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
+        log_fn(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
         goto next_i_loop;
       }
     }
     num++;
-    log(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
+    log_fn(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
     next_i_loop:
       ; /* our compiler may need an explicit statement after the label */
   }
@@ -297,10 +297,10 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
   /* choose a route */
   route = new_route(options.CoinWeight, rarray, rarray_len, &routelen);
   if (!route) {
-    log(LOG_ERR,"onion_generate_cpath(): Error choosing a route through the OR network.");
+    log_fn(LOG_INFO,"Error choosing a route through the OR network.");
     return NULL;
   }
-  log(LOG_DEBUG,"onion_generate_cpath(): Chosen a route of length %u: ",routelen);
+  log_fn(LOG_DEBUG,"Chosen a route of length %u: ",routelen);
 
   *firsthop = rarray[route[routelen-1]];
   assert(*firsthop); /* should always be defined */
@@ -308,7 +308,7 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
   for(i=0; i<routelen; i++) {
     netaddr.s_addr = htonl((rarray[route[i]])->addr);
 
-    log(LOG_DEBUG,"onion_generate_cpath(): %u : %s:%u, %u/%u",routelen-i,
+    log_fn(LOG_DEBUG,"%u : %s:%u, %u/%u",routelen-i,
         inet_ntoa(netaddr),
         (rarray[route[i]])->or_port,
         (int) (rarray[route[i]])->onion_pkey,
@@ -338,7 +338,7 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
     hop->package_window = CIRCWINDOW_START;
     hop->deliver_window = CIRCWINDOW_START;
 
-    log(LOG_DEBUG,"onion_generate_cpath() : Building hop %u of crypt path.",i+1);
+    log_fn(LOG_DEBUG,"Building hop %u of crypt path.",i+1);
   }
 
   /* now link cpath->prev to the end of cpath */

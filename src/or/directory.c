@@ -55,8 +55,9 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   if (router->identity_pkey)
     conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   else {
-    log_fn(LOG_ERR, "No signing key known for dirserver %s; signature won't be checked", conn->address);
+    log_fn(LOG_WARNING, "No signing key known for dirserver %s; signature won't be checked", conn->address);
     conn->identity_pkey = NULL;
+    /* XXX is there really any situation where router doesn't have an identity_pkey? */
   }
 
   if(connection_add(conn) < 0) { /* no space, forget it */
@@ -95,7 +96,7 @@ static int directory_send_command(connection_t *conn, int command) {
   switch(command) {
     case DIR_CONN_STATE_CONNECTING_FETCH:
       if(connection_write_to_buf(fetchstring, strlen(fetchstring), conn) < 0) {
-        log_fn(LOG_DEBUG,"Couldn't write fetch to buffer.");
+        log_fn(LOG_WARNING,"Couldn't write fetch to buffer.");
         return -1;
       }
       conn->state = DIR_CONN_STATE_CLIENT_SENDING_FETCH;
@@ -103,13 +104,13 @@ static int directory_send_command(connection_t *conn, int command) {
     case DIR_CONN_STATE_CONNECTING_UPLOAD:
       s = router_get_my_descriptor();
       if(!s) {
-        log_fn(LOG_DEBUG,"Failed to get my descriptor.");
+        log_fn(LOG_WARNING,"Failed to get my descriptor.");
         return -1;
       }
       snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
                strlen(s), s);
       if(connection_write_to_buf(tmp, strlen(tmp), conn) < 0) {
-        log_fn(LOG_DEBUG,"Couldn't write post/descriptor to buffer.");
+        log_fn(LOG_WARNING,"Couldn't write post/descriptor to buffer.");
         return -1;
       }
       conn->state = DIR_CONN_STATE_CLIENT_SENDING_UPLOAD;
@@ -126,7 +127,7 @@ static void directory_rebuild(void) {
   if(directory_dirty) {
     if (dump_signed_directory_to_string(the_directory, MAX_DIR_SIZE,
                                         get_identity_key())) {
-      log(LOG_ERR, "Error writing directory");
+      log(LOG_WARNING, "Error creating directory");
       return;
     }
     directorylen = strlen(the_directory);
@@ -148,24 +149,24 @@ int connection_dir_process_inbuf(connection_t *conn) {
         switch(fetch_from_buf_http(conn->inbuf,
                                    NULL, 0, the_directory, MAX_DIR_SIZE)) {
           case -1: /* overflow */
-            log_fn(LOG_DEBUG,"'fetch' response too large. Failing.");
+            log_fn(LOG_WARNING,"'fetch' response too large. Failing.");
             return -1;
           case 0:
-            log_fn(LOG_DEBUG,"'fetch' response not all here, but we're at eof. Closing.");
+            log_fn(LOG_INFO,"'fetch' response not all here, but we're at eof. Closing.");
             return -1;
           /* case 1, fall through */
         }
         /* XXX check headers, at least make sure returned 2xx */
         directorylen = strlen(the_directory);
-        log_fn(LOG_DEBUG,"Received directory (size %d):\n%s", directorylen, the_directory);
+        log_fn(LOG_INFO,"Received directory (size %d):\n%s", directorylen, the_directory);
         if(directorylen == 0) {
-          log_fn(LOG_DEBUG,"Empty directory. Ignoring.");
+          log_fn(LOG_INFO,"Empty directory. Ignoring.");
           return -1;
         }
         if(router_get_dir_from_string(the_directory, conn->identity_pkey) < 0){
-          log_fn(LOG_DEBUG,"...but parsing failed. Ignoring.");
+          log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
         } else {
-          log_fn(LOG_DEBUG,"and got an %s directory; updated routers.", 
+          log_fn(LOG_INFO,"and got an %s directory; updated routers.", 
               conn->identity_pkey ? "authenticated" : "unauthenticated");
         }
         if(options.OnionRouter) { /* connect to them all */
@@ -174,10 +175,10 @@ int connection_dir_process_inbuf(connection_t *conn) {
         return -1;
       case DIR_CONN_STATE_CLIENT_READING_UPLOAD:
         /* XXX make sure there's a 200 OK on the buffer */
-        log_fn(LOG_DEBUG,"eof while reading upload response. Finished.");
+        log_fn(LOG_INFO,"eof while reading upload response. Finished.");
         return -1;
       default:
-        log_fn(LOG_DEBUG,"conn reached eof, not reading. Closing.");
+        log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
         return -1;
     }
   }
@@ -200,7 +201,7 @@ static int directory_handle_command(connection_t *conn) {
   switch(fetch_from_buf_http(conn->inbuf,
                              headers, sizeof(headers), body, sizeof(body))) {
     case -1: /* overflow */
-      log_fn(LOG_DEBUG,"input too large. Failing.");
+      log_fn(LOG_WARNING,"input too large. Failing.");
       return -1;
     case 0:
       log_fn(LOG_DEBUG,"command not all here yet.");
@@ -215,14 +216,14 @@ static int directory_handle_command(connection_t *conn) {
     directory_rebuild(); /* rebuild it now, iff it's dirty */
 
     if(directorylen == 0) {
-      log_fn(LOG_DEBUG,"My directory is empty. Closing.");
+      log_fn(LOG_WARNING,"My directory is empty. Closing.");
       return -1;
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client."); 
     if((connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) ||
        (connection_write_to_buf(the_directory, directorylen, conn) < 0)) {
-      log_fn(LOG_DEBUG,"Failed to write answerstring+directory to outbuf.");
+      log_fn(LOG_WARNING,"Failed to write answerstring+directory to outbuf.");
       return -1;
     }
     conn->state = DIR_CONN_STATE_SERVER_WRITING;
@@ -233,14 +234,14 @@ static int directory_handle_command(connection_t *conn) {
     /* XXX should check url and http version */
     log_fn(LOG_DEBUG,"Received POST command, body '%s'", body);
     if(connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) {
-      log_fn(LOG_DEBUG,"Failed to write answerstring to outbuf.");
+      log_fn(LOG_WARNING,"Failed to write answerstring to outbuf.");
       return -1;
     }
     conn->state = DIR_CONN_STATE_SERVER_WRITING;
     return 0;
   }
 
-  log_fn(LOG_DEBUG,"Got headers with unknown command. Closing.");
+  log_fn(LOG_WARNING,"Got headers with unknown command. Closing.");
   return -1;
 }
 
@@ -263,7 +264,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
       }
       /* the connect has finished. */
 
-      log_fn(LOG_DEBUG,"Dir connection to router %s:%u established.",
+      log_fn(LOG_INFO,"Dir connection to router %s:%u established.",
           conn->address,conn->port);
 
       return directory_send_command(conn, conn->state);
@@ -278,13 +279,12 @@ int connection_dir_finished_flushing(connection_t *conn) {
       connection_watch_events(conn, POLLIN);
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
-      log_fn(LOG_DEBUG,"Finished writing server response. Closing.");
+      log_fn(LOG_INFO,"Finished writing server response. Closing.");
       return -1; /* kill it */
     default:
-      log_fn(LOG_DEBUG,"BUG: called in unexpected state.");
-      return 0;
+      log_fn(LOG_WARNING,"BUG: called in unexpected state.");
+      return -1;
   }
-
   return 0;
 }
 

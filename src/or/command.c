@@ -77,7 +77,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
                                 command_process_destroy_cell);
       break;
     default:
-      log(LOG_DEBUG,"Cell of unknown type (%d) received. Dropping.", cell->command);
+      log_fn(LOG_WARNING,"Cell of unknown type (%d) received. Dropping.", cell->command);
       break;
   }
 }
@@ -88,14 +88,14 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
   if(circ) {
-    log_fn(LOG_DEBUG,"received CREATE cell for known circ. Dropping.");
+    log_fn(LOG_WARNING,"received CREATE cell for known circ. Dropping.");
     return;
   }
 
   circ = circuit_new(cell->aci, conn);
   circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
   if(cell->length != DH_ONIONSKIN_LEN) {
-    log_fn(LOG_DEBUG,"Bad cell length %d. Dropping.", cell->length);
+    log_fn(LOG_WARNING,"Bad cell length %d. Dropping.", cell->length);
     circuit_close(circ);
     return;
   }
@@ -104,11 +104,11 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
 
   /* hand it off to the cpuworkers, and then return */
   if(assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
-    log_fn(LOG_DEBUG,"Failed to hand off onionskin. Closing.");
+    log_fn(LOG_WARNING,"Failed to hand off onionskin. Closing.");
     circuit_close(circ);
     return;
   }
-  log_fn(LOG_DEBUG,"success: handed off onionskin.");
+  log_fn(LOG_INFO,"success: handed off onionskin.");
 }
 
 static void command_process_created_cell(cell_t *cell, connection_t *conn) {
@@ -118,12 +118,13 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
   if(!circ) {
-    log_fn(LOG_DEBUG,"received CREATED cell for unknown circ. Dropping.");
+    log_fn(LOG_WARNING,"received CREATED cell for unknown circ. Dropping.");
     return;
   }
 
   if(circ->n_aci != cell->aci) {
-    log_fn(LOG_DEBUG,"got created cell from OPward? Dropping.");
+    log_fn(LOG_WARNING,"got created cell from OPward? Closing.");
+    circuit_close(circ);
     return;
   }
   assert(cell->length == DH_KEY_LEN);
@@ -131,13 +132,13 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   if(circ->cpath) { /* we're the OP. Handshake this. */
     log_fn(LOG_DEBUG,"at OP. Finishing handshake.");
     if(circuit_finish_handshake(circ, cell->payload) < 0) {
-      log_fn(LOG_INFO,"circuit_finish_handshake failed.");
+      log_fn(LOG_WARNING,"circuit_finish_handshake failed.");
       circuit_close(circ);
       return;
     }
     log_fn(LOG_DEBUG,"Moving to next skin.");
     if(circuit_send_next_onion_skin(circ) < 0) {
-      log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
+      log_fn(LOG_WARNING,"circuit_send_next_onion_skin failed.");
       circuit_close(circ);
       return;
     }
@@ -151,9 +152,9 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
     newcell.length = RELAY_HEADER_SIZE + cell->length;
     memcpy(newcell.payload+RELAY_HEADER_SIZE, cell->payload, DH_KEY_LEN);
 
-    log_fn(LOG_DEBUG,"Sending extended relay cell.");
+    log_fn(LOG_INFO,"Converting created cell to extended relay cell, sending.");
     if(circuit_deliver_relay_cell(&newcell, circ, CELL_DIRECTION_IN, NULL) < 0) {
-      log_fn(LOG_DEBUG,"failed to deliver extended cell. Closing.");
+      log_fn(LOG_WARNING,"failed to deliver extended cell. Closing.");
       circuit_close(circ);
       return;
     }
@@ -166,26 +167,27 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
   if(!circ) {
-    log_fn(LOG_DEBUG,"unknown circuit %d. Dropping.", cell->aci);
+    log_fn(LOG_INFO,"unknown circuit %d. Dropping.", cell->aci);
     return;
   }
 
   if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
-    log_fn(LOG_DEBUG,"circuit in create_wait. Dropping.");
+    log_fn(LOG_WARNING,"circuit in create_wait. Closing.");
+    circuit_close(circ);
     return;
   }
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     cell->aci = circ->n_aci; /* switch it */
     if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_OUT, conn->cpath_layer) < 0) {
-      log_fn(LOG_INFO,"circuit_deliver_relay_cell (forward) failed. Closing.");
+      log_fn(LOG_WARNING,"circuit_deliver_relay_cell (forward) failed. Closing.");
       circuit_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
     cell->aci = circ->p_aci; /* switch it */
     if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_IN, NULL) < 0) {
-      log_fn(LOG_DEBUG,"circuit_deliver_relay_cell (backward) failed. Closing.");
+      log_fn(LOG_WARNING,"circuit_deliver_relay_cell (backward) failed. Closing.");
       circuit_close(circ);
       return;
     }
@@ -198,7 +200,7 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
   if(!circ) {
-    log_fn(LOG_DEBUG,"unknown circuit %d. Dropping.", cell->aci);
+    log_fn(LOG_INFO,"unknown circuit %d. Dropping.", cell->aci);
     return;
   }
 

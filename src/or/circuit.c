@@ -121,9 +121,8 @@ static void circuit_free_cpath_node(crypt_path_t *victim) {
 static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
   aci_t test_aci;
   connection_t *conn;
-
-#ifdef SEQUENTIAL_ACI
   uint16_t high_bit;
+
   high_bit = (aci_type == ACI_TYPE_HIGHER) ? 1<<15 : 0;
   conn = connection_exact_get_by_addr_port(addr,port);
   if (!conn)
@@ -141,31 +140,6 @@ static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_t
     }
     test_aci |= high_bit;
   } while(circuit_get_by_aci_conn(test_aci, conn));
-  return test_aci;
-#else
-try_again:
-  log_fn(LOG_DEBUG,"trying to get a unique aci");
-
-  if (CRYPTO_PSEUDO_RAND_INT(test_aci))
-    return -1;
-
-  if(aci_type == ACI_TYPE_LOWER && test_aci >= (1<<15))
-    test_aci -= (1<<15);
-  if(aci_type == ACI_TYPE_HIGHER && test_aci < (1<<15))
-    test_aci += (1<<15);
-  /* if aci_type == ACI_BOTH, don't filter any of it */
-
-  if(test_aci == 0)
-    goto try_again;
-
-  conn = connection_exact_get_by_addr_port(addr,port);
-  if(!conn) /* there can't be a conflict -- no connection of that sort yet */
-    return test_aci;
-
-  if(circuit_get_by_aci_conn(test_aci, conn))
-    goto try_again;
-#endif
-
   return test_aci;
 }
 
@@ -256,7 +230,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   log_fn(LOG_DEBUG,"direction %d, streamid %d before crypt.", cell_direction, *(int*)(cell->payload+1));
 
   if(relay_crypt(circ, buf, 1+CELL_PAYLOAD_SIZE, cell_direction, &layer_hint, &recognized, &conn) < 0) {
-    log_fn(LOG_DEBUG,"relay crypt failed. Dropping connection.");
+    log_fn(LOG_WARNING,"relay crypt failed. Dropping connection.");
     return -1;
   }
 
@@ -302,7 +276,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
       thishop = circ->cpath;
       if(thishop->state != CPATH_STATE_OPEN) {
-        log_fn(LOG_INFO,"Relay cell before first created cell?");
+        log_fn(LOG_WARNING,"Relay cell before first created cell?");
         return -1;
       }
       do { /* Remember: cpath is in forward order, that is, first hop first. */
@@ -311,7 +285,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
         log_fn(LOG_DEBUG,"before decrypt: %d",*(int*)(in+2));
         /* decrypt */
         if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
-          log_fn(LOG_ERR,"Error performing decryption:%s",crypto_perror());
+          log_fn(LOG_WARNING,"Error performing onion decryption: %s", crypto_perror());
           return -1;
         }
         memcpy(in,out,inlen);
@@ -330,7 +304,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
 
       log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+2));
       if(crypto_cipher_encrypt(circ->p_crypto, in, inlen, out)) {
-        log_fn(LOG_ERR,"Encryption failed for ACI : %u (%s).",
+        log_fn(LOG_WARNING,"Onion encryption failed for ACI %u: %s",
             circ->p_aci, crypto_perror());
         return -1;
       }
@@ -351,7 +325,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
 
         log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+2));
         if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, out)) {
-          log_fn(LOG_ERR,"Error performing encryption:%s",crypto_perror());
+          log_fn(LOG_WARNING,"Error performing encryption: %s", crypto_perror());
           return -1;
         }
         memcpy(in,out,inlen);
@@ -362,7 +336,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
     } else { /* we're in the middle. Just one crypt. */
 
       if(crypto_cipher_decrypt(circ->n_crypto,in, inlen, out)) {
-        log_fn(LOG_ERR,"Decryption failed for ACI : %u (%s).",
+        log_fn(LOG_WARNING,"Decryption failed for ACI %u: %s",
                circ->n_aci, crypto_perror());
         return -1;
       }
@@ -645,7 +619,7 @@ void circuit_launch_new(int failure_status) {
 retry_circuit:
 
   if(failures > 5) {
-    log_fn(LOG_INFO,"Giving up, %d failures.", failures);
+    log_fn(LOG_INFO,"Giving up for now, %d failures.", failures);
     return;
   }
 
@@ -667,7 +641,7 @@ int circuit_establish_circuit(void) {
   circ->state = CIRCUIT_STATE_OR_WAIT;
   circ->cpath = onion_generate_cpath(&firsthop);
   if(!circ->cpath) {
-    log_fn(LOG_DEBUG,"Generating cpath failed.");
+    log_fn(LOG_INFO,"Generating cpath failed.");
     circuit_close(circ);
     return -1;
   }
@@ -681,7 +655,7 @@ int circuit_establish_circuit(void) {
     circ->n_addr = firsthop->addr;
     circ->n_port = firsthop->or_port;
     if(options.OnionRouter) { /* we would be connected if he were up. but he's not. */
-      log_fn(LOG_DEBUG,"Route's firsthop isn't connected.");
+      log_fn(LOG_INFO,"Route's firsthop isn't connected.");
       circuit_close(circ); 
       return -1;
     }
@@ -689,7 +663,7 @@ int circuit_establish_circuit(void) {
     if(!n_conn) { /* launch the connection */
       n_conn = connection_or_connect(firsthop);
       if(!n_conn) { /* connect failed, forget the whole thing */
-        log_fn(LOG_DEBUG,"connect to firsthop failed. Closing.");
+        log_fn(LOG_INFO,"connect to firsthop failed. Closing.");
         circuit_close(circ);
         return -1;
       }
@@ -705,7 +679,7 @@ int circuit_establish_circuit(void) {
     circ->n_conn = n_conn;
     log_fn(LOG_DEBUG,"Conn open. Delivering first onion skin.");
     if(circuit_send_next_onion_skin(circ) < 0) {
-      log_fn(LOG_DEBUG,"circuit_send_next_onion_skin failed.");
+      log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
       circuit_close(circ);
       return -1;
     }
@@ -726,7 +700,7 @@ void circuit_n_conn_open(connection_t *or_conn) {
     log_fn(LOG_DEBUG,"Found circ, sending onion skin.");
     circ->n_conn = or_conn;
     if(circuit_send_next_onion_skin(circ) < 0) {
-      log_fn(LOG_DEBUG,"circuit marked for closing.");
+      log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
       circuit_close(circ);
       return; /* FIXME will want to try the other circuits too? */
     }
@@ -752,7 +726,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     cell.length = DH_ONIONSKIN_LEN;
 
     if(onion_skin_create(circ->n_conn->onion_pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
-      log_fn(LOG_INFO,"onion_skin_create (first hop) failed.");
+      log_fn(LOG_WARNING,"onion_skin_create (first hop) failed.");
       return -1;
     }
 
@@ -772,13 +746,13 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
         hop=hop->next) ;
     if(hop == circ->cpath) { /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
-      log_fn(LOG_DEBUG,"circuit built!");
+      log_fn(LOG_INFO,"circuit built!");
       return 0;
     }
 
     router = router_get_by_addr_port(hop->addr,hop->port);
     if(!router) {
-      log_fn(LOG_INFO,"couldn't lookup router %d:%d",hop->addr,hop->port);
+      log_fn(LOG_WARNING,"couldn't lookup router %d:%d",hop->addr,hop->port);
       return -1;
     }
 
@@ -792,14 +766,14 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
     *(uint16_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
     if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
-      log_fn(LOG_INFO,"onion_skin_create failed.");
+      log_fn(LOG_WARNING,"onion_skin_create failed.");
       return -1;
     }
 
     log_fn(LOG_DEBUG,"Sending extend relay cell.");
     /* send it to hop->prev, because it will transfer it to a create cell and then send to hop */
     if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, hop->prev) < 0) {
-      log_fn(LOG_DEBUG,"failed to deliver extend cell. Closing.");
+      log_fn(LOG_WARNING,"failed to deliver extend cell. Closing.");
       return -1;
     }
     hop->state = CPATH_STATE_AWAITING_KEYS;
@@ -855,7 +829,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   log_fn(LOG_DEBUG,"aci_type = %u.",aci_type);
   circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
   if(!circ->n_aci) {
-    log_fn(LOG_ERR,"failed to get unique aci.");
+    log_fn(LOG_WARNING,"failed to get unique aci.");
     return -1;
   }
   log_fn(LOG_DEBUG,"Chosen ACI %u.",circ->n_aci);
@@ -889,14 +863,14 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
         hop != circ->cpath && hop->state == CPATH_STATE_OPEN;
         hop=hop->next) ;
     if(hop == circ->cpath) { /* got an extended when we're all done? */
-      log_fn(LOG_INFO,"got extended when circ already built? Closing.");
+      log_fn(LOG_WARNING,"got extended when circ already built? Closing.");
       return -1;
     }
   }
   assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
   if(onion_skin_client_handshake(hop->handshake_state, reply, keys, 32) < 0) {
-    log_fn(LOG_ERR,"onion_skin_client_handshake failed.");
+    log_fn(LOG_WARNING,"onion_skin_client_handshake failed.");
     return -1;
   }
 
@@ -906,18 +880,18 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   log_fn(LOG_DEBUG,"hop %d init cipher forward %d, backward %d.", (uint32_t)hop, *(uint32_t*)keys, *(uint32_t*)(keys+16));
   if (!(hop->f_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,1))) {
-    log(LOG_ERR,"Cipher initialization failed.");
+    log(LOG_WARNING,"forward cipher initialization failed.");
     return -1;
   }
 
   if (!(hop->b_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys+16,iv,0))) {
-    log(LOG_ERR,"Cipher initialization failed.");
+    log(LOG_WARNING,"backward cipher initialization failed.");
     return -1;
   }
 
   hop->state = CPATH_STATE_OPEN;
-  log_fn(LOG_DEBUG,"Completed.");
+  log_fn(LOG_INFO,"finished");
   return 0;
 }
 
@@ -935,7 +909,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
 
     for(stream = circ->p_streams; stream; stream=stream->next_stream) {
       if(stream->cpath_layer == victim) {
-        log_fn(LOG_DEBUG, "Marking stream %d for close.", *(int*)stream->stream_id);
+        log_fn(LOG_INFO, "Marking stream %d for close.", *(int*)stream->stream_id);
         stream->marked_for_close = 1;
       }
     }
@@ -944,7 +918,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
     circuit_free_cpath_node(victim);
   }
 
-  log_fn(LOG_DEBUG, "Complete.");
+  log_fn(LOG_INFO, "finished");
   return 0;
 }
 

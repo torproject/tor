@@ -160,7 +160,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
 
   if(!dnsconn) {
-    log_fn(LOG_INFO,"no idle dns workers. Failing.");
+    log_fn(LOG_WARNING,"no idle dns workers. Failing.");
     dns_cancel_pending_resolve(exitconn->address, NULL);
     return -1;
   }
@@ -173,7 +173,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   /* FFFF we should have it retry if the first worker bombs out */
   if(connection_write_to_buf(&len, 1, dnsconn) < 0 ||
      connection_write_to_buf(dnsconn->address, len, dnsconn) < 0) {
-    log_fn(LOG_NOTICE,"Write failed. Closing worker and failing resolve.");
+    log_fn(LOG_WARNING,"Write failed. Closing worker and failing resolve.");
     dnsconn->marked_for_close = 1;
     dns_cancel_pending_resolve(exitconn->address, NULL);
     return -1;
@@ -196,7 +196,7 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_INFO,"Answer to unasked question '%s'? Dropping.", question);
+    log_fn(LOG_WARNING,"Question '%s' is not pending. Dropping.", question);
     return;
   }
 
@@ -261,7 +261,7 @@ static void dns_found_answer(char *question, uint32_t answer) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_INFO,"Answer to unasked question '%s'? Dropping.", question);
+    log_fn(LOG_WARNING,"Answer to unasked question '%s'? Dropping.", question);
     return;
   }
 
@@ -299,7 +299,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_DNSWORKER);
 
   if(conn->inbuf_reached_eof) {
-    log(LOG_ERR,"connection_dnsworker_process_inbuf(): Read eof. Worker dying.");
+    log_fn(LOG_WARNING,"Read eof. Worker dying.");
     if(conn->state == DNSWORKER_STATE_BUSY) {
       dns_cancel_pending_resolve(conn->address, NULL);
       num_dnsworkers_busy--;
@@ -338,31 +338,31 @@ int dnsworker_main(void *data) {
   for(;;) {
 
     if(read(fd, &question_len, 1) != 1) {
-      log(LOG_INFO,"dnsworker_main(): read length failed. Exiting.");
+      log_fn(LOG_ERR,"read length failed. Child exiting.");
       spawn_exit();
     }
     assert(question_len > 0);
 
     if(read_all(fd, question, question_len) != question_len) {
-      log(LOG_INFO,"dnsworker_main(): read hostname failed. Exiting.");
+      log_fn(LOG_ERR,"read hostname failed. Child exiting.");
       spawn_exit();
     }
     question[question_len] = 0; /* null terminate it */
 
     rent = gethostbyname(question);
     if (!rent) {
-      log(LOG_INFO,"dnsworker_main(): Could not resolve dest addr %s. Returning nulls.",question);
+      log_fn(LOG_INFO,"Could not resolve dest addr %s. Returning nulls.",question);
       if(write_all(fd, "\0\0\0\0", 4) != 4) {
-        log(LOG_INFO,"dnsworker_main(): writing nulls failed. Exiting.");
+        log_fn(LOG_ERR,"writing nulls failed. Child exiting.");
         spawn_exit();
       }
     } else {
       assert(rent->h_length == 4); /* break to remind us if we move away from ipv4 */
       if(write_all(fd, rent->h_addr, 4) != 4) {
-        log(LOG_INFO,"dnsworker_main(): writing answer failed. Exiting.");
+        log_fn(LOG_INFO,"writing answer failed. Child exiting.");
         spawn_exit();
       }
-      log(LOG_INFO,"dnsworker_main(): Answered question '%s'.",question);
+      log_fn(LOG_INFO,"Answered question '%s'.",question);
     }
   }
   return 0; /* windows wants this function to return an int */
@@ -396,7 +396,7 @@ static int spawn_dnsworker(void) {
   conn->address = strdup("localhost");
 
   if(connection_add(conn) < 0) { /* no space, forget it */
-    log_fn(LOG_INFO,"connection_add failed. Giving up.");
+    log_fn(LOG_WARNING,"connection_add failed. Giving up.");
     connection_free(conn); /* this closes fd[0] */
     return -1;
   }
@@ -433,7 +433,7 @@ static void spawn_enough_dnsworkers(void) {
 
   while(num_dnsworkers < num_dnsworkers_needed) {
     if(spawn_dnsworker() < 0) {
-      log(LOG_ERR,"spawn_enough_dnsworkers(): spawn failed!");
+      log(LOG_WARNING,"spawn_enough_dnsworkers(): spawn failed!");
       return;
     }
     num_dnsworkers++;

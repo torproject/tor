@@ -7,8 +7,6 @@
 
 #include "orconfig.h"
 
-#define SEQUENTIAL_ACI
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -291,10 +289,8 @@ struct connection_t {
 
 /* Used only by OR connections: */
   tor_tls *tls;
-#ifdef SEQUENTIAL_ACI
   uint16_t next_aci; /* Which ACI do we try to use next on this connection? 
                       * This is always in the range 0..1<<15-1.*/
-#endif
 
 /* Used only by edge connections: */
   char stream_id[STREAM_ID_SIZE];
