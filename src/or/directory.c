@@ -566,7 +566,7 @@ body_is_plausible(const char *body, size_t len, int purpose)
         !strcmpstart(body,"running-routers"))
     return 1;
     for (i=0;i<32;++i) {
-      if (!isprint(body[i]) && !isspace(body[i]))
+      if (!TOR_ISPRINT(body[i]) && !TOR_ISSPACE(body[i]))
         return 0;
     }
     return 1;
