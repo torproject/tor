@@ -118,6 +118,21 @@ void smartlist_remove(smartlist_t *sl, void *element) {
     }
 }
 
+/** If there are any string in sl equal to element, remove the first.
+ * Does not preserve order. */
+void
+smartlist_string_remove(smartlist_t *sl, const char *element)
+{
+  int i;
+  size_t len = smartlist_len(sl);
+  for (i = 0; i < len; ++i) {
+    if (!strcmp(element, smartlist_get(sl, i))) {
+      smartlist_del(sl, i);
+      return;
+    }
+  }
+}
+
 /** Return true iff some element E of sl has E==element.
  */
 int smartlist_isin(const smartlist_t *sl, void *element) {
