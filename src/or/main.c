@@ -216,6 +216,7 @@ static void conn_write(int i) {
       /* this connection is broken. remove it. */
       log_fn(LOG_WARN,"Unhandled error on read for %s connection (fd %d); removing",
              conn_type_to_string[conn->type], conn->s);
+      conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
       connection_mark_for_close(conn,0);
     }
   }
