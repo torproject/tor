@@ -102,7 +102,7 @@ void circuit_log_path(int severity, circuit_t *circ) {
  */
 void circuit_rep_hist_note_result(circuit_t *circ) {
   struct crypt_path_t *hop;
-  char *prev_nickname = NULL;
+  char *prev_digest = NULL;
   routerinfo_t *router;
   hop = circ->cpath;
   if(!hop) {
@@ -114,22 +114,22 @@ void circuit_rep_hist_note_result(circuit_t *circ) {
     return;
   }
   if (options.ORPort) {
-    prev_nickname = options.Nickname;
+    prev_digest = router_get_my_routerinfo()->identity_digest;
   }
   do {
     router = router_get_by_digest(hop->identity_digest);
     if (router) {
-      if (prev_nickname) {
+      if (prev_digest) {
         if (hop->state == CPATH_STATE_OPEN)
-          rep_hist_note_extend_succeeded(prev_nickname, router->nickname);
+          rep_hist_note_extend_succeeded(prev_digest, router->identity_digest);
         else {
-          rep_hist_note_extend_failed(prev_nickname, router->nickname);
+          rep_hist_note_extend_failed(prev_digest, router->identity_digest);
           break;
         }
       }
-      prev_nickname = router->nickname;
+      prev_digest = router->identity_digest;
     } else {
-      prev_nickname = NULL;
+      prev_digest = NULL;
     }
     hop=hop->next;
   } while (hop!=circ->cpath);
@@ -445,6 +445,8 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   relay_header_unpack(&rh, cell->payload);
 
   if (rh.length == 4+2+ONIONSKIN_CHALLENGE_LEN) {
+    /* Once this format is no longer supported, nobody will use
+     * connection_*_get_by_addr_port. */
     old_format = 1;
   } else if (rh.length == 4+2+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN) {
     old_format = 0;

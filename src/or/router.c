@@ -124,6 +124,32 @@ void rotate_onion_key(void)
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
 }
 
+/* Read an RSA secret key key from a file that was once named fname_old,
+ * but is now named fname_new.  Rename the file from old to new as needed.
+ */
+crypto_pk_env_t *init_key_from_file_name_changed(const char *fname_old,
+                                                 const char *fname_new)
+{
+  int fs;
+
+  fs = file_status(fname_new);
+  if (fs == FN_FILE)
+    /* The new filename is there. */
+    return init_key_from_file(fname_new);
+  fs = file_status(fname_old);
+  if (fs != FN_FILE)
+    /* There is no key under either name. */
+    return init_key_from_file(fname_new);
+
+  /* The old filename exists, and the new one doesn't.  Rename and load. */
+  if (rename(fname_old, fname_new) < 0) {
+    log_fn(LOG_ERR, "Couldn't rename %s to %s: %s", fname_old, fname_new,
+           strerror(errno));
+    return NULL;
+  }
+  return init_key_from_file(fname_new);
+}
+
 /** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist,
  * create a new RSA key and save it in <b>fname</b>.  Return the read/created
  * key, or NULL on error.
@@ -182,6 +208,7 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
  */
 int init_keys(void) {
   char keydir[512];
+  char keydir2[512];
   char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];
   char *cp;
   const char *tmp, *mydesc, *datadir;
@@ -217,15 +244,17 @@ int init_keys(void) {
   cp = keydir + strlen(keydir); /* End of string. */
 
   /* 1. Read identity key. Make it if none is found. */
-  strcpy(cp, "/identity.key");
-  log_fn(LOG_INFO,"Reading/making identity key %s...",keydir);
-  prkey = init_key_from_file(keydir);
+  sprintf(keydir,"%s/keys/identity.key",datadir);
+  sprintf(keydir2,"%s/keys/secret_id_key",datadir);
+  log_fn(LOG_INFO,"Reading/making identity key %s...",keydir2);
+  prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_identity_key(prkey);
   /* 2. Read onion key.  Make it if none is found. */
-  strcpy(cp, "/onion.key");
-  log_fn(LOG_INFO,"Reading/making onion key %s...",keydir);
-  prkey = init_key_from_file(keydir);
+  sprintf(keydir,"%s/keys/onion.key",datadir);
+  sprintf(keydir2,"%s/keys/secret_onion_key",datadir);
+  log_fn(LOG_INFO,"Reading/making onion key %s...",keydir2);
+  prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_onion_key(prkey);
 
