@@ -683,8 +683,7 @@ connection_edge_process_relay_cell_not_open(
     conn->socks_request->has_finished = 1;
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
-      /* XXXX we can't tell why package failed. -NM */
-      connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+      /* (We already sent an end cell if possible) */
       connection_mark_for_close(conn);
       return 0;
     }
@@ -903,7 +902,12 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       conn->package_window += STREAMWINDOW_INCREMENT;
       log_fn(LOG_DEBUG,"stream-level sendme, packagewindow now %d.", conn->package_window);
       connection_start_reading(conn);
-      connection_edge_package_raw_inbuf(conn, 1); /* handle whatever might still be on the inbuf */
+      /* handle whatever might still be on the inbuf */
+      if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
+        /* (We already sent an end cell if possible) */
+        connection_mark_for_close(conn);
+        return 0;
+      }
       return 0;
     case RELAY_COMMAND_RESOLVE:
       if (layer_hint) {
@@ -952,7 +956,8 @@ uint64_t stats_n_data_bytes_received = 0;
  * and the appropriate package windows aren't empty, grab a cell
  * and send it down the circuit.
  *
- * Return -1 if conn should be marked for close, else return 0.
+ * Return -1 (and send a RELAY_END cell if necessary) if conn should
+ * be marked for close, else return 0.
  */
 int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial) {
   size_t amount_to_process, length;
@@ -966,7 +971,7 @@ repeat_connection_edge_package_raw_inbuf:
 
   circ = circuit_get_by_conn(conn);
   if (!circ) {
-    log_fn(LOG_INFO,"conn has no circuits! Closing.");
+    log_fn(LOG_INFO,"conn has no circuit! Closing.");
     return -1;
   }
 
@@ -1006,7 +1011,8 @@ repeat_connection_edge_package_raw_inbuf:
 
   if (connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
                                    payload, length, conn->cpath_layer) < 0)
-    return 0; /* circuit is closed, don't continue */
+    /* circuit got marked for close, don't continue, don't need to mark conn */
+    return 0;
 
   if (!conn->cpath_layer) { /* non-rendezvous exit */
     tor_assert(circ->package_window > 0);
@@ -1089,7 +1095,11 @@ circuit_resume_edge_reading_helper(connection_t *conn,
         (layer_hint && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
       /* handle whatever might still be on the inbuf */
-      connection_edge_package_raw_inbuf(conn, 1);
+      if (connection_edge_package_raw_inbuf(conn, 1)<0) {
+        /* (We already sent an end cell if possible) */
+        connection_mark_for_close(conn);
+        continue;
+      }
 
       /* If the circuit won't accept any more data, return without looking
        * at any more of the streams. Any connections that should be stopped

@@ -396,8 +396,12 @@ int _circuit_mark_for_close(circuit_t *circ) {
   while (circ->resolving_streams) {
     conn = circ->resolving_streams;
     circ->resolving_streams = conn->next_stream;
-    if (!conn->marked_for_close)
+    if (!conn->marked_for_close) {
+      /* The other side will see a DESTROY, and infer that the connections
+       * are closing because the circuit is getting torn down.  No need
+       * to send an end cell*/
       connection_mark_for_close(conn);
+    }
   }
   if (circ->p_conn)
     connection_send_destroy(circ->p_circ_id, circ->p_conn);

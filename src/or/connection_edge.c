@@ -78,8 +78,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       if (connection_edge_package_raw_inbuf(conn, package_partial) < 0) {
-        /* XXXX We can't tell *why* package failed. -NM */
-        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+        /* (We already sent an end cell if possible) */
         connection_mark_for_close(conn);
         return -1;
       }
@@ -275,6 +274,7 @@ void connection_ap_expire_beginning(void) {
     if (!circ) { /* it's vanished? */
       log_fn(LOG_INFO,"Conn is waiting (address %s), but lost its circ.",
              conn->socks_request->address);
+      conn->has_sent_end = 1; /* No circuit to receive end cell. */
       connection_mark_for_close(conn);
       continue;
     }

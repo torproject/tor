@@ -358,6 +358,8 @@ conn_read_callback(int fd, short event, void *_conn)
       tor_assert(0);
 #endif
 #endif
+      if (CONN_IS_EDGE(conn))
+        connection_edge_end_errno(conn, conn->cpath_layer);
       connection_mark_for_close(conn);
     }
   }
