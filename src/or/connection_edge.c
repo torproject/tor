@@ -524,7 +524,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     connection_write_to_buf(buf,10,conn);
     return connection_flush_buf(conn); /* try to flush it */
   }
-  assert(0);
+  return 0; /* if socks_version isn't 4 or 5, don't send anything */
 }
 
 /*ENDCLOSE*/ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
