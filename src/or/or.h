@@ -1214,6 +1214,7 @@ connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state, const char *rendquery);
+connection_t *connection_get_by_type_purpose(int type, int purpose);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 #define connection_has_pending_tls_data(conn) \
