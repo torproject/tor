@@ -734,7 +734,6 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   if (!is_local_IP(circ->p_conn->addr)) {
     /* record that we could process create cells; presumably this means
        that create cells can reach us too. */
-    log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.");
     router_orport_found_reachable();
   }
 

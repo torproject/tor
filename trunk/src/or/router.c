@@ -399,12 +399,18 @@ void consider_testing_reachability(void) {
 
 /** Annotate that we found our ORPort reachable. */
 void router_orport_found_reachable(void) {
-  can_reach_or_port = 1;
+  if (!can_reach_or_port) {
+    log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.");
+    can_reach_or_port = 1;
+  }
 }
 
 /** Annotate that we found our DirPort reachable. */
 void router_dirport_found_reachable(void) {
-  can_reach_dir_port = 1;
+  if (!can_reach_dir_port) {
+    log_fn(LOG_NOTICE,"Your DirPort is reachable from the outside. Excellent.");
+    can_reach_dir_port = 1;
+  }
 }
 
 /** Our router has just moved to a new IP. Reset stats. */
