@@ -140,6 +140,14 @@ Section~\ref{sec:maintaining-anonymity}.
 Tor multiplexes multiple TCP streams along each virtual
 circuit, to improve efficiency and anonymity.
 
+\item \textbf{Leaky-pipe circuit topology:} Through in-band signalling
+within the circuit, Tor initiators can direct traffic to nodes partway
+down the circuit. This allows for long-range padding to frustrate traffic
+shape and volume attacks at the initiator \cite{defensive-dropping}.
+Because circuits are used by more than one application, it also allows
+traffic to exit the circuit from the middle---thus frustrating traffic
+shape and volume attacks based on observing the end of the circuit.
+
 \item \textbf{No mixing, padding, or traffic shaping:} The original
 Onion Routing design called for batching and reordering the cells arriving
 from each circuit. It also included padding between onion routers and,
@@ -156,16 +164,6 @@ vulnerable \cite{defensive-dropping}. Thus, until we have a proven and
 convenient design for traffic shaping or low-latency mixing that
 will improve anonymity against a realistic adversary, we leave these
 strategies out.
-
-\item \textbf{Leaky-pipe circuit topology:} Through in-band
-  signalling within the
-  circuit, Tor initiators can direct traffic to nodes partway down the
-  circuit. This allows for long-range padding to frustrate traffic
-  shape and volume attacks at the initiator \cite{defensive-dropping}.
-  Because circuits are used by more than one application, it also
-  allows traffic to exit the circuit from the middle---thus
-  frustrating traffic shape and volume attacks based on observing the
-  end of the circuit.
 
 \item \textbf{Congestion control:} Earlier anonymity designs do not
 address traffic bottlenecks. Unfortunately, typical approaches to load
