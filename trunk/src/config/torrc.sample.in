@@ -1,4 +1,10 @@
 ## Configuration file for a typical tor user
+#
+# On Unix, Tor will look for this file in someplace like "~/.tor/torrc" or
+# "/etc/torrc" .
+#
+# On Windows, Tor will look for its configuration file in someplace like
+# Application Data\tor or Application Data\<username>\tor .
 
 ## Replace this with "SocksPort 0" if you don't want clients to connect.
 SocksPort 9050 # what port to advertise for application connections
