@@ -124,46 +124,47 @@
 #define DNSWORKER_STATE_IDLE 0
 #define DNSWORKER_STATE_BUSY 1
 
-#define _CPUWORKER_STATE_MIN 0
-#define CPUWORKER_STATE_IDLE 0
-#define CPUWORKER_STATE_BUSY_ONION 1
-#define CPUWORKER_STATE_BUSY_HANDSHAKE 2
-#define _CPUWORKER_STATE_MAX 2
+#define _CPUWORKER_STATE_MIN 1
+#define CPUWORKER_STATE_IDLE 1
+#define CPUWORKER_STATE_BUSY_ONION 2
+#define CPUWORKER_STATE_BUSY_HANDSHAKE 3
+#define _CPUWORKER_STATE_MAX 3
 
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
 
-#define _OR_CONN_STATE_MIN 0
-#define OR_CONN_STATE_CONNECTING 0 /* waiting for connect() to finish */
-#define OR_CONN_STATE_HANDSHAKING 1 /* SSL is handshaking, not done yet */
-#define OR_CONN_STATE_OPEN 2 /* ready to send/receive cells. */
-#define _OR_CONN_STATE_MAX 2
+#define _OR_CONN_STATE_MIN 1
+#define OR_CONN_STATE_CONNECTING 1 /* waiting for connect() to finish */
+#define OR_CONN_STATE_HANDSHAKING 2 /* SSL is handshaking, not done yet */
+#define OR_CONN_STATE_OPEN 3 /* ready to send/receive cells. */
+#define _OR_CONN_STATE_MAX 3
 
-#define _EXIT_CONN_STATE_MIN 0
-#define EXIT_CONN_STATE_RESOLVING 0 /* waiting for response from dns farm */
-#define EXIT_CONN_STATE_CONNECTING 1 /* waiting for connect() to finish */
-#define EXIT_CONN_STATE_OPEN 2
-#define _EXIT_CONN_STATE_MAX 2
+#define _EXIT_CONN_STATE_MIN 1
+#define EXIT_CONN_STATE_RESOLVING 1 /* waiting for response from dns farm */
+#define EXIT_CONN_STATE_CONNECTING 2 /* waiting for connect() to finish */
+#define EXIT_CONN_STATE_OPEN 3
+#define _EXIT_CONN_STATE_MAX 3
 #if 0
 #define EXIT_CONN_STATE_CLOSE 3 /* flushing the buffer, then will close */
 #define EXIT_CONN_STATE_CLOSE_WAIT 4 /* have sent a destroy, awaiting a confirmation */
 #endif
 
-#define _AP_CONN_STATE_MIN 3
-#define AP_CONN_STATE_SOCKS_WAIT 3
-#define AP_CONN_STATE_OR_WAIT 4
-#define AP_CONN_STATE_OPEN 5
-#define _AP_CONN_STATE_MAX 5
+/* the AP state values must be disjoint from the EXIT state values */
+#define _AP_CONN_STATE_MIN 4
+#define AP_CONN_STATE_SOCKS_WAIT 4
+#define AP_CONN_STATE_OR_WAIT 5
+#define AP_CONN_STATE_OPEN 6
+#define _AP_CONN_STATE_MAX 6
 
-#define _DIR_CONN_STATE_MIN 0
-#define DIR_CONN_STATE_CONNECTING_FETCH 0
-#define DIR_CONN_STATE_CONNECTING_UPLOAD 1
-#define DIR_CONN_STATE_CLIENT_SENDING_FETCH 2
-#define DIR_CONN_STATE_CLIENT_SENDING_UPLOAD 3
-#define DIR_CONN_STATE_CLIENT_READING_FETCH 4
-#define DIR_CONN_STATE_CLIENT_READING_UPLOAD 5
-#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 6
-#define DIR_CONN_STATE_SERVER_WRITING 7
-#define _DIR_CONN_STATE_MAX 7
+#define _DIR_CONN_STATE_MIN 1
+#define DIR_CONN_STATE_CONNECTING_FETCH 1
+#define DIR_CONN_STATE_CONNECTING_UPLOAD 2
+#define DIR_CONN_STATE_CLIENT_SENDING_FETCH 3
+#define DIR_CONN_STATE_CLIENT_SENDING_UPLOAD 4
+#define DIR_CONN_STATE_CLIENT_READING_FETCH 5
+#define DIR_CONN_STATE_CLIENT_READING_UPLOAD 6
+#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 7
+#define DIR_CONN_STATE_SERVER_WRITING 8
+#define _DIR_CONN_STATE_MAX 8
 
 #define CIRCUIT_STATE_BUILDING 0 /* I'm the OP, still haven't done all my handshakes */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1 /* waiting to process the onionskin */
