@@ -256,15 +256,18 @@ typedef enum {
 /** State for a SOCKS connection: got a y.onion URL; waiting to receive
  * rendezvous rescriptor. */
 #define AP_CONN_STATE_RENDDESC_WAIT 6
+/** The controller will attach this connection to a circuit; it isn't our
+ * job to do so. */
+#define AP_CONN_STATE_CONTROLLER_WAIT 7
 /** State for a SOCKS connection: waiting for a completed circuit. */
-#define AP_CONN_STATE_CIRCUIT_WAIT 7
+#define AP_CONN_STATE_CIRCUIT_WAIT 8
 /** State for a SOCKS connection: sent BEGIN, waiting for CONNECTED. */
-#define AP_CONN_STATE_CONNECT_WAIT 8
+#define AP_CONN_STATE_CONNECT_WAIT 9
 /** State for a SOCKS connection: send RESOLVE, waiting for RESOLVED. */
-#define AP_CONN_STATE_RESOLVE_WAIT 9
+#define AP_CONN_STATE_RESOLVE_WAIT 10
 /** State for a SOCKS connection: ready to send and receive. */
-#define AP_CONN_STATE_OPEN 10
-#define _AP_CONN_STATE_MAX 10
+#define AP_CONN_STATE_OPEN 11
+#define _AP_CONN_STATE_MAX 11
 
 #define _DIR_CONN_STATE_MIN 1
 /** State for connection to directory server: waiting for connect(). */
@@ -1053,6 +1056,9 @@ typedef struct {
                                 * the control system. */
   int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
                              * the control system? */
+  int ManageConnections; /**< Boolean: Does Tor attach new connections to
+                          * circuits itself (1), or does it let the controller
+                          * deal? (0) */
 } or_options_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024
@@ -1133,6 +1139,7 @@ void circuit_close_all_marked(void);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
+circuit_t *circuit_get_by_global_id(uint32_t id);
 circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose);
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
                                          const char *digest, uint8_t purpose);
@@ -1172,6 +1179,8 @@ circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname
 circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
                                       int need_uptime, int need_capacity, int is_internal);
 void circuit_reset_failure_count(int timeout);
+int connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
+                                                  circuit_t *circ);
 int connection_ap_handshake_attach_circuit(connection_t *conn);
 
 /********************************* command.c ***************************/
@@ -1260,6 +1269,7 @@ void connection_write_to_buf(const char *string, size_t len, connection_t *conn)
 
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_get_by_identity_digest(const char *digest, int type);
+connection_t *connection_get_by_global_id(uint32_t id);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
@@ -1365,7 +1375,8 @@ typedef enum stream_status_event_t {
   STREAM_EVENT_SUCCEEDED    = 2,
   STREAM_EVENT_FAILED       = 3,
   STREAM_EVENT_CLOSED       = 4,
-  STREAM_EVENT_NEW          = 5
+  STREAM_EVENT_NEW          = 5,
+  STREAM_EVENT_NEW_RESOLVE  = 6
 } stream_status_event_t;
 
 typedef enum or_conn_status_event_t {

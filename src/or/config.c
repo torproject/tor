@@ -174,6 +174,7 @@ static config_var_t config_vars[] = {
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
+  VAR("__ManageConnections", BOOL,     ManageConnections,    "1"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
@@ -1154,6 +1155,9 @@ config_dump_options(or_options_t *options, int minimal)
   for (i=0; config_vars[i].name; ++i) {
     if (config_vars[i].type == CONFIG_TYPE_OBSOLETE ||
         config_vars[i].type == CONFIG_TYPE_LINELIST_S)
+      continue;
+    /* Don't save 'hidden' control variables. */
+    if (!strcmpstart(config_vars[i].name, "__"))
       continue;
     if (minimal && option_is_same(options, defaults, config_vars[i].name))
       continue;

@@ -61,7 +61,8 @@ const char control_c_id[] = "$Id$";
 #define ERR_UNAUTHORIZED            0x0007
 #define ERR_REJECTED_AUTHENTICATION 0x0008
 #define ERR_RESOURCE_EXHAUSETED     0x0009
-#define ERR_TOO_LONG                0x000A
+#define ERR_NO_STREAM               0x000A
+#define ERR_NO_CIRC                 0x000B
 
 /* Recognized asynchronous event types. */
 #define _EVENT_MIN            0x0001
@@ -613,12 +614,6 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
     }
   });
 
-  if (msg_len > 65535) {
-    /* XXXX What if it *is* this long? */
-    send_control_error(conn, ERR_TOO_LONG, body);
-    goto done;
-  }
-
   msg = smartlist_join_strings2(answers, "\0", 1, 1, &msg_len);
   send_control_message(conn, CONTROL_CMD_INFOVALUE,
                        msg_len, msg_len?msg:NULL);
@@ -642,7 +637,47 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
 static int handle_control_attachstream(connection_t *conn, uint32_t len,
                                         const char *body)
 {
-  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  uint32_t conn_id;
+  uint32_t circ_id;
+  connection_t *ap_conn;
+  circuit_t *circ;
+
+  if (len < 8) {
+    send_control_error(conn, ERR_SYNTAX, "attachstream message too short");
+    return 0;
+  }
+
+  conn_id = ntohl(get_uint32(body));
+  circ_id = ntohl(get_uint32(body+4));
+
+  if (!(ap_conn = connection_get_by_global_id(conn_id))) {
+    send_control_error(conn, ERR_NO_STREAM,
+                       "No connection found with given ID");
+    return 0;
+  }
+  if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT) {
+    send_control_error(conn, ERR_NO_STREAM,
+                       "Connection was not managed by controller.");
+    return 0;
+  }
+
+  if (!circ_id) {
+    ap_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+    if (connection_ap_handshake_attach_circuit(ap_conn)<0)
+      connection_mark_for_close(ap_conn);
+
+    return 0;
+  }
+
+
+  if (!(circ = circuit_get_by_global_id(circ_id))) {
+    send_control_error(conn, ERR_NO_CIRC, "No circuit found with given ID");
+    return 0;
+  }
+  if (connection_ap_handshake_attach_chosen_circuit(ap_conn, circ) != 1) {
+    send_control_error(conn, ERR_INTERNAL, "Unable to attach stream.");
+    return 0;
+  }
   return 0;
 }
 static int

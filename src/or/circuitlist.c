@@ -183,6 +183,22 @@ circuit_free_cpath_node(crypt_path_t *victim) {
   tor_free(victim);
 }
 
+/** DOCDOC **/
+circuit_t *
+circuit_get_by_global_id(uint32_t id)
+{
+  circuit_t *circ;
+  for (circ=global_circuitlist;circ;circ = circ->next) {
+    if (circ->global_identifier == id) {
+      if (circ->marked_for_close)
+        return NULL;
+      else
+        return circ;
+    }
+  }
+  return NULL;
+}
+
 /** Return a circ such that:
  *  - circ-\>n_circ_id or circ-\>p_circ_id is equal to <b>circ_id</b>, and
  *  - circ is attached to <b>conn</b>, either as p_conn, n-conn, or

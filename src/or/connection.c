@@ -1243,6 +1243,30 @@ connection_t *connection_get_by_identity_digest(const char *digest, int type)
   return best;
 }
 
+
+/** Return the connection with id <b>id</b> if it is not already
+ * marked for close.
+ */
+connection_t *
+connection_get_by_global_id(uint32_t id) {
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for (i=0;i<n;i++) {
+    conn = carray[i];
+    if (conn->global_identifier == id) {
+      if (!conn->marked_for_close)
+        return conn;
+      else
+        return NULL;
+    }
+  }
+  return NULL;
+}
+
+
 /** Return a connection of type <b>type</b> that is not marked for
  * close.
  */
