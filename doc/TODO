@@ -41,7 +41,7 @@ N . Switch to libevent
    - Make sure logged info is "safe"ish.
 
  Stability
-R  - Reset uptime when IP/ORPort/... changes.
+R  o Reset uptime when IP changes.
 
  Functionality
 N  . Implement pending controller features.
@@ -88,7 +88,7 @@ N - Clean up NT service code even more.  Document it. Enable it by default.
 
  Documentation
 N - Document new version system.
-R - Correct and clarify the wiki entry on port forwarding.
+r - Correct and clarify the wiki entry on port forwarding.
 N - Document where OSX, windows logs go, where stuff is installed.
 
  Installers
@@ -111,22 +111,22 @@ R    - should retry exitpolicy end streams even if the end cell didn't
    - Figure out when to reset addressmaps (on hup, on reconfig, etc)
 
  Improvements to self-measurement.
-R  - round detected bandwidth up to nearest 10KB?
-R  - client software not upload descriptor until:
-     - you've been running for an hour
-     - it's sufficiently satisfied with its bandwidth
-     - it decides it is reachable
-     - start counting again if your IP ever changes.
-     - never regenerate identity keys, for now.
-     - you can set a bit for not-being-an-OR.
-     * no need to do this yet. few people define their ORPort.
+R  X round detected bandwidth up to nearest 10KB?
+R  o client software not upload descriptor until:
+     . it decides it is reachable
+       o dirport
+       . orport
+     o start counting again if your IP ever changes.
+     o never regenerate identity keys, for now.
+     o you can set a bit for not-being-an-OR.
+       * no need to do this yet. few people define their ORPort.
 
  Arguable
 N - Reverse DNS: specify and implement.
-R - make min uptime a function of the available choices (say, choose 60th
+r - make min uptime a function of the available choices (say, choose 60th
     percentile, not 1 day.)
-R - kill dns workers more slowly
-R - build testing circuits? going through non-verified nodes?
+r - kill dns workers more slowly
+r - build testing circuits? going through non-verified nodes?
   - config option to publish what ports you listen on, beyond ORPort/DirPort
 N - It would be nice to have a FirewalledIPs thing that works like
     FirewallPorts.
@@ -174,6 +174,8 @@ For 0.1.1.x:
 Decentralizing:
   - self-measurement
   - remote measurement
+     - you've been running for an hour
+     - it's sufficiently satisfied with its bandwidth
   - remove approval crap, add blacklisting by IP
   - gather more permanent dirservers and put their keys into the code
   - ship with a master key, and implement a way to query dirservers for
