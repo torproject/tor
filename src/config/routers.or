@@ -1,71 +1,78 @@
-# List of core onion routers in the network.
-# Line format : address ORPort OPPort APPort DirPort bandwidth(bytes/s)
-# followed by the routers public key.
-# ORport is where the router listens for routers/clients (speaking cells)
-# APPort is where the router listens for applications (speaking socks)
-# DirPort is where the router listens for directory download requests
-
-# Router 1
-router moria.mit.edu 9001 9021 9031 1000000
+router moria.mit.edu 9001 9021 9031 800000
+onion-key
 -----BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
-7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
-nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
+MIGJAoGBANoIvHieyHUTzIacbnWOnyTyzGrLOdXqbcjz2GGMxyHEd5K1bO1ZBNHP
+9i5qLQpN5viFk2K2rEGuG8tFgDEzSWZEtBqv3NVfUdiumdERWMBwlaQ0MVK4C+jf
+y5gZ8KI3o9ZictgPS1AQF+Kk932/vIHTuRIUKb4ILTnQilNvID0NAgMBAAE=
+-----END RSA PUBLIC KEY-----
+link-key
+-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAPt97bGDd9siVjPd7Xuq2s+amMEOLIj9961aSdP6/OT+BS1Q4TX2dNOX
+ZNAl63Z2fQISsR81+nfoqRLYCKxhajsD7LRvRTaRwUrWemVqFevmZ4nJrHw6FoU3
+xNUIHRMA8X2DZ+l5qgnWZb7JU50ohhX5OpMSyysXnik51J8hD5mBAgMBAAE=
 -----END RSA PUBLIC KEY-----
 signing-key
 -----BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
-7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
-nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
+MIGJAoGBAMHa0ZC/jo2Q2DrwKYF/6ZbmZ27PFYG91u4gUzzmZ/VXLpZ8wNzEV3oW
+nt+I61048fBiC1frT1/DZ351n2bLSk9zJbB6jyGZJn0380FPRX3+cXyXS0Gq8Ril
+xkhMQf5XuNFUb8UmYPSOH4WErjvYjKvU+gfjbK/82Jo9SuHpYz+BAgMBAAE=
 -----END RSA PUBLIC KEY-----
-accept *:*
+router-signature
+-----BEGIN SIGNATURE-----
+fYcz+14lf2kilu0zGrkyAvfjNk2GfL5QClhdCiBuqy5fIkUS/969WZSWg9BXi7pK
+5+EgR9hvY4nAtJ2SBoE+lyOx7miuT/uGfH68wNkC0Le2gULcprDYFKAEc5i1o/aS
+Y/kuZIFDm2FXQPrYM88CIHAq8/3amUCskf2vC7l2eNE=
+-----END SIGNATURE-----
 
-# Router 2
-router moria.mit.edu 9002 9022 9032 1000000
+router moria.mit.edu 9002 9022 9032 800000
+onion-key
 -----BEGIN RSA PUBLIC KEY-----
-MIGJAoGBANX/HHRuudz274MFSQ4manX8DhtsIuogNUyco9/0dr+XsfioTGd3RgMj
-aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
-1UlWR4eiqBx3djxdIl/t+Nidw++YGc8QqRqkg0EhQCJ2fnOtHn9bAgMA//8=
+MIGJAoGBAM4Cc/npgYC54XrYLC+grVxJp7PDmNO2DRRJOxKttBBtvLpnR1UaueTi
+kyknT5kmlx+ihgZF/jmye//2dDUp2+kK/kSkpRV4xnDLXZmed+sNSQxqmm9TtZQ9
+/hjpxhp5J9HmUTYhntBs+4E4CUKokmrI6oRLoln4SA39AX9QLPcnAgMBAAE=
+-----END RSA PUBLIC KEY-----
+link-key
+-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAN7JVeCIJ7+0ZJew5ScOU58rTUqjGt1Z1Rkursc7WabEb8jno45VZwIs
+dkjnl31i36KHyyS7kQdHgkvG5EiyZiRipFAcoTaYv3Gvf1No9cXL6IhT3y/37dJ/
+kFPEMb/G2wdkJCC+D8fMwHBwMuqAg0JGuhoBOz0ArCgK3fq0BLilAgMBAAE=
 -----END RSA PUBLIC KEY-----
 signing-key
 -----BEGIN RSA PUBLIC KEY-----
-MIGJAoGBANX/HHRuudz274MFSQ4manX8DhtsIuogNUyco9/0dr+XsfioTGd3RgMj
-aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
-1UlWR4eiqBx3djxdIl/t+Nidw++YGc8QqRqkg0EhQCJ2fnOtHn9bAgMA//8=
+MIGJAoGBAOcrht/y5rkaahfX7sMe2qnpqoPibsjTSJaDvsUtaNP/Bq0MgNDGOR48
+rtwfqTRff275Edkp/UYw3G3vSgKCJr76/bqOHCmkiZrnPV1zxNfrK18gNw2Cxre0
+nTA+fD8JQqpPtb8b0SnG9kwy75eS//sRu7TErie2PzGMxrf9LH0LAgMBAAE=
 -----END RSA PUBLIC KEY-----
+router-signature
+-----BEGIN SIGNATURE-----
+Hyx1fJFJaR9j7OpEg4qdxKo+AMXIZl6250AuiYmvdcwWD2VBJyhSbptB/vMLQGrU
+/PGWLlZus90xD/mKesc4b0CkwKD6eWI90Wn34JwBUGHalN/qm42tMMoq3slOWae0
+Da9JmxiYqApXwwaHWR9WwNHmkXkWfvTmZDSFkdEMgV0=
+-----END SIGNATURE-----
 
-# Router 3
-router moria.mit.edu 9003 9023 9033 1000000
+router moria.mit.edu 9003 9023 9033 800000
+onion-key
 -----BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAJfkNWCaNkYIRwfHT06KBU6dz8W1xDpW5ezGJwAOoxCX3/ZNoUicb/1V
-oB3OzW6VxWIiht3da/3K0ywiBOOCcf6BabKoMdiPpH7NIeu6XRmBYK2uqW13gBgh
-xJbQBb58Nx8Fr05XkvLG6i+vTDY3MZOW3E2/DwSe/jFzuHSD5b3nAgMA//8=
+MIGJAoGBANS6J/Er9fYo03fjUUVesc7We9Z6xIevyDJH39pYS4NUlcr5ExYgSVFJ
+95aLCNx1x8Rf5YtiBKYuT3plBO/+rfuX+0iAGNkz/y3SlJVGz6aeptU3wN8CkvCL
+zATEcnl4QSPhHX0wFB9A3t7wZ+Bat1PTI029lax/BkoS9JG5onHPAgMBAAE=
+-----END RSA PUBLIC KEY-----
+link-key
+-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAKUMY8p+7LBu7dEJnOR9HqbfcD6c4/f9GqJt3o29uu4XJPD8z2XGVBik
+pZBLijhYS6U7GFg0NLR4zBlsLyB8TxHeaz5KJidJjy+BfC01jz1xwVTYDlmGVpc1
+0mw0Ag0ND6aOQKKhelxhTI3Bf0R9olEXuSUKEWx3EMIz2qhLd9oDAgMBAAE=
 -----END RSA PUBLIC KEY-----
 signing-key
 -----BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAJfkNWCaNkYIRwfHT06KBU6dz8W1xDpW5ezGJwAOoxCX3/ZNoUicb/1V
-oB3OzW6VxWIiht3da/3K0ywiBOOCcf6BabKoMdiPpH7NIeu6XRmBYK2uqW13gBgh
-xJbQBb58Nx8Fr05XkvLG6i+vTDY3MZOW3E2/DwSe/jFzuHSD5b3nAgMA//8=
+MIGJAoGBAMqgq83cwzSid2LSvzsn2rvkD8U0tWvqF6PuQAsKP3QHFqtBO+66pnIm
+CbiY2e6o01tmR47t557LuUCodEc8Blggxjg3ZEzvP42hsGB9LwQbcrU7grPRk0G0
+IltsOF9TZ+66gCeU7LxExLdAMqT2Tx6VT4IREPJMeNxSiceEjbABAgMBAAE=
 -----END RSA PUBLIC KEY-----
-
-router moria.mit.edu 9004 9024 0 1000000
------BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAKD2BDZQpGq/aAbZ7t+/7qktZVEbhUGe097gIjWH9gXcIOIm0CJMe3rN
-MsBJsQMi5Uwqrz+Invb5n6bswrNlJp/bCKBhGTvUCfxg7c8xZy71PPSIPnTg1qXl
-p5fyAkgCYkZNgEEZzQDHv1GRvLCs92kURjSJE5y8QU0dXfbzms8PAgMA//8=
------END RSA PUBLIC KEY-----
-
-router mosg.cl.cam.ac.uk 9005 9025 0 1000000
------BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAMMHEjhhawM6S14ETFVcvByU7D/baN2JMcCweKKJ7zcSurDnpgRH/Uo7
-05+bZE3BCy4OkAqQbGlKd/ejBOuXjEtS0mJo5xwDX9StKguhgFRk60hhrF2OFJm4
-VLItXA6U2NLOrc+FBCv/9laLpBrxOb8Wuct0l/lyZ2/OfE9yYhC3AgMA//8=
------END RSA PUBLIC KEY-----
-
-router 66.17.17.207 9006 9026 0 1000000
------BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAL5cpmH34kVfmHd+A00vMton3pLGHAVf7BYkSMif8e/O5zXTUXRi4w78
-jDcGNo2yFM3htTpT5/tWs/Z2+B/mx8Kz+AhHzZ9z0PdQreDSqxXjF+jmfCyx9Teq
-jU9QA3GZiguLYV2pcs6Oll20svPSt0WRAR4YUmDeQmEYIZdBGnrVAgMBAAE=
------END RSA PUBLIC KEY-----
+router-signature
+-----BEGIN SIGNATURE-----
+xm7Nmk7EmtDIrXZ/Hh2LBbG3oTuwCjY3XrVHpIbg6ttuoYJx3Ai1MdOHHBbUDVdz
+bRE6WV5fXuVgmgcWLP6p364Vymw6i2ff/lkEMqHV4NOAWZ1RbFwZQ5OjEAjXIhH/
+VlVX83wBSM0EefJwwXM7H075MU1MB+f2yRlTZ0/Xp0U=
+-----END SIGNATURE-----
 

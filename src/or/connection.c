@@ -304,19 +304,14 @@ static int connection_tls_finish_handshake(connection_t *conn) {
           return -1;
         }
         log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
-        crypto_free_pk_env(pk);
       } else {
         if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
           log_fn(LOG_INFO,"That router is already connected. Dropping.");
           return -1;
         }
-        conn->link_pkey = pk;
-        conn->bandwidth = router->bandwidth;
-        conn->addr = router->addr, conn->port = router->or_port;
-        if(conn->address)
-          free(conn->address);
-        conn->address = strdup(router->address);
+        connection_or_init_conn_from_router(conn, router);
       }
+      crypto_free_pk_env(pk);
     } else { /* it's an OP */
       conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     }
@@ -615,7 +610,7 @@ int connection_handle_write(connection_t *conn) {
   return 0;
 }
 
-int connection_write_to_buf(char *string, int len, connection_t *conn) {
+int connection_write_to_buf(const char *string, int len, connection_t *conn) {
 
   if(!len)
     return 0;
