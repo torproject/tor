@@ -3,6 +3,5 @@
 aclocal &&
 	autoheader &&
 	autoconf &&
-	automake --add-missing --copy
-./configure
-
+	automake --add-missing --copy &&
+	./configure
