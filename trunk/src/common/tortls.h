@@ -33,7 +33,7 @@ int tor_tls_get_pending_bytes(tor_tls *tls);
 unsigned long tor_tls_get_n_bytes_read(tor_tls *tls);
 unsigned long tor_tls_get_n_bytes_written(tor_tls *tls);
 
-#define assert_no_tls_errors() _assert_no_tls_errors(__FILE__,__LINE__);
+#define assert_no_tls_errors() _assert_no_tls_errors(__FILE__,__LINE__)
 
 void _assert_no_tls_errors(const char *fname, int line);
 
