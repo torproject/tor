@@ -12,6 +12,8 @@ ARMA    - arma claims
         X Abandoned
 
 Bugs:
+        - on solaris, need to build with
+          LDFLAGS="-lsocket -lnsl" ./configure --with-ssl-dir=/usr/local/ssl
         - should maybe make clients exit(1) when bad things happen?
           e.g. clock skew.
         o client-side dns cache doesn't appear to be getting populated
