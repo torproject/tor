@@ -204,11 +204,11 @@ Administrative contact information for server.
 .TP
 \fBExitPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
 Set an exit policy for this server. Each policy is of the form
-"\fBreject\fP \fIADDR\fP\fB/\fP\fIMASK\fP\fB:\fP\fIPORT\fP".
+"\fBaccept\fP|\fBreject\fP \fIADDR\fP[\fB/\fP\fIMASK\fP]\fB:\fP\fIPORT\fP".
 If \fB/\fP\fIMASK\fP is omitted then this policy just applies to the host
 given.  Instead of giving a host or network you can also use "\fB*\fP" to
-denote the universe (0.0.0.0/0).  \fIPORT\fP can either be a single port number
-or an interval of ports: "\fIFROM_PORT\fP\fB-\fP\fITO_PORT\fP".
+denote the universe (0.0.0.0/0).  \fIPORT\fP can be a single port number,
+an interval of ports "\fIFROM_PORT\fP\fB-\fP\fITO_PORT\fP", or "\fB*\fP".
 
 For example, "reject 127.0.0.1:*,reject 192.168.1.0/24:*,accept *:*" would
 reject any traffic destined for localhost and any 192.168.1.* address, but
@@ -218,7 +218,10 @@ This directive can be specified multiple times so you don't have to put
 it all on one line.
 
 See RFC 3330 for more details about internal and reserved IP address
-space. The default exit policy is:
+space. Policies are considered first to last, and the first match wins. If
+you want to _replace_ the default exit policy, end your exit policy with
+either a reject *:* or an accept *:*. Otherwise, you're _augmenting_
+(prepending to) the default exit policy. The default exit policy is:
 .PD 0
 .RS 12
 .IP "reject 0.0.0.0/8" 0
