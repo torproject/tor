@@ -534,10 +534,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 /** Connection <b>conn</b> has finished writing and has no bytes left on
  * its outbuf.
  *
- * If it's in state 'connecting', then take a look at the socket, and
- * take appropriate actions (such as sending back a relay 'connected'
- * cell) if the connect succeeded.
- *
  * If it's in state 'open', stop writing, consider responding with a
  * sendme, and return.
  * Otherwise, stop writing and return.
@@ -546,47 +542,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
  * return 0.
  */
 int connection_edge_finished_flushing(connection_t *conn) {
-  unsigned char connected_payload[4];
-  int e, len=sizeof(e);
-
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
   switch(conn->state) {
-    case EXIT_CONN_STATE_CONNECTING:
-      if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
-        if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
-          /* yuck. kill it. */
-          log_fn(LOG_DEBUG,"in-progress exit connect failed. Removing.");
-          connection_mark_for_close(conn, END_STREAM_REASON_CONNECTFAILED);
-          return -1;
-        } else {
-          log_fn(LOG_DEBUG,"in-progress exit connect still waiting.");
-          return 0; /* no change, see if next time is better */
-        }
-      }
-      /* the connect has finished. */
-
-      log_fn(LOG_INFO,"Exit connection to %s:%u established.",
-          conn->address,conn->port);
-
-      conn->state = EXIT_CONN_STATE_OPEN;
-      connection_watch_events(conn, POLLIN); /* stop writing, continue reading */
-      if(connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
-        connection_start_writing(conn);
-      /* deliver a 'connected' relay cell back through the circuit. */
-      if(connection_edge_is_rendezvous_stream(conn)) {
-        if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
-           RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
-          return 0; /* circuit is closed, don't continue */
-      } else {
-        *(uint32_t*)connected_payload = htonl(conn->addr);
-        if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
-           RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
-          return 0; /* circuit is closed, don't continue */
-      }
-      tor_assert(conn->package_window > 0);
-      return connection_edge_process_inbuf(conn); /* in case the server has written anything */
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_stop_writing(conn);
@@ -603,6 +562,40 @@ int connection_edge_finished_flushing(connection_t *conn) {
       return -1;
   }
   return 0;
+}
+
+/** Connected handler for exit connections: start writing pending
+ * data, deliver 'CONNECTED' relay cells as appropriate, and check
+ * any pending data that may have been received. */
+int connection_edge_finished_connecting(connection_t *conn)
+{
+  unsigned char connected_payload[4];
+
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_EXIT);
+  tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
+
+
+  log_fn(LOG_INFO,"Exit connection to %s:%u established.",
+         conn->address,conn->port);
+
+  conn->state = EXIT_CONN_STATE_OPEN;
+  connection_watch_events(conn, POLLIN); /* stop writing, continue reading */
+  if(connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
+    connection_start_writing(conn);
+  /* deliver a 'connected' relay cell back through the circuit. */
+  if(connection_edge_is_rendezvous_stream(conn)) {
+    if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
+                                    RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
+      return 0; /* circuit is closed, don't continue */
+  } else {
+    *(uint32_t*)connected_payload = htonl(conn->addr);
+    if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
+         RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
+      return 0; /* circuit is closed, don't continue */
+  }
+  tor_assert(conn->package_window > 0);
+  return connection_edge_process_inbuf(conn); /* in case the server has written anything */
 }
 
 uint64_t stats_n_data_cells_packaged = 0;

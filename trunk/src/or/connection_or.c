@@ -59,50 +59,41 @@ int connection_or_process_inbuf(connection_t *conn) {
 /** Connection <b>conn</b> has finished writing and has no bytes left on
  * its outbuf.
  *
- * If it's in state "connecting", then take a look at the socket, and
- * begin the tls handshake if the connect succeeded.
- *
  * Otherwise it's in state "open": stop writing and return.
  *
  * If <b>conn</b> is broken, mark it for close and return -1, else
  * return 0.
  */
 int connection_or_finished_flushing(connection_t *conn) {
-  int e, len=sizeof(e);
-
   tor_assert(conn && conn->type == CONN_TYPE_OR);
+
   assert_connection_ok(conn,0);
 
-  switch(conn->state) {
-    case OR_CONN_STATE_CONNECTING:
-      if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
-        /* not yet */
-        if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
-          log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
-          connection_mark_for_close(conn,0);
-          return -1;
-        } else {
-          return 0; /* no change, see if next time is better */
-        }
-      }
-      /* the connect has finished. */
-
-      log_fn(LOG_INFO,"OR connect() to router %s:%u finished.",
-          conn->address,conn->port);
-
-      if(connection_tls_start_handshake(conn, 0) < 0) {
-        /* TLS handhaking error of some kind. */
-        connection_mark_for_close(conn,0);
-        return -1;
-      }
-      return 0;
-    case OR_CONN_STATE_OPEN:
-      connection_stop_writing(conn);
-      return 0;
-    default:
-      log_fn(LOG_WARN,"BUG: called in unexpected state %d",conn->state);
-      return 0;
+  if (conn->state != OR_CONN_STATE_OPEN) {
+    log_fn(LOG_WARN,"BUG: called in unexpected state %d",conn->state);
+    return -1;
   }
+
+  connection_stop_writing(conn);
+  return 0;
+}
+
+/** Connected handler for OR connections: begin the TLS handshake.
+ */
+int connection_or_finished_connecting(connection_t *conn)
+{
+  tor_assert(conn && conn->type == CONN_TYPE_OR);
+  tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
+
+  log_fn(LOG_INFO,"OR connect() to router %s:%u finished.",
+         conn->address,conn->port);
+
+  if(connection_tls_start_handshake(conn, 0) < 0) {
+    /* TLS handhaking error of some kind. */
+    connection_mark_for_close(conn,0);
+    return -1;
+  }
+  return 0;
 }
 
 /** Initialize <b>conn</b> to include all the relevant data from <b>router</b>.

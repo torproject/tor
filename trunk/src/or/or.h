@@ -1011,11 +1011,11 @@ connection_t *connection_get_by_type_rendquery(int type, const char *rendquery);
    tor_tls_get_pending_bytes((conn)->tls))
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
+int connection_state_is_connecting(connection_t *conn);
 
 int connection_send_destroy(uint16_t circ_id, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
-int connection_finished_flushing(connection_t *conn);
 
 void assert_connection_ok(connection_t *conn, time_t now);
 
@@ -1033,6 +1033,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                        connection_t *conn,
                                        crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
+int connection_edge_finished_connecting(connection_t *conn);
 
 int connection_edge_package_raw_inbuf(connection_t *conn);
 
@@ -1062,6 +1063,7 @@ void client_dns_clean(void);
 
 int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
+int connection_or_finished_connecting(connection_t *conn);
 
 connection_t *connection_or_connect(routerinfo_t *router);
 
@@ -1086,6 +1088,7 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
                                 const char *payload, int payload_len);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
+int connection_dir_finished_connecting(connection_t *conn);
 
 /********************************* dns.c ***************************/
 
