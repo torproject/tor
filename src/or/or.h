@@ -409,6 +409,7 @@ struct circuit_t {
   crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
   crypto_cipher_env_t *n_crypto;
 
+  int desired_cpath_len;
   crypt_path_t *cpath;
 
   char onionskin[DH_ONIONSKIN_LEN]; /* for storage while onionskin pending */
@@ -709,6 +710,8 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                              char *handshake_reply,/* Must be DH_KEY_LEN bytes long*/
                              char *key_out,
                              int key_out_len);
+
+int onion_new_route_len(void);
 
 /********************************* routers.c ***************************/
 

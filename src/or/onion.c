@@ -212,6 +212,13 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   return routelen;
 }
 
+int onion_new_route_len(void) {
+  directory_t *dir;
+
+  router_get_directory(&dir);
+  return new_route_len(options.CoinWeight, dir->routers, dir->n_routers);
+}
+
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
   int i, j;
   int num=0;

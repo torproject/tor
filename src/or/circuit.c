@@ -647,9 +647,18 @@ int circuit_establish_circuit(void) {
 
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
-  circ->cpath = onion_generate_cpath(&firsthop);
+  circ->desired_cpath_len = onion_new_route_len();
+  
+  if (circ->desired_cpath_len < 0) {
+    log_fn(LOG_INFO,"Generating cpath length failed.");
+    circuit_close(circ);
+    return -1;
+  }
+
+  onion_extend_cpath(&circ->cpath, circ->desired_cpath_len,
+                     &firsthop);
   if(!circ->cpath) {
-    log_fn(LOG_INFO,"Generating cpath failed.");
+    log_fn(LOG_INFO,"Generating first cpath hop failed.");
     circuit_close(circ);
     return -1;
   }
@@ -720,8 +729,9 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   cell_t cell;
   crypt_path_t *hop;
   routerinfo_t *router;
+  int r;
 
-  assert(circ && circ->cpath);
+  assert(circ);
 
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
 
@@ -747,17 +757,20 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     assert(circ->cpath->state == CPATH_STATE_OPEN);
     assert(circ->state == CIRCUIT_STATE_BUILDING);
     log_fn(LOG_DEBUG,"starting to send subsequent skin.");
-    for(hop=circ->cpath->next;
-        hop != circ->cpath && hop->state == CPATH_STATE_OPEN;
-        hop=hop->next) ;
-    if(hop == circ->cpath) { /* done building the circuit. whew. */
+    r = onion_extend_cpath(&circ->cpath, circ->desired_cpath_len, &router);
+    if (r==1) {
+      /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
-      log_fn(LOG_INFO,"circuit built!");
+      log_fn(LOG_INFO,"circuit built! (%d hops long)",circ->desired_cpath_len);
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
       connection_ap_attach_pending();
       return 0;
+    } else if (r<0) {
+      log_fn(LOG_WARN,"Unable to extend circuit path.");
+      return -1;
     }
+    hop = circ->cpath->prev;
 
     router = router_get_by_addr_port(hop->addr,hop->port);
     if(!router) {
