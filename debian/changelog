@@ -4,9 +4,11 @@ tor (0.0.1+0.0.2pre20-2) unstable; urgency=low
     depend on tsocks now rather than just recommending it.  Right now
     we install it in debian/rules, but upcoming versions might install
     it in upstream's make install target.
-  * There's a upstream Changelog file now.  Enojy!
+  * There's an upstream ChangeLog file now.  Enjoy!
+  * Add a README.privoxy file that explains how to setup privoxy to
+    go over tor.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 01:58:10 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 02:17:04 +0100
 
 tor (0.0.1+0.0.2pre20-1) unstable; urgency=low
 
