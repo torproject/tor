@@ -20,7 +20,7 @@
   STMT_END
 
 #define test_assert(expr)                                       \
-  STMT_BEGIN \
+  STMT_BEGIN                                                    \
   if(expr) { printf("."); } else {                              \
     printf("\nFile %s: line %d (%s): assertion failed: (%s)\n", \
       __FILE__,                                                 \
@@ -31,55 +31,65 @@
   } STMT_END
 
 #define test_eq(expr1, expr2)                                   \
-  STMT_BEGIN if(expr1==expr2) { printf("."); } else {                \
+  STMT_BEGIN                                                    \
+    long v1=(long)(expr1), v2=(long)(expr2);                    \
+    if(v1==v2) { printf("."); } else {                          \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
            "      (%ld != %ld)\n",                              \
       __FILE__,                                                 \
       __LINE__,                                                 \
       __PRETTY_FUNCTION__,                                      \
       #expr1, #expr2,                                           \
-      (long)expr1, (long)expr2);                                \
+      v1, v2);                                                  \
     return;                                                     \
   } STMT_END
 
 #define test_neq(expr1, expr2)                                  \
-  STMT_BEGIN if(expr1!=expr2) { printf("."); } else {                \
+  STMT_BEGIN                                                    \
+    long v1=(long)(expr1), v2=(long)(expr2);                    \
+    if(v1!=v2) { printf("."); } else {                          \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
            "      (%ld == %ld)\n",                              \
       __FILE__,                                                 \
       __LINE__,                                                 \
       __PRETTY_FUNCTION__,                                      \
       #expr1, #expr2,                                           \
-      (long)expr1, (long)expr2);                                \
+      v1, v2);                                                  \
     return;                                                     \
   } STMT_END
 
 #define test_streq(expr1, expr2)                                \
-  STMT_BEGIN if(!strcmp(expr1,expr2)) { printf("."); } else {        \
+  STMT_BEGIN                                                    \
+    char *v1=(expr1), *v2=(expr2);                              \
+    if(!strcmp(v1,v2)) { printf("."); } else {                  \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
            "      (%s != %s)\n",                                \
       __FILE__,                                                 \
       __LINE__,                                                 \
       __PRETTY_FUNCTION__,                                      \
       #expr1, #expr2,                                           \
-      expr1, expr2);                                            \
+      v1, v2);                                                  \
     return;                                                     \
   } STMT_END
 
 #define test_strneq(expr1, expr2)                               \
-  STMT_BEGIN if(strcmp(expr1,expr2)) { printf("."); } else {         \
+  STMT_BEGIN                                                    \
+    char *v1=(expr1), *v2=(expr2);                              \
+    if(strcmp(v1,v2)) { printf("."); } else {                   \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
            "      (%s == %s)\n",                                \
       __FILE__,                                                 \
       __LINE__,                                                 \
       __PRETTY_FUNCTION__,                                      \
       #expr1, #expr2,                                           \
-      expr1, expr2);                                            \
+      v1, v2);                                                  \
     return;                                                     \
   } STMT_END
 
 #define test_memeq(expr1, expr2, len)                           \
-  STMT_BEGIN if(!memcmp(expr1,expr2,len)) { printf("."); } else {    \
+  STMT_BEGIN                                                    \
+    void *v1=(expr1), *v2=(expr2);                              \
+    if(!memcmp(v1,v2,(len))) { printf("."); } else {            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n", \
       __FILE__,                                                 \
       __LINE__,                                                 \
@@ -89,7 +99,9 @@
   } STMT_END
 
 #define test_memneq(expr1, expr2, len)                           \
-  STMT_BEGIN if(memcmp(expr1,expr2,len)) { printf("."); } else {    \
+  STMT_BEGIN                                                    \
+    void *v1=(expr1), *v2=(expr2);                              \
+    if(memcmp(v1,v2,(len))) { printf("."); } else {             \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n", \
       __FILE__,                                                 \
       __LINE__,                                                 \
