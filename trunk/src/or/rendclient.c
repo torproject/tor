@@ -163,8 +163,6 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
   connection_t *apconn;
   crypt_path_t *hop;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
-  char buf[DIGEST_LEN+9];
-  char expected_digest[DIGEST_LEN];
 
   if(circ->purpose != CIRCUIT_PURPOSE_C_REND_READY ||
      !circ->build_state->pending_final_cpath) {
@@ -203,6 +201,8 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
 
   for(apconn = circ->p_streams; apconn; apconn = apconn->next_stream) {
+    apconn->cpath_layer = circ->cpath->prev;
+    /* now the last hop is different. be sure to send all the way. */
     if(connection_ap_handshake_send_begin(apconn, circ) < 0)
       return -1;
   }

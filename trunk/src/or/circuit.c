@@ -944,7 +944,11 @@ void circuit_log_path(int severity, circuit_t *circ) {
       snprintf(s, sizeof(buf) - (s - buf), "%s(%s) ",
                router->nickname, states[hop->state]);
     } else {
-      snprintf(s, sizeof(buf) - (s - buf), "UNKNOWN ");
+      if(circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
+        snprintf(s, sizeof(buf) - (s - buf), "(rend join)");
+      } else {
+        snprintf(s, sizeof(buf) - (s - buf), "UNKNOWN ");
+      }
     }
     hop=hop->next;
   } while(hop!=circ->cpath);
