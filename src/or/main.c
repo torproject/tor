@@ -667,7 +667,8 @@ static int init_from_config(int argc, char **argv) {
   }
 
   /* Ensure data directory is private; create if possible. */
-  if (check_private_dir(get_data_directory(&options), 1) != 0) {
+  if (get_data_directory(&options) &&
+      check_private_dir(get_data_directory(&options), 1) != 0) {
     log_fn(LOG_ERR, "Couldn't access/create private data directory %s",
            get_data_directory(&options));
     return -1;

@@ -673,9 +673,11 @@ size_t dirserv_get_directory(const char **directory)
       exit(0);
     }
     free(new_directory);
-    sprintf(filename,"%s/cached-directory", get_data_directory(&options));
-    if(write_str_to_file(filename,the_directory) < 0) {
-      log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
+    if(get_data_directory(&options)) {
+      sprintf(filename,"%s/cached-directory", get_data_directory(&options));
+      if(write_str_to_file(filename,the_directory) < 0) {
+        log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
+      }
     }
   } else {
     log(LOG_INFO,"Directory still clean, reusing.");
