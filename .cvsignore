@@ -10,3 +10,4 @@ config.status
 conftest*
 stamp-h
 stamp-h1
+tor.sh
