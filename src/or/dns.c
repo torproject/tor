@@ -633,7 +633,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   tor_assert(conn->type == CONN_TYPE_DNSWORKER);
 
   if (conn->state != DNSWORKER_STATE_BUSY && buf_datalen(conn->inbuf)) {
-    log_fn(LOG_WARN,"Bug: read data (%d bytes) from an idle dns worker.  Please report.", buf_datalen(conn->inbuf));
+    log_fn(LOG_WARN,"Bug: read data (%d bytes) from an idle dns worker.  Please report.", (int)buf_datalen(conn->inbuf));
 #ifdef TOR_FRAGILE
     tor_assert(0);
 #endif
