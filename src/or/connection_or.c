@@ -142,7 +142,7 @@ void conn_or_init_crypto(connection_t *conn) {
  * *result to 1 if connect() returned before completing, or to 2
  * if it completed, and returns the new conn.
  */
-connection_t *connection_or_connect(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local, 
+connection_t *connection_or_connect(routerinfo_t *router, struct sockaddr_in *local, 
                                     uint16_t port, int *result) {
   connection_t *conn;
   struct sockaddr_in router_addr;
@@ -154,8 +154,6 @@ connection_t *connection_or_connect(routerinfo_t *router, crypto_pk_env_t *prkey
 
   /* set up conn so it's got all the data we need to remember */
   conn->addr = router->addr, conn->port = router->or_port; /* NOTE we store or_port here always */
-  if(prkey)
-    conn->prkey = crypto_pk_dup_key(prkey);
   conn->bandwidth = router->bandwidth;
   conn->pkey = crypto_pk_dup_key(router->pkey);
   conn->address = strdup(router->address);
@@ -237,7 +235,7 @@ connection_t *connection_or_connect_as_op(routerinfo_t *router, struct sockaddr_
   if(conn)
     return conn;
 
-  conn = connection_or_connect(router, NULL, local, router->op_port, &result);
+  conn = connection_or_connect(router, local, router->op_port, &result);
   if(!conn)
     return NULL;
 
@@ -342,11 +340,11 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
  *
  */
 
-connection_t *connection_or_connect_as_or(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local) {
+connection_t *connection_or_connect_as_or(routerinfo_t *router, struct sockaddr_in *local) {
   connection_t *conn;
   int result=0; /* so connection_or_connect() can tell us what happened */
 
-  assert(router && prkey && local);
+  assert(router && local);
 
   if(router->addr == local->sin_addr.s_addr && router->or_port == ntohs(local->sin_port)) {
     /* this is me! don't connect to me. */
@@ -354,7 +352,7 @@ connection_t *connection_or_connect_as_or(routerinfo_t *router, crypto_pk_env_t 
     return NULL;
   }
 
-  conn = connection_or_connect(router, prkey, local, router->or_port, &result);
+  conn = connection_or_connect(router, local, router->or_port, &result);
   if(!conn)
     return NULL;
 
@@ -454,7 +452,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Received auth.");
 
   /* decrypt response */
-  retval = crypto_pk_private_decrypt(conn->prkey, cipher, 128, buf, RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(getprivatekey(), cipher, 128, buf, RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
@@ -562,7 +560,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Received auth.");
 
   /* decrypt response */
-  retval = crypto_pk_private_decrypt(conn->prkey, cipher, 128, buf, RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(getprivatekey(), cipher, 128, buf, RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"Public-key decryption failed processing auth message from new client.");
@@ -678,7 +676,7 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Received auth.");
 
   /* decrypt response */
-  retval = crypto_pk_private_decrypt(conn->prkey, cipher, 128, buf,RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(getprivatekey(), cipher, 128, buf,RSA_PKCS1_PADDING);
   if (retval == -1)
   {
     log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
@@ -719,9 +717,9 @@ int or_handshake_server_process_nonce(connection_t *conn) {
 /* ********************************** */
 
 
-int connection_or_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local) {
+int connection_or_create_listener(struct sockaddr_in *local) {
   log(LOG_DEBUG,"connection_create_or_listener starting");
-  return connection_create_listener(prkey, local, CONN_TYPE_OR_LISTENER);
+  return connection_create_listener(local, CONN_TYPE_OR_LISTENER);
 }
 
 int connection_or_handle_listener_read(connection_t *conn) {

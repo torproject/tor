@@ -19,11 +19,20 @@ static int nfds=0; /* number of connections currently active */
 static int please_dumpstats=0; /* whether we should dump stats during the loop */
 
 /* private key */
-static crypto_pk_env_t *prkey;
+static crypto_pk_env_t *privatekey;
 
 routerinfo_t *my_routerinfo=NULL;
 
 /********* END VARIABLES ************/
+
+void setprivatekey(crypto_pk_env_t *k) {
+  privatekey = k;
+}
+
+crypto_pk_env_t *getprivatekey(void) {
+  assert(privatekey);
+  return privatekey;
+}
 
 /****************************************************************************
 *
@@ -398,6 +407,7 @@ int do_main_loop(void) {
   int i;
   int timeout;
   int poll_result;
+  crypto_pk_env_t *prkey;
 
   /* load the routers file */
   if(router_get_list_from_file(options.RouterFile, options.ORPort) < 0) {
@@ -417,11 +427,12 @@ int do_main_loop(void) {
       log(LOG_ERR,"Error loading private key.");
       return -1;
     }
+    setprivatekey(prkey);
   }
 
   /* start-up the necessary connections based on global_role. This is where we
    * try to connect to all the other ORs, and start the listeners */
-  retry_all_connections(options.Role, prkey, options.ORPort,
+  retry_all_connections(options.Role, options.ORPort,
                         options.OPPort, options.APPort, options.DirPort);
 
   for(;;) {

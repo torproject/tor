@@ -30,7 +30,7 @@ int decide_aci_type(uint32_t local_addr, uint16_t local_port,
 int process_onion(circuit_t *circ, connection_t *conn) {
   aci_t aci_type;
 
-  if(!decrypt_onion((onion_layer_t *)circ->onion,circ->onionlen,conn->prkey)) {
+  if(!decrypt_onion((onion_layer_t *)circ->onion,circ->onionlen,getprivatekey())) {
     log(LOG_DEBUG,"command_process_create_cell(): decrypt_onion() failed, closing circuit.");
     return -1;
   }

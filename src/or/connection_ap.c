@@ -393,9 +393,9 @@ int connection_ap_finished_flushing(connection_t *conn) {
 
 }
 
-int connection_ap_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local) {
+int connection_ap_create_listener(struct sockaddr_in *local) {
   log(LOG_DEBUG,"connection_create_ap_listener starting");
-  return connection_create_listener(prkey, local, CONN_TYPE_AP_LISTENER);
+  return connection_create_listener(local, CONN_TYPE_AP_LISTENER);
 }
 
 int connection_ap_handle_listener_read(connection_t *conn) {

@@ -230,7 +230,6 @@ typedef struct
   
 /* used by OR, to keep state while connect()ing: Kludge. */
 
-  crypto_pk_env_t *prkey;
   struct sockaddr_in local;
 
 #if 0 /* obsolete, we now use conn->bandwidth */
@@ -449,12 +448,13 @@ connection_t *connection_new(int type);
 
 void connection_free(connection_t *conn);
 
-int connection_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local, int type);
+int connection_create_listener(struct sockaddr_in *local, int type);
 
 int connection_handle_listener_read(connection_t *conn, int new_type, int new_state);
 
 /* start all connections that should be up but aren't */
-int retry_all_connections(int role, crypto_pk_env_t *prkey, uint16_t or_listenport, 
+int learn_local(struct sockaddr_in *local);
+int retry_all_connections(int role, uint16_t or_listenport, 
   uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
 connection_t *connection_connect_to_router_as_op(routerinfo_t *router, uint16_t local_or_port);
 
@@ -512,7 +512,7 @@ int connection_ap_process_data_cell(cell_t *cell, connection_t *conn);
 
 int connection_ap_finished_flushing(connection_t *conn);
 
-int connection_ap_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
+int connection_ap_create_listener(struct sockaddr_in *local);
 
 int connection_ap_handle_listener_read(connection_t *conn);
 
@@ -534,7 +534,7 @@ int connection_op_process_inbuf(connection_t *conn);
 
 int connection_op_finished_flushing(connection_t *conn);
 
-int connection_op_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
+int connection_op_create_listener(struct sockaddr_in *local);
 
 int connection_op_handle_listener_read(connection_t *conn);
 
@@ -554,11 +554,11 @@ int or_handshake_client_send_auth(connection_t *conn);
 int or_handshake_server_process_auth(connection_t *conn);
 int or_handshake_server_process_nonce(connection_t *conn);
 
-connection_t *connect_to_router_as_or(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local);
-connection_t *connection_or_connect_as_or(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local);
+connection_t *connect_to_router_as_or(routerinfo_t *router, struct sockaddr_in *local);
+connection_t *connection_or_connect_as_or(routerinfo_t *router, struct sockaddr_in *local);
 connection_t *connection_or_connect_as_op(routerinfo_t *router, struct sockaddr_in *local);
 
-int connection_or_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
+int connection_or_create_listener(struct sockaddr_in *local);
 int connection_or_handle_listener_read(connection_t *conn);
 
 /********************************* directory.c ***************************/
@@ -570,11 +570,13 @@ int connection_dir_process_inbuf(connection_t *conn);
 int directory_handle_command(connection_t *conn);
 int directory_handle_reading(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
-int connection_dir_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
+int connection_dir_create_listener(struct sockaddr_in *local);
 int connection_dir_handle_listener_read(connection_t *conn);
 
 /********************************* main.c ***************************/
 
+void setprivatekey(crypto_pk_env_t *k);
+crypto_pk_env_t *getprivatekey(void);
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
@@ -647,7 +649,7 @@ tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, track
 
 /********************************* routers.c ***************************/
 
-void router_retry_connections(crypto_pk_env_t *prkey, struct sockaddr_in *local);
+void router_retry_connections(struct sockaddr_in *local);
 routerinfo_t *router_pick_directory_server(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 unsigned int *router_new_route(int *routelen);
