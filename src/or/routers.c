@@ -537,7 +537,7 @@ int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
     return -1;
   }
   if (compare_recommended_versions(VERSION, directory->software_versions) < 0) {
-    log(LOG_WARNING, "You are running tor version %s, which is no longer supported.\nPlease upgrade to one of %s.", VERSION, RECOMMENDED_SOFTWARE_VERSIONS);
+    log(LOG_WARNING, "You are running tor version %s, which is no longer supported.\nPlease upgrade to one of %s.", VERSION, directory->software_versions);
     if(options.IgnoreVersion) {
       log(LOG_WARNING, "IgnoreVersion is set. If it breaks, we told you so.");
     } else {
