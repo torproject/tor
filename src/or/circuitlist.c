@@ -327,8 +327,8 @@ circuit_get_youngest_clean_open(uint8_t purpose) {
  * circuit_close_all_marked(). Do any cleanup needed:
  *   - If state is onionskin_pending, remove circ from the onion_pending
  *     list.
- *   - If circ isn't open yet, call circuit_build_failed() if we're
- *     the origin, and in case call circuit_rep_hist_note_result()
+ *   - If circ isn't open yet: call circuit_build_failed() if we're
+ *     the origin, and in either case call circuit_rep_hist_note_result()
  *     to note stats.
  *   - If purpose is C_INTRODUCE_ACK_WAIT, remove the intro point we
  *     just tried from our list of intro points for that service
