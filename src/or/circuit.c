@@ -459,10 +459,13 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   circuit_t *circ;
   routerinfo_t *exitrouter;
   int num=0;
+  time_t now = time(NULL);
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN &&
-       !circ->marked_for_close && circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+       !circ->marked_for_close && circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+       (!circ->timestamp_dirty ||
+        circ->timestamp_dirty + options.NewCircuitPeriod < now)) {
       exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
       if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) != ADDR_POLICY_REJECTED)
         if(++num >= MIN_CIRCUITS_HANDLING_STREAM)
