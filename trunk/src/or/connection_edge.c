@@ -34,6 +34,8 @@ connection_close_unattached_ap(connection_t *conn, int endreason) {
     socks5_reply_status_t socksreason =
       connection_edge_end_reason_socks5_response(endreason);
 
+//XXX Bug: it's not marked for close yet, so the below things won't
+// be defined yet. -RD
     if (endreason == END_STREAM_REASON_ALREADY_SOCKS_REPLIED)
       log_fn(LOG_WARN,"Bug: stream (marked at %s:%d) sending two socks replies?",
              conn->marked_for_close_file, conn->marked_for_close);
@@ -44,6 +46,9 @@ connection_close_unattached_ap(connection_t *conn, int endreason) {
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
   }
 
+//XXX Bug: this means that marked-for-close-file and marked-for-close
+// will all be defined as being inside this function. that's not what
+// we had in mind. -RD
   connection_mark_for_close(conn);
   conn->hold_open_until_flushed = 1;
 }
