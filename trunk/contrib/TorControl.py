@@ -114,7 +114,6 @@ def parseHostAndPort(h):
 
     return host, port
 
-
 def _unpack_msg(msg):
     "return None, minLength, body or type,body,rest"
     if len(msg) < 4:
@@ -172,6 +171,14 @@ def unpack_msg(msg):
         inOtherPackets = realLength-lenSoFar-leftInPacket
         minLength = _minLengthToPack(inOtherPackets)
         return None, len(msg)+leftInPacket+inOtherPackets, msg
+
+def _receive_msg(s):
+  body = ""
+  header = s.recv(4)
+  length,type = struct.unpack("!HH",header)
+  if length:
+    body = s.recv(length)
+  return length,type,body
 
 def receive_message(s):
     length, tp, body = _receive_msg(s)
@@ -295,10 +302,16 @@ def extend_circuit(s, circid, hops):
     tp, body = receive_reply(s,[MSG_TYPE.DONE])
     if len(body) != 4:
         raise ProtocolError("Extendcircuit reply too short or long")
-    return struct.unpack("!L",body)
+    return struct.unpack("!L",body)[0]
 
 def redirect_stream(s, streamid, newtarget):
     msg = struct.pack("!L",streamid) + newtarget + "\0"
+    send_message(s,MSG_TYPE.REDIRECTSTREAM,msg)
+    tp,body = receive_reply(s,[MSG_TYPE.DONE])
+
+def attach_stream(s, streamid, circid):
+    msg = struct.pack("!LL",streamid, circid)
+    send_message(s,MSG_TYPE.ATTACHSTREAM,msg)
     tp,body = receive_reply(s,[MSG_TYPE.DONE])
 
 def _unterminate(s):
@@ -310,9 +323,9 @@ def _unterminate(s):
 def unpack_event(body):
     if len(body)<2:
         raise ProtocolError("EVENT body too short.")
-    evtype = struct.unpack("!H", body[:2])
+    evtype, = struct.unpack("!H", body[:2])
     body = body[2:]
-    if evtype == EVENT_TYPE.CIRCUITSTATUS:
+    if evtype == EVENT_TYPE.CIRCSTATUS:
         if len(body)<5:
             raise ProtocolError("CIRCUITSTATUS event too short.")
         status,ident = struct.unpack("!BL", body[:5])
