@@ -226,6 +226,7 @@ void connection_expire_held_open(void)
     if (conn->hold_open_until_flushed) {
       assert(conn->marked_for_close);
       if (now - conn->timestamp_lastwritten >= 15) {
+        log_fn(LOG_WARN,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %d, state %d).", conn->s, conn->type, conn->state);
         conn->hold_open_until_flushed = 0;
       }
     }
