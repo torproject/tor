@@ -217,12 +217,22 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
         log(LOG_DEBUG,"connection_exit_process_data_cell(): data received while resolving/connecting. Queueing.");
       }
       log(LOG_DEBUG,"connection_exit_process_data_cell(): put %d bytes on outbuf.",cell->length - TOPIC_HEADER_SIZE);
+#ifdef USE_ZLIB
+      if(connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
+				      cell->length - TOPIC_HEADER_SIZE, 
+				      conn, Z_SYNC_FLUSH) < 0) {
+        log(LOG_INFO,"connection_exit_process_data_cell(): write to buf failed. Marking for close.");
+        conn->marked_for_close = 1;
+        return 0;
+      }
+#else
       if(connection_write_to_buf(cell->payload + TOPIC_HEADER_SIZE,
                                  cell->length - TOPIC_HEADER_SIZE, conn) < 0) {
         log(LOG_INFO,"connection_exit_process_data_cell(): write to buf failed. Marking for close.");
         conn->marked_for_close = 1;
         return 0;
       }
+#endif
       if(connection_consider_sending_sendme(conn, EDGE_EXIT) < 0)
         conn->marked_for_close = 1;
       return 0;
@@ -241,6 +251,13 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
       for(prevconn = circ->n_conn; prevconn->next_topic != conn; prevconn = prevconn->next_topic) ;
       prevconn->next_topic = conn->next_topic;
 #endif
+#if 0
+      conn->done_sending = 1;
+      shutdown(conn->s, 1); /* XXX check return; refactor NM */
+      if (conn->done_receiving)
+	conn->marked_for_close = 1;
+#endif
+	
       conn->marked_for_close = 1;
       break;
     case TOPIC_COMMAND_CONNECTED:
