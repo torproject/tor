@@ -171,8 +171,6 @@ _connection_free(connection_t *conn) {
   tor_free(conn->chosen_exit_name);
 
   if (connection_speaks_cells(conn)) {
-    if (conn->state == OR_CONN_STATE_OPEN)
-      directory_set_dirty();
     if (conn->tls) {
       tor_tls_free(conn->tls);
       conn->tls = NULL;
@@ -183,8 +181,8 @@ _connection_free(connection_t *conn) {
     crypto_free_pk_env(conn->identity_pkey);
   tor_free(conn->nickname);
   tor_free(conn->socks_request);
-
-  connection_unregister(conn);
+  tor_free(conn->read_event); /* Probably already freed by connection_free. */
+  tor_free(conn->write_event); /* Probably already freed by connection_free. */
 
   if (conn->s >= 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
@@ -201,6 +199,11 @@ void connection_free(connection_t *conn) {
   tor_assert(conn);
   tor_assert(!connection_is_on_closeable_list(conn));
   tor_assert(!connection_in_array(conn));
+  if (connection_speaks_cells(conn)) {
+    if (conn->state == OR_CONN_STATE_OPEN)
+      directory_set_dirty();
+  }
+  connection_unregister(conn);
   _connection_free(conn);
 }
 
