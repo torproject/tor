@@ -439,7 +439,7 @@ typedef struct {
   char *RecommendedVersions;
   char *User;
   char *Group;
-  double CoinWeight;
+  double PathlenCoinWeight;
   int ORPort;
   int SocksPort;
   int DirPort;
