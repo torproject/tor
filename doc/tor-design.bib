@@ -1,8 +1,50 @@
 
+@inproceedings{kesdogan:pet2002,
+  title = {Unobservable Surfing on the World Wide Web: Is Private Information Retrieval an
+        alternative to the MIX based Approach?}, 
+  author = {Dogan Kesdogan and Mark Borning and Michael Schmeink}, 
+  booktitle = {Privacy Enhancing Technologies (PET 2002)},
+  year = {2002}, 
+  month = {April}, 
+  editor = {Roger Dingledine and Paul Syverson}, 
+  publisher = {Springer-Verlag, LNCS 2482}, 
+}
+
+@inproceedings{statistical-disclosure,
+  title = {Statistical Disclosure Attacks}, 
+  author = {George Danezis}, 
+  booktitle = {Security and Privacy in the Age of Uncertainty ({SEC2003})}, 
+  organization = {{IFIP TC11}}, 
+  year = {2003}, 
+  month = {May}, 
+  address = {Athens}, 
+  pages = {421--426}, 
+  publisher = {Kluwer}, 
+}
+
+@inproceedings{limits-open,
+  title = {Limits of Anonymity in Open Environments}, 
+  author = {Dogan Kesdogan and Dakshi Agrawal and Stefan Penz}, 
+  booktitle = {Information Hiding Workshop (IH 2002)}, 
+  year = {2002}, 
+  month = {October}, 
+  editor = {Fabien Petitcolas}, 
+  publisher = {Springer-Verlag, LNCS 2578}, 
+}
+
+@inproceedings{isdn-mixes,
+  title = {{ISDN-mixes: Untraceable communication with very small bandwidth overhead}}, 
+  author = {Andreas Pfitzmann and Birgit Pfitzmann and Michael Waidner}, 
+  booktitle = {GI/ITG Conference on Communication in Distributed Systems}, 
+  year = {1991}, 
+  month = {February}, 
+  pages = {451-463}, 
+}
+
 @inproceedings{tarzan:ccs02,
   title = {Tarzan: A Peer-to-Peer Anonymizing Network Layer}, 
   author = {Michael J. Freedman and Robert Morris}, 
-  booktitle = {Proceedings of the 9th {ACM} {C}onference on {C}omputer and {C}ommunications
+  booktitle = {9th {ACM} {C}onference on {C}omputer and {C}ommunications
         {S}ecurity ({CCS 2002})}, 
   year = {2002}, 
   month = {November}, 
@@ -12,7 +54,7 @@
 @inproceedings{cebolla,
   title = {{Cebolla: Pragmatic IP Anonymity}}, 
   author = {Zach Brown}, 
-  booktitle = {Proceedings of the 2002 Ottawa Linux Symposium}, 
+  booktitle = {Ottawa Linux Symposium}, 
   year = {2002}, 
   month = {June}, 
 }
@@ -43,11 +85,11 @@
   note =         {\url{http://www.privoxy.org/}}
 }
 
-@inproceedings{RRMPH02-1,
+@inproceedings{anonnet,
   title = {{Analysis of an Anonymity Network for Web Browsing}}, 
   author = {Marc Rennhard and Sandro Rafaeli and Laurent Mathy and Bernhard Plattner and
         David Hutchison}, 
-  booktitle = {{Proceedings of the IEEE 7th Intl. Workshop on Enterprise Security (WET ICE
+  booktitle = {{IEEE 7th Intl. Workshop on Enterprise Security (WET ICE
         2002)}}, 
   year = {2002}, 
   month = {June}, 
@@ -55,34 +97,27 @@
   pages = {49--54}, 
 }
 
-@Misc{anonnet,
-  key =          {anonnet},
-  title =        {{AnonNet}},
-  note =         {\url{http://www.authnet.org/anonnet/}}
-}
-
-% can somebody track down the rest of this? -RD
-@Misc{castro-liskov,
+@inproceedings{castro-liskov,
    author = {Miguel Castro and Barbara Liskov}, 
    title = {Proactive Recovery in a Byzantine-Fault-Tolerant System},
-   howpublished = {
-     $<$http://www.pmg.lcs.mit.edu/$\tilde{\hspace{5pt}}$castro/application/recovery.pdf$>$},
+   booktitle = {Fourth Symposium on Operating Systems Design and Implementation},
+   month = {October},
+   year = {2000},
 }
 
 @inproceedings{econymics,
   title = {On the Economics of Anonymity}, 
   author = {Alessandro Acquisti and Roger Dingledine and Paul Syverson}, 
-  booktitle = {Financial Cryptography, FC 2003}, 
+  booktitle = {Financial Cryptography}, 
   year = {2003}, 
   editor = {Rebecca N. Wright}, 
   publisher = {Springer-Verlag, LNCS 2742}, 
-  note = {\url{http://freehaven.net/doc/fc03/econymics.pdf}}, 
 }
 
 @inproceedings{defensive-dropping,
   title = {Stopping Timing Attacks in Low-Latency Mix-Based Systems},
   author = {Matthew Wright and Brian N. Levine and Michael K. Reiter and Chenxi Wang},
-  booktitle = {Financial Cryptography, FC 2004},
+  booktitle = {Financial Cryptography},
   year = {2004}, 
   editor = {Ari Juels},
   publisher = {Springer-Verlag, LNCS (forthcoming)}, 
@@ -91,7 +126,7 @@
 @inproceedings{morphmix:fc04,
   title = {Practical Anonymity for the Masses with MorphMix},
   author = {Marc Rennhard and Bernhard Plattner},
-  booktitle = {Financial Cryptography, FC 2004},
+  booktitle = {Financial Cryptography},
   year = {2004}, 
   editor = {Ari Juels},
   publisher = {Springer-Verlag, LNCS (forthcoming)}, 
@@ -100,10 +135,10 @@
 @inproceedings{eternity,
   title = {The Eternity Service}, 
   author = {Ross Anderson}, 
-  booktitle = {Proceedings of Pragocrypt '96}, 
+  booktitle = {Pragocrypt '96}, 
   year = {1996}, 
-  note =  {\url{http://www.cl.cam.ac.uk/users/rja14/eternity/eternity.html}}, 
 }
+  %note =  {\url{http://www.cl.cam.ac.uk/users/rja14/eternity/eternity.html}}, 
 
 
 @inproceedings{minion-design,
@@ -114,10 +149,8 @@
   month = {May},
   publisher = {IEEE CS},
   pages = {2--15}, 
-  note = {\url{http://mixminion.net/minion-design.pdf}}, 
-  www_important = {1}, 
-  www_section = {Anonymous communication}, 
 }
+  %note = {\url{http://mixminion.net/minion-design.pdf}}, 
 
 @inproceedings{ rao-pseudonymity,
     author = "Josyula R. Rao and Pankaj Rohatgi",
@@ -127,9 +160,9 @@
     month = Aug,
     publisher = {USENIX},
     pages = "85--96",
-    note = {\url{http://www.usenix.org/publications/library/proceedings/sec2000/
-full_papers/rao/rao.pdf}},
 }
+    %note = {\url{http://www.usenix.org/publications/library/proceedings/sec2000/
+%full_papers/rao/rao.pdf}},
 
 @InProceedings{pfitzmann90how,
     author = "Birgit Pfitzmann and Andreas Pfitzmann",
@@ -155,18 +188,6 @@ full_papers/rao/rao.pdf}},
   year =         2003,
 }
 
-% Would a more recent reference for SPRPs be more useful?
-@Article{sprp,
-   author =      {Michael Luby and Charles Rackoff},
-   title =       {How to Construct Pseudorandom Permutations from
-                  Pseudorandom Functions},
-   journal =     {SIAM Journal on Computing},
-   year =        {1988},
-   volume =      {17},
-   number =      {2},
-   pages =       {373--386},
-}
-
 @InProceedings{back01,
   author =       {Adam Back and Ulf M\"oller and Anton Stiglic},
   title =        {Traffic Analysis Attacks and Trade-Offs in Anonymity Providing Systems},
@@ -175,8 +196,8 @@ full_papers/rao/rao.pdf}},
   year =         2001,
   editor =       {Ira S. Moskowitz},
   publisher =    {Springer-Verlag, LNCS 2137},
-  note =         {\newline \url{http://www.cypherspace.org/adam/pubs/traffic.pdf}},
 }
+  %note =         {\newline \url{http://www.cypherspace.org/adam/pubs/traffic.pdf}},
 
 @InProceedings{rackoff93cryptographic,
    author =      {Charles Rackoff and Daniel R. Simon},
@@ -184,8 +205,8 @@ full_papers/rao/rao.pdf}},
    booktitle =   {{ACM} Symposium on Theory of Computing},
    pages =       {672--681},
    year =        {1993},
-   note =        {\url{http://research.microsoft.com/crypto/dansimon/me.htm}},
 }
+   %note =        {\url{http://research.microsoft.com/crypto/dansimon/me.htm}},
 
 @InProceedings{freehaven-berk,
    author =      {Roger Dingledine and Michael J. Freedman and David Molnar},
@@ -196,8 +217,8 @@ full_papers/rao/rao.pdf}},
    month =       {July},
    editor =      {H. Federrath},
    publisher =   {Springer-Verlag, LNCS 2009},
-   note =        {\url{http://freehaven.net/papers.html}},
 }
+   %note =        {\url{http://freehaven.net/papers.html}},
 
 @InProceedings{raymond00,
   author =       {J. F. Raymond},
@@ -240,8 +261,8 @@ full_papers/rao/rao.pdf}},
    publisher =   {IEEE CS Press},
    pages =       {34--40},
    volume =      {1},
-   note =        {\newline \url{http://www.onion-router.net/Publications.html}},
 }
+   %note =        {\newline \url{http://www.onion-router.net/Publications.html}},
 
 @Inproceedings{or-pet00,
   title =        {{Towards an Analysis of Onion Routing Security}},
@@ -254,8 +275,8 @@ full_papers/rao/rao.pdf}},
   pages =        {96--114},
   editor =       {H. Federrath},
   publisher =    {Springer-Verlag, LNCS 2009},
-  note =         {\url{http://www.onion-router.net/Publications/WDIAU-2000.ps.gz}},
 }
+  %note =         {\url{http://www.onion-router.net/Publications/WDIAU-2000.ps.gz}},
 
 @Inproceedings{freenet-pets00,
   title =        {Freenet: A Distributed Anonymous Information Storage
@@ -269,9 +290,8 @@ full_papers/rao/rao.pdf}},
   pages =        {46--66},
   editor =       {H. Federrath},
   publisher =    {Springer-Verlag, LNCS 2009},
-  note =         {\url{http://citeseer.nj.nec.com/clarke00freenet.html}},
 }
-
+  %note =         {\url{http://citeseer.nj.nec.com/clarke00freenet.html}},
 
 @InProceedings{or-ih96,
   author =       {David M. Goldschlag and Michael G. Reed and Paul
@@ -283,8 +303,8 @@ full_papers/rao/rao.pdf}},
   editor =       {R. Anderson},
   month =        {May},
   publisher =    {Springer-Verlag, LNCS 1174},
-  note =         {\url{http://www.onion-router.net/Publications/IH-1996.ps.gz}}
 }
+  %note =         {\url{http://www.onion-router.net/Publications/IH-1996.ps.gz}}
 
 @Article{or-jsac98,
   author =       {Michael G. Reed and Paul F. Syverson and David
@@ -296,8 +316,8 @@ full_papers/rao/rao.pdf}},
   number =       4,
   pages =        {482--494},
   month =        {May},
-  note =         {\url{http://www.onion-router.net/Publications/JSAC-1998.ps.gz}}
 }
+  %note =         {\url{http://www.onion-router.net/Publications/JSAC-1998.ps.gz}}
 
 @Misc{TLS,
    author =      {T. Dierks and C. Allen},
@@ -357,9 +377,9 @@ full_papers/rao/rao.pdf}},
    editor =      {P. Samarati},
    month =       {November},
    publisher =   {ACM Press},
-   note =        {\url{http://www.votehere.net/ada_compliant/ourtechnology/
-                       technicaldocs/shuffle.pdf}},
 }
+   %note =        {\url{http://www.votehere.net/ada_compliant/ourtechnology/
+   %                    technicaldocs/shuffle.pdf}},
 
 @InProceedings{dolev91,
    author =      {Danny Dolev and Cynthia Dwork and Moni Naor},
@@ -390,7 +410,7 @@ full_papers/rao/rao.pdf}},
    editor =       {H. Federrath},
    publisher =    {Springer-Verlag, LNCS 2009},
    pages =       {115--129},
-   year =        2000,
+   year =        {2000},
 }
 
 @InProceedings{disad-free-routes,
@@ -403,9 +423,9 @@ full_papers/rao/rao.pdf}},
    year =        2000,
    editor =       {H. Federrath},
    publisher =    {Springer-Verlag, LNCS 2009},
-   note =        {\url{http://www.tik.ee.ethz.ch/~weiler/lehre/netsec/Unterlagen/anon/
-                       disadvantages_berthold.pdf}},
 }
+   %note =        {\url{http://www.tik.ee.ethz.ch/~weiler/lehre/netsec/Unterlagen/anon/
+   %                    disadvantages_berthold.pdf}},
 
 @InProceedings{boneh00,
    author =      {Dan Boneh and Moni Naor},
@@ -421,7 +441,7 @@ full_papers/rao/rao.pdf}},
    author =      {David M. Goldschlag and Stuart G. Stubblebine},
    title =       {Publicly Verifiable Lotteries: Applications of
                   Delaying Functions},
-   booktitle =   {Financial Cryptography, FC'98},
+   booktitle =   {Financial Cryptography},
    pages =       {214--226},
    year =        1998,
    publisher =   {Springer-Verlag, LNCS 1465},
@@ -481,16 +501,6 @@ full_papers/rao/rao.pdf}},
    month =       {July},
    howpublished = {Draft},
    note =        {\url{http://www.abditum.com/mixmaster-spec.txt}},
-}
-
-@Article{mitzenm-loss,
-   author =      {G. Louth and M. Mitzenmacher and F.P. Kelly},
-   title =       {Computational Complexity of Loss Networks},
-   journal =     {Theoretical Computer Science},
-   year =        {1994},
-   volume =      {125},
-   pages =       {45-59},
-   note =        {\newline \url{http://citeseer.nj.nec.com/louth94computational.html}},
 }
 
 @Misc{hashcash,
@@ -588,10 +598,8 @@ full_papers/rao/rao.pdf}},
    booktitle =   {Information Hiding (IH 1998)},
    year =        {1998},
    publisher =   {Springer-Verlag, LNCS 1525},
-   note =        {\url{http://www.cl.cam.ac.uk/~fapp2/ihw98/ihw98-sgmix.pdf}},
 }
-
-
+   %note =        {\url{http://www.cl.cam.ac.uk/~fapp2/ihw98/ihw98-sgmix.pdf}},
 
 @InProceedings{socks4,
   author =       {David Koblas and Michelle R. Koblas},
@@ -633,25 +641,13 @@ full_papers/rao/rao.pdf}},
 @inproceedings{babel,
   title = {Mixing {E}-mail With {B}abel}, 
   author = {Ceki G\"ulc\"u and Gene Tsudik}, 
-  booktitle = {Proceedings of the Network and Distributed Security Symposium - {NDSS} '96}, 
+  booktitle = {{Network and Distributed Security Symposium (NDSS 96)}}, 
   year = 1996, 
   month = {February}, 
   pages = {2--16}, 
   publisher = {IEEE}, 
-  www_important = 1, 
-  note = {\url{http://citeseer.nj.nec.com/2254.html}}, 
-  www_section = {Anonymous communication}, 
 }
-
-@InProceedings{freenet,
-   author =      {Ian Clarke and Oskar Sandberg and Brandon Wiley and Theodore W. Hong},
-   title =       {Freenet: {A} Distributed Anonymous Information Storage and Retrieval 
-                  System},
-   booktitle =   {Workshop on Design Issues in Anonymity and Unobservability},
-   pages =       {46--66},
-   year =        {2000},
-   note =        {\newline \url{http://citeseer.nj.nec.com/clarke00freenet.html}},
-}
+  %note = {\url{http://citeseer.nj.nec.com/2254.html}}, 
 
 @Misc{rprocess,
    author =      {RProcess},
@@ -678,8 +674,8 @@ full_papers/rao/rao.pdf}},
    volume =      {4},
    number =      {2},
    month =       {February},
-   note =        {\url{http://www.eskimo.com/~weidai/mix-net.txt}},
 }
+   %note =        {\url{http://www.eskimo.com/~weidai/mix-net.txt}},
 
 @InProceedings{nym-alias-net,
   author =       {David Mazi\`{e}res and M. Frans Kaashoek}, 
@@ -689,10 +685,8 @@ full_papers/rao/rao.pdf}},
                   Communications Security (CCS'98)},
   year =         1998,
   publisher =    {ACM Press},
-  note =        {\newline \url{http://www.scs.cs.nyu.edu/~dm/}},
 }
-
-
+  %note =        {\newline \url{http://www.scs.cs.nyu.edu/~dm/}},
 
 @InProceedings{tangler,
   author =       {Marc Waldman and David Mazi\`{e}res},
@@ -703,8 +697,8 @@ full_papers/rao/rao.pdf}},
   pages =        {86--135},
   year =         2001,
   publisher =    {ACM Press},
-  note =         {\url{http://www.scs.cs.nyu.edu/~dm/}}
 }
+  %note =         {\url{http://www.scs.cs.nyu.edu/~dm/}}
 
 @misc{neochaum,
    author =      {Tim May},
@@ -762,8 +756,8 @@ full_papers/rao/rao.pdf}},
   number =       1,
   pages =        {66--92},
   month =        {November},
-  note =         {\url{http://citeseer.nj.nec.com/284739.html}}
 }
+  %note =         {\url{http://citeseer.nj.nec.com/284739.html}}
 
 @Article{crowds-dimacs,
    author =      {Michael K. Reiter and Aviel D. Rubin},
@@ -789,8 +783,8 @@ full_papers/rao/rao.pdf}},
    pages =       {59--72},
    year =        {2000},
    month =       {August},
-   note =        {\newline \url{http://citeseer.nj.nec.com/waldman00publius.html}},
 }
+   %note =        {\newline \url{http://citeseer.nj.nec.com/waldman00publius.html}},
 
 @Misc{freedom-nyms,
    author =      {Russell Samuels},
@@ -823,7 +817,7 @@ full_papers/rao/rao.pdf}},
 @inproceedings{cfs:sosp01,
   title = {Wide-area cooperative storage with {CFS}},
   author = {Frank Dabek and M. Frans Kaashoek and David Karger and Robert Morris and Ion Stoica},
-  booktitle = {Proceedings of the 18th {ACM} {S}ymposium on {O}perating {S}ystems {P}rinciples ({SOSP} '01)},
+  booktitle = {18th {ACM} {S}ymposium on {O}perating {S}ystems {P}rinciples ({SOSP} '01)},
   year = {2001},
   month = {October},
   address = {Chateau Lake Louise, Banff, Canada},
@@ -836,27 +830,8 @@ full_papers/rao/rao.pdf}},
   publisher =   {Springer-Verlag, LNCS (forthcoming)},
   year = {2003}, 
   month = {October}, 
-  note = {\url{http://www.cl.cam.ac.uk/users/aas23/papers_aas/conn_sys.ps}},
 }
-
-@Article{raghavan87randomized,
-   author =      {P. Raghavan and C. Thompson},
-   title =       {Randomized rounding: A technique for provably good algorithms and algorithmic proofs},
-   journal =     {Combinatorica},
-   volume =      {7},
-   pages =       {365--374},
-   year =        {1987},
-}
-
-@InProceedings{leighton91fast,
-   author =      {Frank Thomson Leighton and Fillia Makedon and Serge A. Plotkin and
-                  Clifford Stein and Eva Tardos and Spyros Tragoudas},
-   title =       {Fast Approximation Algorithms for Multicommodity Flow Problems},
-   booktitle =   {{ACM} Symposium on Theory of Computing},
-   pages =       {101-111},
-   year =        {1991},
-   note =        {\newline \url{http://citeseer.nj.nec.com/91073.html}},
-}
+  %note = {\url{http://www.cl.cam.ac.uk/users/aas23/papers_aas/conn_sys.ps}},
 
 @Misc{pk-relations,
    author =      {M. Bellare and A. Desai and D. Pointcheval and P. Rogaway},
@@ -879,18 +854,18 @@ full_papers/rao/rao.pdf}},
   year =        2001,
   editor =      {Ira S. Moskowitz},
   publisher =   {Springer-Verlag, LNCS 2137},
-  note =        {\url{http://www.freehaven.net/papers.html}},
 }
+  %note =        {\url{http://www.freehaven.net/papers.html}},
 
 @InProceedings{casc-rep,
    author =      {Roger Dingledine and Paul Syverson},
    title =       {{Reliable MIX Cascade Networks through Reputation}},
-  booktitle =    {Financial Cryptography (FC '02)},
+  booktitle =    {Financial Cryptography},
   year =         2002,
   editor =       {Matt Blaze},
   publisher =    {Springer-Verlag, LNCS 2357},
-  note =        {\newline \url{http://www.freehaven.net/papers.html}},
 }
+  %note =        {\newline \url{http://www.freehaven.net/papers.html}},
 
 @InProceedings{zhou96certified,
    author =      {Zhou and Gollmann},
@@ -909,22 +884,6 @@ full_papers/rao/rao.pdf}},
    howpublished = {IEEE Journal on Selected Areas in Communications, 1998.},
    note =        {\url{http://www.zurich.ibm.com/security/publications/1998.html}},
 }
-
-@InProceedings{BEAR-LIONESS,
-    author =     {Ross Anderson and Eli Biham},
-    title =      {Two Practical and Provably Secure Block Ciphers: {BEAR} and {LION}},
-    booktitle =  {International Workshop on Fast Software Encryption},
-    year =       {1996},
-    publisher =  {Springer-Verlag},
-    note =       {\url{http://citeseer.nj.nec.com/anderson96two.html}},
-}
-
-@Misc{SPC,
-    author =     {Daniel Bleichenbacher and Anand Desai},
-    title =      {A Construction of a Super-Pseudorandom Cipher},
-    howpublished = {Manuscript},
-}
-
 
 @InProceedings{danezis-pets03,
   author =       {George Danezis},
@@ -1003,7 +962,7 @@ full_papers/rao/rao.pdf}},
 @inproceedings{wright02,
   title = {An Analysis of the Degradation of Anonymous Protocols}, 
   author = {Matthew Wright and Micah Adler and Brian Neil Levine and Clay Shields}, 
-  booktitle = {Proceedings of the Network and Distributed Security Symposium - {NDSS} '02}, 
+  booktitle = {{Network and Distributed Security Symposium (NDSS 02)}}, 
   year = {2002}, 
   month = {February}, 
   publisher = {IEEE}, 
@@ -1012,7 +971,7 @@ full_papers/rao/rao.pdf}},
 @inproceedings{wright03,
   title = {Defending Anonymous Communication Against Passive Logging Attacks}, 
   author = {Matthew Wright and Micah Adler and Brian Neil Levine and Clay Shields}, 
-  booktitle = {2003 IEEE Symposium on Security and Privacy}, 
+  booktitle = {IEEE Symposium on Security and Privacy}, 
   pages= {28--41},
   year = {2003}, 
   month = {May}, 

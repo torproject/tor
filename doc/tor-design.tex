@@ -333,7 +333,7 @@ build the anonymous channel all at once, using a layered ``onion'' of
 public-key encrypted messages, each layer of which provides a set of session
 keys and the address of the next server in the channel.  Tor as described
 herein, Tarzan, Morphmix, Cebolla \cite{cebolla}, and AnonNet
-\cite{RRMPH02-1} build the
+\cite{anonnet} build the
 channel in stages, extending it one hop at a time. This approach
 makes perfect forward secrecy feasible.
 
@@ -686,8 +686,8 @@ in Section~\ref{sec:attacks}.
 The Tor network is an overlay network; each node is called an onion router
 (OR). Onion routers run as normal user-level processes without needing
 any special
-privileges.  Currently, each OR maintains a long-term TLS connection
-to every other
+privileges.  Currently, each OR maintains a long-term TLS \cite{TLS}
+connection to every other
 OR.  (We examine some ways to relax this clique-topology assumption in
 Section~\ref{subsec:restricted-routes}.) A subset of the ORs also act as
 directory servers, tracking which routers are currently in the network;
@@ -948,9 +948,7 @@ The attacker must be able to guess all previous bytes between Alice
 and Bob on that circuit (including the pseudorandomness from the key
 negotiation), plus the bytes in the current cell, to remove or modify the
 cell. Attacks on SHA-1 where the adversary can incrementally add to a
-hash to produce a new valid hash \cite{practical-crypto} don't work,
-% XXX Do we want to cite practical crypto here, or is there a better
-%     place to cite, or is this well-known enough to leave out a cite? -RD
+hash to produce a new valid hash don't work,
 because all hashes are end-to-end encrypted across the circuit.
 The computational overhead isn't so bad, compared to doing an AES
 % XXX We never say we use AES. Say it somewhere above? -RD
@@ -963,7 +961,7 @@ that Alice or Bob tear down the circuit if they receive a bad hash.
 
 Volunteers are generally more willing to run services that can limit
 their bandwidth usage.  To accomodate them, Tor servers use a token
-bucket approach \cite{foo} to limit the number of bytes they
+bucket approach to limit the number of bytes they
 receive. Tokens are added to the bucket each second (when the bucket is
 full, new tokens are discarded.) Each token represents permission to
 receive one byte from the network --- to receive a byte, the connection
@@ -986,9 +984,11 @@ bytes as incoming bytes, it is sufficient in practice to rate-limit
 incoming bytes.
 % Is it?  Fun attack: I send you lots of 1-byte-at-a-time TCP frames.
 % In response, you send lots of 256 byte cells.  Can I use this to 
-% make you exceed your outgoing bandwidth limit by a factor of 256?
+% make you exceed your outgoing bandwidth limit by a factor of 256? -NM
+% Can we resolve this by, when reading from edge connections, rounding up
+% the bytes read (wrt buckets) to the nearest multiple of 256? -RD
 
-Further, inspired by Rennhard et al's design in \cite{RRMPH02-1}, a
+Further, inspired by Rennhard et al's design in \cite{anonnet}, a
 circuit's edges heuristically distinguish interactive streams from bulk
 streams by comparing the frequency with which they supply cells.  We can
 provide good latency for interactive streams by giving them preferential
@@ -1128,10 +1128,12 @@ however, and its network properties still need to be investigated. [XXX
 Channel-based anonymity designs must choose which protocol layer to
 anonymize.  They may choose to intercept IP packets directly, and relay
 them whole (stripping the source address) as the contents of their
-anonymous channels [XXX cite an example].  Alternatively, they may
+anonymous channels \cite{tarzan:ccs02,freedom2-arch}.  Alternatively,
+they may
 accept TCP streams and relay the data in those streams along the
-channel, ignoring the breakdown of that data into TCP frames. (Tor takes
-this approach, as does [XXX].)  Finally, they may accept
+channel, ignoring the breakdown of that data into TCP frames. (Tor
+takes this approach, as does Rennhard's anonymity network \cite{anonnet}
+and Morphmix \cite{morphmix:fc04}.)  Finally, they may accept
 application-level protocols (such as HTTP) and relay the application
 requests themselves along their anonymous channels.
 
@@ -1605,7 +1607,7 @@ Throughout this paper, we have assumed that end-to-end traffic
 analysis cannot yet be defeated.  But even high-latency anonymity
 systems can be vulnerable to end-to-end traffic analysis, if the
 traffic volumes are high enough, and if users' habits are sufficiently
-distinct \cite{disclosure,statistical-disclosure}.  \emph{What can be
+distinct \cite{limits-open,statistical-disclosure}.  \emph{What can be
   done to limit the effectiveness of these attacks against low-latency
   systems?}  Tor already makes some effort to conceal the starts and
 ends of streams by wrapping all long-range control commands in
@@ -1616,7 +1618,7 @@ circuit.  But more research needs to be done in order to find an
 efficient and practical approach.  Volunteers prefer not to run
 constant-bandwidth padding; but more sophisticated traffic shaping
 approaches remain somewhat unanalyzed. [XXX is this so?] Recent work
-on long-range padding \cite{long-range-padding} shows promise.  One
+on long-range padding \cite{defensive-dropping} shows promise.  One
 could also try to reduce correlation in packet timing by batching and
 re-ordering packets, but it is unclear whether this could improve
 anonymity without introducing so much latency as to render the
@@ -1716,7 +1718,7 @@ some padding or something, including long-range padding (to foil the
 first hop), to solve this. let's hope somebody writes a followup to
 \cite{defensive-dropping} that tells us what, exactly, to do, and why,
 exactly, it helps. but website fingerprinting intersection attacks
-\cite{dogan:pet2002} still seem an open problem.
+\cite{kesdogan:pet2002} still seem an open problem.
 
 \item \emph{Option distinguishability.} User configuration options.
 A: We standardize on how clients behave. cite econymics.
