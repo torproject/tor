@@ -1483,7 +1483,11 @@ options_validate(or_options_t *options)
     log_fn(LOG_WARN, "Error in Exit Policy entry.");
     result = -1;
   }
-  exit_policy_implicitly_allows_local_networks(addr_policy, 1);
+  if (server_mode(options)) {
+    exit_policy_implicitly_allows_local_networks(addr_policy, 1);
+  }
+  /* The rest of these calls *append* to addr_policy. So don't actually
+   * use the results for anything other than checking if they parse! */
   if (config_parse_addr_policy(options->DirPolicy, &addr_policy)) {
     log_fn(LOG_WARN, "Error in DirPolicy entry.");
     result = -1;
