@@ -572,7 +572,8 @@ try_next_line:
     value++;
 
   if(!*end || !*value) { /* only a key on this line. no value. */
-    log_fn(LOG_WARN,"Line has keyword '%s' but no value. Skipping.",s);
+    *end = 0;
+    log_fn(LOG_WARN,"Line has keyword '%s' but no value. Skipping.",key);
     goto try_next_line;
   }
   *end = 0; /* null it out */
