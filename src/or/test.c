@@ -512,7 +512,7 @@ test_util(void) {
 
   end.tv_sec = 4;
 
-  test_eq(0L, tv_udiff(&start, &end));
+  test_eq(-1005000L, tv_udiff(&start, &end));
 
   /* The test values here are confirmed to be correct on a platform
    * with a working timegm. */
