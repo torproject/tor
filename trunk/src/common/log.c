@@ -139,10 +139,18 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
 
   r = tor_vsnprintf(buf+n,buf_len-n,format,ap);
   if (r < 0) {
-    n = buf_len-2; /* XXX is this line redundant with the -=2 above,
-                      and also a source of underflow danger? */
-    strlcpy(buf+buf_len-TRUNCATED_STR_LEN-1, TRUNCATED_STR,
-            buf_len-(buf_len-TRUNCATED_STR_LEN-1));
+    /* The message was too long; overwrite the end of the buffer with
+     * "[...truncated]" */
+    if (buf_len >= TRUNCATED_STR_LEN) {
+      /* This is safe, since we have an extra character after buf_len
+         to hold the \0. */
+      strlcpy(buf+buf_len-TRUNCATED_STR_LEN, TRUNCATED_STR,
+              buf_len-(buf_len-TRUNCATED_STR_LEN-1));
+    }
+    /* Set 'n' to the end of the buffer, where we'll be writing \n\0.
+     * Since we already subtracted 2 from buf_len, this is safe.*/
+    n = buf_len;
+
   } else {
     n += r;
   }
