@@ -965,6 +965,10 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
         }
       } else if (!port) {
         /* The port maybe matches. */
+        /* XXX Nick: it looks port 0 only means something special for resolve
+         * commands, which can currently be handled by any exit node.
+         * Should we treat those specially elsewhere?
+         */
         maybe = 1;
       }
     } else {
