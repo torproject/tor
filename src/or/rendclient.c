@@ -394,14 +394,12 @@ void rend_client_desc_here(char *query) {
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
         log_fn(LOG_WARN,"attaching to a rend circ failed. Closing conn.");
-        conn->has_sent_end = 1;
-        connection_mark_for_close(conn);
+        connection_close_unattached_ap(conn, END_STREAM_REASON_MISC);
       }
       tor_assert(conn->state != AP_CONN_STATE_RENDDESC_WAIT); /* avoid loop */
     } else { /* 404, or fetch didn't get that far */
       log_fn(LOG_NOTICE,"Closing stream for '%s.onion': hidden service is unavailable (try again later).", query);
-      conn->has_sent_end = 1;
-      connection_mark_for_close(conn);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
     }
   }
 }

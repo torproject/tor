@@ -722,8 +722,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
         /* no need to send 'end' relay cells,
          * because the other side's already dead
          */
-        stream->has_sent_end = 1;
-        connection_mark_for_close(stream);
+        connection_close_unattached_ap(stream, END_STREAM_REASON_DESTROY);
       }
     }
 

@@ -476,11 +476,10 @@ void directory_all_unreachable(time_t now) {
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
-    conn->has_sent_end = 1; /* it's not connected anywhere, so no need to end */
     log_fn(LOG_NOTICE,"Network down? Failing connection to '%s:%d'.",
            conn->socks_request->address, conn->socks_request->port);
-    connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_NET_UNREACHABLE);
-    connection_mark_for_close(conn);
+    connection_close_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
+// XXX should maybe reflect SOCKS5_NET_UNREACHABLE here. what reason is that?
   }
 }
 
@@ -589,14 +588,14 @@ static void run_connection_housekeeping(int i, time_t now) {
       conn->hold_open_until_flushed = 1;
     } else if (!clique_mode(options) && !circuit_get_by_conn(conn) &&
                (!router || !server_mode(options) || !router_is_clique_mode(router))) {
-      log_fn(LOG_INFO,"Expiring non-used connection to %d (%s:%d) [Not in clique mode].",
+      log_fn(LOG_INFO,"Expiring non-used OR connection to %d (%s:%d) [Not in clique mode].",
              i,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (
          now >= conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
          now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
-      log_fn(LOG_NOTICE,"Expiring stuck connection to %d (%s:%d). (%d bytes to flush; %d seconds since last write)",
+      log_fn(LOG_NOTICE,"Expiring stuck OR connection to %d (%s:%d). (%d bytes to flush; %d seconds since last write)",
              i, conn->address, conn->port,
              (int)buf_datalen(conn->outbuf),
              (int)(now-conn->timestamp_lastwritten));
