@@ -363,25 +363,6 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     return sockshere;
   } /* else socks handshake is done, continue processing */
 
-  if (socks->command == SOCKS_COMMAND_RESOLVE) {
-    uint32_t answer;
-    /* Reply to resolves immediately if we can. */
-    if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
-      log_fn(LOG_WARN,"Address to be resolved is too large. Failing.");
-      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
-      return -1;
-    }
-    answer = htonl(client_dns_lookup_entry(socks->address));
-    if (answer) {
-      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
-                                             (char*)&answer);
-      conn->has_sent_end = 1;
-      connection_mark_for_close(conn);
-      conn->hold_open_until_flushed = 1;
-      return 0;
-    }
-  }
-
   /* Parse the address provided by SOCKS.  Modify it in-place if it
    * specifies a hidden-service (.onion) or particular exit node (.exit).
    */
@@ -400,6 +381,26 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
   if (addresstype != ONION_HOSTNAME) {
     /* not a hidden-service request (i.e. normal or .exit) */
+
+    if (socks->command == SOCKS_COMMAND_RESOLVE) {
+      uint32_t answer;
+      /* Reply to resolves immediately if we can. */
+      if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
+        log_fn(LOG_WARN,"Address to be resolved is too large. Failing.");
+        connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+        return -1;
+      }
+      answer = htonl(client_dns_lookup_entry(socks->address));
+      if (answer) {
+        connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
+                                               (char*)&answer);
+        conn->has_sent_end = 1;
+        connection_mark_for_close(conn);
+        conn->hold_open_until_flushed = 1;
+        return 0;
+      }
+    }
+
     if (socks->command == SOCKS_COMMAND_CONNECT && socks->port == 0) {
       log_fn(LOG_WARN,"Application asked to connect to port 0. Refusing.");
       return -1;
