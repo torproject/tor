@@ -15,6 +15,9 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
 #if _MSC_VER > 1300
 #include <winsock2.h>
 #include <ws2tcpip.h>

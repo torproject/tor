@@ -2,11 +2,51 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#include "../or/or.h"
+#include "orconfig.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include "util.h"
+#include "log.h"
+#include "crypto.h"
 #include "../or/tree.h"
 
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
+#endif
+#ifdef HAVE_CTYPE_H
+#include <ctype.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+#ifdef HAVE_ERRNO_H
+#include <errno.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_FCNTL_H
+#include <sys/fcntl.h>
+#endif
+#ifdef HAVE_PWD_H
+#include <pwd.h>
+#endif
+#ifdef HAVE_GRP_H
+#include <grp.h>
 #endif
 
 /* used by inet_addr, not defined on solaris anywhere!? */

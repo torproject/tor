@@ -5,7 +5,12 @@
 #ifndef __UTIL_H
 #define __UTIL_H
 
-#include "../or/or.h"
+#include "orconfig.h"
+#include "torint.h"
+#include <stdio.h>
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
 
 #if _MSC_VER > 1300
 #include <winsock2.h>
@@ -31,6 +36,9 @@
 #else
 #define INLINE inline
 #endif
+
+/* legal characters in a filename */
+#define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 
 size_t strlcat(char *dst, const char *src, size_t siz);
 size_t strlcpy(char *dst, const char *src, size_t siz);

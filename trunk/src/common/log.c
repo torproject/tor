@@ -2,8 +2,13 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#include "../or/or.h"
 #include <stdarg.h>
+#include <assert.h>
+#include <stdlib.h>
+#include "orconfig.h"
+#include "./util.h"
+#include "./log.h"
+
 
 #ifdef MS_WINDOWS
 #define vsnprintf _vsnprintf
