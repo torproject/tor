@@ -726,8 +726,6 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   return 0;
 }
 
-extern int has_fetched_directory; /* from main.c */
-
 /** Choose a length for a circuit of purpose <b>purpose</b>.
  * Default length is 3 + the number of endpoints that would give something
  * away. If the routerlist <b>routers</b> doesn't have enough routers
