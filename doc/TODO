@@ -59,14 +59,16 @@ N  . Implement pending controller features.
       - List of address mappings (all, or mapaddress+config,
                                   or just mapadddress?)
     o POSTDESCRIPTOR
-    . MAPADDRESS
+    o MAPADDRESS
       o Map A->B.
-      - Map DontCare->B.
+      o Map DontCare->B.
+    - Way to handle overlong messages?
     - Event for "new descriptors"
     o Better stream IDs
     - EXTENDCIRCUIT <depends on revised circ selection stuff.>
     - ATTACHSTREAM <depends on making streams have 'unattached' state.>
     - Stream status changed: "new" state.
+    - Tests for new controller features
 R . HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     other ORs.)
   o Changes for forward compatibility
@@ -86,7 +88,7 @@ R . HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
       (Turns out, if package_raw_inbuf fails, it *can't* send an end cell.)
     o Check for any place where we can close an edge connection without
       sending an end; see if we should send an end.
-N   . Feed end reason back into SOCK5 as reasonable.
+N . Feed end reason back into SOCK5 as reasonable.
 R o cache .foo.exit names better, or differently, or not.
 N - make !advertised_server_mode() ORs fetch dirs less often.
 N - Clean up NT service code even more.  Document it. Enable it by default.
@@ -128,7 +130,9 @@ R  o client software not upload descriptor until:
        * no need to do this yet. few people define their ORPort.
 
  Arguable
-N - Reverse DNS: specify and implement.
+N . Reverse DNS
+    o specify
+    - implement
 r - make min uptime a function of the available choices (say, choose 60th
     percentile, not 1 day.)
 r - kill dns workers more slowly

@@ -534,6 +534,77 @@ void client_dns_set_addressmap(const char *address, uint32_t val, const char *ex
                       time(NULL) + MAX_DNS_ENTRY_AGE);
 }
 
+/* Currently, we hand out 127.192.0.1 through 127.254.254.254.
+ * These addresses should map to localhost, so even if the
+ * application accidentally tried to connect to them directly (not
+ * via Tor), it wouldn't get too far astray.
+ *
+ * Eventually, we should probably make this configurable.
+ */
+#define MIN_UNUSED_IPV4 0x7fc00001u
+#define MAX_UNUSED_IPV4 0x7ffefefeu
+
+/**
+ * Return true iff <b>addr</b> is likely to have been returned by
+ * client_dns_get_unmapped_address.
+ **/
+static int
+address_is_in_unmapped_range(const char *addr)
+{
+  struct in_addr in;
+  tor_assert(addr);
+  if (!strcasecmpend(addr, ".virtual")) {
+    return 1;
+  } else if (tor_inet_aton(addr, &in)) {
+    uint32_t a = ntohl(in.s_addr);
+    if (a >= MIN_UNUSED_IPV4 && a <= MAX_UNUSED_IPV4)
+      return 1;
+  }
+  return 0;
+}
+
+/** Return a newly allocated string holding an address of <b>type</b>
+ * (one of RESOLVED_TYPE_{IPV4|HOSTNAME}) that has not yet been mapped,
+ * and that is very unlikely to be the address of any real host.
+ */
+char *
+client_dns_get_unmapped_address(int type)
+{
+  char buf[64];
+  static uint32_t next_ipv4 = MIN_UNUSED_IPV4;
+  struct in_addr in;
+
+  if (type == RESOLVED_TYPE_HOSTNAME) {
+    char rand[16];
+    do {
+      crypto_rand(rand, sizeof(rand));
+      base32_encode(buf,sizeof(buf),rand,sizeof(rand));
+      strlcat(buf, ".virtual", sizeof(buf));
+    } while (strmap_get(addressmap, buf));
+    return tor_strdup(buf);
+  } else if (type == RESOLVED_TYPE_IPV4) {
+    while (1) {
+      /* Don't hand out any .0 or .255 address. */
+      while ((next_ipv4 & 0xff) == 0 ||
+             (next_ipv4 & 0xff) == 0xff)
+        ++next_ipv4;
+      in.s_addr = htonl(next_ipv4);
+      tor_inet_ntoa(&in, buf, sizeof(buf));
+      if (!strmap_get(addressmap, buf))
+        break;
+
+      ++next_ipv4;
+      if (next_ipv4 > MAX_UNUSED_IPV4)
+        next_ipv4 = MIN_UNUSED_IPV4;
+    }
+    return tor_strdup(buf);
+  } else {
+    log_fn(LOG_WARN, "Called with unsupported address type (%d)",
+           type);
+    return NULL;
+  }
+}
+
 /** Return 1 if <b>address</b> has funny characters in it like
  * colons. Return 0 if it's fine.
  */
@@ -592,6 +663,17 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
   /* For address map controls, remap the address */
   addressmap_rewrite(socks->address, sizeof(socks->address));
+
+  if (address_is_in_unmapped_range(socks->address)) {
+    /* This address was probably handed out by client_dns_get_unmapped_address,
+     * but the mapping was discarded for some reason.  We *don't* want to send
+     * the address through tor; that's likely to fail, and may leak
+     * information.
+     */
+    log_fn(LOG_WARN,"Missing mapping for virtual address '%s'. Refusing.",
+           socks->address);
+    return -1;
+  }
 
   /* Parse the address provided by SOCKS.  Modify it in-place if it
    * specifies a hidden-service (.onion) or particular exit node (.exit).
