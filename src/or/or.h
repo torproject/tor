@@ -284,7 +284,18 @@ typedef struct
   void *next;
 } tracked_onion_t;
 
-
+typedef struct
+{
+   char *LogLevel;
+   char *RouterFile;
+   char *PrivateKeyFile;
+   float CoinWeight;
+   int ORPort;
+   int OPPort;
+   int APPort;
+   int MaxConn;
+   int TrafficShaping;
+} or_options_t;
 
 
     /* all the function prototypes go here */
@@ -365,6 +376,9 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn);
 
 /* loads the configuration file */
 int getconfig(char *filename, config_opt_t *options);
+
+/* create or_options_t from command-line args and config files(s) */
+int getoptions(int argc, char **argv, or_options_t *options);
 
 /********************************* connection.c ***************************/
 

@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/03 16:31:22  montrose
+ * Added getoptions() and made minor adjustment to poptReadDefaultOptions()
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.3  2002/04/02 14:28:24  badbytes
  * Final finishes.
@@ -23,6 +26,7 @@
  */
 
 #include "or.h"
+#include <libgen.h>
 
 /* loads the configuration file */
 int getconfig(char *conf_filename, config_opt_t *options)
@@ -45,5 +49,74 @@ int getconfig(char *conf_filename, config_opt_t *options)
     return -1;
 
   return 0;
+}
+
+int getoptions(int argc, char **argv, or_options_t *options)
+/**
+A replacement for getargs() and getconfig() which uses the <popt> library to parse
+both command-line arguments and configuration files. A specific configuration file
+may be specified using the --ConfigFile option. If one is not specified, then the
+configuration files at /etc/<cmd>rc and ~/.<cmd>rc will be loaded in that order (so
+user preferences will override the ones specified in /etc. Note: <cmd> is the
+basename() or argv[0] so one could run the same executeable through soft links to
+get different configuration files loaded for different instances of the same program.
+The ConfigFile option may only be used on the command-line. All other command-line
+options may also be specified in configuration files. <popt> aliases are enabled
+here so a user can define their own options in the /etc/popt or ~/.popt files.
+RETURN VALUE: 0 on success, non-zero on error
+**/
+{
+   char *ConfigFile;
+   int Verbose;
+   int code;
+   poptContext optCon;
+   char *cmd;
+   struct poptOption opt_tab[] =
+   {
+      { "APPort", 'a', POPT_ARG_INT, &options->APPort, 0, "application proxy port", "<port>" },
+      { "CoinWeight", 'w', POPT_ARG_FLOAT, &options->CoinWeight, 0, "coin weight used in determining routes", "<weight>" },
+      { "ConfigFile", 'f', POPT_ARG_STRING, &ConfigFile, 0, "user specified configuration file", "<file>" },
+      { "LogLevel", 'l', POPT_ARG_STRING, &options->LogLevel, 0, "emerg|alert|crit|err|warning|notice|info|debug", "<level>" },
+      { "MaxConn", 'm', POPT_ARG_INT, &options->MaxConn, 0, "maximum number of incoming connections", "<max>" },
+      { "OPPort", 'o', POPT_ARG_INT, &options->OPPort, 0, "onion proxy port", "<port>" },
+      { "ORPort", 'p', POPT_ARG_INT, &options->ORPort, 0, "onion router port", "<port>" },
+      { "PrivateKeyFile", 'k', POPT_ARG_STRING, &options->PrivateKeyFile, 0, "maximum number of incoming connections", "<max>" },
+      { "RouterFile", 'r', POPT_ARG_STRING, &options->RouterFile, 0, "local port on which the onion proxy is running", "<port>" },
+      { "TrafficShaping", 't', POPT_ARG_INT, &options->TrafficShaping, 0, "which traffic shaping policy to use", "<policy>" },
+      { "Verbose", 'v', POPT_ARG_NONE, &Verbose, 0, "display options selected before execution", NULL },
+      POPT_AUTOHELP  /* handles --usage and --help automatically */
+      POPT_TABLEEND  /* marks end of table */
+   };
+   cmd = basename(argv[0]);
+   optCon = poptGetContext(cmd,argc,(const char **)argv,opt_tab,0);
+
+   poptReadDefaultConfig(optCon,0);       /* read <popt> alias definitions */
+
+   bzero(options,sizeof(or_options_t));   /* zero out options initially */
+
+   code = poptGetNextOpt(optCon);         /* first we handle command-line args */
+
+   if ( ConfigFile )                      /* handle user-specified config file if any */
+   {
+      code = poptReadOptions(optCon,ConfigFile);
+      if ( code < -1 ) return code;
+   }
+   else                                   /* load Default configuration files */
+   {
+      code = poptReadDefaultOptions(cmd,optCon);
+      if ( code < -1 ) return code;
+   }
+
+   if ( Verbose )                         /* display options upon user request */
+   {
+      printf("\nLogLevel=%s\n",options->LogLevel);
+      printf("RouterFile=%s, PrivateKeyFile=%s\n",options->RouterFile,options->PrivateKeyFile);
+      printf("ORPort=%d, OPPort=%d, APPort=%d\n",options->ORPort,options->OPPort,options->APPort);
+      printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n\n",options->CoinWeight,options->MaxConn,options->TrafficShaping);
+   }
+
+   poptFreeContext(optCon);
+
+   return 0;
 }
 
