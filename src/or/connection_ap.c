@@ -123,20 +123,24 @@ int ap_handshake_process_socks(connection_t *conn) {
   }
 
   /* find the circuit that we should use, if there is one. */
-  circ = NULL; /* FIXME don't reuse circs, at least for me. */
+  circ = circuit_get_by_edge_type(EDGE_AP);
 
   /* now we're all ready to make an onion or send a begin */
 
-  if(circ) {
-    if(circ->state == CIRCUIT_STATE_OPEN) {
-      if(ap_handshake_send_begin(conn, circ) < 0) {
-        circuit_close(circ);
-        return -1;
-      }
+  if(circ && circ->state == CIRCUIT_STATE_OPEN) {
+    /* add it into the linked list of topics on this circuit */
+    log(LOG_DEBUG,"ap_handshake_process_socks(): attaching new conn to circ. n_aci %d.", circ->n_aci);
+    conn->next_topic = circ->p_conn;
+    circ->p_conn = conn;
+
+    if(ap_handshake_send_begin(conn, circ) < 0) {
+      circuit_close(circ);
+      return -1;
     }
   } else {
     if(ap_handshake_create_onion(conn) < 0) {
-      circuit_close(circ);
+      if(circ)
+        circuit_close(circ);
       return -1;
     }
   }
@@ -370,6 +374,7 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
   connection_t *conn;
   int topic_command;
   int topic_id;
+  static int num_seen=0;
 
   /* an incoming data cell has arrived */
 
@@ -379,6 +384,9 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
   *cell->payload = 0;
   topic_id = *(uint32_t *)cell->payload;
   log(LOG_DEBUG,"connection_ap_process_data_cell(): command %d topic %d", topic_command, topic_id);
+  num_seen++;
+  log(LOG_DEBUG,"connection_exit_process_data_cell(): Now seen %d data cells here.", num_seen);
+
 
   circuit_consider_sending_sendme(circ, EDGE_AP);
 

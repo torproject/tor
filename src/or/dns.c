@@ -55,6 +55,9 @@ int connection_dns_process_inbuf(connection_t *conn) {
 
   assert(conn->inbuf);
 
+  if(conn->inbuf_datalen <= 0)
+    return 0;
+
   /* peek into the inbuf, so we can check if it's all here */
   length = *conn->inbuf; /* warning: abstraction violation :( */
   assert(length < 240);
@@ -231,7 +234,7 @@ int dns_read_block(int fd, char *string, unsigned char *len) {
   }
 
   string[*len] = 0; /* null terminate it, just in case */
-  log(LOG_INFO,"dns_read_block(): Read '%s', len %u.",string,*len); // XXX make silent
+//  log(LOG_INFO,"dns_read_block(): Read '%s', len %u.",string,*len);
   return 0;
 }
 
@@ -267,7 +270,7 @@ static int dns_read_tor_question(int index) {
                     &slave_data[index].question_len) < 0)
     return -1;
 
-  log(LOG_INFO,"dns_read_tor_question(): Read question '%s'",slave_data[index].question);
+//  log(LOG_INFO,"dns_read_tor_question(): Read question '%s'",slave_data[index].question);
   return 0;
 }
 
@@ -358,7 +361,7 @@ int dns_tor_to_master(char *address) {
     return -1;
   }
 
-  log(LOG_DEBUG,"dns_tor_to_master(): submitted '%s'", address);
+//  log(LOG_DEBUG,"dns_tor_to_master(): submitted '%s'", address);
   return 0;
 }
 

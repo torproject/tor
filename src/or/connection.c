@@ -622,7 +622,7 @@ repeat_connection_package_raw_inbuf:
   cell.length += TOPIC_HEADER_SIZE;
   cell.command = CELL_DATA;
 
-  if(circ->n_conn == conn) { /* send it backward. we're an exit. */
+  if(conn->type == CONN_TYPE_EXIT) {
     cell.aci = circ->p_aci;
     if(circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_EXIT) < 0) {
       log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_data_cell_from_edge (backward) failed. Closing.");
@@ -637,6 +637,7 @@ repeat_connection_package_raw_inbuf:
     }
     log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at exit is %d",conn->n_receive_topicwindow);
   } else { /* send it forward. we're an AP */
+    assert(conn->type == CONN_TYPE_AP);
     cell.aci = circ->n_aci;
     if(circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
       log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_data_cell_from_edge (forward) failed. Closing.");

@@ -454,6 +454,7 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type);
 
 circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
+circuit_t *circuit_get_by_edge_type(char edge_type);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
 int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type);

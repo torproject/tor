@@ -252,13 +252,32 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
+circuit_t *circuit_get_by_edge_type(char edge_type) {
+  circuit_t *circ;
+
+  for(circ=global_circuitlist;circ;circ = circ->next) {
+    if(edge_type == EDGE_AP && circ->n_conn && circ->n_conn->type == CONN_TYPE_OR) {
+      log(LOG_DEBUG,"circuit_get_by_edge_type(): Choosing n_aci %d.", circ->n_aci);
+      return circ;
+    }
+    if(edge_type == EDGE_EXIT && circ->p_conn && circ->p_conn->type == CONN_TYPE_OR) {
+      return circ;
+    }
+    log(LOG_DEBUG,"circuit_get_by_edge_type(): Skipping p_aci %d / n_aci %d.", circ->p_aci, circ->n_aci);
+  }
+  return NULL;
+}
+
 int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type) {
   int cell_direction;
+  static int numsent_ap=0, numsent_exit=0;
 
   log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): called, edge_type %d.", edge_type);
 
   if(edge_type == EDGE_AP) { /* i'm the AP */
     cell_direction = CELL_DIRECTION_OUT;
+    numsent_ap++;
+    log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): now sent %d data cells from ap", numsent_ap);
     if(circ->p_receive_circwindow <= 0) {
       log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): window 0, queueing for later.");
       circ->data_queue = data_queue_add(circ->data_queue, cell);
@@ -267,6 +286,8 @@ int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge
     circ->p_receive_circwindow--;
   } else { /* i'm the exit */
     cell_direction = CELL_DIRECTION_IN;
+    numsent_exit++;
+    log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): now sent %d data cells from exit", numsent_exit);
     if(circ->n_receive_circwindow <= 0) {
       log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): window 0, queueing for later.");
       circ->data_queue = data_queue_add(circ->data_queue, cell);
@@ -491,6 +512,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
 void circuit_close(circuit_t *circ) {
   connection_t *conn;
 
+  assert(circ);
   circuit_remove(circ);
   for(conn=circ->n_conn; conn; conn=conn->next_topic) {
     connection_send_destroy(circ->n_aci, circ->n_conn); 
