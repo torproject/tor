@@ -617,7 +617,7 @@ repeat_connection_package_raw_inbuf:
 
   log(LOG_DEBUG,"connection_package_raw_inbuf(): Packaging %d bytes (%d waiting).",cell.length, amount_to_process);
 
-  *(uint32_t *)cell.payload = conn->topic_id;
+  *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
   *cell.payload = TOPIC_COMMAND_DATA;
   cell.length += TOPIC_HEADER_SIZE;
   cell.command = CELL_DATA;
@@ -673,7 +673,7 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
     return 0;
   }
 
-  *(uint32_t *)cell.payload = conn->topic_id;
+  *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
   *cell.payload = TOPIC_COMMAND_SENDME;
   cell.length += TOPIC_HEADER_SIZE;
   cell.command = CELL_DATA;

@@ -339,10 +339,30 @@ static int dns_master_to_tor(int from, int to) {
   return 0;
 }
 
-int dns_tor_to_master(char *address) {
+int dns_tor_to_master(connection_t *exitconn) {
   connection_t *conn;
   unsigned char len;
 
+#ifdef DO_DNS_DIRECTLY
+  /* new version which does it all right here */
+  struct hostent *rent;
+  rent = gethostbyname(exitconn->address);
+  if (!rent) {
+    return -1;
+  }
+
+  memcpy((char *)&exitconn->addr, rent->h_addr, rent->h_length);
+  exitconn->addr = ntohl(exitconn->addr); /* get it back to host order */
+
+  if(connection_exit_connect(exitconn) < 0) {
+    exitconn->marked_for_close = 1;
+  }
+  return 0;
+#endif
+
+
+
+  /* old version which actually uses the dns farm */
   conn = connection_get_by_type(CONN_TYPE_DNSMASTER);
   if(!conn) {
     log(LOG_ERR,"dns_tor_to_master(): dns master nowhere to be found!");
@@ -350,13 +370,13 @@ int dns_tor_to_master(char *address) {
     return -1;
   }
 
-  len = strlen(address);
+  len = strlen(exitconn->address);
   if(connection_write_to_buf(&len, 1, conn) < 0) {
     log(LOG_DEBUG,"dns_tor_to_master(): Couldn't write length.");
     return -1;
   }
 
-  if(connection_write_to_buf(address, len, conn) < 0) {
+  if(connection_write_to_buf(exitconn->address, len, conn) < 0) {
     log(LOG_DEBUG,"dns_tor_to_master(): Couldn't write address.");
     return -1;
   }
