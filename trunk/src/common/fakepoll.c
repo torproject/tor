@@ -61,8 +61,7 @@ poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 			FD_SET(fd, &readfds);
 		if (ufds[idx].events & POLLOUT)
 			FD_SET(fd, &writefds);
-		if (ufds[idx].events & POLLERR)
-			FD_SET(fd, &exceptfds);
+		FD_SET(fd, &exceptfds);
 	}
 #ifdef MS_WINDOWS
         if (!any_fds_set) {
