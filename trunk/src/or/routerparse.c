@@ -834,7 +834,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   } else if (tok) {
     if (tok->n_args < 3) {
       /* XXXX Once 0.0.7 is *really* dead, restore this warning to its old form*/
-      log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\": must be an obsolete server. Rejecting.");
+      log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\": must be an obsolete server. Rejecting (nickname %s).", router->nickname);
       goto err;
     }
     router->bandwidthrate = tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
