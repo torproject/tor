@@ -225,14 +225,15 @@ int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
 int parse_log_level(const char *level) {
   if (!strcasecmp(level, "err"))
     return LOG_ERR;
-  else if (!strcasecmp(level, "notice"))
+  if (!strcasecmp(level, "warn"))
+    return LOG_WARN;
+  if (!strcasecmp(level, "notice"))
     return LOG_NOTICE;
-  else if (!strcasecmp(level, "info"))
+  if (!strcasecmp(level, "info"))
     return LOG_INFO;
-  else if (!strcasecmp(level, "debug"))
+  if (!strcasecmp(level, "debug"))
     return LOG_DEBUG;
-  else
-    return -1;
+  return -1;
 }
 
 int get_min_log_level(void)
