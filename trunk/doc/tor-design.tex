@@ -1613,10 +1613,11 @@ with a session key shared by Alice and Bob.
 \Section{Early experiences: Tor in the Wild}
 \label{sec:in-the-wild}
 
-The current Tor network, as of mid January 2004, consists of 16 nodes
-(14 in the US, 2 in Europe), and we're adding more each week as the code
-gets more robust.\footnote{For comparison, the current remailer network
-has about 30 nodes.} Each node has at least a 768k/768k connection, and
+As of mid-January 2004, the Tor network consists of 16 nodes
+(14 in the US, 2 in Europe), and more are joining each week as the code
+matures.\footnote{For comparison, the current remailer network
+has about 30 reliable nodes.} Each node has at least a 768k/768k connection, 
+and
 most have 10Mb. The number of users varies (and of course, it's hard to
 tell for sure), but we sometimes have several hundred users---admins at
 several companies have started putting their entire department's web
@@ -1624,53 +1625,60 @@ traffic through Tor, to block snooping admins in other divisions of
 their company from reading the traffic. Tor users have reported using
 the network for web browsing, ftp, IRC, AIM, Kazaa, and ssh.
 
-As of mid January, each Tor node was processing roughly 800,000 relay
+Each Tor currently node currently processes roughly 800,000 relay
 cells (a bit under half a gigabyte) per week. On average, about 80\%
 of each 500-byte payload is full for cells going back to the client,
-whereas about 40\% is full for cells coming from the client. (They are
-difference because most of our traffic is web browsing.) Interactive
+whereas about 40\% is full for cells coming from the client. (The difference
+arises because most of the network's traffic is web browsing.) Interactive
 traffic like ssh brings down the average a lot---once we have more
-experience, and assuming we can resolve the anonymity issues, we will
+experience, and assuming we can resolve the anonymity issues, we may
 consider partitioning traffic into two relay cell sizes: one to handle
 bulk traffic and one for interactive traffic.
 
 We haven't asked to use PlanetLab \cite{planetlab} to provide more nodes,
-because their AUP excludes projects like Tor (see also \cite{darkside}. On
-the other hand, we have had no abuse issues since the network was deployed
-in October 2003. Our default exit policy rejects smtp requests, to block
-spamming even before it becomes an issue. For now we're happy with our
-slow growth rate, while we add features, resolve bugs, and get a feel for
-what users actually want from an anonymity system. We are not eager to
-attract the Kazaa or warez communities, even though they would greatly
-bolster the anonymity sets---we must build a reputation of being for
-privacy, human rights, research, and other entirely legitimate activities.
+because their AUP excludes projects like Tor (see also \cite{darkside}). 
+% I'm confused. Why are we mentioning PlanetLab at all?  Could we perhaps
+% be more generic? -NM
+On the other hand, we have had no abuse issues since the network was
+deployed in October 2003. Our default exit policy rejects SMTP requests,
+to avoid spam issues.  Our slow growth rate gives us time to add features,
+resolve bugs, and get a feel for what users actually want from an
+anonymity system.  Even though having more users would bolster our
+anonymity sets, we are not eager to attract the Kazaa or warez
+communities---we feel that we must build a reputation for privacy, human
+rights, research, and other socially approved activities.
 
 As for performance, profiling shows that almost all the CPU time for the
-Tor program itself is spent in AES (which is fast). Thus latency comes
-from two factors. First, network latency is a critical factor: we are
+Tor program itself is spent in AES, which is fast.  Current latency is
+attributable
+to two factors. First, network latency is critical: we are
 intentionally bouncing traffic around the world several times. Second,
-our end-to-end congestion control algorithm focuses on protecting our
-volunteer servers from accidental DoS rather than providing maximum
-performance. Right now the first $500*500B=250KB$ of the stream arrives
+our end-to-end congestion control algorithm focuses on protecting
+volunteer servers from accidental DoS rather than optimizing
+performance. Right now the first $500 \times 500\mbox{B}=250\mbox{KB}$ 
+of the stream arrives
 quickly, and after that throughput depends on the rate that \emph{relay
-sendme} acknowledgements arrive. We can tweak the congestion control
-parameters to provide faster throughput at the expense of requiring
+sendme} acknowledgments arrive. We can tweak the congestion control
+parameters to provide faster throughput at the cost of
 larger buffers at each node; adding the heuristics mentioned in
 Section~\ref{subsec:rate-limit} to give better speed to low-volume
-streams will change the equation too. More research remains to find the
+streams may also help. More research remains to find the
 right balance.
 
 %performs badly on lossy networks. may need airhook or something else as
 %transport alternative?
 
-With the current network's topology and load, users can typically
-get 1-2 megabits sustained transfer rate. Overall, this performance is
-sufficient. The Tor design focuses on security; usability and performance
-just have to not suck too much.
+With the current network's topology and load, users can typically get 1-2
+megabits sustained transfer rate. Overall, this performance is sufficient
+for most of our users.  The Tor design aims foremost for security;
+performance is secondary.
 
-we expect it to scale to a few hundred nodes and perhaps 10,000 users,
-before we're forced to change topologies to become more distributed.
-but really, give us a chance to run it for a while more, first.
+Although Tor's clique topology and full-visibility directories present
+scaling problems, we still expect the network to a few hundred nodes and
+perhaps 10,000 users, before we're forced to change topologies to become
+more distributed.  With luck, the experience we gained running the
+current topology will help us choose among alternatives when the time
+comes.
 
 \Section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
