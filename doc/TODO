@@ -24,8 +24,6 @@ R  o pick the whole path when you start the circuit.
      haven't made a circ yet.
    o actually give http reason phrases to dir clients, so they know why
      they're rejected.
-   - controller should have an event to learn about new addressmappings?
-   - how do ulimits work on win32, anyway?
    o have a separate config option which caps bandwidth-to-advertise.
    o Make list_server_status work right on non-directories, so that 
      getinfo("network-status") control message can work there.
@@ -161,6 +159,10 @@ R    - when we haven't explicitly sent a socks reject, sending one in
 R    - should retry exitpolicy end streams even if the end cell didn't
        resolve the address for you
    o Figure out when to reset addressmaps (on hup, on reconfig, etc)
+   - how do ulimits work on win32, anyway?  (We should handle WSAENOBUFS as
+     needed, look at the MaxConnections registry entry, look at the
+     MaxUserPort entry, and look at the TcpTimedWaitDelay entry. We may also
+     want to provide a way to set them as needed. See bug 98.)
 
  Improvements to self-measurement.
 R  X round detected bandwidth up to nearest 10KB?
@@ -202,6 +204,7 @@ N - Code cleanup
     - Investigate hidden service performance/reliability
   - Add private:* alias in exit policies to make it easier to ban all the
     fiddly little 192.168.foo addresses.
+  - controller should have an event to learn about new addressmappings?
 
 
   No
