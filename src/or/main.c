@@ -3,6 +3,9 @@
 /* $Id$ */
 
 #include "or.h"
+#ifdef HAVE_UNAME
+#include <sys/utsname.h>
+#endif
 
 /********* START PROTOTYPES **********/
 
@@ -672,11 +675,28 @@ static void dumpstats(void) { /* dump stats to stdout */
   }
 }
 
+static void get_platform_str(char *platform, int len)
+{
+#ifdef HAVE_UNAME
+  struct utsname u;
+  if (!uname(&u)) {
+    snprintf(platform, len-1, "Tor %s on %s %s %s %s %s",
+             VERSION, u.sysname, u.nodename, u.release, u.version, u.machine);
+    platform[len-1] = '\0';
+    return;
+  } else
+#endif
+    {
+      snprintf(platform, len-1, "Tor %s", VERSION);
+    }
+}
+
 int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                           crypto_pk_env_t *ident_key) {
   char *onion_pkey;
   char *link_pkey;
   char *identity_pkey;
+  char platform[256];
   char digest[20];
   char signature[128];
   char published[32];
@@ -684,6 +704,8 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   int written;
   int result=0;
   struct exit_policy_t *tmpe;
+  
+  get_platform_str(platform, 256);
 
   if(crypto_pk_write_public_key_to_string(router->onion_pkey,
                                           &onion_pkey,&onion_pkeylen)<0) {
@@ -706,16 +728,18 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   
   result = snprintf(s, maxlen, 
                     "router %s %s %d %d %d %d\n"
+                    "platform %s\n"
                     "published %s\n"
                     "onion-key\n%s"
                     "link-key\n%s"
                     "signing-key\n%s",
-    router->nickname,                   
+    router->nickname,             
     router->address,
     router->or_port,
     router->ap_port,
     router->dir_port,
     router->bandwidth,
+    platform,
     published,
     onion_pkey, link_pkey, identity_pkey);
 

@@ -275,6 +275,7 @@ typedef enum {
   K_ROUTER_SIGNATURE,
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
+  K_PLATFORM,
   _SIGNATURE, 
   _PUBLIC_KEY, 
   _ERR, 
@@ -296,6 +297,7 @@ static struct token_table_ent token_table[] = {
   { "router-signature", K_ROUTER_SIGNATURE },
   { "published", K_PUBLISHED },
   { "running-routers", K_RUNNING_ROUTERS },
+  { "platform", K_PLATFORM },
   { NULL, -1 }
 };
 
@@ -453,6 +455,7 @@ router_dump_token(directory_token_t *tok) {
     case K_ROUTER_SIGNATURE: printf("Router-signature"); break;
     case K_PUBLISHED: printf("Published"); break;
     case K_RUNNING_ROUTERS: printf("Running-routers"); break;
+    case K_PLATFORM: printf("Platform"); break;
     default:
       printf("?????? %d\n", tok->tp); return;
     }
@@ -886,7 +889,12 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   log_fn(LOG_DEBUG,"or_port %d, ap_port %d, dir_port %d, bandwidth %d.",
     router->or_port, router->ap_port, router->dir_port, router->bandwidth);
 
+  /* XXX Later, require platform before published. */
   NEXT_TOKEN();
+  if (tok->tp == K_PLATFORM) {
+    NEXT_TOKEN();
+  }
+  
   if (tok->tp != K_PUBLISHED) {
     log_fn(LOG_WARNING, "Missing published time"); goto err;
   }
