@@ -518,7 +518,10 @@ static char *find_whitespace(char *s) {
 
 int router_get_list_from_string(char *s) 
 {
-  return router_get_list_from_string_impl(s, &directory);
+  int i;
+  i = router_get_list_from_string_impl(s, &directory);
+  router_resolve_directory(directory);
+  return i;
 }
 
 int router_get_list_from_string_impl(char *s, directory_t **dest) {
@@ -548,7 +551,10 @@ static int router_get_dir_hash(char *s, char *digest)
 
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
 {
-  return router_get_dir_from_string_impl(s, &directory, pkey);
+  int i;
+  i = router_get_dir_from_string_impl(s, &directory, pkey);
+  router_resolve_directory(directory);
+  return i;
 }
 
 int router_get_dir_from_string_impl(char *s, directory_t **dest,
@@ -675,6 +681,28 @@ router_resolve(routerinfo_t *router)
   memcpy(&router->addr, rent->h_addr,rent->h_length);
   router->addr = ntohl(router->addr); /* get it back into host order */
 
+  return 0;
+}
+
+int 
+router_resolve_directory(directory_t *dir)
+{
+  int i, max;
+  if (!dir)
+    dir = directory;
+
+  max = dir->n_routers;
+  for (i = 0; i < max; ++i) {
+    if (router_resolve(dir->routers[i])) {
+      /* ARMA: Is this the right way to remove a router from the directory? */
+      dir->routers[i]->next = NULL;
+      routerlist_free(dir->routers[i]);
+      dir->routers[i] = dir->routers[--max];
+      dir->routers[max] = NULL;
+      --dir->n_routers;
+    }
+  }
+  
   return 0;
 }
 

@@ -798,6 +798,8 @@ int router_is_me(uint32_t addr, uint16_t port);
 void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
 int router_resolve(routerinfo_t *router);
+int router_resolve_directory(directory_t *dir);
+
 /* Reads a list of known routers, unsigned. */
 int router_get_list_from_string(char *s);
 /* Exported for debugging */
