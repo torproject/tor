@@ -144,6 +144,9 @@ On-going
         . Update the spec so it matches the code
 
 Mid-term:
+	- Refactor: add own routerinfo to routerlist.  Right now, only
+	  router_get_by_nickname knows about 'this router', as a hack to
+	  get circuit_launch_new to do the right thing.
         - Rotate tls-level connections -- make new ones, expire old ones.
           So we get actual key rotation, not just symmetric key rotation
         o Are there anonymity issues with sequential streamIDs? Sequential

@@ -320,6 +320,18 @@ int router_compare_to_my_exit_policy(connection_t *conn) {
 
 }
 
+routerinfo_t *router_get_my_routerinfo(void)
+{
+  if (!options.ORPort)
+    return NULL;
+
+  if (!desc_routerinfo) {
+    if (router_rebuild_descriptor())
+      return NULL;
+  }
+  return desc_routerinfo;
+}
+
 const char *router_get_my_descriptor(void) {
   if (!desc_routerinfo) {
     if (router_rebuild_descriptor())

@@ -314,6 +314,10 @@ routerinfo_t *router_get_by_nickname(char *nickname)
     if (0 == strcmp(router->nickname, nickname))
       return router;
   }
+  router = router_get_my_routerinfo();
+  if (router && 0 == strcmp(router->nickname, nickname))
+    return router;
+
   return NULL;
 }
 
