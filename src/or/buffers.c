@@ -375,12 +375,12 @@ int fetch_from_buf_http(buf_t *buf,
   if(headers_out) {
     *headers_out = tor_malloc(headerlen+1);
     memcpy(*headers_out,buf->mem,headerlen);
-    *headers_out[headerlen] = 0; /* null terminate it */
+    (*headers_out)[headerlen] = 0; /* null terminate it */
   }
   if(body_out) {
     *body_out = tor_malloc(bodylen+1);
     memcpy(*body_out,buf->mem+headerlen,bodylen);
-    *body_out[bodylen] = 0; /* null terminate it */
+    (*body_out)[bodylen] = 0; /* null terminate it */
   }
   buf_remove_from_front(buf, headerlen+bodylen);
   return 1;

@@ -760,7 +760,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
   }
 
   if (conn->type != CONN_TYPE_EXIT && conn->type != CONN_TYPE_AP) {
-    assert(!conn->stream_id[0]);
+    assert(!conn->stream_id);
     assert(!conn->next_stream);
     assert(!conn->cpath_layer);
     assert(!conn->package_window);

@@ -6,6 +6,9 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+static int relay_crypt(circuit_t *circ, char *in, char cell_direction,
+                crypt_path_t **layer_hint, char *recognized);
+static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction);
 static void circuit_free_cpath_node(crypt_path_t *victim);
 static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
 
@@ -310,11 +313,14 @@ int circuit_stream_is_being_handled(connection_t *conn) {
 /* update digest from the payload of cell. assign integrity part to cell. */
 void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
   uint32_t integrity;
+  relay_header_t rh;
 
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, (char *)&integrity, 4);
   log_fn(LOG_DEBUG,"Putting digest of %u into relay cell.",integrity);
-  SET_CELL_RELAY_INTEGRITY(*cell, integrity);
+  relay_header_unpack(&rh, cell->payload);
+  rh.integrity = integrity;
+  relay_header_pack(cell->payload, &rh);
 }
 
 /* update digest from the payload of cell (with the integrity part set
@@ -322,10 +328,14 @@ void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
  */
 int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell) {
   uint32_t received_integrity, calculated_integrity;
+  relay_header_t rh;
 
-  received_integrity = CELL_RELAY_INTEGRITY(*cell);
+  relay_header_unpack(&rh, cell->payload);
+  received_integrity = rh.integrity;
+  rh.integrity = 0;
+  relay_header_pack(cell->payload, &rh);
+
   log_fn(LOG_DEBUG,"Reading digest of %u from relay cell.",received_integrity);
-  SET_CELL_RELAY_INTEGRITY(*cell, 0);
 
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, (char *)&calculated_integrity, 4);
@@ -346,15 +356,16 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   assert(cell && circ);
   assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN);
 
-  log_fn(LOG_DEBUG,"direction %d, streamid %d before crypt.", cell_direction, *(int*)(cell->payload+1));
+  log_fn(LOG_DEBUG,"direction %d, stream_id %d before crypt.", cell_direction, *(uint16_t*)(cell->payload+1));/*XXX*/
 
-  if(relay_crypt(circ, cell->payload, CELL_PAYLOAD_SIZE, cell_direction,
-                 &layer_hint, &recognized, &conn) < 0) {
+  if(relay_crypt(circ, cell->payload, cell_direction,
+                 &layer_hint, &recognized) < 0) {
     log_fn(LOG_WARN,"relay crypt failed. Dropping connection.");
     return -1;
   }
 
   if(recognized) {
+    conn = relay_lookup_conn(circ, cell, cell_direction);
     if(cell_direction == CELL_DIRECTION_OUT) {
        if(relay_check_digest(circ->n_digest, cell) < 0) {
         log_fn(LOG_WARN,"outgoing cell failed integrity check. Closing circ.");
@@ -400,14 +411,14 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   return 0;
 }
 
-int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
-                crypt_path_t **layer_hint, char *recognized, connection_t **conn) {
+static int relay_crypt(circuit_t *circ, char *in, char cell_direction,
+                       crypt_path_t **layer_hint, char *recognized) {
   crypt_path_t *thishop;
-  char out[CELL_NETWORK_SIZE];
+  char out[CELL_PAYLOAD_SIZE]; /* 'in' must be this size too */
+  relay_header_t rh;
 
-  assert(circ && in && recognized && conn);
-
-  assert(inlen < CELL_NETWORK_SIZE);
+  assert(circ && in && recognized);
+  assert(cell_direction == CELL_DIRECTION_IN || cell_direction == CELL_DIRECTION_OUT);
 
   if(cell_direction == CELL_DIRECTION_IN) {
     if(circ->cpath) { /* we're at the beginning of the circuit.
@@ -420,16 +431,17 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       do { /* Remember: cpath is in forward order, that is, first hop first. */
         assert(thishop);
 
-        log_fn(LOG_DEBUG,"before decrypt: %d",*(int*)(in+1));
+        log_fn(LOG_DEBUG,"before decrypt: %d",*(uint16_t*)(in+1));
         /* decrypt */
-        if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
+        if(crypto_cipher_decrypt(thishop->b_crypto, in, CELL_PAYLOAD_SIZE, out)) {
           log_fn(LOG_WARN,"Error performing onion decryption: %s", crypto_perror());
           return -1;
         }
-        memcpy(in,out,inlen);
-        log_fn(LOG_DEBUG,"after decrypt: %d",*(int*)(in+1));
+        memcpy(in,out,CELL_PAYLOAD_SIZE);
+        log_fn(LOG_DEBUG,"after decrypt: %d",*(uint16_t*)(in+1));
 
-        if( (*recognized = relay_check_recognized(circ, cell_direction, in+1, conn))) {
+        if(*(uint16_t*)(in+1) == 0) { /* XXX */
+          *recognized = 1;
           *layer_hint = thishop;
           return 0;
         }
@@ -440,20 +452,19 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       return 0;
     } else { /* we're in the middle. Just one crypt. */
 
-      log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+1));
-      if(crypto_cipher_encrypt(circ->p_crypto, in, inlen, out)) {
+      log_fn(LOG_DEBUG,"before encrypt: %d",*(uint16_t*)(in+1));
+      if(crypto_cipher_encrypt(circ->p_crypto, in, CELL_PAYLOAD_SIZE, out)) {
         log_fn(LOG_WARN,"Onion encryption failed for circID %u: %s",
                circ->p_circ_id, crypto_perror());
         return -1;
       }
-      memcpy(in,out,inlen);
-      log_fn(LOG_DEBUG,"after encrypt: %d",*(int*)(in+1));
+      memcpy(in,out,CELL_PAYLOAD_SIZE);
+      log_fn(LOG_DEBUG,"after encrypt: %d",*(uint16_t*)(in+1));
 
       log_fn(LOG_DEBUG,"Skipping recognized check, because we're not the OP.");
       /* don't check for recognized. only the OP can recognize a stream on the way back. */
-
     }
-  } else if(cell_direction == CELL_DIRECTION_OUT) {
+  } else /* cell_direction == CELL_DIRECTION_OUT */ {
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
 
       thishop = *layer_hint; /* we already know which layer, from when we package_raw_inbuf'ed */
@@ -461,69 +472,56 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       do {
         assert(thishop);
 
-        log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+1));
-        if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, out)) {
+        log_fn(LOG_DEBUG,"before encrypt: %d",*(uint16_t*)(in+1));
+        if(crypto_cipher_encrypt(thishop->f_crypto, in, CELL_PAYLOAD_SIZE, out)) {
           log_fn(LOG_WARN,"Error performing encryption: %s", crypto_perror());
           return -1;
         }
-        memcpy(in,out,inlen);
-        log_fn(LOG_DEBUG,"after encrypt: %d",*(int*)(in+1));
+        memcpy(in,out,CELL_PAYLOAD_SIZE);
+        log_fn(LOG_DEBUG,"after encrypt: %d",*(uint16_t*)(in+1));
 
         thishop = thishop->prev;
       } while(thishop != circ->cpath->prev);
     } else { /* we're in the middle. Just one crypt. */
 
-      if(crypto_cipher_decrypt(circ->n_crypto,in, inlen, out)) {
+      if(crypto_cipher_decrypt(circ->n_crypto,in, CELL_PAYLOAD_SIZE, out)) {
         log_fn(LOG_WARN,"Decryption failed for circID %u: %s",
                circ->n_circ_id, crypto_perror());
         return -1;
       }
-      memcpy(in,out,inlen);
+      memcpy(in,out,CELL_PAYLOAD_SIZE);
 
-      if( (*recognized = relay_check_recognized(circ, cell_direction, in+1, conn)))
+      if(*(uint16_t*)(in+1) == 0) { /* XXX */
+        *recognized = 1;
         return 0;
-
+      }
     }
-  } else {
-    log_fn(LOG_ERR,"unknown cell direction %d.", cell_direction);
-    assert(0);
   }
-
   return 0;
 }
 
-int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, connection_t **conn) {
-/* FIXME can optimize by passing thishop in */
+static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction) {
   connection_t *tmpconn;
+  relay_header_t rh;
 
-  if(!memcmp(stream,ZERO_STREAM,STREAM_ID_SIZE)) {
-    log_fn(LOG_DEBUG,"It's the zero stream. Recognized.");
-    return 1; /* the zero stream is always recognized */
-  }
-  log_fn(LOG_DEBUG,"not the zero stream.");
+  relay_header_unpack(&rh, cell->payload);
+
+  if(!rh.stream_id)
+    return NULL;
 
   if(cell_direction == CELL_DIRECTION_OUT)
     tmpconn = circ->n_streams;
   else
     tmpconn = circ->p_streams;
 
-  if(!tmpconn) {
-    log_fn(LOG_DEBUG,"No conns. Not recognized.");
-    return 0;
-  }
-
   for( ; tmpconn; tmpconn=tmpconn->next_stream) {
-    if(!memcmp(stream,tmpconn->stream_id, STREAM_ID_SIZE)) {
-      log_fn(LOG_DEBUG,"recognized stream %d.", *(int*)stream);
-      *conn = tmpconn;
-      return 1;
+    if(rh.stream_id == tmpconn->stream_id) {
+      log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
+      return tmpconn;
     }
-    log_fn(LOG_DEBUG,"considered stream %d, not it.",*(int*)tmpconn->stream_id);
+    log_fn(LOG_DEBUG,"considered stream %d, not it.",tmpconn->stream_id);
   }
-
-  log_fn(LOG_DEBUG,"Didn't recognize on this iteration of decryption.");
-  return 0;
-
+  return NULL; /* probably a begin relay cell */
 }
 
 void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
@@ -1060,7 +1058,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
 
     for(stream = circ->p_streams; stream; stream=stream->next_stream) {
       if(stream->cpath_layer == victim) {
-        log_fn(LOG_INFO, "Marking stream %d for close.", *(int*)stream->stream_id);
+        log_fn(LOG_INFO, "Marking stream %d for close.", stream->stream_id);
         /* no need to send 'end' relay cells,
          * because the other side's already dead
          */
