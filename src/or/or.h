@@ -1560,7 +1560,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
                                  size_t payload_len, crypt_path_t *cpath_layer);
 int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial);
 void connection_edge_consider_sending_sendme(connection_t *conn);
-socks5_reply_status_t connection_edge_end_reason_sock5_response(char *payload, uint16_t length);
+socks5_reply_status_t connection_edge_end_reason_socks5_response(int reason);
 int errno_to_end_reason(int e);
 
 extern uint64_t stats_n_data_cells_packaged;

@@ -62,7 +62,7 @@ N . Switch to libevent
 R  o Reset uptime when IP changes.
 
  Functionality
-N  . Implement pending controller features.
+  o Implement pending controller features.
     o Stubs for new functions.
     o GETINFO
       o Version
@@ -84,9 +84,9 @@ N  . Implement pending controller features.
     o Event for "new descriptors"
     o Better stream IDs
     o Stream status changed: "new" state.
-    - EXTENDCIRCUIT
-R     - revised circ selection stuff.
-      - Implement controller interface.
+    o EXTENDCIRCUIT
+      o revised circ selection stuff.
+      o Implement controller interface.
     o ATTACHSTREAM
       o Make streams have an 'unattached and not-automatically-attachable'
         state. ("Controller managed.")
@@ -96,8 +96,13 @@ R     - revised circ selection stuff.
       o Time out never-attached streams.
       o If we never get a CONNECTED back, we should put the stream back in
         CONTROLLER_WAIT, not in CIRCUIT_WAIT.
-      - Add a way for the controller to say, "Hey, nuke this stream."
-    - Tests for new controller features
+      o Add a way for the controller to say, "Hey, nuke this stream."
+        o Specify
+        o Implement
+      o Add a way for the controller to say, "Hey, nuke this circuit."
+        o Specify
+        o Implement
+  - Tests for new controller features
 R o HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     other ORs.)
   o Changes for forward compatibility
