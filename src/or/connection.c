@@ -744,7 +744,7 @@ repeat_connection_package_raw_inbuf:
     return -1;
   }
 
-  log(LOG_DEBUG,"connection_package_raw_inbuf(): (%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, amount_to_process);
+  log(LOG_DEBUG,"connection_package_raw_inbuf(): (%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, conn->inbuf_datalen);
 
   *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
   *cell.payload = TOPIC_COMMAND_DATA;

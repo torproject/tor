@@ -192,6 +192,9 @@ int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
     {
     case Z_OK:
     case Z_STREAM_END:
+      log(LOG_DEBUG, "Uncompressed (%d/%d); filled (%d/%d)",
+	  *buf_datalen_in-zstream->avail_in, *buf_datalen_in,
+	  *buf_datalen_out-zstream->avail_out, *buf_datalen_out);
       memmove(*buf_in, zstream->next_in, zstream->avail_in);
       *buf_datalen_in = zstream->avail_in;
       *buf_datalen_out = *buflen_out - zstream->avail_out;

@@ -196,6 +196,7 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
   connection_t *conn;
   int topic_command;
   int topic_id;
+  int len;
   static int num_seen=0;
 
   /* an outgoing data cell has arrived */
@@ -248,16 +249,19 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
       if(conn->state != EXIT_CONN_STATE_OPEN) {
         log(LOG_DEBUG,"connection_exit_process_data_cell(): data received while resolving/connecting. Queueing.");
       }
-      log(LOG_DEBUG,"connection_exit_process_data_cell(): put %d bytes on outbuf.",cell->length - TOPIC_HEADER_SIZE);
 #ifdef USE_ZLIB
-      if(connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
-                                      cell->length - TOPIC_HEADER_SIZE, 
-                                      conn, Z_SYNC_FLUSH) < 0) {
+      log(LOG_DEBUG,"connection_exit_process_data_cell(): uncompressing %d bytes onto outbuf...",cell->length - TOPIC_HEADER_SIZE);
+      len = connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
+					 cell->length - TOPIC_HEADER_SIZE, 
+					 conn, Z_SYNC_FLUSH);
+      log(LOG_DEBUG,"%d bytes written", len);
+      if (len<0) {
         log(LOG_INFO,"connection_exit_process_data_cell(): write to buf failed. Marking for close.");
         conn->marked_for_close = 1;
         return 0;
       }
 #else
+      log(LOG_DEBUG,"connection_exit_process_data_cell(): put %d bytes on outbuf.",cell->length - TOPIC_HEADER_SIZE);
       if(connection_write_to_buf(cell->payload + TOPIC_HEADER_SIZE,
                                  cell->length - TOPIC_HEADER_SIZE, conn) < 0) {
         log(LOG_INFO,"connection_exit_process_data_cell(): write to buf failed. Marking for close.");
