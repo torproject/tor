@@ -12,6 +12,31 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
+For 0.0.2pre17:
+        o Put a H(K | handshake) into the onionskin response
+        o Make cells 512 bytes
+        - Reduce streamid footprint from 7 bytes to 2 bytes
+          - Check for collisions in streamid (now possible with
+            just 2 bytes), and back up & replace with padding if so
+        - Use the 4 reserved bytes in each cell header to keep 1/5
+          of a sha1 of the ongoing relay payload (move into stream header)
+        o Move length into the stream header too
+        o Make length 2 bytes
+        - Spec the stream_id stuff. Clarify that nobody on the backward
+          stream should look at stream_id.
+
+Cell:
+        ACI (anonymous circuit identifier)    [2 bytes]
+        Command                               [1 byte]
+        Payload (padded with 0 bytes)         [509 bytes]
+
+Relay payload:
+        Relay command           [1 byte]
+        Stream ID               [7 bytes]
+        Partial SHA-1           [4 bytes]
+        Length                  [2 bytes]
+        Relay payload           [495 bytes]
+
 For 0.0.2pre15:
         o don't pick exit nodes which will certainly reject all things.
         o don't pick nodes that the directory says are down
@@ -119,15 +144,6 @@ NICK            . Handle half-open connections
                         o Figure out what causes connections to close, standardize
                           when we mark a connection vs when we tear it down
                 o Look at what ssl does to keep from mutating data streams
-ARMA    - Reduce streamid footprint from 7 bytes to 2 bytes
-                - Check for collisions in streamid (now possible with
-                  just 2 bytes), and back up & replace with padding if so
-                - Use the 3 saved bytes to put pseudorandomness in each relay cell
-                - Use the 4 reserved bytes in each cell header to keep 1/5
-                  of a sha1 of the relay payload (move into stream header)
-                - Move length into the stream header too
-                - Spec the stream_id stuff. Clarify that nobody on the backward
-                  stream should look at stream_id.
         o Put CPU workers in separate processes
                 o Handle multiple cpu workers (one for each cpu, plus one)
                 o Queue for pending tasks if all workers full
