@@ -507,10 +507,10 @@ connection_edge_process_relay_cell_not_open(
       }
       addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
       if (addr) {
-        log_fn(LOG_INFO,"Address %s refused due to exit policy. Retrying.",
+        log_fn(LOG_INFO,"Address '%s' refused due to exit policy. Retrying.",
                conn->socks_request->address);
       } else {
-        log_fn(LOG_INFO,"Address %s resolved to 0.0.0.0. Closing,",
+        log_fn(LOG_INFO,"Address '%s' resolved to 0.0.0.0. Closing,",
                conn->socks_request->address);
         conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
         connection_mark_for_close(conn);
@@ -525,7 +525,7 @@ connection_edge_process_relay_cell_not_open(
         return 0; /* this circuit is screwed and doesn't know it yet */
       }
       if (connection_ap_can_use_exit(conn, exitrouter)) {
-        log_fn(LOG_NOTICE,"Exitrouter %s seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
+        log_fn(LOG_NOTICE,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
         addr_policy_free(exitrouter->exit_policy);
         exitrouter->exit_policy =
           router_parse_addr_policy_from_string("reject *:*");
