@@ -135,7 +135,7 @@ crypto_log_errors(int severity, const char *doing)
     func = (const char*)ERR_func_error_string(err);
     if (!msg) msg = "(null)";
     if (doing) {
-      log(severity, "crypto error while %s: %s (in %s:%s)", doing, msg, lib,func);
+      log(severity, "crypto error while %s: %s (in %s:%s)", doing, msg, lib, func);
     } else {
       log(severity, "crypto error: %s (in %s:%s)", msg, lib, func);
     }
@@ -377,7 +377,7 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
  * string, *<b>len</b> to the string's length, and return 0.  On
  * failure, return -1.
  */
-int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int *len) {
+int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size_t *len) {
   BUF_MEM *buf;
   BIO *b;
 
@@ -397,6 +397,7 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
   BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
   BIO_free(b);
 
+  tor_assert(buf->length >= 0);
   *dest = tor_malloc(buf->length+1);
   memcpy(*dest, buf->data, buf->length);
   (*dest)[buf->length] = 0; /* null terminate it */
@@ -410,7 +411,7 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
  * <b>src</b>, and store the result in <b>env</b>.  Return 0 on success, -1 on
  * failure.
  */
-int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, int len) {
+int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, size_t len) {
   BIO *b;
 
   tor_assert(env && src);
@@ -455,6 +456,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
     return -1;
   }
   len = BIO_get_mem_data(bio, &cp);
+  tor_assert(len >= 0);
   s = tor_malloc(len+1);
   strncpy(s, cp, len);
   s[len] = '\0';
@@ -1473,7 +1475,7 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   EVP_ENCODE_CTX ctx;
   int len, ret;
   /* 64 bytes of input -> *up to* 48 bytes of output.
-     Plus one more byte, in caes I'm wrong.
+     Plus one more byte, in case I'm wrong.
   */
   if (destlen < ((srclen/64)+1)*49)
     return -1;
