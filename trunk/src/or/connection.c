@@ -808,7 +808,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
 #endif
   }
   
-  if (conn->type != CONN_TYPE_EXIT) {
+  if (conn->type != CONN_TYPE_EXIT && conn->type != CONN_TYPE_AP) {
     assert(!conn->stream_id[0]);
     assert(!conn->next_stream);
     assert(!conn->cpath_layer);
@@ -818,7 +818,8 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(!conn->done_receiving);
   } else {
     assert(!conn->next_stream || 
-           conn->next_stream->type == CONN_TYPE_EXIT);
+           conn->next_stream->type == CONN_TYPE_EXIT ||
+           conn->next_stream->type == CONN_TYPE_AP);
     assert(conn->cpath_layer);
     assert_cpath_layer_ok(conn->cpath_layer);
     /* XXX unchecked, package window, deliver window. */
@@ -847,7 +848,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
              conn->state <= _EXIT_CONN_STATE_MAX);
       break;
     case CONN_TYPE_AP:
-      assert(conn->state >= _AP_CONN_STATE_MIN &&
+      assert(conn->state >= _EXIT_CONN_STATE_MIN &&
              conn->state <= _AP_CONN_STATE_MAX);
       break;
     case CONN_TYPE_DIR:
