@@ -17,6 +17,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
   int asn1len;
   circuit_t *c;
   char hexid[9];
+  char hexdigest[20*2+1];
 
   log_fn(LOG_INFO,
          "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
@@ -39,6 +40,10 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
     goto err;
   }
 
+  /* XXX remove after debuggin */
+  hex_encode(circ->handshake_digest, 20, hexdigest);
+  log_fn(LOG_INFO, "Handshake information is: %s", hexdigest);
+
   /* Next 20 bytes: Hash of handshake_digest | "INTRODUCE" */
   memcpy(buf, circ->handshake_digest, 20);
   memcpy(buf+20, "INTRODUCE", 9);
@@ -46,6 +51,10 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
     log_fn(LOG_WARN, "Error computing digest");
     goto err;
   }
+  hex_encode(expected_digest, 20, hexdigest);
+  log_fn(LOG_INFO, "Expected digest is: %s", hexdigest);
+  hex_encode(buf+2+asn1len, 20, hexdigest);
+  log_fn(LOG_INFO, "Received digest is: %s", hexdigest);
   if (memcmp(expected_digest, buf+2+asn1len, 20)) {
     log_fn(LOG_WARN, "Hash of session info was not as expected");
     goto err;
