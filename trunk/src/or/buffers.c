@@ -132,6 +132,10 @@ buf_t *buf_new()
   return buf_new_with_capacity(INITIAL_BUF_SIZE);
 }
 
+void buf_clear(buf_t *buf)
+{
+  buf->datalen = 0;
+}
 
 size_t buf_datalen(const buf_t *buf)
 {

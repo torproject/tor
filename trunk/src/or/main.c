@@ -221,10 +221,10 @@ static void conn_close_if_marked(int i) {
   assert_connection_ok(conn, time(NULL));
   if(conn->marked_for_close) {
     log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
-    if(conn->s >= 0) { /* -1 means it's an incomplete edge connection */
+    if(conn->s >= 0) {
+      /* -1 means it's an incomplete edge connection, or that the socket
+       * has already been closed as unflushable. */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
-/* XXX the below two calls to flush_buf should not happen if the
- * conn got hung up on. */
       if(connection_speaks_cells(conn)) {
         if(conn->state == OR_CONN_STATE_OPEN)
           flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
