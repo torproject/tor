@@ -98,8 +98,8 @@ NICK    - Reputation info needs to give better weight to recent events than
 	- Don't accept ORs with nicknames same as verified ORs' nicknames.
         - add new "Middleman 1" config variable?
           o if torrc not found, exitpolicy reject *:*
-NICK    - change if(options.ORPort) to what we really mean.
-NICK    - same with socksport.
+        o change if(options.ORPort) to what we really mean.
+        o same with socksport.
 
       ongoing:
         . rename/rearrange functions for what file they're in

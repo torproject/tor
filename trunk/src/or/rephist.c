@@ -9,6 +9,8 @@
 
 #include "or.h"
 
+static void bw_arrays_init(void);
+
 /** History of an OR-\>OR link. */
 typedef struct link_history_t {
   /** When did we start tracking this list? */
@@ -105,6 +107,7 @@ static void update_or_history(or_history_t *hist, time_t when)
 void rep_hist_init(void)
 {
   history_map = strmap_new();
+  bw_arrays_init();
 }
 
 /** Remember that an attempt to connect to the OR with identity digest
@@ -308,6 +311,102 @@ void write_rep_history(const char *filename)
 
 #define NUM_SECS_ROLLING_MEASURE 10
 #define NUM_SECS_BW_SUM_IS_VALID (12*60*60) /* half a day */
+#define NUM_SECS_BW_SUM_INTERVAL (15*60)
+#define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
+
+/**
+ * Struture to track bandwidth use, and remember the maxima for a given
+ * time period.
+ */
+typedef struct bw_array_t {
+  /** Observation array: Total number of bytes transferred in each of the last
+   * NUM_SECS_ROLLING_MEASURE seconds. This is used as a circular array. */
+  int obs[NUM_SECS_ROLLING_MEASURE];
+  int cur_obs_idx; /**< Current position in obs. */
+  time_t cur_obs_time; /**< Time represented in obs[cur_obs_idx] */
+  int total_obs; /**< Total for all members of obs except obs[cur_obs_idx] */
+  int max_total; /**< Largest value that total_obs has taken on in the current
+                  * period. */
+
+  /** When does the next period begin? */
+  time_t next_period;
+  /** Where in 'maxima' should the maximum bandwidth usage for the current
+   * period be stored? */
+  int next_max_idx;
+  /** Circular array of the maximum bandwidth usage for the last NUM_TOTALS
+   * periods */
+  int maxima[NUM_TOTALS];
+} bw_array_t;
+
+/** Shift the current period of b foreward by one.
+ */
+static void commit_max(bw_array_t *b) {
+  /* Store maximum from current period. */
+  b->maxima[b->next_max_idx++] = b->max_total;
+  /* Advance next_period and next_max_idx */
+  b->next_period += NUM_SECS_BW_SUM_INTERVAL;
+  if (b->next_max_idx == NUM_TOTALS)
+    b->next_max_idx = 0;
+  /* Reset max_total. */
+  b->max_total = 0;
+}
+
+/** Shift the current observation time of 'b' foreward by one second.
+ */
+static INLINE void advance_obs(bw_array_t *b) {
+  int nextidx;
+  int total;
+
+  /* Calculate the total bandwidth for the last NUM_SECS_ROLLING_MEASURE
+   * seconds; adjust max_total as needed.*/
+  total = b->total_obs + b->obs[b->cur_obs_idx];
+  if (total > b->max_total)
+    b->max_total = total;
+
+  nextidx = b->cur_obs_idx+1;
+  if (nextidx == NUM_SECS_ROLLING_MEASURE)
+    nextidx = 0;
+
+  b->total_obs = total - b->obs[nextidx];
+  b->obs[nextidx]=0;
+  b->cur_obs_idx = nextidx;
+
+  if (++b->cur_obs_time >= b->next_period)
+    commit_max(b);
+}
+
+/** Add 'n' bytes to the number of bytes in b for second 'when'.
+ */
+static INLINE void add_obs(bw_array_t *b, time_t when, int n) {
+  /* If we're currently adding observations for an earlier second than 'when',
+   * advance 'when' by an appropriate number of seconds. */
+  while (when<b->cur_obs_time)
+    advance_obs(b);
+  b->obs[b->cur_obs_idx] += n;
+}
+
+/** Allocate, initialize, and return a new bw_array.
+ */
+static bw_array_t *bw_array_new(void) {
+  bw_array_t *b;
+  time_t start;
+  b = tor_malloc_zero(sizeof(bw_array_t));
+  start = time(NULL);
+  b->cur_obs_time = start;
+  b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
+  return b;
+}
+
+static bw_array_t *read_array = NULL;
+static bw_array_t *write_array = NULL;
+
+/** Set up read_array and write_array
+ */
+static void bw_arrays_init(void)
+{
+  read_array = bw_array_new();
+  write_array = bw_array_new();
+}
 
 /** We read <b>num_bytes</b> more bytes in second <b>when</b>.
  *
@@ -325,7 +424,7 @@ void rep_hist_note_bytes_written(int num_bytes, time_t when) {
  * seen over when-1 to when-1-NUM_SECS_ROLLING_MEASURE, and stick it
  * somewhere. See rep_hist_bandwidth_assess() below.
  */
-
+  add_obs(write_array, when, num_bytes);
 }
 
 /** We wrote <b>num_bytes</b> more bytes in second <b>when</b>.
@@ -333,6 +432,23 @@ void rep_hist_note_bytes_written(int num_bytes, time_t when) {
  */
 void rep_hist_note_bytes_read(int num_bytes, time_t when) {
 /* if we're smart, we can make this func and the one above share code */
+
+  add_obs(read_array, when, num_bytes);
+}
+
+/** Helper: Return the largest value in b->maxima.  (This is equal to the
+ * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
+ * NUM_SECS_BW_SUM_IS_VALID seconds.)
+ */
+static int find_largest_max(bw_array_t *b)
+{
+  int i,max;
+  max=0;
+  for (i=0; i<NUM_TOTALS; ++i) {
+    if (b->maxima[i]>max)
+      max = b->maxima[i];
+  }
+  return max;
 }
 
 /**
@@ -343,13 +459,13 @@ void rep_hist_note_bytes_read(int num_bytes, time_t when) {
  * Return the smaller of these sums, divided by NUM_SECS_ROLLING_MEASURE.
  */
 int rep_hist_bandwidth_assess(time_t when) {
-/* To get a handle on space complexity, I promise I will call this
- * function at most every options.DirFetchPostPeriod seconds. So in
- * rep_hist_note_bytes_foo() above, you could keep a running max sum
- * for the current period, and when the period ends you can tuck its max away
- * in a circular array of more managable size. We lose a bit of precision,
- * but this is all guesswork anyway.
- */
+  int w,r;
+  r = find_largest_max(read_array);
+  w = find_largest_max(write_array);
+  if (r>w)
+    return w/(double)NUM_SECS_ROLLING_MEASURE;
+  else
+    return r/(double)NUM_SECS_ROLLING_MEASURE;
 
   return 0;
 }
