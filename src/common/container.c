@@ -173,8 +173,7 @@ void *smartlist_get(const smartlist_t *sl, int idx)
   tor_assert(idx < sl->num_used);
   return sl->list[idx];
 }
-/** Change the value of the <b>idx</b>th element of sl to <b>val</b>; return the old
- * value of the <b>idx</b>th element.
+/** Change the value of the <b>idx</b>th element of sl to <b>val</b>.
  */
 void smartlist_set(smartlist_t *sl, int idx, void *val)
 {
