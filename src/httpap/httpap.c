@@ -8,8 +8,13 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/02 09:16:16  arma
+ * httpap now prepends dest_addr and dest_port strings with their length.
+ *
+ * also, it now sets the listening socket option SO_REUSEADDR
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.4  2002/06/14 20:45:26  mp292
  * Extra debugging message.
@@ -102,6 +107,7 @@ int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in re
   unsigned char *line; /* one line of input */
   int len; /* length of the line */
   
+  uint16_t stringlen; /* used for sending how long a string is before the actual string */
   unsigned char *http_ver; /* HTTP version of the incoming request */
   unsigned char *addr; /* destination address */
   unsigned char *port; /* destination port */
@@ -261,15 +267,23 @@ int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in re
     close(sop);
     return -1;    
   }
-  retval = write_tout(sop,addr,strlen(addr)+1, conn_toutp);
-  if (retval < strlen(addr)+1)
+  /* patch so the OP doesn't have to guess how long the string is. Note
+   * we're *no longer* sending the NULL character. */
+  stringlen = htons(strlen(addr));
+  write_tout(sop,(char *)&stringlen,sizeof(uint16_t), conn_toutp);
+  retval = write_tout(sop,addr,strlen(addr), conn_toutp);
+  if (retval < strlen(addr))
   {
     write_tout(new_sock, HTTPAP_STATUS_LINE_UNAVAILABLE, strlen(HTTPAP_STATUS_LINE_UNAVAILABLE), conn_toutp);
     close(sop);
     return -1;
   }
-  retval = write_tout(sop,port,strlen(port)+1, conn_toutp);
-  if (retval < strlen(port)+1)
+  /* patch so the OP doesn't have to guess how long the string is. Note
+   * we're *no longer* sending the NULL character. */
+  stringlen = htons(strlen(port));
+  write_tout(sop,(char *)&stringlen,sizeof(short int), conn_toutp);
+  retval = write_tout(sop,port,strlen(port), conn_toutp);
+  if (retval < strlen(port))
   {
     write_tout(new_sock, HTTPAP_STATUS_LINE_UNAVAILABLE, strlen(HTTPAP_STATUS_LINE_UNAVAILABLE), conn_toutp);
     close(sop);
@@ -453,6 +467,7 @@ int main(int argc, char *argv[])
   int retval = 0;
   
   char c; /* command-line option */
+  int one=1;
   
   /* configuration file */
   char *conf_filename = NULL;
@@ -628,6 +643,9 @@ int main(int argc, char *argv[])
   local.sin_family=AF_INET;
   local.sin_addr.s_addr = INADDR_ANY;
   local.sin_port=p;
+
+  setsockopt(request_sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+
   /* bind it to the socket */
   retval = bind(request_sock,(struct sockaddr *)&local, sizeof(local));
   if (retval < 0)
