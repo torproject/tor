@@ -1026,7 +1026,7 @@ test_dir_format(void)
   get_platform_str(platform, sizeof(platform));
   memset(&r1,0,sizeof(r1));
   memset(&r2,0,sizeof(r2));
-  r1.address = tor_strdup("testaddr1.foo.bar");
+  r1.address = tor_strdup("18.244.0.1");
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
   r1.published_on = 0;
   r1.or_port = 9000;
@@ -1051,7 +1051,7 @@ test_dir_format(void)
   ex2.msk = 0xFF000000u;
   ex2.prt_min = ex2.prt_max = 24;
   ex2.next = NULL;
-  r2.address = tor_strdup("tor.tor.tor");
+  r2.address = tor_strdup("1.1.1.1");
   r2.addr = 0x0a030201u; /* 10.3.2.1 */
   r2.platform = tor_strdup(platform);
   r2.published_on = 5;
@@ -1077,7 +1077,7 @@ test_dir_format(void)
   memset(buf, 0, 2048);
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
 
-  strcpy(buf2, "router Magri testaddr1.foo.bar 9000 9002 9003\n"
+  strcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
          "platform Tor "VERSION" on ");
   strcat(buf2, get_uname());
   strcat(buf2, "\n"
