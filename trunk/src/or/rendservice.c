@@ -422,8 +422,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
     rp_nickname = buf;
     version = 0;
   }
-  /* XXX when 0.0.8.1 and 0.0.9pre3-4 are obsolete, change this to
-   * reject version != 1. */
+  /* XXX when 0.0.9.x is obsolete, change this to reject version != 1. */
   ptr=memchr(rp_nickname,0,nickname_field_len);
   if (!ptr || ptr == rp_nickname) {
     log_fn(LOG_WARN, "Couldn't find a null-padded nickname in INTRODUCE2 cell");
