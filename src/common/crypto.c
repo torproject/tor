@@ -638,12 +638,12 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
 int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
 {
   int len;
-  unsigned char *buf, *bufp;
+  unsigned char *buf, *cp;
   len = i2d_RSAPublicKey(pk->key, NULL);
   if (len < 0 || len > dest_len)
     return -1;
-  bufp = buf = tor_malloc(len+1);
-  len = i2d_RSAPublicKey(pk->key, &bufp);
+  cp = buf = tor_malloc(len+1);
+  len = i2d_RSAPublicKey(pk->key, &cp);
   if (len < 0) {
     tor_free(buf);
     return -1;
@@ -662,17 +662,17 @@ crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
 {
   RSA *rsa;
   unsigned char *buf;
-  const unsigned char *bufp;
-  bufp = buf = tor_malloc(len);
-  memcpy(buf,str,len);
   /* This ifdef suppresses a type warning.  Take out the first case once
    * everybody is using openssl 0.9.7 or later.
    */
 #if OPENSSL_VERSION_NUMBER < 0x00907000l
-  rsa = d2i_RSAPublicKey(NULL, &buf, len);
+  unsigned char *cp;
 #else
-  rsa = d2i_RSAPublicKey(NULL, &bufp, len);
+  const unsigned char *cp;
 #endif
+  cp = buf = tor_malloc(len);
+  memcpy(buf,str,len);
+  rsa = d2i_RSAPublicKey(NULL, &cp, len);
   tor_free(buf);
   if (!rsa)
     return NULL; /* XXXX log openssl error */
