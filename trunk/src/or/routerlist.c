@@ -783,6 +783,7 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     log_fn(LOG_WARN, "Missing onion key"); goto err;
   } /* XXX Check key length */
   router->onion_pkey = tok->val.public_key;
+  tok->val.public_key = NULL; /* Prevent free */
 
   NEXT_TOKEN();
   if (tok->tp != K_LINK_KEY) {
@@ -793,6 +794,7 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     log_fn(LOG_WARN, "Missing link key"); goto err;
   } /* XXX Check key length */
   router->link_pkey = tok->val.public_key;
+  tok->val.public_key = NULL; /* Prevent free */
 
   NEXT_TOKEN();
   if (tok->tp != K_SIGNING_KEY) {
@@ -803,6 +805,7 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     log_fn(LOG_WARN, "Missing signing key"); goto err;
   }
   router->identity_pkey = tok->val.public_key;
+  tok->val.public_key = NULL; /* Prevent free */
 
   NEXT_TOKEN();
   while (tok->tp == K_ACCEPT || tok->tp == K_REJECT) {
@@ -1037,10 +1040,12 @@ router_release_token(directory_token_t *tok)
   switch (tok->tp)
     {
     case _SIGNATURE:
-      free(tok->val.signature);
+      if (tok->val.signature)
+        free(tok->val.signature);
       break;
     case _PUBLIC_KEY:
-      crypto_free_pk_env(tok->val.public_key);
+      if (tok->val.public_key)
+        crypto_free_pk_env(tok->val.public_key);
       break;
     case _ERR:
     case _EOF:
