@@ -1150,7 +1150,7 @@ _router_get_next_token(const char **s, directory_token_t *tok) {
           }
           tok->val.cmd.n_args = i;
           if (i >= MAX_ARGS) {
-            /* XXX free args[0..i] */
+            router_release_token(tok);
             tok->tp = _ERR;
             tok->val.error = "Too many arguments"; return -1;
           }
