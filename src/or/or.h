@@ -1294,6 +1294,7 @@ int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, const char *msg);
 
 int init_cookie_authentication(int enabled);
+int decode_hashed_password(char *buf, const char *hashed);
 
 /********************************* cpuworker.c *****************************/
 

@@ -324,6 +324,31 @@ handle_control_setevents(connection_t *conn, uint16_t len, const char *body)
   return 0;
 }
 
+/** Decode the hashed, base64'd password stored in <b>hashed</b>.  If
+ * <b>buf</b> is provided, store the hashed password in the first
+ * S2K_SPECIFIER_LEN+DIGEST_LEN bytes of <b>buf</b>.  Return 0 on
+ * success, -1 on failure.
+ */
+int
+decode_hashed_password(char *buf, const char *hashed)
+{
+  size_t len = strlen(hashed)+2;
+  char *base64 = tor_malloc(len);
+  char decoded[64];
+  int r;
+  if (tor_snprintf(base64, len, "%s\n", hashed)<0)
+    return -1;
+  if ((r =  base64_decode(decoded, sizeof(decoded),
+                          base64, strlen(base64))) !=
+      S2K_SPECIFIER_LEN+DIGEST_LEN) {
+    printf("BB %d\n",r);
+    return -1;
+  }
+  if (buf)
+    memcpy(buf, decoded, sizeof(decoded));
+  return 0;
+}
+
 /** Called when we get an AUTHENTICATE message.  Check whether the
  * authentication is valid, and if so, update the connection's state to
  * OPEN.  Reply with DONE or ERROR.
@@ -340,9 +365,7 @@ handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
   } else if (options->HashedControlPassword) {
     char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
     char received[DIGEST_LEN];
-    if (base64_decode(expected,sizeof(expected),
-                      options->HashedControlPassword,
-                      strlen(options->HashedControlPassword))<0) {
+    if (decode_hashed_password(expected, options->HashedControlPassword)<0) {
       log_fn(LOG_WARN,"Couldn't decode HashedControlPassword: invalid base64");
       goto err;
     }
