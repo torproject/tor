@@ -1110,6 +1110,7 @@ int connection_state_is_connecting(connection_t *conn);
 int connection_send_destroy(uint16_t circ_id, connection_t *conn);
 
 void assert_connection_ok(connection_t *conn, time_t now);
+int connection_or_nonopen_was_started_here(connection_t *conn);
 
 /********************************* connection_edge.c ***************************/
 

@@ -300,10 +300,17 @@ int connection_tls_continue_handshake(connection_t *conn) {
   return 0;
 }
 
-static int digest_is_zero(const char *id) {
-  char ZERO_DIGEST[DIGEST_LEN];
-  memset(ZERO_DIGEST, 0, DIGEST_LEN);
-  return !memcmp(ZERO_DIGEST, id, DIGEST_LEN);
+static char ZERO_DIGEST[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+
+int connection_or_nonopen_was_started_here(connection_t *conn)
+{
+  tor_assert(sizeof(ZERO_DIGEST) == DIGEST_LEN);
+  tor_assert(conn->type == CONN_TYPE_OR);
+
+  if (!memcmp(ZERO_DIGEST, conn->identity_digest, DIGEST_LEN))
+    return 0;
+  else
+    return 1;
 }
 
 /** The tls handshake is finished.
@@ -371,7 +378,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     return -1;
   }
 
-  if (!digest_is_zero(conn->identity_digest)) {
+  if (connection_or_nonopen_was_started_here(conn)) {
     /* I initiated this connection. */
     if (strcasecmp(conn->nickname, nickname)) {
       log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
