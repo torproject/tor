@@ -497,6 +497,7 @@ typedef struct {
   char *EntryNodes;
   char *ExcludedNodes;
   char *ExitPolicy;
+  char *ExitPolicyPrepend;
   char *SocksBindAddress;
   char *ORBindAddress;
   char *DirBindAddress;

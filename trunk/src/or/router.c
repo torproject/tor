@@ -253,8 +253,8 @@ void router_upload_desc_to_dirservers(void) {
   }
 }
 
-static void router_add_exit_policy_from_config(routerinfo_t *router) {
-  char *s = options.ExitPolicy, *e;
+static void router_add_exit_policy_from_config_helper(char *s, routerinfo_t *router) {
+  char *e;
   int last=0;
   char line[1024];
 
@@ -286,6 +286,11 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
   }
 }
 
+static void router_add_exit_policy_from_config(routerinfo_t *router) {
+  router_add_exit_policy_from_config_helper(options.ExitPolicyPrepend, router);
+  router_add_exit_policy_from_config_helper(options.ExitPolicy, router);
+}
+
 /* Return false if my exit policy says to allow connection to conn.
  * Else return true.
  */
@@ -296,7 +301,7 @@ int router_compare_to_my_exit_policy(connection_t *conn) {
 
   return router_compare_addr_to_exit_policy(conn->addr, conn->port, 
                    desc_routerinfo->exit_policy);
-    
+
 }
 
 const char *router_get_my_descriptor(void) {
