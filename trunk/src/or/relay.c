@@ -457,17 +457,16 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   return 0;
 }
 
-/** Translate the <b>payload</b> of length <b>length</b>, which
- * came from a relay 'end' cell, into a static const string describing
- * why the stream is closing.
+/** Translate <b>reason</b>, which came from a relay 'end' cell,
+ * into a static const string describing why the stream is closing.
+ * <b>reason</b> is -1 if no reason was provided.
  */
 static const char *
-connection_edge_end_reason_str(char *payload, uint16_t length) {
-  if (length < 1) {
-    log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
-    return "MALFORMED";
-  }
-  switch (*payload) {
+connection_edge_end_reason_str(int reason) {
+  switch (reason) {
+    case -1:
+      log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
+      return "MALFORMED";
     case END_STREAM_REASON_MISC:           return "misc error";
     case END_STREAM_REASON_RESOLVEFAILED:  return "resolve failed";
     case END_STREAM_REASON_CONNECTREFUSED: return "connection refused";
@@ -481,7 +480,7 @@ connection_edge_end_reason_str(char *payload, uint16_t length) {
     case END_STREAM_REASON_CONNRESET:      return "connection reset";
     case END_STREAM_REASON_TORPROTOCOL:    return "Tor protocol error";
     default:
-      log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
+      log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",reason);
       return "unknown";
   }
 }
@@ -583,6 +582,107 @@ errno_to_end_reason(int e)
  */
 #define MAX_RESOLVE_FAILURES 3
 
+/** Return 1 if reason is something that you should retry if you
+ * get the end cell before you've connected; else return 0. */
+static int
+edge_reason_is_retriable(int reason) {
+  return reason == END_STREAM_REASON_HIBERNATING ||
+         reason == END_STREAM_REASON_RESOURCELIMIT ||
+         reason == END_STREAM_REASON_EXITPOLICY ||
+         reason == END_STREAM_REASON_RESOLVEFAILED;
+}
+
+static int
+connection_edge_process_end_not_open(
+    relay_header_t *rh, cell_t *cell, circuit_t *circ,
+    connection_t *conn, crypt_path_t *layer_hint) {
+  struct in_addr in;
+  routerinfo_t *exitrouter;
+  int reason = *(cell->payload+RELAY_HEADER_SIZE);
+
+  if (rh->length > 0 && edge_reason_is_retriable(reason)) {
+    if (conn->type != CONN_TYPE_AP) {
+      log_fn(LOG_WARN,"Got an end because of %s, but we're not an AP. Closing.",
+             connection_edge_end_reason_str(reason));
+      return -1;
+    }
+    log_fn(LOG_INFO,"Address '%s' refused due to '%s'. Considering retrying.",
+           conn->socks_request->address,
+           connection_edge_end_reason_str(reason));
+    exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
+    if (!exitrouter) {
+      log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
+      return 0; /* this circuit is screwed and doesn't know it yet */
+    }
+    switch (reason) {
+      case END_STREAM_REASON_EXITPOLICY:
+        if (rh->length >= 5) {
+          uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
+          if (!addr) {
+            log_fn(LOG_INFO,"Address '%s' resolved to 0.0.0.0. Closing,",
+                   conn->socks_request->address);
+            connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+            return 0;
+          }
+          client_dns_set_addressmap(conn->socks_request->address, addr,
+                                    conn->chosen_exit_name);
+        }
+        /* check if he *ought* to have allowed it */
+        if (rh->length < 5 ||
+            (!tor_inet_aton(conn->socks_request->address, &in) &&
+             !conn->chosen_exit_name)) {
+          log_fn(LOG_NOTICE,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
+          addr_policy_free(exitrouter->exit_policy);
+          exitrouter->exit_policy =
+            router_parse_addr_policy_from_string("reject *:*");
+        }
+
+        if (connection_ap_detach_retriable(conn, circ) >= 0)
+          return 0;
+        /* else, conn will get closed below */
+        break;
+      case END_STREAM_REASON_RESOLVEFAILED:
+        if (client_dns_incr_failures(conn->socks_request->address)
+            < MAX_RESOLVE_FAILURES) {
+          /* We haven't retried too many times; reattach the connection. */
+          circuit_log_path(LOG_INFO,circ);
+          tor_assert(circ->timestamp_dirty);
+          circ->timestamp_dirty -= get_options()->MaxCircuitDirtiness;
+
+          if (connection_ap_detach_retriable(conn, circ) >= 0)
+            return 0;
+          /* else, conn will get closed below */
+        } else {
+          log_fn(LOG_NOTICE,"Have tried resolving address '%s' at %d different places. Giving up.",
+                 conn->socks_request->address, MAX_RESOLVE_FAILURES);
+        }
+        break;
+      case END_STREAM_REASON_HIBERNATING:
+      case END_STREAM_REASON_RESOURCELIMIT:
+        addr_policy_free(exitrouter->exit_policy);
+        exitrouter->exit_policy =
+          router_parse_addr_policy_from_string("reject *:*");
+
+        if (connection_ap_detach_retriable(conn, circ) >= 0)
+          return 0;
+        /* else, will close below */
+        break;
+    } /* end switch */
+    log_fn(LOG_INFO,"Giving up on retrying; conn can't be handled.");
+  }
+
+  log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
+         connection_edge_end_reason_str(rh->length > 0 ? reason : -1));
+  if (conn->type == CONN_TYPE_AP) {
+    circuit_log_path(LOG_INFO,circ);
+    connection_mark_unattached_ap(conn, reason);
+  } else {
+    conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
+    connection_mark_for_close(conn);
+  }
+  return 0;
+}
+
 /** An incoming relay cell has arrived from circuit <b>circ</b> to
  * stream <b>conn</b>.
  *
@@ -594,89 +694,9 @@ static int
 connection_edge_process_relay_cell_not_open(
     relay_header_t *rh, cell_t *cell, circuit_t *circ,
     connection_t *conn, crypt_path_t *layer_hint) {
-  struct in_addr in;
-  uint32_t addr;
-  int reason;
-  routerinfo_t *exitrouter;
 
-  if (rh->command == RELAY_COMMAND_END) {
-    reason = *(cell->payload+RELAY_HEADER_SIZE);
-    /* We have to check this here, since we aren't connected yet. */
-    if (rh->length >= 5 && reason == END_STREAM_REASON_EXITPOLICY) {
-      if (conn->type != CONN_TYPE_AP) {
-        log_fn(LOG_WARN,"Got an end because of exitpolicy, but we're not an AP. Closing.");
-        return -1;
-      }
-      addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
-      if (addr) {
-        log_fn(LOG_INFO,"Address '%s' refused due to exit policy. Retrying.",
-               conn->socks_request->address);
-      } else {
-        log_fn(LOG_INFO,"Address '%s' resolved to 0.0.0.0. Closing,",
-               conn->socks_request->address);
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
-        return 0;
-      }
-      client_dns_set_addressmap(conn->socks_request->address, addr,
-                                conn->chosen_exit_name);
-
-      /* check if he *ought* to have allowed it */
-      exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
-      if (!exitrouter) {
-        log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
-        return 0; /* this circuit is screwed and doesn't know it yet */
-      }
-      if (!tor_inet_aton(conn->socks_request->address, &in) &&
-          !conn->chosen_exit_name) {
-        log_fn(LOG_NOTICE,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
-        addr_policy_free(exitrouter->exit_policy);
-        exitrouter->exit_policy =
-          router_parse_addr_policy_from_string("reject *:*");
-      }
-
-      if (connection_ap_detach_retriable(conn, circ) >= 0)
-        return 0;
-
-      log_fn(LOG_INFO,"Giving up on retrying (from exitpolicy); conn can't be handled.");
-      /* else, conn will get closed below */
-    } else if (rh->length && reason == END_STREAM_REASON_RESOLVEFAILED) {
-      if (conn->type != CONN_TYPE_AP) {
-        log_fn(LOG_WARN,"Got an end because of resolvefailed, but we're not an AP. Closing.");
-        return -1;
-      }
-      if (client_dns_incr_failures(conn->socks_request->address)
-          < MAX_RESOLVE_FAILURES) {
-        /* We haven't retried too many times; reattach the connection. */
-        log_fn(LOG_INFO,"Resolve of '%s' failed, trying again.",
-               conn->socks_request->address);
-        circuit_log_path(LOG_INFO,circ);
-        tor_assert(circ->timestamp_dirty);
-        circ->timestamp_dirty -= get_options()->MaxCircuitDirtiness;
-
-        if (connection_ap_detach_retriable(conn, circ) >= 0)
-          return 0;
-
-        /* else, conn will get closed below */
-        log_fn(LOG_INFO,"Giving up on retrying (from resolvefailed); conn can't be handled.");
-      } else {
-        log_fn(LOG_NOTICE,"Have tried resolving address '%s' at %d different places. Giving up.",
-               conn->socks_request->address, MAX_RESOLVE_FAILURES);
-      }
-    }
-    log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
-           connection_edge_end_reason_str(cell->payload+RELAY_HEADER_SIZE,
-                                          rh->length));
-    if (CIRCUIT_IS_ORIGIN(circ))
-      circuit_log_path(LOG_INFO,circ);
-    if (conn->type == CONN_TYPE_AP) {
-      connection_mark_unattached_ap(conn,
-        *(char *)(cell->payload+RELAY_HEADER_SIZE));
-    } else {
-      conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
-      connection_mark_for_close(conn);
-    }
-    return 0;
-  }
+  if (rh->command == RELAY_COMMAND_END)
+    return connection_edge_process_end_not_open(rh, cell, circ, conn, layer_hint);
 
   if (conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
     if (conn->state != AP_CONN_STATE_CONNECT_WAIT) {
@@ -688,7 +708,7 @@ connection_edge_process_relay_cell_not_open(
     log_fn(LOG_INFO,"'connected' received after %d seconds.",
            (int)(time(NULL) - conn->timestamp_lastread));
     if (rh->length >= 4) {
-      addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
+      uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
       if (!addr) {
         log_fn(LOG_INFO,"...but it claims the IP address was 0.0.0.0. Closing.");
         connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
@@ -762,12 +782,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
 
-  if (conn &&
-      conn->state != AP_CONN_STATE_OPEN &&
-      conn->state != EXIT_CONN_STATE_OPEN) {
+  if (conn && !connection_state_is_open(conn))
     return connection_edge_process_relay_cell_not_open(
              &rh, cell, circ, conn, layer_hint);
-  }
 
   switch (rh.command) {
     case RELAY_COMMAND_DROP:
@@ -821,27 +838,18 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_END:
       if (!conn) {
         log_fn(LOG_INFO,"end cell (%s) dropped, unknown stream.",
-               connection_edge_end_reason_str(cell->payload+RELAY_HEADER_SIZE,
-                                              rh.length));
+               connection_edge_end_reason_str(rh.length > 0 ?
+                 *(char *)(cell->payload+RELAY_HEADER_SIZE) : -1));
         return 0;
       }
 /* XXX add to this log_fn the exit node's nickname? */
       log_fn(LOG_INFO,"%d: end cell (%s) for stream %d. Removing stream. Size %d.",
              conn->s,
-             connection_edge_end_reason_str(cell->payload+RELAY_HEADER_SIZE,
-                                            rh.length),
+             connection_edge_end_reason_str(rh.length > 0 ?
+               *(char *)(cell->payload+RELAY_HEADER_SIZE) : -1),
              conn->stream_id, (int)conn->stream_size);
-      if (conn->socks_request && !conn->socks_request->has_finished) {
-        socks5_reply_status_t status;
-        if (rh.length < 1) {
-          log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
-          status = SOCKS5_GENERAL_ERROR;
-        } else {
-          status = connection_edge_end_reason_socks5_response(
-                        *(uint8_t*)cell->payload+RELAY_HEADER_SIZE);
-        }
-        connection_ap_handshake_socks_reply(conn, NULL, 0, status);
-      }
+      if (conn->socks_request && !conn->socks_request->has_finished)
+        log_fn(LOG_WARN,"Bug: open stream hasn't sent socks answer yet? Closing.");
 #ifdef HALF_OPEN
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
