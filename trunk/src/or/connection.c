@@ -979,6 +979,25 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
+connection_t *connection_get_by_identity_digest(const char *digest, int type)
+{
+  int i, n;
+  connection_t *conn, *best=NULL;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for(i=0;i<n;i++) {
+    conn = carray[i];
+    if (conn->type != type)
+      continue;
+    if (!memcmp(conn->identity_digest, digest, DIGEST_LEN)
+        && !conn->marked_for_close
+        && (!best || best->timestamp_created < conn->timestamp_created))
+      best = conn;
+  }
+  return best;
+}
+
 /** Return a connection of type <b>type</b> that is not marked for
  * close.
  */

@@ -444,6 +444,10 @@ int router_rebuild_descriptor(void) {
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
+  if (crypto_pk_get_digest(ri->identity_pkey, ri->identity_digest)<0) {
+    routerinfo_free(ri);
+    return -1;
+  }
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
   ri->bandwidthrate = options.BandwidthRate;

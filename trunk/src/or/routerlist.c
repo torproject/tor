@@ -206,21 +206,59 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-/** Return the router in our routerlist whose nickname is <b>nickname</b>
- * (case insensitive).  Return NULL if no such router is known.
+/** Return the router in our routerlist whose (case-insensitive)
+ * nickname or (case-sensitive) hexadecimal key digest is
+ * <b>nickname</b>.  Return NULL if no such router is known.
  */
-routerinfo_t *router_get_by_nickname(char *nickname)
+routerinfo_t *router_get_by_nickname(const char *nickname)
 {
-  int i;
+  int i, maybedigest;
   routerinfo_t *router;
+  char digest[DIGEST_LEN];
 
   tor_assert(nickname);
   if (!routerlist)
     return NULL;
+  maybedigest = (strlen(nickname) == HEX_DIGEST_LEN) &&
+    (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
-    if (0 == strcasecmp(router->nickname, nickname))
+    if (0 == strcasecmp(router->nickname, nickname) ||
+        (maybedigest && 0 == memcmp(digest, router->identity_digest,
+                                    DIGEST_LEN)))
+      return router;
+  }
+
+  return NULL;
+}
+
+/** Return the router in our routerlist whose hexadecimal key digest
+ * is <b>hexdigest</b>.  Return NULL if no such router is known. */
+routerinfo_t *router_get_by_hexdigest(const char *hexdigest) {
+  char digest[DIGEST_LEN];
+
+  tor_assert(hexdigest);
+  if (!routerlist)
+    return NULL;
+  if (strlen(hexdigest) != HEX_DIGEST_LEN ||
+      base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN) < 0)
+    return NULL;
+
+  return router_get_by_digest(digest);
+}
+
+/** Return the router in our routerlist whose 20-byte key digest
+ * is <b>hexdigest</b>.  Return NULL if no such router is known. */
+routerinfo_t *router_get_by_digest(const char *digest) {
+  int i;
+  routerinfo_t *router;
+
+  tor_assert(digest);
+
+  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+    router = smartlist_get(routerlist->routers, i);
+    if (0 == memcmp(router->identity_digest, digest, DIGEST_LEN))
       return router;
   }
 

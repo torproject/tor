@@ -292,7 +292,9 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   routerinfo_t *router;
   int r;
   int circ_id_type;
-  char payload[2+4+ONIONSKIN_CHALLENGE_LEN];
+  char payload[2+4+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN];
+  char *onionskin;
+  int payload_len;
 
   tor_assert(circ && CIRCUIT_IS_ORIGIN(circ));
 
@@ -352,7 +354,17 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 
     *(uint32_t*)payload = htonl(hop->addr);
     *(uint16_t*)(payload+4) = htons(hop->port);
-    if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), payload+6) < 0) {
+    if (strncmp(router->platform, "Tor 0.0.7", 9)) {
+      /* Before 0.0.8, we didn't support the long payload format. */
+      memcpy(payload+2+4, hop->identity_digest, DIGEST_LEN);
+      onionskin = payload+2+4+DIGEST_LEN;
+      payload_len = 2+4+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN;
+    } else {
+      onionskin = payload+2+4;
+      payload_len = 2+4+ONIONSKIN_CHALLENGE_LEN;
+    }
+
+    if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), onionskin) < 0) {
       log_fn(LOG_WARN,"onion_skin_create failed.");
       return -1;
     }
@@ -361,7 +373,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     /* send it to hop->prev, because it will transfer
      * it to a create cell and then send to hop */
     if(connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTEND,
-                               payload, sizeof(payload), hop->prev) < 0)
+                               payload, payload_len, hop->prev) < 0)
       return 0; /* circuit is closed */
 
     hop->state = CPATH_STATE_AWAITING_KEYS;
@@ -377,16 +389,42 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;
   int circ_id_type;
   cell_t newcell;
+  relay_header_t rh;
+  int old_format;
+  char *onionskin;
 
   if(circ->n_conn) {
     log_fn(LOG_WARN,"n_conn already set. Bug/attack. Closing.");
     return -1;
   }
 
+  relay_header_unpack(&rh, cell->payload);
+
+  if (rh.length == 4+2+ONIONSKIN_CHALLENGE_LEN) {
+    old_format = 1;
+  } else if (rh.length == 4+2+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN) {
+    old_format = 0;
+  } else {
+    log_fn(LOG_WARN, "Wrong length on extend cell. Closing circuit.");
+    circuit_mark_for_close(circ);
+    return 0;
+  }
+
   circ->n_addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
   circ->n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
 
-  n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
+  if (old_format) {
+    n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
+    onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
+  } else {
+    /* XXXX Roger: in this case, we should create the connnection if
+     * n_conn is null. */
+    n_conn = connection_get_by_identity_digest(
+                         cell->payload+RELAY_HEADER_SIZE+4+2,
+                         CONN_TYPE_OR);
+    onionskin = cell->payload+RELAY_HEADER_SIZE+4+2+DIGEST_LEN;
+  }
+
   if(!n_conn || n_conn->type != CONN_TYPE_OR) {
     /* I've disabled making connections through OPs, but it's definitely
      * possible here. I'm not sure if it would be a bug or a feature.
@@ -426,8 +464,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   newcell.command = CELL_CREATE;
   newcell.circ_id = circ->n_circ_id;
 
-  memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+2+4,
-         ONIONSKIN_CHALLENGE_LEN);
+  memcpy(newcell.payload, onionskin, ONIONSKIN_CHALLENGE_LEN);
 
   connection_or_write_cell_to_buf(&newcell, circ->n_conn);
   return 0;
@@ -1079,6 +1116,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
 
   hop->port = choice->or_port;
   hop->addr = choice->addr;
+  memcpy(hop->identity_digest, choice->identity_digest, DIGEST_LEN);
 
   hop->package_window = CIRCWINDOW_START;
   hop->deliver_window = CIRCWINDOW_START;

@@ -493,8 +493,9 @@ struct connection_t {
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it.
                   */
-  crypto_pk_env_t *identity_pkey; /**> Public RSA key for the other side's
+  crypto_pk_env_t *identity_pkey; /**< Public RSA key for the other side's
                                    * signing key. */
+  char identity_digest[DIGEST_LEN]; /**< Hash of identity_pkey */
   char *nickname; /**< Nickname of OR on other side (if any). */
 
 /* Used only by OR connections: */
@@ -569,7 +570,7 @@ typedef struct {
 
   crypto_pk_env_t *onion_pkey; /**< Public RSA key for onions. */
   crypto_pk_env_t *identity_pkey;  /**< Public RSA key for signing. */
-
+  char identity_digest[DIGEST_LEN]; /** Digest of identity key */
 
   char *platform; /**< What software/operating system is this OR using? */
 
@@ -633,6 +634,8 @@ struct crypt_path_t {
   uint32_t addr;
   /** Port of the OR at this step. */
   uint16_t port;
+  /** Identity key digest of the OR at this step. */
+  char identity_digest[DIGEST_LEN];
 
   /** Is the circuit built to this step?  Must be one of:
    *    - CPATH_STATE_CLOSED (The circuit has not been extended to this step)
@@ -1044,6 +1047,7 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn);
 
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
+connection_t *connection_get_by_identity_digest(const char *digest, int type);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
@@ -1341,7 +1345,9 @@ void router_add_running_routers_to_smartlist(struct smartlist_t *sl);
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
-routerinfo_t *router_get_by_nickname(char *nickname);
+routerinfo_t *router_get_by_nickname(const char *nickname);
+routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
+routerinfo_t *router_get_by_digest(const char *digest);
 void router_get_routerlist(routerlist_t **prouterlist);
 void routerlist_free(routerlist_t *routerlist);
 void routerlist_clear_trusted_directories(void);

@@ -733,11 +733,14 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
-    log_fn(LOG_WARN, "Missing onion key"); goto err;
+    log_fn(LOG_WARN, "Missing identity key"); goto err;
   }
   /* XXX Check key length */
   router->identity_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
+  if (crypto_pk_get_digest(router->identity_pkey,router->identity_digest)){
+    log_fn(LOG_WARN, "Couldn't calculate key digest"); goto err;
+  }
 
   if ((tok = find_first_by_keyword(tokens, K_PLATFORM))) {
     router->platform = tor_strdup(tok->args[0]);

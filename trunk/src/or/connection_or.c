@@ -107,9 +107,32 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router) {
   conn->port = router->or_port;
   conn->receiver_bucket = conn->bandwidth = router->bandwidthburst;
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
+  crypto_pk_get_digest(conn->identity_pkey, conn->identity_digest);
   conn->nickname = tor_strdup(router->nickname);
   tor_free(conn->address);
   conn->address = tor_strdup(router->address);
+}
+
+static void
+connection_or_init_conn_from_address(connection_t *conn,
+                                     uint32_t addr, uint16_t port,
+                                     const char *id_digest)
+{
+  routerinfo_t *r;
+  r = router_get_by_digest(id_digest);
+  if (r) {
+    connection_or_init_conn_from_router(conn,r);
+    return;
+  }
+  conn->addr = addr;
+  conn->port = port;
+  /* This next part isn't really right, but it's good enough for now. */
+  conn->receiver_bucket = conn->bandwidth = options.BandwidthBurst;
+  memcpy(conn->identity_digest, id_digest, DIGEST_LEN);
+  conn->nickname = tor_malloc(HEX_DIGEST_LEN+1);
+  base16_encode(conn->nickname, HEX_DIGEST_LEN+1,
+                conn->identity_digest, DIGEST_LEN);
+  /* Do something about address? Or is it already set? XXXX NMNM */
 }
 
 /** Launch a new OR connection to <b>router</b>.
