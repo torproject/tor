@@ -28,6 +28,7 @@ N . Switch to libevent
        - Find a way to make sure we have libevent 1.0 or later.
        - Log which poll method we're using.
        . Check return from event_set, event_add, event_del.
+       - Keep pushing to get a windows patch accepted.
 
  Security: 
    - Make sure logged info is "safe"ish.
@@ -67,9 +68,11 @@ N - Document where OSX, windows logs go, where stuff is installed.
  Installers
 N - Vet all pending installer patches
     - Win32 installer plus privoxy, sockscap/freecap, etc.
+    - Vet win32 systray helper code
 N - Make OSX man pages go into man directory.
 
  Correctness
+   - Mark bugs for 010 or post 010 in bugtracker.
    - Bugfixes
 R    - when we haven't explicitly sent a socks reject, sending one in
        connection_about_to_close_connection() fails because we never give it
@@ -91,7 +94,6 @@ R  - client software not upload descriptor until:
      - you can set a bit for not-being-an-OR.
      * no need to do this yet. few people define their ORPort.
 
-
  Arguable
 N - Reverse DNS: specify and implement.
 R - make min uptime a function of the available choices (say, choose 60th
@@ -111,10 +113,8 @@ N - Code cleanup
     - Write limiting; configurable token buckets.
     - Make it harder to circumvent bandwidth caps: look at number of bytes
       sent across sockets, not number sent inside TLS stream.
-  - Let more config options (e.g. ORPort) change dynamically.
-  - hidserv offerers shouldn't need to define a SocksPort
-    * figure out what breaks for this, and do it.
-
+  - Hidden service improvements
+    - Investigate hidden service performance/reliability
 
   No
   - choose entry node to be one you're already connected to?
@@ -127,6 +127,10 @@ N - Code cleanup
      - teach connection_ap_handshake_socks_reply() about ipv6 and friends
        so connection_ap_handshake_socks_resolved() doesn't also need
        to know about them.
+  - Let more config options (e.g. ORPort) change dynamically.
+  - hidserv offerers shouldn't need to define a SocksPort
+    * figure out what breaks for this, and do it.
+
    - Packaging
      - Figure out how to make the rpm not strip the binaries it makes.
    - Integrate an http proxy into Tor (maybe as a third class of worker
