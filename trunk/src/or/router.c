@@ -352,6 +352,7 @@ int init_keys(void) {
   if(!cp) {
     log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
   } else {
+    tor_strstrip(cp,"\r"); /* XXXX Workaround for win32 read_file_to_str bug. */ 
     if(dirserv_load_from_directory_string(cp) < 0){
       log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
       tor_free(cp);

@@ -64,6 +64,7 @@ int router_reload_router_list(void)
     snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
     s = read_file_to_str(filename,0);
     if (s) {
+      tor_strstrip(s,"\r"); /* XXXX This is a bug workaround for win32. */
       log_fn(LOG_INFO, "Loading cached directory from %s", filename);
       if (router_load_routerlist_from_directory(s, NULL, 0) < 0) {
         log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
