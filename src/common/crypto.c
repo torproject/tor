@@ -366,8 +366,8 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
         b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
 
         /* Now you can treat b as if it were a file.  Just use the
-         *          * PEM_*_bio_* functions instead of the non-bio variants.
-         *                   */
+         * PEM_*_bio_* functions instead of the non-bio variants.
+         */
         if(!PEM_write_bio_RSAPublicKey(b, (RSA *)env->key))
           return -1;
 
