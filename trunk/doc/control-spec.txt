@@ -72,8 +72,9 @@ the message.
                [The client tried to set a configuration option to an
                 incorrect, ill-formed, or impossible value.]
 
-        0x0006 Unrecognized event code
-               [The client tried to set an event code that we don't recognize.]
+        0x0006 Unrecognized byte code
+               [The client tried to set an byte code in the body that
+                we don't recognize.]
 
         0x0007 Unauthorized.
                [The client tried to send a command that requires
@@ -194,6 +195,22 @@ the message.
   Sent from the client to the server. Instructs the server to write out
   its config options into its torrc. Server returns DONE if successful, or
   ERROR if it can't write the file or some other error occurs.
+
+3.10. SIGNAL (Type 0x0009)
+
+  Sent from the client to the server. The body contains one byte that
+  indicates the action the client wishes the server to take.
+
+      0x01 -- Reload: reload config items, refetch directory.
+      0x02 -- Controlled shutdown: if server is an OP, exit immediately.
+              If it's an OR, close listeners and exit after 30 seconds.
+      0x10 -- Dump stats: log information about open connections and
+              circuits.
+      0x12 -- Debug: switch all open logs to loglevel debug.
+      0x15 -- Immediate shutdown: clean up and exit now.
+
+  The server responds with DONE if the signal is recognized (or simply
+  closes the socket if it was asked to close immediately), else ERROR.
 
 4. Implementation notes
 
