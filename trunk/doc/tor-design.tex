@@ -56,7 +56,7 @@ and addresses various limitations in the original Onion Routing design.
 Tor works on the real-world Internet, requires no special
 privileges such as root- or kernel-level access,
 requires little synchronization or coordination between nodes, and
-provides a reasonable tradeoff between anonymity, usability, and efficiency.
+provides a reasonable trade-off between anonymity, usability, and efficiency.
 We include a new, more practical design for rendezvous points, and
 close with a list of open problems in anonymous communication systems
 today.
@@ -77,7 +77,8 @@ low-latency TCP-based applications such as web browsing, secure shell,
 and instant messaging. Clients choose a path through the network and
 build a \emph{virtual circuit}, in which each node (or ``onion router'') 
 in the path knows its
-predecessor and successor, but no others. Traffic flowing down the circuit
+predecessor and successor, but no other nodes in the circuit. 
+Traffic flowing down the circuit
 is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
 at each node (like the layers of an onion) and relayed downstream. The
 original Onion Routing project published several design and analysis
@@ -145,7 +146,7 @@ Onion Routing design called for batching and reordering the cells arriving
 from each circuit. It also included padding between onion routers and,
 in a later design, between onion
 proxies (that is, users) and onion routers \cite{or-ih96,or-jsac98}.
-The tradeoff between padding protection and cost was discussed, but no
+The trade-off between padding protection and cost was discussed, but no
 general padding scheme was suggested. In
 \cite{or-pet00} it was theorized \emph{traffic shaping} would generally
 be used, but details were not provided.
@@ -168,24 +169,26 @@ and send less data until the congestion subsides.
 
 \item \textbf{Directory servers:} The original Onion Routing design
 planned to flood link-state information through the network---an
-approach which can be unreliable and
+approach that can be unreliable and
 open to partitioning attacks or outright deception. Tor takes a simplified
-view towards distributing link-state information. Certain more trusted
+view toward distributing link-state information. Certain more trusted
 onion routers also act as directory servers: they provide signed
-\emph{directories} which describe the routers they know about and mark
-those that
-are currently up. Users periodically download these directories via HTTP.
+\emph{directories} that describe known routers and their availability.
+Users periodically download these directories via HTTP.
 
 \item \textbf{End-to-end integrity checking:} The original Onion Routing
 design did no integrity checking on data. Any onion router on the circuit
-could change the contents of cells as they pass by---for example, to
-redirect a
-connection on the fly so it connects to a different webserver, or to
-tag encrypted traffic and look for the tagged traffic at the network
+could change the contents of data cells as they passed by---for example, to
+alter a
+connection request on the fly so it would connect to a different
+webserver, or to
+`tag' encrypted traffic and look for corresponding corrupted traffic
+at the network
 edges \cite{minion-design}.  Tor hampers these attacks by checking data
 integrity before it leaves the network.
 
-\item \textbf{Robustness to failed nodes:} A failed node in the old design
+\item \textbf{Improved robustness to failed nodes:} A failed node in
+the old design
 meant that circuit-building failed, but thanks to Tor's step-by-step
 circuit building, users can notice failed
 nodes while building circuits and route around them.  Additionally,
@@ -209,35 +212,38 @@ flexible, it has proven valuable to Tor's portability and deployability.
 \item \textbf{Rendezvous points and location-protected servers:}
 Tor provides an integrated mechanism for responder anonymity via
 location-protected servers.  Previous Onion Routing designs included
-long-lived ``reply onions'' which could be used to build virtual circuits
-to a hidden server, but a reply onion becomes useless if any node in
-the path goes down or rotates its keys, and it also does not provide
-forward security.  In Tor's current design, clients negotiate {\it
+long-lived ``reply onions'' that could be used to build virtual circuits
+to a hidden server, but these reply onions did not provide forward
+security, and would become useless if any node in
+the path went down or rotated its keys.
+In Tor's current design, clients negotiate {\it
 rendezvous points} to connect with hidden servers; reply onions are no
 longer required.
 \end{tightlist}
 
 We have implemented most of the above features. Our source code is
-available under a free license, and is not encumbered by patents. We have
-recently begun deploying a widespread alpha network to see how well the
-design works in practice, to get more experience with usability and users,
+available under a free license, and is not (as far as we can tell)
+encumbered by patents. We have
+recently begun deploying a widespread alpha network to test
+the design in practice, to get more experience with usability and users,
 and to provide a research platform for experimenting with new ideas.
 
 We review previous work in Section~\ref{sec:related-work}, describe
 our goals and assumptions in Section~\ref{sec:assumptions},
 and then address the above list of improvements in
 Sections~\ref{sec:design}-\ref{sec:rendezvous}. We
-summarize in Section \ref{sec:analysis}
+summarize in Section~\ref{sec:analysis}
 how our design stands up to known attacks, and conclude with a list of
-open problems.
+open problems in Section~\ref{sec:maintaining-anonymity} and future
+work for the Onion Routing project in Section~\ref{sec:conclusion}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Section{Related work}
 \label{sec:related-work}
 
-Modern anonymity designs date to Chaum's Mix-Net\cite{chaum-mix} design of
-1981.  Chaum proposed hiding sender-recipient linkability by wrapping
+Modern anonymity systems date to Chaum's Mix-Net\cite{chaum-mix} design of
+1981.  Chaum proposed hiding sender-recipient connections by wrapping
 messages in layers of public key cryptography, and relaying them
 through a path composed of ``Mixes.''  These mixes in turn decrypt, delay,
 and re-order messages, before relaying them along the sender-selected
@@ -246,9 +252,9 @@ path towards their destinations.
 Subsequent relay-based anonymity designs have diverged in two
 principal directions.  Some have attempted to maximize anonymity at
 the cost of introducing comparatively large and variable latencies,
-for example, Babel\cite{babel}, Mixmaster\cite{mixmaster-spec}, and
+including Babel\cite{babel}, Mixmaster\cite{mixmaster-spec}, and
 Mixminion\cite{minion-design}.  Because of this
-trade-off, these \emph{high-latency} networks are well-suited for anonymous
+decision, these \emph{high-latency} networks are well-suited for anonymous
 email, but introduce too much lag for interactive tasks such as web browsing,
 internet chat, or SSH connections.
 
@@ -258,7 +264,7 @@ a variety of bidirectional protocols. They also provide more convenient
 mail delivery than the high-latency fire-and-forget anonymous email
 networks, because the remote mail server provides explicit delivery
 confirmation. But because these designs typically
-involve a large number of packets that must be delivered quickly, it is
+involve many packets that must be delivered quickly, it is
 difficult for them to prevent an attacker who can eavesdrop both ends of the
 communication from correlating the timing and volume
 of traffic entering the anonymity network with traffic leaving it.  These
@@ -289,9 +295,12 @@ the entire system.
 More complex are distributed-trust, circuit-based anonymizing systems.
 In these designs, a user establishes one or more medium-term bidirectional
 end-to-end circuits, and tunnels TCP streams in fixed-size cells.
-Establishing circuits is expensive and typically requires public-key
-cryptography, whereas relaying cells is comparatively inexpensive.
-Because a circuit crosses several servers, no single server can link a
+Establishing circuits is computationally expensive and typically
+requires public-key
+cryptography, whereas relaying cells is comparatively inexpensive and
+typically requires only symmetric encryption.
+Because a circuit crosses several servers, and each server only knows
+the adjacent servers in the circuit, no single server can link a
 user to her communication partners.
 
 The Java Anon Proxy (also known as JAP or Web MIXes) uses fixed shared
@@ -325,7 +334,7 @@ from the data stream.
 Hordes \cite{hordes-jcs} is based on Crowds but also uses multicast
 responses to hide the initiator. Herbivore \cite{herbivore} and P5
 \cite{p5} go even further, requiring broadcast. They make anonymity
-and efficiency tradeoffs to make broadcast more practical.
+and efficiency trade-offs to make broadcast more practical.
 These systems are designed primarily for communication between peers,
 although Herbivore users can make external connections by
 requesting a peer to serve as a proxy.  Allowing easy connections to
@@ -395,7 +404,7 @@ multiple communications to or from a single user.  Within this
 main goal, however, several design considerations have directed
 Tor's evolution.
 
-\textbf{Deployability:} The design must be one which can be implemented,
+\textbf{Deployability:} The design must be one that can be implemented,
 deployed, and used in the real world.  This requirement precludes designs
 that are expensive to run (for example, by requiring more bandwidth
 than volunteers are willing to provide); designs that place a heavy
@@ -436,7 +445,7 @@ approaches to protecting anonymity.
 \SubSection{Non-goals}
 \label{subsec:non-goals}
 In favoring simple, deployable designs, we have explicitly deferred
-a number of goals, either because they are solved elsewhere, or because
+several possible goals, either because they are solved elsewhere, or because
 they are an open research question.
 
 \textbf{Not Peer-to-peer:} Tarzan and MorphMix aim to scale to completely
@@ -656,7 +665,7 @@ know it). We also want perfect forward secrecy and key freshness.
 
 The second step shows both that it was Bob
 who received $g^x$, and that it was Bob who came up with $y$. We use
-PK encryption in the first step (rather than, e.g., using the first two
+PK encryption in the first step (rather than, say, using the first two
 steps of STS, which has a signature in the second step) because we
 don't have enough room in a single cell for a public key and also a
 signature. Preliminary analysis with the NRL protocol analyzer \cite{meadows96}
@@ -902,7 +911,7 @@ users to
 consume more network resources than their fair share, or to render the
 network unusable for other users.
 
-First of all, there are a number of CPU-consuming denial-of-service
+First of all, there are several CPU-consuming denial-of-service
 attacks wherein an attacker can force an OR to perform expensive
 cryptographic operations.  For example, an attacker who sends a
 \emph{create} cell full of junk bytes can force an OR to perform an RSA
@@ -1005,9 +1014,10 @@ alert abuse targets to the nature of the anonymous traffic.
 A mixture of open and restricted exit nodes will allow the most
 flexibility for volunteers running servers. But while many
 middleman nodes help provide a large and robust network,
-having only a small number of exit nodes reduces the number of nodes
+having only a few exit nodes reduces the number of points
 an adversary needs to monitor for traffic analysis, and places a
-greater burden on the exit nodes.  This tension can be seen in the JAP
+greater burden on the exit nodes.  This tension can be seen in the
+Java Anon Proxy
 cascade model, wherein only one node in each cascade needs to handle
 abuse complaints---but an adversary only needs to observe the entry
 and exit of a cascade to perform traffic analysis on all that
@@ -1321,7 +1331,7 @@ and its resistance to attacks.
   rather different designs.
   
 \item[Simple design:] Tor opts for practicality when there is no
-  clear resolution of anonymity tradeoffs or practical means to
+  clear resolution of anonymity trade-offs or practical means to
   achieve resolution. Thus, we do not currently pad or mix; although
   it would be easy to add either of these. Indeed, our system allows
   long-range and variable padding if this should ever be shown to have
@@ -1360,8 +1370,8 @@ design withstands them.
 \item \emph{Option distinguishability.} Configuration options can be a
   source of distinguishable patterns. In general there is economic
   incentive to allow preferential services \cite{econymics}, and some
-  degree of configuration choice is a factor in attracting large
-  numbers of users to provide anonymity.  So far, however, we have
+  degree of configuration choice can be a factor in attracting many users
+  to provide anonymity.  So far, however, we have
   not found a compelling use case in Tor for any client-configurable
   options.  Thus, clients are currently distinguishable only by their
   behavior.
@@ -1391,8 +1401,8 @@ design withstands them.
   a passive traffic analysis attack that is potentially effective.
   Instead of searching exit connections for timing and volume
   correlations it is possible to build up a database of
-  ``fingerprints'' containing file sizes and access patterns for a
-  large numbers of interesting websites. If one now wants to
+  ``fingerprints'' containing file sizes and access patterns for many
+  interesting websites. If one now wants to
   monitor the activity of a user, it may be possible to confirm a
   connection to a site simply by consulting the database. This attack has
   been shown to be effective against SafeWeb \cite{hintz-pet02}. Onion
@@ -1457,7 +1467,8 @@ design withstands them.
   traffic once the circuits have been closed.)  Additionally, building
   circuits that cross jurisdictions can make legal coercion
   harder---this phenomenon is commonly called ``jurisdictional
-  arbitrage.'' The JAP project recently experienced this issue, when
+  arbitrage.'' The Java Anon Proxy project recently experienced this
+  issue, when
   the German government successfully ordered them to add a backdoor to
   all of their nodes \cite{jap-backdoor}.
   
@@ -1520,9 +1531,9 @@ design withstands them.
   
 \item \emph{Selectively DoS a Tor node.} As noted, neighbors are
   bandwidth limited; however, it is possible to open up sufficient
-  numbers of circuits that converge at a single onion router to
+  circuits that converge at a single onion router to
   overwhelm its network connection, its ability to process new
-  circuits or both.
+  circuits, or both.
 
 %OK so I noticed that twins are completely removed from the paper above,
 % but it's after 5 so I'll leave that problem to you guys. -PS
@@ -1656,7 +1667,7 @@ design withstands them.
  
 % There must be a better intro than this! -NM
 In addition to the open problems discussed in
-section~\ref{subsec:non-goals}, many other questions remain to be
+Section~\ref{subsec:non-goals}, many other questions remain to be
 solved by future research before we can be truly confident that we
 have built a secure low-latency anonymity service.
 
@@ -1786,7 +1797,7 @@ Does the hydra (many inputs, few outputs) topology work
 better? Are we going to get a hydra anyway because most nodes will be
 middleman nodes?
 
-As mentioned in section\ref{subsec:dos}, Tor could improve its
+As mentioned in Section~\ref{subsec:dos}, Tor could improve its
 robustness against node failure by buffering transmitted stream data
 at the network's edges until the data has been acknowledged by the
 other end of the stream.  The efficacy of this approach remains to be
@@ -1848,7 +1859,7 @@ issues remaining to be ironed out. In particular:
   full-network-visibility model for client knowledge.  None of these
   properties will scale to more than a few hundred servers, at most.
   Promising approaches to better scalability exist (see
-  section~\ref{sec:maintaining-anonymity}), but more deployment
+  Section~\ref{sec:maintaining-anonymity}), but more deployment
   experience would be helpful in learning the relative importance of
   these bottlenecks.
 \item \emph{Cover traffic:} Currently we avoid cover traffic because
@@ -1857,7 +1868,7 @@ issues remaining to be ironed out. In particular:
   \cite{SS03,defensive-dropping}, the price/value ratio may change,
   both for link-level cover traffic and also long-range cover traffic.
 \item \emph{Better directory distribution:} Even with the threshold
-  directory agreement algorithm described in \ref{subsec:dirservers},
+  directory agreement algorithm described in Section~\ref{subsec:dirservers},
   the directory servers are still trust bottlenecks. We must find more
   decentralized yet practical ways to distribute up-to-date snapshots of
   network status without introducing new attacks.  Also, directory
@@ -1884,7 +1895,7 @@ issues remaining to be ironed out. In particular:
   and development where we can start deploying a wider network.  Once
   we have are ready for actual users, we will doubtlessly be better
   able to evaluate some of our design decisions, including our
-  robustness/latency tradeoffs, our performance trade-offs (including
+  robustness/latency trade-offs, our performance trade-offs (including
   cell size), our abuse-prevention mechanisms, and
   our overall usability.
 % XXX work with morphmix spec
