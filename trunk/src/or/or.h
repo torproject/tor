@@ -90,6 +90,7 @@
 #endif
 
 #include "../common/crypto.h"
+#include "../common/tortls.h"
 #include "../common/log.h"
 #include "../common/util.h"
 
@@ -482,18 +483,23 @@ void buf_free(char *buf);
 
 int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof);
   /* grab from s, put onto buf, return how many bytes read */
+int read_to_buf_tls(tor_tls *tls, int at_most, char **buf, int *buflen, int *buf_datalen);
+  /* grab from s, put onto buf, return how many bytes read or a TLS
+   * status (same status codes as tor_tls_read) */
 
 int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen);
   /* push from buf onto s
    * then memmove to front of buf
    * return -1 or how many bytes remain on the buf */
+int flush_buf_tls(tor_tls *tls, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen);
+  /* As flush_buf, but returns number of bytes written or TLS status
+   * (same status codes as tor_tls_write) */
 
 int write_to_buf(char *string, int string_len,
                  char **buf, int *buflen, int *buf_datalen);
   /* append string to buf (growing as needed, return -1 if "too big")
    * return total number of bytes on the buf
    */
-
 
 int fetch_from_buf(char *string, int string_len,
                    char **buf, int *buflen, int *buf_datalen);

@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <openssl/rsa.h>
+#include <openssl/dh.h>
 
 /* available encryption primitives */
 #define CRYPTO_CIPHER_IDENTITY 0
@@ -72,7 +73,10 @@ int base64_encode(char *dest, int destlen, char *src, int srclen);
 int base64_decode(char *dest, int destlen, char *src, int srclen);
 
 /* Key negotiation */
-typedef struct crypto_dh_env_st crypto_dh_env_t;
+typedef struct crypto_dh_env_st {
+  DH *dh;
+} crypto_dh_env_t;
+
 /* #define CRYPTO_DH_SIZE (1536 / 8) */
 #define CRYPTO_DH_SIZE (1024 / 8)
 crypto_dh_env_t *crypto_dh_new();
