@@ -3,8 +3,34 @@
 ; See LICENSE for licencing information
 ;-----------------------------------------
 ;
-;NSIS will be needed to create an installer from this script:
-;http://nsis.sourceforge.net/
+; How to make an installer:
+;   Step 0. If you are a Tor maintainer, make sure that tor.nsi and
+;           src/win32/orconfig.h all have the correct version number.
+;   Step 1. Download and install OpenSSL.
+;   Step 2. Download and install NSIS (http://nsis.sourceforge.net)
+;   Step 3. Make a directory under the main tor directory called "bin".
+;   Step 4. Copy ssleay32.dll and libeay32.dll from OpenSSL into "bin".
+;   Step 5. Run man2html on tor.1.in; call the result tor-reference.html
+;           Run man2html on tor-resolve.1; call the result tor-resolve.html
+;   Step 6. Copy torrc.sample.in to torrc.sample.
+;   Step 7. Build tor.exe; save the result into bin.
+;   Step 8. cd into contrib and run "makensis tor.nsi".
+;
+; Problems:
+;   - Copying torrc.sample.in to torrc.sample and tor.1.in (implicitly)
+;     to tor.1 is a Bad Thing, and leaves us with @autoconf@ vars in the final
+;     result.
+;   - Building Tor requires too much windows C clue.
+;     - We should have actual makefiles for VC that do the right thing.
+;     - We should maybe have project files for VCfoo too.
+;   - It would be nice if version numbers checked themselves.
+;   - I need to learn more NSIS juju to solve these:
+;     - tor-resolve.exe isn't included in the installer. 
+;     - There should be a batteries-included installer that comes with
+;       privoxy too. (Check privoxy license on this; be sure to include
+;       all privoxy documents.)
+;   - The filename should probably have a revision number.
+
 
 !include "MUI.nsh"
 
@@ -81,7 +107,7 @@ Section "Tor" Tor
       Delete $configdir\torrc
       Goto +2
          StrCpy $configfile "torrc.sample"
-   File /oname=$configfile "..\..\src\config\torrc.sample"
+   File /oname=$configfile "..\src\config\torrc.sample"
 SectionEnd
 
 Section "OpenSSL 0.9.7d" OpenSSL
@@ -102,7 +128,7 @@ Section "Documents" Docs
    File "..\doc\tor-doc.css"
    File "..\doc\tor-resolve.html"
    File "..\doc\tor-reference.html"
-   File "..\doc\tor-design.pdf"
+   File "..\doc\design-paper\tor-design.pdf"
    File "..\README"
    File "..\AUTHORS"
    File "..\ChangeLog"
