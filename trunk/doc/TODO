@@ -14,24 +14,25 @@ ARMA    - arma claims
         X Abandoned
 
 For 0.0.2pre14:
-NICK    - More flexible exit policies (18.*, 18.0.0.0/8)
-NICK    - Work to succeed in the precense of exit policy violation
-                - Replace desired_path_len with opaque path-selection specifier
-                - Client-side DNS caching
-                - Add entries to client DNS cache based on END cells
-                - Remove port from END_REASON_EXITPOLICY cells
-                - Start building new circuits when we get an exit-policy
+        o More flexible exit policies (18.*, 18.0.0.0/8)
+        o Work to succeed in the precense of exit policy violation
+                o Replace desired_path_len with opaque path-selection specifier
+                o Client-side DNS caching
+                o Add entries to client DNS cache based on END cells
+                o Remove port from END_REASON_EXITPOLICY cells
+                o Start building new circuits when we get an exit-policy
                   failure.  (Defer exiting from the middle of existing
                   circuits or extending existing circuits for later.)
-                - Implement function to check whether a routerinfo_t 
+                o Implement function to check whether a routerinfo_t 
                   supports a given exit addr.
-                - Choose the exit node of an in-progress circuit based on
+                o Choose the exit node of an in-progress circuit based on
                   pending AP connections.
-                - Choose the exit node _first_, then beginning, then
+                o Choose the exit node _first_, then beginning, then
                   middle nodes.
 
-                 
+
 Short-term:
+        - choose randomly from running dirservers, not just first one
         - Make tls connections tls_close intentionally
         o Rename ACI to circID
         . integrate rep_ok functions, see what breaks
@@ -39,25 +40,22 @@ Short-term:
         o obey SocksBindAddress, ORBindAddress
         - warn if we're running as root
         o make connection_flush_buf() more obviously obsolete
-ARMA    .* let hup reread the config file, eg so we can get new exit
+        o let hup reread the config file, eg so we can get new exit
           policies without restarting
-ARMA    -* Put recommended_versions in a config entry
+        o Put recommended_versions in a config entry
         - use times(2) rather than gettimeofday to measure how long it
           takes to process a cell
-        - Separate trying to rebuild a circuit because you have none from trying 
+        o Separate trying to rebuild a circuit because you have none from trying 
           to rebuild a circuit because the current one is stale
-        - Continue reading from socks port even while waiting for connect.
-        .* Exit policies
+        X Continue reading from socks port even while waiting for connect.
+        . Exit policies
                 o Spec how to write the exit policies
-                .* Path selection algorithms
+                . Path selection algorithms
                         o Choose path more incrementally
-ARMA                    -* Let user request first/last node
+                        - Let user request first/last node
                         - And disallow certain nodes
                         D Choose path by jurisdiction, etc?
                 . Make relay end cells have failure status and payload attached
-NICK            -* Streams that fail due to exit policy must reextend to new node
-NICK            -* Add extend_wait state to edge connections, thumb through them
-                  when the AP get an extended cell.
         X let non-approved routers handshake.
         - Dirserver shouldn't put you in running-routers list if you haven't
           uploaded a descriptor recently
@@ -78,16 +76,15 @@ NICK            -* Add extend_wait state to edge connections, thumb through them
                 - connection_or_init_conn_from_router
                 - tag_pack, tag_unpack, connection_cpu_process_inbuf
                 - directory_initiate_command
-        .* Move from onions to ephemeral DH
+        . Move from onions to ephemeral DH
                 o incremental path building
                 o transition circuit-level sendmes to hop-level sendmes
                 o implement truncate, truncated
                 o move from 192byte DH to 128byte DH, so it isn't so damn slow
-NICK            -* exiting from not-last hop
-                        -* OP logic to decide to extend/truncate a path
-                        -* make sure exiting from the not-last hop works
-                        -* logic to find last *open* hop, not last hop, in cpath
-                        -* choose exit nodes by exit policies
+                - exiting from not-last hop
+                        - OP logic to decide to extend/truncate a path
+                        - make sure exiting from the not-last hop works
+                        - logic to find last *open* hop, not last hop, in cpath
         o Remember address and port when beginning. 
         - Extend by nickname/hostname/something, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
