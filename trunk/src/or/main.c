@@ -273,7 +273,7 @@ static void conn_write(int i) {
   if (connection_handle_write(conn) < 0) {
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it. */
-      log_fn(LOG_WARN,"Unhandled error on read for %s connection (fd %d); removing",
+      log_fn(LOG_WARN,"Unhandled error on write for %s connection (fd %d); removing",
              CONN_TYPE_TO_STRING(conn->type), conn->s);
       conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
       /* XXX do we need a close-immediate here, so we don't try to flush? */
