@@ -60,13 +60,13 @@ tv_udiff(struct timeval *start, struct timeval *end)
   long secdiff = end->tv_sec - start->tv_sec;
 
   if (secdiff+1 > LONG_MAX/1000000) {
-    log_fn(LOG_NOTICE, "comparing times too far apart.");
+    log_fn(LOG_WARNING, "comparing times too far apart.");
     return LONG_MAX;
   }
 
   udiff = secdiff*1000000L + (end_usec - start->tv_usec);
   if(udiff < 0) {
-    log_fn(LOG_NOTICE, "start is after end. Returning 0.");
+    log_fn(LOG_WARNING, "start is after end. Returning 0.");
     return 0;
   }
   return udiff;
@@ -320,17 +320,17 @@ int check_private_dir(const char *dirname, int create)
   struct stat st;
   if (stat(dirname, &st)) {
     if (errno != ENOENT) {
-      log(LOG_ERR, "Directory %s cannot be read: %s", dirname, 
+      log(LOG_WARNING, "Directory %s cannot be read: %s", dirname, 
           strerror(errno));
       return -1;
     } 
     if (!create) {
-      log(LOG_ERR, "Directory %s does not exist.", dirname);
+      log(LOG_WARNING, "Directory %s does not exist.", dirname);
       return -1;
     }
     log(LOG_INFO, "Creating directory %s", dirname); 
     if (mkdir(dirname, 0700)) {
-      log(LOG_ERR, "Error creating directory %s: %s", dirname, 
+      log(LOG_WARNING, "Error creating directory %s: %s", dirname, 
           strerror(errno));
       return -1;
     } else {
@@ -338,17 +338,17 @@ int check_private_dir(const char *dirname, int create)
     }
   }
   if (!(st.st_mode & S_IFDIR)) {
-    log(LOG_ERR, "%s is not a directory", dirname);
+    log(LOG_WARNING, "%s is not a directory", dirname);
     return -1;
   }
   if (st.st_uid != getuid()) {
-    log(LOG_ERR, "%s is not owned by this UID (%d)", dirname, getuid());
+    log(LOG_WARNING, "%s is not owned by this UID (%d)", dirname, getuid());
     return -1;
   }
   if (st.st_mode & 0077) {
     log(LOG_WARNING, "Fixing permissions on directory %s", dirname);
     if (chmod(dirname, 0700)) {
-      log(LOG_ERR, "Could not chmod directory %s: %s", dirname, 
+      log(LOG_WARNING, "Could not chmod directory %s: %s", dirname, 
           strerror(errno));
       return -1;
     } else {
@@ -365,28 +365,28 @@ write_str_to_file(const char *fname, const char *str)
   int fd;
   FILE *file;
   if (strlen(fname) > 1000) {
-    log(LOG_ERR, "Filename %s is too long.", fname);
+    log(LOG_WARNING, "Filename %s is too long.", fname);
     return -1;
   }
   strcpy(tempname,fname);
   strcat(tempname,".tmp");
   if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0) {
-    log(LOG_ERR, "Couldn't open %s for writing: %s", tempname, 
+    log(LOG_WARNING, "Couldn't open %s for writing: %s", tempname, 
         strerror(errno));
     return -1;
   }
   if (!(file = fdopen(fd, "w"))) {
-    log(LOG_ERR, "Couldn't fdopen %s for writing: %s", tempname, 
+    log(LOG_WARNING, "Couldn't fdopen %s for writing: %s", tempname, 
         strerror(errno));
     close(fd); return -1;
   }
   if (fputs(str,file) == EOF) {
-    log(LOG_ERR, "Error writing to %s: %s", tempname, strerror(errno));
+    log(LOG_WARNING, "Error writing to %s: %s", tempname, strerror(errno));
     fclose(file); return -1;
   }
   fclose(file);
   if (rename(tempname, fname)) {
-    log(LOG_ERR, "Error replacing %s: %s", fname, strerror(errno));
+    log(LOG_WARNING, "Error replacing %s: %s", fname, strerror(errno));
     return -1;
   }
   return 0;

@@ -277,24 +277,16 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 /* Validate options */
 
   if(options->LogLevel) {
-    if(!strcmp(options->LogLevel,"emerg"))
-      options->loglevel = LOG_EMERG;
-    else if(!strcmp(options->LogLevel,"alert"))
-      options->loglevel = LOG_ALERT;
-    else if(!strcmp(options->LogLevel,"crit"))
-      options->loglevel = LOG_CRIT;
     else if(!strcmp(options->LogLevel,"err"))
       options->loglevel = LOG_ERR;
     else if(!strcmp(options->LogLevel,"warning"))
       options->loglevel = LOG_WARNING;
-    else if(!strcmp(options->LogLevel,"notice"))
-      options->loglevel = LOG_NOTICE;
     else if(!strcmp(options->LogLevel,"info"))
       options->loglevel = LOG_INFO;
     else if(!strcmp(options->LogLevel,"debug"))
       options->loglevel = LOG_DEBUG;
     else {
-      log(LOG_ERR,"LogLevel must be one of emerg|alert|crit|err|warning|notice|info|debug.");
+      log(LOG_ERR,"LogLevel must be one of err|warning|info|debug.");
       result = -1;
     }
   }
