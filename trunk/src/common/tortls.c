@@ -580,6 +580,7 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
   if (!(id_pkey = _crypto_pk_env_get_evp_pkey(identity_key,0)) ||
       X509_verify(cert, id_pkey) <= 0) {
     log_fn(LOG_WARN,"X509_verify on cert and pkey returned <= 0");
+    tls_log_errors(LOG_WARN,"verifying certificate");
     goto done;
   }
 
