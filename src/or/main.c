@@ -69,8 +69,8 @@ int has_completed_circuit=0;
 /* #define MS_WINDOWS_SERVICE */
 #ifdef MS_WINDOWS_SERVICE
 #include <tchar.h>
-#define GENSRV_SERVICENAME  TEXT("tor-009pre6")
-#define GENSRV_DISPLAYNAME  TEXT("Tor 0.0.9 pre6 Win32 Service")
+#define GENSRV_SERVICENAME  TEXT("tor-"VERSION)
+#define GENSRV_DISPLAYNAME  TEXT("Tor "VERSION" pre6 Win32 Service")
 SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
 static char **backup_argv;
