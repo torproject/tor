@@ -441,12 +441,13 @@ tor_tls_read(tor_tls *tls, char *cp, size_t len)
   if (r > 0)
     return r;
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_INFO);
-  log_fn(LOG_DEBUG,"returned r=%d, err=%d",r,err);
   if (err == _TOR_TLS_ZERORETURN) {
+    log_fn(LOG_DEBUG,"read returned r=%d; TLS is closed",r);
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
   } else {
     tor_assert(err != TOR_TLS_DONE);
+    log_fn(LOG_DEBUG,"read returned r=%d, err=%d",r,err);
     return err;
   }
 }
@@ -479,7 +480,6 @@ tor_tls_write(tor_tls *tls, char *cp, size_t n)
     return r;
   }
   if (err == TOR_TLS_WANTWRITE || err == TOR_TLS_WANTREAD) {
-//    log_fn(LOG_INFO,"wantwrite or wantread. remembering the number %d.",n);
     tls->wantwrite_n = n;
   }
   return err;
@@ -685,7 +685,6 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
   if (!(chain = SSL_get_peer_cert_chain(tls->ssl)))
     goto done;
   num_in_chain = sk_X509_num(chain);
-  log_fn(LOG_DEBUG,"Number of certs in chain: %d", num_in_chain);
   /* 1 means we're receiving (server-side), and it's just the id_cert.
    * 2 means we're connecting (client-side), and it's both the link
    * cert and the id_cert.
