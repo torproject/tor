@@ -510,7 +510,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
     else
       layer->addr = 0;
     /* Expiration Time */
-    layer->expire = time(NULL) + 3600; /* NOW + 1 hour */
+    layer->expire = time(NULL) + 86400; /* NOW + 1 day */
     /* Key Seed Material */
     if(crypto_rand(16, layer->keyseed)) { /* error */
       log(LOG_ERR,"Error generating random data.");
