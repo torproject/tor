@@ -6,10 +6,9 @@
 const char config_c_id[] = "$Id$";
 
 /**
- * /file config.c
+ * \file config.c
  *
- * /brief Code to parse and interpret configuration files.
- *
+ * \brief Code to parse and interpret configuration files.
  **/
 
 #include "or.h"

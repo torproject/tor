@@ -3,9 +3,9 @@
 /* $Id$ */
 
 /**
- * /file log.h
+ * \file log.h
  *
- * /brief Headers for logging functions.
+ * \brief Headers for logging functions.
  **/
 
 #ifndef __LOG_H

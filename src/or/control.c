@@ -4,9 +4,9 @@
 const char control_c_id[] = "$Id$";
 
 /**
- * /file control.c
+ * \file control.c
  *
- * /brief Implementation for Tor's control-socket interface.
+ * \brief Implementation for Tor's control-socket interface.
  */
 
 #include "or.h"
