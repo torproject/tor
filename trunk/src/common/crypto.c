@@ -650,12 +650,21 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
 int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
 {
   int len;
+  unsigned char *buf, *bufp;
   len = i2d_RSAPublicKey((RSA*)pk->key, NULL);
   if (len < 0 || len > dest_len)
     return -1;
-  len = i2d_RSAPublicKey((RSA*)pk->key, (unsigned char**)&dest);
-  if (len < 0)
+  bufp = buf = (unsigned char *)tor_malloc(len+1);
+  len = i2d_RSAPublicKey((RSA*)pk->key, &bufp);
+  if (len < 0) {
+    tor_free(buf);
     return -1;
+  }
+  /* We don't encode directly into 'dest', because that would be illegal
+   * type-punning.  (C99 is smarter than me, C99 is smarter than me...)
+   */
+  memcpy(dest,buf,len);
+  tor_free(buf);
   return len;
 }
 
@@ -664,14 +673,18 @@ int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
 {
   RSA *rsa;
+  unsigned char *buf, *bufp;
+  bufp = buf = (unsigned char *)tor_malloc(len);
+  memcpy(buf,str,len);
   /* This ifdef suppresses a type warning.  Take out the first case once
    * everybody is using openssl 0.9.7 or later.
    */
 #if OPENSSL_VERSION_NUMBER < 0x00907000l
-  rsa = d2i_RSAPublicKey(NULL, (unsigned char**)&str, len);
+  rsa = d2i_RSAPublicKey(NULL, &bufp, len);
 #else
-  rsa = d2i_RSAPublicKey(NULL, (const unsigned char**)&str, len);
+  rsa = d2i_RSAPublicKey(NULL, (const unsigned char **)&bufp, len);
 #endif
+  tor_free(buf);
   if (!rsa)
     return NULL; /* XXXX log openssl error */
   return _crypto_new_pk_env_rsa(rsa);
