@@ -287,7 +287,7 @@ which reveals the downstream node.
           0: Identity 
           1: Single DES in OFB
           2: RC4
-	  3: Triple DES in OFB
+          3: Triple DES in OFB
 
      The port and address field denote the IPV4 address and port of
      the next onion router in the circuit, or are set to 0 for the
@@ -524,11 +524,12 @@ which reveals the downstream node.
 6.4. Topic flow control
 
    Edge nodes use TOPIC_SENDME data cells to implement end-to-end flow
-   control for individual connections across circuits.  As with circuit
+   control for individual connections across circuits. As with circuit
    flow control, edge nodes begin with a window of cells (500) per
    topic, and increment the window by a fixed value (50) upon receiving
    a TOPIC_SENDME data cell. Edge nodes initiate TOPIC_SENDME data
-   cells when
+   cells when both a) the window is <= 450, and b) there are less than
+   ten cell payloads remaining to be flushed at that edge.
 
 7. Directories and routers
 
