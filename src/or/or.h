@@ -187,6 +187,7 @@
 #define RELAY_COMMAND_EXTENDED 7
 #define RELAY_COMMAND_TRUNCATE 8
 #define RELAY_COMMAND_TRUNCATED 9
+#define RELAY_COMMAND_DROP 10
 
 #define RELAY_HEADER_SIZE 8
 
@@ -515,7 +516,7 @@ void circuit_free_cpath(crypt_path_t *cpath);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_newest_open(connection_t *conn);
+circuit_t *circuit_get_newest(connection_t *conn, int must_be_open);
 
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
