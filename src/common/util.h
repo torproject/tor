@@ -235,7 +235,7 @@ int is_internal_IP(uint32_t ip);
 
 const char *get_uname(void);
 
-void start_daemon(char *desired_cwd);
+void start_daemon(const char *desired_cwd);
 void finish_daemon(void);
 
 void write_pidfile(char *filename);

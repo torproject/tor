@@ -586,7 +586,7 @@ static int init_from_config(int argc, char **argv) {
 
   /* Start backgrounding the process, if requested. */
   if (options.RunAsDaemon) {
-    start_daemon(options.DataDirectory);
+    start_daemon(get_data_directory(&options));
   }
 
   /* Configure the log(s) */
@@ -638,7 +638,7 @@ static int do_hup(void) {
   }
   if(options.DirPort) {
     /* reload the approved-routers file */
-    sprintf(keydir,"%s/approved-routers", options.DataDirectory);
+    sprintf(keydir,"%s/approved-routers", get_data_directory(&options));
     log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
     if(dirserv_parse_fingerprint_file(keydir) < 0) {
       log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
@@ -657,7 +657,7 @@ static int do_hup(void) {
     dnsworkers_rotate();
     /* Rebuild fresh descriptor as needed. */
     router_rebuild_descriptor();
-    sprintf(keydir,"%s/router.desc", options.DataDirectory);
+    sprintf(keydir,"%s/router.desc", get_data_directory(&options));
     log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
     if (write_str_to_file(keydir, router_get_my_descriptor())) {
       return -1;

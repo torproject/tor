@@ -1508,7 +1508,7 @@ static int daemon_filedes[2];
  * until finish_daemon is called.  (Note: it's safe to call this more
  * than once: calls after the first are ignored.)
  */
-void start_daemon(char *desired_cwd)
+void start_daemon(const char *desired_cwd)
 {
   pid_t pid;
 
