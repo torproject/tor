@@ -153,7 +153,7 @@ Tor Rendezvous Spec
    Over this stream, Bob's OP makes an HTTP 'POST' request, to the URL
    '/rendezvous/publish' (relative to the directory server's root),
    containing as its body Bob's service descriptor.  Upon receiving a
-   descriptor, the director server checks the signature, and discards the
+   descriptor, the directory server checks the signature, and discards the
    descriptor if the signature does not match the enclosed public key.  Next,
    the directory server checks the timestamp.  If the timestamp is more than
    24 hours in the past or more than 1 hour in the future, or the directory
@@ -168,18 +168,19 @@ Tor Rendezvous Spec
 
    When Alice receives a pointer to a location-hidden service, it is as a
    hostname of the form "y.onion", where y is a base-32 encoding of a
-   ~16-octet hash of Bob's service's public key, computed as follows:
+   10-octet hash of Bob's service's public key, computed as follows:
 
          1. Let H = H(PK).
          2. Let H' = the first 80 bits of H, considering each octet from
-            most significant bit to least significant big.
-         2. Generate a 26-character encoding of H', taking H' 5 bits at
+            most significant bit to least significant bit.
+         2. Generate a 16-character encoding of H', taking H' 5 bits at
             a time, and mapping each 5-bit value to a character as follows:
                0..25 map to the characters 'a'...'z', respectively.
               26..31 map to the characters '0'...'5', respectively.
 
    (We only use 80 bits instead of the 160 bits from SHA1 because we don't
-   need to worry about man-in-the-middle attacks.)
+   need to worry about man-in-the-middle attacks, and because it will make
+   handling the url's more convenient.)
 
    [Yes, numbers are allowed at the beginning.  See RFC1123. -NM]
 
@@ -197,14 +198,19 @@ Tor Rendezvous Spec
    Upon receiving a service descriptor, Alice verifies with the same process
    as the directory server uses, described above in section 1.4.
 
-   [XXXX can Alice cache the descriptor?  It may make her
-   partitionable. -NM]
+   The directory server gives a 400 response if it cannot understand Alice's
+   request.
+
+   Alice should cache the descriptor locally, but should not use
+   descriptors that are more than 24 hours older than their timestamp.
+   [Caching may make her partitionable, but she fetched it anonymously,
+    and we can't very well *not* cache it. -RD]
 
 1.7. Alice's OP establishes a rendezvous point.
 
    When Alice requests a connection to a given location-hidden service,
-   and Alice's OP has not already established a circuit to that circuit,
-   the OP establishes a rendezvous service.  It does this by establishing
+   and Alice's OP does not have an established circuit to that service,
+   the OP builds a rendezvous circuit.  It does this by establishing
    a circuit to a randomly chosen OR, and sending a
    RELAY_ESTABLISH_RENDEZVOUS cell to that OR.  The body of that cell
    contains:
@@ -214,7 +220,7 @@ Tor Rendezvous Spec
    The rendezvous cookie is an arbitrary 20-byte value, chosen randomly by
    Alice's OP.
 
-   Upon receiving a RELAY_ESTABLISH_RENDEZVOUS cell, the OP associates the
+   Upon receiving a RELAY_ESTABLISH_RENDEZVOUS cell, the OR associates the
    RC with the circuit that sent it.
 
    Alice's OP MUST NOT use the circuit which sent the cell for any purpose
@@ -222,26 +228,29 @@ Tor Rendezvous Spec
 
 1.8. Introduction: from Alice's OP to Introduction Point
 
-   Via another circuit, Alice sends a RELAY_INTRODUCE1 cell to once of Bob's
-   chosen introduction points.  This cell contains:
+   Alice builds a separate circuit to one of Bob's chosen introduction
+   points, and sends it a RELAY_INTRODUCE1 cell containing:
 
        Cleartext
-          PK_ID  Identifier for Bob's PK     [16 octets]
+          PK_ID  Identifier for Bob's PK      [20 octets]
 
        Encrypted to Bob's PK:
           RP     Rendezvous point's nickname  [variable]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octetes]
 
-   PK_ID is the first 16 octets of the hash of Bob's public key.  RP is
-   NUL-terminated.
+   PK_ID is the hash of Bob's public key.  RP is NUL-terminated.
 
    The data is encrypted to Bob's PK as follows: Suppose Bob's PK is L octets
    long.  If the data to be encrypted is shorter than L, then it is encrypted
    directly (with no padding).  If the data is at least as long as L, then a
    randomly generated 16-byte symmetric key is prepended to the data, after
-   which the first L-1 bytes of the data are encrypted with Bob's PK; and the
+   which the first L-16 bytes of the data are encrypted with Bob's PK; and the
    rest of the data is encrypted with the symmetric key.
+
+   [There's very little here is that is recognizable by Bob to let him
+    know if he decrypted it correctly. Perhaps we should add OAEP padding
+    to the RSA -- there is space -RD]
 
 1.9. Introduction: From the Introduction Point to Bob's OP
 
@@ -260,7 +269,7 @@ Tor Rendezvous Spec
 
    Bob's OP build a new Tor circuit ending at Alice's chosen rendezvous
    point, and sends a RELAY_RENDEZVOUS1 cell along this circuit, containing:
-       RC       Rendezvous cookie   [20 octets]
+       RC       Rendezvous cookie  [20 octets]
        g^y      Diffie-Hellman     [128 octets]
        H(KH)    Handshake digest   [20 octets]
 
@@ -285,9 +294,9 @@ Tor Rendezvous Spec
        Kf = K[16..31]
        Kb = K[32..47]
 
-   Subsequently, the rendezvous point passes relay cells, unchained, from
+   Subsequently, the rendezvous point passes relay cells, unchanged, from
    each of the two circuits to the other.  When Alice's OP sends
-   sends RELAY cells along the circuit, it first encrypts them with the
+   RELAY cells along the circuit, it first encrypts them with the
    Kf, then with all of the keys for the ORs in Alice's side of the circuit;
    and when Alice's OP receives RELAY cells from the circuit, it decrypts
    them with the keys for the ORs in Alice's side of the circuit, then
