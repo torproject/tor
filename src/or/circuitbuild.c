@@ -245,6 +245,7 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
     circ->n_addr = n_conn->addr;
     circ->n_port = n_conn->port;
     circ->n_conn = n_conn;
+    memcpy(circ->n_conn_id_digest, n_conn->identity_digest, DIGEST_LEN);
     log_fn(LOG_DEBUG,"Conn open. Delivering first onion skin.");
     if(circuit_send_next_onion_skin(circ) < 0) {
       log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
@@ -276,6 +277,7 @@ void circuit_n_conn_done(connection_t *or_conn, int success) {
       }
       log_fn(LOG_DEBUG,"Found circ %d, sending create cell.", circ->n_circ_id);
       circ->n_conn = or_conn;
+      memcpy(circ->n_conn_id_digest, or_conn->identity_digest, DIGEST_LEN);
       if(CIRCUIT_IS_ORIGIN(circ)) {
         if(circuit_send_next_onion_skin(circ) < 0) {
           log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
@@ -506,6 +508,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   circ->n_port = n_conn->port;
 
   circ->n_conn = n_conn;
+  memcpy(circ->n_conn_id_digest, n_conn->identity_digest, DIGEST_LEN);
   log_fn(LOG_DEBUG,"n_conn is %s:%u",n_conn->address,n_conn->port);
 
   if(circuit_deliver_create_cell(circ, onionskin) < 0)
