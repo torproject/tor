@@ -452,11 +452,16 @@ void circuit_expire_building(void) {
     if(victim->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)
       continue; /* it's young still, don't mess with it */
 
-    /* if circ is !open, or if it's open but purpose is est intro or est rend,
-     * then mark it for close */
+    /* if circ is !open, or if it's open but purpose is a non-finished
+     * intro or rend, then mark it for close */
     if(victim->state != CIRCUIT_STATE_OPEN ||
        victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
-       victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
+       victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+       /* c_rend_ready circs measure age since timestamp_dirty,
+        * because that's set when they switch purposes
+        */
+       (victim->purpose == CIRCUIT_PURPOSE_C_REND_READY &&
+        victim->timestamp_dirty + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)) {
       if(victim->n_conn)
         log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s)",
                victim->n_conn->address, victim->n_port, victim->n_circ_id,

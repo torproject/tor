@@ -364,7 +364,7 @@ static void run_scheduled_events(time_t now) {
   }
 
   /* 2. Every second, we examine pending circuits and prune the
-   *    ones which have been pending for more than 3 seconds.
+   *    ones which have been pending for more than a few seconds.
    *    We do this before step 3, so it can try building more if
    *    it's not comfortable with the number of available circuits.
    */
