@@ -101,7 +101,7 @@ void tv_addms(struct timeval *a, long ms) {
  */
 
 /* a wrapper for write(2) that makes sure to write all count bytes.
- * Only use if fd is a blocking socket. */
+ * Only use if fd is a blocking fd. */
 int write_all(int fd, const void *buf, size_t count) {
   int written = 0;
   int result;
@@ -116,7 +116,7 @@ int write_all(int fd, const void *buf, size_t count) {
 }
 
 /* a wrapper for read(2) that makes sure to read all count bytes.
- * Only use if fd is a blocking socket. */
+ * Only use if fd is a blocking fd. */
 int read_all(int fd, void *buf, size_t count) {
   int numread = 0;
   int result;
@@ -391,3 +391,42 @@ write_str_to_file(const char *fname, const char *str)
   }
   return 0;
 }
+
+char *read_file_to_str(const char *filename) {
+  int fd; /* router file */
+  struct stat statbuf;
+  char *string;
+
+  assert(filename);
+
+  if(strcspn(filename,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
+    log_fn(LOG_WARNING,"Filename %s contains illegal characters.",filename);
+    return NULL;
+  }
+  
+  if(stat(filename, &statbuf) < 0) {
+    log_fn(LOG_WARNING,"Could not stat %s.",filename);
+    return NULL;
+  }
+
+  fd = open(filename,O_RDONLY,0);
+  if (fd<0) {
+    log_fn(LOG_WARNING,"Could not open %s.",filename);
+    return NULL;
+  }
+
+  string = tor_malloc(statbuf.st_size+1);
+
+  if(read_all(fd,string,statbuf.st_size) != statbuf.st_size) {
+    log_fn(LOG_WARNING,"Couldn't read all %ld bytes of file '%s'.",
+           (long)statbuf.st_size,filename);
+    free(string);
+    close(fd);
+    return NULL;
+  }
+  close(fd);
+  
+  string[statbuf.st_size] = 0; /* null terminate it */
+  return string;
+}
+
