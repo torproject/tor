@@ -9,9 +9,9 @@ SocksPort 9050
 SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port
 
-# Entry policies to allow/deny SOCKS requests based on IP. First
-# entry that matches wins. If no SocksPolicy is set, we accept all
-# (and only) requests from SocksBindAddress.
+# Entry policies to allow/deny SOCKS requests based on IP address.
+# First entry that matches wins. If no SocksPolicy is set, we accept
+# all (and only) requests from SocksBindAddress.
 #
 #SocksPolicy accept 192.168.0.1/16
 #SocksPolicy reject *
