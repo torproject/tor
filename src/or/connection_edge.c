@@ -818,7 +818,7 @@ void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
 /* Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
  * warn and return -1 (conn needs to die);
- * else launch new circuit and return 0.
+ * else launch new circuit (if necessary) and return 0.
  * Otherwise, associate conn with a safe live circuit, do the
  * right next step, and return 1.
  */
@@ -854,7 +854,13 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   } else { /* we're a rendezvous conn */
     circuit_t *rendcirc=NULL, *introcirc=NULL;
 
-    /* first, find a rendezvous circuit for us */
+    /* before anything else, see if we've already been attached
+     * to a rendezvous circuit */
+    if(conn->cpath_layer) {
+      return 1;
+    }
+
+    /* else, start by finding a rendezvous circuit for us */
 
     retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_REND_JOINED, &rendcirc);
     if(retval < 0) return -1; /* failed */
