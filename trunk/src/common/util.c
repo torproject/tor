@@ -215,6 +215,8 @@ int tor_strpartition(char *dest, size_t dest_len,
   tor_assert(dest_len < SIZE_T_CEILING);
   len_in = strlen(s);
   len_ins = strlen(insert);
+  tor_assert(len_in < SIZE_T_CEILING);
+  tor_assert(len_in/n < SIZE_T_CEILING/len_ins); /* avoid overflow */
   len_out = len_in + (len_in/n)*len_ins;
   is_even = (len_in%n) == 0;
   switch (rule)
