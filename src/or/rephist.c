@@ -266,9 +266,10 @@ void rep_hist_dump_stats(time_t now, int severity)
         or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
         upt, upt+downt, uptime*100.0);
 
-    if (!strmap_isempty(or_history->link_history_map)) {
+    if (!strmap_isempty(or_history->link_history_map))
       strcpy(buffer, "    Good extend attempts: ");
-    }
+    else
+      *buffer = '\0';
     len = strlen(buffer);
     for (lhist_it = strmap_iter_init(or_history->link_history_map);
          !strmap_iter_done(lhist_it);
