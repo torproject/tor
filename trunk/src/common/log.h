@@ -14,13 +14,13 @@
 #define LOG_ERR     4
 #endif
 
-/* magic to make GCC check for proper format strings. */ 
+/* magic to make GCC check for proper format strings. */
 #ifdef __GNUC__
 #define CHECK_PRINTF(formatIdx, firstArg) \
    __attribute__ ((format (printf, formatIdx, firstArg)))
 #else
-#define CHECK_PRINTF(formatIdx, firstArg) 
-#endif 
+#define CHECK_PRINTF(formatIdx, firstArg)
+#endif
 
 void add_stream_log(int loglevel, const char *name, FILE *stream);
 int add_file_log(int severity, const char *filename);

@@ -30,8 +30,8 @@ static logfile_t *logfiles = NULL;
  * of 'logv' so that we never format a message more than once.
  */
 static INLINE void format_msg(char *buf, size_t buf_len,
-                              int severity, const char *funcname, 
-                              const char *format, va_list ap) 
+                              int severity, const char *funcname,
+                              const char *format, va_list ap)
 {
   time_t t;
   struct timeval now;
@@ -44,7 +44,7 @@ static INLINE void format_msg(char *buf, size_t buf_len,
 
   n = strftime(buf, buf_len, "%b %d %H:%M:%S", localtime(&t));
   n += snprintf(buf+n, buf_len-n,
-                ".%.3ld [%s] ", 
+                ".%.3ld [%s] ",
                 (long)now.tv_usec / 1000, sev_to_string(severity));
   if(n > buf_len)
     n = buf_len-1; /* the *nprintf funcs return how many bytes they
@@ -64,7 +64,7 @@ static INLINE void format_msg(char *buf, size_t buf_len,
   buf[n+1]='\0';
 }
 
-static void 
+static void
 logv(int severity, const char *funcname, const char *format, va_list ap)
 {
   char buf[10024];
@@ -145,7 +145,7 @@ void add_stream_log(int loglevel, const char *name, FILE *stream)
  * If opening the logfile fails, -1 is returned and
  * errno is set appropriately (by fopen)
  */
-int add_file_log(int loglevel, const char *filename) 
+int add_file_log(int loglevel, const char *filename)
 {
   FILE *f;
   f = fopen(filename, "a");

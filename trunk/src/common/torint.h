@@ -51,7 +51,7 @@ typedef unsigned char uint8_t;
 #endif
 #endif
 
-#if (SIZEOF_SHORT == 2) 
+#if (SIZEOF_SHORT == 2)
 #ifndef HAVE_INT16_T
 typedef signed short int16_t;
 #define HAVE_INT16_T
@@ -63,7 +63,7 @@ typedef unsigned short uint16_t;
 #endif
 
 
-#if (SIZEOF_INT == 2) 
+#if (SIZEOF_INT == 2)
 #ifndef HAVE_INT16_T
 typedef signed int int16_t;
 #define HAVE_INT16_T
