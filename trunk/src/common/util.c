@@ -18,6 +18,13 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#include <assert.h>
 
 #include "util.h"
 #include "log.h"
@@ -105,5 +112,38 @@ void set_socket_nonblocking(int socket)
 	ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
 	fcntl(socket, F_SETFL, O_NONBLOCK);
+#endif
+}
+
+int spawn_func(int (*func)(void *), void *data)
+{
+#ifdef _MSC_VER
+  int rv;
+  rv = _beginthread(func, 0, data);
+  if (rv == (unsigned long) -1)
+    return -1;
+  return 0;
+#else
+  pid_t pid;
+  pid = fork();
+  if (pid<0)
+    return -1;
+  if (pid==0) {
+    /* Child */
+    func(data);
+    assert(0); /* Should never reach here. */
+  } else {
+    /* Parent */
+    return 0;
+  }
+#endif
+}
+
+void spawn_exit()
+{
+#ifdef _MSC_VER
+  _endthread();
+#else
+  exit(0);
 #endif
 }

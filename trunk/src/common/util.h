@@ -45,4 +45,11 @@ int tv_cmp(struct timeval *a, struct timeval *b);
 
 void set_socket_nonblocking(int socket);
 
+/* Minimalist interface to run a void function in the background.  On
+   unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
+   func should not return, but rather should call spawn_exit.
+*/
+int spawn_func(int (*func)(void *), void *data);
+void spawn_exit();
+
 #endif
