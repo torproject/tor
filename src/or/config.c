@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.5  2002/07/09 19:51:41  montrose
+ * Miscellaneous bug fixes / activated "make check" for src/or
+ *
  * Revision 1.4  2002/07/03 19:58:18  montrose
  * minor bug fix in error checking
  *
@@ -117,10 +120,10 @@ RETURN VALUE: 0 on success, non-zero on error
    case -1:
       if ( Verbose )                      /* display options upon user request */
       {
-         printf("\nLogLevel=%s\n",options->LogLevel);
+         printf("LogLevel=%s\n",options->LogLevel);
          printf("RouterFile=%s, PrivateKeyFile=%s\n",options->RouterFile,options->PrivateKeyFile);
          printf("ORPort=%d, OPPort=%d, APPort=%d\n",options->ORPort,options->OPPort,options->APPort);
-         printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n\n",options->CoinWeight,options->MaxConn,options->TrafficShaping);
+         printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n",options->CoinWeight,options->MaxConn,options->TrafficShaping);
       }
       code = 0;
       break;
