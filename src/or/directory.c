@@ -261,7 +261,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
       log_fn(LOG_INFO,"Finished writing server response. Closing.");
       return -1; /* kill it */
     default:
-      log_fn(LOG_WARN,"BUG: called in unexpected state.");
+      log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
       return -1;
   }
   return 0;
