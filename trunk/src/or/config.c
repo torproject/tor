@@ -161,6 +161,8 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "DirBindAddress", CONFIG_TYPE_STRING, &options->DirBindAddress) ||
     config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_INT, &options->DirFetchPostPeriod) ||
 
+    config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
+    config_compare(list, "EntryNodes",     CONFIG_TYPE_STRING, &options->EntryNodes) ||
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
 
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
@@ -210,17 +212,18 @@ static void config_assign(or_options_t *options, struct config_line *list) {
 void print_usage(void) {
   printf("tor -f <torrc> [args]\n"
          "-d <file>\t\tDebug file\n"
-         "-e <policy>\t\tExit policy\n"
-         "-l <level>\t\tLog level\n"
          "-m <max>\t\tMax number of connections\n"
+         "-l <level>\t\tLog level\n"
+         "-t <bandwidth>\t\tTotal bandwidth\n"
+         "-r <file>\t\tList of known routers\n");
+  printf("\nClient options:\n"
+         "-e \"nick1 nick2 ...\"\t\tExit nodes\n"
          "-s <IP>\t\t\tPort to bind to for Socks\n"
          );
-  /* split things up to be ANSI compliant */
-  printf("-n <nick>\t\tNickname of router\n"
+  printf("\nServer options:\n"
+         "-n <nick>\t\tNickname of router\n"
          "-o <port>\t\tOR port to bind to\n"
          "-p <file>\t\tPID file\n"
-         "-r <file>\t\tRouter config file\n"
-         "-t <bandwidth>\t\tTotal bandwidth\n"
          );
 }
 
@@ -233,6 +236,8 @@ void free_options(or_options_t *options) {
   tor_free(options->Nickname);
   tor_free(options->Address);
   tor_free(options->PidFile);
+  tor_free(options->ExitNodes);
+  tor_free(options->EntryNodes);
   tor_free(options->ExitPolicy);
   tor_free(options->SocksBindAddress);
   tor_free(options->ORBindAddress);
@@ -245,6 +250,8 @@ void init_options(or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
   options->LogLevel = tor_strdup("info");
+  options->ExitNodes = tor_strdup("");
+  options->EntryNodes = tor_strdup("");
   options->ExitPolicy = tor_strdup("reject 127.0.0.1:*");
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");

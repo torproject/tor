@@ -464,6 +464,21 @@ test_util() {
   test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
 }
 
+void test_onion() {
+  char **names;
+  int i,num;
+
+  names = parse_nickname_list("  foo bar	 baz quux  ", &num);
+  test_eq(num,4); 
+  test_streq(names[0],"foo");
+  test_streq(names[1],"bar");
+  test_streq(names[2],"baz");
+  test_streq(names[3],"quux");
+  for(i=0;i<num;i++)
+    tor_free(names[i]);
+  tor_free(names);
+}
+
 void
 test_onion_handshake() {
   /* client-side */
@@ -693,6 +708,7 @@ main(int c, char**v){
   puts("\n========================= Util ============================");
   test_util();
   puts("\n========================= Onion Skins =====================");
+  test_onion();
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
   test_dir_format();

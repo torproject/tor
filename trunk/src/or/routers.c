@@ -29,9 +29,6 @@ typedef struct directory_token directory_token_t;
 
 /* static function prototypes */
 void routerlist_free(routerinfo_t *list);
-static char *eat_whitespace(char *s);
-static char *eat_whitespace_no_nl(char *s);
-static char *find_whitespace(char *s);
 static int router_add_exit_policy_from_string(routerinfo_t *router, char *s);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
@@ -427,40 +424,6 @@ router_get_next_token(char **s, directory_token_t *tok) {
 #else
 #define router_get_next_token _router_get_next_token
 #endif
-
-
-/* return the first char of s that is not whitespace and not a comment */
-static char *eat_whitespace(char *s) {
-  assert(s);
-
-  while(isspace(*s) || *s == '#') {
-    while(isspace(*s))
-      s++;
-    if(*s == '#') { /* read to a \n or \0 */
-      while(*s && *s != '\n')
-        s++;
-      if(!*s)
-        return s;
-    }
-  }
-  return s;
-}
-
-static char *eat_whitespace_no_nl(char *s) {
-  while(*s == ' ' || *s == '\t') 
-    ++s;
-  return s;
-}
-
-/* return the first char of s that is whitespace or '#' or '\0 */
-static char *find_whitespace(char *s) {
-  assert(s);
-
-  while(*s && !isspace(*s) && *s != '#')
-    s++;
-
-  return s;
-}
 
 int router_get_list_from_string(char *s) 
 {
