@@ -319,7 +319,7 @@ which reveals the downstream node.
          Relay command           [1 byte]
          Stream ID               [7 bytes]
 
-   The recognized relay commands are:
+   The relay commands are:
          1 -- RELAY_BEGIN
          2 -- RELAY_DATA
          3 -- RELAY_END
