@@ -477,6 +477,7 @@ int router_load_routerlist_from_directory(const char *s,
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
+  dirserv_set_cached_directory(s, routerlist->published_on);
   return 0;
 }
 

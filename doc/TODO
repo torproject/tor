@@ -19,12 +19,12 @@ For scalability:
 For dtor:
 
 NICK  pre1:
-        - make all ORs serve the directory too.
-          - "AuthoritativeDir 1" for dirservers
-          - non-authorative servers with dirport publish opt dircacheport
-          - make clients read that and use it.
-          - make clients able to read a normal dirport from non-trusted OR too
-          - make ORs parse-and-keep the directory they pull down
+        . make all ORs serve the directory too.
+          o "AuthoritativeDir 1" for dirservers
+          o non-authorative servers with dirport publish opt dircacheport
+          o make clients read that and use it.
+          o make clients able to read a normal dirport from non-trusted OR too
+          o make ORs parse-and-keep-and-serve the directory they pull down
           - authoritativedirservers should pull down directories from
             other authdirservers, to merge descriptors.
         - Have clients and dirservers preserve reputation info over
@@ -35,12 +35,16 @@ NICK  pre1:
           - distinguish directory-is-dirty from runninglist-is-dirty
           - ORs keep this too, and serve it
         - tor remembers descriptor-lists across reboots.
-        - Packages define datadir as /var/lib/tor/. If no datadir is defined,
+        . Packages define datadir as /var/lib/tor/. If no datadir is defined,
           then choose, make, and secure ~/.tor as datadir.
-        - Contact info, pgp fingerprint, comments in router desc.
-          - Add a ContactInfo line to torrc, which gets published in
+	  o Adjust tor
+	  o Change torrc.sample
+	  - Change packages
+	  - Look in ~/.torrc if no */etc/torrc is found?
+        o Contact info, pgp fingerprint, comments in router desc.
+          o Add a ContactInfo line to torrc, which gets published in
             descriptor (as opt)
-        - write tor version at the top of each log file
+        o write tor version at the top of each log file
 
       pre2:
         - refer to things by key:

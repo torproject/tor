@@ -363,7 +363,6 @@
 #define RELAY_COMMAND_INTRODUCE2 35
 #define RELAY_COMMAND_RENDEZVOUS1 36
 #define RELAY_COMMAND_RENDEZVOUS2 37
-/* DOCDOC Spec these next two. */
 #define RELAY_COMMAND_INTRO_ESTABLISHED 38
 #define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
 #define RELAY_COMMAND_INTRODUCE_ACK 40
@@ -823,6 +822,7 @@ typedef struct {
   int ORPort; /**< Port to listen on for OR connections. */
   int SocksPort; /**< Port to listen on for SOCKS connections. */
   int DirPort; /**< Port to listen on for directory connections. */
+  int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int MaxConn; /**< Maximum number of simultaneous connections. */
   int TrafficShaping; /**< Unused. */
   int LinkPadding; /**< Unused. */
@@ -848,6 +848,7 @@ typedef struct {
                    * other ORs are running. */
   struct config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
+  char *ContactInfo; /** Contact info to be published in the directory */
 } or_options_t;
 
 /* XXX are these good enough defaults? */
@@ -989,6 +990,7 @@ int config_init_logs(or_options_t *options);
 void config_parse_exit_policy(struct config_line_t *cfg,
                               struct exit_policy_t **dest);
 void exit_policy_free(struct exit_policy_t *p);
+const char *get_data_directory(or_options_t *options);
 
 /********************************* connection.c ***************************/
 
@@ -1136,6 +1138,7 @@ int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
 void directory_set_dirty(void);
 size_t dirserv_get_directory(const char **cp);
 size_t dirserv_get_runningrouters(const char **rr);
+void dirserv_set_cached_directory(const char *directory, time_t when);
 
 /********************************* dns.c ***************************/
 

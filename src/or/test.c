@@ -666,6 +666,7 @@ test_dir_format()
   r1.or_port = 9000;
   r1.socks_port = 9002;
   r1.dir_port = 9003;
+  r1.is_trusted_dir = 1;
   r1.onion_pkey = pk1;
   r1.identity_pkey = pk2;
   r1.bandwidthrate = 1000;

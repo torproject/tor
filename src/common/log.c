@@ -48,19 +48,11 @@ static INLINE const char *sev_to_string(int severity) {
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 
-/** Helper: Format a log message into a fixed-sized buffer. (This is
- * factored out of <b>logv</b> so that we never format a message more
- * than once.)
- */
-static INLINE void format_msg(char *buf, size_t buf_len,
-                              int severity, const char *funcname,
-                              const char *format, va_list ap)
+static INLINE size_t _log_prefix(char *buf, size_t buf_len, int severity)
 {
   time_t t;
   struct timeval now;
   size_t n;
-
-  buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 
   tor_gettimeofday(&now);
   t = (time_t)now.tv_sec;
@@ -73,6 +65,45 @@ static INLINE void format_msg(char *buf, size_t buf_len,
     n = buf_len-1; /* the *nprintf funcs return how many bytes they
                     * _would_ print, if the output is truncated.
                     * Subtract one because the count doesn't include the \0 */
+  return n;
+}
+
+/** If lf refers to an actual file that we have just opened, and the file
+ * contains no data, log an "opening new logfile" message at the top. **/
+static void log_tor_version(logfile_t *lf)
+{
+  char buf[256];
+  size_t n;
+
+  if (!lf->needs_close)
+    /* If it doesn't get closed, it isn't really a file. */
+    return;
+  if (lf->is_temporary)
+    /* If it's temporary, it isn't really a file. */
+    return;
+  if (ftell(lf->file) != 0)
+    /* We aren't at the start of the file; no need to log. */
+    return;
+  n = _log_prefix(buf, 250, LOG_NOTICE);
+  n += snprintf(buf+n, 250-n, "Tor %s creating new log file\n", VERSION);
+  if (n>250)
+    n = 250;
+  buf[n+1]='\0';
+  fputs(buf, lf->file);
+}
+
+/** Helper: Format a log message into a fixed-sized buffer. (This is
+ * factored out of <b>logv</b> so that we never format a message more
+ * than once.)
+ */
+static INLINE void format_msg(char *buf, size_t buf_len,
+                              int severity, const char *funcname,
+                              const char *format, va_list ap)
+{
+  size_t n;
+  buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
+
+  n = _log_prefix(buf, buf_len, severity);
 
   if (funcname) {
     n += snprintf(buf+n, buf_len-n, "%s(): ", funcname);
@@ -159,6 +190,7 @@ void reset_logs()
     if (lf->needs_close) {
       fclose(lf->file);
       lf->file = fopen(lf->filename, "a");
+      log_tor_version(lf);
     }
   }
 }
@@ -224,6 +256,7 @@ int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
   if (!f) return -1;
   add_stream_log(loglevelMin, loglevelMax, filename, f);
   logfiles->needs_close = 1;
+  log_tor_version(logfiles);
   return 0;
 }
 
