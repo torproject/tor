@@ -1519,7 +1519,7 @@ by attacking non-observed nodes to shut them down, reduce
 their reliability, or persuade users that they are not trustworthy.
 The best defense here is robustness.
   
-\emph{Run a hostile node.}  In addition to the abilities of a
+\emph{Run a hostile node.}  In addition to being a
 local observer, an isolated hostile node can create circuits through
 itself, or alter traffic patterns, to affect traffic at
 other nodes. Its ability to directly DoS a neighbor is now limited
@@ -1536,7 +1536,7 @@ control $m$ out of $N$ nodes, he should be able to correlate at most
 $\left(\frac{m}{N}\right)^2$ of the traffic in this way---although an 
 adversary
 could possibly attract a disproportionately large amount of traffic
-by running an exit node with an unusually permissive exit policy.
+by running an OR with an unusually permissive exit policy.
 
 \emph{Run a hostile directory server.} Directory servers control
 admission to the network. However, because the network directory
@@ -1678,7 +1678,7 @@ by the session key shared by the client and server.
 \Section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
  
-In addition to the open problems discussed in
+In addition to the non-goals in
 Section~\ref{subsec:non-goals}, many other questions must be solved
 before we can be confident of Tor's security.
 
@@ -1686,25 +1686,33 @@ Many of these open issues are questions of balance. For example,
 how often should users rotate to fresh circuits? Frequent rotation
 is inefficient, expensive, and may lead to intersection attacks and
 predecessor attacks \cite{wright03}, but infrequent rotation makes the
-user's traffic linkable. Along with opening a fresh circuit, clients can
-also limit linkability by exiting from a middle point of the circuit,
-or by truncating and re-extending the circuit; but more analysis is
+user's traffic linkable. Besides opening fresh circuits, clients can
+also exit from the middle of the circuit,
+or truncate and re-extend the circuit. More analysis is
 needed to determine the proper tradeoff.
 
-A similar question surrounds timing of directory operations: how often
-should directories be updated?  Clients that update infrequently receive
-an inaccurate picture of the network, but frequent updates can overload
-the directory servers. More generally, we must find more
-decentralized yet practical ways to distribute up-to-date snapshots of
-network status without introducing new attacks.
+%% Duplicated by 'Better directory distribution' in section 9.
+%
+%A similar question surrounds timing of directory operations: how often
+%should directories be updated?  Clients that update infrequently receive
+%an inaccurate picture of the network, but frequent updates can overload
+%the directory servers. More generally, we must find more
+%decentralized yet practical ways to distribute up-to-date snapshots of
+%network status without introducing new attacks.
 
-How should we choose path lengths? If she uses only two hops, then both
-these nodes are certain that by colluding they will learn about Alice
-and Bob. Our current approach is that Alice always chooses at least three
-nodes unrelated to herself and her destination. Thus normally she chooses
-three nodes, but if she is running an OR and her destination is on an OR,
-she uses five. Should Alice choose a nondeterministic path length (say,
-increasing it from a geometric distribution), to foil an attacker who
+How should we choose path lengths? If Alice only ever uses two hops,
+then both ORs can be certain that by colluding they will learn about
+Alice and Bob. In our current approach, Alice always chooses at least
+three nodes unrelated to herself and her destination.
+%% This point is subtle, but not IMO necessary.  Anybody who thinks
+%% about it will see that it's implied by the above sentence; anybody
+%% who doesn't think about it is safe in his ignorance.
+%
+%Thus normally she chooses
+%three nodes, but if she is running an OR and her destination is on an OR,
+%she uses five. 
+Should Alice choose a nondeterministic path length (say,
+increasing it a geometric distribution) to foil an attacker who
 uses timing to learn that he is the fifth hop and thus concludes that
 both Alice and the responder are on ORs?
 
@@ -1716,40 +1724,46 @@ are high enough, and if users' habits are sufficiently distinct
 \cite{limits-open,statistical-disclosure}. Can anything be done to
 make low-latency systems resist these attacks as well as high-latency
 systems? Tor already makes some effort to conceal the starts and ends of
-streams by wrapping all long-range control commands in identical-looking
+streams by wrapping long-range control commands in identical-looking
 relay cells. Link padding could frustrate passive observers who count
 packets; long-range padding could work against observers who own the
 first hop in a circuit. But more research remains to find an efficient
 and practical approach. Volunteers prefer not to run constant-bandwidth
-padding; but no convincing traffic shaping approach has ever been
+padding; but no convincing traffic shaping approach has been
 specified. Recent work on long-range padding \cite{defensive-dropping}
 shows promise. One could also try to reduce correlation in packet timing
 by batching and re-ordering packets, but it is unclear whether this could
 improve anonymity without introducing so much latency as to render the
 network unusable.
 
-Common wisdom suggests that Alice should run her own onion router for best
-anonymity, because traffic coming through her node could plausibly have
-come from elsewhere. How much mixing do we need before this is actually
-effective, or is it immediately beneficial because many real-world
-adversaries won't be able to observe Alice's router?
+A cascade topology may better defend against traffic confirmation by a
+large adversary through aggregating users, and making padding and
+mixing more affordable.  Does the hydra topology (many input nodes,
+few output nodes) work better against some adversaries? Are we going
+to get a hydra anyway because most nodes will be middleman nodes?
+
+Common wisdom suggests that Alice should run her own OR for best
+anonymity, because traffic coming from her node could plausibly have
+come from elsewhere. How much mixing does this approach need?  Is it
+immediately beneficial because of real-world adversaries that can't
+observe Alice's router, but can run routers of their own?
 
 To scale to many users, and to prevent an attacker from observing the
-whole network at once, it may be necessary for low-latency anonymity
-systems to support far more servers than Tor currently anticipates.
+whole network at once, it may be necessary 
+to support far more servers than Tor currently anticipates.
 This introduces several issues.  First, if approval by a centralized set
 of directory servers is no longer feasible, what mechanism should be used
 to prevent adversaries from signing up many colluding servers? Second,
 if clients can no longer have a complete picture of the network at all
 times, how can they perform discovery while preventing attackers from
-manipulating or exploiting gaps in client knowledge?  Third, if there
+manipulating or exploiting gaps in their knowledge?  Third, if there
 are too many servers for every server to constantly communicate with
 every other, what kind of non-clique topology should the network use?
-Restricted-route topologies promise comparable anonymity with better
+(Restricted-route topologies promise comparable anonymity with better
 scalability \cite{danezis-pets03}, but whatever topology we choose, we
 need some way to keep attackers from manipulating their position within
-it \cite{casc-rep}. Fourth, since no centralized authority is tracking
-server reliability, How do we prevent unreliable servers from rendering
+it \cite{casc-rep}.) Fourth, since no centralized authority is tracking
+server reliability, how do we prevent unreliable servers from rendering
 the network unusable?  Fifth, do clients receive so much anonymity benefit
 from running their own servers that we should expect them all to do so
 \cite{econymics}, or do we need to find another incentive structure to
@@ -1757,18 +1771,12 @@ motivate them?  Tarzan and MorphMix present possible solutions.
 
 % advogato, captcha
 
-A cascade topology with long-range padding and mixing may provide more
-defense against traffic confirmation against a large adversary, because
-it aggregates many users. Does the hydra topology (many input nodes,
-few output nodes) work better against some adversaries? Are we going to
-get a hydra anyway because most nodes will be middleman nodes?
-
 When a Tor node goes down, all its circuits (and thus streams) must break.
-Do users abandon the system because of this brittleness? How well
+Will users abandon the system because of this brittleness? How well
 does the method in Section~\ref{subsec:dos} allow streams to survive
 node failure? If affected users rebuild circuits immediately, how much
 anonymity is lost? It seems the problem is even worse in a peer-to-peer
-environment---so far such systems don't provide an incentive for peers to
+environment---such systems don't yet provide an incentive for peers to
 stay connected when they're done retrieving content, so we would expect
 a higher churn rate.
 
@@ -1778,21 +1786,22 @@ a higher churn rate.
 \label{sec:conclusion}
 
 Tor brings together many innovations into a unified deployable system. The
-immediate next steps include:
+next immediate steps include:
 
-\emph{Scalability:} Tor's emphasis on design simplicity and deployability
-has led us to adopt a clique topology, a semi-centralized model for
-directories and trusts, and a full-network-visibility model for client
+\emph{Scalability:} Tor's emphasis on deployability and design simplicity
+has led us to adopt a clique topology, semi-centralized 
+directories, and a full-network-visibility model for client
 knowledge. These properties will not scale past a few hundred servers.
 Section~\ref{sec:maintaining-anonymity} describes some promising
 approaches, but more deployment experience will be helpful in learning
 the relative importance of these bottlenecks.
 
-\emph{Bandwidth classes:} In this paper we assume all onion routers have
-good bandwidth and latency. We should adapt the Morphmix model,
+\emph{Bandwidth classes:} This paper assumes that all ORs have
+good bandwidth and latency. We should instead adopt the Morphmix model,
 where nodes advertise their bandwidth level (DSL, T1, T3), and
-Alice avoids bottlenecks in her path by choosing nodes that match or
-exceed her bandwidth. In this way DSL users can join the Tor network.
+Alice avoids bottlenecks by choosing nodes that match or
+exceed her bandwidth. In this way DSL users can usefully join the Tor
+network.
 
 \emph{Incentives:} Volunteers who run nodes are rewarded with publicity
 and possibly better anonymity \cite{econymics}. More nodes means increased
@@ -1801,7 +1810,7 @@ examining the incentive structures for participating in Tor.
 
 \emph{Cover traffic:} Currently Tor avoids cover traffic because its costs
 in performance and bandwidth are clear, whereas its security benefits are
-not well-understood. We must pursue more research on both link-level cover
+not well understood. We must pursue more research on both link-level cover
 traffic and long-range cover traffic to determine some simple padding
 schemes that offer provable protection against our chosen adversary.
 
@@ -1810,14 +1819,15 @@ schemes that offer provable protection against our chosen adversary.
 %%size cannot be optimal for both types of traffic.
 % This should go in the spec and todo, but not the paper yet. -RD
 
-\emph{Caching at exit nodes:} We should run a caching web proxy at each
-exit node, to provide anonymity for cached pages (Alice's request never
+\emph{Caching at exit nodes:} Perhaps each exit node should run a
+caching web proxy, to improve anonymity for cached pages (Alice's request never
 leaves the Tor network), to improve speed, and to reduce bandwidth cost.
 %XXX and to have a layer to block to block funny stuff out of port 80.
 % is that a useful thing to say?
-On the other hand, forward security is weakened because routers have the
-pages in their cache. We must find the right balance between usability
-and security.
+%     No; we already said it in the exit abuse section. - NM.
+On the other hand, forward security is weakened because caches
+constitute a record of retrieved files.  We must find the right
+balance between usability and security.
 
 \emph{Better directory distribution:} Directory retrieval presents
 a scaling problem, since clients currently download a description of
@@ -1830,15 +1840,15 @@ Section~\ref{sec:rendezvous} has not yet been implemented.  While doing
 so we are likely to encounter additional issues that must be resolved,
 both in terms of usability and anonymity.
 
-\emph{Further specification review:} Although we have a public,
-byte-level specification for the Tor protocols, this document has
-not received extensive external review.  We hope that as Tor
-becomes more widely deployed, more people will examine its
+\emph{Further specification review:} Although have a public
+byte-level specification for the Tor protocols, it needs
+extensive external review.  We hope that as Tor
+is more widely deployed, more people will examine its
 specification.
 
 \emph{Multisystem interoperability:} We are currently working with the
-designer of MorphMix to make the common elements of our two systems
-share a common specification and implementation. So far, this seems
+designer of MorphMix to unify the specification and implementation of
+the common elements of our two systems. So far, this seems
 to be relatively straightforward.  Interoperability will allow testing
 and direct comparison of the two designs for trust and scalability.
 
