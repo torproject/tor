@@ -58,12 +58,12 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_CPUWORKER);
 
   if(conn->inbuf_reached_eof) {
-    log_fn(LOG_WARN,"Read eof. Worker has died.");
+    log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
     if(conn->state != CPUWORKER_STATE_IDLE) {
       /* the circ associated with this cpuworker will have to wait until
        * it gets culled in run_connection_housekeeping(), since we have
        * no way to find out which circ it was. */
-      log_fn(LOG_WARN,"...and leaving a circuit waiting. Oh well.");
+      log_fn(LOG_WARN,"...and it left a circuit queued; abandoning circ.");
       num_cpuworkers_busy--;
     }
     num_cpuworkers--;

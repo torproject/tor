@@ -870,10 +870,12 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert_buf_ok(conn->outbuf);
   }
 
+#if 0 /* computers often go back in time; no way to know */
   assert(!now || conn->timestamp_lastread <= now);
   assert(!now || conn->timestamp_lastwritten <= now);
   assert(conn->timestamp_created <= conn->timestamp_lastread);
   assert(conn->timestamp_created <= conn->timestamp_lastwritten);
+#endif
 
   /* XXX Fix this; no longer so.*/
 #if 0

@@ -353,7 +353,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_DNSWORKER);
 
   if(conn->inbuf_reached_eof) {
-    log_fn(LOG_WARN,"Read eof. Worker dying.");
+    log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
     if(conn->state == DNSWORKER_STATE_BUSY) {
       dns_cancel_pending_resolve(conn->address);
       num_dnsworkers_busy--;
