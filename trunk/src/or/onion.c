@@ -300,13 +300,13 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   log_fn(LOG_INFO, "Found %d servers that might support %d/%d pending connections.",
          n_best_support, best_support, n_pending_connections);
 
-  preferredexits = smartlist_create(MAX_ROUTERS_IN_DIR);
+  preferredexits = smartlist_create(16);
   add_nickname_list_to_smartlist(preferredexits,options.ExitNodes);
 
-  excludedexits = smartlist_create(MAX_ROUTERS_IN_DIR);
+  excludedexits = smartlist_create(16);
   add_nickname_list_to_smartlist(excludedexits,options.ExcludeNodes);
 
-  sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+  sl = smartlist_create(dir->n_routers);
 
   /* If any routers definitely support any pending connections, choose one
    * at random. */
@@ -450,7 +450,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len,
          state->desired_path_len);
 
-  excludednodes = smartlist_create(MAX_ROUTERS_IN_DIR);
+  excludednodes = smartlist_create(16);
   add_nickname_list_to_smartlist(excludednodes,options.ExcludeNodes);
 
   if(cur_len == state->desired_path_len - 1) { /* Picking last node */
@@ -465,7 +465,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     }
   } else if(cur_len == 0) { /* picking first node */
     /* try the nodes in EntryNodes first */
-    sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+    sl = smartlist_create(16);
     add_nickname_list_to_smartlist(sl,options.EntryNodes);
     /* XXX one day, consider picking chosen_exit knowing what's in EntryNodes */
     remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
@@ -473,7 +473,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     choice = smartlist_choose(sl);
     smartlist_free(sl);
     if(!choice) {
-      sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+      sl = smartlist_create(32);
       router_add_running_routers_to_smartlist(sl);
       remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
       smartlist_subtract(sl,excludednodes);
@@ -487,7 +487,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     }
   } else {
     log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
-    sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+    sl = smartlist_create(32);
     router_add_running_routers_to_smartlist(sl);
     remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
     for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {

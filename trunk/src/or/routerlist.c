@@ -164,7 +164,7 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
   if(!routerlist)
     return NULL;
 
-  sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+  sl = smartlist_create(8);
   for(i=0;i<routerlist->n_routers;i++) {
     router = routerlist->routers[i];
     if(router->dir_port > 0 && router->is_running)
@@ -604,8 +604,8 @@ router_get_routerlist_from_directory_impl(const char *str,
   } else {
     end = str + strlen(str);
   }
-  
-  tokens = smartlist_create(128);
+
+  tokens = smartlist_create(16);
   if (tokenize_string(str,end,tokens,1)) {
     log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
   }
@@ -617,7 +617,7 @@ router_get_routerlist_from_directory_impl(const char *str,
            tok->args[0]);
     goto err;
   }
-  
+
   tok = (directory_token_t*)tokens->list[0];
   if (tok->tp != K_SIGNED_DIRECTORY) {
     log_fn(LOG_WARN, "Directory doesn't start with signed-directory."); 
@@ -671,7 +671,7 @@ router_get_routerlist_from_directory_impl(const char *str,
     token_free((directory_token_t*)tokens->list[i]);
   }
   smartlist_free(tokens);
-  tokens = smartlist_create(128);
+  tokens = smartlist_create(16);
   if (tokenize_string(str,str+strlen(str),tokens,1)<0) {
     log_fn(LOG_WARN, "Error tokenizing signature"); goto err;
   }
@@ -817,7 +817,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     log_fn(LOG_WARN, "Couldn't compute router hash.");
     return NULL;
   }
-  tokens = smartlist_create(128);
+  tokens = smartlist_create(16);
   if (tokenize_string(s,end,tokens,0)) {
     log_fn(LOG_WARN, "Error tokeninzing router descriptor."); goto err;
   }
