@@ -5,8 +5,11 @@ tor (0.0.8+0.0.9pre5-1) unstable; urgency=low
   * Make sure all patches apply cleanly.
   * No longer use --pidfile, --logfile, and --runasdaemon
     command line options.  Set them in the configfile instead.
+  * Change the description slightly, to say "don't rely on the current Tor
+    network if you really need strong anonymity", instead of "Tor will not
+    provide anonymity currently".
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 10 Nov 2004 04:41:42 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed, 10 Nov 2004 04:43:10 +0100
 
 tor (0.0.8+0.0.9pre4-1) unstable; urgency=low
 
