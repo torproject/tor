@@ -62,7 +62,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
 }
 
 rend_service_descriptor_t *rend_parse_service_descriptor(
-				       const char *str, int len)
+                           const char *str, int len)
 {
   rend_service_descriptor_t *result = NULL;
   int keylen, asn1len, i;
@@ -95,9 +95,9 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
   keylen = crypto_pk_keysize(result->pk);
   if (end-cp != keylen) goto truncated;
   if (crypto_pk_public_checksig_digest(result->pk,
-				       (char*)str,cp-str, /* data */
-				       (char*)cp,end-cp  /* signature*/
-				       )<0) {
+                                       (char*)str,cp-str, /* data */
+                                       (char*)cp,end-cp  /* signature*/
+                                       )<0) {
     log_fn(LOG_WARN, "Bad signature on service descriptor");
     goto error;
   }

@@ -282,8 +282,8 @@ void directory_has_arrived(void) {
   log_fn(LOG_INFO, "We now have a directory.");
 
   /* just for testing */
-  directory_initiate_command(router_pick_directory_server(),
-                             DIR_PURPOSE_FETCH_RENDDESC, "foo", 3);
+//  directory_initiate_command(router_pick_directory_server(),
+//                             DIR_PURPOSE_FETCH_RENDDESC, "foo", 3);
 
   rend_services_init(); /* get bob to initialize all his hidden services */
 

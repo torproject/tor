@@ -89,7 +89,7 @@ static void add_service(rend_service_t *service)
       p = smartlist_get(service->ports, i);
       addr.s_addr = htonl(p->real_address);
       log_fn(LOG_INFO,"Service maps port %d to %s:%d",
-	     p->virtual_port, inet_ntoa(addr), p->real_port);
+             p->virtual_port, inet_ntoa(addr), p->real_port);
     }
   }
 }
@@ -126,13 +126,13 @@ static rend_service_port_config_t *parse_port_config(const char *string)
       r = tor_inet_aton(addrstring, &addr);
       tor_free(addrstring);
       if (!r) {
-	log_fn(LOG_WARN,"Unparseable address in hidden service port configuration");
-	return NULL;
+        log_fn(LOG_WARN,"Unparseable address in hidden service port configuration");
+        return NULL;
       }
       realport = strtol(colon+1, &endptr, 10);
       if (*endptr) {
-	log_fn(LOG_WARN,"Unparseable or missing port in hidden service port configuration.");
-	return NULL;
+        log_fn(LOG_WARN,"Unparseable or missing port in hidden service port configuration.");
+        return NULL;
       }
     } else if (strchr(string, '.') && tor_inet_aton(string, &addr)) {
       /* We have addr; use deafult port. */
@@ -141,8 +141,8 @@ static rend_service_port_config_t *parse_port_config(const char *string)
       /* No addr:port, no addr -- must be port. */
       realport = strtol(string, &endptr, 10);
       if (*endptr) {
-	log_fn(LOG_WARN, "Unparseable of missing port in hidden service port configuration.");
-	return NULL;
+        log_fn(LOG_WARN, "Unparseable of missing port in hidden service port configuration.");
+        return NULL;
       }
       addr.s_addr = htonl(0x7F000001u); /* Default to 127.0.0.1 */
     }
@@ -173,7 +173,7 @@ int rend_config_services(or_options_t *options)
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service)
-	add_service(service);
+        add_service(service);
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
@@ -188,8 +188,8 @@ int rend_config_services(or_options_t *options)
     if (!strcasecmp(line->key, "HiddenServicePort")) {
       portcfg = parse_port_config(line->value);
       if (!portcfg) {
-	rend_service_free(service);
-	return -1;
+        rend_service_free(service);
+        return -1;
       }
       smartlist_add(service->ports, portcfg);
     } else if (!strcasecmp(line->key, "HiddenServiceNodes")) {
@@ -257,7 +257,7 @@ int rend_service_init_keys(void)
 
     /* Load key */
     if (strlcpy(fname,s->directory,512) >= 512 ||
-	strlcat(fname,"/private_key",512) >= 512) {
+        strlcat(fname,"/private_key",512) >= 512) {
       log_fn(LOG_WARN, "Directory name too long: '%s'", s->directory);
       return -1;
     }
@@ -275,7 +275,7 @@ int rend_service_init_keys(void)
       return -1;
     }
     if (strlcpy(fname,s->directory,512) >= 512 ||
-	strlcat(fname,"/hostname",512) >= 512) {
+        strlcat(fname,"/hostname",512) >= 512) {
       log_fn(LOG_WARN, "Directory name too long: '%s'", s->directory);
       return -1;
     }
