@@ -19,3 +19,6 @@ dist-rpm: dist
 	cp tor-$(VERSION).tar.gz /tmp/tor-rpm-build/SOURCES
 	rpmbuild -ba --define '_topdir /tmp/tor-rpm-build' contrib/tor.spec
 	mv /tmp/tor-rpm-build/*RPMS/* .
+
+doxygen:
+	doxygen && cd doc/doxygen/latex && make
