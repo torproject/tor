@@ -51,35 +51,35 @@ N       - per-month byte allowances.
             window within month to be up.  Stay up until allowance is
             used.  Adjust next month's window based on outcome.  Hibernate
             when we're not up.
-	  - Hibernate means "stop accepting connections, and start sleeping"
+          - Hibernate means "stop accepting connections, and start sleeping"
 N       - Handle rendezvousing with unverified nodes.
           - Specify: Stick rendezvous point's key in INTRODUCE cell.
-	      Bob should _always_ use key from INTRODUCE cell.
-	  - Implement.
+            Bob should _always_ use key from INTRODUCE cell.
+          - Implement.
 N       - Bail out early if datadirectory is NULL.
 N       - Pure C tor_resolve
 N       - node 'groups' that are known to be in the same zone of control.
           - Nodes can list their coadministrated nodes.
-	  - Users can list other coadministrated nodes if they like.
-	  - Never choose two coadministrated nodes in the same circuit.
+          - Users can list other coadministrated nodes if they like.
+          - Never choose two coadministrated nodes in the same circuit.
 R       - figure out enclaves, e.g. so we know what to recommend that people
           do, and so running a tor server on your website is helpful.
-	  - Do enclaves for same IP only.
-	  - Resolve first, then if IP is an OR, connect to next guy.
+          - Do enclaves for same IP only.
+          - Resolve first, then if IP is an OR, connect to next guy.
 N       - let tor servers use http proxies for port 80 exits
-	  - For squid, privoxy, etc on exitconnections.
-	  - (Don't need full HTTP proxy support; assume Host: header
-	    is set correctly.)  Use generic port redirector for
-	    IP/bits:Port->IP:Port .
+          - For squid, privoxy, etc on exitconnections.
+          - (Don't need full HTTP proxy support; assume Host: header
+            is set correctly.)  Use generic port redirector for
+            IP/bits:Port->IP:Port .
 N       - the user interface interface
-	  - Skeleton only.
-	  - Implement parts along with trivial fun gui.
+          - Skeleton only.
+          - Implement parts along with trivial fun gui.
 N       - add ipv6 support.
           - Spec issue: if a resolve returns an IP4 and an IP6 address,
             which to use?
 R       - learn from ben about his openssl-reinitialization-trick to
           rotate tls keys without making new connections.
-	  - (Roger grabs Ben next time he sees him on IRC) 
+          - (Roger grabs Ben next time he sees him on IRC) 
         D nt services on win32.
 
       0.0.8:
