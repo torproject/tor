@@ -268,9 +268,9 @@ open problems.
 Modern anonymity designs date to Chaum's Mix-Net\cite{chaum-mix} design of
 1981.  Chaum proposed hiding sender-recipient connections by wrapping
 messages in several layers of public key cryptography, and relaying them
-through a path composed of Mix servers.  Mix servers in turn decrypt, delay,
-and re-order messages, before relay them along the path towards their
-destinations.
+through a path composed of ``Mixes.''  These mixes in turn decrypt, delay,
+and re-order messages, before relaying them along the sender-selected
+path towards their destinations.
 
 Subsequent relay-based anonymity designs have diverged in two
 principal directions.  Some have attempted to maximize anonymity at
@@ -643,33 +643,35 @@ the connection are unique enough.  (This is not to say that Tor offers
 no resistance to traffic confirmation; it does.  We defer discussion
 of this point and of particular attacks until Section~\ref{sec:attacks},
 after we have described Tor in more detail.)
+% XXX We need to say what traffic analysis is:  How about...
+On the other hand, we {\it do} try to prevent an attacker from
+performing traffic analysis: that is, attempting to learn the communication
+partners of an arbitrary user.
+% XXX If that's not right, what is?  It would be silly to have a
+% threat model section without saying what we want to prevent the
+% attacker from doing. -NM
+% XXX Also, do we want to mention linkability or building profiles? -NM
 
-\SubSection{Known attacks against low-latency anonymity systems}
-\label{subsec:known-attacks}
-% Should be merged into ``Threat model'' and reiterated in Attacks. -NM
+Our assumptions about our adversary's capabilities imply a number of
+possible attacks against users' anonymity.  Our adversary might try to
+mount passive attacks by observing the edges of the network and
+correlating traffic entering and leaving the network: either because
+of relationships in packet timing; relationships in the volume of data
+sent; [XXX simple observation??]; or relationships in any externally
+visible user-selected options.  The adversary can also mount active
+attacks by trying to compromise all the servers' keys in a
+path---either through illegitimate means or through legal coercion in
+unfriendly jurisdiction; by selectively DoSing trustworthy servers; by
+introducing patterns into entering traffic that can later be detected;
+or by modifying data entering the network and hoping that trashed data
+comes out the other end.  The attacker can additionally try to
+decrease the network's reliability by performing antisocial activities
+from reliable servers and trying to get them taken down.
+% XXX Should there be more or less?  Should we turn this into a
+% bulleted list?  Should we cut it entirely?
 
-We discuss each of these attacks in more detail below, along with the
-aspects of the Tor design that provide defense. We provide a summary
-of the attacks and our defenses against them in Section~\ref{sec:attacks}.
-
-Passive attacks:
-simple observation,
-timing correlation,
-size correlation,
-option distinguishability,
-
-Active attacks:
-key compromise,
-iterated subpoena,
-run recipient,
-run a hostile node,
-compromise entire path,
-selectively DOS servers,
-introduce timing into messages,
-directory attacks,
-tagging attacks,
-smear attacks,
-entrapment attacks
+We list these attacks and more, and describe our defenses against them
+in Section~\ref{sec:attacks}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
