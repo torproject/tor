@@ -18,7 +18,7 @@ For scalability:
 
 For 0.0.8:
 
-NICK  milestone 1:
+      milestone 1:
         o make all ORs serve the directory too.
           o "AuthoritativeDir 1" for dirservers
           o non-authorative servers with dirport publish opt dircacheport
@@ -74,9 +74,9 @@ NICK      - Possible to get autoconf to easily install things into ~/.tor?
       milestone 3:
         - users can set their bandwidth, or we auto-detect it:
           - advertised bandwidth defaults to 10KB
-          - advertised bandwidth is the min of max seen in each direction
+          o advertised bandwidth is the min of max seen in each direction
             in the past N seconds.
-NICK        - calculate this
+            o calculate this
           o not counting "local" connections
           - round detected bandwidth up to nearest 10KB
         - client software not upload descriptor until:
@@ -91,15 +91,33 @@ NICK    - Reputation info needs to give better weight to recent events than
         - Have clients and dirservers preserve reputation info over
           reboots.
         - clients choose nodes proportional to advertised bandwidth
-        - authdirserver includes descriptor and lists as running iff:
+        o authdirserver includes descriptor.
+        -  and lists as running iff:
           - he can connect to you
           - he has successfully extended to you
           - he has sufficient mean-time-between-failures
-	- Don't accept ORs with nicknames same as verified ORs' nicknames.
+        - Don't accept ORs with nicknames same as verified ORs' nicknames.
         - add new "Middleman 1" config variable?
           o if torrc not found, exitpolicy reject *:*
         o change if(options.ORPort) to what we really mean.
         o same with socksport.
+        o get contrib/tor_resolve into the tarball and installed
+          - and working
+
+      for pre1:
+        - 0.0.8 ORs should use identity key for 0.0.7 ORs sometimes but
+          not always?
+        - we should publish advertised_bandwidth in descriptor
+        - bug: 0.0.8 OPs can't extend from an 0.0.7 OR to an 0.0.8 OR
+
+      post pre1:
+        - when we sigint tor, the dns/cpuworkers don't intercept sigint?
+        - "AcceptOnlyVerifiedRouters" config option?
+        - why does common/util.c build-depend on or/or.h ?
+        - ORs use uniquer default nicknames
+        - Tors deal appropriately when a newly-verified router has the
+          same nickname as another router they know about
+
 
       ongoing:
         . rename/rearrange functions for what file they're in
@@ -114,7 +132,7 @@ NICK    . Windows port
           . works as server
             - can be configured
           - robust as a server
-	  . Usable as NT service
+          . Usable as NT service
           - docs for building in win
           - installer
 
