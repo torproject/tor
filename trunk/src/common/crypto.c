@@ -234,10 +234,9 @@ int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env, FILE *src)
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-/*
     if (env->key)
-      RSA_free((RSA *)env->key);*/
-    env->key = (unsigned char *)PEM_read_RSAPrivateKey(src, (RSA **)&env->key, NULL, NULL);
+      RSA_free((RSA *)env->key);
+    env->key = (unsigned char *)PEM_read_RSAPrivateKey(src, NULL, NULL, NULL);
     if (!env->key)
       return -1;
     break;
@@ -298,7 +297,9 @@ int crypto_pk_read_public_key_from_file(crypto_pk_env_t *env, FILE *src)
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-    env->key = (unsigned char *)PEM_read_RSAPublicKey(src, (RSA **)&env->key, NULL, NULL);
+    if(env->key)
+      RSA_free((RSA *)env->key); 
+    env->key = (unsigned char *)PEM_read_RSAPublicKey(src, NULL, NULL, NULL);
     if (!env->key)
       return -1;
     break;
