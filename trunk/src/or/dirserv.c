@@ -473,7 +473,7 @@ list_running_servers(char **nicknames_out)
     } else {
       name = tor_malloc(HEX_DIGEST_LEN+2);
       *name = '$';
-      base16_encode(name+1, HEX_DIGEST_LEN, conn->identity_digest, DIGEST_LEN);
+      base16_encode(name+1, HEX_DIGEST_LEN+1, conn->identity_digest, DIGEST_LEN);
     }
 
     if(conn->state == OR_CONN_STATE_OPEN)
