@@ -211,17 +211,17 @@ crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode
   crypto_cipher_env_t *crypto = NULL;
 
   if (! (crypto = crypto_new_cipher_env(cipher_type))) {
-    log_fn(LOG_ERR, "Unable to allocate crypto object");
+    log_fn(LOG_WARNING, "Unable to allocate crypto object");
     return NULL;
   }
 
   if (crypto_cipher_set_key(crypto, key)) {
-    log_fn(LOG_ERR, "Unable to set key: %s", crypto_perror());
+    log_fn(LOG_WARNING, "Unable to set key: %s", crypto_perror());
     goto error;
   }
 
   if (crypto_cipher_set_iv(crypto, iv)) {
-    log_fn(LOG_ERR, "Unable to set iv: %s", crypto_perror());
+    log_fn(LOG_WARNING, "Unable to set iv: %s", crypto_perror());
     goto error;
   }
   
@@ -231,7 +231,7 @@ crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode
     r = crypto_cipher_decrypt_init_cipher(crypto);
 
   if (r) {
-    log_fn(LOG_ERR, "Unable to initialize cipher: %s", crypto_perror());
+    log_fn(LOG_WARNING, "Unable to initialize cipher: %s", crypto_perror());
     goto error;
   }
   return crypto;
@@ -352,45 +352,38 @@ int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env, FILE *src)
 int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile)
 {
   FILE *f_pr;
-  int retval = 0;
  
   assert(env && keyfile);
   
-  if (strspn(keyfile,CONFIG_LEGAL_FILENAME_CHARACTERS) == strlen(keyfile)) /* filename contains legal characters only */
-  {
-    /* open the keyfile */
-    f_pr=fopen(keyfile,"rb");
-    if (!f_pr)
-      return -1;
-    
-    /* read the private key */
-    retval = crypto_pk_read_private_key_from_file(env, f_pr);
-    fclose(f_pr);
-    if (retval == -1)
-    {
-      log_fn(LOG_ERR,"Error reading private key : %s",crypto_perror());
-      return -1;
-    }
-      
-    /* check the private key */
-    retval = crypto_pk_check_key(env);
-    if (retval == 0)
-    {
-      log_fn(LOG_ERR,"Private key read but is invalid : %s.", crypto_perror());
-      return -1;
-    }
-    else if (retval == -1)
-    {
-      log_fn(LOG_ERR,"Private key read but validity checking failed : %s",crypto_perror());
-      return -1;
-    }
-    else if (retval == 1)
-    {
-      return 0;
-    }
-  } /* filename contains legal characters only */
+  if(strspn(keyfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != strlen(keyfile)) {
+    /* filename contains nonlegal characters */
+    return -1;
+  }
+
+  /* open the keyfile */
+  f_pr=fopen(keyfile,"rb");
+  if (!f_pr)
+    return -1;
   
-  return -1; /* report error */
+  /* read the private key */
+  if(crypto_pk_read_private_key_from_file(env, f_pr) < 0) {
+    log_fn(LOG_WARNING,"Error reading private key : %s",crypto_perror());
+    fclose(f_pr);
+    return -1;
+  }
+  fclose(f_pr);
+    
+  /* check the private key */
+  switch(crypto_pk_check_key(env)) {
+    case 0:
+      log_fn(LOG_WARNING,"Private key read but is invalid : %s.", crypto_perror());
+      return -1;
+    case -1:
+      log_fn(LOG_WARNING,"Private key read but validity checking failed : %s",crypto_perror());
+      return -1;
+    /* case 1: fall through */
+  }
+  return 0;
 }
 
 int crypto_pk_read_public_key_from_file(crypto_pk_env_t *env, FILE *src)
@@ -989,14 +982,14 @@ int crypto_seed_rng()
     n = fread(buf, 1, 20, f);
     fclose(f);
     if (n != 20) {
-      log_fn(LOG_INFO, "Error reading from entropy source");
+      log_fn(LOG_WARNING, "Error reading from entropy source");
       return -1;
     }
     RAND_seed(buf, 20);
     return 0;
   }
 
-  log_fn(LOG_INFO, "Cannot seed RNG -- no entropy source found.");
+  log_fn(LOG_WARNING, "Cannot seed RNG -- no entropy source found.");
   return -1;
 }
 
@@ -1053,3 +1046,4 @@ base64_decode(char *dest, int destlen, char *src, int srclen)
   ret += len;
   return ret;
 }
+

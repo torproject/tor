@@ -20,13 +20,9 @@ static INLINE const char *sev_to_string(int severity) {
   switch(severity) {
     case LOG_DEBUG:   return "debug";
     case LOG_INFO:    return "info";
-    case LOG_NOTICE:  return "notice";
     case LOG_WARNING: return "warn";
     case LOG_ERR:     return "err";
-    case LOG_CRIT:    return "crit";
-    case LOG_ALERT:   return "alert";
-    case LOG_EMERG:   return "emerg";
-    default:          return "UNKNOWN";
+    default:          assert(0); return "UNKNOWN";
   }
 }
 
@@ -167,3 +163,4 @@ void add_file_log(int loglevel, const char *filename)
   add_stream_log(loglevel, filename, f);
   logfiles->needs_close = 1;
 }
+

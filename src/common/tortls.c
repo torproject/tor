@@ -214,7 +214,7 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
   if (rsa) {
     cert = tor_tls_create_certificate(rsa, nickname);
     if (!cert) {
-      log(LOG_ERR, "Error creating certificate");
+      log(LOG_WARNING, "Error creating certificate");
       return -1;
     }
   }
@@ -311,7 +311,7 @@ tor_tls_read(tor_tls *tls, char *cp, int len)
   r = SSL_read(tls->ssl, cp, len);
   if (r > 0)
     return r;
-  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_ERR);
+  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_INFO);
   if (err == _TOR_TLS_ZERORETURN) {
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
@@ -335,7 +335,7 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
   if (n == 0)
     return 0;
   r = SSL_write(tls->ssl, cp, n);
-  err = tor_tls_get_error(tls, r, 0, "writing", LOG_ERR);
+  err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO);
   if (err == TOR_TLS_DONE) {
     return r;
   } else {
@@ -358,7 +358,7 @@ tor_tls_handshake(tor_tls *tls)
   } else {
     r = SSL_connect(tls->ssl);
   }
-  r = tor_tls_get_error(tls,r,0, "handshaking", LOG_ERR);
+  r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO);
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN; 
   }
@@ -385,7 +385,7 @@ tor_tls_shutdown(tor_tls *tls)
 	r = SSL_read(tls->ssl, buf, 128);
       } while (r>0);
       err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading to shut down", 
-			      LOG_ERR);
+			      LOG_INFO);
       if (err == _TOR_TLS_ZERORETURN) {
 	tls->state = TOR_TLS_ST_GOTCLOSE;
 	/* fall through... */
@@ -401,7 +401,7 @@ tor_tls_shutdown(tor_tls *tls)
       return TOR_TLS_DONE;
     }
     err = tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO, "shutting down", 
-			    LOG_ERR);
+			    LOG_INFO);
     if (err == _TOR_TLS_SYSCALL) {
       /* The underlying TCP connection closed while we were shutting down. */
       tls->state = TOR_TLS_ST_CLOSED; 
@@ -414,7 +414,7 @@ tor_tls_shutdown(tor_tls *tls)
        */
       if (tls->state == TOR_TLS_ST_GOTCLOSE || 
 	  tls->state == TOR_TLS_ST_SENTCLOSE) {
-	log(LOG_ERR, 
+	log(LOG_WARNING, 
 	    "TLS returned \"half-closed\" value while already half-closed");
 	return TOR_TLS_ERROR;
       }
