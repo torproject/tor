@@ -381,13 +381,13 @@ static int can_reach_or_port = 0;
 /** Whether we can reach our DirPort from the outside. */
 static int can_reach_dir_port = 0;
 
-/** Return 1 if all open ports are known reachable; else return 0. */
-int check_whether_ports_reachable(void) {
-  if (!can_reach_or_port)
-    return 0;
-  if (get_options()->DirPort && !can_reach_dir_port)
-    return 0;
-  return 1;
+/** Return 1 if or port is known reachable; else return 0. */
+int check_whether_orport_reachable(void) {
+  return can_reach_or_port;
+}
+/** Return 1 if we don't have a dirport configured, or if it's reachable. */
+int check_whether_dirport_reachable(void) {
+  return !get_options()->DirPort || can_reach_dir_port;
 }
 
 void consider_testing_reachability(void) {
@@ -397,11 +397,11 @@ void consider_testing_reachability(void) {
     return;
   }
 
-  if (!can_reach_or_port) {
-    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 0, 1);
+  if (!check_whether_orport_reachable()) {
+    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   }
 
-  if (!can_reach_dir_port && me->dir_port) {
+  if (!check_whether_dirport_reachable()) {
     if (me) {
       directory_initiate_command_router(me, DIR_PURPOSE_FETCH_DIR, 1, NULL, NULL, 0);
     } else {
@@ -410,17 +410,11 @@ void consider_testing_reachability(void) {
   }
 }
 
-static void ports_now_reachable(void) {
-  log_fn(LOG_NOTICE,"Your server is reachable. Publishing server descriptor.");
-}
-
 /** Annotate that we found our ORPort reachable. */
 void router_orport_found_reachable(void) {
   if (!can_reach_or_port) {
-    log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.");
+    log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent. Publishing server descriptor.");
     can_reach_or_port = 1;
-    if (check_whether_ports_reachable())
-      ports_now_reachable();
   }
 }
 
@@ -429,8 +423,6 @@ void router_dirport_found_reachable(void) {
   if (!can_reach_dir_port) {
     log_fn(LOG_NOTICE,"Your DirPort is reachable from the outside. Excellent.");
     can_reach_dir_port = 1;
-    if (check_whether_ports_reachable())
-      ports_now_reachable();
   }
 }
 
@@ -495,7 +487,7 @@ static int decide_if_publishable_server(time_t now) {
   if (options->AuthoritativeDir)
     return 1;
 
-  return check_whether_ports_reachable();
+  return check_whether_orport_reachable();
 }
 
 void consider_publishable_server(time_t now, int force) {
@@ -687,7 +679,8 @@ int router_rebuild_descriptor(int force) {
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = options->ORPort;
-  ri->dir_port = hibernating ? 0 : options->DirPort;
+  ri->dir_port = (hibernating || !check_whether_dirport_reachable()) ?
+                 0 : options->DirPort;
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());

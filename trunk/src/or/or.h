@@ -1711,7 +1711,8 @@ void rotate_onion_key(void);
 crypto_pk_env_t *init_key_from_file(const char *fname);
 int init_keys(void);
 
-int check_whether_ports_reachable(void);
+int check_whether_orport_reachable(void);
+int check_whether_dirport_reachable(void);
 void consider_testing_reachability(void);
 void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);

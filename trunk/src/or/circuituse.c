@@ -562,7 +562,7 @@ circuit_testing_failed(circuit_t *circ, int at_last_hop) {
   routerinfo_t *me = router_get_my_routerinfo();
 
   if (!at_last_hop)
-    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 0, 1);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   else
     log_fn(LOG_INFO,"Our testing circuit (to see if your ORPort is reachable) has failed. I'll try again later.");
 }
