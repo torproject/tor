@@ -31,6 +31,7 @@ struct tor_tls_st {
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED
   } state;
   int isServer;
+  int wantwrite_n; /* 0 normally, >0 if we returned wantwrite last time */
 };
 
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa, 
@@ -293,6 +294,7 @@ tor_tls_new(int sock, int isServer)
   SSL_set_fd(result->ssl, sock);
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
+  result->wantwrite_n = 0;
   return result;
 }
 
@@ -343,13 +345,24 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
   assert(tls->state == TOR_TLS_ST_OPEN);
   if (n == 0)
     return 0;
+  if(tls->wantwrite_n) {
+    /* if WANTWRITE last time, we must use the _same_ n as before */
+    assert(n >= tls->wantwrite_n);
+    log_fn(LOG_INFO,"resuming pending-write, (%d to flush, reusing %d)",
+           n, tls->wantwrite_n);
+    n = tls->wantwrite_n;
+    tls->wantwrite_n = 0;
+  }
   r = SSL_write(tls->ssl, cp, n);
   err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO);
   if (err == TOR_TLS_DONE) {
     return r;
-  } else {
-    return err;
-  }  
+  }
+  if (err == TOR_TLS_WANTWRITE) {
+    log_fn(LOG_INFO,"wantwrite. remembering the number %d.",n);
+    tls->wantwrite_n = n;
+  }
+  return err;
 }
 
 /* Perform initial handshake on 'tls'.  When finished, returns
