@@ -506,7 +506,7 @@ char *rep_hist_get_bandwidth_lines(void)
   for (r=0;r<2;++r) {
     b = r?read_array:write_array;
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
-    sprintf(cp, "opt %s-history %s (%d s)", r?"read":"write", t,
+    sprintf(cp, "opt %s %s (%d s)", r?"read-history ":"write-history", t,
             NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
 
