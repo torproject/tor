@@ -193,7 +193,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
 
 #ifdef EVERYONE_HAS_AES
-/* Everybody is running OpenSSL 0.9.7 or later, so no backward compatibiliy
+/* Everybody is running OpenSSL 0.9.7 or later, so no backward compatibility
  * is needed. */
 #define CIPHER_LIST TLS1_TXT_DHE_RSA_WITH_AES_128_SHA
 #elif defined(TLS1_TXT_DHE_RSA_WITH_AES_128_SHA)
