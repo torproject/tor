@@ -17,11 +17,11 @@ Flag-day changes: (things which are backward incompatible)
 	o Generate link keys on startup; don't store them to disk.
         o make onion keys include oaep padding, so you can tell
           if you decrypted it correctly
-	- Rotate onion keys as needed
-	- Rotate TLS connections
-	- Set expiration times on X509 certs
-        . add bandwidthrate and bandwidthburst to server descriptor
-        - directories need to say who signed them.
+	o Rotate onion keys as needed
+	- Rotate TLS connections [arma]
+	- Set expiration times on X509 certs [nickm]
+        . add bandwidthrate and bandwidthburst to server descriptor [nickm]
+        - directories need to say who signed them. [nickm]
         - what other pieces of the descriptors need to change?
           maybe add a section for who's connected to a given router?
           add a flexible section for reputation info?
