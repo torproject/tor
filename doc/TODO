@@ -124,6 +124,8 @@ NICK    - Reputation info needs to give better weight to recent events than
         - make advertised_server_mode() ORs fetch dirs more often.
         - should the running-routers list put unverified routers at the
           end?
+        - tor-resolve needs a man page
+        - tor-resolve should make use of cached answers?
 
 
       ongoing:
