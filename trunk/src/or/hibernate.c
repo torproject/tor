@@ -83,7 +83,6 @@ static uint32_t expected_bandwidth_usage = 0;
 
 static void reset_accounting(time_t now);
 static int read_bandwidth_usage(void);
-static int record_bandwidth_usage(time_t now);
 static time_t start_of_accounting_period_after(time_t now);
 static time_t start_of_accounting_period_containing(time_t now);
 static void accounting_set_wakeup_time(void);
@@ -316,12 +315,11 @@ accounting_set_wakeup_time(void)
          (int)(unsigned char)digest[0], buf);
 }
 
-/* XXXX009 This should also get called on HUP and shutdown. */
 #define BW_ACCOUNTING_VERSION 1
 /** Save all our bandwidth tracking information to disk. Return 0 on
  * success, -1 on failure*/
-static int
-record_bandwidth_usage(time_t now)
+int
+accounting_record_bandwidth_usage(time_t now)
 {
   char buf[128];
   char fname[512];
@@ -483,7 +481,7 @@ static void hibernate_begin(int new_state, time_t now) {
   }
 
   hibernate_state = new_state;
-  record_bandwidth_usage(time(NULL));
+  accounting_record_bandwidth_usage(now);
 }
 
 /** Called when we've been hibernating and our timeout is reached. */
@@ -539,7 +537,7 @@ hibernate_go_dormant(time_t now) {
     connection_mark_for_close(conn);
   }
 
-  record_bandwidth_usage(time(NULL));
+  accounting_record_bandwidth_usage(now);
 }
 
 /** Called when hibernate_end_time has arrived. */
