@@ -1669,6 +1669,7 @@ init_from_config(int argc, char **argv)
       fname = fn;
     } else {
       tor_free(fn);
+#ifndef MS_WINDOWS
       fn = expand_filename("~/.torrc");
       if (fn && file_status(fn) == FN_FILE) {
         fname = fn;
@@ -1676,13 +1677,16 @@ init_from_config(int argc, char **argv)
         tor_free(fn);
         fname = get_default_conf_file();
       }
+#else
+      fname = get_default_conf_file();
+#endif
     }
   }
   tor_assert(fname);
   log(LOG_DEBUG, "Opening config file '%s'", fname);
 
-  cf = read_file_to_str(fname, 0);
-  if (!cf) {
+  if (file_status(fname) != FN_FILE ||
+      !(cf = read_file_to_str(fname,0))) {
     if (using_default_torrc == 1) {
       log(LOG_NOTICE, "Configuration file '%s' not present, "
           "using reasonable defaults.", fname);
