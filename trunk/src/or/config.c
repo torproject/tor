@@ -119,7 +119,7 @@ static config_var_t config_vars[] = {
   VAR("SysLog",              LINELIST, LogOptions),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User),
-  { NULL, NULL, NULL }
+  { NULL, CONFIG_TYPE_OBSOLETE, 0 }
 };
 #undef VAR
 #undef OBSOLETE
