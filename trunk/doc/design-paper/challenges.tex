@@ -273,7 +273,16 @@ networks.
 \subsection{Other}
 
 Tor's scope: How much should Tor aim to do? Applications that leak
-data. We can say they're not our problem, but they're somebody's problem.
+data: we can say they're not our problem, but they're somebody's problem.
+Also, the more widely deployed Tor becomes, the more people who need a
+deployed overlay network tell us they'd like to use us if only we added
+the following more features. For example, Blossom \cite{blossom} and
+random community wireless projects both want source-routable overlay
+networks for their own purposes. Fortunately, our modular design separates
+routing from node discovery; so we could implement Morphmix in Tor just
+by implementing the Morphmix-specific node discovery and path selection
+pieces. On the other hand, we could easily get distracted building a
+general-purpose overlay library, and we're only a few developers.
 
 Should we allow revocation of anonymity if a threshold of
 servers want to?
