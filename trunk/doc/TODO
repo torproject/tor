@@ -33,6 +33,7 @@ Agenda to be resolved:
     pre- or post- tls alternate auth mechanisms.
     what we could get from windows developers.
   Look at having smallcells and largecells
+  Bandwidth classes. How do we do this so it works?
   Rendezvous point design and spec.
   Non-clique topologies -- easy to implement, hard to decide topology.
   Certification/accreditation
