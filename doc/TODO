@@ -17,15 +17,42 @@ For scalability:
         - Handle full buffers without totally borking
 
 For dtor:
-        . rename/rearrange functions for what file they're in
+
+      pre1:
         - make all ORs serve the directory too.
-          - servers publish opt dircacheport
+          - "AuthoritativeDir 1" for dirservers
+          - non-authorative servers with dirport publish opt dircacheport
           - make clients read that and use it.
           - make clients able to read a normal dirport from non-trusted OR too
-          - "AuthoritativeDir 1" for dirservers
           - make ORs parse-and-keep the directory they pull down
           - authoritativedirservers should pull down directories from
             other authdirservers, to merge descriptors.
+        - Have clients and dirservers preserve reputation info over
+          reboots.
+        - allow dirservers to serve running-router list separately.
+          - "get /running-routers" will fetch just this.
+          - ORs keep this too, and serve it
+        - tor remembers descriptor-lists across reboots.
+        - Packages define datadir as /var/lib/tor/. If no datadir is defined,
+          then choose, make, and secure ~/.tor as datadir.
+        - Contact info, pgp fingerprint, comments in router desc.
+          - Add a ContactInfo line to torrc, which gets published in
+            descriptor (as opt)
+        - write tor version at the top of each log file
+
+      pre2:
+        - refer to things by key:
+          - extend cells need ip:port:identitykeyhash.
+          - also use this in intro points and rendezvous points, and
+            hidserv descs.
+          - figure out what to do about ip:port:differentkey
+        - ORs connect on demand. attach circuits to new connections, keep
+          create cells around somewhere, send destroy if fail.
+        - nickname defaults to first piece of hostname
+        - running-routers list refers to nickname if verified, else
+          hash-base64'ed.
+
+      pre3:
         - users can set their bandwidth, or we auto-detect it:
           - advertised bandwidth defaults to 10KB
           - advertised bandwidth is the min of max seen in each direction
@@ -44,29 +71,11 @@ For dtor:
           - he can connect to you
           - he has successfully extended to you
           - he has sufficient mean-time-between-failures
-        - Have clients and dirservers preserve reputation info over
-          reboots.
-        - nickname defaults to first piece of hostname
-        - running-routers list refers to nickname if verified, else
-          hash-base64'ed.
-        - allow dirservers to server running-router list separately.
-          - "get /running-routers" will fetch just this.
-        - tor remembers descriptor-lists across reboots.
-        - Packages define datadir as /var/lib/tor/. If no datadir is defined,
-          then choose, make, and secure ~/.tor as datadir.
-        - refer to things by key:
-          - extend cells need ip:port:identitykeyhash.
-          - also use this in intro points and rendezvous points, and
-            hidserv descs.
-          - figure out what to do about ip:port:differentkey
-        - ORs connect on demand. attach circuits to new connections, keep
-          create cells around somewhere, send destroy if fail.
-        - add new "RelayOnly 1" config variable?
+        - add new "Middleman 1" config variable?
           - if torrc not found, exitpolicy reject *:*
-        - Contact info, pgp fingerprint, comments in router desc.
-          - Add a ContactInfo line to torrc, which gets published in
-            descriptor (as opt)
-        - write tor version at the top of each log file
+
+      ongoing:
+        . rename/rearrange functions for what file they're in
         - generalize our transport: add transport.c in preparation for
           http, airhook, etc transport.
 
