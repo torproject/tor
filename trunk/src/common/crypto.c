@@ -620,7 +620,9 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   }
   outlen = crypto_pk_private_decrypt(env,from,pkeylen,buf,padding);
   if (outlen<0) {
-    log_fn(LOG_WARN, "Error decrypting public-key data");
+    /* this is only log-levelinfo, because when we're decrypting
+     * onions, we try several keys to see which will work */
+    log_fn(LOG_INFO, "Error decrypting public-key data");
     return -1;
   }
   if (outlen < CIPHER_KEY_LEN) {
