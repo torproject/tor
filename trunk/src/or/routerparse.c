@@ -313,8 +313,8 @@ int check_software_version_against_directory(const char *directory,
  */
 int /* Should be static; exposed for unit tests */
 router_parse_routerlist_from_directory(const char *str,
-				       routerlist_t **dest,
-				       crypto_pk_env_t *pkey)
+                                       routerlist_t **dest,
+                                       crypto_pk_env_t *pkey)
 {
   directory_token_t *tok;
   char digest[DIGEST_LEN];
@@ -389,11 +389,18 @@ router_parse_routerlist_from_directory(const char *str,
   }
   tok->n_args = 0; /* Don't free the strings in good_nickname_lst yet. */
 
+  /* Determine if my routerinfo is considered verified. */
+  {
+    routerinfo_t *me = router_get_my_routerinfo();
+    if(me)
+      router_update_status_from_smartlist(me, time(NULL), good_nickname_list);
+  }
+
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
   str = end;
   if (router_parse_list_from_string(&str, &new_dir,
-				    good_nickname_list)) {
+                                    good_nickname_list)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
   }

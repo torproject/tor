@@ -794,7 +794,7 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr)
 {
   int n_routers, i;
-  routerinfo_t *router;
+  routerinfo_t *router, *me = router_get_my_routerinfo();
   if (!list)
     return;
   if (list->published_on >= rr->published_on)
@@ -802,6 +802,10 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
   if (list->running_routers_updated_on >= rr->published_on)
     return;
 
+  if(me) /* learn if the dirservers think I'm verified */
+    router_update_status_from_smartlist(me,
+                                        rr->published_on,
+                                        rr->running_routers);
   n_routers = smartlist_len(list->routers);
   for (i=0; i<n_routers; ++i) {
     router = smartlist_get(list->routers, i);
