@@ -183,7 +183,8 @@ circuit_free_cpath_node(crypt_path_t *victim) {
   tor_free(victim);
 }
 
-/** DOCDOC **/
+/** Return the circuit whose global ID is <b>id</b>, or NULL if no
+ * such circuit exists. */
 circuit_t *
 circuit_get_by_global_id(uint32_t id)
 {

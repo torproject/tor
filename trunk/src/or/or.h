@@ -700,8 +700,7 @@ typedef struct {
    */
   time_t published_on;
   time_t running_routers_updated_on;
-  /** DOCDOC
-   */
+  /** What is the most recently received running_routers structure? */
   running_routers_t *running_routers;
   /** Which router is claimed to have signed it? */
   char *signing_router;
@@ -1308,7 +1307,8 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
 
 int connection_ap_make_bridge(char *address, uint16_t port);
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         size_t replylen, int status);
+                                         size_t replylen,
+                                         socks5_reply_status_t status);
 void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,

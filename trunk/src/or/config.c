@@ -108,9 +108,8 @@ static config_var_t config_vars[] = {
   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
   VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
-/* XXX we'd like dirfetchperiod to be higher for people with dirport not
- * set, but low for people with dirport set. how to have two defaults? */
-  VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "1 hour"),
+  /** DOCDOC **/
+  VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "0 seconds"),
   VAR("DirPostPeriod",       INTERVAL, DirPostPeriod,        "20 minutes"),
   VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "20 minutes"),
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
@@ -169,9 +168,8 @@ static config_var_t config_vars[] = {
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
-/* XXX as with dirfetchperiod, we want this to be 15 minutes for people
- * with a dirport open, but higher for people without a dirport open. */
-  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "15 minutes"),
+  /** DOCDOC */
+  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "0 seconds"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
@@ -1375,11 +1373,13 @@ options_validate(or_options_t *options)
 #define MAX_CACHE_DIR_FETCH_PERIOD 3600
 #define MAX_CACHE_STATUS_FETCH_PERIOD 900
 
-  if (options->DirFetchPeriod < MIN_DIR_FETCH_PERIOD) {
+  if (options->DirFetchPeriod &&
+      options->DirFetchPeriod < MIN_DIR_FETCH_PERIOD) {
     log(LOG_WARN, "DirFetchPeriod option must be at least %d seconds. Clipping.", MIN_DIR_FETCH_PERIOD);
     options->DirFetchPeriod = MIN_DIR_FETCH_PERIOD;
   }
-  if (options->StatusFetchPeriod < MIN_STATUS_FETCH_PERIOD) {
+  if (options->StatusFetchPeriod &&
+      options->StatusFetchPeriod < MIN_STATUS_FETCH_PERIOD) {
     log(LOG_WARN, "StatusFetchPeriod option must be at least %d seconds. Clipping.", MIN_STATUS_FETCH_PERIOD);
     options->StatusFetchPeriod = MIN_STATUS_FETCH_PERIOD;
   }

@@ -481,8 +481,11 @@ connection_edge_end_reason_str(char *payload, uint16_t length) {
   }
 }
 
-socks5_reply_status_t
-connection_edge_end_reason_sock5_response(char *payload, uint16_t length) {
+/** Translate the <b>payload</b> of length <b>length</b>, which
+ * came from a relay 'end' cell, into an appropriate SOCKS5 reply code.
+ */
+static socks5_reply_status_t
+connection_edge_end_reason_socks5_response(char *payload, uint16_t length) {
   if (length < 1) {
     log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
     return SOCKS5_GENERAL_ERROR;
@@ -641,8 +644,6 @@ connection_edge_process_relay_cell_not_open(
         circuit_log_path(LOG_INFO,circ);
         tor_assert(circ->timestamp_dirty);
         circ->timestamp_dirty -= get_options()->MaxCircuitDirtiness;
-        /* make sure not to expire/retry the stream quite yet */
-        conn->timestamp_lastread = time(NULL);
 
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
@@ -685,8 +686,7 @@ connection_edge_process_relay_cell_not_open(
                                 conn->chosen_exit_name);
     }
     circuit_log_path(LOG_INFO,circ);
-    connection_ap_handshake_socks_reply(conn, NULL, 0, 1);
-    conn->socks_request->has_finished = 1;
+    connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_SUCCEEDED);
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
       /* (We already sent an end cell if possible) */
@@ -821,7 +821,12 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
              connection_edge_end_reason_str(cell->payload+RELAY_HEADER_SIZE,
                                             rh.length),
              conn->stream_id, (int)conn->stream_size);
-
+      if (conn->socks_request && !conn->socks_request->has_finished) {
+        socks5_reply_status_t status =
+          connection_edge_end_reason_socks5_response(
+                              cell->payload+RELAY_HEADER_SIZE, rh.length);
+        connection_ap_handshake_socks_reply(conn, NULL, 0, status);
+      }
 #ifdef HALF_OPEN
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */

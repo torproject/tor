@@ -38,7 +38,9 @@ N . Switch to libevent
          o Implement patch, if so.
          - Implement Tor side once patch is accepted.
        o Check return from event_set, event_add, event_del.
-       - Keep pushing to get a windows patch accepted.
+       o Keep pushing to get a windows patch accepted.
+       - After about 26 March, check back with Niels; he should be back
+         by then.
 
  Security:
    - Make sure logged info is "safe"ish.
@@ -72,13 +74,13 @@ N  . Implement pending controller features.
     - EXTENDCIRCUIT
 R     - revised circ selection stuff.
       - Implement controller interface.
-    . ATTACHSTREAM
+    o ATTACHSTREAM
       o Make streams have an 'unattached and not-automatically-attachable'
         state. ("Controller managed.")
       o Add support to put new streams into this state rather than try to
         attach them automatically.  ("Hidden" config option.)
       o Implement 'attach stream X to circuit Y' logic.
-      - Time out never-attached streams.
+      o Time out never-attached streams.
       o If we never get a CONNECTED back, we should put the stream back in
         CONTROLLER_WAIT, not in CIRCUIT_WAIT.
     - Tests for new controller features
@@ -101,9 +103,9 @@ R o HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
       (Turns out, if package_raw_inbuf fails, it *can't* send an end cell.)
     o Check for any place where we can close an edge connection without
       sending an end; see if we should send an end.
-N . Feed end reason back into SOCK5 as reasonable.
+  o Feed end reason back into SOCK5 as reasonable.
 R o cache .foo.exit names better, or differently, or not.
-N - make !advertised_server_mode() ORs fetch dirs less often.
+  o make !advertised_server_mode() ORs fetch dirs less often.
 N - Clean up NT service code even more.  Document it. Enable it by default.
     Make sure it works.
 

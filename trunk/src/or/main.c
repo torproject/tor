@@ -195,7 +195,7 @@ static void connection_unlink(connection_t *conn, int remove) {
   connection_free(conn);
 }
 
-/** DOCDOC **/
+/** Schedule <b>conn</b> to be closed. **/
 void
 add_connection_to_closeable_list(connection_t *conn)
 {
@@ -318,7 +318,7 @@ void connection_start_writing(connection_t *conn) {
            (int)conn->s);
 }
 
-/** DOCDOC */
+/** Close all connections that have been schedule to get closed */
 static void
 close_closeable_connections(void)
 {
@@ -337,7 +337,8 @@ close_closeable_connections(void)
   }
 }
 
-/** DOCDOC */
+/** Libevent callback: this gets invoked when (connection_t*)<b>conn</b> has
+ * some data to read. */
 static void
 conn_read_callback(int fd, short event, void *_conn)
 {
@@ -371,6 +372,8 @@ conn_read_callback(int fd, short event, void *_conn)
     close_closeable_connections();
 }
 
+/** Libevent callback: this gets invoked when (connection_t*)<b>conn</b> has
+ * some data to write. */
 static void conn_write_callback(int fd, short events, void *_conn)
 {
   connection_t *conn = _conn;
@@ -512,7 +515,6 @@ static void conn_write(int i) {
  *    - Otherwise, remove the connection from connection_array and from
  *      all other lists, close it, and free it.
  * Returns 1 if the connection was closed, 0 otherwise.
- * DOCDOC closeable_list
  */
 static int conn_close_if_marked(int i) {
   connection_t *conn;
@@ -580,6 +582,35 @@ void directory_all_unreachable(time_t now) {
   }
 }
 
+INLINE int
+get_dir_fetch_period(or_options_t *options)
+{
+  if (options->DirFetchPeriod)
+    /* Value from config file. */
+    return options->DirFetchPeriod;
+  else if (options->DirPort)
+    /* Default for directory server */
+    return 20*60;
+  else
+    /* Default for average user. */
+    return 40*60;
+}
+
+INLINE int
+get_status_fetch_period(or_options_t *options)
+{
+  if (options->StatusFetchPeriod)
+    /* Value from config file. */
+    return options->StatusFetchPeriod;
+  else if (options->DirPort)
+    /* Default for directory server */
+    return 15*60;
+  else
+    /* Default for average user. */
+    return 30*60;
+}
+
+
 /** This function is called whenever we successfully pull down a directory.
  * If <b>identity_digest</b> is defined, it contains the digest of the
  * router that just gave us this directory. */
@@ -593,13 +624,13 @@ void directory_has_arrived(time_t now, char *identity_digest) {
    * after the directory we had when we started.
    */
   if (!time_to_fetch_directory)
-    time_to_fetch_directory = now + options->DirFetchPeriod;
+    time_to_fetch_directory = now + get_dir_fetch_period(options);
 
   if (!time_to_force_upload_descriptor)
     time_to_force_upload_descriptor = now + options->DirPostPeriod;
 
   if (!time_to_fetch_running_routers)
-    time_to_fetch_running_routers = now + options->StatusFetchPeriod;
+    time_to_fetch_running_routers = now + get_status_fetch_period(options);
 
   if (identity_digest) { /* if this is us, then our dirport is reachable */
     routerinfo_t *router = router_get_by_digest(identity_digest);
@@ -720,6 +751,7 @@ static void run_scheduled_events(time_t now) {
    * new running-routers list, and/or force-uploading our descriptor
    * (if we've passed our internal checks). */
   if (time_to_fetch_directory < now) {
+    time_t next_status_fetch;
     /* purge obsolete entries */
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
 
@@ -734,9 +766,10 @@ static void run_scheduled_events(time_t now) {
     }
 
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
-    time_to_fetch_directory = now + options->DirFetchPeriod;
-    if (time_to_fetch_running_routers < now + options->StatusFetchPeriod) {
-      time_to_fetch_running_routers = now + options->StatusFetchPeriod;
+    time_to_fetch_directory = now + get_dir_fetch_period(options);
+    next_status_fetch = now + get_status_fetch_period(options);
+    if (time_to_fetch_running_routers < next_status_fetch) {
+      time_to_fetch_running_routers = next_status_fetch;
     }
 
     /* Also, take this chance to remove old information from rephist. */
@@ -747,7 +780,7 @@ static void run_scheduled_events(time_t now) {
     if (!authdir_mode(options)) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
-    time_to_fetch_running_routers = now + options->StatusFetchPeriod;
+    time_to_fetch_running_routers = now + get_status_fetch_period(options);
   }
 
   if (time_to_force_upload_descriptor < now) {
@@ -816,7 +849,7 @@ static void run_scheduled_events(time_t now) {
   close_closeable_connections();
 }
 
-/** DOCDOC */
+/** Libevent callback: invoked once every second. */
 static void second_elapsed_callback(int fd, short event, void *args)
 {
   static struct event *timeout_event = NULL;

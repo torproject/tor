@@ -55,6 +55,9 @@ static void delete_log(logfile_t *victim);
 static void close_log(logfile_t *victim);
 static int reset_log(logfile_t *lf);
 
+/** Helper: Write the standard prefix for log lines to a
+ * <b>buf_len</b> character buffer in <b>buf</b>.
+ */
 static INLINE size_t
 _log_prefix(char *buf, size_t buf_len, int severity)
 {
@@ -290,7 +293,8 @@ static void delete_log(logfile_t *victim) {
   tor_free(victim);
 }
 
-/** DOCDOC */
+/** Helper: release system resources (but not memory) held by a single
+ * logfile_t. */
 static void close_log(logfile_t *victim)
 {
   if (victim->needs_close && victim->file) {
@@ -304,7 +308,9 @@ static void close_log(logfile_t *victim)
   }
 }
 
-/** DOCDOC */
+/** Helper: reset a single logfile_t.  For a file log, this involves
+ * closing and reopening the log, and maybe writing the version.  For
+ * other log types, do nothing. */
 static int reset_log(logfile_t *lf)
 {
   if (lf->needs_close) {
@@ -342,6 +348,11 @@ void add_temp_log(void)
   logfiles->is_temporary = 1;
 }
 
+/**
+ * Add a log handler to send messages of severity between
+ * <b>logLevelmin</b> and <b>logLevelMax</b> to the function
+ * <b>cb</b>.
+ */
 int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
 {
   logfile_t *lf;
@@ -437,11 +448,13 @@ int parse_log_level(const char *level) {
   return -1;
 }
 
+/** Return the string equivalent of a given log level. */
 const char *log_level_to_string(int level)
 {
   return sev_to_string(level);
 }
 
+/** Return the least severe log level that any current log is interested in. */
 int get_min_log_level(void)
 {
   logfile_t *lf;
