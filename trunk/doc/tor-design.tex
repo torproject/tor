@@ -124,7 +124,7 @@ proxy'' for each
 supported application protocol---most
 of which were never written, so many applications were never supported.
 Tor uses the standard and near-ubiquitous SOCKS
-\cite{socks4,socks5} proxy interface, allowing us to support most TCP-based
+\cite{socks4} proxy interface, allowing us to support most TCP-based
 programs without modification.  This design change allows Tor to
 use the filtering features of privacy-enhancing
 application-level proxies such as Privoxy \cite{privoxy} without having to
@@ -142,7 +142,7 @@ circuit, to improve efficiency and anonymity.
 
 \item \textbf{No mixing, padding, or traffic shaping:} The original
 Onion Routing design called for batching and reordering the cells arriving
-from each circuit and the ability to do padding between onion routers and,
+from each circuit. It also included padding between onion routers and,
 in a later design, between onion
 proxies (that is, users) and onion routers \cite{or-ih96,or-jsac98}.
 The tradeoff between padding protection and cost was discussed, but no
@@ -645,24 +645,33 @@ used, and expire old used circuits that are no longer in use. Thus
 even heavy users spend a negligible amount of time and CPU in
 building circuits, but only a limited number of requests can be linked
 to each other by a given exit node. Also, because circuits are built
-in the background, failed routers do not affects user experience.
+in the background, failed routers do not affect user experience.
 
 \subsubsection{Constructing a circuit}
 
-Users construct each incrementally, negotiating a symmetric key with
+Users construct a circuit incrementally, negotiating a symmetric key with
 each hop one at a time. To begin creating a new circuit, the user
 (call her Alice) sends a \emph{create} cell to the first node in her
 chosen path. The cell's payload is the first half of the
 Diffie-Hellman handshake, encrypted to the onion key of the OR (call
-him Bob). Bob responds with a \emph{created} cell containg the second
+him Bob). Bob responds with a \emph{created} cell containing the second
 half of the DH handshake, along with a hash of the negotiated key
-$K=g^{xy}$.  This protocol tries to achieve unilateral entity
+$K=g^{xy}$.
+
+To extend a circuit past the first hop, Alice sends a \emph{relay extend}
+cell to the last node in the circuit, specifying the address of the new
+OR and an encrypted $g^x$ for it. That node copies the half-handshake
+into a \emph{create} cell, and passes it to the new OR to extend the
+circuit. When it responds with a \emph{created} cell, the penultimate OR
+copies the payload into a \emph{relay extended} cell and passes it back.
+% Nick: please fix my "that OR" pronouns -RD
+
+The onion-level handshake protocol achieves unilateral entity
 authentication (Alice knows she's handshaking with Bob, Bob doesn't
 care who is opening the circuit---Alice has no key and is trying to
-remain anonymous); unilateral key authentication (Alice and Bob
-agree on a key, and Alice knows Bob is the only other person who could
-know it).  We also want perfect forward
-secrecy, key freshness, etc.
+remain anonymous) and unilateral key authentication (Alice and Bob
+agree on a key, and Alice knows Bob is the only other person who should
+know it). We also want perfect forward secrecy and key freshness.
 
 \begin{equation}
 \begin{aligned}
@@ -679,19 +688,6 @@ don't have enough room in a single cell for a public key and also a
 signature. Preliminary analysis with the NRL protocol analyzer \cite{meadows96}
 shows the above protocol to be secure (including providing PFS) under the
 traditional Dolev-Yao model.
-% cite Cathy? -RD
-% did I use the buzzwords correctly? -RD
-
-% Hm.  I think that this paragraph could go earlier in expository
-% order: we describe how to build whole circuit, then explain the
-% protocol in more detail.  -NM
-To extend a circuit past the first hop, Alice sends a \emph{relay extend}
-cell to the last node in the circuit, specifying the address of the new
-OR and an encrypted $g^x$ for it. That node copies the half-handshake
-into a \emph{create} cell, and passes it to the new OR to extend the
-circuit. When it responds with a \emph{created} cell, the penultimate OR
-copies the payload into a \emph{relay extended} cell and passes it back.
-% Nick: please fix my "that OR" pronouns -RD
 
 \subsubsection{Relay cells}
 Once Alice has established the circuit (so she shares a key with each
@@ -773,37 +769,36 @@ but are still willing to read.
 
 \SubSection{Integrity checking on streams}
 
-In the old Onion Routing design, traffic was vulnerable to a
-malleability attack: an attacker could make changes to an encrypted
+Because the old Onion Routing design used a stream cipher, traffic was
+vulnerable to a malleability attack: even though the attacker could not
+decrypt cells, he could make changes to an encrypted
 cell to create corresponding changes to the data leaving the network.
 (Even an external adversary could do this, despite link encryption!)
 
-This weakness allowed an adversary to change a create cell to a destroy
+This weakness allowed an adversary to change a padding cell to a destroy
 cell; change the destination address in a relay begin cell to the
 adversary's webserver; or change a user on an ftp connection from
-typing ``dir'' to typing ``delete *''. Any node or observer along the
-path could introduce such corruption in a stream.
+typing ``dir'' to typing ``delete *''. Any node or external adversary
+along the circuit could introduce such corruption in a stream.
 
-Tor prevents external adversaries by mounting this attack simply by
+Tor prevents external adversaries from mounting this attack simply by
 using TLS. Addressing the insider malleability attack, however, is
 more complex.
 
-Rather than doing integrity checking of the relay cells at each hop,
-which would increase packet size
-by a function of path length\footnote{This is also the argument against
-using recent cipher modes like EAX \cite{eax}---we don't want the added
-message-expansion overhead at each hop, and we don't want to leak the path
-length (or pad to some max path length).}, we choose to
-% accept passive timing attacks, 
-%    (How?  I don't get it.  Do we mean end-to-end traffic
-%    confirmation attacks? -NM)
-and perform integrity
-checking only at the edges of the circuit. When Alice negotiates a key
-with the exit hop, they both start a SHA-1 with some derivative of that key,
+We could do integrity checking of the relay cells at each hop, either
+by including hashes or by using a cipher mode like EAX \cite{eax}.
+But we don't want the added message-expansion overhead at each hop, and
+we don't want to leak the path length (or pad to some max path length).
+Because we've already accepted that our design is vulnerable to end-to-end
+timing attacks, we can perform integrity checking only at the edges of
+the circuit without introducing any new anonymity attacks. When Alice
+negotiates a key
+with each hop, they both start a SHA-1 with some derivative of that key,
+% Not just the exit hop, but each hop: any hop can be an exit node. -RD
 thus starting out with randomness that only the two of them know. From
-then on they each incrementally add all the data bytes flowing across
-the stream to the SHA-1, and each relay cell includes the first 4 bytes
-of the current value of the hash. 
+then on they each incrementally add to the SHA-1 all the data bytes
+entering or exiting from the circuit, and each such relay cell includes
+the first 4 bytes of the current value of the hash.
 
 The attacker must be able to guess all previous bytes between Alice
 and Bob on that circuit (including the pseudorandomness from the key
@@ -812,7 +807,6 @@ cell. Attacks on SHA-1 where the adversary can incrementally add to a
 hash to produce a new valid hash don't work,
 because all hashes are end-to-end encrypted across the circuit.
 The computational overhead isn't so bad, compared to doing an AES
-% XXX We never say we use AES. Say it somewhere above? -RD
 crypt at each hop in the circuit. We use only four bytes per cell to
 minimize overhead; the chance that an adversary will correctly guess a
 valid hash, plus the payload the current cell, is acceptly low, given
@@ -962,6 +956,9 @@ new to the networking literature, some proposed approaches are a poor
 fit to anonymous networks.  For example, solutions based on backtracking
 harmful traffic \cite{XXX} could allow an anonymity-breaking
 adversary to exploit the backtracking mechanism.
+% XXX I don't see how you would do DDoS through Tor. And even if you
+%     did, it seems ok to track you down. Should we remove this
+%     paragraph? -RD
 
 Attackers also have an opportunity to attack the Tor network by mounting
 attacks on its hosts and network links. Disrupting a single circuit or
@@ -1166,25 +1163,31 @@ signs its current opinion, and broadcasts it to the other directory
 servers; then in round two, each server rebroadcasts all the signed
 opinions it has received.  At this point all directory servers check
 to see whether any server has signed multiple opinions in the same
-period. If so, the server is either broken or cheating, so protocol
+period. If so, the server is either broken or cheating, so the protocol
 stops and notifies the administrators, who either remove the cheater
 or wait for the broken server to be fixed.  If there are no
-discrepancies, each directory server then locally computes algorithm
+discrepancies, each directory server then locally computes an algorithm
+(described below)
 on the set of opinions, resulting in a uniform shared directory. In
 round three servers sign this directory and broadcast it; and finally
 in round four the servers rebroadcast the directory and all the
 signatures.  If any directory server drops out of the network, its
-signature is not included on the file directory.
+signature is not included on the final directory.
 
 The rebroadcast steps ensure that a directory server is heard by
 either all of the other servers or none of them, assuming that any two
-directories can talk directly, or via a third directory (some of the
+directory servers can talk directly, or via a third directory server (some of the
 links between directory servers may be down). Broadcasts are feasible
 because there are relatively few directory servers (currently 3, but we expect
-to use as many as 9 as the network scales). The actual local algorithm
+to transition to 9 as the network scales). The actual local algorithm
 for computing the shared directory is a straightforward threshold
 voting process: we include an OR if a majority of directory servers
 believe it to be good.
+
+To avoid attacks where a router connects to all the directory servers
+but refuses to relay traffic from other routers, the directory servers
+must build circuits and use them to anonymously test router reliability
+\cite{mix-acc}.
 
 When a client Alice retrieves a consensus directory, she uses it if it
 is signed by a majority of the directory servers she knows.
@@ -1192,17 +1195,12 @@ is signed by a majority of the directory servers she knows.
 Using directory servers rather than flooding provides simplicity and
 flexibility. For example, they don't complicate the analysis when we
 start experimenting with non-clique network topologies. And because
-the directories are signed, they can be cached by other onion routers,
-or indeed by any server.  Thus directory servers are not a performance
+the directories are signed, they can be cached by other onion routers.
+Thus directory servers are not a performance
 bottleneck when we have many users, and do not aid traffic analysis by
 forcing clients to periodically announce their existence to any
 central point.
 % Mention Hydra as an example of non-clique topologies. -NM, from RD
-
-% also find some place to integrate that dirservers have to actually
-% lay test circuits and use them, otherwise routers could connect to
-% the dirservers but discard all other traffic.
-% in some sense they're like reputation servers in \cite{mix-acc} -RD
 
 
 \Section{Rendezvous points: location privacy}
@@ -1210,7 +1208,7 @@ central point.
 
 Rendezvous points are a building block for \emph{location-hidden
 services} (also known as ``responder anonymity'') in the Tor
-network.  Location-hidden services allow a server Bob to a TCP
+network.  Location-hidden services allow a server Bob to offer a TCP
 service, such as a webserver, without revealing the IP of his service.
 Besides allowing Bob to provided services anonymously, location
 privacy also seeks to provide some protection against DDoS attacks:
@@ -1219,15 +1217,14 @@ rather than just Bob's IP.
 
 \subsection{Goals for rendezvous points}
 \label{subsec:rendezvous-goals}
-In addition to our other goals, have tried to provide the following
-properties in our design for location-hidden servers:
+Our design for location-hidden servers has the following properties:
 \begin{tightlist}
 \item[Flood-proof:] An attacker should not be able to flood Bob with traffic
-  simply by sending may requests to Bob's public location.  Thus, Bob needs a
+  simply by sending many requests to talk to Bob.  Thus, Bob needs a
   way to filter incoming requests.
 \item[Robust:] Bob should be able to maintain a long-term pseudonymous
-  identity even in the presence of OR failure.  Thus, Bob's identity must not
-  be tied to a single OR.
+  identity even in the presence of router failure.  Thus, Bob's identity
+  must not be tied to a single OR.
 \item[Smear-resistant:] An attacker should not be able to use rendezvous
   points to smear an OR.  That is, if a social attacker tries to host a 
   location-hidden service that is illegal or disreputable, it should not
