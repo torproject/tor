@@ -200,6 +200,7 @@ test_crypto()
                         CRYPTO_CIPHER_DES,
                         CRYPTO_CIPHER_RC4,
                         CRYPTO_CIPHER_3DES,
+                        CRYPTO_CIPHER_AES_CTR,
                         -1 };
 
   data1 = tor_malloc(1024);

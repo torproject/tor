@@ -20,6 +20,7 @@
 #include "crypto.h"
 #include "../or/or.h"
 #include "log.h"
+#include "aes.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00905000l
 #error "We require openssl >= 0.9.5"
@@ -55,6 +56,7 @@ crypto_cipher_iv_length(int type) {
     case CRYPTO_CIPHER_DES: return 8;
     case CRYPTO_CIPHER_RC4: return 16;
     case CRYPTO_CIPHER_3DES: return 8;
+    case CRYPTO_CIPHER_AES_CTR: return 0;
     default: assert(0); return -1;
     }
 }
@@ -71,6 +73,7 @@ crypto_cipher_key_length(int type) {
     case CRYPTO_CIPHER_DES: return 8;
     case CRYPTO_CIPHER_RC4: return 16;
     case CRYPTO_CIPHER_3DES: return 16;
+    case CRYPTO_CIPHER_AES_CTR: return 16;
     default: assert(0); return -1;
     }
 }
@@ -205,7 +208,9 @@ crypto_cipher_env_t *crypto_new_cipher_env(int type)
   iv_len = crypto_cipher_iv_length(type);
   key_len = crypto_cipher_key_length(type);
   
-  if (! crypto_cipher_evp_cipher(type,0))
+  if (type == CRYPTO_CIPHER_AES_CTR) {
+    env->aux = (unsigned char *)aes_new_cipher();
+  } else if (! crypto_cipher_evp_cipher(type,0)) 
     /* This is not an openssl cipher */
     goto err;
   else {
@@ -236,7 +241,11 @@ void crypto_free_cipher_env(crypto_cipher_env_t *env)
 {
   assert(env);
 
-  if (crypto_cipher_evp_cipher(env->type,0)) {
+  if (env->type == CRYPTO_CIPHER_AES_CTR) {
+    assert(env->aux);
+    aes_free_cipher((aes_cnt_cipher_t*)env->aux);
+    env->aux = NULL;
+  } else if (crypto_cipher_evp_cipher(env->type,0)) {
     /* This is an openssl cipher */
     assert(env->aux);
     EVP_CIPHER_CTX_cleanup((EVP_CIPHER_CTX *)env->aux);
@@ -618,6 +627,9 @@ int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
     RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux,
                                        crypto_cipher_evp_cipher(env->type, 1),
                                        env->key, env->iv));
+  } else if (env->type == CRYPTO_CIPHER_AES_CTR) {
+    aes_set_key((aes_cnt_cipher_t*)env->aux, env->key, 128);
+    return 0;
   } else {
     return -1;
   }
@@ -631,6 +643,9 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
     RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux,
                                        crypto_cipher_evp_cipher(env->type, 0),
                                        env->key, env->iv));
+  } else if (env->type == CRYPTO_CIPHER_AES_CTR) {
+    aes_set_key((aes_cnt_cipher_t*)env->aux, env->key, 128);
+    return 0;
   } else {
     return -1;
   }
@@ -642,7 +657,12 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigne
   
   assert(env && from && to);
   
-  RETURN_SSL_OUTCOME(EVP_EncryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
+  if (env->type == CRYPTO_CIPHER_AES_CTR) {
+    aes_crypt((aes_cnt_cipher_t*)env->aux, from, fromlen, to);
+    return 0;
+  } else {
+    RETURN_SSL_OUTCOME(EVP_EncryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
+  }
 }
 
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to)
@@ -650,9 +670,26 @@ int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigne
   int tolen;
   
   assert(env && from && to);
-  
-  RETURN_SSL_OUTCOME(EVP_DecryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
+
+  if (env->type == CRYPTO_CIPHER_AES_CTR) {
+    aes_crypt((aes_cnt_cipher_t*)env->aux, from, fromlen, to);
+    return 0;
+  } else {  
+    RETURN_SSL_OUTCOME(EVP_DecryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
+  }
 }
+
+int
+crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
+{
+  if (env->type == CRYPTO_CIPHER_AES_CTR) {
+    aes_adjust_counter((aes_cnt_cipher_t*)env->aux, delta);
+    return 0;
+  } else {  
+    return -1;
+  }
+}
+
 
 /* SHA-1 */
 int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest)
