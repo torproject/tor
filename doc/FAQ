@@ -29,6 +29,12 @@ routing project, started out of the Naval Research Lab.
 
 (Theories about recursive acronyms are ok too.)
 
+1.3 Is there a backdoor in tor?
+
+Not right now, but if this answer changes we probably won't be allowed
+to tell you. You should always check the source (or at least the diffs
+since the last release) for suspicious things; and if we don't give you
+source, that's a sure sign something funny could be going on.
 
 2. Compiling and installing.
 
