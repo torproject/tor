@@ -215,6 +215,7 @@ void connection_free_all(void) {
  */
 void connection_about_to_close_connection(connection_t *conn)
 {
+  circuit_t *circ;
 
   assert(conn->marked_for_close);
 
@@ -271,7 +272,9 @@ void connection_about_to_close_connection(connection_t *conn)
       break;
     case CONN_TYPE_EXIT:
       if (conn->state == EXIT_CONN_STATE_RESOLVING) {
-        circuit_detach_stream(circuit_get_by_conn(conn), conn);
+        circ = circuit_get_by_conn(conn);
+        if (circ)
+          circuit_detach_stream(circ, conn);
         connection_dns_remove(conn);
       }
       break;
