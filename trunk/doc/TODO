@@ -53,7 +53,7 @@ NICK      - Possible to get autoconf to easily install things into ~/.tor?
             key digest in place of nicknames.
           o Audit all uses of lookup-by-hostname and lookup-by-addr-port
             to search by digest when appropriate.
-NICK      - make sure to use addr/port in cpuworker tasks, because
+          o make sure to use addr/port in cpuworker tasks, because
             OPs don't have keys.
 NICK      - and fix the function comments in rephist
           o Rep-hist functions need to store info by keyid
