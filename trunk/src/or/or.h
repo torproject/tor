@@ -108,6 +108,8 @@
 #define MAX_NICKNAME_LEN 32
 #define MAX_DIR_SIZE 50000 /* XXX, big enough? */
 
+#define MAX_DNS_ENTRY_AGE (15*60)
+
 #define CIRC_ID_TYPE_LOWER 0
 #define CIRC_ID_TYPE_HIGHER 1
 
