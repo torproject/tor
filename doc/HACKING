@@ -414,6 +414,52 @@ the distant future, stuff may have changed.)
   the message (perhaps with a string like "internal error").  Option (A) is
   to be preferred to option (B). -NM]
 
+2.5. Doxygen
+
+  We use the 'doxygen' utility to generate documentation from our source code.
+  Here's how to use it:
+
+  1. Begin every file that should be documented with
+         /**
+          * \file filename.c
+          * \brief Short desccription of the file
+          */
+
+     (Doxygen will recognize any comment beginning with /** as special.)
+
+  2. Before any function, structure, #define, or variable you want to
+     document, add a comment of the form:
+
+        /** Describe the function's actions in imperative sentences.
+         *
+         * Use blank lines for paragraph breaks
+         *   - and
+         *   - hyphens
+         *   - for
+         *   - lists.
+         *
+         * Write <b>argument_names</b> in boldface.
+         *
+         * \code
+         *     place_example_code();
+         *     between_code_and_endcode_commands();
+         * \endcode
+         */
+
+  3. Make sure to escape the characters "<", ">", "\", "%" and "#" as "\<",
+     "\>", "\\", "\%", and "\#".
+
+  4. To document structure members, you can use two forms:
+
+       struct foo {
+         /** You can put the comment before an element; */
+         int a;
+         int b, /**< Or use this form to put the comment after the element. */
+       };
+
+  5. See the Doxygen manual for more information; this summary just scratches
+     the surface.
+
 3. References
 
   About Tor
