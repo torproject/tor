@@ -125,32 +125,25 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
 }
 
 int circuit_init(circuit_t *circ, int aci_type) {
-  onion_layer_t *ol;
   unsigned char iv[16];
   unsigned char digest1[20];
   unsigned char digest2[20];
   struct timeval start, end;
   int time_passed; 
 
-
-
-  assert(circ);
-
-  ol = (onion_layer_t *)circ->onion;
-  assert(ol);
+  assert(circ && circ->onion);
 
   log(LOG_DEBUG,"circuit_init(): starting");
-  circ->n_addr = ol->addr;
-  circ->n_port = ol->port;
-  log(LOG_DEBUG,"circuit_init(): Set port to %u.",ol->port);
-  circ->p_f = ol->backf;
-  log(LOG_DEBUG,"circuit_init(): Set BACKF to %u.",ol->backf);
-  circ->n_f = ol->forwf;
-  log(LOG_DEBUG,"circuit_init(): Set FORWF to %u.",ol->forwf);
+  circ->n_port = ntohs(*(uint16_t *)(circ->onion+2));
+  log(LOG_DEBUG,"circuit_init(): Set port to %u.",circ->n_port);
+  circ->n_addr = ntohl(*(uint32_t *)(circ->onion+4));
+  circ->p_f = *(circ->onion+1) >> 4; /* backf */
+  log(LOG_DEBUG,"circuit_init(): Set BACKF to %u.",circ->p_f);
+  circ->n_f = *(circ->onion+1) & 0x0f; /* forwf */
+  log(LOG_DEBUG,"circuit_init(): Set FORWF to %u.",circ->n_f);
   circ->state = CIRCUIT_STATE_OPEN;
 
   log(LOG_DEBUG,"circuit_init(): aci_type = %u.",aci_type);
-
 
 
 
@@ -171,12 +164,11 @@ int circuit_init(circuit_t *circ, int aci_type) {
 
 
 
-
   log(LOG_DEBUG,"circuit_init(): Chosen ACI %u.",circ->n_aci);
 
   /* keys */
-  memset((void *)iv, 0, 16);
-  crypto_SHA_digest(ol->keyseed,16,digest1);
+  memset(iv, 0, 16);
+  crypto_SHA_digest(circ->onion+12,16,digest1);
   crypto_SHA_digest(digest1,20,digest2);
   crypto_SHA_digest(digest2,20,digest1);
   log(LOG_DEBUG,"circuit_init(): Computed keys.");
@@ -193,7 +185,7 @@ int circuit_init(circuit_t *circ, int aci_type) {
 
   log(LOG_DEBUG,"circuit_init(): Cipher initialization complete.");
 
-  circ->expire = ol->expire;
+  circ->expire = ntohl(*(uint32_t *)(circ->onion+8));
 
   return 0;
 }

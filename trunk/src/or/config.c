@@ -60,7 +60,7 @@ struct config_line *config_get_commandlines(int argc, char **argv) {
 }
 
 /* parse the config file and strdup into key/value strings. Return list.
- *  * Warn and ignore mangled lines. */
+ * Warn and ignore mangled lines. */
 struct config_line *config_get_lines(FILE *f) {
   struct config_line *new;
   struct config_line *front = NULL;

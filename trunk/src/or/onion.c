@@ -110,8 +110,8 @@ void onion_pending_process_one(void) {
   return;
 }
 
-/* go through ol_list, find the element which points to circ, remove and
- * free that element. leave circ itself alone.
+/* go through ol_list, find the onion_queue_t element which points to
+ * circ, remove and free that element. leave circ itself alone.
  */
 void onion_pending_remove(circuit_t *circ) {
   struct onion_queue_t *tmpo, *victim;
@@ -199,7 +199,7 @@ static int onion_deliver_to_conn(aci_t aci, unsigned char *onion, uint32_t onion
  
   log(LOG_DEBUG,"onion_deliver_to_conn(): Setting onion length to %u.",onionlen);
   *(uint32_t*)buf = htonl(onionlen);
-  memcpy((void *)(buf+4),(void *)onion,onionlen);
+  memcpy((buf+4),onion,onionlen);
  
   dataleft = buflen;
   while(dataleft > 0) {
@@ -233,21 +233,22 @@ static int onion_process(circuit_t *circ) {
   if(learn_my_address(&me) < 0)
     return -1;
 
-  if(!decrypt_onion((onion_layer_t *)circ->onion,circ->onionlen,getprivatekey())) {
+  /* decrypt it in-place */
+  if(decrypt_onion(circ->onion,circ->onionlen,getprivatekey()) < 0) {
     log(LOG_DEBUG,"command_process_create_cell(): decrypt_onion() failed, closing circuit.");
     return -1;
   }
   log(LOG_DEBUG,"command_process_create_cell(): Onion decrypted.");
 
   /* check freshness */
-  if (((onion_layer_t *)circ->onion)->expire < time(NULL)) /* expired onion */
+  if (ntohl(*(uint32_t *)(circ->onion+8)) < (uint32_t)time(NULL)) /* expired onion */
   { 
     log(LOG_NOTICE,"I have just received an expired onion. This could be a replay attack.");
     return -1;
   }
 
   aci_type = decide_aci_type(ntohl(me.sin_addr.s_addr), ntohs(me.sin_port),
-             ((onion_layer_t *)circ->onion)->addr,((onion_layer_t *)circ->onion)->port);
+             ntohl(*(uint32_t *)(circ->onion+4)),ntohs(*(uint16_t *)(circ->onion+2)));
       
   if(circuit_init(circ, aci_type) < 0) { 
     log(LOG_ERR,"process_onion(): init_circuit() failed.");
@@ -255,13 +256,13 @@ static int onion_process(circuit_t *circ) {
   }
 
   /* check for replay */
-  if(id_tracked_onion(circ->onion, circ->onionlen, tracked_onions)) {
+  if(find_tracked_onion(circ->onion, circ->onionlen, tracked_onions)) {
     log(LOG_NOTICE,"process_onion(): I have just received a replayed onion. This could be a replay attack.");
     return -1;
   }
 
   /* track the new onion */
-  if(!new_tracked_onion(circ->onion,circ->onionlen, &tracked_onions, &last_tracked_onion)) {
+  if(add_tracked_onion(circ->onion,circ->onionlen, &tracked_onions, &last_tracked_onion) < 0) {
     log(LOG_DEBUG,"process_onion(): Onion tracking failed. Will ignore.");
   }
 
@@ -286,11 +287,11 @@ static int onion_process(circuit_t *circ) {
     log(LOG_DEBUG,"command_process_create_cell(): n_conn is %s:%u",n_conn->address,n_conn->port);
 
     /* send the CREATE cells on to the next hop  */
-    pad_onion(circ->onion,circ->onionlen, sizeof(onion_layer_t));
+    pad_onion(circ->onion, circ->onionlen, ONION_LAYER_SIZE);
     log(LOG_DEBUG,"command_process_create_cell(): Padded the onion with random data.");
 
     retval = onion_deliver_to_conn(circ->n_aci, circ->onion, circ->onionlen, n_conn); 
-    free((void *)circ->onion);
+    free(circ->onion);
     circ->onion = NULL;
     if (retval == -1) {
       log(LOG_DEBUG,"command_process_create_cell(): Could not deliver the onion to next conn. Closing.");
@@ -435,7 +436,7 @@ create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode)
       cipher_type = CRYPTO_CIPHER_DES;
       break;
     case ONION_CIPHER_RC4 :
-      cipher_type = ONION_CIPHER_RC4;
+      cipher_type = CRYPTO_CIPHER_RC4;
       break;
     case ONION_CIPHER_IDENTITY :
       cipher_type = CRYPTO_CIPHER_IDENTITY;
@@ -451,7 +452,7 @@ create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode)
 unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath)
 {
   int i,j;
-  onion_layer_t *layer = NULL;
+  char *layer;
   crypt_path_t *hop = NULL;
   unsigned char *buf;
   routerinfo_t *router;
@@ -461,18 +462,19 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
   assert(rarray && route && len && routelen);
 
   /* calculate the size of the onion */
-  *len = routelen * 28 + 100; /* 28 bytes per layer + 100 bytes padding for the innermost layer */
+  *len = routelen * ONION_LAYER_SIZE + ONION_PADDING_SIZE;
+  /* 28 bytes per layer + 100 bytes padding for the innermost layer */
   log(LOG_DEBUG,"create_onion() : Size of the onion is %u.",*len);
     
   /* allocate memory for the onion */
-  buf = (unsigned char *)malloc(*len);
-  if (!buf) {
+  buf = malloc(*len);
+  if(!buf) {
     log(LOG_ERR,"Error allocating memory.");
     return NULL;
   }
   log(LOG_DEBUG,"create_onion() : Allocated memory for the onion.");
     
-  for (i=0; i<routelen;i++) {
+  for(i=0; i<routelen; i++) {
     netaddr.s_addr = htonl((rarray[route[i]])->addr);
 
     log(LOG_DEBUG,"create_onion(): %u : %s:%u, %u/%u",routelen-i,
@@ -482,7 +484,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
         crypto_pk_keysize((rarray[route[i]])->pkey));
   }
     
-  layer = (onion_layer_t *)(buf + *len - 128); /* pointer to innermost layer */
+  layer = buf + *len - ONION_LAYER_SIZE - ONION_PADDING_SIZE; /* pointer to innermost layer */
   /* create the onion layer by layer, starting with the innermost */
   for (i=0;i<routelen;i++) {
     router = rarray[route[i]];
@@ -492,27 +494,28 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
 //      log(LOG_DEBUG,"create_onion() : Key pointer = %u.",router->pkey);
 //      log(LOG_DEBUG,"create_onion() : Key size = %u.",crypto_pk_keysize(router->pkey)); 
       
-    /* 0 bit */
-    layer->zero = 0;
-    /* version */
-    layer->version = OR_VERSION;
+    *layer = OR_VERSION;
     /* Back F + Forw F both use DES OFB*/
-    layer->backf = ONION_DEFAULT_CIPHER;
-    layer->forwf = ONION_DEFAULT_CIPHER;
+    *(layer+1) = (ONION_DEFAULT_CIPHER << 4) /* for backf */ +
+                 ONION_DEFAULT_CIPHER; /* for forwf */
+
     /* Dest Port */
     if (i) /* not last hop */
-      layer->port = rarray[route[i-1]]->or_port;
+      *(uint16_t *)(layer+2) = htons(rarray[route[i-1]]->or_port);
     else
-      layer->port = 0;
+      *(uint16_t *)(layer+2) = htons(0);
+
     /* Dest Addr */
     if (i) /* not last hop */
-      layer->addr = rarray[route[i-1]]->addr;
+      *(uint32_t *)(layer+4) = htonl(rarray[route[i-1]]->addr);
     else
-      layer->addr = 0;
+      *(uint32_t *)(layer+4) = htonl(0);
+
     /* Expiration Time */
-    layer->expire = time(NULL) + 86400; /* NOW + 1 day */
+    *(uint32_t *)(layer+8) = htonl((uint32_t)(time(NULL) + 86400)); /* NOW + 1 day */
+
     /* Key Seed Material */
-    if(crypto_rand(16, layer->keyseed)) { /* error */
+    if(crypto_rand(16, layer+12)) { /* error */
       log(LOG_ERR,"Error generating random data.");
       goto error;
     }
@@ -529,11 +532,11 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       log(LOG_DEBUG,"create_onion() : Building hop %u of crypt path.",i+1);
       hop = cpath[i];
       /* set crypto functions */
-      hop->backf = layer->backf;
-      hop->forwf = layer->forwf;
+      hop->backf = *(layer+1) >> 4;
+      hop->forwf = *(layer+1) & 0x0f;
 	
       /* calculate keys */
-      crypto_SHA_digest(layer->keyseed,16,hop->digest3);
+      crypto_SHA_digest(layer+12,16,hop->digest3);
       log(LOG_DEBUG,"create_onion() : First SHA pass performed.");
       crypto_SHA_digest(hop->digest3,20,hop->digest2);
       log(LOG_DEBUG,"create_onion() : Second SHA pass performed.");
@@ -561,7 +564,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       
     /* padding if this is the innermost layer */
     if (!i) {
-      if (crypto_pseudo_rand(100, (unsigned char *)layer + 28)) { /* error */
+      if (crypto_pseudo_rand(ONION_PADDING_SIZE, layer + ONION_LAYER_SIZE)) { /* error */
         log(LOG_ERR,"Error generating pseudo-random data.");
         goto error;
       }
@@ -570,20 +573,21 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       
     /* encrypt */
 
-    if(! encrypt_onion(layer,128+(i*28),router->pkey)) {
+    if(encrypt_onion(layer,ONION_PADDING_SIZE+(i+1)*ONION_LAYER_SIZE,router->pkey) < 0) {
       log(LOG_ERR,"Error encrypting onion layer.");
       goto error;
     }
     log(LOG_DEBUG,"create_onion() : Encrypted layer.");
       
     /* calculate pointer to next layer */
-    layer = (onion_layer_t *)(buf + (routelen-i-2)*sizeof(onion_layer_t));
+    layer = buf + (routelen-i-2)*ONION_LAYER_SIZE;
   }
 
   return buf;
+
  error:
   if (buf)
-    free((void *)buf);
+    free(buf);
   if (cpath) {
     for (j=0;j<i;j++) {
       if(cpath[i]->f_crypto)
@@ -598,8 +602,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
  * DES OFB with the key as defined in the outter layer */
-unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_env_t *pkey)
-{
+int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey) {
   unsigned char *tmpbuf = NULL; /* temporary buffer for crypto operations */
   unsigned char digest[20]; /* stores SHA1 output - 160 bits */
   unsigned char iv[8];
@@ -607,20 +610,21 @@ unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
   crypto_cipher_env_t *crypt_env = NULL; /* crypto environment */
  
   assert(onion && pkey);
+  assert(onionlen >= 128);
 
-  memset((void *)iv,0,8);
+  memset(iv,0,8);
     
-  log(LOG_DEBUG,"Onion layer : %u, %u, %u, %s, %u.",onion->zero,onion->backf,onion->forwf,inet_ntoa(*((struct in_addr *)&onion->addr)),onion->port);
+//  log(LOG_DEBUG,"Onion layer : %u, %u, %u, %s, %u.",onion->zero,onion->backf,onion->forwf,inet_ntoa(*((struct in_addr *)&onion->addr)),onion->port);
   /* allocate space for tmpbuf */
   tmpbuf = (unsigned char *)malloc(onionlen);
-  if (!tmpbuf) {
+  if(!tmpbuf) {
     log(LOG_ERR,"Could not allocate memory.");
-    return NULL;
+    return -1;
   }
   log(LOG_DEBUG,"encrypt_onion() : allocated %u bytes of memory for the encrypted onion (at %u).",onionlen,tmpbuf);
   
   /* get key1 = SHA1(KeySeed) */
-  if (crypto_SHA_digest(((onion_layer_t *)onion)->keyseed,16,digest)) {
+  if (crypto_SHA_digest(onion+12,16,digest)) {
     log(LOG_ERR,"Error computing SHA1 digest.");
     goto error;
   }
@@ -628,7 +632,7 @@ unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
     
   log(LOG_DEBUG,"encrypt_onion() : Trying to RSA encrypt.");
   /* encrypt 128 bytes with RSA *pkey */
-  if (crypto_pk_public_encrypt(pkey, (unsigned char *)onion, 128, tmpbuf, RSA_NO_PADDING) == -1) {
+  if (crypto_pk_public_encrypt(pkey, onion, 128, tmpbuf, RSA_NO_PADDING) == -1) {
     log(LOG_ERR,"Error RSA-encrypting data :%s",crypto_perror());
     goto error;
   }
@@ -642,147 +646,136 @@ unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
     goto error;
   }
     
-  if (crypto_cipher_encrypt(crypt_env,(unsigned char *)onion+128, onionlen-128, (unsigned char *)tmpbuf+128)) { /* error */
+  if (crypto_cipher_encrypt(crypt_env,onion+128, onionlen-128, (unsigned char *)tmpbuf+128)) { /* error */
     log(LOG_ERR,"Error performing DES encryption:%s",crypto_perror()); 
     goto error;
   }
   log(LOG_DEBUG,"encrypt_onion() : DES OFB encrypted the rest of the onion.");
     
   /* now copy tmpbuf to onion */
-  memcpy((void *)onion,(void *)tmpbuf,onionlen);
+  memcpy(onion,tmpbuf,onionlen);
   log(LOG_DEBUG,"encrypt_onion() : Copied cipher to original onion buffer.");
-  free((void *)tmpbuf);
+  free(tmpbuf);
   crypto_free_cipher_env(crypt_env);
-  return (unsigned char *)onion;
+  return 0;
 
  error:
   if (tmpbuf)
-    free((void *)tmpbuf);
+    free(tmpbuf);
   if (crypt_env)
     crypto_free_cipher_env(crypt_env);
-  return NULL;
+  return -1;
 }
 
 /* decrypts the first 128 bytes using RSA and prkey, decrypts the rest with DES OFB with key1 */
-unsigned char *decrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_env_t *prkey)
-{
+int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prkey) {
   void *tmpbuf = NULL; /* temporary buffer for crypto operations */
   unsigned char digest[20]; /* stores SHA1 output - 160 bits */
   unsigned char iv[8];
   
   crypto_cipher_env_t *crypt_env =NULL; /* crypto environment */
   
-  if ( (onion) && (prkey) ) { /* valid parameters */
-    memset((void *)iv,0,8);
-    
-    /* allocate space for tmpbuf */
-    tmpbuf = malloc(onionlen);
-    if (!tmpbuf) {
-      log(LOG_ERR,"Could not allocate memory.");
-      return NULL;
-    }
-    log(LOG_DEBUG,"decrypt_onion() : Allocated memory for the temporary buffer.");
+  assert(onion && prkey);
 
-    /* decrypt 128 bytes with RSA *prkey */
-    if (crypto_pk_private_decrypt(prkey, (unsigned char*)onion, 128, (unsigned char *)tmpbuf, RSA_NO_PADDING) == -1)
-    {
-      log(LOG_ERR,"Error RSA-decrypting data :%s",crypto_perror());
-      goto error;
-    }
-    log(LOG_DEBUG,"decrypt_onion() : RSA decryption complete.");
+  memset(iv,0,8);
     
-    /* get key1 = SHA1(KeySeed) */
-    if (crypto_SHA_digest(((onion_layer_t *)tmpbuf)->keyseed,16,digest))
-    {
-      log(LOG_ERR,"Error computing SHA1 digest.");
-      goto error;
-    }
-    log(LOG_DEBUG,"decrypt_onion() : Computed DES key.");
+  /* allocate space for tmpbuf */
+  tmpbuf = malloc(onionlen);
+  if (!tmpbuf) {
+    log(LOG_ERR,"Could not allocate memory.");
+    return -1;
+  }
+  log(LOG_DEBUG,"decrypt_onion() : Allocated memory for the temporary buffer.");
+
+  /* decrypt 128 bytes with RSA *prkey */
+  if (crypto_pk_private_decrypt(prkey, onion, 128, tmpbuf, RSA_NO_PADDING) == -1)
+  {
+    log(LOG_ERR,"Error RSA-decrypting data :%s",crypto_perror());
+    goto error;
+  }
+  log(LOG_DEBUG,"decrypt_onion() : RSA decryption complete.");
     
-    /* now decrypt the rest with DES OFB */
-    crypt_env = crypto_create_init_cipher(CRYPTO_CIPHER_DES, digest, iv, 0);
-    if (!crypt_env) {
-      log(LOG_ERR,"Error creating crypto environment");
-      goto error;
-    }
+  /* get key1 = SHA1(KeySeed) */
+  if (crypto_SHA_digest(tmpbuf+12,16,digest)) {
+    log(LOG_ERR,"Error computing SHA1 digest.");
+    goto error;
+  }
+  log(LOG_DEBUG,"decrypt_onion() : Computed DES key.");
+    
+  /* now decrypt the rest with DES OFB */
+  crypt_env = crypto_create_init_cipher(CRYPTO_CIPHER_DES, digest, iv, 0);
+  if (!crypt_env) {
+    log(LOG_ERR,"Error creating crypto environment");
+    goto error;
+  }
  
-    if (crypto_cipher_decrypt(crypt_env,(unsigned char *)onion+128, onionlen-128,(unsigned char *)tmpbuf+128)) {
-      log(LOG_ERR,"Error performing DES decryption:%s",crypto_perror());
-      goto error;
-    }
+  if (crypto_cipher_decrypt(crypt_env,onion+128, onionlen-128,tmpbuf+128)) {
+    log(LOG_ERR,"Error performing DES decryption:%s",crypto_perror());
+    goto error;
+  }
     
-    log(LOG_DEBUG,"decrypt_onion() : DES decryption complete.");
+  log(LOG_DEBUG,"decrypt_onion() : DES decryption complete.");
     
-    /* now copy tmpbuf to onion */
-    memcpy((void *)onion,(void *)tmpbuf,onionlen);
-    free((void *)tmpbuf);
-    crypto_free_cipher_env(crypt_env);
-    return (unsigned char *)onion;
-  } /* valid parameters */
-  else
-    return NULL;
+  /* now copy tmpbuf to onion */
+  memcpy(onion,tmpbuf,onionlen);
+  free(tmpbuf);
+  crypto_free_cipher_env(crypt_env);
+  return 0;
 
  error:
   if (tmpbuf)
-    free((void *)tmpbuf);
+    free(tmpbuf);
   if (crypt_env)
     crypto_free_cipher_env(crypt_env);
-  return NULL;
+  return -1;
 }
 
 /* delete first n bytes of the onion and pads the end with n bytes of random data */
 void pad_onion(unsigned char *onion, uint32_t onionlen, int n)
 {
-  if (onion) /* valid parameter */
-  {
-    memmove((void *)onion,(void *)(onion+n),onionlen-n);
-    crypto_pseudo_rand(n, onion+onionlen-n);
-  }
+  assert(onion);
+
+  memmove(onion,onion+n,onionlen-n);
+  crypto_pseudo_rand(n, onion+onionlen-n);
 }
 
 /* create a new tracked_onion entry */
-tracked_onion_t *new_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion)
+int add_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion)
 {
   tracked_onion_t *to = NULL;
   
-  if (!onion || !tracked_onions || !last_tracked_onion) /* invalid parameters */
-    return NULL;
+  assert(onion && tracked_onions && last_tracked_onion);
   
   to = (tracked_onion_t *)malloc(sizeof(tracked_onion_t));
   if (!to)
-    return NULL;
+    return -1;
   
-  to->expire = ((onion_layer_t *)onion)->expire; /* set the expiration date */
+  to->expire = ntohl(*(uint32_t *)(onion+8)); /* set the expiration date */
   /* compute the SHA digest */
-  if (crypto_SHA_digest(onion, onionlen, to->digest))
-  {
-    log(LOG_DEBUG,"new_tracked_onion() : Failed to compute a SHA1 digest of the onion.");
-    free((void *)to);
-    return NULL;
+  if (crypto_SHA_digest(onion, onionlen, to->digest)) {
+    log(LOG_DEBUG,"new_tracked_onion(): Failed to compute a SHA1 digest of the onion.");
+    free(to);
+    return -1;
   }
   
   to->next = NULL;
   
-  if (!*tracked_onions)
-  {
+  if (!*tracked_onions) {
     to->prev = NULL;
     *tracked_onions = to;
-  }
-  else
-  {
-    to->prev = (void *)*last_tracked_onion;
-    (*last_tracked_onion)->next = (void *)to;
+  } else {
+    to->prev = *last_tracked_onion;
+    (*last_tracked_onion)->next = to;
   }
   *last_tracked_onion = to;
   
-  return to;
+  return 0;
 }
 
 /* delete a tracked onion entry */
 void remove_tracked_onion(tracked_onion_t *to, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion)
 {
-  if (!*tracked_onions || !*last_tracked_onion || !to)
-    return;
+  assert(*tracked_onions && *last_tracked_onion && to);
   
   if (to->prev)
     ((tracked_onion_t *)to->prev)->next = to->next;
@@ -795,13 +788,13 @@ void remove_tracked_onion(tracked_onion_t *to, tracked_onion_t **tracked_onions,
   if (to == *last_tracked_onion)
     *last_tracked_onion = (tracked_onion_t *)to->prev;
   
-  free((void *)to);
+  free(to);
   
   return;
 }
 
 /* find a tracked onion in the linked list of tracked onions */
-tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t *tracked_onions)
+tracked_onion_t *find_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t *tracked_onions)
 {
   tracked_onion_t *to = tracked_onions;
   unsigned char digest[20];
@@ -809,12 +802,12 @@ tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, track
   /* compute the SHA digest of the onion */
   crypto_SHA_digest(onion,onionlen, digest);
   
-  while(to)
-  {
-    if (!memcmp((void *)digest, (void *)to->digest, 20))
+  while(to) {
+    if(!memcmp(digest, to->digest, 20))
       return to;
     to = (tracked_onion_t *)to->next;
   }
   
   return NULL;
 }
+
