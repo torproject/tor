@@ -761,8 +761,6 @@ typedef struct {
   struct config_line_t *LogOptions; /**< List of configuration lines
                                      * for logfiles */
 
-  char *LogLevel; /**< Verbosity of log: minimal level of messages to report. */
-  char *LogFile; /**< Where to send normal log messages. */
   char *DebugLogFile; /**< Where to send verbose log messages. */
   char *DataDirectory; /**< OR only: where to store long-term data. */
   char *RouterFile; /**< Where to find starting list of ORs. */

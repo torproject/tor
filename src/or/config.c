@@ -200,7 +200,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
     config_compare(list, "EntryNodes",     CONFIG_TYPE_STRING, &options->EntryNodes) ||
-    config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
+    config_compare(list, "ExitPolicy",     CONFIG_TYPE_LINELIST, &options->ExitPolicy) ||
     config_compare(list, "ExcludeNodes",   CONFIG_TYPE_STRING, &options->ExcludeNodes) ||
 
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
