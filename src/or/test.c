@@ -11,7 +11,7 @@
 /* For mkdir() */
 #include <direct.h>
 #endif
-
+#include <dirent.h>
 #include "or.h"
 #include "../common/test.h"
 
@@ -38,18 +38,60 @@ dump_hex(char *s, int len)
   }
 }
 
+static char temp_dir[256];
+
 void
-setup_directory() {
-  char buf[256];
+setup_directory()
+{
+  static int is_setup = 0;
   int r;
-  sprintf(buf, "/tmp/tor_test");
+  if (is_setup) return;
+
+  sprintf(temp_dir, "/tmp/tor_test_%d", (int) getpid());
 #ifdef _MSC_VER
-  r = mkdir(buf);
+  r = mkdir(temp_dir);
 #else
-  r = mkdir(buf, 0700);
+  r = mkdir(temp_dir, 0700);
 #endif
-  if (r && errno != EEXIST)
-    fprintf(stderr, "Can't create directory %s", buf);
+  if (r) {
+    fprintf(stderr, "Can't create directory %s:", temp_dir);
+    perror("");
+    exit(1);
+  }
+  is_setup = 1;
+}
+
+const char *
+get_fname(const char *name)
+{
+  static char buf[1024];
+  setup_directory();
+  sprintf(buf,"%s/%s",temp_dir,name);
+  return buf;
+}
+
+void
+remove_directory()
+{
+  DIR *dirp;
+  struct dirent *de;
+  setup_directory();
+  if (!(dirp = opendir(temp_dir))) {
+    perror("Can't open temporary directory to remove files");
+    return;
+  }
+  while ((de = readdir(dirp)) != NULL) {
+    /* Only "." and ".." start with ., since we don't create any dotfiles. */
+    if (de->d_name[0] == '.') continue;
+    if (unlink(get_fname(de->d_name))) {
+      perror("Error removing file");
+    }
+#if 0
+    printf("==%s\n", de->d_name);
+#endif
+  }
+  closedir(dirp);
+  rmdir(temp_dir);
 }
 
 void
@@ -75,14 +117,14 @@ test_buffers() {
   /****
    * read_to_buf
    ****/
-  s = open("/tmp/tor_test/data", O_WRONLY|O_CREAT|O_TRUNC, 0600);
+  s = open(get_fname("data"), O_WRONLY|O_CREAT|O_TRUNC, 0600);
   for (j=0;j<256;++j) {
     str[j] = (char)j;
   }
   write(s, str, 256);
   close(s);
 
-  s = open("/tmp/tor_test/data", O_RDONLY, 0);
+  s = open(get_fname("data"), O_RDONLY, 0);
   eof = 0;
   i = read_to_buf(s, 10, buf, &eof);
   test_eq(buf_capacity(buf), 512*1024);
@@ -349,10 +391,10 @@ test_crypto()
 
   /* File operations: save and load private key */
   test_assert(! crypto_pk_write_private_key_to_filename(pk1,
-                                                    "/tmp/tor_test/pke1y"));
+                                                        get_fname("pkey1")));
 
   test_assert(! crypto_pk_read_private_key_from_filename(pk2,
-                                                  "/tmp/tor_test/pke1y"));
+                                                         get_fname("pkey1")));
   test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
                                         PK_PKCS1_OAEP_PADDING,1));
 
@@ -933,6 +975,7 @@ main(int c, char**v){
   crypto_seed_rng();
   setup_directory();
   rep_hist_init();
+  atexit(remove_directory);
 
 //  puts("========================== Buffers =========================");
 //  test_buffers();
