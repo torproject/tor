@@ -44,20 +44,20 @@ int learn_my_address(struct sockaddr_in *me) {
 
   /* obtain local host information */
   if(gethostname(localhostname,512) < 0) {
-    log(LOG_ERR,"Error obtaining local hostname.");
+    log_fn(LOG_ERR,"Error obtaining local hostname.");
     return -1;
   }
-  log(LOG_DEBUG,"learn_my_address(): localhostname is '%s'.",localhostname);
+  log_fn(LOG_DEBUG,"localhostname is '%s'.",localhostname);
   localhost = gethostbyname(localhostname);
   if (!localhost) {
-    log(LOG_ERR,"Error obtaining local host info.");
+    log_fn(LOG_ERR,"Error obtaining local host info.");
     return -1;
   }
   memset(me,0,sizeof(struct sockaddr_in));
   me->sin_family = AF_INET;
   memcpy((void *)&me->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
   me->sin_port = htons(options.ORPort);
-  log(LOG_DEBUG,"learn_my_address(): chose address as '%s'.",inet_ntoa(me->sin_addr));
+  log_fn(LOG_DEBUG,"chose address as '%s'.",inet_ntoa(me->sin_addr));
 
   return 0;
 }
@@ -69,7 +69,7 @@ void router_retry_connections(void) {
   for (i=0;i<directory->n_routers;i++) {
     router = directory->routers[i];
     if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
-      log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,router->or_port);
+      log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
       connection_or_connect_as_or(router);
     }
   }
@@ -199,19 +199,19 @@ int router_get_list_from_file(char *routerfile)
   assert(routerfile);
   
   if (strcspn(routerfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
-    log(LOG_ERR,"router_get_list_from_file(): Filename %s contains illegal characters.",routerfile);
+    log_fn(LOG_ERR,"Filename %s contains illegal characters.",routerfile);
     return -1;
   }
   
   if(stat(routerfile, &statbuf) < 0) {
-    log(LOG_ERR,"router_get_list_from_file(): Could not stat %s.",routerfile);
+    log_fn(LOG_ERR,"Could not stat %s.",routerfile);
     return -1;
   }
 
   /* open the router list */
   fd = open(routerfile,O_RDONLY,0);
   if (fd<0) {
-    log(LOG_ERR,"router_get_list_from_file(): Could not open %s.",routerfile);
+    log_fn(LOG_ERR,"Could not open %s.",routerfile);
     return -1;
   }
 
@@ -244,11 +244,10 @@ int router_get_list_from_file(char *routerfile)
 
 typedef enum {
   K_ACCEPT,
-  K_CLIENT_SOFTWARE, 
   K_DIRECTORY_SIGNATURE,
+  K_RECOMMENDED_SOFTWARE,
   K_REJECT, 
   K_ROUTER, 
-  K_SERVER_SOFTWARE,
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
   _SIGNATURE, 
@@ -261,11 +260,10 @@ struct token_table_ent { char *t; int v; };
 
 static struct token_table_ent token_table[] = {
   { "accept", K_ACCEPT },
-  { "client-software", K_CLIENT_SOFTWARE },
   { "directory-signature", K_DIRECTORY_SIGNATURE },
   { "reject", K_REJECT },
   { "router", K_ROUTER },
-  { "server-software", K_SERVER_SOFTWARE },
+  { "recommended-software", K_RECOMMENDED_SOFTWARE },
   { "signed-directory", K_SIGNED_DIRECTORY },
   { "signing-key", K_SIGNING_KEY },
   { NULL, -1 }
@@ -395,11 +393,10 @@ router_dump_token(directory_token_t *tok) {
       puts("EOF");
       return;
     case K_ACCEPT: printf("Accept"); break;
-    case K_CLIENT_SOFTWARE: printf("Client-Software"); break;
     case K_DIRECTORY_SIGNATURE: printf("Directory-Signature"); break;
     case K_REJECT: printf("Reject"); break;
+    case K_RECOMMENDED_SOFTWARE: printf("Server-Software"); break;
     case K_ROUTER: printf("Router"); break;
-    case K_SERVER_SOFTWARE: printf("Server-Software"); break;
     case K_SIGNED_DIRECTORY: printf("Signed-Directory"); break;
     case K_SIGNING_KEY: printf("Signing-Key"); break;
     default:
@@ -518,6 +515,7 @@ int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
     log(LOG_ERR, "Error resolving directory");
     return -1;
   }
+  /* XXXX Check version number */
   return 0;
 }
 
@@ -528,6 +526,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   char digest[20];
   char signed_digest[128];
   directory_t *new_dir = NULL;
+  char *versions;
   
 #define NEXT_TOK()                                                      \
   do {                                                                  \
@@ -551,16 +550,19 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   TOK_IS(K_SIGNED_DIRECTORY, "signed-directory");
 
   NEXT_TOK();
-  TOK_IS(K_CLIENT_SOFTWARE, "client-software");
-
-  NEXT_TOK();
-  TOK_IS(K_SERVER_SOFTWARE, "server-software");
+  TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
+  if (tok.val.cmd.n_args != 1) {
+    log(LOG_ERR, "Invalid recommded-software line");
+    return -1;
+  }
+  versions = strdup(tok.val.cmd.args[0]);
   
   NEXT_TOK();
   if (router_get_list_from_string_tok(&s, &new_dir, &tok)) {
     log(LOG_ERR, "Error reading routers from directory");
     return -1;
   }
+  new_dir->software_versions = versions;
   
   TOK_IS(K_DIRECTORY_SIGNATURE, "directory-signature");
   NEXT_TOK();

@@ -9,6 +9,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.2  2003/05/09 02:25:37  nickm
+ * work on versioning; new log_fn function
+ *
  * Revision 1.1  2002/09/03 18:43:50  nickm
  * Add function to fake a poll call using select
  *
@@ -17,7 +20,6 @@
 #define __FAKEPOLL_H
 
 #include "orconfig.h"
-#undef VERSION
 
 #ifndef HAVE_POLL_H
 #ifndef HAVE_SYS_POLL_H

@@ -157,7 +157,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): and got a %s directory; updated routers.", 
           conn->pkey ? "authenticated" : "unauthenticated");
     }
-    
+
     if(options.ORPort) { /* connect to them all */
       router_retry_connections();
     }
