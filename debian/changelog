@@ -1,3 +1,13 @@
+tor (0.0.8+0.0.9rc5-1) unstable; urgency=medium
+
+  * New upstream release (candidate).
+    - medium because it fixes an integer overflow that might
+      be exploitable, but doesn't seem to be currently.
+  * Add a few 'date' calls in debian/rules, so I can see how long
+    building the docs take on autobuilders.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed,  1 Dec 2004 10:02:08 +0100
+
 tor (0.0.8+0.0.9rc3-1) unstable; urgency=low
 
   * New upstream release (candidate).
