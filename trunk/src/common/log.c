@@ -203,7 +203,9 @@ void _log(int severity, const char *format, ...)
   va_end(ap);
 }
 
+
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
+#ifdef __GNUC__
 void _log_fn(int severity, const char *fn, const char *format, ...)
 {
   va_list ap;
@@ -211,6 +213,17 @@ void _log_fn(int severity, const char *fn, const char *format, ...)
   logv(severity, fn, format, ap);
   va_end(ap);
 }
+#else
+const char *_log_fn_function_name=NULL;
+void _log_fn(int severity, const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  logv(severity, _log_fn_function_name, format, ap);
+  va_end(ap);
+  _log_fn_function_name = NULL;
+}
+#endif
 
 /** Close all open log files. */
 void close_logs()
