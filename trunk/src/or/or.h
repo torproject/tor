@@ -1012,6 +1012,8 @@ void rend_cache_clean(void);
 int rend_cache_lookup(char *query, const char **desc, int *desc_len);
 int rend_cache_store(char *desc, int desc_len);
 
+int rend_parse_rendezvous_address(char *address);
+
 /********************************* rendservice.c ***************************/
 
 int rend_config_services(or_options_t *options);
