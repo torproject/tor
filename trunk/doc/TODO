@@ -12,8 +12,8 @@ ARMA    - arma claims
         X Abandoned
 
 For 0.0.7:
-        - allow multiple log files
-        - the keep-trying-to-build-intropoints-always bug.
+        o allow multiple log files
+        o the keep-trying-to-build-intropoints-always bug.
         - *bindaddress
           - include the port
           - allow multiple of them
