@@ -286,9 +286,15 @@ static void router_add_exit_policy_from_config_helper(char *s, routerinfo_t *rou
   }
 }
 
+#define DefaultExitPolicy "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-80,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*"
+
 static void router_add_exit_policy_from_config(routerinfo_t *router) {
-  router_add_exit_policy_from_config_helper(options.ExitPolicyPrepend, router);
   router_add_exit_policy_from_config_helper(options.ExitPolicy, router);
+  if(strstr(options.ExitPolicy," *:*") == NULL) {
+    /* if exitpolicy includes a *:* line, then we're done. Else, append
+     * the default exitpolicy. */
+    router_add_exit_policy_from_config_helper(DefaultExitPolicy, router);
+  }
 }
 
 /* Return false if my exit policy says to allow connection to conn.
