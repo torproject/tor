@@ -745,6 +745,8 @@ int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey);
 int router_get_dir_from_string_impl(char *s, directory_t **dest,
                                     crypto_pk_env_t *pkey);
 routerinfo_t *router_get_entry_from_string(char **s);
+int router_supports_exit_address(uint32_t addr, uint16_t port,
+                                 routerinfo_t *router);
 int router_compare_to_exit_policy(connection_t *conn);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy);
@@ -754,6 +756,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 const routerinfo_t *router_get_desc_routerinfo(void);
 const char *router_get_my_descriptor(void);
 int router_rebuild_descriptor(void);
+int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 
 /********************************* dirserv.c ***************************/
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);

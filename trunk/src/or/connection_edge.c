@@ -255,8 +255,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
          * forgotten it.
          */
         addr = ntohl(*cell->payload+RELAY_HEADER_SIZE+1);
-        client_dns_set_entry(conn->address, addr);
-        /* XXX Move state back into CIRCUIT_WAIT. */
+        client_dns_set_entry(conn->socks_request->addr, addr);
+        conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+        /* XXX Build another circuit as required */
+        return 0;
       }
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length),
@@ -479,12 +481,19 @@ repeat_connection_edge_package_raw_inbuf:
 /* Tell any APs that are waiting for a new circuit that one is available */
 void connection_ap_attach_pending(void)
 {
-  connection_t *conn;
+  connection_t **carray;
+  int n, i;
+  int need_new_circuit = 0;
 
-  while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
-                                              AP_CONN_STATE_CIRCUIT_WAIT))) {
-    if (connection_ap_handshake_attach_circuit(conn) == 0)
-      break; /* There was no circuit to attach to: stop the loop. */
+  get_connection_array(&carray, &n);
+
+  for (i = 0; i < n; ++i) {
+    if (carray[i]->type != CONN_TYPE_AP || 
+        carray[i]->type != AP_CONN_STATE_CIRCUIT_WAIT)
+      continue;
+    if (connection_ap_handshake_attach_circuit(carray[i])) {
+      need_new_circuit = 1; /* XXX act on this. */
+    }
   }
 }
 
@@ -540,8 +549,9 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   } /* else socks handshake is done, continue processing */
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-  if (connection_ap_handshake_attach_circuit(conn)<0)
-    return -1;
+  if (connection_ap_handshake_attach_circuit(conn)) {
+    /* XXX we need a circuit */
+  }      
   return 0;
 }
 
@@ -569,8 +579,18 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
      *     client until we're connected. the socks spec promises that it
      *     won't write. is that good enough?
      */
-    return 0;
+    return -1;
   }
+  if (connection_ap_can_use_exit(conn,
+                  router_get_by_addr_port(circ->cpath->prev->addr,
+                                          circ->cpath->prev->port)) < 0) {
+    /* The exit on this circuit will _definitely_ reject this connection. */
+    log_fn(LOG_INFO,"Most recent circuit will reject AP connection; delaying.");
+    /* XXX Build another circuit. */
+    connection_stop_reading(conn);
+    return -1;
+  }
+
   connection_start_reading(conn);
 
   circ->dirty = 1;
@@ -586,7 +606,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   connection_ap_handshake_send_begin(conn, circ);
 
-  return 1;
+  return 0;
 }
 
 /* deliver the destaddr:destport in a relay cell */
@@ -763,6 +783,14 @@ void connection_exit_connect(connection_t *conn) {
                                connected_payload, 4, conn->cpath_layer);
 }
 
+int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
+{
+  uint32_t addr;
+  
+  addr = client_dns_lookup_entry(conn->socks_request->addr);
+  return router_supports_exit_address(addr, conn->port, exit);
+}
+
 /* ***** Client DNS code ***** */
 #define MAX_DNS_ENTRY_AGE 30*60
 
@@ -806,7 +834,7 @@ static uint32_t client_dns_lookup_entry(const char *address)
   assert(address);
 
   if (inet_aton(address, &in)) {
-    log_fn(LOG_DEBUG, "Using static address %s", address);
+    log_fn(LOG_DEBUG, "Using static address %s (%08X)", address, in.s_addr);
     return in.s_addr;
   }
   search.address = (char*)address;
@@ -867,6 +895,7 @@ static void client_dns_set_entry(const char *address, uint32_t val)
     ++client_dns_size;
   }
 }
+
 static void client_dns_clean()
 {
   struct client_dns_entry **expired_entries;

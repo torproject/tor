@@ -1061,6 +1061,16 @@ policy_read_failed:
   return -1;
 }
 
+/* Addr is 0 for "IP unknown".
+ *
+ * Returns -1 for 'rejected', 0 for accepted, 1 for 'maybe' (since IP is
+ * unknown.
+ */
+int router_supports_exit_address(uint32_t addr, uint16_t port,
+                                 routerinfo_t *router)
+{
+  return router_compare_addr_to_exit_policy(addr, port, router->exit_policy);
+}
 
 /* Addr is 0 for "IP unknown".
  *
@@ -1074,8 +1084,6 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
   int match = 0;
   struct in_addr in;
   struct exit_policy_t *tmpe;
-
-  assert(desc_routerinfo);
 
   for(tmpe=policy; tmpe; tmpe=tmpe->next) {
     log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
@@ -1117,8 +1125,6 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
  * Else return -1.
  */
 int router_compare_to_exit_policy(connection_t *conn) {
-  struct exit_policy_t *tmpe;
-
   assert(desc_routerinfo);
   
   if (router_compare_addr_to_exit_policy(conn->addr, conn->port,

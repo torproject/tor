@@ -8,6 +8,7 @@ extern or_options_t options; /* command-line and config-file options */
 
 struct cpath_build_state_t {
   int desired_path_len;
+  char *chosen_exit; /* nicknames */
 };
 
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
@@ -223,6 +224,95 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   return routelen;
 }
 
+static routerinfo_t *choose_good_exit_server(directory_t *dir)
+{
+  int *n_supported;
+  int *n_maybe_supported;
+  int i, j;
+  int n_pending_connections = 0;
+  connection_t **carray;
+  int n_connections;
+  int best_support = -1;
+  int best_maybe_support = -1;
+  int best_support_idx = -1;
+  int best_maybe_support_idx = -1;
+  int n_best_support=0, n_best_maybe_support=0;
+  
+  get_connection_array(&carray, &n_connections);
+
+  for (i = 0; i < n_connections; ++i) {
+    if (carray[i]->type == CONN_TYPE_AP && carray[i]->state == AP_CONN_STATE_CIRCUIT_WAIT)
+      ++n_pending_connections;
+  }
+  log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
+         n_pending_connections);
+  n_supported = tor_malloc(sizeof(int)*dir->n_routers);
+  n_maybe_supported = tor_malloc(sizeof(int)*dir->n_routers);
+  for (i = 0; i < dir->n_routers; ++i) {
+    n_supported[i] = n_maybe_supported[i] = 0;
+    for (j = 0; j < n_pending_connections; ++j) {
+      if (carray[i]->type != CONN_TYPE_AP || 
+          carray[i]->state == AP_CONN_STATE_CIRCUIT_WAIT ||
+          carray[i]->marked_for_close)
+        continue;
+      switch (connection_ap_can_use_exit(carray[j], dir->routers[i])) 
+        {
+        case -1:
+          break;
+        case 0:
+          ++n_supported[i];
+        case 1:
+          ++n_maybe_supported[i];
+        }
+    }
+    if (n_supported[i] > best_support) {
+      best_support = n_supported[i]; best_support_idx = i; n_best_support=1;
+    } else if (n_supported[i] == best_support) {
+      ++n_best_support;
+    }
+    if (n_maybe_supported[i] > best_maybe_support) {
+      best_maybe_support = n_maybe_supported[i]; best_maybe_support_idx = i;
+      n_best_maybe_support = 1;
+    } else if (n_maybe_supported[i] == best_maybe_support) {
+      ++n_best_maybe_support;
+    }
+  }
+  log_fn(LOG_WARN, "Found %d servers that will definitely support %d/%d pending connections, and %d that might support %d/%d.",
+         n_best_support, best_support, n_pending_connections,
+         n_best_maybe_support, best_maybe_support, n_pending_connections);
+  if (best_support) {
+    i = crypto_pseudo_rand_int(n_best_support);
+    for (j = best_support_idx; j < dir->n_routers; ++j) {
+      if (n_supported[j] == best_support) {
+        if (i) 
+          --i;
+        else {
+          tor_free(n_supported); tor_free(n_maybe_supported);
+          return dir->routers[i];
+        }
+      }
+    }
+  }
+  if (best_maybe_support) {
+    i = crypto_pseudo_rand_int(n_best_maybe_support);
+    for (j = best_maybe_support_idx; j < dir->n_routers; ++j) {
+      if (n_maybe_supported[j] == best_maybe_support) {
+        if (i) 
+          --i;
+        else {
+          tor_free(n_supported); tor_free(n_maybe_supported);
+          return dir->routers[i];
+        }
+      }
+    }
+  }
+  tor_free(n_supported);
+  tor_free(n_maybe_supported);
+  i = crypto_pseudo_rand_int(dir->n_routers);
+  log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[i]->nickname);
+  return dir->routers[i];
+}
+
 cpath_build_state_t *onion_new_cpath_build_state(void) {
   directory_t *dir;
   int r;
@@ -234,6 +324,8 @@ cpath_build_state_t *onion_new_cpath_build_state(void) {
     return NULL;
   info = tor_malloc(sizeof(cpath_build_state_t));
   info->desired_path_len = r;
+  /* XXX This is leaked */
+  info->chosen_exit = tor_strdup(choose_good_exit_server(dir)->nickname);
   return info;
 }
 
@@ -272,12 +364,11 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   int cur_len;
   crypt_path_t *cpath, *hop;
   routerinfo_t **rarray, *r;
-  unsigned int choice;
+  routerinfo_t *choice;
   int rarray_len;
   int i;
   directory_t *dir;
-  char **nicknames;
-  int num_nicknames;
+  int n_failures;
 
   assert(head_ptr);
   assert(router_out);
@@ -302,28 +393,51 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len, 
          state->desired_path_len);
 
+  n_failures = 0;
+  goto start;
  again:
-  if(cur_len == 0) { /* picking entry node */
-
-
+  log_fn(LOG_DEBUG, "Picked an already-selected router for hop %d; retrying.",
+         cur_len);
+  ++n_failures;
+  if (n_failures == 25) {
+    /* This actually happens with P=1/30,000,000 when we _could_ build a
+     * circuit.  For now, let's leave it in.
+     */
+    log_fn(LOG_ERR, "Infinite loop in exit path selection");
+    exit(1);
   }
-  choice = crypto_pseudo_rand_int(rarray_len);
-  log_fn(LOG_DEBUG,"Contemplating router %s for hop %d",
-         rarray[choice]->nickname, cur_len);
+ start:
+  if(cur_len == 0) { /* picking entry node */
+    log_fn(LOG_DEBUG, "Contemplating first hop: random choice.");
+    choice = rarray[crypto_pseudo_rand_int(rarray_len)];
+  } else if (cur_len == state->desired_path_len - 1) { /* Picking last node */
+    log_fn(LOG_DEBUG, "Contemplating last hop: choice already made.");
+    choice = router_get_by_nickname(state->chosen_exit);
+  } else {
+    log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
+    choice = rarray[crypto_pseudo_rand_int(rarray_len)];
+  }
+  log_fn(LOG_DEBUG,"Contemplating router %s for hop %d (exit is %s)",
+         choice->nickname, cur_len, state->chosen_exit);
+  if (cur_len != state->desired_path_len-1 && 
+      !strcasecmp(choice->nickname, state->chosen_exit)) {
+    goto again;
+  }
+    
   for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
     r = router_get_by_addr_port(cpath->addr, cpath->port);
-    if ((r && !crypto_pk_cmp_keys(r->onion_pkey, rarray[choice]->onion_pkey))
-        || (cpath->addr == rarray[choice]->addr && 
-            cpath->port == rarray[choice]->or_port)
+    if ((r && !crypto_pk_cmp_keys(r->onion_pkey, choice->onion_pkey))
+        || (cur_len != state->desired_path_len-1 &&
+            !strcasecmp(choice->nickname, state->chosen_exit))
+        || (cpath->addr == choice->addr && 
+            cpath->port == choice->or_port)
         || (options.OnionRouter && 
-            !(connection_twin_get_by_addr_port(rarray[choice]->addr,
-                                               rarray[choice]->or_port)))) {
-      log_fn(LOG_DEBUG, "Picked an already-selected router for hop %d; retrying.",
-             cur_len);
+            !(connection_twin_get_by_addr_port(choice->addr,
+                                               choice->or_port)))) {
       goto again;
     }
   }
-  
+ 
   /* Okay, so we haven't used 'choice' before. */
   hop = (crypt_path_t *)tor_malloc(sizeof(crypt_path_t));
   memset(hop, 0, sizeof(crypt_path_t));
@@ -341,16 +455,16 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
 
   hop->state = CPATH_STATE_CLOSED;
   
-  hop->port = rarray[choice]->or_port;
-  hop->addr = rarray[choice]->addr;
+  hop->port = choice->or_port;
+  hop->addr = choice->addr;
   
   hop->package_window = CIRCWINDOW_START;
   hop->deliver_window = CIRCWINDOW_START;
 
   log_fn(LOG_DEBUG, "Extended circuit path with %s for hop %d", 
-         rarray[choice]->nickname, cur_len);
+         choice->nickname, cur_len);
   
-  *router_out = rarray[choice];
+  *router_out = choice;
   return 0;
 }
 
