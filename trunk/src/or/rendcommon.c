@@ -213,7 +213,8 @@ int rend_cache_lookup_desc(char *query, const char **desc, int *desc_len)
 
 
 /* Calculate desc's service id, and store it.
- * Return -1 if it's malformed or otherwise rejected, else return 0.
+ * Return -1 if it's malformed or otherwise rejected and you
+ * want the caller to fail, else return 0.
  */
 int rend_cache_store(char *desc, int desc_len)
 {
@@ -245,15 +246,15 @@ int rend_cache_store(char *desc, int desc_len)
   }
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, query);
   if (e && e->parsed->timestamp > parsed->timestamp) {
-    log_fn(LOG_WARN,"We already have a newer service descriptor with the same ID");
+    log_fn(LOG_INFO,"We already have a newer service descriptor with the same ID");
     rend_service_descriptor_free(parsed);
-    return -1;
+    return 0;
   }
   if (e && e->len == desc_len && !memcmp(desc,e->desc,desc_len)) {
-    log_fn(LOG_WARN,"We already have this service descriptor");
+    log_fn(LOG_INFO,"We already have this service descriptor");
     e->received = time(NULL);
     rend_service_descriptor_free(parsed);
-    return -1;
+    return 0;
   }
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
