@@ -39,8 +39,16 @@
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
+static inline const EVP_CIPHER *
+crypto_cipher_evp_cipher(int type, int enc);
+
+
 static inline int 
 crypto_cipher_iv_length(int type) {
+  /*
+  printf("%d -> %d IV\n",type, EVP_CIPHER_iv_length(
+						  crypto_cipher_evp_cipher(type,0)));
+  */
   switch(type) 
     {
     case CRYPTO_CIPHER_IDENTITY: return 0;
@@ -53,6 +61,10 @@ crypto_cipher_iv_length(int type) {
 
 static inline int
 crypto_cipher_key_length(int type) {
+  /*
+  printf("%d -> %d\n",type, EVP_CIPHER_key_length(
+						  crypto_cipher_evp_cipher(type,0)));
+  */
   switch(type) 
     {
     case CRYPTO_CIPHER_IDENTITY: return 0;
@@ -774,8 +786,36 @@ void crypto_dh_free(crypto_dh_env_t *dh)
   free(dh);
 }
 
-
 /* random numbers */
+int crypto_seed_rng()
+{
+  static char *filenames[] = { 
+    "/dev/srandom", "/dev/urandom", "/dev/random", NULL
+  };
+  int i;
+  char buf[21];
+  char *cp;
+  FILE *f;
+  
+  for (i = 0; filenames[i]; ++i) {
+    f = fopen(filenames[i], "rb");
+    if (!f) continue;
+    log(LOG_INFO, "Seeding RNG from %s", filenames[i]);
+    buf[20]='\xff';
+    cp = fgets(buf, 20, f);
+    fclose(f);
+    if (!cp || buf[20]) {
+      log(LOG_INFO, "Error reading from entropy source");
+      return -1;
+    }
+    RAND_seed(buf, 20);
+    return 0;
+  }
+
+  log(LOG_INFO, "Cannot seed RNG -- no entropy source found.");
+  return -1;
+}
+
 int crypto_rand(unsigned int n, unsigned char *to)
 {
   assert(to);

@@ -799,6 +799,7 @@ int tor_main(int argc, char *argv[]) {
   signal (SIGHUP,  catch); /* to reload directory */
 
   crypto_global_init();
+  crypto_seed_rng();
   retval = do_main_loop();
   crypto_global_cleanup();
 
