@@ -79,6 +79,11 @@ const char crypto_c_id[] = "$Id$";
 /** Macro: is k a valid RSA private key? */
 #define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
 
+#ifdef TOR_IS_MULTITHREADED
+static tor_mutex_t **_openssl_mutexes = NULL;
+static int _n_openssl_mutexes = -1;
+#endif
+
 struct crypto_pk_env_t
 {
   int refs; /* reference counting so we don't have to copy keys */
@@ -170,6 +175,16 @@ int crypto_global_init()
 int crypto_global_cleanup()
 {
   ERR_free_strings();
+#ifdef TOR_IS_MULTITHREADED
+  if (_n_openssl_mutexes) {
+    int i;
+    for (i=0;i<_n_openssl_mutexes;++i) {
+      tor_mutex_free(_openssl_mutexes[i]);
+    }
+    tor_free(_openssl_mutexes);
+    _n_openssl_mutexes = 0;
+  }
+#endif
   return 0;
 }
 
@@ -1631,7 +1646,6 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 }
 
 #ifdef TOR_IS_MULTITHREADED
-static tor_mutex_t **_openssl_mutexes = NULL;
 static void
 _openssl_locking_cb(int mode, int n, const char *file, int line)
 {
@@ -1644,8 +1658,9 @@ static int
 setup_openssl_threading(void) {
   int i;
   int n = CRYPTO_num_locks();
+  _n_openssl_mutexes = n;
   _openssl_mutexes = tor_malloc(n*sizeof(tor_mutex_t *));
-  for (i=0; i <n; ++i)
+  for (i=0; i < n; ++i)
     _openssl_mutexes[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(_openssl_locking_cb);
   CRYPTO_set_id_callback(tor_get_thread_id);
