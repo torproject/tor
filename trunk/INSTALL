@@ -3,7 +3,7 @@ Quickstart version for users:
 0) Download the absolute newest version. No, really.
   http://freehaven.net/tor/dist/
 1) tar xvf it, and then cd into the directory.
-2) ./configure (or do the two-line version below, if you're on bsd)
+2) ./configure
 3) make
 4) make install
 5) tor (if it doesn't work, give it the whole path or fix your path)
