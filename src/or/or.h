@@ -860,6 +860,7 @@ typedef struct {
   int _AllowUnverified; /**< Bitmask; derived from AllowUnverifiedNodes; */
   struct config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   struct config_line_t *SocksPolicy; /**< Lists of socks policy components */
+  struct config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Addresses to bind for listening for SOCKS connections. */
   struct config_line_t *SocksBindAddress;
   /** Addresses to bind for listening for OR connections. */
@@ -1191,6 +1192,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 
 /********************************* directory.c ***************************/
 
+int dir_policy_permits_address(uint32_t addr);
 void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *payload,

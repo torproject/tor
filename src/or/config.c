@@ -236,6 +236,7 @@ config_assign(or_options_t *options, struct config_line_t *list)
       config_compare(list, "DirPort",        CONFIG_TYPE_UINT, &options->DirPort) ||
       config_compare(list, "DirBindAddress", CONFIG_TYPE_LINELIST, &options->DirBindAddress) ||
       config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_UINT, &options->DirFetchPostPeriod) ||
+      config_compare(list, "DirPolicy",      CONFIG_TYPE_LINELIST, &options->DirPolicy) ||
       config_compare(list, "DirServer",      CONFIG_TYPE_LINELIST, &options->DirServers) ||
 
       config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
@@ -479,6 +480,7 @@ free_options(or_options_t *options)
   config_free_lines(options->DirBindAddress);
   config_free_lines(options->ExitPolicy);
   config_free_lines(options->SocksPolicy);
+  config_free_lines(options->DirPolicy);
   config_free_lines(options->DirServers);
   config_free_lines(options->RecommendedVersions);
   config_free_lines(options->NodeFamilies);
@@ -487,7 +489,7 @@ free_options(or_options_t *options)
     SMARTLIST_FOREACH(options->RedirectExitList,
                       exit_redirect_t *, p, tor_free(p));
     smartlist_free(options->RedirectExitList);
-    options->RedirectExitList = NULL;                      
+    options->RedirectExitList = NULL;
   }
   if (options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));

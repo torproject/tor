@@ -420,6 +420,15 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
       return 0;
     }
   }
+  if(new_type == CONN_TYPE_DIR) {
+    /* check dirpolicy to see if we should accept it */
+    if(dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
+      log_fn(LOG_WARN,"Denying dir connection from address %s.",
+             inet_ntoa(remote.sin_addr));
+      tor_close_socket(news);
+      return 0;
+    }
+  }
 
   newconn = connection_new(new_type);
   newconn->s = news;
