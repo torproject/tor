@@ -31,21 +31,30 @@ def runSocks4A(nonce, targetHost, targetPort, targetURL):
             s.close()
             return 1
 
-HOSTS_TO_TEST = [ "moria1", "ned", "tor26"]
+HOSTS_TO_TEST = [ "serifos", "chaoscomputerclub", "NetWorkXXIII", "caethaver2",
+                  "theoryorg", "samaire", "alrua", "ihopethisisunique",
+                  "xolotl", "cacophony", "ghettocluster", "torserverzillion",
+                  "ned", "richhomednsorg", "subzeronet"]
 EXITS_TO_TEST = [ "pvt", ]
+
+HOSTS_THAT_WORK = [ "serifos", "rodos", "moria2", "chaoscomputerclub"]
+EXITS_THAT_WORK = [ "serifos", "rodos"]
+
 TARGETS = [ ("belegost.mit.edu", "/"),
             ("seul.org", "/")]
-N_CIRCS_TO_TRY = 100
+
+N_CIRCS_TO_TRY = 5*len(HOSTS_TO_TEST)
 CIRCS_AT_A_TIME = 3
 CIRC_LEN = 3
-
 
 HOST_STATUS = {}
 N_CIRCS_DONE = 0
 def launchCirc(s):
-    htt = HOSTS_TO_TEST[:]
-    random.shuffle(htt)
-    path = htt[:CIRC_LEN-1]+[random.choice(EXITS_TO_TEST)]
+    htw = HOSTS_THAT_WORK[:]
+    random.shuffle(htw)
+    path = htw[:CIRC_LEN-2] + \
+           [random.choice(HOSTS_TO_TEST)] + \
+           [random.choice(EXITS_THAT_WORK)]
     circid = TorControl.extend_circuit(s, 0, path)
 
     for name in path:
