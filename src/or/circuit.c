@@ -485,12 +485,12 @@ void circuit_expire_building(time_t now) {
          victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
         victim->timestamp_dirty + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)) {
       if(victim->n_conn)
-        log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s)",
+        log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
                victim->n_conn->address, victim->n_port, victim->n_circ_id,
-               victim->state, circuit_state_to_string[victim->state]);
+               victim->state, circuit_state_to_string[victim->state], victim->purpose);
       else
-        log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s)", victim->n_circ_id,
-               victim->state, circuit_state_to_string[victim->state]);
+        log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s, purpose %d)", victim->n_circ_id,
+               victim->state, circuit_state_to_string[victim->state], victim->purpose);
       circuit_log_path(LOG_INFO,victim);
       circuit_mark_for_close(victim);
     }
