@@ -672,7 +672,7 @@ int tor_main(int argc, char *argv[]) {
 #endif
 
   if (options.RunAsDaemon) {
-    start_daemon();
+    start_daemon(options.DataDirectory);
   }
 
   if(options.ORPort) { /* only spawn dns handlers if we're a router */
