@@ -54,7 +54,11 @@ int connection_edge_process_inbuf(connection_t *conn) {
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
     connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
-    connection_mark_for_close(conn);
+    if(!conn->marked_for_close) {
+      /* only mark it if not already marked. it's possible to
+       * get the 'end' right around when the client hangs up on us. */
+      connection_mark_for_close(conn);
+    }
     conn->hold_open_until_flushed = 1; /* just because we shouldn't read
                                           doesn't mean we shouldn't write */
     return 0;
