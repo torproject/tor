@@ -53,7 +53,9 @@ int connection_exit_finished_flushing(connection_t *conn) {
       if(connection_wants_to_flush(conn)) /* in case there are any queued data cells */
         connection_start_writing(conn);
       connection_start_reading(conn);
-      return 0;
+
+      /* also, deliver a 'connected' cell back through the circuit. */
+      return connection_exit_send_connected(conn);
     case EXIT_CONN_STATE_OPEN:
       /* FIXME down the road, we'll clear out circuits that are pending to close */
       connection_stop_writing(conn);
@@ -65,6 +67,18 @@ int connection_exit_finished_flushing(connection_t *conn) {
   }
 
   return 0;
+}
+
+int connection_exit_send_connected(connection_t *conn) {
+  circuit_t *circ;
+
+  assert(conn);
+
+  circ = circuit_get_by_conn(conn);
+
+  assert(circ && circ->p_conn && circ->n_conn == conn); /* is this true? i guess i'll see if it breaks. */
+
+  return connection_send_connected(circ->p_aci, circ->p_conn);
 }
 
 int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
@@ -154,7 +168,9 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
         connection_set_poll_socket(conn);
         conn->state = EXIT_CONN_STATE_OPEN;
         connection_watch_events(conn, POLLIN);
-	return 0;
+
+        /* also, deliver a 'connected' cell back through the circuit. */
+        return connection_exit_send_connected(conn);
       } else {
 	log(LOG_DEBUG,"connection_exit_process_data_cell(): in connecting_wait, but I've already received everything. Closing.");
 	return -1;

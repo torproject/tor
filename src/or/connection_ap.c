@@ -253,7 +253,6 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
   cell_t cell;
   int tmpbuflen, dataleft;
   char *tmpbuf;
-  char zero=0;
 
   circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, ACI_TYPE_BOTH);
   circ->n_conn = n_conn;
@@ -331,11 +330,16 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
 
   /* FIXME should set circ->expire to something here */
 
-  /* now we want to give the AP a "0" byte, because it wants to hear
-   * back from us */
-  connection_write_to_buf(&zero, 1, ap_conn); /* this does connection_start_writing() too */
-
   return 0;
+}
+
+int connection_ap_send_connected(connection_t *conn) {
+  char zero=0;
+
+  assert(conn);
+
+  /* give the AP a "0" byte, because it wants to hear that we've connected */
+  return connection_write_to_buf(&zero, 1, conn);
 }
 
 int connection_ap_process_data_cell(cell_t *cell, connection_t *conn) {

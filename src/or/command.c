@@ -22,6 +22,9 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     case CELL_SENDME:
       command_process_sendme_cell(cell, conn);
       break;
+    case CELL_CONNECTED:
+      command_process_connected_cell(cell, conn);
+      break;
     default:
       log(LOG_DEBUG,"Cell of unknown type (%d) received. Dropping.", cell->command);
       break;
@@ -295,5 +298,24 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   if(cell->aci == circ->n_aci) /* the destroy came from ahead */
     connection_send_destroy(circ->p_aci, circ->p_conn);
   circuit_free(circ);
+}
+
+void command_process_connected_cell(cell_t *cell, connection_t *conn) {
+  circuit_t *circ;
+
+  circ = circuit_get_by_aci_conn(cell->aci, conn);
+
+  if(!circ) {
+    log(LOG_DEBUG,"command_process_connected_cell(): unknown circuit %d. Dropping.", cell->aci);
+    return;
+  }
+
+  if(circ->n_conn != conn) {
+    log(LOG_WARNING,"command_process_connected_cell(): cell didn't come from n_conn! (aci %d)",cell->aci);
+    return;
+  }
+
+  log(LOG_DEBUG,"command_process_connected_cell(): Received for aci %d.",cell->aci);
+  connection_send_connected(circ->p_aci, circ->p_conn);
 }
 
