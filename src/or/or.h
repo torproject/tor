@@ -894,7 +894,12 @@ typedef struct {
                                           allowed to sign directories. */
   struct config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
-  char *ContactInfo; /** Contact info to be published in the directory */
+  char *ContactInfo; /**< Contact info to be published in the directory */
+
+  char *HttpProxy; /**< hostname[:port] to use as http proxy, if any */
+  uint32_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any */
+  uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any */
+
 } or_options_t;
 
 /* XXX are these good enough defaults? */
