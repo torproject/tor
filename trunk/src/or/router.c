@@ -234,7 +234,6 @@ int init_keys(void) {
   /* OP's don't need persistant keys; just make up an identity and
    * initialize the TLS context. */
   if (!server_mode()) {
-    tor_assert(!options.DirPort);
 #if 0
     /* XXXX008 enable this once we make ORs tolerate unknown routers. */
     if (!(prkey = crypto_new_pk_env()))
