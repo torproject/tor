@@ -1315,13 +1315,8 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     return -1;
   }
 
-  memcpy(&circ->n_addr, cell->payload+RELAY_HEADER_SIZE, 4);
-  circ->n_addr = ntohl(circ->n_addr);
-  memcpy(&circ->n_port, cell->payload+RELAY_HEADER_SIZE+4, 2);
-  circ->n_port = ntohs(circ->n_port);
-
-//  circ->n_addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE));
-//  circ->n_port = ntohs(*(uint16_t*)(cell->payload+RELAY_HEADER_SIZE+4));
+  circ->n_addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
+  circ->n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
 
   n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
   if(!n_conn || n_conn->type != CONN_TYPE_OR) {

@@ -29,7 +29,7 @@ typedef struct rend_service_t {
   /* Other fields */
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN+1];
-  char pk_digest[20];
+  char pk_digest[DIGEST_LEN];
   smartlist_t *intro_nodes; /* list of nicknames */
   rend_service_descriptor_t *desc;
 } rend_service_t;
@@ -600,8 +600,8 @@ int rend_services_init(void) {
       circ = NULL;
       found = 1;
       while ((circ = circuit_get_next_by_pk_and_purpose(
-                                                circ,service->pk_digest,
-                                                CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
+                                        circ,service->pk_digest,
+                                        CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
         assert(circ->cpath);
         if (circ->cpath->prev->addr == router->addr &&
             circ->cpath->prev->port == router->or_port) {
