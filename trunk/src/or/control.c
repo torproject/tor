@@ -561,8 +561,12 @@ handle_getinfo_helper(const char *question, char **answer)
     if (ri && ri->signed_descriptor)
       *answer = tor_strdup(ri->signed_descriptor);
   } else if (!strcmp(question, "network-status")) {
-    if (list_server_status(NULL, answer) < 0)
+    routerlist_t *routerlist;
+    router_get_routerlist(&routerlist);
+    if (!routerlist || !routerlist->routers ||
+        list_server_status(routerlist->routers, NULL, answer) < 0) {
       return -1;
+    }
   } else if (!strcmpstart(question, "addr-mappings/")) {
     time_t min_e, max_e;
     smartlist_t *mappings;

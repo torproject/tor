@@ -1460,7 +1460,8 @@ const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char **desc, const char **msg);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors(void);
-int list_server_status(char **running_routers_out, char **router_status_out);
+int list_server_status(smartlist_t *routers,
+                       char **running_routers_out, char **router_status_out);
 void dirserv_remove_old_servers(int age);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
