@@ -30,7 +30,7 @@
 #include "util.h"
 
 int
-poll(struct pollfd *ufds, unsigned int nfds, int timeout)
+tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 {
         int idx, maxfd, fd;
         int r;

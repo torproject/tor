@@ -520,7 +520,7 @@ static int do_main_loop(void) {
     timeout = prepare_for_poll();
 
     /* poll until we have an event, or the second ends */
-    poll_result = poll(poll_array, nfds, timeout);
+    poll_result = tor_poll(poll_array, nfds, timeout);
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */
     if(poll_result < 0) {
