@@ -338,7 +338,8 @@ int router_rebuild_descriptor(void) {
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
   ri->link_pkey = crypto_pk_dup_key(get_link_key());
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
-  ri->bandwidth = options.TotalBandwidth;
+  ri->bandwidthrate = options.BandwidthRate;
+  ri->bandwidthburst = options.BandwidthBurst;
   ri->exit_policy = NULL; /* zero it out first */
   router_add_exit_policy_from_config(ri);
   if (desc_routerinfo)
@@ -421,7 +422,8 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->or_port,
     router->socks_port,
     router->dir_port,
-    (int) router->bandwidth,
+    (int) router->bandwidthrate,
+/* XXXBC also write bandwidthburst */
     platform,
     published,
     onion_pkey, link_pkey, identity_pkey);

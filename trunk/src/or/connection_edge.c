@@ -290,6 +290,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
             return 0;
         }
       }
+/* XXX add to this log_fn the exit node's nickname? */
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length),
         conn->stream_id);
@@ -880,7 +881,8 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
          exit->nickname, conn->socks_request->address,
          conn->socks_request->port);
   addr = client_dns_lookup_entry(conn->socks_request->address);
-  return router_supports_exit_address(addr, conn->socks_request->port, exit);
+  return router_compare_addr_to_exit_policy(addr,
+           conn->socks_request->port, exit->exit_policy);
 }
 
 /* ***** Client DNS code ***** */

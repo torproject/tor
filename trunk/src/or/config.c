@@ -153,6 +153,9 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     /* string options */
     config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
 
+    config_compare(list, "BandwidthRate",  CONFIG_TYPE_INT, &options->BandwidthRate) ||
+    config_compare(list, "BandwidthBurst", CONFIG_TYPE_INT, &options->BandwidthBurst) ||
+
     config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
     config_compare(list, "DirPort",        CONFIG_TYPE_INT, &options->DirPort) ||
@@ -194,7 +197,6 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "SocksPort",      CONFIG_TYPE_INT, &options->SocksPort) ||
     config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
 
-    config_compare(list, "TotalBandwidth", CONFIG_TYPE_INT, &options->TotalBandwidth) ||
     config_compare(list, "TrafficShaping", CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
 
     config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User)
@@ -211,10 +213,11 @@ static void config_assign(or_options_t *options, struct config_line *list) {
 /* prints the usage of tor. */
 void print_usage(void) {
   printf("tor -f <torrc> [args]\n"
+         "See man page for more options.\n\n"
+         "-b <bandwidth>\t\tbytes/second rate limiting\n"
          "-d <file>\t\tDebug file\n"
          "-m <max>\t\tMax number of connections\n"
          "-l <level>\t\tLog level\n"
-         "-t <bandwidth>\t\tTotal bandwidth\n"
          "-r <file>\t\tList of known routers\n");
   printf("\nClient options:\n"
          "-e \"nick1 nick2 ...\"\t\tExit nodes\n"
@@ -269,7 +272,8 @@ void init_options(or_options_t *options) {
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 100;
   options->NewCircuitPeriod = 60; /* once a minute */
-  options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
+  options->BandwidthRate = 800000; /* at most 800kB/s total sustained incoming */
+  options->BandwidthBurst = 10000000; /* max burst on the token bucket */
   options->NumCpus = 1;
 }
 

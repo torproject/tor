@@ -347,8 +347,8 @@ static void run_scheduled_events(time_t now) {
    *    increment global_read_bucket.
    */
   stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
-  if(global_read_bucket < 9*options.TotalBandwidth) {
-    global_read_bucket += options.TotalBandwidth;
+  if(global_read_bucket < options.BandwidthBurst) {
+    global_read_bucket += options.BandwidthRate;
     log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
   }
   stats_prev_global_read_bucket = global_read_bucket;
@@ -418,7 +418,7 @@ static int init_from_config(int argc, char **argv) {
     log_fn(LOG_DEBUG, "Successfully opened DebugLogFile '%s'.", options.DebugLogFile);
   }
 
-  global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
+  global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
   stats_prev_global_read_bucket = global_read_bucket;
 
   if(options.User || options.Group) {
