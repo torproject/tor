@@ -409,6 +409,29 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
   return 0;
 }
 
+static int
+check_sockaddr_in(struct sockaddr *sa, int len, int level)
+{
+  int ok = 1;
+  struct sockaddr_in *sin=(struct sockaddr_in*)sa;
+
+  if (len != sizeof(struct sockaddr_in)) {
+    log_fn(level, "Length of address not as expected: %d vs %d",
+           len,(int)sizeof(struct sockaddr_in));
+    ok = 0;
+  }
+  if (sa->sa_family != AF_INET) {
+    log_fn(level, "Family of address not as expected: %d vs %d",
+           sa->sa_family, AF_INET);
+    ok = 0;
+  }
+  if (sin->sin_addr.s_addr == 0 || sin->sin_port == 0) {
+    log_fn(level, "Address for new connection has address/port equal to zero.");
+    ok = 0;
+  }
+  return ok ? 0 : -1;
+}
+
 /** The listener connection <b>conn</b> told poll() it wanted to read.
  * Call accept() on conn-\>s, and add the new connection if necessary.
  */
@@ -417,8 +440,10 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   connection_t *newconn;
   /* information about the remote peer when connecting to other routers */
   struct sockaddr_in remote;
+  char addrbuf[256];
   /* length of the remote address. Must be an int, since accept() needs that. */
-  int remotelen = sizeof(struct sockaddr_in);
+  int remotelen=256;
+  memset(addrbuf, 0, sizeof(addrbuf));
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
   if (!SOCKET_IS_POLLABLE(news)) {
@@ -447,6 +472,18 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
 
   set_socket_nonblocking(news);
+  if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_INFO)<0) {
+    log_fn(LOG_INFO, "accept() returned a strange address; trying getsockname().");
+    remotelen=256;
+    memset(addrbuf, 0, sizeof(addrbuf));
+    if (getsockname(news, (struct sockaddr*)addrbuf, &remotelen)<0) {
+      log_fn(LOG_WARN, "getsockname() failed.");
+    } else {
+      check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_WARN);
+    }
+  }
+
+  memcpy(&remote, addrbuf, sizeof(struct sockaddr_in));
 
   /* process entrance policies here, before we even create the connection */
   if (new_type == CONN_TYPE_AP) {
