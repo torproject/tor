@@ -28,8 +28,8 @@ void command_time_process_cell(cell_t *cell, connection_t *conn,
 }
 
 void command_process_cell(cell_t *cell, connection_t *conn) {
-  static int num_create=0, num_data=0, num_destroy=0, num_sendme=0;
-  static int create_time=0, data_time=0, destroy_time=0, sendme_time=0;
+  static int num_create=0, num_relay=0, num_destroy=0, num_sendme=0;
+  static int create_time=0, relay_time=0, destroy_time=0, sendme_time=0;
   static long current_second = 0; /* from previous calls to gettimeofday */
   struct timeval now;
 
@@ -39,13 +39,13 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     /* print stats */
     log(LOG_INFO,"At end of second:"); 
     log(LOG_INFO,"Create:    %d (%d ms)", num_create, create_time/1000);
-    log(LOG_INFO,"Data:      %d (%d ms)", num_data, data_time/1000);
+    log(LOG_INFO,"Relay:     %d (%d ms)", num_relay, relay_time/1000);
     log(LOG_INFO,"Destroy:   %d (%d ms)", num_destroy, destroy_time/1000);
     log(LOG_INFO,"Sendme:    %d (%d ms)", num_sendme, sendme_time/1000);
 
     /* zero out stats */
-    num_create = num_data = num_destroy = num_sendme = 0;
-    create_time = data_time = destroy_time = sendme_time = 0;
+    num_create = num_relay = num_destroy = num_sendme = 0;
+    create_time = relay_time = destroy_time = sendme_time = 0;
 
     /* remember which second it is, for next time */
     current_second = now.tv_sec; 
@@ -59,9 +59,9 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
       command_time_process_cell(cell, conn, &num_create, &create_time,
                                 command_process_create_cell);
       break;
-    case CELL_DATA:
-      command_time_process_cell(cell, conn, &num_data, &data_time,
-                                command_process_data_cell);
+    case CELL_RELAY:
+      command_time_process_cell(cell, conn, &num_relay, &relay_time,
+                                command_process_relay_cell);
       break;
     case CELL_DESTROY:
       command_time_process_cell(cell, conn, &num_destroy, &destroy_time,
@@ -195,61 +195,61 @@ void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
   } 
 }
 
-void command_process_data_cell(cell_t *cell, connection_t *conn) {
+void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
   if(!circ) {
-    log(LOG_DEBUG,"command_process_data_cell(): unknown circuit %d. Dropping.", cell->aci);
+    log(LOG_DEBUG,"command_process_relay_cell(): unknown circuit %d. Dropping.", cell->aci);
     return;
   }
 
   if(circ->state == CIRCUIT_STATE_ONION_PENDING) {
-    log(LOG_DEBUG,"command_process_data_cell(): circuit in create_wait. Queueing data cell.");
-    onion_pending_data_add(circ, cell);
+    log(LOG_DEBUG,"command_process_relay_cell(): circuit in create_wait. Queueing relay cell.");
+    onion_pending_relay_add(circ, cell);
     return;
   }
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     if(--circ->p_receive_circwindow < 0) { /* is it less than 0 after decrement? */
-      log(LOG_INFO,"connection_process_data_cell(): Too many data cells for out circuit (aci %d). Closing.", circ->p_aci);
+      log(LOG_INFO,"connection_process_relay_cell(): Too many relay cells for out circuit (aci %d). Closing.", circ->p_aci);
       circuit_close(circ);
       return;
     }
-    log(LOG_DEBUG,"connection_process_data_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
+    log(LOG_DEBUG,"connection_process_relay_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
   }
 
   if(cell->aci == circ->n_aci) { /* it's an ingoing cell */
     if(--circ->n_receive_circwindow < 0) { /* is it less than 0 after decrement? */
-      log(LOG_INFO,"connection_process_data_cell(): Too many data cells for in circuit (aci %d). Closing.", circ->n_aci);
+      log(LOG_INFO,"connection_process_relay_cell(): Too many relay cells for in circuit (aci %d). Closing.", circ->n_aci);
       circuit_close(circ);
       return;
     }
-    log(LOG_DEBUG,"connection_process_data_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
+    log(LOG_DEBUG,"connection_process_relay_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
   }
 
   if(circ->state == CIRCUIT_STATE_ONION_WAIT) {
-    log(LOG_WARNING,"command_process_data_cell(): circuit in onion_wait. Dropping data cell.");
+    log(LOG_WARNING,"command_process_relay_cell(): circuit in onion_wait. Dropping relay cell.");
     return;
   }
   if(circ->state == CIRCUIT_STATE_OR_WAIT) {
-    log(LOG_WARNING,"command_process_data_cell(): circuit in or_wait. Dropping data cell.");
+    log(LOG_WARNING,"command_process_relay_cell(): circuit in or_wait. Dropping relay cell.");
     return;
   }
   /* circ->p_conn and n_conn are only null if we're at an edge point with no connections yet */
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     cell->aci = circ->n_aci; /* switch it */
-    if(circuit_deliver_data_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
-      log(LOG_INFO,"command_process_data_cell(): circuit_deliver_data_cell (forward) failed. Closing.");
+    if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
+      log(LOG_INFO,"command_process_relay_cell(): circuit_deliver_relay_cell (forward) failed. Closing.");
       circuit_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
     cell->aci = circ->p_aci; /* switch it */
-    if(circuit_deliver_data_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
-      log(LOG_DEBUG,"command_process_data_cell(): circuit_deliver_data_cell (backward) failed. Closing.");
+    if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
+      log(LOG_DEBUG,"command_process_relay_cell(): circuit_deliver_relay_cell (backward) failed. Closing.");
       circuit_close(circ);
       return;
     }

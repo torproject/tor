@@ -103,9 +103,9 @@ int ap_handshake_process_socks(connection_t *conn) {
 
   circ->dirty = 1;
 
-  /* add it into the linked list of topics on this circuit */
+  /* add it into the linked list of streams on this circuit */
   log(LOG_DEBUG,"ap_handshake_process_socks(): attaching new conn to circ. n_aci %d.", circ->n_aci);
-  conn->next_topic = circ->p_conn;
+  conn->next_stream = circ->p_conn;
   circ->p_conn = conn;
 
   if(ap_handshake_send_begin(conn, circ) < 0) {
@@ -118,28 +118,28 @@ int ap_handshake_process_socks(connection_t *conn) {
 
 int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
   cell_t cell;
-  uint16_t topic_id;
+  uint16_t stream_id;
 
   memset(&cell, 0, sizeof(cell_t));
-  /* deliver the dest_addr in a data cell */
-  cell.command = CELL_DATA;
+  /* deliver the dest_addr in a relay cell */
+  cell.command = CELL_RELAY;
   cell.aci = circ->n_aci;
-  SET_CELL_TOPIC_COMMAND(cell, TOPIC_COMMAND_BEGIN);
-  if (CRYPTO_PSEUDO_RAND_INT(topic_id))
+  SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_BEGIN);
+  if (CRYPTO_PSEUDO_RAND_INT(stream_id))
     return -1;
-  SET_CELL_TOPIC_ID(cell, topic_id);
+  SET_CELL_STREAM_ID(cell, stream_id);
   /* FIXME check for collisions */
-  ap_conn->topic_id = topic_id;
+  ap_conn->stream_id = stream_id;
 
   snprintf(cell.payload+4, CELL_PAYLOAD_SIZE-4, "%s:%d", ap_conn->dest_addr, ap_conn->dest_port);
-  cell.length = strlen(cell.payload+TOPIC_HEADER_SIZE)+1+TOPIC_HEADER_SIZE;
-  log(LOG_DEBUG,"ap_handshake_send_begin(): Sending data cell to begin topic %d.", ap_conn->topic_id);
-  if(circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
+  cell.length = strlen(cell.payload+RELAY_HEADER_SIZE)+1+RELAY_HEADER_SIZE;
+  log(LOG_DEBUG,"ap_handshake_send_begin(): Sending relay cell to begin stream %d.", ap_conn->stream_id);
+  if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
     log(LOG_DEBUG,"ap_handshake_send_begin(): failed to deliver begin cell. Closing.");
     return -1;
   }
-  ap_conn->n_receive_topicwindow = TOPICWINDOW_START;
-  ap_conn->p_receive_topicwindow = TOPICWINDOW_START;
+  ap_conn->n_receive_streamwindow = STREAMWINDOW_START;
+  ap_conn->p_receive_streamwindow = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_OPEN;
   log(LOG_INFO,"ap_handshake_send_begin(): Address/port sent, ap socket %d, n_aci %d",ap_conn->s,circ->n_aci);
   return 0;

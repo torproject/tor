@@ -8,19 +8,19 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;
   char *colon;
 
-  if(!memchr(cell->payload + TOPIC_HEADER_SIZE,0,cell->length - TOPIC_HEADER_SIZE)) {
-    log(LOG_WARNING,"connection_exit_begin_conn(): topic begin cell has no \\0. Dropping.");
+  if(!memchr(cell->payload + RELAY_HEADER_SIZE,0,cell->length - RELAY_HEADER_SIZE)) {
+    log(LOG_WARNING,"connection_exit_begin_conn(): relay begin cell has no \\0. Dropping.");
     return 0;
   }
-  colon = strchr(cell->payload + TOPIC_HEADER_SIZE, ':');
+  colon = strchr(cell->payload + RELAY_HEADER_SIZE, ':');
   if(!colon) {
-    log(LOG_WARNING,"connection_exit_begin_conn(): topic begin cell has no colon. Dropping.");
+    log(LOG_WARNING,"connection_exit_begin_conn(): relay begin cell has no colon. Dropping.");
     return 0;
   }
   *colon = 0;
 
   if(!atoi(colon+1)) { /* bad port */
-    log(LOG_DEBUG,"connection_exit_begin_conn(): topic begin cell has invalid port. Dropping.");
+    log(LOG_DEBUG,"connection_exit_begin_conn(): relay begin cell has invalid port. Dropping.");
     return 0;
   }
 
@@ -31,25 +31,25 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     return 0;
   }
 
-  cell->payload[0] = 0;
-  n_conn->topic_id = ntohs(*(uint16_t *)(cell->payload+2));
+//  cell->payload[0] = 0;
+  n_conn->stream_id = CELL_STREAM_ID(*cell);
 
-  n_conn->address = strdup(cell->payload + TOPIC_HEADER_SIZE);
+  n_conn->address = strdup(cell->payload + RELAY_HEADER_SIZE);
   n_conn->port = atoi(colon+1);
   n_conn->state = EXIT_CONN_STATE_RESOLVING;
   n_conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */
   n_conn->bandwidth = -1;
   n_conn->s = -1; /* not yet valid */
-  n_conn->n_receive_topicwindow = TOPICWINDOW_START;
-  n_conn->p_receive_topicwindow = TOPICWINDOW_START;
+  n_conn->n_receive_streamwindow = STREAMWINDOW_START;
+  n_conn->p_receive_streamwindow = STREAMWINDOW_START;
   if(connection_add(n_conn) < 0) { /* no space, forget it */
     log(LOG_DEBUG,"connection_exit_begin_conn(): connection_add failed. Dropping.");
     connection_free(n_conn);
     return 0;
   }
 
-  /* add it into the linked list of topics on this circuit */
-  n_conn->next_topic = circ->n_conn;
+  /* add it into the linked list of streams on this circuit */
+  n_conn->next_stream = circ->n_conn;
   circ->n_conn = n_conn;
 
   /* send it off to the gethostbyname farm */
@@ -119,7 +119,7 @@ int connection_exit_connect(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
 
   /* also, deliver a 'connected' cell back through the circuit. */
-  return connection_edge_send_command(conn, circuit_get_by_conn(conn), TOPIC_COMMAND_CONNECTED);
+  return connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED);
 }
 
 /*

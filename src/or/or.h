@@ -122,15 +122,15 @@
 //                                       (or if just one was sent, waiting for that one */
 //#define CIRCUIT_STATE_CLOSE 4 /* both acks received, connection is dead */ /* NOT USED */
 
-#define TOPIC_COMMAND_BEGIN 1
-#define TOPIC_COMMAND_DATA 2
-#define TOPIC_COMMAND_END 3
-#define TOPIC_COMMAND_CONNECTED 4
-#define TOPIC_COMMAND_SENDME 5
+#define RELAY_COMMAND_BEGIN 1
+#define RELAY_COMMAND_DATA 2
+#define RELAY_COMMAND_END 3
+#define RELAY_COMMAND_CONNECTED 4
+#define RELAY_COMMAND_SENDME 5
 
-#define TOPIC_HEADER_SIZE 4
+#define RELAY_HEADER_SIZE 4
 
-#define TOPIC_STATE_RESOLVING
+#define RELAY_STATE_RESOLVING
 
 /* available cipher functions */
 #if 0
@@ -154,13 +154,13 @@
 #define CIRCWINDOW_START 1000
 #define CIRCWINDOW_INCREMENT 100
 
-#define TOPICWINDOW_START 500
-#define TOPICWINDOW_INCREMENT 50
+#define STREAMWINDOW_START 500
+#define STREAMWINDOW_INCREMENT 50
 
 /* cell commands */
 #define CELL_PADDING 0
 #define CELL_CREATE 1
-#define CELL_DATA 2
+#define CELL_RELAY 2
 #define CELL_DESTROY 3
 #define CELL_SENDME 4
 
@@ -195,15 +195,15 @@ typedef uint16_t aci_t;
 typedef struct { 
   aci_t aci; /* Anonymous Connection Identifier */
   unsigned char command;
-  unsigned char length; /* of payload if data cell, else value of sendme */
+  unsigned char length; /* of payload if relay cell, else value of sendme */
   uint32_t seq; /* sequence number */
 
   unsigned char payload[CELL_PAYLOAD_SIZE];
 } cell_t;
-#define CELL_TOPIC_COMMAND(c)         (*(uint8_t*)((c).payload))
-#define SET_CELL_TOPIC_COMMAND(c,cmd) (*(uint8_t*)((c).payload) = (cmd))
-#define CELL_TOPIC_ID(c)              ntohs(*(uint16_t*)((c).payload+2))
-#define SET_CELL_TOPIC_ID(c,id)      (*(uint16_t*)((c).payload+2) = htons(id))
+#define CELL_RELAY_COMMAND(c)         (*(uint8_t*)((c).payload))
+#define SET_CELL_RELAY_COMMAND(c,cmd) (*(uint8_t*)((c).payload) = (cmd))
+#define CELL_STREAM_ID(c)             ntohs(*(uint16_t*)((c).payload+2))
+#define SET_CELL_STREAM_ID(c,id)      (*(uint16_t*)((c).payload+2) = htons(id))
 
 #define SOCKS4_REQUEST_GRANTED          90
 #define SOCKS4_REQUEST_REJECT           91
@@ -265,10 +265,10 @@ struct connection_t {
   uint16_t port;
 
 /* used by exit and ap: */
-  uint16_t topic_id;
-  struct connection_t *next_topic;
-  int n_receive_topicwindow;
-  int p_receive_topicwindow;
+  uint16_t stream_id;
+  struct connection_t *next_stream;
+  int n_receive_streamwindow;
+  int p_receive_streamwindow;
   int done_sending;
   int done_receiving;
 #ifdef USE_ZLIB
@@ -345,9 +345,9 @@ typedef struct {
   
 } crypt_path_t;
 
-struct data_queue_t {
+struct relay_queue_t {
   cell_t *cell;
-  struct data_queue_t *next;
+  struct relay_queue_t *next;
 };
 
 /* struct for a path (circuit) through the network */
@@ -362,7 +362,7 @@ typedef struct {
   aci_t p_aci; /* connection identifiers */
   aci_t n_aci;
 
-  struct data_queue_t *data_queue; /* for queueing cells at the edges */
+  struct relay_queue_t *relay_queue; /* for queueing cells at the edges */
 
   crypto_cipher_env_t *p_crypto; /* crypto environments */
   crypto_cipher_env_t *n_crypto;
@@ -385,7 +385,7 @@ typedef struct {
 
 struct onion_queue_t {
   circuit_t *circ;
-  struct data_queue_t *data_cells;
+  struct relay_queue_t *relay_cells;
   struct onion_queue_t *next;
 };
 
@@ -461,16 +461,16 @@ void compression_free(z_compression *);
 void decompression_free(z_decompression *);
 
 int compress_from_buf(char *string, int string_len, 
-		      char **buf_in, int *buflen_in, int *buf_datalen_in,
-		      z_compression *compression, int flush);
+                      char **buf_in, int *buflen_in, int *buf_datalen_in,
+                      z_compression *compression, int flush);
   /* read and compress as many characters as possible from buf, writing up to
    * string_len of them onto string, then memmove buf back.  Return number of
    * characters written.
    */
 
 int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
-			  char **buf_out, int *buflen_out, int *buf_datalen_out,
-			  z_decompression *decompression, int flush);
+                          char **buf_out, int *buflen_out, int *buf_datalen_out,
+                          z_decompression *decompression, int flush);
   /* XXX document this NM
    */
 
@@ -500,8 +500,8 @@ circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest_by_edge_type(char edge_type);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
-int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type);
-int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, int crypt_type);
+int circuit_deliver_relay_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type);
+int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ, int crypt_type);
 int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type);
 
 void circuit_resume_edge_reading(circuit_t *circ, int edge_type);
@@ -533,7 +533,7 @@ void command_process_cell(cell_t *cell, connection_t *conn);
 
 void command_process_create_cell(cell_t *cell, connection_t *conn);
 void command_process_sendme_cell(cell_t *cell, connection_t *conn);
-void command_process_data_cell(cell_t *cell, connection_t *conn);
+void command_process_relay_cell(cell_t *cell, connection_t *conn);
 void command_process_destroy_cell(cell_t *cell, connection_t *conn);
 void command_process_connected_cell(cell_t *cell, connection_t *conn);
 
@@ -637,8 +637,8 @@ int connection_ap_handle_listener_read(connection_t *conn);
 /********************************* connection_edge.c ***************************/
 
 int connection_edge_process_inbuf(connection_t *conn);
-int connection_edge_send_command(connection_t *conn, circuit_t *circ, int topic_command);
-int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_type);
+int connection_edge_send_command(connection_t *conn, circuit_t *circ, int relay_command);
+int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, int edge_type);
 int connection_edge_finished_flushing(connection_t *conn);
 
 /********************************* connection_exit.c ***************************/
@@ -746,8 +746,8 @@ int onion_pending_add(circuit_t *circ);
 int onion_pending_check(void);
 void onion_pending_process_one(void);
 void onion_pending_remove(circuit_t *circ);
-struct data_queue_t *data_queue_add(struct data_queue_t *list, cell_t *cell);
-void onion_pending_data_add(circuit_t *circ, cell_t *cell);
+struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell);
+void onion_pending_relay_add(circuit_t *circ, cell_t *cell);
 
 /* uses a weighted coin with weight cw to choose a route length */
 int chooselen(double cw);
