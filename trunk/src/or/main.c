@@ -654,7 +654,7 @@ build_directory(directory_t *dir) {
 
   routers = (routerinfo_t**) malloc(sizeof(routerinfo_t*) * (nfds+1));
   if (!routers) {
-    log(LOG_ERR, "build_directory(): couldn\'t allocate space for routerinfo");
+    log(LOG_ERR, "build_directory(): couldn't allocate space for routerinfo");
     return -1;
   }
   if (my_routerinfo) {
@@ -671,7 +671,7 @@ build_directory(directory_t *dir) {
       continue; /* we only want to list ones that successfully handshaked */
     router = router_get_by_addr_port(conn->addr,conn->port);
     if(!router) {
-      log(LOG_ERR,"build_directory(): couldn\'t find router %d:%d!",
+      log(LOG_ERR,"build_directory(): couldn't find router %d:%d!",
           conn->addr,conn->port);
       continue;
     }
@@ -735,11 +735,11 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   cp = s + i;
   
   if (crypto_SHA_digest(s, i, digest)) {
-    log(LOG_ERR,"dump_signed_directory_to_string(): couldn\'t compute digest");
+    log(LOG_ERR,"dump_signed_directory_to_string(): couldn't compute digest");
     return -1;
   }
   if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
-    log(LOG_ERR,"dump_signed_directory_to_string(): couldn\'t sign digest");
+    log(LOG_ERR,"dump_signed_directory_to_string(): couldn't sign digest");
     return -1;
   }
   
@@ -749,7 +749,7 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   i = strlen(s);
   cp = s+i;
   if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
-    log(LOG_ERR,"dump_signed_directory_to_string(): couldn\'t base64-encode signature %d/%d");
+    log(LOG_ERR,"dump_signed_directory_to_string(): couldn't base64-encode signature %d/%d");
     return -1;
   }
 

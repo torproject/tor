@@ -376,6 +376,7 @@ _router_get_next_token(char **s, directory_token_t *tok) {
   }
 }
 
+#ifdef DEBUG_ROUTER_TOKENS
 static void 
 router_dump_token(directory_token_t *tok) {
   int i;
@@ -411,7 +412,6 @@ router_dump_token(directory_token_t *tok) {
   return;
 }
 
-#ifdef DEBUG_ROUTER_TOKENS
 static int
 router_get_next_token(char **s, directory_token_t *tok) {
   int i;
@@ -511,7 +511,7 @@ static int router_get_dir_hash(char *s, char *digest)
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
 {
   if (router_get_dir_from_string_impl(s, &directory, pkey)) {
-    log(LOG_ERR, "router_get_dir_from_string: Couldn\'t parse directory.");
+    log(LOG_ERR, "router_get_dir_from_string: Couldn't parse directory.");
     return -1;
   }
   if (router_resolve_directory(directory)) {
@@ -660,7 +660,7 @@ router_resolve_directory(directory_t *dir)
   for (i = 0; i < max; ++i) {
     remove = 0;
     if (router_resolve(dir->routers[i])) {
-      log(LOG_INFO, "Couldn\'t resolve router %s; removing",
+      log(LOG_INFO, "Couldn't resolve router %s; removing",
           dir->routers[i]->address);
       remove = 1;
       routerinfo_free(dir->routers[i]);
