@@ -511,8 +511,9 @@ list_server_status(char **running_routers_out, char **router_status_out)
   SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
   {
     int is_live;
+	connection_t *conn;
     tor_assert(d->router);
-    connection_t *conn = connection_get_by_identity_digest(
+    conn = connection_get_by_identity_digest(
                     d->router->identity_digest, CONN_TYPE_OR);
     is_live = (conn && conn->state == OR_CONN_STATE_OPEN);
     smartlist_add(rr_entries, list_single_server_status(d, is_live, 1));
