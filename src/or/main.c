@@ -175,14 +175,34 @@ int connection_remove(connection_t *conn) {
   return 0;
 }
 
+/** If it's an edge conn, remove it from the list
+ * of conn's on this circuit. If it's not on an edge,
+ * flush and send destroys for all circuits on this conn.
+ *
+ * If <b>remove</b> is non-zero, then remove it from the
+ * connection_array and closeable_connection_lst.
+ *
+ * Then free it.
+ */
+static void connection_unlink(connection_t *conn, int remove) {
+  circuit_about_to_close_connection(conn);
+  connection_about_to_close_connection(conn);
+  if (remove) {
+    connection_remove(conn);
+    smartlist_remove(closeable_connection_lst, conn);
+  }
+  if (conn->type == CONN_TYPE_EXIT) {
+    assert_connection_edge_not_dns_pending(conn);
+  }
+  connection_free(conn);
+}
+
 /** DOCDOC **/
 void
 add_connection_to_closeable_list(connection_t *conn)
 {
   tor_assert(!smartlist_isin(closeable_connection_lst, conn));
   tor_assert(conn->marked_for_close);
-  tor_assert(conn->poll_index >= 0);
-
   smartlist_add(closeable_connection_lst, conn);
 }
 
@@ -287,8 +307,12 @@ close_closeable_connections(void)
 
   for (i = 0; i < smartlist_len(closeable_connection_lst); ) {
     connection_t *conn = smartlist_get(closeable_connection_lst, i);
-    if (!conn_close_if_marked(conn->poll_index))
-      ++i;
+    if (conn->poll_index < 0) {
+      connection_unlink(conn, 0); /* blow it away right now */
+    } else {
+      if (!conn_close_if_marked(conn->poll_index))
+        ++i;
+    }
   }
 }
 
@@ -502,18 +526,7 @@ static int conn_close_if_marked(int i) {
              conn->marked_for_close);
     }
   }
-  /* if it's an edge conn, remove it from the list
-   * of conn's on this circuit. If it's not on an edge,
-   * flush and send destroys for all circuits on this conn
-   */
-  circuit_about_to_close_connection(conn);
-  connection_about_to_close_connection(conn);
-  connection_remove(conn);
-  smartlist_remove(closeable_connection_lst, conn);
-  if (conn->type == CONN_TYPE_EXIT) {
-    assert_connection_edge_not_dns_pending(conn);
-  }
-  connection_free(conn);
+  connection_unlink(conn, 1); /* unlink, remove, free */
   return 1;
 }
 
