@@ -1740,13 +1740,17 @@ try_next_line:
   while(*value && isspace((int)*value))
     value++;
 
+#if 0
   if(!*end || !*value) { /* only a key on this line. no value. */
     *end = 0;
     log_fn(LOG_WARN,"Line has keyword '%s' but no value. Failing.",key);
     return -1;
   }
+#endif
   *end = 0; /* null it out */
 
+  tor_assert(key);
+  tor_assert(value);
   log_fn(LOG_DEBUG,"got keyword '%s', value '%s'", key, value);
   *key_out = key, *value_out = value;
   return 1;

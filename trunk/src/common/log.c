@@ -34,6 +34,7 @@ typedef struct logfile_t {
   int loglevel; /**< Lowest severity level to send to this stream. */
   int max_loglevel; /**< Highest severity level to send to this stream. */
   int is_temporary; /**< Boolean: close after initializing logging subsystem.*/
+  int is_syslog; /**< Boolean: send messages to syslog. */
 } logfile_t;
 
 /** Helper: map a log severity to descriptive string. */
@@ -50,8 +51,13 @@ static INLINE const char *sev_to_string(int severity) {
 
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
+#ifdef HAVE_SYSLOG_H
+static int syslog_count = 0;
+#endif
 
 static void delete_log(logfile_t *victim);
+static void close_log(logfile_t *victim);
+static int reset_log(logfile_t *lf);
 
 static INLINE size_t
 _log_prefix(char *buf, size_t buf_len, int severity)
@@ -104,16 +110,19 @@ static void log_tor_version(logfile_t *lf, int reset)
 
 /** Helper: Format a log message into a fixed-sized buffer. (This is
  * factored out of <b>logv</b> so that we never format a message more
- * than once.)
+ * than once.)  Return a pointer to the first character of the message
+ * portion of the formatted string.
  */
-static INLINE void format_msg(char *buf, size_t buf_len,
+static INLINE char *format_msg(char *buf, size_t buf_len,
                               int severity, const char *funcname,
                               const char *format, va_list ap)
 {
   size_t n;
+  char *end_of_prefix;
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 
   n = _log_prefix(buf, buf_len, severity);
+  end_of_prefix = buf+n;
 
   if (funcname) {
     n += snprintf(buf+n, buf_len-n, "%s(): ", funcname);
@@ -128,6 +137,7 @@ static INLINE void format_msg(char *buf, size_t buf_len,
   }
   buf[n]='\n';
   buf[n+1]='\0';
+  return end_of_prefix;
 }
 
 /** Helper: sends a message to the appropriate logfiles, at loglevel
@@ -140,22 +150,31 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
   char buf[10024];
   int formatted = 0;
   logfile_t *lf;
+  char *end_of_prefix=NULL;
 
   assert(format);
   lf = logfiles;
   while(lf) {
-    if (severity < lf->loglevel || severity > lf->max_loglevel) {
+    if (severity > lf->loglevel || severity < lf->max_loglevel) {
       lf = lf->next;
       continue;
     }
-    if (!lf->file) {
+    if (! (lf->file || lf->is_syslog)) {
       lf = lf->next;
       continue;
     }
 
     if (!formatted) {
-      format_msg(buf, sizeof(buf), severity, funcname, format, ap);
+      end_of_prefix =
+        format_msg(buf, sizeof(buf), severity, funcname, format, ap);
       formatted = 1;
+    }
+    if (lf->is_syslog) {
+#ifdef HAVE_SYSLOG_H
+      syslog(severity, "%s", end_of_prefix);
+#endif
+      lf = lf->next;
+      continue;
     }
     if(fputs(buf, lf->file) == EOF ||
        fflush(lf->file) == EOF) { /* error */
@@ -194,8 +213,7 @@ void close_logs()
   while(logfiles) {
     victim = logfiles;
     logfiles = logfiles->next;
-    if (victim->needs_close)
-      fclose(victim->file);
+    close_log(victim);
     tor_free(victim->filename);
     tor_free(victim);
   }
@@ -206,17 +224,12 @@ void reset_logs()
 {
   logfile_t *lf = logfiles;
   while(lf) {
-    if (lf->needs_close) {
-      if(fclose(lf->file)==EOF ||
-        !(lf->file = fopen(lf->filename, "a"))) {
-        /* error. don't log it. delete the log entry and continue. */
-        logfile_t *victim = lf;
-        lf = victim->next;
-        delete_log(victim);
-        continue;
-      } else {
-        log_tor_version(lf, 1);
-      }
+    if (reset_log(lf)) {
+      /* error. don't log it. delete the log entry and continue. */
+      logfile_t *victim = lf;
+      lf = victim->next;
+      delete_log(victim);
+      continue;
     }
     lf = lf->next;
   }
@@ -241,19 +254,43 @@ static void delete_log(logfile_t *victim) {
   tor_free(victim);
 }
 
+static void close_log(logfile_t *victim)
+{
+  if (victim->needs_close && victim->file) {
+    fclose(victim->file);
+  } else if (victim->is_syslog) {
+#ifdef HAVE_SYSLOG_H
+    if (--syslog_count == 0)
+      /* There are no other syslogs; close the logging facility. */
+      closelog();
+#endif
+  }
+}
+
+static int reset_log(logfile_t *lf)
+{
+  if (lf->needs_close) {
+    if(fclose(lf->file)==EOF ||
+       !(lf->file = fopen(lf->filename, "a"))) {
+      return -1;
+    } else {
+      log_tor_version(lf, 1);
+    }
+  }
+  return 0;
+}
+
 /** Add a log handler to send all messages of severity <b>loglevel</b>
  * or higher to <b>stream</b>. */
 void add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *stream)
 {
   logfile_t *lf;
-  lf = tor_malloc(sizeof(logfile_t));
+  lf = tor_malloc_zero(sizeof(logfile_t));
   lf->filename = tor_strdup(name);
-  lf->needs_close = 0;
   lf->loglevel = loglevelMin;
   lf->max_loglevel = loglevelMax;
   lf->file = stream;
   lf->next = logfiles;
-  lf->is_temporary = 0;
   logfiles = lf;
 }
 
@@ -266,6 +303,7 @@ void add_temp_log(void)
   logfiles->is_temporary = 1;
 }
 
+/** Close any log handlers added by add_temp_log or marked by mark_logs_temp */
 void close_temp_logs(void)
 {
   logfile_t *lf, **p;
@@ -273,8 +311,7 @@ void close_temp_logs(void)
     if ((*p)->is_temporary) {
       lf = *p;
       *p = (*p)->next;
-      if (lf->needs_close)
-        fclose(lf->file);
+      close_log(lf);
       tor_free(lf->filename);
       tor_free(lf);
     } else {
@@ -283,6 +320,7 @@ void close_temp_logs(void)
   }
 }
 
+/** Configure all log handles to be closed by close_temp_logs */
 void mark_logs_temp(void)
 {
   logfile_t *lf;
@@ -306,6 +344,28 @@ int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
   return 0;
 }
 
+#ifdef HAVE_SYSLOG_H
+/**
+ * Add a log handler to send messages to they system log facility.
+ */
+int add_syslog_log(int loglevelMin, int loglevelMax)
+{
+  logfile_t *lf;
+  if (syslog_count++ == 0)
+    /* This is the the first syslog. */
+    openlog("Tor", LOG_NDELAY, LOG_DAEMON);
+
+  lf = tor_malloc_zero(sizeof(logfile_t));
+  lf->loglevel = loglevelMin;
+  lf->filename = tor_strdup("<syslog>");
+  lf->max_loglevel = loglevelMax;
+  lf->is_syslog = 1;
+  lf->next = logfiles;
+  logfiles = lf;
+  return 0;
+}
+#endif
+
 /** If <b>level</b> is a valid log severity, return the corresponding
  * numeric value.  Otherwise, return -1. */
 int parse_log_level(const char *level) {
@@ -327,7 +387,7 @@ int get_min_log_level(void)
   logfile_t *lf;
   int min = LOG_ERR;
   for (lf = logfiles; lf; lf = lf->next) {
-    if (lf->loglevel < min)
+    if (lf->loglevel > min)
       min = lf->loglevel;
   }
   return min;

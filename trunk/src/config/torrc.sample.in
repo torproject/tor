@@ -29,6 +29,9 @@ AllowUnverifiedNodes middle,rendezvous
 ### Send all debug messages ONLY to /var/log/tor/debug
 #LogFile /var/log/tor/debug
 #LogLevel debug-debug
+### To use the system log instead of Tor's logfiles, uncomment these lines:
+#SysLog
+#LogLevel notice
 
 # Uncomment this to start the process in the background
 #RunAsDaemon 1
