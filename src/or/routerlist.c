@@ -507,14 +507,11 @@ router_resolve(routerinfo_t *router)
 {
   struct hostent *rent;
 
-  rent = (struct hostent *)gethostbyname(router->address);
-  if (!rent) {
+  if (tor_lookup_hostname(router->address, &router->addr)) {
     log_fn(LOG_WARN,"Could not get address for router %s (%s).",
            router->address, router->nickname);
     return -1;
   }
-  tor_assert(rent->h_length == 4);
-  memcpy(&router->addr, rent->h_addr,rent->h_length);
   router->addr = ntohl(router->addr); /* get it back into host order */
 
   return 0;

@@ -39,6 +39,9 @@
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -53,6 +56,18 @@
 #endif
 #ifdef HAVE_GRP_H
 #include <grp.h>
+#endif
+
+#ifdef HAVE_WINSOCK_H
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
+#define WIN32_LEAN_AND_MEAN
+#endif
+#if _MSC_VER > 1300
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#elif defined(_MSC_VER)
+#include <winsock.h>
 #endif
 
 /* used by inet_addr, not defined on solaris anywhere!? */
@@ -1366,6 +1381,42 @@ int tor_inet_aton(const char *c, struct in_addr* addr)
   addr->s_addr = r;
   return 1;
 #endif
+}
+
+/* Similar behavior to Unix gethostbyname: resolve 'name', and set
+ * *addr to the proper IP address, in network byte order.  Returns 0
+ * on success, -1 on failure; 1 on transient failure.
+ *
+ * (This function exists because standard windows gethostbyname
+ * doesn't treat raw IP addresses properly.)
+ */
+/* Perhaps eventually this should be replaced by a tor_getaddrinfo or
+ * something.
+ */
+int tor_lookup_hostname(const char *name, uint32_t *addr)
+{
+  struct in_addr iaddr;
+  struct hostent *ent;
+  tor_assert(addr);
+  if (tor_inet_aton(name, &iaddr)) {
+    /* It's an IP. */
+    memcpy(addr, &iaddr.s_addr, 4);
+    return 0;
+  } else {
+    ent = gethostbyname(name);
+    if (ent) {
+      /* break to remind us if we move away from IPv4 */
+      tor_assert(ent->h_length == 4);
+      memcpy(addr, ent->h_addr, 4);
+      return 0;
+    }
+    memset(addr, 0, 4);
+#ifdef MS_WINDOWS
+    return (WSAGetLastError() == WSATRY_AGAIN) ? 1 : -1;
+#else
+    return (h_errno == TRY_AGAIN) ? 1 : -1;
+#endif
+  }
 }
 
 /*

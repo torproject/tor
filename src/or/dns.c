@@ -451,7 +451,6 @@ int dnsworker_main(void *data) {
   char address[MAX_ADDRESSLEN];
   unsigned char address_len;
   char answer[5];
-  struct hostent *rent;
   int *fdarray = data;
   int fd;
 
@@ -475,21 +474,17 @@ int dnsworker_main(void *data) {
     }
     address[address_len] = 0; /* null terminate it */
 
-    rent = gethostbyname(address);
-    if (!rent) {
-      if(h_errno == TRY_AGAIN) { /* transient error -- don't cache it */
+    switch (tor_lookup_hostname(address, (uint32_t*)answer+1)) {
+      case 1:
         log_fn(LOG_INFO,"Could not resolve dest addr %s (transient).",address);
         answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
-      } else { /* permanent error, can be cached */
+        break;
+      case -1:
         log_fn(LOG_INFO,"Could not resolve dest addr %s (permanent).",address);
         answer[0] = DNS_RESOLVE_FAILED_PERMANENT;
-      }
-      memset(answer+1,0,4);
-    } else {
-      tor_assert(rent->h_length == 4); /* break to remind us if we move away from ipv4 */
-      answer[0] = DNS_RESOLVE_SUCCEEDED;
-      memcpy(answer+1, rent->h_addr, 4);
-      log_fn(LOG_INFO,"Resolved address '%s'.",address);
+      case 0:
+        log_fn(LOG_INFO,"Resolved address '%s'.",address);
+        answer[0] = DNS_RESOLVE_SUCCEEDED;
     }
     if(write_all(fd, answer, 5, 1) != 5) {
       log_fn(LOG_ERR,"writing answer failed. Child exiting.");

@@ -212,6 +212,7 @@ int switch_id(char *user, char *group);
 
 struct in_addr;
 int tor_inet_aton(const char *cp, struct in_addr *addr);
+int tor_lookup_hostname(const char *name, uint32_t *addr);
 
 /* For stupid historical reasons, windows sockets have an independent set of
  * errnos which they use as the fancy strikes them.
