@@ -245,9 +245,10 @@ either a reject *:* or an accept *:*. Otherwise, you're _augmenting_
 .IP "accept *:873"
 .IP "accept *:993"
 .IP "accept *:995" 4
-.IP "reject *:4661-4662"
 .IP "reject *:1214"
-.IP "reject *:6346"
+.IP "reject *:4661-4666"
+.IP "reject *:6346-6429"
+.IP "reject *:6881-6999"
 .IP "accept *:1024-65535"
 .IP "reject *:*"
 .RE
