@@ -527,9 +527,9 @@ int check_private_dir(const char *dirname, int create)
     }
     log(LOG_INFO, "Creating directory %s", dirname);
 #ifdef MS_WINDOWS
-	r = mkdir(dirname);
+    r = mkdir(dirname);
 #else
-	r = mkdir(dirname, 0700);
+    r = mkdir(dirname, 0700);
 #endif
     if (r) {
       log(LOG_WARN, "Error creating directory %s: %s", dirname,
@@ -877,12 +877,12 @@ int tor_inet_aton(const char *c, struct in_addr* addr)
   uint32_t r;
   assert(c && addr);
   if (strcmp(c, "255.255.255.255") == 0) {
-	addr->s_addr = 0xFFFFFFFFu;
-	return 1;
+    addr->s_addr = 0xFFFFFFFFu;
+    return 1;
   }
   r = inet_addr(c);
   if (r == INADDR_NONE)
-	return 0;
+    return 0;
   addr->s_addr = r;
   return 1;
 #endif
