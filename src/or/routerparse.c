@@ -354,7 +354,7 @@ router_parse_routerlist_from_directory(const char *str,
     log_fn(LOG_WARN, "Impossibly short directory header"); goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword in \"%s\"; can't parse directory.",
+    log_fn(LOG_WARN, "Unrecognized keyword \"%s\" in directory header; can't parse directory.",
            tok->args[0]);
     goto err;
   }
@@ -468,7 +468,7 @@ router_parse_runningrouters(const char *str)
     log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword in \"%s\"; can't parse directory.",
+    log_fn(LOG_WARN, "Unrecognized keyword \"%s\"; can't parse running-routers",
            tok->args[0]);
     goto err;
   }
@@ -662,7 +662,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword in \"%s\"; skipping descriptor.",
+    log_fn(LOG_WARN, "Unrecognized keyword \"%s\"; skipping descriptor.",
            tok->args[0]);
     goto err;
   }
