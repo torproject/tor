@@ -487,10 +487,11 @@ static int do_main_loop(void) {
       please_dumpstats = 0;
     }
     if(please_reset) {
+      char keydir[512];
       log_fn(LOG_WARN,"Received sighup. Reloading config.");
       /* first, reload config variables, in case they've changed */
+      /* no need to provide argc/v, they've been cached inside init_from_config */
       if (init_from_config(0, NULL) < 0) {
-        /* no need to provide argc/v, they've been cached inside init_from_config */
         exit(1);
       }
       if(retry_all_connections() < 0) {
@@ -499,7 +500,6 @@ static int do_main_loop(void) {
       }
       if(options.DirPort) {
         /* reload the approved-routers file */
-        char keydir[512];
         sprintf(keydir,"%s/approved-routers", options.DataDirectory);
         log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
         if(dirserv_parse_fingerprint_file(keydir) < 0) {
@@ -509,6 +509,13 @@ static int do_main_loop(void) {
         /* fetch a new directory */
         directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
       }
+      if(options.ORPort) {
+        router_rebuild_descriptor();
+        sprintf(keydir,"%s/router.desc", options.DataDirectory);
+        log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
+        if (write_str_to_file(keydir, router_get_my_descriptor())) {
+          return -1;
+        }
 
       please_reset = 0;
     }
