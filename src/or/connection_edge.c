@@ -1016,11 +1016,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
     }
   }
 
-  if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
-    /* 0.0.8 servers have buggy resolve support. */
-    if (!tor_version_as_new_as(exit->platform, "0.0.9pre1"))
-      return 0;
-  } else {
+  if (conn->socks_request->command != SOCKS_COMMAND_RESOLVE) {
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if (router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
           exit->exit_policy) == ADDR_POLICY_REJECTED)

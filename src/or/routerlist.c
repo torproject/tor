@@ -64,9 +64,8 @@ int router_reload_router_list(void)
       log_fn(LOG_WARN, "Cached directory at '%s' was unparseable; ignoring.", filename);
     }
     if (routerlist &&
-        ((routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2)
+        ((routerlist->published_on > time(NULL) - MIN_ONION_KEY_LIFETIME/2)
          || is_recent)) {
-      /* XXX use new onion key lifetime when 0.0.8 servers are obsolete */
       directory_has_arrived(st.st_mtime); /* do things we've been waiting to do */
     }
     tor_free(s);

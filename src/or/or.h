@@ -145,7 +145,6 @@
 #endif
 
 /** How often do we rotate onion keys? */
-#define OLD_MIN_ONION_KEY_LIFETIME (12*60*60) /* twice a day */
 #define MIN_ONION_KEY_LIFETIME (7*24*60*60) /* once a week */
 /** How often do we rotate TLS contexts? */
 #define MAX_SSL_KEY_LIFETIME (120*60)
