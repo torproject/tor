@@ -368,7 +368,7 @@ int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
   /* FIXME check for collisions */
   ap_conn->topic_id = ntohs(*(uint16_t *)(cell.payload+2));
   cell.payload[0] = TOPIC_COMMAND_BEGIN;
-  snprintf(cell.payload+4, CELL_PAYLOAD_SIZE-4, "%s,%d", ap_conn->dest_addr, ap_conn->dest_port);
+  snprintf(cell.payload+4, CELL_PAYLOAD_SIZE-4, "%s:%d", ap_conn->dest_addr, ap_conn->dest_port);
   cell.length = strlen(cell.payload+TOPIC_HEADER_SIZE)+1+TOPIC_HEADER_SIZE;
   log(LOG_DEBUG,"ap_handshake_send_begin(): Sending data cell to begin topic %d.", ap_conn->topic_id);
   if(circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
