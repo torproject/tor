@@ -20,6 +20,10 @@
 typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
   CONFIG_TYPE_UINT,         /**< A non-negative integer less than MAX_INT */
+  /* DOCDOC */
+  CONFIG_TYPE_INTERVAL,     /**< A non-negative integer less than MAX_INT */
+  /* DOCDOC */
+  CONFIG_TYPE_MEMUNIT,       /**< A non-negative integer less than MAX_INT */
   CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
   CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
   CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and optional
@@ -55,8 +59,8 @@ static config_abbrev_t config_abbrevs[] = {
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
   { "l", "Log", 1},
-  { "BandwidthRate", "BandwidthRateBytes", 0},
-  { "BandwidthBurst", "BandwidthBurstBytes", 0},
+  { "BandwidthRateBytes", "BandwidthRate", 0},
+  { "BandwidthBurstBytes", "BandwidthBurst", 0},
   { "DirFetchPostPeriod", "DirFetchPeriod", 0},
   { NULL, NULL , 0},
 };
@@ -89,8 +93,8 @@ static config_var_t config_vars[] = {
   VAR("Address",             STRING,   Address,              NULL),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
-  VAR("BandwidthRateBytes",  UINT,     BandwidthRateBytes,   "800000"),
-  VAR("BandwidthBurstBytes", UINT,     BandwidthBurstBytes,  "50000000"),
+  VAR("BandwidthRate",       MEMUNIT,   BandwidthRate,   "780 KB"),
+  VAR("BandwidthBurst",      MEMUNIT,   BandwidthBurst,  "48 MB"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
@@ -99,9 +103,9 @@ static config_var_t config_vars[] = {
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
   VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
-  VAR("DirFetchPeriod",      UINT,     DirFetchPeriod,       "3600"),
-  VAR("DirPostPeriod",       UINT,     DirPostPeriod,        "600"),
-  VAR("RendPostPeriod",      UINT,     RendPostPeriod,       "600"),
+  VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "1 hour"),
+  VAR("DirPostPeriod",       INTERVAL, DirPostPeriod,        "10 mintues"),
+  VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "10 minutes"),
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
   VAR("DirServer",           LINELIST, DirServers,           NULL),
   VAR("ExitNodes",           STRING,   ExitNodes,            NULL),
@@ -123,7 +127,7 @@ static config_var_t config_vars[] = {
   VAR("HiddenServiceNodes",  LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceExcludeNodes", LINELIST_S, RendConfigLines, NULL),
   VAR("IgnoreVersion",       BOOL,     IgnoreVersion,        "0"),
-  VAR("KeepalivePeriod",     UINT,     KeepalivePeriod,      "300"),
+  VAR("KeepalivePeriod",     INTERVAL, KeepalivePeriod,      "5 minutes"),
   VAR("Log",                 LINELIST, Logs,                 NULL),
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
   VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
@@ -131,9 +135,10 @@ static config_var_t config_vars[] = {
   VAR("MaxConn",             UINT,     MaxConn,              "1024"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
   VAR("MonthlyAccountingStart",UINT,   AccountingStart,      "1"),
-  VAR("AccountingMaxKB",     UINT,     AccountingMaxKB,      "0"),
+  VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
+  VAR("AccountingMax",       MEMUNIT,   AccountingMax,        "0 bytes"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
-  VAR("NewCircuitPeriod",    UINT,     NewCircuitPeriod,     "30"),
+  VAR("NewCircuitPeriod",    INTERVAL, NewCircuitPeriod,     "30 seconds"),
   VAR("NumCpus",             UINT,     NumCpus,              "1"),
   VAR("ORPort",              UINT,     ORPort,               "0"),
   VAR("ORBindAddress",       LINELIST, ORBindAddress,        NULL),
@@ -150,7 +155,7 @@ static config_var_t config_vars[] = {
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
-  VAR("StatusFetchPeriod",   UINT,     StatusFetchPeriod,    "1200"),
+  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "20 minutes"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
@@ -184,6 +189,9 @@ static int add_single_log_option(or_options_t *options, int minSeverity,
 static int normalize_log_options(or_options_t *options);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
+
+static uint64_t config_parse_memunit(const char *s, int *ok);
+static int config_parse_interval(const char *s, int *ok);
 
 /*
  * Functions to read and write the global options pointer.
@@ -529,6 +537,24 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
     *(int *)lvalue = i;
     break;
 
+  case CONFIG_TYPE_INTERVAL: {
+    i = config_parse_interval(c->value, &ok);
+    if (!ok) {
+      return -2;
+    }
+    *(int *)lvalue = i;
+    break;
+  }
+
+  case CONFIG_TYPE_MEMUNIT: {
+    uint64_t u64 = config_parse_memunit(c->value, &ok);
+    if (!ok) {
+      return -2;
+    }
+    *(uint64_t *)lvalue = u64;
+    break;
+  }
+
   case CONFIG_TYPE_BOOL:
     i = tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
@@ -648,10 +674,16 @@ config_get_assigned_option(or_options_t *options, const char *key)
         return NULL;
       }
       break;
+    case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
       /* This means every or_options_t uint or bool element
        * needs to be an int. Not, say, a uint16_t or char. */
       tor_snprintf(buf, sizeof(buf), "%d", *(int*)value);
+      result->value = tor_strdup(buf);
+      break;
+    case CONFIG_TYPE_MEMUNIT:
+      tor_snprintf(buf, sizeof(buf), U64_FORMAT,
+                   U64_PRINTF_ARG(*(uint64_t*)value));
       result->value = tor_strdup(buf);
       break;
     case CONFIG_TYPE_DOUBLE:
@@ -771,9 +803,13 @@ option_reset(or_options_t *options, config_var_t *var)
     case CONFIG_TYPE_DOUBLE:
       *(double*)lvalue = 0.0;
       break;
+    case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
     case CONFIG_TYPE_BOOL:
       *(int*)lvalue = 0;
+      break;
+    case CONFIG_TYPE_MEMUNIT:
+      *(uint64_t*)lvalue = 0;
       break;
     case CONFIG_TYPE_CSV:
       if (*(smartlist_t**)lvalue) {
@@ -930,6 +966,8 @@ options_free(or_options_t *options)
   for (i=0; config_vars[i].name; ++i) {
     lvalue = ((char*)options) + config_vars[i].var_offset;
     switch(config_vars[i].type) {
+      case CONFIG_TYPE_MEMUNIT:
+      case CONFIG_TYPE_INTERVAL:
       case CONFIG_TYPE_UINT:
       case CONFIG_TYPE_BOOL:
       case CONFIG_TYPE_DOUBLE:
@@ -1183,6 +1221,12 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
+  if (options->_AccountingMaxKB) {
+    log(LOG_WARN, "AccountingMaxKB is deprecated.  Say 'AccountingMax %d KB' instead.", options->_AccountingMaxKB);
+    options->AccountingMax = U64_LITERAL(1024)*options->_AccountingMaxKB;
+    options->_AccountingMaxKB = 0;
+  }
+
   if (options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, const char *, cp,
     {
@@ -1257,8 +1301,8 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
-  if (2*options->BandwidthRateBytes >= options->BandwidthBurstBytes) {
-    log(LOG_WARN,"BandwidthBurstBytes must be more than twice BandwidthRateBytes.");
+  if (2*options->BandwidthRate >= options->BandwidthBurst) {
+    log(LOG_WARN,"BandwidthBurst must be more than twice BandwidthRate.");
     result = -1;
   }
 
@@ -2159,6 +2203,121 @@ save_current_config(void)
   }
   fn = get_default_conf_file();
   return write_configuration_file(fn, get_options());
+}
+
+struct unit_table_t {
+  const char *unit;
+  uint64_t multiplier;
+};
+
+static struct unit_table_t memory_units[] = {
+  { "byte",      1<< 0 },
+  { "bytes",     1<< 0 },
+  { "k",         1<<10 },
+  { "kb",        1<<10 },
+  { "kilobyte",  1<<10 },
+  { "kilobytes", 1<<10 },
+  { "m",         1<<20 },
+  { "mb",        1<<20 },
+  { "megabyte",  1<<20 },
+  { "megabytes", 1<<20 },
+  { "g",         1<<30 },
+  { "gb",        1<<30 },
+  { "gigabyte",  1<<30 },
+  { "gigabytes", 1<<30 },
+  { "t",         U64_LITERAL(1)<<40 },
+  { "tb",        U64_LITERAL(1)<<40 },
+  { "terabyte",  U64_LITERAL(1)<<40 },
+  { "terabytes", U64_LITERAL(1)<<40 },
+  { NULL, 0 },
+};
+
+static struct unit_table_t time_units[] = {
+  { "s",        1 },
+  { "sec",      1 },
+  { "secs",     1 },
+  { "second",   1 },
+  { "seconds",  1 },
+  { "min",      60 },
+  { "mins",     60 },
+  { "minute",   60 },
+  { "minutes",  60 },
+  { "h",        60*60 },
+  { "hr",       60*60 },
+  { "hrs",      60*60 },
+  { "hour",     60*60 },
+  { "hours",    60*60 },
+  { "day",      24*60*60 },
+  { "days",     24*60*60 },
+  { "week",     7*24*60*60 },
+  { "weeks",    7*24*60*60 },
+  { NULL, 0 },
+};
+
+/** Parse a string <b>val</b> containing a number, zero or more
+ * spaces, and an optional unit string.  If the unit appears in the
+ * table <b>u</b>, then multiply the number by the unit multiplier.
+ * On success, set *<b>ok</b> to 1 and return this product.
+ * Otherwise, set *<b>ok</b> to 0.
+ */
+static uint64_t
+config_parse_units(const char *val, struct unit_table_t *u, int *ok)
+{
+  uint64_t v;
+  char *cp;
+
+  tor_assert(ok);
+
+  v = tor_parse_uint64(val, 10, 0, UINT64_MAX, ok, &cp);
+  if (!*ok)
+    return 0;
+  if (!cp) {
+    *ok = 1;
+    return v;
+  }
+  while(isspace(*cp))
+    ++cp;
+  for ( ;u->unit;++u) {
+    if (!strcasecmp(u->unit, cp)) {
+      v *= u->multiplier;
+      *ok = 1;
+      return v;
+    }
+  }
+  log_fn(LOG_WARN, "Unknown unit '%s'.", cp);
+  *ok = 0;
+  return 0;
+}
+
+/** Parse a string in the format "number unit", where unit is a unit of
+ * information (byte, KB, M, etc).  On success, set *<b>ok</b> to true
+ * and return the number of bytes specified.  Otherwise, set
+ * *<b>ok</b> to false and return 0. */
+static uint64_t
+config_parse_memunit(const char *s, int *ok) {
+  return config_parse_units(s, memory_units, ok);
+}
+
+/** Parse a string in the format "number unit", where unit is a unit of time.
+ * On success, set *<b>ok</b> to true and return the number of seconds in
+ * the provided interval.  Otherwise, set *<b>ok</b> to 0 and return -1.
+ */
+static int
+config_parse_interval(const char *s, int *ok) {
+  uint64_t r;
+  r = config_parse_units(s, time_units, ok);
+  if (!ok)
+    return -1;
+  if (r > INT_MAX) {
+    log_fn(LOG_WARN, "Interval '%s' is too long", s);
+    *ok = 0;
+    return -1;
+  } else if (r<0) {
+    log_fn(LOG_WARN, "Interval '%s' is negative", s);
+    *ok = 0;
+    return -1;
+  }
+  return r;
 }
 
 /*

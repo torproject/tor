@@ -937,9 +937,9 @@ typedef struct {
                          * them? */
   int NewCircuitPeriod; /**< How long do we use a circuit before building
                          * a new one? */
-  int BandwidthRateBytes; /**< How much bandwidth, on average, are we willing to
+  uint64_t BandwidthRate; /**< How much bandwidth, on average, are we willing to
                            * use in a second? */
-  int BandwidthBurstBytes; /**< How much bandwidth, at maximum, are we willing to
+  uint64_t BandwidthBurst; /**< How much bandwidth, at maximum, are we willing to
                             * use in a second? */
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
@@ -963,9 +963,13 @@ typedef struct {
   int AccountingStart; /**< At what offset within the accounting interval
                         * do we begin measuring?  (Currently only day-of-month
                         * is supported.) */
-  int AccountingMaxKB; /**< How many KB do we allow per accounting
-                        * interval before hibernation?  0 for "never
-                        * hibernate." */
+  uint64_t AccountingMax; /**< How many bytes do we allow per accounting
+                           * interval before hibernation?  0 for "never
+                           * hibernate." */
+  int _AccountingMaxKB; /**< How many KB do we allow per accounting
+                         * interval before hibernation?  0 for "never
+                         * hibernate." */
+
   char *HashedControlPassword; /**< Base64-encoded hash of a password for
                                 * the control system. */
   int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
