@@ -201,6 +201,15 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
   return 0;
 }
 
+/* Make a relay cell out of 'relay_command' and 'payload', and
+ * send it onto the open circuit 'circ'. If it's a control cell,
+ * set fromconn to NULL, else it's the stream that's sending the
+ * relay cell. Use cpath_layer NULL if you're responding to the OP;
+ * If it's an outgoing cell it must specify the destination hop.
+ *
+ * If you can't send the cell, mark the circuit for close and
+ * return -1. Else return 0.
+ */
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
                                  int relay_command, void *payload,
                                  int payload_len, crypt_path_t *cpath_layer) {
@@ -738,8 +747,13 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
     /* see if we already have it cached */
     if (rend_cache_lookup(socks->address, &descp, &desc_len) == 1) {
-      /* then pick and launch a rendezvous circuit */
-      /* go into some other state */
+      if(0){ //if a circuit already exists to this place, use it
+
+      } else {
+        /* go into some other state maybe? */
+        /* then launch a rendezvous circuit */
+        circuit_launch_new(CIRCUIT_PURPOSE_C_ESTABLISH_REND, NULL);
+      }
     } else {
       /* initiate a dir hidserv desc lookup */
       /* go into a state where you'll be notified of the answer */

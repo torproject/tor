@@ -205,6 +205,8 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
     config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
     config_compare(list, "RecommendedVersions",CONFIG_TYPE_STRING, &options->RecommendedVersions) ||
+    config_compare(list, "RendNodes",      CONFIG_TYPE_STRING, &options->RendNodes) ||
+    config_compare(list, "RendExcludeNodes",CONFIG_TYPE_STRING, &options->RendExcludeNodes) ||
 
     config_compare(list, "SocksPort",      CONFIG_TYPE_INT, &options->SocksPort) ||
     config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
@@ -419,6 +421,8 @@ static void free_options(or_options_t *options) {
   tor_free(options->ExitNodes);
   tor_free(options->EntryNodes);
   tor_free(options->ExcludeNodes);
+  tor_free(options->RendNodes);
+  tor_free(options->RendExcludeNodes);
   tor_free(options->ExitPolicy);
   tor_free(options->SocksBindAddress);
   tor_free(options->ORBindAddress);
@@ -436,6 +440,8 @@ static void init_options(or_options_t *options) {
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
   options->ExcludeNodes = tor_strdup("");
+  options->RendNodes = tor_strdup("");
+  options->RendExcludeNodes = tor_strdup("");
   options->ExitPolicy = tor_strdup("");
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
