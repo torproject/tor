@@ -18,12 +18,9 @@
 
 \title{Challenges in deploying low-latency anonymity (DRAFT)}
 
-%\author{Roger Dingledine and Nick Mathewson and }
-%\institute{The Free Haven Project\\
-%\email{\{arma,nickm\}@freehaven.net}}
-\author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
-Nick Mathewson \\ The Free Haven Project \\ nickm@freehaven.net \and
-Paul Syverson \\ Naval Research Lab \\ syverson@itd.nrl.navy.mil}
+\author{Roger Dingledine\inst{1} \and Nick Mathewson\inst{1} \and Paul Syverson\inst{2}}
+\institute{The Free Haven Project \email{<\{arma,nickm\}@freehaven.net>} \and
+Naval Research Lab \email{<syverson@itd.nrl.navy.mil>}}
 
 \maketitle
 \pagestyle{empty}
@@ -751,10 +748,11 @@ workable alternative.
 \label{subsec:stream-vs-packet}
 \label{subsec:tcp-vs-ip}
 
-We periodically run into ex ZKS employees who tell us that the process of
-anonymizing IPs should ``obviously'' be done at the IP layer. Here are
-the issues that need to be resolved before we'll be ready to switch Tor
-over to arbitrary IP traffic.
+Tor transports streams; it does not tunnel packets. We periodically
+run into developers of the old Freedom network~\cite{freedom21-security}
+who tell us that anonymizing IP addresses should ``obviously'' be done
+at the IP layer. Here are the issues that need to be resolved before
+we'll be ready to switch Tor over to arbitrary IP traffic.
 
 \begin{enumerate}
 \setlength{\itemsep}{0mm}
@@ -773,8 +771,7 @@ understanding the protocols we are transporting.
 \item \emph{The crypto is unspecified.} First we need a block-level encryption
 approach that can provide security despite
 packet loss and out-of-order delivery. Freedom allegedly had one, but it was
-never publicly specified. %, and we believe it's likely vulnerable to tagging
-%attacks \cite{tor-design}.
+never publicly specified.
 Also, TLS over UDP is not implemented or even
 specified, though some early work has begun on that~\cite{dtls}.
 \item \emph{We'll still need to tune network parameters}. Since the above
@@ -806,32 +803,47 @@ than we think. We certainly wouldn't mind if Tor one day is able to
 transport a greater variety of protocols.
 [XXX clarify our actual attitude here. -NM]
 
+To be fair, Tor's stream-based approach has run into practical
+stumbling blocks as well. While Tor supports the SOCKS protocol,
+which provides a standardized interface for generic TCP proxies, many
+applications do not support SOCKS. Supporting such applications requires
+replacing the networking system calls with SOCKS-aware
+versions, or running a SOCKS tunnel locally, neither of which is
+easy for the average user---even with good instructions.
+Even when applications do use SOCKS, they often make DNS requests
+themselves.  (The various versions of the SOCKS protocol include some where
+the application tells the proxy an IP address, and some where it sends a
+hostname.)  By connecting to the DNS server directly, the application breaks
+the user's anonymity and advertises where it is about to connect.
+
+So in order to actually provide good anonymity, we need to make sure that
+users have a practical way to use Tor anonymously.  Possibilities include
+writing wrappers for applications to anonymize them automatically; improving
+the applications' support for SOCKS; writing libraries to help application
+writers use Tor properly; and implementing a local DNS proxy to reroute DNS
+requests to Tor so that applications can simply point their DNS resolvers at
+localhost and continue to use SOCKS for data only.
+
 \subsection{Mid-latency}
 \label{subsec:mid-latency}
 
-Though Tor has always been designed to be practical and usable first
-with as much anonymity as can be built in subject to those goals, we
-have contemplated that users might need resistance to at least simple
-traffic correlation attacks.  Higher-latency mix-networks resist these
-attacks by introducing variability into message arrival times in order to
-suppress timing correlation.  Thus, it seems worthwhile to consider the
-whether we can improving Tor's anonymity by introducing batching and delaying
-strategies to the Tor messages to prevent observers from linking incoming and
-outgoing traffic.
+Some users need to resist traffic correlation attacks.  Higher-latency
+mix-networks resist these attacks by introducing variability into message
+arrival times: as timing variance increases, timing correlation attacks
+require increasingly more data~\cite{e2e-traffic}. Can we improve Tor's
+resistance to these attacks without losing too much usability?
+%by introducing batching
+%and delaying strategies to the Tor messages?
 
-Before we consider the engineering issues involved in the approach, of
-course, we first need to study whether it can genuinely make users more
-anonymous.  Research on end-to-end traffic analysis on higher-latency mix
-networks~\cite{e2e-traffic} indicates that as timing variance decreases,
-timing correlation attacks require increasingly less data; it might be the
-case that Tor can't resist timing attacks for longer than a few minutes
-without increasing message delays to an unusable degree.  Conversely, if Tor
-can remain usable and slow timing attacks by even a matter of hours, this
-would represent a significant improvement in practical anonymity: protecting
-short-duration, once-off activities against a global observer is better than
-protecting no activities at all.  In order to answer this question, we might
+First, we need to learn whether we can trade a small increase in latency
+for a large anonymity increase, or if we'll end up trading a lot of
+latency for a small security gain. It would be worthwhile even if we
+can only protect certain use cases, such as infrequent short-duration
+transactions.
+
+  In order to answer this question, we might
 try to adapt the techniques of~\cite{e2e-traffic} to a lower-latency mix
-network, where instead of sending uncorrelated messages, users send batches
+network, where instead of sending messages, users send batches
 of cells in temporally clustered connections.
 
 Once the anonymity questions are answered, we need to consider usability.  If
@@ -851,7 +863,7 @@ the anonymity provided and the interest on the part of users.
 Adding a mid-latency option should not require significant fundamental
 change to the Tor client or server design; circuits could be labeled as
 low- or mid- latency as they are constructed. Low-latency traffic
-would be processed as now, while cells on on circuits that are mid-latency
+would be processed as now, while cells on circuits that are mid-latency
 would be sent in uniform-size chunks at synchronized intervals.  (Traffic
 already moves through the Tor network in fixed-sized cells; this would
 increase the granularity.)  If servers forward these chunks in roughly
@@ -949,34 +961,6 @@ locations to target for confirmation. A way to counter this
 distribution threat might be to only cache at certain semitrusted
 helper nodes.  This might help specific clients, but it would limit
 the general value of caching.
-
-%Does that cacheing discussion belong in low-latency?
-
-\subsection{Application support: SOCKS and beyond}
-
-Tor supports the SOCKS protocol, which provides a standardized interface for
-generic TCP proxies.  Unfortunately, this is not a complete solution for
-many applications and platforms:
-\begin{tightlist}
-\item Many applications do not support SOCKS. To support such applications,
-  it's necessary to replace the networking system calls with SOCKS-aware
-  versions, or to run a local SOCKS tunnel and convince the applications to
-  connect to localhost.  Neither of these tasks is easy for the average user,
-  even with good instructions.
-\item Even when applications do use SOCKS, they often make DNS requests
-  themselves.  (The various versions of the SOCKS protocol include some where
-  the application tells the proxy an IP address, and some where it sends a
-  hostname.)  By connecting to the DNS sever directly, the application breaks
-  the user's anonymity and advertises where it is about to connect.
-\end{tightlist}
-
-So in order to actually provide good anonymity, we need to make sure that
-users have a practical way to use Tor anonymously.  Possibilities include
-writing wrappers for applications to anonymize them automatically; improving
-the applications' support for SOCKS; writing libraries to help application
-writers use Tor properly; and implementing a local DNS proxy to reroute DNS
-requests to Tor so that applications can simply point their DNS resolvers at
-localhost and continue to use SOCKS for data only.
 
 \subsection{Measuring performance and capacity}
 \label{subsec:performance}
