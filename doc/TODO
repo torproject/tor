@@ -34,8 +34,14 @@ N         - Based on bandwidth and per-month allowance, choose a
             used.  Adjust next month's window based on outcome.  Hibernate
             when we're not up.
 R         - Hibernate means "stop accepting connections, and start sleeping"
-            Implement hibernation.
+            Implement hibernation.  Have a separate
+            about-to-start-hibernating state implemented in similar way to
+            will shut-down-in-30-seconds state.
+        - Rendezvous service bug: can we nail it down?
 R       . bandwidth buckets for write as well as read.
+N       - Make watchdogged clients check cached-directory mtime to avoid
+          fetching directory in a tight loop.
+        - Implement If-Modified-Since for directories.
 N       - Handle rendezvousing with unverified nodes.
           - Specify: Stick rendezvous point's key in INTRODUCE cell.
             Bob should _always_ use key from INTRODUCE cell.
@@ -77,6 +83,10 @@ R       - learn from ben about his openssl-reinitialization-trick to
           on by default for hidden services.
         - Make command-line strict about checking options; make only certain
           option prefixes work.
+        - Split running-routers into 2 lines: verified-routers and
+          live-routers.
+        - Rate-limit OR and directory connections overall and per-IP and
+          maybe per subnet.
         - put expiry date on onion-key, so people don't keep trying
           old ones that they could know are expired?
 * Leave on todo list, see if pre3 onion fixes helped enough.
