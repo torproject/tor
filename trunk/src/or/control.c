@@ -737,7 +737,7 @@ static int handle_control_attachstream(connection_t *conn, uint32_t len,
     ap_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     if (connection_ap_handshake_attach_circuit(ap_conn)<0)
       connection_mark_for_close(ap_conn);
-
+    send_control_done(conn);
     return 0;
   }
 
