@@ -679,6 +679,12 @@ the shared directory is straightforward, and is described in the Tor
 specification \cite{tor-spec}.
 % we should, uh, add this to the spec. oh, and write it. -RD
 
+Because the directories are signed, they can be cached at all the other
+onion routers (or even elsewhere). Thus directory servers are not a
+performance bottleneck when we have many users, and also they won't
+aid traffic analysis by forcing clients to periodically announce their
+existence to any central point.
+
 \Section{Rendezvous points: location privacy}
 \label{sec:rendezvous}
 
