@@ -568,7 +568,12 @@ int connection_handle_write(connection_t *conn) {
       conn->state != OR_CONN_STATE_CONNECTING) {
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       connection_stop_writing(conn);
-      return connection_tls_continue_handshake(conn);
+      if(connection_tls_continue_handshake(conn) < 0) {
+        connection_close_immediate(conn); /* Don't flush; connection is dead. */
+        connection_mark_for_close(conn, 0);
+        return -1;
+      }
+      return 0;
     }
 
     /* else open, or closing */
@@ -576,6 +581,7 @@ int connection_handle_write(connection_t *conn) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
         log_fn(LOG_INFO,"tls error. breaking.");
+        connection_close_immediate(conn); /* Don't flush; connection is dead. */
         connection_mark_for_close(conn, 0);
         return -1; /* XXX deal with close better */
       case TOR_TLS_WANTWRITE:
@@ -601,6 +607,7 @@ int connection_handle_write(connection_t *conn) {
     }
   } else {
     if (flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0) {
+      connection_close_immediate(conn); /* Don't flush; connection is dead. */
       connection_mark_for_close(conn, END_STREAM_REASON_MISC);
       return -1;
     }
