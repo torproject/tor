@@ -743,7 +743,7 @@ address_is_invalid_destination(const char *address) {
   return 0;
 }
 
-/** Iterate over all address mapings which have exipry times between
+/** Iterate over all address mapings which have expiry times between
  * min_expires and max_expires, inclusive.  If sl is provided, add an
  * "old-addr new-addr" string to sl for each mapping.  If sl is NULL,
  * remove the mappings.
