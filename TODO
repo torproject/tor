@@ -6,9 +6,6 @@ Obvious things I'd like to do that won't break anything:
 
 * Test suite. We need one.
 
-* Switch the "return -1" cases that really mean "you've got a bug"
-  into calls to assert().
-
 * Since my OR can handle multiple circuits through a given OP,
   I think it's clear that the OP should pass new create cells through the
   same channel. Thus we can take advantage of the padding we're already
@@ -16,56 +13,31 @@ Obvious things I'd like to do that won't break anything:
   to always pick a favorite OR first, so the OP can minimize the number
   of outgoing connections it must sustain?
 
-* Rewrite the OP to be non-blocking single-process.
-
-* Add autoconf support.
-  Figure out what .h files we're actually using, and how portable
+* Figure out what .h files we're actually using, and how portable
   those are.
-
-* Since we're using a stream cipher, an adversary's cell arriving with the
-  same aci will forever trash our circuit. Since each side picks half
-  the aci, for each cell the adversary has a 1/256 chance of trashing a
-  circuit. This is really nasty. We want to make ACIs something reasonably
-  hard to collide with, such as 20 bytes.
-
-  While we're at it, I'd like more than 4 bits for Version. :)
 
 * Exit policies. Since we don't really know what protocol is being spoken,
   it really comes down to an IP range and port range that we
   allow/disallow. The 'application' connection can evaluate it and make
   a decision.
 
-* We currently block on gethostbyname in OR. This is poor. The complex
-  solution is to have a separate process that we talk to. There are some
-  free software versions we can use, but they'll still be tricky. The
-  better answer is to realize that the OP can do the resolution and
-  simply hand the OR an IP directly.
-  A) This prevents us from doing sneaky things like having the name resolve
-     differently at the OR than at the OP. I'm ok with that.
-  B) It actually just shunts the "dns lookups block" problem back onto the
-     OP. But that's ok too, because the OP doesn't have to be as robust.
-     (Heck, can we have the application proxy resolve it, even?)
+* We currently block on gethostbyname at the exit. This is poor. We need
+  to set it up so we have a separate process that we talk to. There are
+  some free software versions we can use, but they'll still be tricky.
 
 * I'd like a cleaner interface for the configuration files, keys, etc.
   Perhaps the next step is a central repository where we download router
-  lists? Something that takes the human more out of the loop.
+  lists? We can aim to make use of the directory servers that Mixminion
+  deploys.
 
-  We should look into a 'topology communication protocol'; there's one
-  mentioned in the spec that Paul has, but I haven't looked at it to
-  know how complete it is or how well it would work. This would also
-  allow us to add new ORs on the fly. Directory servers, a la the ones
-  we're developing for Mixminion (see http://mixminion.net/), are also
-  a very nice approach to consider.
-
-* Should ORs rotate their link keys periodically?
-
-* We probably want OAEP padding for RSA.
+* ORs should rotate their link keys periodically. Later.
 
 * The parts of the code that say 'FIXME'
 
-* Clean up the number of places that get to look at prkey.
+* Clean up the number of places that get to look at prkey. Later.
 
 * Circuits should expire sometime, say, when circuit->expire triggers?
+  Later.
 
 
 
@@ -75,44 +47,11 @@ Non-obvious things I'd like to do:
 (Many of these topics are inter-related. It's clear that we need more
 analysis before we can guess which approaches are good.)
 
-* Padding between ORs, and correct padding between OPs. The ORs currently
-  send no padding cells between each other. Currently the OP seems to
-  send padding at a steady rate, but data cells can come more quickly
-  than that. This doesn't provide much protection at all. I'd like to
-  investigate a synchronous mixing approach, where cells are sent at fixed
-  intervals. We need to investigate the effects of this on DoS resistance
-  -- what do we do when we have too many packets? One approach is to
-  do traffic shaping rather than traffic padding -- we gain a bit more
-  resistance to DoS at the expense of some anonymity. Can we compare this
-  analysis to that of the Cottrell Mix, and learn something new? We'll
-  need to decide on exactly how the traffic shaping algorithm works.
-
-* Make the connection buf's grow dynamically as needed. This won't
-  really solve the fundamental problem above, though, that a buffer
-  can be given an adversary-controlled number of cells.
-
-* I'd like to add a scheduler of some sort. Currently we only need one
-  for sending out padding cells, and if these events are periodic and
-  synchronized, we don't yet need a scheduler per se, but rather we just
-  need to have poll return every so often and avoid sending cells onto
-  the sockets except at the appointed time. We're nearly ready to do
-  that as it is, with the separation of write_to_buf() and flush_buf().
-
-  Edge case: what do we do with circuits that receive a destroy
-  cell before all data has been sent out? Currently there's only one
-  (outgoing) buffer per connection, so since it's crypted, a circuit
-  can't recognize its own packet once it's been queued. We could mark
-  the circuits for destruction, and go through and cull them once the
-  buffer is entirely flushed; but with the synchronous approach above,
-  the buffer may never become empty. Perhaps I should implement a callback
-  system, so a function can get called when a particular cell gets sent
-  out. That sounds very flexible, but might also be overkill.
-
 * Currently when a connection goes down, it generates a destroy cell
   (either in both directions or just the appropriate one). When a
   destroy cell arrives to an OR (and it gets read after all previous
   cells have arrived), it delivers a destroy cell for the "other side"
-  of the circuit: if the other side is an OP or APP, it closes the entire
+  of the circuit: if the other side is an OP or App, it closes the entire
   connection as well.
 
   But by "a connection going down", I mean "I read eof from it". Yet
@@ -121,12 +60,11 @@ analysis before we can guess which approaches are good.)
   shutdown"). In fact, some webservers work that way -- the client sends
   his entire request, and when the webserver reads an eof it begins
   its response. We currently don't support that sort of protocol; we
-  may want to switch to some sort of a two-way-destry-ripple technique
+  may want to switch to some sort of a two-way-destroy-ripple technique
   (where a destroy makes its way all the way to the end of the circuit
   before being echoed back, and data stops flowing only when a destroy
   has been received from both sides of the circuit); this extends the
   one-hop-ack approach that Matej used.
 
 * Reply onions. Hrm.
-
 
