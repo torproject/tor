@@ -357,9 +357,6 @@
 /** Length of 'y' portion of 'y.onion' URL. */
 #define REND_SERVICE_ID_LEN 16
 
-/* Reasons used by connection_mark_for_close */
-#define CLOSE_REASON_UNUSED_OR_CONN 100
-
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
 
@@ -955,11 +952,11 @@ void connection_free(connection_t *conn);
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);
-int _connection_mark_for_close(connection_t *conn, char reason);
+int _connection_mark_for_close(connection_t *conn);
 
-#define connection_mark_for_close(c,r)                                  \
+#define connection_mark_for_close(c)                                    \
   do {                                                                  \
-    if (_connection_mark_for_close(c,r)<0) {                            \
+    if (_connection_mark_for_close(c)<0) {                              \
       log(LOG_WARN,"Duplicate call to connection_mark_for_close at %s:%d (first at %s:%d)", \
           __FILE__,__LINE__,c->marked_for_close_file,c->marked_for_close); \
     } else {                                                            \

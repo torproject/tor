@@ -83,7 +83,7 @@ void cpuworkers_rotate(void)
   connection_t *cpuworker;
   while ((cpuworker = connection_get_by_type_state(CONN_TYPE_CPUWORKER,
                                                    CPUWORKER_STATE_IDLE))) {
-    connection_mark_for_close(cpuworker,0);
+    connection_mark_for_close(cpuworker);
     --num_cpuworkers;
   }
   last_rotation_time = time(NULL);
@@ -117,7 +117,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     }
     num_cpuworkers--;
     spawn_enough_cpuworkers(); /* try to regrow. hope we don't end up spinning. */
-    connection_mark_for_close(conn,0);
+    connection_mark_for_close(conn);
     return 0;
   }
 
@@ -161,7 +161,7 @@ done_processing:
   conn->state = CPUWORKER_STATE_IDLE;
   num_cpuworkers_busy--;
   if (conn->timestamp_created < last_rotation_time) {
-    connection_mark_for_close(conn,0);
+    connection_mark_for_close(conn);
     num_cpuworkers--;
     spawn_enough_cpuworkers();
   } else {

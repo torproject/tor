@@ -380,11 +380,13 @@ void rend_client_desc_fetched(char *query, int success) {
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
         log_fn(LOG_WARN,"attaching to a rend circ failed. Closing conn.");
-        connection_mark_for_close(conn,0);
+        conn->has_sent_end = 1;
+        connection_mark_for_close(conn);
       }
     } else { /* 404, or fetch didn't get that far */
       log_fn(LOG_WARN,"service id '%s' fetched failed, and not in cache. Closing conn.", query);
-      connection_mark_for_close(conn,0);
+      conn->has_sent_end = 1;
+      connection_mark_for_close(conn);
     }
   }
 }

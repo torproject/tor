@@ -913,11 +913,6 @@ void circuit_about_to_close_connection(connection_t *conn) {
       if(!circ)
         return;
 
-      if(!conn->has_sent_end) {
-        log_fn(LOG_WARN,"Edge connection hasn't sent end yet? Bug.");
-        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
-      }
-
       circuit_detach_stream(circ, conn);
 
   } /* end switch */
@@ -1619,7 +1614,8 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
         /* no need to send 'end' relay cells,
          * because the other side's already dead
          */
-        connection_mark_for_close(stream,0);
+        stream->has_sent_end = 1;
+        connection_mark_for_close(stream);
       }
     }
 

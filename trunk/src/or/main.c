@@ -219,7 +219,7 @@ static void conn_read(int i) {
         /* XXX but it'll clearly happen on MS_WINDOWS from POLLERR, right? */
         log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
                CONN_TYPE_TO_STRING(conn->type), conn->s);
-        connection_mark_for_close(conn,0);
+        connection_mark_for_close(conn);
       }
   }
   assert_connection_ok(conn, time(NULL));
@@ -250,7 +250,7 @@ static void conn_write(int i) {
       log_fn(LOG_WARN,"Unhandled error on read for %s connection (fd %d); removing",
              CONN_TYPE_TO_STRING(conn->type), conn->s);
       conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
-      connection_mark_for_close(conn,0);
+      connection_mark_for_close(conn);
     }
   }
   assert_connection_ok(conn, time(NULL));
@@ -359,11 +359,11 @@ static void run_connection_housekeeping(int i, time_t now) {
       if(flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0) {
         log_fn(LOG_WARN,"flushing expired directory conn failed.");
         connection_close_immediate(conn);
-        connection_mark_for_close(conn,0);
+        connection_mark_for_close(conn);
         /*  */
       } else {
         /* XXXX Does this next part make sense, really? */
-        connection_mark_for_close(conn,0);
+        connection_mark_for_close(conn);
         conn->hold_open_until_flushed = 1; /* give it a last chance */
       }
     }
@@ -383,7 +383,7 @@ static void run_connection_housekeeping(int i, time_t now) {
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);
       /* flush anything waiting, e.g. a destroy for a just-expired circ */
-      connection_mark_for_close(conn,CLOSE_REASON_UNUSED_OR_CONN);
+      connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else {
       /* either a full router, or we've got a circuit. send a padding cell. */

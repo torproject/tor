@@ -72,7 +72,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
     conn->done_receiving = 1;
     shutdown(conn->s, 0); /* XXX check return, refactor NM */
     if (conn->done_sending) {
-      connection_mark_for_close(conn, END_STREAM_REASON_DONE);
+      connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
+      connection_mark_for_close(conn);
     } else {
       connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_END,
                                    NULL, 0, conn->cpath_layer);
@@ -81,7 +82,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
 #else
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
-    connection_mark_for_close(conn, END_STREAM_REASON_DONE);
+    connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
+    connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1; /* just because we shouldn't read
                                           doesn't mean we shouldn't write */
     return 0;
@@ -91,7 +93,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
   switch(conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if(connection_ap_handshake_process_socks(conn) < 0) {
-        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+        conn->has_sent_end = 1; /* no circ yet */
+        connection_mark_for_close(conn);
         conn->hold_open_until_flushed = 1;
         return -1;
       }
@@ -104,7 +107,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
         return 0;
       }
       if(connection_edge_package_raw_inbuf(conn) < 0) {
-        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+        connection_mark_for_close(conn);
         return -1;
       }
       return 0;
@@ -117,7 +121,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
       return 0;
   }
   log_fn(LOG_WARN,"Got unexpected state %d. Closing.",conn->state);
-  connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+  connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+  connection_mark_for_close(conn);
   return -1;
 }
 
@@ -132,7 +137,7 @@ int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
   log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
          circ_id);
   conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
-  connection_mark_for_close(conn, END_STREAM_REASON_DESTROY);
+  connection_mark_for_close(conn);
   conn->hold_open_until_flushed = 1;
   return 0;
 }
@@ -172,7 +177,9 @@ connection_edge_end_reason(char *payload, uint16_t length) {
  * Return -1 if this function has already been called on this conn,
  * else return 0.
  */
-int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer) {
+int
+connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
+{
   char payload[5];
   int payload_len=1;
   circuit_t *circ;
@@ -222,7 +229,8 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   if(!circ) {
     log_fn(LOG_WARN,"no circ. Closing conn.");
     tor_assert(fromconn);
-    connection_mark_for_close(fromconn, 0);
+    fromconn->has_sent_end = 1; /* no circ to send to */
+    connection_mark_for_close(fromconn);
     return -1;
   }
 
@@ -309,7 +317,7 @@ connection_edge_process_relay_cell_not_open(
     if(CIRCUIT_IS_ORIGIN(circ))
       circuit_log_path(LOG_INFO,circ);
     conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
-    connection_mark_for_close(conn, 0);
+    connection_mark_for_close(conn);
     return 0;
   }
 
@@ -331,7 +339,8 @@ connection_edge_process_relay_cell_not_open(
     conn->socks_request->has_finished = 1;
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn) < 0) {
-      connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+      connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+      connection_mark_for_close(conn);
       return 0;
     }
     return 0;
@@ -339,7 +348,8 @@ connection_edge_process_relay_cell_not_open(
 
   log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
          rh->command, conn->state, conn_state_to_string[conn->type][conn->state]);
-  connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+  connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+  connection_mark_for_close(conn);
   return -1;
 }
 
@@ -396,7 +406,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if((layer_hint && --layer_hint->deliver_window < 0) ||
          (!layer_hint && --circ->deliver_window < 0)) {
         log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
-        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+        connection_mark_for_close(conn);
         return -1;
       }
       log_fn(LOG_DEBUG,"circ deliver_window now %d.", layer_hint ?
@@ -436,13 +447,13 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if (conn->done_receiving) {
         /* We just *got* an end; no reason to send one. */
         conn->has_sent_end = 1;
-        connection_mark_for_close(conn, 0);
+        connection_mark_for_close(conn);
         conn->hold_open_until_flushed = 1;
       }
 #else
       /* We just *got* an end; no reason to send one. */
       conn->has_sent_end = 1;
-      connection_mark_for_close(conn, 0);
+      connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
 #endif
       return 0;
@@ -711,14 +722,15 @@ void connection_ap_expire_beginning(void) {
     circ = circuit_get_by_conn(conn);
     if(!circ) { /* it's vanished? */
       log_fn(LOG_INFO,"Conn is in connect-wait, but lost its circ.");
-      connection_mark_for_close(conn,0);
+      connection_mark_for_close(conn);
       continue;
     }
     if(circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (now - conn->timestamp_lastread > 45) {
         log_fn(LOG_WARN,"Rend stream is %d seconds late. Giving up.",
                (int)(now - conn->timestamp_lastread));
-        connection_mark_for_close(conn,END_STREAM_REASON_TIMEOUT);
+        connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
+        connection_mark_for_close(conn);
       }
       continue;
     }
@@ -727,7 +739,8 @@ void connection_ap_expire_beginning(void) {
       log_fn(LOG_WARN,"Stream is %d seconds late. Giving up.",
              15*conn->num_retries);
       circuit_log_path(LOG_WARN, circ);
-      connection_mark_for_close(conn,END_STREAM_REASON_TIMEOUT);
+      connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
+      connection_mark_for_close(conn);
     } else {
       log_fn(LOG_WARN,"Stream is %d seconds late. Retrying.",
              (int)(now - conn->timestamp_lastread));
@@ -750,7 +763,8 @@ void connection_ap_expire_beginning(void) {
       if(connection_ap_handshake_attach_circuit(conn)<0) {
         /* it will never work */
         /* Don't need to send end -- we're not connected */
-        connection_mark_for_close(conn, 0);
+        conn->has_sent_end = 1;
+        connection_mark_for_close(conn);
       }
     } /* end if max_retries */
   } /* end for */
@@ -775,7 +789,8 @@ void connection_ap_attach_pending(void)
     if(connection_ap_handshake_attach_circuit(conn) < 0) {
       /* -1 means it will never work */
       /* Don't send end; there is no 'other side' yet */
-      connection_mark_for_close(conn,0);
+      conn->has_sent_end = 1;
+      connection_mark_for_close(conn);
     }
   }
 }
@@ -1141,7 +1156,8 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
     /* Don't send end: there is no 'other side' yet */
-    connection_mark_for_close(ap_conn, 0);
+    ap_conn->has_sent_end = 1;
+    connection_mark_for_close(ap_conn);
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -1220,7 +1236,8 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
 
   /* attaching to a dirty circuit is fine */
   if (connection_ap_handshake_attach_circuit(conn) < 0) {
-    connection_mark_for_close(conn, 0);
+    conn->has_sent_end = 1; /* no circ to send to */
+    connection_mark_for_close(conn);
     tor_close_socket(fd[1]);
     return -1;
   }
@@ -1332,7 +1349,8 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     assert_circuit_ok(circ);
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_INFO,"Didn't find rendezvous service (port %d)",n_stream->port);
-      connection_mark_for_close(n_stream, END_STREAM_REASON_EXITPOLICY);
+      connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
+      connection_mark_for_close(n_stream);
       connection_free(n_stream);
       circuit_mark_for_close(circ); /* knock the whole thing down, somebody screwed up */
       return 0;
@@ -1366,7 +1384,8 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       return 0;
     case -1: /* resolve failed */
       log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
-      connection_mark_for_close(n_stream, END_STREAM_REASON_RESOLVEFAILED);
+      connection_edge_end(n_stream, END_STREAM_REASON_RESOLVEFAILED, n_stream->cpath_layer);
+      connection_mark_for_close(n_stream);
       connection_free(n_stream);
       break;
     case 0: /* resolve added to pending list */
@@ -1392,7 +1411,8 @@ void connection_exit_connect(connection_t *conn) {
   if (!connection_edge_is_rendezvous_stream(conn) &&
       router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
-    connection_mark_for_close(conn, END_STREAM_REASON_EXITPOLICY);
+    connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, conn->cpath_layer);
+    connection_mark_for_close(conn);
     circuit_detach_stream(circuit_get_by_conn(conn), conn);
     connection_free(conn);
     return;
@@ -1401,7 +1421,8 @@ void connection_exit_connect(connection_t *conn) {
   log_fn(LOG_DEBUG,"about to try connecting");
   switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
     case -1:
-      connection_mark_for_close(conn, END_STREAM_REASON_CONNECTFAILED);
+      connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED, conn->cpath_layer);
+      connection_mark_for_close(conn);
       circuit_detach_stream(circuit_get_by_conn(conn), conn);
       connection_free(conn);
       return;

@@ -47,7 +47,7 @@ int connection_or_process_inbuf(connection_t *conn) {
 
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
-    connection_mark_for_close(conn,0);
+    connection_mark_for_close(conn);
     return 0;
   }
 
@@ -89,8 +89,8 @@ int connection_or_finished_connecting(connection_t *conn)
          conn->address,conn->port);
 
   if(connection_tls_start_handshake(conn, 0) < 0) {
-    /* TLS handhaking error of some kind. */
-    connection_mark_for_close(conn,0);
+    /* TLS handshaking error of some kind. */
+    connection_mark_for_close(conn);
     return -1;
   }
   return 0;
@@ -163,7 +163,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
     return conn;
 
   /* failure */
-  connection_mark_for_close(conn, 0);
+  connection_mark_for_close(conn);
   return NULL;
 }
 
