@@ -523,9 +523,8 @@ typedef struct {
 } or_options_t;
 
 /* XXX are these good enough defaults? */
-#define MAX_SOCKS_REPLY_LEN 256
-/* Not 256; addresses must fit in a begin cell. */
-#define MAX_SOCKS_ADDR_LEN 200
+#define MAX_SOCKS_REPLY_LEN 1024
+#define MAX_SOCKS_ADDR_LEN 256
 struct socks_request_t {
   char socks_version;
   int replylen;

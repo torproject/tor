@@ -394,12 +394,12 @@ int fetch_from_buf_http(buf_t *buf,
  *   socks5 phase two: "version command 0 addresstype..."
  * If it's a complete and valid handshake, and destaddr fits in
  *   MAX_SOCKS_ADDR_LEN bytes, then pull the handshake off the buf,
- *   assign to *req, and return 1.
+ *   assign to req, and return 1.
  * If it's invalid or too big, return -1.
  * Else it's not all there yet, leave buf alone and return 0.
- * If you want to specify the socks reply, write it into *reply
- *   and set *replylen, else leave *replylen alone.
- * If returning 0 or -1, *addr_out and *port_out are undefined.
+ * If you want to specify the socks reply, write it into req->reply
+ *   and set req->replylen, else leave req->replylen alone.
+ * If returning 0 or -1, req->address and req->port are undefined.
  */
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   unsigned char len;
@@ -538,8 +538,31 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       buf_remove_from_front(buf, next-buf->mem+1); /* next points to the final \0 on inbuf */
       return 1;
 
+    case 'G': /* get */
+    case 'H': /* head */
+    case 'P': /* put/post */
+    case 'C': /* connect */
+      strcpy(req->reply,
+"HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
+"Content-Type: text/html; charset=iso-8859-1\r\n"
+"<html>\n"
+"<head>\n"
+"<title>Tor is not an HTTP Proxy</title>\n"
+"</head>\n"
+"<body>\n"
+"It appears you have configured your web browser to use Tor as an HTTP Proxy.\n"
+"This is not correct: Tor provides a SOCKS proxy. Please configure your\n"
+"client accordingly.\n"
+"See <a href=\"http://freehaven.net/tor/cvs/INSTALL\">http://freehaven.net/tor/cvs/INSTALL</a for more information.\n"
+"<!-- Plus this comment, to make the body response more than 512 bytes, so IE will be willing to display it. Comment comment comment comment comment comment comment comment comment comment comment comment.-->\n"
+"</body>\n"
+"</html>\n"
+);
+      req->replylen = strlen(req->reply)+1;
+      /* fall through */
     default: /* version is not socks4 or socks5 */
-      log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an httpd proxy.)",*(buf->mem));
+      log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an httpd proxy.)",
+             *(buf->mem));
       return -1;
   }
 }
