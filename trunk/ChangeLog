@@ -1,3 +1,21 @@
+Changes in version 0.0.2pre24 - 2004-03-03
+  o Bugfixes:
+    - Fix an assertion failure in dns.c, where we were trying to dequeue
+      a pending dns resolve even if it wasn't pending
+    - Fix a spurious socks5 warning about still trying to write after the                      connection is finished.
+    - Hold certain marked_for_close connections open until they're finished
+      flushing, rather than losing bytes by closing them too early.
+    - Correctly report the reason for ending a stream
+    - Remove some duplicate calls to connection_mark_for_close
+    - Put switch_id and start_daemon earlier in the boot sequence, so it
+      will actually try to chdir() to options.DataDirectory
+    - Make 'make test' exit(1) if a test fails; fix some unit tests
+    - Make tor fail when you use a config option it doesn't know about,
+      rather than warn and continue.
+    - Make --version work
+    - Bugfixes on the rpm spec file and tor.sh, so it's more up to date
+
+
 Changes in version 0.0.2pre23 - 2004-02-29
   o New features:
     - Print a statement when the first circ is finished, so the user
