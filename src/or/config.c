@@ -28,14 +28,17 @@ typedef enum config_type_t {
 /** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
+#if 0
 static FILE *config_open(const unsigned char *filename);
 static int config_close(FILE *f);
+#endif
 static struct config_line_t *config_get_commandlines(int argc, char **argv);
 static struct config_line_t *config_get_lines(FILE *f);
 static void config_free_lines(struct config_line_t *front);
 static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg);
 static int config_assign(or_options_t *options, struct config_line_t *list);
 
+#if 0
 /** Open a configuration file for reading */
 static FILE *config_open(const unsigned char *filename) {
   tor_assert(filename);
@@ -51,6 +54,7 @@ static int config_close(FILE *f) {
   tor_assert(f);
   return fclose(f);
 }
+#endif
 
 /** Helper: Read a list of configuration options from the command line. */
 static struct config_line_t *config_get_commandlines(int argc, char **argv) {
@@ -670,9 +674,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
       }
     }
   }
+  tor_assert(fname);
   log(LOG_DEBUG,"Opening config file '%s'",fname);
 
-  cf = config_open(fname);
+  cf = fopen(fname, "r");
   if(!cf) {
     if(using_default_torrc == 1) {
       log(LOG_NOTICE, "Configuration file '%s' not present, using reasonable defaults.",fname);
@@ -692,7 +697,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     if(config_assign(options,cl) < 0)
       return -1;
     config_free_lines(cl);
-    config_close(cf);
+    fclose(cf);
   }
 
 /* go through command-line variables too */

@@ -1507,10 +1507,12 @@ char *read_file_to_str(const char *filename) {
 
   tor_assert(filename);
 
+#if 0
   if(strcspn(filename,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
     log_fn(LOG_WARN,"Filename %s contains illegal characters.",filename);
     return NULL;
   }
+#endif
 
   if(stat(filename, &statbuf) < 0) {
     log_fn(LOG_INFO,"Could not stat %s.",filename);
