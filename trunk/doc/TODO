@@ -26,8 +26,8 @@ N  - clients now have certs, which means we warn when their certs have
 R  - fix print_usage()
    - Download and use running-routers
 R  - document signals in man page
-N  - Check for hibernation on startup, hup, etc.
-     - Test hibernation a lot.
+   o Check for hibernation on startup, hup, etc.
+N  - Test hibernation a lot.
    o Document all undocumented configuration options.
      o Accounting
      o Control interface authentication
