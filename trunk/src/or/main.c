@@ -339,6 +339,9 @@ conn_read_callback(int fd, short event, void *_conn)
 #ifndef MS_WINDOWS
       log_fn(LOG_WARN,"Bug: unhandled error on read for %s connection (fd %d); removing",
              CONN_TYPE_TO_STRING(conn->type), conn->s);
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
 #endif
       connection_mark_for_close(conn);
     }
@@ -366,6 +369,9 @@ static void conn_write_callback(int fd, short events, void *_conn)
       /* this connection is broken. remove it. */
       log_fn(LOG_WARN,"Bug: unhandled error on write for %s connection (fd %d); removing",
              CONN_TYPE_TO_STRING(conn->type), conn->s);
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
       conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
       /* XXX do we need a close-immediate here, so we don't try to flush? */
       connection_mark_for_close(conn);

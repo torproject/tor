@@ -78,6 +78,9 @@ int connection_or_finished_flushing(connection_t *conn) {
 
   if (conn->state != OR_CONN_STATE_OPEN) {
     log_fn(LOG_WARN,"BUG: called in unexpected state %d",conn->state);
+#ifdef TOR_FRAGILE
+    tor_assert(0);
+#endif
     return -1;
   }
 
@@ -210,7 +213,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 
   if (server_mode(get_options()) && (me=router_get_my_routerinfo()) &&
       !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
-    log_fn(LOG_WARN,"Bug: Request to connect to myself! Failing.");
+    log_fn(LOG_WARN,"Bug: Client asked me to connect to myself! Refusing.");
     return NULL;
   }
 

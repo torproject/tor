@@ -220,8 +220,12 @@ void connection_about_to_close_connection(connection_t *conn)
   assert(conn->marked_for_close);
 
   if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
-    if (!conn->has_sent_end)
+    if (!conn->has_sent_end) {
       log_fn(LOG_WARN,"Bug: Edge connection hasn't sent end yet?");
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
+    }
   }
 
   switch (conn->type) {
@@ -295,6 +299,9 @@ void connection_close_immediate(connection_t *conn)
   assert_connection_ok(conn,0);
   if (conn->s < 0) {
     log_fn(LOG_WARN,"Bug: Attempt to close already-closed connection.");
+#ifdef TOR_FRAGILE
+    tor_assert(0);
+#endif
     return;
   }
   if (conn->outbuf_flushlen) {
@@ -319,6 +326,9 @@ _connection_mark_for_close(connection_t *conn)
 
   if (conn->marked_for_close) {
     log(LOG_WARN, "Bug: Double mark-for-close on connection.");
+#ifdef TOR_FRAGILE
+    tor_assert(0);
+#endif
     return -1;
   }
 
@@ -1371,6 +1381,9 @@ static int connection_process_inbuf(connection_t *conn, int package_partial) {
       return connection_control_process_inbuf(conn);
     default:
       log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
       return -1;
   }
 }
@@ -1403,6 +1416,9 @@ static int connection_finished_flushing(connection_t *conn) {
       return connection_control_finished_flushing(conn);
     default:
       log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
       return -1;
   }
 }
@@ -1426,6 +1442,9 @@ static int connection_finished_connecting(connection_t *conn)
       return connection_dir_finished_connecting(conn);
     default:
       log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
       return -1;
   }
 }
@@ -1448,6 +1467,9 @@ static int connection_reached_eof(connection_t *conn)
       return connection_control_reached_eof(conn);
     default:
       log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
       return -1;
   }
 }

@@ -699,6 +699,9 @@ circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
         default:
           log_fn(LOG_WARN,"Bug: unexpected purpose %d when cannibalizing a general circ.",
                  purpose);
+#ifdef TOR_FRAGILE
+          tor_assert(0);
+#endif
           return NULL;
       }
       return circ;
