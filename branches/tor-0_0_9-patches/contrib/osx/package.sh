@@ -34,7 +34,9 @@ PACKAGEMAKER=/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/P
 
 umask 022
 
-rm -rf $BUILD_DIR
+echo I might ask you for your password now, so you can sudo.
+
+sudo rm -rf $BUILD_DIR
 mkdir $BUILD_DIR || exit 1
 for subdir in tor_packageroot tor_resources \
               torstartup_packageroot \
@@ -46,14 +48,19 @@ done
 
 ### Make Tor package.
 make install DESTDIR=$BUILD_DIR/tor_packageroot
+cp $BUILD_DIR/tor_packageroot/usr/local/etc/tor/torrc.sample $BUILD_DIR/tor_packageroot/usr/local/etc/tor/torrc
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
 cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
+cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
+cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cat <<EOF > $BUILD_DIR/tor_resources/Welcome.txt
 Tor: an anonymous Internet communication system
 
 Tor is a system for using the internet anonymously, and allowing
 others to do so.
 EOF
+
+find $BUILD_DIR/tor_packageroot -print0 |sudo xargs -0 chown root:admin
 
 $PACKAGEMAKER -build              \
     -p $BUILD_DIR/output/Tor.pkg  \
@@ -65,6 +72,8 @@ $PACKAGEMAKER -build              \
 ### Put privoxy configuration package in place.
 mkdir -p $BUILD_DIR/privoxyconf_packageroot/Library/Privoxy
 cp contrib/osx/privoxy.config $BUILD_DIR/privoxyconf_packageroot/Library/Privoxy/config
+
+find $BUILD_DIR/privoxyconf_packageroot -print0 |sudo xargs -0 chown root:admin
 
 $PACKAGEMAKER -build                      \
     -p $BUILD_DIR/output/privoxyconf.pkg  \
@@ -78,6 +87,7 @@ mkdir -p $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
    $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 
+find $BUILD_DIR/torstartup_packageroot -print0 | sudo xargs -0 chown root:admin
 $PACKAGEMAKER -build                     \
     -p $BUILD_DIR/output/torstartup.pkg  \
     -f $BUILD_DIR/torstartup_packageroot \
@@ -126,8 +136,12 @@ cp ChangeLog $DOC/Advanced/ChangeLog.txt
 
 ### Package it all into a DMG
 
+find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:admin
+
 mv $BUILD_DIR/output "$BUILD_DIR/Tor $VERSION Bundle"
 rm -f "Tor $VERSION Bundle.dmg"
-hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor $VERSION Bundle" "Tor $VERSION Bundle.dmg"
+USER="`whoami`"
+sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor $VERSION Bundle" "Tor $VERSION Bundle.dmg"
+sudo chown "$USER" "Tor $VERSION Bundle.dmg"
 
-rm -rf $BUILD_DIR
+sudo rm -rf $BUILD_DIR
