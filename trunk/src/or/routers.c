@@ -21,6 +21,7 @@ static int rarray_len = 0;
 
 extern int global_role; /* from main.c */
 extern or_options_t options; /* command-line and config-file options */
+extern routerinfo_t *my_routerinfo; /* from main.c */
 
 /****************************************************************************/
 
@@ -175,6 +176,27 @@ void rarray_free(routerinfo_t **list) {
   free(list);
 }
 
+void router_forget_router(uint32_t addr, uint16_t port) {
+  int i;
+  routerinfo_t *router;
+
+  router = router_get_by_addr_port(addr,port);
+  if(!router) /* we don't seem to know about him in the first place */
+    return;
+
+  /* now walk down router_array until we get to router */
+  for(i=0;i<rarray_len;i++)
+    if(router_array[i] == router)
+      break;
+
+  assert(i != rarray_len); /* if so then router_get_by_addr_port should have returned null */
+
+  free(router);
+//  log(LOG_DEBUG,"router_forget_router(): Forgot about router %d:%d",addr,port);
+  for(; i<rarray_len-1;i++)
+    router_array[i] = router_array[i+1];
+}
+
 /* create a NULL-terminated array of pointers pointing to elements of a router list */
 /* this is done in two passes through the list - inefficient but irrelevant as this is
  * only done once when op/or start up */
@@ -289,6 +311,9 @@ int router_get_list_from_string(char *s, uint16_t or_listenport) {
     if(!router_is_me(router->addr, router->or_port, or_listenport)) {
       router->next = routerlist;
       routerlist = router;
+    } else {
+      if(!my_routerinfo) /* save it, so we can use it for directories */
+        my_routerinfo = router;
     }
     s = eat_whitespace(s);
   }

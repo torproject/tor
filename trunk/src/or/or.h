@@ -653,6 +653,7 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 unsigned int *router_new_route(int *routelen);
 unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
 routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen);
+void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile, uint16_t or_listenport);
 int router_get_list_from_string(char *s, uint16_t or_listenport);
 
