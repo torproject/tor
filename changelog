@@ -1,6 +1,7 @@
 tor (0.1.0.0-alpha-cvs-1) UNRELEASED; urgency=low
 
   * Add a watch file.
+  * Forward port 03_tor_manpage_in_section_8.
   * Forward port 06_add_compile_time_defaults.
   * Add libevent-dev to build-depends.
   * Update URL to tor in debian/control and debian/copyright.
@@ -9,7 +10,7 @@ tor (0.1.0.0-alpha-cvs-1) UNRELEASED; urgency=low
   * Wait for 60 seconds in init stop.  35 is too little.
   * Don't depend on python anymore - tor-resolve is C now.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 15 Mar 2005 23:33:54 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 22 Mar 2005 22:32:08 +0100
 
 tor (0.0.9.4-1) unstable; urgency=low
 
