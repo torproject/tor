@@ -540,6 +540,7 @@ repeat_connection_edge_package_raw_inbuf:
   goto repeat_connection_edge_package_raw_inbuf;
 }
 
+#define MAX_STREAM_RETRIES 4
 void connection_ap_expire_beginning(void) {
   connection_t **carray;
   connection_t *conn;
@@ -554,18 +555,24 @@ void connection_ap_expire_beginning(void) {
     if (conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CONNECT_WAIT)
       continue;
-    if (now - conn->timestamp_lastread >= 15) {
+    if (now - conn->timestamp_lastread < 15)
+      continue;
+    conn->num_retries++;
+    circ = circuit_get_by_conn(conn);
+    if(conn->num_retries >= MAX_STREAM_RETRIES) {
+      log_fn(LOG_WARN,"Stream is %d seconds late. Giving up.",
+             15*conn->num_retries);
+      circuit_log_path(LOG_WARN, circ);
+      connection_mark_for_close(conn,END_STREAM_REASON_TIMEOUT);
+    } else {
       log_fn(LOG_WARN,"Stream is %d seconds late. Retrying.",
              (int)(now - conn->timestamp_lastread));
-      circ = circuit_get_by_conn(conn);
       circuit_log_path(LOG_WARN, circ);
       /* send an end down the circuit */
       connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
       /* un-mark it as ending, since we're going to reuse it */
       conn->has_sent_end = 0;
-      /* move it back into 'pending' state. It's possible it will
-       * reattach to this same circuit, but that's good enough for now.
-       */
+      /* move it back into 'pending' state. */
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       circuit_detach_stream(circ, conn);
       /* kludge to make us not try this circuit again, yet to allow
@@ -580,8 +587,8 @@ void connection_ap_expire_beginning(void) {
         /* Don't need to send end -- we're not connected */
         connection_mark_for_close(conn, 0);
       }
-    }
-  }
+    } /* end if max_retries */
+  } /* end for */
 }
 
 /* Tell any APs that are waiting for a new circuit that one is available */
