@@ -345,7 +345,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   connection_watch_events(conn, EV_READ);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   if (! tor_tls_peer_has_cert(conn->tls)) {
-    log_fn(LOG_WARN,"Peer didn't send a cert! Closing.");
+    log_fn(LOG_INFO,"Peer didn't send a cert! Closing.");
     /* XXX we should handle this case rather than just closing. */
     return -1;
   }
