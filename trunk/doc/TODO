@@ -24,7 +24,6 @@ ARMA    - arma claims
         o Document all undocumented options, or mark them as undocumented
           in the source.
         o Bail out early if datadirectory is NULL.
-R       . bandwidth buckets for write as well as read.
         o Cached-directory changes:
           o make clients store the cached-directory to disk,
           o and use it when they startup, so they don't need to bootstrap
@@ -38,13 +37,14 @@ R       . bandwidth buckets for write as well as read.
             o Decompress incoming HTTP based on Content-Encoding
             o Once dirservers are running new code, make clients
               request compressed directories.
+        o allow yourself to build circuits immediately if you have a
+          recent cached directory
 
       0.0.9pre2:
+R       . bandwidth buckets for write as well as read.
 N       - switch dirservers entries to config lines.
 N       - add three default dirplaces if we parse the whole torrc and
           no dirplaces are specified.
-N       - allow yourself to build circuits immediately if you have a
-          recent cached directory
 N       - Handle rendezvousing with unverified nodes.
           - Specify: Stick rendezvous point's key in INTRODUCE cell.
             Bob should _always_ use key from INTRODUCE cell.
