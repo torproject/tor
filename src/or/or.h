@@ -1184,7 +1184,7 @@ void dirserv_remove_old_servers(int age);
 int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
-size_t dirserv_get_directory(const char **cp, int deflate);
+size_t dirserv_get_directory(const char **cp, int compress);
 size_t dirserv_get_runningrouters(const char **rr);
 void dirserv_set_cached_directory(const char *directory, time_t when);
 
