@@ -151,8 +151,6 @@ void router_set_bandwidth_capacity(int bw) {
 }
 /** Return the value we tucked away above, or zero by default. */
 int router_get_bandwidth_capacity(void) {
-  if (we_are_hibernating())
-    return 0;
   return bw_capacity;
 }
 
@@ -535,6 +533,7 @@ int router_rebuild_descriptor(int force) {
   uint32_t addr;
   char platform[256];
   struct in_addr in;
+  int hibernating = we_are_hibernating();
   or_options_t *options = get_options();
 
   if (!desc_is_dirty && !force)
@@ -550,9 +549,9 @@ int router_rebuild_descriptor(int force) {
   ri->address = tor_strdup(inet_ntoa(in));
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
-  ri->or_port = options->ORPort;
-  ri->socks_port = options->SocksPort;
-  ri->dir_port = options->DirPort;
+  ri->or_port = hibernating ? 0 : options->ORPort;
+  ri->socks_port = hibernating ? 0 : options->SocksPort;
+  ri->dir_port = hibernating ? 0 : options->DirPort;
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
@@ -564,7 +563,7 @@ int router_rebuild_descriptor(int force) {
   ri->platform = tor_strdup(platform);
   ri->bandwidthrate = (int)options->BandwidthRate;
   ri->bandwidthburst = (int)options->BandwidthBurst;
-  ri->bandwidthcapacity = router_get_bandwidth_capacity();
+  ri->bandwidthcapacity = hibernating ? 0 : router_get_bandwidth_capacity();
   router_add_exit_policy_from_config(ri);
   if (desc_routerinfo) /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;
