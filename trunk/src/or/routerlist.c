@@ -541,22 +541,22 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
     == ADDR_POLICY_REJECTED;
 }
 
-static time_t parse_time(const char *cp)
+static int parse_time(const char *cp, time_t *t)
 {
   struct tm st_tm;
 #ifdef HAVE_STRPTIME
   if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
-    log_fn(LOG_WARN, "Published time was unparseable"); return 0;
+    log_fn(LOG_WARN, "Published time was unparseable"); return -1;
   }
 #else 
   unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
-  if (scanf("%u-%u-%u %u:%u:%u", cp, &year, &month, 
+  if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month, 
 	        &day, &hour, &minute, &second) < 6) {
-	log_fn(LOG_WARN, "Published time was unparseable"); return 0;
+	log_fn(LOG_WARN, "Published time was unparseable"); return -1;
   }
-  if (year < 2000 || month < 1 || month > 12 || day < 1 || day > 31 ||
+  if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
 	  hour > 24 || minute > 61 || second > 62) {
-	log_fn(LOG_WARN, "Published time was nonsensical"); return 0;
+	log_fn(LOG_WARN, "Published time was nonsensical"); return -1;
   }
   st_tm.tm_year = year;
   st_tm.tm_mon = month;
@@ -565,8 +565,8 @@ static time_t parse_time(const char *cp)
   st_tm.tm_min = minute;
   st_tm.tm_sec = second;
 #endif
-  return tor_timegm(&st_tm);
-
+  *t = tor_timegm(&st_tm);
+  return 0;
 }
 
 
@@ -632,7 +632,7 @@ router_get_routerlist_from_directory_impl(const char *str,
   }
   assert(tok->n_args == 1);
   
-  if (!(published_on = parse_time(tok->args[0]))) {
+  if (parse_time(tok->args[0], &published_on) < 0) {
      goto err;
   }
 
@@ -902,7 +902,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     log_fn(LOG_WARN, "Missing published time"); goto err;
   }
   assert(tok->n_args == 1);
-  if (!(router->published_on = parse_time(tok->args[0])))
+  if (parse_time(tok->args[0], &router->published_on) < 0)
 	  goto err;
 
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
