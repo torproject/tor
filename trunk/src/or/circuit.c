@@ -127,6 +127,10 @@ void circuit_free(circuit_t *circ) {
     tor_free(circ->build_state->chosen_exit);
   tor_free(circ->build_state);
   circuit_free_cpath(circ->cpath);
+  if (circ->rend_splice) {
+    circ->rend_splice->rend_splice = NULL;
+  }
+
   memset(circ, 0xAA, sizeof(circuit_t)); /* poison memory */
   free(circ);
 }
@@ -286,6 +290,24 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
 /*    log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.",
            newest->n_conn->address, newest->n_port, newest->n_circ_id); */
     return newest;
+  }
+  return NULL;
+}
+
+/* Return the first circuit in global_circuitlist whose rend_service
+ * field is servid and whose purpose is purpose. Returns NULL if no circuit
+ * is found.
+ */
+circuit_t *circuit_get_by_service_and_purpose(const char *servid, int purpose)
+{
+  circuit_t *circ;
+  for(circ=global_circuitlist; circ; circ = circ->next) {
+    if (circ->marked_for_close)
+      continue;
+    if (circ->purpose != purpose)
+      continue;
+    if (!memcmp(circ->rend_service, servid, REND_COOKIE_LEN))
+      return circ;
   }
   return NULL;
 }
@@ -726,8 +748,13 @@ int _circuit_mark_for_close(circuit_t *circ) {
      * circuit-building failed immediately, it won't be set yet. */
     circuit_increment_failure_count();
   }
-
   circ->marked_for_close = 1;
+
+  if (circ->rend_splice && !circ->rend_splice->marked_for_close) {
+    /* do this after marking this circuit, to avoid infinite recursion. */
+    circuit_mark_for_close(circ->rend_splice);
+    circ->rend_splice = NULL;
+  }
   return 0;
 }
 
@@ -989,6 +1016,7 @@ int circuit_establish_circuit(void) {
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
   circ->build_state = onion_new_cpath_build_state();
+  circ->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   if (! circ->build_state) {
     log_fn(LOG_INFO,"Generating cpath length failed.");
@@ -1348,6 +1376,8 @@ void assert_circuit_ok(const circuit_t *c)
 
   assert(c);
   assert(c->magic == CIRCUIT_MAGIC);
+  assert(c->purpose >= _CIRCUIT_PURPOSE_MIN &&
+         c->purpose <= _CIRCUIT_PURPOSE_MAX);
 
   if (c->n_conn)
     assert(c->n_conn->type == CONN_TYPE_OR);
@@ -1375,6 +1405,15 @@ void assert_circuit_ok(const circuit_t *c)
   }
   if (c->cpath) {
 //XXX    assert_cpath_ok(c->cpath);
+  }
+  if (c->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED) {
+    if (!c->marked_for_close) {
+      assert(c->rend_splice);
+      assert(c->rend_splice->rend_splice == c);
+    }
+    assert(c->rend_splice != c);
+  } else {
+    assert(!c->rend_splice);
   }
 }
 

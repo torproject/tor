@@ -103,6 +103,7 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
 
   circ = circuit_new(cell->circ_id, conn);
   circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
+  circ->purpose = CIRCUIT_PURPOSE_INTERMEDIATE;
 
   memcpy(circ->onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
 
