@@ -12,17 +12,26 @@ ARMA    - arma claims
         X Abandoned
 
 
-        . Use a stronger cipher
-                o 3des for now
-                - aes now, by including the code ourselves
-        . Topics / circuits
-                o Implement topics
+        o Use a stronger cipher
+                o aes now, by including the code ourselves
+        . streams / circuits
+                o Implement streams
                 o Rotate circuits after N minutes?
                 X Circuits should expire when circuit->expire triggers
 NICK            . Handle half-open connections
                         o Figure out what causes connections to close, standardize
                           when we mark a connection vs when we tear it down
                 o Look at what ssl does to keep from mutating data streams
+                - Reduce streamid footprint from 7 bytes to 3 bytes
+                        - Check for collisions in streamid (now possible with
+                          just 3 bytes), and back up & replace with padding if so
+                - Use the 3 saved bytes to put pseudorandomness in each cell
+                - Use the 4 reserved bytes in each cell header to keep 1/5
+                  of a sha1 of the payload
+                        - (Move these 4 bytes into the stream header)
+                - Consider moving length into the stream header too
+                - Spec the stream_id stuff. Clarify that nobody on the backward
+                  stream should look at stream_id.
         X On the fly compression of each stream
         o Clean up the event loop (optimize and sanitize)
 ARMA    o Remove that awful concept of 'roles'
@@ -32,7 +41,10 @@ ARMA    . Exit policies
                         - Let user request certain nodes
                         - And disallow certain nodes
                         D Choose path by jurisdiction, etc?
-                - Rewrite how the AP works
+                - Make relay end cells have failure status and payload attached
+                - Streams that fail due to exit policy must reextend to new node
+                - Add extend_wait state to edge connections, thumb through them
+                  when the AP get an extended cell.
 SPEC!!  D Non-clique topologies
         D Implement our own memory management, at least for common structs
         . Appropriate logging
@@ -56,6 +68,13 @@ SPEC!!  D Non-clique topologies
                         o An address doesn't resolve
                         o We have max workers running
                 o Consider taking the master out of the loop?
+        . Put CPU workers in separate processes
+                o Handle multiple cpu workers (one for each cpu, plus one)
+                o Queue for pending tasks if all workers full
+                o Support the 'process this onion' task
+                - Support the 'decrypt this RSA blob' handshake1 task
+                - Handle cpuworkers dying
+                D Support later handshake parts
         . Directory servers
                 D Automated reputation management
                 o Include key in source; sign directories
@@ -80,7 +99,7 @@ SPEC!!          D Figure out how to do threshold directory servers
                 . Get socks4a support into Mozilla
         . Get tor to act like a socks server
                 o socks4, socks4a
-                - socks5
+                D socks5
 SPEC!!          - Handle socks commands other than connect, eg, bind?
         . Develop rendezvous points
                 . Spec (still needs step-by-step instructions)
@@ -100,7 +119,7 @@ NICK            . Unit tests
                 - Performance tests, so we know when we've improved
                         . webload infrastructure (Bruce)
                         . httperf infrastructure (easy to set up)
-                        . oprofile (installed in RH 8.0)
+                        . oprofile (installed in RH >8.0)
         D Deploy a widespread network
         . Router twins
                 o Choose twin if primary is down, when laying circuit
@@ -112,29 +131,30 @@ NICK    . Daemonize and package
                 - Red Hat spec file
                 - Debian spec file equivalent
         . Autoconf
-                . Which .h files are we actually using? Port to:
+                . Which .h files are we actually using?
+                . Port to:
                         o Linux
                         o BSD
                         . Solaris
-                        . Windows
+                        o Cygwin
+                        . Win32
                         o OS X
                 o openssl randomness
                 o inet_ntoa
-                - stdint.h
+                . stdint.h
                 - Make a script to set up a local network on your machine
         D Move away from openssl
                 o Abstract out crypto calls
                 D Look at nss, others? Just include code?
-
-        . transition addr to sin_addr (huh?)
-
         o Clean up the number of places that get to look at prkey
         . Clearer bandwidth management 
-        - Total rate limiting
-        . Look at OR handshake in more detail
+                - Do we want to remove bandwidth from OR handshakes?
+                - What about OP handshakes?
+        o Total rate limiting
+        o Look at OR handshake in more detail
                 o Spec it
                 o Merge OR and OP handshakes
-                . rearrange connection_or so it doesn't suck so much to read
+                o rearrange connection_or so it doesn't suck so much to read
                 D Periodic link key rotation. Spec?
         - More flexibility in node addressing
                 D Support IPv6 rather than just 4
