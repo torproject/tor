@@ -191,7 +191,10 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
   start_time = time(NULL);
 
-  tor_assert(rsa && cname && rsa_sign && cname_sign);
+  tor_assert(rsa);
+  tor_assert(cname);
+  tor_assert(rsa_sign);
+  tor_assert(cname_sign);
   if (!(sign_pkey = _crypto_pk_env_get_evp_pkey(rsa_sign,1)))
     goto error;
   if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,0)))
@@ -432,7 +435,8 @@ int
 tor_tls_read(tor_tls *tls, char *cp, size_t len)
 {
   int r, err;
-  tor_assert(tls && tls->ssl);
+  tor_assert(tls);
+  tor_assert(tls->ssl);
   tor_assert(tls->state == TOR_TLS_ST_OPEN);
   r = SSL_read(tls->ssl, cp, len);
   if (r > 0)
@@ -457,7 +461,8 @@ int
 tor_tls_write(tor_tls *tls, char *cp, size_t n)
 {
   int r, err;
-  tor_assert(tls && tls->ssl);
+  tor_assert(tls);
+  tor_assert(tls->ssl);
   tor_assert(tls->state == TOR_TLS_ST_OPEN);
   if (n == 0)
     return 0;
@@ -489,7 +494,8 @@ int
 tor_tls_handshake(tor_tls *tls)
 {
   int r;
-  tor_assert(tls && tls->ssl);
+  tor_assert(tls);
+  tor_assert(tls->ssl);
   tor_assert(tls->state == TOR_TLS_ST_HANDSHAKE);
   if (tls->isServer) {
     r = SSL_accept(tls->ssl);
@@ -512,7 +518,8 @@ tor_tls_shutdown(tor_tls *tls)
 {
   int r, err;
   char buf[128];
-  tor_assert(tls && tls->ssl);
+  tor_assert(tls);
+  tor_assert(tls->ssl);
 
   while (1) {
     if (tls->state == TOR_TLS_ST_SENTCLOSE) {
