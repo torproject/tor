@@ -737,17 +737,23 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
   if(!rh.stream_id)
     return NULL;
 
-  if(cell_direction == CELL_DIRECTION_OUT)
-    tmpconn = circ->n_streams;
-  else
-    tmpconn = circ->p_streams;
+  /* IN or OUT cells could have come from either direction, now
+   * that we allow rendezvous *to* an OP.
+   */
 
-  for( ; tmpconn; tmpconn=tmpconn->next_stream) {
+  for(tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream) {
+    if(rh.stream_id == tmpconn->stream_id) {
+      log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
+      if(cell_direction == CELL_DIRECTION_OUT ||
+         connection_edge_is_rendezvous_stream(tmpconn))
+        return tmpconn;
+    }
+  }
+  for(tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream) {
     if(rh.stream_id == tmpconn->stream_id) {
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
       return tmpconn;
     }
-//    log_fn(LOG_DEBUG,"considered stream %d, not it.",tmpconn->stream_id);
   }
   return NULL; /* probably a begin relay cell */
 }
