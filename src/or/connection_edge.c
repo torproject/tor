@@ -901,7 +901,6 @@ connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
   uint32_t addr;
   uint16_t port;
-  or_options_t *options = get_options();
 
   if (!connection_edge_is_rendezvous_stream(conn) &&
       router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
