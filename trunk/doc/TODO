@@ -36,7 +36,10 @@ R    - Hibernate means "stop accepting connections, and start sleeping"
 R  . bandwidth buckets for write as well as read.
    o Make watchdogged clients check cached-directory mtime to avoid
      fetching directory in a tight loop.
-N  - Pure C tor_resolve
+   . Pure C tor_resolve
+     o Implement it; socks4a only is fine for now.
+N    - Make it build on win32
+N/R  - Make it not link with zlib and openssl.
 N  - RPMs
 N  - Windows installer
    - Review website; make important info more prominent.
@@ -149,7 +152,7 @@ R  - learn from ben about his openssl-reinitialization-trick to
    . rename/rearrange functions for what file they're in
    - generalize our transport: add transport.c in preparation for
      http, airhook, etc transport.
-N  o investigate sctp for alternate transport.
+   o investigate sctp for alternate transport.
 
 For September:
 N    . Windows port
