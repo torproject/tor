@@ -1207,7 +1207,7 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
     *port_max_out = 65535;
   } else {
     endptr = NULL;
-    *port_min_out =  (uint16_t) tor_parse_long(port, 10, 1, 65535,
+    *port_min_out = (uint16_t) tor_parse_long(port, 10, 1, 65535,
                                                NULL, &endptr);
     if (*endptr == '-') {
       port = endptr+1;

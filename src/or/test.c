@@ -680,9 +680,9 @@ test_util(void) {
   test_eq(0L, tor_parse_long("10",10,50,100,NULL,NULL));
 
   /* Test parse_line_from_str */
-  strlcpy(buf, "k v\n" " key    value with spaces   \n"  "keykey val\n"
+  strlcpy(buf, "k v\n" " key    value with spaces   \n" "keykey val\n"
           "k2\n"
-          "k3 \n"  "\n" "   \n" "#comment\n"
+          "k3 \n" "\n" "   \n" "#comment\n"
           "k4#a\n" "k5#abc\n" "k6 val #with comment\n", sizeof(buf));
   cp = buf;
 
