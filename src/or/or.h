@@ -342,7 +342,14 @@ typedef struct {
   /* crypto environments */
   crypto_cipher_env_t *f_crypto;
   crypto_cipher_env_t *b_crypto;
-  
+
+  char state;
+#define CPATH_STATE_CLOSED 0
+#define CPATH_STATE_AWAITING_KEY 1
+#define CPATH_STATE_OPEN 2
+  void *next;
+  void *prev; /* doubly linked list */
+
 } crypt_path_t;
 
 struct relay_queue_t {
@@ -355,7 +362,7 @@ typedef struct {
   uint32_t n_addr;
   uint16_t n_port;
   connection_t *p_conn;
-  connection_t *n_conn;
+  connection_t *n_conn; /* convention: first conn is the OR conn, if there is one */
   int n_receive_circwindow;
   int p_receive_circwindow;
 
@@ -364,11 +371,10 @@ typedef struct {
 
   struct relay_queue_t *relay_queue; /* for queueing cells at the edges */
 
-  crypto_cipher_env_t *p_crypto; /* crypto environments */
+  crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
   crypto_cipher_env_t *n_crypto;
 
-  crypt_path_t **cpath;
-  int cpathlen; 
+  crypt_path_t *cpath;
 
   uint32_t expire; /* expiration time for the corresponding onion */
   long timestamp_created;
@@ -497,7 +503,7 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type);
 
 circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_newest_by_edge_type(char edge_type);
+circuit_t *circuit_get_newest_ap(void);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
 int circuit_deliver_relay_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type);
@@ -510,7 +516,8 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type);
 
 int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer);
 void circuit_free(circuit_t *circ);
-void circuit_free_cpath(crypt_path_t **cpath, int cpathlen);
+void circuit_free_cpath(crypt_path_t *cpath);
+void circuit_free_cpath_node(crypt_path_t *victim);
 
 void circuit_close(circuit_t *circ);
 
@@ -523,7 +530,7 @@ void circuit_expire_unused_circuits(void);
 void circuit_launch_new(int failure_status);
 int circuit_create_onion(void);
 int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
-                                   int onionlen, crypt_path_t **cpath);
+                                   int onionlen, crypt_path_t *cpath);
 void circuit_n_conn_open(connection_t *or_conn);
 int circuit_send_onion(connection_t *or_conn, circuit_t *circ);
 
