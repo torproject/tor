@@ -3,6 +3,7 @@
 /* $Id$ */
 
 #include <stdlib.h>
+#include <limits.h>
 #include "util.h"
 #include "log.h"
 
@@ -21,6 +22,7 @@ my_gettimeofday(struct timeval *timeval)
 long
 tv_udiff(struct timeval *start, struct timeval *end)
 {
+  long udiff;
   long secdiff = end->tv_sec - start->tv_sec;
   if (secdiff+1 > LONG_MAX/1000000) {
     log(LOG_NOTICE, "tv_udiff(): comparing times too far apart.");
@@ -30,7 +32,12 @@ tv_udiff(struct timeval *start, struct timeval *end)
     end->tv_sec--;
     end->tv_usec += 1000000L;
   }
-  return secdiff*1000000L + (end->tv_usec - start->tv_usec);
+  udiff = secdiff*1000000L + (end->tv_usec - start->tv_usec);
+  if(udiff < 0) {
+    log(LOG_NOTICE, "tv_udiff(): start is after end. Returning 0.");
+    return 0;
+  }
+  return udiff;
 }
 
 int tv_cmp(struct timeval *a, struct timeval *b) {

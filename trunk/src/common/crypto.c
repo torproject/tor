@@ -599,8 +599,8 @@ int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
   
   if (crypto_cipher_evp_cipher(env->type, 1)) {
     RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux,
-				       crypto_cipher_evp_cipher(env->type, 1),
-				       env->key, env->iv));
+                                       crypto_cipher_evp_cipher(env->type, 1),
+                                       env->key, env->iv));
   } else {
     return -1;
   }
@@ -612,8 +612,8 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
 
   if (crypto_cipher_evp_cipher(env->type, 0)) {
     RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux,
-				       crypto_cipher_evp_cipher(env->type, 0),
-				       env->key, env->iv));
+                                       crypto_cipher_evp_cipher(env->type, 0),
+                                       env->key, env->iv));
   } else {
     return -1;
   }
