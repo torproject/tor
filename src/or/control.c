@@ -48,7 +48,8 @@ const char control_c_id[] = "$Id$";
 #define CONTROL_CMD_POSTDESCRIPTOR 0x000F
 #define CONTROL_CMD_FRAGMENTHEADER 0x0010
 #define CONTROL_CMD_FRAGMENT       0x0011
-#define _CONTROL_CMD_MAX_RECOGNIZED 0x0011
+#define CONTROL_CMD_REDIRECTSTREAM  0x0012
+#define _CONTROL_CMD_MAX_RECOGNIZED 0x0012
 
 /* Recognized error codes. */
 #define ERR_UNSPECIFIED             0x0000
@@ -63,6 +64,7 @@ const char control_c_id[] = "$Id$";
 #define ERR_RESOURCE_EXHAUSETED     0x0009
 #define ERR_NO_STREAM               0x000A
 #define ERR_NO_CIRC                 0x000B
+#define ERR_NO_ROUTER               0x000C
 
 /* Recognized asynchronous event types. */
 #define _EVENT_MIN            0x0001
@@ -147,6 +149,8 @@ static int handle_control_extendcircuit(connection_t *conn, uint32_t len,
 static int handle_control_attachstream(connection_t *conn, uint32_t len,
                                         const char *body);
 static int handle_control_postdescriptor(connection_t *conn, uint32_t len,
+                                         const char *body);
+static int handle_control_redirectstream(connection_t *conn, uint32_t len,
                                          const char *body);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
@@ -631,7 +635,52 @@ static int
 handle_control_extendcircuit(connection_t *conn, uint32_t len,
                              const char *body)
 {
-  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  smartlist_t *router_nicknames, *routers;
+  uint32_t circ_id;
+  circuit_t *circ;
+  if (len<5) {
+    send_control_error(conn, ERR_SYNTAX, "extendcircuit message too short");
+    return 0;
+  }
+  circ_id = ntohl(get_uint32(body));
+  if (!(circ = circuit_get_by_global_id(circ_id))) {
+    send_control_error(conn, ERR_NO_STREAM,
+                       "No connection found with given ID");
+    return 0;
+  }
+
+  router_nicknames = smartlist_create();
+  routers = smartlist_create();
+  smartlist_split_string(router_nicknames, body, ",", 0, 0);
+  SMARTLIST_FOREACH(router_nicknames, const char *, n,
+    {
+      routerinfo_t *r = router_get_by_nickname(n);
+      if (!r) {
+        send_control_error(conn, ERR_NO_ROUTER, "Unrecognized router name");
+        goto done;
+      }
+      smartlist_add(routers, r);
+    });
+
+#if 1
+  /*XXXX RD*/
+  send_control_error(conn, ERR_INTERNAL, "EXTENDCIRCUIT not implemented.");
+#else
+  SMARTLIST_FOREACH(routers, routerinfo_t *, r,
+    {
+      /*XXXX RD*/
+      if (circuit_extend_path(circ, r)<0) {
+        send_control_error(conn, ERR_INTERNAL, "Unable to extend path.");
+        goto done;
+      }
+    });
+#endif
+
+  send_control_done(conn);
+ done:
+  SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
+  smartlist_free(router_nicknames);
+  smartlist_free(routers);
   return 0;
 }
 static int handle_control_attachstream(connection_t *conn, uint32_t len,
@@ -677,6 +726,7 @@ static int handle_control_attachstream(connection_t *conn, uint32_t len,
     send_control_error(conn, ERR_INTERNAL, "Unable to attach stream.");
     return 0;
   }
+  send_control_done(conn);
   return 0;
 }
 static int
@@ -693,6 +743,32 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
   send_control_done(conn);
   return 0;
 }
+static int
+handle_control_redirectstream(connection_t *conn, uint32_t len,
+                              const char *body)
+{
+  connection_t *ap_conn;
+  uint32_t conn_id;
+  if (len < 6) {
+    send_control_error(conn, ERR_SYNTAX, "attachstream message too short");
+    return 0;
+  }
+  conn_id = ntohl(get_uint32(body));
+
+  if (!(ap_conn = connection_get_by_global_id(conn_id))
+      || ap_conn->state != CONN_TYPE_AP
+      || !ap_conn->socks_request) {
+    send_control_error(conn, ERR_NO_STREAM,
+                       "No AP connection found with given ID");
+    return 0;
+  }
+  strlcpy(ap_conn->socks_request->address, body+1,
+          sizeof(ap_conn->socks_request->address));
+
+  send_control_done(conn);
+  return 0;
+}
+
 
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
@@ -796,6 +872,10 @@ connection_control_process_inbuf(connection_t *conn) {
       break;
     case CONTROL_CMD_POSTDESCRIPTOR:
       if (handle_control_postdescriptor(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_REDIRECTSTREAM:
+      if (handle_control_redirectstream(conn, body_len, body))
         return -1;
       break;
     case CONTROL_CMD_ERROR:
