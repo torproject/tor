@@ -449,6 +449,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_ESTABLISH_RENDEZVOUS:
     case RELAY_COMMAND_INTRODUCE1:
     case RELAY_COMMAND_INTRODUCE2:
+    case RELAY_COMMAND_INTRODUCE_ACK:
     case RELAY_COMMAND_RENDEZVOUS1:
     case RELAY_COMMAND_RENDEZVOUS2:
     case RELAY_COMMAND_INTRO_ESTABLISHED:

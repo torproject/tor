@@ -112,6 +112,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
 {
   circuit_t *intro_circ;
   char serviceid[REND_SERVICE_ID_LEN+1];
+  char nak_body[1];
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
     log_fn(LOG_WARN, "Rejecting INTRODUCE1 on non-OR or non-edge circuit %d",
@@ -153,10 +154,23 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
     log_fn(LOG_WARN, "Unable to send INTRODUCE2 cell to OP.");
     goto err;
   }
+  /* And sent an ack down the cirecuit.  Empty body->succeeded. */
+  if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
+                                   NULL,0,NULL)) {
+    log_fn(LOG_WARN, "Unable to send INTRODUCE_ACK cell to OP.");
+    circuit_mark_for_close(circ);
+    return -1;
+  }
 
   return 0;
  err:
-  circuit_mark_for_close(circ); /* Is this right? */
+  /* Send the client an ACK */
+  nak_body[0] = 1;
+  if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
+                                   nak_body, 1, NULL)) {
+    log_fn(LOG_WARN, "Unable to send NAK to OP");
+    circuit_mark_for_close(circ); /* Is this right? */
+  }
   return -1;
 }
 

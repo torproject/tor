@@ -291,6 +291,9 @@ void rend_process_relay_cell(circuit_t *circ, int command, int length,
     case RELAY_COMMAND_INTRODUCE2:
       r = rend_service_introduce(circ,payload,length);
       break;
+    case RELAY_COMMAND_INTRODUCE_ACK:
+      r = rend_client_introduction_acked(circ,payload,length);
+      break;
     case RELAY_COMMAND_RENDEZVOUS1:
       r = rend_mid_rendezvous(circ,payload,length);
       break;

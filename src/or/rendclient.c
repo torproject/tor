@@ -137,6 +137,22 @@ rend_client_rendcirc_is_open(circuit_t *circ)
   connection_ap_attach_pending();
 }
 
+/* Called when get an ACK or a NAK for a REND_INTRODUCE1 cell.
+ */
+int
+rend_client_introduction_acked(circuit_t *introcirc,
+                               const char *request, int request_len)
+{
+  if (request_len == 0) {
+    /* It's an ACK; the introduction point relayed our introduction request. */
+    /* XXXX writeme */
+  } else {
+    /* It's a NAK; the introduction point didn't relay our request. */
+    /* XXXX writeme */
+  }
+  return 0;
+}
+
 /* Called when we receive a RENDEZVOUS_ESTABLISHED cell; changes the state of
  * the circuit to C_REND_READY.
  */
