@@ -163,7 +163,8 @@ the message.
 
   Request the server to inform the client about interesting events.
   The body contains a list of 2-byte event codes (see "event" below).
-  Sending SETEVENTS with an empty body turns off all event reporting.
+  Any events *not* listed in the SETEVENTS body are turned off; thus, sending
+  SETEVENTS with an empty body turns off all event reporting.
 
   The server responds with a DONE message on success, and an ERROR message
   if one of the event codes isn't recognized.  (On error, the list of active
