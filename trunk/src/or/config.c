@@ -150,7 +150,7 @@ static config_var_t config_vars[] = {
   VAR("ORBindAddress",       LINELIST, ORBindAddress,        NULL),
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
   VAR("PidFile",             STRING,   PidFile,              NULL),
-  VAR("LongLivedPorts",      CSV,      LongLivedPorts,       "22,6667"),
+  VAR("LongLivedPorts",      CSV,      LongLivedPorts,       "21,22,706,1863,5050,5190,5222,5223,6667,8300,8888"),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
   OBSOLETE("RouterFile"),
