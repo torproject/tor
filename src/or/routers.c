@@ -7,6 +7,11 @@
 #define OR_SIGNATURE_BEGIN_TAG "-----BEGIN SIGNATURE-----\n"
 #define OR_SIGNATURE_END_TAG "-----END SIGNATURE-----\n"
 
+#define _GNU_SOURCE
+/* XXX this is required on rh7 to make strptime not complain. how bad
+ * is this for portability?
+ */
+
 #include "or.h"
 
 /****************************************************************************/
