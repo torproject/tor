@@ -479,10 +479,8 @@ void circuit_about_to_close_connection(connection_t *conn) {
 
   switch (conn->type) {
     case CONN_TYPE_OR:
-      if (conn->state != OR_CONN_STATE_OPEN) {
-        /* Inform any pending (not attached) circs that they should give up. */
-        circuit_n_conn_done(conn, 0);
-      }
+      /* Inform any pending (not attached) circs that they should give up. */
+      circuit_n_conn_done(conn, 0);
       /* Now close all the attached circuits on it. */
       while ((circ = circuit_get_by_conn(conn))) {
         if (circ->n_conn == conn) /* it's closing in front of us */
