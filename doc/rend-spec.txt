@@ -117,20 +117,19 @@ Tor Rendezvous Spec
          PK    Bob's public key                      [KL octets]
          TS    A timestamp                           [4 octets]
          NI    Number of introduction points         [2 octets]
-         Ipt   A list of NUL-terminated OR nicknames [variable]
+         Ipt   A list of NUL-terminated ORs         [variable]
          SIG   Signature of above fields             [variable]
 
    KL is the length of PK, in octets.  (Currently, KL must be 128.)
    TS is the number of seconds elapsed since Jan 1, 1970.
 
+   The members of Ipt may either be OR nicknames, or IP:Port:ID-key-hash
+   triples.  Servers must accept both forms.  Before 0.0.7 is obsoleted,
+   servers should only generate the first form.
+
    [It's ok for Bob to advertise 0 introduction points. He might want
     to do that if he previously advertised some introduction points,
     and now he doesn't have any. -RD]
-
-   [Shouldn't the nicknames be hostname:port's instead?  That way, Alice's
-   directory servers don't need to know Bob's chosen introduction points.
-   Not important now, but essential if we ever have a non-total-knowledge
-   design. -NM]
 
 1.3. Bob's OP establishes his introduction points.
 
@@ -160,7 +159,7 @@ Tor Rendezvous Spec
    currently associated with PK.  On success, the OR sends Bob a
    RELAY_INTRO_ESTABLISHED cell with an empty payload.
 
-1.4. Bob's OP advertises his server descriptor
+1.4. Bob's OP advertises his service descriptor
 
    Bob's OP opens a stream to each directory server's directory port via Tor.
    (He may re-use old circuits for this.)
@@ -251,9 +250,19 @@ Tor Rendezvous Spec
        Encrypted to Bob's PK:
           RP     Rendezvous point's nickname  [20 octets]
           RC     Rendezvous cookie            [20 octets]
-          g^x    Diffie-Hellman data, part 1 [128 octetes]
+          g^x    Diffie-Hellman data, part 1 [128 octets]
+       OR
+          VER    Version byte: set to 4.        [1 octet]
+          RP:IP  IP of rendezvous point        [4 octets]
+          RP:P   Port of rendezvous point      [2 octets]
+          RP:ID  ID key hash of rendezvous pt [20 octets]
+          RC     Rendezvous cookie            [20 octets]
+          g^x    Diffie-Hellman data, part 1 [128 octets]
 
    PK_ID is the hash of Bob's public key.  RP is NUL-padded.
+
+   Implementations must accept both variants, but should only generate the
+   first so long as Tor 0.0.7.
 
    The hybrid encryption to Bob's PK works just like the hybrid
    encryption in CREATE cells (see main spec). Thus the payload of the
