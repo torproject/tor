@@ -674,17 +674,17 @@ config_assign(or_options_t *options, struct config_line_t *list, int reset)
   return 0;
 }
 
-/** Try assigning <b>list</b> to <b>options</b>. You do this by duping
+/** Try assigning <b>list</b> to the global options. You do this by duping
  * options, assigning list to the new one, then validating it. If it's
  * ok, then through out the old one and stick with the new one. Else,
  * revert to old and return failure.  Return 0 on success, -1 on bad
  * keys, -2 on bad values, -3 on bad transition.
  */
 int
-config_trial_assign(or_options_t *options, struct config_line_t *list, int reset)
+config_trial_assign(struct config_line_t *list, int reset)
 {
   int r;
-  or_options_t *trial_options = options_dup(options);
+  or_options_t *trial_options = options_dup(get_options());
 
   if ((r=config_assign(trial_options, list, reset)) < 0) {
     options_free(trial_options);
@@ -696,7 +696,7 @@ config_trial_assign(or_options_t *options, struct config_line_t *list, int reset
     return -2;
   }
 
-  if (options_transition_allowed(options, trial_options) < 0) {
+  if (options_transition_allowed(get_options(), trial_options) < 0) {
     options_free(trial_options);
     return -3;
   }

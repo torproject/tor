@@ -209,7 +209,7 @@ handle_control_setconf(connection_t *conn, uint16_t len, char *body)
     return 0;
   }
 
-  if ((r=config_trial_assign(get_options(), lines, 1)) < 0) {
+  if ((r=config_trial_assign(lines, 1)) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
     if (r==-1) {
       send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY,
