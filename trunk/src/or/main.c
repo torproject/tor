@@ -472,6 +472,7 @@ static int do_hup(void) {
   char keydir[512];
 
   log_fn(LOG_WARN,"Received sighup. Reloading config.");
+  has_completed_circuit=0;
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
   if (init_from_config(0, NULL) < 0) {
