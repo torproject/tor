@@ -35,6 +35,10 @@ static int hibernate_state = HIBERNATE_STATE_LIVE;
  * aren't hibernating. */
 static time_t hibernate_end_time = 0;
 
+typedef enum {
+  UNIT_MONTH, UNIT_WEEK, UNIT_DAY,
+} time_unit_t;
+
 /* Fields for accounting logic.  Accounting overview:
  *
  * Accounting is designed to ensure that no more than N bytes are sent
@@ -196,6 +200,7 @@ update_expected_bandwidth(void)
   uint32_t max_configured = (get_options()->BandwidthRateBytes * 60);
   /* XXX max_configured will be false if it exceeds
    * get_options()->AccountingMaxKB*1000, right? -RD
+   * XXX Huh? Why? How? -NM
    */
 
   if (n_seconds_active_in_interval < 1800) {

@@ -833,7 +833,7 @@ int connection_handle_read(connection_t *conn) {
        if(conn->purpose == DIR_PURPOSE_FETCH_DIR &&
           !all_trusted_directory_servers_down()) {
          log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->address);
-         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
+         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
        }
     }
     return -1;

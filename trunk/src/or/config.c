@@ -93,6 +93,7 @@ static config_var_t config_vars[] = {
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
+  VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
@@ -293,6 +294,8 @@ options_act(void) {
    * will log a warning */
   if(options->PidFile)
     write_pidfile(options->PidFile);
+
+  init_cookie_authentication(options->CookieAuthentication);
 
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_keys()<0) {
@@ -1173,6 +1176,14 @@ options_validate(or_options_t *options)
     }
   }
 
+  if (options->HashedControlPassword) {
+    char buf[S2K_SPECIFIER_LEN+DIGEST_LEN];
+    if (base64_decode(buf,sizeof(buf),options->HashedControlPassword,
+                      strlen(options->HashedControlPassword)!=sizeof(buf))) {
+      log_fn(LOG_WARN,"Bad HashedControlPassword: wrong length or bad base64");
+      result = -1;
+    }
+  }
   if (check_nickname_list(options->ExitNodes, "ExitNodes"))
     result = -1;
   if (check_nickname_list(options->EntryNodes, "EntryNodes"))

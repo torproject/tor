@@ -201,7 +201,7 @@ send_control_event(uint16_t event, uint16_t len, const char *body)
     }
   }
 
-  tor_free(buf); 
+  tor_free(buf);
 }
 
 /** Called when we receive a SETCONF message: parse the body and try
@@ -331,18 +331,17 @@ static int
 handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
 {
   or_options_t *options = get_options();
-  if (len == AUTHENTICATION_COOKIE_LEN &&
-      authentication_cookie_is_set &&
-      !memcmp(authentication_cookie, body, len)) {
-    goto ok;
-  }
-  if (options->HashedControlPassword) {
+  if (options->CookieAuthentication) {
+    if (len == AUTHENTICATION_COOKIE_LEN &&
+        !memcmp(authentication_cookie, body, len)) {
+      goto ok;
+    }
+  } else if (options->HashedControlPassword) {
     char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
     char received[DIGEST_LEN];
     if (base64_decode(expected,sizeof(expected),
                       options->HashedControlPassword,
                       strlen(options->HashedControlPassword))<0) {
-      /* XXXX009 NM we should warn sooner. */
       log_fn(LOG_WARN,"Couldn't decode HashedControlPassword: invalid base64");
       goto err;
     }
@@ -350,11 +349,13 @@ handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
     if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
       goto ok;
     goto err;
-  }
-  if (len == 0) {
-    /* if Tor doesn't demand any stronger authentication, then
-     * the controller can get in with a blank auth line. */
-    goto ok;
+  } else {
+    if (len == 0) {
+      /* if Tor doesn't demand any stronger authentication, then
+       * the controller can get in with a blank auth line. */
+      goto ok;
+    }
+    goto err;
   }
 
  err:
@@ -577,11 +578,12 @@ control_event_logmsg(int severity, const char *msg)
  * Anybody who can read the cookie from disk will be considered
  * authorized to use the control connection. */
 int
-init_cookie_authentication(void)
+init_cookie_authentication(int enabled)
 {
   char fname[512];
 
-  /* XXXX009 NM add config option to disable this. */
+  if (!enabled)
+    authentication_cookie_is_set = 0;
 
   tor_snprintf(fname, sizeof(fname), "%s/control_auth_cookie",
                get_options()->DataDirectory);

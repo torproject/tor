@@ -1028,8 +1028,9 @@ int is_internal_IP(uint32_t ip) {
 }
 
 /** Return true iff <b>ip</b> (in host order) is judged to be on the
- * same network as us. For now, check if it's an internal IP. For XXX008,
- * also check if it's on the same class C network as our public IP.
+ * same network as us. For now, check if it's an internal IP.
+ *
+ * XXX Also check if it's on the same class C network as our public IP.
  */
 int is_local_IP(uint32_t ip) {
   return is_internal_IP(ip);

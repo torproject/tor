@@ -965,6 +965,8 @@ typedef struct {
                         * hibernate." */
   char *HashedControlPassword; /**< Base64-encoded hash of a password for
                                 * the control system. */
+  int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
+                             * the control system? */
 } or_options_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024
@@ -1265,7 +1267,7 @@ int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, const char *msg);
 
-int init_cookie_authentication(void);
+int init_cookie_authentication(int enabled);
 
 /********************************* cpuworker.c *****************************/
 
@@ -1281,8 +1283,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 int dir_policy_permits_address(uint32_t addr);
 void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
-void directory_get_from_dirserver(uint8_t purpose, const char *payload,
-                                  size_t payload_len);
+void directory_get_from_dirserver(uint8_t purpose, const char *resource);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
