@@ -12,6 +12,27 @@ rend_client_introcirc_is_ready(connection_t *apconn, circuit_t *circ)
   log_fn(LOG_WARN,"introcirc is ready");
 }
 
+int
+rend_client_send_establish_rendezvous(circuit_t *circ)
+{
+  assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  log_fn(LOG_INFO, "Sending an ESTABLISH_RENDEZVOUS cell");
+
+  if (crypto_rand(REND_COOKIE_LEN, circ->rend_cookie)<0) {
+    log_fn(LOG_WARN, "Couldn't get random cookie");
+    return -1;
+  }
+  if (connection_edge_send_command(NULL,circ,
+                                   RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
+                                   circ->rend_cookie, REND_COOKIE_LEN,
+                                   circ->cpath->prev)<0) {
+    log_fn(LOG_WARN, "Couldn't send ESTABLISH_RENDEZVOUS cell");
+    return -1;
+  }
+
+  return 0;
+}
+
 /* send the rendezvous cell */
 void
 rend_client_rendcirc_is_ready(connection_t *apconn, circuit_t *circ)
