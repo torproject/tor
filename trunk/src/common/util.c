@@ -86,6 +86,29 @@ void tor_strlower(char *s)
   }
 }
 
+#ifndef UNALIGNED_ACCESS_OK
+uint16_t get_uint16(char *cp)
+{
+  uint16_t v;
+  memcpy(&v,cp,2);
+  return v;
+}
+uint32_t get_uint32(char *cp)
+{
+  uint32_t v;
+  memcpy(&v,cp,4);
+  return v;
+}
+void set_uint16(char *cp, uint16_t v)
+{
+  memcpy(cp,&v,2);
+}
+void set_uint32(char *cp, uint32_t v)
+{
+  memcpy(cp,&v,4);
+}
+#endif
+
 
 /*
  * A simple smartlist interface to make an unordered list of acceptable
