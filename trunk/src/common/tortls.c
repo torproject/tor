@@ -30,8 +30,6 @@
 
 /** How long do identity certificates live? (sec) */
 #define IDENTITY_CERT_LIFETIME  (365*24*60*60)
-/** How much clock skew do we tolerate when checking certificates? (sec) */
-#define CERT_ALLOW_SKEW (90*60)
 
 typedef struct tor_tls_context_st {
   SSL_CTX *ctx;
@@ -678,7 +676,6 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
   EVP_PKEY *id_pkey = NULL;
   RSA *rsa;
   int num_in_chain;
-  time_t now, t;
   int r = -1, i;
 
   *identity_key = NULL;
@@ -708,18 +705,6 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
     goto done;
   }
 
-  now = time(NULL);
-  t = now + CERT_ALLOW_SKEW;
-  if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
-    log_cert_lifetime(cert, "not yet valid");
-    goto done;
-  }
-  t = now - CERT_ALLOW_SKEW;
-  if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
-    log_cert_lifetime(cert, "already expired");
-    goto done;
-  }
-
   if (!(id_pkey = X509_get_pubkey(id_cert)) ||
       X509_verify(cert, id_pkey) <= 0) {
     log_fn(LOG_WARN,"X509_verify on cert and pkey returned <= 0");
@@ -746,6 +731,44 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
 
   return r;
 }
+
+/** Check whether the certificate set on the connection <b>tls</b> is
+ * expired or not-yet-valid, give or take <b>tolerance</b>
+ * seconds. Return 0 for valid, -1 for failure.
+ *
+ * NOTE: you should call tor_tls_verify before tor_tls_check_lifetime.
+ */
+int
+tor_tls_check_lifetime(tor_tls *tls, int tolerance)
+{
+  time_t now, t;
+  X509 *cert;
+  int r = -1;
+
+  now = time(NULL);
+
+  if (!(cert = SSL_get_peer_certificate(tls->ssl)))
+    goto done;
+
+  t = now + tolerance;
+  if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
+    log_cert_lifetime(cert, "not yet valid");
+    goto done;
+  }
+  t = now - tolerance;
+  if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
+    log_cert_lifetime(cert, "already expired");
+    goto done;
+  }
+
+  r = 0;
+ done:
+  if (cert)
+    X509_free(cert);
+
+  return r;
+}
+
 
 /** Return the number of bytes available for reading from <b>tls</b>.
  */

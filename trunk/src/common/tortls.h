@@ -29,6 +29,7 @@ void tor_tls_free(tor_tls *tls);
 int tor_tls_peer_has_cert(tor_tls *tls);
 int tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, size_t buflen);
 int tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity);
+int tor_tls_check_lifetime(tor_tls *tls, int tolerance);
 int tor_tls_read(tor_tls *tls, char *cp, size_t len);
 int tor_tls_write(tor_tls *tls, char *cp, size_t n);
 int tor_tls_handshake(tor_tls *tls);
