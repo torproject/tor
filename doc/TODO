@@ -38,7 +38,7 @@ Short-term:
         o put IP into the descriptor, so clients don't need to resolve things
         o when you hup, rewrite the router.desc file (and maybe others)
         - consider handling broken socks4 implementations
-        - improve how it behaves when i remove a line from the approved-routers files
+        o improve how it behaves when i remove a line from the approved-routers files
         - Make tls connections tls_close intentionally
         - Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
@@ -159,7 +159,7 @@ Rendezvous service:
         - preemptively build n-1 hops of intro circs?
         o (n)ack introduction requests?
         - cannibalize general circs?
-        - how to set up multiple locations for a hidden service?
+        D how to set up multiple locations for a hidden service?
         o make bob publish only established intro circs?
 
 On-going
