@@ -162,11 +162,6 @@ connection_t *connection_get_by_type(int type) {
 
 
 
-/* FIXME can we cut this function out? */
-connection_t *connect_to_router_as_op(routerinfo_t *router) {
-  return connection_connect_to_router_as_op(router, options.ORPort);
-}
-
 void connection_watch_events(connection_t *conn, short events) {
 
   assert(conn && conn->poll_index < nfds);
@@ -446,7 +441,7 @@ int do_main_loop(void) {
   crypto_pk_env_t *prkey;
 
   /* load the routers file */
-  if(router_get_list_from_file(options.RouterFile, options.ORPort) < 0) {
+  if(router_get_list_from_file(options.RouterFile) < 0) {
     log(LOG_ERR,"Error loading router list.");
     return -1;
   }
@@ -478,7 +473,7 @@ int do_main_loop(void) {
     }
     if(please_fetch_directory) {
       if(options.Role & ROLE_DIR_SERVER) {
-        if(router_get_list_from_file(options.RouterFile, options.ORPort) < 0) {
+        if(router_get_list_from_file(options.RouterFile) < 0) {
           log(LOG_ERR,"Error reloading router list. Continuing with old list.");
         }
       } else {

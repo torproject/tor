@@ -26,7 +26,6 @@ extern routerinfo_t *my_routerinfo; /* from main.c */
 /****************************************************************************/
 
 /* static function prototypes */
-static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport);
 static void routerlist_free(routerinfo_t *list);
 static routerinfo_t **make_rarray(routerinfo_t* list, int *len);
 static char *eat_whitespace(char *s);
@@ -35,7 +34,32 @@ static routerinfo_t *router_get_entry_from_string(char **s);
 
 /****************************************************************************/
 
-void router_retry_connections(struct sockaddr_in *local) {
+int learn_my_address(struct sockaddr_in *me) {
+  /* local host information */
+  char localhostname[512];
+  struct hostent *localhost;
+
+  /* obtain local host information */
+  if(gethostname(localhostname,512) < 0) {
+    log(LOG_ERR,"Error obtaining local hostname.");
+    return -1;
+  }
+  log(LOG_DEBUG,"learn_my_address(): localhostname is '%s'.",localhostname);
+  localhost = gethostbyname(localhostname);
+  if (!localhost) {
+    log(LOG_ERR,"Error obtaining local host info.");
+    return -1;
+  }
+  memset((void *)me,0,sizeof(struct sockaddr_in));
+  me->sin_family = AF_INET;
+  memcpy((void *)&me->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
+  me->sin_port = htons(options.ORPort);
+  log(LOG_DEBUG,"learn_my_address(): chose address as '%s'.",inet_ntoa(me->sin_addr));
+
+  return 0;
+}
+
+void router_retry_connections(void) {
   int i;
   routerinfo_t *router;
 
@@ -43,7 +67,7 @@ void router_retry_connections(struct sockaddr_in *local) {
     router = router_array[i];
     if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
       log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,router->or_port);
-      connection_or_connect_as_or(router, local);
+      connection_or_connect_as_or(router);
     }
   }
 }
@@ -94,9 +118,27 @@ unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, 
   return create_onion(router_array,rarray_len,route,routelen,len,cpath);
 }
 
-/* private function, to determine whether the current entry in the router list is actually us */
-static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport)
+/* return 1 if addr and port corresponds to my addr and my or_listenport. else 0,
+ * or -1 for failure.
+ */
+int router_is_me(uint32_t addr, uint16_t port)
 {
+  struct sockaddr_in me; /* my router identity */
+
+  if(!ROLE_IS_OR(global_role)) {
+    /* we're not an OR. This obviously isn't us. */
+    return 0;
+  }
+ 
+  if(learn_my_address(&me) < 0)
+    return -1;
+
+  if(ntohl(me.sin_addr.s_addr) == addr && ntohs(me.sin_port) == port)
+    return 1;
+
+  return 0;
+
+#if 0
   /* local host information */
   char localhostname[512];
   struct hostent *localhost;
@@ -106,11 +148,6 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
   char *addr = NULL;
   int i = 0;
 
-  if(!ROLE_IS_OR(global_role)) {
-    /* we're not an OR. This obviously isn't us. */
-    return 0;
-  }
-  
   /* obtain local host information */
   if (gethostname(localhostname,512) < 0) {
     log(LOG_ERR,"router_is_me(): Error obtaining local hostname.");
@@ -144,8 +181,9 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
     
     addr = localhost->h_addr_list[i++];
   }
-  
+
   return 0;
+#endif
 }
 
 /* delete a list of routers from memory */
@@ -244,7 +282,7 @@ static routerinfo_t **make_rarray(routerinfo_t* list, int *len)
 
 
 /* load the router list */
-int router_get_list_from_file(char *routerfile, uint16_t or_listenport)
+int router_get_list_from_file(char *routerfile)
 {
   int fd; /* router file */
   struct stat statbuf;
@@ -285,7 +323,7 @@ int router_get_list_from_file(char *routerfile, uint16_t or_listenport)
   
   string[statbuf.st_size] = 0; /* null terminate it */
 
-  if(router_get_list_from_string(string, or_listenport) < 0) {
+  if(router_get_list_from_string(string) < 0) {
     log(LOG_ERR,"router_get_list_from_file(): The routerfile itself was corrupt.");
     free(string);
     return -1;
@@ -295,7 +333,7 @@ int router_get_list_from_file(char *routerfile, uint16_t or_listenport)
   return 0;
 } 
 
-int router_get_list_from_string(char *s, uint16_t or_listenport) {
+int router_get_list_from_string(char *s) {
   routerinfo_t *routerlist=NULL;
   routerinfo_t *router;
   routerinfo_t **new_router_array;
@@ -309,12 +347,19 @@ int router_get_list_from_string(char *s, uint16_t or_listenport) {
       routerlist_free(routerlist);
       return -1;
     }
-    if(!router_is_me(router->addr, router->or_port, or_listenport)) {
-      router->next = routerlist;
-      routerlist = router;
-    } else {
-      if(!my_routerinfo) /* save it, so we can use it for directories */
-        my_routerinfo = router;
+    switch(router_is_me(router->addr, router->or_port)) {
+      case 0: /* it's not me */
+        router->next = routerlist;
+        routerlist = router;
+        break;
+      case 1: /* it is me */
+        if(!my_routerinfo) /* save it, so we can use it for directories */
+          my_routerinfo = router;
+        break;
+      default:
+        log(LOG_ERR,"router_get_list_from_string(): router_is_me returned error.");
+        routerlist_free(routerlist);
+        return -1;
     }
     s = eat_whitespace(s);
   }
@@ -392,6 +437,7 @@ static routerinfo_t *router_get_entry_from_string(char **s) {
   }
   assert(rent->h_length == 4);
   memcpy(&router->addr, rent->h_addr,rent->h_length);
+  router->addr = ntohl(router->addr); /* get it back into host order */
 
   /* read router->or_port */
   NEXT_TOKEN(s, next);

@@ -110,9 +110,9 @@ int connection_op_finished_flushing(connection_t *conn) {
 
 }
 
-int connection_op_create_listener(struct sockaddr_in *local) {
+int connection_op_create_listener(struct sockaddr_in *bindaddr) {
   log(LOG_DEBUG,"connection_create_op_listener starting");
-  return connection_create_listener(local, CONN_TYPE_OP_LISTENER);
+  return connection_create_listener(bindaddr, CONN_TYPE_OP_LISTENER);
 }
 
 int connection_op_handle_listener_read(connection_t *conn) {

@@ -142,8 +142,7 @@ void conn_or_init_crypto(connection_t *conn) {
  * *result to 1 if connect() returned before completing, or to 2
  * if it completed, and returns the new conn.
  */
-connection_t *connection_or_connect(routerinfo_t *router, struct sockaddr_in *local, 
-                                    uint16_t port, int *result) {
+connection_t *connection_or_connect(routerinfo_t *router, uint16_t port, int *result) {
   connection_t *conn;
   struct sockaddr_in router_addr;
   int s;
@@ -153,11 +152,11 @@ connection_t *connection_or_connect(routerinfo_t *router, struct sockaddr_in *lo
     return NULL;
 
   /* set up conn so it's got all the data we need to remember */
-  conn->addr = router->addr, conn->port = router->or_port; /* NOTE we store or_port here always */
+  conn->addr = router->addr;
+  conn->port = router->or_port; /* NOTE we store or_port here always */
   conn->bandwidth = router->bandwidth;
   conn->pkey = crypto_pk_dup_key(router->pkey);
   conn->address = strdup(router->address);
-  memcpy(&conn->local,local,sizeof(struct sockaddr_in));
 
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0)
@@ -171,9 +170,9 @@ connection_t *connection_or_connect(routerinfo_t *router, struct sockaddr_in *lo
   memset((void *)&router_addr,0,sizeof(router_addr));
   router_addr.sin_family = AF_INET;
   router_addr.sin_port = htons(port);
-  router_addr.sin_addr.s_addr = router->addr;
+  router_addr.sin_addr.s_addr = htonl(router->addr);
 
-  log(LOG_DEBUG,"connection_or_connect() : Trying to connect to %s:%u.",inet_ntoa(*(struct in_addr *)&router->addr),port);
+  log(LOG_DEBUG,"connection_or_connect() : Trying to connect to %s:%u.",router->address,port);
 
   if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
     if(errno != EINPROGRESS){
@@ -217,13 +216,13 @@ connection_t *connection_or_connect(routerinfo_t *router, struct sockaddr_in *lo
  *
  */
 
-connection_t *connection_or_connect_as_op(routerinfo_t *router, struct sockaddr_in *local) {
+connection_t *connection_or_connect_as_op(routerinfo_t *router) {
   connection_t *conn;
   int result=0; /* so connection_or_connect() can tell us what happened */
 
-  assert(router && local);
+  assert(router);
 
-  if(router->addr == local->sin_addr.s_addr && router->or_port == ntohs(local->sin_port)) {
+  if(router_is_me(router->addr, router->or_port)) {
     /* this is me! don't connect to me. */
     log(LOG_WARNING,"connection_or_connect_as_op(): You just asked me to connect to myself.");
     return NULL;
@@ -235,7 +234,7 @@ connection_t *connection_or_connect_as_op(routerinfo_t *router, struct sockaddr_
   if(conn)
     return conn;
 
-  conn = connection_or_connect(router, local, router->op_port, &result);
+  conn = connection_or_connect(router, router->op_port, &result);
   if(!conn)
     return NULL;
 
@@ -340,19 +339,19 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
  *
  */
 
-connection_t *connection_or_connect_as_or(routerinfo_t *router, struct sockaddr_in *local) {
+connection_t *connection_or_connect_as_or(routerinfo_t *router) {
   connection_t *conn;
   int result=0; /* so connection_or_connect() can tell us what happened */
 
-  assert(router && local);
+  assert(router);
 
-  if(router->addr == local->sin_addr.s_addr && router->or_port == ntohs(local->sin_port)) {
+  if(router_is_me(router->addr, router->or_port)) {
     /* this is me! don't connect to me. */
     log(LOG_DEBUG,"connection_or_connect_as_or(): This is me. Skipping.");
     return NULL;
   }
 
-  conn = connection_or_connect(router, local, router->or_port, &result);
+  conn = connection_or_connect(router, router->or_port, &result);
   if(!conn)
     return NULL;
 
@@ -378,8 +377,12 @@ int or_handshake_client_send_auth(connection_t *conn) {
   int retval;
   char buf[44];
   char cipher[128];
+  struct sockaddr_in me; /* my router identity */
 
   assert(conn);
+
+  if(learn_my_address(&me) < 0)
+    return -1;
 
   /* generate random keys */
   if(crypto_cipher_generate_key(conn->f_crypto) ||
@@ -390,8 +393,8 @@ int or_handshake_client_send_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated DES keys.");
 
   /* generate first message */
-  *(uint32_t*)buf = htonl(conn->local.sin_addr.s_addr); /* local address */
-  *(uint16_t*)(buf+4) = conn->local.sin_port; /* local port, already network order */
+  *(uint32_t*)buf = me.sin_addr.s_addr; /* local address, network order */
+  *(uint16_t*)(buf+4) = me.sin_port; /* local port, network order */
   *(uint32_t*)(buf+6) = htonl(conn->addr); /* remote address */
   *(uint16_t*)(buf+10) = htons(conn->port); /* remote port */
   memcpy(buf+12,conn->f_crypto->key,8); /* keys */
@@ -440,8 +443,12 @@ int or_handshake_client_process_auth(connection_t *conn) {
   char cipher[128];
   uint32_t bandwidth;
   int retval;
+  struct sockaddr_in me; /* my router identity */
 
   assert(conn);
+
+  if(learn_my_address(&me) < 0)
+    return -1;
 
   if(conn->inbuf_datalen < 128) /* entire response available? */
     return 0; /* not yet */
@@ -469,8 +476,8 @@ int or_handshake_client_process_auth(connection_t *conn) {
   }
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Decrypted response.");
   /* check validity */
-  if ( (ntohl(*(uint32_t*)buf) != conn->local.sin_addr.s_addr) || /* local address */
-        (*(uint16_t*)(buf+4) != conn->local.sin_port) || /* local port, keep network order */
+  if (  (*(uint32_t*)buf != me.sin_addr.s_addr) || /* local address, network order */
+        (*(uint16_t*)(buf+4) != me.sin_port) || /* local port, network order */
        (ntohl(*(uint32_t*)(buf+6)) != conn->addr) || /* remote address */
        (ntohs(*(uint16_t*)(buf+10)) != conn->port) || /* remote port */
        (memcmp(conn->f_crypto->key, buf+12, 8)) || /* keys */
@@ -582,7 +589,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   router = router_get_by_addr_port(addr,port);
   if (!router)
   {
-    log(LOG_DEBUG,"or_handshake_server_process_auth() : Received a connection from an unknown router. Will drop.");
+    log(LOG_DEBUG,"or_handshake_server_process_auth() : Received a connection from an unknown router '%s:%d'. Will drop.", conn->address, port);
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Router identified as %s:%u.",
@@ -664,8 +671,12 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   char buf[128];
   char cipher[128];
   int retval;
+  struct sockaddr_in me; /* my router identity */
 
   assert(conn);
+
+  if(learn_my_address(&me) < 0)
+    return -1;
 
   if(conn->inbuf_datalen < 128) /* entire response available? */
     return 0; /* not yet */
@@ -696,8 +707,8 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   /* check validity */
   if ((ntohl(*(uint32_t*)buf) != conn->addr) || /* remote address */
       (ntohs(*(uint16_t*)(buf+4)) != conn->port) || /* remote port */ 
-      (ntohl(*(uint32_t*)(buf+6)) != conn->local.sin_addr.s_addr) || /* local address */
-       (*(uint16_t*)(buf+10) != conn->local.sin_port) || /* local port, network order */
+       (*(uint32_t*)(buf+6) != me.sin_addr.s_addr) || /* local address, network order */
+       (*(uint16_t*)(buf+10) != me.sin_port) || /* local port, network order */
       (memcmp(conn->nonce,buf+12,8))) /* nonce */
   { 
     log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,conn->port);
@@ -717,9 +728,9 @@ int or_handshake_server_process_nonce(connection_t *conn) {
 /* ********************************** */
 
 
-int connection_or_create_listener(struct sockaddr_in *local) {
+int connection_or_create_listener(struct sockaddr_in *bindaddr) {
   log(LOG_DEBUG,"connection_create_or_listener starting");
-  return connection_create_listener(local, CONN_TYPE_OR_LISTENER);
+  return connection_create_listener(bindaddr, CONN_TYPE_OR_LISTENER);
 }
 
 int connection_or_handle_listener_read(connection_t *conn) {

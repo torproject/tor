@@ -29,6 +29,10 @@ int decide_aci_type(uint32_t local_addr, uint16_t local_port,
 
 int process_onion(circuit_t *circ, connection_t *conn) {
   aci_t aci_type;
+  struct sockaddr_in me; /* my router identity */
+
+  if(learn_my_address(&me) < 0)
+    return -1;
 
   if(!decrypt_onion((onion_layer_t *)circ->onion,circ->onionlen,getprivatekey())) {
     log(LOG_DEBUG,"command_process_create_cell(): decrypt_onion() failed, closing circuit.");
@@ -43,7 +47,7 @@ int process_onion(circuit_t *circ, connection_t *conn) {
     return -1;
   }
 
-  aci_type = decide_aci_type(conn->local.sin_addr.s_addr, ntohs(conn->local.sin_port),
+  aci_type = decide_aci_type(ntohl(me.sin_addr.s_addr), ntohs(me.sin_port),
              ((onion_layer_t *)circ->onion)->addr,((onion_layer_t *)circ->onion)->port);
       
   if(circuit_init(circ, aci_type) < 0) { 
