@@ -343,8 +343,7 @@ dirserv_add_descriptor(const char **desc, const char **msg)
     routerinfo_free(ri);
     *desc = end;
     return -1;
-  }
-  if (r==0) {
+  } else if (r==0) {
     char fp[FINGERPRINT_LEN+1];
     log_fn(LOG_INFO, "Unknown nickname '%s' (%s:%d). Will try to add.",
            ri->nickname, ri->address, ri->or_port);
@@ -382,16 +381,18 @@ dirserv_add_descriptor(const char **desc, const char **msg)
   /* Do we already have an entry for this router? */
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ri_old = smartlist_get(descriptor_list, i);
-    if (!strcasecmp(ri->nickname, ri_old->nickname)) {
+    if (!memcmp(ri->identity_digest, ri_old->identity_digest, DIGEST_LEN)) {
       found = i;
       break;
     }
   }
   if (found >= 0) {
+    char hex_digest[HEX_DIGEST_LEN+1];
+    base16_encode(hex_digest, HEX_DIGEST_LEN+1, ri->identity_digest,DIGEST_LEN);
     /* if so, decide whether to update it. */
     if (ri_old->published_on >= ri->published_on) {
       /* We already have a newer or equal-time descriptor */
-      log_fn(LOG_INFO,"We already have a new enough desc for nickname '%s'. Not adding.",ri->nickname);
+      log_fn(LOG_INFO,"We already have a new enough desc for sever %s (nickname '%s'). Not adding.",hex_digest,ri->nickname);
       *msg = "We already have a newer descriptor.";
       /* This isn't really an error; return success. */
       routerinfo_free(ri);
@@ -399,7 +400,7 @@ dirserv_add_descriptor(const char **desc, const char **msg)
       return verified;
     }
     /* We don't alrady have a newer one; we'll update this one. */
-    log_fn(LOG_INFO,"Dirserv updating desc for nickname '%s'",ri->nickname);
+    log_fn(LOG_INFO,"Dirserv updating desc for server %s (nickname '%s')",hex_digest,ri->nickname);
     *msg = verified?"Verified server updated":"Unverified server updated. (Have you sent us your key fingerprint?)";
     routerinfo_free(ri_old);
     smartlist_del_keeporder(descriptor_list, found);
