@@ -203,7 +203,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
    * conn points to the recognized stream. */
 
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
-    if(conn->type == CONN_TYPE_EXIT && rh.command == RELAY_COMMAND_END) {
+    if(rh.command == RELAY_COMMAND_END) {
       log_fn(LOG_INFO,"Exit got end (%s) before we're connected. Marking for close.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
       if(conn->state == EXIT_CONN_STATE_RESOLVING) {
