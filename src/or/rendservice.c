@@ -714,6 +714,7 @@ int rend_services_init(void) {
       smartlist_add(intro_routers, router);
       smartlist_add(exclude_routers, router);
       smartlist_add(service->intro_nodes, tor_strdup(router->nickname));
+      log_fn(LOG_INFO,"Picked router %s as an intro point.", router->nickname);
     }
 
     /* Reset exclude_routers to include obsolete routers only for the next
