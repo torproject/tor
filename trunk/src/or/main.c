@@ -313,6 +313,7 @@ static void conn_close_if_marked(int i) {
    * flush and send destroys for all circuits on this conn
    */
   circuit_about_to_close_connection(conn);
+  connection_about_to_close_connection(conn);
   connection_remove(conn);
   if(conn->type == CONN_TYPE_EXIT) {
     assert_connection_edge_not_dns_pending(conn);
