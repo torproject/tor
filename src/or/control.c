@@ -486,7 +486,7 @@ handle_control_mapaddress(connection_t *conn, uint16_t len, const char *body)
   smartlist_free(elts);
 
   r = smartlist_join_strings(reply, "\n", 1, &sz);
-  send_control_done2(conn,sz,r);
+  send_control_done2(conn,r,sz);
 
   SMARTLIST_FOREACH(reply, char *, cp, tor_free(cp));
   smartlist_free(reply);
