@@ -266,13 +266,13 @@ connection_t *connection_or_connect_as_op(routerinfo_t *router) {
 }
 
 int or_handshake_op_send_keys(connection_t *conn) {
-  //int x;
-  uint32_t bandwidth = DEFAULT_BANDWIDTH_OP;
   unsigned char message[36]; /* bandwidth(32bits), forward key(128bits), backward key(128bits) */
   unsigned char cipher[128];
   int retval;
 
   assert(conn && conn->type == CONN_TYPE_OR);
+
+  conn->bandwidth = DEFAULT_BANDWIDTH_OP;
 
   /* generate random keys */
   if(crypto_cipher_generate_key(conn->f_crypto) ||
@@ -282,7 +282,7 @@ int or_handshake_op_send_keys(connection_t *conn) {
   }
   log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated 3DES keys.");
   /* compose the message */
-  *(uint32_t *)message = htonl(bandwidth);
+  *(uint32_t *)message = htonl(conn->bandwidth);
   memcpy((void *)(message + 4), (void *)conn->f_crypto->key, 16);
   memcpy((void *)(message + 20), (void *)conn->b_crypto->key, 16);
 

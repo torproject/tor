@@ -349,6 +349,7 @@ int connection_read_to_buf(connection_t *conn) {
                             &conn->inbuf_datalen, &conn->inbuf_reached_eof);
 //  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
   if(read_result >= 0 && connection_speaks_cells(conn)) {
+//    log(LOG_DEBUG,"connection_read_to_buf(): Read %d, bucket now %d.",read_result,conn->receiver_bucket);
     conn->receiver_bucket -= read_result;
     if(conn->receiver_bucket <= 0) {
 
@@ -477,12 +478,13 @@ int connection_receiver_bucket_should_increase(connection_t *conn) {
   return 1;
 }
 
-void connection_increment_receiver_bucket (connection_t *conn) {
+void connection_increment_receiver_bucket(connection_t *conn) {
   assert(conn);
 
   if(connection_receiver_bucket_should_increase(conn)) {
     /* yes, the receiver_bucket can become overfull here. But not by much. */
     conn->receiver_bucket += conn->bandwidth*1.1;
+//    log(LOG_DEBUG,"connection_increment_receiver_bucket(): Bucket now %d.",conn->receiver_bucket);
     if(connection_state_is_open(conn)) {
       /* if we're in state 'open', then start reading again */
       connection_start_reading(conn);
