@@ -51,7 +51,7 @@ struct pending_connection_t {
  */
 struct cached_resolve {
   SPLAY_ENTRY(cached_resolve) node;
-  char address[MAX_ADDRESSLEN]; /**< the hostname to be resolved */
+  char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved */
   uint32_t addr; /**< IPv4 addr for <b>address</b>. */
   char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve failed */
 #define CACHE_STATE_PENDING 0
@@ -95,7 +95,7 @@ void dns_init(void) {
   spawn_enough_dnsworkers();
 }
 
-/** linked list of resolved addresses, oldest to newest */
+/** Linked list of resolved addresses, oldest to newest */
 static struct cached_resolve *oldest_cached_resolve = NULL;
 static struct cached_resolve *newest_cached_resolve = NULL;
 
