@@ -15,7 +15,7 @@
 #include "or.h"
 #include "tree.h"
 
-extern or_options_t options; /**< command-line and config-file options */
+extern or_options_t options; /* command-line and config-file options */
 
 /** Longest hostname we're willing to resolve. */
 #define MAX_ADDRESSLEN 256
@@ -52,12 +52,12 @@ struct pending_connection_t {
 struct cached_resolve {
   SPLAY_ENTRY(cached_resolve) node;
   char address[MAX_ADDRESSLEN]; /**< the hostname to be resolved */
-  uint32_t addr; /**< in host order. I know I'm horrible for assuming ipv4 */
+  uint32_t addr; /**< IPv4 addr for <b>address</b>. */
   char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve failed */
 #define CACHE_STATE_PENDING 0
 #define CACHE_STATE_VALID 1
 #define CACHE_STATE_FAILED 2
-  uint32_t expire; /**< remove items from cache after this time */
+  uint32_t expire; /**< Remove items from cache after this time */
   struct pending_connection_t *pending_connections;
   struct cached_resolve *next;
 };

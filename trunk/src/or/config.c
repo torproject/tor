@@ -92,7 +92,7 @@ config_line_prepend(struct config_line_t *front,
   return newline;
 }
 
-/** Herlper: parse the config file and strdup into key/value
+/** Helper: parse the config file and strdup into key/value
  * strings. Return list, or NULL if parsing the file failed.  Warn and
  * ignore any misformatted lines. */
 static struct config_line_t *config_get_lines(FILE *f) {
