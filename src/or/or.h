@@ -445,6 +445,7 @@ struct circuit_t {
   connection_t *n_conn; /* for the OR conn, if there is one */
   connection_t *p_streams;
   connection_t *n_streams;
+  uint16_t next_stream_id;
   int package_window;
   int deliver_window;
 
