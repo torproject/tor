@@ -758,7 +758,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     assert(circ->state == CIRCUIT_STATE_BUILDING);
     log_fn(LOG_DEBUG,"starting to send subsequent skin.");
     r = onion_extend_cpath(&circ->cpath, circ->desired_cpath_len, &router);
-    if (r==1 || !router) {
+    if (r==1) {
       /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
       log_fn(LOG_INFO,"circuit built! (%d hops long)",circ->desired_cpath_len);
@@ -766,7 +766,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
        * circuit that one is ready. */
       connection_ap_attach_pending();
       return 0;
-    } else if (r<0) {
+    } else if (r<0 || !router) {
       log_fn(LOG_WARN,"Unable to extend circuit path.");
       return -1;
     }
