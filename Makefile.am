@@ -1,7 +1,7 @@
 
-SUBDIRS = src
+SUBDIRS = src doc
 
-DIST_SUBDIRS = src
+DIST_SUBDIRS = src doc
 
-EXTRA_DIST = LICENSE doc
+EXTRA_DIST = LICENSE
 

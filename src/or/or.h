@@ -95,7 +95,7 @@
 #include "../common/log.h"
 #include "../common/util.h"
 
-#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre8,0.0.2pre9"
+#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre8,0.0.2pre9,0.0.2pre10"
 
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */

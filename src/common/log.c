@@ -103,7 +103,7 @@ log_set_severity(int severity)
 }
 
 /* Outputs a message to stdout */
-void log(int severity, const char *format, ...)
+void _log(int severity, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
