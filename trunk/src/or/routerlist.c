@@ -193,7 +193,8 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
  * <b>sl</b>.
  */
 static void
-router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified)
+router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
+                                        int preferuptime, int preferbandwidth)
 {
   routerinfo_t *router;
   int i;
@@ -204,7 +205,12 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified)
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
     if(router->is_running &&
-       (allow_unverified || router->is_verified)) {
+       (router->is_verified ||
+       (allow_unverified &&
+        !router_is_unreliable_router(router, preferuptime, preferbandwidth)))) {
+      /* If it's running, and either it's verified or we're ok picking
+       * unverified routers and this one is suitable.
+       */
       smartlist_add(sl, router);
     }
   }
@@ -230,6 +236,17 @@ routerlist_find_my_routerinfo(void) {
  * reliability-critical node positions.
  */
 #define ROUTER_REQUIRED_MIN_UPTIME 3600 /* an hour */
+#define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
+
+int
+router_is_unreliable_router(routerinfo_t *router, int need_uptime, int need_bw)
+{
+  if(need_uptime && router->uptime < ROUTER_REQUIRED_MIN_UPTIME)
+    return 1;
+  if(need_bw && router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
+    return 1;
+  return 0;
+}
 
 static void
 routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
@@ -239,7 +256,7 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
 
   for (i = 0; i < smartlist_len(sl); ++i) {
     router = smartlist_get(sl, i);
-    if(router->uptime < ROUTER_REQUIRED_MIN_UPTIME) {
+    if(router_is_unreliable_router(router, 1, 0)) {
       log(LOG_DEBUG, "Router %s has insufficient uptime; deleting.",
           router->nickname);
       smartlist_del(sl, i--);
@@ -324,7 +341,8 @@ routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
   smartlist_free(sl);
   if(!choice && !strict) {
     sl = smartlist_create();
-    router_add_running_routers_to_smartlist(sl, allow_unverified);
+    router_add_running_routers_to_smartlist(sl, allow_unverified,
+                                            preferuptime, preferbandwidth);
     smartlist_subtract(sl,excludednodes);
     if(excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);

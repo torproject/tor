@@ -1397,6 +1397,7 @@ struct smartlist_t;
 void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list, int warn_if_down);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
+int router_is_unreliable_router(routerinfo_t *router, int need_uptime, int need_bw);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist,

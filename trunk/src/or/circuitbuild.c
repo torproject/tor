@@ -847,7 +847,9 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
       continue; /* skip routers that are known to be down */
     }
     if(!router->is_verified &&
-       !(options._AllowUnverified & ALLOW_UNVERIFIED_EXIT)) {
+       (!(options._AllowUnverified & ALLOW_UNVERIFIED_EXIT) ||
+         router_is_unreliable_router(router, 1, 1))) {
+      /* if it's unverified, and either we don't want it or it's unsuitable */
       n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- unverified router.",
              router->nickname, i);
