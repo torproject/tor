@@ -256,8 +256,8 @@ options_act(void) {
   if (set_max_file_descriptors(options->MaxConn) < 0)
     return -1;
 
-  /* Configure the log(s) */
-  if (config_init_logs(options)<0)
+  mark_logs_temp(); /* Close current logs once new logs are open. */
+  if (config_init_logs(options)<0) /* Configure the log(s) */
     return -1;
   /* Close the temporary log we used while starting up, if it isn't already
    * gone. */
