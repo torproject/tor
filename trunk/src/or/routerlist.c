@@ -48,30 +48,31 @@ int router_reload_router_list(void)
   char filename[512];
   int is_recent;
   struct stat st;
-  if (get_data_directory()) {
-    char *s;
-    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory());
-    if (stat(filename, &st)) {
-      log_fn(LOG_WARN, "Unable to check status for '%s': %s", filename,
-             strerror(errno));
-      return 0;
+  char *s;
+  tor_assert(get_options()->DataDirectory);
+
+  tor_snprintf(filename,sizeof(filename),"%s/cached-directory",
+               get_options()->DataDirectory);
+  if (stat(filename, &st)) {
+    log_fn(LOG_WARN, "Unable to check status for '%s': %s", filename,
+           strerror(errno));
+    return 0;
+  }
+  s = read_file_to_str(filename,0);
+  if (s) {
+    tor_strstrip(s,"\r"); /* XXXX This is a bug workaround for win32. */
+    log_fn(LOG_INFO, "Loading cached directory from %s", filename);
+    is_recent = st.st_mtime > time(NULL) - 60*15;
+    if (router_load_routerlist_from_directory(s, NULL, is_recent) < 0) {
+      log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
     }
-    s = read_file_to_str(filename,0);
-    if (s) {
-      tor_strstrip(s,"\r"); /* XXXX This is a bug workaround for win32. */
-      log_fn(LOG_INFO, "Loading cached directory from %s", filename);
-      is_recent = st.st_mtime > time(NULL) - 60*15;
-      if (router_load_routerlist_from_directory(s, NULL, is_recent) < 0) {
-        log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
-      }
-      if(routerlist &&
-         ((routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2)
-          || is_recent)) {
-        /* XXX use new onion key lifetime when 0.0.8 servers are obsolete */
-        directory_has_arrived(st.st_mtime); /* do things we've been waiting to do */
-      }
-      tor_free(s);
+    if(routerlist &&
+       ((routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2)
+        || is_recent)) {
+      /* XXX use new onion key lifetime when 0.0.8 servers are obsolete */
+      directory_has_arrived(st.st_mtime); /* do things we've been waiting to do */
     }
+    tor_free(s);
   }
   return 0;
 }

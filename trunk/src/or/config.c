@@ -243,10 +243,9 @@ options_act(void) {
 
 /*XXX in options_validate, we should check if this is going to fail */
   /* Ensure data directory is private; create if possible. */
-  if (get_data_directory() &&
-      check_private_dir(get_data_directory(), 1) != 0) {
+  if (check_private_dir(options->DataDirectory, 1) != 0) {
     log_fn(LOG_ERR, "Couldn't access/create private data directory %s",
-           get_data_directory());
+           options->DataDirectory);
     return -1;
   }
 
@@ -268,7 +267,7 @@ options_act(void) {
 
   /* Start backgrounding the process, if requested. */
   if (options->RunAsDaemon) {
-    start_daemon(get_data_directory());
+    start_daemon(options->DataDirectory);
   }
 
   /* Finish backgrounding the process */
@@ -1844,42 +1843,46 @@ parse_dir_server_line(const char *line, int validate_only)
   return r;
 }
 
-/** Return the place where we are currently configured to store and read all
- * of our persistant data. */
-const char *
-get_data_directory(void)
-{
-  return get_options()->DataDirectory;
-}
-
 static int
-validate_data_directory(or_options_t *options) {
-  const char *d = options->DataDirectory;
-
-  if (!options->DataDirectory) {
+normalize_data_directory(or_options_t *options) {
 #ifdef MS_WINDOWS
-    char *p;
-    p = tor_malloc(MAX_PATH);
-    strlcpy(p,get_windows_conf_root(),MAX_PATH);
-    options->DataDirectory = p;
-    return p;
+  char *p;
+  if (options->DataDirectory)
+    return 0; /* all set */
+  p = tor_malloc(MAX_PATH);
+  strlcpy(p,get_windows_conf_root(),MAX_PATH);
+  options->DataDirectory = p;
+  return 0;
 #else
+  const char *d = options->DataDirectory;
+  if(!d)
     d = "~/.tor";
-  }
-#endif
 
- if (d && strncmp(d,"~/",2) == 0) {
+ if (strncmp(d,"~/",2) == 0) {
    char *fn = expand_filename(d);
    if (!fn) {
-     log_fn(LOG_ERR,"Failed to expand filename '%s'. Exiting.", d);
-     exit(1);
+     log_fn(LOG_ERR,"Failed to expand filename '%s'.", d);
+     return -1;
    }
    tor_free(options->DataDirectory);
    options->DataDirectory = fn;
  }
-
  return 0;
+#endif
 }
+
+static int
+validate_data_directory(or_options_t *options) {
+  if(normalize_data_directory(options) < 0)
+    return -1;
+  tor_assert(options->DataDirectory);
+  if (strlen(options->DataDirectory) > (512-128)) {
+    log_fn(LOG_ERR, "DataDirectory is too long.");
+    return -1;
+  }
+  return 0;
+}
+
 
 /*
   Local Variables:

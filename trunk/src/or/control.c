@@ -577,7 +577,7 @@ init_cookie_authentication(void)
   /* XXXX009 NM add config option to disable this. */
 
   tor_snprintf(fname, sizeof(fname), "%s/control_auth_cookie",
-               get_data_directory());
+               get_options()->DataDirectory);
   crypto_rand(authentication_cookie, AUTHENTICATION_COOKIE_LEN);
   authentication_cookie_is_set = 1;
   if (write_bytes_to_file(fname, authentication_cookie,
