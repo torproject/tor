@@ -306,6 +306,13 @@ static void run_connection_housekeeping(int i, time_t now) {
   cell_t cell;
   connection_t *conn = connection_array[i];
 
+  if(conn->type == CONN_TYPE_DIR &&
+     conn->timestamp_created + 5*60 > now) {
+    log_fn(LOG_INFO,"Expiring wedged directory conn (purpose %d)", conn->purpose);
+    connection_mark_for_close(conn,0);
+    return;
+  }
+
   /* check connections to see whether we should send a keepalive, expire, or wait */
   if(!connection_speaks_cells(conn))
     return;
