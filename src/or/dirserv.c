@@ -229,7 +229,8 @@ dirserv_add_descriptor(const char **desc)
   if(r<1) {
     if(r==0) {
       char fp[FINGERPRINT_LEN+1];
-      log_fn(LOG_WARN, "Unknown nickname %s. Not adding.", ri->nickname);
+      log_fn(LOG_WARN, "Unknown nickname %s (%s:%d). Not adding.",
+             ri->nickname, ri->address, ri->or_port);
       if (crypto_pk_get_fingerprint(ri->identity_pkey, fp) < 0) {
         log_fn(LOG_WARN, "Error computing fingerprint for %s", ri->nickname);
       } else {
