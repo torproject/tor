@@ -985,6 +985,12 @@ int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                                    char **str_out,
                                    int *len_out);
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, int len);
+int rend_get_service_id(crypto_pk_env_t *pk, char *out);
+
+void hidserv_cache_init(void);
+void hidserv_cache_clean(void);
+int hidserv_lookup(char *query, const char **desc, int *desc_len);
+int hidserv_store(char *desc, int desc_len);
 
 #endif
 
