@@ -834,8 +834,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   time_t published_on;
   char *identity_pkey; /* Identity key, DER64-encoded. */
 
-  len = 1024+(MAX_HEX_NICKNAME_LEN+2)*smartlist_len(descriptor_list);
-  s = tor_malloc_zero(len);
+  /* For each descriptor we know, we might */
   if (list_server_status(NULL, &router_status)) {
     goto err;
   }
@@ -859,6 +858,9 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 #endif
   published_on = time(NULL);
   format_iso_time(published, published_on);
+
+  len = 2048+strlen(router_status);
+  s = tor_malloc_zero(len);
   tor_snprintf(s, len, "network-status\n"
              "published %s\n"
              "router-status %s\n"
