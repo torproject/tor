@@ -1,4 +1,6 @@
 
+use times(2) rather than gettimeofday to measure how long it takes to process a cell
+
 Legend:
 SPEC!!  - Not specified
 SPEC    - Spec not finalized
