@@ -12,6 +12,7 @@
  **/
 
 #include "../common/crypto.h"
+#include "../common/compat.h"
 
 /* Opaque structure to hold a TLS connection. */
 typedef struct tor_tls_st tor_tls;
@@ -42,7 +43,7 @@ unsigned long tor_tls_get_n_bytes_written(tor_tls *tls);
 
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */
-#define assert_no_tls_errors() _assert_no_tls_errors(__FILE__,__LINE__)
+#define assert_no_tls_errors() _assert_no_tls_errors(_SHORT_FILE_,__LINE__)
 
 void _assert_no_tls_errors(const char *fname, int line);
 

@@ -13,6 +13,7 @@
 
 #include "orconfig.h"
 #include "torint.h"
+#include "compat.h"
 #include <stdio.h>
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
@@ -38,7 +39,7 @@
 #define tor_assert(expr) do {                                 \
  if (!(expr)) {                                               \
    log(LOG_ERR, "%s:%d: %s: Assertion %s failed; aborting.",  \
-       __FILE__, __LINE__, __FUNCTION__, #expr);              \
+       _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);          \
    assert(expr); /* write to console too. */                  \
    abort();  /* unreached */                                  \
  } } while (0)
