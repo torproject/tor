@@ -30,3 +30,16 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #ExitPolicy accept 18.244.0.188:25,accept 18.244.0.114:25
 #ExitPolicy reject *:*
 
+##################### Below is just for location-hidden services ###
+
+## This stuff is so bleeding-edge that my teeth hurt just thinking
+## about it.
+
+#HiddenServiceDirectory /tmp/hidden_service/
+#HiddenServicePort 80 127.0.0.1:80
+#HiddenServicePort 22 127.0.0.1:22
+#HiddenServiceNodes moria1,moria2
+#HiddenServiceExcludeNodes bad,other_bad
+
+#HiddenServiceDirectory /tmp/other_hidden_service/
+#HiddenServicePort 80 127.0.0.1:80
