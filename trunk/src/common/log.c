@@ -203,7 +203,6 @@ void _log(int severity, const char *format, ...)
   va_end(ap);
 }
 
-
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
 #ifdef __GNUC__
 void _log_fn(int severity, const char *fn, const char *format, ...)

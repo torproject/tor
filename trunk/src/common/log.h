@@ -80,6 +80,9 @@ void _log_fn(int severity, const char *funcname, const char *format, ...)
  * of the current function name. */
 #define log_fn(severity, args...) \
   _log_fn(severity, __PRETTY_FUNCTION__, args)
+#elif defined(_MSC_VER) && _MSC_VER < 1300
+/* MSVC 6 and earlier don't have __FUNCTION__, or even __LINE__. */
+#define log_fn _log
 #else
 /* We don't have GCC's varargs macros, so use a global variable to pass the
  * function name to log_fn */
