@@ -150,7 +150,10 @@ messaging server. Using ``rendezvous points'', other Tor users can
 connect to these hidden services, each without knowing the other's network
 identity.
 
-Tor attempts to anonymize the transport layer, not the application layer, so
+Tor attempts to anonymize the transport layer, not the application layer.
+This is useful for applications such as ssh
+where authenticated communication is desired. However, when anonymity from
+those with whom we communicate is desired,
 application protocols that include personally identifying information need
 additional application-level scrubbing proxies, such as
 Privoxy~\cite{privoxy} for HTTP\@.  Furthermore, Tor does not permit arbitrary
@@ -761,7 +764,7 @@ tolerably well for them in practice.
 But of course, we would prefer that legitimate anonymous users be able to
 access abuse-prone services.  One conceivable approach would be to require
 would-be IRC users, for instance, to register accounts if they wanted to
-access the IRC network from Tor.  In practise this would not
+access the IRC network from Tor.  In practice this would not
 significantly impede abuse if creating new accounts were easily automatable;
 this is why services use IP blocking.  In order to deter abuse, pseudonymous
 identities need to require a significant switching cost in resources or human
@@ -1454,7 +1457,8 @@ network: as Tor grows more popular, other groups who need an overlay
 network on the Internet are starting to adapt Tor to their needs.
 %
 Second, Tor is only one of many components that preserve privacy online.
-To keep identifying information out of application traffic, someone must build
+For applications where it is desirable to
+keep identifying information out of application traffic, someone must build
 more and better protocol-aware proxies that are usable by ordinary people.
 %
 Third, we need to gain a reputation for social good, and learn how to
