@@ -498,6 +498,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   const char *cp;
   char *url;
   char tmp[8192];
+  char date[RFC1123_TIME_LEN+1];
 
   log_fn(LOG_DEBUG,"Received GET command.");
 
@@ -537,7 +538,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
 
-    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+    tor_format_rfc1123_time(date, time(NULL));
+    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+             date,
              (int)dlen);
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, strlen(cp), conn);
@@ -560,7 +563,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
     switch(rend_cache_lookup_desc(url+strlen(rend_fetch_url), &descp, &desc_len)) {
       case 1: /* valid */
-        snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
+        tor_format_rfc1123_time(date, time(NULL));
+        snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
+                 date,
                  desc_len); /* can't include descp here, because it's got nuls */
         connection_write_to_buf(tmp, strlen(tmp), conn);
         connection_write_to_buf(descp, desc_len, conn);
