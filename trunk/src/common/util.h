@@ -40,7 +40,8 @@
  if (!(expr)) {                                               \
    log(LOG_ERR, "%s:%d: %s: Assertion %s failed; aborting.",  \
        _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);          \
-   assert(expr); /* write to console too. */                  \
+   fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n", \
+       _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);          \
    abort();  /* unreached */                                  \
  } } while (0)
 #endif

@@ -122,18 +122,19 @@ int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
 const char *
 _tor_fix_source_file(const char *fname)
 {
-  const char *cp1, *cp2;
+  const char *cp1, *cp2, *r;
   cp1 = strrchr(fname, '/');
   cp2 = strrchr(fname, '\\');
   if (cp1 && cp2) {
-    return (cp1<cp2)?(cp2+1):(cp1+1);
+    r = (cp1<cp2)?(cp2+1):(cp1+1);
   } else if (cp1) {
-    return cp1+1;
+    r = cp1+1;
   } else if (cp2) {
-    return cp2+2;
+    r = cp2+1;
   } else {
-    return fname;
+    r = fname;
   }
+  return r;
 }
 
 #ifndef UNALIGNED_INT_ACCESS_OK
