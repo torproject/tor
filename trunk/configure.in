@@ -32,6 +32,7 @@ AC_ARG_WITH(ssl-dir,
 
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
+AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(event_loop, [event], , AC_MSG_ERROR(Libevent library not found. Tor requires libevent to build.))
 
 saved_LIBS="$LIBS"
