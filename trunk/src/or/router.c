@@ -352,7 +352,7 @@ int router_rebuild_descriptor(void) {
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->address = tor_strdup(options.Address);
   ri->nickname = tor_strdup(options.Nickname);
-  ri->addr = (uint32_t) addr.s_addr;
+  ri->addr = (uint32_t) ntohl(addr.s_addr);
   ri->or_port = options.ORPort;
   ri->socks_port = options.SocksPort;
   ri->dir_port = options.DirPort;
