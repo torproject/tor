@@ -444,7 +444,7 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, in
 {
   assert(env && from && to);
 
-  return RSA_public_encrypt(fromlen, from, to, env->key,
+  return RSA_public_encrypt(fromlen, (unsigned char*)from, to, env->key,
                             crypto_get_rsa_padding(padding));
 }
 
@@ -455,14 +455,14 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, i
     /* Not a private key */
     return -1;
 
-  return RSA_private_decrypt(fromlen, from, to, env->key,
+  return RSA_private_decrypt(fromlen, (unsigned char*)from, to, env->key,
                              crypto_get_rsa_padding(padding));
 }
 
 int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
   assert(env && from && to);
-  return RSA_public_decrypt(fromlen, from, to, env->key, RSA_PKCS1_PADDING);
+  return RSA_public_decrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
 }
 
 int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
@@ -472,7 +472,7 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int 
     /* Not a private key */
     return -1;
 
-  return RSA_private_encrypt(fromlen, from, to, env->key, RSA_PKCS1_PADDING);
+  return RSA_private_encrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
 }
 
 /* Return 0 if sig is a correct signature for SHA1(data).  Else return -1.
