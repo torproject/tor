@@ -86,7 +86,7 @@ void tor_strlower(char *s)
   }
 }
 
-#ifndef UNALIGNED_ACCESS_OK
+#ifndef UNALIGNED_INT_ACCESS_OK
 uint16_t get_uint16(char *cp)
 {
   uint16_t v;

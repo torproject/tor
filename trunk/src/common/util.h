@@ -43,7 +43,7 @@ char *tor_strndup(const char *s, size_t n);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
 void tor_strlower(char *s);
 
-#ifdef UNALIGNED_ACCESS_OK
+#ifdef UNALIGNED_INT_ACCESS_OK
 /* XXX Not actually used yet, but would probably be faster on non-sun
  * hardare.
  */
