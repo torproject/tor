@@ -5,10 +5,10 @@
 	<key>IFPkgDescriptionDeleteWarning</key>
 	<string></string>
 	<key>IFPkgDescriptionDescription</key>
-	<string>Bundled package of Tor 0.1.0.0-alpha-cvs and Privoxy.</string>
+	<string>Bundled package of Tor 0.1.0.1-rc and Privoxy.</string>
 	<key>IFPkgDescriptionTitle</key>
 	<string>Tor - Privoxy Bundle</string>
 	<key>IFPkgDescriptionVersion</key>
-	<string>0.1.0.0-alpha-cvs</string>
+	<string>0.1.0.1-rc</string>
 </dict>
 </plist>
