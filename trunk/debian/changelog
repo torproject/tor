@@ -1,3 +1,11 @@
+tor (0.0.7.2-1) unstable; urgency=medium
+
+  * New upstream release.
+    Fixes another instance of that remote crash bug.
+  * Mention another reason why stop/reload may fail in the init script.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu,  8 Jul 2004 03:21:32 +0200
+
 tor (0.0.7.1-1) unstable; urgency=medium
 
   * New upstream release.

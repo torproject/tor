@@ -71,7 +71,7 @@ case "$1" in
 	then
 		echo "FAILED (Is $pid not $NAME?  Is $DAEMON a different binary now?)."
 	else
-		echo "FAILED ($DAEMON died: process $pid not running)."
+		echo "FAILED ($DAEMON died: process $pid not running; or permission denied)."
 	fi
 	;;
   reload|force-reload)
@@ -87,7 +87,7 @@ case "$1" in
 	then
 		echo "FAILED (Is $pid not $NAME?  Is $DAEMON a different binary now?)."
 	else
-		echo "FAILED ($DAEMON died: process $pid not running)."
+		echo "FAILED ($DAEMON died: process $pid not running; or permission denied)."
 	fi
 	;;
   restart)
