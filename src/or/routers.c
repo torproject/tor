@@ -117,6 +117,7 @@ void router_get_directory(directory_t **pdirectory) {
  */
 int router_is_me(uint32_t addr, uint16_t port)
 {
+  /* XXXX Should this check the key too? */
   struct sockaddr_in me; /* my router identity */
 
   if(!options.ORPort) {
@@ -667,22 +668,8 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
       log(LOG_ERR, "Error reading router");
       return -1;
     }
-    switch(router_is_me(router->addr, router->or_port)) {
-      case 0: /* it's not me */
-        router->next = routerlist;
-        routerlist = router;
-        break;
-      case 1: /* it is me */
-        if(!my_routerinfo) /* save it, so we can use it for directories */
-          my_routerinfo = router;
-        else
-          routerlist_free(router);        
-        break;
-      default:
-        log(LOG_ERR,"router_get_list_from_string(): router_is_me returned error.");
-        routerlist_free(routerlist);
-        return -1;
-    }
+    router->next = routerlist;
+    routerlist = router;
   }
  
   new_router_array = make_rarray(routerlist, &new_rarray_len);
@@ -717,20 +704,28 @@ router_resolve(routerinfo_t *router)
 int 
 router_resolve_directory(directory_t *dir)
 {
-  int i, max;
+  int i, max, remove;
   if (!dir)
     dir = directory;
 
   max = dir->n_routers;
   for (i = 0; i < max; ++i) {
+    remove = 0;
     if (router_resolve(dir->routers[i])) {
       log(LOG_INFO, "Couldn\'t resolve router %s; removing",
           dir->routers[i]->address);
+      remove = 1;
       dir->routers[i]->next = NULL;
       routerlist_free(dir->routers[i]);
+    } else if (router_is_me(dir->routers[i]->addr, dir->routers[i]->or_port)) {
+      my_routerinfo = dir->routers[i];
+      remove = 1;
+    }
+    if (remove) {
       dir->routers[i] = dir->routers[--max];
       dir->routers[max] = NULL;
       --dir->n_routers;
+      --i;
     }
   }
   /* This is quick-and-dirty, but it keeps stuff consistant. */
