@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2002/07/12 18:14:16  montrose
+ * removed loglevel from global namespace. severity level is set using log() with a NULL format argument now. example: log(LOG_ERR,NULL);
+ *
  * Revision 1.2  2002/07/02 09:16:16  arma
  * httpap now prepends dest_addr and dest_port strings with their length.
  *
@@ -58,7 +61,6 @@
 #include "httpap.h"
 #include "http.h"
 
-int loglevel = LOG_ERR;
 struct timeval conn_tout;
 struct timeval *conn_toutp = &conn_tout;
 
@@ -464,6 +466,7 @@ int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in re
 
 int main(int argc, char *argv[])
 {
+  int loglevel = LOG_DEBUG;
   int retval = 0;
   
   char c; /* command-line option */
@@ -522,7 +525,7 @@ int main(int argc, char *argv[])
       print_usage();
       return 0;
       break;
-     case 'l':
+    case 'l':
       if (!strcmp(optarg,"emerg"))
 	loglevel = LOG_EMERG;
       else if (!strcmp(optarg,"alert"))
@@ -559,6 +562,8 @@ int main(int argc, char *argv[])
     }
   }
   
+  log(loglevel,NULL);  /* assign severity level for logger */
+
   /* the -f option is mandatory */
   if (conf_filename == NULL)
   {

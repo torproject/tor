@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/12 18:14:16  montrose
+ * removed loglevel from global namespace. severity level is set using log() with a NULL format argument now. example: log(LOG_ERR,NULL);
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.37  2002/06/14 20:45:56  mp292
  * *** empty log message ***
@@ -163,7 +166,6 @@
 /* global variables */
 
 /* default logging threshold */
-int loglevel = LOG_ERR;
 struct timeval conn_tout;
 struct timeval *conn_toutp = &conn_tout; 
 
@@ -702,6 +704,8 @@ int main(int argc, char *argv[])
   int islocal = 0; /* is the incoming connection local? */
 
   struct rlimit cd_limit; /* resource limit to prevent core dumps */
+
+  log(LOG_ERR,NULL);  /* assign severity level for logger */
   
   /* prevent core dump */
   retval = getrlimit(RLIMIT_CORE, &cd_limit);

@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/12 18:14:17  montrose
+ * removed loglevel from global namespace. severity level is set using log() with a NULL format argument now. example: log(LOG_ERR,NULL);
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.32  2002/04/02 14:29:49  badbytes
  * Final finishes.
@@ -133,7 +136,6 @@
 #include "smtpap.h"
 #include "io.h"
 
-int loglevel = LOG_ERR;
 struct timeval conn_tout;
 struct timeval *conn_toutp = &conn_tout;
 
@@ -1141,6 +1143,7 @@ int handle_connection(int s, struct hostent *local, struct sockaddr_in remote, u
 
 int main(int argc, char *argv[])
 {
+  int loglevel = LOG_DEBUG;
   int retval = 0;
   
   char c; /* command-line option */
@@ -1166,7 +1169,7 @@ int main(int argc, char *argv[])
   struct sigaction sa;
   
   char *errtest = NULL; /* for detecting strtoul() errors */
-  
+
   /* set default listening port */
   p = htons(SMTPAP_LISTEN_PORT);
   
@@ -1198,7 +1201,7 @@ int main(int argc, char *argv[])
       print_usage();
       return 0;
       break;
-     case 'l':
+    case 'l':
       if (!strcmp(optarg,"emerg"))
 	loglevel = LOG_EMERG;
       else if (!strcmp(optarg,"alert"))
@@ -1234,7 +1237,9 @@ int main(int argc, char *argv[])
       abort();
     }
   }
-  
+    
+  log(loglevel,NULL); /* assign severity level for logger */
+
   /* the -f option is mandatory */
   if (conf_filename == NULL)
   {
