@@ -178,8 +178,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall)
       continue;
     if(fascistfirewall) {
       tor_snprintf(buf,sizeof(buf),"%d",router->dir_port);
-      if (!smartlist_string_isin(options.FirewallPorts ?
-          options.FirewallPorts : config_get_default_firewallports(), buf))
+      if (!smartlist_string_isin(options.FirewallPorts, buf))
         continue;
     }
     smartlist_add(sl, router);
@@ -214,8 +213,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
         continue;
       if (fascistfirewall) {
         tor_snprintf(buf,sizeof(buf),"%d",d->dir_port);
-        if (!smartlist_string_isin(options.FirewallPorts ?
-            options.FirewallPorts : config_get_default_firewallports(), buf))
+        if (!smartlist_string_isin(options.FirewallPorts, buf))
           continue;
       }
       smartlist_add(sl, d);
