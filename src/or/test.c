@@ -660,7 +660,7 @@ test_util() {
   u32 = 3;
   test_assert(!parse_addr_port("localhost", NULL, &u32, &u16));
   test_eq(cp, NULL);
-  test_eq(u32, 0x7f000001u);
+  test_eq(u32, htonl(0x7f000001u));
   test_eq(u16, 0);
   tor_free(cp);
 
