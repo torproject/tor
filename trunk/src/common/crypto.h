@@ -92,6 +92,7 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigne
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);
 
 /* only implemented for CRYPTO_CIPHER_AES_CTR */
+int crypto_cipher_rewind(crypto_cipher_env_t *env, long delta);
 int crypto_cipher_advance(crypto_cipher_env_t *env, long delta);
 
 /* convenience function: wraps crypto_create_crypto_env, set_key, set_iv, and init. */

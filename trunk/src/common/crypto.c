@@ -808,6 +808,12 @@ int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigne
 }
 
 int
+crypto_cipher_rewind(crypto_cipher_env_t *env, long delta)
+{
+  return crypto_cipher_advance(env, -delta);
+}
+
+int
 crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
 {
   if (env->type == CRYPTO_CIPHER_AES_CTR) {
@@ -841,8 +847,8 @@ crypto_new_digest_env(int type)
 
 void
 crypto_free_digest_env(crypto_digest_env_t *digest) {
-  assert(digest);
-  tor_free(digest);
+  if(digest)
+    free(digest);
 }
 
 void
