@@ -1,5 +1,5 @@
 
-Changes in version 0.0.9 - forthcoming
+Changes in version 0.0.9 - 2004-12-12
   o Bugfixes on 0.0.8.1 (Crashes and asserts):
     - Catch and ignore SIGXFSZ signals when log files exceed 2GB; our
       write() call will fail and we handle it there.
