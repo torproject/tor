@@ -84,7 +84,7 @@ int connection_add(connection_t *conn) {
     log(LOG_WARN,"connection_add(): failing because nfds is too high.");
     return -1;
   }
-  
+
   conn->poll_index = nfds;
   connection_set_poll_socket(conn);
   connection_array[nfds] = conn;
@@ -125,17 +125,17 @@ int connection_remove(connection_t *conn) {
   if(current_index == nfds-1) { /* this is the end */
     nfds--;
     return 0;
-  } 
+  }
 
   /* we replace this one with the one at the end, then free it */
   nfds--;
-  poll_array[current_index].fd = poll_array[nfds].fd; 
+  poll_array[current_index].fd = poll_array[nfds].fd;
   poll_array[current_index].events = poll_array[nfds].events;
   poll_array[current_index].revents = poll_array[nfds].revents;
   connection_array[current_index] = connection_array[nfds];
   connection_array[current_index]->poll_index = current_index;
 
-  return 0;  
+  return 0;
 }
 
 void get_connection_array(connection_t ***array, int *n) {
@@ -196,7 +196,7 @@ static void conn_read(int i) {
       return; /* this conn should not read */
 
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
- 
+
   assert_connection_ok(conn, time(NULL));
 
   if(
@@ -207,10 +207,12 @@ static void conn_read(int i) {
     connection_handle_read(conn) < 0)
     {
       /* this connection is broken. remove it */
-      log_fn(LOG_INFO,"%s connection broken, removing.", conn_type_to_string[conn->type]); 
+      log_fn(LOG_INFO,"%s connection broken, removing.",
+             conn_type_to_string[conn->type]);
       connection_remove(conn);
       connection_free(conn);
-      if(i<nfds) { /* we just replaced the one at i with a new one. process it too. */
+      if(i<nfds) {
+        /* we just replaced the one at i with a new one. process it too. */
         conn_read(i);
       }
     } else assert_connection_ok(conn, time(NULL));
@@ -270,6 +272,7 @@ static void conn_close_if_marked(int i) {
 static void run_connection_housekeeping(int i, time_t now) {
   cell_t cell;
   connection_t *conn = connection_array[i];
+
   if(connection_receiver_bucket_should_increase(conn)) {
     conn->receiver_bucket += conn->bandwidth;
     //        log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, conn->receiver_bucket);
@@ -286,7 +289,7 @@ static void run_connection_housekeeping(int i, time_t now) {
       connection_start_writing(conn);
     }
   }
-  
+
   /* check connections to see whether we should send a keepalive, expire, or wait */
   if(!connection_speaks_cells(conn))
     return;
@@ -336,7 +339,7 @@ static void run_scheduled_events(time_t now) {
   }
 
   /* 2. Every second, we examine pending circuits and prune the
-   *    ones which have been pending for more than 2 seconds.
+   *    ones which have been pending for more than 3 seconds.
    *    We do this before step 3, so it can try building more if
    *    it's not comfortable with the number of available circuits.
    */
@@ -372,7 +375,7 @@ static void run_scheduled_events(time_t now) {
     }
   }
 
-  /* 4. Every second, we check how much bandwidth we've consumed and 
+  /* 4. Every second, we check how much bandwidth we've consumed and
    *    increment global_read_bucket.
    */
   stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
@@ -462,7 +465,7 @@ static crypto_pk_env_t *init_key_from_file(const char *fname)
       goto error;
     }
     return prkey;
-  default: 
+  default:
     assert(0);
   }
 
@@ -479,7 +482,7 @@ static crypto_pk_env_t *init_key_from_file(const char *fname)
 static int init_keys(void)
 {
   char keydir[512];
-  char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3]; 
+  char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];
   char *cp;
   const char *tmp, *mydesc;
   crypto_pk_env_t *prkey;
@@ -506,7 +509,7 @@ static int init_keys(void)
     return -1;
   }
   cp = keydir + strlen(keydir); /* End of string. */
-  
+
   /* 1. Read identity key. Make it if none is found. */
   strcpy(cp, "/identity.key");
   log_fn(LOG_INFO,"Reading/making identity key %s...",keydir);
@@ -519,7 +522,7 @@ static int init_keys(void)
   prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_onion_key(prkey);
-  
+
   /* 3. Initialize link key and TLS context. */
   strcpy(cp, "/link.key");
   log_fn(LOG_INFO,"Reading/making link key %s...",keydir);
@@ -638,9 +641,9 @@ static int do_main_loop(void) {
   int i;
   int timeout;
   int poll_result;
-  
+
   /* load the routers file */
-  if(router_get_list_from_file(options.RouterFile) < 0) {
+  if(router_set_routerlist_from_file(options.RouterFile) < 0) {
     log_fn(LOG_ERR,"Error loading router list.");
     return -1;
   }
@@ -681,21 +684,21 @@ static int do_main_loop(void) {
         exit(1);
       }
 
-      /* fetch a new directory */
       if(options.DirPort) {
-
         /* reload the fingerprint file */
-        char keydir[512]; 
+        char keydir[512];
         sprintf(keydir,"%s/approved-routers", options.DataDirectory);
         log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
         if(dirserv_parse_fingerprint_file(keydir) < 0) {
           log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
         }
 
-        if(router_get_list_from_file(options.RouterFile) < 0) {
+        /* XXX do we really want to be resetting the routerlist here? */
+        if(router_set_routerlist_from_file(options.RouterFile) < 0) {
           log(LOG_WARN,"Error reloading router list. Continuing with old list.");
         }
       } else {
+        /* fetch a new directory */
         directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
       }
 
@@ -732,7 +735,7 @@ static int do_main_loop(void) {
 
     /* any of the conns need to be closed now? */
     for(i=0;i<nfds;i++)
-      conn_close_if_marked(i); 
+      conn_close_if_marked(i);
 
     /* refilling buckets and sending cells happens at the beginning of the
      * next iteration of the loop, inside prepare_for_poll()
@@ -807,13 +810,13 @@ static void dumpstats(int severity) {
          stats_n_destroy_cells_processed);
   if (stats_n_data_cells_packaged)
     log(severity,"Average outgoing cell fullness: %2.3f%%",
-           100*(((double)stats_n_data_bytes_packaged) / 
+           100*(((double)stats_n_data_bytes_packaged) /
                 (stats_n_data_cells_packaged*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
   if (stats_n_data_cells_received)
     log(severity,"Average incoming cell fullness: %2.3f%%",
-           100*(((double)stats_n_data_bytes_received) / 
+           100*(((double)stats_n_data_bytes_received) /
                 (stats_n_data_cells_received*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
-  
+
   if (stats_n_seconds_reading)
     log(severity,"Average bandwidth used: %d bytes/sec",
            (int) (stats_n_bytes_read/stats_n_seconds_reading));

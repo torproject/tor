@@ -534,7 +534,7 @@ test_dir_format()
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
   struct exit_policy_t ex1, ex2;
-  directory_t *dir1 = NULL, *dir2 = NULL;
+  routerlist_t *dir1 = NULL, *dir2 = NULL;
 
   test_assert( (pk1 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
   test_assert( (pk2 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
