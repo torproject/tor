@@ -220,7 +220,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       return 0;
     }
     if(conn->type == CONN_TYPE_AP && rh.command == RELAY_COMMAND_CONNECTED) {
-      if(conn->state != AP_CONN_STATE_CONNECTING) {
+      if(conn->state != AP_CONN_STATE_CONNECT_WAIT) {
         log_fn(LOG_WARN,"Got 'connected' while not in state connecting. Dropping.");
         return 0;
       }
@@ -445,6 +445,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
+    case AP_CONN_STATE_CONNECT_WAIT:
       connection_stop_writing(conn);
       return 0;
     default:
@@ -539,7 +540,7 @@ void connection_ap_expire_beginning(void) {
   for (i = 0; i < n; ++i) {
     conn = carray[i];
     if (conn->type != CONN_TYPE_AP ||
-        conn->state != AP_CONN_STATE_CONNECTING)
+        conn->state != AP_CONN_STATE_CONNECT_WAIT)
       continue;
     if (now - conn->timestamp_lastread >= 15) {
       log_fn(LOG_WARN,"Stream is %d seconds late. Retrying.",
@@ -770,7 +771,7 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
 
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
-  ap_conn->state = AP_CONN_STATE_CONNECTING;
+  ap_conn->state = AP_CONN_STATE_CONNECT_WAIT;
   /* XXX Right now, we rely on the socks client not to send us any data
    * XXX until we've sent back a socks reply.  (If it does, we could wind
    * XXX up packaging that data and sending it to the exit, then later having
@@ -786,7 +787,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
 
   if(replylen) { /* we already have a reply in mind */
     connection_write_to_buf(reply, replylen, conn);
-    return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
+    return 0;
   }
   assert(conn->socks_request);
   if(conn->socks_request->socks_version == 4) {
@@ -796,7 +797,6 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     buf[1] = (success ? SOCKS4_GRANTED : SOCKS4_REJECT);
     /* leave version, destport, destip zero */
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, conn);
-    return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
   }
   if(conn->socks_request->socks_version == 5) {
     buf[0] = 5; /* version 5 */
@@ -808,9 +808,9 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     memset(buf+4,0,6); /* Set external addr/port to 0.
                           The spec doesn't seem to say what to do here. -RD */
     connection_write_to_buf(buf,10,conn);
-    return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
   }
-  return 0; /* if socks_version isn't 4 or 5, don't send anything */
+  /* if socks_version isn't 4 or 5, don't send anything */
+  return 0;
 }
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
