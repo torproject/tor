@@ -6,9 +6,9 @@
 
 /********* START VARIABLES **********/
 
-extern or_options_t options; /* command-line and config-file options */
+extern or_options_t options; /**< command-line and config-file options */
 
-/* Array of strings to make conn->type human-readable */
+/** Array of strings to make conn->type human-readable */
 char *conn_type_to_string[] = {
   "",            /* 0 */
   "OP listener", /* 1 */
@@ -24,7 +24,7 @@ char *conn_type_to_string[] = {
   "CPU worker",  /* 11 */
 };
 
-/* Array of string arrays to make {conn->type,conn->state} human-readable */
+/** Array of string arrays to make {conn->type,conn->state} human-readable */
 char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
   { NULL }, /* no type associated with 0 */
   { NULL }, /* op listener, obsolete */
@@ -74,7 +74,7 @@ static int connection_receiver_bucket_should_increase(connection_t *conn);
 
 /**************************************************************/
 
-/* Allocate space for a new connection_t. This function just initializes
+/** Allocate space for a new connection_t. This function just initializes
  * conn; you must call connection_add() to link it into the main array.
  *
  * Set conn->type to 'type'. Set conn->s and conn->poll_index to
@@ -114,8 +114,8 @@ connection_t *connection_new(int type) {
   return conn;
 }
 
-/* Deallocate memory used by 'conn'. Deallocate its buffers if necessary,
- * close its socket if necessary, and mark the directory as dirty if conn
+/** Deallocate memory used by <b>conn</b>. Deallocate its buffers if necessary,
+ * close its socket if necessary, and mark the directory as dirty if <b>conn</b>
  * is an OR or OP connection.
  */
 void connection_free(connection_t *conn) {
@@ -147,6 +147,10 @@ void connection_free(connection_t *conn) {
   free(conn);
 }
 
+/** Call connection_free() on every connection in our array.
+ * This is used by cpuworkers and dnsworkers when they fork,
+ * so they don't keep resources held open (especially sockets).
+ */
 void connection_free_all(void) {
   int i, n;
   connection_t **carray;
@@ -156,8 +160,9 @@ void connection_free_all(void) {
     connection_free(carray[i]);
 }
 
-/* Close the underlying socket for conn, so we don't try to flush it.
- * Must be used in conjunction with (right before) connection_mark_for_close
+/** Close the underlying socket for <b>conn</b>, so we don't try to
+ * flush it. Must be used in conjunction with (right before)
+ * connection_mark_for_close().
  */
 void connection_close_immediate(connection_t *conn)
 {
@@ -178,6 +183,16 @@ void connection_close_immediate(connection_t *conn)
   }
 }
 
+/** Mark <b>conn</b> to be closed next time we loop through
+ * conn_close_if_marked() in main.c. Do any cleanup needed:
+ *   - Directory conns that fail to fetch a rendezvous descriptor need
+ *     to inform pending rendezvous streams.
+ *   - OR conns need to call rep_hist_note_*() to record status.
+ *   - AP conns need to send a socks reject if necessary.
+ *   - Exit conns need to call connection_dns_remove() if necessary.
+ *   - AP and Exit conns need to send an end cell if they can.
+ *   - DNS conns need to fail any resolves that are pending on them.
+ */
 int
 _connection_mark_for_close(connection_t *conn, char reason)
 {
@@ -214,7 +229,6 @@ _connection_mark_for_close(connection_t *conn, char reason)
       } else {
         rep_hist_note_connection_died(conn->nickname, time(NULL));
       }
-      /* No special processing needed. */
       break;
     case CONN_TYPE_AP:
       if (conn->socks_request->has_finished == 0) {
@@ -250,6 +264,11 @@ _connection_mark_for_close(connection_t *conn, char reason)
   return retval;
 }
 
+/** Find each connection that has hold_open_until_flushed set to
+ * 1 but hasn't written in the past 15 seconds, and set
+ * hold_open_until_flushed to 0. This means it will get cleaned
+ * up in the next loop through close_if_marked() in main.c.
+ */
 void connection_expire_held_open(void)
 {
   connection_t **carray, *conn;
@@ -275,6 +294,10 @@ void connection_expire_held_open(void)
   }
 }
 
+/** Bind a new non-blocking socket listening to
+ * <b>bindaddress</b>:<b>bindport</b>, and add this new connection
+ * (of type <b>type</b>) to the connection array.
+ */
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   struct sockaddr_in bindaddr; /* where to bind */
   connection_t *conn;
@@ -328,6 +351,9 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   return 0;
 }
 
+/** The listener connection <b>conn</b> told poll() it wanted to read.
+ * Call accept() on conn->s, and add the new connection if necessary.
+ */
 static int connection_handle_listener_read(connection_t *conn, int new_type) {
   int news; /* the new socket */
   connection_t *newconn;
@@ -367,6 +393,9 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   return 0;
 }
 
+/** Initialize states for newly accepted connection <b>conn</b>.
+ * If conn is an OR, start the tls handshake.
+ */
 static int connection_init_accepted_conn(connection_t *conn) {
 
   connection_start_reading(conn);
@@ -385,11 +414,13 @@ static int connection_init_accepted_conn(connection_t *conn) {
   return 0;
 }
 
-/* Take conn, make a nonblocking socket; try to connect to
+/** Take conn, make a nonblocking socket; try to connect to
  * addr:port (they arrive in *host order*). If fail, return -1. Else
  * assign s to conn->s: if connected return 1, if eagain return 0.
- * address is used to make the logs useful.  On success, add 'conn' to
- * the list of polled connections.
+ *
+ * address is used to make the logs useful.
+ *
+ * On success, add 'conn' to the list of polled connections.
  */
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port) {
   int s;
@@ -434,6 +465,9 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   return 1;
 }
 
+/** If there exists a listener of type <b>type</b> in the connection
+ * array, mark it for close.
+ */
 static void listener_close_if_present(int type) {
   connection_t *conn;
   tor_assert(type == CONN_TYPE_OR_LISTENER ||
@@ -446,7 +480,10 @@ static void listener_close_if_present(int type) {
   }
 }
 
-/* start all connections that should be up but aren't */
+/** Start all connections that should be up but aren't.
+ *  - Connect to all ORs if you're an OR.
+ *  - Relaunch listeners for each port you have open.
+ */
 int retry_all_connections(void) {
 
   if(options.ORPort) {
@@ -480,9 +517,9 @@ int retry_all_connections(void) {
   return 0;
 }
 
-extern int global_read_bucket;
+extern int global_read_bucket; /**< from main.c */
 
-/* how many bytes at most can we read onto this connection? */
+/** How many bytes at most can we read onto this connection? */
 int connection_bucket_read_limit(connection_t *conn) {
   int at_most;
 
@@ -507,7 +544,7 @@ int connection_bucket_read_limit(connection_t *conn) {
   return at_most;
 }
 
-/* we just read num_read onto conn. Decrement buckets appropriately. */
+/** We just read num_read onto conn. Decrement buckets appropriately. */
 void connection_bucket_decrement(connection_t *conn, int num_read) {
   global_read_bucket -= num_read; tor_assert(global_read_bucket >= 0);
   if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
@@ -528,15 +565,17 @@ void connection_bucket_decrement(connection_t *conn, int num_read) {
   }
 }
 
-/* keep a timeval to know when time has passed enough to refill buckets */
+/** Keep a timeval to know when time has passed enough to refill buckets */
 static struct timeval current_time;
 
+/** Initiatialize the global read bucket to options.BandwidthBurst,
+ * and current_time to the current time. */
 void connection_bucket_init(void) {
   tor_gettimeofday(&current_time);
   global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
 }
 
-/* some time has passed; increment buckets appropriately. */
+/** Some time has passed; increment buckets appropriately. */
 void connection_bucket_refill(struct timeval *now) {
   int i, n;
   connection_t *conn;
@@ -581,6 +620,9 @@ void connection_bucket_refill(struct timeval *now) {
   }
 }
 
+/** Is the receiver bucket for connection <b>conn</b> low enough that we
+ * should add another pile of tokens to it?
+ */
 static int connection_receiver_bucket_should_increase(connection_t *conn) {
   tor_assert(conn);
 
@@ -596,6 +638,18 @@ static int connection_receiver_bucket_should_increase(connection_t *conn) {
   return 1;
 }
 
+/** Read bytes from conn->s and process them.
+ *
+ * This function gets called from conn_read() in main.c, either
+ * when poll() has declared that conn wants to read, or (for OR conns)
+ * when there are pending TLS bytes.
+ *
+ * It calls connection_read_to_buf() to bring in any new bytes,
+ * and then calls connection_process_inbuf() to process them.
+ *
+ * Mark the connection and return -1 if you want to close it, else
+ * return 0.
+ */
 int connection_handle_read(connection_t *conn) {
 
   conn->timestamp_lastread = time(NULL);
@@ -628,7 +682,12 @@ int connection_handle_read(connection_t *conn) {
   return 0;
 }
 
-/* return -1 if we want to break conn, else return 0 */
+/** Pull in new bytes from conn->s onto conn->inbuf, either
+ * directly or via TLS. Reduce the token buckets by the number of
+ * bytes read.
+ *
+ * Return -1 if we want to break conn, else return 0.
+ */
 int connection_read_to_buf(connection_t *conn) {
   int result;
   int at_most;
@@ -676,19 +735,39 @@ int connection_read_to_buf(connection_t *conn) {
   return 0;
 }
 
+/** A pass-through to fetch_from_buf. */
 int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
   return fetch_from_buf(string, len, conn->inbuf);
 }
 
+/** Return conn->outbuf_flushlen: how many bytes conn wants to flush
+ * from its outbuf. */
 int connection_wants_to_flush(connection_t *conn) {
   return conn->outbuf_flushlen;
 }
 
+/** Are there too many bytes on edge connection <b>conn</b>'s outbuf to
+ * send back a relay-level sendme yet? Return 1 if so, 0 if not. Used by
+ * connection_edge_consider_sending_sendme().
+ */
 int connection_outbuf_too_full(connection_t *conn) {
   return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
 }
 
-/* mark and return -1 if you want to break the conn, else return 0 */
+/** Try to flush more bytes onto conn->s.
+ *
+ * This function gets called either from conn_write() in main.c
+ * when poll() has declared that conn wants to write, or below
+ * from connection_write_to_buf() when an entire TLS record is ready.
+ *
+ * Update conn->timestamp_lastwritten to now, and call flush_buf
+ * or flush_buf_tls appropriately. If it succeeds and there no more
+ * more bytes on conn->outbuf, then call connection_finished_flushing
+ * on it too.
+ *
+ * Mark the connection and return -1 if you want to close it, else
+ * return 0.
+ */
 int connection_handle_write(connection_t *conn) {
 
   tor_assert(!connection_is_listener(conn));
@@ -754,6 +833,10 @@ int connection_handle_write(connection_t *conn) {
   return 0;
 }
 
+/** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
+ * outbuf, and ask it to start writing. If it's an OR conn, and an
+ * entire TLS record is ready, then try to flush it now.
+ */
 void connection_write_to_buf(const char *string, int len, connection_t *conn) {
 
   if(!len || conn->marked_for_close)
@@ -788,7 +871,8 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
   }
 }
 
-/* get the conn to addr/port that has the most recent timestamp_created */
+/** Return the conn to addr/port that has the most recent
+ * timestamp_created, or NULL if no such conn exists. */
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i, n;
   connection_t *conn, *best=NULL;
@@ -804,12 +888,14 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   return best;
 }
 
+/** Find a connection to the router described by addr and port,
+ * or alternately any router with the same identity key.
+ * This connection *must* be in 'open' state.
+ * If not, return NULL.
+ */
+/* XXX this twin thing is busted, now that we're rotating onion
+ * keys. abandon/patch? */
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
-  /* Find a connection to the router described by addr and port,
-   *   or alternately any router which knows its key.
-   * This connection *must* be in 'open' state.
-   * If not, return NULL.
-   */
   int i, n;
   connection_t *conn;
   routerinfo_t *router;
@@ -841,6 +927,9 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
+/** Return a connection of type <b>type</b> that is not marked for
+ * close.
+ */
 connection_t *connection_get_by_type(int type) {
   int i, n;
   connection_t *conn;
@@ -855,6 +944,9 @@ connection_t *connection_get_by_type(int type) {
   return NULL;
 }
 
+/** Return a connection of type <b>type</b> that is in state <b>state</b>,
+ * and that is not marked for close.
+ */
 connection_t *connection_get_by_type_state(int type, int state) {
   int i, n;
   connection_t *conn;
@@ -869,6 +961,10 @@ connection_t *connection_get_by_type_state(int type, int state) {
   return NULL;
 }
 
+/** Return the connection of type <b>type</b> that is in state
+ * <b>state</b>, that was written to least recently, and that is not
+ * marked for close.
+ */
 connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
   int i, n;
   connection_t *conn, *best=NULL;
@@ -884,6 +980,9 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
   return best;
 }
 
+/** Return a connection of type <b>type</b> that has rendquery equal
+ * to <b>rendquery</b>, and that is not marked for close.
+ */
 connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) {
   int i, n;
   connection_t *conn;
@@ -900,6 +999,7 @@ connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) 
   return NULL;
 }
 
+/** Return 1 if <b>conn</b> is a listener conn, else return 0. */
 int connection_is_listener(connection_t *conn) {
   if(conn->type == CONN_TYPE_OR_LISTENER ||
      conn->type == CONN_TYPE_AP_LISTENER ||
@@ -908,6 +1008,9 @@ int connection_is_listener(connection_t *conn) {
   return 0;
 }
 
+/** Return 1 if <b>conn</b> is in state 'open' and is not marked
+ * for close, else return 0.
+ */
 int connection_state_is_open(connection_t *conn) {
   tor_assert(conn);
 
@@ -922,6 +1025,11 @@ int connection_state_is_open(connection_t *conn) {
   return 0;
 }
 
+/** Write a 'destroy' cell with circ ID <b>circ_id</b> onto OR connection
+ * <b>conn</b>.
+ *
+ * Return 0.
+ */
 int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
   cell_t cell;
 
@@ -936,6 +1044,11 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
   return 0;
 }
 
+/** Process new bytes that have arrived on conn->inbuf.
+ *
+ * This function just passes conn to the connection-specific
+ * connection_*_process_inbuf() function.
+ */
 int connection_process_inbuf(connection_t *conn) {
 
   tor_assert(conn);
@@ -958,6 +1071,12 @@ int connection_process_inbuf(connection_t *conn) {
   }
 }
 
+/** We just finished flushing bytes from conn->outbuf, and there
+ * are no more bytes remaining.
+ *
+ * This function just passes conn to the connection-specific
+ * connection_*_finished_flushing() function.
+ */
 int connection_finished_flushing(connection_t *conn) {
 
   tor_assert(conn);
@@ -982,6 +1101,9 @@ int connection_finished_flushing(connection_t *conn) {
   }
 }
 
+/** Verify that connection <b>conn</b> has all of its invariants
+ * correct. Trigger an assert if anything is invalid.
+ */
 void assert_connection_ok(connection_t *conn, time_t now)
 {
   tor_assert(conn);
