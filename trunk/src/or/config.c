@@ -1823,6 +1823,7 @@ config_register_addressmaps(or_options_t *options) {
   struct config_line_t *opt;
   char *from, *to;
 
+  addressmap_clear_configured();
   elts = smartlist_create();
   for (opt = options->AddressMap; opt; opt = opt->next) {
     smartlist_split_string(elts, opt->value, NULL,

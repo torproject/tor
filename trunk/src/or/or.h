@@ -1312,6 +1312,8 @@ void connection_ap_attach_pending(void);
 
 void addressmap_init(void);
 void addressmap_clean(time_t now);
+void addressmap_clear_configured(void);
+void addressmap_clear_transient(void);
 void addressmap_free_all(void);
 void addressmap_rewrite(char *address, size_t maxlen);
 int addressmap_already_mapped(const char *address);

@@ -435,29 +435,26 @@ addressmap_ent_remove(const char *addr, addressmap_entry_t *ent)
   addressmap_ent_free(ent);
 }
 
-/** A helper function for addressmap_clean() below. If ent is too old,
- * then remove it from the tree and return NULL, else return ent.
- */
-static void *
-_addressmap_remove_if_expired(const char *addr,
-                              addressmap_entry_t *ent,
-                              time_t *nowp) {
-  if (ent->expires > 1 && ent->expires < *nowp) {
-    log(LOG_INFO, "Addressmap: expiring remap (%s to %s)",
-           addr, ent->new_address);
-    addressmap_ent_remove(addr,ent);
-    return NULL;
-  } else {
-    return ent;
-  }
+/** Remove all entries from the addressmap that were set via the
+ * configuration file or the command line. */
+void
+addressmap_clear_configured(void)
+{
+  addressmap_get_mappings(NULL, 0, 0);
+}
+
+/** Remove all entries from the addressmap that are set to expire, ever. */
+void
+addressmap_clear_transient(void)
+{
+  addressmap_get_mappings(NULL, 2, TIME_MAX);
 }
 
 /** Clean out entries from the addressmap cache that were
  * added long enough ago that they are no longer valid.
  */
 void addressmap_clean(time_t now) {
-  strmap_foreach(addressmap,
-                 (strmap_foreach_fn)_addressmap_remove_if_expired, &now);
+  addressmap_get_mappings(NULL, 2, now);
 }
 
 /** Free all the elements in the addressmap, and free the addressmap
@@ -708,7 +705,11 @@ address_is_invalid_destination(const char *address) {
   return 0;
 }
 
-/* DOCDOC */
+/* Iterate over all address mapings which have exipry times between
+ * min_expires and max_expires, inclusive.  If sl is provided, add an
+ * "old-addr new-addr" string to sl for each mapping.  If sl is NULL,
+ * remove the mappings.
+ */
 void
 addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires)
 {
@@ -717,17 +718,23 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires)
    void *_val;
    addressmap_entry_t *val;
 
-   tor_assert(sl);
-
    for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter);
         iter = strmap_iter_next(addressmap,iter)) {
      strmap_iter_get(iter, &key, &_val);
      val = _val;
      if (val->expires >= min_expires && val->expires <= max_expires) {
-       size_t len = strlen(key)+strlen(val->new_address)+2;
-       char *line = tor_malloc(len);
-       tor_snprintf(line, len, "%s %s", key, val->new_address);
-       smartlist_add(sl, line);
+       if (sl) {
+         size_t len = strlen(key)+strlen(val->new_address)+2;
+         char *line = tor_malloc(len);
+         tor_snprintf(line, len, "%s %s", key, val->new_address);
+         smartlist_add(sl, line);
+         iter = strmap_iter_next(addressmap,iter);
+       } else {
+         addressmap_ent_remove(key, val);
+         iter = strmap_iter_next_rmv(addressmap,iter);
+       }
+     } else {
+       iter = strmap_iter_next(addressmap,iter);
      }
    }
 }
