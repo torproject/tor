@@ -62,7 +62,7 @@ void log(int severity, const char *format, ...)
     {
       t = time(NULL);
       strftime(buf, 200, "%b %d %H:%M:%S", localtime(&t));
-      printf("%s.%.3ld ", buf, now.tv_usec / 1000);
+      printf("%s.%.3ld ", buf, (long)now.tv_usec / 1000);
       sev_to_string(buf, 200, severity);
       printf("[%s] ", buf);
       vprintf(format,ap);
