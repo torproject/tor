@@ -414,6 +414,9 @@ int connection_handle_read(connection_t *conn) {
        router_mark_as_down(conn->nickname);
     }
     /* There's a read error; kill the connection.*/
+    /* XXX This is the place. We need to somehow indicate to
+     * conn that it should never try to flush, or do anything
+     * with conn->s but close it. */
     connection_mark_for_close(conn, END_STREAM_REASON_MISC);
     return -1;
   }
