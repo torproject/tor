@@ -209,6 +209,8 @@ to dissuade them.
 With this image issue in mind, here we discuss the Tor user base and
 Tor's interaction with other services on the Internet.
 
+
+
 \subsection{Usability}
 
 Usability: fc03 paper was great, except the lower latency you are the
@@ -270,6 +272,22 @@ snipe them?
 Takedowns and efnet abuse and wikipedia complaints and irc
 networks.
 
+It was long expected that, alongside Tor's legitimate users, it would also
+attract troublemakers who exploited Tor in order to abuse services on the
+Internet.  Our initial answer to this situation was to use ``exit policies''
+to allow individual Tor servers to block access to specific IP/port ranges.
+This approach was meant to make operators more willing to run Tor by allowing
+them to prevent their servers from being used for abusing particular
+services.  For example, all Tor servers currently block SMTP (port 25), in
+order to avoid being used to send spam.
+
+This approach is useful, but is insufficient for two reasons.  First, since
+it is not possible to force all ORs to block access to any given service,
+many of those services try to block Tor instead.  More broadly, while being
+blockable is important to being good netizens, we would like to encourage
+services to allow anonymous access; services should not need to decide
+between blocking legitimate anonymous use and allowing unlimited abuse.
+
 This is potentially a bigger problem than it may appear. 
 On the one hand, if people want to refuse connections from you on
 their servers it would seem that they should be allowed to.  But, a
@@ -282,6 +300,52 @@ be to have the entire population behind it able to have a Tor exit
 node or write access to wikipedia. This is a loss for both of us (Tor
 and wikipedia). We don't want to compete for (or divvy up) the NAT
 protected entities of the world.
+
+(A related problem is that many IP blacklists are not terribly fine-grained.
+No current IP blacklist, for example, allow a service provider to blacklist
+only those Tor servers that allow access to a specific IP or port, even
+though this information is readily available.  One IP blacklist even bans
+every class C network that contains a Tor server, and recommends banning SMTP
+from these networks even though Tor does not allow SMTP at all.)
+
+Problems of abuse occur mainly with services such as IRC networks and
+Wikipedia, which rely on IP-blocking to ban abusive users.  While at first
+blush this practice might seem to depend on the anachronistic assumption that
+each IP is an identifier for a single user, it is actually more reasonable in
+practice: it assumes that non-proxy IPs are a costly resource, and that an
+abuser can not change IPs at will.  By blocking IPs which are used by Tor
+servers, open proxies, and service abusers, these systems hope to make
+ongoing abuse difficult.  Although the system is imperfect, it works
+tolerably well for them in practice.
+
+But of course, we would prefer that legitimate anonymous users be able to
+access abuse-prone services.  One conceivable approach would be to require
+would-be IRC users, for instance, to register accounts if they wanted to
+access the IRC network from Tor.  But in practise, this would not
+significantly impede abuse if creating new accounts were easily automatable;
+this is why services use IP blocking.  In order to deter abuse, pseudonymous
+identities need to impose a significant switching cost in resources or human
+time.
+
+Once approach, similar to that taken by Freedom, would be to bootstrap some
+non-anonymous costly identification mechanism to allow access to a
+blind-signature pseudonym protocol.  This would effectively create costly
+pseudonyms, which services could require in order to allow anonymous access.
+This approach has difficulties in practise, however:
+\begin{tightlist}
+\item Unlike Freedom, Tor is not a commercial service.  Therefore, it would
+  be a shame to require payment in order to make Tor useful, or to make
+  non-paying users second-class citizens.
+\item It is hard to think of an underlying resource that would actually work.
+  We could use IP addresses, but that's the problem, isn't it?
+\item Managing single sign-on services is not considered a well-solved
+  problem in practice.  If Microsoft can't get universal acceptance for
+  passport, why do we think that a Tor-specific solution would do any good?
+\item Even if we came up with a perfect authentication system for our needs,
+  there's no guarantee that any service would actually start using it.  It
+  would require a nonzero effort for them to support it, and it might just
+  be less hassle for them to block tor anyway.
+\end{tightlist}
 
 Squishy IP based ``authentication'' and ``authorization'' is a reality
 we must contend with. We should say something more about the analogy
@@ -427,6 +491,74 @@ that using Tor as a building block for Free Haven is going to be really
 hard. Also, they're brittle in terms of intersection and observation
 attacks. Would be nice to have hot-swap services, but hard to design.
 
+\subsection{Trust and discovery}
+
+The published Tor design adopted a deliberately simplistic design for
+authorizing new nodes and informing clients about servers and their status.
+In the early Tor designs, all ORs periodically uploaded a signed description
+of their locations, keys, and capabilities to each of several well-known {\it
+  directory servers}.  These directory servers constructed a signed summary
+of all known ORs (a ``directory''), and a signed statement of which ORs they
+believed to be operational at any given time (a ``network status'').  Clients
+periodically downloaded a directory in order to learn the latest ORs and
+keys, and more frequently downloaded a network status to learn which ORs are
+likely to be running.  ORs also operate as directory caches, in order to
+lighten the bandwidth on the authoritative directory servers.
+
+In order to prevent Sybil attacks (wherein an adversary signs up many
+purportedly independent servers in order to increase her chances of observing
+a stream as it enters and leaves the network), the early Tor directory design
+required the operators of the authoritative directory servers to manually
+approve new ORs.  Unapproved ORs were included in the directory, but clients
+did not use them at the start or end of their circuits.  In practice,
+directory administrators performed little actual verification, and tended to
+approve any OR whose operator could compose a coherent email.  This procedure
+may have prevented trivial automated Sybil attacks, but would do little
+against a clever attacker.
+
+There are a number of flaws in this system that need to be addressed as we
+move forward.  They include:
+\begin{tightlist}
+\item Each directory server represents an independent point of failure; if
+  any one were compromised, it could immediately compromise all of its users
+  by recommending only compromised ORs.
+\item The more servers appear join the network, the more unreasonable it
+  becomes to expect clients to know about them all.  Directories
+  become unfeasibly large, and downloading the list of servers becomes
+  burdonsome.
+\item The validation scheme may do as much harm as it does good.  It is not
+  only incapable of preventing clever attackers from mounting Sybil attacks,
+  but may deter server operators from joining the network.  (For instance, if
+  they expect the validation process to be difficult, or if they do not share
+  any languages in common with the directory server operators.)
+\end{tightlist}
+
+We could try to move the system in several directions, depending on our
+choice of threat model and requirements.  If we did not need to increase
+network capacity in order to support more users, there would be no reason not
+to adopt even stricter validation requirements, and reduce the number of
+servers in the network to a trusted minimum.  But since we want Tor to work
+for as many users as it can, we need XXXXX
+
+In order to address the first two issues, it seems wise to move to a system
+including a number of semi-trusted directory servers, no one of which can
+compromise a user on its own.  Ultimately, of course, we cannot escape the
+problem of a first introducer: since most users will run Tor in whatever
+configuration the software ships with, the Tor distribution itself will
+remain a potential single point of failure so long as it includes the seed
+keys for directory servers, a list of directory servers, or any other means
+to learn which servers are on the network.  But omitting this information
+from the Tor distribution would only delegate the trust problem to the
+individual users, most of whom are presumably less informed about how to make
+trust decisions than the Tor developers.
+
+%Network discovery, sybil, node admission, scaling. It seems that the code
+%will ship with something and that's our trust root. We could try to get
+%people to build a web of trust, but no. Where we go from here depends
+%on what threats we have in mind. Really decentralized if your threat is
+%RIAA; less so if threat is to application data or individuals or...
+
+
 Game theory for helper nodes: if Alice offers a hidden service on a
 server (enclave model), and nobody ever uses helper nodes, then against
 George+Steven's attack she's totally nailed. If only Alice uses a helper
@@ -535,12 +667,6 @@ to discourage bad service without opening Alice up as much to attacks.
 %optimal efficiency (what we could get if we ignored the anonymity goals).
 
 \subsection{Peer-to-peer / practical issues}
-
-Network discovery, sybil, node admission, scaling. It seems that the code
-will ship with something and that's our trust root. We could try to get
-people to build a web of trust, but no. Where we go from here depends
-on what threats we have in mind. Really decentralized if your threat is
-RIAA; less so if threat is to application data or individuals or...
 
 Making use of servers with little bandwidth. How to handle hammering by
 certain applications.
