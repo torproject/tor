@@ -33,6 +33,11 @@ char *conn_state_to_string[][15] = {
     "close",             /* 2 */
     "close_wait" },      /* 3 */
   { "ready" }, /* or listener, 0 */
+#ifdef USE_TLS
+  { "connect()ing",                 /* 0 */
+    "handshaking",                  /* 1 */
+    "open" },                       /* 2 */
+#else
   { "connecting (as OP)",       /* or, 0 */
     "sending keys (as OP)",         /* 1 */
     "connecting (as client)",       /* 2 */
@@ -43,6 +48,7 @@ char *conn_state_to_string[][15] = {
     "sending auth (as server)",     /* 7 */
     "waiting for nonce (as server)",/* 8 */
     "open" },                       /* 9 */
+#endif
   { "waiting for dest info",     /* exit, 0 */
     "connecting",                      /* 1 */
     "open" },                          /* 2 */
@@ -88,7 +94,7 @@ connection_t *connection_new(int type) {
      buf_new(&conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen) < 0)
     return NULL;
 
-  conn->receiver_bucket = 10240; /* should be enough to do the handshake */
+  conn->receiver_bucket = 50000; /* should be enough to do the handshake */
   conn->bandwidth = conn->receiver_bucket / 10; /* give it a default */
 
   conn->timestamp_created = now.tv_sec;
@@ -254,7 +260,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
   switch(conn->type) {
     case CONN_TYPE_OR:
 #ifdef USE_TLS
-      if(connection_tls_start_handshake(conn) < 0)
+      if(connection_tls_start_handshake(conn, 1) < 0)
         return -1;
 #else
       conn->state = OR_CONN_STATE_SERVER_AUTH_WAIT;
@@ -271,14 +277,15 @@ static int connection_init_accepted_conn(connection_t *conn) {
 }
 
 #ifdef USE_TLS
-int connection_tls_start_handshake(connection_t *conn) {
+int connection_tls_start_handshake(connection_t *conn, int receiving) {
   conn->state = OR_CONN_STATE_HANDSHAKING;
-  conn->tls = tor_tls_new(conn->s, options.OnionRouter);
+  conn->tls = tor_tls_new(conn->s, receiving);
   if(!conn->tls) {
     log_fn(LOG_ERR,"tor_tls_new failed. Closing.");
     return -1;
   }
   connection_start_reading(conn);
+  log_fn(LOG_DEBUG,"starting the handshake");
   if(connection_tls_continue_handshake(conn) < 0)
     return -1;
   return 0;
@@ -294,8 +301,10 @@ static int connection_tls_continue_handshake(connection_t *conn) {
      return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
       connection_start_writing(conn);
+      log_fn(LOG_DEBUG,"wanted write");
       return 0;
     case TOR_TLS_WANTREAD: /* handshaking conns are *always* reading */
+      log_fn(LOG_DEBUG,"wanted read");
       return 0;
   }
   return 0;
