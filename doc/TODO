@@ -123,6 +123,10 @@ NICK    - Reputation info needs to give better weight to recent events than
             - which means keeping track of which ones are "up"
           - if you don't need a trusted one, choose from the routerinfo
             list if you have one, else from the trusteddir list.
+        - compress the directory. client sends http header
+          "accept-transfer-encoding: gzip", server might send http header
+          "transfer-encoding: gzip". ta-da.
+          - grow a zlib dependency. keep a cached compressed directory.
 
 
       ongoing:
