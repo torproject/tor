@@ -138,13 +138,14 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&one, sizeof(one));
 
   if(bind(s,(struct sockaddr *)bindaddr,sizeof(*bindaddr)) < 0) {
-    perror("bind ");
-    log(LOG_WARN,"Could not bind to port %u.",ntohs(bindaddr->sin_port));
+    log(LOG_WARN,"Could not bind to port %u: %s",ntohs(bindaddr->sin_port),
+        strerror(errno));
     return -1;
   }
 
   if(listen(s,SOMAXCONN) < 0) {
-    log(LOG_WARN,"Could not listen on port %u.",ntohs(bindaddr->sin_port));
+    log(LOG_WARN,"Could not listen on port %u: %s",ntohs(bindaddr->sin_port),
+        strerror(errno));
     return -1;
   }
 

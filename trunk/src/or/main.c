@@ -6,7 +6,7 @@
 
 /********* START PROTOTYPES **********/
 
-static void dumpstats(void); /* dump stats to stdout */
+static void dumpstats(int severity); /* log stats */
 
 /********* START VARIABLES **********/
 
@@ -601,7 +601,7 @@ static int do_main_loop(void) {
   for(;;) {
 #ifndef MS_WIN32 /* do signal stuff only on unix */
     if(please_dumpstats) {
-      dumpstats();
+      dumpstats(LOG_INFO);
       please_dumpstats = 0;
     }
     if(please_reset) {
@@ -630,13 +630,15 @@ static int do_main_loop(void) {
     /* poll until we have an event, or the second ends */
     poll_result = poll(poll_array, nfds, timeout);
 
-#if 0 /* let catch() handle things like ^c, and otherwise don't worry about it */
+    /* let catch() handle things like ^c, and otherwise don't worry about it */
     if(poll_result < 0) {
-      log(LOG_ERR,"do_main_loop(): poll failed.");
-      if(errno != EINTR) /* let the program survive things like ^z */
+      if(errno != EINTR) { /* let the program survive things like ^z */
+        log_fn(LOG_ERR,"poll failed.");
         return -1;
+      } else {
+        log_fn(LOG_DEBUG,"poll interrupted."):
+      }
     }
-#endif
 
     /* do all the reads and errors first, so we can detect closed sockets */
     for(i=0;i<nfds;i++)
@@ -683,36 +685,36 @@ static void catch(int the_signal) {
 #endif /* signal stuff */
 }
 
-static void dumpstats(void) { /* dump stats to stdout */
+static void dumpstats(int severity) {
   int i;
   connection_t *conn;
   time_t now = time(NULL);
 
-  printf("Dumping stats:\n");
+  log(severity, "Dumping stats:");
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
-    printf("Conn %d (socket %d) type %d (%s), state %d (%s), created %ld secs ago\n",
+    log(severity, "Conn %d (socket %d) type %d (%s), state %d (%s), created %ld secs ago",
       i, conn->s, conn->type, conn_type_to_string[conn->type],
       conn->state, conn_state_to_string[conn->type][conn->state], now - conn->timestamp_created);
     if(!connection_is_listener(conn)) {
-      printf("Conn %d is to '%s:%d'.\n",i,conn->address, conn->port);
-      printf("Conn %d: %d bytes waiting on inbuf (last read %ld secs ago)\n",i,
+      log(severity,"Conn %d is to '%s:%d'.",i,conn->address, conn->port);
+      log(severity,"Conn %d: %d bytes waiting on inbuf (last read %ld secs ago)",i,
              (int)buf_datalen(conn->inbuf),
              now - conn->timestamp_lastread);
-      printf("Conn %d: %d bytes waiting on outbuf (last written %ld secs ago)\n",i,
+      log(severity,"Conn %d: %d bytes waiting on outbuf (last written %ld secs ago)",i,
              (int)buf_datalen(conn->outbuf), now - conn->timestamp_lastwritten);
     }
-    circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
-    printf("\n");
+    circuit_dump_by_conn(conn, severity); /* dump info about all the circuits using this conn */
   }
-  printf("Cells processed: %10lu padding\n"
+  log(severity,
+         "Cells processed: %10lu padding\n"
          "                 %10lu create\n"
          "                 %10lu created\n"
          "                 %10lu relay\n"
          "                        (%10lu relayed)\n"
          "                        (%10lu delivered)\n"
-         "                 %10lud destroy\n",
+         "                 %10lud destroy",
          stats_n_padding_cells_processed,
          stats_n_create_cells_processed,
          stats_n_created_cells_processed,
@@ -721,16 +723,16 @@ static void dumpstats(void) { /* dump stats to stdout */
          stats_n_relay_cells_delivered,
          stats_n_destroy_cells_processed);
   if (stats_n_data_cells_packaged)
-    printf("Average outgoing cell fullness: %2.3f%%\n",
+    log(severity,"Average outgoing cell fullness: %2.3f%%",
            100*(((double)stats_n_data_bytes_packaged) / 
                 (stats_n_data_cells_packaged*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
   if (stats_n_data_cells_packaged)
-    printf("Average incoming cell fullness: %2.3f%%\n",
+    log(severity,"Average incoming cell fullness: %2.3f%%",
            100*(((double)stats_n_data_bytes_received) / 
                 (stats_n_data_cells_received*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
   
   if (stats_n_seconds_reading)
-    printf("Average bandwidth used: %d bytes/sec\n",
+    log(severity,"Average bandwidth used: %d bytes/sec",
            (int) (stats_n_bytes_read/stats_n_seconds_reading));
 }
 
@@ -789,7 +791,7 @@ int tor_main(int argc, char *argv[]) {
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
   signal (SIGINT,  catch); /* catch kills so we can exit cleanly */
   signal (SIGTERM, catch);
-  signal (SIGUSR1, catch); /* to dump stats to stdout */
+  signal (SIGUSR1, catch); /* to dump stats */
   signal (SIGHUP,  catch); /* to reload directory */
   signal (SIGCHLD, catch); /* for exiting dns/cpu workers */
 #endif /* signal stuff */

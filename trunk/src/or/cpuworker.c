@@ -170,7 +170,7 @@ static int spawn_cpuworker(void) {
   connection_t *conn;
 
   if(tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
-    perror("socketpair");
+    log(LOG_ERR, "Couldn't construct socketpair: %s", strerror(errno));
     exit(1);
   }
 
