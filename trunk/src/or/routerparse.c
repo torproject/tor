@@ -662,12 +662,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
       router->socks_port = atoi(tok->args[3]);
       router->dir_port = atoi(tok->args[4]);
       ports_set = 1;
-      /* XXXX Remove this after everyone has moved to 0.0.6 */
-      if (tok->n_args == 6) {
-        router->bandwidthrate = atoi(tok->args[5]);
-        router->bandwidthburst = router->bandwidthrate * 10;
-        bw_set = 1;
-      }
     }
   } else {
     log_fn(LOG_WARN,"Wrong # of arguments to \"router\" (%d)",tok->n_args);
@@ -705,12 +699,15 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     log_fn(LOG_WARN,"Redundant bandwidth line");
     goto err;
   } else if (tok) {
+    /* XXX set this to "< 3" once 0.0.7 is obsolete */
     if (tok->n_args < 2) {
       log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\"");
       goto err;
     }
     router->bandwidthrate = atoi(tok->args[0]);
     router->bandwidthburst = atoi(tok->args[1]);
+    if(tok->n_args > 2)
+      router->advertisedbandwidth = atoi(tok->args[2]);
     bw_set = 1;
   }
 
