@@ -50,31 +50,48 @@ void router_retry_connections(void) {
 }
 
 routerinfo_t *router_pick_directory_server(void) {
-  /* pick the first running router with a positive dir_port */
-  int i;
+  /* pick a random running router with a positive dir_port */
+  int i,j;
   routerinfo_t *router, *dirserver=NULL;
-  
+  int num_dirservers=0;
+
   if(!directory)
     return NULL;
 
   for(i=0;i<directory->n_routers;i++) {
     router = directory->routers[i];
     if(router->dir_port > 0 && router->is_running)
-      return router;
+      num_dirservers++;
   }
 
-  log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
-  /* no running dir servers found? go through and mark them all as up,
-   * and we'll cycle through the list again. */
-  for(i=0;i<directory->n_routers;i++) {
+  if(!num_dirservers) {
+    log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
+    /* no running dir servers found? go through and mark them all as up,
+     * and we'll cycle through the list again. */
+    for(i=0;i<directory->n_routers;i++) {
+      router = directory->routers[i];
+      if(router->dir_port > 0) {
+        router->is_running = 1;
+        dirserver = router;
+      }
+    }
+    return dirserver;
+  }
+
+  j = crypto_pseudo_rand_int(num_dirservers);
+  for (i=0;i<directory->n_routers;i++) {
     router = directory->routers[i];
-    if(router->dir_port > 0) {
-      router->is_running = 1;
-      dirserver = router;
+    if (router->dir_port > 0 && router->is_running) {
+      if (j)
+        --j;
+      else {
+        log_fn(LOG_DEBUG, "Chose server '%s'", router->nickname);
+        return router;
+      }
     }
   }
-
-  return dirserver;
+  assert(0);
+  return NULL;
 }
 
 routerinfo_t *router_pick_randomly_from_running(void) {
