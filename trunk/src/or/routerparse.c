@@ -724,7 +724,7 @@ static int check_directory_signature(const char *digest,
     _pkey = pkey;
   }
   if (!_pkey) {
-    log_fn(LOG_WARN, "Found directory in old (before 0.0.9pre3) format--rejecting.");
+    log_fn(LOG_WARN, "Obsolete directory format (dir signing key not present) or signing key not trusted--rejecting.");
     return -1;
   }
 
