@@ -28,7 +28,7 @@
 void log_set_severity(int severity);
 
 void add_stream_log(int loglevel, const char *name, FILE *stream);
-void add_file_log(int severity, const char *filename);
+int add_file_log(int severity, const char *filename);
 void close_logs();
 void reset_logs();
 

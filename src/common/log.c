@@ -155,12 +155,13 @@ void add_stream_log(int loglevel, const char *name, FILE *stream)
   logfiles = lf;
 }
 
-void add_file_log(int loglevel, const char *filename) 
+int add_file_log(int loglevel, const char *filename) 
 {
   FILE *f;
   f = fopen(filename, "a");
-  if (!f) return;
+  if (!f) return -1;
   add_stream_log(loglevel, filename, f);
   logfiles->needs_close = 1;
+  return 0;
 }
 
