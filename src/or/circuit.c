@@ -18,6 +18,7 @@ unsigned long stats_n_relay_cells_delivered = 0;
 
 /********* START VARIABLES **********/
 
+static int circuitlist_len=0;
 static circuit_t *global_circuitlist=NULL;
 char *circuit_state_to_string[] = {
   "doing handshakes",        /* 0 */
@@ -36,6 +37,7 @@ void circuit_add(circuit_t *circ) {
     circ->next = global_circuitlist;
     global_circuitlist = circ;
   }
+  ++circuitlist_len;
 }
 
 void circuit_remove(circuit_t *circ) {
@@ -45,12 +47,14 @@ void circuit_remove(circuit_t *circ) {
 
   if(global_circuitlist == circ) {
     global_circuitlist = global_circuitlist->next;
+    --circuitlist_len;
     return;
   }
 
   for(tmpcirc = global_circuitlist;tmpcirc->next;tmpcirc = tmpcirc->next) {
     if(tmpcirc->next == circ) {
       tmpcirc->next = circ->next;
+      --circuitlist_len;
       return;
     }
   }
@@ -59,9 +63,8 @@ void circuit_remove(circuit_t *circ) {
 void circuit_close_all_marked()
 {
   circuit_t *tmp,*m;
-  
+
   while (global_circuitlist && global_circuitlist->marked_for_close) {
-    
     tmp = global_circuitlist->next;
     circuit_free(global_circuitlist);
     global_circuitlist = tmp;
@@ -325,8 +328,8 @@ int circuit_count_building(void) {
   int num=0;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath 
-       && circ->state != CIRCUIT_STATE_OPEN 
+    if(circ->cpath
+       && circ->state != CIRCUIT_STATE_OPEN
        && !circ->marked_for_close)
       num++;
   }
@@ -343,7 +346,7 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   int num=0;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN && 
+    if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN &&
        !circ->marked_for_close) {
       exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
       if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) != ADDR_POLICY_REJECTED)
@@ -907,34 +910,44 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
   }
 }
 
-/* Expire unused testing circuits after 10 minutes. */
-#define TESTING_CIRCUIT_MAX_AGE 600
+/* Don't keep more than 10 unused open circuits around. */
+#define MAX_UNUSED_OPEN_CIRCUITS 10
 
 void circuit_expire_unused_circuits(void) {
-  circuit_t *circ, *tmpcirc;
+  circuit_t *circ;
   time_t now = time(NULL);
+  smartlist_t *unused_open_circs;
+  int i;
 
-  circ = global_circuitlist;
-  while(circ) {
-    tmpcirc = circ;
-    circ = circ->next;
+  unused_open_circs = smartlist_create(circuitlist_len);
+
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (circ->marked_for_close)
+      continue;
     /* If the circuit has been dirty for too long, and there are no streams
      * on it, mark it for close.
-     * If we are creating test circuits, and the circuit is old, and has
-     * no streams, shut it down even if it isn't dirty.
      */
-    if(((tmpcirc->timestamp_dirty &&
-         tmpcirc->timestamp_dirty + options.NewCircuitPeriod < now) ||
-        (options.RunTesting &&
-         tmpcirc->cpath &&
-         tmpcirc->timestamp_created + TESTING_CIRCUIT_MAX_AGE < now))
-       && !tmpcirc->p_conn
-       && !tmpcirc->p_streams
-       && !tmpcirc->marked_for_close) {
-      log_fn(LOG_DEBUG,"Closing n_circ_id %d",tmpcirc->n_circ_id);
-      circuit_mark_for_close(tmpcirc);
+    if (circ->timestamp_dirty &&
+        circ->timestamp_dirty + options.NewCircuitPeriod < now &&
+        !circ->p_conn &&
+        !circ->p_streams) {
+      log_fn(LOG_DEBUG,"Closing n_circ_id %d",circ->n_circ_id);
+      circuit_mark_for_close(circ);
+    } else if (!circ->timestamp_dirty && circ->cpath &&
+               circ->state == CIRCUIT_STATE_OPEN) {
+      /* Also, gather a list of open unused circuits that we created.
+       * Because we add elements to the front of global_circuitlist,
+       * the last elements of unused_open_circs will be the oldest
+       * ones.
+       */
+      smartlist_add(unused_open_circs, circ);
     }
   }
+  for (i = MAX_UNUSED_OPEN_CIRCUITS; i < unused_open_circs->num_used; ++i) {
+    circuit_t *circ=(circuit_t*)(unused_open_circs->list[i]);
+    circuit_mark_for_close(circ);
+  }
+  smartlist_free(unused_open_circs);
 }
 
 /* Number of consecutive failures so far; should only be touched by
@@ -1351,7 +1364,7 @@ void assert_circuit_ok(const circuit_t *c)
     if (c->cpath) {
       assert(!c->n_crypto);
       assert(!c->p_crypto);
-      assert(!c->n_digest); 
+      assert(!c->n_digest);
       assert(!c->p_digest);
     } else {
       assert(c->n_crypto);
