@@ -1,5 +1,5 @@
 # List of core onion routers in the network.
-# Line format : router-address router-port min-bandwidth(kilobytes/s) max-bandwidthkilobytes/s)
+# Line format : router-address router-port bandwidth(bytes/s) bandwidth(bytes/s)
 # followed by the routers public key.
 # router-port is where the router is accepting connections from other routers.
 
