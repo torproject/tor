@@ -489,13 +489,10 @@ int connection_handle_write(connection_t *conn) {
   return 0;
 }
 
-int connection_write_to_buf(const char *string, int len, connection_t *conn) {
+void connection_write_to_buf(const char *string, int len, connection_t *conn) {
 
-  if(!len)
-    return 0;
-
-  if(conn->marked_for_close)
-    return 0;
+  if(!len || conn->marked_for_close)
+    return;
 
   if( (!connection_speaks_cells(conn)) ||
       (!connection_state_is_open(conn)) ||
@@ -506,7 +503,10 @@ int connection_write_to_buf(const char *string, int len, connection_t *conn) {
     conn->outbuf_flushlen += len;
   }
 
-  return write_to_buf(string, len, conn->outbuf);
+  if(write_to_buf(string, len, conn->outbuf) < 0) {
+    log_fn(LOG_WARNING,"write_to_buf failed. Closing connection (fd %d).", conn->s);
+    conn->marked_for_close = 1;
+  }
 }
 
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
@@ -653,7 +653,8 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   cell.aci = aci;
   cell.command = CELL_DESTROY;
   log_fn(LOG_INFO,"Sending destroy (aci %d).",aci);
-  return connection_write_cell_to_buf(&cell, conn);
+  connection_write_cell_to_buf(&cell, conn);
+  return 0;
 }
 
 int connection_process_inbuf(connection_t *conn) {

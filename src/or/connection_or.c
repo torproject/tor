@@ -248,13 +248,13 @@ static int connection_tls_finish_handshake(connection_t *conn) {
 
 /* ********************************** */
 
-int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
+void connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
 
   cell_pack(n, cellp);
  
-  return connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
+  connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
 }
 
 /* if there's a whole cell there, pull it off and process it. */

@@ -170,14 +170,8 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   num_dnsworkers_busy++;
 
   len = strlen(dnsconn->address);
-  /* FFFF we should have it retry if the first worker bombs out */
-  if(connection_write_to_buf(&len, 1, dnsconn) < 0 ||
-     connection_write_to_buf(dnsconn->address, len, dnsconn) < 0) {
-    log_fn(LOG_WARNING,"Write failed. Closing worker and failing resolve.");
-    dnsconn->marked_for_close = 1;
-    dns_cancel_pending_resolve(exitconn->address, NULL);
-    return -1;
-  }
+  connection_write_to_buf(&len, 1, dnsconn);
+  connection_write_to_buf(dnsconn->address, len, dnsconn);
 
 //  log_fn(LOG_DEBUG,"submitted '%s'", exitconn->address);
   return 0;

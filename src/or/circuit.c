@@ -267,7 +267,8 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   log_fn(LOG_DEBUG,"Passing on unrecognized cell.");
-  return connection_write_cell_to_buf(cell, conn);
+  connection_write_cell_to_buf(cell, conn);
+  return 0;
 }
 
 int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
@@ -737,9 +738,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       return -1;
     }
 
-    if(connection_write_cell_to_buf(&cell, circ->n_conn) < 0) {
-      return -1;
-    }
+    connection_write_cell_to_buf(&cell, circ->n_conn);
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
     circ->state = CIRCUIT_STATE_BUILDING;
@@ -843,10 +842,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
 
   memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6, DH_ONIONSKIN_LEN);
 
-  if(connection_write_cell_to_buf(&newcell, circ->n_conn) < 0) {
-    return -1;
-  }
-
+  connection_write_cell_to_buf(&newcell, circ->n_conn);
   return 0;
 }
 

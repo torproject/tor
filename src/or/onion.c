@@ -151,9 +151,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
     return -1;
   }
 
-  if(connection_write_cell_to_buf(&cell, circ->p_conn) < 0) {
-    return -1;
-  }
+  connection_write_cell_to_buf(&cell, circ->p_conn);
   log_fn(LOG_DEBUG,"Finished sending 'created' cell.");
 
   return 0;
