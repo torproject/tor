@@ -147,7 +147,8 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
     router = smartlist_get(routerlist->routers, i);
     if(router->is_running &&
        (!options.ORPort ||
-        connection_twin_get_by_addr_port(router->addr, router->or_port) ))
+        connection_get_by_identity_digest(router->identity_digest,
+                                          CONN_TYPE_OR)))
       smartlist_add(sl, router);
   }
 }

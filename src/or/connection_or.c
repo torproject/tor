@@ -160,7 +160,8 @@ connection_t *connection_or_connect(routerinfo_t *router) {
 
   /* this function should never be called if we're already connected to router, but */
   /* check first to be sure */
-  conn = connection_exact_get_by_addr_port(router->addr,router->or_port);
+  conn = connection_get_by_identity_digest(router->identity_digest,
+                                           CONN_TYPE_OR);
   if(conn)
     return conn;
 
@@ -304,7 +305,7 @@ connection_tls_finish_handshake(connection_t *conn) {
       return -1;
     }
   } else {
-    if((c=connection_exact_get_by_addr_port(router->addr,router->or_port))) {
+    if((c=connection_get_by_identity_digest(router->identity_digest, CONN_TYPE_OR))) {
       log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", router->nickname, c->s, conn->s);
       return -1;
     }
