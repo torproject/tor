@@ -145,7 +145,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
   int cell_direction;
 
   if(!circ) {
-    log_fn(LOG_WARN,"no circ. Closing.");
+    log_fn(LOG_WARN,"no circ. Closing conn.");
     assert(fromconn);
     connection_mark_for_close(fromconn, 0);
     return -1;
@@ -212,15 +212,15 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         log_fn(LOG_WARN,"Got 'connected' while not in state connecting. Dropping.");
         return 0;
       }
-      log_fn(LOG_INFO,"Connected! Notifying application.");
+//      log_fn(LOG_INFO,"Connected! Notifying application.");
       conn->state = AP_CONN_STATE_OPEN;
       if (rh.length >= 4) {
         addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
         client_dns_set_entry(conn->socks_request->address, addr);
       }
-      log_fn(LOG_WARN,"'connected' received after %d seconds.",
+      log_fn(LOG_INFO,"'connected' received after %d seconds.",
              (int)(time(NULL) - conn->timestamp_lastread));
-      circuit_log_path(LOG_WARN,circ);
+      circuit_log_path(LOG_INFO,circ);
       if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
         log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
         connection_mark_for_close(conn, END_STREAM_REASON_MISC);
@@ -357,8 +357,12 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       circuit_truncated(circ, layer_hint);
       return 0;
     case RELAY_COMMAND_CONNECTED:
-      log_fn(LOG_WARN,"'connected' unsupported while open. Closing.");
-      return -1;
+      if(conn) {
+        log_fn(LOG_WARN,"'connected' unsupported while open. Closing conn.");
+        return -1;
+      }
+      log_fn(LOG_INFO,"'connected' received, no conn attached anymore. Ignoring.");
+      return 0;
     case RELAY_COMMAND_SENDME:
       if(!conn) {
         if(edge_type == EDGE_AP) {
@@ -562,7 +566,7 @@ void connection_ap_attach_pending(void)
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
     if(connection_ap_handshake_attach_circuit(conn) < 0) {
-      /* it will never work */
+      /* -1 means it will never work */
       /* Don't send end; there is no 'other end' of the stream */
       connection_mark_for_close(conn,0);
     }
@@ -661,7 +665,7 @@ static int connection_ap_handshake_attach_circuit_helper(connection_t *conn) {
     log_fn(LOG_INFO,"No safe circuit ready for edge connection; delaying.");
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
-      log_fn(LOG_WARN,"No node exists that will handle exit to %s:%d. Rejecting.",
+      log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
              conn->socks_request->address, conn->socks_request->port);
       return -1;
     }
@@ -672,7 +676,7 @@ static int connection_ap_handshake_attach_circuit_helper(connection_t *conn) {
   connection_start_reading(conn);
 
   /* here, print the circ's path. so people can figure out which circs are sucking. */
-  circuit_log_path(LOG_WARN,circ);
+  circuit_log_path(LOG_INFO,circ);
 
   if(!circ->timestamp_dirty)
     circ->timestamp_dirty = time(NULL);
@@ -980,6 +984,7 @@ static uint32_t client_dns_lookup_entry(const char *address)
     return ent->addr;
   }
 }
+
 static void client_dns_set_entry(const char *address, uint32_t val)
 {
   struct client_dns_entry *ent;

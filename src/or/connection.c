@@ -407,8 +407,8 @@ int connection_handle_read(connection_t *conn) {
 
   if(connection_read_to_buf(conn) < 0) {
     if(conn->type == CONN_TYPE_DIR &&
-      (conn->state == DIR_CONN_STATE_CONNECTING_FETCH ||
-       conn->state == DIR_CONN_STATE_CONNECTING_UPLOAD)) {
+       (conn->state == DIR_CONN_STATE_CONNECTING_FETCH ||
+        conn->state == DIR_CONN_STATE_CONNECTING_UPLOAD)) {
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_mark_as_down(conn->nickname);
@@ -512,10 +512,7 @@ int connection_outbuf_too_full(connection_t *conn) {
 /* return -1 if you want to break the conn, else return 0 */
 int connection_handle_write(connection_t *conn) {
 
-  if(connection_is_listener(conn)) {
-    log_fn(LOG_WARN,"Got a listener socket. Can't happen!");
-    return -1;
-  }
+  assert(!connection_is_listener(conn));
 
   conn->timestamp_lastwritten = time(NULL);
 
@@ -631,7 +628,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
   /* first check if it's there exactly */
   conn = connection_exact_get_by_addr_port(addr,port);
   if(conn && connection_state_is_open(conn)) {
-    log(LOG_INFO,"connection_twin_get_by_addr_port(): Found exact match.");
+    log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found exact match.");
     return conn;
   }
 
@@ -647,7 +644,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
     assert(conn);
     if(connection_state_is_open(conn) &&
        !crypto_pk_cmp_keys(conn->onion_pkey, router->onion_pkey)) {
-      log(LOG_INFO,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
+      log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
       return conn;
     }
   }
@@ -808,7 +805,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
 {
   assert(conn);
   assert(conn->magic == CONNECTION_MAGIC);
-  return;
+  return; /* XXX !!! */
   assert(conn->type >= _CONN_TYPE_MIN);
   assert(conn->type <= _CONN_TYPE_MAX);
 
