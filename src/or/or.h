@@ -219,7 +219,7 @@
 typedef struct {
    unsigned char version;     /* socks version number */
    unsigned char command;     /* command code */
-   uint16_t destport; /* destination port, network order */
+   uint16_t destport; /* destination port, host order */
    uint32_t destip;   /* destination address, host order */
    /* userid follows, terminated by a \0 */
    /* dest host follows, terminated by a \0 */
