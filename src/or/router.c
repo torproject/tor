@@ -687,8 +687,6 @@ int router_rebuild_descriptor(int force) {
 
   if (options->BandwidthRate > options->MaxAdvertisedBandwidth)
     ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
-  if (ri->bandwidthcapacity > options->MaxAdvertisedBandwidth)
-    ri->bandwidthcapacity = (int)options->MaxAdvertisedBandwidth;
 
   router_add_exit_policy_from_config(ri);
   if (desc_routerinfo) /* inherit values */
