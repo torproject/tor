@@ -871,77 +871,6 @@ char *read_file_to_str(const char *filename, int bin) {
   return string;
 }
 
-/** read lines from f (no more than maxlen-1 bytes each) until we
- * get a non-whitespace line. If it isn't of the form "key value"
- * (value can have spaces), return -1.
- * Point *key to the first word in line, point *value * to the second.
- * Put a \0 at the end of key, remove everything at the end of value
- * that is whitespace or comment.
- * Return 1 if success, 0 if no more lines, -1 if error.
- */
-int
-parse_line_from_file(char *line, size_t maxlen, FILE *f,
-                     char **key_out, char **value_out) {
-  char *s;
-
-try_next_line:
-  if(!fgets(line, maxlen, f)) {
-    if(feof(f))
-      return 0;
-    return -1; /* real error */
-  }
-  line[maxlen-1] = '\0';
-
-  s = parse_line_from_str(line, key_out, value_out);
-  if (!s)
-    return -1;
-  if (!*key_out)
-    goto try_next_line;
-
-  return 1;
-
-#if 0
-
-  if((s = strchr(line,'#'))) /* strip comments */
-    *s = 0; /* stop the line there */
-
-  /* remove end whitespace */
-  s = strchr(line, 0); /* now we're at the null */
-  do {
-    *s = 0;
-    s--;
-  } while (s >= line && isspace((int)*s));
-
-  key = line;
-  while(isspace((int)*key))
-    key++;
-  if(*key == 0)
-    goto try_next_line; /* this line has nothing on it */
-  end = key;
-  while(*end && !isspace((int)*end))
-    end++;
-  value = end;
-  while(*value && isspace((int)*value))
-    value++;
-
-#if 0
-  if(!*end || !*value) { /* only a key on this line. no value. */
-    *end = 0;
-    log_fn(LOG_WARN,"Line has keyword '%s' but no value. Failing.",key);
-    return -1;
-  }
-#endif
-  *end = 0; /* null it out */
-
-  tor_assert(key);
-  tor_assert(value);
-  log_fn(LOG_DEBUG,"got keyword '%s', value '%s'", key, value);
-  *key_out = key, *value_out = value;
-  return 1;
-#endif
-}
-
-
 /** DOCDOC.
  *
  * Return next line or end of string on success, NULL on failure.
@@ -1149,7 +1078,7 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
     tor_free(_address);
   }
   if (port)
-    *port =  ok ? ((uint16_t) _port) : 0;
+    *port = ok ? ((uint16_t) _port) : 0;
 
   return ok ? 0 : -1;
 }
