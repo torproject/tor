@@ -275,6 +275,7 @@ static int connection_or_process_cell_from_inbuf(connection_t *conn) {
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
 
+loop:
   log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d (%d pending in tls object).",
          conn->s,(int)buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls));
   if(buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* entire response available? */
@@ -282,14 +283,13 @@ static int connection_or_process_cell_from_inbuf(connection_t *conn) {
  
   connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, conn);
  
-  /* retrieve cell info from buf (create the host-order struct from the network-order string) */
+  /* retrieve cell info from buf (create the host-order struct from the
+   * network-order string) */
   cell_unpack(&cell, buf);
  
   command_process_cell(&cell, conn);
 
-  /* CLEAR Shouldn't this be connection_or_process_inbuf at least? Or maybe
-     just use a loop?  If not, doc why not. */
-  return connection_process_inbuf(conn); /* process the remainder of the buffer */
+  goto loop; /* process the remainder of the buffer */
 }
 
 /*

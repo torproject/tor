@@ -108,7 +108,8 @@ dirserv_parse_fingerprint_file(const char *fname)
   return -1;
 }    
 
-/* return 1 if router's identity and nickname match. */
+/* return 1 if router's identity and nickname match,
+ * -1 if they don't match, 0 if the nickname is not known. */
 int
 dirserv_router_fingerprint_is_known(const routerinfo_t *router)
 {
@@ -126,19 +127,19 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
   
   if (!ent) { /* No such server known */
-    log_fn(LOG_WARN,"no fingerprint found for %s",router->nickname);
+    log_fn(LOG_INFO,"no fingerprint found for %s",router->nickname);
     return 0;
   }
   if (crypto_pk_get_fingerprint(router->identity_pkey, fp)) {
     log_fn(LOG_WARN,"error computing fingerprint");
-    return 0;
+    return -1;
   }
   if (0==strcasecmp(ent->fingerprint, fp)) {
     log_fn(LOG_DEBUG,"good fingerprint for %s",router->nickname);
     return 1; /* Right fingerprint. */
   } else {
     log_fn(LOG_WARN,"mismatched fingerprint for %s",router->nickname);
-    return 0; /* Wrong fingerprint. */
+    return -1; /* Wrong fingerprint. */
   }
 }
 
@@ -183,15 +184,21 @@ dirserv_free_descriptors()
   n_descriptors = 0;
 }
 
-/* Return 0 if descriptor added; -1 if descriptor rejected.  Updates *desc
- * to point after the descriptor if the descriptor is OK.
+/* Return 0 if descriptor is well-formed; -1 if descriptor is not
+ * well-formed.  Update *desc to point after the descriptor if the
+ * descriptor is well-formed.
+ */
+/* XXX down the road perhaps we should return 1 for accepted, 0 for
+ * well-formed but rejected, -1 for not-well-formed. So remote servers
+ * can know if their submission was accepted and not just whether it
+ * was well-formed. ...Or maybe we shouldn't give them that info?
  */
 int
 dirserv_add_descriptor(const char **desc)
 {
   descriptor_entry_t **desc_ent_ptr;
   routerinfo_t *ri = NULL;
-  int i;
+  int i, r;
   char *start, *end;
   char *desc_tmp = NULL, *cp;
   size_t desc_len;
@@ -221,14 +228,23 @@ dirserv_add_descriptor(const char **desc)
   }
   tor_free(desc_tmp);
   /* Okay.  Now check whether the fingerprint is recognized. */
-  if (!dirserv_router_fingerprint_is_known(ri)) {
-    log_fn(LOG_WARN, "Identity is unrecognized for descriptor");
-    goto err;
+  r = dirserv_router_fingerprint_is_known(ri);
+  if(r<1) {
+    if(r==0) {
+      log_fn(LOG_WARN, "Unknown nickname %s. Not adding.", ri->nickname);
+    } else {
+      log_fn(LOG_WARN, "Known nickname %s, wrong fingerprint. Not adding.", ri->nickname);
+    }
+    routerinfo_free(ri);
+    *desc = end;
+    return 0;
   }
   /* Is there too much clock skew? */
   if (ri->published_on > time(NULL)+ROUTER_ALLOW_SKEW) {
-    log_fn(LOG_WARN, "Publication time for nickname %s is too far in the future; possible clock skew.", ri->nickname);
-    goto err;
+    log_fn(LOG_WARN, "Publication time for nickname %s is too far in the future; possible clock skew. Not adding", ri->nickname);
+    routerinfo_free(ri);
+    *desc = end;
+    return 0;
   }
   /* Do we already have an entry for this router? */
   desc_ent_ptr = NULL;
@@ -244,8 +260,7 @@ dirserv_add_descriptor(const char **desc)
       /* We already have a newer descriptor */
       log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Not adding.",ri->nickname);
       /* This isn't really an error; return. */
-      tor_free(desc_tmp);
-      if (ri) routerinfo_free(ri);
+      routerinfo_free(ri);
       *desc = end;
       return 0;
     }
@@ -254,6 +269,7 @@ dirserv_add_descriptor(const char **desc)
   } else {
     /* Add this at the end. */
     desc_ent_ptr = &descriptor_list[n_descriptors++];
+    /* XXX check if n_descriptors is too big */
   }
   
   (*desc_ent_ptr) = tor_malloc(sizeof(descriptor_entry_t));
