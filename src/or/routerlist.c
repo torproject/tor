@@ -566,16 +566,24 @@ int router_add_to_routerlist(routerinfo_t *router) {
         routerinfo_free(router);
         return -1;
       }
-    } else if (!strcmp(router->nickname, r->nickname)) {
+    } else if (!strcasecmp(router->nickname, r->nickname)) {
       /* nicknames match, keys don't. */
       if (router->is_verified) {
         /* The new verified router replaces the old one; remove the
-         * old one.  and carry on to the end of the list, in case
+         * old one.  And carry on to the end of the list, in case
          * there are more old unverifed routers with this nickname
          */
+        /* mark-for-close connections using the old key, so we can
+         * make new ones with the new key.
+         */
+        connection_t *conn;
+        while((conn = connection_get_by_identity_digest(r->identity_digest,
+                                                        CONN_TYPE_OR))) {
+          log_fn(LOG_INFO,"Closing conn to obsolete router '%s'", r->nickname);
+          connection_mark_for_close(conn);
+        }
         routerinfo_free(r);
         smartlist_del_keeporder(routerlist->routers, i--);
-        /* XXXX What do we do about any connections using the old key? */
       } else if (r->is_verified) {
         /* Can't replace a verified router with an unverified one. */
         log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
