@@ -578,7 +578,6 @@ static int do_main_loop(void) {
 
   if(options.ORPort) {
     cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the onion key. */
-    router_upload_dir_desc_to_dirservers(); /* upload our descriptor to all dirservers */
   }
 
   /* start up the necessary connections based on which ports are
