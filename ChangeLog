@@ -1,3 +1,81 @@
+Release notes in progress for 0.0.8:
+pre1:
+  o Bugfixes:
+    - Made our unit tests compile again on OpenBSD 3.5, and tor
+      itself compile again on OpenBSD on a sparc64.
+    - We were neglecting milliseconds when logging on win32, so
+      everything appeared to happen at the beginning of each second.
+
+  o Protocol changes:
+    - 'Extend' relay cell payloads now include the digest of the
+      intended next hop's identity key. Now we can verify that we're
+      extending to the right router, and also extend to routers we
+      hadn't heard of before.
+
+  o Features:
+    - Tor nodes can now act as relays (with an advertised ORPort)
+      without being manually verified by the dirserver operators.
+      - Uploaded descriptors of unverified routers are now accepted
+        by the dirservers, and included in the directory.
+      - Verified routers are listed by nickname in the running-routers
+        list; unverified routers are listed as "$<fingerprint>".
+      - We now use hash-of-identity-key in most places rather than
+        nickname or addr:port, for improved security/flexibility.
+      - To avoid Sybil attacks, paths still use only verified servers.
+        But now we have a chance to play around with hybrid approaches.
+      - Nodes track bandwidth usage to estimate capacity (not used yet).
+      - ClientOnly option for nodes that never want to become servers.
+    - Directory caching.
+      - "AuthoritativeDir 1" option for the official dirservers.
+      - Now other nodes (clients and servers) will cache the latest
+        directory they've pulled down.
+      - They can enable their DirPort to serve it to others.
+      - Clients will pull down a directory from any node with an open
+        DirPort, and check the signature/timestamp correctly.
+      - Authoritative dirservers now fetch directories from other
+        authdirservers, to stay better synced.
+      - Running-routers list tells who's down also, along with noting
+        if they're verified (listed by nickname) or unverified (listed
+        by hash-of-key).
+      - Allow dirservers to serve running-router list separately.
+        This isn't used yet.
+    - ORs connect-on-demand to other ORs
+      - If you get an extend cell to an OR you're not connected to,
+        connect, handshake, and forward the create cell.
+      - The authoritative dirservers stay connected to everybody,
+        and everybody stays connected to 0.0.7 servers, but otherwise
+        clients/servers expire unused connections after 5 minutes.
+    - When servers get a sigint, they delay 30 seconds (refusing new
+      connections) then exit. A second sigint causes immediate exit.
+    - File and name management:
+      - Look for .torrc if no CONFDIR "torrc" is found.
+      - If no datadir is defined, then choose, make, and secure ~/.tor
+        as datadir.
+      - If torrc not found, exitpolicy reject *:*.
+      - Expands ~/ in filenames to $HOME/ (but doesn't yet expand ~arma).
+      - If no nickname is defined, derive default from hostname.
+      - Rename secret key files, e.g. identity.key -> secret_id_key,
+        to discourage people from mailing their identity key to tor-ops.
+    - Refuse to build a circuit before the directory has arrived --
+      it won't work anyway, since you won't know the right onion keys
+      to use.
+    - Try other dirservers immediately if the one you try is down. This
+      should tolerate down dirservers better now.
+    - Parse tor version numbers so we can do an is-newer-than check
+      rather than an is-in-the-list check.
+    - New socks command 'resolve', to let us shim gethostbyname()
+      locally.
+      - A 'tor_resolve' script to access the socks resolve functionality.
+      - A new socks-extensions.txt doc file to describe our
+        interpretation and extensions to the socks protocols.
+    - Add a ContactInfo option, which gets published in descriptor.
+    - Publish OR uptime in descriptor (and thus in directory) too.
+    - Write tor version at the top of each log file
+    - New docs in the tarball:
+      - tor-doc.html.
+      - Document that you should proxy your SSL traffic too.
+
+
 Changes in version 0.0.7.2 - 2004-07-07
   o A better fix for the 0.0.0.0 problem, that will hopefully
     eliminate the remaining related assertion failures.
