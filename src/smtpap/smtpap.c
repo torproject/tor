@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2002/08/24 07:56:34  arma
+ * proxies send port in host order as ascii string
+ *
  * Revision 1.2  2002/07/12 18:14:17  montrose
  * removed loglevel from global namespace. severity level is set using log() with a NULL format argument now. example: log(LOG_ERR,NULL);
  *
@@ -768,7 +771,7 @@ int handle_connection(int s, struct hostent *local, struct sockaddr_in remote, u
 		    else /* connection established, now send the standard structure + address and wait for a response */
 		    {
 		      /* write the message to the op_out buffer */
-		      snprintf(dest_port_str,6,"%u",htons(SMTPAP_DEFAULT_SMTP_PORT));
+		      snprintf(dest_port_str,6,"%u",SMTPAP_DEFAULT_SMTP_PORT);
 
 		      if (op_out != NULL)
 		      {
