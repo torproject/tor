@@ -1099,7 +1099,7 @@ static void do_list_fingerprint(void)
   crypto_pk_env_t *k;
   const char *nickname = get_options()->Nickname;
   if(!server_mode(get_options())) {
-    printf("Clients don't have long-term identity keys. Exiting.");
+    printf("Clients don't have long-term identity keys. Exiting.\n");
     return;
   }
   tor_assert(nickname);
