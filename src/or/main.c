@@ -813,14 +813,17 @@ static void second_elapsed_callback(int fd, short event, void *args)
 
   if (server_mode(options) &&
       !we_are_hibernating() &&
-      !check_whether_ports_reachable() &&
       stats_n_seconds_working / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
       (stats_n_seconds_working+seconds_elapsed) /
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
     /* every 20 minutes, check and complain if necessary */
     routerinfo_t *me = router_get_my_routerinfo();
-    log_fn(LOG_WARN,"Your server (%s:%d) has not managed to confirm that it is reachable. Please check your firewalls, ports, address, etc.",
-           me ? me->address : options->Address, options->ORPort);
+    if (!check_whether_orport_reachable())
+      log_fn(LOG_WARN,"Your server (%s:%d) has not managed to confirm that its ORPort is reachable. Please check your firewalls, ports, address, etc.",
+             me ? me->address : options->Address, options->ORPort);
+    if (!check_whether_dirport_reachable())
+      log_fn(LOG_WARN,"Your server (%s:%d) has not managed to confirm that its DirPort is reachable. Please check your firewalls, ports, address, etc.",
+             me ? me->address : options->Address, options->DirPort);
   }
 
   /* if more than 10s have elapsed, probably the clock jumped: doesn't count. */
