@@ -105,10 +105,10 @@ NICK    - Reputation info needs to give better weight to recent events than
           - and working
 
       for pre1:
-        - 0.0.8 ORs should use identity key for 0.0.7 ORs sometimes but
+        o 0.0.8 ORs should use identity key for 0.0.7 ORs sometimes but
           not always?
-        - we should publish advertised_bandwidth in descriptor
-        - bug: 0.0.8 OPs can't extend from an 0.0.7 OR to an 0.0.8 OR
+        o we should publish advertised_bandwidth in descriptor
+        o bug: 0.0.8 OPs can't extend from an 0.0.7 OR to an 0.0.8 OR
 
       post pre1:
         - when we sigint tor, the dns/cpuworkers don't intercept sigint?
@@ -117,6 +117,13 @@ NICK    - Reputation info needs to give better weight to recent events than
         - ORs use uniquer default nicknames
         - Tors deal appropriately when a newly-verified router has the
           same nickname as another router they know about
+        X 007 can't extend to unverified 008. they will never be able to.
+        - if a begin failed due to exit policy, but we believe the IP
+          should have been allowed, switch that router to exitpolicy
+          reject *:* until we get our next directory.
+        - make advertised_server_mode() ORs fetch dirs more often.
+        - should the running-routers list put unverified routers at the
+          end?
 
 
       ongoing:

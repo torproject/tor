@@ -11,10 +11,6 @@ This is not a design document; most design criteria are not examined.  For
 more information on why Tor acts as it does, see tor-design.pdf.
 
 TODO: (very soon)
-      X EXTEND cells should have hostnames or nicknames, so that OPs never
-        resolve OR hostnames.  Else DNS servers can give different answers to
-        different OPs, and compromise their anonymity.
-         - Alternatively, directories should include IPs.
       - REASON_CONNECTFAILED should include an IP.
       - Copy prose from tor-design to make everything more readable.
 
@@ -68,8 +64,8 @@ TODO: (very soon)
    support any suite without ephemeral keys, symmetric keys of at
    least 128 bits, and digests of at least 160 bits.
 
-   An OR always sends two-certificate chain, consisting of a self-signed
-   certificate containing the OR's identity key, and of a second certificate
+   An OR always sends a two-certificate chain, consisting of a self-signed
+   certificate containing the OR's identity key, and a second certificate
    using a short-term connection key.  The commonName of the second
    certificate is the OR's nickname, and the commonName of the first
    certificate is the OR's nickname, followed by a space and the string
@@ -79,8 +75,7 @@ TODO: (very soon)
    as expected.  (When initiating a connection, the expected identity key is
    the one given in the directory; when creating a connection because of an
    EXTEND cell, the expected identity key is the one given in the cell.)  If
-   the key is not as expected, the party must close the connection if it is
-   not.
+   the key is not as expected, the party must close the connection.
 
    Once a TLS connection is established, the two sides send cells
    (specified below) to one another.  Cells are sent serially.  All
@@ -175,18 +170,18 @@ TODO: (very soon)
    The relay payload for an EXTEND relay cell consists of:
          Address                       [4 bytes]
          Port                          [2 bytes]
-         Public key hash               [20 bytes]
          Onion skin                    [186 bytes]
+         Public key hash               [20 bytes]
 
    The port and address field denote the IPV4 address and port of the
    next onion router in the circuit; the public key hash is the SHA1 hash of
    the ASN1 encoding of the next onion router's identity key.
 
    [XXXX Before 0.0.8, EXTEND cells did not include the public key hash.
-   Servers running 0.0.8 distinguish the old-style cells based on the length
-   of payloads.  Clients running 0.0.8 check for servers version 0.0.7 or
-   later, and send them the old-style EXTEND cells.  In a future release,
-   old-style EXTEND cells will not be supported.]
+   Servers running 0.0.8 distinguish the old-style cells based on the
+   length of payloads. (Servers running 0.0.7 blindly pass on the extend
+   cell regardless of length.) In a future release, old-style EXTEND
+   cells will not be supported.]
 
    The payload for a CREATED cell, or the relay payload for an
    EXTENDED cell, contains:
