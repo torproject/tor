@@ -1331,31 +1331,31 @@ void assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->state == LISTENER_STATE_READY);
       break;
     case CONN_TYPE_OR:
-      tor_assert(conn->state >= _OR_CONN_STATE_MIN &&
-                 conn->state <= _OR_CONN_STATE_MAX);
+      tor_assert(conn->state >= _OR_CONN_STATE_MIN);
+      tor_assert(conn->state <= _OR_CONN_STATE_MAX);
       break;
     case CONN_TYPE_EXIT:
-      tor_assert(conn->state >= _EXIT_CONN_STATE_MIN &&
-                 conn->state <= _EXIT_CONN_STATE_MAX);
+      tor_assert(conn->state >= _EXIT_CONN_STATE_MIN);
+      tor_assert(conn->state <= _EXIT_CONN_STATE_MAX);
       break;
     case CONN_TYPE_AP:
-      tor_assert(conn->state >= _AP_CONN_STATE_MIN &&
-                 conn->state <= _AP_CONN_STATE_MAX);
+      tor_assert(conn->state >= _AP_CONN_STATE_MIN);
+      tor_assert(conn->state <= _AP_CONN_STATE_MAX);
       tor_assert(conn->socks_request);
       break;
     case CONN_TYPE_DIR:
-      tor_assert(conn->state >= _DIR_CONN_STATE_MIN &&
-                 conn->state <= _DIR_CONN_STATE_MAX);
-      tor_assert(conn->purpose >= _DIR_PURPOSE_MIN &&
-                 conn->purpose <= _DIR_PURPOSE_MAX);
+      tor_assert(conn->state >= _DIR_CONN_STATE_MIN);
+      tor_assert(conn->state <= _DIR_CONN_STATE_MAX);
+      tor_assert(conn->purpose >= _DIR_PURPOSE_MIN);
+      tor_assert(conn->purpose <= _DIR_PURPOSE_MAX);
       break;
     case CONN_TYPE_DNSWORKER:
       tor_assert(conn->state == DNSWORKER_STATE_IDLE ||
                  conn->state == DNSWORKER_STATE_BUSY);
       break;
     case CONN_TYPE_CPUWORKER:
-      tor_assert(conn->state >= _CPUWORKER_STATE_MIN &&
-                 conn->state <= _CPUWORKER_STATE_MAX);
+      tor_assert(conn->state >= _CPUWORKER_STATE_MIN);
+      tor_assert(conn->state <= _CPUWORKER_STATE_MAX);
       break;
     default:
       tor_assert(0);

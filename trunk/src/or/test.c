@@ -34,7 +34,8 @@ dump_hex(char *s, size_t len)
   for(i=0;i<len;++i) {
     for (j=1;j>=0;--j) {
       nyb = (((int) d[i]) >> (j*4)) & 0x0f;
-      tor_assert(0<=nyb && nyb <=15);
+      tor_assert(0 <= nyb);
+      tor_assert(nyb <= 15);
       putchar(TABLE[nyb]);
     }
   }

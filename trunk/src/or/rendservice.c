@@ -508,7 +508,8 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   }
   oldstate = oldcirc->build_state;
   newstate = newcirc->build_state;
-  tor_assert(newstate && oldstate);
+  tor_assert(newstate);
+  tor_assert(oldstate);
   newstate->failure_count = oldstate->failure_count+1;
   newstate->pending_final_cpath = oldstate->pending_final_cpath;
   oldstate->pending_final_cpath = NULL;
@@ -556,7 +557,8 @@ rend_service_intro_has_opened(circuit_t *circuit)
   char serviceid[REND_SERVICE_ID_LEN+1];
 
   tor_assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
-  tor_assert(CIRCUIT_IS_ORIGIN(circuit) && circuit->cpath);
+  tor_assert(CIRCUIT_IS_ORIGIN(circuit));
+  tor_assert(circuit->cpath);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);

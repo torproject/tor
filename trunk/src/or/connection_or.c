@@ -43,7 +43,8 @@ static void cell_unpack(cell_t *dest, const char *src) {
  */
 int connection_or_process_inbuf(connection_t *conn) {
 
-  tor_assert(conn && conn->type == CONN_TYPE_OR);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_OR);
 
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
@@ -65,7 +66,8 @@ int connection_or_process_inbuf(connection_t *conn) {
  * return 0.
  */
 int connection_or_finished_flushing(connection_t *conn) {
-  tor_assert(conn && conn->type == CONN_TYPE_OR);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_OR);
 
   assert_connection_ok(conn,0);
 
@@ -82,7 +84,8 @@ int connection_or_finished_flushing(connection_t *conn) {
  */
 int connection_or_finished_connecting(connection_t *conn)
 {
-  tor_assert(conn && conn->type == CONN_TYPE_OR);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_OR);
   tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
 
   log_fn(LOG_INFO,"OR connect() to router %s:%u finished.",
@@ -152,6 +155,7 @@ connection_or_update_nickname(connection_t *conn)
   routerinfo_t *r;
   const char *n;
 
+  tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
   n = dirserv_get_nickname_by_digest(conn->identity_digest);
   if (n) {
@@ -414,7 +418,8 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
 
-  tor_assert(cell && conn);
+  tor_assert(cell);
+  tor_assert(conn);
   tor_assert(connection_speaks_cells(conn));
 
   cell_pack(n, cell);

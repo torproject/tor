@@ -56,7 +56,8 @@ crypto_pk_env_t *get_previous_onion_key(void) {
 
 void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
 {
-  tor_assert(key && last);
+  tor_assert(key);
+  tor_assert(last);
   tor_mutex_acquire(key_lock);
   *key = crypto_pk_dup_key(onionkey);
   if (lastonionkey)

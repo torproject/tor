@@ -277,7 +277,7 @@ config_assign(or_options_t *options, struct config_line_t *list)
       config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
       config_compare(list, "PathlenCoinWeight",CONFIG_TYPE_DOUBLE, &options->PathlenCoinWeight) ||
 
-      config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
+      config_compare(list, "RouterFile",     CONFIG_TYPE_OBSOLETE, NULL) ||
       config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
       config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting) ||
       config_compare(list, "RecommendedVersions",CONFIG_TYPE_LINELIST, &options->RecommendedVersions) ||
@@ -457,7 +457,6 @@ free_options(or_options_t *options)
   tor_free(options->ContactInfo);
   tor_free(options->DebugLogFile);
   tor_free(options->DataDirectory);
-  tor_free(options->RouterFile);
   tor_free(options->Nickname);
   tor_free(options->Address);
   tor_free(options->PidFile);

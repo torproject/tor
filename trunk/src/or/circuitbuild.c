@@ -40,7 +40,8 @@ static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type)
   int attempts=0;
   uint16_t high_bit;
 
-  tor_assert(conn && conn->type == CONN_TYPE_OR);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_OR);
   high_bit = (circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   do {
     /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a
@@ -72,7 +73,8 @@ void circuit_log_path(int severity, circuit_t *circ) {
   struct crypt_path_t *hop;
   char *states[] = {"closed", "waiting for keys", "open"};
   routerinfo_t *router;
-  tor_assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ->cpath);
 
   snprintf(s, sizeof(buf)-1, "circ (length %d, exit %s): ",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit_name);
@@ -307,7 +309,9 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
   int circ_id_type;
   cell_t cell;
 
-  tor_assert(circ && circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
+  tor_assert(circ);
+  tor_assert(circ->n_conn);
+  tor_assert(circ->n_conn->type == CONN_TYPE_OR);
   tor_assert(payload);
 
   /* XXXX008 How can we keep a good upgrade path here?  We should
@@ -352,7 +356,8 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   char *onionskin;
   size_t payload_len;
 
-  tor_assert(circ && CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
@@ -543,7 +548,8 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
   crypto_digest_env_t *tmp_digest;
   crypto_cipher_env_t *tmp_crypto;
 
-  tor_assert(cpath && key_data);
+  tor_assert(cpath);
+  tor_assert(key_data);
   tor_assert(!(cpath->f_crypto || cpath->b_crypto ||
              cpath->f_digest || cpath->b_digest));
 
@@ -636,7 +642,8 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
 //  crypt_path_t *victim;
 //  connection_t *stream;
 
-  tor_assert(circ && CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
   tor_assert(layer);
 
   /* XXX Since we don't ask for truncates currently, getting a truncated
@@ -743,7 +750,9 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
   int num_acceptable_routers;
   int routelen;
 
-  tor_assert((cw >= 0) && (cw < 1) && routers); /* valid parameters */
+  tor_assert(cw >= 0.);
+  tor_assert(cw < 1.);
+  tor_assert(routers);
 
 #ifdef TOR_PERF
   routelen = 2;

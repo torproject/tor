@@ -48,7 +48,8 @@ void cpu_init(void) {
 
 /** Called when we're done sending a request to a cpuworker. */
 int connection_cpu_finished_flushing(connection_t *conn) {
-  tor_assert(conn && conn->type == CONN_TYPE_CPUWORKER);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_CPUWORKER);
   connection_stop_writing(conn);
   return 0;
 }
@@ -104,7 +105,8 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   connection_t *p_conn;
   circuit_t *circ;
 
-  tor_assert(conn && conn->type == CONN_TYPE_CPUWORKER);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_CPUWORKER);
 
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");

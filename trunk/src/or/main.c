@@ -170,20 +170,25 @@ void get_connection_array(connection_t ***array, int *n) {
  */
 void connection_watch_events(connection_t *conn, short events) {
 
-  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
+  tor_assert(conn);
+  tor_assert(conn->poll_index >= 0);
+  tor_assert(conn->poll_index < nfds);
 
   poll_array[conn->poll_index].events = events;
 }
 
 /** Return true iff <b>conn</b> is listening for read events. */
 int connection_is_reading(connection_t *conn) {
-  tor_assert(conn && conn->poll_index >= 0);
+  tor_assert(conn);
+  tor_assert(conn->poll_index >= 0);
   return poll_array[conn->poll_index].events & POLLIN;
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any read events. */
 void connection_stop_reading(connection_t *conn) {
-  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
+  tor_assert(conn);
+  tor_assert(conn->poll_index >= 0);
+  tor_assert(conn->poll_index < nfds);
 
   log(LOG_DEBUG,"connection_stop_reading() called.");
   if(poll_array[conn->poll_index].events & POLLIN)
@@ -192,7 +197,9 @@ void connection_stop_reading(connection_t *conn) {
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
 void connection_start_reading(connection_t *conn) {
-  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
+  tor_assert(conn);
+  tor_assert(conn->poll_index >= 0);
+  tor_assert(conn->poll_index < nfds);
   poll_array[conn->poll_index].events |= POLLIN;
 }
 
@@ -203,14 +210,18 @@ int connection_is_writing(connection_t *conn) {
 
 /** Tell the main loop to stop notifying <b>conn</b> of any write events. */
 void connection_stop_writing(connection_t *conn) {
-  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
+  tor_assert(conn);
+  tor_assert(conn->poll_index >= 0);
+  tor_assert(conn->poll_index < nfds);
   if(poll_array[conn->poll_index].events & POLLOUT)
     poll_array[conn->poll_index].events -= POLLOUT;
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
 void connection_start_writing(connection_t *conn) {
-  tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
+  tor_assert(conn);
+  tor_assert(conn->poll_index >= 0);
+  tor_assert(conn->poll_index < nfds);
   poll_array[conn->poll_index].events |= POLLOUT;
 }
 
