@@ -19,7 +19,9 @@ extern or_options_t options; /**< command-line and config-file options */
 /* ********************************************************************** */
 
 /* static function prototypes */
-static routerinfo_t *router_pick_directory_server_impl(void);
+static routerinfo_t *
+router_pick_directory_server_impl(int requireauth, int preferothers);
+static void mark_all_authdirservers_up(void);
 static int router_resolve_routerlist(routerlist_t *dir);
 
 /****************************************************************************/
@@ -35,32 +37,46 @@ static routerlist_t *routerlist = NULL;
 
 extern int has_fetched_directory; /**< from main.c */
 
-/** Try to find a running dirserver.  If there are no running dirservers
- * in our routerlist, reload the routerlist and try again. */
-routerinfo_t *router_pick_directory_server(void) {
+/** Try to find a running dirserver. If there are no running dirservers
+ * in our routerlist, set all the authoritative ones as running again,
+ * and pick one. If there are no dirservers at all in our routerlist,
+ * reload the routerlist and try one last time. */
+routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
   routerinfo_t *choice;
 
-  choice = router_pick_directory_server_impl();
-  if(!choice) {
-    log_fn(LOG_WARN,"No dirservers known. Reloading and trying again.");
-    has_fetched_directory=0; /* reset it */
-    routerlist_clear_trusted_directories();
-    if(options.RouterFile) {
-      if(router_load_routerlist_from_file(options.RouterFile, 1) < 0)
-        return NULL;
-    } else {
-      if(config_assign_default_dirservers() < 0)
-        return NULL;
-    }
-    /* give it another try */
-    choice = router_pick_directory_server_impl();
+  choice = router_pick_directory_server_impl(requireauth, requireothers);
+  if(choice)
+    return choice;
+
+  log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
+  /* mark all authdirservers are up again */
+  mark_all_authdirservers_up();
+  /* try again */
+  choice = router_pick_directory_server_impl(requireauth, requireothers);
+  if(choice)
+    return choice;
+
+  log_fn(LOG_WARN,"No dirservers known. Reloading and trying again.");
+  has_fetched_directory=0; /* reset it */
+  routerlist_clear_trusted_directories();
+  if(options.RouterFile) {
+    if(router_load_routerlist_from_file(options.RouterFile, 1) < 0)
+      return NULL;
+  } else {
+    if(config_assign_default_dirservers() < 0)
+      return NULL;
   }
+  /* give it one last try */
+  choice = router_pick_directory_server_impl(requireauth, requireothers);
   return choice;
 }
 
-/** Pick a random running router that's a trusted dirserver from our
- * routerlist. */
-static routerinfo_t *router_pick_directory_server_impl(void) {
+/** Pick a random running router from our routerlist. If requireauth,
+ * it has to be a trusted server. If requireothers, it cannot be us.
+ */
+static routerinfo_t *
+router_pick_directory_server_impl(int requireauth, int requireothers)
+{
   int i;
   routerinfo_t *router;
   smartlist_t *sl;
@@ -72,36 +88,36 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
   sl = smartlist_create();
   for(i=0;i< smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(router->is_running && router->is_trusted_dir) {
-      tor_assert(router->dir_port > 0);
-      smartlist_add(sl, router);
-    }
+    if(!router->is_running || !router->dir_port)
+      continue;
+    if(requireauth && !router->is_trusted_dir)
+      continue;
+    if(requireothers && router_is_me(router))
+      continue;
+    smartlist_add(sl, router);
   }
 
   router = smartlist_choose(sl);
   smartlist_free(sl);
+  return router;
+}
 
-  if(router)
-    return router;
-  log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
+/** Go through and mark the auth dirservers as up */
+static void mark_all_authdirservers_up(void) {
+  int i;
+  routerinfo_t *router;
 
-  /* No running dir servers found? go through and mark them all as up,
-   * so we cycle through the list again. */
-  sl = smartlist_create();
+  if(!routerlist)
+    return;
+
   for(i=0; i < smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
     if(router->is_trusted_dir) {
       tor_assert(router->dir_port > 0);
       router->is_running = 1;
       router->status_set_at = time(NULL);
-      smartlist_add(sl, router);
     }
   }
-  router = smartlist_choose(sl);
-  smartlist_free(sl);
-  if(!router)
-    log_fn(LOG_WARN,"No dirservers in directory! Returning NULL.");
-  return router;
 }
 
 /** Return 0 if \exists an authoritative dirserver that's currently
