@@ -1319,7 +1319,7 @@ int connection_dir_reached_eof(connection_t *conn);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
-int connection_dir_connect_failed(connection_t *conn);
+void connection_dir_connect_failed(connection_t *conn);
 void parse_dir_policy(void);
 
 /********************************* dirserv.c ***************************/
