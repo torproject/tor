@@ -190,7 +190,7 @@ static int onionskin_process(circuit_t *circ) {
 
   log(LOG_DEBUG,"onionskin_process(): Entering.");
 
-  if(onion_skin_server_handshake(circ->onionskin, getprivatekey(),
+  if(onion_skin_server_handshake(circ->onionskin, get_privatekey(),
     cell.payload, keys, 32) < 0) {
     log(LOG_ERR,"onionskin_process(): onion_skin_server_handshake failed.");
     return -1;

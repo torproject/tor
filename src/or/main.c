@@ -19,19 +19,29 @@ static int please_dumpstats=0; /* whether we should dump stats during the loop *
 static int please_fetch_directory=0; /* whether we should fetch a new directory */
 
 /* private key */
-static crypto_pk_env_t *privatekey;
+static crypto_pk_env_t *privatekey=NULL;
+static crypto_pk_env_t *signing_privatekey=NULL;
 
 routerinfo_t *my_routerinfo=NULL;
 
 /********* END VARIABLES ************/
 
-void setprivatekey(crypto_pk_env_t *k) {
+void set_privatekey(crypto_pk_env_t *k) {
   privatekey = k;
 }
 
-crypto_pk_env_t *getprivatekey(void) {
+crypto_pk_env_t *get_privatekey(void) {
   assert(privatekey);
   return privatekey;
+}
+
+void set_signing_privatekey(crypto_pk_env_t *k) {
+  signing_privatekey = k;
+}
+
+crypto_pk_env_t *get_signing_privatekey(void) {
+  assert(signing_privatekey);
+  return signing_privatekey;
 }
 
 /****************************************************************************
@@ -431,12 +441,25 @@ int do_main_loop(void) {
       log(LOG_ERR,"Error creating a crypto environment.");
       return -1;
     }
-    if (crypto_pk_read_private_key_from_filename(prkey, options.PrivateKeyFile))
-    {
+    if (crypto_pk_read_private_key_from_filename(prkey, options.PrivateKeyFile)) {
       log(LOG_ERR,"Error loading private key.");
       return -1;
     }
-    setprivatekey(prkey);
+    set_privatekey(prkey);
+  }
+
+  /* load the private key, if we're supposed to have one */
+  if(options.DirPort) {
+    prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
+    if (!prkey) {
+      log(LOG_ERR,"Error creating a crypto environment.");
+      return -1;
+    }
+    if (crypto_pk_read_private_key_from_filename(prkey, options.SigningPrivateKeyFile)) {
+      log(LOG_ERR,"Error loading private key.");
+      return -1;
+    }
+    set_signing_privatekey(prkey);
   }
 
   /* start up the necessary connections based on which ports are
@@ -684,7 +707,7 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   
   if (crypto_SHA_digest(s, i, digest))
     return -1;
-  if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0)
+  if (crypto_pk_private_sign(get_signing_privatekey(), digest, 20, signature) < 0)
     return -1;
   
   strncpy(cp, 

@@ -52,7 +52,6 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     current_second = now.tv_sec; 
   }
 
-  log(LOG_DEBUG,"command_process_cell(): Examining cell type %d.", cell->command);
   switch(cell->command) {
     case CELL_PADDING:
       /* do nothing */

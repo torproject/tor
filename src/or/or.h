@@ -406,6 +406,7 @@ struct onion_queue_t {
 typedef struct {
    char *LogLevel;
    char *RouterFile;
+   char *SigningPrivateKeyFile;
    char *PrivateKeyFile;
    double CoinWeight;
    int Daemon;
@@ -711,8 +712,10 @@ int dns_master_start(void);
 
 /********************************* main.c ***************************/
 
-void setprivatekey(crypto_pk_env_t *k);
-crypto_pk_env_t *getprivatekey(void);
+void set_privatekey(crypto_pk_env_t *k);
+crypto_pk_env_t *get_privatekey(void);
+void set_signing_privatekey(crypto_pk_env_t *k);
+crypto_pk_env_t *get_signing_privatekey(void);
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
