@@ -77,7 +77,7 @@ void circuit_log_path(int severity, circuit_t *circ) {
   hop=circ->cpath;
   do {
     s = buf + strlen(buf);
-    router = router_get_by_addr_port(hop->addr,hop->port);
+    router = router_get_by_digest(hop->identity_digest);
     if(router) {
       snprintf(s, sizeof(buf) - (s - buf), "%s(%s) ",
                router->nickname, states[hop->state]);
@@ -115,7 +115,7 @@ void circuit_rep_hist_note_result(circuit_t *circ) {
     prev_nickname = options.Nickname;
   }
   do {
-    router = router_get_by_addr_port(hop->addr,hop->port);
+    router = router_get_by_digest(hop->identity_digest);
     if (router) {
       if (prev_nickname) {
         if (hop->state == CPATH_STATE_OPEN)
@@ -218,7 +218,8 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
 
   log_fn(LOG_DEBUG,"Looking for firsthop '%s:%u'",
       firsthop->address,firsthop->or_port);
-  n_conn = connection_twin_get_by_addr_port(firsthop->addr,firsthop->or_port);
+  n_conn = connection_get_by_identity_digest(firsthop->identity_digest,
+                                             CONN_TYPE_OR);
   if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
     circ->n_addr = firsthop->addr;
     circ->n_port = firsthop->or_port;
@@ -954,7 +955,8 @@ static int count_acceptable_routers(smartlist_t *routers) {
       goto next_i_loop;
     }
     if(options.ORPort) {
-      conn = connection_exact_get_by_addr_port(r->addr, r->or_port);
+      conn = connection_get_by_identity_digest(r->identity_digest,
+                                               CONN_TYPE_OR);
       if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {
         log_fn(LOG_DEBUG,"Nope, %d is not connected.",i);
         goto next_i_loop;
@@ -1090,7 +1092,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
     remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
     remove_twins_from_smartlist(sl,router_get_my_routerinfo());
     for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
-      r = router_get_by_addr_port(cpath->addr, cpath->port);
+      r = router_get_by_digest(cpath->identity_digest);
       tor_assert(r);
       remove_twins_from_smartlist(sl,r);
     }

@@ -317,7 +317,8 @@ void router_retry_connections(void) {
     router = smartlist_get(rl->routers, i);
     if(router_is_me(router))
       continue;
-    if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) {
+    if(!connection_get_by_identity_digest(router->identity_digest,
+                                          CONN_TYPE_OR)) {
       /* not in the list */
       log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
       connection_or_connect(router);
