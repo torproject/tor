@@ -123,6 +123,9 @@ connection_t *connection_new(int type) {
       return NULL;
     }
   }
+  if(type == CONN_TYPE_OR) {
+    directory_set_dirty();
+  }
   return conn;
 }
 
@@ -149,6 +152,9 @@ void connection_free(connection_t *conn) {
   if(conn->s > 0) {
     log(LOG_INFO,"connection_free(): closing fd %d.",conn->s);
     close(conn->s);
+  }
+  if(conn->type == CONN_TYPE_OR) {
+    directory_set_dirty();
   }
   free(conn);
 }

@@ -302,7 +302,6 @@ int prepare_for_poll(int *timeout) {
   connection_t *tmpconn;
   struct timeval now; //soonest;
   static long current_second = 0; /* from previous calls to gettimeofday */
-  static long time_to_rebuild_directory = 0;
   static long time_to_fetch_directory = 0;
 //  int ms_until_conn;
   cell_t cell;
@@ -312,19 +311,7 @@ int prepare_for_poll(int *timeout) {
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
-    if(options.Role & ROLE_DIR_SERVER) {
-      if(time_to_rebuild_directory < now.tv_sec) {
-        /* it's time to rebuild our directory */
-        if(time_to_rebuild_directory == 0) { 
-          /* we just started up. if we build a directory now it will be meaningless. */
-          log(LOG_DEBUG,"prepare_for_poll(): Delaying initial dir build for 10 seconds.");
-          time_to_rebuild_directory = now.tv_sec + 10; /* try in 10 seconds */
-        } else {
-          directory_rebuild();
-          time_to_rebuild_directory = now.tv_sec + options.DirRebuildPeriod;
-        }
-      }
-    } else {
+    if(!(options.Role & ROLE_DIR_SERVER)) {
       if(time_to_fetch_directory < now.tv_sec) {
         /* it's time to fetch a new directory */
         /* NOTE directory servers do not currently fetch directories.
@@ -561,7 +548,7 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
   int written;
 
   if(crypto_pk_write_public_key_to_string(router->pkey,&pkey,&pkeylen)<0) {
-    log(LOG_ERR,"dump_directory_to_string(): write pkey to string failed!");
+    log(LOG_ERR,"dump_router_to_string(): write pkey to string failed!");
     return 0;
   }
   written = snprintf(s, maxlen, "%s %d %d %d %d %d\n%s\n",

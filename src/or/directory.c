@@ -13,6 +13,7 @@ extern or_options_t options; /* command-line and config-file options */
 static char the_directory[MAX_DIR_SIZE+1];
 static int directorylen=0;
 static int reading_headers=0;
+static int directory_dirty=1;
 
 static char getstring[] = "GET / HTTP/1.0\r\n\r\n";
 static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
@@ -44,8 +45,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
   conn->bandwidth = -1;
 
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if (s < 0)
-  { 
+  if(s < 0) { 
     log(LOG_ERR,"directory_initiate_fetch(): Error creating network socket.");
     connection_free(conn);
     return;
@@ -110,12 +110,19 @@ int directory_send_command(connection_t *conn) {
   return 0;
 }
 
+void directory_set_dirty(void) {
+  directory_dirty = 1;
+}
+
 void directory_rebuild(void) {
-
-  dump_directory_to_string(the_directory, MAX_DIR_SIZE);
-  log(LOG_DEBUG,"New directory:\n%s",the_directory);  
-  directorylen = strlen(the_directory);
-
+  if(directory_dirty) {
+    dump_directory_to_string(the_directory, MAX_DIR_SIZE);
+    log(LOG_INFO,"New directory:\n%s",the_directory);
+    directorylen = strlen(the_directory);
+    directory_dirty = 0;
+  } else {
+    log(LOG_INFO,"Directory still clean, reusing.");
+  }
 }
 
 int connection_dir_process_inbuf(connection_t *conn) {
@@ -174,6 +181,8 @@ int directory_handle_command(connection_t *conn) {
     log(LOG_DEBUG,"directory_handle_command(): Command doesn't seem to be a get. Closing,");
     return -1;
   }
+
+  directory_rebuild(); /* rebuild it now, iff it's dirty */
 
   if(directorylen == 0) {
     log(LOG_DEBUG,"directory_handle_command(): My directory is empty. Closing.");

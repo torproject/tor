@@ -634,6 +634,7 @@ int connection_or_handle_listener_read(connection_t *conn);
 
 void directory_initiate_fetch(routerinfo_t *router);
 int directory_send_command(connection_t *conn);
+void directory_set_dirty(void);
 void directory_rebuild(void);
 int connection_dir_process_inbuf(connection_t *conn);
 int directory_handle_command(connection_t *conn);
