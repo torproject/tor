@@ -194,7 +194,9 @@ proxy that integrates well with Tor. Add the line <br>
 <tt>forward-socks4a / localhost:9050 .</tt><br>
 (don't forget the dot) to its
 config file. Then change your mozilla to http proxy at localhost port 8118
-(and no socks proxy). This step will give you good html scrubbing as well.
+(and no socks proxy). You should also set your SSL proxy to the same
+thing, to hide your https traffic. Using privoxy will give you good html
+scrubbing as well.
 (See <a href="http://freehaven.net/tor/cvs/doc/CLIENTS">this explanation</a>
 for why direct socks gives you less anonymity.)</p>
 

@@ -27,8 +27,9 @@ Quickstart version for users:
 8) Optionally, install privoxy (www.privoxy.org), and add the line
   "forward-socks4a / localhost:9050 ." (without the quotes -- don't forget
   the dot) to its config file. Then change your mozilla to http proxy
-  at localhost port 8118 (and no socks proxy). This step will give you
-  good html scrubbing as well.
+  at localhost port 8118 (and no socks proxy). You should also set your
+  SSL proxy to the same thing, to hide your https traffic. Using privoxy
+  will give you good html scrubbing as well.
   (See doc/CLIENTS for why direct socks gives you less anonymity.)
 
 *****If this works for you, you can stop reading here******
