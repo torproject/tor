@@ -10,6 +10,42 @@
 
 #include "or.h"
 
+/* private function, to determine whether the current entry in the router list is actually us */
+static int routers_is_us(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport)
+{
+  /* local host information */
+  char localhostname[512];
+  struct hostent *localhost;
+  
+  char *addr = NULL;
+  int i = 0;
+  
+  /* obtain local host information */
+  if (gethostname(localhostname,512) < 0) {
+    log(LOG_ERR,"Error obtaining local hostname.");
+    return -1;
+  }
+  localhost = gethostbyname(localhostname);
+  if (!localhost) {
+    log(LOG_ERR,"Error obtaining local host info.");
+    return -1;
+  }
+  
+  /* check host addresses for a match with or_address above */
+  addr = localhost->h_addr_list[i++]; /* set to the first local address */
+  while(addr)
+  {
+    if (!memcmp((void *)&or_address, (void *)addr, sizeof(uint32_t))) { /* addresses match */
+      if (or_listenport == htons(my_or_listenport)) /* ports also match */
+	      return 1;
+    }
+    
+    addr = localhost->h_addr_list[i++];
+  }
+  
+  return 0;
+}
+
 /* delete a list of routers from memory */
 void delete_routerlist(routerinfo_t *list)
 {
@@ -76,7 +112,7 @@ routerinfo_t **make_rarray(routerinfo_t* list, size_t *len)
 }
 
 /* load the router list */
-routerinfo_t **getrouters(char *routerfile, size_t *lenp)
+routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport)
 {
   int retval = 0;
   char *retp = NULL;
@@ -167,8 +203,8 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp)
 	  if ((*token != '\0') && (*errtest == '\0')) /* conversion was successful */
 	  {
 /* FIXME patch from RD. We should make it actually read these. */
-            router->op_port = htons(router->or_port + 10);
-            router->ap_port = htons(router->or_port + 20);
+	    router->op_port = htons(router->or_port + 10);
+	    router->ap_port = htons(router->or_port + 20);
 	    /* convert port to network format */
 	    router->or_port = htons(router->or_port);
 	    
@@ -208,7 +244,7 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp)
 			  if (!retp)
 			  {
 			    log(LOG_ERR,"Could not find a public key entry for router %s:%u.",
-			        router->address,router->or_port);
+				router->address,router->or_port);
 			    free((void *)router->address);
 			    free((void *)router);
 			    fclose(rf);
@@ -273,13 +309,34 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp)
 			    delete_routerlist(routerlist);
 			    return NULL;
 			  }
-			  router->next = NULL;
-			  /* save the entry into the routerlist linked list */
-			  if (!routerlist) /* this is the first entry */
-			    routerlist = router;
-			  else
-			    lastrouter->next = (void *)router;
-			  lastrouter = router;
+			  
+			  /* check that this router doesn't actually represent us */
+			  retval = routers_is_us(router->addr, router->or_port, or_listenport);
+			  if (!retval) { /* this isn't us, continue */
+			    router->next = NULL;
+			    /* save the entry into the routerlist linked list */
+			    if (!routerlist) /* this is the first entry */
+				    routerlist = router;
+			    else
+				    lastrouter->next = (void *)router;
+			    lastrouter = router;
+			  }
+			  else if (retval == 1) /* this is us, ignore */
+			  {
+			    log(LOG_DEBUG,"getrouters(): This entry is actually me. Ignoring.");
+			    free((void *)router->address);
+			    RSA_free(router->pkey);
+			    free((void *)router);
+			  }
+			  else /* routers_is_us() returned an error */
+			  {
+			    free((void *)router->address);
+			    RSA_free(router->pkey);
+			    free((void *)router);
+			    fclose(rf);
+			    delete_routerlist(routerlist);
+			    return NULL;
+			  }
 			}
 		      }
 		      else /* maximum link utilisation is zero */

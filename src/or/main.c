@@ -302,7 +302,7 @@ int do_main_loop(void) {
   int i;
 
   /* load the routers file */
-  router_array = getrouters(options[RouterFile].r.str,&rarray_len);
+  router_array = getrouters(options[RouterFile].r.str,&rarray_len, options[ORPort].r.i);
   if (!router_array)
   {
     log(LOG_ERR,"Error loading router list.");
