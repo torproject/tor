@@ -1177,6 +1177,7 @@ int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
 int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
 void dirserv_free_fingerprint_list();
+const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char **desc);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors();
