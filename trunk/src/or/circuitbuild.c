@@ -1258,7 +1258,7 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
 
 /** Add to sl all routers with platform version less than cutoff. */
 static void
-excluded_add_obsolete(smartlist_t *sl, const char *cutoff) {
+excluded_add_obsolete(smartlist_t *sl, const char *atleast, const char *nomore) {
   routerlist_t *rl;
   int i;
   routerinfo_t *router;
@@ -1268,7 +1268,8 @@ excluded_add_obsolete(smartlist_t *sl, const char *cutoff) {
 
   for (i = 0; i < smartlist_len(rl->routers); ++i) { /* iterate over routers */
     router = smartlist_get(rl->routers, i);
-    if (!tor_version_as_new_as(router->platform,cutoff))
+    if (!tor_version_as_new_as(router->platform, atleast) ||
+        tor_version_as_new_as(router->platform, nomore))
       smartlist_add(sl, router);
   }
 }
@@ -1300,7 +1301,7 @@ static routerinfo_t *choose_good_middle_server(uint8_t purpose,
     }
   }
   if (purpose == CIRCUIT_PURPOSE_TESTING)
-    excluded_add_obsolete(excluded, "0.0.9.7");
+    excluded_add_obsolete(excluded, "0.0.9.7", "0.0.9.10");
   choice = router_choose_random_node(NULL, get_options()->ExcludeNodes, excluded,
            state->need_uptime, state->need_capacity,
            get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
