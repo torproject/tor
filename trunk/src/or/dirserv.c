@@ -284,9 +284,11 @@ dirserv_add_descriptor(const char **desc)
       return 1;
     }
     /* We don't have a newer one; we'll update this one. */
+    log_fn(LOG_INFO,"Dirserv updating desc for nickname %s",ri->nickname);
     free_descriptor_entry(*desc_ent_ptr);
   } else {
     /* Add this at the end. */
+    log_fn(LOG_INFO,"Dirserv adding desc for nickname %s",ri->nickname);
     desc_ent_ptr = &descriptor_list[n_descriptors++];
     /* XXX check if n_descriptors is too big */
   }

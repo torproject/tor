@@ -395,6 +395,20 @@ void router_mark_as_down(char *nickname) {
 
 /* ------------------------------------------------------------ */
 
+static void dump_onion_keys(int severity)
+{
+  int i;
+  char buf[FINGERPRINT_LEN+1];
+  routerinfo_t *r;
+
+  log_fn(severity, "Parsed a directory.  Here are the onion keys:");
+  for (i = 0; i < smartlist_len(routerlist->routers); i++) {
+    r = smartlist_get(routerlist->routers, i);
+    crypto_pk_get_fingerprint(r->onion_pkey, buf);
+    log_fn(severity, "%10s: %s", r->nickname, buf);
+  }
+}
+
 /* Replace the current router list with the one stored in 'routerfile'. */
 int router_set_routerlist_from_file(char *routerfile)
 {
@@ -411,6 +425,7 @@ int router_set_routerlist_from_file(char *routerfile)
     free(string);
     return -1;
   }
+  /* dump_onion_keys(LOG_NOTICE); */
 
   free(string);
   return 0;
@@ -429,6 +444,8 @@ int router_set_routerlist_from_string(const char *s)
     log(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
+  /* dump_onion_keys(LOG_NOTICE); */
+
   return 0;
 }
 
@@ -496,6 +513,7 @@ int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
       exit(0);
     }
   }
+  /* dump_onion_keys(LOG_NOTICE); */
   return 0;
 }
 
@@ -879,6 +897,7 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
   *dest = tor_malloc(sizeof(routerlist_t));
   (*dest)->routers = routers;
   (*dest)->software_versions = NULL;
+
   return 0;
 }
 

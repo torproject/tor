@@ -83,7 +83,6 @@ void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *route
   conn->addr = router->addr;
   conn->port = router->or_port;
   conn->receiver_bucket = conn->bandwidth = router->bandwidthburst;
-  conn->onion_pkey = crypto_pk_dup_key(router->onion_pkey);
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   conn->nickname = tor_strdup(router->nickname);
   tor_free(conn->address);
