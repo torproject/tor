@@ -460,6 +460,46 @@ test_util() {
 
 }
 
+void
+test_onion_handshake() {
+  int i;
+
+  /* client-side */
+  crypto_dh_env_t *c_dh = NULL;
+  char c_buf[208];
+  char c_keys[40];
+
+  /* server-side */
+  char s_buf[192];
+  char s_keys[40];
+
+  /* shared */
+  crypto_pk_env_t *pk = NULL;
+
+  pk = crypto_new_pk_env(CRYPTO_PK_RSA);
+  test_assert(! crypto_pk_generate_key(pk));
+
+  /* client handshake 1. */
+  memset(c_buf, 0, 208);
+  test_assert(! onion_skin_create(pk, &c_dh, c_buf));
+
+  /* server handshake */
+  memset(s_buf, 0, 192);
+  memset(s_keys, 0, 40);
+  test_assert(! onion_skin_server_handshake(c_buf, pk, s_buf, s_keys, 40));
+  
+  /* client handshake 2 */
+  memset(c_keys, 0, 40);
+  test_assert(! onion_skin_client_handshake(c_dh, s_buf, c_keys, 40));
+  
+  crypto_dh_free(c_dh);
+  crypto_free_pk_env(pk);
+
+  test_memeq(c_keys, s_keys, 40);
+  memset(s_buf, 0, 40);
+  test_memneq(c_keys, s_buf, 40);
+}
+
 int 
 main(int c, char**v) {
 #if 0
@@ -476,8 +516,10 @@ main(int c, char**v) {
   puts("========================== Crypto ==========================");
   test_crypto_dh();
   test_crypto();
-  puts("\n========================== Util ============================");
+  puts("\n========================= Util ============================");
   test_util();
+  puts("\n========================= Onion Skins======================");
+  test_onion_handshake();
   puts("");
   return 0;
 }

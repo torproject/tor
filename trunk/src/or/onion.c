@@ -855,7 +855,7 @@ onion_skin_create(crypto_pk_env_t *router_key,
 
   *handshake_state_out = NULL;
   memset(onion_skin_out, 0, 208);
-  memset(iv, 0, 16); /* XXXX This can't be safe, can it? */
+  memset(iv, 0, 16);
 
   if (!(dh = crypto_dh_new()))
     goto err;
@@ -863,29 +863,51 @@ onion_skin_create(crypto_pk_env_t *router_key,
   dhbytes = crypto_dh_get_bytes(dh);
   pkbytes = crypto_pk_keysize(router_key);
   assert(dhbytes+16 == 208);
-  if (!(pubkey = malloc(dhbytes)))
+  if (!(pubkey = malloc(dhbytes+16)))
     goto err;
 
   if (crypto_rand(16, pubkey))
     goto err;
+  
+  /* XXXX You can't just run around RSA-encrypting any bitstream: if it's
+   *      greater than the RSA key, then OpenSSL will happily encrypt,
+   *      and later decrypt to the wrong value.  So we set the first bit
+   *      of 'pubkey' to 0.  This means that our symmetric key is really only
+   *      127 bits long, but since it shouldn't be necessary to encrypt
+   *      DH public keys values in the first place, we should be fine.
+   */
+  pubkey[0] &= 0x7f; 
 
   if (crypto_dh_get_public(dh, pubkey+16, dhbytes))
     goto err;
 
-  if (crypto_pk_public_encrypt(router_key, pubkey, pkbytes,
-                               onion_skin_out, RSA_NO_PADDING))
-    goto err;
+#if 0
+  printf("Client DH sent: %x %x %x ... %x %x %x\n",
+         (int) pubkey[16], (int) pubkey[17], (int) pubkey[18], 
+         (int) pubkey[205], (int) pubkey[206], (int) pubkey[207]);
+
+  printf("Client key sent: %x %x %x ... %x %x %x\n",
+         pubkey[0],pubkey[1],pubkey[2], 
+         pubkey[13],pubkey[14],pubkey[15]);
+#endif
 
   cipher = crypto_create_init_cipher(CRYPTO_CIPHER_3DES, pubkey, iv, 1);
-  
-  if (crypto_cipher_encrypt(cipher, pubkey+pkbytes, dhbytes-16-pkbytes,
+
+  if (!cipher)
+    goto err;
+
+  if (crypto_pk_public_encrypt(router_key, pubkey, pkbytes,
+                               onion_skin_out, RSA_NO_PADDING)==-1)
+    goto err;
+
+  if (crypto_cipher_encrypt(cipher, pubkey+pkbytes, dhbytes+16-pkbytes,
                             onion_skin_out+pkbytes))
     goto err;
 
   free(pubkey);
   crypto_free_cipher_env(cipher);
   *handshake_state_out = dh;
-  
+
   return 0;
  err:
   if (pubkey) free(pubkey);
@@ -916,14 +938,25 @@ onion_skin_server_handshake(char *onion_skin, /* 208 bytes long */
 
   if (crypto_pk_private_decrypt(private_key,
                                 onion_skin, pkbytes,
-                                buf, RSA_NO_PADDING))
+                                buf, RSA_NO_PADDING) == -1)
     goto err;
+  
+#if 0
+  printf("Client key got: %x %x %x ... %x %x %x\n",
+         buf[0],buf[1],buf[2], buf[13],buf[14],buf[15]);
+#endif
 
   cipher = crypto_create_init_cipher(CRYPTO_CIPHER_3DES, buf, iv, 0);
 
   if (crypto_cipher_decrypt(cipher, onion_skin+pkbytes, 208-pkbytes,
                             buf+pkbytes))
     goto err;
+
+#if 0
+  printf("Client DH got: %x %x %x ... %x %x %x\n",
+         (int) buf[16], (int) buf[17], (int) buf[18], 
+         (int) buf[205], (int) buf[206], (int) buf[207]);
+#endif
   
   dh = crypto_dh_new();
   if (crypto_dh_get_public(dh, handshake_reply_out, 192))

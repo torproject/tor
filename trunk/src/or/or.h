@@ -793,6 +793,21 @@ void init_tracked_tree(void);
 void onion_pack(char *dest, onion_layer_t *src);
 void onion_unpack(onion_layer_t *dest, char *src);
 
+int onion_skin_create(crypto_pk_env_t *router_key,
+                      crypto_dh_env_t **handshake_state_out,
+                      char *onion_skin_out); /* Must be 208 bytes long */
+
+int onion_skin_server_handshake(char *onion_skin, /* 208 bytes long */
+                                crypto_pk_env_t *private_key,
+                                char *handshake_reply_out, /* 192 bytes long */
+                                char *key_out,
+                                int key_out_len);
+
+int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
+                             char *handshake_reply,/* Must be 192 bytes long*/
+                             char *key_out,
+                             int key_out_len);
+
 /********************************* routers.c ***************************/
 
 int learn_my_address(struct sockaddr_in *me);
