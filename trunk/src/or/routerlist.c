@@ -226,7 +226,7 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
  * currently running.  Add the routerinfos for those routers to 'sl'.
  */
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
-  char *start,*end;
+  const char *start,*end;
   char nick[MAX_NICKNAME_LEN+1];
   routerinfo_t *router;
 
