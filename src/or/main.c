@@ -228,6 +228,16 @@ static void conn_read(int i) {
   /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
    * discussion of POLLIN vs POLLHUP */
   if(!(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR)))
+    /* Sometimes read events get triggered for things that didn't ask
+     * for them (XXX due to unknown poll wonkiness) and sometime we
+     * want to read even though there was no read event (due to
+     * pending TLS data).
+     */
+
+    /* XXX Post 0.0.9, we should rewrite this whole if statement;
+     * something sane may result.  Nick suspects that the || below
+     * should be a &&.
+     */
     if(!connection_is_reading(conn) ||
        !connection_has_pending_tls_data(conn))
       return; /* this conn should not read */
