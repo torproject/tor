@@ -20,6 +20,10 @@
 #include <time.h>
 #endif
 
+#ifndef NULL_REP_IS_ZERO_BYTES
+#error "It seems your platform does not represent NULL as zero. We can't cope."
+#endif
+
 #if _MSC_VER > 1300
 #include <winsock2.h>
 #include <ws2tcpip.h>
