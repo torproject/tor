@@ -74,9 +74,8 @@ this paper describes the policy and technical issues that Tor faces are
 we continue deployment. We aim to lay a research agenda for others to
 help in addressing these issues. Section~\ref{sec:what-is-tor} gives an
 overview of the Tor
-design and ours goals. We go on in Section~\ref{sec:related} to describe
-Tor's context in the anonymity space. Sections~\ref{sec:crossroads-policy}
-and~\ref{sec:crossroads-technical} describe the practical challenges,
+design and ours goals. Sections~\ref{sec:crossroads-policy}
+and~\ref{sec:crossroads-technical} go on to describe the practical challenges,
 both policy and technical respectively, that stand in the way of moving
 from a practical useful network to a practical useful anonymous network.
 
@@ -137,8 +136,8 @@ in its security and flexibility.  Mix networks such as
 Mixmaster~\cite{mixmaster} or its successor Mixminion~\cite{minion-design}
 gain the highest degrees of anonymity at the expense of introducing highly
 variable delays, thus making them unsuitable for applications such as web
-browsing that require quick response times.  Commercial single-hop proxies
-such as {\url{anonymizer.com}} present a single point of failure, where
+browsing that require quick response times.  Commercial single-hop
+proxies~\cite{anonymizer} present a single point of failure, where
 a single compromise can expose all users' traffic, and a single-point
 eavesdropper can perform traffic analysis on the entire network.
 Also, their proprietary implementations place any infrastucture that
@@ -171,20 +170,35 @@ weasel's graph of \# nodes and of bandwidth, ideally from week 0.
 Tor doesn't try to provide steg (but see Sec \ref{china}), or
 the other non-goals listed in tor-design.
 
-\section{Tor's position in the anonymity field}
-\label{sec:related}
+Tor is not the only anonymity system that aims to be practical and useful.
+Commercial single-hop proxies~\cite{anonymizer}, as well as unsecured
+open proxies around the Internet~\cite{open-proxies}, can provide good
+performance and some security against a weaker attacker. Dresden's Java
+Anon Proxy~\cite{jap} provides similar functionality to Tor but only
+handles web browsing rather than arbitrary TCP. Also, JAP's network
+topology uses cascades (fixed routes through the network); since without
+end-to-end padding it is just as vulnerable as Tor to end-to-end timing
+attacks, its dispersal properties are therefore worse than Tor's.
+%Some peer-to-peer file-sharing overlay networks such as
+%Freenet~\cite{freenet} and Mute~\cite{mute}
+Zero-Knowledge Systems' commercial Freedom
+network~\cite{freedom21-security} was even more flexible than Tor in
+that it could transport arbitrary IP packets, and it also supported
+pseudonymous access rather than just anonymous access; but it had
+a different approach to sustainability (collecting money from users
+and paying ISPs to run servers), and has shut down due to financial
+load.  Finally, more scalable designs like Tarzan~\cite{tarzan} and
+MorphMix~\cite{morphmix} have been proposed in the literature, but
+have not yet been fielded. We direct the interested reader to Section
+2 of~\cite{tor-design} for a more indepth review of related work.
 
-There are many other classes of systems: single-hop proxies, open proxies,
-jap, mixminion, flash mixes, freenet, i2p, mute/ants/etc, tarzan,
-morphmix, freedom. Give brief descriptions and brief characterizations
-of how we differ. This is not the breakthrough stuff and we only have
-a page or two for it.
 
 have a serious discussion of morphmix's assumptions, since they would
 seem to be the direct competition. in fact tor is a flexible architecture
 that would encompass morphmix, and they're nearly identical except for
 path selection and node discovery. and the trust system morphmix has
 seems overkill (and/or insecure) based on the threat model we've picked.
+% this para should probably move to the scalability / directory system. -RD
 
 \section{Threat model}
 
