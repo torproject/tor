@@ -639,6 +639,9 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
   }
 }
 
+/* Given a private or public key pk, put a fingerprint of the
+ * public key into fp_out.
+ */
 int
 crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
 {
