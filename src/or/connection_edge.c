@@ -356,7 +356,11 @@ void connection_ap_attach_pending(void)
  * When an addressmap request is made but one is already registered,
  * the new one is replaced only if the currently registered one has
  * no "new_address" (that is, it's in the process of dns resolve),
- * or if the new one is permanent (expires==0).
+ * or if the new one is permanent (expires==0 or 1).
+ *
+ * (We overload the 'expires' field, using "0" for mappings set via
+ * the configuration file, "1" for mappings set from the control
+ * interface, and other values for DNS mappings that can expire.)
  */
 typedef struct {
   char *new_address;
@@ -438,7 +442,7 @@ static void *
 _addressmap_remove_if_expired(const char *addr,
                               addressmap_entry_t *ent,
                               time_t *nowp) {
-  if (ent->expires && ent->expires < *nowp) {
+  if (ent->expires > 1 && ent->expires < *nowp) {
     log(LOG_INFO, "Addressmap: expiring remap (%s to %s)",
            addr, ent->new_address);
     addressmap_ent_remove(addr,ent);
@@ -493,7 +497,8 @@ int addressmap_already_mapped(const char *address) {
 }
 
 /** Register a request to map <b>address</b> to <b>new_address</b>,
- * which will expire on <b>expires</b> (or 0 if never expires).
+ * which will expire on <b>expires</b> (or 0 if never expires from config
+ * file, 1 if never expires from controller).
  *
  * <b>new_address</b> should be a newly dup'ed string, which we'll use or
  * free as appropriate. We will leave address alone.
@@ -505,7 +510,7 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
   addressmap_entry_t *ent;
 
   ent = strmap_get(addressmap, address);
-  if (ent && ent->new_address && expires) {
+  if (ent && ent->new_address && expires>1) {
     log_fn(LOG_INFO,"Addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'", address, new_address, ent->new_address);
     tor_free(new_address);
     return;
@@ -688,7 +693,7 @@ addressmap_register_virtual_address(int type, char *new_address)
   tor_free(*addrp);
   *addrp = addressmap_get_virtual_address(type);
   strmap_set(virtaddress_reversemap, new_address, tor_strdup(*addrp));
-  addressmap_register(*addrp, new_address, 0);
+  addressmap_register(*addrp, new_address, 1);
   return *addrp;
 }
 
@@ -701,6 +706,30 @@ address_is_invalid_destination(const char *address) {
   if (strchr(address,':'))
     return 1;
   return 0;
+}
+
+/* DOCDOC */
+void
+addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires)
+{
+   strmap_iter_t *iter;
+   const char *key;
+   void *_val;
+   addressmap_entry_t *val;
+
+   tor_assert(sl);
+
+   for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter);
+        iter = strmap_iter_next(addressmap,iter)) {
+     strmap_iter_get(iter, &key, &_val);
+     val = _val;
+     if (val->expires >= min_expires && val->expires <= max_expires) {
+       size_t len = strlen(key)+strlen(val->new_address)+2;
+       char *line = tor_malloc(len);
+       tor_snprintf(line, len, "%s %s", key, val->new_address);
+       smartlist_add(sl, line);
+     }
+   }
 }
 
 /** connection_edge_process_inbuf() found a conn in state

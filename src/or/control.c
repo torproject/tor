@@ -487,7 +487,8 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH(lines, const char *, line,
   {
-    smartlist_split_string(elts, body, " ", 0, 2);
+    tor_strlower(line);
+    smartlist_split_string(elts, line, " ", 0, 2);
     if (smartlist_len(elts) == 2) {
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
@@ -510,7 +511,7 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
           smartlist_add(reply, ans);
         }
       } else {
-        addressmap_register(from, tor_strdup(to), 0);
+        addressmap_register(from, tor_strdup(to), 1);
         smartlist_add(reply, tor_strdup(line));
       }
     } else {
@@ -559,8 +560,27 @@ handle_getinfo_helper(const char *question)
       *cp++ = ',';
     });
     return answer;
-  } else if (!strcmp(question, "addr-mappings")) {
-    return NULL; /* XXXX */
+  } else if (!strcmpstart(question, "addr-mappings/")) {
+    time_t min_e, max_e;
+    smartlist_t *mappings;
+    char *answer;
+    if (!strcmp(question, "addr-mappings/all")) {
+      min_e = 0; max_e = TIME_MAX;
+    } else if (!strcmp(question, "addr-mappings/cache")) {
+      min_e = 2; max_e = TIME_MAX;
+    } else if (!strcmp(question, "addr-mappings/config")) {
+      min_e = 0; max_e = 0;
+    } else if (!strcmp(question, "addr-mappings/control")) {
+      min_e = 1; max_e = 1;
+    } else {
+      return NULL;
+    }
+    mappings = smartlist_create();
+    addressmap_get_mappings(mappings, min_e, max_e);
+    answer = smartlist_join_strings(mappings, "\n", 1, NULL);
+    SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
+    smartlist_free(mappings);
+    return answer;
   } else {
     /* unrecognized key */
     return NULL;
