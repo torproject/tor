@@ -20,88 +20,159 @@ In particular:
 1a. We want to let clients learn about new servers from anywhere
     and build circuits through them if they wish. This means that
     Tor nodes need to be able to Extend to nodes they don't already
-    know about. This is already implemented, but see the 'Extend policy'
-    issue below.
+    know about.
 
-1b. We want to provide a robust (available) and not-too-centralized
+1b. We want to let servers limit the addresses and ports they're
+    willing to extend to. This is necessary e.g. for middleman nodes
+    who have jerks trying to extend from them to badmafia.com:80 all
+    day long and it's drawing attention.
+
+1b'. While we're at it, we also want to handle servers that *can't*
+    extend to some addresses/ports, e.g. because they're behind NAT or
+    otherwise firewalled. (See section 5 below.)
+
+1c. We want to provide a robust (available) and not-too-centralized
     mechanism for tracking network status (which nodes are up and working)
     and admission (which nodes are "recommended" for certain uses).
 
-1c. [optional] We want to permit servers that can't route to all other
-    servers, e.g. because they're behind NAT or otherwise firewalled.*
-
 2. Assumptions.
 
-People get the code from us, and they trust us (or our gpg keys, or
-something down the trust chain that's equivalent).
+2a. People get the code from us, and they trust us (or our gpg keys, or
+    something down the trust chain that's equivalent).
 
-Even if the software allows humans to change the client configuration,
-most of them will use the default that's provided, so we should provide
-one that is the right balance of robust and safe.
+2b. Even if the software allows humans to change the client configuration,
+    most of them will use the default that's provided. so we should
+    provide one that is the right balance of robust and safe. That is,
+    we need to hard-code enough "first introduction" locations that new
+    clients will always have an available way to get connected.
 
-Assume that Sybil attackers can produce only a limited number of
-independent-looking nodes.
+2c. Assume that the current "ask them to email us and see if it seems
+    suspiciously related to previous emails" approach will not catch
+    the strong Sybil attackers. Therefore, assume the Sybil attackers
+    we do want to defend against can produce only a limited number of
+    not-obviously-on-the-same-subnet nodes.
 
-Roger has only a limited amount of time for approving nodes, and doesn't
-want to be the time bottleneck anyway.
+2d. Roger has only a limited amount of time for approving nodes; shouldn't
+    be the time bottleneck anyway; and is doing a poor job at keeping
+    out some adversaries.
 
-We can trust servers to accurately report their characteristics (uptime,
-capacity, exit policies, etc), as long as we have some mechanism for
-notifying clients when we notice that they're lying.
+2e. Some people would be willing to offer servers but will be put off
+    by the need to send us mail and identify themselves.
+2e'. Some evil people will avoid doing evil things based on the perception
+    (however true or false) that there are humans monitoring the network
+    and discouraging evil behavior.
+2e''. Some people will trust the network, and the code, more if they
+    have the perception that there are trustworthy humans guiding the
+    deployed network.
 
-There exists a "main" core Internet in which most locations can access
-most locations. We'll focus on it first.
+2f. We can trust servers to accurately report their characteristics
+    (uptime, capacity, exit policies, etc), as long as we have some
+    mechanism for notifying clients when we notice that they're lying.
+
+2g. There exists a "main" core Internet in which most locations can access
+    most locations. We'll focus on it (first).
 
 3. Some notes on how to achieve.
 
-We ship with S (e.g. 3) seed keys.
-We ship with N (e.g. 20) introducer locations and fingerprints.
-We ship with some set of signed timestamped certs for those introducers.
+Piece one: (required)
 
-Introducers serve signed network-status pages, listing their opinions
-of network status and which routers are good.
+  We ship with N (e.g. 20) directory server locations and fingerprints.
 
-They also serve descriptors in some way. These don't need to be signed by
-the introducers, since they're self-signed and timestamped by each server.
+  Directory servers serve signed network-status pages, listing their
+  opinions of network status and which routers are good (see 4a below).
 
-A DHT is not so appropriate for distributing server descriptors as long
-as we expect each client to plan to collect all of them periodically. It
-would seem that each introducer might as well just keep its own
-big pile of descriptors, and they synchronize (pull) from each other
-periodically. Clients then get network-status pages from a threshold of
-introducers, fetch enough of the server descriptors to make them happy,
-and proceed as now. Anything wrong with this?
+  Dirservers collect and provide server descriptors as well. These don't
+  need to be signed by the dirservers, since they're self-certifying
+  and timestamped.
 
-Notice that this doesn't preclude other approaches to discovering
-different concurrent Tor networks. For example, a Tor network inside
-China could ship Tor with a different torrc and poof, they're using
-a different set of seed keys and a different set of introducers. Some
-smarter clients could be made to learn about both networks, and be told
-which nodes bridge the networks.
+  (In theory the dirservers don't need to be the ones serving the
+  descriptors, but in practice the dirservers would need to point people
+  at the place that does, so for simplicity let's assume that they do.)
+
+  Clients then get network-status pages from a threshold of dirservers,
+  fetch enough of the corresponding server descriptors to make them happy,
+  and proceed as now.
+
+Piece two: (optional)
+
+  We ship with S (e.g. 3) seed keys (trust anchors), and ship with
+  signed timestamped certs for each dirserver. Dirservers also serve a
+  list of certs, maybe including a "publish all certs since time foo"
+  functionality. If at least two seeds agree about something, then it
+  is so.
+
+  Now dirservers can be added, and revoked, without requiring users to
+  upgrade to a new version. If we only ship with dirserver locations
+  and not fingerprints, it also means that dirservers can rotate their
+  signing keys transparently.
+
+  But, keeping track of the seed keys becomes a critical security issue;
+  and rotating them in a backward-compatible way adds complexity.
+
+Piece three: (optional)
+
+  Notice that this doesn't preclude other approaches to discovering
+  different concurrent Tor networks. For example, a Tor network inside
+  China could ship Tor with a different torrc and poof, they're using
+  a different set of dirservers. Some smarter clients could be made to
+  learn about both networks, and be told which nodes bridge the networks.
+  ...
+
+4. Unresolved issues.
+
+4a. How do the dirservers decide whether to recommend a server? We
+    could have them do it based on contact from the human, but by
+    assumptions 2c and 2d above, that's going to be less effective, and
+    more of a hassle, as we scale up. Thus I propose that they simply
+    do some basic automatic measuring themselves, starting with the
+    current "are they connected to me" measurement, and that's all
+    that is done.
+
+    We could blacklist as we notice evil servers, but then we're in
+    the same boat all the irc networks are in. We could whitelist as we
+    notice new servers, and stop whitelisting (maybe rolling back a bit)
+    once an attack is in progress. If we assume humans aren't particularly
+    good at this anyway, we could just do automated delayed whitelisting,
+    and have a "you're under attack" switch the human can enable for a
+    while to start acting more conservatively.
+
+    Once upon a time we collected contact info for servers, which was
+    mainly used to remind people that their servers are down and could
+    they please restart. Now that we have a critical mass of servers,
+    I've stopped doing that reminding. So contact info is less important.
+
+4b. What do we do about recommended-versions? Do we need a threshold of
+    dirservers to claim that your version is obsolete before you believe
+    them? Or do we make it have less effect -- e.g. print a warning but
+    never actually quit? Coordinating all the humans to upgrade their
+    recommended-version strings at once seems bad. Maybe if we have
+    seeds, the seeds can sign a recommended-version and upload it to
+    the dirservers.
+
+4c. What does it mean to bind a nickname to a key? What if each dirserver
+    does it differently, so one nickname corresponds to several keys?
+    Maybe the solution is that nickname<=>key bindings should be
+    individually configured by clients in their torrc (if they want to
+    refer to nicknames in their torrc), and we stop thinking of nicknames
+    as globally unique.
+
+4d. What new features need to be added to server descriptors so they
+    remain compact yet support new functionality? Section 5 is a start
+    of discussion of one answer to this.
 
 
 
-4. Unresolved:
-  - What new features need to be added to server descriptors so they
-    remain compact yet support new functionality?
-  - How do we compactly describe seeds, introducers, and certs? Does
-    Tor have built-in defaults still, that can be overridden?
-  - How much cert functionality do we want in our PKI? Can we revoke
-    introducers, or is that done by releasing a new version of the code?
-  - By what mechanism will new servers contact the humans who run
-    introducers, so they can be approved?
-  - Is our network growing because of peoples' trust in Roger? Will it
-    grow the same way, or as robustly, or more robustly, with no
-    figurehead?
-  - 'Extend policies' -- middleman doesn't really mean middleman, alas.
-
-----------
-
-(*) Regarding "Blossom: an unstructured overlay network for end-to-end
+5. Regarding "Blossom: an unstructured overlay network for end-to-end
 connectivity."
 
 In this section we address possible solutions to the problem of how to allow
 Tor routers in different transport domains to communicate.
+
+[Can we have a one-sentence definition of transport domain here? If there
+are 5 servers on the Internet as we know it and suddenly one link between
+a pair of them catches fire, how many transport domains are involved now?
+What if one link is down permanently but the rest work? Is "in the same
+transport domain as" a symmetric property?]
 
 First, we presume that for every interface between transport domains A and B,
 one Tor router T_A exists in transport domain A, one Tor router T_B exists in
@@ -122,7 +193,12 @@ As in regular Tor, each Blossom router pushes its descriptor to directory
 servers.  These directory servers can be within the same transport domain, but
 they need not be.  The trick is that if a directory server is in another
 transport domain, then that directory server must know through which Tor
-routers to send messages destined for the Tor router in question.  Descriptors
+routers to send messages destined for the Tor router in question.
+[We are assuming that routers in the non-primary transport domain (the
+primary one being the one with dirservers) know how to get to the primary
+transport domain, either through Tor or other voodoo, to publish to the
+hard-coded dirservers.]
+Descriptors
 for Blossom routers held by the directory server must contain a special field
 for specifying a path through the overlay (i.e. an ordered list of router
 names/IDs) to a router in a foreign transport domain.  (This field may be a set
@@ -144,6 +220,7 @@ appended to each path.  If the new router used approach (b), then the directory
 server will define the same path(s) in the descriptors for the routers
 specified in the list.  The directory server will then insert the newly defined
 path into the descriptor from the router.
+[Dirservers can't modify server descriptors; they're self-certifying. -RD]
 
 If all directory servers are within the same transport domain, then the problem
 is solved: routers can exist within multiple transport domains, and as long as
@@ -172,4 +249,8 @@ router, the Blossom nodes may use a route selection protocol similar in design
 to that used by BGP (may be a simple distance-vector route selection procedure
 that only takes into account path length, or may be more complex to avoid
 loops, cache results, etc.) in order to choose the best one.
+
+[How does this work with exit policies (how do we enumerate all resources
+in our transport domain?), and translating resources that we want to
+get to to servers that can reach them?]
 
