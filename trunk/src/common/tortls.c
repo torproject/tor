@@ -33,6 +33,9 @@ struct tor_tls_st {
   int isServer;
 };
 
+static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa, 
+                                        const char *nickname); 
+
 /* global tls context, keep it here because nobody else needs to touch it */
 static tor_tls_context *global_tls_context=NULL;
 static int tls_library_is_initialized = 0;
@@ -111,8 +114,9 @@ static int always_accept_verify_cb(int preverify_ok,
  * commonName 'nickname', and write it, PEM-encoded, to the file named
  * by 'certfile'.  Return 0 on success, -1 for failure.
  */
-int
-tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
+X509 *
+tor_tls_create_certificate(crypto_pk_env_t *rsa, 
+                           const char *nickname)
 {
   time_t start_time, end_time;
   EVP_PKEY *pkey = NULL;
@@ -120,15 +124,15 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
   X509_NAME *name = NULL;
   BIO *out = NULL;
   int nid;
-  int r;
+  int err;
   
   tor_tls_init();
 
   start_time = time(NULL);
 
-  assert(rsa);
+  assert(rsa && nickname);
   if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa)))
-    return -1;
+    return NULL;
   if (!(x509 = X509_new()))
     goto error;
   if (!(X509_set_version(x509, 2)))
@@ -143,7 +147,7 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
                                    "TOR", -1, -1, 0))) goto error;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   nickname, -1, -1, 0))) goto error;
+                                   (char*)nickname, -1, -1, 0))) goto error;
   
   if (!(X509_set_issuer_name(x509, name)))
     goto error;
@@ -158,25 +162,21 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
     goto error;
   if (!X509_sign(x509, pkey, EVP_sha1()))
     goto error;
-  if (!(out = BIO_new_file(certfile, "w")))
-    goto error;
-  if (!(PEM_write_bio_X509(out, x509)))
-    goto error;
 
-  r = 0;
+  err = 0;
   goto done;
  error:
-  r = -1;
+  err = 1;
  done:
   if (out)
     BIO_free(out);
-  if (x509)
+  if (x509 && err)
     X509_free(x509);
   if (pkey)
     EVP_PKEY_free(pkey);
   if (name)
     X509_NAME_free(name);
-  return r;
+  return x509;
 }
 
 
@@ -201,15 +201,23 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
  * used for that certificate. Return -1 if failure, else 0.
  */
 int
-tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
+tor_tls_context_new(crypto_pk_env_t *rsa,
+                    int isServer, const char *nickname)
 {
   crypto_dh_env_t *dh = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context *result;
-
-  assert((certfile && rsa) || (!certfile && !rsa));
-
+  X509 *cert = NULL;
+  
   tor_tls_init();
+
+  if (rsa) {
+    cert = tor_tls_create_certificate(rsa, nickname);
+    if (!cert) {
+      log(LOG_ERR, "Error creating certificate");
+      return NULL;
+    }
+  }
 
   result = tor_malloc(sizeof(tor_tls_context));
   result->ctx = NULL;
@@ -225,8 +233,7 @@ tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
 #endif
   if (!SSL_CTX_set_cipher_list(result->ctx, CIPHER_LIST))
     goto error;
-  if (certfile && !SSL_CTX_use_certificate_file(result->ctx,certfile,
-                                                SSL_FILETYPE_PEM))
+  if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
     goto error;
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   if (rsa) {
@@ -236,7 +243,7 @@ tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
       goto error;
     EVP_PKEY_free(pkey);
     pkey = NULL;
-    if (certfile) {
+    if (cert) {
       if (!SSL_CTX_check_private_key(result->ctx))
         goto error;
     }

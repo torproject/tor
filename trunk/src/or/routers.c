@@ -28,10 +28,6 @@ static char *eat_whitespace(char *s);
 static char *eat_whitespace_no_nl(char *s);
 static char *find_whitespace(char *s);
 static void router_free_exit_policy(routerinfo_t *router);
-static routerinfo_t *router_get_entry_from_string_tok(char**s, 
-                                                      directory_token_t *tok);
-static int router_get_list_from_string_tok(char **s, directory_t **dest,
-                                           directory_token_t *tok);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
 static int 
@@ -119,7 +115,24 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-routerinfo_t *router_get_by_pk(crypto_pk_env_t *pk) 
+routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk) 
+{
+  int i;
+  routerinfo_t *router;
+
+  assert(directory);
+
+  for(i=0;i<directory->n_routers;i++) {
+    router = directory->routers[i];
+    if (0 == crypto_pk_cmp_keys(router->link_pkey, pk))
+      return router;
+  }
+  
+  return NULL;
+}
+
+#if 0 
+routerinfo_t *router_get_by_identity_pk(crypto_pk_env_t *pk) 
 {
   int i;
   routerinfo_t *router;
@@ -129,13 +142,14 @@ routerinfo_t *router_get_by_pk(crypto_pk_env_t *pk)
   for(i=0;i<directory->n_routers;i++) {
     router = directory->routers[i];
     /* XXX Should this really be a separate link key? */
-    if (0 == crypto_pk_cmp_keys(router->pkey, pk))
+    if (0 == crypto_pk_cmp_keys(router->identity_pkey, pk))
       return router;
   }
   
   return NULL;
 }
-  
+#endif
+ 
 
 void router_get_directory(directory_t **pdirectory) {
   *pdirectory = directory;
@@ -174,10 +188,12 @@ void routerinfo_free(routerinfo_t *router)
 
   if (router->address)
     free(router->address);
-  if (router->pkey)
-    crypto_free_pk_env(router->pkey);
-  if (router->signing_pkey)
-    crypto_free_pk_env(router->signing_pkey);
+  if (router->onion_pkey)
+    crypto_free_pk_env(router->onion_pkey);
+  if (router->link_pkey)
+    crypto_free_pk_env(router->link_pkey);
+  if (router->identity_pkey)
+    crypto_free_pk_env(router->identity_pkey);
   e = router->exit_policy;
   while (e) {
     etmp = e->next;
@@ -195,7 +211,8 @@ void directory_free(directory_t *directory)
   int i;
   for (i = 0; i < directory->n_routers; ++i)
     routerinfo_free(directory->routers[i]);
-  free(directory->routers);
+  if (directory->routers)
+    free(directory->routers);
   if(directory->software_versions)
     free(directory->software_versions);
   free(directory);
@@ -282,6 +299,9 @@ typedef enum {
   K_ROUTER, 
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
+  K_ONION_KEY,
+  K_LINK_KEY,
+  K_ROUTER_SIGNATURE,
   _SIGNATURE, 
   _PUBLIC_KEY, 
   _ERR, 
@@ -298,6 +318,9 @@ static struct token_table_ent token_table[] = {
   { "recommended-software", K_RECOMMENDED_SOFTWARE },
   { "signed-directory", K_SIGNED_DIRECTORY },
   { "signing-key", K_SIGNING_KEY },
+  { "onion-key", K_ONION_KEY },
+  { "link-key", K_LINK_KEY },
+  { "router-signature", K_ROUTER_SIGNATURE },
   { NULL, -1 }
 };
 
@@ -450,6 +473,9 @@ router_dump_token(directory_token_t *tok) {
     case K_ROUTER: printf("Router"); break;
     case K_SIGNED_DIRECTORY: printf("Signed-Directory"); break;
     case K_SIGNING_KEY: printf("Signing-Key"); break;
+    case K_ONION_KEY: printf("Onion-key"); break;
+    case K_LINK_KEY: printf("Link-key"); break;
+    case K_ROUTER_SIGNATURE: printf("Router-signature"); break;
     default:
       printf("?????? %d\n", tok->tp); return;
     }
@@ -459,7 +485,6 @@ router_dump_token(directory_token_t *tok) {
   printf("\n");
   return;
 }
-
 static int
 router_get_next_token(char **s, directory_token_t *tok) {
   int i;
@@ -508,7 +533,7 @@ static char *find_whitespace(char *s) {
 
 int router_get_list_from_string(char *s) 
 {
-  if (router_get_list_from_string_impl(s, &directory)) {
+  if (router_get_list_from_string_impl(&s, &directory)) {
     log(LOG_ERR, "Error parsing router file");
     return -1;
   }
@@ -519,41 +544,44 @@ int router_get_list_from_string(char *s)
   return 0;
 }
 
-int router_get_list_from_string_impl(char *s, directory_t **dest) {
-  directory_token_t tok;
-  if (router_get_next_token(&s, &tok)) {
-    log(LOG_ERR, "Error reading routers: %s", tok.val.error); 
-    return -1;
-  }
-  return router_get_list_from_string_tok(&s, dest, &tok);
-}
-
-static int router_get_dir_hash(char *s, char *digest)
+static int router_get_hash_impl(char *s, char *digest, const char *start_str,
+                                const char *end_str) 
 {
   char *start, *end;
-  start = strstr(s, "signed-directory");
+  start = strstr(s, start_str);
   if (!start) {
-    log(LOG_ERR,"router_get_dir_hash(): couldn't find \"signed-directory\"");
+    log_fn(LOG_ERR,"couldn't find \"%s\"",start_str);
     return -1;
   }
-  end = strstr(start, "directory-signature");
+  end = strstr(start+strlen(start_str), end_str);
   if (!end) {
-    log(LOG_ERR,"router_get_dir_hash(): couldn't find \"directory-signature\"");
+    log_fn(LOG_ERR,"couldn't find \"%s\"",end_str);
     return -1;
   }
   end = strchr(end, '\n');
   if (!end) {
-    log(LOG_ERR,"router_get_dir_hash(): couldn't find EOL");
+    log_fn(LOG_ERR,"couldn't find EOL");
     return -1;
   }
   ++end;
   
   if (crypto_SHA_digest(start, end-start, digest)) {
-    log(LOG_ERR,"router_get_dir_hash(): couldn't compute digest");
+    log_fn(LOG_ERR,"couldn't compute digest");
     return -1;
   }
 
   return 0;
+}
+
+static int router_get_dir_hash(char *s, char *digest)
+{
+  return router_get_hash_impl(s,digest,
+                              "signed-directory","directory-signature");
+}
+int router_get_router_hash(char *s, char *digest)
+{
+  return router_get_hash_impl(s,digest,
+                              "router ","router-signature");
 }
 
 /* return 0 if myversion is in start. Else return -1. */
@@ -621,12 +649,11 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
       log(LOG_ERR, "Error reading directory: expected %s", name);       \
       return -1;                                                        \
     } } while(0)
-  
+
   if (router_get_dir_hash(s, digest)) {
     log(LOG_ERR, "Unable to compute digest of directory");
-    return -1;
+    goto err;
   }
-
   NEXT_TOK();
   TOK_IS(K_SIGNED_DIRECTORY, "signed-directory");
 
@@ -634,17 +661,17 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
   if (tok.val.cmd.n_args != 1) {
     log(LOG_ERR, "Invalid recommded-software line");
-    return -1;
+    goto err;
   }
   versions = strdup(tok.val.cmd.args[0]);
   
-  NEXT_TOK();
-  if (router_get_list_from_string_tok(&s, &new_dir, &tok)) {
+  if (router_get_list_from_string_impl(&s, &new_dir)) {
     log(LOG_ERR, "Error reading routers from directory");
-    return -1;
+    goto err;
   }
   new_dir->software_versions = versions;
-  
+
+  NEXT_TOK();
   TOK_IS(K_DIRECTORY_SIGNATURE, "directory-signature");
   NEXT_TOK();
   TOK_IS(_SIGNATURE, "signature");
@@ -653,12 +680,12 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
         != 20) {
       log(LOG_ERR, "Error reading directory: invalid signature.");
       free(tok.val.signature);
-      return -1;
+      goto err;
     }
     if (memcmp(digest, signed_digest, 20)) {
       log(LOG_ERR, "Error reading directory: signature does not match.");
       free(tok.val.signature);
-      return -1;
+      goto err;
     }
   }
   free(tok.val.signature);
@@ -671,12 +698,16 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   *dest = new_dir;
 
   return 0;
+
+ err:
+  if (new_dir)
+    directory_free(new_dir);
+  return -1;
 #undef NEXT_TOK
 #undef TOK_IS
 }
 
-static int router_get_list_from_string_tok(char **s, directory_t **dest,
-                                           directory_token_t *tok)
+int router_get_list_from_string_impl(char **s, directory_t **dest)
 {
   routerinfo_t *router;
   routerinfo_t **rarray;
@@ -686,8 +717,11 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
 
   rarray = (routerinfo_t **)tor_malloc((sizeof(routerinfo_t *))*MAX_ROUTERS_IN_DIR);
 
-  while (tok->tp == K_ROUTER) {
-    router = router_get_entry_from_string_tok(s, tok);
+  while (1) {
+    *s = eat_whitespace(*s);
+    if (strncmp(*s, "router ", 7)!=0)
+      break;
+    router = router_get_entry_from_string(s);
     if (!router) {
       log(LOG_ERR, "Error reading router");
       return -1;
@@ -755,33 +789,31 @@ router_resolve_directory(directory_t *dir)
   return 0;
 }
 
-
-routerinfo_t *router_get_entry_from_string(char **s) {
-  directory_token_t tok;
-  routerinfo_t *router;
-  if (router_get_next_token(s, &tok)) return NULL;
-  router = router_get_entry_from_string_tok(s, &tok);
-  if (tok.tp != _EOF) {
-    router_release_token(&tok);
-    return NULL;
-  }
-  return router;
-}
-
 /* reads a single router entry from s.
  * updates s so it points to after the router it just read.
  * mallocs a new router, returns it if all goes well, else returns NULL.
  */
-static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t *tok) {
+routerinfo_t *router_get_entry_from_string(char**s) {
   routerinfo_t *router = NULL;
+#if 0
+  char signed_digest[128];
+#endif
+  char digest[128];
+  directory_token_t _tok;
+  directory_token_t *tok = &_tok;
 
-#define NEXT_TOKEN()                                                    \
-  do { if (router_get_next_token(s, tok)) {                             \
-      log(LOG_ERR, "Error reading directory: %s", tok->val.error);      \
-      goto err;                                                         \
+#define NEXT_TOKEN()                                                     \
+  do { if (router_get_next_token(s, tok)) {                              \
+      log(LOG_ERR, "Error reading directory: %s", tok->val.error);       \
+      goto err;                                                          \
     } } while(0)
 
 #define ARGS tok->val.cmd.args
+
+  if (router_get_router_hash(*s, digest) < 0)
+    return NULL;
+
+  NEXT_TOKEN();
 
   if (tok->tp != K_ROUTER) {
     router_release_token(tok);
@@ -793,7 +825,7 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
   memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
   /* C doesn't guarantee that NULL is represented by 0 bytes.  You'll
      thank me for this someday. */
-  router->pkey = router->signing_pkey = NULL; 
+  router->onion_pkey = router->identity_pkey = router->link_pkey = NULL; 
 
   if (tok->val.cmd.n_args != 5) {
     log(LOG_ERR,"router_get_entry_from_string(): Wrong # of arguments to \"router\"");
@@ -828,27 +860,64 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
     router->or_port, router->ap_port, router->dir_port, router->bandwidth);
 
   NEXT_TOKEN();
+  if (tok->tp != K_ONION_KEY) {
+    log_fn(LOG_ERR, "Missing onion-key"); goto err;
+  }
+  NEXT_TOKEN();
   if (tok->tp != _PUBLIC_KEY) {
-    log(LOG_ERR,"router_get_entry_from_string(): Missing public key");
-    goto err;
-  } /* Check key length */
-  router->pkey = tok->val.public_key;
+    log_fn(LOG_ERR, "Missing onion key"); goto err;
+  } /* XXX Check key length */
+  router->onion_pkey = tok->val.public_key;
 
   NEXT_TOKEN();
-  if (tok->tp == K_SIGNING_KEY) {
-    NEXT_TOKEN();
-    if (tok->tp != _PUBLIC_KEY) {
-      log(LOG_ERR,"router_get_entry_from_string(): Missing signing key");
-      goto err;
-    }
-    router->signing_pkey = tok->val.public_key;
-    NEXT_TOKEN();
-  } 
+  if (tok->tp != K_LINK_KEY) {
+    log_fn(LOG_ERR, "Missing link-key");  goto err;
+  }
+  NEXT_TOKEN();
+  if (tok->tp != _PUBLIC_KEY) {
+    log_fn(LOG_ERR, "Missing link key"); goto err;
+  } /* XXX Check key length */
+  router->link_pkey = tok->val.public_key;
 
+  NEXT_TOKEN();
+  if (tok->tp != K_SIGNING_KEY) {
+    log_fn(LOG_ERR, "Missing signing-key"); goto err;
+  }
+  NEXT_TOKEN();
+  if (tok->tp != _PUBLIC_KEY) {
+    log_fn(LOG_ERR, "Missing signing key"); goto err;
+  }
+  router->identity_pkey = tok->val.public_key;
+
+  NEXT_TOKEN();
   while (tok->tp == K_ACCEPT || tok->tp == K_REJECT) {
     router_add_exit_policy(router, tok);
     NEXT_TOKEN();
   }
+  
+  if (tok->tp != K_ROUTER_SIGNATURE) {
+    log_fn(LOG_ERR,"Missing router signature");
+    goto err;
+  }
+  NEXT_TOKEN();
+  if (tok->tp != _SIGNATURE) {
+    log_fn(LOG_ERR,"Missing router signature");
+    goto err;
+  }
+  assert (router->identity_pkey);
+#if 0
+  /* XXX This should get re-enabled, once directory servers properly
+   * XXX relay signed router blocks. */
+  if (crypto_pk_public_checksig(router->identity_pkey, tok->val.signature,
+                                128, signed_digest) != 20) {
+    log_fn(LOG_ERR, "Invalid signature");
+    goto err;
+  }
+  if (memcmp(digest, signed_digest, 20)) {
+    log_fn(LOG_ERR, "Mismatched signature");
+    goto err;
+  }
+#endif
   
   return router;
 
@@ -856,10 +925,12 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
   router_release_token(tok); 
   if(router->address)
     free(router->address);
-  if(router->pkey)
-    crypto_free_pk_env(router->pkey);
-  if(router->signing_pkey)
-    crypto_free_pk_env(router->signing_pkey);
+  if(router->link_pkey)
+    crypto_free_pk_env(router->link_pkey);
+  if(router->onion_pkey)
+    crypto_free_pk_env(router->onion_pkey);
+  if(router->identity_pkey)
+    crypto_free_pk_env(router->identity_pkey);
   router_free_exit_policy(router);
   free(router);
   return NULL;

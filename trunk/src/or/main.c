@@ -7,6 +7,7 @@
 /********* START PROTOTYPES **********/
 
 static void dumpstats(void); /* dump stats to stdout */
+static int init_descriptor(void);
 
 /********* START VARIABLES **********/
 
@@ -29,30 +30,42 @@ static int please_reset =0; /* whether we just got a sighup */
 static int please_reap_children=0; /* whether we should waitpid for exited children*/
 #endif /* signal stuff */
 
-/* private key */
-static crypto_pk_env_t *privatekey=NULL;
-static crypto_pk_env_t *signing_privatekey=NULL;
+/* private keys */
+static crypto_pk_env_t *onionkey=NULL;
+static crypto_pk_env_t *linkkey=NULL;
+static crypto_pk_env_t *identitykey=NULL;
 
 routerinfo_t *my_routerinfo=NULL;
 
 /********* END VARIABLES ************/
 
-void set_privatekey(crypto_pk_env_t *k) {
-  privatekey = k;
+void set_onion_key(crypto_pk_env_t *k) {
+  onionkey = k;
 }
 
-crypto_pk_env_t *get_privatekey(void) {
-  assert(privatekey);
-  return privatekey;
+crypto_pk_env_t *get_onion_key(void) {
+  assert(onionkey);
+  return onionkey;
 }
 
-void set_signing_privatekey(crypto_pk_env_t *k) {
-  signing_privatekey = k;
+void set_link_key(crypto_pk_env_t *k)
+{
+  linkkey = k;
 }
 
-crypto_pk_env_t *get_signing_privatekey(void) {
-  assert(signing_privatekey);
-  return signing_privatekey;
+crypto_pk_env_t *get_link_key(void)
+{
+  assert(linkkey);
+  return linkkey;
+}
+
+void set_identity_key(crypto_pk_env_t *k) {
+  identitykey = k;
+}
+
+crypto_pk_env_t *get_identity_key(void) {
+  assert(identitykey);
+  return identitykey;
 }
 
 /****************************************************************************
@@ -69,7 +82,7 @@ int connection_add(connection_t *conn) {
     log(LOG_INFO,"connection_add(): failing because nfds is too high.");
     return -1;
   }
-
+  
   conn->poll_index = nfds;
   connection_set_poll_socket(conn);
   connection_array[nfds] = conn;
@@ -146,7 +159,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
     assert(conn);
     if(connection_state_is_open(conn) &&
        !conn->marked_for_close &&
-       !crypto_pk_cmp_keys(conn->pkey, router->pkey)) {
+       !crypto_pk_cmp_keys(conn->onion_pkey, router->onion_pkey)) {
       log(LOG_INFO,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
       return conn;
     }
@@ -308,13 +321,11 @@ static void check_conn_marked(int i) {
     if(conn->s >= 0) { /* might be an incomplete edge connection */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
       if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING)
-        flush_buf_tls(conn->tls, &conn->outbuf, &conn->outbuflen,
-                      &conn->outbuf_flushlen, &conn->outbuf_datalen);
+        flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
       else
-        flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
-                  &conn->outbuf_flushlen, &conn->outbuf_datalen);
+        flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
       if(connection_wants_to_flush(conn)) /* not done flushing */
-        log_fn(LOG_WARNING,"Conn (socket %d) still wants to flush. Losing %d bytes!",conn->s, conn->inbuf_datalen);
+        log_fn(LOG_WARNING,"Conn (socket %d) still wants to flush. Losing %d bytes!",conn->s, (int)buf_datalen(conn->inbuf));
     }
     connection_remove(conn);
     connection_free(conn);
@@ -420,68 +431,218 @@ static int prepare_for_poll(void) {
   return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 }
 
+#define FN_ERROR -1
+#define FN_NOENT 0
+#define FN_FILE 1
+#define FN_DIR 2
+static int fn_exists(const char *fname)
+{
+  struct stat st;
+  if (stat(fname, &st)) {
+    if (errno == ENOENT) {
+      return FN_NOENT;
+    }
+    return FN_ERROR;
+  }
+  if (st.st_mode & S_IFDIR) 
+    return FN_DIR;
+  else
+    return FN_FILE;
+}
+
+static crypto_pk_env_t *init_key_from_file(const char *fname)
+{
+  crypto_pk_env_t *prkey = NULL;
+  int fd = -1;
+  FILE *file = NULL;
+
+  if (!(prkey = crypto_new_pk_env(CRYPTO_PK_RSA))) {
+    log(LOG_ERR, "Error creating crypto environment.");
+    goto error;
+  }
+
+  switch(fn_exists(fname)) {
+  case FN_DIR:
+  case FN_ERROR:
+    log(LOG_ERR, "Can't read key from %s", fname);
+    goto error;
+  case FN_NOENT:
+    log(LOG_INFO, "No key found in %s; generating fresh key.", fname);
+    if (crypto_pk_generate_key(prkey)) {
+      log(LOG_ERR, "Error generating key: %s", crypto_perror());
+      goto error;
+    }
+    if (crypto_pk_check_key(prkey) <= 0) {
+      log(LOG_ERR, "Generated key seems invalid");
+      goto error;
+    }
+    log(LOG_INFO, "Generated key seems valid");
+    fd = open(fname, O_WRONLY|O_CREAT|O_TRUNC, 0400);
+    if (fd == -1) {
+      log(LOG_ERR, "Can't open %s for writing", fname);
+      goto error;
+    }
+    file = fdopen(fd, "w");
+    if (!file) {
+      log(LOG_ERR, "Can't fdopen %s for writing", fname);
+      goto error;
+    }
+    if (crypto_pk_write_private_key_to_file(prkey, file) < 0) {
+      log(LOG_ERR, "Can't write private key to %s", fname);
+      goto error;
+    }
+    fclose(file);
+    /* XXX fingerprint */
+    return prkey;
+  case FN_FILE:
+    if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
+      log(LOG_ERR, "Error loading private key.");
+      goto error;
+    }
+    return prkey;
+  default: 
+    assert(0);
+  }
+
+ error:
+  if (prkey)
+    crypto_free_pk_env(prkey);
+  if (fd >= 0 && !file)
+    close(fd);
+  if (file)
+    fclose(file);
+  return NULL;
+}
+
+static int init_keys(void)
+{
+  char keydir[512];
+  char fingerprint[FINGERPRINT_LEN+1];
+  char *cp;
+  crypto_pk_env_t *prkey;
+  FILE *file;
+
+  /* OP's don't need keys.  Just initialize the TLS context.*/
+  if (!options.OnionRouter && !options.DirPort) {
+    if (tor_tls_context_new(NULL, 0, NULL)<0) {
+      log_fn(LOG_ERR, "Error creating TLS context for OP.");
+      return -1;
+    }
+    return 0;
+  }
+  assert(options.DataDirectory);
+  if (strlen(options.DataDirectory) > (512-128)) {
+    log_fn(LOG_ERR, "DataDirectory is too long.");
+    return -1;
+  }
+  strcpy(keydir, options.DataDirectory);
+  switch (fn_exists(keydir)) {
+  case FN_NOENT:
+    log_fn(LOG_ERR, "DataDirectory does not exist");
+    return -1;
+  case FN_ERROR:
+    log_fn(LOG_ERR, "DataDirectory can't be read");
+    return -1;
+  case FN_FILE:
+    log_fn(LOG_ERR, "DataDirectory is not a directory.");
+    return -1;
+  }
+  strcat(keydir, "/keys");
+  switch (fn_exists(keydir)) {
+  case FN_NOENT:
+    if (mkdir(keydir, 0700)) {
+      log_fn(LOG_ERR, "Error making key directory.");
+      return -1;
+    }
+    break;
+  case FN_ERROR:
+    log_fn(LOG_ERR, "Error reading key directory.");
+    return -1;
+  case FN_FILE:
+    log_fn(LOG_ERR, "Key directory is not a directory.");
+    return -1;
+  case FN_DIR:
+    chmod(keydir, 0700);
+    break;
+  }
+  cp = keydir + strlen(keydir); /* End of string. */
+  assert(!*cp);
+  
+  /* 1. Read identity key. Make it if none is found. */
+  strcat(keydir, "/identity.key");
+  prkey = init_key_from_file(keydir);
+  if (!prkey) return -1;
+  set_identity_key(prkey);
+  /* 2. Read onion key.  Make it if none is found. */
+  *cp = '\0';
+  strcat(keydir, "/onion.key");
+  prkey = init_key_from_file(keydir);
+  if (!prkey) return -1;
+  set_onion_key(prkey);
+  
+  /* 3. Initialize link key and TLS context. */
+  *cp = '\0';
+  strcat(keydir, "/link.key");
+  prkey = init_key_from_file(keydir);
+  if (!prkey) return -1;
+  set_link_key(prkey);
+  if (tor_tls_context_new(prkey, 1, options.Nickname) < 0) {
+    log_fn(LOG_ERR, "Error initializing TLS context");
+    return -1;
+  }
+  /* 4. Dump router descriptor to 'router.desc' */
+  /* Must be called after keys are initialized. */
+  if (init_descriptor()<0) {
+    log_fn(LOG_ERR, "Error initializing descriptor.");
+    return -1;
+  }
+  strcpy(keydir, options.DataDirectory);
+  strcat(keydir, "/router.desc");
+  file = fopen(keydir, "w");
+  if (!file) {
+    log_fn(LOG_ERR, "Error opening %s for writing", keydir);
+    return -1;
+  }
+  fputs(router_get_my_descriptor(), file);
+  fclose(file);
+  /* 5. Dump fingerprint to 'fingerprint' */
+  strcpy(keydir, options.DataDirectory);
+  strcat(keydir, "/fingerprint");
+  file = fopen(keydir, "w");
+  if (!file) {
+    log_fn(LOG_ERR, "Error opening %s for writing", keydir);
+    return -1;
+  }
+  if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint)<0) {
+    log_fn(LOG_ERR, "Error computing fingerprint");
+    return -1;
+  }
+  fprintf(file, "%s %s\n", options.Nickname, fingerprint);
+  fclose(file);
+
+  return 0;
+}
+
 static int do_main_loop(void) {
   int i;
   int timeout;
   int poll_result;
-  crypto_pk_env_t *prkey;
-
+  
   /* load the routers file */
   if(router_get_list_from_file(options.RouterFile) < 0) {
-    log(LOG_ERR,"Error loading router list.");
+    log_fn(LOG_ERR,"Error loading router list.");
     return -1;
   }
 
-  /* load the private key, if we're supposed to have one */
+  /* load the private keys, if we're supposed to have them, and set up the
+   * TLS context. */
+  if (init_keys() < 0) {
+    log_fn(LOG_ERR,"Error initializing keys; exiting");
+    return -1;
+  }
+
   if(options.OnionRouter) {
-    prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
-    if (!prkey) {
-      log(LOG_ERR,"Error creating a crypto environment.");
-      return -1;
-    }
-    if (crypto_pk_read_private_key_from_filename(prkey, options.PrivateKeyFile)) {
-      log(LOG_ERR,"Error loading private key.");
-      return -1;
-    }
-    set_privatekey(prkey);
     cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the private key. */
-  }
-
-  /* load the directory private key, if we're supposed to have one */
-  if(options.DirPort) {
-    prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
-    if (!prkey) {
-      log(LOG_ERR,"Error creating a crypto environment.");
-      return -1;
-    }
-    if (crypto_pk_read_private_key_from_filename(prkey, options.SigningPrivateKeyFile)) {
-      log(LOG_ERR,"Error loading private key.");
-      return -1;
-    }
-    set_signing_privatekey(prkey);
-  }
-
-  if(options.OnionRouter) {
-    struct stat statbuf;
-    if(stat(options.CertFile, &statbuf) < 0) {
-      log_fn(LOG_INFO,"CertFile %s is missing. Generating.", options.CertFile);
-      if(tor_tls_write_certificate(options.CertFile,
-                                   get_privatekey(),
-                                   options.Nickname) < 0) {
-        log_fn(LOG_ERR,"Couldn't write CertFile %s. Dying.", options.CertFile);
-        return -1;
-      }
-    }
-
-    if(tor_tls_context_new(options.CertFile, get_privatekey(), 1) < 0) {
-      log_fn(LOG_ERR,"Error creating tls context.");
-      return -1;
-    }
-  } else { /* just a proxy, the context is easy */
-    if(tor_tls_context_new(NULL, NULL, 0) < 0) {
-      log_fn(LOG_ERR,"Error creating tls context.");
-      return -1;
-    }
   }
 
   /* start up the necessary connections based on which ports are
@@ -590,9 +751,10 @@ static void dumpstats(void) { /* dump stats to stdout */
       conn->state, conn_state_to_string[conn->type][conn->state], now.tv_sec - conn->timestamp_created);
     if(!connection_is_listener(conn)) {
       printf("Conn %d is to '%s:%d'.\n",i,conn->address, conn->port);
-      printf("Conn %d: %d bytes waiting on inbuf (last read %ld secs ago)\n",i,conn->inbuf_datalen,
-        now.tv_sec - conn->timestamp_lastread);
-      printf("Conn %d: %d bytes waiting on outbuf (last written %ld secs ago)\n",i,conn->outbuf_datalen, 
+      printf("Conn %d: %d bytes waiting on inbuf (last read %ld secs ago)\n",i,
+             (int)buf_datalen(conn->inbuf),
+             now.tv_sec - conn->timestamp_lastread);
+      printf("Conn %d: %d bytes waiting on outbuf (last written %ld secs ago)\n",i,(int)buf_datalen(conn->outbuf),
         now.tv_sec - conn->timestamp_lastwritten);
     }
     circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
@@ -601,42 +763,50 @@ static void dumpstats(void) { /* dump stats to stdout */
 
 }
 
-int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
-  char *pkey;
-  char *signing_pkey, *signing_pkey_tag;
-  int pkeylen, signing_pkeylen;
+int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
+                          crypto_pk_env_t *ident_key) {
+  char *onion_pkey;
+  char *link_pkey;
+  char *identity_pkey;
+  char digest[20];
+  char signature[128];
+  int onion_pkeylen, link_pkeylen, identity_pkeylen;
   int written;
   int result=0;
   struct exit_policy_t *tmpe;
 
-  if(crypto_pk_write_public_key_to_string(router->pkey,&pkey,&pkeylen)<0) {
-    log(LOG_ERR,"dump_router_to_string(): write pkey to string failed!");
-    return 0;
+  if(crypto_pk_write_public_key_to_string(router->onion_pkey,
+                                          &onion_pkey,&onion_pkeylen)<0) {
+    log_fn(LOG_ERR,"write onion_pkey to string failed!");
+    return -1;
   }
 
-  signing_pkey = "";
-  signing_pkey_tag = "";
-  if (router->signing_pkey) {
-    if(crypto_pk_write_public_key_to_string(router->signing_pkey,
-                                         &signing_pkey,&signing_pkeylen)<0) {
-      log(LOG_ERR,"dump_router_to_string(): write signing_pkey to string failed!");
-      return 0;
-    }
-    signing_pkey_tag = "signing-key\n";
+  if(crypto_pk_write_public_key_to_string(router->identity_pkey,
+                                          &identity_pkey,&identity_pkeylen)<0) {
+    log_fn(LOG_ERR,"write identity_pkey to string failed!");
+    return -1;
+  }
+
+  if(crypto_pk_write_public_key_to_string(router->link_pkey,
+                                          &link_pkey,&link_pkeylen)<0) {
+    log_fn(LOG_ERR,"write link_pkey to string failed!");
+    return -1;
   }
   
-  result = snprintf(s, maxlen, "router %s %d %d %d %d\n%s%s%s",
+  result = snprintf(s, maxlen, 
+                    "router %s %d %d %d %d\nonion-key\n%s"
+                    "link-key\n%s"
+                    "signing-key\n%s",
     router->address,
     router->or_port,
     router->ap_port,
     router->dir_port,
     router->bandwidth,
-    pkey,
-    signing_pkey_tag, signing_pkey);
+    onion_pkey, link_pkey, identity_pkey);
 
-  free(pkey);
-  if (*signing_pkey)
-    free(signing_pkey);
+  free(onion_pkey);
+  free(link_pkey);
+  free(identity_pkey);
 
   if(result < 0 || result > maxlen) {
     /* apparently different glibcs do different things on snprintf error.. so check both */
@@ -654,19 +824,34 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
     }
     written += result;
   }
+  if (written > maxlen-256) /* Not enough room for signature. */
+    return -1;
 
-  if(written > maxlen-2) {
-    return -1; /* not enough space for \n\0 */
+  strcat(s+written, "router-signature\n");
+  written += strlen(s+written);
+  s[written] = '\0';
+  if (router_get_router_hash(s, digest) < 0)
+    return -1;
+
+  if (crypto_pk_private_sign(ident_key, digest, 20, signature) < 0) {
+    log_fn(LOG_ERR, "Error signing digest");
+    return -1;
   }
-  /* XXX count fenceposts here. They're probably wrong. In general,
-   * we need a better way to handle overruns in building the directory
-   * string, and a better way to handle directory string size in general. */
-
+  strcat(s+written, "-----BEGIN SIGNATURE-----\n");
+  written += strlen(s+written);
+  if (base64_encode(s+written, maxlen-written, signature, 128) < 0) {
+    log_fn(LOG_ERR, "Couldn't base64-encode signature");
+  }
+  written += strlen(s+written);
+  strcat(s+written, "-----END SIGNATURE-----\n");
+  written += strlen(s+written);
+  
+  if (written > maxlen-2) 
+    return -1;
   /* include a last '\n' */
   s[written] = '\n';
   s[written+1] = 0;
   return written+1;
-
 }
 
 static int 
@@ -738,7 +923,10 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   cp = s+i;
   for (i = 0; i < dir->n_routers; ++i) {
     router = dir->routers[i];
-    written = dump_router_to_string(cp, eos-cp, router);
+    /* XXX This is wrong; we shouldn't sign routers, but rather propagate
+     * XXX the original router blocks, unaltered.
+     */
+    written = dump_router_to_string(cp, eos-cp, router, private_key);
 
     if(written < 0) { 
       log(LOG_ERR,"dump_signed_directory_to_string(): tried to exceed string length.");
@@ -789,8 +977,35 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   return 0;
 }
 
-char *router_get_my_descriptor(void) {
-  return "this is bob's descriptor";
+static char descriptor[8192];
+/* XXX should this replace my_routerinfo? */
+static routerinfo_t *desc_routerinfo; 
+const char *router_get_my_descriptor(void) {
+  return descriptor;
+}
+
+static int init_descriptor(void) {
+  routerinfo_t *ri;
+  ri = tor_malloc(sizeof(routerinfo_t));
+  ri->address = strdup("XXXXXXX"); /*XXX*/
+  ri->nickname = strdup(options.Nickname);
+  /* No need to set addr. ???? */
+  ri->or_port = options.ORPort;
+  ri->ap_port = options.APPort;
+  ri->dir_port = options.DirPort;
+  ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
+  ri->link_pkey = crypto_pk_dup_key(get_link_key());
+  ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
+  ri->bandwidth = options.TotalBandwidth;
+  ri->exit_policy = NULL; /* XXX implement this. */
+  if (desc_routerinfo)
+    routerinfo_free(desc_routerinfo);
+  desc_routerinfo = ri;
+  if (dump_router_to_string(descriptor, 8192, ri, get_identity_key())<0) {
+    log_fn(LOG_ERR, "Couldn't dump router to string.");
+    return -1;
+  }
+  return 0;
 }
 
 void daemonize(void) {
@@ -840,7 +1055,7 @@ int tor_main(int argc, char *argv[]) {
   crypto_seed_rng();
   retval = do_main_loop();
   crypto_global_cleanup();
-
+  
   return retval;
 }
 

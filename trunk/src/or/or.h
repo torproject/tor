@@ -245,6 +245,8 @@ typedef struct {
 
 #define ZERO_STREAM "\0\0\0\0\0\0\0\0"
 
+typedef struct buf_t buf_t;
+
 struct connection_t { 
 
   uint8_t type;
@@ -261,16 +263,12 @@ struct connection_t {
                          * iteration of the main loop?
                          */
 
-  char *inbuf;
-  int inbuflen; /* how many bytes are alloc'ed for inbuf? */
-  int inbuf_datalen; /* how many bytes of data are on inbuf? */
+  buf_t *inbuf;
   int inbuf_reached_eof; /* did read() return 0 on this conn? */
   long timestamp_lastread; /* when was the last time poll() said we could read? */
 
-  char *outbuf;
-  int outbuflen; /* how many bytes are allocated for the outbuf? */
+  buf_t *outbuf;
   int outbuf_flushlen; /* how much data should we try to flush from the outbuf? */
-  int outbuf_datalen; /* how much data is there total on the outbuf? */
   long timestamp_lastwritten; /* when was the last time poll() said we could write? */
 
   long timestamp_created; /* when was this connection_t created? */
@@ -287,7 +285,9 @@ struct connection_t {
   char *address; /* FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it
                   */
-  crypto_pk_env_t *pkey; /* public RSA key for the other side */
+  crypto_pk_env_t *onion_pkey; /* public RSA key for the other side's onions */
+  crypto_pk_env_t *link_pkey; /* public RSA key for the other side's TLS */
+  crypto_pk_env_t *identity_pkey; /* public RSA key for the other side's signing */
 
 /* Used only by OR connections: */
   tor_tls *tls;
@@ -331,8 +331,9 @@ typedef struct {
   uint16_t ap_port;
   uint16_t dir_port;
  
-  crypto_pk_env_t *pkey; /* public RSA key */
-  crypto_pk_env_t *signing_pkey; /* May be null */
+  crypto_pk_env_t *onion_pkey; /* public RSA key for onions */
+  crypto_pk_env_t *link_pkey;  /* public RSA key for TLS */
+  crypto_pk_env_t *identity_pkey;  /* public RSA key for signing */
  
   /* link info */
   uint32_t bandwidth;
@@ -405,10 +406,8 @@ typedef struct circuit_t circuit_t;
 
 typedef struct {
    char *LogLevel;
+   char *DataDirectory;
    char *RouterFile;
-   char *SigningPrivateKeyFile;
-   char *PrivateKeyFile;
-   char *CertFile;
    char *Nickname;
    double CoinWeight;
    int Daemon;
@@ -435,24 +434,29 @@ typedef struct {
 
 /********************************* buffers.c ***************************/
 
-int buf_new(char **buf, int *buflen, int *buf_datalen);
-void buf_free(char *buf);
+buf_t *buf_new();
+buf_t *buf_new_with_capacity(size_t size);
+void buf_free(buf_t *buf);
 
-int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof);
-int read_to_buf_tls(tor_tls *tls, int at_most, char **buf, int *buflen, int *buf_datalen);
+size_t buf_datalen(const buf_t *buf);
+size_t buf_capacity(const buf_t *buf);
+const char *_buf_peek_raw_buffer(const buf_t *buf);
 
-int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen);
-int flush_buf_tls(tor_tls *tls, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen);
+int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof);
+int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf);
 
-int write_to_buf(char *string, int string_len, char **buf, int *buflen, int *buf_datalen);
-int fetch_from_buf(char *string, int string_len, char **buf, int *buflen, int *buf_datalen);
-int fetch_from_buf_http(char *buf, int *buf_datalen,
+int flush_buf(int s, buf_t *buf, int *buf_flushlen);
+int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen);
+
+int write_to_buf(char *string, int string_len, buf_t *buf);
+int fetch_from_buf(char *string, int string_len, buf_t *buf);
+int fetch_from_buf_http(buf_t *buf,
                         char *headers_out, int max_headerlen,
                         char *body_out, int max_bodylen);
-int fetch_from_buf_socks(char *buf, int *buf_datalen,
+int fetch_from_buf_socks(buf_t *buf,
                          char *addr_out, int max_addrlen,
                          uint16_t *port_out);
-int find_on_inbuf(char *string, int string_len, char *buf, int buf_datalen);
+int find_on_inbuf(char *string, int string_len, buf_t *buf);
 
 /********************************* circuit.c ***************************/
 
@@ -589,10 +593,10 @@ int dns_resolve(connection_t *exitconn);
 
 /********************************* main.c ***************************/
 
-void set_privatekey(crypto_pk_env_t *k);
-crypto_pk_env_t *get_privatekey(void);
-void set_signing_privatekey(crypto_pk_env_t *k);
-crypto_pk_env_t *get_signing_privatekey(void);
+void set_onion_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_onion_key(void);
+void set_identity_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_identity_key(void);
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
@@ -617,7 +621,7 @@ int dump_signed_directory_to_string(char *s, int maxlen,
 int dump_signed_directory_to_string_impl(char *s, int maxlen, 
                                          directory_t *dir, 
                                          crypto_pk_env_t *private_key); 
-char *router_get_my_descriptor(void);
+const char *router_get_my_descriptor(void);
 
 int main(int argc, char *argv[]);
 
@@ -655,16 +659,20 @@ int learn_my_address(struct sockaddr_in *me);
 void router_retry_connections(void);
 routerinfo_t *router_pick_directory_server(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
-routerinfo_t *router_get_by_pk(crypto_pk_env_t *pk);
+routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
+#if 0
+routerinfo_t *router_get_by_identity_pk(crypto_pk_env_t *pk);
+#endif
 void router_get_directory(directory_t **pdirectory);
 int router_is_me(uint32_t addr, uint16_t port);
 void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
+int router_get_router_hash(char *s, char *digest);
 
 /* Reads a list of known routers, unsigned. */
 int router_get_list_from_string(char *s);
 /* Exported for debugging */
-int router_get_list_from_string_impl(char *s, directory_t **dest);
+int router_get_list_from_string_impl(char **s, directory_t **dest);
 /* Reads a signed directory. */
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey);
 /* Exported or debugging */

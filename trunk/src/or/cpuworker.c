@@ -73,9 +73,9 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   }
 
   if(conn->state == CPUWORKER_STATE_BUSY_ONION) {
-    if(conn->inbuf_datalen < LEN_ONION_RESPONSE) /* entire answer available? */
+    if(buf_datalen(conn->inbuf) < LEN_ONION_RESPONSE) /* entire answer available? */
       return 0; /* not yet */
-    assert(conn->inbuf_datalen == LEN_ONION_RESPONSE);
+    assert(buf_datalen(conn->inbuf) == LEN_ONION_RESPONSE);
 
     connection_fetch_from_buf(buf,LEN_ONION_RESPONSE,conn);
 
@@ -147,7 +147,7 @@ int cpuworker_main(void *data) {
     }
 
     if(question_type == CPUWORKER_TASK_ONION) {
-      if(onion_skin_server_handshake(question, get_privatekey(),
+      if(onion_skin_server_handshake(question, get_onion_key(),
         reply_to_proxy, keys, 32) < 0) {
         /* failure */
         log_fn(LOG_ERR,"onion_skin_server_handshake failed.");

@@ -336,7 +336,7 @@ repeat_connection_package_raw_inbuf:
     return 0;
   }
  
-  amount_to_process = conn->inbuf_datalen;
+  amount_to_process = buf_datalen(conn->inbuf);
  
   if(!amount_to_process)
     return 0;
@@ -352,7 +352,8 @@ repeat_connection_package_raw_inbuf:
  
   connection_fetch_from_buf(cell.payload+RELAY_HEADER_SIZE, cell.length, conn);
  
-  log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, conn->inbuf_datalen);
+  log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).",conn->s,cell.length,
+         (int)buf_datalen(conn->inbuf));
  
   cell.command = CELL_RELAY;
   SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_DATA);
@@ -440,7 +441,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
   log_fn(LOG_DEBUG,"entered.");
 
-  switch(fetch_from_buf_socks(conn->inbuf,&conn->inbuf_datalen,
+  switch(fetch_from_buf_socks(conn->inbuf,
                               destaddr, sizeof(destaddr), &destport)) {
     case -1:
       log_fn(LOG_DEBUG,"Fetching socks handshake failed. Closing.");

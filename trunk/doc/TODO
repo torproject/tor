@@ -48,7 +48,7 @@ NICK    - instruments ORs to report stats
         . integrate rep_ok functions, see what breaks
 ARMA    - configure log files. separate log file, separate severities.
 ARMA    - what assumptions break if we fclose(0) when we daemonize?
-NICK    - make buffer struct elements opaque outside buffers.c
+NICK    o make buffer struct elements opaque outside buffers.c
 ARMA    - Go through log messages, reduce confusing error messages.
 ARMA    - make the logs include more info (fd, etc)
 ARMA    - add log convention to the HACKING file

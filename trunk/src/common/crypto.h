@@ -42,7 +42,7 @@ int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, char *src, int l
 int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest);
 int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest);
 int crypto_pk_check_key(crypto_pk_env_t *env);
-int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, unsigned char *keyfile);
+int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile);
 
 int crypto_pk_set_key(crypto_pk_env_t *env, unsigned char *key);
 int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b);
@@ -53,6 +53,8 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int from
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
 int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
 int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
+#define FINGERPRINT_LEN 49
+int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out);
 
 int base64_encode(char *dest, int destlen, char *src, int srclen);
 int base64_decode(char *dest, int destlen, char *src, int srclen);

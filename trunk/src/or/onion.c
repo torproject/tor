@@ -231,7 +231,7 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
     choice = choice % rarray_len;
     log(LOG_DEBUG,"new_route(): Contemplating router %u.",choice);
     if(choice == oldchoice ||
-      (oldchoice < rarray_len && !crypto_pk_cmp_keys(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
+       (oldchoice < rarray_len && !crypto_pk_cmp_keys(rarray[choice]->onion_pkey, rarray[oldchoice]->onion_pkey)) ||
       (options.OnionRouter && !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port))) {
       /* Same router as last choice, or router twin,
        *   or no routers with that key are connected to us.
@@ -263,7 +263,7 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
       }
     }
     for(j=0;j<i;j++) {
-      if(!crypto_pk_cmp_keys(rarray[i]->pkey, rarray[j]->pkey)) {
+      if(!crypto_pk_cmp_keys(rarray[i]->onion_pkey, rarray[j]->onion_pkey)) {
         /* these guys are twins. so we've already counted him. */
         log(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
         goto next_i_loop;
@@ -311,8 +311,8 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
     log(LOG_DEBUG,"onion_generate_cpath(): %u : %s:%u, %u/%u",routelen-i,
         inet_ntoa(netaddr),
         (rarray[route[i]])->or_port,
-        (int) (rarray[route[i]])->pkey,
-        crypto_pk_keysize((rarray[route[i]])->pkey));
+        (int) (rarray[route[i]])->onion_pkey,
+        crypto_pk_keysize((rarray[route[i]])->onion_pkey));
   }
 
   /* create the cpath layer by layer, starting at the last hop */
