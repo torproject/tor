@@ -102,7 +102,9 @@ the message.
 
         0x000A No such stream
 
-        0x000B No such circuit.
+        0x000B No such circuit
+
+        0x000C No such OR
 
   The rest of the body should be a human-readable description of the error.
 
@@ -328,8 +330,6 @@ the message.
 
 3.14 EXTENDCIRCUIT (Type 0x000D)
 
-  [Proposal; not finalized]
-
   Sent from the client to the server.  The message body contains two fields:
       Circuit ID [4 octets]
       Path [NUL-terminated, comma-delimited string of OR nickname/identity]
@@ -401,7 +401,18 @@ the message.
 
   See FRAGMENTHEADER for more information
 
-3.19 
+3.19 REDIRECTSTREAM (Type 0x0012)
+
+  Sent form the client to the server. The message body contains two fields:
+      Stream ID [4 octets]
+      Address [variable-length, NUL-terminated.]
+
+  Tells the server to change the exit address on the specified stream.  No
+  remapping is performed on the new provided address.
+
+  To be sure that the modified address will be used, this event must be sent
+  after a new stream event is received, and before attaching this stream to
+  a circuit.
 
 4. Implementation notes
 
