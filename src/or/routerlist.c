@@ -389,8 +389,7 @@ int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
-  if (is_recommended_version(VERSION,
-      routerlist->software_versions) < 0) {
+  if (!is_recommended_version(VERSION, routerlist->software_versions)) {
     log(options.IgnoreVersion ? LOG_WARN : LOG_ERR,
         "You are running Tor version %s, which will not work with this network.\n"
        "Please use %s%s.",
