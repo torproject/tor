@@ -141,20 +141,6 @@ static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type
   return test_circ_id;
 }
 
-circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *circ, uint32_t naddr, uint16_t nport) {
-
-  if(!circ) /* use circ if it's defined, else start from the beginning */
-    circ = global_circuitlist; 
-  else
-    circ = circ->next;
-
-  for( ; circ; circ = circ->next) {
-    if(circ->n_addr == naddr && circ->n_port == nport)
-       return circ;
-  }
-  return NULL;
-}
-
 circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn) {
   circuit_t *circ;
   connection_t *tmpconn;
@@ -258,21 +244,23 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
 /* close all circuits that start at us, aren't open, and were born
  * at least MIN_SECONDS_BEFORE_EXPIRING_CIRC seconds ago */
 void circuit_expire_building(void) {
-  circuit_t *circ;
   int now = time(NULL);
+  circuit_t *victim, *circ = global_circuitlist;
 
-  for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath &&
-       circ->state != CIRCUIT_STATE_OPEN &&
-       circ->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC+1 < now) {
-      if(circ->n_conn)
+  while(circ) {
+    victim = circ;
+    circ = circ->next;
+    if(victim->cpath &&
+       victim->state != CIRCUIT_STATE_OPEN &&
+       victim->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC+1 < now) {
+      if(victim->n_conn)
         log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s)",
-               circ->n_conn->address, circ->n_port, circ->n_circ_id,
-               circ->state, circuit_state_to_string[circ->state]);
+               victim->n_conn->address, victim->n_port, victim->n_circ_id,
+               victim->state, circuit_state_to_string[victim->state]);
       else
-        log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s)", circ->n_circ_id,
-               circ->state, circuit_state_to_string[circ->state]);
-      circuit_close(circ);
+        log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s)", victim->n_circ_id,
+               victim->state, circuit_state_to_string[victim->state]);
+      circuit_close(victim);
     }
   }
 }
@@ -793,21 +781,18 @@ int circuit_establish_circuit(void) {
 void circuit_n_conn_open(connection_t *or_conn) {
   circuit_t *circ;
 
-  log_fn(LOG_DEBUG,"Starting.");
-  circ = circuit_enumerate_by_naddr_nport(NULL, or_conn->addr, or_conn->port);
-  for(;;) {
-    if(!circ)
-      return;
-
-    assert(circ->state == CIRCUIT_STATE_OR_WAIT);
-    log_fn(LOG_DEBUG,"Found circ, sending onion skin.");
-    circ->n_conn = or_conn;
-    if(circuit_send_next_onion_skin(circ) < 0) {
-      log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
-      circuit_close(circ);
-      return; /* FIXME will want to try the other circuits too? */
+  for(circ=global_circuitlist;circ;circ = circ->next) {
+    if(circ->cpath && circ->n_addr == or_conn->addr && circ->n_port == or_conn->port) {
+      assert(circ->state == CIRCUIT_STATE_OR_WAIT);
+      log_fn(LOG_DEBUG,"Found circ %d, sending onion skin.", circ->n_circ_id);
+      circ->n_conn = or_conn;
+      if(circuit_send_next_onion_skin(circ) < 0) {
+        log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
+        circuit_close(circ);
+        continue;
+          /* XXX could this be bad, eg if next_onion_skin failed because conn died? */
+      }
     }
-    circ = circuit_enumerate_by_naddr_nport(circ, or_conn->addr, or_conn->port);
   }
 }
 
