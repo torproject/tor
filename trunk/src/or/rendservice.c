@@ -363,7 +363,7 @@ int rend_services_init(void) {
 
     // for each intro point,
     {
-      circ = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+      //circ = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, intro->nickname);
       // tell circ which hidden service this is about
     }
 

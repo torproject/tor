@@ -689,7 +689,7 @@ void circuit_log_path(int severity, circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 
 void circuit_expire_unused_circuits(void);
-circuit_t *circuit_launch_new(uint8_t purpose);
+circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname);
 void circuit_increment_failure_count(void);
 void circuit_reset_failure_count(void);
 void circuit_n_conn_open(connection_t *or_conn);
@@ -916,7 +916,7 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                              char *key_out,
                              int key_out_len);
 
-cpath_build_state_t *onion_new_cpath_build_state(void);
+cpath_build_state_t *onion_new_cpath_build_state(const char *exit_nickname);
 
 /********************************* router.c ***************************/
 
