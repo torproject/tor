@@ -1,6 +1,6 @@
 $Id$
 
-                            TC: A Tor control protocol
+                      TC: A Tor control protocol
 
 0. Scope
 
@@ -359,6 +359,8 @@ the message.
   This message informs the server that the specified stream should be
   associated with the specified circuit.  Each stream may be associated with
   at most one circuit, and multiple streams may share the same circuit.
+  Streams can only be attached to completed circuits (that is, circuits that
+  have sent a circuit status 'built' event).
 
   If the circuit ID is 0, responsibility for attaching the given stream is
   returned to Tor.
