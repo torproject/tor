@@ -24,4 +24,6 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
 int is_gzip_supported(void);
 
+int detect_compression_method(const char *in, size_t in_len);
+
 #endif
