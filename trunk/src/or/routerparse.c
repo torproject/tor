@@ -285,7 +285,8 @@ int check_software_version_against_directory(const char *directory,
 int /* Should be static; exposed for unit tests */
 router_parse_routerlist_from_directory(const char *str,
                                        routerlist_t **dest,
-                                       crypto_pk_env_t *pkey)
+                                       crypto_pk_env_t *pkey,
+                                       int check_version)
 {
   directory_token_t *tok;
   char digest[DIGEST_LEN];
@@ -335,7 +336,8 @@ router_parse_routerlist_from_directory(const char *str,
   tokens = NULL;
 
   /* Now that we know the signature is okay, check the version. */
-  check_software_version_against_directory(str, options.IgnoreVersion);
+  if (check_version)
+    check_software_version_against_directory(str, options.IgnoreVersion);
 
   /* Now try to parse the first part of the directory. */
   if ((end = strstr(str,"\nrouter "))) {

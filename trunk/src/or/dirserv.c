@@ -742,7 +742,7 @@ static int dirserv_regenerate_directory(void)
    * necessary, but safe is better than sorry. */
   new_directory = tor_strdup(the_directory);
   /* use a new copy of the dir, since get_dir_from_string scribbles on it */
-  if (router_load_routerlist_from_directory(new_directory, get_identity_key())) {
+  if (router_load_routerlist_from_directory(new_directory, get_identity_key(), 1)) {
     log_fn(LOG_ERR, "We just generated a directory we can't parse. Dying.");
     tor_cleanup();
     exit(0);

@@ -65,7 +65,7 @@ int router_reload_router_list(void)
     s = read_file_to_str(filename,0);
     if (s) {
       log_fn(LOG_INFO, "Loading cached directory from %s", filename);
-      if (router_load_routerlist_from_directory(s, NULL) < 0) {
+      if (router_load_routerlist_from_directory(s, NULL, 0) < 0) {
         log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
       }
       if(routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2) {
@@ -793,10 +793,12 @@ int router_load_routerlist_from_string(const char *s, int trusted)
  * signed directory <b>s</b>.  If pkey is provided, check the signature against
  * pkey; else check against the pkey of the signing directory server. */
 int router_load_routerlist_from_directory(const char *s,
-                                          crypto_pk_env_t *pkey)
+                                          crypto_pk_env_t *pkey,
+                                          int check_version)
 {
   routerlist_t *new_list = NULL;
-  if (router_parse_routerlist_from_directory(s, &new_list, pkey)) {
+  if (router_parse_routerlist_from_directory(s, &new_list, pkey,
+                                             check_version)) {
     log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;
   }
