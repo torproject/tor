@@ -373,7 +373,7 @@ size_t dirserv_get_directory(const char **directory)
     /* Now read the directory we just made in order to update our own
      * router lists.  This does more signature checking than is strictly
      * necessary, but safe is better than sorry. */
-    new_directory = strdup(*directory);
+    new_directory = strdup(the_directory);
     if (router_get_dir_from_string(new_directory, get_identity_key())) {
       log_fn(LOG_ERR, "We just generated a directory we can't parse. Dying.");
       exit(0);

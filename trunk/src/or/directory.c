@@ -167,7 +167,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
 static int directory_handle_command(connection_t *conn) {
   char headers[1024];
   char body[50000]; /* XXX */
-  size_t dl;
+  size_t dlen;
   const char *cp;
 
   assert(conn && conn->type == CONN_TYPE_DIR);
@@ -187,16 +187,16 @@ static int directory_handle_command(connection_t *conn) {
   if(!strncasecmp(headers,"GET",3)) {
     /* XXX should check url and http version */
 
-    dl = dirserv_get_directory(&cp);
+    dlen = dirserv_get_directory(&cp);
 
-    if(dl == 0) {
+    if(dlen == 0) {
       log_fn(LOG_WARNING,"My directory is empty. Closing.");
       return -1;
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client."); 
     if((connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) ||
-       (connection_write_to_buf(cp, dl, conn) < 0)) {
+       (connection_write_to_buf(cp, dlen, conn) < 0)) {
       log_fn(LOG_WARNING,"Failed to write answerstring+directory to outbuf.");
       return -1;
     }
