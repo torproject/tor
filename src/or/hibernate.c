@@ -605,6 +605,16 @@ read_bandwidth_usage(void)
   interval_start_time = t1;
   expected_bandwidth_usage = expected_bw;
 
+  log_fn(LOG_INFO, "Successfully read bandwidth accounting file written at %s for interval starting at %s.  We have been active for %lu seconds in this interval.  At the start of the interval, we expected to use about %lu KB per second. ("U64_FORMAT" bytes read so far, "U64_FORMAT" bytes written so far)",
+         (char*)smartlist_get(elts,2),
+         (char*)smartlist_get(elts,1),
+         (unsigned long)n_seconds_active_in_interval,
+         (unsigned long)((uint64_t)expected_bandwidth_usage*1024/60),
+         n_bytes_read_in_interval,
+         n_bytes_written_in_interval);
+  SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
+  smartlist_free(elts);
+
   return 0;
  err:
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
