@@ -649,6 +649,7 @@ int connection_op_handle_listener_read(connection_t *conn);
 int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 
+void connection_or_set_open(connection_t *conn);
 void conn_or_init_crypto(connection_t *conn);
 
 int or_handshake_op_send_keys(connection_t *conn);

@@ -86,9 +86,8 @@ int connection_or_finished_flushing(connection_t *conn) {
     case OR_CONN_STATE_CLIENT_SENDING_NONCE:
       log(LOG_DEBUG,"connection_or_finished_flushing(): client finished sending nonce.");
       conn_or_init_crypto(conn);
-      conn->state = OR_CONN_STATE_OPEN;
-      connection_init_timeval(conn);
-      connection_watch_events(conn, POLLIN);
+      connection_or_set_open(conn);
+
       return connection_process_inbuf(conn); /* in case there's anything waiting on it */
     case OR_CONN_STATE_SERVER_SENDING_AUTH:
       log(LOG_DEBUG,"connection_or_finished_flushing(): server finished sending auth.");
@@ -109,6 +108,13 @@ int connection_or_finished_flushing(connection_t *conn) {
 }
 
 /*********************/
+
+void connection_or_set_open(connection_t *conn) {
+  conn->state = OR_CONN_STATE_OPEN;
+  directory_set_dirty();
+  connection_init_timeval(conn);
+  connection_watch_events(conn, POLLIN);
+}
 
 void conn_or_init_crypto(connection_t *conn) {
   //int x;
@@ -327,9 +333,7 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
   /* do crypto initialization, etc */
   conn_or_init_crypto(conn);
 
-  conn->state = OR_CONN_STATE_OPEN;
-  connection_init_timeval(conn);
-  connection_watch_events(conn, POLLIN); /* give it a default, tho the ap_handshake call may change it */
+  connection_or_set_open(conn);
   ap_handshake_n_conn_open(conn); /* send the pending onions */
   return 0;
 }
@@ -532,9 +536,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
   /* it finished sending */
   log(LOG_DEBUG,"or_handshake_client_process_auth(): Finished sending nonce.");
   conn_or_init_crypto(conn);
-  conn->state = OR_CONN_STATE_OPEN;
-  connection_init_timeval(conn);
-  connection_watch_events(conn, POLLIN);
+  connection_or_set_open(conn);
   return connection_process_inbuf(conn); /* process the rest of the inbuf */
 
 }
@@ -719,9 +721,7 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Response valid. Authentication complete.");
 
   conn_or_init_crypto(conn);
-  conn->state = OR_CONN_STATE_OPEN;
-  connection_init_timeval(conn);
-  connection_watch_events(conn, POLLIN);
+  connection_or_set_open(conn);
   return connection_process_inbuf(conn); /* process the rest of the inbuf */
 
 }

@@ -123,9 +123,6 @@ connection_t *connection_new(int type) {
       return NULL;
     }
   }
-  if(type == CONN_TYPE_OR) {
-    directory_set_dirty();
-  }
 #ifdef USE_ZLIB
   if (type == CONN_TYPE_AP || type == CONN_TYPE_EXIT)  {
     if (buf_new(&conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
