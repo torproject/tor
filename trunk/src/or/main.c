@@ -274,7 +274,8 @@ static void conn_read(int i) {
     connection_free(conn);
     if(i<nfds) { /* we just replaced the one at i with a new one.
                     process it too. */
-      if(poll_array[i].revents & POLLIN) /* something to read */
+      if(poll_array[i].revents & POLLIN ||
+         poll_array[i].revents & POLLHUP ) /* something to read */
         conn_read(i);
     }
   }
@@ -552,8 +553,11 @@ static int do_main_loop(void) {
     if(poll_result > 0) { /* we have at least one connection to deal with */
       /* do all the reads first, so we can detect closed sockets */
       for(i=0;i<nfds;i++)
-        if(poll_array[i].revents & POLLIN) /* something to read */
+        if(poll_array[i].revents & POLLIN ||
+           poll_array[i].revents & POLLHUP ) /* something to read */
           conn_read(i); /* this also blows away broken connections */
+/* see http://www.greenend.org.uk/rjk/2001/06/poll.html for discussion
+ * of POLLIN vs POLLHUP */
 
       /* then do the writes */
       for(i=0;i<nfds;i++)
