@@ -1031,19 +1031,19 @@ control_signal_act(int the_signal)
   switch(the_signal)
     {
     case 1:
-      signal_callback(0,0,(void*)SIGHUP);
+      signal_callback(0,0,(void*)(uintptr_t)SIGHUP);
       break;
     case 2:
-      signal_callback(0,0,(void*)SIGINT);
+      signal_callback(0,0,(void*)(uintptr_t)SIGINT);
       break;
     case 10:
-      signal_callback(0,0,(void*)SIGUSR1);
+      signal_callback(0,0,(void*)(uintptr_t)SIGUSR1);
       break;
     case 12:
-      signal_callback(0,0,(void*)SIGUSR2);
+      signal_callback(0,0,(void*)(uintptr_t)SIGUSR2);
       break;
     case 15:
-      signal_callback(0,0,(void*)SIGTERM);
+      signal_callback(0,0,(void*)(uintptr_t)SIGTERM);
       break;
     default:
       return -1;
@@ -1053,7 +1053,7 @@ control_signal_act(int the_signal)
 
 static void signal_callback(int fd, short events, void *arg)
 {
-  int sig = (int) arg;
+  uintptr_t sig = (uintptr_t)arg;
   switch (sig)
     {
     case SIGTERM:
