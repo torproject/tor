@@ -1418,10 +1418,8 @@ and its resistance to attacks.
 \SubSection{Attacks and Defenses}
 \label{sec:attacks}
 
-Below we summarize a variety of attacks and how well our design withstands
-them.
-
-[XXX Note that some of these attacks are outside our threat model! -NM]
+Below we summarize a variety of attacks, and discuss how well our
+design withstands them.
 
 \subsubsection*{Passive attacks}
 \begin{tightlist}
@@ -1708,7 +1706,33 @@ them.
 
 \subsubsection*{Attacks against rendezvous points}
 \begin{tightlist}
-\item foo
+\item \emph{Make many introduction requests.}  An attacker could
+  attempt to deny Bob service by flooding his Introduction Point with
+  requests.  Because the introduction point can block requests that
+  lack authentication tokens, however, Bob can restrict the volume of
+  requests he receives, or require a certain amount of computation for
+  every request he receives.
+  
+\item \emph{Attack an introduction point.} An attacker could try to
+  disrupt a location-hidden service by disabling its introduction
+  point.  But because a service's identity is attached to its public
+  key, not its introduction point, the service can simply re-advertise
+  itself at a different introduction point.
+
+\item \emph{Compromise an introduction point.} If an attacker controls
+  an introduction point for a service, it can flood the service with
+  introduction requests, or prevent valid introduction requests from
+  reaching the hidden server.  The server will notice a flooding
+  attempt if it receives many introduction requests.  To notice
+  blocking of valid requests, however, the hidden server should
+  periodically test the introduction point by sending its introduction
+  requests, and making sure it receives them.
+
+\item \emph{Compromise a rendezvous point.}  Controlling a rendezvous
+  point gains an attacker no more than controlling any other OR along
+  a circuit, since all data passing along the rendezvous is protected
+  by the session key shared by the client and server.
+
 \end{tightlist}
 
 
