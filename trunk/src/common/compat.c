@@ -513,14 +513,15 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    err = getaddrinfo(name, NULL, &hints, &res);
+    err = getaddrinfo(name, NULL, NULL, &res);
     if (!err) {
       for (res_p = res; res_p; res_p = res_p->ai_next) {
-        if (res_p->ai_family == PF_INET &&
-            res_p->ai_addrlen == 4) {
-          memcpy(addr, res_p->ai_addr, 4);
+        if (res_p->ai_family == AF_INET) {
+          struct sockaddr_in *sin = (struct sockaddr_in *)res_p->ai_addr;
+          memcpy(addr, &sin->sin_addr, 4);
           freeaddrinfo(res);
           return 0;
+        } else {
         }
       }
       return -1;
