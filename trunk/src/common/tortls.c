@@ -35,6 +35,7 @@
 
 typedef struct tor_tls_context_st {
   SSL_CTX *ctx;
+  SSL_CTX *client_only_ctx;
 } tor_tls_context;
 
 /** Holds a SSL object and its associated data.  Members are only
@@ -291,6 +292,8 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   tor_tls_context *result = NULL;
   X509 *cert = NULL, *idcert = NULL;
   char nn2[1024];
+  int client_only;
+  SSL_CTX **ctx;
   sprintf(nn2, "%s <identity>", nickname);
 
   tor_tls_init();
@@ -314,51 +317,56 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   }
 
   result = tor_malloc(sizeof(tor_tls_context));
-  result->ctx = NULL;
+  result->ctx = result->client_only_ctx = NULL;
+  for (client_only=0; client_only <= 1; ++client_only) {
+    ctx = client_only ? &result->client_only_ctx : &result->ctx;
 #ifdef EVERYONE_HAS_AES
-  /* Tell OpenSSL to only use TLS1 */
-  if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
-    goto error;
+    /* Tell OpenSSL to only use TLS1 */
+    if (!(*ctx = SSL_CTX_new(TLSv1_method())))
+      goto error;
 #else
-  /* Tell OpenSSL to use SSL3 or TLS1 but not SSL2. */
-  if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
-    goto error;
-  SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
+    /* Tell OpenSSL to use SSL3 or TLS1 but not SSL2. */
+    if (!(*ctx = SSL_CTX_new(SSLv23_method())))
+      goto error;
+    SSL_CTX_set_options(*ctx, SSL_OP_NO_SSLv2);
 #endif
-  if (!SSL_CTX_set_cipher_list(result->ctx, CIPHER_LIST))
-    goto error;
-  if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
-    goto error;
-  if (idcert && !SSL_CTX_add_extra_chain_cert(result->ctx,idcert))
-    goto error;
-  SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
-  if (isServer) {
-    tor_assert(rsa);
-    if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
+    if (!SSL_CTX_set_cipher_list(*ctx, CIPHER_LIST))
       goto error;
-    if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
-      goto error;
-    EVP_PKEY_free(pkey);
-    pkey = NULL;
-    if (cert) {
-      if (!SSL_CTX_check_private_key(result->ctx))
+    if (!client_only) {
+      if (cert && !SSL_CTX_use_certificate(*ctx,cert))
+        goto error;
+      if (idcert && !SSL_CTX_add_extra_chain_cert(*ctx,idcert))
         goto error;
     }
+    SSL_CTX_set_session_cache_mode(*ctx, SSL_SESS_CACHE_OFF);
+    if (isServer && !client_only) {
+      tor_assert(rsa);
+      if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
+        goto error;
+      if (!SSL_CTX_use_PrivateKey(*ctx, pkey))
+        goto error;
+      EVP_PKEY_free(pkey);
+      pkey = NULL;
+      if (cert) {
+        if (!SSL_CTX_check_private_key(*ctx))
+          goto error;
+      }
+    }
+    dh = crypto_dh_new();
+    SSL_CTX_set_tmp_dh(*ctx, _crypto_dh_env_get_dh(dh));
+    crypto_dh_free(dh);
+    SSL_CTX_set_verify(*ctx, SSL_VERIFY_PEER,
+                       always_accept_verify_cb);
+    /* let us realloc bufs that we're writing from */
+    SSL_CTX_set_mode(*ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
   }
-  dh = crypto_dh_new();
-  SSL_CTX_set_tmp_dh(result->ctx, _crypto_dh_env_get_dh(dh));
-  crypto_dh_free(dh);
-  SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
-                     always_accept_verify_cb);
-  /* let us realloc bufs that we're writing from */
-  SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-
   /* Free the old context if one exists. */
   if (global_tls_context) {
     /* This is safe even if there are open connections: OpenSSL does
      * reference counting with SSL and SSL_CTX objects. */
     SSL_CTX_free(global_tls_context->ctx);
-    free(global_tls_context);
+    SSL_CTX_free(global_tls_context->client_only_ctx);
+    tor_free(global_tls_context);
   }
   global_tls_context = result;
   return 0;
@@ -373,6 +381,8 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     crypto_dh_free(dh);
   if (result && result->ctx)
     SSL_CTX_free(result->ctx);
+  if (result && result->client_only_ctx)
+    SSL_CTX_free(result->client_only_ctx);
   if (result)
     free(result);
   if (cert)
@@ -386,11 +396,14 @@ tor_tls_context_new(crypto_pk_env_t *identity,
  * determine whether it is functioning as a server.
  */
 tor_tls *
-tor_tls_new(int sock, int isServer)
+tor_tls_new(int sock, int isServer, int use_no_cert)
 {
   tor_tls *result = tor_malloc(sizeof(tor_tls));
+  SSL_CTX *ctx;
   tor_assert(global_tls_context); /* make sure somebody made it first */
-  if (!(result->ssl = SSL_new(global_tls_context->ctx)))
+  ctx = use_no_cert ? global_tls_context->client_only_ctx
+    : global_tls_context->ctx;
+  if (!(result->ssl = SSL_new(ctx)))
     return NULL;
   result->socket = sock;
   SSL_set_fd(result->ssl, sock);
