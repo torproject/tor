@@ -1,0 +1,20 @@
+# Defaults for tor initscript
+# sourced by /etc/init.d/tor
+# installed at /etc/default/tor by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+RUN_DAEMON="yes"
+
+#
+# Servers sometimes may need more than the default 1024 file descriptors
+# if they are very busy and have many clients connected to them.
+#  (ulimit -n)
+#
+MAX_FILEDESCRIPTORS=4096
+
+#
+# Uncomment this if you want to get coredumps
+#
+ulimit -c unlimited
