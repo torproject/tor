@@ -8,7 +8,7 @@ extern or_options_t options; /* command-line and config-file options */
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
 static int connection_ap_handshake_attach_circuit(connection_t *conn);
-static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
+static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                                int replylen, char success);
 
@@ -469,26 +469,11 @@ repeat_connection_edge_package_raw_inbuf:
 void connection_ap_attach_pending(void)
 {
   connection_t *conn;
-  int r;
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
-    r = connection_ap_handshake_attach_circuit(conn);
-    if (r == 0) {
-      /* r==0: We're attached; do nothing. */
-    } else if (r>0) {
-      /* r>0: There was no circuit to attach to: stop the loop. */
-      break;
-    } else {
-      /* r<0: There was an error sending the begin cell; other pending  
-       *   AP connections may succeed.
-       */
-      /* XXX r is only <0 if openssl can't generate random bytes. if
-       * the begin failed, r==0 and the circ is closed. */
-      connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
-      conn->marked_for_close = 1;
-      conn->has_sent_end = 1; /* if the begin failed, don't try an end */
-    }
+    if (connection_ap_handshake_attach_circuit(conn) == 0)
+      break; /* There was no circuit to attach to: stop the loop. */
   }
 }
 
@@ -550,10 +535,9 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 }
 
 /* Try to find a live circuit.  If we don't find one, tell 'conn' to
- * stop reading and return 1.  Otherwise, associate the CONN_TYPE_AP
- * connection 'conn' with the newest live circuit, and start sending a
- * BEGIN cell down the circuit.  Return 0 on success, and -1 on
- * error.
+ * stop reading and return 0.  Otherwise, associate the CONN_TYPE_AP
+ * connection 'conn' with the newest live circuit, start sending a
+ * BEGIN cell down the circuit, and return 1.
  */
 static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   circuit_t *circ;
@@ -574,7 +558,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
      *     client until we're connected. the socks spec promises that it
      *     won't write. is that good enough?
      */
-    return 1;
+    return 0;
   }
   connection_start_reading(conn);
 
@@ -589,16 +573,13 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
   conn->cpath_layer = circ->cpath->prev;
 
-  if(connection_ap_handshake_send_begin(conn, circ) < 0) {
-    circuit_close(circ);
-    return -1;
-  }
+  connection_ap_handshake_send_begin(conn, circ);
 
-  return 0;
+  return 1;
 }
 
 /* deliver the destaddr:destport in a relay cell */
-static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
+static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
@@ -620,13 +601,13 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
 
   if(connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
                                payload, payload_len, ap_conn->cpath_layer) < 0)
-    return 0; /* circuit is closed, don't continue */
+    return; /* circuit is closed, don't continue */
 
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_OPEN;
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
-  return 0;
+  return;
 }
 
 static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
