@@ -16,10 +16,11 @@ Quickstart version for users:
 2) ./configure (or do the two-line version below, if you're on bsd)
 3) make
 4) cd src/config
-5) ../or/or -f oprc
-6) point your mozilla (or whatever) to socks4 proxy at localhost port 9050
-  In mozilla, this is in edit|preferences|advanced|proxies. This allows you
-  to test to make sure tor is installed correctly.
+5) ../or/tor -f oprc
+  You don't need to run this as root, and you probably shouldn't.
+6) point your browser to socks4 proxy at localhost port 9050. In mozilla,
+  this is in edit|preferences|advanced|proxies. This allows you to test
+  to make sure tor is installed correctly.
 7) make sure you've set it up correctly: go to
   http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
   you're coming from. If it works, you should probably go on to step 8,
@@ -34,6 +35,8 @@ If this works for you, you can stop reading. Otherwise, below is a more
 detailed version.
 
 **************************************************************************
+You only need to look beyond this point if the above doesn't work for you.
+**************************************************************************
 
 Dependencies:
 
@@ -46,15 +49,10 @@ Dependencies:
 If you got the source from cvs:
 
   Run "./autogen.sh", which will run the various auto* programs and then
-  run ./configure for you. From there, you should be able to run 'make'
-  and you'll be on your way.
+  run ./configure for you. From there, start at step 3 in the quickstart
+  list above.
 
-If you got the source from a tarball:
-
-  Run ./configure and make as usual. There isn't much point in 
-  'make install' yet.
-
-If this doesn't work for you / troubleshooting:
+If the quickstart doesn't work for you:
 
   If you have problems finding libraries, try 
     CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
@@ -66,22 +64,14 @@ If this doesn't work for you / troubleshooting:
   and let us know what you did to fix it, or give us the details and
   we'll see what we can do.
 
-Do you want to run a tor server or a tor client?
+Do you want to run a tor server?
 
-  If you want to run a local onion proxy (that is, you're a user, not
-  a node operator), go into src/config and look at the oprc file. (You
-  shouldn't have to edit any of it.) You can run an onion proxy with
-  "../or/or -f oprc". See below for how to use it.
-
-  If you want to run a node in the tor network, use the orkeygen program
-  (included) to generate a keypair:
-    orkeygen file-for-privkey file-for-pubkey
-  Then set up a config file for your node (start with sample-orrc
-  and edit the top portion). Then take a look at the routers.or file,
-  and mail arma@mit.edu an entry for your new router. You can start up
-  your router with "../or/or -f you-orrc". Remember that you won't be
-  able to authenticate to the other tor nodes until I've added you to
-  the directory.
+  First, set up a config file for your node (start with sample-orrc and
+  edit the top portion). Then run the node (as above, but with the new
+  config file) to generate keys. One of the generated files is your
+  'fingerprint' file.  Mail it to arma@mit.edu. Remember that you won't
+  be able to authenticate to the other tor nodes until I've added you
+  to the directory.
 
 How to use it for web browsing:
 
