@@ -1,0 +1,100 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: or - Win32 Debug--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "D:\DOCUME~1\nickm\LOCALS~1\Temp\RSP13D.tmp" with contents
+[
+/nologo /MTd /W3 /Gm /GX /ZI /Od /I "d:\openssl\include" /I "..\..\src\win32" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Debug/or.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ  /c 
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\circuit.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\command.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\config.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\connection.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\connection_ap.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\connection_edge.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\connection_exit.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\connection_or.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\directory.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\dns.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\main.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\onion.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\routers.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\test.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\tor_main.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\or\buffers.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\common\crypto.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\common\fakepoll.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\common\log.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\common\util.c"
+"D:\Documents and Settings\nickm\My Documents\tor\src\common\aes.c"
+]
+Creating command line "cl.exe @D:\DOCUME~1\nickm\LOCALS~1\Temp\RSP13D.tmp" 
+Creating temporary file "D:\DOCUME~1\nickm\LOCALS~1\Temp\RSP13E.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib  kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/or.pdb" /debug /machine:I386 /out:"Debug/or.exe" /pdbtype:sept 
+".\Debug\circuit.obj"
+".\Debug\command.obj"
+".\Debug\config.obj"
+".\Debug\connection.obj"
+".\Debug\connection_ap.obj"
+".\Debug\connection_edge.obj"
+".\Debug\connection_exit.obj"
+".\Debug\connection_or.obj"
+".\Debug\directory.obj"
+".\Debug\dns.obj"
+".\Debug\main.obj"
+".\Debug\onion.obj"
+".\Debug\routers.obj"
+".\Debug\test.obj"
+".\Debug\tor_main.obj"
+".\Debug\buffers.obj"
+".\Debug\crypto.obj"
+".\Debug\fakepoll.obj"
+".\Debug\log.obj"
+".\Debug\util.obj"
+".\Debug\aes.obj"
+]
+Creating command line "link.exe @D:\DOCUME~1\nickm\LOCALS~1\Temp\RSP13E.tmp"
+<h3>Output Window</h3>
+Compiling...
+circuit.c
+command.c
+d:\documents and settings\nickm\my documents\tor\src\or\circuit.c(232) : warning C4761: integral size mismatch in argument; conversion supplied
+config.c
+connection.c
+D:\Documents and Settings\nickm\My Documents\tor\src\or\connection.c(360) : warning C4018: '>' : signed/unsigned mismatch
+D:\Documents and Settings\nickm\My Documents\tor\src\or\connection.c(420) : warning C4018: '>' : signed/unsigned mismatch
+connection_ap.c
+connection_edge.c
+D:\Documents and Settings\nickm\My Documents\tor\src\or\connection_edge.c(268) : error C2065: 'EINPROGRESS' : undeclared identifier
+connection_exit.c
+D:\Documents and Settings\nickm\My Documents\tor\src\or\connection_exit.c(89) : error C2065: 'EINPROGRESS' : undeclared identifier
+connection_or.c
+D:\Documents and Settings\nickm\My Documents\tor\src\or\connection_or.c(65) : error C2065: 'EINPROGRESS' : undeclared identifier
+directory.c
+D:\Documents and Settings\nickm\My Documents\tor\src\or\directory.c(69) : error C2065: 'EINPROGRESS' : undeclared identifier
+dns.c
+main.c
+onion.c
+D:\Documents and Settings\nickm\My Documents\tor\src\or\onion.c(252) : warning C4018: '<' : signed/unsigned mismatch
+routers.c
+test.c
+tor_main.c
+buffers.c
+crypto.c
+fakepoll.c
+log.c
+util.c
+aes.c
+Error executing cl.exe.
+
+
+
+<h3>Results</h3>
+or.exe - 4 error(s), 4 warning(s)
+</pre>
+</body>
+</html>
