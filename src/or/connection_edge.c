@@ -408,7 +408,8 @@ int connection_edge_finished_flushing(connection_t *conn) {
       if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
          RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
         return 0; /* circuit is closed, don't continue */
-      return connection_process_inbuf(conn); /* in case the server has written anything */
+      assert(conn->package_window > 0);
+      return connection_edge_process_inbuf(conn); /* in case the server has written anything */
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_stop_writing(conn);

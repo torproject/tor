@@ -34,8 +34,9 @@ static int ol_length=0;
 int onion_pending_add(circuit_t *circ) {
   struct onion_queue_t *tmp;
 
-  tmp = tor_malloc_zero(sizeof(struct onion_queue_t));
+  tmp = tor_malloc(sizeof(struct onion_queue_t));
   tmp->circ = circ;
+  tmp->next = NULL;
 
   if(!ol_tail) {
     assert(!ol_list);
@@ -70,14 +71,6 @@ circuit_t *onion_next_task(void) {
 
   assert(ol_list->circ);
   assert(ol_list->circ->p_conn); /* make sure it's still valid */
-#if 0
-  if(!ol_list->circ->p_conn) {
-    log_fn(LOG_INFO,"ol_list->circ->p_conn null, must have died?");
-    onion_pending_remove(ol_list->circ);
-    return onion_next_task(); /* recurse: how about the next one? */
-  }
-#endif
-
   assert(ol_length > 0);
   circ = ol_list->circ;
   onion_pending_remove(ol_list->circ);
@@ -182,7 +175,7 @@ char **parse_nickname_list(char *list, int *num) {
     strncpy(out[i],start,end-start);
     out[i][end-start] = 0; /* null terminate it */
     i++;
-    while(isspace(*end)) end++;
+    while(*end && isspace(*end)) end++;
     start = end;
   }
   *num = i;
@@ -209,13 +202,9 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   }
 
   if(num_acceptable_routers < routelen) {
-    log_fn(LOG_INFO,"Not enough routers: cutting routelen from %d to %d.",routelen, num_acceptable_routers);
+    log_fn(LOG_INFO,"Not enough routers: cutting routelen from %d to %d.",
+           routelen, num_acceptable_routers);
     routelen = num_acceptable_routers;
-  }
-
-  if (routelen < 1) {
-    log_fn(LOG_WARN,"Didn't find any acceptable routers. Failing.");
-    return -1;
   }
 
   return routelen;
@@ -235,7 +224,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   int best_maybe_support_idx = -1;
   int n_best_support=0, n_best_maybe_support=0;
   int n_running_routers=0;
-  
+
   get_connection_array(&carray, &n_connections);
 
   /* Count how many connections are waiting for a circuit to be built.
@@ -316,7 +305,8 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
       ++n_best_maybe_support;
     }
   }
-  log_fn(LOG_INFO, "Found %d servers that will definitely support %d/%d pending connections, and %d that might support %d/%d.",
+  log_fn(LOG_INFO, "Found %d servers that will definitely support %d/%d "
+                   "pending connections, and %d that might support %d/%d.",
          n_best_support, best_support, n_pending_connections,
          n_best_maybe_support, best_maybe_support, n_pending_connections);
   /* If any routers definitely support any pending connections, choose one
@@ -469,10 +459,9 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   log_fn(LOG_DEBUG, "Picked an already-selected router for hop %d; retrying.",
          cur_len);
   ++n_failures;
-  if (n_failures == 25) {
-    /* This actually happens with P=1/30,000,000 when we _could_ build a
-     * circuit.  For now, let's leave it in.
-     */
+  if (n_failures == 50) {
+    /* XXX hack to prevent infinite loop. Ideally we should build a list
+     * of acceptable choices and then choose from it. */
     log_fn(LOG_INFO, "Unable to continue generating circuit path");
     return -1;
   }
@@ -505,23 +494,21 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
          choice->nickname, cur_len, state->chosen_exit);
   if (cur_len != state->desired_path_len-1 && 
       !strcasecmp(choice->nickname, state->chosen_exit)) {
+    /* make sure we don't pick the exit for another node in the path */
     goto again;
   }
 
   for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
     r = router_get_by_addr_port(cpath->addr, cpath->port);
-    if ((r && !crypto_pk_cmp_keys(r->onion_pkey, choice->onion_pkey))
-        || (cur_len != state->desired_path_len-1 &&
-            !strcasecmp(choice->nickname, state->chosen_exit))
-        || (cpath->addr == choice->addr && 
-            cpath->port == choice->or_port)
-        || (options.ORPort &&
-            !(connection_twin_get_by_addr_port(choice->addr,
-                                               choice->or_port)))) {
-      goto again;
-    }
+    assert(r);
+    if (!crypto_pk_cmp_keys(r->onion_pkey, choice->onion_pkey))
+      goto again; /* same key -- it or a twin is already chosen */
+    if (options.ORPort &&
+        !(connection_twin_get_by_addr_port(choice->addr, choice->or_port)))
+      goto again; /* this node is not connected to us. */
+
   }
- 
+
   /* Okay, so we haven't used 'choice' before. */
   hop = (crypt_path_t *)tor_malloc_zero(sizeof(crypt_path_t));
 
@@ -537,16 +524,16 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   }
 
   hop->state = CPATH_STATE_CLOSED;
-  
+
   hop->port = choice->or_port;
   hop->addr = choice->addr;
-  
+
   hop->package_window = CIRCWINDOW_START;
   hop->deliver_window = CIRCWINDOW_START;
 
   log_fn(LOG_DEBUG, "Extended circuit path with %s for hop %d", 
          choice->nickname, cur_len);
-  
+
   *router_out = choice;
   return 0;
 }
@@ -628,7 +615,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   if (crypto_cipher_encrypt(cipher, pubkey+pkbytes, dhbytes+16-pkbytes,
                             onion_skin_out+pkbytes))
     goto err;
-  
+
   free(pubkey);
   crypto_free_cipher_env(cipher);
   *handshake_state_out = dh;
@@ -658,7 +645,7 @@ onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
   crypto_cipher_env_t *cipher = NULL;
   int pkbytes;
   int len;
-  
+
   memset(iv, 0, 16);
   pkbytes = crypto_pk_keysize(private_key);
 
@@ -666,7 +653,7 @@ onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
                                 onion_skin, pkbytes,
                                 buf, RSA_NO_PADDING) == -1)
     goto err;
-  
+
 #ifdef DEBUG_ONION_SKINS
   printf("Server: client symkey:");
   PA(buf+0,16);
@@ -737,7 +724,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 {
   int len;
   assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
-  
+
 #ifdef DEBUG_ONION_SKINS
   printf("Client: server g^y:");
   PA(handshake_reply+0,3);
@@ -750,7 +737,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                                  key_out, key_out_len);
   if (len < 0)
     return -1;
-  
+
 #ifdef DEBUG_ONION_SKINS
   printf("Client: keys out:");
   PA(key_out, key_out_len);
