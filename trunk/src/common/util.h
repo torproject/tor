@@ -232,6 +232,7 @@ void tor_mutex_free(tor_mutex_t *m);
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
 
 int is_internal_IP(uint32_t ip);
+int is_local_IP(uint32_t ip);
 
 const char *get_uname(void);
 
