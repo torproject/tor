@@ -167,7 +167,12 @@ char *tor_strndup(const char *s, size_t n) {
   char *dup;
   tor_assert(s);
   dup = tor_malloc(n+1);
-  strlcpy(dup, s, n+1);
+  /* Performance note: Ordinarly we prefer strlcpy to strncpy.  But
+   * this function gets called a whole lot, and platform strncpy is
+   * much faster than strlcpy when strlen(s) is much longer than n.
+   */
+  strncpy(dup, s, n+1);
+  dup[n]='\0';
   return dup;
 }
 
