@@ -51,16 +51,14 @@
 
 \begin{abstract}
 We present Tor, a circuit-based low-latency anonymous communication
-system. Tor is the successor to Onion Routing
-and addresses various limitations in the original Onion Routing design.
-Tor works on the real-world Internet, requires no special
-privileges such as root- or kernel-level access,
-requires little synchronization or coordination between nodes, and
-provides a reasonable trade-off between anonymity, usability, and efficiency.
-We include a new, more practical design for rendezvous points, and
-close with a list of open problems in anonymous communication systems
-today.
-% Which other innovations from section 1 should we mention in the abstract?
+system. This second-generation Onion Routing system addresses limitations
+in the original design. We add perfect forward secrecy, congestion
+control, directory servers, integrity checking, variable exit policies,
+and a practical design for rendezvous points. Tor works on the real-world
+Internet, requires no special privileges or kernel modifications, requires
+little synchronization or coordination between nodes, and provides a
+reasonable trade-off between anonymity, usability, and efficiency. We
+close with a list of open problems in anonymous communication systems.
 \end{abstract}
 
 %\begin{center}
@@ -109,8 +107,6 @@ As a side benefit, onion replay detection is no longer
 necessary, and the process of building circuits is more reliable, since
 the initiator knows when a hop fails and can then try extending to a new node.
 
-% Perhaps mention that not all of these are things that we invented. -NM
-
 \item \textbf{Separation of protocol cleaning from anonymity:}
 The original Onion Routing design required a separate ``application
 proxy'' for each
@@ -135,11 +131,12 @@ circuit, to improve efficiency and anonymity.
 
 \item \textbf{Leaky-pipe circuit topology:} Through in-band signalling
 within the circuit, Tor initiators can direct traffic to nodes partway
-down the circuit. This allows for long-range padding to frustrate traffic
-shape and volume attacks at the initiator \cite{defensive-dropping}.
-Because circuits are used by more than one application, it also allows
-traffic to exit the circuit from the middle---thus frustrating traffic
-shape and volume attacks based on observing the end of the circuit.
+down the circuit. This novel approach allows both for long-range
+padding to frustrate traffic shape and volume attacks at the initiator
+\cite{defensive-dropping}, and, because circuits are used by more than one
+application, allows traffic to exit the circuit from the middle---thus
+frustrating traffic shape and volume attacks based on observing the end
+of the circuit.
 
 \item \textbf{No mixing, padding, or traffic shaping:} The original
 Onion Routing design called for batching and reordering the cells arriving
@@ -216,14 +213,14 @@ long-lived ``reply onions'' that could be used to build virtual circuits
 to a hidden server, but these reply onions did not provide forward
 security, and would become useless if any node in
 the path went down or rotated its keys.
-In Tor's current design, clients negotiate {\it
+In Tor, clients negotiate {\it
 rendezvous points} to connect with hidden servers; reply onions are no
 longer required.
 \end{tightlist}
 
 We have implemented most of the above features. Our source code is
-available under a free license, and is not (as far as we can tell)
-encumbered by patents. We have
+available under a free license, and we believe it to be
+unencumbered by patents. We have
 recently begun deploying a widespread alpha network to test
 the design in practice, to get more experience with usability and users,
 and to provide a research platform for experimenting with new ideas.
@@ -242,9 +239,9 @@ work for the Onion Routing project in Section~\ref{sec:conclusion}.
 \Section{Related work}
 \label{sec:related-work}
 
-Modern anonymity systems date to Chaum's Mix-Net\cite{chaum-mix} design of
-1981.  Chaum proposed hiding sender-recipient connections by wrapping
-messages in layers of public key cryptography, and relaying them
+Modern anonymity systems date to Chaum's Mix-Net\cite{chaum-mix}. Chaum
+proposed hiding the correspondence between sender and recipient by
+wrapping messages in layers of public key cryptography, and relaying them
 through a path composed of ``Mixes.''  These mixes in turn decrypt, delay,
 and re-order messages, before relaying them along the sender-selected
 path towards their destinations.
