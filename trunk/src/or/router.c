@@ -774,6 +774,26 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   return written+1;
 }
 
+int is_legal_nickname(const char *s)
+{
+  size_t len;
+  tor_assert(s);
+  len = strlen(s);
+  return len > 0 && len <= MAX_NICKNAME_LEN &&
+    strspn(s,LEGAL_NICKNAME_CHARACTERS)==len;
+}
+int is_legal_nickname_or_hexdigest(const char *s)
+{
+  size_t len;
+  tor_assert(s);
+  if (*s!='$')
+    return is_legal_nickname(s);
+
+  len = strlen(s);
+  return len == HEX_DIGEST_LEN+1 && strspn(s+1,HEX_CHARACTERS)==len-1;
+}
+
+
 /*
   Local Variables:
   mode:c

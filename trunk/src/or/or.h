@@ -1386,6 +1386,8 @@ int router_is_me(routerinfo_t *router);
 int router_rebuild_descriptor(void);
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
+int is_legal_nickname(const char *s);
+int is_legal_nickname_or_hexdigest(const char *s);
 
 /********************************* routerlist.c ***************************/
 
