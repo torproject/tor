@@ -79,6 +79,11 @@ AllowUnverifiedNodes middle,rendezvous
 ## The IP or fqdn for this server. Leave blank and Tor will guess.
 #Address noname.example.com
 
+## Contact info that will be published in the directory, so we can
+## contact you if you need to upgrade or if something goes wrong.
+## This is optional but recommended.
+#ContactInfo Random Person <nobody@example.com>
+## You might also include your PGP or GPG fingerprint if you have one:
 #ContactInfo 1234D/FFFFFFFF Random Person <nobody@example.com>
 
 ## Required: what port to advertise for tor connections
