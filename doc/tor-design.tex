@@ -251,10 +251,11 @@ are no longer required.
 deploying isn't there yet, and not all features are implemented.
 Mention that it runs, is kinda alpha, kinda deployed, runs on win32.]
 
-We review previous work in Section \ref{sec:background}, describe
-our goals and assumptions in Section \ref{sec:assumptions},
-and then address the above list of improvements in Sections
-\ref{sec:design}-\ref{sec:maintaining-anonymity}. We then summarize
+We review previous work in Section~\ref{sec:background}, describe
+our goals and assumptions in Section~\ref{sec:assumptions},
+and then address the above list of improvements in
+Sections~\ref{sec:design}-\ref{sec:maintaining-anonymity}. We then
+summarize
 how our design stands up to known attacks, and conclude with a list of
 open problems.
 
@@ -416,7 +417,7 @@ cebolla\\
 \Section{Design goals and assumptions}
 \label{sec:assumptions}
 
-\subsection{Goals}
+\SubSection{Goals}
 Like other low-latency anonymity designs, Tor seeks to frustrate
 attackers from linking communication partners, or from linking
 multiple communications to or from a single point.  Within this
@@ -484,7 +485,7 @@ Tor's evolution.
   % This last bit sounds completely cheesy.  Somebody should tone it down. -NM 
 \end{description}
 
-\subsection{Non-goals}
+\SubSection{Non-goals}
 In favoring conservative, deployable designs, we have explicitly deferred
 a number of goals. Many of these goals are desirable in anonymity systems,
 but we choose to defer them either because they are solved elsewhere,
@@ -499,8 +500,8 @@ accepted solution.
   conservative design.
 \item[Not secure against end-to-end attacks:] Tor does not claim to provide a
   definitive solution to end-to-end timing or intersection attacks. Some
-  approaches, such as running an onion router, may help; see Section
-  \ref{sec:analysis} for more discussion.
+  approaches, such as running an onion router, may help; see
+  Section~\ref{sec:analysis} for more discussion.
 \item[No protocol normalization:] Tor does not provide \emph{protocol
   normalization} like Privoxy or the Anonymizer.  In order to make clients
   indistinguishable when they use complex and variable protocols such as HTTP,
@@ -697,9 +698,9 @@ any special
 privileges.  Currently, each OR maintains a long-term TLS connection
 to every other
 OR.  (We examine some ways to relax this clique-topology assumption in
-section \ref{subsec:restricted-routes}). A subset of the ORs also act as
+Section~\ref{subsec:restricted-routes}.) A subset of the ORs also act as
 directory servers, tracking which routers are currently in the network;
-see section \ref{subsec:dirservers} for directory server details. Users
+see Section~\ref{subsec:dirservers} for directory server details. Users
 run local software called an onion proxy (OP) to fetch directories,
 establish paths (called \emph{virtual circuits}) across the network,
 and handle connections from user applications. Onion proxies accept
@@ -719,15 +720,15 @@ the identity key of a router is considered equivalent to creating a
 new router. The onion (decryption) key is used for decrypting requests
 from users to set up a circuit and negotiate ephemeral keys. Finally,
 link keys are used by the TLS protocol when communicating between
-onion routers.  We discuss rotating these keys in Section
-\ref{subsec:rotating-keys}.
+onion routers.  We discuss rotating these keys in
+Section~\ref{subsec:rotating-keys}.
 
-Section \ref{subsec:cells} discusses the structure of the fixed-size
+Section~\ref{subsec:cells} discusses the structure of the fixed-size
 \emph{cells} that are the unit of communication in Tor. We describe
-in section \ref{subsec:circuits} how virtual circuits are
-built, extended, truncated, and destroyed. Section \ref{subsec:tcp}
+in Section~\ref{subsec:circuits} how virtual circuits are
+built, extended, truncated, and destroyed. Section~\ref{subsec:tcp}
 describes how TCP streams are routed through the network, and finally
-Section \ref{subsec:congestion} talks about congestion control and
+Section~\ref{subsec:congestion} talks about congestion control and
 fairness issues.
 
 \SubSection{Cells}
@@ -735,24 +736,27 @@ fairness issues.
 
 % I think we should describe connections before cells. -NM
 
-Traffic passes from one OR to another, or from a user's OP to an OR,
+Traffic passes from one OR to another, or between a user's OP and an OR,
 in fixed-size cells. Each cell is 256
 bytes, and consists of a header and a payload. The header includes an
-anonymous circuit identifier (ACI) the specifies which circuit the
+anonymous circuit identifier (ACI) that specifies which circuit the
+% Should we replace ACI with circID ? What is this 'anonymous circuit'
+% thing anyway? -RD
 cell refers to
 (many circuits can be multiplexed over the single TCP connection between
 ORs or between an OP and an OR), and a command to describe what to do
 with the cell's payload. Cells are either \emph{control} cells, which are
 interpreted by the node that receives them, or \emph{relay} cells,
-whichcarry end-to-end stream data. Controls cells can be one of:
+which carry end-to-end stream data. Controls cells can be one of:
 \emph{padding} (currently used for keepalive, but also usable for link
 padding); \emph{create} or \emph{created} (used to set up a new circuit);
 or \emph{destroy} (to tear down a circuit).
 % We need to say that ACIs are connection-specific: each circuit has
 % a different ACI along each connection. -NM
+% agreed -RD
 
 Relay cells have an additional header (the relay header) after the
-cell header, containing a the stream identifier (many streams can
+cell header, containing the stream identifier (many streams can
 be multiplexed over a circuit); an end-to-end checksum for integrity
 checking; the length of the relay payload; and a relay command. Relay
 commands can be one of: \emph{relay
@@ -876,8 +880,9 @@ When Alice's application wants to open a TCP connection to a given
 address and port, it asks the OP (via SOCKS) to make the connection. The
 OP chooses the newest open circuit (or creates one if none is available),
 chooses a suitable OR on that circuit to be the exit node (usually the
-last node, but maybe others due to exit policy conflicts; see Section
-\ref{sec:exit-policies}), chooses a new random stream ID for this stream,
+last node, but maybe others due to exit policy conflicts; see
+Section~\ref{sec:exit-policies}), chooses a new random stream ID for
+this stream,
 and delivers a relay begin cell to that exit node. It uses a stream ID
 of zero for the begin cell (so the OR will recognize it), and the relay
 payload lists the new stream ID and the destination address and port.
@@ -939,7 +944,7 @@ length (or pad to some max path length).}, we choose to
 % accept passive timing attacks, 
 %    (How?  I don't get it.  Do we mean end-to-end traffic
 %    confirmation attacks? -NM)
-and preform integrity
+and perform integrity
 checking only at the edges of the circuit. When Alice negotiates a key
 with the exit hop, they both start a SHA-1 with some derivative of that key,
 thus starting out with randomness that only the two of them know. From
@@ -1052,7 +1057,7 @@ the ability to drop cells when we're full and retransmit later, etc),
 because the TCP streams already guarantee in-order delivery of each
 cell. But we need to investigate further the effects of the current
 parameters on throughput and latency, while also keeping privacy in mind;
-see Section \ref{sec:maintaining-anonymity} for more discussion.
+see Section~\ref{sec:maintaining-anonymity} for more discussion.
 
 \Section{Other design decisions}
 
@@ -1355,7 +1360,7 @@ to special users. When those mirrors are knocked down by DDoS attacks,
 those special users can switch to accessing Bob's service via the Tor
 rendezvous system.
 
-\subsection{Integration with user applications}
+\SubSection{Integration with user applications}
 
 For each service Bob offers, he configures his local onion proxy to know
 the local IP and port of the server, a strategy for authorizating Alices,
@@ -1664,8 +1669,8 @@ directory agreement algorithm described in \ref{subsec:dirservers},
 the directory servers are still trust bottlenecks. We must find more
 decentralized yet practical ways to distribute up-to-date snapshots of
 network status without introducing new attacks.
-\item \emph{Implementing location-hidden servers:} While Section
-\ref{sec:rendezvous} provides a design for rendezvous points and
+\item \emph{Implementing location-hidden servers:} While
+Section~\ref{sec:rendezvous} provides a design for rendezvous points and
 location-hidden servers, this feature has not yet been implemented.
 We will likely encounter additional issues, both in terms of usability
 and anonymity, that must be resolved.
@@ -1679,8 +1684,10 @@ deploying a wider network. We will see what happens!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%\Section{Acknowledgments}
 %% commented out for anonymous submission
+%\Section{Acknowledgments}
+% Peter Palfrader for editing
+% Bram Cohen for congestion control discussions
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
