@@ -70,10 +70,11 @@ static INLINE size_t _log_prefix(char *buf, size_t buf_len, int severity)
 
 /** If lf refers to an actual file that we have just opened, and the file
  * contains no data, log an "opening new logfile" message at the top. **/
-static void log_tor_version(logfile_t *lf)
+static void log_tor_version(logfile_t *lf, int reset)
 {
   char buf[256];
   size_t n;
+  int is_new;
 
   if (!lf->needs_close)
     /* If it doesn't get closed, it isn't really a file. */
@@ -81,11 +82,14 @@ static void log_tor_version(logfile_t *lf)
   if (lf->is_temporary)
     /* If it's temporary, it isn't really a file. */
     return;
-  if (ftell(lf->file) != 0)
-    /* We aren't at the start of the file; no need to log. */
+  is_new = (ftell(lf->file) == 0);
+  if (reset && !is_new)
+    /* We are resetting, but we aren't at the start of the file; no
+     * need to log again. */
     return;
   n = _log_prefix(buf, 250, LOG_NOTICE);
-  n += snprintf(buf+n, 250-n, "Tor %s creating new log file\n", VERSION);
+  n += snprintf(buf+n, 250-n, "Tor %s opening %slog file\n", VERSION,
+                is_new?"new ":"");
   if (n>250)
     n = 250;
   buf[n+1]='\0';
@@ -190,7 +194,7 @@ void reset_logs()
     if (lf->needs_close) {
       fclose(lf->file);
       lf->file = fopen(lf->filename, "a");
-      log_tor_version(lf);
+      log_tor_version(lf, 1);
     }
   }
 }
@@ -256,7 +260,7 @@ int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
   if (!f) return -1;
   add_stream_log(loglevelMin, loglevelMax, filename, f);
   logfiles->needs_close = 1;
-  log_tor_version(logfiles);
+  log_tor_version(logfiles, 0);
   return 0;
 }
 
