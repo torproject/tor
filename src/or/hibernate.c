@@ -91,6 +91,15 @@ static void accounting_set_wakeup_time(void);
  * Functions for bandwidth accounting.
  * ************/
 
+/** If we want to manage the accounting system and potentially
+ * hibernate, return 1, else return 0.
+ */
+int accounting_is_enabled(or_options_t *options) {
+  if (options->AccountingMaxKB)
+    return 1;
+  return 0;
+}
+
 /** Called from main.c to tell us that <b>seconds</b> seconds have
  * passed, <b>n_read</b> bytes have been read, and <b>n_written</b>
  * bytes have been written. */

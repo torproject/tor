@@ -556,7 +556,7 @@ static void run_scheduled_events(time_t now) {
 
   /** 1c. If we have to change the accounting interval or record
    * bandwidth used in this accounting interval, do so. */
-  if (options->AccountingMaxKB)
+  if (accounting_is_enabled(options))
     accounting_run_housekeeping(now);
 
   /** 2. Every DirFetchPostPeriod seconds, we get a new directory and
@@ -700,7 +700,7 @@ static int prepare_for_poll(void) {
     seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
     stats_n_bytes_read += bytes_read;
     stats_n_bytes_written += bytes_written;
-    if (get_options()->AccountingMaxKB)
+    if (accounting_is_enabled(get_options()))
       accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
     control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
 
