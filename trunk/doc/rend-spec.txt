@@ -1,12 +1,11 @@
 $Id$
 
-[XXX We need to make nicknames in intro* cells padded to 20
- bytes, and maybe have a fixed length for nicknames in the
- descriptor too -RD]
-
                     Tor Rendezvous Specification
 
 0. Overview and preliminaries
+
+   Read http://tor.eff.org/doc/design-paper/tor-design.html#sec:rendezvous
+   before you read this specification. It will make more sense.
 
    Rendezvous points provide location-hidden services (server
    anonymity) for the onion routing network. With rendezvous points,
@@ -126,8 +125,7 @@ $Id$
    The members of Ipt may be either (a) nicknames, or (b) identity key
    digests, encoded in hex, and prefixed with a '$'.  Clients must
    accept both forms. Services must only generate the second form.
-   Once 0.0.8.1 and 0.0.9pre3-4 are obsoleted, we can drop the first
-   form.
+   Once 0.0.9.x is obsoleted, we can drop the first form.
 
    [It's ok for Bob to advertise 0 introduction points. He might want
     to do that if he previously advertised some introduction points,
