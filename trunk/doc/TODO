@@ -13,8 +13,8 @@ ARMA    - arma claims
 
       0.0.9pre2:
 R       . bandwidth buckets for write as well as read.
-N       - switch dirservers entries to config lines.
-N       - add three default dirplaces if we parse the whole torrc and
+        o switch dirservers entries to config lines.
+        o add three default dirplaces if we parse the whole torrc and
           no dirplaces are specified.
 N       - Handle rendezvousing with unverified nodes.
           - Specify: Stick rendezvous point's key in INTRODUCE cell.

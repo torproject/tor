@@ -105,20 +105,18 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
   if (purpose == DIR_PURPOSE_FETCH_DIR) {
     if (advertised_server_mode()) {
       /* only ask authdirservers, and don't ask myself */
-      r = router_pick_directory_server(1, 1);
-      /* XXXX NM Enable this once we actually set keys for dirservers.
-       * ds = router_pick_trusteddirserver(1);
-       */
+      ds = router_pick_trusteddirserver(1);
     } else {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(0, 1);
+      r = router_pick_directory_server(1);
+      if (!r) {
+        log_fn(LOG_INFO, "No router found for directory; falling back to dirserver list");
+        ds = router_pick_trusteddirserver(1);
+      }
     }
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
     /* only ask authdirservers, any of them will do */
-    r = router_pick_directory_server(1, 0);
-    /* XXXX NM Enable this once we actually set keys for dirservers.
-     * ds = router_pick_trusteddirserver(0);
-     */
+    ds = router_pick_trusteddirserver(0);
   }
 
   if (r)
@@ -152,7 +150,7 @@ static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
                       uint8_t purpose, const char *payload, int payload_len)
 {
-  directory_initiate_command(dirserv->address, dirserv->addr, dirserv->dir_port,
+  directory_initiate_command(dirserv->address, dirserv->addr,dirserv->dir_port,
                         NULL, dirserv->digest, purpose, payload, payload_len);
 }
 
@@ -212,7 +210,8 @@ directory_initiate_command(const char *address, uint32_t addr,
     switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
       case -1:
         router_mark_as_down(conn->identity_digest); /* don't try him again */
-        if(purpose == DIR_PURPOSE_FETCH_DIR && !all_directory_servers_down()) {
+        if(purpose == DIR_PURPOSE_FETCH_DIR &&
+           !all_trusted_directory_servers_down()) {
           log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->nickname);
           directory_get_from_dirserver(purpose, payload, payload_len);
         }
