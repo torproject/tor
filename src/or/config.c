@@ -218,6 +218,12 @@ RETURN VALUE: 0 on success, non-zero on error
       code = -1;
    }
 
+   if ( options->MaxConn >= MAXCONNECTIONS )
+   {
+      log(LOG_ERR,"MaxConn option must be less than %d.", MAXCONNECTIONS);
+      code = -1;
+   }
+
    if ( options->TrafficShaping != 0 && options->TrafficShaping != 1 )
    {
       log(LOG_ERR,"TrafficShaping option must be either 0 or 1.");

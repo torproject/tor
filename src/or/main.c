@@ -36,8 +36,7 @@ static int rarray_len = 0;
 
 int connection_add(connection_t *conn) {
 
-  if(nfds >= MAXCONNECTIONS-2) { /* 2, for some breathing room. should count the fenceposts. */
-    /* FIXME should use the 'max connections' option */
+  if(nfds >= options.MaxConn-1) {
     log(LOG_INFO,"connection_add(): failing because nfds is too high.");
     return -1;
   }
@@ -55,7 +54,6 @@ int connection_add(connection_t *conn) {
   log(LOG_INFO,"connection_add(): new conn type %d, socket %d, nfds %d.",conn->type, conn->s, nfds);
 
   return 0;
-
 }
 
 void connection_set_poll_socket(connection_t *conn) {
@@ -73,7 +71,6 @@ int connection_remove(connection_t *conn) {
 
   current_index = conn->poll_index;
   if(current_index == nfds-1) { /* this is the end */
-//    connection_free(conn);
     nfds--;
     return 0;
   } 

@@ -122,8 +122,10 @@ void connection_free(connection_t *conn) {
       crypto_free_cipher_env(conn->b_crypto);
   }
 
-  if(conn->s > 0)
+  if(conn->s > 0) {
+    log(LOG_INFO,"connection_free(): closing fd %d.",conn->s);
     close(conn->s);
+  }
   free(conn);
 }
 
@@ -156,11 +158,14 @@ int connection_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local
   fcntl(s, F_SETFL, O_NONBLOCK); /* set s to non-blocking */
 
   conn = connection_new(type);
-  if(!conn)
+  if(!conn) {
+    log(LOG_DEBUG,"connection_create_listener(): connection_new failed. Giving up.");
     return -1;
+  }
   conn->s = s;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
+    log(LOG_DEBUG,"connection_create_listener(): connection_add failed. Giving up.");
     connection_free(conn);
     return -1;
   }
@@ -192,7 +197,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
     log(LOG_ERR,"connection_handle_listener_read(): accept() failed. Closing.");
     return -1;
   }
-  log(LOG_DEBUG,"Connection accepted on socket %d.",news);
+  log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
 
   fcntl(news, F_SETFL, O_NONBLOCK); /* set news to non-blocking */
 
@@ -211,7 +216,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
 
   if(connection_add(newconn) < 0) { /* no space, forget it */
     connection_free(newconn);
-    return -1;
+    return 0; /* no need to tear down the parent */
   }
 
   log(LOG_DEBUG,"connection_handle_listener_read(): socket %d entered state %d.",newconn->s, new_state);
