@@ -264,6 +264,11 @@ static void rend_service_update_descriptor(rend_service_t *service)
   d->intro_points = tor_malloc(sizeof(char*)*n);
   for (i=0; i < n; ++i) {
     router = router_get_by_nickname(smartlist_get(service->intro_nodes, i));
+    if(!router) {
+      log_fn(LOG_WARN,"Router '%s' not found. Skipping.",
+             (char*)smartlist_get(service->intro_nodes, i));
+      continue;
+    }
     circ = find_intro_circuit(router, service->pk_digest);
     if (circ && circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
       /* We have an entirely established intro circuit. */
@@ -718,6 +723,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
 {
   circuit_t *circ = NULL;
 
+  tor_assert(router);
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
     tor_assert(circ->cpath);
