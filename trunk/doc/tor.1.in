@@ -135,9 +135,10 @@ A list of ports that your firewall allows you to connect to.  Only used when
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
 .TP
 \fBNodeFamily \fR\fInickname,nickname,...\fP
-The named Tor servers constitute a "family" of similar or
-co-administared servers, so never use any two of them in the same
-circuit.  This option can be used multiple times.
+The named Tor servers constitute a "family" of similar or co-administared
+servers, so never use any two of them in the same circuit. Defining a
+NodeFamily is only needed when a server doesn't list the family itself
+(with MyFamily). This option can be used multiple times.
 .TP
 .\" \fBPathlenCoinWeight \fR\fI0.0-1.0\fP
 .\" Paths are 3 hops plus a geometric distribution centered around this coinweight. Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
