@@ -127,8 +127,9 @@ int cpuworker_main(void *data) {
 
   close(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
+#ifndef MS_WINDOWS
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
-/* XXX probably don't close all the fd's on MS_WINDOWS? */
+#endif
 
   for(;;) {
 
