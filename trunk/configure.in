@@ -135,7 +135,7 @@ if (test ! -z "$ac_cv_openssldir" && test "x$ac_cv_openssldir" != "x(system)") ;
                 fi
         fi
 fi
-LIBS="$saved_LIBS -lssl -lcrypto"
+LIBS="$saved_LIBS"
 
 dnl The warning message here is no longer strictly accurate.
 
