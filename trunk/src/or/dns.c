@@ -581,8 +581,8 @@ int connection_dns_process_inbuf(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DNSWORKER);
 
-  if (conn->state != DNSWORKER_STATE_BUSY) {
-    log_fn(LOG_WARN,"Bug: poll() indicated than an idle dns worker was readable. Please report.");
+  if (conn->state != DNSWORKER_STATE_BUSY && buf_datalen(conn->inbuf)) {
+    log_fn(LOG_WARN,"Bug: read data from an idle dns worker.  Please report.");
     return 0;
   }
   if (buf_datalen(conn->inbuf) < 5) /* entire answer available? */
@@ -653,9 +653,9 @@ static int dnsworker_main(void *data) {
   int fd;
   int result;
 
-  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
 #ifndef MS_WINDOWS
+  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
 #endif
   handle_signals(0); /* ignore interrupts from the keyboard, etc */
