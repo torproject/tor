@@ -153,6 +153,10 @@ void connection_close_immediate(connection_t *conn)
     log_fn(LOG_WARN,"Attempt to close already-closed connection.");
     return;
   }
+  if (conn->outbuf_flushlen) {
+    log_fn(LOG_INFO,"Closing connection (fd %d, type %d, state %d) with data on outbuf.",
+           conn->s, conn->type, conn->state);
+  }
   close(conn->s);
   conn->s = -1;
   if(!connection_is_listener(conn)) {

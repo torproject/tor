@@ -229,18 +229,23 @@ static void conn_close_if_marked(int i) {
   assert_connection_ok(conn, time(NULL));
   if(conn->marked_for_close) {
     log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
-    if(conn->s >= 0) {
+    if(conn->s >= 0 && connection_wants_to_flush(conn)) {
       /* -1 means it's an incomplete edge connection, or that the socket
        * has already been closed as unflushable. */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
+      log_fn(LOG_WARN,
+             "Conn (fd %d, type %d, state %d) marked for close, but wants to flush.",
+             conn->s, conn->type, conn->state);
+
       if(connection_speaks_cells(conn)) {
-        if(conn->state == OR_CONN_STATE_OPEN)
+        if(conn->state == OR_CONN_STATE_OPEN && conn->outbuf_flushlen) {
           flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
+        }
       } else {
         flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
       }
       if(connection_wants_to_flush(conn) && buf_datalen(conn->outbuf)) {
-        log_fn(LOG_WARN,"Conn (socket %d) still wants to flush. Losing %d bytes!",
+        log_fn(LOG_WARN,"Conn (fd %d) still wants to flush. Losing %d bytes!",
                conn->s, (int)buf_datalen(conn->outbuf));
       }
     }
