@@ -1614,7 +1614,7 @@ add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
     return -1;
   }
 
-  log_fn(LOG_WARN, "The old LogLevel/LogFile/DebugLogFile/SysLog options are deprecated, and will go away soon.  New format: 'Log %s'", buf);
+  log(LOG_WARN, "The old LogLevel/LogFile/DebugLogFile/SysLog options are deprecated, and will go away soon.  Your new torrc line should be: 'Log %s'", buf);
   options->Logs = config_line_prepend(options->Logs, "Log", buf);
   return 0;
 }
