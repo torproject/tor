@@ -230,8 +230,6 @@
 
 #define SOCKS4_NETWORK_LEN 8
 
-typedef uint16_t circ_id_t;
-
 /*
  * Relay payload:
  *         Relay command           [1 byte]
@@ -276,7 +274,7 @@ typedef uint16_t circ_id_t;
 
 /* cell definition */
 typedef struct {
-  circ_id_t circ_id;
+  uint16_t circ_id;
   unsigned char command;
   unsigned char payload[CELL_PAYLOAD_SIZE];
 } cell_t;
@@ -331,8 +329,8 @@ struct connection_t {
 
 /* Used only by OR connections: */
   tor_tls *tls;
-  circ_id_t next_circ_id; /* Which circ_id do we try to use next on this connection?
-                           * This is always in the range 0..1<<15-1.*/
+  uint16_t next_circ_id; /* Which circ_id do we try to use next on this connection?
+                          * This is always in the range 0..1<<15-1.*/
 
   /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
   uint32_t bandwidth; /* connection bandwidth. */
@@ -450,8 +448,8 @@ struct circuit_t {
   int package_window;
   int deliver_window;
 
-  circ_id_t p_circ_id; /* circuit identifiers */
-  circ_id_t n_circ_id;
+  uint16_t p_circ_id; /* circuit identifiers */
+  uint16_t n_circ_id;
 
   crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
   crypto_cipher_env_t *n_crypto;
@@ -554,11 +552,11 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 
 void circuit_add(circuit_t *circ);
 void circuit_remove(circuit_t *circ);
-circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn);
+circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t *cpath);
 
-circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn);
+circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest(connection_t *conn, int must_be_open);
 
@@ -650,7 +648,7 @@ int connection_receiver_bucket_should_increase(connection_t *conn);
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
-int connection_send_destroy(circ_id_t circ_id, connection_t *conn);
+int connection_send_destroy(uint16_t circ_id, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
 int connection_finished_flushing(connection_t *conn);

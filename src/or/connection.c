@@ -647,7 +647,7 @@ int connection_state_is_open(connection_t *conn) {
   return 0;
 }
 
-int connection_send_destroy(circ_id_t circ_id, connection_t *conn) {
+int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
   cell_t cell;
 
   assert(conn);
