@@ -664,7 +664,14 @@ int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
 {
   RSA *rsa;
+  /* This ifdef suppresses a type warning.  Take out the first case once
+   * everybody is using openssl 0.9.7 or later.
+   */
+#if OPENSSL_VERSION_NUMBER < 0x00907000l
+  rsa = d2i_RSAPublicKey(NULL, (unsigned char**)&str, len);
+#else
   rsa = d2i_RSAPublicKey(NULL, (const unsigned char**)&str, len);
+#endif
   if (!rsa)
     return NULL; /* XXXX log openssl error */
   return _crypto_new_pk_env_rsa(rsa);
