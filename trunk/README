@@ -5,7 +5,7 @@ http://archives.seul.org/or/dev/.
 
 Is your question in the FAQ? Should it be?
 
-Quickstart version:
+Quickstart version for users:
 
 0) Download the absolute newest version. No, really.
   http://freehaven.net/or/.
@@ -58,35 +58,37 @@ If this doesn't work for you / troubleshooting:
   and let us know what you did to fix it, or give us the details and
   we'll see what we can do.
 
-Once you've got it compiled:
+Do you want to run a tor server or a tor client?
 
-  If you want to run a local onion proxy (that is, you're a user, not a
-  node operator), go into src/config and look at the oprc file. You can
-  run an onion proxy by "../or/or -f oprc". See below for how to use it.
+  If you want to run a local onion proxy (that is, you're a user, not
+  a node operator), go into src/config and look at the oprc file. (You
+  shouldn't have to edit any of it.) You can run an onion proxy with
+  "../or/or -f oprc". See below for how to use it.
 
-  If you want to set up your own test network (that is, act like you're
-  a full set of node operators), go into src/config/ and look at the
-  routers.or file. Also in that directory are public and private keys for
-  various nodes (*-public, *-private) and configuration files for the
-  nodes (*-orrc). You can generate your own keypairs with the orkeygen
-  program, or use the provided ones for testing.
+  If you want to run a node in the tor network, use the orkeygen program
+  (included) to generate a keypair:
+    orkeygen file-for-privkey file-for-pubkey
+  Then set up a config file for your node (start with sample-orrc
+  and edit the top portion). Then take a look at the routers.or file,
+  and mail arma@mit.edu an entry for your new router. You can start up
+  your router with "../or/or -f you-orrc". Remember that you won't be
+  able to authenticate to the other tor nodes until I've added you to
+  the directory.
 
-  Once you've got your config files ready, you're ready to start up your
-  network. I recommend using a screen session (man screen), or some
-  other way to handle many windows at once. I open a window for each
-  onion router, go into the src/config directory, and run something like
-  "../or/or -f moria2-orrc".
-
-How to use it:
+How to use it for web browsing:
 
   Download privoxy (www.privoxy.org). Install it. Add the following
   line to your 'config' file:
     forward-socks4a / localhost:9050 .
   Don't forget the . at the end.
 
-  From here, you can point your browser/etc at localhost:8118 and your
-  traffic will go through Privoxy, then through the onion proxy, to the
-  onion routing network.
+  From here, you can point your browser/etc to localhost:8118 (as an
+  httpd proxy) and your traffic will go through Privoxy, then through
+  the onion proxy, to the onion routing network.
+
+  You can also ignore the whole privoxy thing and set your Mozilla to
+  use localhost 9050 directly as a socks4 server. But see doc/CLIENTS
+  for why this may not give you the anonymity you want.
 
   For more convenient command-line use, I recommend making a ~/.wgetrc
   with the line
@@ -103,4 +105,14 @@ How to use it:
   wait until you fg the wget -- and other circuits will work just fine
   throughout. Then try ^z'ing the onion routers, and watch how well it
   recovers. Then try ^z'ing several of them at once. :)
+
+How to use it for ssh:
+
+  Download tsocks (tsocks.sourceforge.net) and configure it to talk to
+  localhost:9050 as a socks4 server. My /etc/tsocks.conf simply has:
+    server_port = 9050
+    server = 127.0.0.1
+  Then you can do "tsocks ssh arma@moria.mit.edu". But note that since
+  ssh is suid root, you either need to do this as root, or cp a local
+  version of ssh that isn't suid.
 
