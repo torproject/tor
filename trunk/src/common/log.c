@@ -54,17 +54,19 @@ static INLINE void format_msg(char *buf, size_t buf_len,
                 ".%.3ld [%s] ", 
                 (long)now.tv_usec / 1000, sev_to_string(severity));
   if(n > buf_len)
-    n = buf_len; /* the *nprintf funcs return how many bytes they
-                  * _would_ print, if the output is truncated */
+    n = buf_len-1; /* the *nprintf funcs return how many bytes they
+                    * _would_ print, if the output is truncated.
+                    * Subtract one because the count doesn't include the \0 */
+
   if (funcname) {
     n += snprintf(buf+n, buf_len-n, "%s(): ", funcname);
     if(n > buf_len)
-      n = buf_len;
+      n = buf_len-1;
   }
 
   n += vsnprintf(buf+n,buf_len-n,format,ap);
   if(n > buf_len)
-    n = buf_len;
+    n = buf_len-1;
   buf[n]='\n';
   buf[n+1]='\0';
 }

@@ -38,6 +38,10 @@ static int find_str_in_str(const char *str, int str_len,
   return -1;
 }
 
+int find_on_inbuf(char *string, int string_len, buf_t *buf) {
+  return find_str_in_str(string, string_len, buf->buf, buf->datalen);
+}
+
 /* Create and return a new buf of size 'size'
  */
 buf_t *buf_new_with_capacity(size_t size) {
@@ -206,7 +210,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
   return r;
 }
 
-int write_to_buf(char *string, int string_len, buf_t *buf) {
+int write_to_buf(const char *string, int string_len, buf_t *buf) {
 
   /* append string to buf (growing as needed, return -1 if "too big")
    * return total number of bytes on the buf
@@ -285,11 +289,12 @@ int fetch_from_buf_http(buf_t *buf,
   }
 
 #define CONTENT_LENGTH "\r\nContent-Length: "
-  i = find_str_in_str(CONTENT_LENGTH, sizeof(CONTENT_LENGTH), 
+  i = find_str_in_str(CONTENT_LENGTH, strlen(CONTENT_LENGTH), 
                       headers, headerlen);
   if(i > 0) {
     contentlen = atoi(headers+i);
     /* XXX What if content-length is malformed? */
+    log_fn(LOG_DEBUG,"Got a contentlen of %d.",contentlen);
     if(bodylen < contentlen) {
       log_fn(LOG_DEBUG,"body not all here yet.");
       return 0; /* not all there yet */
@@ -307,7 +312,7 @@ int fetch_from_buf_http(buf_t *buf,
     body_out[bodylen] = 0; /* null terminate it */
   }
   buf->datalen -= (headerlen+bodylen);
-  memmove(buf, buf->buf+headerlen+bodylen, buf->datalen);
+  memmove(buf->buf, buf->buf+headerlen+bodylen, buf->datalen);
 
   return 1;
 }
@@ -399,15 +404,6 @@ int fetch_from_buf_socks(buf_t *buf,
   memmove(buf->buf, next+1, buf->datalen);
 //  log_fn(LOG_DEBUG,"buf_datalen is now %d:'%s'",*buf_datalen,buf);
   return 1;
-}
-
-int find_on_inbuf(char *string, int string_len, buf_t *buf) {
-  /* find first instance of needle 'string' on haystack 'buf'. return how
-   * many bytes from the beginning of buf to the end of string.
-   * If it's not there, return -1.
-   */
-
-  return find_str_in_str(string, string_len, buf->buf, buf->datalen);
 }
 
 /*

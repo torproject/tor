@@ -5,10 +5,7 @@ OnionRouter 1
 # List of routers
 RouterFile ../config/routers.or
 
-# Private key
-PrivateKeyFile moria1-private
-SigningPrivateKeyFile moria1-private
-CertFile moria1-cert
+DataDirectory moria1
 Nickname moria1
 
 CoinWeight 0.01

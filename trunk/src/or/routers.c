@@ -37,14 +37,14 @@ router_resolve_directory(directory_t *dir);
 
 int learn_my_address(struct sockaddr_in *me) {
   /* local host information */
-  char localhostname[512];
+  char localhostname[256];
   struct hostent *localhost;
   static struct sockaddr_in answer;
   static int already_learned=0;
 
   if(!already_learned) {
     /* obtain local host information */
-    if(gethostname(localhostname,512) < 0) {
+    if(gethostname(localhostname,sizeof(localhostname)) < 0) {
       log_fn(LOG_ERR,"Error obtaining local hostname");
       return -1;
     }
@@ -98,6 +98,20 @@ routerinfo_t *router_pick_directory_server(void) {
   }
 
   return NULL;
+}
+
+void router_upload_desc_to_dirservers(void) {
+  int i;
+  routerinfo_t *router;
+
+  if(!directory)
+    return;
+
+  for(i=0;i<directory->n_routers;i++) {
+    router = directory->routers[i];
+    if(router->dir_port > 0)
+      directory_initiate_command(router, DIR_CONN_STATE_CONNECTING_UPLOAD);
+  }
 }
 
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {

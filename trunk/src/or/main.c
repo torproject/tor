@@ -12,7 +12,7 @@ static int init_descriptor(void);
 /********* START VARIABLES **********/
 
 extern char *conn_type_to_string[];
-extern char *conn_state_to_string[][15];
+extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 or_options_t options; /* command-line and config-file options */
 int global_read_bucket; /* max number of bytes I can read this second */
@@ -320,10 +320,12 @@ static void check_conn_marked(int i) {
     log_fn(LOG_DEBUG,"Cleaning up connection.");
     if(conn->s >= 0) { /* might be an incomplete edge connection */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
-      if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING)
-        flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
-      else
+      if(connection_speaks_cells(conn)) {
+        if(conn->state == OR_CONN_STATE_OPEN)
+          flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
+      } else {
         flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
+      }
       if(connection_wants_to_flush(conn)) /* not done flushing */
         log_fn(LOG_WARNING,"Conn (socket %d) still wants to flush. Losing %d bytes!",conn->s, (int)buf_datalen(conn->inbuf));
     }
@@ -642,7 +644,9 @@ static int do_main_loop(void) {
   }
 
   if(options.OnionRouter) {
-    cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the private key. */
+    cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the onion key. */
+    if(options.DirPort == 0) /* not a dirserver; XXX eventually do this for dirservers too */
+      router_upload_desc_to_dirservers(); /* upload our descriptor to all dirservers */
   }
 
   /* start up the necessary connections based on which ports are
@@ -981,13 +985,20 @@ static char descriptor[8192];
 /* XXX should this replace my_routerinfo? */
 static routerinfo_t *desc_routerinfo; 
 const char *router_get_my_descriptor(void) {
+  log_fn(LOG_DEBUG,"my desc is '%s'",descriptor);	
   return descriptor;
 }
 
 static int init_descriptor(void) {
   routerinfo_t *ri;
+  char localhostname[256];
+
+  if(gethostname(localhostname,sizeof(localhostname)) < 0) {
+    log_fn(LOG_ERR,"Error obtaining local hostname");
+    return -1;
+  }
   ri = tor_malloc(sizeof(routerinfo_t));
-  ri->address = strdup("XXXXXXX"); /*XXX*/
+  ri->address = strdup(localhostname);
   ri->nickname = strdup(options.Nickname);
   /* No need to set addr. ???? */
   ri->or_port = options.ORPort;

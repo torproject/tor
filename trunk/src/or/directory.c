@@ -19,7 +19,6 @@ static int directorylen=0;
 static int directory_dirty=1;
 
 static char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
-static char uploadstring[] = "POST / HTTP/1.0\r\n\r\n";
 static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
 
 /********* END VARIABLES ************/
@@ -88,7 +87,8 @@ void directory_initiate_command(routerinfo_t *router, int command) {
 }
 
 static int directory_send_command(connection_t *conn, int command) {
-  char *s;
+  const char *s;
+  char tmp[8192];
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
@@ -106,8 +106,9 @@ static int directory_send_command(connection_t *conn, int command) {
         log_fn(LOG_DEBUG,"Failed to get my descriptor.");
         return -1;
       }
-      if(connection_write_to_buf(uploadstring, strlen(uploadstring), conn) < 0 ||
-         connection_write_to_buf(s, strlen(s), conn) < 0) {
+      snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
+               strlen(s), s);
+      if(connection_write_to_buf(tmp, strlen(tmp), conn) < 0) {
         log_fn(LOG_DEBUG,"Couldn't write post/descriptor to buffer.");
         return -1;
       }
@@ -192,7 +193,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
 static int directory_handle_command(connection_t *conn) {
   char headers[1024];
-  char body[1024];
+  char body[50000]; /* XXX */
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 

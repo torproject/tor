@@ -434,6 +434,8 @@ typedef struct {
 
 /********************************* buffers.c ***************************/
 
+int find_on_inbuf(char *string, int string_len, buf_t *buf);
+
 buf_t *buf_new();
 buf_t *buf_new_with_capacity(size_t size);
 void buf_free(buf_t *buf);
@@ -448,7 +450,7 @@ int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf);
 int flush_buf(int s, buf_t *buf, int *buf_flushlen);
 int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen);
 
-int write_to_buf(char *string, int string_len, buf_t *buf);
+int write_to_buf(const char *string, int string_len, buf_t *buf);
 int fetch_from_buf(char *string, int string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
                         char *headers_out, int max_headerlen,
@@ -456,7 +458,6 @@ int fetch_from_buf_http(buf_t *buf,
 int fetch_from_buf_socks(buf_t *buf,
                          char *addr_out, int max_addrlen,
                          uint16_t *port_out);
-int find_on_inbuf(char *string, int string_len, buf_t *buf);
 
 /********************************* circuit.c ***************************/
 
@@ -529,7 +530,7 @@ int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
 int connection_flush_buf(connection_t *conn);
 int connection_handle_write(connection_t *conn);
-int connection_write_to_buf(char *string, int len, connection_t *conn);
+int connection_write_to_buf(const char *string, int len, connection_t *conn);
 
 int connection_receiver_bucket_should_increase(connection_t *conn);
 
@@ -562,6 +563,7 @@ int connection_exit_connect(connection_t *conn);
 int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 
+void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router);
 connection_t *connection_or_connect(routerinfo_t *router);
 
 int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
@@ -658,6 +660,7 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 int learn_my_address(struct sockaddr_in *me);
 void router_retry_connections(void);
 routerinfo_t *router_pick_directory_server(void);
+void router_upload_desc_to_dirservers(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 #if 0

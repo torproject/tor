@@ -215,7 +215,7 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
     cert = tor_tls_create_certificate(rsa, nickname);
     if (!cert) {
       log(LOG_ERR, "Error creating certificate");
-      return NULL;
+      return -1;
     }
   }
 
