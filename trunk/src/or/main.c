@@ -553,8 +553,9 @@ static void catch(int the_signal) {
       break;
     case SIGCHLD:
       please_reap_children = 1;
+      break;
     default:
-      log(LOG_ERR,"Caught signal that we can't handle??");
+      log(LOG_ERR,"Caught signal %d that we can't handle??", the_signal);
   }
 #endif /* signal stuff */
 }
