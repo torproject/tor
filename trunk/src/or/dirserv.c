@@ -643,7 +643,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
     log_fn(LOG_INFO, "Ignoring old directory; not caching.");
   } else if (when>=now+ROUTER_ALLOW_SKEW) {
     log_fn(LOG_INFO, "Ignoring future directory; not caching.");
-  } if (when>cached_directory_published &&
+  } else if (when>cached_directory_published &&
         when<now+ROUTER_ALLOW_SKEW) {
     log_fn(LOG_DEBUG, "Caching directory.");
     tor_free(cached_directory);
@@ -667,12 +667,12 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
 
 /** Set *<b>directory</b> to the most recently generated encoded signed
  * directory, generating a new one as necessary. */
-size_t dirserv_get_directory(const char **directory, int deflate)
+size_t dirserv_get_directory(const char **directory, int compress)
 {
   if (!options.AuthoritativeDir) {
-    if (deflate?cached_directory:cached_directory_z) {
-      *directory = deflate?cached_directory:cached_directory_z;
-      return (size_t) (deflate?cached_directory_len:cached_directory_z_len);
+    if (compress?cached_directory_z:cached_directory) {
+      *directory = compress?cached_directory_z:cached_directory;
+      return (size_t) (compress?cached_directory_z_len:cached_directory_len);
     } else {
       /* no directory yet retrieved */
       return 0;
@@ -685,8 +685,8 @@ size_t dirserv_get_directory(const char **directory, int deflate)
   } else {
     log(LOG_INFO,"Directory still clean, reusing.");
   }
-  *directory = deflate ? the_directory_z : the_directory;
-  return deflate ? the_directory_z_len : the_directory_len;
+  *directory = compress ? the_directory_z : the_directory;
+  return compress ? the_directory_z_len : the_directory_len;
 }
 
 /**
