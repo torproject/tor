@@ -250,7 +250,7 @@ void free_options(or_options_t *options) {
 void init_options(or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
-  options->LogLevel = tor_strdup("info");
+  options->LogLevel = tor_strdup("warn");
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
   options->ExitPolicy = tor_strdup("reject 127.0.0.1:*");
