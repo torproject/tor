@@ -119,6 +119,8 @@ Short-term:
         o Remember address and port when beginning. 
         - Extend by nickname/hostname/something, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
+        - Make it harder to circumvent bandwidth caps: look at number of bytes
+          sent across sockets, not number sent inside TLS stream.
 
 On-going
         . Better comments for functions!

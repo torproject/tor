@@ -52,7 +52,6 @@ static int tls_library_is_initialized = 0;
 #define _TOR_TLS_SYSCALL    -6
 #define _TOR_TLS_ZERORETURN -5
 
-
 /* These functions are declared in crypto.c but not exported. */
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
@@ -570,4 +569,16 @@ tor_tls_get_pending_bytes(tor_tls *tls)
 {
   assert(tls);
   return SSL_pending(tls->ssl);
+}
+
+/* Return the number of bytes read across the underlying socket. */
+unsigned long tor_tls_get_n_bytes_read(tor_tls *tls)
+{
+  assert(tls);
+  return BIO_number_read(SSL_get_rbio(tls->ssl));
+}
+unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
+{
+  assert(tls);
+  return BIO_number_written(SSL_get_wbio(tls->ssl));
 }

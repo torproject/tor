@@ -29,4 +29,7 @@ int tor_tls_handshake(tor_tls *tls);
 int tor_tls_shutdown(tor_tls *tls);
 int tor_tls_get_pending_bytes(tor_tls *tls);
 
+unsigned long tor_tls_get_n_bytes_read(tor_tls *tls);
+unsigned long tor_tls_get_n_bytes_written(tor_tls *tls);
+
 #endif
