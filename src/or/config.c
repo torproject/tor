@@ -277,7 +277,7 @@ options_act(void) {
 
   /* XXXX We once had a reason to separate start_daemon and finish_daemon: It
    *    let us have the parent process stick around until we were sure Tor was
-   *    started.  Should se make start_daemon get called earlier? -NM */
+   *    started.  Should we make start_daemon get called earlier? -NM */
   if (options->RunAsDaemon) {
     start_daemon(options->DataDirectory);
   }
@@ -689,7 +689,7 @@ config_assign(or_options_t *options, struct config_line_t *list, int reset)
 
 /** Try assigning <b>list</b> to the global options. You do this by duping
  * options, assigning list to the new one, then validating it. If it's
- * ok, then through out the old one and stick with the new one. Else,
+ * ok, then throw out the old one and stick with the new one. Else,
  * revert to old and return failure.  Return 0 on success, -1 on bad
  * keys, -2 on bad values, -3 on bad transition.
  */
@@ -1233,6 +1233,8 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
     log_fn(LOG_WARN,"During reload, changing DataDirectory (%s->%s) is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
     return -1;
   }
+
+  /* XXX not allowed to change User or Group either */
 
   return 0;
 }
@@ -1839,7 +1841,7 @@ parse_dir_server_line(const char *line, int validate_only)
   return r;
 }
 
-/** Adjust or the value of options->DataDirectory, or fill it in if it's
+/** Adjust the value of options->DataDirectory, or fill it in if it's
  * absent. Return 0 on success, -1 on failure. */
 static int
 normalize_data_directory(or_options_t *options) {
@@ -1885,10 +1887,12 @@ validate_data_directory(or_options_t *options) {
     log_fn(LOG_ERR, "DataDirectory is too long.");
     return -1;
   }
+#if 0
   if (check_private_dir(options->DataDirectory, CPD_CHECK != 0)) {
     log_fn(LOG_WARN, "Can't create directory %s", options->DataDirectory);
     return -1;
   }
+#endif
   return 0;
 }
 
