@@ -915,11 +915,14 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
          rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
         /* then we know !pending_final_cpath, from above */
         log_fn(LOG_INFO,"intro and rend circs are both ready. introducing.");
+        /* this call marks introcirc for close */
         if(rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
         }
         /* now attach conn to rendcirc */
         link_apconn_to_circ(conn, rendcirc);
+        if(!rendcirc->timestamp_dirty)
+          rendcirc->timestamp_dirty = time(NULL);
         return 1;
       }
     }
