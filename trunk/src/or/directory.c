@@ -10,6 +10,7 @@ static int directory_handle_command(connection_t *conn);
 /********* START VARIABLES **********/
 
 extern or_options_t options; /* command-line and config-file options */
+extern int has_fetched_directory;
 
 static char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
 static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
@@ -129,6 +130,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         } else {
           log_fn(LOG_INFO,"updated routers.");
         }
+        has_fetched_directory=1;
         if(options.ORPort) { /* connect to them all */
           router_retry_connections();
         }

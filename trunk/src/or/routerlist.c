@@ -95,6 +95,8 @@ router_release_token(directory_token_t *tok);
 
 /****************************************************************************/
 
+extern int has_fetched_directory;
+
 /* try to find a running dirserver. if there are no dirservers
  * in our routerlist, reload the routerlist and try again. */
 routerinfo_t *router_pick_directory_server(void) {
@@ -103,6 +105,7 @@ routerinfo_t *router_pick_directory_server(void) {
   choice = router_pick_directory_server_impl();
   if(!choice) {
     log_fn(LOG_WARN,"No dirservers known. Reloading and trying again.");
+    has_fetched_directory=0; /* reset it */
     if(options.RouterFile) {
       if(router_set_routerlist_from_file(options.RouterFile) < 0)
         return NULL;
