@@ -1,0 +1,55 @@
+#! /bin/sh
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/bin/tor
+NAME=tor
+DESC="tor daemon"
+TORLOG=/var/log/tor/log
+TORPID=/var/run/tor/tor.pid
+ARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1"
+
+test -x $DAEMON || exit 0
+
+# Include tor defaults if available
+if [ -f /etc/default/tor ] ; then
+	. /etc/default/tor
+fi
+
+set -e
+
+case "$1" in
+  start)
+	if [ "$RUN_DAEMON" != "yes" ]; then
+		echo "Not starting $DESC (Disabled in /etc/default/tor)."
+	else
+		echo -n "Starting $DESC: "
+		start-stop-daemon --start --quiet --oknodo \
+			--chuid debian-tor:debian-tor \
+			--pidfile $TORPID \
+			--exec $DAEMON -- $ARGS
+		echo "$NAME."
+	fi
+	;;
+  stop)
+	echo -n "Stopping $DESC: "
+	start-stop-daemon --stop --quiet --oknodo --pidfile $TORPID \
+		--exec $DAEMON
+	echo "$NAME."
+	;;
+  reload|force-reload)
+	echo "Reloading $DESC configuration."
+	start-stop-daemon --stop --signal 1 --oknodo --quiet --pidfile $TORPID \
+		--exec $DAEMON
+	;;
+  restart)
+	$0 stop
+	sleep 1
+	$0 start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|reload|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0
