@@ -189,8 +189,8 @@ static void connection_unlink(connection_t *conn, int remove) {
   connection_about_to_close_connection(conn);
   if (remove) {
     connection_remove(conn);
-    smartlist_remove(closeable_connection_lst, conn);
   }
+  smartlist_remove(closeable_connection_lst, conn);
   if (conn->type == CONN_TYPE_EXIT) {
     assert_connection_edge_not_dns_pending(conn);
   }
