@@ -374,6 +374,9 @@ struct crypt_path_t {
   crypto_cipher_env_t *f_crypto;
   crypto_cipher_env_t *b_crypto;
 
+  crypto_digest_env_t *f_digest; /* for integrity checking */
+  crypto_digest_env_t *b_digest;
+
   crypto_dh_env_t *handshake_state;
 
   uint32_t addr;
@@ -391,7 +394,8 @@ struct crypt_path_t {
 };
 
 #define DH_KEY_LEN CRYPTO_DH_SIZE
-#define DH_ONIONSKIN_LEN DH_KEY_LEN+16
+#define ONIONSKIN_CHALLENGE_LEN (16+DH_KEY_LEN+6+8+16)
+#define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+20)
 
 typedef struct crypt_path_t crypt_path_t;
 
@@ -417,10 +421,13 @@ struct circuit_t {
   crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
   crypto_cipher_env_t *n_crypto;
 
+  crypto_digest_env_t *p_digest; /* for integrity checking, */
+  crypto_digest_env_t *n_digest; /* intermediate hops only */
+
   cpath_build_state_t *build_state;
   crypt_path_t *cpath;
 
-  char onionskin[DH_ONIONSKIN_LEN]; /* for storage while onionskin pending */
+  char onionskin[ONIONSKIN_CHALLENGE_LEN]; /* for storage while onionskin pending */
   time_t timestamp_created;
   time_t timestamp_dirty; /* when the circuit was first used, or 0 if clean */
 
@@ -709,16 +716,16 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state,
 
 int onion_skin_create(crypto_pk_env_t *router_key,
                       crypto_dh_env_t **handshake_state_out,
-                      char *onion_skin_out); /* Must be DH_ONIONSKIN_LEN bytes long */
+                      char *onion_skin_out);
 
-int onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
+int onion_skin_server_handshake(char *onion_skin,
                                 crypto_pk_env_t *private_key,
-                                char *handshake_reply_out, /* DH_KEY_LEN bytes long */
+                                char *handshake_reply_out,
                                 char *key_out,
                                 int key_out_len);
 
 int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
-                             char *handshake_reply,/* Must be DH_KEY_LEN bytes long*/
+                             char *handshake_reply,
                              char *key_out,
                              int key_out_len);
 

@@ -9,8 +9,8 @@ extern or_options_t options; /* command-line and config-file options */
 #define MIN_CPUWORKERS 1
 
 #define TAG_LEN 8
-#define LEN_ONION_QUESTION (1+TAG_LEN+DH_ONIONSKIN_LEN)
-#define LEN_ONION_RESPONSE (1+TAG_LEN+DH_KEY_LEN+32)
+#define LEN_ONION_QUESTION (1+TAG_LEN+ONIONSKIN_CHALLENGE_LEN)
+#define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+32)
 
 int num_cpuworkers=0;
 int num_cpuworkers_busy=0;
@@ -95,7 +95,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
       circuit_close(circ);
       goto done_processing;
     }
-    if(onionskin_answer(circ, buf+1+TAG_LEN, buf+1+TAG_LEN+DH_KEY_LEN) < 0) {
+    if(onionskin_answer(circ, buf+1+TAG_LEN, buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       log_fn(LOG_WARN,"onionskin_answer failed. Closing.");
       circuit_close(circ);
       goto done_processing;
@@ -113,14 +113,14 @@ done_processing:
 }
 
 int cpuworker_main(void *data) {
-  unsigned char question[DH_ONIONSKIN_LEN];
+  unsigned char question[ONIONSKIN_CHALLENGE_LEN];
   unsigned char question_type;
   int *fdarray = data;
   int fd;
 
   /* variables for onion processing */
   unsigned char keys[32];
-  unsigned char reply_to_proxy[DH_KEY_LEN];
+  unsigned char reply_to_proxy[ONIONSKIN_REPLY_LEN];
   unsigned char buf[LEN_ONION_RESPONSE];
   char tag[TAG_LEN];
 
@@ -140,7 +140,7 @@ int cpuworker_main(void *data) {
       spawn_exit();
     }
 
-    if(read_all(fd, question, DH_ONIONSKIN_LEN) != DH_ONIONSKIN_LEN) {
+    if(read_all(fd, question, ONIONSKIN_CHALLENGE_LEN) != ONIONSKIN_CHALLENGE_LEN) {
       log_fn(LOG_ERR,"read question failed. Exiting.");
       spawn_exit();
     }
@@ -156,8 +156,8 @@ int cpuworker_main(void *data) {
         log_fn(LOG_INFO,"onion_skin_server_handshake succeeded.");
         buf[0] = 1; /* 1 means success */
         memcpy(buf+1,tag,TAG_LEN);
-        memcpy(buf+1+TAG_LEN,reply_to_proxy,DH_KEY_LEN);
-        memcpy(buf+1+TAG_LEN+DH_KEY_LEN,keys,32);
+        memcpy(buf+1+TAG_LEN,reply_to_proxy,ONIONSKIN_REPLY_LEN);
+        memcpy(buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN,keys,32);
       }
       if(write_all(fd, buf, LEN_ONION_RESPONSE) != LEN_ONION_RESPONSE) {
         log_fn(LOG_ERR,"writing response buf failed. Exiting.");
@@ -272,7 +272,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 
     connection_write_to_buf(&question_type, 1, cpuworker);
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
-    connection_write_to_buf(circ->onionskin, DH_ONIONSKIN_LEN, cpuworker);
+    connection_write_to_buf(circ->onionskin, ONIONSKIN_CHALLENGE_LEN, cpuworker);
   }
   return 0;
 }
