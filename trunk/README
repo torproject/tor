@@ -17,12 +17,10 @@ doesn't work for you.
 
 Do you want to run a tor server?
 
-  First, set up a config file for your node (start with sample-orrc and
-  edit the top portion). Then run the node (as above, but with the new
-  config file) to generate keys. One of the generated files is your
-  'fingerprint' file.  Mail it to arma@mit.edu. Remember that you won't
-  be able to authenticate to the other tor nodes until I've added you
-  to the directory.
+  First, move sample-server-torrc onto torrc, and edit it. Then run tor
+  to generate keys. One of the generated files is your 'fingerprint' file.
+  Mail it to arma@mit.edu. Remember that you won't be able to authenticate
+  to the other tor nodes until I've added you to the directory.
 
 Configuring tsocks:
 
