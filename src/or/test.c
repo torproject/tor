@@ -165,6 +165,7 @@ test_crypto_dh()
   char p2[CRYPTO_DH_SIZE];
   char s1[CRYPTO_DH_SIZE];
   char s2[CRYPTO_DH_SIZE];
+  int s1len, s2len;
 
   dh1 = crypto_dh_new();
   dh2 = crypto_dh_new();
@@ -180,10 +181,12 @@ test_crypto_dh()
   test_memneq(p1, p2, CRYPTO_DH_SIZE);
   
   memset(s1, 0, CRYPTO_DH_SIZE);
-  memset(s2, 0, CRYPTO_DH_SIZE);
-  test_assert(! crypto_dh_compute_secret(dh1, p2, CRYPTO_DH_SIZE, s1));
-  test_assert(! crypto_dh_compute_secret(dh2, p1, CRYPTO_DH_SIZE, s2));
-  test_memeq(s1, s2, CRYPTO_DH_SIZE);
+  memset(s2, 0xFF, CRYPTO_DH_SIZE);
+  s1len = crypto_dh_compute_secret(dh1, p2, CRYPTO_DH_SIZE, s1);
+  s2len = crypto_dh_compute_secret(dh2, p1, CRYPTO_DH_SIZE, s2);
+  test_assert(s1len > 0);
+  test_eq(s1len, s2len);
+  test_memeq(s1, s2, s1len);
   
   crypto_dh_free(dh1);
   crypto_dh_free(dh2);
@@ -597,22 +600,18 @@ main(int c, char**v) {
 #ifndef DEBUG_ONION_SKINS
   puts("========================== Buffers =========================");
   test_buffers();
-  puts("========================== Crypto ==========================");
+  puts("\n========================== Crypto ==========================");
   test_crypto();
   test_crypto_dh();
   puts("\n========================= Util ============================");
   test_util();
   puts("\n========================= Onion Skins =====================");
 #endif
-#ifdef DEBUG_ONION_SKINS
   crypto_seed_rng();
   while(1) {
-#endif
     test_onion_handshake();
-#ifdef DEBUG_ONION_SKINS
     fflush(NULL);
   }
-#endif
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
   puts("");
