@@ -279,8 +279,8 @@ If you have more than this number of onionskins queued for decrypt, reject new o
 Declare that this Tor server is controlled or administered by a group
 or organization identical or similar to that of the other named servers.
 When two servers both declare that they are in the same 'family', Tor clients
-will not use them in the same circuit.  (Each server only need to list the
-other servers in its family; it doesn't need to list itself.)
+will not use them in the same circuit.  (Each server only needs to list the
+other servers in its family; it doesn't need to list itself, but it won't hurt.)
 .TP
 \fBNickname \fR\fIname\fP
 Set the server's nickname to 'name'.
