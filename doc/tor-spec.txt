@@ -470,6 +470,8 @@ TODO: (very soon)
       10 -- REASON_INTERNAL       (Internal error at the OR)
       11 -- REASON_RESOURCELIMIT  (OR has no resources to fulfill request)
       12 -- REASON_CONNRESET      (Connection was unexpectedly reset)
+      13 -- REASON_TORPROTOCOL    (Sent when closing connection because of
+                                   Tor protocol violations.)
 
    (With REASON_EXITPOLICY, the 4-byte IPv4 address or 16-byte IPv6 address
    forms the optional data; no other reason currently has extra data.)
