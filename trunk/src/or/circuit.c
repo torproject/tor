@@ -22,6 +22,8 @@ void circuit_expire_old_circuits(void);
 static void circuit_is_open(circuit_t *circ);
 static void circuit_build_failed(circuit_t *circ);
 static circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_nickname);
+static void circuit_free(circuit_t *circ);
+static void circuit_free_cpath(crypt_path_t *cpath);
 
 /********* START VARIABLES **********/
 
@@ -112,7 +114,7 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
 
 /** Deallocate space associated with circ.
  */
-void circuit_free(circuit_t *circ) {
+static void circuit_free(circuit_t *circ) {
   tor_assert(circ);
   tor_assert(circ->magic == CIRCUIT_MAGIC);
   if (circ->n_crypto)
@@ -139,7 +141,7 @@ void circuit_free(circuit_t *circ) {
 }
 
 /** Deallocate space associated with the linked list <b>cpath</b>. */
-void circuit_free_cpath(crypt_path_t *cpath) {
+static void circuit_free_cpath(crypt_path_t *cpath) {
   crypt_path_t *victim, *head=cpath;
 
   if(!cpath)

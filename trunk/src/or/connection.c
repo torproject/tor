@@ -79,6 +79,8 @@ static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_receiver_bucket_should_increase(connection_t *conn);
 static int connection_finished_flushing(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
+static int connection_read_to_buf(connection_t *conn);
+static int connection_process_inbuf(connection_t *conn);
 
 /**************************************************************/
 
@@ -702,7 +704,7 @@ int connection_handle_read(connection_t *conn) {
  *
  * Return -1 if we want to break conn, else return 0.
  */
-int connection_read_to_buf(connection_t *conn) {
+static int connection_read_to_buf(connection_t *conn) {
   int result;
   int at_most;
 
@@ -1103,7 +1105,7 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
  * This function just passes conn to the connection-specific
  * connection_*_process_inbuf() function.
  */
-int connection_process_inbuf(connection_t *conn) {
+static int connection_process_inbuf(connection_t *conn) {
 
   tor_assert(conn);
 

@@ -34,7 +34,7 @@ static int num_cpuworkers_busy=0;
  * the last time we got a key rotation event. */
 static time_t last_rotation_time=0;
 
-int cpuworker_main(void *data);
+static int cpuworker_main(void *data);
 static int spawn_cpuworker(void);
 static void spawn_enough_cpuworkers(void);
 static void process_pending_task(connection_t *cpuworker);
@@ -183,7 +183,7 @@ done_processing:
  *          Onionskin challenge ONIONSKIN_REPLY_LEN
  *          Negotiated keys     KEY_LEN*2+DIGEST_LEN*2
  */
-int cpuworker_main(void *data) {
+static int cpuworker_main(void *data) {
   unsigned char question[ONIONSKIN_CHALLENGE_LEN];
   unsigned char question_type;
   int *fdarray = data;
