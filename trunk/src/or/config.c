@@ -120,6 +120,9 @@ static config_var_t config_vars[] = {
   VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes,     "0"),
   VAR("ExitPolicy",          LINELIST, ExitPolicy,           NULL),
   VAR("ExcludeNodes",        STRING,   ExcludeNodes,         NULL),
+  VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
+  VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
+  VAR("AddressMap",          LINELIST, AddressMap,           NULL),
   VAR("FascistFirewall",     BOOL,     FascistFirewall,      "0"),
   VAR("FirewallPorts",       CSV,      FirewallPorts,        "80,443"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
@@ -186,6 +189,7 @@ static or_options_t *options_dup(or_options_t *old);
 static int options_validate(or_options_t *options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
 static int check_nickname_list(const char *lst, const char *name);
+static void config_register_addressmaps(or_options_t *options);
 
 static int parse_dir_server_line(const char *line, int validate_only);
 static int parse_redirect_line(smartlist_t *result,
@@ -332,6 +336,9 @@ options_act(void) {
    * will log a warning */
   if (options->PidFile)
     write_pidfile(options->PidFile);
+
+  /* Register addressmap directives */
+  config_register_addressmaps(options);
 
   /* Update address policies. */
   parse_socks_policy();
@@ -1795,6 +1802,29 @@ init_from_config(int argc, char **argv)
   tor_free(fname);
   options_free(newoptions);
   return -1;
+}
+
+static void
+config_register_addressmaps(or_options_t *options) {
+  smartlist_t *elts;
+  struct config_line_t *opt;
+  char *from, *to;
+
+  elts = smartlist_create();
+  for (opt = options->AddressMap; opt; opt = opt->next) {
+    smartlist_split_string(elts, opt->value, NULL,
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+    if (smartlist_len(elts) >= 2) {
+      from = smartlist_get(elts,0);
+      to = smartlist_get(elts,1);
+      addressmap_register(from, tor_strdup(to), 0);
+    } else {
+      log_fn(LOG_WARN,"AddressMap '%s' has too few arguments. Ignoring.", opt->value);
+    }
+    SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
+    smartlist_clear(elts);
+  }
+  smartlist_free(elts);
 }
 
 /** If <b>range</b> is of the form MIN-MAX, for MIN and MAX both
