@@ -329,11 +329,11 @@ int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, int cell_direction)
 
   if(cell_direction == CELL_DIRECTION_OUT && (!conn || conn->type == CONN_TYPE_EXIT)) {
     log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to exit.");
-    return connection_exit_process_data_cell(cell, circ);
+    return connection_edge_process_data_cell(cell, circ, EDGE_EXIT);
   }
   if(cell_direction == CELL_DIRECTION_IN && (!conn || conn->type == CONN_TYPE_AP)) {
     log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to AP.");
-    return connection_ap_process_data_cell(cell, circ);
+    return connection_edge_process_data_cell(cell, circ, EDGE_AP);
   }
   /* else send it as a cell */
   assert(conn);
@@ -536,8 +536,6 @@ void circuit_about_to_close_connection(connection_t *conn) {
    */
   circuit_t *circ;
   connection_t *prevconn, *tmpconn;
-  cell_t cell;
-  int edge_type;
 
   if(!connection_speaks_cells(conn)) {
     /* it's an edge conn. need to remove it from the linked list of
@@ -549,48 +547,29 @@ void circuit_about_to_close_connection(connection_t *conn) {
     if(!circ)
       return;
 
-    memset(&cell, 0, sizeof(cell_t));
-    cell.command = CELL_DATA;
-    cell.length = TOPIC_HEADER_SIZE;
-    *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
-    *cell.payload = TOPIC_COMMAND_END;
-
     if(conn == circ->p_conn) {
       circ->p_conn = conn->next_topic;
-      edge_type = EDGE_AP;
       goto send_end;
     }
     if(conn == circ->n_conn) {
       circ->n_conn = conn->next_topic;
-      edge_type = EDGE_EXIT;
       goto send_end;
     }
     for(prevconn = circ->p_conn; prevconn->next_topic && prevconn->next_topic != conn; prevconn = prevconn->next_topic) ;
     if(prevconn->next_topic) {
       prevconn->next_topic = conn->next_topic;
-      edge_type = EDGE_AP;
       goto send_end;
     }
     for(prevconn = circ->n_conn; prevconn->next_topic && prevconn->next_topic != conn; prevconn = prevconn->next_topic) ;
     if(prevconn->next_topic) {
       prevconn->next_topic = conn->next_topic;
-      edge_type = EDGE_EXIT;
       goto send_end;
     }
     log(LOG_ERR,"circuit_about_to_close_connection(): edge conn not in circuit's list?");
     assert(0); /* should never get here */
 send_end:
-    if(edge_type == EDGE_AP) { /* send to circ->n_conn */
-      log(LOG_INFO,"circuit_about_to_close_connection(): send data end forward (aci %d).",circ->n_aci);
-      cell.aci = circ->n_aci;
-    } else { /* send to circ->p_conn */
-      assert(edge_type == EDGE_EXIT);
-      log(LOG_INFO,"circuit_about_to_close_connection(): send data end backward (aci %d).",circ->p_aci);
-      cell.aci = circ->p_aci;
-    }
-
-    if(circuit_deliver_data_cell_from_edge(&cell, circ, edge_type) < 0) {
-      log(LOG_DEBUG,"circuit_about_to_close_connection(): circuit_deliver_data_cell_from_edge (%d) failed. Closing.", edge_type);
+    if(connection_edge_send_command(conn, circ, TOPIC_COMMAND_END) < 0) {
+      log(LOG_DEBUG,"circuit_about_to_close_connection(): sending end failed. Closing.");
       circuit_close(circ);
     }
     return;

@@ -102,9 +102,9 @@
 #define EXIT_CONN_STATE_CLOSE_WAIT 4 /* have sent a destroy, awaiting a confirmation */
 #endif
 
-#define AP_CONN_STATE_SOCKS_WAIT 0
-#define AP_CONN_STATE_OR_WAIT 1
-#define AP_CONN_STATE_OPEN 2
+#define AP_CONN_STATE_SOCKS_WAIT 3
+#define AP_CONN_STATE_OR_WAIT 4
+#define AP_CONN_STATE_OPEN 5
 
 #define DIR_CONN_STATE_CONNECTING 0
 #define DIR_CONN_STATE_SENDING_COMMAND 1
@@ -142,8 +142,8 @@
 
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
-#define EDGE_EXIT 3 /* make direction and edge values not overlap, to help catch bugs */
-#define EDGE_AP 4
+#define EDGE_EXIT CONN_TYPE_EXIT
+#define EDGE_AP CONN_TYPE_AP
 
 #define CIRCWINDOW_START 1000
 #define CIRCWINDOW_INCREMENT 100
@@ -603,8 +603,6 @@ int connection_finished_flushing(connection_t *conn);
 
 /********************************* connection_ap.c ****************************/
 
-int connection_ap_process_inbuf(connection_t *conn);
-
 int ap_handshake_process_socks(connection_t *conn);
 
 int ap_handshake_create_onion(connection_t *conn);
@@ -618,23 +616,23 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *or_conn, circui
 int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 int ap_handshake_socks_reply(connection_t *conn, char result);
-int connection_ap_send_connected(connection_t *conn);
-int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ);
-
-int connection_ap_finished_flushing(connection_t *conn);
 
 int connection_ap_create_listener(struct sockaddr_in *bindaddr);
 
 int connection_ap_handle_listener_read(connection_t *conn);
 
+/********************************* connection_edge.c ***************************/
+
+int connection_edge_process_inbuf(connection_t *conn);
+int connection_edge_send_command(connection_t *conn, int topic_command);
+int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_type);
+int connection_edge_finished_flushing(connection_t *conn);
+
 /********************************* connection_exit.c ***************************/
 
-int connection_exit_process_inbuf(connection_t *conn);
-int connection_exit_package_inbuf(connection_t *conn);
 int connection_exit_send_connected(connection_t *conn);
-int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ);
+int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 
-int connection_exit_finished_flushing(connection_t *conn);
 int connection_exit_connect(connection_t *conn);
 
 /********************************* connection_op.c ***************************/

@@ -44,9 +44,12 @@ char *conn_state_to_string[][15] = {
     "connecting",                      /* 1 */
     "open" },                          /* 2 */
   { "ready" }, /* app listener, 0 */
-  { "awaiting dest info",         /* app, 0 */
-    "waiting for OR connection",       /* 1 */
-    "open" },                          /* 2 */
+  { "", /* 0 */
+    "", /* 1 */
+    "", /* 2 */
+    "awaiting dest info",         /* app, 3 */
+    "waiting for OR connection",       /* 4 */
+    "open" },                          /* 5 */
   { "ready" }, /* dir listener, 0 */
   { "connecting",                      /* 0 */
     "sending command",                 /* 1 */
@@ -681,9 +684,8 @@ int connection_process_inbuf(connection_t *conn) {
     case CONN_TYPE_OR:
       return connection_or_process_inbuf(conn);
     case CONN_TYPE_EXIT:
-      return connection_exit_process_inbuf(conn);
     case CONN_TYPE_AP:
-      return connection_ap_process_inbuf(conn);
+      return connection_edge_process_inbuf(conn);
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(conn);
     case CONN_TYPE_DNSMASTER:
@@ -838,14 +840,13 @@ int connection_finished_flushing(connection_t *conn) {
 //  log(LOG_DEBUG,"connection_finished_flushing() entered. Socket %u.", conn->s);
 
   switch(conn->type) {
-    case CONN_TYPE_AP:
-      return connection_ap_finished_flushing(conn);
     case CONN_TYPE_OP:
       return connection_op_finished_flushing(conn);
     case CONN_TYPE_OR:
       return connection_or_finished_flushing(conn);
+    case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
-      return connection_exit_finished_flushing(conn);
+      return connection_edge_finished_flushing(conn);
     case CONN_TYPE_DIR:
       return connection_dir_finished_flushing(conn);
     case CONN_TYPE_DNSMASTER:
