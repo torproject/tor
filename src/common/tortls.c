@@ -769,7 +769,6 @@ tor_tls_check_lifetime(tor_tls *tls, int tolerance)
   return r;
 }
 
-
 /** Return the number of bytes available for reading from <b>tls</b>.
  */
 int
