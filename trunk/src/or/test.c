@@ -539,7 +539,7 @@ test_dir_format()
                                                     &pk1_str_len));
   test_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str, 
                                                     &pk2_str_len));
-  strcpy(buf2, "router testaddr1.foo.bar 9000 9001 9002 9003 1000\n");
+  strcpy(buf2, "router testaddr1.foo.bar 9000 9002 9003 1000\n");
   strcat(buf2, pk1_str);
   strcat(buf2, "\n");
   
@@ -559,7 +559,7 @@ test_dir_format()
   test_assert(rp1->signing_pkey == NULL);
   test_assert(rp1->exit_policy == NULL);
 
-  strcpy(buf2, "router tor.tor.tor 9005 0 0 0 3000\n");
+  strcpy(buf2, "router tor.tor.tor 9005 0 0 3000\n");
   strcat(buf2, pk2_str);
   strcat(buf2, "signing-key\n");
   strcat(buf2, pk1_str);

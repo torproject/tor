@@ -150,6 +150,8 @@ void routerinfo_free(routerinfo_t *router)
     free(router->address);
   if (router->pkey)
     crypto_free_pk_env(router->pkey);
+  if (router->signing_pkey)
+    crypto_free_pk_env(router->signing_pkey);
   e = router->exit_policy;
   while (e) {
     etmp = e->next;
@@ -284,6 +286,25 @@ struct directory_token {
     crypto_pk_env_t *public_key;
   } val;
 };
+
+/* Free any malloced resources allocated for a token.  Don't call this if
+   you inherit the reference to those resources.
+ */
+static void
+router_release_token(directory_token_t *tok)
+{
+  switch (tok->tp) 
+    {
+    case _SIGNATURE:
+      free(tok->val.signature);
+      break;
+    case _PUBLIC_KEY:
+      crypto_free_pk_env(tok->val.public_key);
+      break;
+    default:
+      break;
+    }
+}
 
 static int
 _router_get_next_token(char **s, directory_token_t *tok) {
@@ -568,6 +589,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 #define TOK_IS(type,name)                                               \
   do {                                                                  \
     if (tok.tp != type) {                                               \
+      router_release_token(&tok);                                       \
       log(LOG_ERR, "Error reading directory: expected %s", name);       \
       return -1;                                                        \
     } } while(0)
@@ -711,8 +733,10 @@ routerinfo_t *router_get_entry_from_string(char **s) {
   routerinfo_t *router;
   if (router_get_next_token(s, &tok)) return NULL;
   router = router_get_entry_from_string_tok(s, &tok);
-  if (tok.tp != _EOF)
+  if (tok.tp != _EOF) {
+    router_release_token(&tok);
     return NULL;
+  }
   return router;
 }
 
@@ -732,6 +756,7 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
 #define ARGS tok->val.cmd.args
 
   if (tok->tp != K_ROUTER) {
+    router_release_token(tok);
     log(LOG_ERR,"router_get_entry_from_string(): Entry does not start with \"router\"");
     return NULL;
   }
@@ -775,7 +800,7 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
     router->or_port, router->ap_port, router->dir_port, router->bandwidth);
 
   NEXT_TOKEN();
-  if (tok->tp != _PUBLIC_KEY) { 
+  if (tok->tp != _PUBLIC_KEY) {
     log(LOG_ERR,"router_get_entry_from_string(): Missing public key");
     goto err;
   } /* Check key length */
@@ -800,10 +825,13 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
   return router;
 
  err:
+  router_release_token(tok); 
   if(router->address)
     free(router->address);
   if(router->pkey)
     crypto_free_pk_env(router->pkey);
+  if(router->signing_pkey)
+    crypto_free_pk_env(router->signing_pkey);
   router_free_exit_policy(router);
   free(router);
   return NULL;
