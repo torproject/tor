@@ -183,10 +183,8 @@ Tor Rendezvous Spec
          1. Let H = H(PK).
          2. Let H' = the first 80 bits of H, considering each octet from
             most significant bit to least significant bit.
-         2. Generate a 16-character encoding of H', taking H' 5 bits at
-            a time, and mapping each 5-bit value to a character as follows:
-               0..25 map to the characters 'a'...'z', respectively.
-              26..31 map to the characters '0'...'5', respectively.
+         2. Generate a 16-character encoding of H', using base32 as defined
+            in RFC 3548.
 
    (We only use 80 bits instead of the 160 bits from SHA1 because we don't
    need to worry about man-in-the-middle attacks, and because it will make

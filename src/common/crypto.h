@@ -78,7 +78,7 @@ int crypto_pk_check_fingerprint_syntax(const char *s);
 
 int base64_encode(char *dest, int destlen, const char *src, int srclen);
 int base64_decode(char *dest, int destlen, const char *src, int srclen);
-#define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz012345"
+#define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
 int base32_encode(char *dest, int destlen, const char *src, int srclen);
 
 /* Key negotiation */
