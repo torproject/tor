@@ -69,10 +69,12 @@ N  . Implement pending controller features.
     o Event for "new descriptors"
     o Better stream IDs
     o Stream status changed: "new" state.
-    - EXTENDCIRCUIT <depends on revised circ selection stuff.>
+    - EXTENDCIRCUIT
+R     - revised circ selection stuff.
+      - Implement controller interface.
     - ATTACHSTREAM
       - Make streams have an 'unattached and not-automatically-attachable'
-        state.
+        state. ("Controller managed.")
       - Add support to put new streams into this state rather than try to
         attach them automatically.  ("Hidden" config option.)
       - Time out never-attached streams.
@@ -125,7 +127,7 @@ R    - when we haven't explicitly sent a socks reject, sending one in
        warn us if we forgot one. [Tag this 010 in flyspray.]
 R    - should retry exitpolicy end streams even if the end cell didn't
        resolve the address for you
-   - Figure out when to reset addressmaps (on hup, on reconfig, etc)
+   o Figure out when to reset addressmaps (on hup, on reconfig, etc)
 
  Improvements to self-measurement.
 R  X round detected bandwidth up to nearest 10KB?
@@ -133,6 +135,8 @@ R  o client software not upload descriptor until:
      . it decides it is reachable
        o dirport
        . orport
+         - rule for now: "If you process a CREATE cell that did not come from
+           your own IP, you are reachable."
      o start counting again if your IP ever changes.
      o never regenerate identity keys, for now.
      o you can set a bit for not-being-an-OR.
@@ -176,7 +180,7 @@ N - Code cleanup
   - Let more config options (e.g. ORPort) change dynamically.
   - hidserv offerers shouldn't need to define a SocksPort
     * figure out what breaks for this, and do it.
-
+  - Destroy and truncated cells should have reasons.
    - Packaging
      - Figure out how to make the rpm not strip the binaries it makes.
    - Integrate an http proxy into Tor (maybe as a third class of worker
@@ -187,6 +191,7 @@ N - Code cleanup
      - Only the top of a directory needs to be signed.
    - Windows
      - Get a controller to launch tor and keep it on the system tray.
+
 
 For 0.1.1.x:
 
