@@ -742,7 +742,7 @@ hibernate_go_dormant(time_t now) {
                           conn->cpath_layer);
     log_fn(LOG_INFO,"Closing conn type %d", conn->type);
     if (conn->type == CONN_TYPE_AP) /* send socks failure if needed */
-      connection_close_unattached_ap(conn, END_STREAM_REASON_HIBERNATING);
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_HIBERNATING);
     else
       connection_mark_for_close(conn);
   }

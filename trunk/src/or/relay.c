@@ -417,7 +417,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
     log_fn(LOG_WARN,"no circ. Closing conn.");
     tor_assert(fromconn);
     if (fromconn->type == CONN_TYPE_AP) {
-      connection_close_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);
+      connection_mark_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);
     } else {
       fromconn->has_sent_end = 1; /* no circ to send to */
       connection_mark_for_close(fromconn);
@@ -614,7 +614,7 @@ connection_edge_process_relay_cell_not_open(
       } else {
         log_fn(LOG_INFO,"Address '%s' resolved to 0.0.0.0. Closing,",
                conn->socks_request->address);
-        connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
       client_dns_set_addressmap(conn->socks_request->address, addr,
@@ -669,7 +669,7 @@ connection_edge_process_relay_cell_not_open(
     if (CIRCUIT_IS_ORIGIN(circ))
       circuit_log_path(LOG_INFO,circ);
     if (conn->type == CONN_TYPE_AP) {
-      connection_close_unattached_ap(conn,
+      connection_mark_unattached_ap(conn,
         *(char *)(cell->payload+RELAY_HEADER_SIZE));
     } else {
       conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
@@ -692,7 +692,7 @@ connection_edge_process_relay_cell_not_open(
       if (!addr) {
         log_fn(LOG_INFO,"...but it claims the IP address was 0.0.0.0. Closing.");
         connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
-        connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
       client_dns_set_addressmap(conn->socks_request->address, addr,
@@ -716,14 +716,14 @@ connection_edge_process_relay_cell_not_open(
     tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
     if (rh->length < 2 || cell->payload[RELAY_HEADER_SIZE+1]+2>rh->length) {
       log_fn(LOG_WARN, "Dropping malformed 'resolved' cell");
-      connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return 0;
     }
     connection_ap_handshake_socks_resolved(conn,
                    cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
                    cell->payload+RELAY_HEADER_SIZE+2); /* answer */
-    connection_close_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
     return 0;
   }
 
