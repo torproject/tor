@@ -35,6 +35,7 @@ Short-term:
         - Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
         - Make logs handle it better when writing to them fails.
+        - leave server descriptor out of directory if it's too old
         o Rename ACI to circID
         . integrate rep_ok functions, see what breaks
         - update tor faq
