@@ -89,7 +89,7 @@ void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int r
   if(payload_len) {
     memcpy(cell.payload+RELAY_HEADER_SIZE,payload,payload_len);
   }
-  log_fn(LOG_INFO,"delivering %d cell %s.", relay_command,
+  log_fn(LOG_DEBUG,"delivering %d cell %s.", relay_command,
          cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
   if(circuit_deliver_relay_cell(&cell, circ, cell_direction, cpath_layer) < 0) {
