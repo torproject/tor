@@ -222,38 +222,63 @@ service url</a>).</p>
 that have at least 1Mbit each way. Currently we don't use all of that,
 but we want it available for burst traffic.</p>
 
-<p>(The Tor server doesn't need to be run as root, and doesn't
-need any special system permissions or kernel mods. You should probably
-run it as its own user though, especially if you run an identd service
-too. If you're the paranoid sort, feel free to <a
-href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put it
-into a chroot jail</a>.)</p>
+<p>To set up a Tor server, do the following steps. Some steps are optional
+but recommended.</p>
 
-<p>First, copy torrc.sample to torrc (in the default configuration this
+<ul>
+<li>(Optional) 1. Make a separate user to run the server. If you
+installed the deb or the rpm, this is already done. Otherwise,
+you can do it by hand. (The Tor server doesn't need to be run as
+root, so it's good practice to not run it as root. Running as a
+'tor' user avoids issues with identd and other services that
+detect user name. If you're the paranoid sort, feel free to <a
+href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put Tor
+into a chroot jail</a>.)
+<li>2. Copy torrc.sample to torrc (in the default configuration this
 means copy /usr/local/etc/tor/torrc.sample to /usr/local/etc/tor/torrc),
-and edit the bottom part. Create the DataDirectory,
-and make sure it's owned by the uid/gid that will be running tor. Fix your system
-clock so it's not too far off. Make sure name resolution works. Make sure
-each process can get to 1024 file descriptors (this should be already
-done for everybody but the BSD folks). Open a hole in your firewall so
-outsiders can connect to your ORPort.</p>
+and edit the bottom part. Create the DataDirectory, and make sure it's
+owned by the uid/gid that will be running tor. Fix your system clock so
+it's not too far off. Make sure name resolution works. Make sure each
+process can get to 1024 file descriptors (this should be already done
+for everybody but some BSD folks).
+<li>3. Decide what exit policy you want. By default your server allows
+access to many popular services, but we restrict some (such as port 25)
+due to abuse potential. You might want an exit policy that is either
+less restrictive or more restrictive; edit your torrc appropriately.
+If you choose a particularly open exit policy, you might want to make
+sure your upstream or ISP is ok with that choice.
+<li>4. Run tor to generate keys and then exit: <tt>tor
+--list-fingerprint</tt>. Send mail to tor-ops@freehaven.net including
+a) this key fingerprint, b) who you are, so we know whom to contact if
+there's any problem, and c) what kind of connectivity the new server
+will have. If possible, PGP sign your mail.
+<li>5. If you are using a firewall, open a hole in your firewall so
+incoming connections can reach the ports you configured (i.e. ORPort,
+plus DirPort if you enabled it). Make sure outgoing connections can reach
+at least ports 80, 443, and 9001-9033 (to get to other onion routers),
+plus any other addresses or ports your exit policy allows.
+<li>6. Start your server: <tt>tor</tt>. If it logs any warnings,
+address them.
+<li>(Optional) 7. You may find the initscripts in contrib/tor.sh or
+contrib/torctl useful if you want to set up Tor to start at boot. Let
+us know which script you find more useful.
+<li>(Optional) 8. Consider setting your hostname to 'anonymous' or
+'proxy' or 'tor-proxy' if you can, so when other people see the address
+in their web logs or whatever, they will more quickly understand what's
+going on.
+<li>(Optional) 9. If you're not running anything else on port 80 or port
+443, please consider setting up port-forwarding and advertising these
+low-numbered ports as your Tor server. This will help allow users behind
+particularly restrictive firewalls to access the Tor network. See section
+4 of <a href="http://wiki.noreply.org/wiki/TheOnionRouter_2fTorFAQ">the
+FAQ</a> for details of how to set this up.
+</ul>
 
-<p>Then run tor to generate keys: <tt>tor</tt>. One of the files generated
-in your DataDirectory is your 'fingerprint' file. Mail it to
-tor-ops@freehaven.net.</p>
-
-<p>In that mail, be sure to tell us who you are, so we know whom to contact
-if there's any problem.  Also describe what kind of connectivity the new
-server will have. If possible, PGP sign your mail.</p>
-
-<p>Once your fingerprint has been approved, you can click <a
-href="http://moria.seul.org:9031/">here</a> or <a
-href="http://62.116.124.106:9030/">here</a> and look at the
-running-routers line to see if your server is part of the network.</p>
-
-<p>You may find the initscripts in contrib/tor.sh or contrib/torctl
-useful if you want to set up Tor to start at boot. Let us know which
-script you found more useful.</p>
+<p>You can click <a href="http://moria.seul.org:9031/">here</a> or <a
+href="http://62.116.124.106:9030/">here</a> and look at the router-status
+line to see if your server is part of the network. It will be listed by
+nickname once we have added your server to the list of known servers;
+otherwise it is listed only by its fingerprint.</p>
 
 <a name="hidden-service"></a>
 <h2>Configuring a hidden service</h2>

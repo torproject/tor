@@ -19,6 +19,10 @@ N  - Get win32 servers working, or find out why it isn't happening now.
 ************************ For Post 0.0.9 *****************************
 
 Tier one:
+   - niels's "did it fail because conn refused or timeout or what"
+     relay end feature.
+   - if a version is later than the last in its series, but a version
+     in the next series is recommended, that doesn't mean it's bad.
    - fix dfc/weasel's intro point bug
    - support hostnames as well as IPs for authdirservers.
 N  - OS X package (and bundle?)
