@@ -1520,6 +1520,8 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   */
   if (destlen < ((srclen/48)+1)*66)
     return -1;
+  if (destlen > SIZE_T_CEILING)
+    return -1;
 
   EVP_EncodeInit(&ctx);
   EVP_EncodeUpdate(&ctx, dest, &len, (char*) src, srclen);
@@ -1543,6 +1545,8 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   */
   if (destlen < ((srclen/64)+1)*49)
     return -1;
+  if (destlen > SIZE_T_CEILING)
+    return -1;
 
   EVP_DecodeInit(&ctx);
   EVP_DecodeUpdate(&ctx, dest, &len, (char*) src, srclen);
@@ -1562,6 +1566,7 @@ base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 
   tor_assert((nbits%5) == 0); /* We need an even multiple of 5 bits. */
   tor_assert((nbits/5)+1 <= destlen); /* We need enough space. */
+  tor_assert(destlen < SIZE_T_CEILING);
 
   for (i=0,bit=0; bit < nbits; ++i, bit+=5) {
     /* set v to the 16-bit value starting at src[bits/8], 0-padded. */
@@ -1588,6 +1593,7 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
   uint8_t c;
   size_t count;
   char *tmp;
+  tor_assert(key_out_len < SIZE_T_CEILING);
 
 #define EXPBIAS 6
   c = s2k_specifier[8];

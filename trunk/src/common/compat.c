@@ -100,6 +100,8 @@ int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   int r;
   if (size == 0)
     return -1; /* no place for the NUL */
+  if (size > SIZE_T_CEILING)
+    return -1;
 #ifdef MS_WINDOWS
   r = _vsnprintf(str, size, format, args);
 #else
