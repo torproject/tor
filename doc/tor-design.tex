@@ -578,18 +578,73 @@ the server doesn't even acknowledge its existence.
 Below we summarize a variety of attacks and how well our design withstands
 them.
 
+\begin{enumerate}
+\item \textbf{Passive attacks}
+\begin{itemize}
+\item \emph{Simple observation.}
+\item \emph{Timing correlation.}
+\item \emph{Size correlation.}
+\item \emph{Option distinguishability.}
+\end{itemize}
+
+\item \textbf{Active attacks}
+\begin{itemize}
+\item \emph{Key compromise.}
+\item \emph{Iterated subpoena.}
+\item \emph{Run recipient.}
+\item \emph{Run a hostile node.}
+\item \emph{Compromise entire path.}
+\item \emph{Selectively DoS servers.}
+\item \emph{Introduce timing into messages.}
+\item \emph{Tagging attacks.}
+\end{itemize}
+
+\item \textbf{Directory attacks}
+\begin{itemize}
+\item foo
+\end{itemize}
+
+\end{enumerate}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Section{Future Directions and Open Problems}
 \label{sec:conclusion}
 
-Tor brings together many innovations from many different projects into
+Tor brings together many innovations into
 a unified deployable system. But there are still several attacks that
 work quite well, as well as a number of sustainability and run-time
 issues remaining to be ironed out. In particular:
 
 \begin{itemize}
-\item foo
+\item \emph{Scalability:} Since Tor's emphasis currently is on simplicity
+of design and deployment, the current design won't easily handle more
+than a few hundred servers, because of its clique topology. Restricted
+route topologies \cite{danezis:pet2003} promise comparable anonymity
+with much better scaling properties, but we must solve problems like
+how to randomly form the network without introducing net attacks.
+\item \emph{Cover traffic:} Currently we avoid cover traffic because
+it introduces clear performance and bandwidth costs, but and its
+security properties are not well understood. With more research
+\cite{SS03,defensive-dropping}, the price/value ratio may change, both for
+link-level cover traffic and also long-range cover traffic. In particular,
+we expect restricted route topologies to reduce the cost of cover traffic
+because there are fewer links to cover.
+\item \emph{Better directory distribution:} Even with the threshold
+directory agreement algorithm described in \ref{sec:dirservers},
+the directory servers are still trust bottlenecks. We must find more
+decentralized yet practical ways to distribute up-to-date snapshots of
+network status without introducing new attacks.
+\item \emph{Implementing location-hidden servers:} While Section
+\ref{sec:rendezvous} provides a design for rendezvous points and
+location-hidden servers, this feature has not yet been implemented.
+We will likely encounter additional issues, both in terms of usability
+and anonymity, that must be resolved.
+\item \emph{Wider-scale deployment:} The original goal of Tor was to
+gain experience in deploying an anonymizing overlay network, and learn
+from having actual users. We are now at the point where we can start
+deploying a wider network. We will see what happens!
+% ok, so that's hokey. fix it. -RD
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
