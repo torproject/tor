@@ -11,35 +11,6 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-      0.0.9pre1:
-        o Fix OutboundBindAddress
-        o Config defaults should be consistent with config file and no
-          config file.
-        o write instructions for port-forwarding directives or programs
-          to let people run on ports 80 and 443 without needing to bind
-          tor to them.
-        o clean up all the comma-separated stuff (eg exit policies) into
-          smartlists.
-        o investigate sctp for alternate transport.
-        o Document all undocumented options, or mark them as undocumented
-          in the source.
-        o Bail out early if datadirectory is NULL.
-        o Cached-directory changes:
-          o make clients store the cached-directory to disk,
-          o and use it when they startup, so they don't need to bootstrap
-            from the authdirservers every time they start.
-          D also, once we've reduced authdirserver entries to config
-            lines, we can have lines that list cacheddirservers too.
-        o compress the directory.
-          o Implement gzip/zlib wrappers
-          o Compress directories as they're cached/generated
-            o When requested, give a compressed directory.
-            o Decompress incoming HTTP based on Content-Encoding
-            o Once dirservers are running new code, make clients
-              request compressed directories.
-        o allow yourself to build circuits immediately if you have a
-          recent cached directory
-
       0.0.9pre2:
 R       . bandwidth buckets for write as well as read.
 N       - switch dirservers entries to config lines.
