@@ -692,6 +692,7 @@ static int prepare_for_poll(void) {
  * retry all connections, re-upload all descriptors, and so on. */
 static int do_hup(void) {
   char keydir[512];
+  or_options_t *options = get_options();
 
   log_fn(LOG_NOTICE,"Received sighup. Reloading config.");
   has_completed_circuit=0;
@@ -702,11 +703,12 @@ static int do_hup(void) {
     log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
     return -1;
   }
+  options = get_options();
 /*XXX this should move to options_act, but only once it's been
  * removed from init_keys() */
-  if(authdir_mode(get_options())) {
+  if(authdir_mode(options)) {
     /* reload the approved-routers file */
-    tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", get_data_directory());
+    tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", options->DataDirectory);
     log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
     if(dirserv_parse_fingerprint_file(keydir) < 0) {
       log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
@@ -714,14 +716,14 @@ static int do_hup(void) {
   }
   /* Fetch a new directory. Even authdirservers do this. */
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
-  if(server_mode(get_options())) {
+  if(server_mode(options)) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
     dnsworkers_rotate();
     /* Rebuild fresh descriptor as needed. */
     router_rebuild_descriptor();
-    tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", get_data_directory());
+    tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", options->DataDirectory);
     log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
     if (write_str_to_file(keydir, router_get_my_descriptor(), 0)) {
       return -1;

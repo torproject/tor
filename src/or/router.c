@@ -103,9 +103,9 @@ void rotate_onion_key(void)
   char fname_prev[512];
   crypto_pk_env_t *prkey;
   tor_snprintf(fname,sizeof(fname),
-           "%s/keys/secret_onion_key",get_data_directory());
+           "%s/keys/secret_onion_key",get_options()->DataDirectory);
   tor_snprintf(fname_prev,sizeof(fname_prev),
-           "%s/keys/secret_onion_key.old",get_data_directory());
+           "%s/keys/secret_onion_key.old",get_options()->DataDirectory);
   if (!(prkey = crypto_new_pk_env())) {
     log(LOG_ERR, "Error creating crypto environment.");
     goto error;
@@ -258,12 +258,7 @@ int init_keys(void) {
     return 0;
   }
   /* Make sure DataDirectory exists, and is private. */
-  datadir = get_data_directory();
-  tor_assert(datadir);
-  if (strlen(datadir) > (512-128)) {
-    log_fn(LOG_ERR, "DataDirectory is too long.");
-    return -1;
-  }
+  datadir = options->DataDirectory;
   if (check_private_dir(datadir, 1)) {
     return -1;
   }

@@ -328,7 +328,7 @@ record_bandwidth_usage(time_t now)
                (unsigned long)n_seconds_active_in_interval,
                (unsigned long)expected_bandwidth_usage);
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
-               get_data_directory());
+               get_options()->DataDirectory);
 
   return write_str_to_file(fname, buf, 0);
 }
@@ -347,7 +347,7 @@ read_bandwidth_usage(void)
   int ok;
 
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
-               get_data_directory());
+               get_options()->DataDirectory);
   if (!(s = read_file_to_str(fname, 0))) {
     return 0;
   }
