@@ -327,11 +327,11 @@ int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, int cell_direction)
     return -1;
   }
 
-  if((!conn && cell_direction == CELL_DIRECTION_OUT) || (conn && conn->type == CONN_TYPE_EXIT)) {
+  if(cell_direction == CELL_DIRECTION_OUT && (!conn || conn->type == CONN_TYPE_EXIT)) {
     log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to exit.");
     return connection_exit_process_data_cell(cell, circ);
   }
-  if((!conn && cell_direction == CELL_DIRECTION_IN) || (conn && conn->type == CONN_TYPE_AP)) {
+  if(cell_direction == CELL_DIRECTION_IN && (!conn || conn->type == CONN_TYPE_AP)) {
     log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to AP.");
     return connection_ap_process_data_cell(cell, circ);
   }
@@ -352,7 +352,7 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char cell_direction) {
   if(!out)
     return -1;
 
-  if(cell_direction == CELL_DIRECTION_IN) { //crypt_type == 'e') {
+  if(cell_direction == CELL_DIRECTION_IN) { 
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
       for (i=circ->cpathlen-1; i >= 0; i--) /* moving from first to last hop 
                                        * Remember : cpath is in reverse order, i.e. last hop first
@@ -379,7 +379,7 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char cell_direction) {
       }
       memcpy(in,out,inlen);
     }
-  } else if(cell_direction == CELL_DIRECTION_OUT) { //crypt_type == 'd') {
+  } else if(cell_direction == CELL_DIRECTION_OUT) { 
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
       for (i=0; i < circ->cpathlen; i++) /* moving from last to first hop 
                                           * Remember : cpath is in reverse order, i.e. last hop first
