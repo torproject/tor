@@ -178,6 +178,7 @@ configure_accounting(time_t now)
         start_of_accounting_period_containing(interval_start_time)) {
     log_fn(LOG_INFO, "Continuing accounting interval.");
     /* We are in the interval we thought we were in. Do nothing.*/
+    interval_end_time = start_of_accounting_period_after(interval_start_time);
   } else {
     log_fn(LOG_WARN, "Mismatched accounting interval; starting a fresh one.");
     reset_accounting(now);
@@ -228,8 +229,8 @@ reset_accounting(time_t now) {
 static INLINE int
 time_to_record_bandwidth_usage(time_t now)
 {
-  /* Note every 5 minutes */
-#define NOTE_INTERVAL (5*60)
+  /* Note every 60 sec */
+#define NOTE_INTERVAL (60)
   /* Or every 20 megabytes */
 #define NOTE_BYTES 20*(1024*1024)
   static uint64_t last_read_bytes_noted = 0;
@@ -303,6 +304,7 @@ accounting_set_wakeup_time(void)
     24*60*60 * (unsigned char)digest[0];
 }
 
+/* XXXX009 This should also get called on HUP and shutdown. */
 #define BW_ACCOUNTING_VERSION 1
 /** Save all our bandwidth tracking information to disk. Return 0 on
  * success, -1 on failure*/
@@ -353,7 +355,7 @@ read_bandwidth_usage(void)
     return 0;
   }
   elts = smartlist_create();
-  smartlist_split_string(elts, s, "\n", SPLIT_SKIP_SPACE, SPLIT_IGNORE_BLANK);
+  smartlist_split_string(elts, s, "\n", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
   tor_free(s);
 
   if (smartlist_len(elts)<1 ||
@@ -469,6 +471,7 @@ static void hibernate_begin(int new_state, time_t now) {
   }
 
   hibernate_state = new_state;
+  record_bandwidth_usage(time(NULL));
 }
 
 /** Called when we've been hibernating and our timeout is reached. */
@@ -520,6 +523,8 @@ hibernate_go_dormant(void) {
     log_fn(LOG_INFO,"Closing conn type %d", conn->type);
     connection_mark_for_close(conn);
   }
+
+  record_bandwidth_usage(time(NULL));
 }
 
 /** Called when hibernate_end_time has arrived. */
