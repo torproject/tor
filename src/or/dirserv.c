@@ -428,17 +428,25 @@ static void
 directory_remove_unrecognized(void)
 {
   int i;
+  int r;
   routerinfo_t *ent;
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ent = smartlist_get(descriptor_list, i);
-    if (dirserv_router_fingerprint_is_known(ent)<=0) {
-      log(LOG_INFO, "Router '%s' is no longer recognized",
+    r = dirserv_router_fingerprint_is_known(ent);
+    if (r<0) {
+      log(LOG_INFO, "Router '%s' is now verified with a key; removing old router with same name and different key.",
           ent->nickname);
       routerinfo_free(ent);
       smartlist_del(descriptor_list, i--);
+    } else if (r>0 && !ent->is_verified) {
+      log(LOG_INFO, "Router '%s' is now approved.", ent->nickname);
+      ent->is_verified = 1;
+    } else if (r==0 && ent->is_verified) {
+      log(LOG_INFO, "Router '%s' is no longer approved." ent->nickname);
+      ent->is_verified = 0;
     }
   }
 }
