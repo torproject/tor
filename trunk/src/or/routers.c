@@ -44,10 +44,10 @@ int learn_my_address(struct sockaddr_in *me) {
 
   /* obtain local host information */
   if(gethostname(localhostname,512) < 0) {
-    log_fn(LOG_ERR,"Error obtaining local hostname.");
+    log_fn(LOG_ERR,"Error obtaining local hostname");
     return -1;
   }
-  log_fn(LOG_DEBUG,"localhostname is '%s'.",localhostname);
+  log_fnf(LOG_DEBUG,"localhostname is '%s'.",localhostname);
   localhost = gethostbyname(localhostname);
   if (!localhost) {
     log_fn(LOG_ERR,"Error obtaining local host info.");
@@ -57,7 +57,7 @@ int learn_my_address(struct sockaddr_in *me) {
   me->sin_family = AF_INET;
   memcpy((void *)&me->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
   me->sin_port = htons(options.ORPort);
-  log_fn(LOG_DEBUG,"chose address as '%s'.",inet_ntoa(me->sin_addr));
+  log_fnf(LOG_DEBUG,"chose address as '%s'.",inet_ntoa(me->sin_addr));
 
   return 0;
 }
@@ -69,7 +69,7 @@ void router_retry_connections(void) {
   for (i=0;i<directory->n_routers;i++) {
     router = directory->routers[i];
     if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
-      log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
+      log_fnf(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
       connection_or_connect(router);
     }
   }
@@ -199,26 +199,26 @@ int router_get_list_from_file(char *routerfile)
   assert(routerfile);
   
   if (strcspn(routerfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
-    log_fn(LOG_ERR,"Filename %s contains illegal characters.",routerfile);
+    log_fnf(LOG_ERR,"Filename %s contains illegal characters.",routerfile);
     return -1;
   }
   
   if(stat(routerfile, &statbuf) < 0) {
-    log_fn(LOG_ERR,"Could not stat %s.",routerfile);
+    log_fnf(LOG_ERR,"Could not stat %s.",routerfile);
     return -1;
   }
 
   /* open the router list */
   fd = open(routerfile,O_RDONLY,0);
   if (fd<0) {
-    log_fn(LOG_ERR,"Could not open %s.",routerfile);
+    log_fnf(LOG_ERR,"Could not open %s.",routerfile);
     return -1;
   }
 
   string = tor_malloc(statbuf.st_size+1);
 
   if(read(fd,string,statbuf.st_size) != statbuf.st_size) {
-    log(LOG_ERR,"router_get_list_from_file(): Couldn't read all %d bytes of file '%s'.",statbuf.st_size,routerfile);
+    log_fnf(LOG_ERR,"Couldn't read all %d bytes of file '%s'.",statbuf.st_size,routerfile);
     free(string);
     close(fd);
     return -1;
@@ -228,7 +228,7 @@ int router_get_list_from_file(char *routerfile)
   string[statbuf.st_size] = 0; /* null terminate it */
 
   if(router_get_list_from_string(string) < 0) {
-    log(LOG_ERR,"router_get_list_from_file(): The routerfile itself was corrupt.");
+    log_fn(LOG_ERR,"The routerfile itself was corrupt.");
     free(string);
     return -1;
   }
