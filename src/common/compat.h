@@ -62,6 +62,16 @@ size_t strlcat(char *dst, const char *src, size_t siz);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 
+#ifdef MS_WINDOWS
+#define U64_PRINTF_ARG(a) (a)
+#define U64_SCANF_ARG(a) (a)
+#dfeine U64_FORMAT "%I64u"
+#else
+#define U64_PRINTF_ARG(a) ((long long unsigned int)a)
+#define U64_SCANF_ARG(a) ((long long unsigned int*)a)
+#define U64_FORMAT "%llu"
+#endif
+
 int tor_snprintf(char *str, size_t size, const char *format, ...)
      CHECK_PRINTF(3,4);
 int tor_vsnprintf(char *str, size_t size, const char *format, va_list args);
