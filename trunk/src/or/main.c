@@ -810,10 +810,11 @@ static void second_elapsed_callback(int fd, short event, void *args)
   stats_prev_global_write_bucket = global_write_bucket;
 
   if (server_mode(options) &&
-      stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
-      stats_n_seconds_working+seconds_elapsed >=
-        TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
-      !check_whether_ports_reachable()) {
+      !check_whether_ports_reachable() &&
+      stats_n_seconds_working / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
+      (stats_n_seconds_working+seconds_elapsed) /
+        TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
+    /* every 20 minutes, check and complain if necessary */
     routerinfo_t *me = router_get_my_routerinfo();
     log_fn(LOG_WARN,"Your server (%s:%d) has not managed to confirm that it is reachable. Please check your firewalls, ports, address, etc.",
            me ? me->address : options->Address, options->ORPort);
