@@ -19,11 +19,24 @@ protocols.
    mode, with an IV of all 0 bytes.  All asymmetric ciphers are RSA
    with 1024-bit keys, and exponents of 65537.
 
-   [Comments: DES?  This should be AES.  Why are
+   [Comments: DES?  This should be AES.  Why are -NM]
+   [We will move to AES once we can assume everybody will have it. -RD]
 
 1. System overview
 
-????
+[Something to start with here. Do feel free to change/expand. -RD]
+
+Tor is an implementation of version 2 of Onion Routing.
+
+Onion Routing is a connection-oriented anonymizing communication
+service. Users build a layered block of asymmetric encryptions
+(an "onion") which describes a source-routed path through a set of
+nodes. Those nodes build a "virtual circuit" through the network, in which
+each node knows its predecessor and successor, but no others. Traffic
+flowing down the circuit is unwrapped by a symmetric key at each node,
+which reveals the downstream node.
+
+
 
 2. Connections
 
@@ -33,7 +46,7 @@ protocols.
    OR (called the 'client') and the listening OR (called the 'server')
    perform the following handshake.
 
-   Before the handshake begins, the client and server use one
+   Before the handshake begins, the client and server know one
    another's (1024-bit) public keys, IPV4 addresses, and ports.
 
      1. Client connects to server:
@@ -50,8 +63,7 @@ protocols.
            The server's published port            [2 bytes]
            The forward key (K_f)                  [8 bytes]
            The backward key (K_f)                 [8 bytes]
-           The maximum bandwidth (units????)      [4 bytes]
-           Arbitrary data (BUG?????)              [4 bytes]
+           The maximum bandwidth (bytes/s)        [4 bytes]
                                                [Total: 36 bytes] 
 
         The client then RSA-encrypts the message with the server's
@@ -59,12 +71,12 @@ protocols.
 
         [Commentary: 1024 bytes is probably too short, and this protocol can't
         support IPv6. -NM]
+        [1024 is too short for a high-latency remailer; but perhaps it's
+         fine for us, given our need for speed and also given our greater
+         vulnerability to other attacks? Onions are infrequent enough now
+         that maybe we could handle it; but I worry it will impact
+         scalability, and handling more users is important.-RD]
  
-        [Commentary: Is there a bug on line 740 of connection_or.c?  
-          I think that "conn->pkey, buf, 36, cipher, RSA_PKCS1_PADDING"
-             should be "conn->pkey, buf, 32, cipher, RSA_PKCS1_PASSING"
-          -NM]
-
         The client then opens a TCP connection to the server, sends
         the 128-byte RSA-encrypted data to the server, and waits for a
         reply.
@@ -74,7 +86,7 @@ protocols.
         Upon receiving a TCP connection, the server waits to receive
         128 bytes from the client.  It decrypts the message with its 
         private key, and checks the PKCS1 padding.  If the padding is
-        incorrect, or if the message's length is other than 36 bytes,
+        incorrect, or if the message's length is other than 32 bytes,
         the server closes the TCP connection and stops handshaking.
 
         The server then checks the list of known ORs for one with the
@@ -84,13 +96,13 @@ protocols.
         stops handshaking. 
 
         For later use, the server sets its keys for this connection,
-	setting K_f to the client's K_b, and K_b to the client's K_f.
+        setting K_f to the client's K_b, and K_b to the client's K_f.
 
         The server then creates a server authentication message[M2] as
         follows: 
-               Modified client authentication         [36 bytes]
+               Modified client authentication         [32 bytes]
                A random nonce [N]                     [8 bytes]
-                                                  [Total: 44 bytes]
+                                                  [Total: 40 bytes]
         The client authentication is generated from M by replacing
         the client's preferred bandwidth [B_c] with the server's
         preferred bandwidth [B_s], if B_s < B_c. 
@@ -99,13 +111,13 @@ protocols.
         from the list of known routers), using PKCS1 padding.
 
         The server sends the 128-byte encrypted message to the client,
-        and waits for a reply.               
+        and waits for a reply.
 
      3. Client authenticates to server.
 
         Once the client has received 128 bytes, it decrypts them with
         its public key, and checks the PKCS1 padding.  If the padding
-        is invalid, or the decrypted message's length is other than 44
+        is invalid, or the decrypted message's length is other than 40
         bytes, the client closes the TCP connection.
 
         The client checks that the addresses and keys in the reply
@@ -141,18 +153,18 @@ protocols.
 
 2.2. Establishing OP-to-OR connections
 
-   When an OP needs to establish a connection to an OR, the handshake
-   is simpler because the OR does not need to verify the OR's
-   identity.  The OP and OR establish the following steps:
+   When an Onion Proxy (OP) needs to establish a connection to an OR,
+   the handshake is simpler because the OR does not need to verify the
+   OP's identity.  The OP and OR establish the following steps:
 
      1. OP connects to OR:
-        
+
         First, the OP generates a pair of 8-byte symmetric keys (one
-        [K_f] for the 'forward' stream from OP to OP, and one
+        [K_f] for the 'forward' stream from OP to OR, and one
         [K_b] for the 'backward' stream from OR to OP.
 
         The OP generates a message [M] in the following format:
-           Maximum bandwidth                [4 bytes]
+           Maximum bandwidth (bytes/s)      [4 bytes]
            Forward key [K_f]                [8 bytes]
            Backward key [K_b]               [8 bytes]
                                         [Total: 20 bytes]
@@ -165,6 +177,8 @@ protocols.
 
         When the OR receives a connection from an OP [This is on a
         different port, right? How does it know the difference? -NM],
+        [Correct. The 'or_port' config variable specifies the OR port,
+         and the op_port variable specified the OP port. -RD]
         it waits for 128 bytes of data, and decrypts the resulting
         data with its private key, checking the PKCS1 padding.  If the
         padding is invalid, or the message is not 20 bytes long, the
@@ -174,7 +188,7 @@ protocols.
         to receive cells.  
 
         The server sets its keys for this connection, setting K_f to
-	the client's K_b, and K_b to the client's K_f.
+        the client's K_b, and K_b to the client's K_f.
 
 2.3. Sending cells and link encryption
 
@@ -191,6 +205,15 @@ protocols.
     server.  I need to look more at the data format to see whether
     this is exploitable, but if there's no integrity checking there
     either, I suspect we may have an attack here. -NM]
+   [Yes, this protocol is open to tagging attacks. The payloads are
+    encrypted inside the network, so it's only at the edge node and beyond
+    that it's a worry. But adversaries can already count packets and
+    observe/modify timing. It's not worth putting in hashes; indeed, it
+    would be quite hard, because one of the sides of the circuit doesn't
+    know the keys that are used for de/encrypting at each hop, so couldn't
+    craft hashes anyway. See the Bandwidth Throttling (threat model)
+    thread on http://archives.seul.org/or/dev/Jul-2002/threads.html. -RD]
+
 
 3. Cell Packet format
 
@@ -206,13 +229,11 @@ protocols.
                                          [Total size: 128 bytes]
 
    The 'Command' field holds one of the following values:
-         0 -- PADDING     (Random padding)
+         0 -- PADDING     (Padding)
          1 -- CREATE      (Create a circuit)
          2 -- DATA        (End-to-end data)
          3 -- DESTROY     (Stop using a circuit)
-         4 -- ACK         (unused)
-         5 -- NACK        (unused)
-         6 -- SENDME      (For flow control)
+         4 -- SENDME      (For flow control)
 
    The interpretation of 'Length' and 'Payload' depend on....
 
