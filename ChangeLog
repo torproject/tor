@@ -1,3 +1,52 @@
+Changes in version 0.0.9.2 - 2005-01-04
+  o Bugfixes on 0.0.9 (crashes and asserts):
+    - Fix an assert on startup when the disk is full and you're logging
+      to a file.
+    - If you do socks4 with an IP of 0.0.0.x but *don't* provide a socks4a
+      style address, then we'd crash.
+    - Fix an assert trigger when the running-routers string we get from
+      a dirserver is broken.
+    - Make worker threads start and run on win32. Now win32 servers
+      may work better.
+    - Bandaid (not actually fix, but now it doesn't crash) an assert
+      where the dns worker dies mysteriously and the main Tor process
+      doesn't remember anything about the address it was resolving.
+
+  o Bugfixes on 0.0.9 (Win32):
+    - Workaround for brain-damaged __FILE__ handling on MSVC: keep Nick's
+      name out of the warning/assert messages.
+    - Fix a superficial "unhandled error on read" bug on win32.
+    - The win32 installer no longer requires a click-through for our
+      license, since our Free Software license grants rights but does not
+      take any away.
+    - Win32: When connecting to a dirserver fails, try another one
+      immediately. (This was already working for non-win32 Tors.)
+    - Stop trying to parse $HOME on win32 when hunting for default
+      DataDirectory.
+    - Make tor-resolve.c work on win32 by calling network_init().
+
+  o Bugfixes on 0.0.9 (other):
+    - Make 0.0.9.x build on Solaris again.
+    - Due to a fencepost error, we were blowing away the \n when reporting
+      confvalue items in the controller. So asking for multiple config
+      values at once couldn't work.
+    - When listing circuits that are pending on an opening OR connection,
+      if we're an OR we were listing circuits that *end* at us as
+      being pending on every listener, dns/cpu worker, etc. Stop that.
+    - Dirservers were failing to create 'running-routers' or 'directory'
+      strings if we had more than some threshold of routers. Fix them so
+      they can handle any number of routers.
+    - Fix a superficial "Duplicate mark for close" bug.
+    - Stop checking for clock skew for OR connections, even for servers.
+    - Fix a fencepost error that was chopping off the last letter of any
+      nickname that is the maximum allowed nickname length.
+    - Update URLs in log messages so they point to the new website.
+    - Fix a potential problem in mangling server private keys while
+      writing to disk (not triggered yet, as far as we know).
+    - Include the licenses for other free software we include in Tor,
+      now that we're shipping binary distributions more regularly.
+
+
 Changes in version 0.0.9.1 - 2004-12-15
   o Bugfixes on 0.0.9:
     - Make hibernation actually work.
