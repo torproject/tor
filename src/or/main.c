@@ -555,7 +555,7 @@ static int prepare_for_poll(void) {
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
-    ++stats_n_seconds_uptime;
+    stats_n_seconds_uptime += (now.tv_sec - current_second);
     assert_all_pending_dns_resolves_ok();
     run_scheduled_events(now.tv_sec);
     assert_all_pending_dns_resolves_ok();
