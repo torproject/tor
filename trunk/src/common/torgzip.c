@@ -46,7 +46,7 @@ method_bits(compress_method_t method)
 
 int
 tor_gzip_compress(char **out, size_t *out_len,
-		  const char *in, size_t in_len,
+                  const char *in, size_t in_len,
                   compress_method_t method)
 {
   struct z_stream_s *stream = NULL;
@@ -71,10 +71,10 @@ tor_gzip_compress(char **out, size_t *out_len,
   stream->avail_in = in_len;
 
   if (deflateInit2(stream, Z_BEST_COMPRESSION, Z_DEFLATED,
-		   method_bits(method),
-		   8, Z_DEFAULT_STRATEGY) != Z_OK) {
+                   method_bits(method),
+                   8, Z_DEFAULT_STRATEGY) != Z_OK) {
     log_fn(LOG_WARN, "Error from deflateInit2: %s",
-	   stream->msg?stream->msg:"<no message>");
+           stream->msg?stream->msg:"<no message>");
     goto err;
   }
 
@@ -95,12 +95,12 @@ tor_gzip_compress(char **out, size_t *out_len,
         if (stream->avail_out >= stream->avail_in+16)
           break;
       case Z_BUF_ERROR:
-	offset = stream->next_out - ((unsigned char*)*out);
-	out_size *= 2;
-	*out = tor_realloc(*out, out_size);
-	stream->next_out = *out + offset;
-	stream->avail_out = out_size - offset;
-	break;
+        offset = stream->next_out - ((unsigned char*)*out);
+        out_size *= 2;
+        *out = tor_realloc(*out, out_size);
+        stream->next_out = *out + offset;
+        stream->avail_out = out_size - offset;
+        break;
       default:
         log_fn(LOG_WARN, "Gzip compression didn't finish: %s",
                stream->msg ? stream->msg : "<no message>");
@@ -129,7 +129,7 @@ tor_gzip_compress(char **out, size_t *out_len,
 
 int
 tor_gzip_uncompress(char **out, size_t *out_len,
-		    const char *in, size_t in_len,
+                    const char *in, size_t in_len,
                     compress_method_t method)
 {
   struct z_stream_s *stream = NULL;
@@ -156,7 +156,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   if (inflateInit2(stream,
                    method_bits(method)) != Z_OK) {
     log_fn(LOG_WARN, "Error from inflateInit2: %s",
-	   stream->msg?stream->msg:"<no message>");
+           stream->msg?stream->msg:"<no message>");
     goto err;
   }
 
@@ -171,22 +171,22 @@ tor_gzip_uncompress(char **out, size_t *out_len,
     switch(inflate(stream, Z_FINISH))
       {
       case Z_STREAM_END:
-	goto done;
+        goto done;
       case Z_OK:
-	/* In case zlib doesn't work as I think.... */
-	if (stream->avail_out >= stream->avail_in+16)
-	  break;
+        /* In case zlib doesn't work as I think.... */
+        if (stream->avail_out >= stream->avail_in+16)
+          break;
       case Z_BUF_ERROR:
-	offset = stream->next_out - ((unsigned char*)*out);
-	out_size *= 2;
-	*out = tor_realloc(*out, out_size);
-	stream->next_out = *out + offset;
-	stream->avail_out = out_size - offset;
-	break;
+        offset = stream->next_out - ((unsigned char*)*out);
+        out_size *= 2;
+        *out = tor_realloc(*out, out_size);
+        stream->next_out = *out + offset;
+        stream->avail_out = out_size - offset;
+        break;
       default:
-	log_fn(LOG_WARN, "Gzip decompression returned an error: %s",
-	       stream->msg ? stream->msg : "<no message>");
-	goto err;
+        log_fn(LOG_WARN, "Gzip decompression returned an error: %s",
+               stream->msg ? stream->msg : "<no message>");
+        goto err;
       }
 
   }
