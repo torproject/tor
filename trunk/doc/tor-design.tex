@@ -647,7 +647,7 @@ without delaying streams and thereby harming user experience.\\
 
 \begin{figure}[h]
 \centering
-\mbox{\epsfig{figure=interaction,width=8cm}}
+\mbox{\epsfig{figure=interaction,width=8.75cm}}
 \caption{Alice builds a two-hop circuit and begins fetching a web page.}
 \label{fig:interaction}
 \end{figure}
@@ -896,8 +896,8 @@ receive a bad hash.
 \SubSection{Rate limiting and fairness}
 \label{subsec:rate-limit}
 
-Volunteers are generally more willing to run services that can limit
-their own bandwidth usage. To accommodate them, Tor servers use a
+Volunteers are more willing to run services that can limit
+their bandwidth usage. To accommodate them, Tor servers use a
 token bucket approach~\cite{tannenbaum96} to
 enforce a long-term average rate of incoming bytes, while still
 permitting short-term bursts above the allowed bandwidth.
@@ -1801,7 +1801,7 @@ our overall usability.
  We thank Peter Palfrader, Geoff Goodell, Adam Shostack, Joseph Sokol-Margolis,
    John Bashinski, and Zack Brown
    for editing and comments;
- Matej Pfajfar, Andrei Serjantov, Marc Rennhard: for design discussions.
+ Matej Pfajfar, Andrei Serjantov, Marc Rennhard for design discussions;
  Bram Cohen for congestion control discussions;
  Adam Back for suggesting telescoping circuits; and
  Cathy Meadows for formal analysis of the \emph{extend} protocol.
