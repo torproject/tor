@@ -18,9 +18,11 @@ Tor 0.0.9rc1:
      o Start at a time other than 0:00 GMT.
      o Document
    o Integrate NT service patch
-   - make loglevels info,debug less noisy
+   . make loglevels info,debug less noisy
 
 Beyond 0.0.9:
+N  - Clean up NT service code
+N  - OS X package (and bundle?)
    - controller should have 'getinfo' command to query about rephist,
      about rendezvous status, etc.
    - allow transition from ORPort to !ORPort, and back
