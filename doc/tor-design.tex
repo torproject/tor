@@ -567,8 +567,64 @@ the server doesn't even acknowledge its existence.
 \Section{Maintaining anonymity sets}
 \label{sec:maintaining-anonymity}
 
-\SubSection{Using a circuit many times}
-\label{subsec:many-messages}
+packet counting attacks work great against initiators. need to do some
+level of obfuscation for that. standard link padding for passive link
+observers. long-range padding for people who own the first hop. are
+we just screwed against people who insert timing signatures into your
+traffic?
+
+Even regardless of link padding from Alice to the cloud, there will be
+times when Alice is simply not online. Link padding, at the edges or
+inside the cloud, does not help for this.
+
+how often should we pull down directories? how often send updated
+server descs?
+
+when we start up the client, should we build a circuit immediately,
+or should the default be to build a circuit only on demand? should we
+fetch a directory immediately?
+
+would we benefit from greater synchronization, to blend with the other
+users? would the reduced speed hurt us more?
+
+does the "you can't see when i'm starting or ending a stream because
+you can't tell what sort of relay cell it is" idea work, or is just
+a distraction?
+
+does running a server actually get you better protection, because traffic
+coming from your node could plausibly have come from elsewhere? how
+much mixing do you need before this is actually plausible, or is it
+immediately beneficial because many adversary can't see your node?
+
+do different exit policies at different exit nodes trash anonymity sets,
+or not mess with them much?
+
+do we get better protection against a realistic adversary by having as
+many nodes as possible, so he probably can't see the whole network,
+or by having a small number of nodes that mix traffic well? is a
+cascade topology a more realistic way to get defenses against traffic
+confirmation? does the hydra (many inputs, few outputs) topology work
+better? are we going to get a hydra anyway because most nodes will be
+middleman nodes?
+
+using a circuit many times is good because it's less cpu work
+  good because of predecessor attacks with path rebuilding
+  bad because predecessor attacks can be more likely to link you with a
+    previous circuit since you're so verbose
+  bad because each thing you do on that circuit is linked to the other
+    things you do on that circuit
+
+Because Tor runs over TCP, when one of the servers goes down it seems
+that all the circuits (and thus streams) going over that server must
+break. This reduces anonymity because everybody needs to reconnect
+right then (does it? how much?) and because exit connections all break
+at the same time, and it also reduces usability. It seems the problem
+is even worse in a p2p environment, because so far such systems don't
+really provide an incentive for nodes to stay connected when they're
+done browsing, so we would expect a much higher churn rate than for
+onion routing. Are there ways of allowing streams to survive the loss
+of a node in the path?
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -623,6 +679,8 @@ than a few hundred servers, because of its clique topology. Restricted
 route topologies \cite{danezis:pet2003} promise comparable anonymity
 with much better scaling properties, but we must solve problems like
 how to randomly form the network without introducing net attacks.
+% cascades are a restricted route topology too. we must mention
+% earlier why we're not satisfied with the cascade approach.
 \item \emph{Cover traffic:} Currently we avoid cover traffic because
 it introduces clear performance and bandwidth costs, but and its
 security properties are not well understood. With more research
@@ -649,7 +707,8 @@ deploying a wider network. We will see what happens!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Section{Acknowledgments}
+%\Section{Acknowledgments}
+%% commented out for anonymous submission
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
