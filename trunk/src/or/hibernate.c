@@ -451,7 +451,7 @@ accounting_set_wakeup_time(void)
 
     log_fn(LOG_NOTICE, "Configured hibernation.  This interval begins at %s "
         "and ends at %s.  We have no prior estimate for bandwidth, so "
-        "we will start out awake and hibernate when we exhaust our bandwidth.",
+        "we will start out awake and hibernate when we exhaust our quota.",
         buf1, buf2);
     return;
   }
@@ -493,7 +493,7 @@ accounting_set_wakeup_time(void)
 
     log_fn(LOG_NOTICE, "Configured hibernation.  This interval began at %s; "
            "the scheduled wake-up time %s %s; "
-           "we expect%s to exhaust our bandwidth for this interval around %s; "
+           "we expect%s to exhaust our quota for this interval around %s; "
            "the next interval begins at %s (all times local)",
            buf1,
            time(NULL)<interval_wakeup_time?"is":"was", buf2,
