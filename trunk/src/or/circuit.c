@@ -1231,13 +1231,16 @@ void circuit_expire_old_circuits(void) {
      */
     if (circ->timestamp_dirty &&
         circ->timestamp_dirty + options.NewCircuitPeriod < now &&
-        !circ->p_conn &&
-        !circ->p_streams) {
-      log_fn(LOG_DEBUG,"Closing n_circ_id %d",circ->n_circ_id);
+        !circ->p_conn && /* we're the origin */
+        !circ->p_streams && /* AP connections */
+        !circ->n_streams /* exit connections */ ) {
+      log_fn(LOG_DEBUG,"Closing n_circ_id %d (dirty %d secs ago)",circ->n_circ_id,
+             (int)(now - circ->timestamp_dirty));
       circuit_mark_for_close(circ);
     } else if (!circ->timestamp_dirty && CIRCUIT_IS_ORIGIN(circ) &&
-               circ->state == CIRCUIT_STATE_OPEN) {
-      /* Also, gather a list of open unused circuits that we created.
+               circ->state == CIRCUIT_STATE_OPEN &&
+               circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+      /* Also, gather a list of open unused general circuits that we created.
        * Because we add elements to the front of global_circuitlist,
        * the last elements of unused_open_circs will be the oldest
        * ones.
