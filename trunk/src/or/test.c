@@ -715,7 +715,7 @@ main(int c, char**v){
   test_onion();
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
-  add_stream_log(LOG_DEBUG, NULL, stdout);
+//  add_stream_log(LOG_DEBUG, NULL, stdout);
   test_dir_format();
   puts("");
 
