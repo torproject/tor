@@ -765,7 +765,9 @@ static int prepare_for_poll(void) {
     stats_prev_global_read_bucket = global_read_bucket;
     stats_prev_global_write_bucket = global_write_bucket;
 
-    stats_n_seconds_working += seconds_elapsed;
+    /* if more than 10s have elapsed, probably the clock changed: doesn't count. */
+    if (seconds_elapsed < 10)
+      stats_n_seconds_working += seconds_elapsed;
 
     assert_all_pending_dns_resolves_ok();
     run_scheduled_events(now.tv_sec);
