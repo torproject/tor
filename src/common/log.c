@@ -51,7 +51,10 @@ static INLINE const char *sev_to_string(int severity) {
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 
-static INLINE size_t _log_prefix(char *buf, size_t buf_len, int severity)
+static void delete_log(logfile_t *victim);
+
+static INLINE size_t
+_log_prefix(char *buf, size_t buf_len, int severity)
 {
   time_t t;
   struct timeval now;
@@ -159,10 +162,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
       /* don't log the error! Blow away this log entry and continue. */
       logfile_t *victim = lf;
       lf = victim->next;
-      if(victim == logfiles)
-        logfiles = lf;
-      tor_free(victim->filename);
-      tor_free(victim);
+      delete_log(victim);
     } else {
       lf = lf->next;
     }
@@ -212,10 +212,7 @@ void reset_logs()
         /* error. don't log it. delete the log entry and continue. */
         logfile_t *victim = lf;
         lf = victim->next;
-        if(victim == logfiles)
-          logfiles = lf;
-        tor_free(victim->filename);
-        tor_free(victim);
+        delete_log(victim);
         continue;
       } else {
         log_tor_version(lf, 1);
@@ -223,6 +220,24 @@ void reset_logs()
     }
     lf = lf->next;
   }
+}
+
+/** Remove and free the log entry <b>victim</b> from the linked-list
+ * logfiles (it must be present in the list when this function is
+ * called). After this function is called, the caller shouldn't refer
+ * to <b>victim</b> anymore.
+ */
+static void delete_log(logfile_t *victim) {
+  logfile_t *tmpl;
+  if(victim == logfiles)
+    logfiles = victim->next;
+  else {
+    for(tmpl = logfiles; tmpl && tmpl->next != victim; tmpl=tmpl->next) ;
+    tor_assert(tmpl->next == victim);
+    tmpl->next = victim->next;
+  }
+  tor_free(victim->filename);
+  tor_free(victim);
 }
 
 /** Add a log handler to send all messages of severity <b>loglevel</b>
