@@ -724,55 +724,77 @@ transport a greater variety of protocols.
 Though Tor has always been designed to be practical and usable first
 with as much anonymity as can be built in subject to those goals, we
 have contemplated that users might need resistance to at least simple
-traffic confirmation attacks. Raising the latency of communication
-slightly might make this feasible. If the latency could be kept to two
-or three times its current overhead, this might be acceptable to the
-majority of Tor users. However, it might also destroy much of the user
-base, and it is difficult to know in advance.  Note also that in
-practice, as the network is growing and we accept cable modem, DSL
-nodes, and more nodes in various continents, we're \emph{already}
-looking at many-second delays for some transactions. The engineering
-required to get this lower is going to be extremely hard. It's worth
-considering how hard it would be to accept the fixed (higher) latency
-and improve the protection we get from it. Thus, it may be most
-practical to run a mid-latency option over the Tor network for those
-users either willing to experiment or in need of more a priori
-anonymity in the network.  This will allow us to experiment with both
+traffic confirmation attacks.  Higher-latency mix-networks resist these
+attacks by introducing variability into message arrival times in order to
+suppress timing correlation.  Thus, it seems worthwhile to consider the
+whether we can improving Tor's anonymity by introducing batching and delaying
+strategies to the Tor messages to prevent observers from linking incoming and
+outgoing traffic.
+
+Before we consider the engineering issues involved in the approach, of
+course, we first need to study whether it can genuinely make users more
+anonymous.  Research on end-to-end traffic analysis on higher-latency mix
+networks~\cite{e2e-traffic} indicates that as timing variance decreases,
+timing correlation attacks require increasingly less data; it might be the
+case that Tor can't resist timing attacks for longer than a few minutes
+without increasing message delays to an unusable degree.  Conversely, if Tor
+can remain usable and slow timing attacks by even a matter of hours, this
+would represent a significant improvement in practical anonymity: protecting
+short-duration, once-off activities against a global observer is better than
+protecting no activities at all.  In order to answer this question, we might
+try to adapt the techniques of~\cite{e2e-traffic} to a lower-latency mix
+network, where instead of sending uncorrelated messages, users send batches
+of cells in temporally clustered connections.
+
+Once the anonymity questions are answered, we need to consider usability.  If
+the latency could be kept to two or three times its current overhead, this
+might be acceptable to most Tor users. However, it might also destroy much of
+the user base, and it is difficult to know in advance.  Note also that in
+practice, as the network grows to incorporate more DSL and cable-modem nodes,
+and more nodes in various continents, this alone will \emph{already} cause
+many-second delays for some transactions.  Reducing this latency will be
+hard, so perhaps it's worth considering whether accepting this higher latency
+can improve the anonymity we provide.  Also, it could be possible to
+run a mid-latency option over the Tor network for those
+users either willing to experiment or in need of more
+anonymity.  This would allow us to experiment with both
 the anonymity provided and the interest on the part of users.
 
 Adding a mid-latency option should not require significant fundamental
-change to the Tor client or server design; circuits can be labeled as
-low or mid latency on servers as they are set up. Low-latency traffic
-would be processed as now.  Packets on circuits that are mid-latency
-would be sent in uniform size chunks at synchronized intervals.  To
-some extent the chunking is already done because traffic moves through
-the network in uniform size cells, but this would occur at a coarser
-granularity.  If servers forward these chunks in roughly synchronous
-fashion, it will increase the similarity of data stream timing
+change to the Tor client or server design; circuits could be labeled as
+low- or mid- latency as they are constructed. Low-latency traffic
+would be processed as now, while cells on on circuits that are mid-latency
+would be sent in uniform-size chunks at synchronized intervals.  (Traffic
+already moves through the Tor network in fixed-sized cells; this would
+increase the granularity.)  If servers forward these chunks in roughly
+synchronous  fashion, it will increase the similarity of data stream timing
 signatures. By experimenting with the granularity of data chunks and
 of synchronization we can attempt once again to optimize for both
 usability and anonymity. Unlike in \cite{sync-batching}, it may be
 impractical to synchronize on network batches by dropping chunks from
 a batch that arrive late at a given node---unless Tor moves away from
-stream processing to a more loss-tolerant processing of traffic (cf.\ 
-Section~\ref{subsec:tcp-vs-ip}). In other words, there would
-probably be no direct attempt to synchronize on batches of data
-entering the Tor network at the same time. Rather, it is the link
-level batching that will add noise to the traffic patterns entering
-and passing through the
-network.  Similarly, if end-to-end traffic confirmation is the
-concern, there is little point in mixing. It might also be feasible to
+stream processing to a more loss-tolerant paradigm (cf.\
+Section~\ref{subsec:tcp-vs-ip}). Instead, batch timing would be obscured by
+synchronizing batches at the link level, and there would
+be no direct attempt to synchronize all batches
+entering the Tor network at the same time.
+%Alternatively, if end-to-end traffic confirmation is the
+%concern, there is little point in mixing.
+%   Why not?? -NM
+It might also be feasible to
 pad chunks to uniform size as is done now for cells; if this is link
 padding rather than end-to-end, then it will take less overhead,
-especially in bursty environments. This is another way in which it
-would be fairly practical to set up a mid-latency option within the
-existing Tor network. Other padding regimens might supplement the
+especially in bursty environments.
+% This is another way in which it
+%would be fairly practical to set up a mid-latency option within the
+%existing Tor network.
+Other padding regimens might supplement the
 mid-latency option; however, we should continue the caution with which
 we have always approached padding lest the overhead cost us too much
 performance or too many volunteers.
 
 The distinction between traffic confirmation and traffic analysis is
-not as practically cut and dried as we might wish. In \cite{hintz-pet02} it was
+not as cut and dried as we might wish. In \cite{hintz-pet02} it was
 shown that if data volumes of various popular
 responder destinations are catalogued, it may not be necessary to
 observe both ends of a stream to confirm a source-destination link.
@@ -811,42 +833,96 @@ be another significant step to evaluating resistance to such attacks.
 The attacks in \cite{attack-tor-oak05} are also dependent on
 cooperation of the responding application or the ability to modify or
 monitor the responder stream, in order of decreasing attack
-effectiveness.  So, another way to counter these attacks in some cases
-would be to employ caching of responses. This is infeasible for
-application data that is not relatively static and from frequently
-visited sites; however, it might be useful for DNS lookups. This is
-also likely to be trading one practical threat for another. To be
-useful, such caches would need to be distributed to any likely exit
-nodes of recurred requests for the same data.  Aside from the logistic
-difficulties and overhead of distribution, they constitute a collected
-record of destinations and/or data visited by Tor users.  While
+effectiveness.  So, another way to slow some of these attacks
+would be to cache responses at exit servers where possible, as it is with
+DNS lookups and cacheable HTTP responses.  Caching would, however,
+create threats of its own.
+%To be
+%useful, such caches would need to be distributed to any likely exit
+%nodes of recurred requests for the same data.
+%   Even local caches could be useful, I think. -NM
+Aside from the logistic
+difficulties and overhead, caches would  constitute a
+record of destinations and data visited by Tor users.  While
 limited to network insiders, given the need for wide distribution
 they could serve as useful data to an attacker deciding which locations
 to target for confirmation. A way to counter this distribution
 threat might be to only cache at certain semitrusted helper nodes.
 
+%Does that cacheing discussion belong in low-latency?
 
-[nick will work on this]
+\subsection{Application support: SOCKS and beyond}
 
-\subsection{Application support: socks doesn't solve all our problems}
+Tor supports the SOCKS protocol, which provides a standardized interface for
+generic TCP proxies.  Unfortunately, this is not a complete solution for
+many applications and platforms:
+\begin{tightlist}
+\item Many applications do not support SOCKS. To support such applications,
+  it's necessary to replace the networking system calls with SOCKS-aware
+  versions, or to run a local SOCKS tunnel and convince the applications to
+  connect to localhost.  Neither of these tasks is easy for the average user,
+  even with good instructions.
+\item Even when applications do use SOCKS, they often make DNS requests
+  themselves.  (The various versions of the SOCKS protocol include some where
+  the application tells the proxy an IP address, and some where it sends a
+  hostname.)  By connecting to the DNS sever directly, the application breaks
+  the user's anonymity and advertises where it is about to connect.
+\end{tightlist}
 
-socks4a isn't everywhere. the dns problem. etc.
-
-nick will work on this.
+So in order to actually provide good anonymity, we need to make sure that
+users have a practical way to use Tor anonymously.  Possibilities include
+writing wrappers for applications to anonymize them automatically; improving
+the applications' support for SOCKS; writing libraries to help application
+writers use Tor properly; and implementing a local DNS proxy to reroute DNS
+requests to Tor so that applications can simply point their DNS resolvers at
+localhost and continue to use SOCKS for data only.
 
 \subsection{Measuring performance and capacity}
+One of the paradoxes with engineering an anonymity network is that we'd like
+to learn as much as we can about how traffic flows so we can improve the
+network, but we want to prevent others from learning how traffic flows in
+order to trace users' connections through the network.  Furthermore, many
+mechanisms that help Tor run efficiently (such as having clients choose servers
+based on their capacities) require measurements about the network.
 
-How to measure performance without letting people selectively deny service
-by distinguishing pings. Heck, just how to measure performance at all. In
-practice people have funny firewalls that don't match up to their exit
-policies and Tor doesn't deal.
+Currently, servers record their bandwidth use in 15-minute intervals and
+include this information in the descriptors they upload to the directory.
+They also try to deduce their own available bandwidth, on the basis of how
+much traffic they have been able to transfer recently, and upload this
+information as well.
 
-Network investigation: Is all this bandwidth publishing thing a good idea?
-How can we collect stats better? Note weasel's smokeping, at
-http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
-which probably gives george and steven enough info to break tor?
+This is, of course, eminantly cheatable.  A malicious server can get a
+disproportionate amount of traffic simply by claiming to have more bandiwdth
+than it does.  But better mechanisms have their problems.  If bandwidth data
+is to be measured rather than self-reported, it is usually possible for
+servers to selectively provide better service for the measuring party, or
+sabotage the measured value of other servers.  Complex solutions for
+mix networks have been proposed, but do not address the issues
+completely~\cite{mix-acc,casc-rep}.
 
-[nick will work on this section, unless arma gets there first]
+Even without the possibility of cheating, network measurement is
+non-trivial.  It is far from unusual for one observer's view of a server's
+latency or bandwidth to disagree wildly with another's.  Furthermore, it is
+unclear whether total bandwidth is really the right measure; perhaps clients
+should be considering servers on the basis of unused bandwidth instead, or
+perhaps observed throughput.
+% XXXX say more here?
+
+%How to measure performance without letting people selectively deny service
+%by distinguishing pings. Heck, just how to measure performance at all. In
+%practice people have funny firewalls that don't match up to their exit
+%policies and Tor doesn't deal.
+
+%Network investigation: Is all this bandwidth publishing thing a good idea?
+%How can we collect stats better? Note weasel's smokeping, at
+%http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
+%which probably gives george and steven enough info to break tor?
+
+Even if we can collect and use this network information effectively, we need
+to make sure that it is not more useful to attackers than to us.  While it
+seems plausible that bandwidth data alone is not enough to reveal
+sender-recipient connections under most circumstances, it could certainly
+reveal the path taken by large traffic flows under low-usage circumstances.
 
 \subsection{Running a Tor server, path length, and helper nodes}
 
@@ -913,27 +989,57 @@ your computer is doing that behavior.
 \subsection{Helper nodes}
 \label{subsec:helper-nodes}
 
-When does fixing your entry or exit node help you?
-Helper nodes in the literature don't deal with churn, and
-especially active attacks to induce churn.
+Tor can only provide anonymity against an attacker if that attacker can't
+monitor the user's entry and exit on the Tor network.  But since Tor
+currently chooses entry and exit points randomly and changes them frequently,
+a patient attacker who controls a single entry and a single exit is sure to
+eventually break some circuits of frequent users who consider those servers.
+(We assume that users are as concerned about statistical profiling as about
+the anonymity any particular connection.  That is, it is almost as bad to
+leak the fact that Alice {\it sometimes} talks to Bob as it is to leak the times
+when Alice is {\it actually} talking to Bob.)
 
-Do general DoS attacks have anonymity implications? See e.g. Adam
-Back's IH paper, but I think there's more to be pointed out here.
 
-Game theory for helper nodes: if Alice offers a hidden service on a
-server (enclave model), and nobody ever uses helper nodes, then against
-George+Steven's attack she's totally nailed. If only Alice uses a helper
-node, then she's still identified as the source of the data. If everybody
-uses a helper node (including Alice), then the attack identifies the
-helper node and also Alice, and knows which one is which. If everybody
-uses a helper node (but not Alice), then the attacker figures the real
-source was a client that is using Alice as a helper node. [How's my
-logic here?]
+One solution to this problem is to use ``helper nodes''~\cite{helpers}---to
+have each client choose a few fixed servers for critical positions in her
+circuits.  That is, Alice might choose some server H1 as her preferred
+entry, so that unless the attacker happens to control or observe her
+connection to H1, her circuits will remain anonymous.  If H1 is compromised,
+Alice is vunerable as before.  But now, at least, she has a chance of
+not being profiled.
 
-point to routing-zones section re: helper nodes to defend against
-big stuff.
+(Choosing fixed exit nodes is less useful, since the connection from the exit
+node to Alice's destination will be seen not only by the exit but by the
+destination.  Even if Alice chooses a good fixed exit node, she may
+nevertheless connect to a hostile website.)
 
-[nick will write this section]
+There are still obstacles remaining before helper nodes can be implemented.
+For one, the litereature does not describe how to choose helpers from a list
+of servers that changes over time.  If Alice is forced to choose a new entry
+helper every $d$ days, she can expect to choose a compromised server around
+every $dc/n$ days.  Worse, an attacker with the ability to DoS servers could
+force their users to switch helper nodes more frequently.
+
+%Do general DoS attacks have anonymity implications? See e.g. Adam
+%Back's IH paper, but I think there's more to be pointed out here. -RD
+% Not sure what you want to say here. -NM
+
+%Game theory for helper nodes: if Alice offers a hidden service on a
+%server (enclave model), and nobody ever uses helper nodes, then against
+%George+Steven's attack she's totally nailed. If only Alice uses a helper
+%node, then she's still identified as the source of the data. If everybody
+%uses a helper node (including Alice), then the attack identifies the
+%helper node and also Alice, and knows which one is which. If everybody
+%uses a helper node (but not Alice), then the attacker figures the real
+%source was a client that is using Alice as a helper node. [How's my
+%logic here?] -RD
+%
+% Not sure about the logic.  For the attack to work with helper nodes, the
+%attacker needs to guess that Alice is running the hidden service, right?
+%Otherwise, how can he know to measure her traffic specifically? -NM
+
+%point to routing-zones section re: helper nodes to defend against
+%big stuff.
 
 \subsection{Location-hidden services}
 
@@ -1256,29 +1362,20 @@ help address censorship; we wish them luck.
 
 \subsection{Non-clique topologies}
 
-[nick will try to shrink this section]
-
-Because of its threat model that is substantially weaker than high
-latency mixnets, Tor is actually in a potentially better position to
-scale at least initially. From the perspective of a mix network, one
-of the worst things that can happen is partitioning. The more
-potential senders of messages entering the network the better the
-anonymity.  Roughly, if a network is, e.g., split in half, then your
-anonymity is cut in half. Attacks become half as hard (if they're
-linear in network size), etc. In some sense this is still true for
-Tor: if you want to know who Alice is talking to, you can watch her
-for one end of a circuit. For a half size network, you then only have
-to brute force examine half as many nodes to find the other end. But
-Tor is not meant to cope with someone directly attacking many dozens
-of nodes in a few minutes. It was meant to cope with traffic
-confirmation attacks. And, these are independent of the size of the
-network.  So, a simple possibility when the scale of a Tor network
+Tor's comparatively  weak model makes it easier to scale than other mix net
+designs.  High-latency mix networks need to avoid partitioning attacks, where
+network splits prevent users of the separate partitions from providing cover
+for each other.  In Tor, however, we assume that the adversary cannot
+cheaply observe nodes at will, so even if the network becomes split, the
+users do not necessarily receive much less protection.
+Thus, a simple possibility when the scale of a Tor network
 exceeds some size is to simply split it. Care could be taken in
 allocating which nodes go to which network along the lines of
 \cite{casc-rep} to insure that collaborating hostile nodes are not
 able to gain any advantage in network splitting that they do not
 already have in joining a network.
 
+% Describe these attacks; many people will not have read the paper!
 The attacks in \cite{attack-tor-oak05} show that certain types of
 brute force attacks are in fact feasible; however they make the
 above point stronger not weaker. The attacks do not appear to be
@@ -1292,32 +1389,31 @@ basis. More analysis is needed; we simply note here that splitting
 a Tor network is an easy way to achieve moderate scalability and that
 it does not necessarily have the same implications as splitting a mixnet.
 
-Alternatively, we can try to scale a single network.  Some issues for
-scaling include how many neighbors can nodes support and how many
-users (and how much application traffic capacity) can the network
-handle for each new node that comes into the network. This depends on
-many things, most notably the traffic capacity of the new nodes.  We
-can observe, however, that adding a tor node of any feasible bandwidth
-will increase the traffic capacity of the network. This means that, as
-a first step to scaling, we can focus on the interconnectivity of the
-nodes, followed by directories, discovery, etc.
+Alternatively, we can try to scale a single Tor network.  Some issues for
+scaling include restricting the number of sockets and the amount of bandwidth
+used by each server.  The number of sockets is determined by the network's
+connectivity and the number of users, while bandwidth capacity is determined
+by the total bandwidth of servers on the network.  The simplest solution to
+bandwidth capacity is to add more servers, since adding a tor node of any
+feasible bandwidth will increase the traffic capacity of the network.  So as
+a first step to scaling, we should focus on making the network tolerate more
+servers, by reducing the interconnectivity of the nodes; later we can reduce
+overhead associated withy directories, discovery, and so on.
 
-By reducing the connectivity of the network we increase the total
-number of nodes that the network can contain. Anonymity implications
-of restricted routes for mix networks have already been explored by
-Danezis~\cite{danezis-pets03}.  That paper explicitly considered only
-traffic analysis resistance provided by a mix network and sidestepped
-questions of traffic confirmation resistance. But, Tor is designed
-only to resist traffic confirmation. For this and other reasons, we
-cannot simply adopt his mixnet results to onion routing networks.  If
-an attacker gains minimal increase in the likelyhood of compromising
-the endpoints of a Tor circuit through a sparse network (vs.\ a clique
-on the same node set), then the restriction will have had minimal
-impact on the anonymity provided by that network.
+By reducing the connectivity of the network we increase the total number of
+nodes that the network can contain. Danezis~\cite{danezis-pet03} considers
+the anonymity implications of restricting routes on mix networks, and
+recommends an approach based on expander graphs (where any subgraph is likely
+to have many neighbors).  It is not immediately clear that this approach will
+extend to Tor, which has a weaker threat model but higher performance
+requirements than the network considered.  Instead of analyzing the
+probability of an attacker's viewing whole paths, we will need to examine the
+attacker's likelihood of compromising the endpoints of a Tor circuit through
+a sparse network.
 
-The approach Danezis describes is based on expander graphs, i.e.,
-graphs in which any subgraph of nodes is likely to have lots of nodes
-as neighbors. For Tor, we may not need to have an expander per se, it
+% Nick edits these next 2 grafs.
+
+To make matters simpler, Tor may not need an expander graph per se: it
 may be enough to have a single subnet that is highly connected.  As an
 example, assume fifty nodes of relatively high traffic capacity.  This
 \emph{center} forms are a clique.  Assume each center node can each
@@ -1341,9 +1437,6 @@ network. This network is hidden behind the Tor network and its
 only visible connection to Tor at those points where it connects.
 As far as the public network is concerned or anyone observing it,
 they are running clients.
-
-
-
 
 \section{The Future}
 \label{sec:conclusion}
