@@ -18,19 +18,19 @@ ARMA    - arma claims
      - when you hup, they're not getting re-parsed
      - stop calling a *_policy an exit_policy_t
    - stop calling running-routers running-routers?
-   - Replace syslog/debuglogfile/logfile/loglevel with a new option,
+   o Replace syslog/debuglogfile/logfile/loglevel with a new option,
      "log (minlevel)?-(maxlevel)? (syslog|stderr|stdout|file (.*))".
    o Replace running-routers with a router-status line that can be used
      without a list of router descriptors.
    o Add a log handler that sends stuff to syslog.
    o Deprecate unofficial configuration abbrevs; make official abbrevs
      only official on the command line.
-   l per-month byte allowances.
-N    . Based on bandwidth and per-month allowance, choose a
+   o per-month byte allowances.
+     o Based on bandwidth and per-month allowance, choose a
        window within month to be up.  Stay up until allowance is
        used.  Adjust next month's window based on outcome.  Hibernate
        when we're not up.
-R    - Hibernate means "stop accepting connections, and start sleeping"
+     o Hibernate means "stop accepting connections, and start sleeping"
        Implement hibernation.  Have a separate
        about-to-start-hibernating state implemented in similar way to
        will shut-down-in-30-seconds state.
@@ -40,12 +40,17 @@ R  . bandwidth buckets for write as well as read.
      fetching directory in a tight loop.
    . Pure C tor_resolve
      o Implement it; socks4a only is fine for now.
-N    - Make it build on win32
+     o Make it build on win32
      o Make it not link with zlib and openssl.
 N  - RPMs
+     o Merge changes from jbash
+     - Figure out versioning
 N  - Windows installer
    - Review website; make important info more prominent.
-   - Implement control-spec.txt
+   . Implement control-spec.txt
+     o Implement protocol
+R    . Implement setconfig
+     - Specify and implement a commitconfig command.
      - Ability to dump minimal set of options to torrc.
 
 Beyond 0.0.9:
@@ -62,7 +67,7 @@ R  - figure out enclaves, e.g. so we know what to recommend that people
      - Do enclaves for same IP only.
      - Resolve first, then if IP is an OR, connect to next guy.
 N  - the user interface interface
-     - Implement parts along with trivial fun gui.
+     - Implement a trivial fun gui.
 N  - add ipv6 support.
      - Spec issue: if a resolve returns an IP4 and an IP6 address,
        which to use?
@@ -186,11 +191,10 @@ N    . Windows port
      . correct, update, polish spec
      - document the exposed function api?
      o document what we mean by socks.
+     - Document where we differ from tor-design
 
-N  . packages
-     . rpm
-       * nick will look at the spec file
-     - find a long-term rpm maintainer
+   . packages
+R    - find a long-term rpm maintainer
        * roger will start guilting people
 
    - code
