@@ -35,7 +35,8 @@ static int please_reap_children=0; /* whether we should waitpid for exited child
 
 int has_fetched_directory=0;
 /* we set this to 1 when we've fetched a dir, to know whether to complain
- * yet about unrecognized nicknames in entrynodes, exitnodes, etc. */
+ * yet about unrecognized nicknames in entrynodes, exitnodes, etc.
+ * Also, we don't try building circuits unless this is 1. */
 
 int has_completed_circuit=0;
 /* we set this to 1 when we've opened a circuit, so we can print a log
@@ -354,7 +355,8 @@ static void run_scheduled_events(time_t now) {
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
    */
-  if(options.SocksPort || options.RunTesting) {
+  if((has_fetched_directory || options.DirPort) &&
+     (options.SocksPort || options.RunTesting)) {
 
     if (options.SocksPort)
       /* launch a new circ for any pending streams that need one */
