@@ -36,7 +36,7 @@ severity levels are debug, info, notice, warn, and err.  If only one
 severity level is given, all messages of that level or higher will be
 sent to the listed destination.
 .TP
-\fBLog \fR\fIminSeverity\fR-\fImaxSeverity\fR \fBfile\fR \fIFILENAME\fP
+\fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBfile\fR \fIFILENAME\fP
 As above, but send log messages to the listed filename.  The "Log"
 option may appear more than once in a configuration file.  Messages
 are sent to all the logs that match their severity level.
