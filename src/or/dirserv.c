@@ -228,7 +228,13 @@ dirserv_add_descriptor(const char **desc)
   r = dirserv_router_fingerprint_is_known(ri);
   if(r<1) {
     if(r==0) {
+      char fp[FINGERPRINT_LEN+1];
       log_fn(LOG_WARN, "Unknown nickname %s. Not adding.", ri->nickname);
+      if (crypto_pk_get_fingerprint(ri->identity_pkey, fp) < 0) {
+        log_fn(LOG_WARN, "Error computing fingerprint for %s", ri->nickname);
+      } else {
+        log_fn(LOG_WARN, "Fingerprint line: %s %s", ri->nickname, fp);
+      }
     } else {
       log_fn(LOG_WARN, "Known nickname %s, wrong fingerprint. Not adding.", ri->nickname);
     }
