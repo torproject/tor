@@ -114,9 +114,14 @@ int dns_resolve(connection_t *exitconn) {
         pending_connection->conn = exitconn;
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
+        log_fn(LOG_DEBUG,"Connection (fd %d) waiting for pending DNS resolve of '%s'",
+               exitconn->s, exitconn->address);
+               
         return 0;
       case CACHE_STATE_VALID:
         exitconn->addr = resolve->answer;
+        log_fn(LOG_DEBUG,"Connection (fd %d) found cached answer for '%s'",
+               exitconn->s, exitconn->address);
         return 1;
       case CACHE_STATE_FAILED:
         return -1;
@@ -165,6 +170,9 @@ static int assign_to_dnsworker(connection_t *exitconn) {
     return -1;
   }
 
+  log_fn(LOG_DEBUG, "Connection (fd %d) needs to resolve '%s'; assigning to DNSWorker (fd %d)",
+         exitconn->s, exitconn->address, dnsconn->s);
+
   free(dnsconn->address);
   dnsconn->address = tor_strdup(exitconn->address);
   dnsconn->state = DNSWORKER_STATE_BUSY;
@@ -203,14 +211,19 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
     if(pend->conn == onlyconn) {
       resolve->pending_connections = pend->next;
       free(pend);
-      if(resolve->pending_connections) /* more pending, don't cancel it */
+      if(resolve->pending_connections) {/* more pending, don't cancel it */
+        log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
+               onlyconn->s, question);
         return;
+      }
     } else {
       for( ; pend->next; pend = pend->next) {
         if(pend->next->conn == onlyconn) {
           victim = pend->next;
           pend->next = victim->next;
           free(victim);
+          log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
+                 onlyconn->s, question);
           return; /* more are pending */
         }
       }
@@ -218,6 +231,8 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
     }
   } else {
     /* mark all pending connections to fail */
+    log_fn(LOG_DEBUG, "Failing all connections waiting on DNS resolve of '%s'",
+           question);
     while(resolve->pending_connections) {
       pend = resolve->pending_connections;
       connection_edge_end(pend->conn, END_STREAM_REASON_MISC, NULL);
@@ -257,11 +272,21 @@ static void dns_found_answer(char *question, uint32_t answer) {
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
     log_fn(LOG_WARN,"Answer to unasked question '%s'? Dropping.", question);
+    /* XXX Why drop?  Just because we don't care now doesn't mean we shouldn't
+     * XXX cache the result for later. */
     return;
   }
 
-  assert(resolve->state == CACHE_STATE_PENDING);
-  /* XXX sometimes this still gets triggered. :( */
+  if (resolve->state != CACHE_STATE_PENDING) {
+    log_fn(LOG_WARN, "Duplicate answer to question '%s'; ignoring",
+           question);
+    return;
+  }
+  /* Removed this assertion: in fact, we'll sometimes get a double answer
+   * to the same question.  This can happen when we ask one worker to resolve
+   * X.Y.Z., then we cancel the request, and then we ask another worker to
+   * resolve X.Y.Z. */
+  /* assert(resolve->state == CACHE_STATE_PENDING); */
 
   resolve->answer = ntohl(answer);
   if(resolve->answer)
@@ -310,6 +335,9 @@ int connection_dns_process_inbuf(connection_t *conn) {
   assert(buf_datalen(conn->inbuf) == 4);
 
   connection_fetch_from_buf((char*)&answer,sizeof(answer),conn);
+
+  log_fn(LOG_DEBUG, "DNSWorker (fd %d) returned answer for '%s'",
+         conn->s, conn->address);
 
   dns_found_answer(conn->address, answer);
 
@@ -402,6 +430,10 @@ static void spawn_enough_dnsworkers(void) {
                            * but no less than min and no more than max */
   connection_t *dnsconn;
 
+  /* XXX This may not be the best strategy. Maybe we should queue pending
+   * XXX requests until the old ones finish or time out: otherwise, if
+   * XXX the connection requests come fast enough, we never get any DNS done.
+   */
   if(num_dnsworkers_busy == MAX_DNSWORKERS) {
     /* We always want at least one worker idle.
      * So find the oldest busy worker and kill it.
@@ -409,6 +441,7 @@ static void spawn_enough_dnsworkers(void) {
     dnsconn = connection_get_by_type_state_lastwritten(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_BUSY);
     assert(dnsconn);
 
+    log_fn(LOG_DEBUG, "Max DNS workers spawned; all are busy. Killing one.");
     /* tell the exit connection that it's failed */
     dns_cancel_pending_resolve(dnsconn->address, NULL);
 
