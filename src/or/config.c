@@ -1044,6 +1044,9 @@ const char *get_data_directory(or_options_t *options) {
   }
   if (d && strncmp(d,"~/",2)==0) {
     char *fn = expand_filename(d);
+    if(!fn) {
+      /* XXX complain and exit(1) here */
+    }
     tor_free(options->DataDirectory);
     options->DataDirectory = fn;
   }
