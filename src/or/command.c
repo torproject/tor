@@ -46,11 +46,11 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
 
   if(now > current_second) { /* the second has rolled over */
     /* print stats */
-    log(LOG_INFO,"At end of second:");
-    log(LOG_INFO,"Create:    %d (%d ms)", num_create, create_time/1000);
-    log(LOG_INFO,"Created:   %d (%d ms)", num_created, created_time/1000);
-    log(LOG_INFO,"Relay:     %d (%d ms)", num_relay, relay_time/1000);
-    log(LOG_INFO,"Destroy:   %d (%d ms)", num_destroy, destroy_time/1000);
+    log(LOG_INFO,"At end of second: %d creates (%d ms), %d createds (%d ms), %d relays (%d ms), %d destroys (%d ms)",
+      num_create, create_time/1000,
+      num_created, created_time/1000,
+      num_relay, relay_time/1000,
+      num_destroy, destroy_time/1000);
 
     /* zero out stats */
     num_create = num_created = num_relay = num_destroy = 0;
