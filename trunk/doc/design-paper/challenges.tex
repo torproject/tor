@@ -169,10 +169,17 @@ seems overkill (and/or insecure) based on the threat model we've picked.
 \section{Crossroads: Policy issues}
 \label{sec:crossroads-policy}
 
+\subsection{Tor and blacklists}
+
+Takedowns and efnet abuse and wikipedia complaints and irc
+networks.
+
+\subsection{Tor and file-sharing}
+
 Bittorrent and dmca. Should we add an IDS to autodetect protocols and
-snipe them? Takedowns and efnet abuse and wikipedia complaints and irc
-networks. Should we allow revocation of anonymity if a threshold of
-servers want to?
+snipe them?
+
+\subsection{Image and sustainability}
 
 Image: substantial non-infringing uses. Image is a security parameter,
 since it impacts user base and perceived sustainability.
@@ -185,8 +192,13 @@ collect enough money to pay its servers; JAP bandwidth is supported by
 continued money, and they periodically ask what they will do when it
 dries up.
 
-How much should Tor aim to do? Applications that leak data. We can say
-they're not our problem, but they're somebody's problem.
+\subsection{Other}
+
+Tor's scope: How much should Tor aim to do? Applications that leak
+data. We can say they're not our problem, but they're somebody's problem.
+
+Should we allow revocation of anonymity if a threshold of
+servers want to?
 
 Logging. Making logs not revealing. A happy coincidence that verbose
 logging is our \#2 performance bottleneck. Is there a way to detect
@@ -279,8 +291,12 @@ attacks. Would be nice to have hot-swap services, but hard to design.
 %\label{sec:crossroads-scaling}
 %P2P + anonymity issues:
 
-Incentives. Copy the page I wrote for the NSF proposal, and maybe extend
+\subsection{Incentives}
+
+Copy the page I wrote for the NSF proposal, and maybe extend
 it if we're feeling smart.
+
+\subsection{Usability}
 
 Usability: fc03 paper was great, except the lower latency you are the
 less useful it seems it is.
@@ -308,10 +324,14 @@ Restricted routes. How to propagate to everybody the topology? BGP
 style doesn't work because we don't want just *one* path. Point to
 Geoff's stuff.
 
+\subsection{ISP-class adversaries}
+
 Routing-zones. It seems that our threat model comes down to diversity and
 dispersal. But hard for Alice to know how to act. Many questions remain.
 
-The China problem. We have lots of users in Iran and similar (we stopped
+\subsection{The China problem}
+
+We have lots of users in Iran and similar (we stopped
 logging, so it's hard to know now, but many Persian sites on how to use
 Tor), and they seem to be doing ok. But the China problem is bigger. Cite
 Stefan's paper, and talk about how we need to route through clients,
