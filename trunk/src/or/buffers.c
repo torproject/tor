@@ -332,8 +332,7 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf) {
  * the body are present, or b) there's no Content-Length field and
  * all headers are present, then:
  *   strdup headers into *headers_out, and nul-terminate it.
- *   memdup body into *body_out, and malloc one byte more than
- *   necessary, in case the caller wants to nul-terminate it.
+ *   memdup body into *body_out, and nul-terminate it.
  *   Then remove them from buf, and return 1.
  *
  *   If headers or body is NULL, discard that part of the buf.
@@ -395,7 +394,7 @@ int fetch_from_buf_http(buf_t *buf,
     *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
     memcpy(*body_out,buf->mem+headerlen,bodylen);
-    /* don't null terminate it */
+    (*body_out)[bodylen] = 0; /* null terminate it */
   }
   buf_remove_from_front(buf, headerlen+bodylen);
   return 1;
