@@ -8,6 +8,7 @@
 #include "orconfig.h"
 
 #define USE_TLS
+#define SEQUENTIAL_ACI
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -313,6 +314,9 @@ struct connection_t {
   crypto_cipher_env_t *b_crypto;
 
   char nonce[8];
+#endif
+#ifdef SEQUENTIAL_ACI
+  uint16_t next_aci; /* Which ACI do we try to use next on this connection? */
 #endif
 
 /* Used only by edge connections: */
