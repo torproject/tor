@@ -494,7 +494,7 @@ test_util() {
 static void* _squareAndRemoveK4(const char *key, void*val, void *data)
 {
   int *ip = (int*)data;
-  int v;
+  intptr_t v;
   if (strcmp(key,"K4") == 0) {
     ++(*ip);
     return NULL;
