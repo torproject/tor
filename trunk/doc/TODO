@@ -25,9 +25,16 @@ N . Switch to libevent
          bandwidth buckets under heavy load.  (Really, the logic was
          never right in the first place.)  Also, we should audit all users
          of get_pending_bytes().
-       - Find a way to make sure we have libevent 1.0 or later.
-       - Log which poll method we're using.
-       . Check return from event_set, event_add, event_del.
+       . Find a way to make sure we have libevent 1.0 or later.
+         o Implement patch to libevent
+         o Submit patch to niels making this possible.
+       . Log which poll method we're using.
+         o Implement patch to libevent
+         o Submit patch to niels making this possible.
+       - Intercept libevent's "log" messages.
+         o Ask Niels whether a patch would be accepted.
+         - Implement patch, if so.
+       o Check return from event_set, event_add, event_del.
        - Keep pushing to get a windows patch accepted.
 
  Security:
@@ -37,7 +44,19 @@ N . Switch to libevent
 R  - Reset uptime when IP/ORPort/... changes.
 
  Functionality
-N - Implement pending controller features.
+N  . Implement pending controller features.
+    - Stubs for new functions.
+    - GETINFO
+      - Version
+      - Descriptors
+      - List of address mappings
+    - POSTDESCRIPTOR
+    - MAPADDRESS
+    - Event for "new descriptors"
+    - Better streams IDs
+    - EXTENDCIRCUIT <depends on revised circ selection stuff.>
+    - ATTACHSTREAM <depends on making streams have 'unattached' state.>
+    - Stream status changed: "new" state.
 R . HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     other ORs.)
   - Changes for forward compatibility
