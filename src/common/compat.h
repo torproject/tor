@@ -164,6 +164,9 @@ void set_uint32(char *cp, uint32_t v);
 
 int set_max_file_descriptors(unsigned int required_min);
 int switch_id(char *user, char *group);
+#ifdef HAVE_PWD_H
+char *get_user_homedir(const char *username);
+#endif
 
 int spawn_func(int (*func)(void *), void *data);
 void spawn_exit(void);

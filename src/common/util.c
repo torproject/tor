@@ -958,22 +958,50 @@ parse_line_from_str(char *line, char **key_out, char **value_out)
 char *expand_filename(const char *filename)
 {
   tor_assert(filename);
-  /* XXXX Should eventually check for ~username/ */
-  if (!strncmp(filename,"~/",2)) {
+  if (*filename == '~') {
     size_t len;
-    const char *home = getenv("HOME");
-    char *result;
-    if (!home) {
-      log_fn(LOG_WARN, "Couldn't find $HOME environment variable while expanding %s", filename);
-      return NULL;
+    char *home, *result;
+    const char *rest;
+
+    if (filename[1] == '/' || filename[1] == '\0') {
+      home = getenv("HOME");
+      if (!home) {
+        log_fn(LOG_WARN, "Couldn't find $HOME environment variable while expanding %s", filename);
+        return NULL;
+      }
+      home = tor_strdup(home);
+      rest = strlen(filename)>=2?(filename+2):NULL;
+    } else {
+#ifdef HAVE_PWD_H
+      char *username, *slash;
+      slash = strchr(filename, '/');
+      if (slash)
+        username = tor_strndup(filename+1,slash-filename-1);
+      else
+        username = tor_strdup(filename+1);
+      if (!(home = get_user_homedir(username))) {
+        log_fn(LOG_WARN,"Couldn't get homedir for %s",username);
+        tor_free(username);
+        return NULL;
+      }
+      tor_free(username);
+      rest = slash ? (slash+1) : NULL;
+#else
+      log_fn(LOG_WARN, "Couldn't expend homedir on system without pwd.h");
+      return tor_strdup(filename);
+#endif
     }
-    /* minus two characters for ~/, plus one for /, plus one for NUL.
+    tor_assert(home);
+    /* Remove trailing slash. */
+    if (strlen(home)>1 && !strcmpend(home,"/")) {
+      home[strlen(home)-1] = '\0';
+    }
+    /* Plus one for /, plus one for NUL.
      * Round up to 16 in case we can't do math. */
-    len = strlen(home)+strlen(filename)+16;
+    len = strlen(home)+strlen(rest)+16;
     result = tor_malloc(len);
-    tor_snprintf(result,len,"%s%s%s",home,
-                 (!strcmpend(home, "/")) ? "" : "/",
-                 filename+2);
+    tor_snprintf(result,len,"%s/%s",home,rest?rest:"");
+    tor_free(home);
     return result;
   } else {
     return tor_strdup(filename);
