@@ -51,13 +51,15 @@ AllowUnverifiedNodes middle,rendezvous
 #ContactInfo 1024D/28988BF5 Roger Dingledine <arma@mit.edu>
 
 #ORPort 9001 # where to listen for tor connections
-#ORBindAddress 0.0.0.0 # accept connections from anywhere
-#ORBindAddress 0.0.0.0:9090 # accept connections from anywhere, and
-                            # listen on a port other than the one we
-                            # advertised.
+# If you want to listen on a port other than the one advertised
+# in ORPort, uncomment the line below.
+#ORBindAddress 0.0.0.0:9090
 
 # Uncomment this to mirror the directory for others (please do)
 #DirPort 9030
+# If you want to listen on a port other than the one advertised
+# in DirPort, uncomment the line below.
+#DirBindAddress 0.0.0.0:9091
 
 ## A comma-separated list of exit policies. They're considered first
 ## to last, and the first match wins. If you want to *replace*
