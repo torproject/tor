@@ -1078,10 +1078,18 @@ int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, int len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
 
+typedef struct rend_cache_entry_t {
+  int len; /* Length of desc */
+  time_t received; /* When did we get the descriptor? */
+  char *desc; /* Service descriptor */
+  rend_service_descriptor_t *parsed; /* Parsed value of 'desc' */
+} rend_cache_entry_t;
+
 void rend_cache_init(void);
 void rend_cache_clean(void);
 int rend_valid_service_id(char *query);
-int rend_cache_lookup(char *query, const char **desc, int *desc_len);
+int rend_cache_lookup_desc(char *query, const char **desc, int *desc_len);
+int rend_cache_lookup_entry(char *query, rend_cache_entry_t **entry_out);
 int rend_cache_store(char *desc, int desc_len);
 
 /********************************* rendservice.c ***************************/

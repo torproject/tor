@@ -57,7 +57,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
   assert(!rend_cmp_service_ids(introcirc->rend_query, rendcirc->rend_query));
 
-  if(rend_cache_lookup(introcirc->rend_query, &descp, &desc_len) < 1) {
+  if(rend_cache_lookup_desc(introcirc->rend_query, &descp, &desc_len) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
            introcirc->rend_query);
     goto err;
@@ -281,7 +281,7 @@ char *rend_client_get_random_intro(char *query) {
   char *choice;
   char *nickname;
 
-  if(rend_cache_lookup(query, &descp, &desc_len) < 1) {
+  if(rend_cache_lookup_desc(query, &descp, &desc_len) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.", query);
     return NULL;
   }
