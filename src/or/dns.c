@@ -436,6 +436,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
                                 connection_mark_for_close macro */
       /* prevent double-remove. */
       pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
+      circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
       connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
       connection_mark_for_close(pendconn);
       connection_free(pendconn);

@@ -200,7 +200,7 @@ circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn) {
 }
 
 /** Return a circ such that circ is attached to <b>conn</b>, either as
- * p_conn, n-conn, or in p_streams or n_streams.
+ * p_conn, n-conn, or in p_streams or n_streams or resolving_streams.
  *
  * Return NULL if no such circuit exists.
  */
