@@ -974,6 +974,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
          exit->nickname, conn->socks_request->address,
          conn->socks_request->port);
   if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
+    /* 0.0.8 servers have buggy resolve support. */
     return tor_version_as_new_as(exit->platform, "0.0.9pre1");
   }
   addr = client_dns_lookup_entry(conn->socks_request->address);

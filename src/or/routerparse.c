@@ -824,15 +824,13 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     log_fn(LOG_WARN,"Redundant bandwidth line");
     goto err;
   } else if (tok) {
-    /* XXX set this to "< 3" once 0.0.7 is obsolete */
-    if (tok->n_args < 2) {
+    if (tok->n_args < 3) {
       log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\"");
       goto err;
     }
     router->bandwidthrate = tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
     router->bandwidthburst = tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
-    if(tok->n_args > 2)
-      router->bandwidthcapacity = tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
+    router->bandwidthcapacity = tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
     bw_set = 1;
   }
 
