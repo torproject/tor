@@ -48,7 +48,7 @@ case "$1" in
 	if [ "$RUN_DAEMON" != "yes" ]; then
 		echo "Not starting $DESC (Disabled in $DEFAULTSFILE)."
 	else
-		echo "Starting $DESC..."
+		echo "Starting $DESC: $NAME..."
 		start-stop-daemon --start --quiet --oknodo \
 			--chuid debian-tor:debian-tor \
 			--pidfile $TORPID \
