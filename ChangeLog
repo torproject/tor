@@ -1,4 +1,12 @@
 Changes so far in 0.0.9:
+rc4:
+  o Bugfixes on 0.0.8.1:
+    - Make windows sockets actually non-blocking (oops), and handle
+      win32 socket errors better.
+
+  o Bugfixes on 0.0.9rc1:
+    - Actually catch the -USR2 signal.
+
 rc3:
   o Bugfixes on 0.0.8.1:
     - Flush the log file descriptor after we print "Tor opening log file",
