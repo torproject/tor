@@ -26,6 +26,8 @@ AC_ARG_WITH(ssl-dir,
         ]
 )
 
+AC_SEARCH_LIBS(socket, [socket])
+
 saved_LIBS="$LIBS"
 saved_LDFLAGS="$LDFLAGS"
 saved_CPPFLAGS="$CPPFLAGS"
