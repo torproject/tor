@@ -57,7 +57,6 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
   buf[ 8] = (counter1 >> 24) & 0xff;
 
   rijndaelEncrypt(cipher->rk, cipher->nr, buf, cipher->buf);
-  cipher->pos = 0;
 }
 
 aes_cnt_cipher_t*
