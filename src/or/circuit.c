@@ -566,6 +566,10 @@ void circuit_close(circuit_t *circ) {
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
     connection_send_destroy(circ->p_circ_id, conn); 
   }
+  if (circ->state != CIRCUIT_STATE_OPEN && circ->cpath) {
+    /* If we never built the circuit, note it as a failure. */
+    circuit_increment_failure_count();
+  }
   circuit_free(circ);
 }
 
@@ -686,35 +690,40 @@ void circuit_expire_unused_circuits(void) {
   }
 }
 
+/* Number of failures so far this second; should only be touched by 
+ * circuit_launch_new and circuit_*_failure_count.
+ */ 
+static int n_circuit_failures = 0; 
+
 /* failure_status code: negative means reset failures to 0. Other values mean
  * add that value to the current number of failures, then if we don't have too
  * many failures on record, try to make a new circuit.
  *
  * Return -1 if you aren't going to try to make a circuit, 0 if you did try.
  */
-int circuit_launch_new(int failure_status) {
-  static int failures=0;
+int circuit_launch_new(void) {
 
   if(!options.SocksPort) /* we're not an application proxy. no need for circuits. */
     return -1;
 
-  if(failure_status == -1) { /* I was called because a circuit succeeded */
-    failures = 0;
-    return -1;
-  }
-
-  failures += failure_status;
-
-  if(failures > 5) {
+  if(n_circuit_failures > 5) {
     return -1;
   }
 
   if(circuit_establish_circuit() < 0) {
+    ++n_circuit_failures;
     return 0;
   }
 
-  failures = 0;
   return 0;
+}
+
+void circuit_increment_failure_count(void) {
+  ++n_circuit_failures;
+}
+
+void circuit_reset_failure_count(void) {
+  n_circuit_failures = 0;
 }
 
 int circuit_establish_circuit(void) {
@@ -840,6 +849,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
       log_fn(LOG_INFO,"circuit built!");
+      circuit_reset_failure_count();
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
       connection_ap_attach_pending();

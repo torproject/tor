@@ -356,19 +356,20 @@ static void run_scheduled_events(time_t now) {
     if(time_to_new_circuit < now) {
       client_dns_clean();
       circuit_expire_unused_circuits();
-      circuit_launch_new(-1); /* tell it to forget about previous failures */
+      circuit_reset_failure_count();
       if(circ && circ->timestamp_dirty) {
         log_fn(LOG_INFO,"Youngest circuit dirty; launching replacement.");
-        circuit_launch_new(0); /* make a new circuit */
+        circuit_launch_new(); /* make a new circuit */
       }
       time_to_new_circuit = now + options.NewCircuitPeriod;
     }
 #define CIRCUIT_MIN_BUILDING 2
-    if(!circ && circuit_count_building() < CIRCUIT_MIN_BUILDING)
+    if(!circ && circuit_count_building() < CIRCUIT_MIN_BUILDING) {
       /* if there's no open circ, and less than 2 are on the way,
        * go ahead and try another.
        */
-      circuit_launch_new(1);
+      circuit_launch_new();
+    }
   }
 
   /* 4. Every second, we check how much bandwidth we've consumed and 
