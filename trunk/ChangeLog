@@ -1,4 +1,14 @@
 Changes so far in 0.0.9:
+rc3:
+  o Bugfixes on 0.0.8.1:
+    - Flush the log file descriptor after we print "Tor opening log file",
+      so we don't see those messages days later.
+
+  o Bugfixes on 0.0.9rc1:
+    - Make tor-resolve work again.
+    - Avoid infinite loop in tor-resolve if tor hangs up on it.
+    - Fix an assert trigger for clients/servers handling resolves.
+
 rc2:
   o Bugfixes on 0.0.9rc1:
     - I broke socks5 support while fixing the eof bug.
