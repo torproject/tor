@@ -751,10 +751,10 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
   d = is_running_routers ? &cached_runningrouters : &cached_directory;
   if (when<=d->published) {
     log_fn(LOG_INFO, "Ignoring old directory; not caching.");
-  } else if (when>=now+ROUTER_ALLOW_SKEW) {
+  } else if (when>=now+ROUTER_MAX_AGE) {
     log_fn(LOG_INFO, "Ignoring future directory; not caching.");
-  } else if (when>d->published &&
-        when<now+ROUTER_ALLOW_SKEW) {
+  } else {
+    /* if (when>d->published && when<now+ROUTER_MAX_AGE) */
     log_fn(LOG_DEBUG, "Caching directory.");
     tor_free(d->dir);
     d->dir = tor_strdup(directory);
