@@ -206,6 +206,11 @@ add_connection_to_closeable_list(connection_t *conn)
   smartlist_add(closeable_connection_lst, conn);
 }
 
+/** Return 1 if conn is on the closeable list, else return 0. */
+int connection_is_on_closeable_list(connection_t *conn) {
+  return smartlist_isin(closeable_connection_lst, conn);
+}
+
 /** Return true iff conn is in the current poll array. */
 int connection_in_array(connection_t *conn) {
   int i;

@@ -143,6 +143,8 @@ connection_t *connection_new(int type) {
 void connection_free(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->magic == CONNECTION_MAGIC);
+  tor_assert(!connection_in_array(conn));
+  tor_assert(!connection_is_on_closeable_list(conn));
 
   if (!connection_is_listener(conn)) {
     buf_free(conn->inbuf);
