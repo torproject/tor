@@ -277,7 +277,8 @@ int dns_resolve(connection_t *exitconn) {
         circ = circuit_get_by_conn(exitconn);
         if (circ)
           circuit_detach_stream(circ, exitconn);
-        connection_free(exitconn);
+        if (!exitconn->marked_for_close)
+          connection_free(exitconn);
         return -1;
     }
     tor_assert(0);
