@@ -376,9 +376,9 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
     pend = resolve->pending_connections;
     assert_connection_ok(pend->conn,time(NULL));
     pend->conn->addr = resolve->addr;
+    /* prevent double-remove */
+    pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
     if(resolve->state == CACHE_STATE_FAILED) {
-      /* prevent double-remove */
-      pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
       pendconn = pend->conn; /* don't pass complex things to the
                                 connection_mark_for_close macro */
       connection_mark_for_close(pendconn, END_STREAM_REASON_RESOLVEFAILED);
