@@ -506,11 +506,13 @@ int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
     return -1;
   }
   if (compare_recommended_versions(VERSION, directory->software_versions) < 0) {
-    log(LOG_WARN, "You are running tor version %s, which is not recommended.\nPlease upgrade to one of %s.", VERSION, directory->software_versions);
+    log(options.IgnoreVersion ? LOG_WARN : LOG_ERR,
+        "You are running Tor version %s, which is not recommended.\n"
+       "Please upgrade to one of %s.",
+        VERSION, directory->software_versions);
     if(options.IgnoreVersion) {
       log(LOG_WARN, "IgnoreVersion is set. If it breaks, we told you so.");
     } else {
-      log(LOG_ERR,"Set IgnoreVersion config variable if you want to proceed.");
       fflush(0);
       exit(0);
     }
