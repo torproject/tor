@@ -309,7 +309,7 @@ config_assign_line(or_options_t *options, struct config_line_t *c)
     c->key = tor_strdup(var->name);
   }
 
-  lvalue = ((void*)options) + var->var_offset;
+  lvalue = ((char*)options) + var->var_offset;
   switch(var->type) {
 
   case CONFIG_TYPE_UINT:

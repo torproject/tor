@@ -2346,7 +2346,7 @@ int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   r = vsnprintf(str, size, format, args);
 #endif
   str[size-1] = '\0';
-  if (r < 0 || r >= size)
+  if (r < 0 || ((size_t)r) >= size)
     return -1;
   return r;
 }
