@@ -237,7 +237,8 @@ int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
   if (r<0)
     return r;
   buf->datalen += r;
-  log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",r, (int)buf->datalen);
+  log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf; %d pending",r,
+         (int)buf->datalen,(int)tor_tls_get_pending_bytes(tls));
   return r;
 }
 
