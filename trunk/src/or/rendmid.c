@@ -75,6 +75,14 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
     circuit_mark_for_close(c);
   }
 
+  /* Acknlowedge the request. */
+  if (connection_edge_send_command(NULL,circ,
+                                   RELAY_COMMAND_INTRO_ESTABLISHED,
+                                   "", 0, NULL)<0) {
+    log_fn(LOG_WARN, "Couldn't send INTRO_ESTABLISHED cell");
+    goto err;
+  }
+
   /* Now, set up this circuit. */
   circ->purpose = CIRCUIT_PURPOSE_INTRO_POINT;
   memcpy(circ->rend_pk_digest, pk_digest, 20);
@@ -165,6 +173,14 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, int request_
 
   if (circuit_get_rendezvous(request)) {
     log_fn(LOG_WARN, "Duplicate rendezvous cookie in ESTABLISH_RENDEZVOUS");
+    goto err;
+  }
+
+  /* Acknlowedge the request. */
+  if (connection_edge_send_command(NULL,circ,
+                                   RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
+                                   "", 0, NULL)<0) {
+    log_fn(LOG_WARN, "Couldn't send RENDEZVOUS_ESTABLISHED cell");
     goto err;
   }
 

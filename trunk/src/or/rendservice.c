@@ -320,7 +320,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   log_fn(LOG_INFO, "Received INTRODUCE2 cell for service %s on circ %d",
          hexid, circuit->n_circ_id);
 
-  if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
+  if (circuit->purpose != CIRCUIT_PURPOSE_S_INTRO) {
     log_fn(LOG_WARN, "Got an INTRODUCE2 over a non-introduction circuit %d",
            circuit->n_circ_id);
     return -1;
@@ -504,6 +504,22 @@ rend_service_intro_is_ready(circuit_t *circuit)
   circuit_mark_for_close(circuit);
 }
 
+/* Handle an intro_established cell. */
+int
+rend_service_intro_established(circuit_t *circuit, const char *request, int request_len)
+{
+  if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
+    log_fn(LOG_WARN, "received INTRO_ESTABLISHED cell on non-intro circuit");
+    goto err;
+  }
+  circuit->purpose = CIRCUIT_PURPOSE_S_INTRO;
+
+  return 0;
+ err:
+  circuit_mark_for_close(circuit);
+  return -1;
+}
+
 /* Called once a circuit to a rendezvous point is ready: sends a
  *  RELAY_COMMAND_RENDEZVOUS1 cell.
  */
@@ -569,6 +585,33 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
  * Manage introduction points
  ******/
 
+static circuit_t *
+find_intro_circuit(routerinfo_t *router, const char *pk_digest)
+{
+  circuit_t *circ = NULL;
+
+  while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
+                                                  CIRCUIT_PURPOSE_S_INTRO))) {
+    assert(circ->cpath);
+    if (circ->cpath->prev->addr == router->addr &&
+        circ->cpath->prev->port == router->or_port) {
+      return circ;
+    }
+  }
+
+  circ = NULL;
+  while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
+                                        CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
+    assert(circ->cpath);
+    if (circ->cpath->prev->addr == router->addr &&
+        circ->cpath->prev->port == router->or_port) {
+      return circ;
+    }
+  }
+  return NULL;
+}
+
+
 /* For every service, check how many intro points it currently has, and:
  *  - Pick new intro points as necessary.
  *  - Launch circuits to any new intro points.
@@ -579,9 +622,8 @@ int rend_services_init(void) {
   routerinfo_t *router;
   routerlist_t *rl;
   rend_service_t *service;
-  circuit_t *circ;
   char *desc, *intro;
-  int changed, found, prev_intro_nodes, desc_len;
+  int changed, prev_intro_nodes, desc_len;
 
   router_get_routerlist(&rl);
 
@@ -593,26 +635,11 @@ int rend_services_init(void) {
 
     /* Find out which introduction points we really have for this service. */
     for (j=0;j< smartlist_len(service->intro_nodes); ++j) {
-
       router = router_get_by_nickname(smartlist_get(service->intro_nodes,j));
-      if (!router)
-        goto remove_point;
-      circ = NULL;
-      found = 1;
-      while ((circ = circuit_get_next_by_pk_and_purpose(
-                                        circ,service->pk_digest,
-                                        CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
-        assert(circ->cpath);
-        if (circ->cpath->prev->addr == router->addr &&
-            circ->cpath->prev->port == router->or_port) {
-          found = 1; break;
-        }
+      if (!router || !find_intro_circuit(router,service->pk_digest)) {
+        smartlist_del(service->intro_nodes,j--);
+        changed = 1;
       }
-      if (found) continue;
-
-    remove_point:
-      smartlist_del(service->intro_nodes,j--);
-      changed = 1;
     }
 
     /* We have enough intro points, and the intro points we thought we had were

@@ -201,12 +201,15 @@
 #define CIRCUIT_PURPOSE_REND_ESTABLISHED 4 /* At OR, both circuits have this purpose */
 /* these circuits originate at this node */
 #define CIRCUIT_PURPOSE_C_GENERAL 5 /* normal circuit, with cpath */
-#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 6 /* at Bob, waiting for introductions */
-#define CIRCUIT_PURPOSE_C_INTRODUCING 7 /* at Alice, connecting to intro point */
-#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 8 /* at Alice, waiting for Bob */
-#define CIRCUIT_PURPOSE_S_CONNECT_REND 9 /* at Bob, connecting to rend point */
-#define CIRCUIT_PURPOSE_C_REND_JOINED 10 /* at Alice, rendezvous established.*/
-#define CIRCUIT_PURPOSE_S_REND_JOINED 11 /* at Bob, rendezvous established.*/
+#define CIRCUIT_PURPOSE_C_INTRODUCING 6 /* at Alice, connecting to intro point */
+#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 7 /* at Alice, waiting for Bob */
+#define CIRCUIT_PURPOSE_C_REND_JOINED 8 /* at Alice, rendezvous established.*/
+
+#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 9 /* at Bob, waiting for introductions */
+#define CIRCUIT_PURPOSE_S_INTRO 10 /* at Bob, successfully established intro */
+#define CIRCUIT_PURPOSE_S_CONNECT_REND 11 /* at Bob, connecting to rend point */
+
+#define CIRCUIT_PURPOSE_S_REND_JOINED 12 /* at Bob, rendezvous established.*/
 #define _CIRCUIT_PURPOSE_MAX 11
 
 #define RELAY_COMMAND_BEGIN 1
@@ -228,6 +231,9 @@
 #define RELAY_COMMAND_INTRODUCE2 35
 #define RELAY_COMMAND_RENDEZVOUS1 36
 #define RELAY_COMMAND_RENDEZVOUS2 37
+/* DOCDOC Spec these next two. */
+#define RELAY_COMMAND_INTRO_ESTABLISHED 38
+#define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
 
 #define _MIN_END_STREAM_REASON 1
 #define END_STREAM_REASON_MISC 1
@@ -1062,6 +1068,7 @@ int rend_service_init_keys(void);
 int rend_services_init(void);
 
 void rend_service_intro_is_ready(circuit_t *circuit);
+int rend_service_intro_established(circuit_t *circuit, const char *request, int request_len);
 void rend_service_rendezvous_is_ready(circuit_t *circuit);
 int rend_service_introduce(circuit_t *circuit, const char *request, int request_len);
 
