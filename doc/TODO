@@ -25,18 +25,18 @@ ARMA    - arma claims
           in the source.
         o Bail out early if datadirectory is NULL.
 R       . bandwidth buckets for write as well as read.
-        . Cached-directory changes:
+        o Cached-directory changes:
           o make clients store the cached-directory to disk,
           o and use it when they startup, so they don't need to bootstrap
             from the authdirservers every time they start.
           D also, once we've reduced authdirserver entries to config
             lines, we can have lines that list cacheddirservers too.
-        . compress the directory.
+        o compress the directory.
           o Implement gzip/zlib wrappers
           o Compress directories as they're cached/generated
             o When requested, give a compressed directory.
             o Decompress incoming HTTP based on Content-Encoding
-N           - Once dirservers are running new code, make clients
+            o Once dirservers are running new code, make clients
               request compressed directories.
 N       - switch dirservers entries to config lines.
 N       - add three default dirplaces if we parse the whole torrc and
