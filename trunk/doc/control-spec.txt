@@ -133,6 +133,10 @@ the message.
   virtual keyword to get all HiddenServiceDir, HiddenServicePort,
   HiddenServiceNodes, and HiddenServiceExcludeNodes option settings.
 
+  As another exception, the controller can getconf the "version" string,
+  and Tor will return a string describing its version number. Setconf on
+  "version" will not work.
+
 3.5. CONFVALUE (Type 0x0004)
 
   Sent in response to a GETCONF message; contains a list of "Key Value\n"
