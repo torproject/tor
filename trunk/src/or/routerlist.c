@@ -236,7 +236,7 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
   }
 }
 
-static routerinfo_t *
+routerinfo_t *
 routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
 {
   int i;
