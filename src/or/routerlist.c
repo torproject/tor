@@ -709,6 +709,7 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
 /** Free all storage held by a routerlist <b>rl</b> */
 void routerlist_free(routerlist_t *rl)
 {
+  tor_assert(rl);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   smartlist_free(rl->routers);
@@ -718,7 +719,8 @@ void routerlist_free(routerlist_t *rl)
 
 void routerlist_free_current(void)
 {
-  routerlist_free(routerlist);
+  if (routerlist)
+    routerlist_free(routerlist);
   routerlist = NULL;
 }
 
