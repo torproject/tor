@@ -81,43 +81,30 @@ RKROLwP1ExjTZeg6wuN0pzYqed9IJUd5lAe9hp4ritbnmJAgS6qfww6jgx61CfUR
 gI1vsw92+P1Ty4RHj6fyD9DhbV19nh2Qs+pvGJOS2FY=
 -----END SIGNATURE-----
 
-router moria3 18.244.0.188 9003 9023 9033
-platform Tor 0.0.6rc1 on Linux moria.mit.edu i686
-published 2004-04-25 21:54:31
-bandwidth 800000 10000000
+router tor26 62.116.124.106 9001 9050 9030
+platform Tor 0.0.6 on Linux seppia i686
+published 2004-05-06 21:33:23
+bandwidth 500000 10000000
 onion-key
 -----BEGIN RSA PUBLIC KEY-----
-MIGJAoGBANS6J/Er9fYo03fjUUVesc7We9Z6xIevyDJH39pYS4NUlcr5ExYgSVFJ
-95aLCNx1x8Rf5YtiBKYuT3plBO/+rfuX+0iAGNkz/y3SlJVGz6aeptU3wN8CkvCL
-zATEcnl4QSPhHX0wFB9A3t7wZ+Bat1PTI029lax/BkoS9JG5onHPAgMBAAE=
+MIGJAoGBAMEHdDnpj3ik1AF1xe/VqjoguH2DbANifYqXXfempu0fS+tU9FGo6dU/
+fnVHAZwL9Ek9k2rMzumShi1RduK9p035R/Gk+PBBcLfvwYJ/Nat+ZO/L8jn/3bZe
+ieQd9CKj2LjNGKpRNry37vkwMGIOIlegwK+2us8aXJ7sIvlNts0TAgMBAAE=
 -----END RSA PUBLIC KEY-----
 signing-key
 -----BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAMqgq83cwzSid2LSvzsn2rvkD8U0tWvqF6PuQAsKP3QHFqtBO+66pnIm
-CbiY2e6o01tmR47t557LuUCodEc8Blggxjg3ZEzvP42hsGB9LwQbcrU7grPRk0G0
-IltsOF9TZ+66gCeU7LxExLdAMqT2Tx6VT4IREPJMeNxSiceEjbABAgMBAAE=
+MIGJAoGBAMQgV2gXLbXgesWgeAsj8P1Uvm/zibrFXqwDq27lLKNgWGYGX2ax3LyT
+3nzI1Y5oLs4kPKTsMM5ft9aokwf417lKoCRlZc9ptfRbgxDx90c9GtWVmkrmDvCK
+ae59TMoXIiGfZiwWT6KKq5Zm9/Fu2Il3B2vHGkKJYKixmiBJRKp/AgMBAAE=
 -----END RSA PUBLIC KEY-----
-reject 0.0.0.0/255.0.0.0:*
-reject 169.254.0.0/255.255.0.0:*
-reject 127.0.0.0/255.0.0.0:*
-reject 192.168.0.0/255.255.0.0:*
-reject 10.0.0.0/255.0.0.0:*
-reject 172.16.0.0/255.240.0.0:*
-accept *:20-22
-accept *:53
-accept *:79-80
-accept *:110
-accept *:143
-accept *:443
-accept *:873
-accept *:993
-accept *:995
-accept *:1024-65535
+accept 62.245.184.24:25
+accept 62.116.124.106:6666-6670
+accept *:48099
 reject *:*
 router-signature
 -----BEGIN SIGNATURE-----
-QuoVInaiAnxgmZwCHVRTlcKrfRN4CmhcCJxQlwgeqnb1rg4LlFei3mic8+0vMF9r
-s74h2O1bF+bgbO7JmJ5ZxBG/U3UEL46kj1v9Y+FPhCihvaAZLJ5ajIbTw65tizg5
-8JOrpyjzPbaqPt31nE+3W0qpUNO8wWdxtnoGo7Kiibs=
+qh/xRoqfLNFzPaB8VdpbdMAwRyuk5qjx4LeLVQ2pDwTZ55PqmG99+VKUNte2WTTD
+7dZEA7um2rueohGe4nYmvbhJWr20/I0ZxmWDRDvFy0b5nwzDMGvLvDw95Zu/XJQ2
+md32NE3y9VZCfbCN+GlvETX3fdR3Svzcm8Kzesg2/s4=
 -----END SIGNATURE-----
 
