@@ -164,8 +164,6 @@ rend_client_rendcirc_has_opened(circuit_t *circ)
   if (rend_client_send_establish_rendezvous(circ) < 0) {
     return;
   }
-
-  connection_ap_attach_pending();
 }
 
 /** Called when get an ACK or a NAK for a REND_INTRODUCE1 cell.
@@ -400,7 +398,7 @@ void rend_client_desc_fetched(char *query, int status) {
         connection_mark_for_close(conn);
       }
     } else { /* 404, or fetch didn't get that far */
-      log_fn(LOG_WARN,"Failed to fetch service id '%s', and not in cache. Closing conn.", query);
+      log_fn(LOG_NOTICE,"Failed to fetch service id '%s', and not in cache. Closing conn.", query);
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);
     }
