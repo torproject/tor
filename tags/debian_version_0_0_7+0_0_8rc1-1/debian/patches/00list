@@ -1,0 +1,3 @@
+01_uncomment_datadirectory.dpatch
+02_add_debian_files_in_manpage.dpatch
+03_tor_manpage_in_section_8.dpatch
