@@ -158,6 +158,11 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
   start = list;
   while(*start) {
     end=start; while(*end && !isspace((int)*end) && *end != ',') end++;
+    if (end-start > MAX_HEX_NICKNAME_LEN) {
+      log_fn(LOG_WARN,"Nickname too long; skipping");
+      start = end;
+      continue;
+    }
     memcpy(nick,start,end-start);
     nick[end-start] = 0; /* null terminate it */
     router = router_get_by_nickname(nick);
