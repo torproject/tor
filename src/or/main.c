@@ -151,9 +151,8 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
-    assert(conn);
     if(conn->addr == addr && conn->port == port && !conn->marked_for_close)
-       return conn;
+      return conn;
   }
   return NULL;
 }
@@ -165,7 +164,7 @@ connection_t *connection_get_by_type(int type) {
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
     if(conn->type == type && !conn->marked_for_close)
-       return conn;
+      return conn;
   }
   return NULL;
 }
@@ -177,9 +176,22 @@ connection_t *connection_get_by_type_state(int type, int state) {
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
     if(conn->type == type && conn->state == state && !conn->marked_for_close)
-       return conn;
+      return conn;
   }
   return NULL;
+}
+
+connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
+  int i;
+  connection_t *conn, *best=NULL;
+
+  for(i=0;i<nfds;i++) {
+    conn = connection_array[i];
+    if(conn->type == type && conn->state == state && !conn->marked_for_close)
+      if(!best || conn->timestamp_lastwritten < best->timestamp_lastwritten)
+        best = conn;
+  }
+  return best;
 }
 
 void connection_watch_events(connection_t *conn, short events) {
