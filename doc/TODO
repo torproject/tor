@@ -13,16 +13,18 @@ ARMA    - arma claims
 
       0.0.8:
         - fix sprintf's to snprintf's?
-NICK    - Make it work on win32 with no $home
-NICK    - Why is the first entry of kill -USR1 a router with a 0 key?
-NICK?   - Tors deal appropriately when a newly-verified router has the
+        . Make it work on win32 with no $home
+                o Don't crash.
+NICK	        - Put files someplace reasonable.
+        o Why is the first entry of kill -USR1 a router with a 0 key?
+ARMA    . Tors deal appropriately when a newly-verified router has the
           same nickname as another router they know about
 NICK    . put ip:port:keyhash in intro points, rendezvous points,
           and hidserv descriptors.
                 o Specify
                 - Implement parsing
                 - Generate new formats (Not till 007 is dead)
-NICK    - unify similar config entries that need to be split. put them
+NICK    . unify similar config entries that need to be split. put them
           into a smartlist, and have things take a smartlist.
 
         - figure out what to do when somebody asks to extend to
