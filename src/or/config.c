@@ -1180,24 +1180,32 @@ options_validate(or_options_t *options)
 
 /** Check if any of the previous options have changed but aren't allowed to. */
 static int
-options_transition_allowed(or_options_t *old, or_options_t *new) {
+options_transition_allowed(or_options_t *old, or_options_t *new_val) {
 
   if(!old)
     return 0;
 
   if (old->PidFile &&
-      (!new->PidFile || strcmp(old->PidFile,new->PidFile))) {
+      (!new_val->PidFile || strcmp(old->PidFile,new_val->PidFile))) {
     log_fn(LOG_WARN,"PidFile is not allowed to change. Failing.");
     return -1;
   }
 
-  if (old->RunAsDaemon && !new->RunAsDaemon) {
+  if (old->RunAsDaemon && !new_val->RunAsDaemon) {
     log_fn(LOG_WARN,"During reload, change from RunAsDaemon=1 to =0 not allowed. Failing.");
     return -1;
   }
 
-  if (old->ORPort != new->ORPort) {
+  if (old->ORPort != new_val->ORPort) {
     log_fn(LOG_WARN,"During reload, changing ORPort is not allowed. Failing.");
+    return -1;
+  }
+
+  if ((old->DataDirectory &&
+       (!new_val->DataDirectory ||
+        strcmp(old->DataDirectory,new_val->DataDirectory)!=0)) ||
+      (!old->DataDirectory && new_val->DataDirectory)) {
+    log_fn(LOG_WARN,"During reload, changing DataDirectory is not allowed. Failing.");
     return -1;
   }
 
