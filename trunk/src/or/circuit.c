@@ -58,8 +58,7 @@ void circuit_remove(circuit_t *circ) {
 circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ; 
 
-  circ = (circuit_t *)tor_malloc(sizeof(circuit_t));
-  memset(circ,0,sizeof(circuit_t)); /* zero it out */
+  circ = tor_malloc_zero(sizeof(circuit_t));
 
   circ->timestamp_created = time(NULL);
 

@@ -340,9 +340,8 @@ list_running_servers(char **nicknames_out)
   for (i = 0; i<n; ++i) {
     length += strlen(nickname_lst[i]);
   }
-  *nicknames_out = tor_malloc(length);
+  *nicknames_out = tor_malloc_zero(length);
   cp = *nicknames_out;
-  memset(cp,0,length);
   for (i = 0; i<n; ++i) {
     if (i)
       strcat(cp, " ");

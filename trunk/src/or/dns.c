@@ -127,8 +127,7 @@ int dns_resolve(connection_t *exitconn) {
         return -1;
     }
   } else { /* need to add it */
-    resolve = tor_malloc(sizeof(struct cached_resolve));
-    memset(resolve, 0, sizeof(struct cached_resolve));
+    resolve = tor_malloc_zero(sizeof(struct cached_resolve));
     resolve->state = CACHE_STATE_PENDING;
     resolve->expire = now + 15*60; /* 15 minutes */
     strncpy(resolve->question, exitconn->address, MAX_ADDRESSLEN);

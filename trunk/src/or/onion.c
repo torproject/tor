@@ -34,8 +34,7 @@ static int ol_length=0;
 int onion_pending_add(circuit_t *circ) {
   struct onion_queue_t *tmp;
 
-  tmp = tor_malloc(sizeof(struct onion_queue_t));
-  memset(tmp, 0, sizeof(struct onion_queue_t));
+  tmp = tor_malloc_zero(sizeof(struct onion_queue_t));
   tmp->circ = circ;
 
   if(!ol_tail) {
@@ -460,8 +459,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   }
  
   /* Okay, so we haven't used 'choice' before. */
-  hop = (crypt_path_t *)tor_malloc(sizeof(crypt_path_t));
-  memset(hop, 0, sizeof(crypt_path_t));
+  hop = (crypt_path_t *)tor_malloc_zero(sizeof(crypt_path_t));
 
   /* link hop into the cpath, at the end. */
   if (*head_ptr) {

@@ -76,8 +76,7 @@ connection_t *connection_new(int type) {
   connection_t *conn;
   time_t now = time(NULL);
 
-  conn = (connection_t *)tor_malloc(sizeof(connection_t));
-  memset(conn,0,sizeof(connection_t)); /* zero it out to start */
+  conn = tor_malloc_zero(sizeof(connection_t));
   conn->s = -1; /* give it a default of 'not used' */
 
   conn->type = type;
@@ -86,8 +85,7 @@ connection_t *connection_new(int type) {
     conn->outbuf = buf_new();
   }
   if (type == CONN_TYPE_AP) {
-    conn->socks_request = tor_malloc(sizeof(socks_request_t));
-    memset(conn->socks_request, 0, sizeof(socks_request_t));
+    conn->socks_request = tor_malloc_zero(sizeof(socks_request_t));
   }
 
   conn->timestamp_created = now;
@@ -264,7 +262,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   }
   set_socket_nonblocking(s);
 
-  memset((void *)&dest_addr,0,sizeof(dest_addr));
+  memset(&dest_addr,0,sizeof(dest_addr));
   dest_addr.sin_family = AF_INET;
   dest_addr.sin_port = htons(port);
   dest_addr.sin_addr.s_addr = htonl(addr);
