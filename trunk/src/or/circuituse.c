@@ -979,8 +979,8 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ) {
 }
 
 /** Attempt to attach the connection <b>conn</b> to <b>circ</b>, and
- * send a begin or resolve cell as appropriate.  Return values for
- * connection_ap_handshake_attach_chosen_circuit. */
+ * send a begin or resolve cell as appropriate.  Return values are as
+ * for connection_ap_handshake_attach_circuit. */
 int
 connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
                                               circuit_t *circ)
@@ -992,6 +992,9 @@ connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
   tor_assert(conn->socks_request);
   tor_assert(circ);
 
+  if (circ->state != CIRCUIT_STATE_OPEN)
+    return 0;
+
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
 
   if (!circ->timestamp_dirty)
@@ -1001,9 +1004,11 @@ connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
   tor_assert(conn->socks_request);
   if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
     consider_recording_trackhost(conn, circ);
-    connection_ap_handshake_send_begin(conn, circ);
+    if (connection_ap_handshake_send_begin(conn, circ)<0)
+      return -1;
   } else {
-    connection_ap_handshake_send_resolve(conn, circ);
+    if (connection_ap_handshake_send_resolve(conn, circ)<0)
+      return -1;
   }
 
   return 1;
