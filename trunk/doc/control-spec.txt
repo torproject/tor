@@ -382,9 +382,10 @@ the message.
   The descriptor, when parsed, must contain a number of well-specified
   fields, including fields for its nickname and identity.
 
-  If there is an error in parsing the descriptor, or if the server rejects
-  the descriptor for any reason, the server must send an appropriate error
-  message.
+  If there is an error in parsing the descriptor, the server must send an
+  appropriate error message.  If the descriptor is well-formed but the server
+  chooses not to add it, it must reply with a DONE message whose body
+  explains why the server was not added.
 
 3.17 FRAGMENTHEADER (Type 0x0010)
 
