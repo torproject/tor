@@ -34,7 +34,7 @@ Tor Rendezvous Spec
 
    In the specifications below, we use the same notation as in
    "tor-spec.txt".  The service specified here also requires the existence of
-   an onion routing network as specified in "tor-spec.txt".  
+   an onion routing network as specified in "tor-spec.txt".
 
         H(x) is a SHA1 digest of x.
         PKSign(SK,x) is a PKCS.1-padded RSA signature of x with SK.
@@ -93,6 +93,9 @@ Tor Rendezvous Spec
       35 -- RELAY_INTRODUCE2
       36 -- RELAY_RENDEZVOUS1
       37 -- RELAY_RENDEZVOUS2
+      38 -- RELAY_INTRO_ESTABLISHED
+      39 -- RELAY_RENDEZVOUS_ESTABLISHED
+      40 -- RELAY_COMMAND_INTRODUCE_ACK
 
 1. The Protocol
 
@@ -154,7 +157,8 @@ Tor Rendezvous Spec
    correct given the shared state between Bob's OP and the OR.  If either
    check fails, the OP discards the cell; otherwise, it associates the
    circuit with Bob's public key, and dissociates any other circuits
-   currently associated with PK.
+   currently associated with PK.  On success, the OR sends Bob a
+   RELAY_INTRO_ESTABLISHED cell with an empty payload.
 
 1.4. Bob's OP advertises his server descriptor
 
@@ -230,7 +234,8 @@ Tor Rendezvous Spec
    Alice's OP.
 
    Upon receiving a RELAY_ESTABLISH_RENDEZVOUS cell, the OR associates the
-   RC with the circuit that sent it.
+   RC with the circuit that sent it.  It replies to Alice with an empty
+   RELAY_RENDEZVOUS_ESTABLISHED cell to indicate success.
 
    Alice's OP MUST NOT use the circuit which sent the cell for any purpose
    other than rendezvous with the given location-hidden service.
@@ -263,6 +268,12 @@ Tor Rendezvous Spec
    established a circuit for introductions as in 1.3 above, it sends the body
    of the cell in a new RELAY_INTRODUCE2 cell down the corresponding circuit.
    (If the PK_ID is unrecognized, the RELAY_INTRODUCE1 cell is discarded.)
+
+   After sending the RELAY_INTRODUCE2 cell, the OR replies to Alice with an
+   empty RELAY_COMMAND_INTRODUCE_ACK cell.  If no RELAY_INTRODUCE2 cell can
+   be sent, the OR replies to Alice with a non-empty cell to indicate an
+   error.  (The semantics of the cell body may be determined later; the
+   current implementation sends a single '1' byte on failure.)
 
    When Bob's OP receives the RELAY_INTRODUCE2 cell, it decrypts it with
    the private key for the corresponding hidden service, and extracts the
