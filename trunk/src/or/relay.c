@@ -436,8 +436,10 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
     rh.stream_id = fromconn->stream_id; /* else it's 0 */
   rh.length = payload_len;
   relay_header_pack(cell.payload, &rh);
-  if (payload_len)
+  if (payload_len) {
+    tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
     memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
+  }
 
   log_fn(LOG_DEBUG,"delivering %d cell %s.", relay_command,
          cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
