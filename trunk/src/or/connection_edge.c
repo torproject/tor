@@ -1,6 +1,6 @@
 /* Copyright 2001 Matej Pfajfar.
  * Copyright 2001-2004 Roger Dingledine.
- * Copyright 2004 Roger Dingledine, Nick Mathewson. */
+ * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 const char connection_edge_c_id[] = "$Id$";
@@ -38,7 +38,7 @@ connection_close_unattached_ap(connection_t *conn, int endreason) {
 // be defined yet. -RD
     if (endreason == END_STREAM_REASON_ALREADY_SOCKS_REPLIED)
       log_fn(LOG_WARN,"Bug: stream (marked at %s:%d) sending two socks replies?",
-             conn->marked_for_close_file?conn->marked_for_close_file:"", 
+             conn->marked_for_close_file?conn->marked_for_close_file:"",
              conn->marked_for_close);
 
     if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
