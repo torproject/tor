@@ -24,16 +24,18 @@
 \pagestyle{empty}
 
 \begin{abstract}
+  
+  We describe our experiences with deploying Tor, a low-latency
+  anonymous general purpose communication system that has been funded
+  by the U.S.~Navy, DARPA, and the Electronic Frontier Foundation. The
+  basic Tor design supports most applications that run over TCP (those
+  that are SOCKS compliant).
 
-We describe our experiences with deploying Tor, a low-latency anonymous
-communication system that has been funded both by the U.S.~Navy
-and also by the Electronic Frontier Foundation.
-
-Because of its simplified threat model, Tor does not aim to defend
-against many of the attacks in the literature.
+%Because of its simplified threat model, Tor does not aim to defend
+%against many of the attacks in the literature.
 
 We describe both policy issues that have come up from operating the
-network and technical challenges in building a more sustainable and
+network and technical challenges to building a more sustainable and
 scalable network.
 
 \end{abstract}
@@ -73,8 +75,8 @@ who don't want to reveal information to their competitors, and law
 enforcement and government intelligence agencies who need
 to do operations on the Internet without being noticed.
 
-Tor research and development has been funded by the U.S.~Navy, for use
-in securing government
+Tor research and development has been funded by the U.S.~Navy and DARPA
+for use in securing government
 communications, and also by the Electronic Frontier Foundation, for use
 in maintaining civil liberties for ordinary citizens online. The Tor
 protocol is one of the leading choices
@@ -298,24 +300,25 @@ dispersal and diversity. Murdoch and Danezis describe an attack
 \cite{attack-tor-oak05} that lets an attacker determine the nodes used
 in a circuit; yet s/he cannot identify the initiator or responder,
 e.g., client or web server, through this attack. So the endpoints
-remain secure, which is the goal. On the other hand we can imagine an
-adversary that could attack or set up observation of all connections
+remain secure, which is the goal. It is conceivable that an
+adversary could attack or set up observation of all connections
 to an arbitrary Tor node in only a few minutes.  If such an adversary
 were to exist, s/he could use this probing to remotely identify a node
-for further attack.  Also, the enclave model seems particularly
-threatened by this attack, since it identifies endpoints when they're
-also nodes in the Tor network: see Section~\ref{subsec:helper-nodes}
-for discussion of some ways to address this issue.
-
-[*****Suppose an adversary with active access to the responder traffic
+for further attack.  Of more likely immediate practical concern
+an adversary with active access to the responder traffic
 wants to keep a circuit alive long enough to attack an identified
-node. Could s/he do this without the overt cooperation of the client
-proxy? More immediately, someone could identify nodes in this way and
-if in their jurisdiction, immediately get a subpoena (if they even
-need one) and tell the node operator(s) that she must retain all the
-active circuit data she now has at that moment.  That \emph{can} be
-done in real time.********** We should say something about this
-here or later in the paper -pfs]
+node. Thus it is important to prevent the responding end of the circuit
+from keeping it open indefinitely. 
+Also, someone could identify nodes in this way and if in their
+jurisdiction, immediately get a subpoena (if they even need one)
+telling the node operator(s) that she must retain all the active
+circuit data she now has.
+Further, the enclave model, which had previously looked to be the most
+generally secure, seems particularly threatened by this attack, since
+it identifies endpoints when they're also nodes in the Tor network:
+see Section~\ref{subsec:helper-nodes} for discussion of some ways to
+address this issue.
+
 
 see \ref{subsec:routing-zones} for discussion of larger
 adversaries and our dispersal goals.
@@ -605,7 +608,7 @@ possible major problem with the blocking of Tor is that it's not just
 the decision of the individual server administrator whose deciding if
 he wants to post to Wikipedia from his Tor node address or allow
 people to read Wikipedia anonymously through his Tor node. (Wikipedia
-has blocked all posting from all Tor nodes based in IP address.) If e.g.,
+has blocked all posting from all Tor nodes based on IP address.) If e.g.,
 s/he comes through a campus or corporate NAT, then the decision must
 be to have the entire population behind it able to have a Tor exit
 node or to have write access to Wikipedia. This is a loss for both of us (Tor
@@ -726,8 +729,8 @@ characterize the exit policies and let clients parse them to decide
 which nodes will allow which packets to exit.
 \item \emph{The Tor-internal name spaces would need to be redesigned.} We
 support hidden service {\tt{.onion}} addresses, and other special addresses
-like {\tt{.exit}} (see Section~\ref{subsec:}), by intercepting the addresses
-when they are passed to the Tor client.
+like {\tt{.exit}} (see Section~\ref{subsec:hidden-services}),
+by intercepting the addresses when they are passed to the Tor client.
 \end{enumerate}
 
 This list is discouragingly long right now, but we recognize that it
@@ -833,7 +836,7 @@ This is likely to entail high variability and massive storage since
 % Hintz stuff and the Back et al. stuff from Info Hiding 01. I've
 % separated the two and added the references. -PFS
 routes through the network to each site will be random even if they
-have relatively unique latency characteristics. So the do
+have relatively unique latency characteristics. So this does
 not seem an immediate practical threat. Further along similar lines,
 the same paper suggested a ``clogging attack''. A version of this
 was demonstrated to be practical in
@@ -854,18 +857,31 @@ monitor the responder stream, in order of decreasing attack
 effectiveness.  So, another way to slow some of these attacks
 would be to cache responses at exit servers where possible, as it is with
 DNS lookups and cacheable HTTP responses.  Caching would, however,
-create threats of its own.
+create threats of its own. First, a Tor network is expected to contain
+hostile nodes. If one of these is the repository of a cache, the
+attack is still possible. Though more work to set up a Tor node and
+cache repository, the payoff of such an attack is potentially
+higher.
 %To be
 %useful, such caches would need to be distributed to any likely exit
 %nodes of recurred requests for the same data.
 %   Even local caches could be useful, I think. -NM
-Aside from the logistic
-difficulties and overhead, caches would  constitute a
-record of destinations and data visited by Tor users.  While
-limited to network insiders, given the need for wide distribution
-they could serve as useful data to an attacker deciding which locations
-to target for confirmation. A way to counter this distribution
-threat might be to only cache at certain semitrusted helper nodes.
+%
+%Added some clarification -PFS
+Besides allowing any other insider attacks, caching nodes would hold a
+record of destinations and data visited by Tor users reducing forward
+anonymity. Worse, for the cache to be widely useful much beyond the
+client that caused it there would have to either be a new mechanism to
+distribute cache information around the network and a way for clients
+to make use of it or the caches themselves would need to be
+distributed widely. Either way the record of visited sites and
+downloaded information is made automatically available to an attacker
+without having to actively gather it himself.  Besides its inherent
+value, this could serve as useful data to an attacker deciding which
+locations to target for confirmation. A way to counter this
+distribution threat might be to only cache at certain semitrusted
+helper nodes.  This might help specific clients, but it would limit
+the general value of caching.
 
 %Does that cacheing discussion belong in low-latency?
 
@@ -984,7 +1000,10 @@ certain that it has not missed the first node in the circuit. Also,
 the attack does not identify the order of nodes in a route, so the
 longer the route, the greater the uncertainty about which node might
 be first. It may be possible to extend the attack to learn the route
-node order, but it is not clear that this is practically feasible.
+node order, but has not been shown whether this is practically feasible.
+If so, the incompleteness uncertainty engendered by random lengths would
+remain, but once the complete set of nodes in the route were identified
+the initiating node would also be identified.
 
 Another way to reduce the threats to both enclaves and simple Tor
 clients is to have helper nodes. Helper nodes were introduced
@@ -993,7 +1012,8 @@ of the initiator of a communication in various anonymity protocols.
 The idea is to use a single trusted node as the first one you go to,
 that way an attacker cannot ever attack the first nodes you connect
 to and do some form of intersection attack. This will not affect the
-Danezis-Murdoch attack at all.
+Danezis-Murdoch attack at all if the attacker can time latencies to
+both the helper node and the enclave node.
 
 We have to pick the path length so adversary can't distinguish client from
 server (how many hops is good?).
@@ -1054,6 +1074,7 @@ force their users to switch helper nodes more frequently.
 %big stuff.
 
 \subsection{Location-hidden services}
+\label{subsec:hidden-services}
 
 While most of the discussions about have been about forward anonymity
 with Tor, it also provides support for \emph{rendezvous points}, which
@@ -1174,9 +1195,9 @@ Scaling Tor involves three main challenges.  First is safe server
 discovery, both bootstrapping -- how a Tor client can robustly find an
 initial server list -- and ongoing -- how a Tor client can learn about
 a fair sample of honest servers and not let the adversary control his
-circuits (see Section x).  Second is detecting and handling the speed
+circuits (see Section~\ref{}).  Second is detecting and handling the speed
 and reliability of the variety of servers we must use if we want to
-accept many servers (see Section y).
+accept many servers (see Section~\ref{}).
 Since the speed and reliability of a circuit is limited by its worst link,
 we must learn to track and predict performance.  Finally, in order to get
 a large set of servers in the first place, we must address incentives
