@@ -11,6 +11,7 @@
  **/
 
 extern or_options_t options; /* command-line and config-file options */
+extern long stats_n_seconds_uptime;
 
 /** Exposed for test.c. */ void get_platform_str(char *platform, int len);
 
@@ -474,7 +475,8 @@ int router_rebuild_descriptor(void) {
  */
 void get_platform_str(char *platform, int len)
 {
-  snprintf(platform, len-1, "Tor %s on %s", VERSION, get_uname());
+  snprintf(platform, len-1, "Tor %s (up %ld sec) on %s",
+           VERSION, stats_n_seconds_uptime, get_uname());
   platform[len-1] = '\0';
   return;
 }

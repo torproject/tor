@@ -28,7 +28,7 @@ static int stats_prev_global_read_bucket;
 /** How many bytes have we read since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
 /** How many seconds have we been running? */
-static long stats_n_seconds_reading = 0;
+long stats_n_seconds_uptime = 0;
 
 /** Array of all open connections; each element corresponds to the element of
  * poll_array in the same position.  The first nfds elements are valid. */
@@ -536,7 +536,7 @@ static int prepare_for_poll(void) {
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
-    ++stats_n_seconds_reading;
+    ++stats_n_seconds_uptime;
     assert_all_pending_dns_resolves_ok();
     run_scheduled_events(now.tv_sec);
     assert_all_pending_dns_resolves_ok();
@@ -844,9 +844,9 @@ static void dumpstats(int severity) {
            100*(((double)stats_n_data_bytes_received) /
                 (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
-  if (stats_n_seconds_reading)
+  if (stats_n_seconds_uptime)
     log(severity,"Average bandwidth used: %d bytes/sec",
-           (int) (stats_n_bytes_read/stats_n_seconds_reading));
+           (int) (stats_n_bytes_read/stats_n_seconds_uptime));
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
