@@ -599,7 +599,7 @@ static int do_main_loop(void) {
                         (uint16_t) options.DirPort);
 
   for(;;) {
-#ifndef MS_WIN32 /* do signal stuff only on unix */
+#ifndef MS_WINDOWS /* do signal stuff only on unix */
     if(please_dumpstats) {
       /* prefer to log it at INFO, but make sure we always see it */
       dumpstats(options.loglevel>LOG_INFO ? options.loglevel : LOG_INFO);
@@ -670,14 +670,14 @@ static int do_main_loop(void) {
 
 static void catch(int the_signal) {
 
-#ifndef MS_WIN32 /* do signal stuff only on unix */
+#ifndef MS_WINDOWS /* do signal stuff only on unix */
   switch(the_signal) {
 //    case SIGABRT:
     case SIGTERM:
     case SIGINT:
       log(LOG_ERR,"Catching signal %d, exiting cleanly.", the_signal);
-      /* we don't care if there was an error when we unlink,
-         nothing we could do about it anyways */
+      /* we don't care if there was an error when we unlink, nothing
+         we could do about it anyways */
       unlink(options.PidFile);
       exit(0);
     case SIGHUP:
@@ -767,6 +767,7 @@ void daemonize(void) {
 }
 
 void write_pidfile(char *filename) {
+#ifndef MS_WINDOWS
   FILE *pidfile;
 
   if ((pidfile = fopen(filename, "w")) == NULL) {
@@ -776,6 +777,52 @@ void write_pidfile(char *filename) {
     fprintf(pidfile, "%d", getpid());
     fclose(pidfile);
   }
+#endif
+}
+
+int switch_user(char *user) {
+#ifndef MS_WINDOWS
+  int status;
+  struct passwd *pw = NULL;
+
+  pw = getpwnam(user);
+  if(pw == NULL) {
+    log_fn(LOG_ERR,"User '%s' not found.", user);
+    return -1;
+  }
+  status = setuid(pw->pw_uid);
+  if (status != 0) {
+    log_fn(LOG_ERR,"Error setting UID: %s", strerror(errno));
+    return -1;
+  }
+  status = setgid(pw->pw_gid);
+  if (status != 0) {
+    log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
+    return -1;
+  }
+
+  return 0;
+#endif
+}
+
+int switch_group(char *group) {
+#ifndef MS_WINDOWS
+  int status;
+  struct group *gr = NULL;
+
+  gr = getgrnam(group);
+  if(gr == NULL) {
+    log_fn(LOG_ERR,"Group '%s' not found.", group);
+    return -1;
+  }
+  status = setgid(gr->gr_gid);
+  if (status != 0) {
+    log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
+    return -1;
+  }
+
+  return 0;
+#endif
 }
 
 int tor_main(int argc, char *argv[]) {
@@ -801,6 +848,19 @@ int tor_main(int argc, char *argv[]) {
 
   /* write our pid to the pid file */
   write_pidfile(options.PidFile);
+
+  /* now that we've written the pid file, we can switch the user and group */
+  if(options.User) {
+    if(switch_user(options.User) != 0) {
+      return -1;
+    }
+  }
+
+  if(options.Group) {
+    if(switch_group(options.Group) != 0) {
+      return -1;
+    }
+  }
 
   if(options.RunAsDaemon)
     daemonize();

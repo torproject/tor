@@ -162,6 +162,8 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
     config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
     config_compare(list, "ORBindAddress",  CONFIG_TYPE_STRING, &options->ORBindAddress) ||
+    config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User) ||
+    config_compare(list, "Group",           CONFIG_TYPE_STRING, &options->Group) ||
 
     /* int options */
     config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
