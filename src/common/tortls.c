@@ -40,7 +40,7 @@ static tor_tls_context *global_tls_context=NULL;
 
 
 /* These functions are declared in crypto.c but not exported. */
-RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
+EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
 
 static int
@@ -66,8 +66,8 @@ tor_tls_get_error(tor_tls *tls, int r, int extra)
 static int always_accept_verify_cb(int preverify_ok, 
                                    X509_STORE_CTX *x509_ctx)
 {
-  /* XXXX Actually, this needs to get more complicated.  But for now,
-     XXXX always accept peer certs. */
+  /* We always accept peer certs and complete the handshake.  We don't validate
+   * them until later. */
   return 1;
 }
 
@@ -78,63 +78,84 @@ static int always_accept_verify_cb(int preverify_ok,
 int
 tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
 {
-  RSA *_rsa = NULL;
   time_t start_time, end_time;
   EVP_PKEY *pkey = NULL;
   X509 *x509 = NULL;
   X509_NAME *name = NULL;
   BIO *out = NULL;
   int nid;
+  int r;
   
   start_time = time(NULL);
 
   assert(rsa);
-  if (!(_rsa = RSAPrivateKey_dup(_crypto_pk_env_get_rsa(rsa))))
-    /* XXX we have a crypto_pk_dup_key(), it's a shame we can't use it here */
-    return -1;
-  if (!(pkey = EVP_PKEY_new()))
-    return -1;
-  if (!(EVP_PKEY_assign_RSA(pkey, _rsa)))
+  if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa)))
     return -1;
   if (!(x509 = X509_new()))
-    return -1;
+    goto error;
   if (!(X509_set_version(x509, 2)))
-    return -1;
+    goto error;
   if (!(ASN1_INTEGER_set(X509_get_serialNumber(x509), (long)start_time)))
-    return -1;
+    goto error;
   
   if (!(name = X509_NAME_new()))
-    return -1;
-  if ((nid = OBJ_txt2nid("organizationName")) != NID_undef) return -1;
+    goto error;
+  if ((nid = OBJ_txt2nid("organizationName")) != NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   "TOR", -1, -1, 0))) return -1;
-  if ((nid = OBJ_txt2nid("commonName")) != NID_undef) return -1;
+                                   "TOR", -1, -1, 0))) goto error;
+  if ((nid = OBJ_txt2nid("commonName")) != NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   nickname, -1, -1, 0))) return -1;
+                                   nickname, -1, -1, 0))) goto error;
   
   if (!(X509_set_issuer_name(x509, name)))
-    return -1;
+    goto error;
   if (!(X509_set_subject_name(x509, name)))
-    return -1;
+    goto error;
   if (!X509_time_adj(X509_get_notBefore(x509),0,&start_time))
-    return -1;
+    goto error;
   end_time = start_time + 24*60*60*365;
   if (!X509_time_adj(X509_get_notAfter(x509),0,&end_time))
-    return -1;
+    goto error;
   if (!X509_set_pubkey(x509, pkey))
-    return -1;
+    goto error;
   if (!X509_sign(x509, pkey, EVP_sha1()))
-    return -1;
+    goto error;
   if (!(out = BIO_new_file(certfile, "w")))
-    return -1;
+    goto error;
   if (!(PEM_write_bio_X509(out, x509)))
-    return -1;
-  BIO_free(out);
-  X509_free(x509);
-  EVP_PKEY_free(pkey);
-  X509_NAME_free(name);
-  return 0;
+    goto error;
+  
+  r = 0;
+  goto done;
+ error:
+  r = -1;
+ done:
+  if (out)
+    BIO_free(out);
+  if (x509)
+    X509_free(x509);
+  if (pkey)
+    EVP_PKEY_free(pkey);
+  if (name)
+    X509_NAME_free(name);
+  return r;
 }
+
+
+#ifdef EVERYONE_HAS_AES
+/* Everybody is running OpenSSL 0.9.7 or later, so no backward compatibiliy
+ * is needed. */
+#define CIPHER_LIST TLS1_TXT_DHE_RSA_WITH_AES_128_SHA
+#elif defined(TLS1_TXT_DHE_RSA_WITH_AES_128_SHA)
+/* Some people are running OpenSSL before 0.9.7, but we aren't.  
+ * We can support AES and 3DES.
+ */
+#define CIPHER_LIST (TLS1_TXT_DHE_RSA_WITH_AES_128_SHA \
+		     SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
+#else
+/* We're running OpenSSL before 0.9.7. We only support 3DES. */
+#define CIPHER_LIST SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA
+#endif
 
 /* Create a new TLS context.  If we are going to be using it as a
  * server, it must have isServer set to true, certfile set to a
@@ -145,36 +166,39 @@ int
 tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
 {
   crypto_dh_env_t *dh = NULL;
-  RSA *_rsa = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context *result;
 
   assert((certfile && rsa) || (!certfile && !rsa));
 
   result = tor_malloc(sizeof(tor_tls_context));
+  result->ctx = NULL;
+#ifdef EVERYONE_HAS_AES
+  /* Tell OpenSSL to only use TLS1 */
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
-    return -1;
-  /* XXXX This should use AES, but we'll need to require OpenSSL 0.9.7 first */
-  if (!SSL_CTX_set_cipher_list(result->ctx, TLS1_TXT_DHE_DSS_WITH_RC4_128_SHA))
-                               /* TLS1_TXT_DHE_RSA_WITH_AES_128_SHA)) */
-    return -1;
+    goto error;
+#else
+  /* Tell OpenSSL to use SSL3 or TLS1 but not SSL2. */
+  if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
+    goto error;
+  SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
+#endif
+  if (!SSL_CTX_set_cipher_list(result->ctx, CIPHER_LIST))
+    goto error;
   if (certfile && !SSL_CTX_use_certificate_file(result->ctx,certfile,
                                                 SSL_FILETYPE_PEM))
-    return -1;
+    goto error;
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   if (rsa) {
-    if (!(_rsa = RSAPrivateKey_dup(_crypto_pk_env_get_rsa(rsa))))
-      return -1;
-    if (!(pkey = EVP_PKEY_new()))
-      return -1;
-    if (!EVP_PKEY_assign_RSA(pkey, _rsa))
-      return -1;
+    if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa)))
+      goto error;
     if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
-      return -1;
+      goto error;
     EVP_PKEY_free(pkey);
+    pkey = NULL;
     if (certfile) {
       if (!SSL_CTX_check_private_key(result->ctx))
-        return -1;
+        goto error;
     }
   }
   dh = crypto_dh_new();
@@ -185,6 +209,18 @@ tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
   
   global_tls_context = result;
   return 0;
+
+ error:
+  if (pkey)
+    EVP_PKEY_free(pkey);
+  if (dh)
+    crypto_dh_free(dh);
+  if (result && result->ctx)
+    SSL_CTX_free(result->ctx);
+  if (result)
+    free(result);
+
+  return -1;
 }
 
 /* Create a new TLS object from a TLS context, a filedescriptor, and 

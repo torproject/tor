@@ -139,6 +139,28 @@ RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
   return (RSA*)env->key;
 }
 
+EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env)
+{
+  RSA *key = NULL;
+  EVP_PKEY *pkey = NULL;
+  if (env->type != CRYPTO_PK_RSA)
+    return NULL;
+  assert(env->key);
+  if (!(key = RSAPrivateKey_dup((RSA*)env->key)))
+    goto error;
+  if (!(pkey = EVP_PKEY_new()))
+    goto error;
+  if (!(EVP_PKEY_assign_RSA(pkey, key)))
+    goto error;
+  return pkey;
+ error:
+  if (pkey)
+    EVP_PKEY_free(pkey);
+  if (key)
+    RSA_free(key);
+  return NULL;
+}
+
 crypto_pk_env_t *crypto_new_pk_env(int type)
 {
   RSA *rsa;
