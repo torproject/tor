@@ -98,8 +98,6 @@ void connection_free(connection_t *conn) {
   buf_free(conn->outbuf);
   if(conn->address)
     free(conn->address);
-  if(conn->dest_addr)
-    free(conn->dest_addr);
 
   if(connection_speaks_cells(conn)) {
     directory_set_dirty();
@@ -527,13 +525,6 @@ int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
   return fetch_from_buf(string, len, &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen);
 }
 
-int connection_fetch_from_buf_http(connection_t *conn,
-                                   char *headers_out, int max_headerlen,
-                                   char *body_out, int max_bodylen) {
-  return fetch_from_buf_http(conn->inbuf,&conn->inbuf_datalen,
-                             headers_out, max_headerlen, body_out, max_bodylen);
-}
-
 int connection_find_on_inbuf(char *string, int len, connection_t *conn) {
   return find_on_inbuf(string, len, conn->inbuf, conn->inbuf_datalen);
 }
@@ -780,13 +771,6 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(conn->cpath_layer);
     assert_cpath_layer_ok(conn->cpath_layer);
     /* XXX unchecked, package window, deliver window. */
-  }
-
-  if (conn->type != CONN_TYPE_AP) {
-    assert(!conn->socks_version);
-    assert(!conn->read_username);
-    assert(!conn->dest_addr);
-    assert(!conn->dest_port);
   }
 
   switch(conn->type) 

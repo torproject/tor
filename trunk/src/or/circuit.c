@@ -807,8 +807,9 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   return 0;
 }
 
-/* take the 'extend' cell, pull out addr/port plus the onion skin. Connect
- * to the next hop, and pass it the onion skin in a create cell.
+/* take the 'extend' cell, pull out addr/port plus the onion skin. Make
+ * sure we're connected to the next hop, and pass it the onion skin in
+ * a create cell.
  */
 int circuit_extend(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;

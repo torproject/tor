@@ -126,8 +126,8 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
     *buf_datalen -= write_result;
     *buf_flushlen -= write_result;
     memmove(*buf, *buf+write_result, *buf_datalen);
-//    log_fn(LOG_DEBUG,"flushed %d bytes, %d ready to flush, %d remain.",
-//       write_result,*buf_flushlen,*buf_datalen);
+    log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
+      s,write_result,*buf_flushlen,*buf_datalen);
     return *buf_flushlen;
     /* XXX USE_TLS should change to return write_result like any sane function would */
   }
@@ -254,6 +254,86 @@ int fetch_from_buf_http(char *buf, int *buf_datalen,
   *buf_datalen -= (headerlen+bodylen);
   memmove(buf, buf+headerlen+bodylen, *buf_datalen);
 
+  return 1;
+}
+
+/* There is a (possibly incomplete) socks handshake on *buf, of the
+ * forms
+ *   socks4: "socksheader || username\0".
+ *   socks4a: "socksheader || username\0 || destaddr\0".
+ * If it's a complete and valid handshake, and destaddr fits in addr_out,
+ *   then pull the handshake off the buf, assign to addr_out and port_out,
+ *   and return 1.
+ * If it's invalid or too big, return -1.
+ * Else it's not all there yet, change nothing return 0.
+ */
+int fetch_from_buf_socks(char *buf, int *buf_datalen,
+                         char *addr_out, int max_addrlen,
+                         uint16_t *port_out) {
+  socks4_t *socks4_info;
+  char tmpbuf[512];
+  uint16_t port;
+  enum {socks4, socks4a } socks_prot = socks4a;
+  char *next, *startaddr;
+
+  if(*buf_datalen < sizeof(socks4_t)) /* basic info available? */
+    return 0; /* not yet */
+
+  socks4_info = (socks4_t *)buf;
+
+  if(socks4_info->version != 4) {
+    log_fn(LOG_NOTICE,"Unrecognized version %d.",socks4_info->version);
+    return -1;
+  }
+
+  if(socks4_info->command != 1) { /* not a connect? we don't support it. */
+    log_fn(LOG_NOTICE,"command %d not '1'.",socks4_info->command);
+    return -1;
+  }
+
+  port = ntohs(*(uint16_t*)&socks4_info->destport);
+  if(!port) {
+    log_fn(LOG_NOTICE,"Port is zero.");
+    return -1;
+  }
+
+  if(socks4_info->destip[0] || socks4_info->destip[1] ||
+     socks4_info->destip[2] || !socks4_info->destip[3]) { /* not 0.0.0.x */
+    log_fn(LOG_NOTICE,"destip not in form 0.0.0.x.");
+    sprintf(tmpbuf, "%d.%d.%d.%d", socks4_info->destip[0],
+      socks4_info->destip[1], socks4_info->destip[2], socks4_info->destip[3]);
+    if(max_addrlen <= strlen(tmpbuf)) {
+      log_fn(LOG_DEBUG,"socks4-addr too long.");
+      return -1;
+    }
+    log_fn(LOG_DEBUG,"Successfully read destip (%s)", tmpbuf);
+    socks_prot = socks4;
+  }
+
+  next = memchr(buf+sizeof(socks4_t), 0, *buf_datalen);
+  if(!next) {
+    log_fn(LOG_DEBUG,"Username not here yet.");
+    return 0;
+  }
+
+  startaddr = next+1;
+  if(socks_prot == socks4a) {
+    next = memchr(startaddr, 0, buf+*buf_datalen-startaddr);
+    if(!next) {
+      log_fn(LOG_DEBUG,"Destaddr not here yet.");
+      return 0;
+    }
+    if(max_addrlen <= next-startaddr) {
+      log_fn(LOG_DEBUG,"Destaddr not here yet.");
+      return -1;
+    }
+  }
+  log_fn(LOG_DEBUG,"Everything is here. Success.");
+  *port_out = port; 
+  strcpy(addr_out, socks_prot == socks4 ? tmpbuf : startaddr);
+  *buf_datalen -= (next-buf+1); /* next points to the final \0 on inbuf */
+  memmove(buf, next+1, *buf_datalen);
+//  log_fn(LOG_DEBUG,"buf_datalen is now %d:'%s'",*buf_datalen,buf);
   return 1;
 }
 
