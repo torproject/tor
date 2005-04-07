@@ -351,7 +351,7 @@ void connection_close_immediate(connection_t *conn)
     return;
   }
   if (conn->outbuf_flushlen) {
-    log_fn(LOG_INFO,"fd %d, type %s, state %d, %d bytes on outbuf.",
+    log_fn(LOG_INFO,"fd %d, type %s, state %s, %d bytes on outbuf.",
            conn->s, conn_type_to_string(conn->type),
            conn_state_to_string(conn->type, conn->state),
            (int)conn->outbuf_flushlen);
