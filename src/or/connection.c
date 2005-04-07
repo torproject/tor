@@ -13,78 +13,6 @@ const char connection_c_id[] = "$Id$";
 
 #include "or.h"
 
-/********* START VARIABLES **********/
-
-/** Array of strings to make conn-\>type human-readable. */
-const char *conn_type_to_string[] = {
-  "",            /* 0 */
-  "OP listener", /* 1 */
-  "OP",          /* 2 */
-  "OR listener", /* 3 */
-  "OR",          /* 4 */
-  "Exit",        /* 5 */
-  "App listener",/* 6 */
-  "App",         /* 7 */
-  "Dir listener",/* 8 */
-  "Dir",         /* 9 */
-  "DNS worker",  /* 10 */
-  "CPU worker",  /* 11 */
-  "Control listener", /* 12 */
-  "Control",     /* 13 */
-};
-
-/** Array of string arrays to make {conn-\>type,conn-\>state} human-readable. */
-const char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
-  { NULL }, /* no type associated with 0 */
-  { NULL }, /* op listener, obsolete */
-  { NULL }, /* op, obsolete */
-  { "ready" }, /* or listener, 0 */
-  { "",                         /* OR, 0 */
-    "connect()ing",                 /* 1 */
-    "proxy flushing",               /* 2 */
-    "proxy reading",                /* 3 */
-    "handshaking",                  /* 4 */
-    "open" },                       /* 5 */
-  { "",                          /* exit, 0 */
-    "waiting for dest info",           /* 1 */
-    "connecting",                      /* 2 */
-    "open",                            /* 3 */
-    "resolve failed" },                /* 4 */
-  { "ready" }, /* app listener, 0 */
-  { "", /* 0 */
-    "", /* 1 */
-    "", /* 2 */
-    "", /* 3 */
-    "", /* 4 */
-    "awaiting dest info",         /* app, 5 */
-    "waiting for rendezvous desc",     /* 6 */
-    "waiting for controller",          /* 7 */
-    "waiting for safe circuit",        /* 8 */
-    "waiting for connected",           /* 9 */
-    "waiting for resolve",             /* 10 */
-    "open" },                          /* 11 */
-  { "ready" }, /* dir listener, 0 */
-  { "",                           /* dir, 0 */
-    "connecting",                      /* 1 */
-    "client sending",                  /* 2 */
-    "client reading",                  /* 3 */
-    "awaiting command",                /* 4 */
-    "writing" },                       /* 5 */
-  { "",                    /* dns worker, 0 */
-    "idle",                            /* 1 */
-    "busy" },                          /* 2 */
-  { "",                    /* cpu worker, 0 */
-    "idle",                            /* 1 */
-    "busy with onion",                 /* 2 */
-    "busy with handshake" },           /* 3 */
-  { "ready" }, /* control listener, 0 */
-  { "",                       /* control, 0 */
-    "ready",                           /* 1 */
-    "waiting for authentication", },   /* 2 */
-};
-
-/********* END VARIABLES ************/
-
 static int connection_create_listener(const char *bindaddress,
                                       uint16_t bindport, int type);
 static int connection_init_accepted_conn(connection_t *conn);
@@ -98,6 +26,103 @@ static int connection_process_inbuf(connection_t *conn, int package_partial);
 static int connection_bucket_read_limit(connection_t *conn);
 
 /**************************************************************/
+
+const char *
+conn_type_to_string(int type)
+{
+  static char buf[64];
+  switch (type) {
+    case CONN_TYPE_OR_LISTENER: return "OR listener";
+    case CONN_TYPE_OR: return "OR";
+    case CONN_TYPE_EXIT: return "Exit";
+    case CONN_TYPE_AP_LISTENER: return "App listener";
+    case CONN_TYPE_AP: return "App";
+    case CONN_TYPE_DIR_LISTENER: return "Dir listener";
+    case CONN_TYPE_DIR: return "Dir";
+    case CONN_TYPE_DNSWORKER: return "DNS worker";
+    case CONN_TYPE_CPUWORKER: return "CPU worker";
+    case CONN_TYPE_CONTROL_LISTENER: return "Control listener";
+    case CONN_TYPE_CONTROL: return "Control";
+    default:
+      tor_snprintf(buf, sizeof(buf), "unknown [%d]", type);
+      return buf;
+  }
+}
+
+const char *
+conn_state_to_string(int type, int state) {
+  static char buf[96];
+  switch (type) {
+    case CONN_TYPE_OR_LISTENER:
+    case CONN_TYPE_AP_LISTENER:
+    case CONN_TYPE_DIR_LISTENER:
+    case CONN_TYPE_CONTROL_LISTENER:
+      if (state == LISTENER_STATE_READY)
+        return "ready";
+      break;
+    case CONN_TYPE_OR:
+      switch (state) {
+        case OR_CONN_STATE_CONNECTING: return "connect()ing";
+        case OR_CONN_STATE_PROXY_FLUSHING: return "proxy flushing";
+        case OR_CONN_STATE_PROXY_READING: return "proxy reading";
+        case OR_CONN_STATE_HANDSHAKING: return "proxy reading";
+        case OR_CONN_STATE_OPEN: return "open";
+      }
+      break;
+    case CONN_TYPE_EXIT:
+      switch (state) {
+        case EXIT_CONN_STATE_RESOLVING: return "waiting for dest info";
+        case EXIT_CONN_STATE_CONNECTING: return "connecting";
+        case EXIT_CONN_STATE_OPEN: return "open";
+        case EXIT_CONN_STATE_RESOLVEFAILED: return "resolve failed";
+      }
+      break;
+    case CONN_TYPE_AP:
+      switch (state) {
+        case AP_CONN_STATE_SOCKS_WAIT: return "waiting for dest info";
+        case AP_CONN_STATE_RENDDESC_WAIT: return "waiting for rendezvous desc";
+        case AP_CONN_STATE_CONTROLLER_WAIT: return "waiting for controller";
+        case AP_CONN_STATE_CIRCUIT_WAIT: return "waiting for safe circuit";
+        case AP_CONN_STATE_CONNECT_WAIT: return "waiting for connect";
+        case AP_CONN_STATE_RESOLVE_WAIT: return "waiting for resolve";
+        case AP_CONN_STATE_OPEN: return "open";
+      }
+      break;
+    case CONN_TYPE_DIR:
+      switch (state) {
+        case DIR_CONN_STATE_CONNECTING: return "connecting";
+        case DIR_CONN_STATE_CLIENT_SENDING: return "client sending";
+        case DIR_CONN_STATE_CLIENT_READING: return "cleint reading";
+        case DIR_CONN_STATE_SERVER_COMMAND_WAIT: return "waiting for command";
+        case DIR_CONN_STATE_SERVER_WRITING: return "writing";
+      }
+      break;
+    case CONN_TYPE_DNSWORKER:
+      switch (state) {
+        case DNSWORKER_STATE_IDLE: return "idle";
+        case DNSWORKER_STATE_BUSY: return "busy";
+      }
+      break;
+    case CONN_TYPE_CPUWORKER:
+      switch (state) {
+        case CPUWORKER_STATE_IDLE: return "idle";
+        case CPUWORKER_STATE_BUSY_ONION: return "busy with onion";
+      }
+      break;
+    case CONN_TYPE_CONTROL:
+      switch (state) {
+        case CONTROL_CONN_STATE_OPEN: return "open";
+        case CONTROL_CONN_STATE_NEEDAUTH: return "waiting for authentication";
+      }
+      break;
+  }
+
+  tor_snprintf(buf, sizeof(buf),
+               "unknown state [%d] on unknown [%s] connection",
+               state, conn_type_to_string(type));
+  return buf;
+}
+
 
 /** Allocate space for a new connection_t. This function just initializes
  * conn; you must call connection_add() to link it into the main array.
@@ -325,8 +350,9 @@ void connection_close_immediate(connection_t *conn)
   }
   if (conn->outbuf_flushlen) {
     log_fn(LOG_INFO,"fd %d, type %s, state %d, %d bytes on outbuf.",
-           conn->s, CONN_TYPE_TO_STRING(conn->type),
-           conn->state, (int)conn->outbuf_flushlen);
+           conn->s, conn_type_to_string(conn->type),
+           conn_state_to_string(conn->type, conn->state),
+           (int)conn->outbuf_flushlen);
   }
 
   connection_unregister(conn);
@@ -390,8 +416,9 @@ void connection_expire_held_open(void)
     if (conn->hold_open_until_flushed) {
       tor_assert(conn->marked_for_close);
       if (now - conn->timestamp_lastwritten >= 15) {
-        log_fn(LOG_NOTICE,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %d).",
-               conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
+        log_fn(LOG_NOTICE,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %s).",
+               conn->s, conn_type_to_string(conn->type),
+               conn_state_to_string(conn->type, conn->state));
         conn->hold_open_until_flushed = 0;
       }
     }
@@ -468,7 +495,7 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
     return -1;
   }
 
-  log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string[type], usePort);
+  log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string(type), usePort);
 
   conn->state = LISTENER_STATE_READY;
   connection_start_reading(conn);
@@ -772,7 +799,7 @@ static int retry_listeners(int type, struct config_line_t *cfg,
 
     /* Otherwise, warn the user and relaunch. */
     log_fn(LOG_NOTICE,"We have %d %s(s) open, but we want %d; relaunching.",
-           have, conn_type_to_string[type], want);
+           have, conn_type_to_string(type), want);
   }
 
   listener_close_if_present(type);
