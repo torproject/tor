@@ -125,7 +125,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
     case AP_CONN_STATE_RESOLVE_WAIT:
     case AP_CONN_STATE_CONTROLLER_WAIT:
       log_fn(LOG_INFO,"data from edge while in '%s' state. Leaving it on buffer.",
-                      conn_state_to_string[conn->type][conn->state]);
+             conn_state_to_string(conn->type, conn->state));
       return 0;
   }
   log_fn(LOG_WARN,"Bug: Got unexpected state %d. Closing.",conn->state);

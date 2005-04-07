@@ -1252,11 +1252,8 @@ int save_current_config(void);
 
 /********************************* connection.c ***************************/
 
-#define CONN_TYPE_TO_STRING(t) (((t) < _CONN_TYPE_MIN || (t) > _CONN_TYPE_MAX) ? \
-  "Unknown" : conn_type_to_string[(t)])
-
-extern const char *conn_type_to_string[];
-extern const char *conn_state_to_string[][_CONN_TYPE_MAX+1];
+const char *conn_type_to_string(int type);
+const char *conn_state_to_string(int type, int state);
 
 connection_t *connection_new(int type);
 void connection_unregister(connection_t *conn);

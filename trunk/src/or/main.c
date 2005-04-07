@@ -142,7 +142,7 @@ int connection_add(connection_t *conn) {
   nfds++;
 
   log_fn(LOG_INFO,"new conn type %s, socket %d, nfds %d.",
-      CONN_TYPE_TO_STRING(conn->type), conn->s, nfds);
+      conn_type_to_string(conn->type), conn->s, nfds);
 
   return 0;
 }
@@ -158,7 +158,7 @@ int connection_remove(connection_t *conn) {
   tor_assert(nfds>0);
 
   log_fn(LOG_INFO,"removing socket %d (type %s), nfds now %d",
-         conn->s, CONN_TYPE_TO_STRING(conn->type), nfds-1);
+         conn->s, conn_type_to_string(conn->type), nfds-1);
 
   tor_assert(conn->poll_index >= 0);
   current_index = conn->poll_index;
@@ -358,7 +358,7 @@ conn_read_callback(int fd, short event, void *_conn)
     if (!conn->marked_for_close) {
 #ifndef MS_WINDOWS
       log_fn(LOG_WARN,"Bug: unhandled error on read for %s connection (fd %d); removing",
-             CONN_TYPE_TO_STRING(conn->type), conn->s);
+             conn_type_to_string(conn->type), conn->s);
 #ifdef TOR_FRAGILE
       tor_assert(0);
 #endif
@@ -390,7 +390,7 @@ static void conn_write_callback(int fd, short events, void *_conn)
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it. */
       log_fn(LOG_WARN,"Bug: unhandled error on write for %s connection (fd %d); removing",
-             CONN_TYPE_TO_STRING(conn->type), conn->s);
+             conn_type_to_string(conn->type), conn->s);
 #ifdef TOR_FRAGILE
       tor_assert(0);
 #endif
@@ -431,7 +431,7 @@ static int conn_close_if_marked(int i) {
       log_fn(LOG_INFO,
         "Conn (addr %s, fd %d, type %s, state %d) marked, but wants to flush %d bytes. "
         "(Marked at %s:%d)",
-        conn->address, conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
+        conn->address, conn->s, conn_type_to_string(conn->type), conn->state,
         (int)conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
     if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
@@ -449,7 +449,7 @@ static int conn_close_if_marked(int i) {
     }
     if (connection_wants_to_flush(conn)) {
       log_fn(LOG_NOTICE,"Conn (addr %s, fd %d, type %s, state %d) is being closed, but there are still %d bytes we can't write. (Marked at %s:%d)",
-             conn->address, conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
+             conn->address, conn->s, conn_type_to_string(conn->type), conn->state,
              (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,
              conn->marked_for_close);
     }
@@ -1054,8 +1054,8 @@ dumpstats(int severity) {
   for (i=0;i<nfds;i++) {
     conn = connection_array[i];
     log(severity, "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
-      i, conn->s, conn->type, CONN_TYPE_TO_STRING(conn->type),
-      conn->state, conn_state_to_string[conn->type][conn->state], (int)(now - conn->timestamp_created));
+      i, conn->s, conn->type, conn_type_to_string(conn->type),
+        conn->state, conn_state_to_string(conn->type, conn->state), (int)(now - conn->timestamp_created));
     if (!connection_is_listener(conn)) {
       log(severity,"Conn %d is to '%s:%d'.",i,conn->address, conn->port);
       log(severity,"Conn %d: %d bytes waiting on inbuf (last read %d secs ago)",i,
