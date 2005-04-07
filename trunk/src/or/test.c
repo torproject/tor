@@ -118,7 +118,6 @@ remove_directory(void)
 
 static void
 test_buffers(void) {
-#define MAX_BUF_SIZE 1024*1024
   char str[256];
   char str2[256];
 

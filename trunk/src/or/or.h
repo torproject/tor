@@ -154,7 +154,9 @@
 #define MAX_NICKNAME_LEN 19
 /* Hex digest plus dollar sign. */
 #define MAX_HEX_NICKNAME_LEN (HEX_DIGEST_LEN+1)
-#define MAX_DIR_SIZE 500000
+/** Maximum size, in bytes, for resized buffers. */
+#define MAX_BUF_SIZE ((1<<24)-1)
+#define MAX_DIR_SIZE MAX_BUF_SIZE
 
 /* For http parsing */
 #define MAX_HEADERS_SIZE 50000
