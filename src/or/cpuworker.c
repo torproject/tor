@@ -356,6 +356,30 @@ static void process_pending_task(connection_t *cpuworker) {
     log_fn(LOG_WARN,"assign_to_cpuworker failed. Ignoring.");
 }
 
+#define CPUWORKER_BUSY_TIMEOUT 100 /* seconds */
+
+static void
+cull_wedged_cpuworkers(void) {
+  connection_t **carray;
+  connection_t *conn;
+  int n_conns, i;
+  time_t now = time(NULL);
+
+  get_connection_array(&carray, &n_conns);
+  for (i = 0; i < n_conns; ++i) {
+    conn = carray[i];
+    if (!conn->marked_for_close &&
+        conn->type == CONN_TYPE_CPUWORKER &&
+        conn->state == CPUWORKER_STATE_BUSY_ONION &&
+        conn->timestamp_lastwritten + CPUWORKER_BUSY_TIMEOUT > now) {
+      log_fn(LOG_NOTICE,"Bug: closing wedged cpuworker. Can somebody find the bug?");
+      num_cpuworkers_busy--;
+      num_cpuworkers--;
+      connection_mark_for_close(conn);
+    }
+  }
+}
+
 /** If cpuworker is defined, assert that he's idle, and use him. Else,
  * look for an idle cpuworker and use him. If none idle, queue task onto
  * the pending onion list and return.
@@ -368,6 +392,9 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
   char tag[TAG_LEN];
 
   tor_assert(question_type == CPUWORKER_TASK_ONION);
+
+  cull_wedged_cpuworkers();
+  spawn_enough_cpuworkers();
 
   if (question_type == CPUWORKER_TASK_ONION) {
     circ = task;
