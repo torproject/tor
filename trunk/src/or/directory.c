@@ -60,7 +60,7 @@ char rend_publish_string[] = "/tor/rendezvous/publish";
 char rend_fetch_url[] = "/tor/rendezvous/";
 #endif
 
-#define ALLOW_DIRECTORY_TIME_SKEW 30*60
+#define ALLOW_DIRECTORY_TIME_SKEW 30*60 /* 30 minutes */
 
 /********* END VARIABLES ************/
 
@@ -649,8 +649,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     now = time(NULL);
     delta = now-date_header;
     if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
-      routerinfo_t *router = router_get_by_digest(conn->identity_digest);
-      log_fn((router && router->is_verified) ? LOG_WARN : LOG_INFO,
+      log_fn(router_digest_is_trusted_dir(conn->identity_digest) ? LOG_WARN : LOG_INFO,
              "Received directory with skewed time (server '%s'): we are %d minutes %s, or the directory is %d minutes %s.",
              conn->address,
              abs(delta)/60, delta>0 ? "ahead" : "behind",
