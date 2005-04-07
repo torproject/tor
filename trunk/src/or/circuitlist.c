@@ -34,7 +34,7 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 
 /** DOCDOC This whole section */
 struct orconn_circid_circuit_map_t {
-  SPLAY_ENTRY(orconn_circid_circuit_map_t) node;
+  RB_ENTRY(orconn_circid_circuit_map_t) node;
   connection_t *or_conn;
   uint16_t circ_id;
   circuit_t *circuit;
@@ -51,9 +51,11 @@ static INLINE int compare_orconn_circid_entries(
   else
     return ((int)b->circ_id) - ((int)a->circ_id);
 };
-static SPLAY_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = SPLAY_INITIALIZER(orconn_circid_circuit_map);
-SPLAY_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
-SPLAY_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
+static RB_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = RB_INITIALIZER(orconn_circid_circuit_map);
+RB_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
+RB_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
+
+struct orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
 void
 circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
@@ -79,12 +81,20 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     circ->n_conn = conn;
   }
 
+  if (_last_circid_orconn_ent &&
+      ((old_id == _last_circid_orconn_ent->circ_id &&
+        old_conn == _last_circid_orconn_ent->or_conn) ||
+       (id == _last_circid_orconn_ent->circ_id &&
+        conn == _last_circid_orconn_ent->or_conn))) {
+    _last_circid_orconn_ent = NULL;
+  }
+
   if (old_conn) {
     search.circ_id = old_id;
     search.or_conn = old_conn;
-    found = SPLAY_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+    found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
     if (found) {
-      SPLAY_REMOVE(orconn_circid_tree, &orconn_circid_circuit_map, found);
+      RB_REMOVE(orconn_circid_tree, &orconn_circid_circuit_map, found);
     }
     tor_free(found);
   }
@@ -94,7 +104,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
 
   search.circ_id = id;
   search.or_conn = conn;
-  found = SPLAY_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+  found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
   if (found) {
     found->circuit = circ;
   } else {
@@ -102,7 +112,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     found->circ_id = id;
     found->or_conn = conn;
     found->circuit = circ;
-    SPLAY_INSERT(orconn_circid_tree, &orconn_circid_circuit_map, found);
+    RB_INSERT(orconn_circid_tree, &orconn_circid_circuit_map, found);
   }
 }
 
@@ -291,9 +301,16 @@ circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn) {
 
   tor_assert(conn->type == CONN_TYPE_OR);
 
-  search.circ_id = circ_id;
-  search.or_conn = conn;
-  found = SPLAY_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+  if (_last_circid_orconn_ent &&
+      circ_id == _last_circid_orconn_ent->circ_id &&
+      conn == _last_circid_orconn_ent->or_conn) {
+    found = _last_circid_orconn_ent;
+  } else {
+    search.circ_id = circ_id;
+    search.or_conn = conn;
+    found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+    _last_circid_orconn_ent = found;
+  }
   if (found && found->circuit && !found->circuit->marked_for_close)
     return found->circuit;
 
