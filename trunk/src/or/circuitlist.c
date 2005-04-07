@@ -40,21 +40,18 @@ struct orconn_circid_circuit_map_t {
   circuit_t *circuit;
 };
 
-static int compare_orconn_circid_entries(struct orconn_circid_circuit_map_t *a,
-                                         struct orconn_circid_circuit_map_t *b)
+static INLINE int compare_orconn_circid_entries(
+       struct orconn_circid_circuit_map_t *a,
+       struct orconn_circid_circuit_map_t *b)
 {
   if (a->or_conn < b->or_conn)
     return -1;
   else if (a->or_conn > b->or_conn)
     return 1;
-  else if (a->circ_id < b->circ_id)
-    return -1;
-  else if (a->circ_id > b->circ_id)
-    return 1;
   else
-    return 0;
+    return ((int)b->circ_id) - ((int)a->circ_id);
 };
-SPLAY_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = SPLAY_INITIALIZER(orconn_circid_circuit_map);
+static SPLAY_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = SPLAY_INITIALIZER(orconn_circid_circuit_map);
 SPLAY_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
 SPLAY_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
 
