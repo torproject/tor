@@ -5,10 +5,9 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-Note: This is an attempt to specify Tor as it exists as implemented in
-mid-August, 2004.  It is not recommended that others implement this
-design as it stands; future versions of Tor will implement improved
-protocols.
+Note: This is an attempt to specify Tor as currently implemented.  Future
+versions of Tor will implement improved protocols, and compatibility is not
+guaranteed.
 
 This is not a design document; most design criteria are not examined.  For
 more information on why Tor acts as it does, see tor-design.pdf.
