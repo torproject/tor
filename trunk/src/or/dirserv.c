@@ -357,14 +357,16 @@ dirserv_add_descriptor(const char **desc, const char **msg)
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far in the future; possible clock skew. Not adding.", ri->nickname);
+    log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding.",
+           ri->nickname, (int)((ri->published_on-now)/60));
     *msg = "Rejected: Your clock is set too far in the future, or your timezone is not correct.";
     routerinfo_free(ri);
     *desc = end;
     return -1;
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
-    log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far in the past. Not adding.", ri->nickname);
+    log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding.",
+           ri->nickname, (int)((now-ri->published_on)/60));
     *msg = "Rejected: Server is expired, or your clock is too far in the past, or your timezone is not correct.";
     routerinfo_free(ri);
     *desc = end;

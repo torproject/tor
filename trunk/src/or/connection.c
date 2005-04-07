@@ -44,6 +44,7 @@ conn_type_to_string(int type)
     case CONN_TYPE_CONTROL_LISTENER: return "Control listener";
     case CONN_TYPE_CONTROL: return "Control";
     default:
+      log_fn(LOG_WARN, "Bug: unknown connection type %d", type);
       tor_snprintf(buf, sizeof(buf), "unknown [%d]", type);
       return buf;
   }
@@ -117,6 +118,7 @@ conn_state_to_string(int type, int state) {
       break;
   }
 
+  log_fn(LOG_WARN, "Bug: unknown connection state %d (type %d)", state, type);
   tor_snprintf(buf, sizeof(buf),
                "unknown state [%d] on unknown [%s] connection",
                state, conn_type_to_string(type));

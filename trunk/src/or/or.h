@@ -1165,7 +1165,7 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
 /********************************* circuitlist.c ***********************/
 
-extern const char *circuit_state_to_string[];
+const char *circuit_state_to_string(int state);
 enum which_conn_changed_t { P_CONN_CHANGED=1, N_CONN_CHANGED=0 };
 void circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
                                connection_t *conn,
