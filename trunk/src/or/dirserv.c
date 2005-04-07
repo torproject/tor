@@ -12,7 +12,7 @@ const char dirserv_c_id[] = "$Id$";
  **/
 
 /** How far in the future do we allow a router to get? (seconds) */
-#define ROUTER_ALLOW_SKEW (30*60)
+#define ROUTER_ALLOW_SKEW (60*60*12) /* 12 hours */
 /** How many seconds do we wait before regenerating the directory? */
 #define DIR_REGEN_SLACK_TIME 10
 
