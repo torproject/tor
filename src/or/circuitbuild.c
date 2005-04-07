@@ -185,7 +185,7 @@ circuit_dump_details(int severity, circuit_t *circ, int poll_index,
                      const char *type, int this_circid, int other_circid) {
   log(severity,"Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d:",
       poll_index, type, this_circid, other_circid, circ->state,
-      circuit_state_to_string[circ->state], (int)circ->timestamp_created);
+      circuit_state_to_string(circ->state), (int)circ->timestamp_created);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
     circuit_log_path(severity, circ);
   }

@@ -15,14 +15,6 @@ const char circuitlist_c_id[] = "$Id$";
 
 /********* START VARIABLES **********/
 
-/** Array of strings to make circ-\>state human-readable */
-const char *circuit_state_to_string[] = {
-  "doing handshakes",        /* 0 */
-  "processing the onion",    /* 1 */
-  "connecting to firsthop",  /* 2 */
-  "open"                     /* 3 */
-};
-
 /** A global list of all circuits at this hop. */
 circuit_t *global_circuitlist=NULL;
 
@@ -153,6 +145,22 @@ void circuit_close_all_marked(void)
       /* Advance tmp. */
       tmp = tmp->next;
     }
+  }
+}
+
+/** Function to make circ-\>state human-readable */
+const char *
+circuit_state_to_string(int state) {
+  static buf[64];
+  switch (state) {
+    case CIRCUIT_STATE_BUILDING: return "doing handshakes";
+    case CIRCUIT_STATE_ONIONSKIN_PENDING: return "processing the onion";
+    case CIRCUIT_STATE_OR_WAIT: return "connecting to firsthop";
+    case CIRCUIT_STATE_OPEN: return "open";
+    default:
+      log_fn(LOG_WARN, "Bug: unknown circuit state %d", state);
+      tor_snprintf(buf, sizeof(buf), "unknown state [%d], state");
+      return buf;
   }
 }
 

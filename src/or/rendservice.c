@@ -988,7 +988,7 @@ rend_service_dump_stats(int severity)
         continue;
       }
       log(severity, "  Intro point at %s: circuit is %s",nickname,
-          circuit_state_to_string[circ->state]);
+          circuit_state_to_string(circ->state));
     }
   }
 }
