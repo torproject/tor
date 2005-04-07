@@ -1,3 +1,12 @@
+Changes in version 0.0.9.8 - 2005-04-07
+  o Bugfixes on 0.0.9.x:
+    - We have a bug that I haven't found yet. Sometimes, very rarely,
+      cpuworkers get stuck in the 'busy' state, even though the cpuworker
+      thinks of itself as idle. This meant that no new circuits ever got
+      established. Here's a workaround to kill any cpuworker that's been
+      busy for more than 100 seconds.
+
+
 Changes in version 0.0.9.7 - 2005-04-01
   o Bugfixes on 0.0.9.x:
     - Fix another race crash bug (thanks to Glenn Fink for reporting).
