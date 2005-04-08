@@ -496,7 +496,8 @@ void switch_logs_debug(void)
 
 #ifdef HAVE_EVENT_SET_LOG_CALLBACK
 static const char *suppress_msg = NULL;
-void libevent_logging_callback(int severity, const char *msg)
+static void
+libevent_logging_callback(int severity, const char *msg)
 {
   if (suppress_msg && strstr(msg, suppress_msg))
     return;
