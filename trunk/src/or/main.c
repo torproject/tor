@@ -322,14 +322,11 @@ void connection_start_writing(connection_t *conn) {
            (int)conn->s);
 }
 
-/** Close all connections that have been schedule to get closed */
+/** Close all connections that have been scheduled to get closed */
 static void
 close_closeable_connections(void)
 {
   int i;
-  if (!smartlist_len(closeable_connection_lst))
-    return;
-
   for (i = 0; i < smartlist_len(closeable_connection_lst); ) {
     connection_t *conn = smartlist_get(closeable_connection_lst, i);
     if (conn->poll_index < 0) {
