@@ -179,6 +179,12 @@ R  o client software not upload descriptor until:
      o you can set a bit for not-being-an-OR.
 
  Arguable
+  - Bug: Why do idle cpuworkers sometimes get thought of as busy?
+  - IP-based blacklisting of which servers get recommended by dirservers.
+
+Log more info:
+Apr 05 23:19:54.222 [notice] dirserv_add_descriptor(): Router with nickname 'Anon321' has invalid address '192.168.0.2'. Not adding.
+
 N - tor-resolve script should use socks5 to get better error messages.
 N - Script to try pulling bytes through slow-seeming servers so they can
     notice that they might be fast.
@@ -210,6 +216,9 @@ N - Code cleanup
 
 
   No
+Todo: when you connect and get a guy you didn't expect, tell him hey i wasn't
+expecting you i'm going to go now bye, instead of just hanging up. This lets
+him let that he's doing something funny.
   - choose entry node to be one you're already connected to?
   - Convert man pages to pod, or whatever's right.
   - support hostnames as well as IPs for authdirservers.
