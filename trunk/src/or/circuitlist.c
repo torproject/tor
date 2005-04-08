@@ -159,7 +159,7 @@ circuit_state_to_string(int state) {
     case CIRCUIT_STATE_OPEN: return "open";
     default:
       log_fn(LOG_WARN, "Bug: unknown circuit state %d", state);
-      tor_snprintf(buf, sizeof(buf), "unknown state [%d], state");
+      tor_snprintf(buf, sizeof(buf), "unknown state [%d]", state);
       return buf;
   }
 }
