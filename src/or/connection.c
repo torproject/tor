@@ -542,7 +542,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   /* length of the remote address. Must be an int, since accept() needs that. */
   int remotelen = 256;
   char tmpbuf[INET_NTOA_BUF_LEN];
-  tor_assert(remotelen >= sizeof(struct sockaddr_in));
+  tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
 
   news = accept(conn->s,(struct sockaddr *)&addrbuf,&remotelen);
