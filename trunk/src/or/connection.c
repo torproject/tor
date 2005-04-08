@@ -1265,6 +1265,40 @@ int connection_handle_write(connection_t *conn) {
   return 0;
 }
 
+/* DOCDOC */
+void _connection_controller_force_write(connection_t *conn)
+{
+  /* XXX This is hideous code duplication, but raising it seems a little
+   * tricky for now.  Think more about this one.   We only call it for
+   * EVENT_ERR_MSG, so messing with buckets a little isn't such a big problem.
+   */
+  int result;
+  tor_assert(conn);
+  tor_assert(!conn->tls);
+  tor_assert(conn->type == CONN_TYPE_CONTROL);
+  if (conn->marked_for_close || conn->s < 0)
+    return;
+
+  result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
+  if (result < 0) {
+    connection_close_immediate(conn); /* Don't flush; connection is dead. */
+    connection_mark_for_close(conn);
+    return;
+  }
+
+  if (result > 0 && !is_local_IP(conn->addr)) { /* remember it */
+    rep_hist_note_bytes_written(result, time(NULL));
+    global_write_bucket -= result;
+  }
+
+  if (!connection_wants_to_flush(conn)) { /* it's done flushing */
+    if (connection_finished_flushing(conn) < 0) {
+      /* already marked */
+      return;
+    }
+  }
+}
+
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
  * outbuf, and ask it to start writing.
  */

@@ -1283,6 +1283,7 @@ int connection_fetch_from_buf(char *string, size_t len, connection_t *conn);
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn);
+void _connection_controller_force_write(connection_t *conn);
 void connection_write_to_buf(const char *string, size_t len, connection_t *conn);
 
 connection_t *connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port);

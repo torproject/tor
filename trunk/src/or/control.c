@@ -330,6 +330,9 @@ send_control_event(uint16_t event, uint32_t len, const char *body)
         conns[i]->state == CONTROL_CONN_STATE_OPEN &&
         conns[i]->event_mask & (1<<event)) {
       send_control_message(conns[i], CONTROL_CMD_EVENT, buflen, buf);
+      if (event == EVENT_ERR_MSG) {
+        _connection_controller_force_write(conns[i]);
+      }
     }
   }
 
