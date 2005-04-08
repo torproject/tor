@@ -151,7 +151,7 @@ void circuit_close_all_marked(void)
 /** Function to make circ-\>state human-readable */
 const char *
 circuit_state_to_string(int state) {
-  static buf[64];
+  static char buf[64];
   switch (state) {
     case CIRCUIT_STATE_BUILDING: return "doing handshakes";
     case CIRCUIT_STATE_ONIONSKIN_PENDING: return "processing the onion";
