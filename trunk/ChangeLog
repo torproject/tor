@@ -1,3 +1,81 @@
+Changes in version 0.1.0.3-rc - 2005-04-08
+  o Improvements on 0.1.0.2-rc:
+    - Client now retries when streams end early for 'hibernating' or
+      'resource limit' reasons, rather than failing them.
+    - More automated handling for dirserver operators:
+      - Automatically approve nodes running 0.1.0.2-rc or later,
+        now that the the reachability detection stuff is working.
+      - Now we allow two unverified servers with the same nickname
+        but different keys. But if a nickname is verified, only that
+        nickname+key are allowed.
+      - If you're an authdirserver connecting to an address:port,
+        and it's not the OR you were expecting, forget about that
+        descriptor. If he *was* the one you were expecting, then forget
+        about all other descriptors for that address:port.
+      - Allow servers to publish descriptors from 12 hours in the future.
+        Corollary: only whine about clock skew from the dirserver if
+        he's a trusted dirserver (since now even verified servers could
+        have quite wrong clocks).
+    - Adjust maximum skew and age for rendezvous descriptors: let skew
+      be 48 hours rather than 90 minutes.
+    - Efficiency improvements:
+      - Keep a big splay tree of (circid,orconn)->circuit mappings to make
+        it much faster to look up a circuit for each relay cell.
+      - Remove most calls to assert_all_pending_dns_resolves_ok(),
+        since they're eating our cpu on exit nodes.
+      - Stop wasting time doing a case insensitive comparison for every
+        dns name every time we do any lookup. Canonicalize the names to
+        lowercase and be done with it.
+    - Start sending 'truncated' cells back rather than destroy cells,
+      if the circuit closes in front of you. This means we won't have
+      to abandon partially built circuits.
+    - Only warn once per nickname from add_nickname_list_to_smartlist
+      per failure, so an entrynode or exitnode choice that's down won't
+      yell so much.
+    - Put a note in the torrc about abuse potential with the default
+      exit policy.
+    - Revise control spec and implementation to allow all log messages to
+      be sent to controller with their severities intact (suggested by
+      Matt Edman). Update TorControl to handle new log event types.
+    - Provide better explanation messages when controller's POSTDESCRIPTOR
+      fails.
+    - Stop putting nodename in the Platform string in server descriptors.
+      It doesn't actually help, and it is confusing/upsetting some people.
+
+  o Bugfixes on 0.1.0.2-rc:
+    - We were printing the host mask wrong in exit policies in server
+      descriptors. This isn't a critical bug though, since we were still
+      obeying the exit policy internally.
+    - Fix Tor when compiled with libevent but without pthreads: move
+      connection_unregister() from _connection_free() to
+      connection_free().
+    - Fix an assert trigger (already fixed in 0.0.9.x): when we have
+      the rare mysterious case of accepting a conn on 0.0.0.0:0, then
+      when we look through the connection array, we'll find any of the
+      cpu/dnsworkers. This is no good.
+
+  o Bugfixes on 0.0.9.x:
+    - Fix possible bug on threading platforms (e.g. win32) which was
+      leaking a file descriptor whenever a cpuworker or dnsworker died.
+    - When using preferred entry or exit nodes, ignore whether the
+      circuit wants uptime or capacity. They asked for the nodes, they
+      get the nodes.
+    - chdir() to your datadirectory at the *end* of the daemonize process,
+      not the beginning. This was a problem because the first time you
+      run tor, if your datadir isn't there, and you have runasdaemon set
+      to 1, it will try to chdir to it before it tries to create it. Oops.
+    - Handle changed router status correctly when dirserver reloads
+      fingerprint file. We used to be dropping all unverified descriptors
+      right then. The bug was hidden because we would immediately
+      fetch a directory from another dirserver, which would include the
+      descriptors we just dropped.
+    - When we're connecting to an OR and he's got a different nickname/key
+      than we were expecting, only complain loudly if we're an OP or a
+      dirserver. Complaining loudly to the OR admins just confuses them.
+    - Tie MAX_DIR_SIZE to MAX_BUF_SIZE, so now directory sizes won't get
+      artificially capped at 500kB.
+
+
 Changes in version 0.1.0.2-rc - 2005-04-01
   o Bugfixes on 0.1.0.1-rc:
     - Fixes on reachability detection:
@@ -203,6 +281,15 @@ Changes in version 0.1.0.1-rc - 2005-03-28
       ORPort that is actually an apache running ssl.
     - Add "opt hibernating 1" to server descriptor to make it clearer
       whether the server is hibernating.
+
+
+Changes in version 0.0.9.8 - 2005-04-07
+  o Bugfixes on 0.0.9.x:
+    - We have a bug that I haven't found yet. Sometimes, very rarely,
+      cpuworkers get stuck in the 'busy' state, even though the cpuworker
+      thinks of itself as idle. This meant that no new circuits ever got
+      established. Here's a workaround to kill any cpuworker that's been
+      busy for more than 100 seconds.
 
 
 Changes in version 0.0.9.7 - 2005-04-01
