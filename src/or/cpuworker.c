@@ -375,7 +375,7 @@ cull_wedged_cpuworkers(void) {
     if (!conn->marked_for_close &&
         conn->type == CONN_TYPE_CPUWORKER &&
         conn->state == CPUWORKER_STATE_BUSY_ONION &&
-        conn->timestamp_lastwritten + CPUWORKER_BUSY_TIMEOUT > now) {
+        conn->timestamp_lastwritten + CPUWORKER_BUSY_TIMEOUT < now) {
       log_fn(LOG_NOTICE,"Bug: closing wedged cpuworker. Can somebody find the bug?");
       num_cpuworkers_busy--;
       num_cpuworkers--;
