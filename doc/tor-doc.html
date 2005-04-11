@@ -253,8 +253,8 @@ href="#client-or-server">the section above</a>.
 </p>
 
 <p>To set up a Tor server, do the following steps after installing Tor.
-(These instructions are Unix-centric; but Tor 0.0.9.5 is running as a
-server on Windows now as well.)
+(These instructions are Unix-centric; but Tor 0.0.9.5 and later is running 
+as a server on Windows now as well.)
 </p>
 
 <ul>
@@ -329,7 +329,7 @@ Optionally, we recommend the following steps as well:
 </p>
 
 <ul>
-<li>(Unix only) 5. Make a separate user to run the server. If you
+<li>6 (Unix only). Make a separate user to run the server. If you
 installed the deb or the rpm, this is already done. Otherwise,
 you can do it by hand. (The Tor server doesn't need to be run as
 root, so it's good practice to not run it as root. Running as a
@@ -337,20 +337,20 @@ root, so it's good practice to not run it as root. Running as a
 detect user name. If you're the paranoid sort, feel free to <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put Tor
 into a chroot jail</a>.)
-<li>6. Decide what exit policy you want. By default your server allows
+<li>7. Decide what exit policy you want. By default your server allows
 access to many popular services, but we restrict some (such as port 25)
 due to abuse potential. You might want an exit policy that is
 less restrictive or more restrictive; edit your torrc appropriately.
 If you choose a particularly open exit policy, you might want to make
 sure your upstream or ISP is ok with that choice.
-<li>7. If you installed from source, you may find the initscripts in
+<li>8. If you installed from source, you may find the initscripts in
 contrib/tor.sh or contrib/torctl useful if you want to set up Tor to
 start at boot.
-<li>8. Consider setting your hostname to 'anonymous' or
+<li>9. Consider setting your hostname to 'anonymous' or
 'proxy' or 'tor-proxy' if you can, so when other people see the address
 in their web logs or whatever, they will more quickly understand what's
 going on.
-<li>9. If you're not running anything else on port 80 or port 443,
+<li>10. If you're not running anything else on port 80 or port 443,
 please consider setting up port-forwarding and advertising these
 low-numbered ports as your Tor server. This will help allow users behind
 particularly restrictive firewalls to access the Tor network. Win32
@@ -434,4 +434,3 @@ have to restart the process).
 
 </body>
 </html>
-
