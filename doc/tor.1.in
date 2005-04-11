@@ -182,7 +182,7 @@ ports will contain only high-uptime nodes, to reduce the chance that a
 node will go down before the stream is finished.
 .TP
 \fBMapAddress\fR \fIaddress\fR \fInewaddress\fR
-When a request for address arrives to Tor, it will rewrite it to newaddress before processing it. For example, if you always want connections to www.indymedia.org to exit via yourtorserver, use "MapAddress www.indymedia.org www.indymedia.org.yourtorserver.exit".
+When a request for address arrives to Tor, it will rewrite it to newaddress before processing it. For example, if you always want connections to www.indymedia.org to exit via \fItorserver\fR (where \fItorserver\fR is the nickname of the server), use "MapAddress www.indymedia.org www.indymedia.org.torserver.exit".
 .TP
 \fBNewCircuitPeriod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
