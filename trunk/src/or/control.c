@@ -834,10 +834,9 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
     break;
   case 1:
     send_control_done(conn);
-    return 0;
+    break;
   }
 
-  send_control_done(conn);
   return 0;
 }
 static int
