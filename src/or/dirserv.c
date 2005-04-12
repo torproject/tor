@@ -1025,11 +1025,11 @@ dirserv_orconn_tls_done(const char *address,
         or_port == ri->or_port) {
       /* We have a router at the same address! */
       if (strcasecmp(ri->nickname, nickname_rcvd)) {
-        log_fn(LOG_WARN, "Dropping descriptor: nickname '%s' does not match nickname '%s' in cert from %s:%d",
+        log_fn(LOG_NOTICE, "Dropping descriptor: nickname '%s' does not match nickname '%s' in cert from %s:%d",
                ri->nickname, nickname_rcvd, address, or_port);
         drop = 1;
       } else if (memcmp(ri->identity_digest, digest_rcvd, DIGEST_LEN)) {
-        log_fn(LOG_WARN, "Dropping descriptor: identity key does not match key in cert from %s:%d",
+        log_fn(LOG_NOTICE, "Dropping descriptor: identity key does not match key in cert from %s:%d",
                address, or_port);
         drop = 1;
       }
