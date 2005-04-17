@@ -319,6 +319,8 @@ send_control_event(uint16_t event, uint32_t len, const char *body)
   size_t buflen;
   char *buf;
 
+  tor_assert(event >= _EVENT_MIN && event <= _EVENT_MAX);
+
   buflen = len + 2;
   buf = tor_malloc_zero(buflen);
   set_uint16(buf, htons(event));
@@ -1159,19 +1161,27 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 void
 control_event_logmsg(int severity, const char *msg)
 {
-  int oldlog = EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE) &&
+  static int sending_logmsg=0;
+  int oldlog, event;
+
+  if (sending_logmsg)
+    return;
+
+  oldlog = EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE) &&
     (severity == LOG_NOTICE || severity == LOG_WARN || severity == LOG_ERR);
-  int event = log_severity_to_event(severity);
+  event = log_severity_to_event(severity);
 
   if (event<0 || !EVENT_IS_INTERESTING(event))
     event = 0;
 
   if (oldlog || event) {
     size_t len = strlen(msg);
+    sending_logmsg = 1;
     if (event)
       send_control_event(event, (uint32_t)(len+1), msg);
     if (oldlog)
       send_control_event(EVENT_LOG_OBSOLETE, (uint32_t)(len+1), msg);
+    sending_logmsg = 0;
   }
 }
 
@@ -1228,4 +1238,3 @@ init_cookie_authentication(int enabled)
 
   return 0;
 }
-
