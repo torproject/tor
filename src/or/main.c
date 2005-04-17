@@ -925,6 +925,11 @@ static int do_main_loop(void) {
   for (;;) {
     if (nt_service_is_stopped())
       return 0;
+
+#ifndef MS_WINDOWS
+    /* Make it easier to tell whether libevent failure is our fault or not. */
+    errno = 0;
+#endif
     /* poll until we have an event, or the second ends */
     loop_result = event_dispatch();
 
