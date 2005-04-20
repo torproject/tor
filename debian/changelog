@@ -12,8 +12,10 @@ tor (0.1.0.3-rc-200504080730-1) UNRELEASED; urgency=low
   * Don't depend on python anymore - tor-resolve is C now.
   * If "with-dmalloc" is in DEB_BUILD_OPTIONS we build against libdmalloc4.
     Of course the -dev package needs to be installed.
+  * Update README.Debian to say that upstream now does have a default
+    for DataDirectory.
 
- -- Peter Palfrader <weasel@debian.org>  Fri,  8 Apr 2005 09:33:45 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 20 Apr 2005 17:27:38 +0200
 
 tor (0.0.9.8-1) unstable; urgency=low
 
