@@ -6,7 +6,7 @@ into Debian:
 - RunAsDaemon is enabled by default.
 - PidFile is set to /var/run/tor/tor.pid.  No default upstream.
 - default logging goes to /var/log/tor/log instead of stdout.
-- DataDirectory is set to /var/lib/tor by default.  No default upstream.
+- DataDirectory is set to /var/lib/tor by default.  Uses $HOME/.tor upstream.
 
 
 -- 
