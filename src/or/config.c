@@ -128,6 +128,7 @@ static config_var_t config_vars[] = {
   VAR("FirewallPorts",       CSV,      FirewallPorts,        "80,443"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
+  VAR("NoPublish",           BOOL,     NoPublish,            "0"),
   VAR("Group",               STRING,   Group,                NULL),
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
   VAR("HttpProxy",           STRING,   HttpProxy,            NULL),
@@ -1327,6 +1328,11 @@ options_validate(or_options_t *options)
 
   if (options->AuthoritativeDir && options->ClientOnly) {
     log(LOG_WARN, "Running as authoritative directory, but ClientOnly also set.");
+    result = -1;
+  }
+
+  if (options->AuthoritativeDir && options->NoPublish) {
+    log(LOG_WARN, "You cannot set both AuthoritativeDir and NoPublish.");
     result = -1;
   }
 
