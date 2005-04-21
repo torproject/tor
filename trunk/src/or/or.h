@@ -1010,6 +1010,7 @@ typedef struct {
   int DirPort; /**< Port to listen on for directory connections. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
+  int NoPublish; /**< Boolean: should we never publish a descriptor? */
   int ConnLimit; /**< Requested maximum number of simultaneous connections. */
   int _ConnLimit; /**< Actual maximum number of simultaneous connections. */
   int IgnoreVersion; /**< If true, run no matter what versions of Tor the

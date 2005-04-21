@@ -472,17 +472,22 @@ int proxy_mode(or_options_t *options) {
   return (options->SocksPort != 0 || options->SocksBindAddress);
 }
 
-/** Decide if we're a publishable server or just a client. We are a server if:
+/** Decide if we're a publishable server. We are a publishable server if:
+ * - We don't have the ClientOnly option set
+ * and
+ * - We don't have the NoPublish option set
+ * and
+ * - We have ORPort set
+ * and
+ * - We believe we are reachable from the outside; or
  * - We have the AuthoritativeDirectory option set.
- * or
- * - We don't have the ClientOnly option set; and
- * - We have ORPort set; and
- * - We believe we are reachable from the outside.
  */
 static int decide_if_publishable_server(time_t now) {
   or_options_t *options = get_options();
 
   if (options->ClientOnly)
+    return 0;
+  if (options->NoPublish)
     return 0;
   if (!server_mode(options))
     return 0;
