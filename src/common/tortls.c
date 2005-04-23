@@ -850,8 +850,8 @@ void _check_no_tls_errors(const char *fname, int line)
 {
   if (ERR_peek_error() == 0)
     return;
-  log_fn(LOG_ERR, "Unhandled OpenSSL errors found at %s:%d: ",
+  log_fn(LOG_WARN, "Unhandled OpenSSL errors found at %s:%d: ",
          fname, line);
-  tls_log_errors(LOG_ERR, NULL);
+  tls_log_errors(LOG_WARN, NULL);
 }
 
