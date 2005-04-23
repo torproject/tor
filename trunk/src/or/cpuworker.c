@@ -356,12 +356,12 @@ static void process_pending_task(connection_t *cpuworker) {
     log_fn(LOG_WARN,"assign_to_cpuworker failed. Ignoring.");
 }
 
-#define CPUWORKER_BUSY_TIMEOUT 100 /* seconds */
+#define CPUWORKER_BUSY_TIMEOUT 3600 /* seconds */
 
 /** We have a bug that I can't find. Sometimes, very rarely, cpuworkers
  * get stuck in the 'busy' state, even though the cpuworker process
  * thinks of itself as idle. I don't know why. But here's a workaround
- * to kill any cpuworker that's been busy for more than 100 seconds. */
+ * to kill any cpuworker that's been busy for more than 3600 seconds. */
 static void
 cull_wedged_cpuworkers(void) {
   connection_t **carray;
