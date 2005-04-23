@@ -226,7 +226,7 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
          (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
          (int)at_most);
 
-  assert_no_tls_errors();
+  check_no_tls_errors();
   r = tor_tls_read(tls, buf->mem+buf->datalen, at_most);
   if (r<0)
     return r;

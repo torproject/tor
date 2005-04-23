@@ -284,6 +284,7 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
 int connection_tls_continue_handshake(connection_t *conn) {
+  check_no_tls_errors();
   switch (tor_tls_handshake(conn->tls)) {
     case TOR_TLS_ERROR:
     case TOR_TLS_CLOSE:
@@ -346,6 +347,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   conn->state = OR_CONN_STATE_OPEN;
   connection_watch_events(conn, POLLIN);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
+  check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an old OP. */
     if (server_mode(options)) { /* I'm an OR; good. */
       conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
@@ -356,6 +358,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     }
   }
   /* Okay; the other side is an OR or a post-0.0.8 OP (with a cert). */
+  check_no_tls_errors();
   if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, sizeof(nickname))) {
     log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
            conn->address, conn->port);
@@ -364,6 +367,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be router '%s'",
          conn->address, conn->port, nickname);
 
+  check_no_tls_errors();
   if (tor_tls_verify(conn->tls, &identity_rcvd) < 0) {
     log_fn(LOG_WARN,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
@@ -376,6 +380,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     return -1;
   }
 #endif
+  check_no_tls_errors();
   log_fn(LOG_DEBUG,"The router's cert is valid.");
   crypto_pk_get_digest(identity_rcvd, digest_rcvd);
 

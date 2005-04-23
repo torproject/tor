@@ -803,14 +803,12 @@ unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
 
 /** Implement assert_no_tls_errors: If there are any pending OpenSSL
  * errors, log an error message and assert(0). */
-void _assert_no_tls_errors(const char *fname, int line)
+void _check_no_tls_errors(const char *fname, int line)
 {
   if (ERR_peek_error() == 0)
     return;
   log_fn(LOG_ERR, "Unhandled OpenSSL errors found at %s:%d: ",
          fname, line);
   tls_log_errors(LOG_ERR, NULL);
-
-  tor_assert(0);
 }
 
