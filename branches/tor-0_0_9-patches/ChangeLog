@@ -1,3 +1,10 @@
+Changes in version 0.0.9.9 - 2005-04-23
+  o Bugfixes on 0.0.9.x:
+    - If unofficial Tor clients connect and send weird TLS certs, our
+      Tor server triggers an assert. This release contains a minimal
+      backport from the broader fix that we put into 0.1.0.4-rc.
+
+
 Changes in version 0.0.9.8 - 2005-04-07
   o Bugfixes on 0.0.9.x:
     - We have a bug that I haven't found yet. Sometimes, very rarely,
