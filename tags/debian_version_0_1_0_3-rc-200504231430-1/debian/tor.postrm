@@ -1,0 +1,11 @@
+#!/bin/sh -e
+
+if [ "$1" = "purge" ]; then
+    # logs have to be removed according to policy.
+    rm -rf /var/log/tor/
+    rm -rf /var/lib/tor/
+fi
+
+#DEBHELPER#
+
+exit 0
