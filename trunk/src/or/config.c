@@ -56,6 +56,7 @@ static config_abbrev_t config_abbrevs[] = {
   PLURAL(LongLivedPort),
   PLURAL(HiddenServiceNode),
   PLURAL(HiddenServiceExcludeNode),
+  PLURAL(NumCpu),
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
   PLURAL(StrictEntryNode),
