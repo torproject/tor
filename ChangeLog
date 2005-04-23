@@ -1,3 +1,23 @@
+Changes in version 0.1.0.4-rc - 2005-04-23
+  o Bugfixes:
+    - If unofficial Tor clients connect and send weird TLS certs, our
+      Tor server triggers an assert. Stop asserting, and start handling
+      TLS errors better in other situations too.
+    - When the controller asks us to tell it about all the debug-level
+      logs, it turns out we were generating debug-level logs while
+      telling it about them, which turns into a bad loop. Now keep
+      track of whether you're sending a debug log to the controller,
+      and don't log when you are.
+    - Fix the "postdescriptor" feature of the controller interface: on
+      non-complete success, only say "done" once.
+  o Features:
+    - Clients are now willing to load balance over up to 2mB, not 1mB,
+      of advertised bandwidth capacity.
+    - Add a NoPublish config option, so you can be a server (e.g. for
+      testing running Tor servers in other Tor networks) without
+      publishing your descriptor to the primary dirservers.
+
+
 Changes in version 0.1.0.3-rc - 2005-04-08
   o Improvements on 0.1.0.2-rc:
     - Client now retries when streams end early for 'hibernating' or
@@ -281,6 +301,13 @@ Changes in version 0.1.0.1-rc - 2005-03-28
       ORPort that is actually an apache running ssl.
     - Add "opt hibernating 1" to server descriptor to make it clearer
       whether the server is hibernating.
+
+
+Changes in version 0.0.9.9 - 2005-04-23
+  o Bugfixes on 0.0.9.x:
+    - If unofficial Tor clients connect and send weird TLS certs, our
+      Tor server triggers an assert. This release contains a minimal
+      backport from the broader fix that we put into 0.1.0.4-rc.
 
 
 Changes in version 0.0.9.8 - 2005-04-07
