@@ -378,6 +378,7 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
 int connection_tls_continue_handshake(connection_t *conn) {
+  check_no_tls_errors();
   switch (tor_tls_handshake(conn->tls)) {
     case TOR_TLS_ERROR:
     case TOR_TLS_CLOSE:
@@ -442,16 +443,19 @@ connection_tls_finish_handshake(connection_t *conn) {
   conn->state = OR_CONN_STATE_OPEN;
   connection_watch_events(conn, EV_READ);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
+  check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) {
     log_fn(LOG_INFO,"Peer didn't send a cert! Closing.");
     /* XXX we should handle this case rather than just closing. */
     return -1;
   }
+  check_no_tls_errors();
   if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, sizeof(nickname))) {
     log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
            conn->address, conn->port);
     return -1;
   }
+  check_no_tls_errors();
   log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be router '%s'",
          conn->address, conn->port, nickname);
 
@@ -460,6 +464,7 @@ connection_tls_finish_handshake(connection_t *conn) {
            nickname, conn->address, conn->port);
     return -1;
   }
+  check_no_tls_errors();
 #if 0
   if (tor_tls_check_lifetime(conn->tls, LOOSE_CERT_ALLOW_SKEW)<0) {
     log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a very highly skewed clock, or an expired certificate.  Closing.",

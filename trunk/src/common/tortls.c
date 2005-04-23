@@ -251,12 +251,12 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
   goto done;
  error:
-  tls_log_errors(LOG_WARN, "generating certificate");
   if (x509) {
     X509_free(x509);
     x509 = NULL;
   }
  done:
+  tls_log_errors(LOG_WARN, "generating certificate");
   if (sign_pkey)
     EVP_PKEY_free(sign_pkey);
   if (pkey)
@@ -421,13 +421,18 @@ tor_tls_new(int sock, int isServer, int use_no_cert)
   tor_assert(global_tls_context); /* make sure somebody made it first */
   ctx = use_no_cert ? global_tls_context->client_only_ctx
     : global_tls_context->ctx;
-  if (!(result->ssl = SSL_new(ctx)))
+  if (!(result->ssl = SSL_new(ctx))) {
+    tls_log_errors(LOG_WARN, "generating TLS context");
+    tor_free(result);
     return NULL;
+  }
   result->socket = sock;
   SSL_set_fd(result->ssl, sock);
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;
+  /* Not expected to get called. */
+  tls_log_errors(LOG_WARN, "generating TLS context");
   return result;
 }
 
@@ -603,7 +608,9 @@ int
 tor_tls_peer_has_cert(tor_tls *tls)
 {
   X509 *cert;
-  if (!(cert = SSL_get_peer_certificate(tls->ssl)))
+  cert = SSL_get_peer_certificate(tls->ssl);
+  tls_log_errors(LOG_WARN, "getting peer certificate");
+  if (!cert)
     return 0;
   X509_free(cert);
   return 1;
@@ -621,6 +628,7 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, size_t buflen)
   X509_NAME *name = NULL;
   int nid;
   int lenout;
+  int r = -1;
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl))) {
     log_fn(LOG_WARN, "Peer has no certificate");
@@ -643,13 +651,15 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, size_t buflen)
       log_fn(LOG_WARN, "  (Maybe it is not really running Tor at its advertised OR port.)");
     goto error;
   }
-  X509_free(cert);
 
-  return 0;
+  r = 0;
+
  error:
   if (cert)
     X509_free(cert);
-  return -1;
+
+  tls_log_errors(LOG_WARN, "getting peer certificate nickname");
+  return r;
 }
 
 static void log_cert_lifetime(X509 *cert, const char *problem)
@@ -688,6 +698,8 @@ static void log_cert_lifetime(X509 *cert, const char *problem)
   log_fn(LOG_WARN, "(certificate lifetime runs from %s through %s. Your time is %s.)",s1,s2,mytime);
 
  end:
+  /* Not expected to get invoked */
+  tls_log_errors(LOG_WARN, "getting certificate lifetime");
   if (bio)
     BIO_free(bio);
   if (s1)
@@ -797,6 +809,8 @@ tor_tls_check_lifetime(tor_tls *tls, int tolerance)
  done:
   if (cert)
     X509_free(cert);
+  /* Not expected to get invoked */
+  tls_log_errors(LOG_WARN, "checking certificate lifetime");
 
   return r;
 }
@@ -830,16 +844,14 @@ unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
   return BIO_number_written(SSL_get_wbio(tls->ssl));
 }
 
-/** Implement assert_no_tls_errors: If there are any pending OpenSSL
+/** Implement check_no_tls_errors: If there are any pending OpenSSL
  * errors, log an error message and assert(0). */
-void _assert_no_tls_errors(const char *fname, int line)
+void _check_no_tls_errors(const char *fname, int line)
 {
   if (ERR_peek_error() == 0)
     return;
   log_fn(LOG_ERR, "Unhandled OpenSSL errors found at %s:%d: ",
          fname, line);
   tls_log_errors(LOG_ERR, NULL);
-
-  tor_assert(0);
 }
 
