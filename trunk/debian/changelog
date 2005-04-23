@@ -1,4 +1,4 @@
-tor (0.1.0.3-rc-200504080730-1) UNRELEASED; urgency=low
+tor (0.1.0.3-rc-200504231430-1) UNRELEASED; urgency=low
 
   * CVS snapshot: 2005-04-08 07:30 UTC.
   * Add a watch file.
@@ -15,7 +15,7 @@ tor (0.1.0.3-rc-200504080730-1) UNRELEASED; urgency=low
   * Update README.Debian to say that upstream now does have a default
     for DataDirectory.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 20 Apr 2005 17:27:38 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat, 23 Apr 2005 16:32:37 +0200
 
 tor (0.0.9.8-1) unstable; urgency=low
 
