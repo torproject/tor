@@ -528,12 +528,17 @@ tor_tls_handshake(tor_tls *tls)
   tor_assert(tls);
   tor_assert(tls->ssl);
   tor_assert(tls->state == TOR_TLS_ST_HANDSHAKE);
+  check_no_tls_errors();
   if (tls->isServer) {
     r = SSL_accept(tls->ssl);
   } else {
     r = SSL_connect(tls->ssl);
   }
   r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO);
+  if (ERR_peek_error() != 0) {
+    tls_log_errors(LOG_WARN, "handshaking");
+    return TOR_TLS_ERROR;
+  }
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN;
   }
