@@ -263,7 +263,7 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   } else {
     *buf_flushlen -= write_result;
     log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
-           s,write_result,(int)*buf_flushlen,(int)buf->datalen);
+           s,write_result,(int)*buf_flushlen,(int)buf->datalen-write_result);
     buf_remove_from_front(buf, write_result);
 
     return write_result;
