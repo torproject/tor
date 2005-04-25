@@ -440,8 +440,6 @@ connection_tls_finish_handshake(connection_t *conn) {
   int severity = (authdir_mode(options) || !server_mode(options))
                  ? LOG_WARN : LOG_INFO;
 
-  conn->state = OR_CONN_STATE_OPEN;
-  connection_watch_events(conn, EV_READ);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) {
@@ -542,8 +540,9 @@ connection_tls_finish_handshake(connection_t *conn) {
   }
 
   directory_set_dirty();
+  conn->state = OR_CONN_STATE_OPEN;
+  connection_watch_events(conn, EV_READ);
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
-  /* Note the success */
   rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
   control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED);
   return 0;
