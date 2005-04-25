@@ -568,27 +568,27 @@ static void run_connection_housekeeping(int i, time_t now) {
       now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     if (!connection_state_is_open(conn)) {
-      log_fn(LOG_INFO,"Expiring non-open OR connection to %d (%s:%d).",
-             i,conn->address, conn->port);
+      log_fn(LOG_INFO,"Expiring non-open OR connection to fd %d (%s:%d).",
+             conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (we_are_hibernating() && !circuit_get_by_conn(conn) &&
                !buf_datalen(conn->outbuf)) {
-      log_fn(LOG_INFO,"Expiring non-used OR connection to %d (%s:%d) [Hibernating or exiting].",
-             i,conn->address, conn->port);
+      log_fn(LOG_INFO,"Expiring non-used OR connection to fd %d (%s:%d) [Hibernating or exiting].",
+             conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (!clique_mode(options) && !circuit_get_by_conn(conn) &&
                (!router || !server_mode(options) || !router_is_clique_mode(router))) {
-      log_fn(LOG_INFO,"Expiring non-used OR connection to %d (%s:%d) [Not in clique mode].",
-             i,conn->address, conn->port);
+      log_fn(LOG_INFO,"Expiring non-used OR connection to fd %d (%s:%d) [Not in clique mode].",
+             conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (
          now >= conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
          now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
-      log_fn(LOG_NOTICE,"Expiring stuck OR connection to %d (%s:%d). (%d bytes to flush; %d seconds since last write)",
-             i, conn->address, conn->port,
+      log_fn(LOG_NOTICE,"Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to flush; %d seconds since last write)",
+             conn->s, conn->address, conn->port,
              (int)buf_datalen(conn->outbuf),
              (int)(now-conn->timestamp_lastwritten));
       connection_mark_for_close(conn);
