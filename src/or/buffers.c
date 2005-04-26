@@ -12,11 +12,11 @@ const char buffers_c_id[] = "$Id$";
 
 #include "or.h"
 
-#undef SENTINALS
+#undef SENTINELS
 #undef CHECK_AFTER_RESIZE
 
-#ifdef SENTINALS
-/* If SENTINALS is defined, check for attempts to write beyond the
+#ifdef SENTINELS
+/* If SENTINELS is defined, check for attempts to write beyond the
  * end/before the start of the buffer.
  */
 #define START_MAGIC 0x70370370u
@@ -49,7 +49,7 @@ struct buf_t {
  * than this size. */
 #define MIN_BUF_SHRINK_SIZE (16*1024)
 
-static void peek_from_buf(char *string, size_t string_len, buf_t *buf);
+static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf);
 
 static void buf_normalize(buf_t *buf)
 {
@@ -1039,7 +1039,7 @@ void assert_buf_ok(buf_t *buf)
   tor_assert(buf->magic == BUFFER_MAGIC);
   tor_assert(buf->mem);
   tor_assert(buf->datalen <= buf->len);
-#ifdef SENTINALS
+#ifdef SENTINELS
   tor_assert(get_uint32(buf->mem - 4) == START_MAGIC);
   tor_assert(get_uint32(buf->mem + buf->len) == END_MAGIC);
 #endif
