@@ -1059,6 +1059,7 @@ typedef struct {
   char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any */
   uint32_t HttpsProxyAddr; /**< Parsed IPv4 addr for https proxy, if any */
   uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any */
+  char *HttpsProxyAuthenticator; /** username:password string, if any */
 
   struct config_line_t *DirServers; /**< List of configuration lines
                                      * for directory servers. */
