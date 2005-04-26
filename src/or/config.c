@@ -134,6 +134,7 @@ static config_var_t config_vars[] = {
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
   VAR("HttpProxy",           STRING,   HttpProxy,            NULL),
   VAR("HttpsProxy",          STRING,   HttpsProxy,           NULL),
+  VAR("HttpsProxyAuthenticator",STRING,HttpsProxyAuthenticator,NULL),
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
@@ -342,8 +343,6 @@ options_act(void) {
     }
     set_exit_redirects(sl);
   }
-
-  /* Start backgrounding the process, if requested. */
 
   /* Finish backgrounding the process */
   if (options->RunAsDaemon) {
@@ -1509,6 +1508,13 @@ options_validate(or_options_t *options)
     }
     if (options->HttpsProxyPort == 0) { /* give it a default */
       options->HttpsProxyPort = 443;
+    }
+  }
+
+  if (options->HttpsProxyAuthenticator) {
+    if (strlen(options->HttpsProxyAuthenticator) >= 48) {
+      log(LOG_WARN, "HttpsProxyAuthenticator is too long (>= 48 chars).");
+      result = -1;
     }
   }
 
