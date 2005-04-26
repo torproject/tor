@@ -122,9 +122,8 @@ test_buffers(void) {
   char str2[256];
 
   buf_t *buf;
-  buf_t *buf2;
 
-  int s, i, j, eof;
+  int j;
 
   /****
    * buf_new
@@ -179,7 +178,6 @@ test_buffers(void) {
   test_eq(buf_capacity(buf), 256);
   fetch_from_buf(str2, 254, buf);
   test_memeq(str+1, str2, 254);
-  printf("%d, %d, %d\n", (int)buf, buf_capacity(buf), buf_datalen(buf));
   test_eq(buf_capacity(buf), 256);
   assert_buf_ok(buf);
   write_to_buf(str, 32, buf);
@@ -230,6 +228,7 @@ test_buffers(void) {
     test_memeq(str2, str, 255);
   }
 
+#if 0
   /****
    * read_to_buf
    ****/
@@ -289,6 +288,7 @@ test_buffers(void) {
   test_eq(buf_capacity(buf), MAX_BUF_SIZE);
   test_eq(buf_datalen(buf), 256-6-32);
   test_eq(eof, 1);
+#endif
 
   buf_free(buf);
 }
