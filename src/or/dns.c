@@ -139,15 +139,11 @@ static void purge_expired_resolves(uint32_t now) {
     log(LOG_DEBUG,"Forgetting old cached resolve (expires %lu)", (unsigned long)resolve->expire);
     if (resolve->state == CACHE_STATE_PENDING) {
       log_fn(LOG_WARN,"Bug: Expiring a dns resolve that's still pending. Forgot to cull it?");
-#ifdef TOR_FRAGILE
-      tor_assert(0);
-#endif
+      tor_fragile_assert();
     }
     if (resolve->pending_connections) {
       log_fn(LOG_WARN, "Closing pending connections on expiring DNS resolve!");
-#ifdef TOR_FRAGILE
-      tor_assert(0);
-#endif
+      tor_fragile_assert();
       while (resolve->pending_connections) {
         pend = resolve->pending_connections;
         resolve->pending_connections = pend->next;
@@ -439,9 +435,7 @@ void dns_cancel_pending_resolve(char *address) {
   if (!resolve->pending_connections) {
     /* XXX this should never trigger, but sometimes it does */
     log_fn(LOG_WARN,"Bug: Address '%s' is pending but has no pending connections!", address);
-#ifdef TOR_FRAGILE
-    tor_assert(0);
-#endif
+    tor_fragile_assert();
     return;
   }
   tor_assert(resolve->pending_connections);
@@ -637,10 +631,8 @@ int connection_dns_process_inbuf(connection_t *conn) {
   tor_assert(conn->type == CONN_TYPE_DNSWORKER);
 
   if (conn->state != DNSWORKER_STATE_BUSY && buf_datalen(conn->inbuf)) {
-    log_fn(LOG_WARN,"Bug: read data (%d bytes) from an idle dns worker.  Please report.", (int)buf_datalen(conn->inbuf));
-#ifdef TOR_FRAGILE
-    tor_assert(0);
-#endif
+    log_fn(LOG_WARN,"Bug: read data (%d bytes) from an idle dns worker (address '%s'.  Please report.", (int)buf_datalen(conn->inbuf), conn->address);
+    tor_fragile_assert();
     return 0;
   }
   if (buf_datalen(conn->inbuf) < 5) /* entire answer available? */

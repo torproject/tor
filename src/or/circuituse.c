@@ -731,9 +731,7 @@ circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
         default:
           log_fn(LOG_WARN,"Bug: unexpected purpose %d when cannibalizing a general circ.",
                  purpose);
-#ifdef TOR_FRAGILE
-          tor_assert(0);
-#endif
+          tor_fragile_assert();
           return NULL;
       }
       return circ;

@@ -148,9 +148,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       break;
     default:
       log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
-#ifdef TOR_FRAGILE
-      tor_assert(0);
-#endif
+      tor_fragile_assert();
       return -1;
   }
   return 0;

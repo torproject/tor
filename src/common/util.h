@@ -23,7 +23,7 @@
 #include <time.h>
 #endif
 
-/** Replace assert() with a variant that sends failures to the log before
+/* Replace assert() with a variant that sends failures to the log before
  * calling assert() normally.
  */
 #ifdef NDEBUG
@@ -46,6 +46,11 @@
    abort();  /* unreached */                                  \
  } } while (0)
 #endif
+
+/** Define this if you want Tor to crash when any problem comes up,
+ * so you can get a coredump and track things down. */
+// #define tor_fragile_assert() tor_assert(0)
+#define tor_fragile_assert()
 
 /* Memory management */
 void *_tor_malloc(const char *file, const int line, size_t size);
