@@ -382,6 +382,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
 void rend_client_desc_here(char *query) {
   connection_t *conn;
   rend_cache_entry_t *entry;
+  time_t now = time(NULL);
 
   while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                                  AP_CONN_STATE_RENDDESC_WAIT, query))) {
@@ -391,6 +392,13 @@ void rend_client_desc_here(char *query) {
        * valid entry from before which we should reuse */
       log_fn(LOG_INFO,"Rend desc is usable. Launching circuits.");
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+
+      /* restart their timeout values, so they get a fair shake at
+       * connecting to the hidden service. */
+      conn->timestamp_created = now;
+      conn->timestamp_lastread = now;
+      conn->timestamp_lastwritten = now;
+
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
         log_fn(LOG_WARN,"attaching to a rend circ failed. Closing conn.");
