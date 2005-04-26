@@ -136,7 +136,8 @@ static void purge_expired_resolves(uint32_t now) {
    */
   while (oldest_cached_resolve && (oldest_cached_resolve->expire < now)) {
     resolve = oldest_cached_resolve;
-    log(LOG_DEBUG,"Forgetting old cached resolve (expires %lu)", (unsigned long)resolve->expire);
+    log(LOG_DEBUG,"Forgetting old cached resolve (address %s, expires %lu)",
+        resolve->address, (unsigned long)resolve->expire);
     if (resolve->state == CACHE_STATE_PENDING) {
       log_fn(LOG_WARN,"Bug: Expiring a dns resolve ('%s') that's still pending. Forgot to cull it?", resolve->address);
       tor_fragile_assert();
