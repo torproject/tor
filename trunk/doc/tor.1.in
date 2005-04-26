@@ -76,6 +76,12 @@ rather than connecting directly to any directory servers.
 If set, Tor will make all its OR (SSL) connections through this host:port,
 via HTTP CONNECT, rather than connecting directly to servers.
 .TP
+\fBHttpsProxyAuthenticator\fR \fIusername:password\fP
+If defined, Tor will use this username:password for Basic Https proxy
+authentication, as in RFC 2617. This is currently the only form of
+Https proxy authentication that Tor supports; feel free to submit a
+patch if you want it to support others.
+.TP
 \fBKeepalivePeriod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive
 cell on open connections every NUM seconds. (Default: 5 minutes.)
