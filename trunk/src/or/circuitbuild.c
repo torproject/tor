@@ -820,9 +820,7 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
     routelen = 4;
   else {
     log_fn(LOG_WARN,"Bug: unhandled purpose %d", purpose);
-#ifdef TOR_FRAGILE
-    tor_assert(0);
-#endif
+    tor_fragile_assert();
     return -1;
   }
 #endif
@@ -1138,9 +1136,7 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
       return r;
   }
   log_fn(LOG_WARN,"Bug: unhandled purpose %d", purpose);
-#ifdef TOR_FRAGILE
-  tor_assert(0);
-#endif
+  tor_fragile_assert();
   return NULL;
 }
 

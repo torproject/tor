@@ -146,10 +146,6 @@
 #define cell_t tor_cell_t
 #endif
 
-/** Define this if you want Tor to crash when any problem comes up,
- * so you can get a coredump and track things down. */
-#undef TOR_FRAGILE
-
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 19
 /* Hex digest plus dollar sign. */

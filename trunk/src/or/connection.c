@@ -270,9 +270,7 @@ void connection_about_to_close_connection(connection_t *conn)
   if (CONN_IS_EDGE(conn)) {
     if (!conn->has_sent_end) {
       log_fn(LOG_WARN,"Harmless bug: Edge connection (marked at %s:%d) hasn't sent end yet?", conn->marked_for_close_file, conn->marked_for_close);
-#ifdef TOR_FRAGILE
-      tor_assert(0);
-#endif
+      tor_fragile_assert();
     }
   }
 
@@ -345,9 +343,7 @@ void connection_close_immediate(connection_t *conn)
   assert_connection_ok(conn,0);
   if (conn->s < 0) {
     log_fn(LOG_WARN,"Bug: Attempt to close already-closed connection.");
-#ifdef TOR_FRAGILE
-    tor_assert(0);
-#endif
+    tor_fragile_assert();
     return;
   }
   if (conn->outbuf_flushlen) {
@@ -380,9 +376,7 @@ _connection_mark_for_close(connection_t *conn, int line, const char *file)
     log(LOG_WARN, "Duplicate call to connection_mark_for_close at %s:%d"
         " (first at %s:%d)", file, line, conn->marked_for_close_file,
         conn->marked_for_close);
-#ifdef TOR_FRAGILE
-    tor_assert(0);
-#endif
+    tor_fragile_assert();
     return;
   }
 
@@ -1572,9 +1566,7 @@ static int connection_process_inbuf(connection_t *conn, int package_partial) {
       return connection_control_process_inbuf(conn);
     default:
       log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
-#ifdef TOR_FRAGILE
-      tor_assert(0);
-#endif
+      tor_fragile_assert();
       return -1;
   }
 }
@@ -1607,9 +1599,7 @@ static int connection_finished_flushing(connection_t *conn) {
       return connection_control_finished_flushing(conn);
     default:
       log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
-#ifdef TOR_FRAGILE
-      tor_assert(0);
-#endif
+      tor_fragile_assert();
       return -1;
   }
 }
@@ -1633,9 +1623,7 @@ static int connection_finished_connecting(connection_t *conn)
       return connection_dir_finished_connecting(conn);
     default:
       log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
-#ifdef TOR_FRAGILE
-      tor_assert(0);
-#endif
+      tor_fragile_assert();
       return -1;
   }
 }
@@ -1658,9 +1646,7 @@ static int connection_reached_eof(connection_t *conn)
       return connection_control_reached_eof(conn);
     default:
       log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
-#ifdef TOR_FRAGILE
-      tor_assert(0);
-#endif
+      tor_fragile_assert();
       return -1;
   }
 }
