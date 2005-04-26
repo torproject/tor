@@ -80,7 +80,9 @@ via HTTP CONNECT, rather than connecting directly to servers.
 If defined, Tor will use this username:password for Basic Https proxy
 authentication, as in RFC 2617. This is currently the only form of
 Https proxy authentication that Tor supports; feel free to submit a
-patch if you want it to support others.
+patch if you want it to support others. You may want to set FascistFirewall
+to restrict the set of ports you might try to connect to, if your Https
+proxy only allows connecting to certain ports.
 .TP
 \fBKeepalivePeriod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive
