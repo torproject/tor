@@ -25,12 +25,12 @@ const char buffers_c_id[] = "$Id$";
 #define GUARDED_MEM(m) ((m)+4)
 #define ALLOC_LEN(ln) ((ln)+8)
 #define SET_GUARDS(m, ln) \
-  do { set_uint32((m)-4, START_MAGIC); set_uint32((m)+ln, END_MAGIC); }while(0)
+  do { set_uint32((m)-4,START_MAGIC); set_uint32((m)+ln,END_MAGIC); } while (0)
 #else
 #define RAW_MEM(m) (m)
 #define GUARDED_MEM(m) (m)
 #define ALLOC_LEN(ln) (ln)
-#define SET_GUARDS(m,ln) do {} while(0)
+#define SET_GUARDS(m,ln) do {} while (0)
 #endif
 
 #define BUFFER_MAGIC 0xB0FFF312u
@@ -75,7 +75,6 @@ static INLINE char *_buf_end(buf_t *buf)
   char *end = buf->mem + buf->len;
   return (next < end) ? next : (next - buf->len);
 }
-
 
 /** If the pointer <b>cp</b> has passed beyond the end of the buffer, wrap it
  * around. */
@@ -449,7 +448,6 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
   }
 }
 
-
 /** Write data from <b>buf</b> to the socket <b>s</b>.  Write at most
  * <b>*buf_flushlen</b> bytes, decrement <b>*buf_flushlen</b> by
  * the number of bytes actually written, and remove the written bytes
@@ -508,7 +506,6 @@ flush_buf_tls_impl(tor_tls *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
          r,(int)*buf_flushlen,(int)buf->datalen);
   return r;
 }
-
 
 /** As flush_buf, but writes data to a TLS connection.
  */

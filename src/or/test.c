@@ -156,7 +156,7 @@ test_buffers(void) {
   memset(str2, 0, sizeof(str2));
   /* Okay, now we should be 512 bytes into the 4096-byte buffer.  If we add
    * another 3584 bytes, we hit the end. */
-  for(j=0;j<15;++j) {
+  for (j=0;j<15;++j) {
     write_to_buf(str, 256, buf);
   }
   assert_buf_ok(buf);
@@ -164,7 +164,7 @@ test_buffers(void) {
   fetch_from_buf(str2, 56, buf);
   test_eq(buf_datalen(buf), 3840);
   test_memeq(str+200, str2, 56);
-  for(j=0;j<15;++j) {
+  for (j=0;j<15;++j) {
     memset(str2, 0, sizeof(str2));
     fetch_from_buf(str2, 256, buf);
     test_memeq(str, str2, 256);
@@ -229,7 +229,6 @@ test_buffers(void) {
     fetch_from_buf(str2, 255,buf);
     test_memeq(str2, str, 255);
   }
-
 
   /****
    * read_to_buf

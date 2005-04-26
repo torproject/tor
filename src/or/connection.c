@@ -125,7 +125,6 @@ conn_state_to_string(int type, int state) {
   return buf;
 }
 
-
 /** Allocate space for a new connection_t. This function just initializes
  * conn; you must call connection_add() to link it into the main array.
  *
