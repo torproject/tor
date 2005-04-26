@@ -132,26 +132,122 @@ test_buffers(void) {
   if (!(buf = buf_new()))
     test_fail();
 
-  test_eq(buf_capacity(buf), 512*1024);
+  test_eq(buf_capacity(buf), 4096);
   test_eq(buf_datalen(buf), 0);
+
+  /****
+   * General pointer frobbing
+   */
+  for (j=0;j<256;++j) {
+    str[j] = (char)j;
+  }
+  write_to_buf(str, 256, buf);
+  write_to_buf(str, 256, buf);
+  test_eq(buf_datalen(buf), 512);
+  fetch_from_buf(str2, 200, buf);
+  test_memeq(str, str2, 200);
+  test_eq(buf_datalen(buf), 312);
+  memset(str2, 0, sizeof(str2));
+
+  fetch_from_buf(str2, 256, buf);
+  test_memeq(str+200, str2, 56);
+  test_memeq(str, str2+56, 200);
+  test_eq(buf_datalen(buf), 56);
+  memset(str2, 0, sizeof(str2));
+  /* Okay, now we should be 512 bytes into the 4096-byte buffer.  If we add
+   * another 3584 bytes, we hit the end. */
+  for(j=0;j<15;++j) {
+    write_to_buf(str, 256, buf);
+  }
+  assert_buf_ok(buf);
+  test_eq(buf_datalen(buf), 3896);
+  fetch_from_buf(str2, 56, buf);
+  test_eq(buf_datalen(buf), 3840);
+  test_memeq(str+200, str2, 56);
+  for(j=0;j<15;++j) {
+    memset(str2, 0, sizeof(str2));
+    fetch_from_buf(str2, 256, buf);
+    test_memeq(str, str2, 256);
+  }
+  test_eq(buf_datalen(buf), 0);
+  buf_free(buf);
+
+  /* Okay, now make sure growing can work. */
+  buf = buf_new_with_capacity(16);
+  test_eq(buf_capacity(buf), 16);
+  write_to_buf(str+1, 255, buf);
+  test_eq(buf_capacity(buf), 256);
+  fetch_from_buf(str2, 254, buf);
+  test_memeq(str+1, str2, 254);
+  printf("%d, %d, %d\n", (int)buf, buf_capacity(buf), buf_datalen(buf));
+  test_eq(buf_capacity(buf), 256);
+  assert_buf_ok(buf);
+  write_to_buf(str, 32, buf);
+  test_eq(buf_capacity(buf), 256);
+  assert_buf_ok(buf);
+  write_to_buf(str, 256, buf);
+  assert_buf_ok(buf);
+  test_eq(buf_capacity(buf), 512);
+  test_eq(buf_datalen(buf), 33+256);
+  fetch_from_buf(str2, 33, buf);
+  test_eq(*str2, str[255]);
+
+  test_memeq(str2+1, str, 32);
+  test_eq(buf_capacity(buf), 512);
+  test_eq(buf_datalen(buf), 256);
+  fetch_from_buf(str2, 256, buf);
+  test_memeq(str, str2, 256);
+
+  /* now try shrinking: case 1. */
+  buf_free(buf);
+  buf = buf_new_with_capacity(33668);
+  for (j=0;j<67;++j) {
+    write_to_buf(str,255, buf);
+  }
+  test_eq(buf_capacity(buf), 33668);
+  test_eq(buf_datalen(buf), 17085);
+  for (j=0; j < 40; ++j) {
+    fetch_from_buf(str2, 255,buf);
+    test_memeq(str2, str, 255);
+  }
+
+  /* now try shrinking: case 2. */
+  buf_free(buf);
+  buf = buf_new_with_capacity(33668);
+  for (j=0;j<67;++j) {
+    write_to_buf(str,255, buf);
+  }
+  for (j=0; j < 20; ++j) {
+    fetch_from_buf(str2, 255,buf);
+    test_memeq(str2, str, 255);
+  }
+  for (j=0;j<80;++j) {
+    write_to_buf(str,255, buf);
+  }
+  test_eq(buf_capacity(buf),33668);
+  for (j=0; j < 120; ++j) {
+    fetch_from_buf(str2, 255,buf);
+    test_memeq(str2, str, 255);
+  }
+
 
   /****
    * read_to_buf
    ****/
   s = open(get_fname("data"), O_WRONLY|O_CREAT|O_TRUNC, 0600);
-  for (j=0;j<256;++j) {
-    str[j] = (char)j;
-  }
   write(s, str, 256);
   close(s);
 
   s = open(get_fname("data"), O_RDONLY, 0);
   eof = 0;
+  errno = 0; /* XXXX */
   i = read_to_buf(s, 10, buf, &eof);
-  test_eq(buf_capacity(buf), 512*1024);
-  test_eq(buf_datalen(buf), 10);
-  test_eq(eof, 0);
+  printf("%s\n", strerror(errno));
   test_eq(i, 10);
+  test_eq(eof, 0);
+  test_eq(buf_capacity(buf), 4096);
+  test_eq(buf_datalen(buf), 10);
+
   test_memeq(str, (char*)_buf_peek_raw_buffer(buf), 10);
 
   /* Test reading 0 bytes. */
@@ -194,49 +290,6 @@ test_buffers(void) {
   test_eq(buf_capacity(buf), MAX_BUF_SIZE);
   test_eq(buf_datalen(buf), 256-6-32);
   test_eq(eof, 1);
-
-  close(s);
-
-  /****
-   * fetch_from_buf
-   ****/
-  memset(str2, 255, 256);
-  test_eq(246, fetch_from_buf(str2, 10, buf));
-  test_memeq(str2, str, 10);
-  test_memeq(str+10,(char*)_buf_peek_raw_buffer(buf),246);
-  test_eq(buf_datalen(buf),246);
-
-  test_eq(0, fetch_from_buf(str2, 246, buf));
-  test_memeq(str2, str+10, 246);
-  test_eq(buf_capacity(buf),MAX_BUF_SIZE);
-  test_eq(buf_datalen(buf),0);
-
-  /****
-   * write_to_buf
-   ****/
-  memset((char *)_buf_peek_raw_buffer(buf), (int)'-', 256);
-  i = write_to_buf("Hello world", 11, buf);
-  test_eq(i, 11);
-  test_eq(buf_datalen(buf), 11);
-  test_memeq((char*)_buf_peek_raw_buffer(buf), "Hello world", 11);
-  i = write_to_buf("XYZZY", 5, buf);
-  test_eq(i, 16);
-  test_eq(buf_datalen(buf), 16);
-  test_memeq((char*)_buf_peek_raw_buffer(buf), "Hello worldXYZZY", 16);
-  /* Test when buffer is overfull. */
-#if 0
-  buflen = 18;
-  test_eq(-1, write_to_buf("This string will not fit.", 25,
-                           &buf, &buflen, &buf_datalen));
-  test_eq(buf_datalen, 16);
-  test_memeq(buf, "Hello worldXYZZY--", 18);
-  buflen = MAX_BUF_SIZE;
-#endif
-
-  /****
-   * flush_buf
-   ****/
-  /* XXXX Needs tests. */
 
   buf_free(buf);
 }
@@ -1319,8 +1372,8 @@ main(int c, char**v) {
 
   printf("Running Tor unit tests on %s\n", get_uname());
 
-//  puts("========================== Buffers =========================");
-  if (0) test_buffers();
+  puts("========================== Buffers =========================");
+  test_buffers();
   puts("\n========================== Crypto ==========================");
   // add_stream_log(LOG_DEBUG, LOG_ERR, "<stdout>", stdout);
   test_crypto();
