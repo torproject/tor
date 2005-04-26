@@ -417,7 +417,7 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   if (at_start) {
     int r2;
     tor_assert(_buf_end(buf) == buf->mem);
-    r2 = read_to_buf_tls_impl(tls, at_most, buf, buf->mem);
+    r2 = read_to_buf_tls_impl(tls, at_start, buf, buf->mem);
     if (r2 < 0)
       return r2;
     else
