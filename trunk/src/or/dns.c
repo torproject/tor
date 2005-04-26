@@ -138,7 +138,7 @@ static void purge_expired_resolves(uint32_t now) {
     resolve = oldest_cached_resolve;
     log(LOG_DEBUG,"Forgetting old cached resolve (expires %lu)", (unsigned long)resolve->expire);
     if (resolve->state == CACHE_STATE_PENDING) {
-      log_fn(LOG_WARN,"Bug: Expiring a dns resolve that's still pending. Forgot to cull it?");
+      log_fn(LOG_WARN,"Bug: Expiring a dns resolve ('%s') that's still pending. Forgot to cull it?", resolve->address);
       tor_fragile_assert();
     }
     if (resolve->pending_connections) {
@@ -631,8 +631,19 @@ int connection_dns_process_inbuf(connection_t *conn) {
   tor_assert(conn->type == CONN_TYPE_DNSWORKER);
 
   if (conn->state != DNSWORKER_STATE_BUSY && buf_datalen(conn->inbuf)) {
-    log_fn(LOG_WARN,"Bug: read data (%d bytes) from an idle dns worker (address '%s'.  Please report.", (int)buf_datalen(conn->inbuf), conn->address);
+    log_fn(LOG_WARN,"Bug: read data (%d bytes) from an idle dns worker (fd %d, address '%s'). Please report.",
+           (int)buf_datalen(conn->inbuf), conn->s, conn->address);
     tor_fragile_assert();
+
+    /* Pull it off the buffer anyway, or it will just stay there.
+     * Keep pulling things off because sometimes we get several
+     * answers at once (!). */
+    while (buf_datalen(conn->inbuf)) {
+      connection_fetch_from_buf(&success,1,conn);
+      connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
+      log_fn(LOG_WARN,"Discarding idle dns answer (success %d, addr %d.)",
+             success, addr);
+    }
     return 0;
   }
   if (buf_datalen(conn->inbuf) < 5) /* entire answer available? */
