@@ -1,0 +1,45 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tor", "Tor.vcproj", "{63A6B170-E742-400C-B3A0-9CCED3699043}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tor_resolve", "..\tor_resolve\tor_resolve.vcproj", "{E2D2762A-26BD-4A28-BD72-DDAB181324B4}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "..\unittests\unittests.vcproj", "{F1F64693-11A9-4992-8B4B-2A67C07BD8C8}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libevent", "..\..\..\contrib\libevent\WIN32-Prj\libevent.vcproj", "{52BBFCA6-6F82-4596-BBAD-0BCFBC637B80}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{63A6B170-E742-400C-B3A0-9CCED3699043}.Debug.ActiveCfg = Debug|Win32
+		{63A6B170-E742-400C-B3A0-9CCED3699043}.Debug.Build.0 = Debug|Win32
+		{63A6B170-E742-400C-B3A0-9CCED3699043}.Release.ActiveCfg = Release|Win32
+		{63A6B170-E742-400C-B3A0-9CCED3699043}.Release.Build.0 = Release|Win32
+		{E2D2762A-26BD-4A28-BD72-DDAB181324B4}.Debug.ActiveCfg = Debug|Win32
+		{E2D2762A-26BD-4A28-BD72-DDAB181324B4}.Debug.Build.0 = Debug|Win32
+		{E2D2762A-26BD-4A28-BD72-DDAB181324B4}.Release.ActiveCfg = Release|Win32
+		{E2D2762A-26BD-4A28-BD72-DDAB181324B4}.Release.Build.0 = Release|Win32
+		{F1F64693-11A9-4992-8B4B-2A67C07BD8C8}.Debug.ActiveCfg = Debug|Win32
+		{F1F64693-11A9-4992-8B4B-2A67C07BD8C8}.Debug.Build.0 = Debug|Win32
+		{F1F64693-11A9-4992-8B4B-2A67C07BD8C8}.Release.ActiveCfg = Release|Win32
+		{F1F64693-11A9-4992-8B4B-2A67C07BD8C8}.Release.Build.0 = Release|Win32
+		{52BBFCA6-6F82-4596-BBAD-0BCFBC637B80}.Debug.ActiveCfg = Debug|Win32
+		{52BBFCA6-6F82-4596-BBAD-0BCFBC637B80}.Debug.Build.0 = Debug|Win32
+		{52BBFCA6-6F82-4596-BBAD-0BCFBC637B80}.Release.ActiveCfg = Release|Win32
+		{52BBFCA6-6F82-4596-BBAD-0BCFBC637B80}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

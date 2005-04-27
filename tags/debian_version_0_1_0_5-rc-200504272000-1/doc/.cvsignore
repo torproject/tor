@@ -1,0 +1,8 @@
+Makefile
+Makefile.in
+tor.1
+*.aux
+*.dvi
+*.blg
+*.bbl
+*.log
