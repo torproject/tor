@@ -43,10 +43,10 @@ are sent to all the logs that match their severity level.
 .TP
 \fBBandwidthRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 A token bucket limits the average incoming bandwidth on this node to
-the specified number of bytes per second. (Default: 780 KB)
+the specified number of bytes per second. (Default: 2 MB)
 .TP
 \fBBandwidthBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
-Limit the maximum token bucket size (also known as the burst) to the given number of bytes. (Default: 48 MB)
+Limit the maximum token bucket size (also known as the burst) to the given number of bytes. (Default: 5 MB)
 .TP
 \fBMaxAdvertisedBandwidth \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 If set, we will not advertise more than this amount of bandwidth for our
