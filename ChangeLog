@@ -7,6 +7,13 @@ Changes in version 0.1.0.5-rc - 2005-04-27
       to hopefully improve performance for fast servers a lot.
     - Add HttpsProxyAuthenticator support (based auth only), based
       on patch from Adam Langley.
+    - Bump the default BandwidthRate from 1 MB to 2 MB, to accommodate
+      the fast servers that have been joining lately.
+    - Given hidden service accesses extra time on the first attempt,
+      since 60 seconds is often only barely enough. This might improve
+      robustness more.
+    - Improve performance for dirservers: stop re-parsing the whole
+      directory every time you regenerate it.
     - Add more debugging info to help us find the weird dns freebsd
       pthreads bug.
     - Cleaner debug messages to help us track down future issues.
