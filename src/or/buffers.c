@@ -12,9 +12,10 @@ const char buffers_c_id[] = "$Id$";
 
 #include "or.h"
 
-#undef SENTINELS
+#define SENTINELS
 #undef CHECK_AFTER_RESIZE
 #undef PARANOIA
+#undef NOINLINE
 
 #ifdef SENTINELS
 /* If SENTINELS is defined, check for attempts to write beyond the
@@ -40,8 +41,10 @@ const char buffers_c_id[] = "$Id$";
 #define check() do { } while (0)
 #endif
 
+#ifdef NOINLINE
 #undef INLINE
 #define INLINE
+#endif
 
 #define BUFFER_MAGIC 0xB0FFF312u
 struct buf_t {
