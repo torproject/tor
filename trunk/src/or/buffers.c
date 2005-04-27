@@ -47,7 +47,7 @@ const char buffers_c_id[] = "$Id$";
 struct buf_t {
   uint32_t magic; /**< Magic cookie for debugging: Must be set to BUFFER_MAGIC */
   char *mem;      /**< Storage for data in the buffer */
-  char *start;    /**< The first byte used for storing data in the buffer. */
+  char *cur;      /**< The first byte used for storing data in the buffer. */
   size_t len;     /**< Maximum amount of data that <b>mem</b> can hold. */
   size_t datalen; /**< Number of bytes currently in <b>mem</b>. */
 };
@@ -64,18 +64,18 @@ static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf);
 static void buf_normalize(buf_t *buf)
 {
   check();
-  if (buf->start + buf->datalen <= buf->mem+buf->len) {
+  if (buf->cur + buf->datalen <= buf->mem+buf->len) {
     return;
   } else {
     char *newmem;
-    size_t sz = (buf->mem+buf->len)-buf->start;
+    size_t sz = (buf->mem+buf->len)-buf->cur;
     log_fn(LOG_WARN, "Unexpected non-normalized buffer.");
     newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(buf->len)));
     SET_GUARDS(newmem, buf->len);
-    memcpy(newmem, buf->start, sz);
+    memcpy(newmem, buf->cur, sz);
     memcpy(newmem+sz, buf->mem, buf->datalen-sz);
     free(RAW_MEM(buf->mem));
-    buf->mem = buf->start = newmem;
+    buf->mem = buf->cur = newmem;
     check();
   }
 }
@@ -83,7 +83,7 @@ static void buf_normalize(buf_t *buf)
 /** Return the point in the buffer where the next byte will get stored. */
 static INLINE char *_buf_end(buf_t *buf)
 {
-  char *next = buf->start + buf->datalen;
+  char *next = buf->cur + buf->datalen;
   char *end = buf->mem + buf->len;
   return (next < end) ? next : (next - buf->len);
 }
@@ -129,7 +129,7 @@ static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
   peek_from_buf(tmp, buf->datalen, buf);
 #endif
 
-  offset = buf->start - buf->mem;
+  offset = buf->cur - buf->mem;
   if (offset + buf->datalen >= new_capacity) {
     /* We need to move stuff before we shrink. */
     if (offset+buf->datalen >= buf->len) {
@@ -141,7 +141,7 @@ static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
        * We're shrinking the buffer by (len-new_capacity) bytes, so we need
        * to move the start portion back by that many bytes.
        */
-      memmove(buf->start-(buf->len-new_capacity), buf->start,
+      memmove(buf->cur-(buf->len-new_capacity), buf->cur,
               buf->len-offset);
       offset -= (buf->len-new_capacity);
     } else {
@@ -149,14 +149,14 @@ static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
        * buffer length:
        *   mem[offset] ... mem[offset+datalen-1] (the data)
        */
-      memmove(buf->mem, buf->start, buf->datalen);
+      memmove(buf->mem, buf->cur, buf->datalen);
       offset = 0;
     }
   }
   buf->mem = GUARDED_MEM(tor_realloc(RAW_MEM(buf->mem),
                                      ALLOC_LEN(new_capacity)));
   SET_GUARDS(buf->mem, new_capacity);
-  buf->start = buf->mem+offset;
+  buf->cur = buf->mem+offset;
   if (offset + buf->datalen >= buf->len) {
     /* We need to move data now that we are done growing.  The buffer
      * now contains:
@@ -168,9 +168,9 @@ static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
      * We're growing by (new_capacity-len) bytes, so we need to move the
      * end portion forward by that many bytes.
      */
-    memmove(buf->start+(new_capacity-buf->len), buf->start,
+    memmove(buf->cur+(new_capacity-buf->len), buf->cur,
             buf->len-offset);
-    buf->start += new_capacity-buf->len;
+    buf->cur += new_capacity-buf->len;
   }
   buf->len = new_capacity;
 
@@ -237,7 +237,7 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
 static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   tor_assert(buf->datalen >= n);
   buf->datalen -= n;
-  buf->start = _wrap_ptr(buf, buf->start+n);
+  buf->cur = _wrap_ptr(buf, buf->cur+n);
   buf_shrink_if_underfull(buf);
   check();
 }
@@ -257,7 +257,7 @@ buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
   buf = tor_malloc(sizeof(buf_t));
   buf->magic = BUFFER_MAGIC;
-  buf->start = buf->mem = GUARDED_MEM(tor_malloc(ALLOC_LEN(size)));
+  buf->cur = buf->mem = GUARDED_MEM(tor_malloc(ALLOC_LEN(size)));
   SET_GUARDS(buf->mem, size);
   buf->len = size;
   buf->datalen = 0;
@@ -277,7 +277,7 @@ buf_t *buf_new()
 void buf_clear(buf_t *buf)
 {
   buf->datalen = 0;
-  buf->start = buf->mem;
+  buf->cur = buf->mem;
 }
 
 /** Return the number of bytes stored in <b>buf</b> */
@@ -297,7 +297,7 @@ size_t buf_capacity(const buf_t *buf)
  */
 const char *_buf_peek_raw_buffer(const buf_t *buf)
 {
-  return buf->start;
+  return buf->cur;
 }
 
 /** Release storage held by <b>buf</b>.
@@ -371,7 +371,7 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
   if (at_start) {
     int r2;
     tor_assert(_buf_end(buf) == buf->mem);
-    r2 = read_to_buf_impl(s, at_start, buf, buf->start, reached_eof);
+    r2 = read_to_buf_impl(s, at_start, buf, buf->mem, reached_eof);
     check();
     if (r2 < 0) {
       return r2;
@@ -448,7 +448,7 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   int write_result;
 
-  write_result = send(s, buf->start, sz, 0);
+  write_result = send(s, buf->cur, sz, 0);
   if (write_result < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
@@ -486,7 +486,7 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
     return 0;
 
   flushlen0 = *buf_flushlen;
-  _split_range(buf, buf->start, &flushlen0, &flushlen1);
+  _split_range(buf, buf->cur, &flushlen0, &flushlen1);
 
   r = flush_buf_impl(s, buf, flushlen0, buf_flushlen);
   check();
@@ -498,7 +498,7 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   flushed = r;
 
   if (flushlen1) {
-    tor_assert(buf->start == buf->mem);
+    tor_assert(buf->cur == buf->mem);
     r = flush_buf_impl(s, buf, flushlen1, buf_flushlen);
     check();
     log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
@@ -515,7 +515,7 @@ flush_buf_tls_impl(tor_tls *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   int r;
 
-  r = tor_tls_write(tls, buf->start, sz);
+  r = tor_tls_write(tls, buf->cur, sz);
   if (r < 0) {
     return r;
   }
@@ -542,7 +542,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
   check_no_tls_errors();
 
   flushlen0 = *buf_flushlen;
-  _split_range(buf, buf->start, &flushlen0, &flushlen1);
+  _split_range(buf, buf->cur, &flushlen0, &flushlen1);
 
   r = flush_buf_tls_impl(tls, buf, flushlen0, buf_flushlen);
   check();
@@ -551,7 +551,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
   flushed = r;
 
   if (flushlen1) {
-    tor_assert(buf->start == buf->mem);
+    tor_assert(buf->cur == buf->mem);
     r = flush_buf_tls_impl(tls, buf, flushlen1, buf_flushlen);
     check();
     if (r<0)
@@ -613,9 +613,9 @@ static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf)
   tor_assert(string_len <= buf->datalen); /* make sure we don't ask for too much */
   assert_buf_ok(buf);
 
-  _split_range(buf, buf->start, &string_len, &len2);
+  _split_range(buf, buf->cur, &string_len, &len2);
 
-  memcpy(string, buf->start, string_len);
+  memcpy(string, buf->cur, string_len);
   if (len2) {
     memcpy(string+string_len,buf->mem,len2);
   }
@@ -669,7 +669,7 @@ int fetch_from_buf_http(buf_t *buf,
     log_fn(LOG_WARN,"Couldn't nul-terminate buffer");
     return -1;
   }
-  headers = buf->start;
+  headers = buf->cur;
   body = strstr(headers,"\r\n\r\n");
   if (!body) {
     log_fn(LOG_DEBUG,"headers not all here yet.");
@@ -714,14 +714,14 @@ int fetch_from_buf_http(buf_t *buf,
   /* all happy. copy into the appropriate places, and return 1 */
   if (headers_out) {
     *headers_out = tor_malloc(headerlen+1);
-    memcpy(*headers_out,buf->start,headerlen);
+    memcpy(*headers_out,buf->cur,headerlen);
     (*headers_out)[headerlen] = 0; /* null terminate it */
   }
   if (body_out) {
     tor_assert(body_used);
     *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
-    memcpy(*body_out,buf->start+headerlen,bodylen);
+    memcpy(*body_out,buf->cur+headerlen,bodylen);
     (*body_out)[bodylen] = 0; /* null terminate it */
   }
   buf_remove_from_front(buf, headerlen+bodylen);
@@ -763,16 +763,16 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
     return 0;
   buf_normalize(buf);
 
-  switch (*(buf->start)) { /* which version of socks? */
+  switch (*(buf->cur)) { /* which version of socks? */
 
     case 5: /* socks5 */
 
       if (req->socks_version != 5) { /* we need to negotiate a method */
-        unsigned char nummethods = (unsigned char)*(buf->start+1);
+        unsigned char nummethods = (unsigned char)*(buf->cur+1);
         tor_assert(!req->socks_version);
         if (buf->datalen < 2u+nummethods)
           return 0;
-        if (!nummethods || !memchr(buf->start+2, 0, nummethods)) {
+        if (!nummethods || !memchr(buf->cur+2, 0, nummethods)) {
           log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
           req->replylen = 2; /* 2 bytes of response */
           req->reply[0] = 5;
@@ -792,7 +792,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       log_fn(LOG_DEBUG,"socks5: checking request");
       if (buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
         return 0; /* not yet */
-      req->command = (unsigned char) *(buf->start+1);
+      req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
@@ -800,13 +800,13 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
                req->command);
         return -1;
       }
-      switch (*(buf->start+3)) { /* address type */
+      switch (*(buf->cur+3)) { /* address type */
         case 1: /* IPv4 address */
           log_fn(LOG_DEBUG,"socks5: ipv4 address type");
           if (buf->datalen < 10) /* ip/port there? */
             return 0; /* not yet */
 
-          destip = ntohl(*(uint32_t*)(buf->start+4));
+          destip = ntohl(*(uint32_t*)(buf->cur+4));
           in.s_addr = htonl(destip);
           tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
           if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
@@ -815,7 +815,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
             return -1;
           }
           strlcpy(req->address,tmpbuf,sizeof(req->address));
-          req->port = ntohs(*(uint16_t*)(buf->start+8));
+          req->port = ntohs(*(uint16_t*)(buf->cur+8));
           buf_remove_from_front(buf, 10);
           if (!have_warned_about_unsafe_socks) {
             log_fn(LOG_WARN,"Your application (using socks5 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
@@ -824,7 +824,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           return 1;
         case 3: /* fqdn */
           log_fn(LOG_DEBUG,"socks5: fqdn address type");
-          len = (unsigned char)*(buf->start+4);
+          len = (unsigned char)*(buf->cur+4);
           if (buf->datalen < 7u+len) /* addr/port there? */
             return 0; /* not yet */
           if (len+1 > MAX_SOCKS_ADDR_LEN) {
@@ -832,13 +832,13 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
                    len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
-          memcpy(req->address,buf->start+5,len);
+          memcpy(req->address,buf->cur+5,len);
           req->address[len] = 0;
-          req->port = ntohs(get_uint16(buf->start+5+len));
+          req->port = ntohs(get_uint16(buf->cur+5+len));
           buf_remove_from_front(buf, 5+len+2);
           return 1;
         default: /* unsupported */
-          log_fn(LOG_WARN,"socks5: unsupported address type %d. Rejecting.",*(buf->start+3));
+          log_fn(LOG_WARN,"socks5: unsupported address type %d. Rejecting.",*(buf->cur+3));
           return -1;
       }
       tor_assert(0);
@@ -850,7 +850,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       if (buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */
         return 0; /* not yet */
 
-      req->command = (unsigned char) *(buf->start+1);
+      req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
@@ -859,7 +859,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         return -1;
       }
 
-      req->port = ntohs(*(uint16_t*)(buf->start+2));
+      req->port = ntohs(*(uint16_t*)(buf->cur+2));
       destip = ntohl(*(uint32_t*)(buf->mem+4));
       if ((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
         log_fn(LOG_WARN,"socks4: Port or DestIP is zero. Rejecting.");
@@ -878,13 +878,13 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         socks4_prot = socks4;
       }
 
-      next = memchr(buf->start+SOCKS4_NETWORK_LEN, 0,
+      next = memchr(buf->cur+SOCKS4_NETWORK_LEN, 0,
                     buf->datalen-SOCKS4_NETWORK_LEN);
       if (!next) {
         log_fn(LOG_DEBUG,"socks4: Username not here yet.");
         return 0;
       }
-      tor_assert(next < buf->start+buf->datalen);
+      tor_assert(next < buf->cur+buf->datalen);
 
       startaddr = NULL;
       if (socks4_prot != socks4a && !have_warned_about_unsafe_socks) {
@@ -892,12 +892,12 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
       }
       if (socks4_prot == socks4a) {
-        if (next+1 == buf->start+buf->datalen) {
+        if (next+1 == buf->cur+buf->datalen) {
           log_fn(LOG_DEBUG,"socks4: No part of destaddr here yet.");
           return 0;
         }
         startaddr = next+1;
-        next = memchr(startaddr, 0, buf->start+buf->datalen-startaddr);
+        next = memchr(startaddr, 0, buf->cur+buf->datalen-startaddr);
         if (!next) {
           log_fn(LOG_DEBUG,"socks4: Destaddr not all here yet.");
           return 0;
@@ -906,12 +906,12 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           log_fn(LOG_WARN,"socks4: Destaddr too long. Rejecting.");
           return -1;
         }
-        tor_assert(next < buf->start+buf->datalen);
+        tor_assert(next < buf->cur+buf->datalen);
       }
       log_fn(LOG_DEBUG,"socks4: Everything is here. Success.");
       strlcpy(req->address, startaddr ? startaddr : tmpbuf,
               sizeof(req->address));
-      buf_remove_from_front(buf, next-buf->start+1); /* next points to the final \0 on inbuf */
+      buf_remove_from_front(buf, next-buf->cur+1); /* next points to the final \0 on inbuf */
       return 1;
 
     case 'G': /* get */
@@ -943,7 +943,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       /* fall through */
     default: /* version is not socks4 or socks5 */
       log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an http proxy.)",
-             *(buf->start));
+             *(buf->cur));
       return -1;
   }
 }
@@ -1013,8 +1013,8 @@ int fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
 
     /* Count how much data is really here. */
     sofar = msglen-6;
-    cp = buf->start+4+msglen;
-    endp = buf->start+buf->datalen;
+    cp = buf->cur+4+msglen;
+    endp = buf->cur+buf->datalen;
     /* XXXXX!!!!!! This will not handle fragmented messages right now. */
     while (sofar < totallen) {
       if ((endp-cp)<4)
