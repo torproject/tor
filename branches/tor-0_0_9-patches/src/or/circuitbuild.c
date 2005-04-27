@@ -309,7 +309,8 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
 void circuit_n_conn_done(connection_t *or_conn, int status) {
   circuit_t *circ;
 
-  log_fn(LOG_DEBUG,"or_conn to %s, status=%d", or_conn->nickname, status);
+  log_fn(LOG_DEBUG,"or_conn to %s, status=%d",
+         or_conn->nickname ? or_conn->nickname : "NULL", status);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (circ->marked_for_close)
