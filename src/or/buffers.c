@@ -23,8 +23,8 @@ const char buffers_c_id[] = "$Id$";
  */
 #define START_MAGIC 0x70370370u
 #define END_MAGIC 0xA0B0C0D0u
-#define RAW_MEM(m) ((m)-4)
-#define GUARDED_MEM(m) ((m)+4)
+#define RAW_MEM(m) ((void*)(((char*)m)-4))
+#define GUARDED_MEM(m) ((void*)(((char*)m)+4))
 #define ALLOC_LEN(ln) ((ln)+8)
 #define SET_GUARDS(m, ln) \
   do { set_uint32((m)-4,START_MAGIC); set_uint32((m)+ln,END_MAGIC); } while (0)
