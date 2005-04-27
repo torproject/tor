@@ -11,124 +11,29 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-For 0.0.9.6:
+For sometime soon:
    - Server instructions for OSX and Windows operators.
    - Audit all changes to bandwidth buckets for integer over/underflow.
-
-For 0.1.0.1-rc:
-   o write a changelog
-   o pick the whole path when you start the circuit.
-     o and then the controller can call that for extendcircuit
-   o finish messing with reachability stuff
-   o if we jump in time a lot, then mark our circs and note that we
-     haven't made a circ yet.
-   o actually give http reason phrases to dir clients, so they know why
-     they're rejected.
-   o have a separate config option which caps bandwidth-to-advertise.
-   o Make list_server_status work right on non-directories, so that 
-     getinfo("network-status") control message can work there.
-   - Forward-port changes related to checking sockaddrs set by accept() on OS
-     X, once we know what the bug was to begin with.
    - whine if your socks port is an open proxy.
-
-For 0.1.0.x:
+N  - parse routerinfo->contactinfo into a string we can use.
+     - The goal is to log IP and ContactInfo when the dirserver refuses
+       an uploaded descriptor, so we have some idea of who to contact.
 
  Refactoring and infrastructure:
 
 N . Switch to libevent
        - Hold-open-until-flushed now works by accident; it should work by
          design.
-       - The logic for reading from TLS sockets is likely to overrun the
+       . The logic for reading from TLS sockets is likely to overrun the
          bandwidth buckets under heavy load.  (Really, the logic was
          never right in the first place.)  Also, we should audit all users
          of get_pending_bytes().
-       o Find a way to make sure we have libevent 1.0 or later.
-         o Implement patch to libevent
-         o Submit patch to niels making this possible.
-         o Implement Tor side once patch is accepted.
-       o Log which poll method we're using.
-         o Implement patch to libevent
-         o Submit patch to niels making this possible.
-         o Implement Tor side once patch is accepted.
-       o Intercept libevent's "log" messages.
-         o Ask Niels whether a patch would be accepted.
-         o Implement patch, if so.
-         o Implement Tor side once patch is accepted.
-       o Check return from event_set, event_add, event_del.
-       o Keep pushing to get a windows patch accepted.
-       o After about 26 March, check back with Niels; he should be back
-         by then.
 
  Security:
    - Make sure logged info is "safe"ish.
 
- Stability
-R  o Reset uptime when IP changes.
-
  Functionality
-  o Implement pending controller features.
-    o Stubs for new functions.
-    o GETINFO
-      o Version
-      o Descriptor list
-      o Individual descriptors
-        o Need to remember descriptors for all routers.
-        o Replace everything else that remembers serverdescs with
-          routerinfo.
-      o List of address mappings
-    o POSTDESCRIPTOR
-    o MAPADDRESS
-      o Map A->B.
-      o Map DontCare->B.
-        o Reuse mappings when asked to map DontCare->B for the same B.
-          o But only when the DontCare is of the same type. :/
-    o Way to handle overlong messages
-      o Specify fragmented format
-      o Implement fragmented format
-    o Event for "new descriptors"
-    o Better stream IDs
-    o Stream status changed: "new" state.
-    o EXTENDCIRCUIT
-      o revised circ selection stuff.
-      o Implement controller interface.
-    o ATTACHSTREAM
-      o Make streams have an 'unattached and not-automatically-attachable'
-        state. ("Controller managed.")
-      o Add support to put new streams into this state rather than try to
-        attach them automatically.  ("Hidden" config option.)
-      o Implement 'attach stream X to circuit Y' logic.
-      o Time out never-attached streams.
-      o If we never get a CONNECTED back, we should put the stream back in
-        CONTROLLER_WAIT, not in CIRCUIT_WAIT.
-      o Add a way for the controller to say, "Hey, nuke this stream."
-        o Specify
-        o Implement
-      o Add a way for the controller to say, "Hey, nuke this circuit."
-        o Specify
-        o Implement
   - Tests for new controller features
-R o HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
-    other ORs.)
-  o Changes for forward compatibility
-    o If a version is later than the last in its series, but a version
-      in the next series is recommended, that doesn't mean it's bad.
-  o Do end reasons better
-    o Start using RESOURCELIMIT more.
-    o Try to use MISC a lot less.
-      o bug: if the exit node fails to create a socket (e.g. because it
-        has too many open), we will get a generic stream end response.
-        o Fix on platforms with set_max_file_descriptors.
-      o niels's "did it fail because conn refused or timeout or what"
-        relay end feature.
-    o Realize that unrecognized end reasons are probably features rather than
-      bugs. (backport to 009x)
-    o Push the work of sending the end cell deeper into package_raw_inbuf.
-      (Turns out, if package_raw_inbuf fails, it *can't* send an end cell.)
-    o Check for any place where we can close an edge connection without
-      sending an end; see if we should send an end.
-  o Feed end reason back into SOCK5 as reasonable.
-R o cache .foo.exit names better, or differently, or not.
-  o make !advertised_server_mode() ORs fetch dirs less often.
 N . NT Service code
     o Clean up NT service code even more.
     o Enable it by default.
@@ -136,7 +41,6 @@ N . NT Service code
     . Document it.
 
  Documentation
-  o Document new version system.
 r - Correct and clarify the wiki entry on port forwarding.
   o Document where OSX logs and torrc go.
   o Document where windows logs and torrc go.
@@ -146,47 +50,23 @@ r - Correct and clarify the wiki entry on port forwarding.
 N - Vet all pending installer patches
     - Win32 installer plus privoxy, sockscap/freecap, etc.
     - Vet win32 systray helper code
-  o Make OSX man pages go into man directory.
 N . Make logs go into platform default locations.
     o OSX
     - Windows. (?)
 
  Correctness
-   o Bugfixes
-     o when we haven't explicitly sent a socks reject, sending one in
-       connection_about_to_close_connection() fails because we never give it
-       a chance to flush. right answer is to do the socks reply manually in
-       each appropriate case, and then about-to-close-connection can simply
-       warn us if we forgot one. [Tag this 010 in flyspray.]
-     o should retry exitpolicy end streams even if the end cell didn't
-       resolve the address for you
-   o Figure out when to reset addressmaps (on hup, on reconfig, etc)
    - how do ulimits work on win32, anyway?  (We should handle WSAENOBUFS as
      needed, look at the MaxConnections registry entry, look at the
      MaxUserPort entry, and look at the TcpTimedWaitDelay entry. We may also
      want to provide a way to set them as needed. See bug 98.)
 
- Improvements to self-measurement.
-R  X round detected bandwidth up to nearest 10KB?
-R  o client software not upload descriptor until:
-     . it decides it is reachable
-       o dirport
-       . orport
-         - rule for now: "If you process a CREATE cell that did not come from
-           your own IP, you are reachable."
-     o start counting again if your IP ever changes.
-     o never regenerate identity keys, for now.
-     o you can set a bit for not-being-an-OR.
-
  Arguable
   - Bug: Why do idle cpuworkers sometimes get thought of as busy?
   - IP-based blacklisting of which servers get recommended by dirservers.
 
-Log more info:
-Apr 05 23:19:54.222 [notice] dirserv_add_descriptor(): Router with nickname 'Anon321' has invalid address '192.168.0.2'. Not adding.
 
 N - tor-resolve script should use socks5 to get better error messages.
-N - Script to try pulling bytes through slow-seeming servers so they can
+  o Script to try pulling bytes through slow-seeming servers so they can
     notice that they might be fast.
 N . Reverse DNS
     o specify
@@ -218,7 +98,7 @@ N - Code cleanup
   No
 Todo: when you connect and get a guy you didn't expect, tell him hey i wasn't
 expecting you i'm going to go now bye, instead of just hanging up. This lets
-him let that he's doing something funny.
+him know that he's doing something funny.
   - choose entry node to be one you're already connected to?
   - Convert man pages to pod, or whatever's right.
   - support hostnames as well as IPs for authdirservers.
