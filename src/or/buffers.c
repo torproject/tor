@@ -12,9 +12,9 @@ const char buffers_c_id[] = "$Id$";
 
 #include "or.h"
 
-#define SENTINELS
-#define CHECK_AFTER_RESIZE
-#define PARANOIA
+#undef SENTINELS
+#undef CHECK_AFTER_RESIZE
+#undef PARANOIA
 
 #ifdef SENTINELS
 /* If SENTINELS is defined, check for attempts to write beyond the
