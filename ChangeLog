@@ -1,3 +1,17 @@
+Changes in version 0.1.0.5-rc - 2005-04-27
+  o Bugfixes:
+    - Stop trying to print a null pointer if an OR conn fails because
+      we didn't like its cert.
+  o Features:
+    - Switch our internal buffers implementation to use a ring buffer,
+      to hopefully improve performance for fast servers a lot.
+    - Add HttpsProxyAuthenticator support (based auth only), based
+      on patch from Adam Langley.
+    - Add more debugging info to help us find the weird dns freebsd
+      pthreads bug.
+    - Cleaner debug messages to help us track down future issues.
+
+
 Changes in version 0.1.0.4-rc - 2005-04-23
   o Bugfixes:
     - If unofficial Tor clients connect and send weird TLS certs, our
