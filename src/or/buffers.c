@@ -12,8 +12,9 @@ const char buffers_c_id[] = "$Id$";
 
 #include "or.h"
 
-#undef SENTINELS
-#undef CHECK_AFTER_RESIZE
+#define SENTINELS
+#define CHECK_AFTER_RESIZE
+#define PARANOIA
 
 #ifdef SENTINELS
 /* If SENTINELS is defined, check for attempts to write beyond the
@@ -32,6 +33,15 @@ const char buffers_c_id[] = "$Id$";
 #define ALLOC_LEN(ln) (ln)
 #define SET_GUARDS(m,ln) do {} while (0)
 #endif
+
+#ifdef PARANOIA
+#define check() do { assert_buf_ok(buf); } while (0)
+#else
+#define check() do { } while (0)
+#endif
+
+#undef INLINE
+#define INLINE
 
 #define BUFFER_MAGIC 0xB0FFF312u
 struct buf_t {
@@ -53,6 +63,7 @@ static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf);
 
 static void buf_normalize(buf_t *buf)
 {
+  check();
   if (buf->start + buf->datalen <= buf->mem+buf->len) {
     return;
   } else {
@@ -65,6 +76,7 @@ static void buf_normalize(buf_t *buf)
     memcpy(newmem+sz, buf->mem, buf->datalen-sz);
     free(RAW_MEM(buf->mem));
     buf->mem = buf->start = newmem;
+    check();
   }
 }
 
@@ -91,6 +103,7 @@ static INLINE void _split_range(buf_t *buf, char *at, size_t *len,
                                 size_t *more_len)
 {
   char *eos = at + *len;
+  check();
   if (eos >= (buf->mem + buf->len)) {
     *more_len = eos - (buf->mem + buf->len);
     *len -= *more_len;
@@ -226,6 +239,7 @@ static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   buf->datalen -= n;
   buf->start = _wrap_ptr(buf, buf->start+n);
   buf_shrink_if_underfull(buf);
+  check();
 }
 
 /** Make sure that the memory in buf ends with a zero byte. */
@@ -349,7 +363,7 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
   _split_range(buf, next, &at_most, &at_start);
 
   r = read_to_buf_impl(s, at_most, buf, next, reached_eof);
-
+  check();
   if (r < 0 || (size_t)r < at_most) {
     return r; /* Either error, eof, block, or no more to read. */
   }
@@ -358,6 +372,7 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
     int r2;
     tor_assert(_buf_end(buf) == buf->mem);
     r2 = read_to_buf_impl(s, at_start, buf, buf->start, reached_eof);
+    check();
     if (r2 < 0) {
       return r2;
     } else {
@@ -411,6 +426,7 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   _split_range(buf, next, &at_most, &at_start);
 
   r = read_to_buf_tls_impl(tls, at_most, buf, next);
+  check();
   if (r < 0 || (size_t)r < at_most)
     return r; /* Either error, eof, block, or no more to read. */
 
@@ -418,6 +434,7 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
     int r2;
     tor_assert(_buf_end(buf) == buf->mem);
     r2 = read_to_buf_tls_impl(tls, at_start, buf, buf->mem);
+    check();
     if (r2 < 0)
       return r2;
     else
@@ -472,6 +489,7 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   _split_range(buf, buf->start, &flushlen0, &flushlen1);
 
   r = flush_buf_impl(s, buf, flushlen0, buf_flushlen);
+  check();
 
   log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
            s,r,(int)*buf_flushlen,(int)buf->datalen);
@@ -482,6 +500,7 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   if (flushlen1) {
     tor_assert(buf->start == buf->mem);
     r = flush_buf_impl(s, buf, flushlen1, buf_flushlen);
+    check();
     log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
            s,r,(int)*buf_flushlen,(int)buf->datalen);
     if (r<0)
@@ -526,6 +545,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
   _split_range(buf, buf->start, &flushlen0, &flushlen1);
 
   r = flush_buf_tls_impl(tls, buf, flushlen0, buf_flushlen);
+  check();
   if (r < 0 || (size_t)r < flushlen0)
     return r; /* Error, or can't flush any more now. */
   flushed = r;
@@ -533,6 +553,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
   if (flushlen1) {
     tor_assert(buf->start == buf->mem);
     r = flush_buf_tls_impl(tls, buf, flushlen1, buf_flushlen);
+    check();
     if (r<0)
       return r;
     flushed += r;
@@ -575,6 +596,7 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
     buf->datalen += len2;
   }
   log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",(int)string_len, (int)buf->datalen);
+  check();
   return buf->datalen;
 }
 
@@ -610,8 +632,10 @@ int fetch_from_buf(char *string, size_t string_len, buf_t *buf)
    *
    * Return the number of bytes still on the buffer. */
 
+  check();
   peek_from_buf(string, string_len, buf);
   buf_remove_from_front(buf, string_len);
+  check();
   return buf->datalen;
 }
 
@@ -1040,7 +1064,11 @@ void assert_buf_ok(buf_t *buf)
   tor_assert(buf->mem);
   tor_assert(buf->datalen <= buf->len);
 #ifdef SENTINELS
-  tor_assert(get_uint32(buf->mem - 4) == START_MAGIC);
-  tor_assert(get_uint32(buf->mem + buf->len) == END_MAGIC);
+  {
+    uint32_t u32 = get_uint32(buf->mem - 4);
+    tor_assert(u32 == START_MAGIC);
+    u32 = get_uint32(buf->mem + buf->len);
+    tor_assert(u32 == END_MAGIC);
+  }
 #endif
 }
