@@ -14,7 +14,7 @@ const char dirserv_c_id[] = "$Id$";
 /** How far in the future do we allow a router to get? (seconds) */
 #define ROUTER_ALLOW_SKEW (60*60*12) /* 12 hours */
 /** How many seconds do we wait before regenerating the directory? */
-#define DIR_REGEN_SLACK_TIME 10
+#define DIR_REGEN_SLACK_TIME 5
 
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
@@ -850,6 +850,7 @@ static int dirserv_regenerate_directory(void)
     return -1;
   }
 
+#if 0
   /* Now read the directory we just made in order to update our own
    * router lists.  This does more signature checking than is strictly
    * necessary, but safe is better than sorry. */
@@ -862,6 +863,7 @@ static int dirserv_regenerate_directory(void)
     exit(0);
   }
   tor_free(new_directory);
+#endif
   the_directory_is_dirty = 0;
 
   /* Save the directory to disk so we re-load it quickly on startup.
