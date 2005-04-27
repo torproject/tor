@@ -923,6 +923,46 @@ handle_control_closecircuit(connection_t *conn, uint32_t len,
   return 0;
 }
 
+static int
+handle_control_fragments(connection_t *conn, uint16_t command_type,
+                         uint32_t body_len, char *body)
+{
+  if (command_type == CONTROL_CMD_FRAGMENTHEADER) {
+    if (conn->incoming_cmd) {
+      log_fn(LOG_WARN, "Dropping incomplete fragmented command");
+      tor_free(conn->incoming_cmd);
+    }
+    if (body_len < 6) {
+      send_control_error(conn, ERR_SYNTAX, "FRAGMENTHEADER too short.");
+      return 0;
+    }
+    conn->incoming_cmd_type = ntohs(get_uint16(body));
+    conn->incoming_cmd_len = ntohl(get_uint32(body+2));
+    conn->incoming_cmd_cur_len = 0;
+    conn->incoming_cmd = tor_malloc(conn->incoming_cmd_len);
+    body += 6;
+    body_len -= 6;
+  } else if (command_type == CONTROL_CMD_FRAGMENT) {
+    if (!conn->incoming_cmd) {
+      send_control_error(conn, ERR_SYNTAX, "Out-of-place FRAGMENT");
+      return 0;
+    }
+  } else {
+    tor_assert(0);
+  }
+
+  if (conn->incoming_cmd_cur_len + body_len > conn->incoming_cmd_len) {
+    tor_free(conn->incoming_cmd);
+    send_control_error(conn, ERR_SYNTAX,
+                       "Fragmented data exceeds declared length");
+    return 0;
+  }
+  memcpy(conn->incoming_cmd + conn->incoming_cmd_cur_len,
+         body, body_len);
+  conn->incoming_cmd_cur_len += body_len;
+  return 0;
+}
+
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(connection_t *conn) {
@@ -978,6 +1018,23 @@ connection_control_process_inbuf(connection_t *conn) {
     send_control_error(conn, ERR_UNAUTHORIZED, "Authentication required");
     tor_free(body);
     goto again;
+  }
+
+  if (command_type == CONTROL_CMD_FRAGMENTHEADER ||
+      command_type == CONTROL_CMD_FRAGMENT) {
+    if (handle_control_fragments(conn, command_type, body_len, body))
+      return -1;
+    tor_free(body);
+    if (conn->incoming_cmd_cur_len != conn->incoming_cmd_len)
+      goto again;
+
+    command_type = conn->incoming_cmd_type;
+    body_len = conn->incoming_cmd_len;
+    body = conn->incoming_cmd;
+    conn->incoming_cmd = NULL;
+  } else if (conn->incoming_cmd) {
+    log_fn(LOG_WARN, "Dropping incomplete fragmented command");
+    tor_free(conn->incoming_cmd);
   }
 
   /* Okay, we're willing to process the command. */
