@@ -968,7 +968,7 @@ int fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
 {
   uint32_t msglen;
   uint16_t type;
-  char tmp[10];
+  char tmp[4];
 
   tor_assert(buf);
   tor_assert(len_out);
@@ -985,77 +985,17 @@ int fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
     return 0;
 
   type = ntohs(get_uint16(tmp+2));
-  if (type != CONTROL_CMD_FRAGMENTHEADER) {
-    *len_out = msglen;
-    *type_out = type;
-    buf_remove_from_front(buf, 4);
-    if (msglen) {
-      *body_out = tor_malloc(msglen+1);
-      fetch_from_buf(*body_out, msglen, buf);
-      (*body_out)[msglen] = '\0';
-    } else {
-      *body_out = NULL;
-    }
-    return 1;
+  *len_out = msglen;
+  *type_out = type;
+  buf_remove_from_front(buf, 4);
+  if (msglen) {
+    *body_out = tor_malloc(msglen+1);
+    fetch_from_buf(*body_out, msglen, buf);
+    (*body_out)[msglen] = '\0';
   } else {
-    uint32_t totallen, sofar;
-    char *cp, *endp, *outp;
-
-    /* Okay, we have a fragmented message.  Is it all here? */
-    if (msglen < 6)
-      return -1;
-    peek_from_buf(tmp, 10, buf);
-    type = htons(get_uint16(tmp+4));
-    totallen = htonl(get_uint32(tmp+6));
-    if (totallen < 65536)
-      return -1;
-
-    if (buf->datalen<4+6+totallen)
-      /* The data can't possibly be here yet, no matter how well it's packed.*/
-      return 0;
-
-    /* Count how much data is really here. */
-    sofar = msglen-6;
-    cp = buf->cur+4+msglen;
-    endp = buf->cur+buf->datalen;
-    /* XXXXX!!!!!! This will not handle fragmented messages right now. */
-    while (sofar < totallen) {
-      if ((endp-cp)<4)
-        return 0; /* Fragment header not all here. */
-      msglen = ntohs(get_uint16(cp));
-      if (ntohs(get_uint16(cp+2) != CONTROL_CMD_FRAGMENT))
-        return -1; /* Missing fragment message; error. */
-      if ((endp-cp) < (int)(4+msglen))
-        return 0; /* Fragment not all here. */
-      sofar += msglen;
-      cp += (4+msglen);
-    }
-    if (sofar > totallen)
-      return -1; /* Fragments add to more than expected; error. */
-
-    /* Okay, everything is here. */
-    *len_out = totallen;
-    *type_out = type;
-    *body_out = tor_malloc(totallen+1);
-
-    /* copy FRAGMENTED packet contents. */
-    msglen = ntohs(get_uint16(buf->mem));
-    if (msglen>6)
-      memcpy(*body_out,buf->mem+4+6,msglen-6);
-    sofar = msglen-6;
-    outp = *body_out+sofar;
-    cp = buf->mem+4+msglen;
-    while (sofar < totallen) {
-      msglen = ntohs(get_uint16(cp));
-      memcpy(outp,cp+4,msglen);
-      outp += msglen;
-      cp += 4+msglen;
-      sofar -= msglen;
-    }
-    (*body_out)[totallen]='\0';
-
-    return 1;
+    *body_out = NULL;
   }
+  return 1;
 }
 
 /** Log an error and exit if <b>buf</b> is corrupted.

@@ -639,6 +639,10 @@ struct connection_t {
 
   /* Used only by control connections */
   uint32_t event_mask;
+  uint16_t incoming_cmd_type;
+  uint32_t incoming_cmd_len;
+  uint32_t incoming_cmd_cur_len;
+  char *incoming_cmd;
 };
 
 typedef struct connection_t connection_t;
