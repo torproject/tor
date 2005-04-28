@@ -1,4 +1,4 @@
-.TH TOR 1 "March 2005" "TOR"
+.TH TOR 1 "April 2005" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -225,7 +225,7 @@ Bind to this address to listen for connections from SOCKS-speaking applications.
 \fBSOCKSPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
 Set an entrance policy for this server, to limit who can connect to the SOCKS ports. The policies have the same form as exit policies below.
 .TP
-\fBTrackHostExits \fR\fIhost\fR|\fI.domain\fR|\fI.\fR\fP
+\fBTrackHostExits \fR\fIhost\fR,\fI.domain\fR,\fI...\fR\fP
 For each value in the comma separated list, Tor will track recent connections
 to hosts that match this value and attempt to
 reuse the same exit node for each. If the value is prepended with a '.', it is
