@@ -342,6 +342,9 @@ uploaded whenever it changes.  (Default: 20 minutes.)
 \fBAccountingMax \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 Never send more than the specified number of bytes in a given
 accounting period, or receive more than that number in the period.
+For example, with AccountingMax set to 1 GB, a server could send 900 MB
+and receive 800 MB and continue running. It will only hibernate once one
+of the two reaches 1 GB.
 When the number of bytes is exhausted, Tor will hibernate until some
 time in the next accounting period.  To prevent all servers from
 waking at the same time, Tor will also wait until a random point in
