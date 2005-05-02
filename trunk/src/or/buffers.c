@@ -267,7 +267,11 @@ buf_shrink(buf_t *buf)
 static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   tor_assert(buf->datalen >= n);
   buf->datalen -= n;
-  buf->cur = _wrap_ptr(buf, buf->cur+n);
+  if (buf->datalen) {
+    buf->cur = _wrap_ptr(buf, buf->cur+n);
+  } else {
+    buf->cur = buf->mem;
+  }
   buf_shrink_if_underfull(buf);
   check();
 }
