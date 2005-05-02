@@ -14,7 +14,7 @@ Changes in version 0.1.0.5-rc - 2005-04-27
       robustness more.
     - Improve performance for dirservers: stop re-parsing the whole
       directory every time you regenerate it.
-    - Add more debugging info to help us find the weird dns freebsd
+    - Add more debugging info to help us find the weird dns netbsd
       pthreads bug; cleaner debug messages to help track future issues.
 
 
