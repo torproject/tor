@@ -362,7 +362,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 
 /** Get the maximum allowed number of file descriptors. (Some systems
  * have a low soft limit.) Make sure we set it to at least
- * <b>*limit</b>. Return a new limit if we can, or -1 if we fail. */
+ * <b>limit</b>. Return a new limit if we can, or -1 if we fail. */
 int
 set_max_file_descriptors(unsigned long limit, unsigned long cap) {
 #ifndef HAVE_GETRLIMIT
