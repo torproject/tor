@@ -51,6 +51,7 @@ struct buf_t {
   uint32_t magic; /**< Magic cookie for debugging: Must be set to BUFFER_MAGIC */
   char *mem;      /**< Storage for data in the buffer */
   char *cur;      /**< The first byte used for storing data in the buffer. */
+  size_t highwater; /**< Largest observed datalen since last buf_shrink */
   size_t len;     /**< Maximum amount of data that <b>mem</b> can hold. */
   size_t datalen; /**< Number of bytes currently in <b>mem</b>. */
 };
@@ -60,7 +61,8 @@ struct buf_t {
 /** Size, in bytes, for minimum 'shrink' size for buffers.  Buffers may start
  * out smaller than this, but they will never autoshrink to less
  * than this size. */
-#define MIN_BUF_SHRINK_SIZE (16*1024)
+#define MIN_GREEDY_SHRINK_SIZE (16*1024)
+#define MIN_LAZY_SHRINK_SIZE (4*1024)
 
 static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf);
 
@@ -212,27 +214,45 @@ static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
   return 0;
 }
 
-/** If the buffer is at least 2*MIN_BUF_SHRINK_SIZE bytes in capacity,
- * and if the buffer is less than 1/4 full, shrink the buffer until
+/** If the buffer is at least 2*MIN_GREEDY_SHRINK_SIZE bytes in capacity,
+ * and if the buffer is less than 1/8 full, shrink the buffer until
  * one of the above no longer holds.  (We shrink the buffer by
  * dividing by powers of 2.)
  */
 static INLINE void buf_shrink_if_underfull(buf_t *buf) {
   size_t new_len;
-  /* If the buffer is at least .25 full, or if shrinking the buffer would
-   * put it under MIN_BUF_SHRINK_SIZE, don't do it. */
-  if (buf->datalen >= buf->len/4 || buf->len < 2*MIN_BUF_SHRINK_SIZE)
+  /* If the buffer is at least 1/8 full, or if shrinking the buffer would
+   * put it under MIN_GREEDY_SHRINK_SIZE, don't do it. */
+  if (buf->datalen >= (buf->len>>3) || buf->len < MIN_GREEDY_SHRINK_SIZE*2)
     return;
   /* Shrink new_len by powers of 2 until: datalen is at least 1/4 of
    * new_len, OR shrinking new_len more would put it under
-   * MIN_BUF_SHRINK_SIZE.
+   * MIN_GREEDY_SHRINK_SIZE.
    */
-  new_len = buf->len / 2;
-  while (buf->datalen < new_len/4 && new_len/2 > MIN_BUF_SHRINK_SIZE)
-    new_len /= 2;
+  new_len = (buf->len>>1);
+  while (buf->datalen < (new_len>>3) && new_len > MIN_GREEDY_SHRINK_SIZE*2)
+    new_len >>= 1;
   log_fn(LOG_DEBUG,"Shrinking buffer from %d to %d bytes.",
          (int)buf->len, (int)new_len);
   buf_resize(buf, new_len);
+}
+
+void
+buf_shrink(buf_t *buf)
+{
+  size_t new_len;
+
+  if (buf->highwater >= (buf->len<<2) && buf->len > MIN_LAZY_SHRINK_SIZE*2)
+    return;
+
+  new_len = (buf->len>>1);
+  while (buf->highwater < (new_len>>2) && new_len > MIN_LAZY_SHRINK_SIZE*2)
+    new_len >>= 1;
+
+  log_fn(LOG_DEBUG,"Shrinking buffer from %d to %d bytes.",
+         (int)buf->len, (int)new_len);
+  buf_resize(buf, new_len);
+  buf->highwater = buf->datalen;
 }
 
 /** Remove the first <b>n</b> bytes from buf.
@@ -331,6 +351,8 @@ static INLINE int read_to_buf_impl(int s, size_t at_most, buf_t *buf,
     return 0;
   } else { /* we read some bytes */
     buf->datalen += read_result;
+    if (buf->datalen > buf->highwater)
+      buf->highwater = buf->datalen;
     log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",read_result,
            (int)buf->datalen);
     return read_result;
@@ -397,6 +419,8 @@ read_to_buf_tls_impl(tor_tls *tls, size_t at_most, buf_t *buf, char *next)
   if (r<0)
     return r;
   buf->datalen += r;
+  if (buf->datalen > buf->highwater)
+    buf->highwater = buf->datalen;
   log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf; %d pending",r,
          (int)buf->datalen,(int)tor_tls_get_pending_bytes(tls));
   return r;
@@ -598,6 +622,8 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
     memcpy(buf->mem, string+string_len, len2);
     buf->datalen += len2;
   }
+  if (buf->datalen > buf->highwater)
+    buf->highwater = buf->datalen;
   log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",(int)string_len, (int)buf->datalen);
   check();
   return buf->datalen;
@@ -1005,7 +1031,8 @@ void assert_buf_ok(buf_t *buf)
   tor_assert(buf);
   tor_assert(buf->magic == BUFFER_MAGIC);
   tor_assert(buf->mem);
-  tor_assert(buf->datalen <= buf->len);
+  tor_assert(buf->highwater <= buf->len);
+  tor_assert(buf->datalen <= buf->highwater);
 #ifdef SENTINELS
   {
     uint32_t u32 = get_uint32(buf->mem - 4);
