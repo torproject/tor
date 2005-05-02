@@ -249,12 +249,12 @@ buf_shrink(buf_t *buf)
 {
   size_t new_len;
 
-  if (buf->highwater >= (buf->len<<2) && buf->len > MIN_LAZY_SHRINK_SIZE*2)
-    return;
-
-  new_len = (buf->len>>1);
+  new_len = buf->len;
   while (buf->highwater < (new_len>>2) && new_len > MIN_LAZY_SHRINK_SIZE*2)
     new_len >>= 1;
+
+  if (new_len == buf->len)
+    return;
 
   log_fn(LOG_DEBUG,"Shrinking buffer from %d to %d bytes.",
          (int)buf->len, (int)new_len);
