@@ -1035,6 +1035,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
       case -1:
         /* malformed descriptor, or something wrong */
         write_http_status_line(conn, 400, msg?msg:"Malformed or unacceptable server descriptor");
+        log_fn(LOG_NOTICE,"Rejected descriptor published by '%s'.", conn->address);
         break;
       case 0:
         /* descriptor was well-formed but server has not been approved */
