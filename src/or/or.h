@@ -1127,7 +1127,6 @@ void buf_shrink(buf_t *buf);
 
 size_t buf_datalen(const buf_t *buf);
 size_t buf_capacity(const buf_t *buf);
-unsigned int buf_n_times_resized(const buf_t *buf);
 const char *_buf_peek_raw_buffer(const buf_t *buf);
 
 int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof);
