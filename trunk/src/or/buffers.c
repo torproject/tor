@@ -244,10 +244,11 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
 #define buf_shrink_if_underfull(buf) do {} while (0)
 #endif
 
-/** Resize buf so it won't hold extra memory that we haven't
- * been using lately. Try to shrink the buf until it is the
- * largest factor of two that can contain highwater, but never
- * smaller than MIN_LAZY_SHRINK_SIZE.
+/** Resize buf so it won't hold extra memory that we haven't been
+ * using lately (that is, since the last time we called buf_shrink).
+ * Try to shrink the buf until it is the largest factor of two that
+ * can contain <b>buf</b>-&gt;highwater, but never smaller than
+ * MIN_LAZY_SHRINK_SIZE.
  */
 void
 buf_shrink(buf_t *buf)
