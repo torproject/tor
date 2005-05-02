@@ -446,8 +446,9 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       return -1;
     }
 
-    if (get_options()->ORPort || !router->platform ||
-        !tor_version_as_new_as(router->platform, "0.1.0.6-rc")) {
+    if (1 || /* Disable this '1' once we believe CREATE_FAST works. XXXX */
+        (get_options()->ORPort || !router->platform ||
+         !tor_version_as_new_as(router->platform, "0.1.0.6-rc"))) {
       /* We are an OR, or we are connecting to an old Tor: we should
        * send an old slow create cell.
        */
