@@ -83,11 +83,11 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
     cpath = rendcirc->build_state->pending_final_cpath =
       tor_malloc_zero(sizeof(crypt_path_t));
     cpath->magic = CRYPT_PATH_MAGIC;
-    if (!(cpath->handshake_state = crypto_dh_new())) {
+    if (!(cpath->dh_handshake_state = crypto_dh_new())) {
       log_fn(LOG_WARN, "Couldn't allocate DH");
       goto err;
     }
-    if (crypto_dh_generate_public(cpath->handshake_state)<0) {
+    if (crypto_dh_generate_public(cpath->dh_handshake_state)<0) {
       log_fn(LOG_WARN, "Couldn't generate g^x");
       goto err;
     }
@@ -103,7 +103,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   strncpy(tmp, rendcirc->build_state->chosen_exit_name, (MAX_NICKNAME_LEN+1)); /* nul pads */
   memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
 #endif
-  if (crypto_dh_get_public(cpath->handshake_state,
+  if (crypto_dh_get_public(cpath->dh_handshake_state,
 #if 0
                            tmp+1+MAX_HEX_NICKNAME_LEN+1+REND_COOKIE_LEN,
 #else
@@ -338,8 +338,8 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
   tor_assert(circ->build_state);
   tor_assert(circ->build_state->pending_final_cpath);
   hop = circ->build_state->pending_final_cpath;
-  tor_assert(hop->handshake_state);
-  if (crypto_dh_compute_secret(hop->handshake_state, request, DH_KEY_LEN,
+  tor_assert(hop->dh_handshake_state);
+  if (crypto_dh_compute_secret(hop->dh_handshake_state, request, DH_KEY_LEN,
                                keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_fn(LOG_WARN, "Couldn't complete DH handshake");
     goto err;
@@ -354,8 +354,8 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
     goto err;
   }
 
-  crypto_dh_free(hop->handshake_state);
-  hop->handshake_state = NULL;
+  crypto_dh_free(hop->dh_handshake_state);
+  hop->dh_handshake_state = NULL;
 
   /* All is well. Extend the circuit. */
   circ->purpose = CIRCUIT_PURPOSE_C_REND_JOINED;

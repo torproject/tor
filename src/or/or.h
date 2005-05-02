@@ -474,6 +474,8 @@ typedef enum {
 #define CELL_CREATED 2
 #define CELL_RELAY 3
 #define CELL_DESTROY 4
+#define CELL_CREATE_FAST 5
+#define CELL_CREATED_FAST 6
 
 /* people behind fascist firewalls use only these ports */
 #define REQUIRED_FIREWALL_DIRPORT 80
@@ -749,7 +751,8 @@ struct crypt_path_t {
 
   /** Current state of Diffie-Hellman key negotiation with the OR at this
    * step. */
-  crypto_dh_env_t *handshake_state;
+  crypto_dh_env_t *dh_handshake_state;
+  char fast_handshake_state[DIGEST_LEN];
   /** Negotiated key material shared with the OR at this step. */
   char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
 
@@ -1158,9 +1161,9 @@ int circuit_send_next_onion_skin(circuit_t *circ);
 void circuit_note_clock_jumped(int seconds_elapsed);
 int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
-int circuit_finish_handshake(circuit_t *circ, char *reply);
+int circuit_finish_handshake(circuit_t *circ, uint8_t cell_type, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
-int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
+int onionskin_answer(circuit_t *circ, uint8_t cell_type, unsigned char *payload, unsigned char *keys);
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
@@ -1552,7 +1555,7 @@ int onion_skin_create(crypto_pk_env_t *router_key,
                       crypto_dh_env_t **handshake_state_out,
                       char *onion_skin_out);
 
-int onion_skin_server_handshake(char *onion_skin,
+int onion_skin_server_handshake(const char *onion_skin,
                                 crypto_pk_env_t *private_key,
                                 crypto_pk_env_t *prev_private_key,
                                 char *handshake_reply_out,
@@ -1560,9 +1563,19 @@ int onion_skin_server_handshake(char *onion_skin,
                                 size_t key_out_len);
 
 int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
-                             char *handshake_reply,
-                             char *key_out,
-                             size_t key_out_len);
+                                const char *handshake_reply,
+                                char *key_out,
+                                size_t key_out_len);
+
+int fast_server_handshake(const char *key_in,
+                          char *handshake_reply_out,
+                          char *key_out,
+                          size_t key_out_len);
+
+int fast_client_handshake(const char *handshake_state,
+                          const char *handshake_reply_out,
+                          char *key_out,
+                          size_t key_out_len);
 
 void clear_pending_onions(void);
 

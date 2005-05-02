@@ -19,7 +19,8 @@ extern circuit_t *global_circuitlist;
 
 /********* END VARIABLES ************/
 
-static int circuit_deliver_create_cell(circuit_t *circ, char *payload);
+static int circuit_deliver_create_cell(circuit_t *circ,
+                                       uint8_t cell_type, char *payload);
 static int onion_pick_cpath_exit(circuit_t *circ, routerinfo_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_next_router_in_cpath(circuit_t *circ, routerinfo_t **router);
@@ -374,7 +375,7 @@ void circuit_n_conn_done(connection_t *or_conn, int status) {
         }
       } else {
         /* pull the create cell out of circ->onionskin, and send it */
-        if (circuit_deliver_create_cell(circ, circ->onionskin) < 0) {
+        if (circuit_deliver_create_cell(circ,CELL_CREATE,circ->onionskin) < 0) {
           circuit_mark_for_close(circ);
           continue;
         }
@@ -384,7 +385,7 @@ void circuit_n_conn_done(connection_t *or_conn, int status) {
 }
 
 static int
-circuit_deliver_create_cell(circuit_t *circ, char *payload) {
+circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type, char *payload) {
   cell_t cell;
   uint16_t id;
 
@@ -392,6 +393,7 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
   tor_assert(circ->n_conn);
   tor_assert(circ->n_conn->type == CONN_TYPE_OR);
   tor_assert(payload);
+  tor_assert(cell_type == CELL_CREATE || cell_type == CELL_CREATE_FAST);
 
   id = get_unique_circ_id_by_conn(circ->n_conn);
   if (!id) {
@@ -402,7 +404,7 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
   circuit_set_circid_orconn(circ, id, circ->n_conn, N_CONN_CHANGED);
 
   memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_CREATE;
+  cell.command = cell_type;
   cell.circ_id = circ->n_circ_id;
 
   memcpy(cell.payload, payload, ONIONSKIN_CHALLENGE_LEN);
@@ -434,6 +436,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   if (circ->cpath->state == CPATH_STATE_CLOSED) {
+    uint8_t cell_type;
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
 
     router = router_get_by_digest(circ->n_conn->identity_digest);
@@ -443,14 +446,30 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       return -1;
     }
 
-    if (onion_skin_create(router->onion_pkey,
-                          &(circ->cpath->handshake_state),
-                          payload) < 0) {
-      log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
-      return -1;
+    if (get_options()->ORPort || !router->platform ||
+        !tor_version_as_new_as(router->platform, "0.1.0.6-rc")) {
+      /* We are an OR, or we are connecting to an old Tor: we should
+       * send an old slow create cell.
+       */
+      cell_type = CELL_CREATE;
+      if (onion_skin_create(router->onion_pkey,
+                            &(circ->cpath->dh_handshake_state),
+                            payload) < 0) {
+        log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
+        return -1;
+      }
+    } else {
+      /* We are not an OR, and we building the first hop of a circuit to
+       * a new OR: we can be speedy. */
+      cell_type = CELL_CREATE_FAST;
+      memset(payload, 0, sizeof(payload));
+      crypto_rand(circ->cpath->fast_handshake_state,
+                  sizeof(circ->cpath->fast_handshake_state));
+      memcpy(payload, circ->cpath->fast_handshake_state,
+             sizeof(circ->cpath->fast_handshake_state));
     }
 
-    if (circuit_deliver_create_cell(circ, payload) < 0)
+    if (circuit_deliver_create_cell(circ, cell_type, payload) < 0)
       return -1;
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
@@ -491,7 +510,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     memcpy(payload+2+4+ONIONSKIN_CHALLENGE_LEN, hop->identity_digest, DIGEST_LEN);
     payload_len = 2+4+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN;
 
-    if (onion_skin_create(router->onion_pkey, &(hop->handshake_state), onionskin) < 0) {
+    if (onion_skin_create(router->onion_pkey, &(hop->dh_handshake_state), onionskin) < 0) {
       log_fn(LOG_WARN,"onion_skin_create failed.");
       return -1;
     }
@@ -589,7 +608,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   memcpy(circ->n_conn_id_digest, n_conn->identity_digest, DIGEST_LEN);
   log_fn(LOG_DEBUG,"n_conn is %s:%u",n_conn->address,n_conn->port);
 
-  if (circuit_deliver_create_cell(circ, onionskin) < 0)
+  if (circuit_deliver_create_cell(circ, CELL_CREATE, onionskin) < 0)
     return -1;
   return 0;
 }
@@ -648,13 +667,14 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
 
 /** A created or extended cell came back to us on the circuit,
  * and it included <b>reply</b> (the second DH key, plus KH).
+ * DOCDOC reply_type.
  *
  * Calculate the appropriate keys and digests, make sure KH is
  * correct, and initialize this hop of the cpath.
  *
  * Return -1 if we want to mark circ for close, else return 0.
  */
-int circuit_finish_handshake(circuit_t *circ, char *reply) {
+int circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply) {
   unsigned char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
 
@@ -670,16 +690,31 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   }
   tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
-  if (onion_skin_client_handshake(hop->handshake_state, reply, keys,
-                                  DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
-    log_fn(LOG_WARN,"onion_skin_client_handshake failed.");
+  if (reply_type == CELL_CREATED && hop->dh_handshake_state) {
+    if (onion_skin_client_handshake(hop->dh_handshake_state, reply, keys,
+                                    DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
+      log_fn(LOG_WARN,"onion_skin_client_handshake failed.");
+      return -1;
+    }
+    /* Remember hash of g^xy */
+    memcpy(hop->handshake_digest, reply+DH_KEY_LEN, DIGEST_LEN);
+  } else if (reply_type == CELL_CREATED_FAST && !hop->dh_handshake_state) {
+    if (fast_client_handshake(hop->fast_handshake_state, reply, keys,
+                              DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
+      log_fn(LOG_WARN,"fast_client_handshake failed.");
+      return -1;
+    }
+    memcpy(hop->handshake_digest, reply+DIGEST_LEN, DIGEST_LEN);
+  } else {
+    log_fn(LOG_WARN,"CREATED cell type did not match CREATE cell type.");
     return -1;
   }
 
-  crypto_dh_free(hop->handshake_state); /* don't need it anymore */
-  hop->handshake_state = NULL;
-  /* Remember hash of g^xy */
-  memcpy(hop->handshake_digest, reply+DH_KEY_LEN, DIGEST_LEN);
+  if (hop->dh_handshake_state) {
+    crypto_dh_free(hop->dh_handshake_state); /* don't need it anymore */
+    hop->dh_handshake_state = NULL;
+  }
+  memset(hop->fast_handshake_state, 0, sizeof(hop->fast_handshake_state));
 
   if (circuit_init_cpath_crypto(hop, keys, 0)<0) {
     return -1;
@@ -742,7 +777,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
 /** Given a response payload and keys, initialize, then send a created
  * cell back.
  */
-int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys) {
+int onionskin_answer(circuit_t *circ, uint8_t cell_type, unsigned char *payload, unsigned char *keys) {
   cell_t cell;
   crypt_path_t *tmp_cpath;
 
@@ -750,14 +785,15 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   tmp_cpath->magic = CRYPT_PATH_MAGIC;
 
   memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_CREATED;
+  cell.command = cell_type;
   cell.circ_id = circ->p_circ_id;
 
   circ->state = CIRCUIT_STATE_OPEN;
 
   log_fn(LOG_DEBUG,"Entering.");
 
-  memcpy(cell.payload, payload, ONIONSKIN_REPLY_LEN);
+  memcpy(cell.payload, payload,
+         cell_type == CELL_CREATED ? ONIONSKIN_REPLY_LEN : DIGEST_LEN*2);
 
   log_fn(LOG_INFO,"init digest forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)(keys), (unsigned int)*(uint32_t*)(keys+20));
@@ -773,7 +809,10 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   tmp_cpath->magic = 0;
   tor_free(tmp_cpath);
 
-  memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, DIGEST_LEN);
+  if (cell_type == CELL_CREATED)
+    memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, DIGEST_LEN);
+  else
+    memcpy(circ->handshake_digest, cell.payload+DIGEST_LEN, DIGEST_LEN);
 
   connection_or_write_cell_to_buf(&cell, circ->p_conn);
   log_fn(LOG_DEBUG,"Finished sending 'created' cell.");
@@ -1457,4 +1496,3 @@ onion_append_hop(crypt_path_t **head_ptr, routerinfo_t *choice) {
 
   return 0;
 }
-

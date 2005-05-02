@@ -214,7 +214,7 @@ TODO: (very soon)
    When initializing the first hop of a circuit, the OP has already
    established the OR's identity and negotiated a secret key using TLS.
    Because of this, it is not always necessary for the OP to perform the
-   an set of public key operations to create a circuit.  In this case, the
+   public key operations to create a circuit.  In this case, the
    OP SHOULD send a CREATE_FAST cell instead of a CREATE cell for the first
    hop only.  The OR responds with a CREATED_FAST cell, and the circuit is
    created.
@@ -228,7 +228,7 @@ TODO: (very soon)
        Key material (Y)    [20 bytes]
        Derivative key data [20 bytes]
 
-   [Versions of Tor before 0.1.???? did not support these cell types;
+   [Versions of Tor before 0.1.0.6-rc did not support these cell types;
     clients should not send CREATE_FAST cells to older Tor servers.]
 
 4.2. Setting circuit keys
