@@ -837,7 +837,8 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
   tokens = smartlist_create();
   if (tokenize_string(s,end,tokens,0)) {
-    log_fn(LOG_WARN, "Error tokeninzing router descriptor."); goto err;
+    log_fn(LOG_WARN, "Error tokeninzing router descriptor.");
+    goto err;
   }
 
   if (smartlist_len(tokens) < 2) {
@@ -960,8 +961,9 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   exit_policy_tokens = find_all_exitpolicy(tokens);
   SMARTLIST_FOREACH(exit_policy_tokens, directory_token_t *, t,
                     if (router_add_exit_policy(router,t)<0) {
-                      log_fn(LOG_WARN,"Error in exit policy"); goto err;}
-                    );
+                      log_fn(LOG_WARN,"Error in exit policy");
+                      goto err;
+                    });
 
   if ((tok = find_first_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
     int i;
@@ -976,7 +978,8 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
-    log_fn(LOG_WARN, "Missing router signature"); goto err;
+    log_fn(LOG_WARN, "Missing router signature");
+    goto err;
   }
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
     log_fn(LOG_WARN, "Bad object type or length on router signature");
@@ -984,17 +987,21 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
   if ((t=crypto_pk_public_checksig(router->identity_pkey, signed_digest,
                                    tok->object_body, 128)) != 20) {
-    log_fn(LOG_WARN, "Invalid signature %d",t); goto err;
+    log_fn(LOG_WARN, "Invalid signature %d",t);
+    goto err;
   }
   if (memcmp(digest, signed_digest, 20)) {
-    log_fn(LOG_WARN, "Mismatched signature"); goto err;
+    log_fn(LOG_WARN, "Mismatched signature");
+    goto err;
   }
 
   if (!ports_set) {
-    log_fn(LOG_WARN,"No ports declared; failing."); goto err;
+    log_fn(LOG_WARN,"No ports declared; failing.");
+    goto err;
   }
   if (!bw_set) {
-    log_fn(LOG_WARN,"No bandwidth declared; failing."); goto err;
+    log_fn(LOG_WARN,"No bandwidth declared; failing.");
+    goto err;
   }
   if (!router->or_port) {
     log_fn(LOG_WARN,"or_port unreadable or 0. Failing.");
