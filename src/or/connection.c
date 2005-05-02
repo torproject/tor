@@ -1036,10 +1036,20 @@ loop_again:
  */
 static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
   int result, at_most = *max_to_read;
+  size_t bytes_in_buf, more_to_read;
 
   if (at_most == -1) { /* we need to initialize it */
     /* how many bytes are we allowed to read? */
     at_most = connection_bucket_read_limit(conn);
+  }
+
+  bytes_in_buf = buf_capacity(conn->inbuf) - buf_datalen(conn->inbuf);
+ again:
+  if (at_most > bytes_in_buf && bytes_in_buf >= 1024) {
+    more_to_read = at_most - bytes_in_buf;
+    at_most = bytes_in_buf;
+  } else {
+    more_to_read = 0;
   }
 
   if (connection_speaks_cells(conn) && conn->state > OR_CONN_STATE_PROXY_READING) {
@@ -1105,6 +1115,13 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
   if (result > 0 && !is_local_IP(conn->addr)) { /* remember it */
     rep_hist_note_bytes_read(result, time(NULL));
     connection_read_bucket_decrement(conn, result);
+  }
+
+  if (more_to_read && result == at_most) {
+    bytes_in_buf = buf_capacity(conn->inbuf) - buf_datalen(conn->inbuf);
+    tor_assert(bytes_in_buf < 1024);
+    at_most = more_to_read;
+    goto again;
   }
 
   /* Call even if result is 0, since the global read bucket may
