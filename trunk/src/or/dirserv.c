@@ -338,8 +338,9 @@ dirserv_add_descriptor(const char **desc, const char **msg)
   /* Okay.  Now check whether the fingerprint is recognized. */
   r = dirserv_router_fingerprint_is_known(ri);
   if (r==-1) {
-    log_fn(LOG_WARN, "Known nickname '%s', wrong fingerprint. Not adding (ContactInfo '%s').",
-           ri->nickname, ri->contact_info ? ri->contact_info : "");
+    log_fn(LOG_WARN, "Known nickname '%s', wrong fingerprint. Not adding (ContactInfo '%s', platform '%s').",
+           ri->nickname, ri->contact_info ? ri->contact_info : "",
+           ri->platform ? ri->platform : "");
     *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
     routerinfo_free(ri);
     *desc = end;
@@ -358,26 +359,30 @@ dirserv_add_descriptor(const char **desc, const char **msg)
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding (ContactInfo '%s').",
+    log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding (ContactInfo '%s', platform '%s').",
            ri->nickname, (int)((ri->published_on-now)/60),
-           ri->contact_info ? ri->contact_info : "");
+           ri->contact_info ? ri->contact_info : "",
+           ri->platform ? ri->platform : "");
     *msg = "Rejected: Your clock is set too far in the future, or your timezone is not correct.";
     routerinfo_free(ri);
     *desc = end;
     return -1;
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
-    log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding (ContactInfo '%s').",
+    log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
            ri->nickname, (int)((now-ri->published_on)/60),
-           ri->contact_info ? ri->contact_info : "");
+           ri->contact_info ? ri->contact_info : "",
+           ri->platform ? ri->platform : "");
     *msg = "Rejected: Server is expired, or your clock is too far in the past, or your timezone is not correct.";
     routerinfo_free(ri);
     *desc = end;
     return -1;
   }
   if (dirserv_router_has_valid_address(ri) < 0) {
-    log_fn(LOG_NOTICE, "Router with nickname '%s' has invalid address '%s'. Not adding (ContactInfo '%s').",
-           ri->nickname, ri->address, ri->contact_info ? ri->contact_info : "");
+    log_fn(LOG_NOTICE, "Router with nickname '%s' has invalid address '%s'. Not adding (ContactInfo '%s', platform '%s').",
+           ri->nickname, ri->address,
+           ri->contact_info ? ri->contact_info : "",
+           ri->platform ? ri->platform : "");
     *msg = "Rejected: Address is not an IP, or IP is a private address.";
     routerinfo_free(ri);
     *desc = end;
