@@ -188,12 +188,6 @@ TODO: (very soon)
    onion router in the circuit; the public key hash is the SHA1 hash of the
    PKCS#1 ASN1 encoding of the next onion router's identity (signing) key.
 
-   [XXXX Before 0.0.8, EXTEND cells did not include the public key hash.
-   Servers running 0.0.8 distinguish the old-style cells based on the
-   length of payloads. (Servers running 0.0.7 blindly pass on the extend
-   cell regardless of length.) In a future release, old-style EXTEND
-   cells will not be supported.]
-
    The payload for a CREATED cell, or the relay payload for an
    EXTENDED cell, contains:
          DH data (g^y)                 [128 bytes]
@@ -662,8 +656,6 @@ The items' formats are as follows:
       over any ten second period in the past day, and another sustained
       input.  The "observed" value is the lesser of these two numbers.
 
-      [bandwidth-observed was not present before 0.0.8.]
-
    "platform" string
 
       A human-readable string describing the system on which this OR is
@@ -679,6 +671,17 @@ The items' formats are as follows:
       A fingerprint (20 byte SHA1 hash of asn1 encoded public key, encoded
       in hex, with spaces after every 4 characters) for this router's
       identity key.
+
+      [We didn't start parsing this line until Tor 0.1.0.6-rc; it should
+       be marked with "opt" until earlier versions of Tor are obsolete.]
+
+   "hibernating" 0|1
+
+      If the value is 1, then the Tor server was hibernating when the
+      descriptor was published, and shouldn't be used to build circuits.
+
+      [We didn't start parsing this line until Tor 0.1.0.6-rc; it should
+       be marked with "opt" until earlier versions of Tor are obsolete.]
 
    "uptime"
 
@@ -709,17 +712,6 @@ The items' formats are as follows:
        The router descriptor is invalid unless the signature is performed
        with the router's identity key.
 
-   "dircacheport" port NL
-
-       Same as declaring "port" as this OR's directory port in the 'router'
-       line. At most one of dircacheport and the directory port in the router
-       line may be non-zero.
-
-       [Obsolete; will go away once 0.0.8 is dead.  Older versions of Tor
-       did poorly when non-authoritative directories had a non-zero directory
-       port.  To transition, Tor 0.0.8 used dircacheport for
-       nonauthoritative directories.]
-
    "contact" info NL
 
        Describes a way to contact the server's administrator, preferably
@@ -743,6 +735,9 @@ The items' formats are as follows:
        the end of the most recent interval.  The numbers are the number of
        bytes used in the most recent intervals, ordered from oldest to newest.
 
+       [We didn't start parsing these lines until Tor 0.1.0.6-rc; they should
+        be marked with "opt" until earlier versions of Tor are obsolete.]
+
 nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
 
 exitpattern ::= addrspec ":" portspec
@@ -764,7 +759,7 @@ line, they must appear in the "ports" lines.
 
 A Directory begins with a "signed-directory" item, followed by one each of
 the following, in any order: "recommended-software", "published",
-"router-status", "directory-signing-key".  It may include any number of "opt"
+"router-status", "dir-signing-key".  It may include any number of "opt"
 items.  After these items, a directory includes any number of router
 descriptors, and a single "directory-signature" item.
 
@@ -776,7 +771,7 @@ descriptors, and a single "directory-signature" item.
 
         The time at which this directory was generated and signed, in GMT.
 
-    "directory-signing-key"
+    "dir-signing-key"
 
         The key used to sign this directory; see "signing-key" for format.
 
@@ -816,8 +811,6 @@ descriptors, and a single "directory-signature" item.
 
         When parsing this line, clients should only mark a router as
         'verified' if its nickname AND digest match the one provided.
-        [XXXX 'router-status' was added in 0.0.9pre5; older directory code
-        uses 'running-routers' instead.]
 
     "directory-signature" nickname-of-dirserver NL Signature
 

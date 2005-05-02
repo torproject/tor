@@ -490,13 +490,11 @@ dirserv_load_from_directory_string(const char *dir)
 
 /**
  * Allocate and return a description of the status of the server <b>desc</b>,
- * for use in a running-routers line (if <b>rr_format</b> is true), or in a
- * router-status line (if <b>rr_format</b> is false.  The server is listed
+ * for use in a router-status line.  The server is listed
  * as running iff <b>is_live</b> is true.
  */
 static char *
-list_single_server_status(routerinfo_t *desc, int is_live,
-                          int rr_format)
+list_single_server_status(routerinfo_t *desc, int is_live)
 {
   char buf[MAX_NICKNAME_LEN+HEX_DIGEST_LEN+4]; /* !nickname=$hexdigest\0 */
   char *cp;
@@ -510,29 +508,21 @@ list_single_server_status(routerinfo_t *desc, int is_live,
   if (desc->is_verified) {
     strlcpy(cp, desc->nickname, sizeof(buf)-(cp-buf));
     cp += strlen(cp);
-    if (!rr_format)
-      *cp++ = '=';
+    *cp++ = '=';
   }
-  if (!desc->is_verified || !rr_format) {
-    *cp++ = '$';
-    base16_encode(cp, HEX_DIGEST_LEN+1, desc->identity_digest,
-                  DIGEST_LEN);
-  }
+  *cp++ = '$';
+  base16_encode(cp, HEX_DIGEST_LEN+1, desc->identity_digest,
+                DIGEST_LEN);
   return tor_strdup(buf);
 }
 
 /** Based on the routerinfo_ts in <b>routers</b>, allocate the
- * contents of a running-routers line and a router-status line, and
- * store them in *<b>running_routers_out</b> and
- * *<b>router_status_out</b> respectively.  If either is NULL, skip
- * it.  Return 0 on success, -1 on failure.
+ * contents of a router-status line, and store it in
+ * *<b>router_status_out</b>.  Return 0 on success, -1 on failure.
  */
 int
-list_server_status(smartlist_t *routers, char **running_routers_out, char **router_status_out)
+list_server_status(smartlist_t *routers, char **router_status_out)
 {
-  /* List of entries in running-routers style: An optional !, then either
-   * a nickname or a dollar-prefixed hexdigest. */
-  smartlist_t *rr_entries;
   /* List of entries in a router-status style: An optional !, then an optional
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
   smartlist_t *rs_entries;
@@ -542,9 +532,8 @@ list_server_status(smartlist_t *routers, char **running_routers_out, char **rout
    * series.
    */
   int authdir_mode = get_options()->AuthoritativeDir;
-  tor_assert(running_routers_out || router_status_out);
+  tor_assert(router_status_out);
 
-  rr_entries = smartlist_create();
   rs_entries = smartlist_create();
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
@@ -562,18 +551,12 @@ list_server_status(smartlist_t *routers, char **running_routers_out, char **rout
     } else {
       is_live = ri->is_running;
     }
-    smartlist_add(rr_entries, list_single_server_status(ri, is_live, 1));
-    smartlist_add(rs_entries, list_single_server_status(ri, is_live, 0));
+    smartlist_add(rs_entries, list_single_server_status(ri, is_live));
   });
 
-  if (running_routers_out)
-    *running_routers_out = smartlist_join_strings(rr_entries, " ", 0,NULL);
-  if (router_status_out)
-    *router_status_out = smartlist_join_strings(rs_entries, " ", 0,NULL);
+  *router_status_out = smartlist_join_strings(rs_entries, " ", 0,NULL);
 
-  SMARTLIST_FOREACH(rr_entries, char *, cp, tor_free(cp));
   SMARTLIST_FOREACH(rs_entries, char *, cp, tor_free(cp));
-  smartlist_free(rr_entries);
   smartlist_free(rs_entries);
 
   return 0;
@@ -613,7 +596,7 @@ dirserv_dump_directory_to_string(char **dir_out,
                                  crypto_pk_env_t *private_key)
 {
   char *cp;
-  char *running_routers, *router_status;
+  char *router_status;
   char *identity_pkey; /* Identity key, DER64-encoded. */
   char *recommended_versions;
   char digest[20];
@@ -623,6 +606,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   char *buf = NULL;
   size_t buf_len;
   int i;
+  size_t identity_pkey_len;
 
   tor_assert(dir_out);
   *dir_out = NULL;
@@ -630,27 +614,14 @@ dirserv_dump_directory_to_string(char **dir_out,
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
-  if (list_server_status(descriptor_list, &running_routers, &router_status))
+  if (list_server_status(descriptor_list, &router_status))
     return -1;
 
-  /* ASN.1-encode the public key.  This is a temporary measure; once
-   * everyone is running 0.0.9pre3 or later, we can shift to using a
-   * PEM-encoded key instead.
-   */
-#if 1
-  if (crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
+  if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
+                                           &identity_pkey_len)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     return -1;
   }
-#else
-  {
-    int l;
-    if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,&l)<0) {
-      log_fn(LOG_WARN,"write identity_pkey to string failed!");
-      return -1;
-    }
-  }
-#endif
 
   {
     smartlist_t *versions;
@@ -669,7 +640,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   published_on = time(NULL);
   format_iso_time(published, published_on);
 
-  buf_len = 2048+strlen(recommended_versions)+strlen(running_routers)+
+  buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
                     buf_len += strlen(ri->signed_descriptor));
@@ -683,14 +654,12 @@ dirserv_dump_directory_to_string(char **dir_out,
            "signed-directory\n"
            "published %s\n"
            "recommended-software %s\n"
-           "running-routers %s\n"
-           "opt router-status %s\n"
-           "opt dir-signing-key %s\n\n",
-           published, recommended_versions, running_routers, router_status,
+           "router-status %s\n"
+           "dir-signing-key\n%s\n",
+           published, recommended_versions, router_status,
            identity_pkey);
 
   tor_free(recommended_versions);
-  tor_free(running_routers);
   tor_free(router_status);
   tor_free(identity_pkey);
   i = strlen(buf);
@@ -890,31 +859,19 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   size_t len;
   time_t published_on;
   char *identity_pkey; /* Identity key, DER64-encoded. */
+  size_t identity_pkey_len;
 
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
-  if (list_server_status(descriptor_list, NULL, &router_status)) {
+  if (list_server_status(descriptor_list, &router_status)) {
     goto err;
   }
-  /* ASN.1-encode the public key.  This is a temporary measure; once
-   * everyone is running 0.0.9pre3 or later, we can shift to using a
-   * PEM-encoded key instead.
-   */
-#if 1
-  if (crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
+  if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
+                                           &identity_pkey_len)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     goto err;
   }
-#else
-  {
-    int l;
-    if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,&l)<0) {
-      log_fn(LOG_WARN,"write identity_pkey to string failed!");
-      goto err;
-    }
-  }
-#endif
   published_on = time(NULL);
   format_iso_time(published, published_on);
 
@@ -923,7 +880,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   tor_snprintf(s, len, "network-status\n"
              "published %s\n"
              "router-status %s\n"
-             "opt dir-signing-key %s\n"
+             "dir-signing-key\n%s"
              "directory-signature %s\n"
              "-----BEGIN SIGNATURE-----\n",
           published, router_status, identity_pkey, get_options()->Nickname);

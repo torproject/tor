@@ -699,6 +699,8 @@ typedef struct {
 
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
+
+  char *contact_info; /**< Declared contact info for this router. */
 } routerinfo_t;
 
 /** Contents of a running-routers list */
@@ -706,7 +708,6 @@ typedef struct running_routers_t {
   time_t published_on; /**< When was the list marked as published? */
   /** Which ORs are on the list?  Entries may be prefixed with ! and $. */
   smartlist_t *running_routers;
-  int is_running_routers_format; /**< Are we using the old entry format? */
 } running_routers_t;
 
 /** Contents of a directory of onion routers. */
@@ -1472,8 +1473,7 @@ const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char **desc, const char **msg);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors(void);
-int list_server_status(smartlist_t *routers,
-                       char **running_routers_out, char **router_status_out);
+int list_server_status(smartlist_t *routers, char **router_status_out);
 void dirserv_remove_old_servers(int age);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
@@ -1811,12 +1811,10 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr);
 int routers_update_status_from_entry(smartlist_t *routers,
                                         time_t list_time,
-                                        const char *s,
-                                        int rr_format);
+                                        const char *s);
 int router_update_status_from_smartlist(routerinfo_t *r,
                                         time_t list_time,
-                                        smartlist_t *running_list,
-                                        int rr_format);
+                                        smartlist_t *running_list);
 void add_trusted_dir_server(const char *addr, uint16_t port,const char *digest);
 void clear_trusted_dir_servers(void);
 

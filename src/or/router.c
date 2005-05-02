@@ -814,9 +814,9 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   if (router->declared_family && smartlist_len(router->declared_family)) {
     size_t n;
     char *s = smartlist_join_strings(router->declared_family, " ", 0, &n);
-    n += strlen("opt family ") + 2; /* 1 for \n, 1 for \0. */
+    n += strlen("family ") + 2; /* 1 for \n, 1 for \0. */
     family_line = tor_malloc(n);
-    tor_snprintf(family_line, n, "opt family %s\n", s);
+    tor_snprintf(family_line, n, "family %s\n", s);
     tor_free(s);
   } else {
     family_line = tor_strdup("");
@@ -828,7 +828,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "platform %s\n"
                     "published %s\n"
                     "opt fingerprint %s\n"
-                    "opt uptime %ld\n"
+                    "uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
                     "signing-key\n%s%s%s%s",
@@ -857,7 +857,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   written = result;
 
   if (get_options()->ContactInfo && strlen(get_options()->ContactInfo)) {
-    result = tor_snprintf(s+written,maxlen-written, "opt contact %s\n",
+    result = tor_snprintf(s+written,maxlen-written, "contact %s\n",
                       get_options()->ContactInfo);
     if (result<0)
       return -1;

@@ -1148,7 +1148,7 @@ test_dir_format(void)
          "opt fingerprint ");
   test_assert(!crypto_pk_get_fingerprint(pk2, fingerprint, 1));
   strcat(buf2, fingerprint);
-  strcat(buf2, "\nopt uptime 0\n"
+  strcat(buf2, "\nuptime 0\n"
   /* XXX the "0" above is hardcoded, but even if we made it reflect
    * uptime, that still wouldn't make it right, because the two
    * descriptors might be made on different seconds... hm. */
@@ -1395,4 +1395,3 @@ main(int c, char**v) {
   else
     return 0;
 }
-
