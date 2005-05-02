@@ -916,8 +916,7 @@ router_load_single_router(const char *s, const char **msg)
     running_routers_t *rr = routerlist->running_routers;
     router_update_status_from_smartlist(ri,
                                         rr->published_on,
-                                        rr->running_routers,
-                                        rr->is_running_routers_format);
+                                        rr->running_routers);
   }
   if (router_add_to_routerlist(ri, msg)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list; dropping.");
@@ -1276,7 +1275,7 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
   smartlist_add_all(all_routers,list->routers);
   SMARTLIST_FOREACH(rr->running_routers, const char *, cp,
      routers_update_status_from_entry(all_routers, rr->published_on,
-                                      cp, rr->is_running_routers_format));
+                                      cp));
   smartlist_free(all_routers);
   list->running_routers_updated_on = rr->published_on;
 }
@@ -1302,8 +1301,7 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
  */
 int routers_update_status_from_entry(smartlist_t *routers,
                                      time_t list_time,
-                                     const char *s,
-                                     int rr_format)
+                                     const char *s)
 {
   int is_running = 1;
   int is_verified = 0;
@@ -1365,16 +1363,9 @@ int routers_update_status_from_entry(smartlist_t *routers,
   }
 
   /* Make sure that the entry was in the right format. */
-  if (rr_format) {
-    if (is_verified == hex_digest_set) {
-      log_fn(LOG_WARN, "Invalid syntax for running-routers member (%s)", s);
-      return -1;
-    }
-  } else {
-    if (!hex_digest_set) {
-      log_fn(LOG_WARN, "Invalid syntax for router-status member (%s)", s);
-      return -1;
-    }
+  if (!hex_digest_set) {
+    log_fn(LOG_WARN, "Invalid syntax for router-status member (%s)", s);
+    return -1;
   }
 
   /* Okay, we're done parsing. For all routers that match, update their status.
@@ -1383,11 +1374,11 @@ int routers_update_status_from_entry(smartlist_t *routers,
   {
     int nickname_matches = is_verified && !strcasecmp(r->nickname, nickname);
     int digest_matches = !memcmp(digest, r->identity_digest, DIGEST_LEN);
-    if (nickname_matches && (digest_matches||rr_format))
+    if (nickname_matches && digest_matches)
       r->is_verified = 1;
     else if (digest_matches)
       r->is_verified = 0;
-    if (digest_matches || (nickname_matches&&rr_format))
+    if (digest_matches)
       if (r->status_set_at < list_time) {
         r->is_running = is_running;
         r->status_set_at = time(NULL);
@@ -1402,14 +1393,13 @@ int routers_update_status_from_entry(smartlist_t *routers,
 int
 router_update_status_from_smartlist(routerinfo_t *router,
                                     time_t list_time,
-                                    smartlist_t *running_list,
-                                    int rr_format)
+                                    smartlist_t *running_list)
 {
   smartlist_t *rl;
   rl = smartlist_create();
   smartlist_add(rl,router);
   SMARTLIST_FOREACH(running_list, const char *, cp,
-            routers_update_status_from_entry(rl,list_time,cp,rr_format));
+                    routers_update_status_from_entry(rl,list_time,cp));
   smartlist_free(rl);
   return 0;
 }

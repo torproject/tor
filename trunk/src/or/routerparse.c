@@ -38,12 +38,15 @@ typedef enum {
   K_OPT,
   K_BANDWIDTH,
   K_PORTS,
-  K_DIRCACHEPORT,
   K_CONTACT,
   K_NETWORK_STATUS,
   K_UPTIME,
   K_DIR_SIGNING_KEY,
   K_FAMILY,
+  K_FINGERPRINT,
+  K_HIBERNATING,
+  K_READ_HISTORY,
+  K_WRITE_HISTORY,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -114,12 +117,15 @@ static struct {
   { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR_ONLY },
   { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ,  ANY },
   { "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK,  ANY },
-  { "dircacheport",        K_DIRCACHEPORT,        ARGS,    NO_OBJ,  RTR_ONLY },
   { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ,  ANY },
   { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR_ONLY },
   { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR_ONLY },
   { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK,  DIR_ONLY },
   { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR_ONLY },
+  { "fingerprint",         K_FINGERPRINT,         ARGS,    NO_OBJ,  ANY },
+  { "hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ,  RTR_ONLY },
+  { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR_ONLY },
+  { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR_ONLY },
   { NULL, -1, NO_ARGS, NO_OBJ, ANY }
 };
 
@@ -358,7 +364,6 @@ router_parse_routerlist_from_directory(const char *str,
   char digest[DIGEST_LEN];
   routerlist_t *new_dir = NULL;
   char *versions = NULL;
-  int nickname_list_is_running_routers;
   smartlist_t *good_nickname_list = NULL;
   time_t published_on;
   int i, r;
@@ -466,14 +471,11 @@ router_parse_routerlist_from_directory(const char *str,
 
   /* Prefer router-status, then running-routers. */
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_STATUS))) {
-    if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
-      log_fn(LOG_WARN,
-             "Missing running-routers/router-status line from directory.");
-      goto err;
-    }
+    log_fn(LOG_WARN,
+           "Missing router-status line from directory.");
+    goto err;
   }
 
-  nickname_list_is_running_routers = (tok->tp == K_RUNNING_ROUTERS);
   good_nickname_list = smartlist_create();
   for (i=0; i<tok->n_args; ++i) {
     smartlist_add(good_nickname_list, tok->args[i]);
@@ -497,7 +499,7 @@ router_parse_routerlist_from_directory(const char *str,
     routerinfo_t *me = router_get_my_routerinfo();
     if (me) {
       if (router_update_status_from_smartlist(me,
-            published_on, good_nickname_list, tok->tp==K_RUNNING_ROUTERS)==1 &&
+            published_on, good_nickname_list)==1 &&
           me->is_verified == 0 && !have_warned_about_unverified_status) {
         log_fn(LOG_WARN,"Dirserver '%s' lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
         have_warned_about_unverified_status = 1;
@@ -510,8 +512,6 @@ router_parse_routerlist_from_directory(const char *str,
   new_dir->running_routers = tor_malloc_zero(sizeof(running_routers_t));
   new_dir->running_routers->published_on = published_on;
   new_dir->running_routers->running_routers = good_nickname_list;
-  new_dir->running_routers->is_running_routers_format =
-    nickname_list_is_running_routers;
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
@@ -599,7 +599,6 @@ router_parse_runningrouters(const char *str, int write_to_cache)
   new_list = tor_malloc_zero(sizeof(running_routers_t));
   new_list->published_on = published_on;
   new_list->running_routers = smartlist_create();
-  new_list->is_running_routers_format = (tok->tp == K_RUNNING_ROUTERS);
   for (i=0;i<tok->n_args;++i) {
     smartlist_add(new_list->running_routers, tok->args[i]);
   }
@@ -659,6 +658,8 @@ static crypto_pk_env_t *find_dir_signing_key(const char *str)
     key = tok->key;
     tok->key = NULL; /* steal reference. */
   } else if (tok->n_args >= 1) {
+    /** XXXX Once all the directories are running 0.1.0.6-rc or later, we
+     * can remove this logic. */
     key = crypto_pk_DER64_decode_public_key(tok->args[0]);
     if (!key) {
       log_fn(LOG_WARN, "Unparseable dir-signing-key argument");
@@ -801,8 +802,7 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
 
   if (good_nickname_list) {
     SMARTLIST_FOREACH(good_nickname_list, const char *, cp,
-           routers_update_status_from_entry(routers, published_on,
-                                            cp, rr_format));
+                  routers_update_status_from_entry(routers, published_on, cp));
   }
 
   if (*dest)
@@ -893,17 +893,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     ports_set = 1;
   }
 
-  tok = find_first_by_keyword(tokens, K_DIRCACHEPORT);
-  if (tok) {
-    if (router->dir_port)
-      log_fn(LOG_WARN,"Redundant dircacheport line");
-    if (tok->n_args != 1) {
-      log_fn(LOG_WARN,"Wrong # of arguments to \"dircacheport\"");
-      goto err;
-    }
-    router->dir_port = (uint16_t) tor_parse_long(tok->args[0],10,1,65535,NULL,NULL);
-  }
-
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
   if (tok && bw_set) {
     log_fn(LOG_WARN,"Redundant bandwidth line");
@@ -962,6 +951,10 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
 
   if ((tok = find_first_by_keyword(tokens, K_PLATFORM))) {
     router->platform = tor_strdup(tok->args[0]);
+  }
+
+  if ((tok = find_first_by_keyword(tokens, K_CONTACT))) {
+    router->contact_info = tor_strdup(tok->args[0]);
   }
 
   exit_policy_tokens = find_all_exitpolicy(tokens);

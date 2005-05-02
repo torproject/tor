@@ -630,7 +630,7 @@ handle_getinfo_helper(const char *question, char **answer)
     routerlist_t *routerlist;
     router_get_routerlist(&routerlist);
     if (!routerlist || !routerlist->routers ||
-        list_server_status(routerlist->routers, NULL, answer) < 0) {
+        list_server_status(routerlist->routers, answer) < 0) {
       return -1;
     }
   } else if (!strcmpstart(question, "addr-mappings/")) {
