@@ -274,8 +274,8 @@ circuit_free_cpath_node(crypt_path_t *victim) {
     crypto_free_digest_env(victim->f_digest);
   if (victim->b_digest)
     crypto_free_digest_env(victim->b_digest);
-  if (victim->handshake_state)
-    crypto_dh_free(victim->handshake_state);
+  if (victim->dh_handshake_state)
+    crypto_dh_free(victim->dh_handshake_state);
   victim->magic = 0xDEADBEEFu;
   tor_free(victim);
 }
@@ -613,10 +613,10 @@ void assert_cpath_layer_ok(const crypt_path_t *cp)
       tor_assert(cp->b_crypto);
       /* fall through */
     case CPATH_STATE_CLOSED:
-      tor_assert(!cp->handshake_state);
+      tor_assert(!cp->dh_handshake_state);
       break;
     case CPATH_STATE_AWAITING_KEYS:
-      tor_assert(cp->handshake_state);
+      /* tor_assert(cp->dh_handshake_state); */
       break;
     default:
       log_fn(LOG_ERR,"Unexpected state %d",cp->state);

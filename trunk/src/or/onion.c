@@ -199,7 +199,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
  * next key_out_len bytes of key material in key_out.
  */
 int
-onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes */
+onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes */
                             crypto_pk_env_t *private_key,
                             crypto_pk_env_t *prev_private_key,
                             char *handshake_reply_out, /* ONIONSKIN_REPLY_LEN bytes */
@@ -287,9 +287,9 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
  */
 int
 onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
-                            char *handshake_reply, /* Must be ONIONSKIN_REPLY_LEN bytes */
-                            char *key_out,
-                            size_t key_out_len)
+            const char *handshake_reply, /* Must be ONIONSKIN_REPLY_LEN bytes */
+            char *key_out,
+            size_t key_out_len)
 {
   int len;
   char *key_material=NULL;
@@ -326,6 +326,69 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 #endif
 
   tor_free(key_material);
+  return 0;
+}
+
+int
+fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
+                      char *handshake_reply_out, /* DIGEST_LEN*2 bytes */
+                      char *key_out,
+                      size_t key_out_len)
+{
+  char tmp[DIGEST_LEN+DIGEST_LEN+1];
+  char digest[DIGEST_LEN];
+  int i;
+
+  if (crypto_rand(handshake_reply_out, DIGEST_LEN)<0)
+    return -1;
+
+  memcpy(tmp, key_in, DIGEST_LEN);
+  memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
+  tmp[DIGEST_LEN+DIGEST_LEN] = 0;
+  crypto_digest(handshake_reply_out+DIGEST_LEN, tmp, sizeof(tmp));
+
+  for (i = 0; i*DIGEST_LEN < key_out_len; ++i) {
+    size_t len;
+    tmp[DIGEST_LEN+DIGEST_LEN] = i+1;
+    crypto_digest(digest, tmp, sizeof(tmp));
+    len = key_out_len - i*DIGEST_LEN;
+    if (len > DIGEST_LEN) len = DIGEST_LEN;
+    memcpy(key_out+i*DIGEST_LEN, digest, len);
+  }
+
+  return 0;
+}
+
+int
+fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
+                      const char *handshake_reply_out, /* DIGEST_LEN*2 bytes */
+                      char *key_out,
+                      size_t key_out_len)
+{
+  char tmp[DIGEST_LEN+DIGEST_LEN+1];
+  char digest[DIGEST_LEN];
+  int i;
+
+  memcpy(tmp, handshake_state, DIGEST_LEN);
+  memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
+  tmp[DIGEST_LEN+DIGEST_LEN] = 0;
+  crypto_digest(digest, tmp, sizeof(tmp));
+
+  if (memcmp(digest, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
+    /* H(K) does *not* match. Something fishy. */
+    log_fn(LOG_WARN,"Digest DOES NOT MATCH on fast handshake. Bug or attack.");
+    return -1;
+  }
+
+  for (i = 0; i*DIGEST_LEN < key_out_len; ++i) {
+    size_t len;
+    tmp[DIGEST_LEN+DIGEST_LEN] = i+1;
+    crypto_digest(digest, tmp, sizeof(tmp));
+    len = key_out_len - i*DIGEST_LEN;
+    if (len > DIGEST_LEN) len = DIGEST_LEN;
+    memcpy(key_out+i*DIGEST_LEN, digest, len);
+  }
+
   return 0;
 }
 

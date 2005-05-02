@@ -511,7 +511,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   cpath->magic = CRYPT_PATH_MAGIC;
   launched->build_state->expiry_time = time(NULL) + MAX_REND_TIMEOUT;
 
-  cpath->handshake_state = dh;
+  cpath->dh_handshake_state = dh;
   dh = NULL;
   if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1)<0)
     goto err;
@@ -722,7 +722,7 @@ rend_service_rendezvous_has_opened(circuit_t *circuit)
 
   /* All we need to do is send a RELAY_RENDEZVOUS1 cell... */
   memcpy(buf, circuit->rend_cookie, REND_COOKIE_LEN);
-  if (crypto_dh_get_public(hop->handshake_state,
+  if (crypto_dh_get_public(hop->dh_handshake_state,
                            buf+REND_COOKIE_LEN, DH_KEY_LEN)<0) {
     log_fn(LOG_WARN,"Couldn't get DH public key");
     goto err;
@@ -738,8 +738,8 @@ rend_service_rendezvous_has_opened(circuit_t *circuit)
     goto err;
   }
 
-  crypto_dh_free(hop->handshake_state);
-  hop->handshake_state = NULL;
+  crypto_dh_free(hop->dh_handshake_state);
+  hop->dh_handshake_state = NULL;
 
   /* Append the cpath entry. */
   hop->state = CPATH_STATE_OPEN;

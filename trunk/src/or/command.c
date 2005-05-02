@@ -98,6 +98,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
       /* do nothing */
       break;
     case CELL_CREATE:
+    case CELL_CREATE_FAST:
       ++stats_n_create_cells_processed;
 #ifdef KEEP_TIMING_STATS
       ++num_create;
@@ -108,6 +109,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
 #endif
       break;
     case CELL_CREATED:
+    case CELL_CREATED_FAST:
       ++stats_n_created_cells_processed;
 #ifdef KEEP_TIMING_STATS
       ++num_created;
@@ -181,18 +183,33 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   }
 
   circ = circuit_new(cell->circ_id, conn);
-  circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
   circ->purpose = CIRCUIT_PURPOSE_OR;
+  circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
+  if (cell->command == CELL_CREATE) {
+    memcpy(circ->onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
 
-  memcpy(circ->onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
-
-  /* hand it off to the cpuworkers, and then return */
-  if (assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
-    log_fn(LOG_WARN,"Failed to hand off onionskin. Closing.");
-    circuit_mark_for_close(circ);
-    return;
+    /* hand it off to the cpuworkers, and then return */
+    if (assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
+      log_fn(LOG_WARN,"Failed to hand off onionskin. Closing.");
+      circuit_mark_for_close(circ);
+      return;
+    }
+    log_fn(LOG_DEBUG,"success: handed off onionskin.");
+  } else {
+    unsigned char keys[CPATH_KEY_MATERIAL_LEN];
+    unsigned char reply[DIGEST_LEN*2];
+    tor_assert(cell->command == CELL_CREATE_FAST);
+    if (fast_server_handshake(cell->payload, reply, keys, sizeof(keys))<0) {
+      log_fn(LOG_WARN,"Failed to generate key material. Closing.");
+      circuit_mark_for_close(circ);
+      return;
+    }
+    if (onionskin_answer(circ, CELL_CREATED_FAST, reply, keys)<0) {
+      log_fn(LOG_WARN,"Failed to reply to CREATE_FAST cell. Closing.");
+      circuit_mark_for_close(circ);
+      return;
+    }
   }
-  log_fn(LOG_DEBUG,"success: handed off onionskin.");
 }
 
 /** Process a 'created' <b>cell</b> that just arrived from <b>conn</b>. Find the circuit
@@ -220,7 +237,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
 
   if (CIRCUIT_IS_ORIGIN(circ)) { /* we're the OP. Handshake this. */
     log_fn(LOG_DEBUG,"at OP. Finishing handshake.");
-    if (circuit_finish_handshake(circ, cell->payload) < 0) {
+    if (circuit_finish_handshake(circ, cell->command, cell->payload) < 0) {
       log_fn(LOG_WARN,"circuit_finish_handshake failed.");
       circuit_mark_for_close(circ);
       return;
@@ -318,4 +335,3 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
     }
   }
 }
-

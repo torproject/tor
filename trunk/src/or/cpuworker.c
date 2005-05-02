@@ -24,7 +24,7 @@ const char cpuworker_c_id[] = "$Id$";
 /** How many bytes are sent from tor to the cpuworker? */
 #define LEN_ONION_QUESTION (1+TAG_LEN+ONIONSKIN_CHALLENGE_LEN)
 /** How many bytes are sent from the cpuworker back to tor? */
-#define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+40+32)
+#define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+CPATH_KEY_MATERIAL_LEN)
 
 /** How many cpuworkers we have running right now. */
 static int num_cpuworkers=0;
@@ -159,7 +159,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
       goto done_processing;
     }
     tor_assert(circ->p_conn);
-    if (onionskin_answer(circ, buf+TAG_LEN, buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
+    if (onionskin_answer(circ, CELL_CREATED, buf+TAG_LEN, buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       log_fn(LOG_WARN,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ);
       goto done_processing;
@@ -205,7 +205,7 @@ static int cpuworker_main(void *data) {
   int fd;
 
   /* variables for onion processing */
-  unsigned char keys[40+32];
+  unsigned char keys[CPATH_KEY_MATERIAL_LEN];
   unsigned char reply_to_proxy[ONIONSKIN_REPLY_LEN];
   unsigned char buf[LEN_ONION_RESPONSE];
   char tag[TAG_LEN];
@@ -248,7 +248,7 @@ static int cpuworker_main(void *data) {
 
     if (question_type == CPUWORKER_TASK_ONION) {
       if (onion_skin_server_handshake(question, onion_key, last_onion_key,
-          reply_to_proxy, keys, 40+32) < 0) {
+          reply_to_proxy, keys, CPATH_KEY_MATERIAL_LEN) < 0) {
         /* failure */
         log_fn(LOG_INFO,"onion_skin_server_handshake failed.");
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
@@ -258,7 +258,7 @@ static int cpuworker_main(void *data) {
         buf[0] = 1; /* 1 means success */
         memcpy(buf+1,tag,TAG_LEN);
         memcpy(buf+1+TAG_LEN,reply_to_proxy,ONIONSKIN_REPLY_LEN);
-        memcpy(buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN,keys,40+32);
+        memcpy(buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN,keys,CPATH_KEY_MATERIAL_LEN);
       }
       if (write_all(fd, buf, LEN_ONION_RESPONSE, 1) != LEN_ONION_RESPONSE) {
         log_fn(LOG_ERR,"writing response buf failed. Exiting.");

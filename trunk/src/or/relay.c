@@ -882,7 +882,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
       log_fn(LOG_DEBUG,"Got an extended cell! Yay.");
-      if (circuit_finish_handshake(circ, cell->payload+RELAY_HEADER_SIZE) < 0) {
+      if (circuit_finish_handshake(circ, CELL_CREATED,
+                                   cell->payload+RELAY_HEADER_SIZE) < 0) {
         log_fn(LOG_WARN,"circuit_finish_handshake failed.");
         return -1;
       }
