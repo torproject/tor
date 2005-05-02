@@ -118,7 +118,7 @@ static INLINE void _split_range(buf_t *buf, char *at, size_t *len,
 }
 
 /** Change a buffer's capacity. <b>new_capacity</b> must be \>= buf->datalen. */
-static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
+static void buf_resize(buf_t *buf, size_t new_capacity)
 {
   off_t offset;
 #ifdef CHECK_AFTER_RESIZE
@@ -133,6 +133,9 @@ static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
   tmp2 = tor_malloc(buf->datalen);
   peek_from_buf(tmp, buf->datalen, buf);
 #endif
+
+  if (buf->len == new_capacity)
+    return;
 
   offset = buf->cur - buf->mem;
   if (offset + buf->datalen >= new_capacity) {
@@ -214,6 +217,7 @@ static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
   return 0;
 }
 
+#if 0
 /** If the buffer is at least 2*MIN_GREEDY_SHRINK_SIZE bytes in capacity,
  * and if the buffer is less than 1/8 full, shrink the buffer until
  * one of the above no longer holds.  (We shrink the buffer by
@@ -236,6 +240,9 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
          (int)buf->len, (int)new_len);
   buf_resize(buf, new_len);
 }
+#else
+#define buf_shrink_if_underfull(buf) do {} while (0)
+#endif
 
 void
 buf_shrink(buf_t *buf)
@@ -278,13 +285,11 @@ static INLINE int buf_nul_terminate(buf_t *buf)
  */
 buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
-  buf = tor_malloc(sizeof(buf_t));
+  buf = tor_malloc_zero(sizeof(buf_t));
   buf->magic = BUFFER_MAGIC;
   buf->cur = buf->mem = GUARDED_MEM(tor_malloc(ALLOC_LEN(size)));
   SET_GUARDS(buf->mem, size);
   buf->len = size;
-  buf->datalen = 0;
-//  memset(buf->mem,0,size);
 
   assert_buf_ok(buf);
   return buf;

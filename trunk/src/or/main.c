@@ -103,6 +103,7 @@ static int nt_service_is_stopped(void);
 #endif
 
 #define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
+#define BUF_SHRINK_INTERVAL 180 /* three minutes */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
 
 /********* END VARIABLES ************/
@@ -606,6 +607,7 @@ static void run_scheduled_events(time_t now) {
   static time_t last_rotated_certificate = 0;
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
+  static time_t time_to_shrink_buffers = 0;
   or_options_t *options = get_options();
   int i;
 
@@ -743,6 +745,16 @@ static void run_scheduled_events(time_t now) {
   /** 5. We do housekeeping for each connection... */
   for (i=0;i<nfds;i++) {
     run_connection_housekeeping(i, now);
+  }
+  if (time_to_shrink_buffers < now) {
+    for (i=0;i<nfds;i++) {
+      connection_t *conn = connection_array[i];
+      if (conn->outbuf)
+        buf_shrink(conn->outbuf);
+      if (conn->inbuf)
+        buf_shrink(conn->inbuf);
+    }
+    time_to_shrink_buffers = now + BUF_SHRINK_INTERVAL;
   }
 
   /** 6. And remove any marked circuits... */
