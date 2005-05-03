@@ -666,8 +666,8 @@ void circuit_build_failed(circuit_t *circ) {
       /* Don't increment failure count, since Alice may have picked
        * the rendezvous point maliciously */
       log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s (%s hop failed).",
-             failed_at_last_hop?"last":"non-last",
-             circ->build_state->chosen_exit_name);
+             circ->build_state->chosen_exit_name,
+             failed_at_last_hop?"last":"non-last");
       rend_service_relaunch_rendezvous(circ);
       break;
     default:
@@ -838,7 +838,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
                                               need_uptime)) {
       log_fn(LOG_NOTICE,"No Tor server exists that allows exit to %s:%d. Rejecting.",
-             conn->socks_request->address, conn->socks_request->port);
+             safe_str(conn->socks_request->address), conn->socks_request->port);
       return -1;
     }
   }
@@ -856,19 +856,20 @@ try_an_intro_point:
       exitname = rend_client_get_random_intro(conn->rend_query);
       if (!exitname) {
         log_fn(LOG_INFO,"No intro points for '%s': refetching service descriptor.",
-               conn->rend_query);
+               safe_str(conn->rend_query));
         rend_client_refetch_renddesc(conn->rend_query);
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
       if (!router_get_by_nickname(exitname)) {
         log_fn(LOG_NOTICE,"Advertised intro point '%s' is not recognized for '%s'. Skipping over.",
-               exitname, conn->rend_query);
+               exitname, safe_str(conn->rend_query));
         rend_client_remove_intro_point(exitname, conn->rend_query);
         tor_free(exitname);
         goto try_an_intro_point;
       }
-      log_fn(LOG_INFO,"Chose %s as intro point for %s.", exitname, conn->rend_query);
+      log_fn(LOG_INFO,"Chose %s as intro point for %s.",
+             exitname, safe_str(conn->rend_query));
     }
 
     /* If we have specified a particular exit node for our
@@ -878,7 +879,8 @@ try_an_intro_point:
       if (conn->chosen_exit_name) {
         exitname = tor_strdup(conn->chosen_exit_name);
         if (!router_get_by_nickname(exitname)) {
-          log_fn(LOG_NOTICE,"Requested exit point '%s' is not known. Closing.", exitname);
+          log_fn(LOG_NOTICE,"Requested exit point '%s' is not known. Closing.",
+                 exitname);
           tor_free(exitname);
           return -1;
         }

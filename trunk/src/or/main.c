@@ -252,7 +252,7 @@ void connection_watch_events(connection_t *conn, short events) {
   if (r<0)
     log_fn(LOG_WARN,
            "Error from libevent setting read event state for %d to %swatched.",
-           (int)conn->s, (events & EV_READ)?"":"un");
+           conn->s, (events & EV_READ)?"":"un");
 
   if (events & EV_WRITE) {
     r = event_add(conn->write_event, NULL);
@@ -263,7 +263,7 @@ void connection_watch_events(connection_t *conn, short events) {
   if (r<0)
     log_fn(LOG_WARN,
            "Error from libevent setting read event state for %d to %swatched.",
-           (int)conn->s, (events & EV_WRITE)?"":"un");
+           conn->s, (events & EV_WRITE)?"":"un");
 }
 
 /** Return true iff <b>conn</b> is listening for read events. */
@@ -281,7 +281,7 @@ void connection_stop_reading(connection_t *conn) {
   log(LOG_DEBUG,"connection_stop_reading() called.");
   if (event_del(conn->read_event))
     log_fn(LOG_WARN, "Error from libevent setting read event state for %d to unwatched.",
-           (int)conn->s);
+           conn->s);
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
@@ -291,7 +291,7 @@ void connection_start_reading(connection_t *conn) {
 
   if (event_add(conn->read_event, NULL))
     log_fn(LOG_WARN, "Error from libevent setting read event state for %d to watched.",
-           (int)conn->s);
+           conn->s);
 }
 
 /** Return true iff <b>conn</b> is listening for write events. */
@@ -308,7 +308,7 @@ void connection_stop_writing(connection_t *conn) {
 
   if (event_del(conn->write_event))
     log_fn(LOG_WARN, "Error from libevent setting write event state for %d to unwatched.",
-           (int)conn->s);
+           conn->s);
 
 }
 
@@ -319,7 +319,7 @@ void connection_start_writing(connection_t *conn) {
 
   if (event_add(conn->write_event, NULL))
     log_fn(LOG_WARN, "Error from libevent setting write event state for %d to watched.",
-           (int)conn->s);
+           conn->s);
 }
 
 /** Close all connections that have been scheduled to get closed */
@@ -442,7 +442,8 @@ static int conn_close_if_marked(int i) {
     }
     if (connection_wants_to_flush(conn)) {
       log_fn(LOG_NOTICE,"Conn (addr %s, fd %d, type %s, state %d) is being closed, but there are still %d bytes we can't write. (Marked at %s:%d)",
-             conn->address, conn->s, conn_type_to_string(conn->type), conn->state,
+             safe_str(conn->address), conn->s, conn_type_to_string(conn->type),
+             conn->state,
              (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,
              conn->marked_for_close);
     }
@@ -466,7 +467,7 @@ void directory_all_unreachable(time_t now) {
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
     log_fn(LOG_NOTICE,"Network down? Failing connection to '%s:%d'.",
-           conn->socks_request->address, conn->socks_request->port);
+           safe_str(conn->socks_request->address), conn->socks_request->port);
     connection_mark_unattached_ap(conn, END_STREAM_REASON_NET_UNREACHABLE);
   }
 }
@@ -553,7 +554,8 @@ static void run_connection_housekeeping(int i, time_t now) {
   if (conn->type == CONN_TYPE_DIR &&
       !conn->marked_for_close &&
       conn->timestamp_lastwritten + 5*60 < now) {
-    log_fn(LOG_INFO,"Expiring wedged directory conn (fd %d, purpose %d)", conn->s, conn->purpose);
+    log_fn(LOG_INFO,"Expiring wedged directory conn (fd %d, purpose %d)",
+           conn->s, conn->purpose);
     connection_mark_for_close(conn);
     return;
   }
@@ -1066,7 +1068,7 @@ dumpstats(int severity) {
       i, conn->s, conn->type, conn_type_to_string(conn->type),
         conn->state, conn_state_to_string(conn->type, conn->state), (int)(now - conn->timestamp_created));
     if (!connection_is_listener(conn)) {
-      log(severity,"Conn %d is to '%s:%d'.",i,conn->address, conn->port);
+      log(severity,"Conn %d is to '%s:%d'.",i,safe_str(conn->address), conn->port);
       log(severity,"Conn %d: %d bytes waiting on inbuf (last read %d secs ago)",i,
              (int)buf_datalen(conn->inbuf),
              (int)(now - conn->timestamp_lastread));

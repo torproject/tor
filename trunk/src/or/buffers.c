@@ -918,7 +918,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
                  (int)strlen(tmpbuf));
           return -1;
         }
-        log_fn(LOG_DEBUG,"socks4: successfully read destip (%s)", tmpbuf);
+        log_fn(LOG_DEBUG,"socks4: successfully read destip (%s)", safe_str(tmpbuf));
         socks4_prot = socks4;
       }
 

@@ -356,7 +356,7 @@ circuit_t *circuit_get_by_edge_conn(connection_t *conn)
     /* return NULL; */
     circ = circuit_get_by_conn(conn);
     if (circ) {
-      log_fn(LOG_WARN, "BUG: conn->on_circuit==NULL, but there was in fact a circuit there. ");
+      log_fn(LOG_WARN, "BUG: conn->on_circuit==NULL, but there was in fact a circuit there.");
     }
     return circ;
   }
@@ -562,7 +562,7 @@ void _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     /* treat this like getting a nack from it */
     log_fn(LOG_INFO,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
-           circ->rend_query, circ->build_state->chosen_exit_name);
+           safe_str(circ->rend_query), safe_str(circ->build_state->chosen_exit_name));
     rend_client_remove_intro_point(circ->build_state->chosen_exit_name, circ->rend_query);
   }
 

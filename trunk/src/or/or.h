@@ -1093,6 +1093,8 @@ typedef struct {
                           * to cope? (1) */
   int ShutdownWaitLength; /**< When we get a SIGINT and we're a server, how
                            * long do we wait before exiting? */
+  int SafeLogging; /**< Boolean: are we allowed to log sensitive strings
+                    * such as addresses (0), or do we scrub them first (1)? */
 } or_options_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024
@@ -1242,6 +1244,7 @@ or_options_t *get_options(void);
 void set_options(or_options_t *new_val);
 int options_act(void);
 void config_free_all(void);
+const char *safe_str(const char *address);
 
 int config_get_lines(char *string, struct config_line_t **result);
 void config_free_lines(struct config_line_t *front);

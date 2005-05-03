@@ -168,6 +168,7 @@ static config_var_t config_vars[] = {
   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
+  VAR("SafeLogging",         BOOL,     SafeLogging,          "1"),
   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
@@ -247,6 +248,17 @@ config_free_all(void)
 {
   options_free(global_options);
   tor_free(config_fname);
+}
+
+/** If options->SafeLogging is on, return a not very useful string,
+ * else return address.
+ */
+const char *
+safe_str(const char *address) {
+  if (get_options()->SafeLogging)
+    return "[scrubbed]";
+  else
+    return address;
 }
 
 /** Fetch the active option list, and take actions based on it. All
@@ -930,7 +942,7 @@ static void
 print_usage(void)
 {
   printf(
-"Copyright 2001-2004 Roger Dingledine, Nick Mathewson, Matej Pfajfar.\n\n"
+"Copyright 2001-2005 Roger Dingledine, Nick Mathewson.\n\n"
 "tor -f <torrc> [args]\n"
 "See man page for options, or http://tor.eff.org/ for documentation.\n");
 }
@@ -1617,8 +1629,8 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
     return -1;
   }
 
-  if (old->RunAsDaemon && !new_val->RunAsDaemon) {
-    log_fn(LOG_WARN,"During reload, change from RunAsDaemon=1 to =0 not allowed. Failing.");
+  if (old->RunAsDaemon != new_val->RunAsDaemon) {
+    log_fn(LOG_WARN,"During reload, changing RunAsDaemon is not allowed. Failing.");
     return -1;
   }
 
@@ -1638,7 +1650,7 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
   }
 
   if (!opt_streq(old->Group, new_val->Group)) {
-    log_fn(LOG_WARN,"During reload, changing User is not allowed. Failing.");
+    log_fn(LOG_WARN,"During reload, changing Group is not allowed. Failing.");
     return -1;
   }
 
@@ -2173,7 +2185,7 @@ config_parse_addr_policy(struct config_line_t *cfg,
       if (*nextp) {
         nextp = &((*nextp)->next);
       } else {
-        log_fn(LOG_WARN,"Malformed policy %s.", ent);
+        log_fn(LOG_WARN,"Malformed policy '%s'.", ent);
         r = -1;
       }
     });

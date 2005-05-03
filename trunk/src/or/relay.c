@@ -607,7 +607,7 @@ connection_edge_process_end_not_open(
       return -1;
     }
     log_fn(LOG_INFO,"Address '%s' refused due to '%s'. Considering retrying.",
-           conn->socks_request->address,
+           safe_str(conn->socks_request->address),
            connection_edge_end_reason_str(reason));
     exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
     if (!exitrouter) {
@@ -620,7 +620,7 @@ connection_edge_process_end_not_open(
           uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
           if (!addr) {
             log_fn(LOG_INFO,"Address '%s' resolved to 0.0.0.0. Closing,",
-                   conn->socks_request->address);
+                   safe_str(conn->socks_request->address));
             connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
             return 0;
           }
@@ -654,7 +654,7 @@ connection_edge_process_end_not_open(
           /* else, conn will get closed below */
         } else {
           log_fn(LOG_NOTICE,"Have tried resolving address '%s' at %d different places. Giving up.",
-                 conn->socks_request->address, MAX_RESOLVE_FAILURES);
+                 safe_str(conn->socks_request->address), MAX_RESOLVE_FAILURES);
         }
         break;
       case END_STREAM_REASON_HIBERNATING:
