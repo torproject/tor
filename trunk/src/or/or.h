@@ -1543,6 +1543,7 @@ void directory_has_arrived(time_t now, char *identity_digest);
 int control_signal_act(int the_signal);
 void handle_signals(int is_parent);
 void tor_cleanup(void);
+void tor_free_all(int postfork);
 
 int tor_main(int argc, char *argv[]);
 
