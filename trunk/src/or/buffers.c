@@ -138,9 +138,9 @@ static void buf_resize(buf_t *buf, size_t new_capacity)
     return;
 
   offset = buf->cur - buf->mem;
-  if (offset + buf->datalen >= new_capacity) {
+  if (offset + buf->datalen > new_capacity) {
     /* We need to move stuff before we shrink. */
-    if (offset+buf->datalen >= buf->len) {
+    if (offset + buf->datalen > buf->len) {
       /* We have:
        *
        * mem[0] ... mem[datalen-(len-offset)] (end of data)
@@ -165,7 +165,7 @@ static void buf_resize(buf_t *buf, size_t new_capacity)
                                      ALLOC_LEN(new_capacity)));
   SET_GUARDS(buf->mem, new_capacity);
   buf->cur = buf->mem+offset;
-  if (offset + buf->datalen >= buf->len) {
+  if (offset + buf->datalen > buf->len) {
     /* We need to move data now that we are done growing.  The buffer
      * now contains:
      *
