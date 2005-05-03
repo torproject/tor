@@ -366,14 +366,10 @@ directory_send_command(connection_t *conn, const char *platform,
   char proxystring[128];
   char hoststring[128];
   char url[128];
-  int use_newer = 0;
   const char *httpcommand = NULL;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
-
-  /* If we don't know the platform, assume it's up-to-date. */
-  use_newer = platform ? tor_version_as_new_as(platform, "0.0.9pre1"):1;
 
   if (conn->port == 80) {
     strlcpy(hoststring, conn->address, sizeof(hoststring));
@@ -390,22 +386,22 @@ directory_send_command(connection_t *conn, const char *platform,
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(!resource);
       tor_assert(!payload);
-      log_fn(LOG_DEBUG, "Asking for %scompressed directory from server running %s",
-             use_newer?"":"un", platform?platform:"<unknown version>");
+      log_fn(LOG_DEBUG, "Asking for compressed directory from server running %s",
+             platform?platform:"<unknown version>");
       httpcommand = "GET";
-      strlcpy(url, use_newer ? "/tor/dir.z" : "/", sizeof(url));
+      strlcpy(url, "/tor/dir.z", sizeof(url));
       break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       tor_assert(!resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      strlcpy(url, use_newer ? "/tor/running-routers" : "/running-routers", sizeof(url));
+      strlcpy(url, "/tor/running-routers", sizeof(url));
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
-      strlcpy(url, use_newer ? "/tor/" : "/", sizeof(url));
+      strlcpy(url, "/tor/", sizeof(url));
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
       tor_assert(resource);
@@ -417,14 +413,14 @@ directory_send_command(connection_t *conn, const char *platform,
       strlcpy(conn->rend_query, resource, sizeof(conn->rend_query));
 
       httpcommand = "GET";
-      tor_snprintf(url, sizeof(url), "%s/rendezvous/%s", use_newer ? "/tor" : "", resource);
+      tor_snprintf(url, sizeof(url), "/tor/rendezvous/%s", resource);
 
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
-      tor_snprintf(url, sizeof(url), "%s/rendezvous/publish", use_newer ? "/tor" : "");
+      tor_snprintf(url, sizeof(url), "/tor/rendezvous/publish");
       break;
   }
 
