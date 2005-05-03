@@ -2336,7 +2336,10 @@ normalize_data_directory(or_options_t *options) {
    if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
      /* If our homedir is /, we probably don't want to use it. */
      /* XXXX Default to /var/lib/tor? */
-     log_fn(LOG_WARN, "Defaulting to 'DataDirectory %s', which may not be what you want", fn);
+     log_fn(LOG_WARN, "Default DataDirectory is ~/.tor, which works out to %s, which is probably not what you want.  Using %s/tor instead", fn, LOCALSTATEDIR);
+     tor_free(fn);
+     fn = tor_strdup(LOCALSTATEDIR"/tor");
+
    }
    tor_free(options->DataDirectory);
    options->DataDirectory = fn;
