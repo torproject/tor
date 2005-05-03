@@ -329,6 +329,8 @@ AC_SUBST(BINDIR)
 
 LOCALSTATEDIR=`eval echo $localstatedir`
 AC_SUBST(LOCALSTATEDIR)
+AC_DEFINE_UNQUOTED(LOCALSTATEDIR,"$LOCALSTATEDIR")
+AC_DEFINE([LOCALSTATEDIR], [], [Default location to store state files.])
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
