@@ -40,7 +40,6 @@ static void conn_write_callback(int fd, short event, void *_conn);
 static void signal_callback(int fd, short events, void *arg);
 static void second_elapsed_callback(int fd, short event, void *args);
 static int conn_close_if_marked(int i);
-void tor_free_all(void);
 
 /********* START VARIABLES **********/
 
@@ -1227,7 +1226,7 @@ static int tor_init(int argc, char *argv[]) {
  *
  * Also valgrind should then report 0 reachable in its
  * leak report */
-void tor_free_all(void)
+void tor_free_all(int postfork)
 {
   routerlist_free_current();
   free_trusted_dir_servers();
@@ -1242,13 +1241,17 @@ void tor_free_all(void)
   clear_pending_onions();
   circuit_free_all();
   connection_free_all();
-  config_free_all();
-  router_free_all_keys();
+  if (!postfork) {
+    config_free_all();
+    router_free_all_keys();
+  }
   tor_tls_free_all();
   /* stuff in main.c */
   smartlist_free(closeable_connection_lst);
 
-  close_logs(); /* free log strings. do this last so logs keep working. */
+  if (!postfork) {
+    close_logs(); /* free log strings. do this last so logs keep working. */
+  }
 }
 
 /** Do whatever cleanup is necessary before shutting Tor down. */
@@ -1260,7 +1263,7 @@ void tor_cleanup(void) {
     unlink(options->PidFile);
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
-  tor_free_all(); /* move tor_free_all back into the ifdef below later. XXX*/
+  tor_free_all(0); /* move tor_free_all back into the ifdef below later. XXX*/
   crypto_global_cleanup();
 #ifdef USE_DMALLOC
   dmalloc_log_unfreed();
