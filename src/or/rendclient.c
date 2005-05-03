@@ -67,7 +67,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
 
   if (rend_cache_lookup_entry(introcirc->rend_query, &entry) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
-           introcirc->rend_query);
+           safe_str(introcirc->rend_query));
     goto err;
   }
 
@@ -216,16 +216,17 @@ rend_client_introduction_acked(circuit_t *circ,
       nickname = rend_client_get_random_intro(circ->rend_query);
       tor_assert(nickname);
       log_fn(LOG_INFO,"Got nack for %s from %s, extending to %s.",
-             circ->rend_query, circ->build_state->chosen_exit_name, nickname);
+             safe_str(circ->rend_query),
+             circ->build_state->chosen_exit_name, nickname);
       if (!(r = router_get_by_nickname(nickname))) {
         log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
-               nickname, circ->rend_query);
+               nickname, safe_str(circ->rend_query));
         tor_free(nickname);
         circuit_mark_for_close(circ);
         return -1;
       }
       log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d)",
-             nickname, circ->rend_query, circ->n_circ_id);
+             nickname, safe_str(circ->rend_query), circ->n_circ_id);
       tor_free(nickname);
       return circuit_extend_to_new_exit(circ, r);
     }
@@ -241,7 +242,7 @@ void
 rend_client_refetch_renddesc(const char *query)
 {
   if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
-    log_fn(LOG_INFO,"Would fetch a new renddesc here (for %s), but one is already in progress.", query);
+    log_fn(LOG_INFO,"Would fetch a new renddesc here (for %s), but one is already in progress.", safe_str(query));
   } else {
     /* not one already; initiate a dir rend desc lookup */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_RENDDESC, query, 1);
@@ -263,11 +264,12 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
 
   r = rend_cache_lookup_entry(query, &ent);
   if (r<0) {
-    log_fn(LOG_WARN, "Malformed service ID '%s'", query);
+    log_fn(LOG_WARN, "Malformed service ID '%s'", safe_str(query));
     return -1;
   }
   if (r==0) {
-    log_fn(LOG_INFO, "Unknown service %s. Re-fetching descriptor.", query);
+    log_fn(LOG_INFO, "Unknown service %s. Re-fetching descriptor.",
+           safe_str(query));
     rend_client_refetch_renddesc(query);
     return 0;
   }
@@ -282,7 +284,8 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
   }
 
   if (!ent->parsed->n_intro_points) {
-    log_fn(LOG_INFO,"No more intro points remain for %s. Re-fetching descriptor.", query);
+    log_fn(LOG_INFO,"No more intro points remain for %s. Re-fetching descriptor.",
+           safe_str(query));
     rend_client_refetch_renddesc(query);
 
     /* move all pending streams back to renddesc_wait */
@@ -293,7 +296,8 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
 
     return 0;
   }
-  log_fn(LOG_INFO,"%d options left for %s.", ent->parsed->n_intro_points, query);
+  log_fn(LOG_INFO,"%d options left for %s.",
+         ent->parsed->n_intro_points, safe_str(query));
   return 1;
 }
 
@@ -406,7 +410,7 @@ void rend_client_desc_here(char *query) {
       }
       tor_assert(conn->state != AP_CONN_STATE_RENDDESC_WAIT); /* avoid loop */
     } else { /* 404, or fetch didn't get that far */
-      log_fn(LOG_NOTICE,"Closing stream for '%s.onion': hidden service is unavailable (try again later).", query);
+      log_fn(LOG_NOTICE,"Closing stream for '%s.onion': hidden service is unavailable (try again later).", safe_str(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
     }
   }
@@ -423,7 +427,8 @@ char *rend_client_get_random_intro(char *query) {
   rend_cache_entry_t *entry;
 
   if (rend_cache_lookup_entry(query, &entry) < 1) {
-    log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.", query);
+    log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
+           safe_str(query));
     return NULL;
   }
 

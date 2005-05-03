@@ -173,12 +173,12 @@ connection_unregister(connection_t *conn)
 {
   if (conn->read_event) {
     if (event_del(conn->read_event))
-      log_fn(LOG_WARN, "Error removing read event for %d", (int)conn->s);
+      log_fn(LOG_WARN, "Error removing read event for %d", conn->s);
     tor_free(conn->read_event);
   }
   if (conn->write_event) {
     if (event_del(conn->write_event))
-      log_fn(LOG_WARN, "Error removing write event for %d", (int)conn->s);
+      log_fn(LOG_WARN, "Error removing write event for %d", conn->s);
     tor_free(conn->write_event);
   }
 }
@@ -670,7 +670,8 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
     return -1;
   } else if (!SOCKET_IS_POLLABLE(s)) {
     log_fn(LOG_WARN,
-      "Too many connections; can't create pollable connection to %s", address);
+      "Too many connections; can't create pollable connection to %s",
+      safe_str(address));
     tor_close_socket(s);
     return -1;
   }
@@ -700,13 +701,13 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   dest_addr.sin_port = htons(port);
   dest_addr.sin_addr.s_addr = htonl(addr);
 
-  log_fn(LOG_DEBUG,"Connecting to %s:%u.",address,port);
+  log_fn(LOG_DEBUG,"Connecting to %s:%u.",safe_str(address),port);
 
   if (connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
       /* yuck. kill it. */
-      log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",address,port,
+      log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",safe_str(address),port,
              tor_socket_strerror(e));
       tor_close_socket(s);
       return -1;
@@ -721,7 +722,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   }
 
   /* it succeeded. we're connected. */
-  log_fn(LOG_INFO,"Connection to %s:%u established.",address,port);
+  log_fn(LOG_INFO,"Connection to %s:%u established.",safe_str(address),port);
   conn->s = s;
   if (connection_add(conn) < 0) /* no space, forget it */
     return -1;

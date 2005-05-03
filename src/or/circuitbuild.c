@@ -791,8 +791,6 @@ int onionskin_answer(circuit_t *circ, uint8_t cell_type, unsigned char *payload,
 
   circ->state = CIRCUIT_STATE_OPEN;
 
-  log_fn(LOG_DEBUG,"Entering.");
-
   memcpy(cell.payload, payload,
          cell_type == CELL_CREATED ? ONIONSKIN_REPLY_LEN : DIGEST_LEN*2);
 
@@ -1497,3 +1495,4 @@ onion_append_hop(crypt_path_t **head_ptr, routerinfo_t *choice) {
 
   return 0;
 }
+

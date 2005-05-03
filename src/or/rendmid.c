@@ -77,7 +77,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   while ((c = circuit_get_next_by_pk_and_purpose(
                                 c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
     log_fn(LOG_INFO, "Replacing old circuit %d for service %s",
-           c->p_circ_id, serviceid);
+           c->p_circ_id, safe_str(serviceid));
     circuit_mark_for_close(c);
   }
 
@@ -95,7 +95,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
 
   log_fn(LOG_INFO,
          "Established introduction point on circuit %d for service %s",
-         circ->p_circ_id, serviceid);
+         circ->p_circ_id, safe_str(serviceid));
 
   return 0;
  truncated:
@@ -140,13 +140,13 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   if (!intro_circ) {
     log_fn(LOG_WARN,
            "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; responding with nack",
-           serviceid, circ->p_circ_id);
+           safe_str(serviceid), circ->p_circ_id);
     goto err;
   }
 
   log_fn(LOG_INFO,
          "Sending introduction request for service %s from circ %d to circ %d",
-         serviceid, circ->p_circ_id, intro_circ->p_circ_id);
+         safe_str(serviceid), circ->p_circ_id, intro_circ->p_circ_id);
 
   /* Great.  Now we just relay the cell down the circuit. */
   if (connection_edge_send_command(NULL, intro_circ,

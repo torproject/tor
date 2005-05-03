@@ -616,7 +616,6 @@ int router_compare_to_my_exit_policy(connection_t *conn)
 
   return router_compare_addr_to_addr_policy(conn->addr, conn->port,
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
-
 }
 
 /** Return true iff <b>router</b> has the same nickname as this OR.  (For an

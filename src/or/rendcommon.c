@@ -280,23 +280,24 @@ int rend_cache_store(const char *desc, size_t desc_len)
   }
   now = time(NULL);
   if (parsed->timestamp < now-REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
-    log_fn(LOG_WARN,"Service descriptor %s is too old", query);
+    log_fn(LOG_WARN,"Service descriptor %s is too old", safe_str(query));
     rend_service_descriptor_free(parsed);
     return -1;
   }
   if (parsed->timestamp > now+REND_CACHE_MAX_SKEW) {
-    log_fn(LOG_WARN,"Service descriptor %s is too far in the future", query);
+    log_fn(LOG_WARN,"Service descriptor %s is too far in the future",
+           safe_str(query));
     rend_service_descriptor_free(parsed);
     return -1;
   }
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, query);
   if (e && e->parsed->timestamp > parsed->timestamp) {
-    log_fn(LOG_INFO,"We already have a newer service descriptor %s with the same ID", query);
+    log_fn(LOG_INFO,"We already have a newer service descriptor %s with the same ID", safe_str(query));
     rend_service_descriptor_free(parsed);
     return 0;
   }
   if (e && e->len == desc_len && !memcmp(desc,e->desc,desc_len)) {
-    log_fn(LOG_INFO,"We already have this service descriptor %s", query);
+    log_fn(LOG_INFO,"We already have this service descriptor %s", safe_str(query));
     e->received = time(NULL);
     rend_service_descriptor_free(parsed);
     return 0;
@@ -314,7 +315,8 @@ int rend_cache_store(const char *desc, size_t desc_len)
   e->desc = tor_malloc(desc_len);
   memcpy(e->desc, desc, desc_len);
 
-  log_fn(LOG_INFO,"Successfully stored rend desc '%s', len %d", query, (int)desc_len);
+  log_fn(LOG_INFO,"Successfully stored rend desc '%s', len %d",
+         safe_str(query), (int)desc_len);
   return 1;
 }
 

@@ -579,7 +579,8 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
                tor_strdup(to));
         if (!addr) {
           log_fn(LOG_WARN,
-                 "Unable to allocate address for '%s' in MapAddress msg",line);
+                 "Unable to allocate address for '%s' in MapAddress msg",
+                 safe_str(line));
         } else {
           size_t anslen = strlen(addr)+strlen(to)+2;
           char *ans = tor_malloc(anslen);
