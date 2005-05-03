@@ -827,10 +827,6 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
 
       stats_n_data_bytes_received += rh.length;
-      if (conn->type == CONN_TYPE_AP) {
-        conn->stream_size += rh.length;
-        log_fn(LOG_DEBUG,"%d: stream size now %d.", conn->s, (int)conn->stream_size);
-      }
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                               rh.length, conn);
       connection_edge_consider_sending_sendme(conn);
@@ -843,11 +839,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
 /* XXX add to this log_fn the exit node's nickname? */
-      log_fn(LOG_INFO,"%d: end cell (%s) for stream %d. Removing stream. Size %d.",
+      log_fn(LOG_INFO,"%d: end cell (%s) for stream %d. Removing stream.",
              conn->s,
              connection_edge_end_reason_str(rh.length > 0 ?
                *(char *)(cell->payload+RELAY_HEADER_SIZE) : -1),
-             conn->stream_id, (int)conn->stream_size);
+             conn->stream_id);
       if (conn->socks_request && !conn->socks_request->has_finished)
         log_fn(LOG_WARN,"Bug: open stream hasn't sent socks answer yet? Closing.");
 #ifdef HALF_OPEN
@@ -1044,10 +1040,6 @@ repeat_connection_edge_package_raw_inbuf:
 
   log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).", conn->s,
          (int)length, (int)buf_datalen(conn->inbuf));
-  if (conn->type == CONN_TYPE_EXIT) {
-    conn->stream_size += length;
-    log_fn(LOG_DEBUG,"%d: Stream size now %d.", conn->s, (int)conn->stream_size);
-  }
 
   if (connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
                                    payload, length, conn->cpath_layer) < 0)

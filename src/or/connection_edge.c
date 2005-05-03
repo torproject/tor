@@ -76,7 +76,7 @@ int connection_edge_reached_eof(connection_t *conn) {
     /* it still has stuff to process. don't let it die yet. */
     return 0;
   }
-  log_fn(LOG_INFO,"conn (fd %d) reached eof (stream size %d). Closing.", conn->s, (int)conn->stream_size);
+  log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
   if (!conn->marked_for_close) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */

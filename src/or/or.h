@@ -614,7 +614,6 @@ struct connection_t {
                                            * querying for? (DIR/AP only) */
 
 /* Used only by edge connections: */
-  size_t stream_size; /**< Used for debugging. */
   uint16_t stream_id;
   struct connection_t *next_stream; /**< Points to the next stream at this
                                      * edge, if any (Edge only). */
