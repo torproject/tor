@@ -722,7 +722,7 @@ static int dnsworker_main(void *data) {
   fd = fdarray[1]; /* this side is ours */
 #ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
-  connection_free_all(1); /* so the child doesn't hold the parent's fd's open */
+  tor_free_all(1); /* so the child doesn't hold the parent's fd's open */
   handle_signals(0); /* ignore interrupts from the keyboard, etc */
 #endif
   tor_free(data);
