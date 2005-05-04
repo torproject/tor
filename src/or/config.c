@@ -1282,6 +1282,9 @@ options_validate(or_options_t *options)
     }
   }
 
+  if (server_mode(options) && !options->ContactInfo)
+    log_fn(LOG_NOTICE,"Your ContactInfo config option is not set. Please consider setting it, so we can contact you if your server is misconfigured or something else goes wrong.");
+
   if (normalize_log_options(options))
     return -1;
 
