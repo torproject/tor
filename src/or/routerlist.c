@@ -693,6 +693,7 @@ void routerinfo_free(routerinfo_t *router)
   tor_free(router->address);
   tor_free(router->nickname);
   tor_free(router->platform);
+  tor_free(router->contact_info);
   if (router->onion_pkey)
     crypto_free_pk_env(router->onion_pkey);
   if (router->identity_pkey)
