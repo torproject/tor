@@ -1069,11 +1069,14 @@ dumpstats(int severity) {
         conn->state, conn_state_to_string(conn->type, conn->state), (int)(now - conn->timestamp_created));
     if (!connection_is_listener(conn)) {
       log(severity,"Conn %d is to '%s:%d'.",i,safe_str(conn->address), conn->port);
-      log(severity,"Conn %d: %d bytes waiting on inbuf (last read %d secs ago)",i,
+      log(severity,"Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",i,
              (int)buf_datalen(conn->inbuf),
+             (int)buf_capacity(conn->inbuf),
              (int)(now - conn->timestamp_lastread));
-      log(severity,"Conn %d: %d bytes waiting on outbuf (last written %d secs ago)",i,
-             (int)buf_datalen(conn->outbuf), (int)(now - conn->timestamp_lastwritten));
+      log(severity,"Conn %d: %d bytes waiting on outbuf (len %d, last written %d secs ago)",i,
+             (int)buf_datalen(conn->outbuf),
+             (int)buf_capacity(conn->outbuf),
+             (int)(now - conn->timestamp_lastwritten));
     }
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits using this conn */
   }
