@@ -330,7 +330,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   num_dnsworkers_busy++;
 
   len = strlen(dnsconn->address);
-  connection_write_to_buf(&len, 1, dnsconn);
+  connection_write_to_buf((char*)&len, 1, dnsconn);
   connection_write_to_buf(dnsconn->address, len, dnsconn);
 
   return 0;

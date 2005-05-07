@@ -347,7 +347,7 @@ fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
   tmp[DIGEST_LEN+DIGEST_LEN] = 0;
   crypto_digest(handshake_reply_out+DIGEST_LEN, tmp, sizeof(tmp));
 
-  for (i = 0; i*DIGEST_LEN < key_out_len; ++i) {
+  for (i = 0; i*DIGEST_LEN < (int)key_out_len; ++i) {
     size_t len;
     tmp[DIGEST_LEN+DIGEST_LEN] = i+1;
     crypto_digest(digest, tmp, sizeof(tmp));
@@ -380,7 +380,7 @@ fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
     return -1;
   }
 
-  for (i = 0; i*DIGEST_LEN < key_out_len; ++i) {
+  for (i = 0; i*DIGEST_LEN < (int)key_out_len; ++i) {
     size_t len;
     tmp[DIGEST_LEN+DIGEST_LEN] = i+1;
     crypto_digest(digest, tmp, sizeof(tmp));

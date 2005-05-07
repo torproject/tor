@@ -84,9 +84,10 @@ aes_new_cipher()
  * the counter to 0.
  */
 void
-aes_set_key(aes_cnt_cipher_t *cipher, const unsigned char *key, int key_bits)
+aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
 {
-  cipher->nr = rijndaelKeySetupEnc(cipher->rk, key, key_bits);
+  cipher->nr = rijndaelKeySetupEnc(cipher->rk, (const unsigned char*)key,
+                                   key_bits);
   cipher->counter0 = 0;
   cipher->counter1 = 0;
   cipher->pos = 0;
@@ -108,7 +109,7 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
  * by <b>len</b> bytes as it encrypts.
  */
 void
-aes_crypt(aes_cnt_cipher_t *cipher, const char *input, int len, char *output)
+aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len, char *output)
 {
   int c = cipher->pos;
   if (!len) return;
