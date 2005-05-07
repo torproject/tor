@@ -1799,6 +1799,8 @@ init_from_config(int argc, char **argv)
       newoptions->command = CMD_HASH_PASSWORD;
       newoptions->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
       ++i;
+    } else if (!strcmp(argv[i],"--verify-config")) {
+      newoptions->command = CMD_VERIFY_CONFIG;
     }
   }
 
