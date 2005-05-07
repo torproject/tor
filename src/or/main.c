@@ -1409,6 +1409,9 @@ void nt_service_main(void)
       case CMD_HASH_PASSWORD:
         do_hash_password();
         break;
+      case CMD_VERIFY_CONFIG:
+        printf("Configuration was valid\n");
+        break;
       default:
         log_fn(LOG_ERR, "Illegal command number %d: internal error.", get_options()->command);
       }
@@ -1593,6 +1596,9 @@ int tor_main(int argc, char *argv[]) {
     break;
   case CMD_HASH_PASSWORD:
     do_hash_password();
+    break;
+  case CMD_VERIFY_CONFIG:
+    printf("Configuration was valid\n");
     break;
   default:
     log_fn(LOG_ERR, "Illegal command number %d: internal error.",
