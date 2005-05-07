@@ -533,8 +533,8 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   /* information about the remote peer when connecting to other routers */
   struct sockaddr_in remote;
   char addrbuf[256];
-  /* length of the remote address. Must be an int, since accept() needs that. */
-  int remotelen = 256;
+  /* length of the remote address. Must be whatever accept() needs. */
+  socklen_t remotelen = 256;
   char tmpbuf[INET_NTOA_BUF_LEN];
   tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
@@ -1046,7 +1046,7 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
 
   bytes_in_buf = buf_capacity(conn->inbuf) - buf_datalen(conn->inbuf);
  again:
-  if (at_most > bytes_in_buf && bytes_in_buf >= 1024) {
+  if ((size_t)at_most > bytes_in_buf && bytes_in_buf >= 1024) {
     more_to_read = at_most - bytes_in_buf;
     at_most = bytes_in_buf;
   } else {
@@ -1167,7 +1167,8 @@ int connection_outbuf_too_full(connection_t *conn) {
  * return 0.
  */
 int connection_handle_write(connection_t *conn) {
-  int e, len=sizeof(e);
+  int e;
+  socklen_t len=sizeof(e);
   int result;
   time_t now = time(NULL);
 

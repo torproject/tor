@@ -196,8 +196,8 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
     }
     log_fn(LOG_DEBUG,"success: handed off onionskin.");
   } else {
-    unsigned char keys[CPATH_KEY_MATERIAL_LEN];
-    unsigned char reply[DIGEST_LEN*2];
+    char keys[CPATH_KEY_MATERIAL_LEN];
+    char reply[DIGEST_LEN*2];
     tor_assert(cell->command == CELL_CREATE_FAST);
     if (fast_server_handshake(cell->payload, reply, keys, sizeof(keys))<0) {
       log_fn(LOG_WARN,"Failed to generate key material. Closing.");

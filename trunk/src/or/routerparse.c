@@ -930,7 +930,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
   if (crypto_pk_keysize(tok->key) != PK_BYTES) {
     log_fn(LOG_WARN, "Wrong size on onion key: %d bits!",
-           crypto_pk_keysize(tok->key)*8);
+           (int)crypto_pk_keysize(tok->key)*8);
     goto err;
   }
   router->onion_pkey = tok->key;
@@ -941,7 +941,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
   if (crypto_pk_keysize(tok->key) != PK_BYTES) {
     log_fn(LOG_WARN, "Wrong size on identity key: %d bits!",
-           crypto_pk_keysize(tok->key)*8);
+           (int)crypto_pk_keysize(tok->key)*8);
     goto err;
   }
   router->identity_pkey = tok->key;

@@ -258,7 +258,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
  * any pending data that may have been received. */
 int connection_edge_finished_connecting(connection_t *conn)
 {
-  unsigned char connected_payload[4];
+  char connected_payload[4];
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_EXIT);
@@ -1474,7 +1474,7 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
  */
 void
 connection_exit_connect(connection_t *conn) {
-  unsigned char connected_payload[4];
+  char connected_payload[4];
   uint32_t addr;
   uint16_t port;
 

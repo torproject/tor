@@ -73,53 +73,53 @@ crypto_pk_env_t *crypto_pk_DER64_decode_public_key(const char *in);
 
 int crypto_pk_check_key(crypto_pk_env_t *env);
 int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b);
-int crypto_pk_keysize(crypto_pk_env_t *env);
+size_t crypto_pk_keysize(crypto_pk_env_t *env);
 crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *orig);
 
-int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *to,
-                             const unsigned char *from, int fromlen, int padding);
-int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *to,
-                              const unsigned char *from, int fromlen,
+int crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to,
+                             const char *from, size_t fromlen, int padding);
+int crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
+                              const char *from, size_t fromlen,
                               int padding, int warnOnFailure);
-int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *to,
-                              const unsigned char *from, int fromlen);
-int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *data,
-                                     int datalen, const unsigned char *sig, int siglen);
-int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *to,
-                           const unsigned char *from, int fromlen);
-int crypto_pk_private_sign_digest(crypto_pk_env_t *env, unsigned char *to,
-                                  const unsigned char *from, int fromlen);
-int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env, unsigned char *to,
-                                    const unsigned char *from, int fromlen,
+int crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
+                              const char *from, size_t fromlen);
+int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
+                                     int datalen, const char *sig, int siglen);
+int crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
+                           const char *from, size_t fromlen);
+int crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to,
+                                  const char *from, size_t fromlen);
+int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env, char *to,
+                                    const char *from, size_t fromlen,
                                     int padding, int force);
-int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env, unsigned char *to,
-                                     const unsigned char *from, int fromlen,
+int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env, char *to,
+                                     const char *from, size_t fromlen,
                                      int padding, int warnOnFailure);
 
 int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len);
-crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len);
+crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out);
 int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out,int add_space);
 int crypto_pk_check_fingerprint_syntax(const char *s);
 
 /* symmetric crypto */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env);
-int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key);
-const unsigned char *crypto_cipher_get_key(crypto_cipher_env_t *env);
+int crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key);
+const char *crypto_cipher_get_key(crypto_cipher_env_t *env);
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env);
 int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env);
 
-int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *to,
-                          const unsigned char *from, unsigned int fromlen);
-int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *to,
-                          const unsigned char *from, unsigned int fromlen);
+int crypto_cipher_encrypt(crypto_cipher_env_t *env, char *to,
+                          const char *from, size_t fromlen);
+int crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
+                          const char *from, size_t fromlen);
 
 /* only implemented for CRYPTO_CIPHER_AES_CTR */
 int crypto_cipher_rewind(crypto_cipher_env_t *env, long delta);
 int crypto_cipher_advance(crypto_cipher_env_t *env, long delta);
 
 /* SHA-1 */
-int crypto_digest(unsigned char *digest, const unsigned char *m, int len);
+int crypto_digest(char *digest, const char *m, size_t len);
 crypto_digest_env_t *crypto_new_digest_env(void);
 void crypto_free_digest_env(crypto_digest_env_t *digest);
 void crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
@@ -143,8 +143,8 @@ void crypto_dh_free(crypto_dh_env_t *dh);
 
 /* random numbers */
 int crypto_seed_rng(void);
-int crypto_rand(unsigned char *to, unsigned int n);
-void crypto_pseudo_rand(unsigned char *to, unsigned int n);
+int crypto_rand(char *to, size_t n);
+void crypto_pseudo_rand(char *to, size_t n);
 int crypto_pseudo_rand_int(unsigned int max);
 
 struct smartlist_t;

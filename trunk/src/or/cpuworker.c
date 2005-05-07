@@ -117,7 +117,7 @@ int connection_cpu_reached_eof(connection_t *conn) {
  */
 int connection_cpu_process_inbuf(connection_t *conn) {
   char success;
-  unsigned char buf[LEN_ONION_RESPONSE];
+  char buf[LEN_ONION_RESPONSE];
   uint32_t addr;
   uint16_t port;
   uint16_t circ_id;
@@ -199,15 +199,15 @@ done_processing:
  * connections, not with routers (where we'd use identity).)
  */
 static int cpuworker_main(void *data) {
-  unsigned char question[ONIONSKIN_CHALLENGE_LEN];
-  unsigned char question_type;
+  char question[ONIONSKIN_CHALLENGE_LEN];
+  uint8_t question_type;
   int *fdarray = data;
   int fd;
 
   /* variables for onion processing */
-  unsigned char keys[CPATH_KEY_MATERIAL_LEN];
-  unsigned char reply_to_proxy[ONIONSKIN_REPLY_LEN];
-  unsigned char buf[LEN_ONION_RESPONSE];
+  char keys[CPATH_KEY_MATERIAL_LEN];
+  char reply_to_proxy[ONIONSKIN_REPLY_LEN];
+  char buf[LEN_ONION_RESPONSE];
   char tag[TAG_LEN];
   crypto_pk_env_t *onion_key = NULL, *last_onion_key = NULL;
 
@@ -390,7 +390,7 @@ cull_wedged_cpuworkers(void) {
  * If question_type is CPUWORKER_TASK_ONION then task is a circ.
  * No other question_types are allowed.
  */
-int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
+int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
                         void *task) {
   circuit_t *circ;
   char tag[TAG_LEN];
@@ -424,7 +424,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;
     num_cpuworkers_busy++;
 
-    connection_write_to_buf(&question_type, 1, cpuworker);
+    connection_write_to_buf((char*)&question_type, 1, cpuworker);
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
     connection_write_to_buf(circ->onionskin, ONIONSKIN_CHALLENGE_LEN, cpuworker);
   }

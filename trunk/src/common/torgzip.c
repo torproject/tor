@@ -94,7 +94,7 @@ tor_gzip_compress(char **out, size_t *out_len,
   out_size = in_len / 2;
   if (out_size < 1024) out_size = 1024;
   *out = tor_malloc(out_size);
-  stream->next_out = *out;
+  stream->next_out = (unsigned char*)*out;
   stream->avail_out = out_size;
 
   while (1) {
@@ -110,7 +110,7 @@ tor_gzip_compress(char **out, size_t *out_len,
         offset = stream->next_out - ((unsigned char*)*out);
         out_size *= 2;
         *out = tor_realloc(*out, out_size);
-        stream->next_out = *out + offset;
+        stream->next_out = (unsigned char*)(*out + offset);
         stream->avail_out = out_size - offset;
         break;
       default:
@@ -179,7 +179,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   if (out_size < 1024) out_size = 1024;
 
   *out = tor_malloc(out_size);
-  stream->next_out = *out;
+  stream->next_out = (unsigned char*)*out;
   stream->avail_out = out_size;
 
   while (1) {
@@ -195,7 +195,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
         offset = stream->next_out - ((unsigned char*)*out);
         out_size *= 2;
         *out = tor_realloc(*out, out_size);
-        stream->next_out = *out + offset;
+        stream->next_out = (unsigned char*)(*out + offset);
         stream->avail_out = out_size - offset;
         break;
       default:

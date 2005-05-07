@@ -521,9 +521,9 @@ typedef enum {
  * OR-to-OR, is via cells. */
 typedef struct {
   uint16_t circ_id; /**< Circuit which received the cell. */
-  unsigned char command; /**< Type of the cell: one of PADDING, CREATE, RELAY,
-                          * or DESTROY. */
-  unsigned char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
+  uint8_t command; /**< Type of the cell: one of PADDING, CREATE, RELAY,
+                    * or DESTROY. */
+  char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 } cell_t;
 
 /** Beginning of a RELAY cell payload. */
@@ -1166,7 +1166,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
 int circuit_finish_handshake(circuit_t *circ, uint8_t cell_type, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
-int onionskin_answer(circuit_t *circ, uint8_t cell_type, unsigned char *payload, unsigned char *keys);
+int onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys);
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
@@ -1445,7 +1445,7 @@ void cpuworkers_rotate(void);
 int connection_cpu_finished_flushing(connection_t *conn);
 int connection_cpu_reached_eof(connection_t *conn);
 int connection_cpu_process_inbuf(connection_t *conn);
-int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
+int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
                         void *task);
 
 /********************************* directory.c ***************************/

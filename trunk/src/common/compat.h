@@ -135,6 +135,10 @@ int replace_file(const char *from, const char *to);
 #define tor_close_socket(s) close(s)
 #endif
 
+#if (SIZEOF_SOCKLEN_T == 0)
+typedef int socklen_t;
+#endif
+
 /* Now that we use libevent, all real sockets are safe for polling ... or
  * if they aren't, libevent will help us. */
 #define SOCKET_IS_POLLABLE(fd) ((fd)>=0)

@@ -676,7 +676,7 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
  * Return -1 if we want to mark circ for close, else return 0.
  */
 int circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply) {
-  unsigned char keys[CPATH_KEY_MATERIAL_LEN];
+  char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
 
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
@@ -778,7 +778,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
 /** Given a response payload and keys, initialize, then send a created
  * cell back.
  */
-int onionskin_answer(circuit_t *circ, uint8_t cell_type, unsigned char *payload, unsigned char *keys) {
+int onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys) {
   cell_t cell;
   crypt_path_t *tmp_cpath;
 
