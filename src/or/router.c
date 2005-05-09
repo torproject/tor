@@ -672,7 +672,7 @@ int router_rebuild_descriptor(int force) {
   if (!desc_is_dirty && !force)
     return 0;
 
-  if (resolve_my_address(options->Address, &addr) < 0) {
+  if (resolve_my_address(options, &addr) < 0) {
     log_fn(LOG_WARN,"options->Address didn't resolve into an IP.");
     return -1;
   }

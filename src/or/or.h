@@ -1249,7 +1249,7 @@ const char *safe_str(const char *address);
 int config_get_lines(char *string, struct config_line_t **result);
 void config_free_lines(struct config_line_t *front);
 int config_trial_assign(struct config_line_t *list, int reset);
-int resolve_my_address(const char *address, uint32_t *addr);
+int resolve_my_address(or_options_t *options, uint32_t *addr);
 void options_init(or_options_t *options);
 int init_from_config(int argc, char **argv);
 int config_init_logs(or_options_t *options, int validate_only);
