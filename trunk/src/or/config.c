@@ -952,7 +952,7 @@ print_usage(void)
  * in <b>addr</b>.
  */
 int
-resolve_my_address(const char *address, uint32_t *addr)
+resolve_my_address(or_options_t *options, uint32_t *addr)
 {
   struct in_addr in;
   struct hostent *rent;
@@ -960,6 +960,7 @@ resolve_my_address(const char *address, uint32_t *addr)
   int explicit_ip=1;
   char tmpbuf[INET_NTOA_BUF_LEN];
   static uint32_t old_addr=0;
+  const char *address = options->Address;
 
   tor_assert(addr);
 
@@ -1001,7 +1002,8 @@ resolve_my_address(const char *address, uint32_t *addr)
     log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
            "Please set the Address config option to be the IP you want to use.",
            hostname, tmpbuf);
-    return -1;
+    if(!options->NoPublish)
+      return -1;
   }
 
   log_fn(LOG_DEBUG, "Resolved Address to %s.", tmpbuf);
@@ -1299,7 +1301,7 @@ options_validate(or_options_t *options)
   if (server_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
-    if (resolve_my_address(options->Address, &tmp) < 0)
+    if (resolve_my_address(options, &tmp) < 0)
       result = -1;
   }
 
