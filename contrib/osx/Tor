@@ -56,4 +56,9 @@ StopService ()
 
 RestartService () { StopService; StartService; }
 
+if [ "x$1" = x ]; then
+  echo "Syntax: tor {start|stop}
+  exit 1
+fi 
+
 RunService "$1"
