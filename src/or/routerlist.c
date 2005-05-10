@@ -26,6 +26,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall,
 static trusted_dir_server_t *
 router_pick_trusteddirserver_impl(int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
+static int router_resolve(routerinfo_t *router);
 static int router_resolve_routerlist(routerlist_t *dir);
 
 /****************************************************************************/
@@ -929,6 +930,12 @@ router_load_single_router(const char *s, const char **msg)
     control_event_descriptors_changed(changed);
     smartlist_free(changed);
   }
+
+  if (router_resolve(ri)<0) {
+    if (msg && !*msg) *msg = "Couldn't resolve router address.";
+    return 0;
+  }
+
   log_fn(LOG_DEBUG, "Added router to list");
   return 1;
 }
