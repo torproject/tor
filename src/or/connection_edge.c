@@ -912,16 +912,34 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   addresstype = parse_extended_hostname(socks->address);
 
   if (addresstype == EXIT_HOSTNAME) {
-    /* .exit -- modify conn to specify the exit node. */
+    /* foo.exit -- modify conn->chosen_exit_node to specify the exit
+     * node, and conn->address to hold only the address portion.*/
     char *s = strrchr(socks->address,'.');
-    if (!s || s[1] == '\0') {
-      log_fn(LOG_WARN,"Malformed exit address '%s'. Refusing.",
+    if (s && s[1] != '\0') {
+      conn->chosen_exit_name = tor_strdup(s+1);
+      *s = 0;
+    } else if (s[1] == '\0') {
+      log_fn(LOG_WARN,"Malformed exit address '%s.exit'. Refusing.",
              safe_str(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
+    } else {
+      tor_assert(!s); /* address is of the form server.exit. */
+      struct in_addr in;
+      routerinfo_t *r = router_get_by_nickname(socks->address);
+      if (r) {
+        conn->chosen_exit_name = tor_strdup(socks->address);
+        /* XXXX Should this use server->address instead? */
+        in.s_addr = htonl(r->addr);
+        strlcpy(socks->address, inet_ntoa(in), sizeof(socks->address));
+      } else {
+        log_fn(LOG_WARN,
+               "Unrecognized server in exit address '%s.exit'. Refusing.",
+               safe_str(socks->address));
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+        return -1;
+      }
     }
-    conn->chosen_exit_name = tor_strdup(s+1);
-    *s = 0;
   }
 
   if (addresstype != ONION_HOSTNAME) {
