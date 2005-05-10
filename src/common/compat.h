@@ -211,10 +211,10 @@ char *get_user_homedir(const char *username);
 int spawn_func(int (*func)(void *), void *data);
 void spawn_exit(void);
 
-#if defined(MS_WINDOWS)
+#if defined(ENABLE_THREADS) && defined(MS_WINDOWS)
 #define USE_WIN32_THREADS
 #define TOR_IS_MULTITHREADED 1
-#elif defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_CREATE)
+#elif defined(ENABLE_THREADS) && defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_CREATE)
 #define USE_PTHREADS
 #define TOR_IS_MULTITHREADED 1
 #else
