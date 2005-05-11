@@ -201,12 +201,24 @@ thing, to hide your SSL traffic. Using privoxy is <b>necessary</b> because
 DNS requests when it uses a SOCKS proxy directly</a>. Privoxy also gives
 you good html scrubbing.</p>
 
-<p>To test if it's working, go to 
+
+<p>To test if it's working, you need to know your normal IP address so you can
+verify that the address really changes when running Tor.
+If you are using Linux or OSX your local IP address is shown by the <tt>ifconfig</tt> 
+command.  Under Windows go to the Start menu, click Run and enter <tt>cmd</tt>. 
+At the command prompt, enter <tt>ipconfig</tt>. If you are behind a NAT/Firewall
+ you can use one of the sites listed below to check which IP you are using.
+When that is done, start Tor and Privoxy and visit any of the sites again.
+If everything works, your IP address should have changed.
+</p>
+
+<p>
 <!--<a href="http://peertech.org/privacy-knoppix/">peertech</a>, -->
 <a href="http://www.junkbusters.com/cgi-bin/privacy">junkbusters</a>,
 <a href="http://www.network-tools.com">network-tools</a> or
 <a href="http://ipid.shat.net">ipid</a> 
-and see what IP it says you're coming from.
+are sites that basically shows your present IP so you can see 
+what address you're coming from.
 </p>
 
 <p>
