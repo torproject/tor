@@ -210,7 +210,7 @@ def _receive_msg(s):
   length,type = struct.unpack("!HH",header)
   if length:
     while length > len(body):
-      body += s.recv(length)
+      body += s.recv(length-len(body))
   return length,type,body
 
 def receive_message(s):
