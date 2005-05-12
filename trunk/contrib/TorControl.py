@@ -209,7 +209,8 @@ def _receive_msg(s):
   header = s.recv(4)
   length,type = struct.unpack("!HH",header)
   if length:
-    body = s.recv(length)
+    while length > len(body):
+      body += s.recv(length)
   return length,type,body
 
 def receive_message(s):
@@ -431,7 +432,10 @@ def do_main_loop(host,port):
                            ("frebnitz.com", "5.6.7.8"),
                            (".", "abacinator.onion")])`
     print `extend_circuit(s,0,["moria1"])`
-    send_signal(s,1)
+    print '========'
+    print `extend_circuit(s,0,[""])`
+    print '========'
+    #send_signal(s,1)
     #save_conf(s)
 
 
