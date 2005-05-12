@@ -215,12 +215,15 @@ A list of preferred nodes to use for the rendezvous point, if possible.
 A list of nodes to never use when choosing a rendezvous point.
 .TP
 \fBSOCKSPort \fR\fIPORT\fP
-Bind to this port to listen for connections from SOCKS-speaking applications.
-Set this to 0 if you don't want to allow application connections. (Default:
-9050)
+Advertise this port to listen for connections from SOCKS-speaking
+applications.  Set this to 0 if you don't want to allow application
+connections. (Default: 9050)
 .TP
-\fBSOCKSBindAddress \fR\fIIP\fP
-Bind to this address to listen for connections from SOCKS-speaking applications. (Default: 127.0.0.1) You can also specify a port (e.g. 192.168.0.1:9100). This directive can be specified multiple times to bind to multiple addresses/ports.
+\fBSOCKSBindAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind to this address to listen for connections from SOCKS-speaking
+applications. (Default: 127.0.0.1) You can also specify a port
+(e.g. 192.168.0.1:9100). This directive can be specified multiple times
+to bind to multiple addresses/ports.
 .TP
 \fBSOCKSPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
 Set an entrance policy for this server, to limit who can connect to the SOCKS ports. The policies have the same form as exit policies below.
@@ -311,10 +314,12 @@ Set the server's nickname to 'name'.
 How many processes to use at once for decrypting onionskins. (Default: 1)
 .TP
 \fBORPort \fR\fIPORT\fP
-Bind to this port to listen for connections from Tor clients and servers.
+Advertise this port to listen for connections from Tor clients and servers.
 .TP
-\fBORBindAddress \fR\fIIP\fP
-Bind to this address to listen for connections from Tor clients and servers. (Default: 0.0.0.0)
+\fBORBindAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind to this IP address to listen for connections from Tor clients and
+servers. If you specify a port, bind to this port rather than the one
+specified in ORPort. (Default: 0.0.0.0)
 .TP
 \fBRedirectExit \fR\fIpattern target\fP
 Whenever an outgoing connection tries to connect to one of a given set
@@ -379,10 +384,11 @@ probably do not want to set this option.  Please coordinate with the other
 admins at tor-ops@freehaven.net if you think you should be a directory.
 .TP
 \fBDirPort \fR\fIPORT\fP
-Bind the directory service to this port.
+Advertise the directory service on this port.
 .TP
-\fBDirBindAddress \fR\fIIP\fP
-Bind the directory service to this address. (Default: 0.0.0.0)
+\fBDirBindAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind the directory service to this address. If you specify a port, bind
+to this port rather than the one specified in DirPort. (Default: 0.0.0.0)
 .TP
 \fBDirPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
 Set an entrance policy for this server, to limit who can connect to the directory ports. The policies have the same form as exit policies above.
