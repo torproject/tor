@@ -188,23 +188,25 @@ the source for the latest version
 default configuration file, and most people won't need to change any of
 the settings.</p>
 
-<p>After installing Tor, you should install <a
+<p>
+After installing Tor, you should install <a
 href="http://www.privoxy.org/">privoxy</a>, which is a filtering web
-proxy that integrates well with Tor. Add the line <br>
+proxy that integrates well with Tor. (If you installed the Win32 or OS
+X package, see those instructions instead.)
+To configure privoxy to use Tor, add the line <br>
 <tt>forward-socks4a / localhost:9050 .</tt><br>
 (don't forget the dot) to privoxy's config file (you can just add it to the
 top). Then change your browser to http proxy at localhost port 8118.
 (In Mozilla, this is in Edit|Preferences|Advanced|Proxies.)
 You should also set your SSL proxy to the same
 thing, to hide your SSL traffic. Using privoxy is <b>necessary</b> because
-<a href="http://tor.eff.org/cvs/tor/doc/CLIENTS">Mozilla leaks your
-DNS requests when it uses a SOCKS proxy directly</a>. Privoxy also gives
+<a href="http://tor.eff.org/cvs/tor/doc/CLIENTS">most browsers leak your
+DNS requests when they use a SOCKS proxy directly</a>. Privoxy also gives
 you good html scrubbing.</p>
-
 
 <p>To test if it's working, you need to know your normal IP address so you can
 verify that the address really changes when running Tor.
-If you are using Linux or OSX your local IP address is shown by the <tt>ifconfig</tt> 
+If you are using Linux or OS X your local IP address is shown by the <tt>ifconfig</tt> 
 command.  Under Windows go to the Start menu, click Run and enter <tt>cmd</tt>. 
 At the command prompt, enter <tt>ipconfig</tt>. If you are behind a NAT/Firewall
  you can use one of the sites listed below to check which IP you are using.
@@ -216,7 +218,7 @@ If everything works, your IP address should have changed.
 <!--<a href="http://peertech.org/privacy-knoppix/">peertech</a>, -->
 <a href="http://www.showmyip.com/">showmyip.com</a> and 
 <a href="http://ipid.shat.net">ipid.shat.net</a> 
-are sites that basically shows your present IP so you can see 
+are sites that show your current IP so you can see 
 what address and country you're coming from.
 </p>
 
@@ -283,8 +285,8 @@ you will need to copy torrc.sample to torrc first. Look for them in
 </ul>
 Make sure to define at least Nickname and ORPort.
 Create the DataDirectory if necessary, and make
-sure it's owned by the user that will be running tor. Fix your system
-clock so it's not too far off. Make sure name resolution works.
+sure it's owned by the user that will be running tor.
+Make sure name resolution works.
 <li>2. If you are using a firewall, open a hole in your firewall so
 incoming connections can reach the ports you configured (i.e. ORPort,
 plus DirPort if you enabled it). Make sure you allow outgoing connections,
