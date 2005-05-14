@@ -451,7 +451,7 @@ def do_main_loop(host,port):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print "Syntax: tor-control.py torhost:torport"
+        print "Syntax: TorControl.py torhost:torport"
         sys.exit(0)
     sh,sp = parseHostAndPort(sys.argv[1])
     do_main_loop(sh,sp)
