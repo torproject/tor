@@ -796,7 +796,7 @@ void router_mark_as_down(const char *digest) {
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
  * older entries (if any) with the same name.  Note: Callers should not hold
- * their pointers to <b>router</b> after invoking this function; <b>router</b>
+ * their pointers to <b>router</b> if this function fails; <b>router</b>
  * will either be inserted into the routerlist or freed.  Returns 0 if the
  * router was added; -1 if it was not.
  *
@@ -914,6 +914,18 @@ router_load_single_router(const char *s, const char **msg)
     if (msg) *msg = "Couldn't parse router descriptor";
     return -1;
   }
+  if (router_is_me(ri)) {
+    log_fn(LOG_WARN, "Router's identity key matches mine; dropping.");
+    if (msg && !*msg) *msg = "Router's identity key matches mine.";
+    routerinfo_free(ri);
+    return 0;
+  }
+  if (router_resolve(ri)<0) {
+    log_fn(LOG_WARN, "Couldn't resolve router address; dropping.");
+    if (msg && !*msg) *msg = "Couldn't resolve router address.";
+    routerinfo_free(ri);
+    return 0;
+  }
   if (routerlist && routerlist->running_routers) {
     running_routers_t *rr = routerlist->running_routers;
     router_update_status_from_smartlist(ri,
@@ -923,17 +935,13 @@ router_load_single_router(const char *s, const char **msg)
   if (router_add_to_routerlist(ri, msg)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list; dropping.");
     if (msg && !*msg) *msg = "Couldn't add router to list.";
+    /* ri is already freed */
     return 0;
   } else {
     smartlist_t *changed = smartlist_create();
     smartlist_add(changed, ri);
     control_event_descriptors_changed(changed);
     smartlist_free(changed);
-  }
-
-  if (router_resolve(ri)<0) {
-    if (msg && !*msg) *msg = "Couldn't resolve router address.";
-    return 0;
   }
 
   log_fn(LOG_DEBUG, "Added router to list");
