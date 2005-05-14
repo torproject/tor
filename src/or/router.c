@@ -577,31 +577,6 @@ void router_upload_dir_desc_to_dirservers(int force) {
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
 }
 
-#define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
-
-/** Set the exit policy on <b>router</b> to match the exit policy in the
- * current configuration file.  If the exit policy doesn't have a catch-all
- * rule, then append the default exit policy as well.
- */
-static void router_add_exit_policy_from_config(routerinfo_t *router) {
-  addr_policy_t *ep;
-  struct config_line_t default_policy;
-  config_parse_addr_policy(get_options()->ExitPolicy, &router->exit_policy);
-
-  for (ep = router->exit_policy; ep; ep = ep->next) {
-    if (ep->msk == 0 && ep->prt_min <= 1 && ep->prt_max >= 65535) {
-      /* if exitpolicy includes a *:* line, then we're done. */
-      return;
-    }
-  }
-
-  /* Else, append the default exitpolicy. */
-  default_policy.key = NULL;
-  default_policy.value = (char*)DEFAULT_EXIT_POLICY;
-  default_policy.next = NULL;
-  config_parse_addr_policy(&default_policy, &router->exit_policy);
-}
-
 /** OR only: Check whether my exit policy says to allow connection to
  * conn.  Return false if we accept; true if we reject.
  */
@@ -702,7 +677,9 @@ int router_rebuild_descriptor(int force) {
   if (options->BandwidthRate > options->MaxAdvertisedBandwidth)
     ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
 
-  router_add_exit_policy_from_config(ri);
+  config_parse_addr_policy(get_options()->ExitPolicy, &ri->exit_policy);
+  config_append_default_exit_policy(&ri->exit_policy);
+
   if (desc_routerinfo) /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;
   if (options->MyFamily) {

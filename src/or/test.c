@@ -1316,6 +1316,40 @@ test_dir_format(void)
 }
 
 static void
+test_exit_policies(void)
+{
+  addr_policy_t *policy;
+
+  policy = router_parse_addr_policy_from_string("reject 192.168.0.0/16:*");
+  test_eq(NULL, policy->next);
+  test_eq(ADDR_POLICY_REJECT, policy->policy_type);
+  test_eq(0xc0a80000u, policy->addr);
+  test_eq(0xffff0000u, policy->msk);
+  test_eq(1, policy->prt_min);
+  test_eq(65535, policy->prt_max);
+  test_streq("reject 192.168.0.0/16:*", policy->string);
+
+  test_assert(exit_policy_implicitly_allows_local_networks(policy, 0));
+  test_eq(ADDR_POLICY_ACCEPTED,
+          router_compare_addr_to_addr_policy(0x01020304u, 2, policy));
+  test_eq(ADDR_POLICY_PROBABLY_ACCEPTED,
+          router_compare_addr_to_addr_policy(0, 2, policy));
+  test_eq(ADDR_POLICY_REJECTED,
+          router_compare_addr_to_addr_policy(0xc0a80102, 2, policy));
+
+  addr_policy_free(policy);
+
+  /* Copied from router.c */
+  policy = NULL;
+  config_append_default_exit_policy(&policy);
+  test_assert(policy);
+  test_assert(!exit_policy_implicitly_allows_local_networks(policy, 1));
+
+  addr_policy_free(policy);
+
+}
+
+static void
 test_rend_fns(void)
 {
   char address1[] = "fooaddress.onion";
@@ -1386,6 +1420,8 @@ main(int c, char**v) {
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
+  puts("\n========================= Exit policies ===================");
+  test_exit_policies();
   puts("\n========================= Rendezvous functionality ========");
   test_rend_fns();
   puts("");
