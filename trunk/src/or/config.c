@@ -1574,6 +1574,7 @@ options_validate(or_options_t *options)
     log_fn(LOG_WARN, "Error in Exit Policy entry.");
     result = -1;
   }
+  config_append_default_exit_policy(&addr_policy);
   if (server_mode(options)) {
     exit_policy_implicitly_allows_local_networks(addr_policy, 1);
   }
@@ -2160,6 +2161,32 @@ normalize_log_options(or_options_t *options)
 
   return 0;
 }
+
+#define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
+
+void
+config_append_default_exit_policy(addr_policy_t **policy)
+{
+  struct config_line_t tmp;
+  addr_policy_t *ap;
+
+  tmp.key = NULL;
+  tmp.value = (char*)DEFAULT_EXIT_POLICY;
+  tmp.next = NULL;
+  config_parse_addr_policy(&tmp, policy);
+
+  /* Remove redundant parts, if any. */
+  for (ap=*policy; ap; ap=ap->next) {
+    if (ap->msk == 0 && ap->prt_min <= 1 && ap->prt_max >= 65535) {
+      if (ap->next) {
+        addr_policy_free(ap->next);
+        ap->next = NULL;
+      }
+      return;
+    }
+  }
+}
+
 
 /**
  * Given a linked list of config lines containing "allow" and "deny" tokens,

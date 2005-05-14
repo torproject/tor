@@ -1171,8 +1171,9 @@ policy_includes_addr_mask_implicitly(addr_policy_t *policy,
      * its value, and every free bit set to 1.  So if addr and addr2 are
      * both in the policy, the range is covered by the policy.
      */
-    if ((policy->addr & policy->msk) == (addr & policy->msk) &&
-        (policy->addr & policy->msk) == (addr2 & policy->msk) &&
+    uint32_t p_addr = policy->addr & policy->msk;
+    if (p_addr == (addr & policy->msk) &&
+        p_addr == (addr2 & policy->msk) &&
         (policy->prt_min <= 1 && policy->prt_max == 65535)) {
       return 0;
     }
@@ -1216,14 +1217,15 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
   };
   for (i=0; private_networks[i].addr; ++i) {
     p = NULL;
-      if (policy_includes_addr_mask_implicitly(
+    /* log_fn(LOG_INFO,"Checking network %s", private_networks[i].network); */
+    if (policy_includes_addr_mask_implicitly(
               policy, private_networks[i].addr, private_networks[i].mask, &p)) {
-        if (warn)
-          log_fn(LOG_WARN, "Exit policy %s implicitly accepts %s",
-                 p?p->string:"(default)",
-                 private_networks[i].network);
-        r = 1;
-      }
+      if (warn)
+        log_fn(LOG_WARN, "Exit policy %s implicitly accepts %s",
+               p?p->string:"(default)",
+               private_networks[i].network);
+      r = 1;
+    }
   }
 
   return r;
