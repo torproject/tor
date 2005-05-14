@@ -23,8 +23,10 @@ AC_ARG_ENABLE(threads,
      AC_HELP_STRING(--disable-threads, disable multi-threading support))
 
 if test x$enable_threads = x; then
-   case $ac_sys_system in
-    NetBSD*)
+   case $host in
+    *-*-netbsd*)
+     # Don't try multithreading on netbsd -- there is no threadsafe DNS
+     # lookup function there.
      enable_threads="no";;
     *)
      enable_threads="yes";;
