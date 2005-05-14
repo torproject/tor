@@ -1,3 +1,46 @@
+Changes in version 0.1.0.6-rc - 2005-05-14
+  o Bugfixes:
+    - Implement --disable-threads. netbsd defaults to nothreads,
+      because its getaddrinfo appears to be non-reentrant.
+    - Apple's OS X 10.4.0 ships with a broken kqueue. We patched
+      libevent to detect and disable it.
+    - Append default exit policy before checking for implicit internal
+      addresses. Now we don't log a bunch of complaints on startup
+      when using with the default exit policy.
+    - Workaround for user error: some people were putting "Address  "
+      in their torrc, and they had a buggy resolver that resolved " "
+      to 0.0.0.0. Oops.
+    - If DataDir is ~/.tor, and that expands to /.tor, then default to
+      LOCALSTATEDIR/tor instead.
+    - Fix fragment-message bug in TorControl.py.
+    - Resolve a bug which would prevent unreachable dirports from getting
+      suppressed.
+    - When the controller gave us a new descriptor, we weren't resolving
+      it immediately, so Tor would think its address was 0.0.0.0 until
+      we fetched a new directory.
+    - Fix an uppercase/lowercase case error in suppressing a bogus
+      libevent warning.
+
+  o Features:
+    - Begin scrubbing sensitive strings from logs by default.
+    - Switch to a new buffer management algorithm, which tries to avoid
+      reallocing and copying quite as much. Looks like it uses *more*
+      memory on average, but less cpu.
+    - First cut at support for "create-fast" cells, which clients can
+      use when extending to their first hop, since the TLS already
+      provides forward secrecy and authentication. Not enabled on
+      clients yet.
+    - When dirservers refuse a router descriptor, log its contactinfo,
+      platform, and source address.
+    - Call tor_free_all instead of connections_free_all after forking, to
+      save memory on systems that need to fork.
+    - Whine at you if you're a server and you don't set your contactinfo.
+    - Implement --verify-config command-line option to check if your torrc
+      is valid without actually launching Tor.
+    - Rewrite address "serifos.exit" to "localhost.serifos.exit"
+      rather than just rejecting it.
+
+
 Changes in version 0.1.0.5-rc - 2005-04-27
   o Bugfixes:
     - Stop trying to print a null pointer if an OR conn fails because
