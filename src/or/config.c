@@ -285,7 +285,7 @@ options_act(void) {
   }
   if (!libevent_initialized) {
     configure_libevent_logging();
-    suppress_libevent_log_msg("function not implemented");
+    suppress_libevent_log_msg("Function not implemented");
     event_init();
     suppress_libevent_log_msg(NULL);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
