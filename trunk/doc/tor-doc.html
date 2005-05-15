@@ -386,13 +386,12 @@ otherwise it is listed only by its fingerprint.</p>
 <a name="hidden-service"></a>
 <h2>Configuring a hidden service</h2>
 
-<p>Tor allows clients and servers to offer hidden services. That
-is, you can offer an apache, sshd, etc, without revealing your IP to its
-users. This works via Tor's rendezvous point design: both sides build
-a Tor circuit out, and they meet in the middle.</p>
-
-<p>Using the built-in redirection (see below), it is possible to have a
-server setup on localhost and only remote Tor connections can access it.</p>
+<p>Tor allows clients and servers to offer hidden services. That is,
+you can offer an web server, sshd, etc, without revealing your IP to its
+users. You can even have your application listen on localhost only, yet
+remote Tor connections can access it. This works via Tor's rendezvous
+point design: both sides build a Tor circuit out, and they meet in
+the middle.</p>
 
 <p>If you're using Tor and <a href="http://www.privoxy.org/">Privoxy</a>,
 you can <a href="http://6sxoyfb3h2nvok2d.onion/">go to the hidden wiki</a>
@@ -405,22 +404,23 @@ create each HiddenServiceDir you have configured, and it will create a
 can tell people the url, and they can connect to it via their Tor client,
 assuming they're using a proxy (such as Privoxy) that speaks SOCKS 4A.</p>
 
-<p>Assume you want to have a hidden service to allow people to access your
-Apache http server through tor.  By doing this, they can access your server
-but won't know who they are connecting to.  You want them to access your
-Apache server using the standard port 80.  However, your Apache
-server is actually running on port 8080 so it needs to be
-redirected.</p>
+<p>Let's consider an example.
+Assume you want to set up a hidden service to allow people to access your
+Apache http server through Tor.  By doing this, they can access your server
+but won't know who they are connecting to.  You want clients to use the
+standard port 80 when accessing your server. However, if your Apache
+server is actually running on port 8080 locally, client connections need
+to be redirected.</p>
 
 <p><b>HiddenServiceDir</b> is a directory where Tor will store information
-about that hidden service.  In particular, it will store a file here named
+about that hidden service.  In particular, Tor will create a file here named
 <i>hostname</i> which will tell you the onion URL.  You don't need to add any
 files to this directory.</p>
 
 <p><b>HiddenServicePort</b> is where you specify a virtual port and where
-it should be redirected to.  For instance, you tell tor there's a virtual
-port 80 and then redirect traffic to your local webserver at
-127.0.0.1:8080.</p>
+to redirect connections to this virtual port.  For instance, you tell
+Tor there's a virtual port 80 and then redirect traffic to your local
+webserver at 127.0.0.1:8080.</p>
 
 <p>Example lines from a torrc file</p>
 
@@ -429,16 +429,16 @@ HiddenServiceDir /usr/local/etc/tor/hidden_service/
 HiddenServicePort 80 127.0.0.1:8080
 </pre>
 
-<p>This tells tor to store its files in <tt>/usr/local/etc/tor/hidden_service/</tt>
+<p>This tells Tor to store its files in <tt>/usr/local/etc/tor/hidden_service/</tt>
 and allow people to connect to your onion address on port 80.  It
 will then redirect requests to your localhost webserver on port 8080.
 </p>
 
 <p>To let people access your hidden service, look at the file
 <tt>/usr/local/etc/tor/hidden_service/hostname</tt> which will tell you what the
-hostname is (such as xyz.onion).  Then, as long as they have tor and privoxy
+hostname is (such as xyz.onion).  Then, as long as they have Tor and Privoxy
 configured, they can access your webserver with a web browser by connecting
-to http://xyz.onion.</p>
+to http://xyz.onion/</p>
 
 <p>You can have multiple tor hidden services by repeating Dir and Ports:</p>
 
@@ -455,10 +455,8 @@ HiddenServicePort 22 127.0.0.1:22
 <tt>/usr/local/etc/tor/hidden_service/hostname</tt> for an HTTP server and
 to a different hostname in
 <tt>/usr/local/etc/tor/other_hidden_service/hostname</tt> for an IRC and
-SSH server.</p>
-
-<p>To an end user, this appears to be two separate hosts with one running an
-HTTP server and another running an IRC/SSH server.</p>
+SSH server. To an end user, this appears to be two separate hosts with
+one running an HTTP server and another running an IRC/SSH server.</p>
 
 <a name="own-network"></a>
 <h2>Setting up your own network</h2>
