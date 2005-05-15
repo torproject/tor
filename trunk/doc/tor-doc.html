@@ -27,7 +27,7 @@ track and sell your behavior), and similarly from your local ISP.
 of its citizens visiting certain websites, they may monitor the sites
 and put readers on a list of suspicious persons.
 <li>Circumvention of local censorship: connect to resources (news
-sites, instant messaging, etc) that are restricted from your
+sites, instant messaging, etc.) that are restricted from your
 ISP/school/company/government.
 <li>Socially sensitive communication: chat rooms and web forums for
 rape and abuse survivors, or people with illnesses.
@@ -238,7 +238,7 @@ href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
 
 <p>To Torify an application that supports http, just point it at Privoxy
 (that is, localhost port 8118). To use SOCKS directly (for example, for
-instant messaging, Jabber, IRC, etc), point your application directly at
+instant messaging, Jabber, IRC, etc.), point your application directly at
 Tor (localhost port 9050). For applications that support neither SOCKS
 nor http, you should look at
 using <a href="http://tsocks.sourceforge.net/">tsocks</a>
@@ -387,7 +387,7 @@ otherwise it is listed only by its fingerprint.</p>
 <h2>Configuring a hidden service</h2>
 
 <p>Tor allows clients and servers to offer hidden services. That is,
-you can offer a web server, sshd, etc, without revealing your IP to its
+you can offer a web server, SSH server, etc., without revealing your IP to its
 users. You can even have your application listen on localhost only, yet
 remote Tor connections can access it. This works via Tor's rendezvous
 point design: both sides build a Tor circuit out, and they meet in
@@ -406,7 +406,7 @@ assuming they're using a proxy (such as Privoxy) that speaks SOCKS 4A.</p>
 
 <p>Let's consider an example.
 Assume you want to set up a hidden service to allow people to access your
-Apache http server through Tor.  By doing this, they can access your server
+Apache web server through Tor.  By doing this, they can access your server
 but won't know who they are connecting to.  You want clients to use the
 standard port 80 when accessing your server. However, if your Apache
 server is actually running on port 8080 locally, client connections need
