@@ -28,19 +28,6 @@ Other options can be specified either on the command-line (\fI--option
 value\fR), or in the configuration file (\fIoption value\fR).
 Options are case-insensitive.
 .TP
-\fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBstderr\fR|\fBstdout\fR|\fBsyslog\fR\fP
-Send all messages between \fIminSeverity\fR and \fImaxSeverity\fR to
-the standard output stream, the standard error stream, or to the system
-log. (The "syslog" value is only supported on Unix.)  Recognized
-severity levels are debug, info, notice, warn, and err.  If only one
-severity level is given, all messages of that level or higher will be
-sent to the listed destination.
-.TP
-\fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBfile\fR \fIFILENAME\fP
-As above, but send log messages to the listed filename.  The "Log"
-option may appear more than once in a configuration file.  Messages
-are sent to all the logs that match their severity level.
-.TP
 \fBBandwidthRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 A token bucket limits the average incoming bandwidth on this node to
 the specified number of bytes per second. (Default: 2 MB)
@@ -55,8 +42,35 @@ who ask to build circuits through them (since this is proportional to
 advertised bandwidth rate) can thus reduce the CPU demands on their
 server without impacting network performance.
 .TP
+\fBControlPort \fR\fIPort\fP
+If set, Tor will accept connections from the same machine (localhost only) on
+this port, and allow those connections to control the Tor process using the
+Tor Control Protocol (described in control-spec.txt).  Note: unless you also
+specify one of \fBHashedControlPassword\fP or \fBCookieAuthentication\fP,
+setting this option will cause Tor to allow any process on the local host to
+control it.
+.TP
+\fBHashedControlPassword \fR\fIhashed_password\fP
+Don't allow any connections on the control port except when the other process
+knows the password whose one-way hash is \fIhashed_password\fP.  You can
+compute the hash of a password by running "tor --hash-password
+\fIpassword\fP".
+.TP
+\fBCookieAuthentication \fR\fB0\fR|\fB1\fP
+If this option is set to 1, don't allow any connections on the control port
+except when the connecting process knows the contents of a file named
+"control_auth_cookie", which Tor will create in its data directory.  This
+authentication methods should only be used on systems with good filesystem
+security. (Default: 0)
+.TP
 \fBDataDirectory \fR\fIDIR\fP
 Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
+.TP
+\fBDirFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
+Every time the specified period elapses, Tor downloads a directory.
+A directory contains a signed list of all known servers as well as
+their current liveness status. A value of "0 seconds" tells Tor to choose an
+appropriate default. (Default: 1 hour for clients, 20 minutes for servers.)
 .TP
 \fBDirServer \fR\fIaddress:port fingerprint\fP
 Use a nonstandard authoritative directory server at the provided
@@ -88,6 +102,19 @@ proxy only allows connecting to certain ports.
 To keep firewalls from expiring connections, send a padding keepalive
 cell on open connections every NUM seconds. (Default: 5 minutes.)
 .TP
+\fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBstderr\fR|\fBstdout\fR|\fBsyslog\fR\fP
+Send all messages between \fIminSeverity\fR and \fImaxSeverity\fR to
+the standard output stream, the standard error stream, or to the system
+log. (The "syslog" value is only supported on Unix.)  Recognized
+severity levels are debug, info, notice, warn, and err.  If only one
+severity level is given, all messages of that level or higher will be
+sent to the listed destination.
+.TP
+\fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBfile\fR \fIFILENAME\fP
+As above, but send log messages to the listed filename.  The "Log"
+option may appear more than once in a configuration file.  Messages
+are sent to all the logs that match their severity level.
+.TP
 \fBMaxConn \fR\fINUM\fP
 Maximum number of simultaneous sockets allowed.  You probably don't need
 to adjust this. (Default: 1024)
@@ -103,46 +130,20 @@ On startup, write our PID to FILE. On clean shutdown, remove FILE.
 \fBRunAsDaemon \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor forks and daemonizes to the background. (Default: 0)
 .TP
+\fBSafeLogging \fR\fB0\fR|\fB1\fP
+If 1, Tor replaces potentially sensitive strings in the logs
+(e.g. addresses) with the string [scrubbed]. This way logs can still be
+useful, but they don't leave behind personally identifying information
+about what sites a user might have visited. (Default: 1)
+.TP
+\fBStatusFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
+Every time the specified period elapses, Tor downloads signed status
+information about the current state of known servers.  A value of
+"0 seconds" tells Tor to choose an appropriate default. (Default: 30
+minutes for clients, 15 minutes for servers.)
+.TP
 \fBUser \fR\fIUID\fP
 On startup, setuid to this user.
-.TP
-\fBControlPort \fR\fIPort\fP
-If set, Tor will accept connections from the same machine (localhost only) on
-this port, and allow those connections to control the Tor process using the
-Tor Control Protocol (described in control-spec.txt).  Note: unless you also
-specify one of \fBHashedControlPassword\fP or \fBCookieAuthentication\fP,
-setting this option will cause Tor to allow any process on the local host to
-control it.
-.TP
-\fBHashedControlPassword \fR\fIhashed_password\fP
-Don't allow any connections on the control port except when the other process
-knows the password whose one-way hash is \fIhashed_password\fP.  You can
-compute the hash of a password by running "tor --hash-password
-\fIpassword\fP".
-.TP
-\fBCookieAuthentication \fR\fB0\fR|\fB1\fP
-If this option is set to 1, don't allow any connections on the control port
-except when the connecting process knows the contents of a file named
-"control_auth_cookie", which Tor will create in its data directory.  This
-authentication methods should only be used on systems with good filesystem
-security.
-.TP
-\fBDirFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
-Every time the specified period elapses, Tor downloads a directory.
-A directory contains a signed list of all known servers as well as
-their current liveness status. A value of "0 seconds" tells Tor to choose an
-appropriate default. (Default: 1 hour for clients, 20 minutes for servers.)
-.TP
-\fBStatusFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP Every time the
-specified period elapses, Tor downloads signed status information about the
-current state of known servers.  A value of "0 seconds" tells Tor to choose
-an appropriate default. (Default: 30 minutes for clients, 15 minutes for
-servers.)  (Default: 20 minutes.)
-.TP
-\fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
-Every time the specified period elapses, Tor uploads any rendezvous
-service descriptors to the directory servers.  This information is also
-uploaded whenever it changes.  (Default: 20 minutes.)
 
 .SH CLIENT OPTIONS
 .PP
@@ -437,6 +438,11 @@ ones; most people can leave this unset.
 \fBHiddenServiceExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
 Do not use the specified nodes as introduction points for the hidden
 service. In normal use there is no reason to set this.
+.TP
+\fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
+Every time the specified period elapses, Tor uploads any rendezvous
+service descriptors to the directory servers.  This information is also
+uploaded whenever it changes.  (Default: 20 minutes.)
 
 .\" UNDOCUMENTED
 .\" ignoreversion
@@ -491,6 +497,6 @@ The tor process stores keys and other data here.
 .BR http://tor.eff.org/
 
 .SH BUGS
-Plenty, probably. It's still in alpha. Please report them.
+Plenty, probably. Tor is still in development. Please report them.
 .SH AUTHORS
 Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.
