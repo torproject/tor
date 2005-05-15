@@ -285,6 +285,9 @@ options_act(void) {
   }
   if (!libevent_initialized) {
     configure_libevent_logging();
+    /* If the kernel complains that some method (say, epoll) doesn't
+     * exist, we don't care about it, since libevent will cope.
+     */
     suppress_libevent_log_msg("Function not implemented");
     event_init();
     suppress_libevent_log_msg(NULL);
