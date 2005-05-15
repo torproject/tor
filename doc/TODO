@@ -15,9 +15,6 @@ For sometime soon:
    - Server instructions for OSX and Windows operators.
    - Audit all changes to bandwidth buckets for integer over/underflow.
    - whine if your socks port is an open proxy.
-N  - parse routerinfo->contactinfo into a string we can use.
-     - The goal is to log IP and ContactInfo when the dirserver refuses
-       an uploaded descriptor, so we have some idea of who to contact.
 
  Refactoring and infrastructure:
 
@@ -30,7 +27,7 @@ N . Switch to libevent
          of get_pending_bytes().
 
  Security:
-   - Make sure logged info is "safe"ish.
+   . Make sure logged info is "safe"ish.
 
  Functionality
   - Tests for new controller features
