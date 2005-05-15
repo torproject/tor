@@ -153,9 +153,9 @@ servers haven't authenticated as "verified"?  (Default: middle,rendezvous.)
 .TP
 \fBClientOnly \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will under no circumstances run as a server. The default
-is to run as a client unless ORPort or DirPort is configured.  (Usually,
+is to run as a client unless ORPort is configured.  (Usually,
 you don't need to set this; Tor is pretty smart at figuring out whether
-you are reliable and high-bandwidth enough to be a good server.)
+you are reliable and high-bandwidth enough to be a useful server.)
 .TP
 \fBEntryNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
 A list of preferred nodes to use for the first hop in the circuit, if possible.
