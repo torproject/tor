@@ -9,7 +9,7 @@ Changes in version 0.1.0.6-rc - 2005-05-14
       addresses. Now we don't log a bunch of complaints on startup
       when using the default exit policy.
     - Some people were putting "Address  " in their torrc, and they had
-    a buggy resolver that resolved " " to 0.0.0.0. Oops.
+      a buggy resolver that resolved " " to 0.0.0.0. Oops.
     - If DataDir is ~/.tor, and that expands to /.tor, then default to
       LOCALSTATEDIR/tor instead.
     - Fix fragmented-message bug in TorControl.py.
