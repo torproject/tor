@@ -126,6 +126,7 @@ except when the connecting process knows the contents of a file named
 "control_auth_cookie", which Tor will create in its data directory.  This
 authentication methods should only be used on systems with good filesystem
 security.
+.TP
 \fBDirFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor downloads a directory.
 A directory contains a signed list of all known servers as well as
