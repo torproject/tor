@@ -849,7 +849,7 @@ static int do_hup(void) {
   char keydir[512];
   or_options_t *options = get_options();
 
-  log_fn(LOG_NOTICE,"Received sighup. Reloading config.");
+  log(LOG_NOTICE,"Received sighup. Reloading config.");
   has_completed_circuit=0;
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
@@ -1195,7 +1195,7 @@ static int tor_init(int argc, char *argv[]) {
   /* give it somewhere to log to initially */
   add_temp_log();
 
-  log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not rely on it for strong anonymity.",VERSION);
+  log(LOG_NOTICE,"Tor v%s. This is experimental software. Do not rely on it for strong anonymity.",VERSION);
 
   if (network_init()<0) {
     log_fn(LOG_ERR,"Error initializing network; exiting.");

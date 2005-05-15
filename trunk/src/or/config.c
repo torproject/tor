@@ -294,10 +294,10 @@ options_act(void) {
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
     /* Making this a NOTICE for now so we can link bugs to a libevent versions
      * or methods better. */
-    log_fn(LOG_NOTICE, "Initialized libevent version %s using method %s",
+    log(LOG_NOTICE, "Initialized libevent version %s using method %s",
            event_get_version(), event_get_method());
 #else
-    log_fn(LOG_NOTICE, "Initialized old libevent (version 1.0b or earlier)");
+    log(LOG_NOTICE, "Initialized old libevent (version 1.0b or earlier)");
 #endif
     libevent_initialized = 1;
   }
