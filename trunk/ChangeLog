@@ -3,8 +3,8 @@ Changes in version 0.1.0.6-rc - 2005-05-14
     - Implement --disable-threads configure option. Disable threads on
       netbsd by default, because it appears to have no reentrant resolver
       functions.
-    - Apple's OS X 10.4.0 ships with a broken kqueue. We patched
-      libevent (1.0f) to detect and disable kqueue if it's broken.
+    - Apple's OS X 10.4.0 ships with a broken kqueue. The new libevent
+      release (1.1) detects and disables kqueue if it's broken.
     - Append default exit policy before checking for implicit internal
       addresses. Now we don't log a bunch of complaints on startup
       when using the default exit policy.
