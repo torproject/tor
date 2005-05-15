@@ -489,10 +489,10 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       if (!has_completed_circuit) {
         or_options_t *options = get_options();
         has_completed_circuit=1;
-        log_fn(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
+        log(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
         /* XXX009 Log a count of known routers here */
         if (server_mode(options) && !check_whether_orport_reachable())
-          log_fn(LOG_NOTICE,"Now checking whether ORPort %s%s reachable... (this may take several minutes)",
+          log(LOG_NOTICE,"Now checking whether ORPort %s%s reachable... (this may take several minutes)",
                  options->DirPort ? "and DirPort " : "",
                  options->DirPort ? "are" : "is");
       }
@@ -532,7 +532,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
  * something has also gone wrong with our network: notify the user,
  * and abandon all not-yet-used circuits. */
 void circuit_note_clock_jumped(int seconds_elapsed) {
-  log_fn(LOG_NOTICE,"Your clock just jumped %d seconds forward; assuming established circuits no longer work.", seconds_elapsed);
+  log(LOG_NOTICE,"Your clock just jumped %d seconds forward; assuming established circuits no longer work.", seconds_elapsed);
   has_completed_circuit=0; /* so it'll log when it works again */
   circuit_mark_all_unused_circs();
 }

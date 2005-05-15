@@ -816,7 +816,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 
   if (!has_fetched_directory) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
-      log_fn(LOG_NOTICE,"Application request when we're believed to be offline. Optimistically trying again.");
+      log(LOG_NOTICE,"Application request when we're believed to be offline. Optimistically trying again.");
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
     /* the stream will be dealt with when has_fetched_directory becomes
@@ -837,7 +837,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       addr = ntohl(in.s_addr);
     if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
                                               need_uptime)) {
-      log_fn(LOG_NOTICE,"No Tor server exists that allows exit to %s:%d. Rejecting.",
+      log(LOG_NOTICE,"No Tor server exists that allows exit to %s:%d. Rejecting.",
              safe_str(conn->socks_request->address), conn->socks_request->port);
       return -1;
     }
@@ -862,7 +862,7 @@ try_an_intro_point:
         return 0;
       }
       if (!router_get_by_nickname(exitname)) {
-        log_fn(LOG_NOTICE,"Advertised intro point '%s' is not recognized for '%s'. Skipping over.",
+        log_fn(LOG_NOTICE,"Advertised intro point '%s' is not recognized for hidserv address '%s'. Skipping over.",
                exitname, safe_str(conn->rend_query));
         rend_client_remove_intro_point(exitname, conn->rend_query);
         tor_free(exitname);
@@ -1034,7 +1034,8 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   conn_age = time(NULL) - conn->timestamp_created;
   if (conn_age > CONN_AP_MAX_ATTACH_DELAY) {
-    log_fn(LOG_NOTICE,"Giving up on unattached conn (%d sec old).", conn_age);
+    log(LOG_NOTICE,"Tried for %d seconds to get a connection to %s:%d. Giving up.",
+        conn_age, safe_str(conn->socks_request->address), conn->socks_request->port);
     return -1;
   }
 
