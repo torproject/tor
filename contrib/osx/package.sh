@@ -51,6 +51,7 @@ make install DESTDIR=$BUILD_DIR/tor_packageroot
 #mv $BUILD_DIR/tor_packageroot/Library/Tor/torrc.sample $BUILD_DIR/tor_packageroot/Library/Tor/torrc
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
 #cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
+chmod 755 contrib/osx/TorPostflight
 cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cat <<EOF > $BUILD_DIR/tor_resources/Welcome.txt
