@@ -38,7 +38,7 @@ Changes in version 0.1.0.6-rc - 2005-05-14
     - Whine at you if you're a server and you don't set your contactinfo.
     - Implement --verify-config command-line option to check if your torrc
       is valid without actually launching Tor.
-    - Rewrite address "serifos.exit" to "localhost.serifos.exit"
+    - Rewrite address "serifos.exit" to "externalIP.serifos.exit"
       rather than just rejecting it.
 
 
