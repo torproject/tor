@@ -195,11 +195,11 @@ node will go down before the stream is finished.
 When a request for address arrives to Tor, it will rewrite it to newaddress before processing it. For example, if you always want connections to www.indymedia.org to exit via \fItorserver\fR (where \fItorserver\fR is the nickname of the server), use "MapAddress www.indymedia.org www.indymedia.org.torserver.exit".
 .TP
 \fBNewCircuitPeriod \fR\fINUM\fP
-Every NUM seconds consider whether to build a new circuit. (Default: 60)
+Every NUM seconds consider whether to build a new circuit. (Default: 30 seconds)
 .TP
 \fBMaxCircuitDirtiness \fR\fINUM\fP
 Feel free to reuse a circuit that was first used at most NUM seconds
-ago, but never attach a new stream to a circuit that is too old.
+ago, but never attach a new stream to a circuit that is too old. (Default: 10 minutes)
 .TP
 \fBNodeFamily \fR\fInickname\fR,\fInickname\fR,\fI...\fP
 The named Tor servers constitute a "family" of similar or co-administered
