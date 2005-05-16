@@ -1236,6 +1236,7 @@ void tor_free_all(int postfork)
   routerlist_free_current();
   free_trusted_dir_servers();
   addressmap_free_all();
+  set_exit_redirects(NULL); /* free the registered exit redirects */
   free_socks_policy();
   free_dir_policy();
   dirserv_free_all();
