@@ -58,7 +58,6 @@
 %define ostag suse
 %endif
 
-
 # Using the build date ensures that every build really does get
 # a different release number.  We use this trick for CVS versions.
 # For release versions, we don't want or need it.
@@ -70,6 +69,10 @@
 %else
 %define release %{pkgspec}.%{specver}.%{ostag}
 %endif
+
+# This line is rumored to make sure binaries aren't stripped, but
+# to still allow man pages to be compressed.
+# %define __spec_install_post /usr/lib/rpm/brp-compress /usr/lib/rpm/brp-strip-comment-note %{nil}
 
 ## General-purpose macros
 #
