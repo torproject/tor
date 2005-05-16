@@ -1005,7 +1005,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr)
     log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
            "Please set the Address config option to be the IP you want to use.",
            hostname, tmpbuf);
-    if(!options->NoPublish)
+    if (!options->NoPublish)
       return -1;
   }
 
@@ -2189,7 +2189,6 @@ config_append_default_exit_policy(addr_policy_t **policy)
     }
   }
 }
-
 
 /**
  * Given a linked list of config lines containing "allow" and "deny" tokens,
