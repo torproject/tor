@@ -1,9 +1,16 @@
-Changes in version 0.1.0.7-rc - 2005-05-16
+Changes in version 0.1.0.7-rc - 2005-05-17
   o Bugfixes:
-    - Fix a bug in the OS X package installer that prevented in from
+    - Fix a bug in the OS X package installer that prevented it from
       installing on Tiger.
     - Fix a script bug in the OS X package installer that made it
       complain during installation.
+    - Find libevent even if it's hiding in /usr/local/ and your
+      CFLAGS and LDFLAGS don't tell you to look there.
+    - Be able to link with libevent as a shared library (the default
+      after 1.0d), even if it's hiding in /usr/local/lib and even
+      if you haven't added /usr/local/lib to your /etc/ld.so.conf,
+      assuming you're running gcc. Otherwise fail and give a useful
+      error message.
     - Fix a bug in the RPM packager: set home directory for _tor to
       something more reasonable when first installing.
     - Free a minor amount of memory that is still reachable on exit.
