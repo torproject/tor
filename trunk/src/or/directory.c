@@ -439,7 +439,9 @@ directory_send_command(connection_t *conn, const char *platform,
 }
 
 /** Parse an HTTP request string <b>headers</b> of the form
+ * \verbatim
  * "\%s [http[s]://]\%s HTTP/1..."
+ * \endverbatim
  * If it's well-formed, strdup the second \%s into *<b>url</b>, and
  * null-terminate it. If the url doesn't start with "/tor/", rewrite it
  * so it does. Return 0.
@@ -485,7 +487,9 @@ parse_http_url(char *headers, char **url)
 }
 
 /** Parse an HTTP response string <b>headers</b> of the form
+ * \verbatim
  * "HTTP/1.\%d \%d\%s\r\n...".
+ * \endverbatim
  *
  * If it's well-formed, assign the status code to *<b>code</b> and
  * return 0.  Otherwise, return -1.

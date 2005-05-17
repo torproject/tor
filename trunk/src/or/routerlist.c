@@ -247,7 +247,7 @@ static void mark_all_trusteddirservers_up(void) {
   }
 }
 
-/** Return 0 if \exists an authoritative dirserver that's currently
+/** Return 0 if \\exists an authoritative dirserver that's currently
  * thought to be running, else return 1.
  */
 int all_trusted_directory_servers_down(void) {

@@ -652,7 +652,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
 
 /** Take conn, make a nonblocking socket; try to connect to
  * addr:port (they arrive in *host order*). If fail, return -1. Else
- * assign s to conn->\s: if connected return 1, if EAGAIN return 0.
+ * assign s to conn-\>s: if connected return 1, if EAGAIN return 0.
  *
  * address is used to make the logs useful.
  *
@@ -960,7 +960,7 @@ static int connection_receiver_bucket_should_increase(connection_t *conn) {
   return 1;
 }
 
-/** Read bytes from conn->\s and process them.
+/** Read bytes from conn-\>s and process them.
  *
  * This function gets called from conn_read() in main.c, either
  * when poll() has declared that conn wants to read, or (for OR conns)
