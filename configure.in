@@ -60,12 +60,28 @@ AC_SEARCH_LIBS(pthread_detach, [pthread])
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?
 
-AC_SEARCH_LIBS(event_loop, [event], event_found=yes, event_found=no)
 
-if test "$event_found" = no; then
-  saved_LIBS="$LIBS"
-  saved_LDFLAGS="$LDFLAGS"
+AC_CACHE_CHECK([for libevent], ac_cv_libevent_normal, [
+   saved_LIBS="$LIBS"
+   LIBS="$LIBS -levent"
+   AC_TRY_RUN([
+void *event_init(void);
+int main(void)
+{
+	if (!event_init())
+	        return -1;
+        return 0;
+}], ac_cv_libevent_normal=yes, ac_cv_libevent_normal=no)
+   LIBS="$saved_LIBS"
+])
+
+
+if test "$ac_cv_libevent_normal" = no; then
+  LIBS="$LIBS -levent"
+else
   AC_CACHE_CHECK([for libevent in /usr/local/lib], ac_cv_libevent_local, [
+     saved_LIBS="$LIBS"
+     saved_LDFLAGS="$LDFLAGS"  
      LIBS="$LIBS -levent"
      LDFLAGS="$LDFLAGS -L/usr/local/lib"
      AC_TRY_LINK([], [ void *event_init(void); event_init(); ],
