@@ -2299,7 +2299,7 @@ parse_redirect_line(smartlist_t *result, struct config_line_t *line)
 }
 
 /** Read the contents of a DirServer line from <b>line</b>.  Return 0
- * if the line is well-formed, and 0 if it isn't.  If
+ * if the line is well-formed, and -1 if it isn't.  If
  * <b>validate_only</b> is 0, and the line is well-formed, then add
  * the dirserver described in the line as a valid server. */
 static int
