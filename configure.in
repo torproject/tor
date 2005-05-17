@@ -56,7 +56,88 @@ AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(pthread_detach, [pthread])
-AC_SEARCH_LIBS(event_loop, [event], , AC_MSG_ERROR(Libevent library not found. Tor requires libevent to build.  You can get the latest version of libevent at http://www.monkey.org/~provos/libevent/ ))
+
+dnl ------------------------------------------------------
+dnl Where do you live, libevent?
+
+AC_SEARCH_LIBS(event_loop, [event], event_found=yes, event_found=no)
+
+if test "$event_found" = no; then
+  echo FLOOIE
+  saved_LIBS="$LIBS"
+  saved_LDFLAGS="$LDFLAGS"
+  saved_CPPFLAGS="$CPPFLAGS"
+  AC_CACHE_CHECK([for libevent in /usr/local/lib], ac_cv_libevent_local, [
+     LIBS="$LIBS -levent"
+     LDFLAGS="$LDFLAGS -L/usr/local/lib"
+     CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+     AC_TRY_COMPILE([
+#include <event.h>
+int main(void)
+{
+	event_init();
+	return 0;
+}], [ libevent_is_in_local=yes ], [ libevent_is_in_local=no ])
+    if test libevent_is_in_local = yes; then
+       AC_TRY_RUN([
+#include <event.h>
+int main(void)
+{
+	event_init();
+	return 0;
+}], , [ ac_cv_libevent_local=unlinked ])
+    else
+       ac_cv_libevent_local=no   
+    fi
+    if test "$GCC" = yes -a $ac_vc_libevent_local = unlinked ; then
+       LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
+       AC_TRY_RUN([
+#include <event.h>
+int main(void)
+{
+	event_init();
+	return 0;
+}], [ ac_cv_libevent_local=unlinked_gcc_elf ])
+    fi 
+
+    LIBS="$saved_LIBS"
+    CFLAGS="$saved_CFLAGS"
+    LDFLAGS="$saved_LDFLAGS" ])
+
+  if test $ac_cv_libevent_local != no; then
+      LIBS="$LIBS -levent"
+      LDFLAGS="$LDFLAGS -L/usr/local/lib"
+      CFLAGS="$CFLAGS -I/usr/local/include"
+  fi
+  if test $av_cv_libevent_local = unlinked_gcc_elf; then
+      LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
+  fi
+
+  if test $ac_cv_libevent_local = unlinked; then
+      echo <<EOF
+=====================================================
+HEY!!!!
+
+Your libevent library is installed in /usr/local/lib,
+but your dynamic linker isn't configured to look for
+it there.
+
+EOF
+    if test -f /etc/ld.so.conf; then
+        echo <<EOF
+Maybe you need to add /usr/local/lib to /etc/ld.so.conf,
+and then run ldconfig -v ?
+EOF
+    fi
+    echo <<EOF
+
+=====================================================
+EOF
+  fi
+fi
+
+dnl ------------------------------------------------------
+dnl Where do you live, OpenSSL?
 
 saved_LIBS="$LIBS"
 saved_LDFLAGS="$LDFLAGS"
