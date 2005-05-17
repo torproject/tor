@@ -779,6 +779,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   num_seen++;
   log_fn(LOG_DEBUG,"Now seen %d relay cells here.", num_seen);
 
+  if (rh.length > RELAY_PAYLOAD_SIZE) {
+    log_fn(LOG_WARN, "Relay cell length field too long. Closing circuit.");
+    return -1;
+  }
+
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
 
