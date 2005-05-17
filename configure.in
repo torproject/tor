@@ -63,7 +63,6 @@ dnl Where do you live, libevent?
 AC_SEARCH_LIBS(event_loop, [event], event_found=yes, event_found=no)
 
 if test "$event_found" = no; then
-  echo FLOOIE
   saved_LIBS="$LIBS"
   saved_LDFLAGS="$LDFLAGS"
   saved_CPPFLAGS="$CPPFLAGS"
@@ -89,7 +88,7 @@ int main(void)
     else
        ac_cv_libevent_local=no   
     fi
-    if test "$GCC" = yes -a $ac_vc_libevent_local = unlinked ; then
+    if test "$GCC" = yes -a $ac_cv_libevent_local = unlinked ; then
        LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
        AC_TRY_RUN([
 #include <event.h>
