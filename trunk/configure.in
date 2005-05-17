@@ -121,6 +121,12 @@ int main(void)
   fi
   if test $ac_cv_libevent_local = unlinked_gcc_elf; then
       LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
+      if test -f /etc/ld.so.conf ; then
+        AC_MSG_NOTICE([
+Apparently, you don't have /usr/local/lib in your /etc/ld.so.conf.
+Tor is smart enought to deal this now, but other applications aren't.
+You might want to add it in.])
+      fi
   fi
 
   if test $ac_cv_libevent_local = unlinked ; then
