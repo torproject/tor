@@ -1,3 +1,14 @@
+Changes in version 0.1.0.7-rc - 2005-05-16
+  o Bugfixes:
+    - Fix a bug in the OS X package installer that prevented in from
+      installing on Tiger.
+    - Fix a script bug in the OS X package installer that made it
+      complain during installation.
+    - Fix a bug in the RPM packager: set home directory for _tor to
+      something more reasonable when first installing.
+    - Free a minor amount of memory that is still reachable on exit.
+
+
 Changes in version 0.1.0.6-rc - 2005-05-14
   o Bugfixes:
     - Implement --disable-threads configure option. Disable threads on
