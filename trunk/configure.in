@@ -108,7 +108,7 @@ int main(void)
   fi
 
   if test $ac_cv_libevent_local = unlinked ; then
-    if test -f /etc/ld.conf ; then
+    if test -f /etc/ld.so.conf ; then
       AC_MSG_NOTICE([
 =================================================
 Your libevent library is installed in /usr/local/lib,
