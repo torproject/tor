@@ -108,7 +108,7 @@ int main(void)
       LDFLAGS="$LDFLAGS -L/usr/local/lib"
       CFLAGS="$CFLAGS -I/usr/local/include"
   fi
-  if test $av_cv_libevent_local = unlinked_gcc_elf; then
+  if test $ac_cv_libevent_local = unlinked_gcc_elf; then
       LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
   fi
 
