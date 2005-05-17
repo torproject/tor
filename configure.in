@@ -61,7 +61,7 @@ dnl ------------------------------------------------------
 dnl Where do you live, libevent?
 
 
-AC_CACHE_CHECK([for libevent], ac_cv_libevent_normal, [
+AC_CACHE_CHECK([for a normal libevent], ac_cv_libevent_normal, [
    saved_LIBS="$LIBS"
    LIBS="$LIBS -levent"
    AC_TRY_RUN([
@@ -76,7 +76,7 @@ int main(void)
 ])
 
 
-if test "$ac_cv_libevent_normal" = no; then
+if test "$ac_cv_libevent_normal" = yes; then
   LIBS="$LIBS -levent"
 else
   AC_CACHE_CHECK([for libevent in /usr/local/lib], ac_cv_libevent_local, [
