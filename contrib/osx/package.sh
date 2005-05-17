@@ -61,7 +61,7 @@ Tor is a system for using the internet anonymously, and allowing
 others to do so.
 EOF
 
-find $BUILD_DIR/tor_packageroot -print0 |sudo xargs -0 chown root:admin
+find $BUILD_DIR/tor_packageroot -print0 |sudo xargs -0 chown root:wheel
 
 $PACKAGEMAKER -build              \
     -p $BUILD_DIR/output/Tor.pkg  \
@@ -74,7 +74,7 @@ $PACKAGEMAKER -build              \
 mkdir -p $BUILD_DIR/privoxyconf_packageroot/Library/Privoxy
 cp contrib/osx/privoxy.config $BUILD_DIR/privoxyconf_packageroot/Library/Privoxy/config
 
-find $BUILD_DIR/privoxyconf_packageroot -print0 |sudo xargs -0 chown root:admin
+find $BUILD_DIR/privoxyconf_packageroot -print0 |sudo xargs -0 chown root:wheel
 
 $PACKAGEMAKER -build                      \
     -p $BUILD_DIR/output/privoxyconf.pkg  \
@@ -88,7 +88,7 @@ mkdir -p $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
    $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 
-find $BUILD_DIR/torstartup_packageroot -print0 | sudo xargs -0 chown root:admin
+find $BUILD_DIR/torstartup_packageroot -print0 | sudo xargs -0 chown root:wheel
 $PACKAGEMAKER -build                     \
     -p $BUILD_DIR/output/torstartup.pkg  \
     -f $BUILD_DIR/torstartup_packageroot \
@@ -137,7 +137,7 @@ cp ChangeLog $DOC/Advanced/ChangeLog.txt
 
 ### Package it all into a DMG
 
-find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:admin
+find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 
 mv $BUILD_DIR/output "$BUILD_DIR/Tor $VERSION Bundle"
 rm -f "Tor $VERSION Bundle.dmg"

@@ -63,3 +63,7 @@ if [ ! -d /Library/StartupItems/Tor ]; then
 fi
 rm -f /Library/StartupItems/Tor/Tor.loc
 echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
+
+if [ -d /Library/StartupItems/Privoxy ]; then
+  find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel
+fi
