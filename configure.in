@@ -78,7 +78,7 @@ int main(void)
 	if (!event_init())
 	        return -1;
         return 0;
-}], , [ ac_cv_libevent_local=unlinked ])
+}], [ ac_cv_libevent_local=yes ], [ ac_cv_libevent_local=unlinked ])
     else
        ac_cv_libevent_local=no   
     fi
