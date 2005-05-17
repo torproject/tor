@@ -65,20 +65,18 @@ AC_SEARCH_LIBS(event_loop, [event], event_found=yes, event_found=no)
 if test "$event_found" = no; then
   saved_LIBS="$LIBS"
   saved_LDFLAGS="$LDFLAGS"
-  saved_CPPFLAGS="$CPPFLAGS"
   AC_CACHE_CHECK([for libevent in /usr/local/lib], ac_cv_libevent_local, [
      LIBS="$LIBS -levent"
      LDFLAGS="$LDFLAGS -L/usr/local/lib"
-     CPPFLAGS="$CPPFLAGS -I/usr/local/include"
-     AC_TRY_LINK([#include <event.h>], [ event_init(); return 0; ], [
-      libevent_is_in_local=yes ], [ libevent_is_in_local=no ])
+     AC_TRY_LINK([], [ void *event_init(void); event_init(); ],
+        [ libevent_is_in_local=yes ], [ libevent_is_in_local=no ])
     if test libevent_is_in_local = yes; then
        AC_TRY_RUN([
-#include <event.h>
+void *event_init(void);
 int main(void)
 {
-	event_init();
-	return 0;
+	if (!event_init())
+	        return -1;
 }], , [ ac_cv_libevent_local=unlinked ])
     else
        ac_cv_libevent_local=no   
@@ -86,11 +84,11 @@ int main(void)
     if test "$GCC" = yes -a $ac_cv_libevent_local = unlinked ; then
        LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
        AC_TRY_RUN([
-#include <event.h>
+void *event_init(void);
 int main(void)
 {
-	event_init();
-	return 0;
+	if (!event_init())
+	        return -1;
 }], [ ac_cv_libevent_local=unlinked_gcc_elf ])
     fi 
 
@@ -101,13 +99,13 @@ int main(void)
   if test $ac_cv_libevent_local != no; then
       LIBS="$LIBS -levent"
       LDFLAGS="$LDFLAGS -L/usr/local/lib"
-      CFLAGS="$CFLAGS -I/usr/local/include"
+      CPPFLAGS="$CPPFLAGS -I/usr/local/include"
   fi
   if test $ac_cv_libevent_local = unlinked_gcc_elf; then
       LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
   fi
 
-  if test $ac_cv_libevent_local = unlinked; then
+  if test $ac_cv_libevent_local = unlinked ; then
       echo <<EOF
 =====================================================
 HEY!!!!
@@ -127,7 +125,15 @@ EOF
 
 =====================================================
 EOF
+fi
+
+  if test $ac_cv_libevent_local = no ; then
+      echo <<EOF
+Tor requires libevent to build.  You can download the latest
+version of libevent from http://monkey.org/~provos/libevent/
+EOF
   fi
+
 fi
 
 dnl ------------------------------------------------------
