@@ -1919,7 +1919,7 @@ config_register_addressmaps(or_options_t *options) {
 
 /** If <b>range</b> is of the form MIN-MAX, for MIN and MAX both
  * recognized log severity levels, set *<b>min_out</b> to MIN and
- * *<b>max_out</b> to MAX and return 0.  Else, if <b>range<b> is of
+ * *<b>max_out</b> to MAX and return 0.  Else, if <b>range</b> is of
  * the form MIN, act as if MIN-err had been specified.  Else, warn and
  * return -1.
  */
@@ -2084,7 +2084,7 @@ config_init_logs(or_options_t *options, int validate_only)
   return ok?0:-1;
 }
 
-/** Add a single option of the form Log min-max <type> [fname] to options. */
+/** Add a single option of the form Log min-max \<type\> [fname] to options. */
 static int
 add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
                       const char *type, const char *fname)

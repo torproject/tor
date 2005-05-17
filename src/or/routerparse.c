@@ -701,7 +701,7 @@ static int dir_signing_key_is_trusted(crypto_pk_env_t *key)
  * Otherwise, if pkey is provided, try to use it.
  *
  * (New callers should always use <b>declared_key</b> when possible;
- * <b>pkey is only for debugging.)
+ * <b>pkey</b> is only for debugging.)
  */
 static int check_directory_signature(const char *digest,
                                      directory_token_t *tok,

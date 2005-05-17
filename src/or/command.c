@@ -25,7 +25,7 @@ unsigned long stats_n_created_cells_processed = 0;
 unsigned long stats_n_relay_cells_processed = 0;
 unsigned long stats_n_destroy_cells_processed = 0;
 
-/** These are the main four functions for processing cells */
+/* These are the main four functions for processing cells */
 static void command_process_create_cell(cell_t *cell, connection_t *conn);
 static void command_process_created_cell(cell_t *cell, connection_t *conn);
 static void command_process_relay_cell(cell_t *cell, connection_t *conn);

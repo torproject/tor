@@ -15,7 +15,7 @@ const char router_c_id[] = "$Id$";
 
 extern long stats_n_seconds_working;
 
-/** Exposed for test.c. */ void get_platform_str(char *platform, size_t len);
+/* Exposed for test.c. */ void get_platform_str(char *platform, size_t len);
 
 /************************************************************/
 

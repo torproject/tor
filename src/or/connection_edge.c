@@ -1680,10 +1680,10 @@ set_exit_redirects(smartlist_t *lst)
 }
 
 /** If address is of the form "y.onion" with a well-formed handle y:
- *     Put a '\0' after y, lower-case it, and return ONION_HOSTNAME.
+ *     Put a \code{'\0'} after y, lower-case it, and return ONION_HOSTNAME.
  *
  * If address is of the form "y.exit":
- *     Put a '\0' after y and return EXIT_HOSTNAME.
+ *     Put a \code{'\0'} after y and return EXIT_HOSTNAME.
  *
  * Otherwise:
  *     Return NORMAL_HOSTNAME and change nothing.
