@@ -70,8 +70,7 @@ if test "$event_found" = no; then
      LDFLAGS="$LDFLAGS -L/usr/local/lib"
      AC_TRY_LINK([], [ void *event_init(void); event_init(); ],
         [ libevent_is_in_local=yes ], [ libevent_is_in_local=no ])
-    echo libevent_is_in_local is $libevent_is_in_local
-    if test libevent_is_in_local = yes; then
+    if test $libevent_is_in_local = yes; then
        AC_TRY_RUN([
 void *event_init(void);
 int main(void)
