@@ -34,15 +34,32 @@ the distant future, stuff may have changed.)
         because many people are running older versions of OpenSSL without
         AES support.)
 
+     compat.[ch] -- Wrappers to make calls more portable.  This code defines
+        functions such as tor_malloc, tor_snprintf, get/set various data types,
+        renaming, setting socket options, switching user IDs.  It is basically
+        where the non-portable items are conditionally included depending on
+        the platform.
+
+     container.[ch] -- Implements a smart list which is a resizable array along
+        with helper functions to use on these lists.  Also includes a
+        splay-tree implementation of the string-to-void* map.
+
      crypto.[ch] -- Wrapper functions to present a consistent interface to
         public-key and symmetric cryptography operations from OpenSSL.
 
-     fakepoll.[ch] -- Used on systems that don't have a poll() system call;
-        reimplements() poll using the select() system call.
-
      log.[ch] -- Tor's logging subsystem.
 
+     strlcat.c -- Safer, size-bounded string concatenation.  Use this instead
+        of strncat because it has a safer API.  Included for platforms that
+        that don't already ship this code.
+
+     strlcpy.c -- Safer, size-bounded string copying.  Use this instead of
+        strncpy because it is a safer API which guarantees to NUL terminate.
+        Included for platforms that don't already ship this code.
+
      test.h -- Macros used by unit tests.
+
+     torgzip.[ch] -- A simple in-memory gzip implementation.
 
      torint.h -- Provides missing [u]int*_t types for environments that
         don't have stdint.h.
@@ -91,28 +108,69 @@ the distant future, stuff may have changed.)
      dirserv.c -- Code to manage directory contents and generate
         directories. [Directory server only]
 
-     routers.c -- Code to parse directories and router descriptors; and to
+     router.c -- Code to parse directories and router descriptors; and to
         generate a router descriptor corresponding to this OR's
         capabilities.  Also presents some high-level interfaces for
         managing an OR or OP's view of the directory.
 
    [Circuit-related modules.]
 
-     circuit.c -- Code to create circuits, manage circuits, and route
-        relay cells along circuits.
+     circuitbuild.c -- Creates circuits.
+
+     circuitlist.c -- Manage the global circuit list.
+
+     circuituse.c -- Launch the right type of circuits and attach streams
+        to them.
 
      onion.c -- Code to generate and respond to "onion skins".
 
+     relay.c -- Handle relay cell encryption/decryption along with packaging
+        and receiving from circuits.
+
    [Core protocol implementation.]
+
+     command.c -- Code to handle specific cell types.
 
      connection.c -- Code used in common by all connection types.  See
         1.2. below for more general information about connections.
 
      connection_edge.c -- Code used only by edge connections.
 
-     command.c -- Code to handle specific cell types.
-
      connection_or.c -- Code to implement cell-speaking connections.
+
+   [Hidden services]
+
+     rendclient.c -- Client code to access location-hidden services.  This
+        allows clients and servers to run services and have people connect
+        without either end knowing who they are connecting to.
+
+     rendcommon.c -- Rendevzous implementation: Shared code between
+        introducers, services, clients, and rendezvous points.
+
+     rendmid.c -- Implement introduction and rendezvous points.
+
+     rendservice.c -- Hidden-service side of rendezvous functionality.
+
+   [Reputation]
+
+     rephist.c -- Basic history functionality for reputation module.
+
+   [Router lists]
+
+     routerlist.c -- Code to maintain and access global list of routerinfos for
+        known servers.
+
+     routerparse.c -- Code to parse and validate router descriptors and
+        directories.
+
+   [Bandwidth and GUI]
+
+     control.c -- Implementation of Tor's control socket interface.  Useful
+        for designing GUIs to interact with Tor.
+
+     hibernate.c -- Functions to close listeners, stop allowing new circuits,
+        and so on in preparation of closing down or going dormant.  Also used
+        to track bandwidth and time intervals to know when to hibernate.
 
    [Toplevel modules.]
 
@@ -127,6 +185,7 @@ the distant future, stuff may have changed.)
 
      test.c -- Contains unit tests for many pieces of the lower level Tor
         modules.
+
 
 1.2. All about connections
 
@@ -358,8 +417,8 @@ the distant future, stuff may have changed.)
 
 2.1. Details
 
-  Use tor_malloc, tor_strdup, and tor_gettimeofday instead of their
-  generic equivalents.  (They always succeed or exit.)
+  Use tor_malloc, tor_free, tor_snprintf, tor_strdup, and tor_gettimeofday
+  instead of their generic equivalents.  (They always succeed or exit.)
 
   Use INLINE instead of 'inline', so that we work properly on windows.
 
@@ -456,7 +515,14 @@ the distant future, stuff may have changed.)
          int b; /**< Or use the less-than symbol to put the comment after the element. */
        };
 
-  5. See the Doxygen manual for more information; this summary just scratches
+  5. To generate documentation from the Tor source code, type:
+
+     $ doxygen -g
+
+     To generate a file called 'Doxyfile'.  Edit that file and run 'doxygen' to
+     generate the aPI documentation.
+
+  6. See the Doxygen manual for more information; this summary just scratches
      the surface.
 
 3. References
