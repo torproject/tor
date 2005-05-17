@@ -70,13 +70,8 @@ if test "$event_found" = no; then
      LIBS="$LIBS -levent"
      LDFLAGS="$LDFLAGS -L/usr/local/lib"
      CPPFLAGS="$CPPFLAGS -I/usr/local/include"
-     AC_TRY_COMPILE([
-#include <event.h>
-int main(void)
-{
-	event_init();
-	return 0;
-}], [ libevent_is_in_local=yes ], [ libevent_is_in_local=no ])
+     AC_TRY_LINK([#include <event.h>], [ event_init(); return 0; ], [
+      libevent_is_in_local=yes ], [ libevent_is_in_local=no ])
     if test libevent_is_in_local = yes; then
        AC_TRY_RUN([
 #include <event.h>
