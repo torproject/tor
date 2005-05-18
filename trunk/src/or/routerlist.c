@@ -916,13 +916,13 @@ router_load_single_router(const char *s, const char **msg)
   }
   if (router_is_me(ri)) {
     log_fn(LOG_WARN, "Router's identity key matches mine; dropping.");
-    if (msg && !*msg) *msg = "Router's identity key matches mine.";
+    if (msg) *msg = "Router's identity key matches mine.";
     routerinfo_free(ri);
     return 0;
   }
   if (router_resolve(ri)<0) {
     log_fn(LOG_WARN, "Couldn't resolve router address; dropping.");
-    if (msg && !*msg) *msg = "Couldn't resolve router address.";
+    if (msg) *msg = "Couldn't resolve router address.";
     routerinfo_free(ri);
     return 0;
   }
@@ -934,7 +934,7 @@ router_load_single_router(const char *s, const char **msg)
   }
   if (router_add_to_routerlist(ri, msg)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list; dropping.");
-    if (msg && !*msg) *msg = "Couldn't add router to list.";
+    if (msg) *msg = "Couldn't add router to list.";
     /* ri is already freed */
     return 0;
   } else {
