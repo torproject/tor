@@ -827,7 +827,7 @@ static int
 handle_control_postdescriptor(connection_t *conn, uint32_t len,
                               const char *body)
 {
-  const char *msg;
+  const char *msg=NULL;
   switch (router_load_single_router(body, &msg)) {
   case -1:
     send_control_error(conn,ERR_SYNTAX,msg?msg: "Could not parse descriptor");
