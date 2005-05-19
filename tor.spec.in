@@ -200,7 +200,6 @@ if [ ! -n "`/usr/bin/id -u %{runuser} 2>/dev/null`" ]; then
     # One would also like to default the UID, but doing that properly would
     # also require thought.
     if [ -x /sbin/nologin ]; then
-    if [ -x /sbin/nologin ]; then
         %{_sbindir}/useradd -r -g %{runuser} -d %{localstatedir}/lib/%{name} -s /sbin/nologin %{runuser} 2> /dev/null
     else
         %{_sbindir}/useradd -r -g %{runuser} -d %{localstatedir}/lib/%{name} -s /bin/false %{runuser} 2> /dev/null
