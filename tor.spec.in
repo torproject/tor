@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define specver 0
+%define specver 1
 
 ## Things users may want to change
 #
