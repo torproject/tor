@@ -24,9 +24,11 @@ AC_ARG_ENABLE(threads,
 
 if test x$enable_threads = x; then
    case $host in
-    *-*-netbsd*)
+    *-*-netbsd* | *-*-openbsd* )
      # Don't try multithreading on netbsd -- there is no threadsafe DNS
      # lookup function there.
+     AC_MSG_NOTICE([You are running OpenBSD or NetBSD; I am assuming that
+getaddrinfo is not threadsafe here, so I will disable threads.])
      enable_threads="no";;
     *)
      enable_threads="yes";;
