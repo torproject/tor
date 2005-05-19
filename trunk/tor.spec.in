@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define specver 1
+%define specver 2
 
 ## Things users may want to change
 #
@@ -200,9 +200,9 @@ if [ ! -n "`/usr/bin/id -u %{runuser} 2>/dev/null`" ]; then
     # One would also like to default the UID, but doing that properly would
     # also require thought.
     if [ -x /sbin/nologin ]; then
-        %{_sbindir}/useradd -r -g %{runuser} -d %{localstatedir}/lib/%{name} -s /sbin/nologin %{runuser} 2> /dev/null
+        %{_sbindir}/useradd -r -g %{runuser} -d %{_localstatedir}/lib/%{name} -s /sbin/nologin %{runuser} 2> /dev/null
     else
-        %{_sbindir}/useradd -r -g %{runuser} -d %{localstatedir}/lib/%{name} -s /bin/false %{runuser} 2> /dev/null
+        %{_sbindir}/useradd -r -g %{runuser} -d %{_localstatedir}/lib/%{name} -s /bin/false %{runuser} 2> /dev/null
     fi
 fi
 exit 0
