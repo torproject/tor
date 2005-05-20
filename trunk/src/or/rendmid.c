@@ -70,6 +70,9 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
     goto err;
   }
 
+  crypto_free_pk_env(pk); /* don't need it anymore */
+  pk = NULL; /* so we don't free it again if err */
+
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1, pk_digest,10);
 
   /* Close any other intro circuits with the same pk. */
