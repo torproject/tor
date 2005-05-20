@@ -784,6 +784,7 @@ static void second_elapsed_callback(int fd, short event, void *args)
   int seconds_elapsed;
   or_options_t *options = get_options();
   if (!timeout_event) {
+    /* XXX NM: We don't free timeout_event on exit. */
     timeout_event = tor_malloc_zero(sizeof(struct event));
     evtimer_set(timeout_event, second_elapsed_callback, NULL);
     one_second.tv_sec = 1;
