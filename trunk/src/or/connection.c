@@ -1559,6 +1559,28 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
   return 0;
 }
 
+/** Alloocates a base64'ed authenticator for use in http or https
+ * auth, based on the input string <b>authenticator</b>. Returns it
+ * if success, else returns NULL. */
+char *
+alloc_http_authenticator(const char *authenticator) {
+  /* an authenticator in Basic authentication
+   * is just the string "username:password" */
+  const int authenticator_length = strlen(authenticator);
+  /* The base64_encode function needs a minimum buffer length
+   * of 66 bytes. */
+  const int base64_authenticator_length = (authenticator_length/48+1)*66;
+  char *base64_authenticator = tor_malloc(base64_authenticator_length);
+  if (base64_encode(base64_authenticator, base64_authenticator_length,
+                    authenticator, authenticator_length) < 0) {
+    tor_free(base64_authenticator); /* free and set to null */
+  } else {
+    /* remove extra \n at end of encoding */
+    base64_authenticator[strlen(base64_authenticator) - 1] = 0;
+  }
+  return base64_authenticator;
+}
+
 /** Process new bytes that have arrived on conn-\>inbuf.
  *
  * This function just passes conn to the connection-specific

@@ -1059,11 +1059,12 @@ typedef struct {
   char *HttpProxy; /**< hostname[:port] to use as http proxy, if any */
   uint32_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any */
   uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any */
+  char *HttpProxyAuthenticator; /**< username:password string, if any */
 
   char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any */
   uint32_t HttpsProxyAddr; /**< Parsed IPv4 addr for https proxy, if any */
   uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any */
-  char *HttpsProxyAuthenticator; /** username:password string, if any */
+  char *HttpsProxyAuthenticator; /**< username:password string, if any */
 
   struct config_line_t *DirServers; /**< List of configuration lines
                                      * for directory servers. */
@@ -1075,7 +1076,7 @@ typedef struct {
   smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
   int _MonthlyAccountingStart; /**< Deprecated: day of month when accounting
                                 * interval starts */
-  char *AccountingStart; /** How long is the accounting interval, and when
+  char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting
                            * interval before hibernation?  0 for "never
@@ -1317,6 +1318,7 @@ int connection_state_is_open(connection_t *conn);
 int connection_state_is_connecting(connection_t *conn);
 
 int connection_send_destroy(uint16_t circ_id, connection_t *conn);
+char *alloc_http_authenticator(const char *authenticator);
 
 void assert_connection_ok(connection_t *conn, time_t now);
 int connection_or_nonopen_was_started_here(connection_t *conn);
