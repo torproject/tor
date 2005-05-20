@@ -647,7 +647,7 @@ implementations MUST ignore any item of the form "opt keyword ....." when
 they would not recognize "keyword ....."; and MUST treat "opt keyword ....."
 as synonymous with "keyword ......" when keyword is recognized.
 
-7.1. Router descriptor format.
+7.2. Router descriptor format.
 
 Every router descriptor MUST start with a "router" Item; MUST end with a
 "router-signature" Item and an extra NL; and MUST contain exactly one
@@ -784,7 +784,7 @@ num_ip6_bits ::= an integer between 0 and 128
 Ports are required; if they are not included in the router
 line, they must appear in the "ports" lines.
 
-7.2. Directory format
+7.3. Directory format
 
 A Directory begins with a "signed-directory" item, followed by one each of
 the following, in any order: "recommended-software", "published",
@@ -854,7 +854,7 @@ it should reject only that router descriptor, and continue using the
 others.  If it encounters an unrecognized keyword in the directory header,
 it should reject the entire directory.
 
-7.3. Network-status descriptor
+7.4. Network-status descriptor
 
 A "network-status" (a.k.a "running-routers") document is a truncated
 directory that contains only the current status of a list of nodes, not
@@ -867,17 +867,17 @@ entries.
 
      "published" YYYY-MM-DD HH:MM:SS
 
-        (see 7.2 above)
+        (see 7.3 above)
 
      "router-status" list
 
-        (see 7.2 above)
+        (see 7.3 above)
 
      "directory-signature" NL signature
 
-        (see 7.2 above)
+        (see 7.3 above)
 
-7.4. Behavior of a directory server
+7.5. Behavior of a directory server
 
 lists nodes that are connected currently
 speaks HTTP on a socket, spits out directory on request
