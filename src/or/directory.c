@@ -363,7 +363,8 @@ directory_send_command(connection_t *conn, const char *platform,
                        int purpose, const char *resource,
                        const char *payload, size_t payload_len) {
   char tmp[8192];
-  char proxystring[128];
+  char proxystring[256];
+  char proxyauthstring[256];
   char hoststring[128];
   char url[128];
   const char *httpcommand = NULL;
@@ -371,15 +372,35 @@ directory_send_command(connection_t *conn, const char *platform,
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
 
+  /* come up with a string for which Host: we want */
   if (conn->port == 80) {
     strlcpy(hoststring, conn->address, sizeof(hoststring));
   } else {
     tor_snprintf(hoststring, sizeof(hoststring),"%s:%d",conn->address, conn->port);
   }
+
+  /* come up with some proxy lines, if we're using one. */
   if (get_options()->HttpProxy) {
+    char *base64_authenticator=NULL;
+    const char *authenticator = get_options()->HttpProxyAuthenticator;
+
     tor_snprintf(proxystring, sizeof(proxystring),"http://%s", hoststring);
+    if (authenticator) {
+      base64_authenticator = alloc_http_authenticator(authenticator);
+      if (!base64_authenticator)
+        log_fn(LOG_WARN, "Encoding http authenticator failed");
+    }
+    if (base64_authenticator) {
+      tor_snprintf(proxyauthstring, sizeof(proxyauthstring),
+                   "\r\nProxy-Authorization: Basic %s",
+                   base64_authenticator);
+      tor_free(base64_authenticator);
+    } else {
+      proxyauthstring[0] = 0;
+    }
   } else {
     proxystring[0] = 0;
+    proxyauthstring[0] = 0;
   }
 
   switch (purpose) {
@@ -424,12 +445,13 @@ directory_send_command(connection_t *conn, const char *platform,
       break;
   }
 
-  tor_snprintf(tmp, sizeof(tmp), "%s %s%s HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s\r\n\r\n",
+  tor_snprintf(tmp, sizeof(tmp), "%s %s%s HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
            httpcommand,
            proxystring,
            url,
            payload ? (unsigned long)payload_len : 0,
-           hoststring);
+           hoststring,
+           proxyauthstring);
   connection_write_to_buf(tmp, strlen(tmp), conn);
 
   if (payload) {

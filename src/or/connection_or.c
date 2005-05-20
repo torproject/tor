@@ -169,27 +169,18 @@ int connection_or_finished_connecting(connection_t *conn)
     char buf[1024];
     char addrbuf[INET_NTOA_BUF_LEN];
     struct in_addr in;
+    char *base64_authenticator=NULL;
     const char *authenticator = get_options()->HttpsProxyAuthenticator;
 
     in.s_addr = htonl(conn->addr);
     tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
 
     if (authenticator) {
-      /* an authenticator in Basic authentication
-       * is just the string "username:password" */
-      const int authenticator_length = strlen(authenticator);
-      /* The base64_encode function needs a minimum buffer length
-       * of 66 bytes. */
-      const int base64_authenticator_length = (authenticator_length/48+1)*66;
-      char *base64_authenticator = tor_malloc(base64_authenticator_length);
-      if (base64_encode(base64_authenticator, base64_authenticator_length,
-                        authenticator, authenticator_length) < 0) {
-        log_fn(LOG_WARN, "Encoding authenticator failed");
-        base64_authenticator[0] = 0;
-      } else {
-        /* remove extra \n at end of encoding */
-        base64_authenticator[strlen(base64_authenticator) - 1] = 0;
-      }
+      base64_authenticator = alloc_http_authenticator(authenticator);
+      if (!base64_authenticator)
+        log_fn(LOG_WARN, "Encoding https authenticator failed");
+    }
+    if (base64_authenticator) {
       tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.1\r\n"
                    "Proxy-Authorization: Basic %s\r\n\r\n", addrbuf,
                    conn->port, base64_authenticator);

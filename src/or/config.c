@@ -133,6 +133,7 @@ static config_var_t config_vars[] = {
   VAR("Group",               STRING,   Group,                NULL),
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
   VAR("HttpProxy",           STRING,   HttpProxy,            NULL),
+  VAR("HttpProxyAuthenticator",STRING, HttpProxyAuthenticator,NULL),
   VAR("HttpsProxy",          STRING,   HttpsProxy,           NULL),
   VAR("HttpsProxyAuthenticator",STRING,HttpsProxyAuthenticator,NULL),
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
@@ -1524,6 +1525,13 @@ options_validate(or_options_t *options)
     }
     if (options->HttpProxyPort == 0) { /* give it a default */
       options->HttpProxyPort = 80;
+    }
+  }
+
+  if (options->HttpProxyAuthenticator) {
+    if (strlen(options->HttpProxyAuthenticator) >= 48) {
+      log(LOG_WARN, "HttpProxyAuthenticator is too long (>= 48 chars).");
+      result = -1;
     }
   }
 
