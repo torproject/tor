@@ -996,6 +996,8 @@ loop_again:
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     if (CONN_IS_EDGE(conn)) {
       connection_edge_end_errno(conn, conn->cpath_layer);
+      if (conn->socks_request) /* broken, so don't send a socks reply back */
+        conn->socks_request->has_finished = 1;
     }
     connection_mark_for_close(conn);
     return -1;
