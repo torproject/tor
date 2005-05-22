@@ -89,14 +89,15 @@ rather than connecting directly to any directory servers.
 \fBHttpsProxy\fR \fIhost\fR[:\fIport\fR]\fP
 If set, Tor will make all its OR (SSL) connections through this host:port,
 via HTTP CONNECT, rather than connecting directly to servers.
+You may want to set \fBFascistFirewall\fR to restrict the set of ports you
+might try to connect to, if your Https proxy only allows connecting to certain
+ports.
 .TP
 \fBHttpsProxyAuthenticator\fR \fIusername:password\fP
 If defined, Tor will use this username:password for Basic Https proxy
 authentication, as in RFC 2617. This is currently the only form of
 Https proxy authentication that Tor supports; feel free to submit a
-patch if you want it to support others. You may want to set FascistFirewall
-to restrict the set of ports you might try to connect to, if your Https
-proxy only allows connecting to certain ports.
+patch if you want it to support others.
 .TP
 \fBKeepalivePeriod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive
