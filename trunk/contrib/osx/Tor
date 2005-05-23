@@ -1,6 +1,5 @@
 #!/bin/sh
 
-export EVENT_NOKQUEUE=1 # assume kqueue broken on all os x machines for now.
 TORLOC=/Library/StartupItems/Tor/Tor.loc
 
 if [ -f $TORLOC ]; then
