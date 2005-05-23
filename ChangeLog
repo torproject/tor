@@ -1,3 +1,34 @@
+Changes in version 0.1.0.8-rc - 2005-05-23
+  o Bugfixes:
+    - It turns out that kqueue on OS X 10.3.9 was causing kernel
+      panics. Disable kqueue on all OS X Tors.
+    - Fix RPM: remove duplicate line accidentally added to the rpm
+      spec file.
+    - Disable threads on openbsd too, since its gethostaddr is not
+      reentrant either.
+    - Allow the middle hop of the testing circuit to be running any
+      version, now that most of them have the bugfix to let them connect
+      to unknown servers. This will allow reachability testing to work
+      even when 0.0.9.7-0.0.9.9 become obsolete.
+    - Handle relay cells with rh.length too large. This prevents
+      a potential attack that could read arbitrary memory (maybe even
+      keys) from the exit server's process.
+    - We screwed up the dirport reachability testing when we don't yet
+      have a cached version of the directory. Hopefully now fixed.
+    - Clean up router_load_single_router() (used by the controller),
+      so it doesn't seg fault on error.
+    - Fix a minor memory leak when somebody establishes an introduction
+      point at your Tor server.
+    - If a socks connection ends because read fails, don't warn that
+      you're not sending a socks reply back.
+
+  o Features:
+    - Add HttpProxyAuthenticator config option too, that works like
+      the HttpsProxyAuthenticator config option.
+    - Encode hashed controller passwords in hex instead of base64,
+      to make it easier to write controllers.
+
+
 Changes in version 0.1.0.7-rc - 2005-05-17
   o Bugfixes:
     - Fix a bug in the OS X package installer that prevented it from
