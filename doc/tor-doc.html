@@ -133,12 +133,14 @@ notice this quickly and stop advertising the server. Just try to make
 sure it's not too often, since connections using the server when it
 disconnects will break.</li>
 <li>We can handle servers with dynamic IPs just fine, as long as the
-server itself knows its IP. If your server is behind a NAT and it doesn't
-know its public IP (e.g. it has an IP of 192.168.x.y), then we can't use it
-as a server yet. (If you want to port forward and set your Address
-config option to use dyndns DNS voodoo to get around this, feel free. If
-you write a howto, <a href="mailto:tor-volunteer@freehaven.net">even
-better</a>.)</li>
+server itself knows its IP. Have a look at this
+<a href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#DynamicIP">
+entry in the FAQ</a>.</li>
+<li>If your server is behind a NAT and it doesn't
+know its public IP (e.g. it has an IP of 192.168.x.y), you need to set
+up port forwarding.  Forwarding TCP connections is system dependent but 
+<a href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerForFirewalledClients">
+this entry</a> offers some examples on how to do this.</li>
 <li>Your server will passively estimate and advertise its recent
 bandwidth capacity.
 Clients choose paths weighted by this capacity, so high-bandwidth
