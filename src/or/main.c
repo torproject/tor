@@ -586,7 +586,7 @@ static void run_connection_housekeeping(int i, time_t now) {
              (int)buf_datalen(conn->outbuf),
              (int)(now-conn->timestamp_lastwritten));
       connection_mark_for_close(conn);
-    } else {
+    } else if (!buf_datalen(conn->outbuf)) {
       /* either in clique mode, or we've got a circuit. send a padding cell. */
       log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
              conn->address, conn->port);
