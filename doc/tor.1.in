@@ -70,7 +70,7 @@ Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 Every time the specified period elapses, Tor downloads a directory.
 A directory contains a signed list of all known servers as well as
 their current liveness status. A value of "0 seconds" tells Tor to choose an
-appropriate default. (Default: 1 hour for clients, 20 minutes for servers.)
+appropriate default. (Default: 1 hour for clients, 20 minutes for servers)
 .TP
 \fBDirServer \fR\fIaddress:port fingerprint\fP
 Use a nonstandard authoritative directory server at the provided
@@ -101,7 +101,7 @@ patch if you want it to support others.
 .TP
 \fBKeepalivePeriod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive
-cell on open connections every NUM seconds. (Default: 5 minutes.)
+cell on open connections every NUM seconds. (Default: 5 minutes)
 .TP
 \fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBstderr\fR|\fBstdout\fR|\fBsyslog\fR\fP
 Send all messages between \fIminSeverity\fR and \fImaxSeverity\fR to
@@ -141,7 +141,7 @@ about what sites a user might have visited. (Default: 1)
 Every time the specified period elapses, Tor downloads signed status
 information about the current state of known servers.  A value of
 "0 seconds" tells Tor to choose an appropriate default. (Default: 30
-minutes for clients, 15 minutes for servers.)
+minutes for clients, 15 minutes for servers)
 .TP
 \fBUser \fR\fIUID\fP
 On startup, setuid to this user.
@@ -152,7 +152,7 @@ The following options are useful only for clients (that is, if \fBSOCKSPort\fP i
 .TP
 \fBAllowUnverifiedNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
 Where on our circuits should we allow Tor servers that the directory
-servers haven't authenticated as "verified"?  (Default: middle,rendezvous.)
+servers haven't authenticated as "verified"?  (Default: middle,rendezvous)
 .TP
 \fBClientOnly \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will under no circumstances run as a server. The default
@@ -185,16 +185,20 @@ but will not allow you to run as a server behind such a firewall.
 .TP
 \fBFirewallPorts \fR\fIPORTS\fP
 A list of ports that your firewall allows you to connect to.  Only used when
-\fBFascistFirewall\fR is set. (Default: 80, 443.)
+\fBFascistFirewall\fR is set. (Default: 80, 443)
 .TP
 \fBLongLivedPorts \fR\fIPORTS\fP
 A list of ports for services that tend to have long-running connections
 (e.g. chat and interactive shells). Circuits for streams that use these
 ports will contain only high-uptime nodes, to reduce the chance that a
-node will go down before the stream is finished.
+node will go down before the stream is finished. (Default: 21, 22, 706, 1863, 5050, 
+5190, 5222, 5223, 6667, 8300, 8888)
 .TP
 \fBMapAddress\fR \fIaddress\fR \fInewaddress\fR
-When a request for address arrives to Tor, it will rewrite it to newaddress before processing it. For example, if you always want connections to www.indymedia.org to exit via \fItorserver\fR (where \fItorserver\fR is the nickname of the server), use "MapAddress www.indymedia.org www.indymedia.org.torserver.exit".
+When a request for address arrives to Tor, it will rewrite it to newaddress before 
+processing it. For example, if you always want connections to www.indymedia.org to 
+exit via \fItorserver\fR (where \fItorserver\fR is the nickname of the server), 
+use "MapAddress www.indymedia.org www.indymedia.org.torserver.exit".
 .TP
 \fBNewCircuitPeriod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 30 seconds)
@@ -210,7 +214,8 @@ NodeFamily is only needed when a server doesn't list the family itself
 (with MyFamily). This option can be used multiple times.
 .TP
 .\" \fBPathlenCoinWeight \fR\fI0.0-1.0\fP
-.\" Paths are 3 hops plus a geometric distribution centered around this coinweight. Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
+.\" Paths are 3 hops plus a geometric distribution centered around this coinweight. 
+.\" Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
 .\" .TP
 \fBRendNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
 A list of preferred nodes to use for the rendezvous point, if possible.
@@ -230,7 +235,8 @@ applications. (Default: 127.0.0.1) You can also specify a port
 to bind to multiple addresses/ports.
 .TP
 \fBSOCKSPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
-Set an entrance policy for this server, to limit who can connect to the SOCKS ports. The policies have the same form as exit policies below.
+Set an entrance policy for this server, to limit who can connect to the SOCKS ports. 
+The policies have the same form as exit policies below.
 .TP
 \fBTrackHostExits \fR\fIhost\fR,\fI.domain\fR,\fI...\fR\fP
 For each value in the comma separated list, Tor will track recent connections
@@ -346,7 +352,7 @@ we exit. If we get a second SIGINT, we exit immediately.  (Default:
 \fBDirPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor uploads its server
 descriptors to the directory servers.  This information is also
-uploaded whenever it changes.  (Default: 20 minutes.)
+uploaded whenever it changes.  (Default: 20 minutes)
 .TP
 \fBAccountingMax \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 Never send more than the specified number of bytes in a given
@@ -395,7 +401,8 @@ Bind the directory service to this address. If you specify a port, bind
 to this port rather than the one specified in DirPort. (Default: 0.0.0.0)
 .TP
 \fBDirPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
-Set an entrance policy for this server, to limit who can connect to the directory ports. The policies have the same form as exit policies above.
+Set an entrance policy for this server, to limit who can connect to the directory ports. 
+The policies have the same form as exit policies above.
 .TP
 \fBRecommendedVersions \fR\fISTRING\fP
 STRING is a command-separated list of Tor versions currently believed
@@ -443,7 +450,7 @@ service. In normal use there is no reason to set this.
 \fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor uploads any rendezvous
 service descriptors to the directory servers.  This information is also
-uploaded whenever it changes.  (Default: 20 minutes.)
+uploaded whenever it changes.  (Default: 20 minutes)
 
 .\" UNDOCUMENTED
 .\" ignoreversion
