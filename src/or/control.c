@@ -469,9 +469,16 @@ int
 decode_hashed_password(char *buf, const char *hashed)
 {
   char decoded[64];
-  if (base64_decode(decoded, sizeof(decoded), hashed, strlen(hashed))
-      != S2K_SPECIFIER_LEN+DIGEST_LEN) {
-    return -1;
+  if (!strcmpstart(hashed, "16:")) {
+    if (base16_decode(decoded, sizeof(decoded), hashed+3, strlen(hashed+3))<0
+        || strlen(hashed+3) != (S2K_SPECIFIER_LEN+DIGEST_LEN)*2) {
+      return -1;
+    }
+  } else {
+      if (base64_decode(decoded, sizeof(decoded), hashed, strlen(hashed))
+          != S2K_SPECIFIER_LEN+DIGEST_LEN) {
+        return -1;
+      }
   }
   if (buf)
     memcpy(buf, decoded, sizeof(decoded));

@@ -1317,11 +1317,8 @@ static void do_hash_password(void)
   secret_to_key(key+S2K_SPECIFIER_LEN, DIGEST_LEN,
                 get_options()->command_arg, strlen(get_options()->command_arg),
                 key);
-  if (base64_encode(output, sizeof(output), key, sizeof(key))<0) {
-    log_fn(LOG_ERR, "Unable to compute base64");
-  } else {
-    printf("%s",output);
-  }
+  base16_encode(output, sizeof(output), key, sizeof(key));
+  printf("16:%s\n",output);
 }
 
 #ifdef MS_WINDOWS_SERVICE
