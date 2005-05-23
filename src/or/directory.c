@@ -903,6 +903,28 @@ write_http_status_line(connection_t *conn, int status,
   connection_write_to_buf(buf, strlen(buf), conn);
 }
 
+/** Helper function: return 1 if there are any dir conns of purpose
+ * <b>purpose</b> that are going elsewhere than our own ORPort/Dirport.
+ * Else return 0.
+ */
+static int
+already_fetching_directory(int purpose) {
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for (i=0;i<n;i++) {
+    conn = carray[i];
+    if (conn->type == CONN_TYPE_DIR &&
+        conn->purpose == purpose &&
+        !conn->marked_for_close &&
+        !router_digest_is_me(conn->identity_digest))
+      return 1;
+  }
+  return 0;
+}
+
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
@@ -938,7 +960,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
       log_fn(LOG_NOTICE,"Client asked for the mirrored directory, but we don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
-      if (!connection_get_by_type_purpose(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_DIR))
+      if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
       return 0;
     }
@@ -963,8 +985,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     if (!dlen) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
-      if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
-                                          DIR_PURPOSE_FETCH_RUNNING_LIST))
+      if (!already_fetching_directory(DIR_PURPOSE_FETCH_RUNNING_LIST))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
       return 0;
     }

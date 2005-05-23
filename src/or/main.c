@@ -523,12 +523,8 @@ void directory_has_arrived(time_t now, char *identity_digest) {
 
   if (server_mode(options) && identity_digest) {
     /* if this is us, then our dirport is reachable */
-    routerinfo_t *router = router_get_by_digest(identity_digest);
-    if (!router) // XXX
-      log_fn(LOG_WARN,"Bug: router_get_by_digest doesn't find me.");
-    if (router && router_is_me(router)) {
+    if (router_digest_is_me(identity_digest))
       router_dirport_found_reachable();
-    }
   }
 
   if (server_mode(options) &&

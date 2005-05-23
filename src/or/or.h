@@ -1304,7 +1304,6 @@ connection_t *connection_get_by_global_id(uint32_t id);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
-connection_t *connection_get_by_type_purpose(int type, int purpose);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state, const char *rendquery);
 
@@ -1752,6 +1751,7 @@ void mark_my_descriptor_dirty(void);
 int router_compare_to_my_exit_policy(connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);
+int router_digest_is_me(const char *digest);
 int router_is_me(routerinfo_t *router);
 int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
