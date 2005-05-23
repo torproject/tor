@@ -6,6 +6,9 @@ Changes in version 0.1.0.8-rc - 2005-05-23
       spec file.
     - Disable threads on openbsd too, since its gethostaddr is not
       reentrant either.
+    - Tolerate libevent 0.8 since it still works, even though it's
+      ancient.
+    - Enable building on Red Hat 9.0 again.
     - Allow the middle hop of the testing circuit to be running any
       version, now that most of them have the bugfix to let them connect
       to unknown servers. This will allow reachability testing to work
