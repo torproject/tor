@@ -1555,7 +1555,7 @@ options_validate(or_options_t *options)
 
   if (options->HashedControlPassword) {
     if (decode_hashed_password(NULL, options->HashedControlPassword)<0) {
-      log_fn(LOG_WARN,"Bad HashedControlPassword: wrong length or bad base64");
+      log_fn(LOG_WARN,"Bad HashedControlPassword: wrong length or bad encoding");
       result = -1;
     }
   }
