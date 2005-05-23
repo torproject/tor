@@ -120,7 +120,6 @@ int main(void)
     fi 
 
     LIBS="$saved_LIBS"
-    CFLAGS="$saved_CFLAGS"
     LDFLAGS="$saved_LDFLAGS" ])
 
   # Now we're done.  ac_vc_libevent_local could be:
