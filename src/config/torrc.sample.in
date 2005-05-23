@@ -1,4 +1,5 @@
 ## Configuration file for a typical tor user
+## Built for Tor version @VERSION@
 #
 # On Unix, Tor will look for this file in someplace like "~/.tor/torrc" or
 # "/etc/torrc"
