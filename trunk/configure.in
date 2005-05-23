@@ -60,9 +60,11 @@ AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(pthread_detach, [pthread])
 
 dnl ------------------------------------------------------
-dnl Where do you live, libevent?
+dnl Where do you live, libevent?  And how do we call you?
 
 
+# Step 1. Try to link and run a program using libevent.  If it works,
+#         great!  Just add -levent.
 AC_CACHE_CHECK([for a normal libevent], ac_cv_libevent_normal, [
    saved_LIBS="$LIBS"
    LIBS="$LIBS -levent"
@@ -70,13 +72,11 @@ AC_CACHE_CHECK([for a normal libevent], ac_cv_libevent_normal, [
 void *event_init(void);
 int main(void)
 {
-	if (!event_init())
-	        return -1;
+	event_init();
         return 0;
 }], ac_cv_libevent_normal=yes, ac_cv_libevent_normal=no)
    LIBS="$saved_LIBS"
 ])
-
 
 if test "$ac_cv_libevent_normal" = yes; then
   LIBS="$LIBS -levent"
@@ -86,28 +86,35 @@ else
      saved_LDFLAGS="$LDFLAGS"  
      LIBS="$LIBS -levent"
      LDFLAGS="$LDFLAGS -L/usr/local/lib"
+     # Step 2.  Otherwise, check whether adding -L/usr/local/lib allows
+     #          us to link.  If not, assume we have no libevent at all.
      AC_TRY_LINK([], [ void *event_init(void); event_init(); ],
         [ libevent_is_in_local=yes ], [ libevent_is_in_local=no ])
-    if test $libevent_is_in_local = yes; then
+     if test $libevent_is_in_local = no ; then
+       ac_cv_libevent_local=no   
+     else
+       # Step 3.  Does adding -L/usr/local/lib allow us to run, too?
+       #          If so, all we have to do as adjust LDFLAGS and CFLAGS.
        AC_TRY_RUN([
 void *event_init(void);
 int main(void)
 {
-	if (!event_init())
-	        return -1;
+	event_init();
         return 0;
 }], [ ac_cv_libevent_local=yes ], [ ac_cv_libevent_local=unlinked ])
-    else
-       ac_cv_libevent_local=no   
     fi
     if test "$GCC" = yes -a $ac_cv_libevent_local = unlinked ; then
+       # Step 4.  Okay, so we can link but not run.  This probably means
+       #          that the dynamic linker doesn't have /usr/local/lib in
+       #          its search path.  If we're lucky enough to be running
+       #          GCC on an ELF system, we might have a workaround for that.
+       #          See whether -Wl,-R/usr/local/lib makes things better.
        LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
        AC_TRY_RUN([
 void *event_init(void);
 int main(void)
 {
-	if (!event_init())
-	        return -1;
+	event_init();
         return 0;
 }], [ ac_cv_libevent_local=unlinked_gcc_elf ])
     fi 
@@ -115,6 +122,13 @@ int main(void)
     LIBS="$saved_LIBS"
     CFLAGS="$saved_CFLAGS"
     LDFLAGS="$saved_LDFLAGS" ])
+
+  # Now we're done.  ac_vc_libevent_local could be:
+  #    yes -- Add -L/usr/local/lib and we can link fine.
+  #    unlinked_gcc_elf -- We can link, but we need to use the GCC-ELF
+  #        workaround.  Complain a little.
+  #    unlinked -- We can link, but we can't run.  Complain a lot.
+  #    no -- we can't link at all.  Give an error and die.
 
   if test $ac_cv_libevent_local != no; then
       LIBS="$LIBS -levent"
