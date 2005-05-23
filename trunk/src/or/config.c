@@ -4,7 +4,6 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 const char config_c_id[] = "$Id$";
-
 /**
  * \file config.c
  *
@@ -290,6 +289,9 @@ options_act(void) {
      * exist, we don't care about it, since libevent will cope.
      */
     suppress_libevent_log_msg("Function not implemented");
+#ifdef __APPLE__
+    putenv("EVENT_NOKQUEUE=1");
+#endif
     event_init();
     suppress_libevent_log_msg(NULL);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
