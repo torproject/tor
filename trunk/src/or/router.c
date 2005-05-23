@@ -593,16 +593,20 @@ int router_compare_to_my_exit_policy(connection_t *conn)
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 }
 
-/** Return true iff <b>router</b> has the same nickname as this OR.  (For an
- * OP, always returns false.)
- */
-int router_is_me(routerinfo_t *router)
+/** Return true iff I'm a server and <b>digest</b> is equal to
+ * my identity digest. */
+int router_digest_is_me(const char *digest)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  tor_assert(router);
-  if (!me || memcmp(me->identity_digest, router->identity_digest, DIGEST_LEN))
+  if (!me || memcmp(me->identity_digest, digest, DIGEST_LEN))
     return 0;
   return 1;
+}
+
+/** A wrapper around router_digest_is_me(). */
+int router_is_me(routerinfo_t *router)
+{
+  return router_digest_is_me(router->identity_digest);
 }
 
 /** Return a routerinfo for this OR, rebuilding a fresh one if
