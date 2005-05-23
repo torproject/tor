@@ -153,31 +153,16 @@ server <a href="#server">below</a>.</p>
 <a name="installing"></a>
 <h2>Installing Tor</h2>
 
-<p>We have installers for Windows and Mac OS X 10.3 or later.  For help
-with installing,
-  configuring, and using Tor on these operating systems, consult the
-  <a href="tor-doc-win32.html">Windows instructions</a> or the
-  <a href="tor-doc-osx.html">Mac OS X instructions</a>.
-</p>
-
-<p>You can get the latest releases <a
-href="http://tor.eff.org/dist/">here</a>.</p>
+<p>We have installers for Windows, Mac OS X 10.3, and Red Hat. We
+have contributed packages for Debian, Gentoo, and *BSD. See <a href="http://tor.eff.org/download.html">the download page</a> for pointers and details.
 
 <p>If you got Tor from a tarball, unpack it: <tt>tar xzf
 tor-0.0.9.9.tar.gz; cd tor-0.0.9.9</tt>. Run <tt>./configure</tt>, then
 <tt>make</tt>, and then <tt>make install</tt> (as root if necessary). Then
 you can launch tor from the command-line by running <tt>tor</tt>.
-Otherwise, if you got it prepackaged (e.g. in the <a
-href="http://packages.debian.org/tor">Debian package</a> or <a
-href="http://packages.gentoo.org/packages/?category=net-misc;name=tor">Gentoo
-package</a>), these steps are already done for you, and you may
-even already have Tor started in the background (logging to
-/var/log/something).</p>
-
-<p><b>For newer releases</b>: To build Tor version 0.1.0.1-rc or later from
-source, you will need Niels Provos's <tt>libevent</tt> library; you can get
-the source for the latest version
-<a href="http://www.monkey.org/~provos/libevent/">here</a>.</p>
+Otherwise, if you got it prepackaged, these steps are already done
+for you, and you may even already have Tor started in the background
+(logging to /var/log/something).</p>
 
 <p>In any case, see the <a href="#client">next section</a> for what to
 <i>do</i> with it now that you've got it running.</p>
