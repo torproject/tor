@@ -825,7 +825,7 @@ static void second_elapsed_callback(int fd, short event, void *args)
              me ? me->address : options->Address, options->DirPort);
   }
 
-  /* if more than 10s have elapsed, probably the clock jumped: doesn't count. */
+  /* if more than 100s have elapsed, probably the clock jumped: doesn't count. */
   if (seconds_elapsed < 100)
     stats_n_seconds_working += seconds_elapsed;
   else
@@ -943,7 +943,7 @@ static int do_main_loop(void) {
     if (loop_result < 0) {
       int e = errno;
       /* let the program survive things like ^z */
-      if (e != EINTR) {
+      if (e != EINTR && e != EINPROGRESS) {
 #ifdef HAVE_EVENT_GET_METHOD
         log_fn(LOG_ERR,"libevent poll with %s failed: %s [%d]",
                event_get_method(), tor_socket_strerror(e), e);
@@ -953,6 +953,8 @@ static int do_main_loop(void) {
 #endif
         return -1;
       } else {
+        if (e == EINPROGRESS)
+          log_fn(LOG_WARN,"libevent poll returned EINPROGRESS? Please report.");
         log_fn(LOG_DEBUG,"event poll interrupted.");
         /* You can't trust the results of this poll(). Go back to the
          * top of the big for loop. */
