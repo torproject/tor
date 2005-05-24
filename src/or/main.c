@@ -768,10 +768,11 @@ static void run_scheduled_events(time_t now) {
   close_closeable_connections();
 }
 
+static struct event *timeout_event = NULL;
+
 /** Libevent callback: invoked once every second. */
 static void second_elapsed_callback(int fd, short event, void *args)
 {
-  static struct event *timeout_event = NULL;
   static struct timeval one_second;
   static long current_second = 0;
   struct timeval now;
@@ -780,7 +781,6 @@ static void second_elapsed_callback(int fd, short event, void *args)
   int seconds_elapsed;
   or_options_t *options = get_options();
   if (!timeout_event) {
-    /* XXX NM: We don't free timeout_event on exit. */
     timeout_event = tor_malloc_zero(sizeof(struct event));
     evtimer_set(timeout_event, second_elapsed_callback, NULL);
     one_second.tv_sec = 1;
@@ -1251,6 +1251,7 @@ void tor_free_all(int postfork)
   tor_tls_free_all();
   /* stuff in main.c */
   smartlist_free(closeable_connection_lst);
+  tor_free(timeout_event);
 
   if (!postfork) {
     close_logs(); /* free log strings. do this last so logs keep working. */
