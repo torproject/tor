@@ -1024,7 +1024,7 @@ static void signal_callback(int fd, short events, void *arg)
       break;
 #ifdef SIGPIPE
     case SIGPIPE:
-      log(LOG_NOTICE,"Caught sigpipe. Ignoring.");
+      log(LOG_DEBUG,"Caught sigpipe. Ignoring.");
       break;
 #endif
     case SIGUSR1:
