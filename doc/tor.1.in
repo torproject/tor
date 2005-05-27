@@ -83,15 +83,22 @@ directory servers: moria1, moria2, and tor26.
 On startup, setgid to this user.
 .TP
 \fBHttpProxy\fR \fIhost\fR[:\fIport\fR]\fP
-If set, Tor will make all its directory requests through this host:port,
+Tor will make all its directory requests through this host:port
+(or host:80 if port is not specified),
 rather than connecting directly to any directory servers.
 .TP
+\fBHttpProxyAuthenticator\fR \fIusername:password\fP
+If defined, Tor will use this username:password for Basic Http proxy
+authentication, as in RFC 2617. This is currently the only form of
+Http proxy authentication that Tor supports; feel free to submit a
+patch if you want it to support others.
+.TP
 \fBHttpsProxy\fR \fIhost\fR[:\fIport\fR]\fP
-If set, Tor will make all its OR (SSL) connections through this host:port,
-via HTTP CONNECT, rather than connecting directly to servers.
-You may want to set \fBFascistFirewall\fR to restrict the set of ports you
-might try to connect to, if your Https proxy only allows connecting to certain
-ports.
+Tor will make all its OR (SSL) connections through this host:port
+(or host:443 if port is not specified), via HTTP CONNECT rather than
+connecting directly to servers.  You may want to set \fBFascistFirewall\fR
+to restrict the set of ports you might try to connect to, if your Https
+proxy only allows connecting to certain ports.
 .TP
 \fBHttpsProxyAuthenticator\fR \fIusername:password\fP
 If defined, Tor will use this username:password for Basic Https proxy
