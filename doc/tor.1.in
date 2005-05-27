@@ -101,7 +101,9 @@ patch if you want it to support others.
 .TP
 \fBKeepalivePeriod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive
-cell on open connections every NUM seconds. (Default: 5 minutes)
+cell every NUM seconds on open connections that are in use. If the
+connection has no open circuits, it will instead be closed after NUM
+seconds of idleness. (Default: 5 minutes)
 .TP
 \fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBstderr\fR|\fBstdout\fR|\fBsyslog\fR\fP
 Send all messages between \fIminSeverity\fR and \fImaxSeverity\fR to
