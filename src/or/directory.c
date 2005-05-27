@@ -664,7 +664,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (!reason) reason = tor_strdup("[no reason given]");
 
   log_fn(LOG_DEBUG,
-         "Received response from directory servers '%s': %d \"%s\"",
+         "Received response from directory server '%s': %d \"%s\"",
          conn->address, status_code, reason);
 
   if (date_header > 0) {
