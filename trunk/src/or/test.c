@@ -565,6 +565,35 @@ test_crypto(void)
 }
 
 static void
+test_crypto_s2k(void)
+{
+  char buf[29];
+  char buf2[29];
+  char *buf3;
+  int i;
+
+  memset(buf, 0, sizeof(buf));
+  memset(buf2, 0, sizeof(buf2));
+  buf3 = tor_malloc(65536);
+  memset(buf3, 0, 65536);
+
+  secret_to_key(buf+9, 20, "", 0, buf);
+  crypto_digest(buf2+9, buf3, 1024);
+  test_memeq(buf, buf2, 29);
+
+  memcpy(buf,"vrbacrda",8);
+  memcpy(buf2,"vrbacrda",8);
+  buf[8] = 96;
+  buf2[8] = 96;
+  secret_to_key(buf+9, 20, "12345678", 8, buf);
+  for (i = 0; i < 65536; i += 16) {
+    memcpy(buf3+i, "vrbacrda12345678", 16);
+  }
+  crypto_digest(buf2+9, buf3, 65536);
+  test_memeq(buf, buf2, 29);
+}
+
+static void
 test_util(void) {
   struct timeval start, end;
   struct tm a_time;
@@ -1411,6 +1440,7 @@ main(int c, char**v) {
   // add_stream_log(LOG_DEBUG, LOG_ERR, "<stdout>", stdout);
   test_crypto();
   test_crypto_dh();
+  test_crypto_s2k();
   puts("\n========================= Util ============================");
   test_gzip();
   test_util();
