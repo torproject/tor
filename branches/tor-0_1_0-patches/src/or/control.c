@@ -481,7 +481,7 @@ decode_hashed_password(char *buf, const char *hashed)
       }
   }
   if (buf)
-    memcpy(buf, decoded, sizeof(decoded));
+    memcpy(buf, decoded, S2K_SPECIFIER_LEN+DIGEST_LEN);
   return 0;
 }
 
