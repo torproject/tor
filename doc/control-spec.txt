@@ -234,8 +234,11 @@ the message.
 3.8. AUTHENTICATE (Type 0x0007)
 
   Sent from the client to the server.  Contains a 'magic cookie' to prove
-  that client is really the admin for this Tor process.  The server responds
-  with DONE or ERROR.
+  that client is really allowed to control this Tor process.  The server
+  responds with DONE or ERROR.
+
+  The format of the 'cookie' is implementation-dependent; see 4.1 below for
+  information on how the standard Tor implementation handles it.
 
 3.9. SAVECONF (Type 0x0008)
 
@@ -460,30 +463,28 @@ the message.
 
 4. Implementation notes
 
-4.1. There are four ways we could authenticate, for now:
+4.1. Authentication
 
- 1) Listen on 127.0.0.1; trust all local users.
+  By default, the current Tor implementation trusts all local users.
 
- 2) Write a named socket in tor's data-directory or in some other location;
-    rely on the OS to ensure that only authorized users can open it.  (NOTE:
-    the Linux unix(7) man page suggests that some BSDs don't enforce
-    authorization.)  If the OS has named sockets, and implements
-    authentication, trust all users who can read Tor's data directory.
+  If the 'CookieAuthentication' option is true, Tor writes a "magic cookie"
+  file named "control_auth_cookie" into its data directory.  To authenticate,
+  the controller must send the contents of this file.
 
- 3) Write a random magic cookie to the FS in Tor's data-directory; use that
-    magic cookie for authentication.  Trust all users who can read Tor's data
-    directory.
-
- 4) Store a salted-and-hashed passphrase in Tor's configuration.  Use the
-    passphrase for authentication.  Trust all users who know the passphrase.
-
-  On Win32, our only options are 1, 3, and 4.  Since the semantics for 2
-  and 3 are so similar, we chose to not support 2, and just always bind
-  on 127.0.0.1.  We've implemented 1, 3, and 4.
-
-  By default, the Tor client accepts authentication approach #1. If
-  the controller wants Tor to demand more authentication, it should use
-  setconf and saveconf to configure Tor to demand more next time.
+  If the 'HashedControlPassword' option is set, it must contain the salted
+  hash of a secret password.  The salted hash is computed according to the
+  S2K algorithm in RFC 2440 (OpenPGP), and prefixed with the s2k specifier.
+  This is then encoded in hexadecimal, prefixed by the indicator sequence
+  "16:".  Thus, for example, the password 'foo' could encode to:
+     16:660537E3E1CD49996044A3BF558097A981F539FEA2F9DA662B4626C1C2
+        ++++++++++++++++**^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           salt                       hashed value
+                       indicator
+  You can generate the salt of a password by calling
+           'tor --hash-password <password>'
+  or by using the example code in the Python and Java controller libraries.
+  To authenticate under this scheme, the controller sends Tor the original
+  secret that was used to generate the password.
 
 4.2. Don't let the buffer get too big.
 
