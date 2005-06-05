@@ -54,11 +54,23 @@ if [ "x$TORGROUP" != "x" ]; then
     TORARGS="$TORARGS --group $TORGROUP"
 fi
 
+if [ -x /bin/su ] ; then
+    SUPROG=/bin/su
+elif [ -x /sbin/su ] ; then
+    SUPROG=/sbin/su
+elif [ -x /usr/bin/su ] ; then
+    SUPROG=/usr/bin/su
+elif [ -x /usr/sbin/su ] ; then
+    SUPROG=/usr/sbin/su
+else
+    SUPROG=/bin/su
+fi
+
 # the command used to start
 if  [ "x$TORUSER" = "x" ]; then
     START="$TORBIN -f $TORCONF $TORARGS"
 else
-    START="/bin/su -c \\"$TORBIN -f $TORCONF $TORARGS\\" $TORUSER"
+    START="$SUPROG -c \\"$TORBIN -f $TORCONF $TORARGS\\" $TORUSER"
 fi
 
 #

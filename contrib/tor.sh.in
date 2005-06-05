@@ -24,6 +24,18 @@ if [ "x$TORGROUP" != "x" ]; then
 fi
 RETVAL=0
 
+if [ -x /bin/su ] ; then
+    SUPROG=/bin/su
+elif [ -x /sbin/su ] ; then
+    SUPROG=/sbin/su
+elif [ -x /usr/bin/su ] ; then
+    SUPROG=/usr/bin/su
+elif [ -x /usr/sbin/su ] ; then
+    SUPROG=/usr/sbin/su
+else
+    SUPROG=/bin/su
+fi
+
 case "$1" in
 
     start)
@@ -36,7 +48,7 @@ case "$1" in
         if  [ "x$TORUSER" = "x" ]; then
             $TORBIN -f $TORCONF $TORARGS
         else
-            /bin/su -c "$TORBIN -f $TORCONF $TORARGS" $TORUSER
+            $SUPROG -c "$TORBIN -f $TORCONF $TORARGS" $TORUSER
         fi
         RETVAL=$?
         if [ $RETVAL -eq 0 ]; then
