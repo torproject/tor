@@ -1230,7 +1230,10 @@ static int tor_init(int argc, char *argv[]) {
   handle_signals(1);
 
   crypto_global_init();
-  crypto_seed_rng();
+  if (crypto_seed_rng()) {
+    log_fn(LOG_ERR, "Unable to seed random number generator. Exiting.");
+    return -1;
+  }
   return 0;
 }
 
