@@ -1433,11 +1433,11 @@ int crypto_seed_rng(void)
     }
     provider_set = 1;
   }
-  if (!CryptGenRandom(provider, sizeof(buf), buf)) {
+  if (!CryptGenRandom(provider, DIGEST_LEN, buf)) {
     log_fn(LOG_ERR,"Can't get entropy from CryptoAPI.");
     return -1;
   }
-  RAND_seed(buf, sizeof(buf));
+  RAND_seed(buf, DIGEST_LEN);
   /* And add the current screen state to the entropy pool for
    * good measure. */
   RAND_screen();
@@ -1454,13 +1454,13 @@ int crypto_seed_rng(void)
     fd = open(filenames[i], O_RDONLY, 0);
     if (fd<0) continue;
     log_fn(LOG_INFO, "Seeding RNG from %s", filenames[i]);
-    n = read_all(fd, buf, sizeof(buf), 0);
+    n = read(fd, buf, DIGEST_LEN);
     close(fd);
-    if (n != sizeof(buf)) {
+    if (n != DIGEST_LEN) {
       log_fn(LOG_WARN, "Error reading from entropy source");
       return -1;
     }
-    RAND_seed(buf, sizeof(buf));
+    RAND_seed(buf, DIGEST_LEN);
     return 0;
   }
 
