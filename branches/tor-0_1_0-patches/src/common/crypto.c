@@ -1425,25 +1425,19 @@ int crypto_seed_rng(void)
   char buf[DIGEST_LEN+1];
 
   if (!provider_set) {
-    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_MACHINE_KEYSET)) {
+    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
       if (GetLastError() != NTE_BAD_KEYSET) {
         log_fn(LOG_ERR,"Can't get CryptoAPI provider [1]");
-        return -1;
-      }
-      /* Yes, we need to try it twice. */
-      if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
-                               CRYPT_MACHINE_KEYSET | CRYPT_NEWKEYSET)) {
-        log_fn(LOG_ERR,"Can't get CryptoAPI provider [2], error code: %x", GetLastError());
         return -1;
       }
     }
     provider_set = 1;
   }
-  if (!CryptGenRandom(provider, DIGEST_LEN, buf)) {
+  if (!CryptGenRandom(provider, sizeof(buf), buf)) {
     log_fn(LOG_ERR,"Can't get entropy from CryptoAPI.");
     return -1;
   }
-  RAND_seed(buf, DIGEST_LEN);
+  RAND_seed(buf, sizeof(buf));
   /* And add the current screen state to the entropy pool for
    * good measure. */
   RAND_screen();
@@ -1460,13 +1454,13 @@ int crypto_seed_rng(void)
     fd = open(filenames[i], O_RDONLY, 0);
     if (fd<0) continue;
     log_fn(LOG_INFO, "Seeding RNG from %s", filenames[i]);
-    n = read(fd, buf, DIGEST_LEN);
+    n = read_all(fd, buf, sizeof(buf), 0);
     close(fd);
-    if (n != DIGEST_LEN) {
+    if (n != sizeof(buf)) {
       log_fn(LOG_WARN, "Error reading from entropy source");
       return -1;
     }
-    RAND_seed(buf, DIGEST_LEN);
+    RAND_seed(buf, sizeof(buf));
     return 0;
   }
 
