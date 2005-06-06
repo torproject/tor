@@ -1058,6 +1058,9 @@ dumpstats(int severity) {
   connection_t *conn;
   time_t now = time(NULL);
   time_t elapsed;
+  extern uint64_t buf_total_used;
+  extern uint64_t buf_total_alloc;
+  extern uint64_t rephist_total_alloc;
 
   log(severity, "Dumping stats:");
 
@@ -1120,6 +1123,12 @@ dumpstats(int severity) {
         (int)elapsed,
         (int) (stats_n_bytes_written/elapsed));
   }
+
+  log(severity, "--------------- Dumping memory information:");
+  log(severity, "In buffers: "U64_FORMAT" used/"U64_FORMAT" allocated.",
+      U64_PRINTF_ARG(buf_total_used), U64_PRINTF_ARG(buf_total_alloc));
+  log(severity, "In rephist: "U64_FORMAT" used.",
+      U64_PRINTF_ARG(rephist_total_alloc));
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);

@@ -13,6 +13,8 @@ const char rephist_c_id[] = "$Id$";
 static void bw_arrays_init(void);
 static void predicted_ports_init(void);
 
+uint64_t rephist_total_alloc;
+
 /** History of an OR-\>OR link. */
 typedef struct link_history_t {
   /** When did we start tracking this list? */
@@ -67,6 +69,7 @@ static or_history_t *get_or_history(const char* id)
   hist = (or_history_t*) strmap_get(history_map, hexid);
   if (!hist) {
     hist = tor_malloc_zero(sizeof(or_history_t));
+    rephist_total_alloc += sizeof(or_history_t);
     hist->link_history_map = strmap_new();
     hist->since = hist->changed = time(NULL);
     strmap_set(history_map, hexid, hist);
@@ -93,6 +96,7 @@ static link_history_t *get_link_history(const char *from_id,
   lhist = (link_history_t*) strmap_get(orhist->link_history_map, to_hexid);
   if (!lhist) {
     lhist = tor_malloc_zero(sizeof(link_history_t));
+    rephist_total_alloc += sizeof(link_history_t);
     lhist->since = lhist->changed = time(NULL);
     strmap_set(orhist->link_history_map, to_hexid, lhist);
   }
@@ -102,6 +106,7 @@ static link_history_t *get_link_history(const char *from_id,
 static void
 _free_link_history(void *val)
 {
+  rephist_total_alloc -= sizeof(link_history_t);
   tor_free(val);
 }
 
@@ -110,6 +115,7 @@ free_or_history(void *_hist)
 {
   or_history_t *hist = _hist;
   strmap_free(hist->link_history_map, _free_link_history);
+  rephist_total_alloc -= sizeof(or_history_t);
   tor_free(hist);
 }
 
@@ -347,6 +353,7 @@ void rep_history_clean(time_t before)
       strmap_iter_get(lhist_it, &hd2, &link_history_p);
       link_history = link_history_p;
       if (link_history->changed < before) {
+        rephist_total_alloc -= sizeof(link_history_t);
         tor_free(link_history);
         lhist_it = strmap_iter_next_rmv(or_history->link_history_map,lhist_it);
         continue;
@@ -495,6 +502,7 @@ static bw_array_t *bw_array_new(void) {
   bw_array_t *b;
   time_t start;
   b = tor_malloc_zero(sizeof(bw_array_t));
+  rephist_total_alloc += sizeof(bw_array_t);
   start = time(NULL);
   b->cur_obs_time = start;
   b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
@@ -626,10 +634,12 @@ static smartlist_t *predicted_ports_list=NULL;
 static smartlist_t *predicted_ports_times=NULL;
 
 static void add_predicted_port(uint16_t port, time_t now) {
+  /* XXXX we could just use uintptr_t here, I think. */
   uint16_t *tmp_port = tor_malloc(sizeof(uint16_t));
   time_t *tmp_time = tor_malloc(sizeof(time_t));
   *tmp_port = port;
   *tmp_time = now;
+  rephist_total_alloc += sizeof(uint16_t) + sizeof(time_t);
   smartlist_add(predicted_ports_list, tmp_port);
   smartlist_add(predicted_ports_times, tmp_time);
 }
@@ -641,8 +651,10 @@ static void predicted_ports_init(void) {
 }
 
 static void predicted_ports_free(void) {
+  rephist_total_alloc -= smartlist_len(predicted_ports_list)*sizeof(uint16_t);
   SMARTLIST_FOREACH(predicted_ports_list, char *, cp, tor_free(cp));
   smartlist_free(predicted_ports_list);
+  rephist_total_alloc -= smartlist_len(predicted_ports_times)*sizeof(time_t);
   SMARTLIST_FOREACH(predicted_ports_times, char *, cp, tor_free(cp));
   smartlist_free(predicted_ports_times);
 }
@@ -697,6 +709,7 @@ smartlist_t *rep_hist_get_predicted_ports(time_t now) {
       log_fn(LOG_DEBUG, "Expiring predicted port %d", *tmp_port);
       smartlist_del(predicted_ports_list, i);
       smartlist_del(predicted_ports_times, i);
+      rephist_total_alloc -= sizeof(uint16_t)+sizeof(time_t);
       tor_free(tmp_port);
       tor_free(tmp_time);
       i--;
