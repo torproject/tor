@@ -574,67 +574,7 @@ The pieces.
   Streams are multiplexed over circuits.
 
   Cells. Some connections, specifically OR and OP connections, speak
-  "cells". This means that data over that connection is bundled into 256
-  byte packets (8 bytes of header and 248 bytes of payload). Each cell has
+  "cells". This means that data over that connection is bundled into 512
+  byte packets (14 bytes of header and 498 bytes of payload). Each cell has
   a type, or "command", which indicates what it's for.
 
-Robustness features.
-
-[XXX no longer up to date]
- Bandwidth throttling. Each cell-speaking connection has a maximum
-  bandwidth it can use, as specified in the routers.or file. Bandwidth
-  throttling can occur on both the sender side and the receiving side. If
-  the LinkPadding option is on, the sending side sends cells at regularly
-  spaced intervals (e.g., a connection with a bandwidth of 25600B/s would
-  queue a cell every 10ms). The receiving side protects against misbehaving
-  servers that send cells more frequently, by using a simple token bucket:
-
-  Each connection has a token bucket with a specified capacity. Tokens are
-  added to the bucket each second (when the bucket is full, new tokens
-  are discarded.) Each token represents permission to receive one byte
-  from the network --- to receive a byte, the connection must remove a
-  token from the bucket. Thus if the bucket is empty, that connection must
-  wait until more tokens arrive. The number of tokens we add enforces a
-  longterm average rate of incoming bytes, yet we still permit short-term
-  bursts above the allowed bandwidth. Currently bucket sizes are set to
-  ten seconds worth of traffic.
-
-  The bandwidth throttling uses TCP to push back when we stop reading.
-  We extend it with token buckets to allow more flexibility for traffic
-  bursts.
-
- Data congestion control. Even with the above bandwidth throttling,
-  we still need to worry about congestion, either accidental or intentional.
-  If a lot of people make circuits into same node, and they all come out
-  through the same connection, then that connection may become saturated
-  (be unable to send out data cells as quickly as it wants to). An adversary
-  can make a 'put' request through the onion routing network to a webserver
-  he owns, and then refuse to read any of the bytes at the webserver end
-  of the circuit. These bottlenecks can propagate back through the entire
-  network, mucking up everything.
-
-  (See the tor-spec.txt document for details of how congestion control
-  works.)
-
-  In practice, all the nodes in the circuit maintain a receive window
-  close to maximum except the exit node, which stays around 0, periodically
-  receiving a sendme and reading more data cells from the webserver.
-  In this way we can use pretty much all of the available bandwidth for
-  data, but gracefully back off when faced with multiple circuits (a new
-  sendme arrives only after some cells have traversed the entire network),
-  stalled network connections, or attacks.
-
-  We don't need to reimplement full tcp windows, with sequence numbers,
-  the ability to drop cells when we're full etc, because the tcp streams
-  already guarantee in-order delivery of each cell. Rather than trying
-  to build some sort of tcp-on-tcp scheme, we implement this minimal data
-  congestion control; so far it's enough.
-
- Router twins. In many cases when we ask for a router with a given
-  address and port, we really mean a router who knows a given key. Router
-  twins are two or more routers that share the same private key. We thus
-  give routers extra flexibility in choosing the next hop in the circuit: if
-  some of the twins are down or slow, it can choose the more available ones.
-
-  Currently the code tries for the primary router first, and if it's down,
-  chooses the first available twin.
