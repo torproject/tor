@@ -943,7 +943,7 @@ static int do_main_loop(void) {
     if (loop_result < 0) {
       int e = errno;
       /* let the program survive things like ^z */
-      if (e != EINTR && e != EINPROGRESS) {
+      if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
 #ifdef HAVE_EVENT_GET_METHOD
         log_fn(LOG_ERR,"libevent poll with %s failed: %s [%d]",
                event_get_method(), tor_socket_strerror(e), e);
@@ -953,7 +953,7 @@ static int do_main_loop(void) {
 #endif
         return -1;
       } else {
-        if (e == EINPROGRESS)
+        if (ERRNO_IS_EINPROGRESS(e))
           log_fn(LOG_WARN,"libevent poll returned EINPROGRESS? Please report.");
         log_fn(LOG_DEBUG,"event poll interrupted.");
         /* You can't trust the results of this poll(). Go back to the
