@@ -10,6 +10,7 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
       has it bound_! So, don't do that on Win32.
     - Clean up the log messages when starting on Win32 with no config
       file.
+    - Security fix: seed RNG well even when not in Administrator group.
 
   o Assert / crash bugs:
     - Refuse relay cells that claim to have a length larger than the
