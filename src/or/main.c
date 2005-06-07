@@ -1033,7 +1033,7 @@ static void signal_callback(int fd, short events, void *arg)
       break;
     case SIGUSR2:
       switch_logs_debug();
-      log(LOG_NOTICE,"Caught USR2. Going to loglevel debug.");
+      log(LOG_NOTICE,"Caught USR2, going to loglevel debug. Send HUP to change back.");
       break;
     case SIGHUP:
       if (do_hup() < 0) {
