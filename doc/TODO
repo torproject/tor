@@ -60,6 +60,7 @@ for 0.1.1.x:
     - uninstallers
     - something, anything, for sys tray on Windows.
   - let ORPort config option change.
+  - new controller protocol
 
 
 
