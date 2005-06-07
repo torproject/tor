@@ -1377,7 +1377,7 @@ int socks_policy_permits_address(uint32_t addr);
 
 void set_exit_redirects(smartlist_t *lst);
 typedef enum hostname_type_t {
-  NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME
+  NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME, BAD_HOSTNAME
 } hostname_type_t;
 hostname_type_t parse_extended_hostname(char *address);
 
