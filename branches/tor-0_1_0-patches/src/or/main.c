@@ -941,7 +941,7 @@ static int do_main_loop(void) {
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */
     if (loop_result < 0) {
-      int e = errno;
+      int e = tor_socket_errno(-1);
       /* let the program survive things like ^z */
       if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
 #ifdef HAVE_EVENT_GET_METHOD
