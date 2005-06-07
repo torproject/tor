@@ -1384,6 +1384,7 @@ test_rend_fns(void)
   char address1[] = "fooaddress.onion";
   char address2[] = "aaaaaaaaaaaaaaaa.onion";
   char address3[] = "fooaddress.exit";
+  char address4[] = "tor.eff.org";
   rend_service_descriptor_t *d1, *d2;
   char *encoded;
   size_t len;
@@ -1412,9 +1413,10 @@ test_rend_fns(void)
   test_streq(d2->intro_points[1], "crow");
   test_streq(d2->intro_points[2], "joel");
 
-  test_eq(NORMAL_HOSTNAME, parse_extended_hostname(address1));
+  test_eq(BAD_HOSTNAME, parse_extended_hostname(address1));
   test_eq(ONION_HOSTNAME, parse_extended_hostname(address2));
   test_eq(EXIT_HOSTNAME, parse_extended_hostname(address3));
+  test_eq(NORMAL_HOSTNAME, parse_extended_hostname(address4));
 
   rend_service_descriptor_free(d1);
   rend_service_descriptor_free(d2);
