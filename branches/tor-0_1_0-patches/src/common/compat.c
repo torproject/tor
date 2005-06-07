@@ -526,8 +526,9 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
   } else {
 #ifdef HAVE_GETADDRINFO
     int err;
-    struct addrinfo *res, *res_p;
+    struct addrinfo *res=NULL, *res_p;
     struct addrinfo hints;
+    int result = -1;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_INET;
     hints.ai_socktype = SOCK_STREAM;
@@ -537,14 +538,13 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
         if (res_p->ai_family == AF_INET) {
           struct sockaddr_in *sin = (struct sockaddr_in *)res_p->ai_addr;
           memcpy(addr, &sin->sin_addr, 4);
-          freeaddrinfo(res);
-          return 0;
-        } else {
+          result = 0;
+          break;
         }
       }
-      return -1;
+      freeaddrinfo(res);
+      return result;
     }
-
     return (err == EAI_AGAIN) ? 1 : -1;
 #else
     struct hostent *ent;
