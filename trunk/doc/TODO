@@ -11,6 +11,15 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
+For 0.1.0.x:
+  - Memory use on Linux: what's happening?
+  - Why do solaris cpuworks go dormant?
+    (Apparently, disabling threads fixes this.)
+  - Why does kevent barf with EINVAL on some freebsd boxes?
+  - Fix the remaining flyspray bugs marked for 0.1.0.9
+  - Free remaining unfreed memory (arma will run valgrind)
+  - Note libevent/method/platform combos that are unlikely to work.
+
 for 0.1.1.x:
   - cpu fixes:
     - create-light
