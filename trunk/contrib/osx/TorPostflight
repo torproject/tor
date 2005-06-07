@@ -58,11 +58,10 @@ if [ ! -e /var/log/tor -o -L /var/log/tor ]; then
   ln -sf $LOGDIR tor
 fi
 
-if [ ! -d /Library/StartupItems/Tor ]; then
-  mkdir -p /Library/StartupItems/Tor
+if [ -d /Library/StartupItems/Tor ]; then
+  rm -f /Library/StartupItems/Tor/Tor.loc
+  echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
 fi
-rm -f /Library/StartupItems/Tor/Tor.loc
-echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
 
 if [ -d /Library/StartupItems/Privoxy ]; then
   find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel

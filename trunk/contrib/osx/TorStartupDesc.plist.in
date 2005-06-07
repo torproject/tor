@@ -5,6 +5,6 @@
 	<key>IFPkgDescriptionTitle</key>
 	<string>Tor Startup Script</string>
 	<key>IFPkgDescriptionVersion</key>
-	<string>0.0.9.1</string>
+	<string>@VERSION@</string>
 </dict>
 </plist>
