@@ -11,6 +11,49 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
+for 0.1.1.x:
+  - cpu fixes:
+    - create-light
+    - see if we should make use of truncate to retry
+    - hardware accelerator support
+    - use aes when available
+    - do the kernel buffer style design
+  - continue decentralizing the directory
+    M have two router descriptor formats
+    - dirservers verify reachability claims
+    - find 10 dirservers.
+    - dirservers have blacklist of IPs they hate.
+    - dirservers publish router-status with all these flags.
+    - alices fetch many router-statuses and update descriptors as needed.
+    - add if-newer-than fetch options
+    - dirservers allow people to lookup by N descriptors, or to fetch all.
+    - alices avoid duplicate class C nodes.
+    - everybody with a dirport will give you his descriptor.
+    - config option, on by default, to cache all descriptors.
+    - Compress router desc sets before transmitting them
+    M Analyze how bad the partitioning is or isn't.
+  - Naming:
+    - some dirservers announce that they manage bindings (a flag in
+      router-status).
+    - other dirservers mention a binding if there is no conflict for
+      that binding among the dirservers that manage it.
+      no conflict == any of them bind it and no disagreement.
+    - alice can specify a nickname and it will record that name in her
+      datadir along with the key *if* it is bound. otherwise her specifying
+      will fail (loudly we hope).
+    - thus when a binding vanishes (e.g. conflict) alice will keep using
+      the one she meant.
+    - if the binding changes keys, the entry in her datadir will silently
+      get corrected.
+  - helper nodes (at least preliminary)
+  - enclaves (at least preliminary)
+  - packaging and ui stuff:
+    - uninstallers
+    - something, anything, for sys tray on Windows.
+  - let ORPort config option change.
+
+
+
 For sometime soon:
    - Server instructions for OSX and Windows operators.
    - Audit all changes to bandwidth buckets for integer over/underflow.
