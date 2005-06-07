@@ -911,6 +911,12 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
    */
   addresstype = parse_extended_hostname(socks->address);
 
+  if (addresstype == BAD_HOSTNAME) {
+    log_fn(LOG_WARN, "Invalid hostname %s; rejecting", socks->address);
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+    return -1;
+  }
+
   if (addresstype == EXIT_HOSTNAME) {
     /* foo.exit -- modify conn->chosen_exit_node to specify the exit
      * node, and conn->address to hold only the address portion.*/
@@ -1712,6 +1718,6 @@ parse_extended_hostname(char *address) {
 failed:
     /* otherwise, return to previous state and return 0 */
     *s = '.';
-    return NORMAL_HOSTNAME;
+    return BAD_HOSTNAME;
 }
 
