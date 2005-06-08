@@ -944,8 +944,9 @@ print_usage(void)
 }
 
 /**
- * Based on <b>address</b>, guess our public IP address and put it
- * in <b>addr</b>.
+ * Based on <b>options-\>Address</b>, guess our public IP address and put it
+ * in *<b>addr</b>. Return 0 if all is well, or -1 if we can't find a
+ * suitable public IP address.
  */
 int
 resolve_my_address(or_options_t *options, uint32_t *addr)
@@ -994,12 +995,23 @@ resolve_my_address(or_options_t *options, uint32_t *addr)
   }
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-  if (!explicit_ip && is_internal_IP(htonl(in.s_addr))) {
-    log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
-           "Please set the Address config option to be the IP you want to use.",
-           hostname, tmpbuf);
-    if (!options->NoPublish)
+  if (is_internal_IP(htonl(in.s_addr)) && !options->NoPublish) {
+    /* make sure we're ok with publishing an internal IP */
+    if (!options->DirServers) {
+      /* if they are using the default dirservers, disallow internal IPs always. */
+      log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
+             "Servers must use public IP addresses.",
+             hostname, tmpbuf);
       return -1;
+    }
+    if (!explicit_ip) {
+      /* even if they've set their own dirservers, require an explicit IP if
+       * they're using an internal address. */
+      log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
+             "Please set the Address config option to be the IP you want to use.",
+             hostname, tmpbuf);
+      return -1;
+    }
   }
 
   log_fn(LOG_DEBUG, "Resolved Address to %s.", tmpbuf);
