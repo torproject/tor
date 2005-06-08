@@ -499,23 +499,29 @@ static const char *suppress_msg = NULL;
 static void
 libevent_logging_callback(int severity, const char *msg)
 {
+  char buf[1024];
+  size_t n;
   if (suppress_msg && strstr(msg, suppress_msg))
     return;
+  n = strlcpy(buf, msg, sizeof(buf));
+  if (n && n < sizeof(buf) && buf[n-1] == '\n') {
+    buf[n-1] = '\0';
+  }
   switch (severity) {
     case _EVENT_LOG_DEBUG:
-      log(LOG_DEBUG, "Message from libevent: %s", msg);
+      log(LOG_DEBUG, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_MSG:
-      log(LOG_INFO, "Message from libevent: %s", msg);
+      log(LOG_INFO, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_WARN:
-      log(LOG_WARN, "Warning from libevent: %s", msg);
+      log(LOG_WARN, "Warning from libevent: %s", buf);
       break;
     case _EVENT_LOG_ERR:
-      log(LOG_ERR, "Error from libevent: %s", msg);
+      log(LOG_ERR, "Error from libevent: %s", buf);
       break;
     default:
-      log(LOG_WARN, "Message [%d] from libevent: %s", severity, msg);
+      log(LOG_WARN, "Message [%d] from libevent: %s", severity, buf);
       break;
   }
 }
