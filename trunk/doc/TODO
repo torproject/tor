@@ -16,13 +16,15 @@ For 0.1.0.x:
   - Why do solaris cpuworks go dormant?
     (Apparently, disabling threads fixes this.)
   - Why does kevent barf with EINVAL on some freebsd boxes?
+    (Lucky is trying a patch that should tell us why.)
   - Fix the remaining flyspray bugs marked for 0.1.0.9
+    (Only 124 remains.)
   - Free remaining unfreed memory (arma will run valgrind)
-  . Note libevent/method/platform combos that are unlikely to work.
-    o Write
-    - Test
-    - Backport
-  - Memory use on Linux: what's happening?
+    (Not for a stable release)
+  o Note libevent/method/platform combos that are unlikely to work.
+  . Memory use on Linux: what's happening?
+    - Is it threading?  (Maybe, maybe not)
+    - Is it the buf_shrink bug? (Quite possibly)
   - instrument the code to figure out where our memory is going. (all platforms?)
   - change torrc to point to abuse-faq (once abuse-faq is posted)
 
