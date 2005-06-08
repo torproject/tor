@@ -975,6 +975,9 @@ static int connection_receiver_bucket_should_increase(connection_t *conn) {
 int connection_handle_read(connection_t *conn) {
   int max_to_read=-1, try_to_read;
 
+  if (conn->marked_for_close)
+    return 0; /* do nothing */
+
   conn->timestamp_lastread = time(NULL);
 
   switch (conn->type) {
@@ -1175,6 +1178,9 @@ int connection_handle_write(connection_t *conn) {
   time_t now = time(NULL);
 
   tor_assert(!connection_is_listener(conn));
+
+  if (conn->marked_for_close)
+    return 0; /* do nothing */
 
   conn->timestamp_lastwritten = now;
 
