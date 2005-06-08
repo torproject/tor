@@ -4,6 +4,7 @@ SPEC!!  - Not specified
 SPEC    - Spec not finalized
 NICK    - nick claims
 ARMA    - arma claims
+PHOBOS	- phobos claims
         - Not done
         * Top priority
         . Partially done
@@ -372,4 +373,36 @@ Efficiency/speed/robustness:
     quickly (and kill the thickpipe!) when there's congestion.
   Other transport. HTTP, udp, rdp, airhook, etc. May have to do our own
     link crypto, unless we can bully openssl into it.
+
+*********** uncategorized
+
+- solx86 cpu worker never responds
+- why gnutls is bad/not good for tor
+
+PHOBOS - convert the abuse section of the faq into a webpage like the
+rest of ours; submit it to shari for approval to add to the official
+site
+
+- flesh out the rest of the section 6 of the faq
+- follow up to the archive.org lady to try to get her tor server working
+- rewrite how libevent does select() on win32 so it's not so very slow.
+- instrument the code to figure out where our memory is going.
+- compare 0.1.0.5-rc vs 0.1.0.8-rc memory usage to test out old buffer
+(1015) vs new buffer (0108) algorithms
+- gather pointers to livecd distros that include tor
+- we should remove our libevent tree from cvs. it's obsolete now.
+- desired contribute.html patch: atches for dir-servers to verify server
+reachability.
+- i want to put the logo on the website, in source form, so people can
+put it on stickers directly, etc.
+- i want more pictures from ren. he wants to describe the tor handshake,
+i want to talk about hidden services.
+- make it clearer how to find the mailing lists from the website
+(they're in users.html)
+- switch accountingmax to count total in+out, not either in or out. it's
+easy to move in this direction (not risky), but hard to back, out if we
+decide we prefer it the way it already is. hm.
+- clean up the places where our docs are redundant (or worse, obsolete
+in one file and correct elsewhere). agl has a start on a global
+list-of-tor-docs.
 
