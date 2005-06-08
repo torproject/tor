@@ -216,6 +216,9 @@ static int write_configuration_file(const char *fname, or_options_t *options);
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void print_cvs_version(void);
+static int init_libevent(void);
+static void check_libevent_version(const char *m, const char *v, int server);
+
 
 /*
  * Functions to read and write the global options pointer.
@@ -283,27 +286,6 @@ options_act(void) {
   if (options->RunAsDaemon) {
     start_daemon();
   }
-  if (!libevent_initialized) {
-    configure_libevent_logging();
-    /* If the kernel complains that some method (say, epoll) doesn't
-     * exist, we don't care about it, since libevent will cope.
-     */
-    suppress_libevent_log_msg("Function not implemented");
-#ifdef __APPLE__
-    putenv("EVENT_NOKQUEUE=1");
-#endif
-    event_init();
-    suppress_libevent_log_msg(NULL);
-#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-    /* Making this a NOTICE for now so we can link bugs to a libevent versions
-     * or methods better. */
-    log(LOG_NOTICE, "Initialized libevent version %s using method %s",
-           event_get_version(), event_get_method());
-#else
-    log(LOG_NOTICE, "Initialized old libevent (version 1.0b or earlier)");
-#endif
-    libevent_initialized = 1;
-  }
 
   clear_trusted_dir_servers();
   for (cl = options->DirServers; cl; cl = cl->next) {
@@ -342,11 +324,19 @@ options_act(void) {
   mark_logs_temp(); /* Close current logs once new logs are open. */
   if (config_init_logs(options, 0)<0) /* Configure the log(s) */
     return -1;
+
   /* Close the temporary log we used while starting up, if it isn't already
    * gone. */
   close_temp_logs();
   add_callback_log(LOG_ERR, LOG_ERR, control_event_logmsg);
   adjust_event_log_severity();
+
+  /* Set up libevent. */
+  if (!libevent_initialized) {
+    if (init_libevent())
+      return -1;
+    libevent_initialized = 1;
+  }
 
   options->_ConnLimit =
     set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
@@ -2617,6 +2607,83 @@ config_parse_interval(const char *s, int *ok) {
     return -1;
   }
   return (int)r;
+}
+
+/**
+ * Initialize the libevent library.
+ */
+static int
+init_libevent(void)
+{
+  configure_libevent_logging();
+  /* If the kernel complains that some method (say, epoll) doesn't
+   * exist, we don't care about it, since libevent will cope.
+   */
+  suppress_libevent_log_msg("Function not implemented");
+#ifdef __APPLE__
+  putenv("EVENT_NOKQUEUE=1");
+#endif
+  event_init();
+  suppress_libevent_log_msg(NULL);
+#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
+  /* Making this a NOTICE for now so we can link bugs to a libevent versions
+   * or methods better. */
+  log(LOG_NOTICE, "Initialized libevent version %s using method %s",
+      event_get_version(), event_get_method());
+  check_libevent_version(event_get_method(), event_get_version(),
+                         get_options()->ORPort != 0);
+#else
+  log(LOG_NOTICE, "Initialized old libevent (version 1.0b or earlier)");
+  log(LOG_WARN, "You have a very old version of libevent.  It is likely to be buggy; please consider building Tor with a more recent version.");
+#endif
+
+  return 0;
+}
+
+
+/**
+ * Compare the given libevent method and version to a list of versions
+ * which are known not to work.  Warn the user as appropriate.
+ *
+ */
+static void
+check_libevent_version(const char *m, const char *v, int server)
+{
+  int buggy = 0, iffy = 0, slow = 0;
+
+  tor_assert(m && v);
+
+  if (!strcmp(m, "kqueue")) {
+    if (!strcmp(v, "1.0c")) {
+      buggy = 1;
+    }
+  } else if (!strcmp(m, "epoll")) {
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
+      iffy = 1;
+  } else if (!strcmp(m, "poll")) {
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d"))
+      buggy = 1;
+    else if (!strcmp(v, "1.0e"))
+      slow = 1;
+  } else if (!strcmp(m, "poll")) {
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
+      slow = 1;
+  }
+
+  if (buggy) {
+    log(LOG_WARN,
+        "There are known bugs in using %s with libevent %s. "
+        "Please use the latest version of libevent.", m, v);
+  } else if (iffy) {
+    log(LOG_WARN,
+        "There are minor bugs in using %s with libevent %s. "
+        "You may want to use the latest version of libevent.", m, v);
+  } else if (slow && server) {
+    log(LOG_WARN,
+c        "libevent %s can be very slow with %s. "
+      "When running a server, please use the latest version of libevent.",v,m);
+  }
+
 }
 
 static void
