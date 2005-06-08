@@ -19,8 +19,12 @@ For 0.1.0.x:
   - Why does kevent barf with EINVAL on some freebsd boxes?
   - Fix the remaining flyspray bugs marked for 0.1.0.9
   - Free remaining unfreed memory (arma will run valgrind)
-  - Note libevent/method/platform combos that are unlikely to work.
+  . Note libevent/method/platform combos that are unlikely to work.
+    o Write
+    - Test
+    - Backport
   - rewrite how libevent does select() on win32 so it's not so very slow.
+    (Nice idea but nontrivial.)
   - instrument the code to figure out where our memory is going. (all platforms?)
 
 for 0.1.1.x:
