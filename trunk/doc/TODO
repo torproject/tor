@@ -23,16 +23,15 @@ For 0.1.0.x:
     o Write
     - Test
     - Backport
-  - rewrite how libevent does select() on win32 so it's not so very slow.
-    (Nice idea but nontrivial.)
   - instrument the code to figure out where our memory is going. (all platforms?)
 
 for 0.1.1.x:
   - cpu fixes:
+    M rewrite how libevent does select() on win32 so it's not so very slow.
     - create-light
     - see if we should make use of truncate to retry
     - hardware accelerator support
-    - use aes when available
+    - use openssl aes when available
     - do the kernel buffer style design
   - continue decentralizing the directory
     M have two router descriptor formats
@@ -387,7 +386,7 @@ PHOBOS - flesh out the rest of the section 6 of the faq
 - compare 0.1.0.5-rc vs 0.1.0.8-rc memory usage to test out old buffer (1015) vs new buffer (0108) algorithms
 PHOBOS - gather pointers to livecd distros that include tor
 - we should remove our libevent tree from cvs. it's obsolete now.
-- desired contribute.html patch: atches for dir-servers to verify server reachability.
+- desired contribute.html patch: patches for dir-servers to verify server reachability.
 PHOBOS - i want to put the logo on the website, in source form, so people can put it on stickers directly, etc.
 - i want more pictures from ren. he wants to describe the tor handshake, i want to talk about hidden services.
 PHOBOS - make it clearer how to find the mailing lists from the website (they're in users.html)
