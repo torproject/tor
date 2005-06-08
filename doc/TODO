@@ -1,4 +1,4 @@
-
+$Id$
 Legend:
 SPEC!!  - Not specified
 SPEC    - Spec not finalized
@@ -379,14 +379,14 @@ Efficiency/speed/robustness:
 *********** uncategorized
 
 - why gnutls is bad/not good for tor
-- flesh out the rest of the section 6 of the faq
+PHOBOS - flesh out the rest of the section 6 of the faq
 - compare 0.1.0.5-rc vs 0.1.0.8-rc memory usage to test out old buffer (1015) vs new buffer (0108) algorithms
-- gather pointers to livecd distros that include tor
+PHOBOS - gather pointers to livecd distros that include tor
 - we should remove our libevent tree from cvs. it's obsolete now.
 - desired contribute.html patch: atches for dir-servers to verify server reachability.
-- i want to put the logo on the website, in source form, so people can put it on stickers directly, etc.
+PHOBOS - i want to put the logo on the website, in source form, so people can put it on stickers directly, etc.
 - i want more pictures from ren. he wants to describe the tor handshake, i want to talk about hidden services.
-- make it clearer how to find the mailing lists from the website (they're in users.html)
+PHOBOS - make it clearer how to find the mailing lists from the website (they're in users.html)
 - switch accountingmax to count total in+out, not either in or out. it's
 easy to move in this direction (not risky), but hard to back, out if we
 decide we prefer it the way it already is. hm.
