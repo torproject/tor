@@ -579,20 +579,26 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
 
   connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
 
-#if 0 /* commented out -- can we get away with not doing this,
-       * because we're already round-robining in handle_read?
-       */
 #define MIN_TLS_FLUSHLEN 15872
 /* openssl tls record size is 16383, this is close. The goal here is to
  * push data out as soon as we know there's enough for a tls record, so
  * during periods of high load we won't read the entire megabyte from
- * input before pushing any data out. */
+ * input before pushing any data out. It also has the feature of not
+ * growing huge outbufs unless something is slow. */
   if (conn->outbuf_flushlen-CELL_NETWORK_SIZE < MIN_TLS_FLUSHLEN &&
       conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
     int extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
     conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
     if (connection_handle_write(conn) < 0) {
-      log_fn(LOG_WARN,"flushing failed.");
+      if (!conn->marked_for_close) {
+        /* this connection is broken. remove it. */
+        log_fn(LOG_WARN,"Bug: unhandled error on write for OR conn (fd %d); removing",
+               conn->s);
+        tor_fragile_assert();
+        conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
+        /* XXX do we need a close-immediate here, so we don't try to flush? */
+        connection_mark_for_close(conn);
+      }
       return;
     }
     if (extra) {
@@ -600,8 +606,6 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
       connection_start_writing(conn);
     }
   }
-#endif
-
 }
 
 /** Process cells from <b>conn</b>'s inbuf.

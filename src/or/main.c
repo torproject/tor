@@ -344,8 +344,6 @@ static void
 conn_read_callback(int fd, short event, void *_conn)
 {
   connection_t *conn = _conn;
-  if (conn->marked_for_close)
-    return;
 
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
 
@@ -376,8 +374,6 @@ static void conn_write_callback(int fd, short events, void *_conn)
   connection_t *conn = _conn;
 
   log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
-  if (conn->marked_for_close)
-    return;
 
   assert_connection_ok(conn, time(NULL));
 
