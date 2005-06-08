@@ -4,7 +4,7 @@ SPEC!!  - Not specified
 SPEC    - Spec not finalized
 NICK    - nick claims
 ARMA    - arma claims
-PHOBOS	- phobos claims
+PHOBOS  - phobos claims
         - Not done
         * Top priority
         . Partially done
@@ -13,7 +13,6 @@ PHOBOS	- phobos claims
         X Abandoned
 
 For 0.1.0.x:
-  - Memory use on Linux: what's happening?
   - Why do solaris cpuworks go dormant?
     (Apparently, disabling threads fixes this.)
   - Why does kevent barf with EINVAL on some freebsd boxes?
@@ -23,7 +22,9 @@ For 0.1.0.x:
     o Write
     - Test
     - Backport
+  - Memory use on Linux: what's happening?
   - instrument the code to figure out where our memory is going. (all platforms?)
+  - change torrc to point to abuse-faq (once abuse-faq is posted)
 
 for 0.1.1.x:
   - cpu fixes:
@@ -37,7 +38,12 @@ for 0.1.1.x:
     M have two router descriptor formats
     - dirservers verify reachability claims
     - find 10 dirservers.
-    - dirservers have blacklist of IPs they hate.
+    - some back-out mechanism?
+      - dirservers have blacklist of IPs they hate
+      - a way of rolling back approvals to before a timestamp
+      - have new people be in limbo and need to demonstrate usefulness
+        before we approve them
+      - other?
     - dirservers publish router-status with all these flags.
     - alices fetch many router-statuses and update descriptors as needed.
     - add if-newer-than fetch options
