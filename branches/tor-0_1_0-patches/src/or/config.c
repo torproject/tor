@@ -217,8 +217,9 @@ static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void print_cvs_version(void);
 static int init_libevent(void);
+#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 static void check_libevent_version(const char *m, const char *v, int server);
-
+#endif
 
 /*
  * Functions to read and write the global options pointer.
@@ -2640,7 +2641,7 @@ init_libevent(void)
   return 0;
 }
 
-
+#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 /**
  * Compare the given libevent method and version to a list of versions
  * which are known not to work.  Warn the user as appropriate.
@@ -2685,6 +2686,7 @@ check_libevent_version(const char *m, const char *v, int server)
   }
 
 }
+#endif
 
 static void
 print_cvs_version(void)
