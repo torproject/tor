@@ -669,6 +669,7 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
     tor_assert(_buf_end(buf) == buf->mem);
     memcpy(buf->mem, string+string_len, len2);
     buf->datalen += len2;
+    buf_total_used += len2;
   }
   if (buf->datalen > buf->highwater)
     buf->highwater = buf->datalen;
