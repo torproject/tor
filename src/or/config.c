@@ -2680,7 +2680,7 @@ check_libevent_version(const char *m, const char *v, int server)
         "You may want to use the latest version of libevent.", m, v);
   } else if (slow && server) {
     log(LOG_WARN,
-c        "libevent %s can be very slow with %s. "
+        "libevent %s can be very slow with %s. "
       "When running a server, please use the latest version of libevent.",v,m);
   }
 
