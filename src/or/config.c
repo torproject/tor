@@ -1001,7 +1001,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr)
     if (!options->DirServers) {
       /* if they are using the default dirservers, disallow internal IPs always. */
       log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
-             "Servers must use public IP addresses.",
+             "Tor servers that use the default DirServers must have public IP addresses.",
              hostname, tmpbuf);
       return -1;
     }
