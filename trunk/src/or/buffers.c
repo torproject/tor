@@ -69,6 +69,11 @@ uint64_t buf_total_alloc = 0;
 
 static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf);
 
+/** If the contents of buf wrap around the end of the allocated space,
+ * malloc a new buf and copy the contents in starting at the
+ * beginning. This operation is relatively expensive, so it shouldn't
+ * be used e.g. for every single read or write.
+ */
 static void buf_normalize(buf_t *buf)
 {
   check();
@@ -156,7 +161,7 @@ static void buf_resize(buf_t *buf, size_t new_capacity)
               buf->len-offset);
       offset -= (buf->len-new_capacity);
     } else {
-      /* The data doen't wrap around, but it does extend beyond the new
+      /* The data doesn't wrap around, but it does extend beyond the new
        * buffer length:
        *   mem[offset] ... mem[offset+datalen-1] (the data)
        */
@@ -164,11 +169,27 @@ static void buf_resize(buf_t *buf, size_t new_capacity)
       offset = 0;
     }
   }
-  buf->mem = GUARDED_MEM(tor_realloc(RAW_MEM(buf->mem),
-                                     ALLOC_LEN(new_capacity)));
-  SET_GUARDS(buf->mem, new_capacity);
+
+  /* XXX Some play code to throw away old buffers sometimes rather
+   * than constantly reallocing them; just in case this is our memory
+   * problem. It looks for now like it isn't, so disabled. -RD */
+  if (0 && new_capacity == MIN_LAZY_SHRINK_SIZE &&
+      !buf->datalen &&
+      buf->len >= 1<<16) {
+    /* don't realloc; free and malloc */
+    char *newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(new_capacity)));
+    SET_GUARDS(newmem, new_capacity);
+    free(RAW_MEM(buf->mem));
+    buf->mem = buf->cur = newmem;
+
+  } else {
+    buf->mem = GUARDED_MEM(tor_realloc(RAW_MEM(buf->mem),
+                                       ALLOC_LEN(new_capacity)));
+    SET_GUARDS(buf->mem, new_capacity);
+    buf->cur = buf->mem+offset;
+  }
   buf_total_alloc += (new_capacity - buf->len);
-  buf->cur = buf->mem+offset;
+
   if (offset + buf->datalen > buf->len) {
     /* We need to move data now that we are done growing.  The buffer
      * now contains:
