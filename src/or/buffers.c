@@ -284,13 +284,13 @@ buf_shrink(buf_t *buf)
   while (buf->highwater < (new_len>>2) && new_len > MIN_LAZY_SHRINK_SIZE*2)
     new_len >>= 1;
 
+  buf->highwater = buf->datalen;
   if (new_len == buf->len)
     return;
 
   log_fn(LOG_DEBUG,"Shrinking buffer from %d to %d bytes.",
          (int)buf->len, (int)new_len);
   buf_resize(buf, new_len);
-  buf->highwater = buf->datalen;
 }
 
 /** Remove the first <b>n</b> bytes from buf.
