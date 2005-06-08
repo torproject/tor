@@ -34,6 +34,7 @@ const char main_c_id[] = "$Id$";
 
 /********* PROTOTYPES **********/
 
+static void dumpmemusage(int severity);
 static void dumpstats(int severity); /* log stats */
 static void conn_read_callback(int fd, short event, void *_conn);
 static void conn_write_callback(int fd, short event, void *_conn);
@@ -831,6 +832,9 @@ static void second_elapsed_callback(int fd, short event, void *args)
 
   current_second = now.tv_sec; /* remember which second it is, for next time */
 
+  if (current_second % 60 == 0)
+    dumpmemusage(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
+
   if (evtimer_add(timeout_event, &one_second))
     log_fn(LOG_ERR,
            "Error from libevent when setting one-second timeout event");
@@ -1046,6 +1050,19 @@ static void signal_callback(int fd, short events, void *arg)
   }
 }
 
+static void
+dumpmemusage(int severity) {
+  extern uint64_t buf_total_used;
+  extern uint64_t buf_total_alloc;
+  extern uint64_t rephist_total_alloc;
+
+  log(severity, "In buffers: "U64_FORMAT" used/"U64_FORMAT" allocated (%d conns).",
+      U64_PRINTF_ARG(buf_total_used), U64_PRINTF_ARG(buf_total_alloc),
+      nfds);
+  log(severity, "In rephist: "U64_FORMAT" used.",
+      U64_PRINTF_ARG(rephist_total_alloc));
+}
+
 /** Write all statistics to the log, with log level 'severity'.  Called
  * in response to a SIGUSR1. */
 static void
@@ -1054,9 +1071,6 @@ dumpstats(int severity) {
   connection_t *conn;
   time_t now = time(NULL);
   time_t elapsed;
-  extern uint64_t buf_total_used;
-  extern uint64_t buf_total_alloc;
-  extern uint64_t rephist_total_alloc;
 
   log(severity, "Dumping stats:");
 
@@ -1121,10 +1135,7 @@ dumpstats(int severity) {
   }
 
   log(severity, "--------------- Dumping memory information:");
-  log(severity, "In buffers: "U64_FORMAT" used/"U64_FORMAT" allocated.",
-      U64_PRINTF_ARG(buf_total_used), U64_PRINTF_ARG(buf_total_alloc));
-  log(severity, "In rephist: "U64_FORMAT" used.",
-      U64_PRINTF_ARG(rephist_total_alloc));
+  dumpmemusage(severity);
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
