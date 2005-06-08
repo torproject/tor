@@ -500,8 +500,8 @@ static int decide_if_publishable_server(time_t now) {
 void consider_publishable_server(time_t now, int force) {
   if (decide_if_publishable_server(now)) {
     set_server_advertised(1);
-    router_rebuild_descriptor(force);
-    router_upload_dir_desc_to_dirservers(force);
+    if (router_rebuild_descriptor(force) == 0)
+      router_upload_dir_desc_to_dirservers(force);
   } else {
     set_server_advertised(0);
   }

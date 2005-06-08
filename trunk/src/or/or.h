@@ -162,7 +162,7 @@
 /** How long do we keep DNS cache entries before purging them? */
 #define MAX_DNS_ENTRY_AGE (150*60)
 #else
-#define MAX_DNS_ENTRY_AGE (15*60)
+#define MAX_DNS_ENTRY_AGE (30*60)
 #endif
 
 /** How often do we rotate onion keys? */
