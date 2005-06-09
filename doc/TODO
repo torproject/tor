@@ -39,7 +39,7 @@ for 0.1.1.x:
   - continue decentralizing the directory
     M have two router descriptor formats
     - dirservers verify reachability claims
-    - find 10 dirservers.
+    - find 10 dirservers. (what are criteria to be a dirserver?)
     - some back-out mechanism?
       - dirservers have blacklist of IPs they hate
       - a way of rolling back approvals to before a timestamp
