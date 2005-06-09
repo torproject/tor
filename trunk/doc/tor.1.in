@@ -168,6 +168,9 @@ If set to 1, Tor will under no circumstances run as a server. The default
 is to run as a client unless ORPort is configured.  (Usually,
 you don't need to set this; Tor is pretty smart at figuring out whether
 you are reliable and high-bandwidth enough to be a useful server.)
+
+This option will likely be deprecated in the future; see the NoPublish
+option below.
 .TP
 \fBEntryNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
 A list of preferred nodes to use for the first hop in the circuit, if possible.
@@ -329,6 +332,12 @@ other servers in its family; it doesn't need to list itself, but it won't hurt.)
 .TP
 \fBNickname \fR\fIname\fP
 Set the server's nickname to 'name'.
+.TP
+\fBNoPublish \fR\fB0\fR|\fB1\fR\fP
+If you set NoPublish 1, Tor will act as a server if you have an ORPort
+defined, but it will not publish its descriptor to the dirservers. This
+option is useful if you're testing out your server, or if you're using
+alternate dirservers (e.g. for other Tor networks such as Blossom).
 .TP
 \fBNumCPUs \fR\fInum\fP
 How many processes to use at once for decrypting onionskins. (Default: 1)
