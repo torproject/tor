@@ -399,7 +399,7 @@ P   - i want to put the logo on the website, in source form, so people can put i
     - i want more pictures from ren. he wants to describe the tor handshake, i want to talk about hidden services.
     o switch accountingmax to count total in+out, not either in or out. it's easy to move in this direction (not risky), but hard to back, out if we decide we prefer it the way it already is. hm.
     - clean up the places where our docs are redundant (or worse, obsolete in one file and correct elsewhere). agl has a start on a global list-of-tor-docs.
-
-multiple sample torrc files
-os x uninstall click-click script
+P   - update window's docs to clarify which versions of windows, and why a DOS window, how it's used, for the less technical users
+    - multiple sample torrc files
+P   . os x uninstall click-click script
 
