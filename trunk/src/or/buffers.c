@@ -188,7 +188,8 @@ static void buf_resize(buf_t *buf, size_t new_capacity)
     SET_GUARDS(buf->mem, new_capacity);
     buf->cur = buf->mem+offset;
   }
-  buf_total_alloc += (new_capacity - buf->len);
+  buf_total_alloc += new_capacity;
+  buf_total_alloc -= buf->len;
 
   if (offset + buf->datalen > buf->len) {
     /* We need to move data now that we are done growing.  The buffer
@@ -673,7 +674,8 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
   }
   if (buf->datalen > buf->highwater)
     buf->highwater = buf->datalen;
-  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",(int)string_len, (int)buf->datalen);
+  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",
+         (int)string_len, (int)buf->datalen);
   check();
   return buf->datalen;
 }
