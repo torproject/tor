@@ -1,3 +1,40 @@
+Changes in version 0.1.0.9-rc - 2005-05-09
+  o Bugfixes:
+    - Reset buf->highwater every time buf_shrink() is called, not just on
+      a successful shrink. This was causing significant memory bloat.
+    - Fix buffer overflow when checking hashed passwords.
+    - Security fix: if seeding the RNG on Win32 fails, quit.
+    - Allow seeding the RNG on Win32 even when you're not running as
+      Administrator.
+    - Reenable the part of the code that tries to flush as soon as an
+      OR outbuf has a full TLS record available. Perhaps this will make
+      OR outbufs not grow as huge except in rare cases, thus saving lots
+      of CPU time plus memory.
+    - Reject malformed .onion addresses rather then passing them on as
+      normal web requests.
+    - Adapt patch from Adam Langley: fix possible memory leak in
+      tor_lookup_hostname().
+    - Initialize libevent later in the startup process, so the logs are
+      already established by the time we start logging libevent warns.
+    - Use correct errno on win32 if libevent fails.
+    - Check and warn about known-bad/slow libevent versions.
+    - Pay more attention to the ClientOnly config option.
+    - Have torctl.in/tor.sh.in check for location of su binary (needed
+      on FreeBSD)
+    - Correct/add man page entries for LongLivedPorts, ExitPolicy,
+      KeepalivePeriod, ClientOnly, NoPublish, HttpProxy, HttpsProxy,
+      HttpProxyAuthenticator
+    - Stop warning about sigpipes in the logs. We're going to
+      pretend that getting these occassionally is normal and fine.
+    - Resolve OS X installer bugs: stop claiming to be 0.0.9.2 in certain
+      installer screens; and don't put stuff into StartupItems unless
+      the user asks you to.
+    - Require servers that use the default dirservers to have public IP
+      addresses. We have too many servers that are configured with private
+      IPs and their admins never notice the log entries complaining that
+      their descriptors are being rejected.
+
+
 Changes in version 0.1.0.8-rc - 2005-05-23
   o Bugfixes:
     - It turns out that kqueue on OS X 10.3.9 was causing kernel
