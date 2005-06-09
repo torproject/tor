@@ -19,14 +19,14 @@ For 0.1.0.x:
     (Lucky is trying a patch that should tell us why.)
   - Fix the remaining flyspray bugs marked for 0.1.0.9
     (Only 124 remains.)
-  - Free remaining unfreed memory (arma will run valgrind)
+  X Free remaining unfreed memory (arma will run valgrind)
     (Not for a stable release)
   o Note libevent/method/platform combos that are unlikely to work.
   . Memory use on Linux: what's happening?
     - Is it threading?  (Maybe, maybe not)
     - Is it the buf_shrink bug? (Quite possibly)
   - instrument the code to figure out where our memory is going. (all platforms?)
-  - change torrc to point to abuse-faq (once abuse-faq is posted)
+  X change torrc to point to abuse-faq (once abuse-faq is posted)
 
 for 0.1.1.x:
   - cpu fixes:
@@ -399,3 +399,7 @@ P   - i want to put the logo on the website, in source form, so people can put i
     - i want more pictures from ren. he wants to describe the tor handshake, i want to talk about hidden services.
     o switch accountingmax to count total in+out, not either in or out. it's easy to move in this direction (not risky), but hard to back, out if we decide we prefer it the way it already is. hm.
     - clean up the places where our docs are redundant (or worse, obsolete in one file and correct elsewhere). agl has a start on a global list-of-tor-docs.
+
+multiple sample torrc files
+os x uninstall click-click script
+
