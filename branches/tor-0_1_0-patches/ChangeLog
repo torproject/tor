@@ -6,6 +6,8 @@ Changes in version 0.1.0.9-rc - 2005-05-09
     - Security fix: if seeding the RNG on Win32 fails, quit.
     - Allow seeding the RNG on Win32 even when you're not running as
       Administrator.
+    - Disable threading on Solaris too. Something is wonky with it,
+      cpuworkers, and reentrant libs.
     - Reenable the part of the code that tries to flush as soon as an
       OR outbuf has a full TLS record available. Perhaps this will make
       OR outbufs not grow as huge except in rare cases, thus saving lots
@@ -33,6 +35,8 @@ Changes in version 0.1.0.9-rc - 2005-05-09
       addresses. We have too many servers that are configured with private
       IPs and their admins never notice the log entries complaining that
       their descriptors are being rejected.
+    - Add OSX uninstall instructions. An actual uninstall script will
+      come later.
 
 
 Changes in version 0.1.0.8-rc - 2005-05-23
