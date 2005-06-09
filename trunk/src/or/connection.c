@@ -824,7 +824,8 @@ static int retry_listeners(int type, struct config_line_t *cfg,
 int retry_all_listeners(int force) {
   or_options_t *options = get_options();
 
-  if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORBindAddress,
+  if (server_mode(options) &&
+      retry_listeners(CONN_TYPE_OR_LISTENER, options->ORBindAddress,
                       options->ORPort, "0.0.0.0", force)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirBindAddress,

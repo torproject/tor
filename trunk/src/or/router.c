@@ -451,6 +451,7 @@ int clique_mode(or_options_t *options) {
 /** Return true iff we are trying to be a server.
  */
 int server_mode(or_options_t *options) {
+  if (options->ClientOnly) return 0;
   return (options->ORPort != 0 || options->ORBindAddress);
 }
 
