@@ -758,3 +758,4 @@ void rep_hist_free_all(void)
   tor_free(write_array);
   predicted_ports_free();
 }
+

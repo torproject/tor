@@ -289,3 +289,4 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
   circuit_mark_for_close(circ);
   return -1;
 }
+

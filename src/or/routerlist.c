@@ -1459,3 +1459,4 @@ void clear_trusted_dir_servers(void)
     trusted_dir_servers = smartlist_create();
   }
 }
+

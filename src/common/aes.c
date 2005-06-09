@@ -812,3 +812,4 @@ void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 c
                 rk[3];
         PUTU32(ct + 12, s3);
 }
+

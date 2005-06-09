@@ -245,3 +245,4 @@ int detect_compression_method(const char *in, size_t in_len)
     return 0;
   }
 }
+

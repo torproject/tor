@@ -94,3 +94,4 @@ void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp);
 int strmap_iter_done(strmap_iter_t *iter);
 
 #endif
+

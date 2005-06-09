@@ -358,3 +358,4 @@ void rend_process_relay_cell(circuit_t *circ, int command, size_t length,
       tor_assert(0);
   }
 }
+

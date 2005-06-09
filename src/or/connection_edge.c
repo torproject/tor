@@ -1720,3 +1720,4 @@ failed:
     *s = '.';
     return BAD_HOSTNAME;
 }
+
