@@ -30,6 +30,11 @@ if test x$enable_threads = x; then
      AC_MSG_NOTICE([You are running OpenBSD or NetBSD; I am assuming that
 getaddrinfo is not threadsafe here, so I will disable threads.])
      enable_threads="no";;
+    *-*-solaris* )
+     # Don't try multithreading on solaris -- cpuworkers seem to lock.
+     AC_MSG_NOTICE([You are running Solaris; Sometimes threading makes
+cpu workers lock up here, so I will disable threads.])
+     enable_threads="no";;
     *)
      enable_threads="yes";;
    esac
