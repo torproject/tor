@@ -250,3 +250,4 @@ typedef uint32_t uintptr_t;
 #define SIZE_T_CEILING (sizeof(char)<<(sizeof(size_t)*8 - 1))
 
 #endif /* __TORINT_H */
+

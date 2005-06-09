@@ -970,3 +970,4 @@ void router_free_all_keys(void)
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
 }
+

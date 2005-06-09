@@ -707,3 +707,4 @@ void assert_circuit_ok(const circuit_t *c)
     tor_assert(!c->rend_splice);
   }
 }
+

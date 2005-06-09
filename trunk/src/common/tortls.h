@@ -51,3 +51,4 @@ unsigned long tor_tls_get_n_bytes_written(tor_tls *tls);
 void _check_no_tls_errors(const char *fname, int line);
 
 #endif
+

@@ -675,3 +675,4 @@ name##_RB_MINMAX(struct name *head, int val)				\
 	     (x) = name##_RB_NEXT(head, x))
 
 #endif	/* _SYS_TREE_H_ */
+

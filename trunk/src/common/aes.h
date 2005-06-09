@@ -28,3 +28,4 @@ void aes_set_counter(aes_cnt_cipher_t *cipher, uint64_t counter);
 void aes_adjust_counter(aes_cnt_cipher_t *cipher, long delta);
 
 #endif
+

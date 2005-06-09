@@ -404,3 +404,4 @@ clear_pending_onions(void)
   ol_list = ol_tail = NULL;
   ol_length = 0;
 }
+

@@ -1043,3 +1043,4 @@ dirserv_free_all(void)
   memset(&cached_directory, 0, sizeof(cached_directory));
   memset(&cached_runningrouters, 0, sizeof(cached_runningrouters));
 }
+

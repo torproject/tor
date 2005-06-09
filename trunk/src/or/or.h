@@ -1887,3 +1887,4 @@ int tor_version_compare(tor_version_t *a, tor_version_t *b);
 void assert_addr_policy_ok(addr_policy_t *t);
 
 #endif
+

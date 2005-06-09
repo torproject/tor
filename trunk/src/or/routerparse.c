@@ -1631,3 +1631,4 @@ tor_version_same_series(tor_version_t *a, tor_version_t *b)
           (a->minor == b->minor) &&
           (a->micro == b->micro));
 }
+

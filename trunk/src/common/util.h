@@ -142,3 +142,4 @@ void finish_daemon(const char *desired_cwd);
 void write_pidfile(char *filename);
 
 #endif
+

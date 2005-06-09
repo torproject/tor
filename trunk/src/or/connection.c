@@ -1817,3 +1817,4 @@ void assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(0);
   }
 }
+
