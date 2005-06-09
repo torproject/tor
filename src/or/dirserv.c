@@ -186,7 +186,8 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
     log_fn(LOG_DEBUG,"good fingerprint for '%s'",router->nickname);
     return 1; /* Right fingerprint. */
   } else {
-    log_fn(LOG_WARN,"mismatched fingerprint for '%s'",router->nickname);
+    log_fn(LOG_WARN,"mismatched fingerprint for '%s': expected '%s' got '%s'",
+           router->nickname, ent->fingerprint, fp);
     return -1; /* Wrong fingerprint. */
   }
 }
