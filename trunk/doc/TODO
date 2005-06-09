@@ -13,12 +13,11 @@ PHOBOS  - phobos claims
         X Abandoned
 
 For 0.1.0.x:
-  - Why do solaris cpuworks go dormant?
+  o Why do solaris cpuworks go dormant?
     (Apparently, disabling threads fixes this.)
   - Why does kevent barf with EINVAL on some freebsd boxes?
     (Lucky is trying a patch that should tell us why.)
-  - Fix the remaining flyspray bugs marked for 0.1.0.9
-    (Only 124 remains.)
+  o Fix the remaining flyspray bugs marked for 0.1.0.9
   X Free remaining unfreed memory (arma will run valgrind)
     (Not for a stable release)
   o Note libevent/method/platform combos that are unlikely to work.
