@@ -1624,4 +1624,3 @@ int tor_main(int argc, char *argv[]) {
   tor_cleanup();
   return -1;
 }
-

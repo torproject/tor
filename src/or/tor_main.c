@@ -18,4 +18,3 @@ int main(int argc, char *argv[])
 {
   return tor_main(argc, argv);
 }
-

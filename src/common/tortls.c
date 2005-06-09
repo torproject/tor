@@ -859,4 +859,3 @@ void _check_no_tls_errors(const char *fname, int line)
          fname, line);
   tls_log_errors(LOG_WARN, NULL);
 }
-

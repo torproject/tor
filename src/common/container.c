@@ -649,4 +649,3 @@ int strmap_isempty(strmap_t *map)
 {
   return SPLAY_EMPTY(&map->head);
 }
-

@@ -75,5 +75,8 @@ for $fn (@ARGV) {
 	    }
 	}
     }
+    if ($lastnil) {
+        print "  EOL\@EOF:$fn:$.\n";
+    }
     close(F);
 }

@@ -447,4 +447,3 @@ char *rend_client_get_random_intro(char *query) {
   smartlist_free(sl);
   return nickname;
 }
-

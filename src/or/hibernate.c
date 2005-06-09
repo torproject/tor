@@ -832,4 +832,3 @@ void consider_hibernation(time_t now) {
     }
   }
 }
-

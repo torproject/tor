@@ -160,4 +160,3 @@ void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
                    size_t secret_len, const char *s2k_specifier);
 
 #endif
-
