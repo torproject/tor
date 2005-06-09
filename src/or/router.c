@@ -414,7 +414,8 @@ void consider_testing_reachability(void) {
 void router_orport_found_reachable(void) {
   if (!can_reach_or_port) {
     if (!clique_mode(get_options()))
-      log(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent. Publishing server descriptor.");
+      log(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.%s",
+          get_options()->NoPublish ? "" : " Publishing server descriptor.");
     can_reach_or_port = 1;
     consider_publishable_server(time(NULL), 1);
   }
