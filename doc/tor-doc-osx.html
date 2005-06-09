@@ -150,6 +150,33 @@ the <a href="http://wiki.noreply.org/wiki/TheOnionRouter/TorifyHOWTO">Torify HOW
 them on <a href="http://bugs.noreply.org/tor">our bugtracker</a> in the
 website category. Thanks!</p>
 
+<h2>How To Uninstall</h2>
+
+<p>The Tor 0.1.0.x series does not come with an uninstaller; this feature
+  will be added in the 0.1.1.x series.  If you want to remove Tor on OSX,
+  here's how:</p>
+
+<p>Change your application proxy settings back to their original values.
+   If you just want to stop using Tor, you can end at this point.</p>
+
+<p>To stop Tor and Privoxy from running on startup</b>, remove the
+   /Library/StartupItems/Tor and /Library/StartupItems/Privoxy directories
+   respectively. If you just want to stop Tor from running, you can end at this
+   point.</p>
+
+<p>To erase all remaining Tor and Privoxy files from your computer, delete
+  the following:
+   <ul><li>/Library/Tor</li>
+   <li>/Library/Privoxy</li>
+   <li>/usr/bin/tor</li>
+   <li>/usr/bin/tor_resolve</li>
+   <li>/var/log/tor</li>
+   <li>/usr/share/man/man1/tor.1</li>
+   <li>/usr/share/man/man1/tor-resolve.1</li>
+   <li>/usr/share/man/man1/torify.1</li>
+  </ul>
+</p>
+
 </body>
 </html>
 
