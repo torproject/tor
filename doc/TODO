@@ -402,3 +402,10 @@ P   - update window's docs to clarify which versions of windows, and why a DOS w
     - multiple sample torrc files
 P   . os x uninstall click-click script
 
+    - write a spec appendix for 'being nice with tor'
+    - Hunt for open socks ports on tor servers, send mail
+    - tor-in-the-media page
+    - recommended-versions for client / server
+    - schanzle@cas.homelinux.org: rpm spec fixes for tor-0.1.0.7.rc
+    - start handling server descriptors without a socksport?
+
