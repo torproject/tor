@@ -99,4 +99,3 @@ void _log_fn(int severity, const char *format, ...);
 
 # define __LOG_H
 #endif
-

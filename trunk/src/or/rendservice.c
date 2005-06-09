@@ -1028,4 +1028,3 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
          conn->port,serviceid);
   return -1;
 }
-

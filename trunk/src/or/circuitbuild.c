@@ -1475,4 +1475,3 @@ onion_append_hop(crypt_path_t **head_ptr, routerinfo_t *choice) {
 
   return 0;
 }
-

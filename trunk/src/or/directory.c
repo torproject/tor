@@ -1190,4 +1190,3 @@ int connection_dir_finished_connecting(connection_t *conn)
   conn->state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
   return 0;
 }
-

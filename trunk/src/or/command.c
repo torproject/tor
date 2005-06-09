@@ -335,4 +335,3 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
     }
   }
 }
-
