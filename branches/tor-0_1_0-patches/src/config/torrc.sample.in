@@ -127,6 +127,10 @@ AllowUnverifiedNodes middle,rendezvous
 ## Look at http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#Abuse
 ## for issues you might encounter if you use the default exit policy.
 ##
+## If certain IPs and ports are blocked externally, e.g. by your firewall,
+## you should update your exit policy to reflect this -- otherwise Tor
+## users will be told that those destinations are down.
+##
 #ExitPolicy accept *:6660-6667,reject *:* # allow irc ports but no more
 #ExitPolicy accept *:119 # accept nntp as well as default exit policy
 #ExitPolicy reject *:* # middleman only -- no exits allowed
