@@ -1,3 +1,4 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 
 <html>
 <head>
@@ -21,7 +22,7 @@
   server" section at <a href="tor-doc.html#server">tor-doc.html</a>.</b>
 </p>
 <p>
-This document was updated May 23 2005.
+This document was updated June 08 2005.
 </p>
 <p>
 The latest beta release of Tor for Macintosh OS X is <a
@@ -98,8 +99,8 @@ individually.</p>
 src="http://tor.eff.org/img/screenshot-osx-proxy-settings.png"
 border="1">
 
-<p>Select and enter localhost and port 8118 for both Web Proxy (HTTP)
-and your Secure Web Proxy (HTTPS)</p>
+<p>Select and enter 127.0.0.1 and port 8118 for both Web Proxy (HTTP)
+and your Secure Web Proxy (HTTPS).  Leave your Use Passive FTP Mode (PASV) setting as is.</p>
 
 <p>Using privoxy is <strong>necessary</strong> because <a
 href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS">browsers
@@ -148,6 +149,33 @@ the <a href="http://wiki.noreply.org/wiki/TheOnionRouter/TorifyHOWTO">Torify HOW
 <p>If you have suggestions for improving this document, please post
 them on <a href="http://bugs.noreply.org/tor">our bugtracker</a> in the
 website category. Thanks!</p>
+
+<h2>How To Uninstall</h2>
+
+<p>The Tor 0.1.0.x series does not come with an uninstaller; this feature
+  will be added in the 0.1.1.x series.  If you want to remove Tor on OSX,
+  here's how:</p>
+
+<p>Change your application proxy settings back to their original values.
+   If you just want to stop using Tor, you can end at this point.</p>
+
+<p>To stop Tor and Privoxy from running on startup</b>, remove the
+   /Library/StartupItems/Tor and /Library/StartupItems/Privoxy directories
+   respectively. If you just want to stop Tor from running, you can end at this
+   point.</p>
+
+<p>To erase all remaining Tor and Privoxy files from your computer, delete
+  the following:
+   <ul><li>/Library/Tor</li>
+   <li>/Library/Privoxy</li>
+   <li>/usr/bin/tor</li>
+   <li>/usr/bin/tor_resolve</li>
+   <li>/var/log/tor</li>
+   <li>/usr/share/man/man1/tor.1</li>
+   <li>/usr/share/man/man1/tor-resolve.1</li>
+   <li>/usr/share/man/man1/torify.1</li>
+  </ul>
+</p>
 
 </body>
 </html>
