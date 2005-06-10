@@ -1,4 +1,4 @@
-tor (0.1.0.8-rc-1) UNRELEASED; urgency=low
+tor (0.1.0.9-rc-1) UNRELEASED; urgency=low
 
   * New development version.
   * Add a watch file.
@@ -15,7 +15,7 @@ tor (0.1.0.8-rc-1) UNRELEASED; urgency=low
   * Update README.Debian to say that upstream now does have a default
     for DataDirectory.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 23 May 2005 14:00:27 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri, 10 Jun 2005 18:05:27 +0200
 
 tor (0.0.9.9-1) unstable; urgency=low
 
