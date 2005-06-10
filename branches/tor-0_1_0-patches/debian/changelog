@@ -14,8 +14,10 @@ tor (0.1.0.9-rc-1) UNRELEASED; urgency=low
     Of course the -dev package needs to be installed.
   * Update README.Debian to say that upstream now does have a default
     for DataDirectory.
+  * Don't fail in the init script when we cannot raise the ulimit.
+    Instead just warn a bit (closes: #312882).
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 10 Jun 2005 18:05:27 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri, 10 Jun 2005 18:08:44 +0200
 
 tor (0.0.9.9-1) unstable; urgency=low
 

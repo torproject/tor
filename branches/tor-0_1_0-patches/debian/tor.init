@@ -51,7 +51,7 @@ case "$1" in
 		echo "Not starting $DESC (Disabled in $DEFAULTSFILE)."
 	else
 		echo "Starting $DESC: $NAME..."
-		ulimit -n $MAX_FILEDESCRIPTORS
+		ulimit -n $MAX_FILEDESCRIPTORS || echo "Warn: Could not set ulimit for number of file descriptors." >&2
 		start-stop-daemon --start --quiet --oknodo \
 			--chuid debian-tor:debian-tor \
 			--pidfile $TORPID \
