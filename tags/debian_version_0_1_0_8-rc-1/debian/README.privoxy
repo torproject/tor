@@ -1,0 +1,18 @@
+Tor only provides TCP layer anonymity.  It does not do any protocol
+cleaning, so if you are going to browse the web you still give away a
+lot of information to servers.
+
+The privoxy package provides a privacy enhancing HTTP proxy, which
+is good at filtering headers, cookies, and much more.  To view the
+description of the Debian privoxy package just run "apt-cache show
+privoxy".  Please refer to the privoxy documentation for more details.
+
+In order to use privoxy over tor, add the following line to your
+privoxy configuration file:
+	forward-socks4a / localhost:9050 .
+(the dot is important)
+
+Then configure your browser to use privoxy as its HTTP proxy.
+
+-- 
+Peter Palfrader <weasel@debian.org>, Tue, 17 Feb 2004 02:15:36 +0100
