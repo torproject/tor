@@ -7,7 +7,9 @@ const char buffers_c_id[] = "$Id$";
 
 /**
  * \file buffers.c
- * \brief Abstractions for buffered IO.
+ * \brief Implements a generic buffer interface.  Buffers are
+ * fairly opaque string holders that can read to or flush from:
+ * memory, file descriptors, or TLS connections.
  **/
 
 #include "or.h"

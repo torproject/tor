@@ -6,9 +6,8 @@ const char log_c_id[] = "$Id$";
 
 /**
  * \file log.c
- *
  * \brief Functions to send messages to log files or the console.
- */
+ **/
 
 #include "orconfig.h"
 #include <stdarg.h>

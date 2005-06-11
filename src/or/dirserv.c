@@ -8,7 +8,8 @@ const char dirserv_c_id[] = "$Id$";
 
 /**
  * \file dirserv.c
- * \brief Directory server core implementation.
+ * \brief Directory server core implementation. Manages directory
+ * contents and generates directories.
  **/
 
 /** How far in the future do we allow a router to get? (seconds) */

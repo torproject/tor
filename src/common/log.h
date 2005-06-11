@@ -6,7 +6,7 @@
 /**
  * \file log.h
  *
- * \brief Headers for logging functions.
+ * \brief Headers for log.c
  **/
 
 #ifndef __LOG_H

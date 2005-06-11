@@ -9,7 +9,7 @@
 
 /**
  * \file test.h
- * \brief Headers for test.c
+ * \brief Macros used by unit tests.
  */
 
 #include <string.h>

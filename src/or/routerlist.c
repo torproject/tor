@@ -5,15 +5,14 @@
 /* $Id$ */
 const char routerlist_c_id[] = "$Id$";
 
-#include "or.h"
-
 /**
  * \file routerlist.c
- *
  * \brief Code to
  * maintain and access the global list of routerinfos for known
  * servers.
  **/
+
+#include "or.h"
 
 /****************************************************************************/
 

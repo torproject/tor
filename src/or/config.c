@@ -4,9 +4,9 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 const char config_c_id[] = "$Id$";
+
 /**
  * \file config.c
- *
  * \brief Code to parse and interpret configuration files.
  **/
 

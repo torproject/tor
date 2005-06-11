@@ -7,7 +7,7 @@ const char circuituse_c_id[] = "$Id$";
 
 /**
  * \file circuituse.c
- * \brief Launch the right sort of circuits, attach streams to them.
+ * \brief Launch the right sort of circuits and attach streams to them.
  **/
 
 #include "or.h"

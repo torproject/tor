@@ -7,7 +7,7 @@ const char command_c_id[] = "$Id$";
 
 /**
  * \file command.c
- * \brief Functions for processing incoming cells
+ * \brief Functions for processing incoming cells.
  **/
 
 /* In-points to command.c:

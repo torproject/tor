@@ -6,8 +6,7 @@ const char torgzip_c_id[] = "$Id$";
 
 /**
  * \file torgzip.c
- *
- * \brief Simple in-memory gzip implementation.
+ * \brief A simple in-memory gzip implementation.
  **/
 
 #include "orconfig.h"

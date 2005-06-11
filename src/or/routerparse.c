@@ -7,7 +7,6 @@ const char routerparse_c_id[] = "$Id$";
 
 /**
  * \file routerparse.c
- *
  * \brief Code to parse and validate router descriptors and directories.
  **/
 

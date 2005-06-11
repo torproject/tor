@@ -6,7 +6,6 @@ const char util_c_id[] = "$Id$";
 
 /**
  * \file util.c
- *
  * \brief Common functions for strings, IO, network, data structures,
  * process control.
  **/

@@ -6,8 +6,11 @@ const char aes_c_id[] = "$Id$";
 
 /**
  * \file aes.c
- *
- * \brief Implementation of a simple AES counter mode.
+ * \brief Implements the AES cipher (with 128-bit keys and blocks),
+ * and a counter-mode stream cipher on top of AES.  This code is
+ * taken from the main Rijndael distribution.  (We include this
+ * because many people are running older versions of OpenSSL without
+ * AES support.)
  **/
 
 #include "orconfig.h"
