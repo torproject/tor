@@ -182,21 +182,23 @@ typedef enum {
 #define _CONN_TYPE_MIN 3
 /** Type for sockets listening for OR connections. */
 #define CONN_TYPE_OR_LISTENER 3
-/** Type for OR-to-OR or OP-to-OR connections. */
+/** A bidirectional TLS connection transmitting a sequence of cells.
+ * May be from an OR to an OR, or from an OP to an OR. */
 #define CONN_TYPE_OR 4
-/** Type for connections from final OR to chosen destination. */
+/** A TCP connection from an onion router to a stream's destination. */
 #define CONN_TYPE_EXIT 5
 /** Type for sockets listening for SOCKS connections. */
 #define CONN_TYPE_AP_LISTENER 6
-/** Type for SOCKS connections to OP. */
+/** A SOCKS proxy connection from the user application to the onion
+ * proxy. */
 #define CONN_TYPE_AP 7
 /** Type for sockets listening for HTTP connections to the directory server. */
 #define CONN_TYPE_DIR_LISTENER 8
 /** Type for HTTP connections to the directory server. */
 #define CONN_TYPE_DIR 9
-/** Type for connections to local dnsworker processes. */
+/** Connection from the main process to a DNS worker process. */
 #define CONN_TYPE_DNSWORKER 10
-/** Type for connections to local cpuworker processes. */
+/** Connection from the main process to a CPU worker process. */
 #define CONN_TYPE_CPUWORKER 11
 /** Type for listenting for connections from user interface process */
 #define CONN_TYPE_CONTROL_LISTENER 12
@@ -538,8 +540,26 @@ typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
 
 #define CONNECTION_MAGIC 0x7C3C304Eu
+
 /** Description of a connection to another host or process, and associated
- * data. */
+ * data.
+ *
+ * A connection is named based on what it's connected to -- an "OR
+ * connection" has an onion router on the other end, an "OP connection"
+ * (nearly obsolete) has an onion proxy on the other end, an "exit
+ * connection" has a website or other server on the other end, and an
+ * "AP connection" has an application proxy (and thus a user) on the
+ * other end.
+ *
+ * Every connection has a type and a state.  Connections never change
+ * their type, but can go through many state changes in their lifetime.
+ *
+ * Every connection has two associated input and output buffers.
+ * Listeners don't use them.  For non-listener connections, incoming
+ * data is appended to conn->inbuf, and outgoing data is taken from
+ * conn->outbuf.  Connections differ primarily in the functions called
+ * to fill and drain these buffers.
+ */
 struct connection_t {
   uint32_t magic; /**< For memory debugging: must equal CONNECTION_MAGIC. */
 
@@ -816,7 +836,29 @@ typedef struct {
 } cpath_build_state_t;
 
 #define CIRCUIT_MAGIC 0x35315243u
-/** Struct for a path (circuit) through the onion routing network. */
+
+/**
+ * A circuit is a path over the onion routing
+ * network. Applications can connect to one end of the circuit, and can
+ * create exit connections at the other end of the circuit. AP and exit
+ * connections have only one circuit associated with them (and thus these
+ * connection types are closed when the circuit is closed), whereas
+ * OR connections multiplex many circuits at once, and stay standing even
+ * when there are no circuits running over them.
+ *
+ * A circuit_t structure fills two roles.  First, a circuit_t links two
+ * connections together: either an edge connection and an OR connection,
+ * or two OR connections.  (When joined to an OR connection, a circuit_t
+ * affects only cells sent to a particular circID on that connection.  When
+ * joined to an edge connection, a circuit_t affects all data.)
+
+ * Second, a circuit_t holds the cipher keys and state for sending data
+ * along a given circuit.  At the OP, it has a sequence of ciphers, each
+ * of which is shared with a single OR along the circuit.  Separate
+ * ciphers are used for data going "forward" (away from the OP) and
+ * "backward" (towards the OP).  At the OR, a circuit has only two stream
+ * ciphers: one for data going forward, and one for data going backward.
+ */
 struct circuit_t {
   uint32_t magic; /**< For memory debugging: must equal CIRCUIT_MAGIC. */
 

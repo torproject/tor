@@ -477,6 +477,23 @@ read_to_buf_tls_impl(tor_tls *tls, size_t at_most, buf_t *buf, char *next)
 }
 
 /** As read_to_buf, but reads from a TLS connection.
+ *
+ * Using TLS on OR connections complicates matters in two ways.
+ *
+ * First, a TLS stream has its own read buffer independent of the
+ * connection's read buffer.  (TLS needs to read an entire frame from
+ * the network before it can decrypt any data.  Thus, trying to read 1
+ * byte from TLS can require that several KB be read from the network
+ * and decrypted.  The extra data is stored in TLS's decrypt buffer.)
+ * Because the data hasn't been read by Tor (it's still inside the TLS),
+ * this means that sometimes a connection "has stuff to read" even when
+ * poll() didn't return POLLIN. The tor_tls_get_pending_bytes function is
+ * used in connection.c to detect TLS objects with non-empty internal
+ * buffers and read from them again.
+ *
+ * Second, the TLS stream's events do not correspond directly to network
+ * events: sometimes, before a TLS stream can read, the network must be
+ * ready to write -- or vice versa.
  */
 int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   int r;

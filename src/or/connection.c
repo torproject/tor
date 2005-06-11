@@ -1094,7 +1094,7 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
     pending = tor_tls_get_pending_bytes(conn->tls);
     if (pending) {
       /* XXXX If we have any pending bytes, read them now.  This *can*
-       * take us over our read alotment, but really we shouldn't be
+       * take us over our read allotment, but really we shouldn't be
        * believing that SSL bytes are the same as TCP bytes anyway. */
       int r2 = read_to_buf_tls(conn->tls, pending, conn->inbuf);
       if (r2<0) {
