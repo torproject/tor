@@ -6,8 +6,9 @@ const char cpuworker_c_id[] = "$Id$";
 
 /**
  * \file cpuworker.c
- * \brief Run computation-intensive tasks (generally for crypto) in
- * a separate execution context. [OR only.]
+ * \brief Implements a farm of 'CPU worker' processes to perform
+ * CPU-intensive tasks in another thread or process, to not
+ * interrupt the main thread.
  *
  * Right now, we only use this for processing onionskins.
  **/

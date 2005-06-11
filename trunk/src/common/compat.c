@@ -4,8 +4,16 @@
 /* $Id$ */
 const char compat_c_id[] = "$Id$";
 
-/* This is required on rh7 to make strptime not complain.
- */
+/**
+ * \file compat.c
+ * \brief Wrappers to make calls more portable.  This code defines
+ * functions such as tor_malloc, tor_snprintf, get/set various data types,
+ * renaming, setting socket options, switching user IDs.  It is basically
+ * where the non-portable items are conditionally included depending on
+ * the platform.
+ **/
+
+/* This is required on rh7 to make strptime not complain. */
 #define _GNU_SOURCE
 
 #include "orconfig.h"

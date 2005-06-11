@@ -6,8 +6,8 @@ const char crypto_c_id[] = "$Id$";
 
 /**
  * \file crypto.c
- *
- * \brief Low-level cryptographic functions.
+ * \brief Wrapper functions to present a consistent interface to
+ * public-key and symmetric cryptography operations from OpenSSL.
  **/
 
 #include "orconfig.h"

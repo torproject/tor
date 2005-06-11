@@ -4,6 +4,11 @@
 /* $Id$ */
 const char test_c_id[] = "$Id$";
 
+/**
+ * \file test.c
+ * \brief Unit tests for many pieces of the lower level Tor modules.
+ **/
+
 #include "orconfig.h"
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H

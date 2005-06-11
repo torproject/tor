@@ -6,9 +6,8 @@
 
 /**
  * \file or.h
- *
  * \brief Master header file for Tor-specific functionality.
- */
+ **/
 
 #ifndef __OR_H
 #define __OR_H

@@ -6,7 +6,8 @@ const char tor_main_c_id[] = "$Id$";
 
 /**
  * \file tor_main.c
- * \brief Entry point for tor binary.
+ * \brief Stub module containing a main() function. Allows unit
+ * test binary to link against main.c.
  **/
 
 int tor_main(int argc, char *argv[]);

@@ -6,7 +6,7 @@
 /**
  * \file crypto.h
  *
- * \brief Headers for low-level cryptographic functions.
+ * \brief Headers for crypto.c
  **/
 
 #ifndef __CRYPTO_H

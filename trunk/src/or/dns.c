@@ -6,7 +6,10 @@ const char dns_c_id[] = "$Id$";
 
 /**
  * \file dns.c
- * \brief Resolve hostnames in separate processes.
+ * \brief Implements a farm of 'DNS worker' threads or processes to
+ * perform DNS lookups for onion routers and cache the results.
+ * [This needs to be done in the background because of the lack of a
+ * good, ubiquitous asynchronous DNS implementation.]
  **/
 
 /* See http://elvin.dstc.com/ListArchive/elvin-dev/archive/2001/09/msg00027.html

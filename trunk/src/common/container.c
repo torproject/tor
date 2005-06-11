@@ -4,6 +4,13 @@
 /* $Id$ */
 const char container_c_id[] = "$Id$";
 
+/**
+ * \file container.c
+ * \brief Implements a smartlist (a resizable array) along
+ * with helper functions to use smartlists.  Also includes a
+ * splay-tree implementation of the string-to-void* map.
+ **/
+
 #include "compat.h"
 #include "util.h"
 #include "log.h"
@@ -16,10 +23,6 @@ const char container_c_id[] = "$Id$";
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-/* =====
- * smartlist_t: a simple resizeable array abstraction.
- * ===== */
 
 /* All newly allocated smartlists have this capacity.
  */

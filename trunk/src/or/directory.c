@@ -8,7 +8,9 @@ const char directory_c_id[] = "$Id$";
 
 /**
  * \file directory.c
- * \brief Implement directory HTTP protocol.
+ * \brief Code to send and fetch directories and router
+ * descriptors via HTTP.  Directories use dirserv.c to generate the
+ * results; clients use routers.c to parse them.
  **/
 
 /* In-points to directory.c:

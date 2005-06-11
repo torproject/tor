@@ -7,7 +7,8 @@ const char main_c_id[] = "$Id$";
 
 /**
  * \file main.c
- * \brief Tor main loop and startup functions.
+ * \brief Toplevel module. Handles signals, multiplexes between
+ * connections, implements main loop, and drives scheduled events.
  **/
 
 #include "or.h"

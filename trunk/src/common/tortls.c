@@ -6,9 +6,10 @@ const char tortls_c_id[] = "$Id$";
 
 /**
  * \file tortls.c
- *
- * \brief TLS wrappers for Tor.
+ * \brief Wrapper functions to present a consistent interface to
+ * TLS, SSL, and X.509 functions from OpenSSL.
  **/
+
 /* (Unlike other tor functions, these
  * are prefixed with tor_ in order to avoid conflicting with OpenSSL
  * functions and variables.)
