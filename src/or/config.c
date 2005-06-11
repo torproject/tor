@@ -2693,7 +2693,7 @@ check_libevent_version(const char *m, const char *v, int server)
   } else if (!strcmp(m, "poll")) {
     if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d"))
       buggy = 1;
-T    else if (!strcmp(v, "1.0e"))
+    else if (!strcmp(v, "1.0e"))
       slow = 1;
   } else if (!strcmp(m, "poll")) {
     if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
