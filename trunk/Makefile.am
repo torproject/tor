@@ -51,7 +51,7 @@ doxygen:
 
 # Avoid strlcpy.c, strlcat.c, tree.h
 check-spaces:
-	./contrib/checkSpace.pl                \
+	./contrib/checkSpace.pl -C             \
 	        src/common/*.h                 \
 		src/common/[^s]*.c             \
 		src/or/[^t]*.[ch] src/or/t*.c
