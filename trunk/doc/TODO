@@ -177,6 +177,8 @@ Future version:
   - auth mechanisms to let hidden service midpoint and responder filter
     connection requests.
   - Relax clique assumptions.
+  - tor should be able to have a pool of outgoing IP addresses
+    that it is able to rotate through. (maybe)
 
 Blue-sky:
   - Patch privoxy and socks protocol to pass strings to the browser.
@@ -190,6 +192,13 @@ Blue-sky:
   - Implement Morphmix, so we can compare its behavior, complexity, etc.
   - Other transport. HTTP, udp, rdp, airhook, etc. May have to do our own
     link crypto, unless we can bully openssl into it.
+  - Conn key rotation.
+  - Need a relay teardown cell, separate from one-way ends.
+    (Pending a user who needs this)
+  - Handle half-open connections: right now we don't support all TCP
+    streams, at least according to the protocol. But we handle all that
+    we've seen in the wild.
+    (Pending a user who needs this)
 
 Volunteer projects:  [Phobos moves these to contribute.html]
   - use openssl aes when available
@@ -283,12 +292,3 @@ Did we do these ones already? XXXXX
   - If we have a trusted directory on port 80, stop falling back to
     forbidden ports when fascistfirewall blocks all good dirservers.
 
-I don't have any record of what we decided about these: XXXXX
-  - Make millisecond accuracy work on win32
-  - tor should be able to have a pool of outgoing IP addresses
-    that it is able to rotate through. (maybe)
-  - Conn key rotation.
-  - Need a relay teardown cell, separate from one-way ends.
-  - Handle half-open connections: right now we don't support all TCP
-    streams, at least according to the protocol. But we handle all that
-    we've seen in the wild.
