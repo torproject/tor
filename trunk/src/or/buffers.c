@@ -303,8 +303,7 @@ buf_shrink(buf_t *buf)
   buf_resize(buf, new_len);
 }
 
-/** Remove the first <b>n</b> bytes from buf.
- */
+/** Remove the first <b>n</b> bytes from buf. */
 static INLINE void
 buf_remove_from_front(buf_t *buf, size_t n) {
   tor_assert(buf->datalen >= n);
@@ -329,8 +328,7 @@ buf_nul_terminate(buf_t *buf)
   return 0;
 }
 
-/** Create and return a new buf with capacity <b>size</b>.
- */
+/** Create and return a new buf with capacity <b>size</b>. */
 buf_t *
 buf_new_with_capacity(size_t size) {
   buf_t *buf;
@@ -352,7 +350,7 @@ buf_new(void)
   return buf_new_with_capacity(INITIAL_BUF_SIZE);
 }
 
-/** Remove all data from <b>buf</b> */
+/** Remove all data from <b>buf</b>. */
 void
 buf_clear(buf_t *buf)
 {
@@ -376,16 +374,15 @@ buf_capacity(const buf_t *buf)
   return buf->len;
 }
 
-/** For testing only: Return a pointer to the raw memory stored in <b>buf</b>.
- */
+/** For testing only: Return a pointer to the raw memory stored in
+ * <b>buf</b>. */
 const char *
 _buf_peek_raw_buffer(const buf_t *buf)
 {
   return buf->cur;
 }
 
-/** Release storage held by <b>buf</b>.
- */
+/** Release storage held by <b>buf</b>. */
 void
 buf_free(buf_t *buf)
 {
@@ -397,7 +394,7 @@ buf_free(buf_t *buf)
   tor_free(buf);
 }
 
-/** Helper for read_to_buf: read no more than at_most bytes from
+/** Helper for read_to_buf(): read no more than at_most bytes from
  * socket s into buffer buf, starting at the position pos.  (Does not
  * check for overflow.)  Set *reached_eof to true on EOF.  Return
  * number of bytes read on success, 0 if the read would block, -1 on
@@ -434,7 +431,7 @@ read_to_buf_impl(int s, size_t at_most, buf_t *buf,
 
 /** Read from socket <b>s</b>, writing onto end of <b>buf</b>.  Read at most
  * <b>at_most</b> bytes, resizing the buffer as necessary.  If recv()
- * returns 0, set <b>*reached_eof</b> to 1 and return 0. Return -1 on error;
+ * returns 0, set *<b>reached_eof</b> to 1 and return 0. Return -1 on error;
  * else return the number of bytes read.  Return 0 if recv() would
  * block.
  */
@@ -481,10 +478,11 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
   return r;
 }
 
-/** Helper for read_to_buf_tls: read no more than at_most bytes from
- * the TLS connection tlsinto buffer buf, starting at the position
- * next.  (Does not check for overflow.)  Return number of bytes read
- * on success, 0 if the read would block, -1 on failure.
+/** Helper for read_to_buf_tls(): read no more than <b>at_most</b>
+ * bytes from the TLS connection <b>tls</b> into buffer <b>buf</b>,
+ * starting at the position <b>next</b>.  (Does not check for overflow.)
+ * Return number of bytes read on success, 0 if the read would block,
+ * -1 on failure.
  */
 static INLINE int
 read_to_buf_tls_impl(tor_tls *tls, size_t at_most, buf_t *buf, char *next)
@@ -569,8 +567,9 @@ read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf)
   return r;
 }
 
-/** Helper for flush_buf: try to write sz bytes from buffer buf onto
- * socket s.  On success, deduct the bytes written from *buf_flushlen.
+/** Helper for flush_buf(): try to write <b>sz</b> bytes from buffer
+ * <b>buf</b> onto socket <b>s</b>.  On success, deduct the bytes written
+ * from *<b>buf_flushlen</b>.
  * Return the number of bytes written on success, -1 on failure.
  */
 static INLINE int
@@ -596,7 +595,7 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 }
 
 /** Write data from <b>buf</b> to the socket <b>s</b>.  Write at most
- * <b>*buf_flushlen</b> bytes, decrement <b>*buf_flushlen</b> by
+ * *<b>buf_flushlen</b> bytes, decrement *<b>buf_flushlen</b> by
  * the number of bytes actually written, and remove the written bytes
  * from the buffer.  Return the number of bytes written on success,
  * -1 on failure.  Return 0 if write() would block.
@@ -641,8 +640,9 @@ flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   return flushed;
 }
 
-/** Helper for flush_buf_tls: try to write sz bytes from buffer buf onto
- * TLS object tls.  On success, deduct the bytes written from *buf_flushlen.
+/** Helper for flush_buf_tls(): try to write <b>sz</b> bytes from buffer
+ * <b>buf</b> onto TLS object <b>tls</b>.  On success, deduct the bytes
+ * written from *<b>buf_flushlen</b>.
  * Return the number of bytes written on success, -1 on failure.
  */
 static INLINE int
@@ -661,7 +661,7 @@ flush_buf_tls_impl(tor_tls *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
   return r;
 }
 
-/** As flush_buf, but writes data to a TLS connection.
+/** As flush_buf(), but writes data to a TLS connection.
  */
 int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
 {
@@ -740,7 +740,8 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
   return buf->datalen;
 }
 
-/** Helper: copy the first string_len bytes from buf onto string.
+/** Helper: copy the first <b>string_len</b> bytes from <b>buf</b>
+ * onto <b>string</b>.
  */
 static INLINE void
 peek_from_buf(char *string, size_t string_len, buf_t *buf)
