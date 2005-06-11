@@ -246,6 +246,8 @@ Volunteer projects:  [Phobos moves these to contribute.html]
     use? Need to measure and tweak, or maybe overhaul.
   - Add alternative versions of crypto.c and tortls.c to use libnss or
     libgcrypt+gnutls.
+  - If we have a trusted directory on port 80, optionally stop falling back
+    to forbidden ports when fascistfirewall blocks all good dirservers.
 
 
 Research projects: [Phobos moves these to contribute.html]
@@ -287,8 +289,4 @@ Research projects: [Phobos moves these to contribute.html]
     descriptors when they restart; nodes offering hidden services forget
     their chosen intro points when they restart.
 
-
-Did we do these ones already? XXXXX
-  - If we have a trusted directory on port 80, stop falling back to
-    forbidden ports when fascistfirewall blocks all good dirservers.
 
