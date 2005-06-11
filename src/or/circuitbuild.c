@@ -400,7 +400,12 @@ circuit_n_conn_done(connection_t *or_conn, int status)
   }
 }
 
-/** DOCDOC */
+/** Find a new circid that isn't currently in use by the outgoing
+ * circuit <b>circ</b>, and deliver a cell of type <b>cell_type</b>
+ * (either CELL_CREATE or CELL_CREATE_FAST) with payload <b>payload</b>
+ * to this circuit.
+ * Return -1 if we failed to find a suitable circid, else return 0.
+ */
 static int
 circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type, char *payload)
 {
