@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define specver 0
+%define specver 1
 
 ## Things users may want to change
 #
@@ -140,7 +140,7 @@ for high-stakes anonymity.
 ed -s contrib/tor.sh.in << '/EOF/' > /dev/null
 ,s/^TORUSER=$/TORUSER=%{runuser}/
 ,s/^TORGROUP=$/TORGROUP=%{runuser}/
-,s:/bin/su:/bin/su -s /bin/sh:
+,s:\$SUPROG:$SUPROG -s /bin/sh:
 #
 # Save and exit ed
 w
