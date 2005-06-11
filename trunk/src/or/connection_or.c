@@ -26,7 +26,9 @@ static int connection_or_process_cells_from_inbuf(connection_t *conn);
  * in the buffer <b>dest</b>. See tor-spec.txt for details about the
  * wire format.
  */
-static void cell_pack(char *dest, const cell_t *src) {
+static void
+cell_pack(char *dest, const cell_t *src)
+{
   *(uint16_t*)dest     = htons(src->circ_id);
   *(uint8_t*)(dest+2)  = src->command;
   memcpy(dest+3, src->payload, CELL_PAYLOAD_SIZE);
@@ -35,13 +37,17 @@ static void cell_pack(char *dest, const cell_t *src) {
 /** Unpack the network-order buffer <b>src</b> into a host-order
  * cell_t structure <b>dest</b>.
  */
-static void cell_unpack(cell_t *dest, const char *src) {
+static void
+cell_unpack(cell_t *dest, const char *src)
+{
   dest->circ_id = ntohs(*(uint16_t*)(src));
   dest->command = *(uint8_t*)(src+2);
   memcpy(dest->payload, src+3, CELL_PAYLOAD_SIZE);
 }
 
-int connection_or_reached_eof(connection_t *conn) {
+int
+connection_or_reached_eof(connection_t *conn)
+{
   log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
   connection_mark_for_close(conn);
   return 0;
@@ -53,8 +59,8 @@ int connection_or_reached_eof(connection_t *conn) {
  * and hope for better luck next time.
  */
 static int
-connection_or_read_proxy_response(connection_t *conn) {
-
+connection_or_read_proxy_response(connection_t *conn)
+{
   char *headers;
   char *reason=NULL;
   int status_code;
@@ -108,8 +114,9 @@ connection_or_read_proxy_response(connection_t *conn) {
  * connection_or_process_cells_from_inbuf()
  * (else do nothing).
  */
-int connection_or_process_inbuf(connection_t *conn) {
-
+int
+connection_or_process_inbuf(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
 
@@ -131,7 +138,9 @@ int connection_or_process_inbuf(connection_t *conn) {
  * If <b>conn</b> is broken, mark it for close and return -1, else
  * return 0.
  */
-int connection_or_finished_flushing(connection_t *conn) {
+int
+connection_or_finished_flushing(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
 
@@ -156,7 +165,8 @@ int connection_or_finished_flushing(connection_t *conn) {
 
 /** Connected handler for OR connections: begin the TLS handshake.
  */
-int connection_or_finished_connecting(connection_t *conn)
+int
+connection_or_finished_connecting(connection_t *conn)
 {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
@@ -208,7 +218,8 @@ int connection_or_finished_connecting(connection_t *conn)
  * if the other side initiated it.
  */
 static void
-connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router) {
+connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
+{
   or_options_t *options = get_options();
 
   conn->addr = router->addr;
@@ -221,6 +232,7 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router) {
   conn->address = tor_strdup(router->address);
 }
 
+/** DOCDOC */
 static void
 connection_or_init_conn_from_address(connection_t *conn,
                                      uint32_t addr, uint16_t port,
@@ -257,6 +269,7 @@ connection_or_init_conn_from_address(connection_t *conn,
   tor_inet_ntoa(&in,conn->address,INET_NTOA_BUF_LEN);
 }
 
+/** DOCDOC */
 void
 connection_or_update_nickname(connection_t *conn)
 {
@@ -303,8 +316,9 @@ connection_or_update_nickname(connection_t *conn)
  *
  * Return the launched conn, or NULL if it failed.
  */
-connection_t *connection_or_connect(uint32_t addr, uint16_t port,
-                                    const char *id_digest) {
+connection_t *
+connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
+{
   connection_t *conn;
   routerinfo_t *me;
   or_options_t *options = get_options();
@@ -370,7 +384,9 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
  *
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
-int connection_tls_start_handshake(connection_t *conn, int receiving) {
+int
+connection_tls_start_handshake(connection_t *conn, int receiving)
+{
   conn->state = OR_CONN_STATE_HANDSHAKING;
   conn->tls = tor_tls_new(conn->s, receiving, 0);
   if (!conn->tls) {
@@ -390,7 +406,9 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
  *
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
-int connection_tls_continue_handshake(connection_t *conn) {
+int
+connection_tls_continue_handshake(connection_t *conn)
+{
   check_no_tls_errors();
   switch (tor_tls_handshake(conn->tls)) {
     case TOR_TLS_ERROR:
@@ -412,7 +430,9 @@ int connection_tls_continue_handshake(connection_t *conn) {
 
 static char ZERO_DIGEST[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-int connection_or_nonopen_was_started_here(connection_t *conn)
+/** DOCDOC */
+int
+connection_or_nonopen_was_started_here(connection_t *conn)
 {
   tor_assert(sizeof(ZERO_DIGEST) == DIGEST_LEN);
   tor_assert(conn->type == CONN_TYPE_OR);
@@ -443,7 +463,8 @@ int connection_or_nonopen_was_started_here(connection_t *conn)
  * an authdirserver).
  */
 static int
-connection_tls_finish_handshake(connection_t *conn) {
+connection_tls_finish_handshake(connection_t *conn)
+{
   routerinfo_t *router;
   char nickname[MAX_NICKNAME_LEN+1];
   connection_t *c;
@@ -567,7 +588,9 @@ connection_tls_finish_handshake(connection_t *conn) {
  * (Commented out) If it's an OR conn, and an entire TLS record is
  * ready, then try to flush the record now.
  */
-void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
+void
+connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn)
+{
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
 
@@ -615,7 +638,9 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
  *
  * Always return 0.
  */
-static int connection_or_process_cells_from_inbuf(connection_t *conn) {
+static int
+connection_or_process_cells_from_inbuf(connection_t *conn)
+{
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
 

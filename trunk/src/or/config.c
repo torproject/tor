@@ -232,7 +232,8 @@ static char *config_fname = NULL;
 
 /** Return the currently configured options. */
 or_options_t *
-get_options(void) {
+get_options(void)
+{
   tor_assert(global_options);
   return global_options;
 }
@@ -241,7 +242,8 @@ get_options(void) {
  * of their current value; free the old value as necessary.
  */
 void
-set_options(or_options_t *new_val) {
+set_options(or_options_t *new_val)
+{
   if (global_options)
     options_free(global_options);
   global_options = new_val;
@@ -258,7 +260,8 @@ config_free_all(void)
  * else return address.
  */
 const char *
-safe_str(const char *address) {
+safe_str(const char *address)
+{
   if (get_options()->SafeLogging)
     return "[scrubbed]";
   else
@@ -276,7 +279,8 @@ safe_str(const char *address) {
  * here yet.  Some is still in do_hup() and other places.
  */
 int
-options_act(void) {
+options_act(void)
+{
   struct config_line_t *cl;
   or_options_t *options = get_options();
   static int libevent_initialized = 0;
@@ -549,7 +553,8 @@ config_free_lines(struct config_line_t *front)
  * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
  * warn, and return the corresponding config_var_t.  Otherwise return NULL.
  */
-static config_var_t *config_find_option(const char *key)
+static config_var_t *
+config_find_option(const char *key)
 {
   int i;
   size_t keylen = strlen(key);
@@ -1225,7 +1230,8 @@ config_dump_options(or_options_t *options, int minimal)
 }
 
 static int
-validate_ports_csv(smartlist_t *sl, const char *name) {
+validate_ports_csv(smartlist_t *sl, const char *name)
+{
   int i;
   int result = 0;
   tor_assert(name);
@@ -1641,8 +1647,8 @@ opt_streq(const char *s1, const char *s2)
 
 /** Check if any of the previous options have changed but aren't allowed to. */
 static int
-options_transition_allowed(or_options_t *old, or_options_t *new_val) {
-
+options_transition_allowed(or_options_t *old, or_options_t *new_val)
+{
   if (!old)
     return 0;
 
@@ -1682,7 +1688,8 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
 #ifdef MS_WINDOWS
 /** Return the directory on windows where we expect to find our application
  * data. */
-static char *get_windows_conf_root(void)
+static char *
+get_windows_conf_root(void)
 {
   static int is_set = 0;
   static char path[MAX_PATH+1];
@@ -1738,7 +1745,8 @@ get_default_conf_file(void)
 /** Verify whether lst is a string containing valid-looking space-separated
  * nicknames, or NULL. Return 0 on success. Warn and return -1 on failure.
  */
-static int check_nickname_list(const char *lst, const char *name)
+static int
+check_nickname_list(const char *lst, const char *name)
 {
   int r = 0;
   smartlist_t *sl;
@@ -1897,8 +1905,12 @@ init_from_config(int argc, char **argv)
   return -1;
 }
 
+/** Adjust the address map mased on the MapAddress elements in the
+ * configuration <b>options</b>
+ */
 static void
-config_register_addressmaps(or_options_t *options) {
+config_register_addressmaps(or_options_t *options)
+{
   smartlist_t *elts;
   struct config_line_t *opt;
   char *from, *to;
@@ -2180,6 +2192,8 @@ normalize_log_options(or_options_t *options)
 
 #define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
+/** Add the default exit policy entries to <b>policy</b>
+ */
 void
 config_append_default_exit_policy(addr_policy_t **policy)
 {
@@ -2247,7 +2261,8 @@ config_parse_addr_policy(struct config_line_t *cfg,
 
 /** Release all storage held by <b>p</b> */
 void
-addr_policy_free(addr_policy_t *p) {
+addr_policy_free(addr_policy_t *p)
+{
   addr_policy_t *e;
 
   while (p) {
@@ -2374,7 +2389,8 @@ parse_dir_server_line(const char *line, int validate_only)
 /** Adjust the value of options->DataDirectory, or fill it in if it's
  * absent. Return 0 on success, -1 on failure. */
 static int
-normalize_data_directory(or_options_t *options) {
+normalize_data_directory(or_options_t *options)
+{
 #ifdef MS_WINDOWS
   char *p;
   if (options->DataDirectory)
@@ -2412,7 +2428,8 @@ normalize_data_directory(or_options_t *options) {
 /** Check and normalize the value of options->DataDirectory; return 0 if it
  * sane, -1 otherwise. */
 static int
-validate_data_directory(or_options_t *options) {
+validate_data_directory(or_options_t *options)
+{
   if (normalize_data_directory(options) < 0)
     return -1;
   tor_assert(options->DataDirectory);
@@ -2676,7 +2693,7 @@ check_libevent_version(const char *m, const char *v, int server)
   } else if (!strcmp(m, "poll")) {
     if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d"))
       buggy = 1;
-    else if (!strcmp(v, "1.0e"))
+T    else if (!strcmp(v, "1.0e"))
       slow = 1;
   } else if (!strcmp(m, "poll")) {
     if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
@@ -2700,6 +2717,7 @@ check_libevent_version(const char *m, const char *v, int server)
 }
 #endif
 
+/** Dump the version of every file to the log. */
 static void
 print_cvs_version(void)
 {

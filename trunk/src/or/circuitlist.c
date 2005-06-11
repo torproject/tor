@@ -32,9 +32,10 @@ struct orconn_circid_circuit_map_t {
   circuit_t *circuit;
 };
 
-static INLINE int compare_orconn_circid_entries(
-       struct orconn_circid_circuit_map_t *a,
-       struct orconn_circid_circuit_map_t *b)
+/** DOCDOC */
+static INLINE int
+compare_orconn_circid_entries(struct orconn_circid_circuit_map_t *a,
+                              struct orconn_circid_circuit_map_t *b)
 {
   if (a->or_conn < b->or_conn)
     return -1;
@@ -43,12 +44,14 @@ static INLINE int compare_orconn_circid_entries(
   else
     return ((int)b->circ_id) - ((int)a->circ_id);
 };
+
 static RB_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = RB_INITIALIZER(orconn_circid_circuit_map);
 RB_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
 RB_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
 
 struct orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
+/** DOCDOC */
 void
 circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
                           connection_t *conn,
@@ -111,7 +114,9 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
 /** Add <b>circ</b> to the global list of circuits. This is called only from
  * within circuit_new.
  */
-static void circuit_add(circuit_t *circ) {
+static void
+circuit_add(circuit_t *circ)
+{
   if (!global_circuitlist) { /* first one */
     global_circuitlist = circ;
     circ->next = NULL;
@@ -124,7 +129,8 @@ static void circuit_add(circuit_t *circ) {
 /** Detach from the global circuit list, and deallocate, all
  * circuits that have been marked for close.
  */
-void circuit_close_all_marked(void)
+void
+circuit_close_all_marked(void)
 {
   circuit_t *tmp,*m;
 
@@ -167,7 +173,9 @@ circuit_state_to_string(int state) {
 /** Allocate space for a new circuit, initializing with <b>p_circ_id</b>
  * and <b>p_conn</b>. Add it to the global circuit list.
  */
-circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
+circuit_t *
+circuit_new(uint16_t p_circ_id, connection_t *p_conn)
+{
   circuit_t *circ;
   static uint32_t n_circuits_allocated = 1;
     /* never zero, since a global ID of 0 is treated specially by the controller */
@@ -198,7 +206,9 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
 
 /** Deallocate space associated with circ.
  */
-static void circuit_free(circuit_t *circ) {
+static void
+circuit_free(circuit_t *circ)
+{
   tor_assert(circ);
   tor_assert(circ->magic == CIRCUIT_MAGIC);
   if (circ->n_crypto)
@@ -228,7 +238,9 @@ static void circuit_free(circuit_t *circ) {
 }
 
 /** Deallocate space associated with the linked list <b>cpath</b>. */
-static void circuit_free_cpath(crypt_path_t *cpath) {
+static void
+circuit_free_cpath(crypt_path_t *cpath)
+{
   crypt_path_t *victim, *head=cpath;
 
   if (!cpath)
@@ -265,7 +277,8 @@ circuit_free_all(void)
 
 /** Deallocate space associated with the cpath node <b>victim</b>. */
 static void
-circuit_free_cpath_node(crypt_path_t *victim) {
+circuit_free_cpath_node(crypt_path_t *victim)
+{
   if (victim->f_crypto)
     crypto_free_cipher_env(victim->f_crypto);
   if (victim->b_crypto)
@@ -303,7 +316,9 @@ circuit_get_by_global_id(uint32_t id)
  *    in p_streams or n_streams.
  * Return NULL if no such circuit exists.
  */
-circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn) {
+circuit_t *
+circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
+{
   struct orconn_circid_circuit_map_t search;
   struct orconn_circid_circuit_map_t *found;
 
@@ -346,7 +361,8 @@ circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn) {
 }
 
 /** DOCDOC */
-circuit_t *circuit_get_by_edge_conn(connection_t *conn)
+circuit_t *
+circuit_get_by_edge_conn(connection_t *conn)
 {
   circuit_t *circ;
   connection_t *tmpconn;
@@ -382,7 +398,9 @@ circuit_t *circuit_get_by_edge_conn(connection_t *conn)
  *
  * Return NULL if no such circuit exists.
  */
-circuit_t *circuit_get_by_conn(connection_t *conn) {
+circuit_t *
+circuit_get_by_conn(connection_t *conn)
+{
   circuit_t *circ;
   connection_t *tmpconn;
 
@@ -413,7 +431,9 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
  *
  * Return NULL if no such circuit exists.
  */
-circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose) {
+circuit_t *
+circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
+{
   circuit_t *circ;
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
@@ -454,7 +474,8 @@ circuit_get_next_by_pk_and_purpose(circuit_t *start,
 /** Return the circuit waiting for a rendezvous with the provided cookie.
  * Return NULL if no such circuit is found.
  */
-circuit_t *circuit_get_rendezvous(const char *cookie)
+circuit_t *
+circuit_get_rendezvous(const char *cookie)
 {
   circuit_t *circ;
   for (circ = global_circuitlist; circ; circ = circ->next) {
@@ -476,7 +497,8 @@ circuit_t *circuit_get_rendezvous(const char *cookie)
  */
 circuit_t *
 circuit_get_clean_open(uint8_t purpose, int need_uptime,
-                       int need_capacity, int internal) {
+                       int need_capacity, int internal)
+{
   circuit_t *circ;
   circuit_t *best=NULL;
 
@@ -500,7 +522,9 @@ circuit_get_clean_open(uint8_t purpose, int need_uptime,
 
 /** Go through the circuitlist; mark-for-close each circuit that starts
  *  at us but has not yet been used. */
-void circuit_mark_all_unused_circs(void) {
+void
+circuit_mark_all_unused_circs(void)
+{
   circuit_t *circ;
 
   for (circ=global_circuitlist; circ; circ = circ->next) {
@@ -526,7 +550,8 @@ void circuit_mark_all_unused_circs(void) {
  *   - If circ->rend_splice is set (we are the midpoint of a joined
  *     rendezvous stream), then mark the other circuit to close as well.
  */
-void _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
+void
+_circuit_mark_for_close(circuit_t *circ, int line, const char *file)
 {
   connection_t *conn;
 
@@ -600,7 +625,8 @@ void _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
 /** Verify that cpath layer <b>cp</b> has all of its invariants
  * correct. Trigger an assert if anything is invalid.
  */
-void assert_cpath_layer_ok(const crypt_path_t *cp)
+void
+assert_cpath_layer_ok(const crypt_path_t *cp)
 {
 //  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
 //  tor_assert(cp->port);
@@ -652,7 +678,8 @@ assert_cpath_ok(const crypt_path_t *cp)
 /** Verify that circuit <b>c</b> has all of its invariants
  * correct. Trigger an assert if anything is invalid.
  */
-void assert_circuit_ok(const circuit_t *c)
+void
+assert_circuit_ok(const circuit_t *c)
 {
   connection_t *conn;
 

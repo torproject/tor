@@ -36,8 +36,10 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn);
  * <b>cell</b> that just arrived on <b>conn</b>. Increment <b>*time</b>
  * by the number of microseconds used by the call to <b>*func(cell, conn)</b>.
  */
-static void command_time_process_cell(cell_t *cell, connection_t *conn, int *time,
-                               void (*func)(cell_t *, connection_t *)) {
+static void
+command_time_process_cell(cell_t *cell, connection_t *conn, int *time,
+                               void (*func)(cell_t *, connection_t *))
+{
   struct timeval start, end;
   long time_passed;
 
@@ -64,7 +66,9 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn, int *tim
  * this second, and the total number of microseconds it took to
  * process each type of cell.
  */
-void command_process_cell(cell_t *cell, connection_t *conn) {
+void
+command_process_cell(cell_t *cell, connection_t *conn)
+{
 #ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
    * name. */
@@ -150,7 +154,9 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
  * onionskin_pending, and pass the onionskin to the cpuworker. Circ will
  * get picked up again when the cpuworker finishes decrypting it.
  */
-static void command_process_create_cell(cell_t *cell, connection_t *conn) {
+static void
+command_process_create_cell(cell_t *cell, connection_t *conn)
+{
   circuit_t *circ;
 
   if (we_are_hibernating()) {
@@ -219,7 +225,9 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
  * finish processing keys, and then call circuit_send_next_onion_skin() to
  * extend to the next hop in the circuit if necessary.
  */
-static void command_process_created_cell(cell_t *cell, connection_t *conn) {
+static void
+command_process_created_cell(cell_t *cell, connection_t *conn)
+{
   circuit_t *circ;
 
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
@@ -259,7 +267,9 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
  * it came in with a recognized circ_id. Pass it on to
  * circuit_receive_relay_cell() for actual processing.
  */
-static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
+static void
+command_process_relay_cell(cell_t *cell, connection_t *conn)
+{
   circuit_t *circ;
 
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
@@ -304,7 +314,9 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
  * Then mark the circuit for close (which marks all edges for close,
  * and passes the destroy cell onward if necessary).
  */
-static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
+static void
+command_process_destroy_cell(cell_t *cell, connection_t *conn)
+{
   circuit_t *circ;
 
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);

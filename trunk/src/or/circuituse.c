@@ -28,11 +28,12 @@ static void circuit_increment_failure_count(void);
 /* Return 1 if <b>circ</b> could be returned by circuit_get_best().
  * Else return 0.
  */
-static int circuit_is_acceptable(circuit_t *circ,
-                                 connection_t *conn,
-                                 int must_be_open,
-                                 uint8_t purpose,
-                                 time_t now)
+static int
+circuit_is_acceptable(circuit_t *circ,
+                      connection_t *conn,
+                      int must_be_open,
+                      uint8_t purpose,
+                      time_t now)
 {
   routerinfo_t *exitrouter;
   tor_assert(circ);
@@ -102,7 +103,8 @@ static int circuit_is_acceptable(circuit_t *circ,
 /* Return 1 if circuit <b>a</b> is better than circuit <b>b</b> for
  * <b>purpose</b>, and return 0 otherwise. Used by circuit_get_best.
  */
-static int circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
+static int
+circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
 {
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
@@ -184,7 +186,9 @@ circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose)
 /** Close all circuits that start at us, aren't open, and were born
  * at least MIN_SECONDS_BEFORE_EXPIRING_CIRC seconds ago.
  */
-void circuit_expire_building(time_t now) {
+void
+circuit_expire_building(time_t now)
+{
   circuit_t *victim, *circ = global_circuitlist;
 
   while (circ) {
@@ -254,7 +258,8 @@ void circuit_expire_building(time_t now) {
  * open or in-progress circuit.
  */
 void
-circuit_remove_handled_ports(smartlist_t *needed_ports) {
+circuit_remove_handled_ports(smartlist_t *needed_ports)
+{
   int i;
   uint16_t *port;
 
@@ -275,7 +280,9 @@ circuit_remove_handled_ports(smartlist_t *needed_ports) {
  * an acceptable exit node for conn if conn is defined, else for "*:port".
  * Else return 0.
  */
-int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) {
+int
+circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
+{
   circuit_t *circ;
   routerinfo_t *exitrouter;
   int num=0;
@@ -377,7 +384,9 @@ circuit_predict_and_launch_new(void)
  * services just want enough circuits for current tasks, whereas
  * others want a minimum set of idle circuits hanging around.
  */
-void circuit_build_needed_circs(time_t now) {
+void
+circuit_build_needed_circs(time_t now)
+{
   static long time_to_new_circuit = 0;
 
   /* launch a new circ for any pending streams that need one */
@@ -410,7 +419,9 @@ void circuit_build_needed_circs(time_t now) {
 /** If the stream <b>conn</b> is a member of any of the linked
  * lists of <b>circ</b>, then remove it from the list.
  */
-void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
+void
+circuit_detach_stream(circuit_t *circ, connection_t *conn)
+{
   connection_t *prevconn;
 
   tor_assert(circ);
@@ -472,7 +483,9 @@ void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
  * If it's an edge conn, then detach it from its circ, so we don't
  * try to reference it later.
  */
-void circuit_about_to_close_connection(connection_t *conn) {
+void
+circuit_about_to_close_connection(connection_t *conn)
+{
   /* currently, we assume it's too late to flush conn's buf here.
    * down the road, maybe we'll consider that eof doesn't mean can't-write
    */
@@ -550,7 +563,8 @@ circuit_expire_old_circuits(void)
 
 /** A testing circuit has completed. Take whatever stats we want. */
 static void
-circuit_testing_opened(circuit_t *circ) {
+circuit_testing_opened(circuit_t *circ)
+{
   /* For now, we only use testing circuits to see if our ORPort is
      reachable. But we remember reachability in onionskin_answer(),
      so there's no need to record anything here. Just close the circ. */
@@ -576,8 +590,9 @@ circuit_testing_failed(circuit_t *circ, int at_last_hop) {
  * call connection_ap_attach_pending, which looks for pending streams
  * that could use circ.
  */
-void circuit_has_opened(circuit_t *circ) {
-
+void
+circuit_has_opened(circuit_t *circ)
+{
   control_event_circuit_status(circ, CIRC_EVENT_BUILT);
 
   switch (circ->purpose) {
@@ -610,10 +625,11 @@ void circuit_has_opened(circuit_t *circ) {
   }
 }
 
-/*~ Called whenever a circuit could not be successfully built.
+/** Called whenever a circuit could not be successfully built.
  */
-void circuit_build_failed(circuit_t *circ) {
-
+void
+circuit_build_failed(circuit_t *circ)
+{
   /* we should examine circ and see if it failed because of
    * the last hop or an earlier hop. then use this info below.
    */
@@ -771,7 +787,9 @@ circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
 /** Record another failure at opening a general circuit. When we have
  * too many, we'll stop trying for the remainder of this minute.
  */
-static void circuit_increment_failure_count(void) {
+static void
+circuit_increment_failure_count(void)
+{
   ++n_circuit_failures;
   log_fn(LOG_DEBUG,"n_circuit_failures now %d.",n_circuit_failures);
 }
@@ -780,7 +798,9 @@ static void circuit_increment_failure_count(void) {
  * we will try MAX_CIRCUIT_FAILURES times more (if necessary) before
  * stopping again.
  */
-void circuit_reset_failure_count(int timeout) {
+void
+circuit_reset_failure_count(int timeout)
+{
   if (timeout && n_circuit_failures > MAX_CIRCUIT_FAILURES)
     did_circs_fail_last_period = 1;
   else
@@ -797,7 +817,8 @@ void circuit_reset_failure_count(int timeout) {
 static int
 circuit_get_open_circ_or_launch(connection_t *conn,
                                 uint8_t desired_circuit_purpose,
-                                circuit_t **circp) {
+                                circuit_t **circp)
+{
   circuit_t *circ;
   int is_resolve;
   int need_uptime;
@@ -919,7 +940,9 @@ try_an_intro_point:
  * p_streams. Also set apconn's cpath_layer to the last hop in
  * circ's cpath.
  */
-static void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
+static void
+link_apconn_to_circ(connection_t *apconn, circuit_t *circ)
+{
   /* add it into the linked list of streams on this circuit */
   log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
   apconn->timestamp_lastread = time(NULL); /* reset it, so we can measure circ timeouts */
@@ -938,7 +961,8 @@ static void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
 /** If an exit wasn't specifically chosen, save the history for future
  * use */
 static void
-consider_recording_trackhost(connection_t *conn, circuit_t *circ) {
+consider_recording_trackhost(connection_t *conn, circuit_t *circ)
+{
   int found_needle = 0;
   char *str;
   or_options_t *options = get_options();
@@ -1023,7 +1047,9 @@ connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
  * Otherwise, associate conn with a safe live circuit, do the
  * right next step, and return 1.
  */
-int connection_ap_handshake_attach_circuit(connection_t *conn) {
+int
+connection_ap_handshake_attach_circuit(connection_t *conn)
+{
   int retval;
   int conn_age;
 

@@ -44,6 +44,9 @@
   do { log_fn(LOG_ERR, "Error while %s: %s", act,           \
               tor_socket_strerror(tor_socket_errno(_s))); } while (0)
 
+/** Set *out to a newly allocated SOCKS4a resolve request with
+ * username and hostname as provided.  Return the number of bytes in
+ * the request. */
 static int
 build_socks4a_resolve_request(char **out,
                               const char *username,
@@ -66,6 +69,9 @@ build_socks4a_resolve_request(char **out,
   return len;
 }
 
+/** Given a len-byte SOCKS4a response in <b>response</b>, set *addr_out to the
+ * address it contains (in host order).  Return 0 on success, -1 on error.
+ */
 static int
 parse_socks4a_resolve_response(const char *response, size_t len,
                                uint32_t *addr_out)
@@ -96,6 +102,10 @@ parse_socks4a_resolve_response(const char *response, size_t len,
   return 0;
 }
 
+/** Send a resolve request for <b>hostname</b> to the Tor listening on
+ * <b>sockshost</b>:<b>socksport</b>.  Store the resulting IPv4
+ * address (in host order) into <b>result_addr</b>.
+ */
 static int
 do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
            uint32_t *result_addr)
@@ -163,6 +173,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   return 0;
 }
 
+/** Print a usage message and exit. */
 static void
 usage(void)
 {
@@ -170,6 +181,7 @@ usage(void)
   exit(1);
 }
 
+/** Entry point to tor-resolve */
 int
 main(int argc, char **argv)
 {

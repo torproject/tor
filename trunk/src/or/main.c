@@ -121,7 +121,9 @@ static int nt_service_is_stopped(void);
  * connection's socket must be set; the connection starts out
  * non-reading and non-writing.
  */
-int connection_add(connection_t *conn) {
+int
+connection_add(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->s >= 0);
 
@@ -153,7 +155,9 @@ int connection_add(connection_t *conn) {
  * corresponding poll entry.  Calling this function will shift the last
  * connection (if any) into the position occupied by conn.
  */
-int connection_remove(connection_t *conn) {
+int
+connection_remove(connection_t *conn)
+{
   int current_index;
 
   tor_assert(conn);
@@ -188,7 +192,9 @@ int connection_remove(connection_t *conn) {
  *
  * Then free it.
  */
-static void connection_unlink(connection_t *conn, int remove) {
+static void
+connection_unlink(connection_t *conn, int remove)
+{
   circuit_about_to_close_connection(conn);
   connection_about_to_close_connection(conn);
   if (remove) {
@@ -212,12 +218,16 @@ add_connection_to_closeable_list(connection_t *conn)
 }
 
 /** Return 1 if conn is on the closeable list, else return 0. */
-int connection_is_on_closeable_list(connection_t *conn) {
+int
+connection_is_on_closeable_list(connection_t *conn)
+{
   return smartlist_isin(closeable_connection_lst, conn);
 }
 
 /** Return true iff conn is in the current poll array. */
-int connection_in_array(connection_t *conn) {
+int
+connection_in_array(connection_t *conn)
+{
   int i;
   for (i=0; i<nfds; ++i) {
     if (conn==connection_array[i])
@@ -230,15 +240,19 @@ int connection_in_array(connection_t *conn) {
  * to the length of the array. <b>*array</b> and <b>*n</b> must not
  * be modified.
  */
-void get_connection_array(connection_t ***array, int *n) {
+void
+get_connection_array(connection_t ***array, int *n)
+{
   *array = connection_array;
   *n = nfds;
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
-* mask is a bitmask whose bits are EV_READ and EV_WRITE.)
+ * mask is a bitmask whose bits are EV_READ and EV_WRITE.)
  */
-void connection_watch_events(connection_t *conn, short events) {
+void
+connection_watch_events(connection_t *conn, short events)
+{
   int r;
 
   tor_assert(conn);
@@ -269,14 +283,18 @@ void connection_watch_events(connection_t *conn, short events) {
 }
 
 /** Return true iff <b>conn</b> is listening for read events. */
-int connection_is_reading(connection_t *conn) {
+int
+connection_is_reading(connection_t *conn)
+{
   tor_assert(conn);
 
   return conn->read_event && event_pending(conn->read_event, EV_READ, NULL);
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any read events. */
-void connection_stop_reading(connection_t *conn) {
+void
+connection_stop_reading(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->read_event);
 
@@ -287,7 +305,9 @@ void connection_stop_reading(connection_t *conn) {
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
-void connection_start_reading(connection_t *conn) {
+void
+connection_start_reading(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->read_event);
 
@@ -297,14 +317,18 @@ void connection_start_reading(connection_t *conn) {
 }
 
 /** Return true iff <b>conn</b> is listening for write events. */
-int connection_is_writing(connection_t *conn) {
+int
+connection_is_writing(connection_t *conn)
+{
   tor_assert(conn);
 
   return conn->write_event && event_pending(conn->write_event, EV_WRITE, NULL);
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any write events. */
-void connection_stop_writing(connection_t *conn) {
+void
+connection_stop_writing(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->write_event);
 
@@ -315,7 +339,9 @@ void connection_stop_writing(connection_t *conn) {
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
-void connection_start_writing(connection_t *conn) {
+void
+connection_start_writing(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->write_event);
 
@@ -371,7 +397,8 @@ conn_read_callback(int fd, short event, void *_conn)
 
 /** Libevent callback: this gets invoked when (connection_t*)<b>conn</b> has
  * some data to write. */
-static void conn_write_callback(int fd, short events, void *_conn)
+static void
+conn_write_callback(int fd, short events, void *_conn)
 {
   connection_t *conn = _conn;
 
@@ -404,7 +431,9 @@ static void conn_write_callback(int fd, short events, void *_conn)
  *      all other lists, close it, and free it.
  * Returns 1 if the connection was closed, 0 otherwise.
  */
-static int conn_close_if_marked(int i) {
+static int
+conn_close_if_marked(int i)
+{
   connection_t *conn;
   int retval;
 
@@ -456,7 +485,9 @@ static int conn_close_if_marked(int i) {
  * and try another directory fetch. Kill off all the circuit_wait
  * streams that are waiting now, since they will all timeout anyway.
  */
-void directory_all_unreachable(time_t now) {
+void
+directory_all_unreachable(time_t now)
+{
   connection_t *conn;
 
   has_fetched_directory=0;
@@ -470,6 +501,9 @@ void directory_all_unreachable(time_t now) {
   }
 }
 
+/**
+ * Return the interval to wait betweeen directory downloads, in seconds.
+ */
 static INLINE int
 get_dir_fetch_period(or_options_t *options)
 {
@@ -484,6 +518,9 @@ get_dir_fetch_period(or_options_t *options)
     return 40*60;
 }
 
+/**
+ * Return the interval to wait betweeen router status downloads, in seconds.
+ */
 static INLINE int
 get_status_fetch_period(or_options_t *options)
 {
@@ -501,7 +538,9 @@ get_status_fetch_period(or_options_t *options)
 /** This function is called whenever we successfully pull down a directory.
  * If <b>identity_digest</b> is defined, it contains the digest of the
  * router that just gave us this directory. */
-void directory_has_arrived(time_t now, char *identity_digest) {
+void
+directory_has_arrived(time_t now, char *identity_digest)
+{
   or_options_t *options = get_options();
 
   log_fn(LOG_INFO, "A directory has arrived.");
@@ -536,7 +575,9 @@ void directory_has_arrived(time_t now, char *identity_digest) {
 /** Perform regular maintenance tasks for a single connection.  This
  * function gets run once per second per connection by run_scheduled_events.
  */
-static void run_connection_housekeeping(int i, time_t now) {
+static void
+run_connection_housekeeping(int i, time_t now)
+{
   cell_t cell;
   connection_t *conn = connection_array[i];
   or_options_t *options = get_options();
@@ -598,7 +639,9 @@ static void run_connection_housekeeping(int i, time_t now) {
 /** Perform regular maintenance tasks.  This function gets run once per
  * second by prepare_for_poll.
  */
-static void run_scheduled_events(time_t now) {
+static void
+run_scheduled_events(time_t now)
+{
   static time_t last_rotated_certificate = 0;
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
@@ -769,7 +812,8 @@ static void run_scheduled_events(time_t now) {
 static struct event *timeout_event = NULL;
 
 /** Libevent callback: invoked once every second. */
-static void second_elapsed_callback(int fd, short event, void *args)
+static void
+second_elapsed_callback(int fd, short event, void *args)
 {
   static struct timeval one_second;
   static long current_second = 0;
@@ -843,7 +887,9 @@ static void second_elapsed_callback(int fd, short event, void *args)
 
 /** Called when we get a SIGHUP: reload configuration files and keys,
  * retry all connections, re-upload all descriptors, and so on. */
-static int do_hup(void) {
+static int
+do_hup(void)
+{
   char keydir[512];
   or_options_t *options = get_options();
 
@@ -894,7 +940,9 @@ static int do_hup(void) {
 }
 
 /** Tor main loop. */
-static int do_main_loop(void) {
+static int
+do_main_loop(void)
+{
   int loop_result;
 
   /* load the private keys, if we're supposed to have them, and set up the
@@ -1005,7 +1053,10 @@ control_signal_act(int the_signal)
   return 0;
 }
 
-static void signal_callback(int fd, short events, void *arg)
+/** Libevent callback: invoked when we get a signal.
+ */
+static void
+signal_callback(int fd, short events, void *arg)
 {
   uintptr_t sig = (uintptr_t)arg;
   switch (sig)
@@ -1051,8 +1102,12 @@ static void signal_callback(int fd, short events, void *arg)
   }
 }
 
+/**
+ * Write current memory uusage information to the log.
+ */
 static void
-dumpmemusage(int severity) {
+dumpmemusage(int severity)
+{
   extern uint64_t buf_total_used;
   extern uint64_t buf_total_alloc;
   extern uint64_t rephist_total_alloc;
@@ -1067,7 +1122,8 @@ dumpmemusage(int severity) {
 /** Write all statistics to the log, with log level 'severity'.  Called
  * in response to a SIGUSR1. */
 static void
-dumpstats(int severity) {
+dumpstats(int severity)
+{
   int i;
   connection_t *conn;
   time_t now = time(NULL);
@@ -1144,7 +1200,8 @@ dumpstats(int severity) {
 
 /** Called by exit() as we shut down the process.
  */
-static void exit_function(void)
+static void
+exit_function(void)
 {
   /* NOTE: If we ever daemonize, this gets called immediately.  That's
    * okay for now, because we only use this on Windows.  */
@@ -1154,7 +1211,8 @@ static void exit_function(void)
 }
 
 /** Set up the signal handlers for either parent or child. */
-void handle_signals(int is_parent)
+void
+handle_signals(int is_parent)
 {
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
   int i;
@@ -1199,7 +1257,9 @@ void handle_signals(int is_parent)
 
 /** Main entry point for the Tor command-line client.
  */
-static int tor_init(int argc, char *argv[]) {
+static int
+tor_init(int argc, char *argv[])
+{
   time_of_process_start = time(NULL);
   closeable_connection_lst = smartlist_create();
   /* Initialize the history structures. */
@@ -1250,7 +1310,8 @@ static int tor_init(int argc, char *argv[]) {
  *
  * Also valgrind should then report 0 reachable in its
  * leak report */
-void tor_free_all(int postfork)
+void
+tor_free_all(int postfork)
 {
   routerlist_free_current();
   free_trusted_dir_servers();
@@ -1281,7 +1342,8 @@ void tor_free_all(int postfork)
 }
 
 /** Do whatever cleanup is necessary before shutting Tor down. */
-void tor_cleanup(void) {
+void
+tor_cleanup(void) {
   or_options_t *options = get_options();
   /* Remove our pid file. We don't care if there was an error when we
    * unlink, nothing we could do about it anyways. */
@@ -1298,7 +1360,8 @@ void tor_cleanup(void) {
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
-static void do_list_fingerprint(void)
+static void
+do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];
   crypto_pk_env_t *k;
@@ -1325,7 +1388,8 @@ static void do_list_fingerprint(void)
 
 /** Entry point for password hashing: take the desired password from
  * the command line, and print its salted hash to stdout. **/
-static void do_hash_password(void)
+static void
+do_hash_password(void)
 {
 
   char output[256];
@@ -1357,7 +1421,9 @@ nt_service_is_stopped(void)
   return 0;
 }
 
-void nt_service_control(DWORD request)
+/** DOCDOC */
+void
+nt_service_control(DWORD request)
 {
   switch (request) {
     case SERVICE_CONTROL_STOP:
@@ -1369,7 +1435,9 @@ void nt_service_control(DWORD request)
   SetServiceStatus(hStatus, &service_status);
 }
 
-void nt_service_body(int argc, char **argv)
+/** DOCDOC */
+void
+nt_service_body(int argc, char **argv)
 {
   int err;
   service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
@@ -1402,7 +1470,9 @@ void nt_service_body(int argc, char **argv)
   return;
 }
 
-void nt_service_main(void)
+/** DOCDOC */
+void
+nt_service_main(void)
 {
   SERVICE_TABLE_ENTRY table[2];
   DWORD result = 0;
@@ -1438,7 +1508,9 @@ void nt_service_main(void)
   }
 }
 
-int nt_service_install()
+/** DOCDOC */
+int
+nt_service_install(void)
 {
   /* XXXX Problems with NT services:
    * 1. The configuration file needs to be in the same directory as the .exe
@@ -1541,7 +1613,9 @@ int nt_service_install()
   return 0;
 }
 
-int nt_service_remove()
+/** DOCDOC */
+int
+nt_service_remove(void)
 {
   SC_HANDLE hSCManager = NULL;
   SC_HANDLE hService = NULL;
@@ -1587,7 +1661,10 @@ int nt_service_remove()
 }
 #endif
 
-int tor_main(int argc, char *argv[]) {
+/** DOCDOC */
+int
+tor_main(int argc, char *argv[])
+{
 #ifdef MS_WINDOWS_SERVICE
   backup_argv = argv;
   backup_argc = argc;

@@ -44,7 +44,9 @@ unsigned long stats_n_relay_cells_delivered = 0;
 /** Update digest from the payload of cell. Assign integrity part to
  * cell.
  */
-static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
+static void
+relay_set_digest(crypto_digest_env_t *digest, cell_t *cell)
+{
   char integrity[4];
   relay_header_t rh;
 
@@ -63,7 +65,9 @@ static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
  * to 0). If the integrity part is valid, return 1, else restore digest
  * and cell to their original state and return 0.
  */
-static int relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell) {
+static int
+relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell)
+{
   char received_integrity[4], calculated_integrity[4];
   relay_header_t rh;
   crypto_digest_env_t *backup_digest=NULL;
@@ -104,8 +108,10 @@ static int relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell) {
  *
  * Return -1 if the crypto fails, else return 0.
  */
-static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
-                                   int encrypt_mode) {
+static int
+relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
+                        int encrypt_mode)
+{
   char out[CELL_PAYLOAD_SIZE]; /* 'in' must be this size too */
 
   if (( encrypt_mode && crypto_cipher_encrypt(cipher, out, in, CELL_PAYLOAD_SIZE)) ||
@@ -126,8 +132,9 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
  *  - Else connection_or_write_cell_to_buf to the conn on the other
  *    side of the circuit.
  */
-int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
-                               int cell_direction) {
+int
+circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
+{
   connection_t *conn=NULL;
   crypt_path_t *layer_hint=NULL;
   char recognized=0;
@@ -214,8 +221,10 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
  * else return 0.
  */
 /* wrap this into receive_relay_cell one day */
-static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
-                       crypt_path_t **layer_hint, char *recognized) {
+static int
+relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
+            crypt_path_t **layer_hint, char *recognized)
+{
   crypt_path_t *thishop;
   relay_header_t rh;
 
@@ -370,7 +379,9 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
  * network-order in the buffer <b>dest</b>. See tor-spec.txt for details
  * about the wire format.
  */
-void relay_header_pack(char *dest, const relay_header_t *src) {
+void
+relay_header_pack(char *dest, const relay_header_t *src)
+{
   *(uint8_t*)(dest) = src->command;
 
   set_uint16(dest+1, htons(src->recognized));
@@ -382,7 +393,9 @@ void relay_header_pack(char *dest, const relay_header_t *src) {
 /** Unpack the network-order buffer <b>src</b> into a host-order
  * relay_header_t structure <b>dest</b>.
  */
-void relay_header_unpack(relay_header_t *dest, const char *src) {
+void
+relay_header_unpack(relay_header_t *dest, const char *src)
+{
   dest->command = *(uint8_t*)(src);
 
   dest->recognized = ntohs(get_uint16(src+1));
@@ -400,9 +413,11 @@ void relay_header_unpack(relay_header_t *dest, const char *src) {
  * If you can't send the cell, mark the circuit for close and
  * return -1. Else return 0.
  */
-int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
-                                 int relay_command, const char *payload,
-                                 size_t payload_len, crypt_path_t *cpath_layer) {
+int
+connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
+                             int relay_command, const char *payload,
+                             size_t payload_len, crypt_path_t *cpath_layer)
+{
   cell_t cell;
   relay_header_t rh;
   int cell_direction;
@@ -462,7 +477,8 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
  * <b>reason</b> is -1 if no reason was provided.
  */
 static const char *
-connection_edge_end_reason_str(int reason) {
+connection_edge_end_reason_str(int reason)
+{
   switch (reason) {
     case -1:
       log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
@@ -542,6 +558,9 @@ connection_edge_end_reason_socks5_response(int reason)
 #define S_CASE(s) case s
 #endif
 
+/** Given an errno from a failed exit connection, return a reason code
+ * appropriate for use in a RELAY END cell.
+ */
 int
 errno_to_end_reason(int e)
 {
@@ -585,17 +604,22 @@ errno_to_end_reason(int e)
 /** Return 1 if reason is something that you should retry if you
  * get the end cell before you've connected; else return 0. */
 static int
-edge_reason_is_retriable(int reason) {
+edge_reason_is_retriable(int reason)
+{
   return reason == END_STREAM_REASON_HIBERNATING ||
          reason == END_STREAM_REASON_RESOURCELIMIT ||
          reason == END_STREAM_REASON_EXITPOLICY ||
          reason == END_STREAM_REASON_RESOLVEFAILED;
 }
 
+/** Called when we receive an END cell on a stream that isn't open yet.
+ * Arguments are as for connection_edge_process_relay_cell().
+ */
 static int
 connection_edge_process_end_not_open(
     relay_header_t *rh, cell_t *cell, circuit_t *circ,
-    connection_t *conn, crypt_path_t *layer_hint) {
+    connection_t *conn, crypt_path_t *layer_hint)
+{
   struct in_addr in;
   routerinfo_t *exitrouter;
   int reason = *(cell->payload+RELAY_HEADER_SIZE);
@@ -693,8 +717,8 @@ connection_edge_process_end_not_open(
 static int
 connection_edge_process_relay_cell_not_open(
     relay_header_t *rh, cell_t *cell, circuit_t *circ,
-    connection_t *conn, crypt_path_t *layer_hint) {
-
+    connection_t *conn, crypt_path_t *layer_hint)
+{
   if (rh->command == RELAY_COMMAND_END)
     return connection_edge_process_end_not_open(rh, cell, circ, conn, layer_hint);
 
@@ -995,7 +1019,9 @@ uint64_t stats_n_data_bytes_received = 0;
  * Return -1 (and send a RELAY_END cell if necessary) if conn should
  * be marked for close, else return 0.
  */
-int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial) {
+int
+connection_edge_package_raw_inbuf(connection_t *conn, int package_partial)
+{
   size_t amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
@@ -1077,7 +1103,9 @@ repeat_connection_edge_package_raw_inbuf:
  * If conn->outbuf is not too full, and our deliver window is
  * low, send back a suitable number of stream-level sendme cells.
  */
-void connection_edge_consider_sending_sendme(connection_t *conn) {
+void
+connection_edge_consider_sending_sendme(connection_t *conn)
+{
   circuit_t *circ;
 
   if (connection_outbuf_too_full(conn))
@@ -1125,8 +1153,8 @@ circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
 static int
 circuit_resume_edge_reading_helper(connection_t *conn,
                                    circuit_t *circ,
-                                   crypt_path_t *layer_hint) {
-
+                                   crypt_path_t *layer_hint)
+{
   for ( ; conn; conn=conn->next_stream) {
     if (conn->marked_for_close)
       continue;

@@ -152,7 +152,8 @@ static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
  * <b>s</b>.  Return 0 on success, nonzero on failure.
  */
-int router_get_dir_hash(const char *s, char *digest)
+int
+router_get_dir_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "signed-directory","\ndirectory-signature");
@@ -161,7 +162,8 @@ int router_get_dir_hash(const char *s, char *digest)
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the first router in
  * <b>s</b>. Return 0 on success, nonzero on failure.
  */
-int router_get_router_hash(const char *s, char *digest)
+int
+router_get_router_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "router ","\nrouter-signature");
@@ -170,7 +172,8 @@ int router_get_router_hash(const char *s, char *digest)
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the running-routers
  * string in <b>s</b>. Return 0 on success, nonzero on failure.
  */
-int router_get_runningrouters_hash(const char *s, char *digest)
+int
+router_get_runningrouters_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "network-status","\ndirectory-signature");
@@ -309,8 +312,9 @@ get_recommended_software_from_directory(const char *str)
 
 /* Return 0 if myversion is supported; else log a message and return
  * -1 (or exit if ignoreversions is false) */
-int check_software_version_against_directory(const char *directory,
-                                             int ignoreversion)
+int
+check_software_version_against_directory(const char *directory,
+                                         int ignoreversion)
 {
   char *v;
   v = get_recommended_software_from_directory(directory);
@@ -629,7 +633,8 @@ router_parse_runningrouters(const char *str, int write_to_cache)
 /** Given a directory or running-routers string in <b>str</b>, try to
  * find the its dir-signing-key token (if any).  If this token is
  * present, extract and return the key.  Return NULL on failure. */
-static crypto_pk_env_t *find_dir_signing_key(const char *str)
+static crypto_pk_env_t *
+find_dir_signing_key(const char *str)
 {
   const char *cp;
   directory_token_t *tok;
@@ -675,7 +680,8 @@ static crypto_pk_env_t *find_dir_signing_key(const char *str)
 
 /** Return true iff <b>key</b> is allowed to sign directories.
  */
-static int dir_signing_key_is_trusted(crypto_pk_env_t *key)
+static int
+dir_signing_key_is_trusted(crypto_pk_env_t *key)
 {
   char digest[DIGEST_LEN];
   if (!key) return 0;
@@ -702,10 +708,11 @@ static int dir_signing_key_is_trusted(crypto_pk_env_t *key)
  * (New callers should always use <b>declared_key</b> when possible;
  * <b>pkey</b> is only for debugging.)
  */
-static int check_directory_signature(const char *digest,
-                                     directory_token_t *tok,
-                                     crypto_pk_env_t *pkey,
-                                     crypto_pk_env_t *declared_key)
+static int
+check_directory_signature(const char *digest,
+                          directory_token_t *tok,
+                          crypto_pk_env_t *pkey,
+                          crypto_pk_env_t *declared_key)
 {
   char signed_digest[PK_BYTES];
   crypto_pk_env_t *_pkey = NULL;
@@ -816,8 +823,9 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
  * *<b>end</b>.  Mallocs a new router and returns it if all goes well, else
  * returns NULL.
  */
-routerinfo_t *router_parse_entry_from_string(const char *s,
-                                           const char *end) {
+routerinfo_t *
+router_parse_entry_from_string(const char *s, const char *end)
+{
   routerinfo_t *router = NULL;
   char signed_digest[128];
   char digest[128];
@@ -1014,10 +1022,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     router->platform = tor_strdup("<unknown>");
   }
 
-//  log_fn(LOG_DEBUG,"or_port %d, dir_port %d, bandwidthrate %u, bandwidthburst %u.",
-//    router->or_port, router->dir_port,
-//    (unsigned) router->bandwidthrate, (unsigned) router->bandwidthburst);
-
   goto done;
   return router;
 
@@ -1075,6 +1079,7 @@ router_parse_addr_policy_from_string(const char *s)
   return r;
 }
 
+/** DOCDOC */
 int
 router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 {
@@ -1089,6 +1094,7 @@ router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
   return 0;
 }
 
+/** DOCDOC */
 static int
 router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
 {
@@ -1106,8 +1112,8 @@ router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
 /** Given a K_ACCEPT or K_REJECT token and a router, create and return
  * a new exit_policy_t corresponding to the token. */
 static addr_policy_t *
-router_parse_addr_policy(directory_token_t *tok) {
-
+router_parse_addr_policy(directory_token_t *tok)
+{
   addr_policy_t *newe;
 //  struct in_addr in;
   char *arg;
@@ -1152,6 +1158,7 @@ policy_read_failed:
   return NULL;
 }
 
+/** log and exit if <b>t</b> is malformed */
 void
 assert_addr_policy_ok(addr_policy_t *t)
 {
@@ -1204,7 +1211,8 @@ token_free(directory_token_t *tok)
  * or RTR_ONLY, reject all tokens of the wrong type.
  */
 static directory_token_t *
-get_next_token(const char **s, where_syntax where) {
+get_next_token(const char **s, where_syntax where)
+{
   const char *next, *obstart;
   int i, done, allocated, is_opt;
   directory_token_t *tok;
@@ -1461,9 +1469,10 @@ find_all_exitpolicy(smartlist_t *s)
  *
  * If no such substring exists, return -1.
  */
-static int router_get_hash_impl(const char *s, char *digest,
-                                const char *start_str,
-                                const char *end_str)
+static int
+router_get_hash_impl(const char *s, char *digest,
+                     const char *start_str,
+                     const char *end_str)
 {
   char *start, *end;
   start = strstr(s, start_str);
@@ -1500,7 +1509,9 @@ static int router_get_hash_impl(const char *s, char *digest,
  * and compare it to the version in <b>cutoff</b>. Return 1 if
  * the router is at least as new as the cutoff, else return 0.
  */
-int tor_version_as_new_as(const char *platform, const char *cutoff) {
+int
+tor_version_as_new_as(const char *platform, const char *cutoff)
+{
   tor_version_t cutoff_version, router_version;
   char *s, *start;
   char tmp[128];
@@ -1529,7 +1540,8 @@ int tor_version_as_new_as(const char *platform, const char *cutoff) {
 
 /** Parse a tor version from <b>s</b>, and store the result in <b>out</b>.
  * Return 0 on success, -1 on failure. */
-int tor_version_parse(const char *s, tor_version_t *out)
+int
+tor_version_parse(const char *s, tor_version_t *out)
 {
   char *eos=NULL, *cp=NULL;
   /* Format is:
@@ -1598,7 +1610,8 @@ int tor_version_parse(const char *s, tor_version_t *out)
 
 /** Compare two tor versions; Return <0 if a < b; 0 if a ==b, >0 if a >
  * b. */
-int tor_version_compare(tor_version_t *a, tor_version_t *b)
+int
+tor_version_compare(tor_version_t *a, tor_version_t *b)
 {
   int i;
   tor_assert(a);
@@ -1621,6 +1634,8 @@ int tor_version_compare(tor_version_t *a, tor_version_t *b)
   }
 }
 
+/** Return true iff versions <b>a</b> and <b>b</b> belong to the same series.
+ */
 static int
 tor_version_same_series(tor_version_t *a, tor_version_t *b)
 {

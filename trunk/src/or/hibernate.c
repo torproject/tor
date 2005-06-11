@@ -209,7 +209,9 @@ accounting_parse_options(or_options_t *options, int validate_only)
 /** If we want to manage the accounting system and potentially
  * hibernate, return 1, else return 0.
  */
-int accounting_is_enabled(or_options_t *options) {
+int
+accounting_is_enabled(or_options_t *options)
+{
   if (options->AccountingMax)
     return 1;
   return 0;
@@ -366,7 +368,8 @@ update_expected_bandwidth(void)
  * the start and end of the interval, and clear byte/time totals.
  */
 static void
-reset_accounting(time_t now) {
+reset_accounting(time_t now)
+{
   log_fn(LOG_INFO, "Starting new accounting interval.");
   update_expected_bandwidth();
   interval_start_time = start_of_accounting_period_containing(now);
@@ -400,6 +403,8 @@ time_to_record_bandwidth_usage(time_t now)
   return 0;
 }
 
+/** Invoked once per second.  Checks whether it is time to hibernate,
+ * record bandwidth used, etc.  */
 void
 accounting_run_housekeeping(time_t now)
 {
@@ -640,7 +645,8 @@ hibernate_hard_limit_reached(void)
 
 /** Return true iff we have sent/received almost all the bytes we are willing
  * to send/receive this interval. */
-static int hibernate_soft_limit_reached(void)
+static int
+hibernate_soft_limit_reached(void)
 {
   uint64_t soft_limit = (uint64_t) ((get_options()->AccountingMax) * .95);
   if (!soft_limit)
@@ -652,7 +658,9 @@ static int hibernate_soft_limit_reached(void)
 /** Called when we get a SIGINT, or when bandwidth soft limit is
  * reached. Puts us into "loose hibernation": we don't accept new
  * connections, but we continue handling old ones. */
-static void hibernate_begin(int new_state, time_t now) {
+static void
+hibernate_begin(int new_state, time_t now)
+{
   connection_t *conn;
   or_options_t *options = get_options();
 
@@ -689,8 +697,8 @@ static void hibernate_begin(int new_state, time_t now) {
 
 /** Called when we've been hibernating and our timeout is reached. */
 static void
-hibernate_end(int new_state) {
-
+hibernate_end(int new_state)
+{
   tor_assert(hibernate_state == HIBERNATE_STATE_LOWBANDWIDTH ||
              hibernate_state == HIBERNATE_STATE_DORMANT);
 
@@ -704,20 +712,23 @@ hibernate_end(int new_state) {
 
 /** A wrapper around hibernate_begin, for when we get SIGINT. */
 void
-hibernate_begin_shutdown(void) {
+hibernate_begin_shutdown(void)
+{
   hibernate_begin(HIBERNATE_STATE_EXITING, time(NULL));
 }
 
 /** Return true iff we are currently hibernating. */
 int
-we_are_hibernating(void) {
+we_are_hibernating(void)
+{
   return hibernate_state != HIBERNATE_STATE_LIVE;
 }
 
 /** If we aren't currently dormant, close all connections and become
  * dormant. */
 static void
-hibernate_go_dormant(time_t now) {
+hibernate_go_dormant(time_t now)
+{
   connection_t *conn;
 
   if (hibernate_state == HIBERNATE_STATE_DORMANT)
@@ -780,7 +791,9 @@ hibernate_end_time_elapsed(time_t now)
 /** Consider our environment and decide if it's time
  * to start/stop hibernating.
  */
-void consider_hibernation(time_t now) {
+void
+consider_hibernation(time_t now)
+{
   int accounting_enabled = get_options()->AccountingMax != 0;
   char buf[ISO_TIME_LEN+1];
 

@@ -122,7 +122,8 @@ remove_directory(void)
 }
 
 static void
-test_buffers(void) {
+test_buffers(void)
+{
   char str[256];
   char str2[256];
 
@@ -599,7 +600,8 @@ test_crypto_s2k(void)
 }
 
 static void
-test_util(void) {
+test_util(void)
+{
   struct timeval start, end;
   struct tm a_time;
   smartlist_t *sl;
@@ -1428,7 +1430,8 @@ test_rend_fns(void)
 }
 
 int
-main(int c, char**v) {
+main(int c, char**v)
+{
   or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
   network_init();
   options_init(options);

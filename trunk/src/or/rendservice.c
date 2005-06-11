@@ -63,7 +63,8 @@ static smartlist_t *rend_service_list = NULL;
 
 /** Release the storage held by <b>service</b>.
  */
-static void rend_service_free(rend_service_t *service)
+static void
+rend_service_free(rend_service_t *service)
 {
   if (!service) return;
   tor_free(service->directory);
@@ -82,7 +83,8 @@ static void rend_service_free(rend_service_t *service)
 
 /** Release all the storage held in rend_service_list.
  */
-void rend_service_free_all(void)
+void
+rend_service_free_all(void)
 {
   if (!rend_service_list) {
     return;
@@ -95,7 +97,8 @@ void rend_service_free_all(void)
 
 /** Validate <b>service</b> and add it to rend_service_list if possible.
  */
-static void add_service(rend_service_t *service)
+static void
+add_service(rend_service_t *service)
 {
   int i;
   rend_service_port_config_t *p;
@@ -131,7 +134,8 @@ static void add_service(rend_service_t *service)
  *
  * IP defaults to 127.0.0.1; RealPort defaults to VirtualPort.
  */
-static rend_service_port_config_t *parse_port_config(const char *string)
+static rend_service_port_config_t *
+parse_port_config(const char *string)
 {
   int virtport;
   int realport;
@@ -186,8 +190,8 @@ static rend_service_port_config_t *parse_port_config(const char *string)
  * failure.  (If <b>validate_only</b> is set, parse, warn and return as
  * normal, but don't actually change the configured services.)
  */
-
-int rend_config_services(or_options_t *options, int validate_only)
+int
+rend_config_services(or_options_t *options, int validate_only)
 {
   struct config_line_t *line;
   rend_service_t *service = NULL;
@@ -253,7 +257,8 @@ int rend_config_services(or_options_t *options, int validate_only)
 /** Replace the old value of <b>service</b>-\>desc with one that reflects
  * the other fields in service.
  */
-static void rend_service_update_descriptor(rend_service_t *service)
+static void
+rend_service_update_descriptor(rend_service_t *service)
 {
   rend_service_descriptor_t *d;
   circuit_t *circ;
@@ -288,7 +293,8 @@ static void rend_service_update_descriptor(rend_service_t *service)
 /** Load and/or generate private keys for all hidden services.  Return 0 on
  * success, -1 on failure.
  */
-int rend_service_load_keys(void)
+int
+rend_service_load_keys(void)
 {
   int i;
   rend_service_t *s;
@@ -828,7 +834,9 @@ upload_service_descriptor(rend_service_t *service)
  *  - Pick new intro points as necessary.
  *  - Launch circuits to any new intro points.
  */
-void rend_services_introduce(void) {
+void
+rend_services_introduce(void)
+{
   int i,j,r;
   routerinfo_t *router;
   rend_service_t *service;
@@ -937,7 +945,8 @@ void rend_services_introduce(void) {
  * from now, and pick it independently for each service.
  */
 void
-rend_consider_services_upload(time_t now) {
+rend_consider_services_upload(time_t now)
+{
   int i;
   rend_service_t *service;
   int rendpostperiod = get_options()->RendPostPeriod;
