@@ -34,7 +34,9 @@ static crypto_pk_env_t *identitykey=NULL;
 /** Replace the current onion key with <b>k</b>.  Does not affect lastonionkey;
  * to update onionkey correctly, call rotate_onion_key().
  */
-void set_onion_key(crypto_pk_env_t *k) {
+void
+set_onion_key(crypto_pk_env_t *k)
+{
   tor_mutex_acquire(key_lock);
   onionkey = k;
   onionkey_set_at = time(NULL);
@@ -44,7 +46,9 @@ void set_onion_key(crypto_pk_env_t *k) {
 
 /** Return the current onion key.  Requires that the onion key has been
  * loaded or generated. */
-crypto_pk_env_t *get_onion_key(void) {
+crypto_pk_env_t *
+get_onion_key(void)
+{
   tor_assert(onionkey);
   return onionkey;
 }
@@ -53,14 +57,17 @@ crypto_pk_env_t *get_onion_key(void) {
  * key rotation.  If no rotation has been performed since this process
  * started, return NULL.
  */
-crypto_pk_env_t *get_previous_onion_key(void) {
+crypto_pk_env_t *
+get_previous_onion_key(void)
+{
   return lastonionkey;
 }
 
 /** Store a copy of the current onion key into *<b>key</b>, and a copy
  * of the most recent onion key into *<b>last</b>.
  */
-void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
+void
+dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
 {
   tor_assert(key);
   tor_assert(last);
@@ -77,26 +84,34 @@ void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
  * when the process launched, or the time of the most recent key rotation since
  * the process launched.
  */
-time_t get_onion_key_set_at(void) {
+time_t
+get_onion_key_set_at(void)
+{
   return onionkey_set_at;
 }
 
 /** Set the current identity key to k.
  */
-void set_identity_key(crypto_pk_env_t *k) {
+void
+set_identity_key(crypto_pk_env_t *k)
+{
   identitykey = k;
 }
 
 /** Returns the current identity key; requires that the identity key has been
  * set.
  */
-crypto_pk_env_t *get_identity_key(void) {
+crypto_pk_env_t *
+get_identity_key(void)
+{
   tor_assert(identitykey);
   return identitykey;
 }
 
 /** Return true iff the identity key has been set. */
-int identity_key_is_set(void) {
+int
+identity_key_is_set(void)
+{
   return identitykey != NULL;
 }
 
@@ -107,7 +122,8 @@ int identity_key_is_set(void) {
  *     pending work.  (This will cause fresh cpuworkers to be generated.)
  *   - generate and upload a fresh routerinfo.
  */
-void rotate_onion_key(void)
+void
+rotate_onion_key(void)
 {
   char fname[512];
   char fname_prev[512];
@@ -153,7 +169,6 @@ static crypto_pk_env_t *
 init_key_from_file_name_changed(const char *fname_old,
                                 const char *fname_new)
 {
-
   if (file_status(fname_new) == FN_FILE || file_status(fname_old) != FN_FILE)
     /* The new filename is there, or both are, or neither is. */
     return init_key_from_file(fname_new);
@@ -171,7 +186,8 @@ init_key_from_file_name_changed(const char *fname_old,
  * create a new RSA key and save it in <b>fname</b>.  Return the read/created
  * key, or NULL on error.
  */
-crypto_pk_env_t *init_key_from_file(const char *fname)
+crypto_pk_env_t *
+init_key_from_file(const char *fname)
 {
   crypto_pk_env_t *prkey = NULL;
   FILE *file = NULL;
@@ -223,7 +239,9 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
 /** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context.
  */
-int init_keys(void) {
+int
+init_keys(void)
+{
   /* XXX009 Two problems with how this is called:
    * 1. It should be idempotent for servers, so we can call init_keys
    *    as much as we need to.
@@ -382,15 +400,23 @@ static int can_reach_or_port = 0;
 static int can_reach_dir_port = 0;
 
 /** Return 1 if or port is known reachable; else return 0. */
-int check_whether_orport_reachable(void) {
+int
+check_whether_orport_reachable(void)
+{
   return clique_mode(get_options()) || can_reach_or_port;
 }
+
 /** Return 1 if we don't have a dirport configured, or if it's reachable. */
-int check_whether_dirport_reachable(void) {
+int
+check_whether_dirport_reachable(void)
+{
   return !get_options()->DirPort || can_reach_dir_port;
 }
 
-void consider_testing_reachability(void) {
+/**DOCDOC*/
+void
+consider_testing_reachability(void)
+{
   routerinfo_t *me = router_get_my_routerinfo();
   if (!me) {
     log_fn(LOG_WARN,"Bug: router_get_my_routerinfo() did not find my routerinfo?");
@@ -411,7 +437,9 @@ void consider_testing_reachability(void) {
 }
 
 /** Annotate that we found our ORPort reachable. */
-void router_orport_found_reachable(void) {
+void
+router_orport_found_reachable(void)
+{
   if (!can_reach_or_port) {
     if (!clique_mode(get_options()))
       log(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.%s",
@@ -422,7 +450,9 @@ void router_orport_found_reachable(void) {
 }
 
 /** Annotate that we found our DirPort reachable. */
-void router_dirport_found_reachable(void) {
+void
+router_dirport_found_reachable(void)
+{
   if (!can_reach_dir_port) {
     log(LOG_NOTICE,"Your DirPort is reachable from the outside. Excellent.");
     can_reach_dir_port = 1;
@@ -430,7 +460,9 @@ void router_dirport_found_reachable(void) {
 }
 
 /** Our router has just moved to a new IP. Reset stats. */
-void server_has_changed_ip(void) {
+void
+server_has_changed_ip(void)
+{
   stats_n_seconds_working = 0;
   can_reach_or_port = 0;
   can_reach_dir_port = 0;
@@ -440,18 +472,24 @@ void server_has_changed_ip(void) {
 /** Return true iff we believe ourselves to be an authoritative
  * directory server.
  */
-int authdir_mode(or_options_t *options) {
+int
+authdir_mode(or_options_t *options)
+{
   return options->AuthoritativeDir != 0;
 }
 /** Return true iff we try to stay connected to all ORs at once.
  */
-int clique_mode(or_options_t *options) {
+int
+clique_mode(or_options_t *options)
+{
   return authdir_mode(options);
 }
 
 /** Return true iff we are trying to be a server.
  */
-int server_mode(or_options_t *options) {
+int
+server_mode(or_options_t *options)
+{
   if (options->ClientOnly) return 0;
   return (options->ORPort != 0 || options->ORBindAddress);
 }
@@ -461,16 +499,25 @@ static int server_is_advertised=0;
 
 /** Return true iff we have published our descriptor lately.
  */
-int advertised_server_mode(void) {
+int
+advertised_server_mode(void)
+{
   return server_is_advertised;
 }
 
-static void set_server_advertised(int s) {
+/**
+ * Called with a boolean: set whether we have recently published our descriptor.
+ */
+static void
+set_server_advertised(int s)
+{
   server_is_advertised = s;
 }
 
 /** Return true iff we are trying to be a socks proxy. */
-int proxy_mode(or_options_t *options) {
+int
+proxy_mode(or_options_t *options)
+{
   return (options->SocksPort != 0 || options->SocksBindAddress);
 }
 
@@ -484,7 +531,9 @@ int proxy_mode(or_options_t *options) {
  * - We believe we are reachable from the outside; or
  * - We have the AuthoritativeDirectory option set.
  */
-static int decide_if_publishable_server(time_t now) {
+static int
+decide_if_publishable_server(time_t now)
+{
   or_options_t *options = get_options();
 
   if (options->ClientOnly)
@@ -499,7 +548,12 @@ static int decide_if_publishable_server(time_t now) {
   return check_whether_orport_reachable();
 }
 
-void consider_publishable_server(time_t now, int force) {
+/** Initiate server descriptor upload as reasonable (if server is publishable,
+ * etc).  <b>force</b> is as for router_upload_dir_desc_to_dirservers.
+ */
+void
+consider_publishable_server(time_t now, int force)
+{
   if (decide_if_publishable_server(now)) {
     set_server_advertised(1);
     if (router_rebuild_descriptor(force) == 0)
@@ -517,7 +571,9 @@ void consider_publishable_server(time_t now, int force) {
  * other ORs we know about. Otherwise, open connections to those we
  * think are in clique mode.
  */
-void router_retry_connections(void) {
+void
+router_retry_connections(void)
+{
   int i;
   routerinfo_t *router;
   routerlist_t *rl;
@@ -544,7 +600,9 @@ void router_retry_connections(void) {
 
 /** Return true iff this OR should try to keep connections open to all
  * other ORs. */
-int router_is_clique_mode(routerinfo_t *router) {
+int
+router_is_clique_mode(routerinfo_t *router)
+{
   if (router_digest_is_trusted_dir(router->identity_digest))
     return 1;
   return 0;
@@ -565,7 +623,9 @@ static int desc_needs_upload = 0;
  * descriptor successfully yet, try to upload our signed descriptor to
  * all the directory servers we know about.
  */
-void router_upload_dir_desc_to_dirservers(int force) {
+void
+router_upload_dir_desc_to_dirservers(int force)
+{
   const char *s;
 
   s = router_get_my_descriptor();
@@ -582,7 +642,8 @@ void router_upload_dir_desc_to_dirservers(int force) {
 /** OR only: Check whether my exit policy says to allow connection to
  * conn.  Return false if we accept; true if we reject.
  */
-int router_compare_to_my_exit_policy(connection_t *conn)
+int
+router_compare_to_my_exit_policy(connection_t *conn)
 {
   tor_assert(desc_routerinfo);
 
@@ -597,7 +658,8 @@ int router_compare_to_my_exit_policy(connection_t *conn)
 
 /** Return true iff I'm a server and <b>digest</b> is equal to
  * my identity digest. */
-int router_digest_is_me(const char *digest)
+int
+router_digest_is_me(const char *digest)
 {
   routerinfo_t *me = router_get_my_routerinfo();
   if (!me || memcmp(me->identity_digest, digest, DIGEST_LEN))
@@ -606,14 +668,16 @@ int router_digest_is_me(const char *digest)
 }
 
 /** A wrapper around router_digest_is_me(). */
-int router_is_me(routerinfo_t *router)
+int
+router_is_me(routerinfo_t *router)
 {
   return router_digest_is_me(router->identity_digest);
 }
 
 /** Return a routerinfo for this OR, rebuilding a fresh one if
  * necessary.  Return NULL on error, or if called on an OP. */
-routerinfo_t *router_get_my_routerinfo(void)
+routerinfo_t *
+router_get_my_routerinfo(void)
 {
   if (!server_mode(get_options()))
     return NULL;
@@ -628,7 +692,9 @@ routerinfo_t *router_get_my_routerinfo(void)
 /** OR only: Return a signed server descriptor for this OR, rebuilding a fresh
  * one if necessary.  Return NULL on error.
  */
-const char *router_get_my_descriptor(void) {
+const char *
+router_get_my_descriptor(void)
+{
   if (!desc_routerinfo) {
     if (router_rebuild_descriptor(1))
       return NULL;
@@ -641,7 +707,9 @@ const char *router_get_my_descriptor(void) {
  * a fresh routerinfo and signed server descriptor for this OR.
  * Return 0 on success, -1 on error.
  */
-int router_rebuild_descriptor(int force) {
+int
+router_rebuild_descriptor(int force)
+{
   routerinfo_t *ri;
   uint32_t addr;
   char platform[256];
@@ -720,7 +788,8 @@ mark_my_descriptor_dirty(void)
  * string describing the version of Tor and the operating system we're
  * currently running on.
  */
-void get_platform_str(char *platform, size_t len)
+void
+get_platform_str(char *platform, size_t len)
 {
   tor_snprintf(platform, len, "Tor %s on %s",
            VERSION, get_uname());
@@ -738,8 +807,10 @@ void get_platform_str(char *platform, size_t len)
  * result into <b>s</b>, using at most <b>maxlen</b> bytes.  Return -1 on
  * failure, and the number of bytes used on success.
  */
-int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
-                                 crypto_pk_env_t *ident_key) {
+int
+router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
+                             crypto_pk_env_t *ident_key)
+{
   char *onion_pkey; /* Onion key, PEM-encoded. */
   char *identity_pkey; /* Identity key, PEM-encoded. */
   char digest[20];
@@ -936,7 +1007,8 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 }
 
 /** Return true iff <b>s</b> is a legally valid server nickname. */
-int is_legal_nickname(const char *s)
+int
+is_legal_nickname(const char *s)
 {
   size_t len;
   tor_assert(s);
@@ -946,7 +1018,8 @@ int is_legal_nickname(const char *s)
 }
 /** Return true iff <b>s</b> is a legally valid server nickname or
  * hex-encoded identity-key digest. */
-int is_legal_nickname_or_hexdigest(const char *s)
+int
+is_legal_nickname_or_hexdigest(const char *s)
 {
   size_t len;
   tor_assert(s);
@@ -958,7 +1031,8 @@ int is_legal_nickname_or_hexdigest(const char *s)
 }
 
 /** Release all resources held in router keys. */
-void router_free_all_keys(void)
+void
+router_free_all_keys(void)
 {
   if (onionkey)
     crypto_free_pk_env(onionkey);

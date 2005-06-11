@@ -76,7 +76,8 @@ static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf);
  * beginning. This operation is relatively expensive, so it shouldn't
  * be used e.g. for every single read or write.
  */
-static void buf_normalize(buf_t *buf)
+static void
+buf_normalize(buf_t *buf)
 {
   check();
   if (buf->cur + buf->datalen <= buf->mem+buf->len) {
@@ -96,7 +97,8 @@ static void buf_normalize(buf_t *buf)
 }
 
 /** Return the point in the buffer where the next byte will get stored. */
-static INLINE char *_buf_end(buf_t *buf)
+static INLINE char *
+_buf_end(buf_t *buf)
 {
   char *next = buf->cur + buf->datalen;
   char *end = buf->mem + buf->len;
@@ -105,7 +107,8 @@ static INLINE char *_buf_end(buf_t *buf)
 
 /** If the pointer <b>cp</b> has passed beyond the end of the buffer, wrap it
  * around. */
-static INLINE char *_wrap_ptr(buf_t *buf, char *cp) {
+static INLINE char *
+_wrap_ptr(buf_t *buf, char *cp) {
   return (cp >= buf->mem + buf->len) ? (cp - buf->len) : cp;
 }
 
@@ -114,7 +117,8 @@ static INLINE char *_wrap_ptr(buf_t *buf, char *cp) {
  * at <b>at</b>, and set *<b>more_len</b> to the number of bytes starting
  * at <b>buf-&gt;mem</b>.  Otherwise, set *<b>more_len</b> to 0.
  */
-static INLINE void _split_range(buf_t *buf, char *at, size_t *len,
+static INLINE void
+_split_range(buf_t *buf, char *at, size_t *len,
                                 size_t *more_len)
 {
   char *eos = at + *len;
@@ -128,7 +132,8 @@ static INLINE void _split_range(buf_t *buf, char *at, size_t *len,
 }
 
 /** Change a buffer's capacity. <b>new_capacity</b> must be \>= buf->datalen. */
-static void buf_resize(buf_t *buf, size_t new_capacity)
+static void
+buf_resize(buf_t *buf, size_t new_capacity)
 {
   off_t offset;
 #ifdef CHECK_AFTER_RESIZE
@@ -225,7 +230,8 @@ static void buf_resize(buf_t *buf, size_t new_capacity)
  * it so that it can.  (The new size will be a power of 2 times the old
  * size.)
  */
-static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
+static INLINE int
+buf_ensure_capacity(buf_t *buf, size_t capacity)
 {
   size_t new_len;
   if (buf->len >= capacity)  /* Don't grow if we're already big enough. */
@@ -251,7 +257,8 @@ static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
  * one of the above no longer holds.  (We shrink the buffer by
  * dividing by powers of 2.)
  */
-static INLINE void buf_shrink_if_underfull(buf_t *buf) {
+static INLINE void
+buf_shrink_if_underfull(buf_t *buf) {
   size_t new_len;
   /* If the buffer is at least 1/8 full, or if shrinking the buffer would
    * put it under MIN_GREEDY_SHRINK_SIZE, don't do it. */
@@ -298,7 +305,8 @@ buf_shrink(buf_t *buf)
 
 /** Remove the first <b>n</b> bytes from buf.
  */
-static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
+static INLINE void
+buf_remove_from_front(buf_t *buf, size_t n) {
   tor_assert(buf->datalen >= n);
   buf->datalen -= n;
   buf_total_used -= n;
@@ -312,7 +320,8 @@ static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
 }
 
 /** Make sure that the memory in buf ends with a zero byte. */
-static INLINE int buf_nul_terminate(buf_t *buf)
+static INLINE int
+buf_nul_terminate(buf_t *buf)
 {
   if (buf_ensure_capacity(buf,buf->datalen+1)<0)
     return -1;
@@ -322,7 +331,8 @@ static INLINE int buf_nul_terminate(buf_t *buf)
 
 /** Create and return a new buf with capacity <b>size</b>.
  */
-buf_t *buf_new_with_capacity(size_t size) {
+buf_t *
+buf_new_with_capacity(size_t size) {
   buf_t *buf;
   buf = tor_malloc_zero(sizeof(buf_t));
   buf->magic = BUFFER_MAGIC;
@@ -336,13 +346,15 @@ buf_t *buf_new_with_capacity(size_t size) {
 }
 
 /** Allocate and return a new buffer with default capacity. */
-buf_t *buf_new()
+buf_t *
+buf_new(void)
 {
   return buf_new_with_capacity(INITIAL_BUF_SIZE);
 }
 
 /** Remove all data from <b>buf</b> */
-void buf_clear(buf_t *buf)
+void
+buf_clear(buf_t *buf)
 {
   buf_total_used -= buf->datalen;
   buf->datalen = 0;
@@ -350,28 +362,33 @@ void buf_clear(buf_t *buf)
 }
 
 /** Return the number of bytes stored in <b>buf</b> */
-size_t buf_datalen(const buf_t *buf)
+size_t
+buf_datalen(const buf_t *buf)
 {
   return buf->datalen;
 }
 
 /** Return the maximum bytes that can be stored in <b>buf</b> before buf
  * needs to resize. */
-size_t buf_capacity(const buf_t *buf)
+size_t
+buf_capacity(const buf_t *buf)
 {
   return buf->len;
 }
 
 /** For testing only: Return a pointer to the raw memory stored in <b>buf</b>.
  */
-const char *_buf_peek_raw_buffer(const buf_t *buf)
+const char *
+_buf_peek_raw_buffer(const buf_t *buf)
 {
   return buf->cur;
 }
 
 /** Release storage held by <b>buf</b>.
  */
-void buf_free(buf_t *buf) {
+void
+buf_free(buf_t *buf)
+{
   assert_buf_ok(buf);
   buf->magic = 0xDEADBEEF;
   free(RAW_MEM(buf->mem));
@@ -380,8 +397,15 @@ void buf_free(buf_t *buf) {
   tor_free(buf);
 }
 
-static INLINE int read_to_buf_impl(int s, size_t at_most, buf_t *buf,
-                            char *pos, int *reached_eof)
+/** Helper for read_to_buf: read no more than at_most bytes from
+ * socket s into buffer buf, starting at the position pos.  (Does not
+ * check for overflow.)  Set *reached_eof to true on EOF.  Return
+ * number of bytes read on success, 0 if the read would block, -1 on
+ * failure.
+ */
+static INLINE int
+read_to_buf_impl(int s, size_t at_most, buf_t *buf,
+                 char *pos, int *reached_eof)
 {
   int read_result;
 
@@ -414,7 +438,8 @@ static INLINE int read_to_buf_impl(int s, size_t at_most, buf_t *buf,
  * else return the number of bytes read.  Return 0 if recv() would
  * block.
  */
-int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
+int
+read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
 {
   int r;
   char *next;
@@ -456,6 +481,11 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
   return r;
 }
 
+/** Helper for read_to_buf_tls: read no more than at_most bytes from
+ * the TLS connection tlsinto buffer buf, starting at the position
+ * next.  (Does not check for overflow.)  Return number of bytes read
+ * on success, 0 if the read would block, -1 on failure.
+ */
 static INLINE int
 read_to_buf_tls_impl(tor_tls *tls, size_t at_most, buf_t *buf, char *next)
 {
@@ -495,7 +525,9 @@ read_to_buf_tls_impl(tor_tls *tls, size_t at_most, buf_t *buf, char *next)
  * events: sometimes, before a TLS stream can read, the network must be
  * ready to write -- or vice versa.
  */
-int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
+int
+read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf)
+{
   int r;
   char *next;
   size_t at_start;
@@ -537,6 +569,10 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   return r;
 }
 
+/** Helper for flush_buf: try to write sz bytes from buffer buf onto
+ * socket s.  On success, deduct the bytes written from *buf_flushlen.
+ * Return the number of bytes written on success, -1 on failure.
+ */
 static INLINE int
 flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
@@ -565,7 +601,8 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
  * from the buffer.  Return the number of bytes written on success,
  * -1 on failure.  Return 0 if write() would block.
  */
-int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
+int
+flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
 {
   int r;
   size_t flushed = 0;
@@ -604,6 +641,10 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   return flushed;
 }
 
+/** Helper for flush_buf_tls: try to write sz bytes from buffer buf onto
+ * TLS object tls.  On success, deduct the bytes written from *buf_flushlen.
+ * Return the number of bytes written on success, -1 on failure.
+ */
 static INLINE int
 flush_buf_tls_impl(tor_tls *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
@@ -699,7 +740,10 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
   return buf->datalen;
 }
 
-static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf)
+/** Helper: copy the first string_len bytes from buf onto string.
+ */
+static INLINE void
+peek_from_buf(char *string, size_t string_len, buf_t *buf)
 {
   size_t len2;
 
@@ -724,7 +768,8 @@ static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf)
  * into <b>string</b>.  Return the new buffer size.  <b>string_len</b> must be \<=
  * the number of bytes on the buffer.
  */
-int fetch_from_buf(char *string, size_t string_len, buf_t *buf)
+int
+fetch_from_buf(char *string, size_t string_len, buf_t *buf)
 {
   /* There must be string_len bytes in buf; write them onto string,
    * then memmove buf back (that is, remove them from buf).
@@ -755,9 +800,11 @@ int fetch_from_buf(char *string, size_t string_len, buf_t *buf)
  *
  * Else, change nothing and return 0.
  */
-int fetch_from_buf_http(buf_t *buf,
-                        char **headers_out, size_t max_headerlen,
-                        char **body_out, size_t *body_used, size_t max_bodylen) {
+int
+fetch_from_buf_http(buf_t *buf,
+                    char **headers_out, size_t max_headerlen,
+                    char **body_out, size_t *body_used, size_t max_bodylen)
+{
   char *headers, *body, *p;
   size_t headerlen, bodylen, contentlen;
 
@@ -846,7 +893,9 @@ int fetch_from_buf_http(buf_t *buf,
  *
  * If returning 0 or -1, <b>req->address</b> and <b>req->port</b> are undefined.
  */
-int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
+int
+fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
+{
   unsigned char len;
   char tmpbuf[INET_NTOA_BUF_LEN];
   uint32_t destip;
@@ -1059,8 +1108,9 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
  *
  * Return -1 on error.
  */
-int fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
-                           char **body_out)
+int
+fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
+                       char **body_out)
 {
   uint32_t msglen;
   uint16_t type;

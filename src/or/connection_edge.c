@@ -26,8 +26,8 @@ static int address_is_in_virtual_range(const char *addr);
  */
 void
 _connection_mark_unattached_ap(connection_t *conn, int endreason,
-                               int line, const char *file) {
-
+                               int line, const char *file)
+{
   tor_assert(conn->type == CONN_TYPE_AP);
   conn->has_sent_end = 1; /* no circ yet */
 
@@ -57,7 +57,9 @@ _connection_mark_unattached_ap(connection_t *conn, int endreason,
 
 /** There was an EOF. Send an end and mark the connection for close.
  */
-int connection_edge_reached_eof(connection_t *conn) {
+int
+connection_edge_reached_eof(connection_t *conn)
+{
 #ifdef HALF_OPEN
   /* eof reached; we're done reading, but we might want to write more. */
   conn->done_receiving = 1;
@@ -98,8 +100,9 @@ int connection_edge_reached_eof(connection_t *conn) {
  * Mark and return -1 if there was an unexpected error with the conn,
  * else return 0.
  */
-int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
-
+int
+connection_edge_process_inbuf(connection_t *conn, int package_partial)
+{
   tor_assert(conn);
   tor_assert(CONN_IS_EDGE(conn));
 
@@ -138,7 +141,9 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
 /** This edge needs to be closed, because its circuit has closed.
  * Mark it for close and return 0.
  */
-int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
+int
+connection_edge_destroy(uint16_t circ_id, connection_t *conn)
+{
   tor_assert(CONN_IS_EDGE(conn));
 
   if (!conn->marked_for_close) {
@@ -228,7 +233,9 @@ connection_edge_end_errno(connection_t *conn, crypt_path_t *cpath_layer)
  * If <b>conn</b> is broken, mark it for close and return -1, else
  * return 0.
  */
-int connection_edge_finished_flushing(connection_t *conn) {
+int
+connection_edge_finished_flushing(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(CONN_IS_EDGE(conn));
 
@@ -256,7 +263,8 @@ int connection_edge_finished_flushing(connection_t *conn) {
 /** Connected handler for exit connections: start writing pending
  * data, deliver 'CONNECTED' relay cells as appropriate, and check
  * any pending data that may have been received. */
-int connection_edge_finished_connecting(connection_t *conn)
+int
+connection_edge_finished_connecting(connection_t *conn)
 {
   char connected_payload[4];
 
@@ -296,7 +304,9 @@ int connection_edge_finished_connecting(connection_t *conn)
  * For rendezvous streams, simply give up after 45 seconds (with no
  * retry attempt).
  */
-void connection_ap_expire_beginning(void) {
+void
+connection_ap_expire_beginning(void)
+{
   connection_t **carray;
   connection_t *conn;
   circuit_t *circ;
@@ -366,7 +376,8 @@ void connection_ap_expire_beginning(void) {
 /** Tell any AP streams that are waiting for a new circuit that one is
  * available.
  */
-void connection_ap_attach_pending(void)
+void
+connection_ap_attach_pending(void)
 {
   connection_t **carray;
   connection_t *conn;
@@ -455,27 +466,33 @@ static strmap_t *addressmap=NULL;
 static strmap_t *virtaddress_reversemap=NULL;
 
 /** Initialize addressmap. */
-void addressmap_init(void) {
+void
+addressmap_init(void)
+{
   addressmap = strmap_new();
   virtaddress_reversemap = strmap_new();
 }
 
 /** Free the memory associated with the addressmap entry <b>_ent</b>. */
 static void
-addressmap_ent_free(void *_ent) {
+addressmap_ent_free(void *_ent)
+{
   addressmap_entry_t *ent = _ent;
   tor_free(ent->new_address);
   tor_free(ent);
 }
 
+/** Free storage held by a virtaddress_entry_t* entry in <b>ent</b> */
 static void
-addressmap_virtaddress_ent_free(void *_ent) {
+addressmap_virtaddress_ent_free(void *_ent)
+{
   virtaddress_entry_t *ent = _ent;
   tor_free(ent->ipv4_address);
   tor_free(ent->hostname_address);
   tor_free(ent);
 }
 
+/** Free storage held by a virtaddress_entry_t* entry in <b>ent</b> */
 static void
 addressmap_virtaddress_remove(const char *addr, addressmap_entry_t *ent)
 {
@@ -521,13 +538,17 @@ addressmap_clear_transient(void)
 /** Clean out entries from the addressmap cache that were
  * added long enough ago that they are no longer valid.
  */
-void addressmap_clean(time_t now) {
+void
+addressmap_clean(time_t now)
+{
   addressmap_get_mappings(NULL, 2, now);
 }
 
 /** Free all the elements in the addressmap, and free the addressmap
  * itself. */
-void addressmap_free_all(void) {
+void
+addressmap_free_all(void)
+{
   strmap_free(addressmap, addressmap_ent_free);
   addressmap = NULL;
   strmap_free(virtaddress_reversemap, addressmap_virtaddress_ent_free);
@@ -537,7 +558,9 @@ void addressmap_free_all(void) {
  * more rewrites; but don't get into an infinite loop.
  * Don't write more than maxlen chars into address.
  */
-void addressmap_rewrite(char *address, size_t maxlen) {
+void
+addressmap_rewrite(char *address, size_t maxlen)
+{
   addressmap_entry_t *ent;
   int rewrites;
 
@@ -557,7 +580,9 @@ void addressmap_rewrite(char *address, size_t maxlen) {
 }
 
 /** Return 1 if <b>address</b> is already registered, else return 0 */
-int addressmap_already_mapped(const char *address) {
+int
+addressmap_already_mapped(const char *address)
+{
   return strmap_get(addressmap, address) ? 1 : 0;
 }
 
@@ -572,7 +597,9 @@ int addressmap_already_mapped(const char *address) {
  * If <b>new_address</b> is NULL, or equal to <b>address</b>, remove
  * any mappings that exist from <b>address</b>.
  */
-void addressmap_register(const char *address, char *new_address, time_t expires) {
+void
+addressmap_register(const char *address, char *new_address, time_t expires)
+{
   addressmap_entry_t *ent;
 
   ent = strmap_get(addressmap, address);
@@ -616,7 +643,8 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
  * Increment the number of resolve failures we have on record
  * for it, and then return that number.
  */
-int client_dns_incr_failures(const char *address)
+int
+client_dns_incr_failures(const char *address)
 {
   addressmap_entry_t *ent;
   ent = strmap_get(addressmap,address);
@@ -638,7 +666,8 @@ int client_dns_incr_failures(const char *address)
  * If <b>exitname</b> is defined, then append the addresses with
  * ".exitname.exit" before registering the mapping.
  */
-void client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname)
+void
+client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname)
 {
   struct in_addr in;
   char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_HEX_NICKNAME_LEN+10];
@@ -802,7 +831,8 @@ addressmap_register_virtual_address(int type, char *new_address)
  * colons. Return 0 if it's fine.
  */
 static int
-address_is_invalid_destination(const char *address) {
+address_is_invalid_destination(const char *address)
+{
   /* FFFF should flesh this out */
   if (strchr(address,':'))
     return 1;
@@ -854,7 +884,9 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires)
  * Return -1 if an unexpected error with conn (and it should be marked
  * for close), else return 0.
  */
-static int connection_ap_handshake_process_socks(connection_t *conn) {
+static int
+connection_ap_handshake_process_socks(connection_t *conn)
+{
   socks_request_t *socks;
   int sockshere;
   hostname_type_t addresstype;
@@ -1055,7 +1087,9 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 /** Iterate over the two bytes of stream_id until we get one that is not
  * already in use; return it. Return 0 if can't get a unique stream_id.
  */
-static uint16_t get_unique_stream_id_by_circ(circuit_t *circ) {
+static uint16_t
+get_unique_stream_id_by_circ(circuit_t *circ)
+{
   connection_t *tmpconn;
   uint16_t test_stream_id;
   uint32_t attempts=0;
@@ -1080,7 +1114,8 @@ again:
  *
  * If ap_conn is broken, mark it for close and return -1. Else return 0.
  */
-int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
+int
+connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
@@ -1122,7 +1157,8 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
  *
  * If ap_conn is broken, mark it for close and return -1. Else return 0.
  */
-int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
+int
+connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
 {
   int payload_len;
   const char *string_addr;
@@ -1163,7 +1199,9 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
  *
  * Return the other end of the socketpair, or -1 if error.
  */
-int connection_ap_make_bridge(char *address, uint16_t port) {
+int
+connection_ap_make_bridge(char *address, uint16_t port)
+{
   int fd[2];
   connection_t *conn;
 
@@ -1220,10 +1258,11 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
  * -1 for unreachable; the answer should be in the format specified
  * in the socks extensions document.
  **/
-void connection_ap_handshake_socks_resolved(connection_t *conn,
-                                            int answer_type,
-                                            size_t answer_len,
-                                            const char *answer)
+void
+connection_ap_handshake_socks_resolved(connection_t *conn,
+                                       int answer_type,
+                                       size_t answer_len,
+                                       const char *answer)
 {
   char buf[256];
   size_t replylen;
@@ -1285,9 +1324,10 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
  *
  * If <b>reply</b> is undefined, <b>status</b> can't be 0.
  */
-void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         size_t replylen,
-                                         socks5_reply_status_t status) {
+void
+connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
+                                    size_t replylen,
+                                    socks5_reply_status_t status) {
   char buf[256];
   tor_assert(conn->socks_request); /* make sure it's an AP stream */
 
@@ -1341,7 +1381,9 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
  *
  * Return -1 if we want to tear down <b>circ</b>. Else return 0.
  */
-int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
+int
+connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
+{
   connection_t *n_stream;
   relay_header_t rh;
   char *address=NULL;
@@ -1449,7 +1491,9 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
  * Called when we receive a RELAY_RESOLVE cell 'cell' along the circuit 'circ';
  * begin resolving the hostname, and (eventually) reply with a RESOLVED cell.
  */
-int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
+int
+connection_exit_begin_resolve(cell_t *cell, circuit_t *circ)
+{
   connection_t *dummy_conn;
   relay_header_t rh;
 
@@ -1498,7 +1542,8 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
  * streams must not reveal what IP they connected to.)
  */
 void
-connection_exit_connect(connection_t *conn) {
+connection_exit_connect(connection_t *conn)
+{
   char connected_payload[4];
   uint32_t addr;
   uint16_t port;
@@ -1577,7 +1622,9 @@ connection_exit_connect(connection_t *conn) {
 /** Return 1 if <b>conn</b> is a rendezvous stream, or 0 if
  * it is a general stream.
  */
-int connection_edge_is_rendezvous_stream(connection_t *conn) {
+int
+connection_edge_is_rendezvous_stream(connection_t *conn)
+{
   tor_assert(conn);
   if (*conn->rend_query) /* XXX */
     return 1;
@@ -1589,7 +1636,8 @@ int connection_edge_is_rendezvous_stream(connection_t *conn) {
  * (We might be uncertain if conn's destination address has not yet been
  * resolved.)
  */
-int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
+int
+connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -1648,6 +1696,8 @@ parse_socks_policy(void)
   }
 }
 
+/** Free all storage held by our SOCKS allow policy
+ */
 void
 free_socks_policy(void)
 {
@@ -1658,7 +1708,8 @@ free_socks_policy(void)
 /** Return 1 if <b>addr</b> is permitted to connect to our socks port,
  * based on <b>socks_policy</b>. Else return 0.
  */
-int socks_policy_permits_address(uint32_t addr)
+int
+socks_policy_permits_address(uint32_t addr)
 {
   int a;
 
@@ -1695,7 +1746,8 @@ set_exit_redirects(smartlist_t *lst)
  *     Return NORMAL_HOSTNAME and change nothing.
  */
 hostname_type_t
-parse_extended_hostname(char *address) {
+parse_extended_hostname(char *address)
+{
     char *s;
     char query[REND_SERVICE_ID_LEN+1];
 

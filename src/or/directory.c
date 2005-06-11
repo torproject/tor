@@ -85,6 +85,7 @@ parse_dir_policy(void)
   }
 }
 
+/** Free storage used to hold parsed directory policy */
 void
 free_dir_policy(void)
 {
@@ -95,7 +96,8 @@ free_dir_policy(void)
 /** Return 1 if <b>addr</b> is permitted to connect to our dir port,
  * based on <b>dir_policy</b>. Else return 0.
  */
-int dir_policy_permits_address(uint32_t addr)
+int
+dir_policy_permits_address(uint32_t addr)
 {
   int a;
 
@@ -110,8 +112,11 @@ int dir_policy_permits_address(uint32_t addr)
   return 0;
 }
 
+/** Return true iff the directory purpose 'purpose' must use an
+ * anonymous connection to a directory. */
 static int
-purpose_is_private(uint8_t purpose) {
+purpose_is_private(uint8_t purpose)
+{
   if (purpose == DIR_PURPOSE_FETCH_DIR ||
       purpose == DIR_PURPOSE_UPLOAD_DIR ||
       purpose == DIR_PURPOSE_FETCH_RUNNING_LIST)
@@ -363,7 +368,8 @@ directory_initiate_command(const char *address, uint32_t addr,
 static void
 directory_send_command(connection_t *conn, const char *platform,
                        int purpose, const char *resource,
-                       const char *payload, size_t payload_len) {
+                       const char *payload, size_t payload_len)
+{
   char tmp[8192];
   char proxystring[256];
   char proxyauthstring[256];
@@ -846,7 +852,10 @@ connection_dir_client_reached_eof(connection_t *conn)
   return 0;
 }
 
-int connection_dir_reached_eof(connection_t *conn) {
+/** Called when a directory connection reaches EOF */
+int
+connection_dir_reached_eof(connection_t *conn)
+{
   int retval;
   if (conn->state != DIR_CONN_STATE_CLIENT_READING) {
     log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
@@ -863,8 +872,8 @@ int connection_dir_reached_eof(connection_t *conn) {
 /** Read handler for directory connections.  (That's connections <em>to</em>
  * directory servers and connections <em>at</em> directory servers.)
  */
-int connection_dir_process_inbuf(connection_t *conn) {
-
+int connection_dir_process_inbuf(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
 
@@ -910,7 +919,8 @@ write_http_status_line(connection_t *conn, int status,
  * Else return 0.
  */
 static int
-already_fetching_directory(int purpose) {
+already_fetching_directory(int purpose)
+{
   int i, n;
   connection_t *conn;
   connection_t **carray;
@@ -1050,7 +1060,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
  * 400.  Always return 0. */
 static int
 directory_handle_command_post(connection_t *conn, char *headers,
-                                         char *body, size_t body_len)
+                              char *body, size_t body_len)
 {
   const char *cp;
   char *url;
@@ -1116,7 +1126,9 @@ directory_handle_command_post(connection_t *conn, char *headers,
  * from the inbuf, try to process it; otherwise, leave it on the
  * buffer.  Return a 0 on success, or -1 on error.
  */
-static int directory_handle_command(connection_t *conn) {
+static int
+directory_handle_command(connection_t *conn)
+{
   char *headers=NULL, *body=NULL;
   size_t body_len=0;
   int r;
@@ -1155,8 +1167,9 @@ static int directory_handle_command(connection_t *conn) {
  * been flushed.  Close the connection or wait for a response as
  * appropriate.
  */
-int connection_dir_finished_flushing(connection_t *conn) {
-
+int
+connection_dir_finished_flushing(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
 
@@ -1180,7 +1193,8 @@ int connection_dir_finished_flushing(connection_t *conn) {
 
 /** Connected handler for directory connections: begin sending data to the
  * server */
-int connection_dir_finished_connecting(connection_t *conn)
+int
+connection_dir_finished_connecting(connection_t *conn)
 {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);

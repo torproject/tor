@@ -101,7 +101,8 @@ const char compat_c_id[] = "$Id$";
  * easiest to emulate "return -1" with conformant implementations than
  * it is to emulate "return number that would be written" with
  * non-conformant implementations.) */
-int tor_snprintf(char *str, size_t size, const char *format, ...)
+int
+tor_snprintf(char *str, size_t size, const char *format, ...)
 {
   va_list ap;
   int r;
@@ -114,7 +115,8 @@ int tor_snprintf(char *str, size_t size, const char *format, ...)
 /** Replacement for vsnprintf; behavior differs as tor_snprintf differs from
  * snprintf.
  */
-int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
+int
+tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
 {
   int r;
   if (size == 0)
@@ -162,7 +164,8 @@ _tor_fix_source_file(const char *fname)
  * *(uint16_t*)(cp), but will not cause segfaults on platforms that forbid
  * unaligned memory access.
  */
-uint16_t get_uint16(const char *cp)
+uint16_t
+get_uint16(const char *cp)
 {
   uint16_t v;
   memcpy(&v,cp,2);
@@ -173,7 +176,8 @@ uint16_t get_uint16(const char *cp)
  * *(uint32_t*)(cp), but will not cause segfaults on platforms that forbid
  * unaligned memory access.
  */
-uint32_t get_uint32(const char *cp)
+uint32_t
+get_uint32(const char *cp)
 {
   uint32_t v;
   memcpy(&v,cp,4);
@@ -183,7 +187,8 @@ uint32_t get_uint32(const char *cp)
  * Set a 16-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
  * *(uint16_t)(cp) = v, but will not cause segfaults on platforms that forbid
  * unaligned memory access. */
-void set_uint16(char *cp, uint16_t v)
+void
+set_uint16(char *cp, uint16_t v)
 {
   memcpy(cp,&v,2);
 }
@@ -191,7 +196,8 @@ void set_uint16(char *cp, uint16_t v)
  * Set a 32-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
  * *(uint32_t)(cp) = v, but will not cause segfaults on platforms that forbid
  * unaligned memory access. */
-void set_uint32(char *cp, uint32_t v)
+void
+set_uint32(char *cp, uint32_t v)
 {
   memcpy(cp,&v,4);
 }
@@ -202,7 +208,8 @@ void set_uint32(char *cp, uint32_t v)
  * rename(2).  On windows, this removes 'to' first if it already exists.
  * Returns 0 on success.  Returns -1 and sets errno on failure.
  */
-int replace_file(const char *from, const char *to)
+int
+replace_file(const char *from, const char *to)
 {
 #ifndef MS_WINDOWS
   return rename(from,to);
@@ -226,7 +233,8 @@ int replace_file(const char *from, const char *to)
 
 /** Turn <b>socket</b> into a nonblocking socket.
  */
-void set_socket_nonblocking(int socket)
+void
+set_socket_nonblocking(int socket)
 {
 #ifdef MS_WINDOWS
   int nonblocking = 1;
@@ -419,7 +427,8 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap) {
 /** Call setuid and setgid to run as <b>user</b>:<b>group</b>.  Return 0 on
  * success.  On failure, log and return -1.
  */
-int switch_id(char *user, char *group) {
+int
+switch_id(char *user, char *group) {
 #ifndef MS_WINDOWS
   struct passwd *pw = NULL;
   struct group *gr = NULL;
@@ -490,7 +499,8 @@ get_user_homedir(const char *username)
  * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
  * but works on Windows and Solaris.)
  */
-int tor_inet_aton(const char *c, struct in_addr* addr)
+int
+tor_inet_aton(const char *c, struct in_addr* addr)
 {
 #ifdef HAVE_INET_ATON
   return inet_aton(c, addr);
@@ -517,7 +527,8 @@ int tor_inet_aton(const char *c, struct in_addr* addr)
  * (This function exists because standard windows gethostbyname
  * doesn't treat raw IP addresses properly.)
  */
-int tor_lookup_hostname(const char *name, uint32_t *addr)
+int
+tor_lookup_hostname(const char *name, uint32_t *addr)
 {
   /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
    * something.
@@ -744,7 +755,8 @@ spawn_func(int (*func)(void *), void *data)
 
 /** End the current thread/process.
  */
-void spawn_exit()
+void
+spawn_exit()
 {
 #if defined(USE_WIN32_THREADS)
   _endthread();
@@ -760,7 +772,9 @@ void spawn_exit()
 /** Set *timeval to the current time of day.  On error, log and terminate.
  * (Same as gettimeofday(timeval,NULL), but never returns -1.)
  */
-void tor_gettimeofday(struct timeval *timeval) {
+void
+tor_gettimeofday(struct timeval *timeval)
+{
 #ifdef HAVE_GETTIMEOFDAY
   if (gettimeofday(timeval, NULL)) {
     log_fn(LOG_ERR, "gettimeofday failed.");
@@ -785,7 +799,8 @@ void tor_gettimeofday(struct timeval *timeval) {
 
 #ifndef HAVE_LOCALTIME_R
 #ifdef TIME_FNS_NEED_LOCKS
-struct tm *tor_localtime_r(const time_t *timep, struct tm *result)
+struct tm *
+tor_localtime_r(const time_t *timep, struct tm *result)
 {
   struct tm *r;
   static tor_mutex_t *m=NULL;
@@ -798,7 +813,8 @@ struct tm *tor_localtime_r(const time_t *timep, struct tm *result)
   return result;
 }
 #else
-struct tm *tor_localtime_r(const time_t *timep, struct tm *result)
+struct tm *
+tor_localtime_r(const time_t *timep, struct tm *result)
 {
   struct tm *r;
   tor_assert(result);
@@ -811,7 +827,8 @@ struct tm *tor_localtime_r(const time_t *timep, struct tm *result)
 
 #ifndef HAVE_GMTIME_R
 #ifdef TIME_FNS_NEED_LOCKS
-struct tm *tor_gmtime_r(const time_t *timep, struct tm *result)
+struct tm *
+tor_gmtime_r(const time_t *timep, struct tm *result)
 {
   struct tm *r;
   static tor_mutex_t *m=NULL;
@@ -824,7 +841,8 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result)
   return result;
 }
 #else
-struct tm *tor_gmtime_r(const time_t *timep, struct tm *result)
+struct tm *
+tor_gmtime_r(const time_t *timep, struct tm *result)
 {
   struct tm *r;
   tor_assert(result);
@@ -839,7 +857,8 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result)
 struct tor_mutex_t {
   HANDLE handle;
 };
-tor_mutex_t *tor_mutex_new(void)
+tor_mutex_t *
+tor_mutex_new(void)
 {
   tor_mutex_t *m;
   m = tor_malloc_zero(sizeof(tor_mutex_t));
@@ -847,12 +866,14 @@ tor_mutex_t *tor_mutex_new(void)
   tor_assert(m->handle != NULL);
   return m;
 }
-void tor_mutex_free(tor_mutex_t *m)
+void
+tor_mutex_free(tor_mutex_t *m)
 {
   CloseHandle(m->handle);
   tor_free(m);
 }
-void tor_mutex_acquire(tor_mutex_t *m)
+void
+tor_mutex_acquire(tor_mutex_t *m)
 {
   DWORD r;
   r = WaitForSingleObject(m->handle, INFINITE);
@@ -867,7 +888,8 @@ void tor_mutex_acquire(tor_mutex_t *m)
       log_fn(LOG_WARN, "Failed to acquire mutex: %d", GetLastError());
   }
 }
-void tor_mutex_release(tor_mutex_t *m)
+void
+tor_mutex_release(tor_mutex_t *m)
 {
   BOOL r;
   r = ReleaseMutex(m->handle);
@@ -884,23 +906,27 @@ tor_get_thread_id(void)
 struct tor_mutex_t {
   pthread_mutex_t mutex;
 };
-tor_mutex_t *tor_mutex_new(void)
+tor_mutex_t *
+tor_mutex_new(void)
 {
   tor_mutex_t *mutex = tor_malloc_zero(sizeof(tor_mutex_t));
   pthread_mutex_init(&mutex->mutex, NULL);
   return mutex;
 }
-void tor_mutex_acquire(tor_mutex_t *m)
+void
+tor_mutex_acquire(tor_mutex_t *m)
 {
   tor_assert(m);
   pthread_mutex_lock(&m->mutex);
 }
-void tor_mutex_release(tor_mutex_t *m)
+void
+tor_mutex_release(tor_mutex_t *m)
 {
   tor_assert(m);
   pthread_mutex_unlock(&m->mutex);
 }
-void tor_mutex_free(tor_mutex_t *m)
+void
+tor_mutex_free(tor_mutex_t *m)
 {
   tor_assert(m);
   pthread_mutex_destroy(&m->mutex);
@@ -1007,7 +1033,8 @@ struct { int code; const char *msg; } windows_socket_errors[] = {
 /** There does not seem to be a strerror equivalent for winsock errors.
  * Naturally, we have to roll our own.
  */
-const char *tor_socket_strerror(int e)
+const char *
+tor_socket_strerror(int e)
 {
   int i;
   for (i=0; windows_socket_errors[i].code >= 0; ++i) {
@@ -1021,7 +1048,8 @@ const char *tor_socket_strerror(int e)
 /** Called before we make any calls to network-related functions.
  * (Some operating systems require their network libraries to be
  * initialized.) */
-int network_init(void)
+int
+network_init(void)
 {
 #ifdef MS_WINDOWS
   /* This silly exercise is necessary before windows will allow gethostbyname to work.

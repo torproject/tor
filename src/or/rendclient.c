@@ -53,7 +53,8 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
  * down introcirc if possible.
  */
 int
-rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
+rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
+{
   size_t payload_len;
   int r;
   char payload[RELAY_PAYLOAD_SIZE];
@@ -383,7 +384,9 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
  * with at least one intro point, move them to the next state;
  * else fail them.
  */
-void rend_client_desc_here(char *query) {
+void
+rend_client_desc_here(char *query)
+{
   connection_t *conn;
   rend_cache_entry_t *entry;
   time_t now = time(NULL);
@@ -419,7 +422,9 @@ void rend_client_desc_here(char *query) {
 /** strdup a nickname for a random introduction
  * point of query. return NULL if error.
  */
-char *rend_client_get_random_intro(char *query) {
+char *
+rend_client_get_random_intro(char *query)
+{
   int i;
   smartlist_t *sl;
   char *choice;

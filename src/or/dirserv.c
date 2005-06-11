@@ -196,7 +196,8 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
 /** If we are an authoritative dirserver, and the list of approved
  * servers contains one whose identity key digest is <b>digest</b>,
  * return that router's nickname.  Otherwise return NULL. */
-const char *dirserv_get_nickname_by_digest(const char *digest)
+const char *
+dirserv_get_nickname_by_digest(const char *digest)
 {
   char hexdigest[HEX_DIGEST_LEN+1];
   if (!fingerprint_list)
@@ -730,6 +731,7 @@ static size_t the_directory_len = 0;
 static char *the_directory_z = NULL;
 static size_t the_directory_z_len = 0;
 
+/** DOCDOC */
 typedef struct cached_dir_t {
   char *dir;
   char *dir_z;
@@ -745,8 +747,9 @@ static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0 };
 /** If we have no cached directory, or it is older than <b>when</b>, then
  * replace it with <b>directory</b>, published at <b>when</b>.
  */
-void dirserv_set_cached_directory(const char *directory, time_t when,
-                                  int is_running_routers)
+void
+dirserv_set_cached_directory(const char *directory, time_t when,
+                             int is_running_routers)
 {
   time_t now;
   cached_dir_t *d;
@@ -781,7 +784,8 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
 /** Set *<b>directory</b> to the most recently generated encoded signed
  * directory, generating a new one as necessary.  If not an authoritative
  * directory may return 0 if no directory is yet cached.*/
-size_t dirserv_get_directory(const char **directory, int compress)
+size_t
+dirserv_get_directory(const char **directory, int compress)
 {
   if (!get_options()->AuthoritativeDir) {
     cached_dir_t *d = &cached_directory;
@@ -807,7 +811,8 @@ size_t dirserv_get_directory(const char **directory, int compress)
 /**
  * Generate a fresh directory (authdirservers only.)
  */
-static int dirserv_regenerate_directory(void)
+static int
+dirserv_regenerate_directory(void)
 {
   char *new_directory=NULL;
 
@@ -859,7 +864,8 @@ static char *the_runningrouters_z=NULL;
 static size_t the_runningrouters_z_len=0;
 
 /** Replace the current running-routers list with a newly generated one. */
-static int generate_runningrouters(crypto_pk_env_t *private_key)
+static int
+generate_runningrouters(crypto_pk_env_t *private_key)
 {
   char *s=NULL, *cp;
   char *router_status=NULL;
@@ -942,7 +948,8 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 /** Set *<b>rr</b> to the most recently generated encoded signed
  * running-routers list, generating a new one as necessary.  Return the
  * size of the directory on success, and 0 on failure. */
-size_t dirserv_get_runningrouters(const char **rr, int compress)
+size_t
+dirserv_get_runningrouters(const char **rr, int compress)
 {
   if (!get_options()->AuthoritativeDir) {
     cached_dir_t *d = &cached_runningrouters;
@@ -1012,6 +1019,7 @@ dirserv_orconn_tls_done(const char *address,
   }
 }
 
+/** Release all storage used by the directory server. */
 void
 dirserv_free_all(void)
 {

@@ -43,13 +43,17 @@ static void process_pending_task(connection_t *cpuworker);
 
 /** Initialize the cpuworker subsystem.
  */
-void cpu_init(void) {
+void
+cpu_init(void)
+{
   last_rotation_time=time(NULL);
   spawn_enough_cpuworkers();
 }
 
 /** Called when we're done sending a request to a cpuworker. */
-int connection_cpu_finished_flushing(connection_t *conn) {
+int
+connection_cpu_finished_flushing(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CPUWORKER);
   connection_stop_writing(conn);
@@ -58,7 +62,9 @@ int connection_cpu_finished_flushing(connection_t *conn) {
 
 /** Pack addr,port,and circ_id; set *tag to the result. (See note on
  * cpuworker_main for wire format.) */
-static void tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id) {
+static void
+tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id)
+{
   *(uint32_t *)tag     = addr;
   *(uint16_t *)(tag+4) = port;
   *(uint16_t *)(tag+6) = circ_id;
@@ -66,7 +72,9 @@ static void tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id) 
 
 /** Unpack <b>tag</b> into addr, port, and circ_id.
  */
-static void tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id) {
+static void
+tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id)
+{
   struct in_addr in;
   char addrbuf[INET_NTOA_BUF_LEN];
 
@@ -83,7 +91,8 @@ static void tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t
  * cpuworkers.  Close all currently idle cpuworkers, and mark the last
  * rotation time as now.
  */
-void cpuworkers_rotate(void)
+void
+cpuworkers_rotate(void)
 {
   connection_t *cpuworker;
   while ((cpuworker = connection_get_by_type_state(CONN_TYPE_CPUWORKER,
@@ -97,7 +106,9 @@ void cpuworkers_rotate(void)
 
 /** If the cpuworker closes the connection,
  * mark it as closed and spawn a new one as needed. */
-int connection_cpu_reached_eof(connection_t *conn) {
+int
+connection_cpu_reached_eof(connection_t *conn)
+{
   log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
   if (conn->state != CPUWORKER_STATE_IDLE) {
     /* the circ associated with this cpuworker will have to wait until
@@ -116,7 +127,9 @@ int connection_cpu_reached_eof(connection_t *conn) {
  * wait for a complete answer. If the answer is complete,
  * process it as appropriate.
  */
-int connection_cpu_process_inbuf(connection_t *conn) {
+int
+connection_cpu_process_inbuf(connection_t *conn)
+{
   char success;
   char buf[LEN_ONION_RESPONSE];
   uint32_t addr;
@@ -199,7 +212,9 @@ done_processing:
  *  (Note: this _should_ be by addr/port, since we're concerned with specific
  * connections, not with routers (where we'd use identity).)
  */
-static int cpuworker_main(void *data) {
+static int
+cpuworker_main(void *data)
+{
   char question[ONIONSKIN_CHALLENGE_LEN];
   uint8_t question_type;
   int *fdarray = data;
@@ -280,7 +295,9 @@ static int cpuworker_main(void *data) {
 
 /** Launch a new cpuworker.
  */
-static int spawn_cpuworker(void) {
+static int
+spawn_cpuworker(void)
+{
   int *fdarray;
   int fd;
   connection_t *conn;
@@ -325,7 +342,9 @@ static int spawn_cpuworker(void) {
 /** If we have too few or too many active cpuworkers, try to spawn new ones
  * or kill idle ones.
  */
-static void spawn_enough_cpuworkers(void) {
+static void
+spawn_enough_cpuworkers(void)
+{
   int num_cpuworkers_needed = get_options()->NumCpus;
 
   if (num_cpuworkers_needed < MIN_CPUWORKERS)
@@ -343,7 +362,9 @@ static void spawn_enough_cpuworkers(void) {
 }
 
 /** Take a pending task from the queue and assign it to 'cpuworker'. */
-static void process_pending_task(connection_t *cpuworker) {
+static void
+process_pending_task(connection_t *cpuworker)
+{
   circuit_t *circ;
 
   tor_assert(cpuworker);
@@ -364,7 +385,8 @@ static void process_pending_task(connection_t *cpuworker) {
  * thinks of itself as idle. I don't know why. But here's a workaround
  * to kill any cpuworker that's been busy for more than 3600 seconds. */
 static void
-cull_wedged_cpuworkers(void) {
+cull_wedged_cpuworkers(void)
+{
   connection_t **carray;
   connection_t *conn;
   int n_conns, i;
@@ -391,8 +413,10 @@ cull_wedged_cpuworkers(void) {
  * If question_type is CPUWORKER_TASK_ONION then task is a circ.
  * No other question_types are allowed.
  */
-int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
-                        void *task) {
+int
+assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
+                    void *task)
+{
   circuit_t *circ;
   char tag[TAG_LEN];
 

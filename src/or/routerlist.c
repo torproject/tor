@@ -45,7 +45,8 @@ extern int has_fetched_directory; /**< from main.c */
  * Reload the original list of trusted dirservers, and the most recent
  * cached directory (if present).
  */
-int router_reload_router_list(void)
+int
+router_reload_router_list(void)
 {
   char filename[512];
   int is_recent;
@@ -77,7 +78,8 @@ int router_reload_router_list(void)
  * trusted_dir_server_t * for all known trusted dirservers.  Callers
  * must not modify the list or its contents.
  */
-void router_get_trusted_dir_servers(smartlist_t **outp)
+void
+router_get_trusted_dir_servers(smartlist_t **outp)
 {
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_create();
@@ -92,10 +94,12 @@ void router_get_trusted_dir_servers(smartlist_t **outp)
  * true, then only pick a dirserver that can answer runningrouters queries
  * (that is, a trusted dirserver, or one running 0.0.9rc5-cvs or later).
  */
-routerinfo_t *router_pick_directory_server(int requireothers,
-                                           int fascistfirewall,
-                                           int for_runningrouters,
-                                           int retry_if_no_servers) {
+routerinfo_t *
+router_pick_directory_server(int requireothers,
+                             int fascistfirewall,
+                             int for_runningrouters,
+                             int retry_if_no_servers)
+{
   routerinfo_t *choice;
 
   if (!routerlist)
@@ -127,9 +131,12 @@ routerinfo_t *router_pick_directory_server(int requireothers,
   return choice;
 }
 
-trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
-                                                   int fascistfirewall,
-                                                   int retry_if_no_servers) {
+/** DOCDOC */
+trusted_dir_server_t *
+router_pick_trusteddirserver(int requireothers,
+                             int fascistfirewall,
+                             int retry_if_no_servers)
+{
   trusted_dir_server_t *choice;
 
   choice = router_pick_trusteddirserver_impl(requireothers, fascistfirewall);
@@ -197,6 +204,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall,
   return router;
 }
 
+/** DOCDOC */
 static trusted_dir_server_t *
 router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
 {
@@ -231,7 +239,9 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
 }
 
 /** Go through and mark the auth dirservers as up */
-static void mark_all_trusteddirservers_up(void) {
+static void
+mark_all_trusteddirservers_up(void)
+{
   if (routerlist) {
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
                  if (router_digest_is_trusted_dir(router->identity_digest)) {
@@ -249,7 +259,9 @@ static void mark_all_trusteddirservers_up(void) {
 /** Return 0 if \\exists an authoritative dirserver that's currently
  * thought to be running, else return 1.
  */
-int all_trusted_directory_servers_down(void) {
+int
+all_trusted_directory_servers_down(void)
+{
   if (!trusted_dir_servers)
     return 1;
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
@@ -259,7 +271,9 @@ int all_trusted_directory_servers_down(void) {
 
 /** Add all the family of <b>router</b> to the smartlist <b>sl</b>.
  */
-void routerlist_add_family(smartlist_t *sl, routerinfo_t *router) {
+void
+routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
+{
   routerinfo_t *r;
   struct config_line_t *cl;
 
@@ -395,8 +409,10 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
   }
 }
 
+/** DOCDOC */
 routerinfo_t *
-routerlist_find_my_routerinfo(void) {
+routerlist_find_my_routerinfo(void)
+{
   routerinfo_t *router;
   int i;
 
@@ -411,6 +427,7 @@ routerlist_find_my_routerinfo(void) {
   return NULL;
 }
 
+/** DOCDOC */
 int
 router_is_unreliable(routerinfo_t *router, int need_uptime, int need_capacity)
 {
@@ -421,6 +438,7 @@ router_is_unreliable(routerinfo_t *router, int need_uptime, int need_capacity)
   return 0;
 }
 
+/** DOCDOC */
 static void
 routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
 {
@@ -437,6 +455,7 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
   }
 }
 
+/** DOCDOC */
 routerinfo_t *
 routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
 {
@@ -490,11 +509,12 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
  * available.  If <b>strict</b> is true, never pick any node besides
  * those in <b>preferred</b>.
  */
-routerinfo_t *router_choose_random_node(const char *preferred,
-                                        const char *excluded,
-                                        smartlist_t *excludedsmartlist,
-                                        int need_uptime, int need_capacity,
-                                        int allow_unverified, int strict)
+routerinfo_t *
+router_choose_random_node(const char *preferred,
+                          const char *excluded,
+                          smartlist_t *excludedsmartlist,
+                          int need_uptime, int need_capacity,
+                          int allow_unverified, int strict)
 {
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice;
@@ -544,7 +564,9 @@ routerinfo_t *router_choose_random_node(const char *preferred,
 /** Return the router in our routerlist whose address is <b>addr</b> and
  * whose OR port is <b>port</b>. Return NULL if no such router is known.
  */
-routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
+routerinfo_t *
+router_get_by_addr_port(uint32_t addr, uint16_t port)
+{
   int i;
   routerinfo_t *router;
 
@@ -563,8 +585,8 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
  * encoded in hexadecimal, matches <b>hexdigest</b> (which is
  * optionally prefixed with a single dollar sign).  Return false if
  * <b>hexdigest</b> is malformed, or it doesn't match.  */
-static INLINE int router_hex_digest_matches(routerinfo_t *router,
-                                     const char *hexdigest)
+static INLINE int
+router_hex_digest_matches(routerinfo_t *router, const char *hexdigest)
 {
   char digest[DIGEST_LEN];
   tor_assert(hexdigest);
@@ -582,7 +604,8 @@ static INLINE int router_hex_digest_matches(routerinfo_t *router,
  * (case-insensitive), or if <b>router's</b> identity key digest
  * matches a hexadecimal value stored in <b>nickname</b>.  Return
  * false otherwise.*/
-int router_nickname_matches(routerinfo_t *router, const char *nickname)
+int
+router_nickname_matches(routerinfo_t *router, const char *nickname)
 {
   if (nickname[0]!='$' && !strcasecmp(router->nickname, nickname))
     return 1;
@@ -594,7 +617,8 @@ int router_nickname_matches(routerinfo_t *router, const char *nickname)
  * nickname or (case-sensitive) hexadecimal key digest is
  * <b>nickname</b>.  Return NULL if no such router is known.
  */
-routerinfo_t *router_get_by_nickname(const char *nickname)
+routerinfo_t *
+router_get_by_nickname(const char *nickname)
 {
   int i, maybedigest;
   routerinfo_t *router;
@@ -625,7 +649,9 @@ routerinfo_t *router_get_by_nickname(const char *nickname)
 
 /** Return true iff <b>digest</b> is the digest of the identity key of
  * a trusted directory. */
-int router_digest_is_trusted_dir(const char *digest) {
+int
+router_digest_is_trusted_dir(const char *digest)
+{
   if (!trusted_dir_servers)
     return 0;
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
@@ -635,7 +661,9 @@ int router_digest_is_trusted_dir(const char *digest) {
 
 /** Return the router in our routerlist whose hexadecimal key digest
  * is <b>hexdigest</b>.  Return NULL if no such router is known. */
-routerinfo_t *router_get_by_hexdigest(const char *hexdigest) {
+routerinfo_t *
+router_get_by_hexdigest(const char *hexdigest)
+{
   char digest[DIGEST_LEN];
 
   tor_assert(hexdigest);
@@ -652,7 +680,9 @@ routerinfo_t *router_get_by_hexdigest(const char *hexdigest) {
 
 /** Return the router in our routerlist whose 20-byte key digest
  * is <b>digest</b>.  Return NULL if no such router is known. */
-routerinfo_t *router_get_by_digest(const char *digest) {
+routerinfo_t *
+router_get_by_digest(const char *digest)
+{
   int i;
   routerinfo_t *router;
 
@@ -673,18 +703,23 @@ routerinfo_t *router_get_by_digest(const char *digest) {
 }
 
 /** Set *<b>prouterlist</b> to the current list of all known routers. */
-void router_get_routerlist(routerlist_t **prouterlist) {
+void
+router_get_routerlist(routerlist_t **prouterlist)
+{
   *prouterlist = routerlist;
 }
 
 /** Return the publication time on the current routerlist, or 0 if we have no
  * routerlist. */
-time_t routerlist_get_published_time(void) {
+time_t
+routerlist_get_published_time(void)
+{
   return routerlist ? routerlist->published_on : 0;
 }
 
 /** Free all storage held by <b>router</b>. */
-void routerinfo_free(routerinfo_t *router)
+void
+routerinfo_free(routerinfo_t *router)
 {
   if (!router)
     return;
@@ -707,7 +742,8 @@ void routerinfo_free(routerinfo_t *router)
 }
 
 /** Allocate a fresh copy of <b>router</b> */
-routerinfo_t *routerinfo_copy(const routerinfo_t *router)
+routerinfo_t *
+routerinfo_copy(const routerinfo_t *router)
 {
   routerinfo_t *r;
   addr_policy_t **e, *tmp;
@@ -741,7 +777,8 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
 }
 
 /** Free all storage held by a routerlist <b>rl</b> */
-void routerlist_free(routerlist_t *rl)
+void
+routerlist_free(routerlist_t *rl)
 {
   tor_assert(rl);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
@@ -752,7 +789,9 @@ void routerlist_free(routerlist_t *rl)
   tor_free(rl);
 }
 
-void routerlist_free_current(void)
+/** Free all entries in the current router list. */
+void
+routerlist_free_current(void)
 {
   if (routerlist)
     routerlist_free(routerlist);
@@ -764,7 +803,9 @@ void routerlist_free_current(void)
   }
 }
 
-void free_trusted_dir_servers(void)
+/** Free all entries in the list of trusted directory servers. */
+void
+free_trusted_dir_servers(void)
 {
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
@@ -775,7 +816,9 @@ void free_trusted_dir_servers(void)
 }
 
 /** Mark the router with ID <b>digest</b> as non-running in our routerlist. */
-void router_mark_as_down(const char *digest) {
+void
+router_mark_as_down(const char *digest)
+{
   routerinfo_t *router;
   tor_assert(digest);
 
@@ -802,7 +845,8 @@ void router_mark_as_down(const char *digest) {
  * DOCDOC msg
  */
 static int
-router_add_to_routerlist(routerinfo_t *router, const char **msg) {
+router_add_to_routerlist(routerinfo_t *router, const char **msg)
+{
   int i;
   routerinfo_t *r;
   char id_digest[DIGEST_LEN];
@@ -958,10 +1002,11 @@ router_load_single_router(const char *s, const char **msg)
  * If <b>dir_is_cached</b> is non-zero, then we're reading it
  * from the cache so don't bother to re-write it to the cache.
  */
-int router_load_routerlist_from_directory(const char *s,
-                                          crypto_pk_env_t *pkey,
-                                          int dir_is_recent,
-                                          int dir_is_cached)
+int
+router_load_routerlist_from_directory(const char *s,
+                                      crypto_pk_env_t *pkey,
+                                      int dir_is_recent,
+                                      int dir_is_cached)
 {
   routerlist_t *new_list = NULL;
   if (router_parse_routerlist_from_directory(s, &new_list, pkey,
@@ -1134,8 +1179,10 @@ router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
 
 /** Return 1 if all running sufficiently-stable routers will reject
  * addr:port, return 0 if any might accept it. */
-int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
-                                          int need_uptime) {
+int
+router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
+                                          int need_uptime)
+{
   int i;
   routerinfo_t *router;
   addr_policy_result_t r;
@@ -1241,13 +1288,16 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
 
 /** Return true iff <b>router</b> does not permit exit streams.
  */
-int router_exit_policy_rejects_all(routerinfo_t *router) {
+int
+router_exit_policy_rejects_all(routerinfo_t *router)
+{
   return router_compare_addr_to_addr_policy(0, 0, router->exit_policy)
     == ADDR_POLICY_REJECTED;
 }
 
 /** Release all space held in <b>rr</b>. */
-void running_routers_free(running_routers_t *rr)
+void
+running_routers_free(running_routers_t *rr)
 {
   if (!rr)
     return;
@@ -1274,8 +1324,9 @@ routerlist_set_runningrouters(routerlist_t *list, running_routers_t *rr)
  * on the contents of <b>rr</b>. */
 /* Note: this function is not yet used, since nobody publishes just
  * running-router lists yet. */
-void routerlist_update_from_runningrouters(routerlist_t *list,
-                                           running_routers_t *rr)
+void
+routerlist_update_from_runningrouters(routerlist_t *list,
+                                      running_routers_t *rr)
 {
   routerinfo_t *me = router_get_my_routerinfo();
   smartlist_t *all_routers;
@@ -1317,9 +1368,10 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
  *
  * Return 1 if we found router in running_list, else return 0.
  */
-int routers_update_status_from_entry(smartlist_t *routers,
-                                     time_t list_time,
-                                     const char *s)
+int
+routers_update_status_from_entry(smartlist_t *routers,
+                                 time_t list_time,
+                                 const char *s)
 {
   int is_running = 1;
   int is_verified = 0;
@@ -1448,7 +1500,8 @@ add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
 }
 
 /** Remove all members from the list of trusted dir servers. */
-void clear_trusted_dir_servers(void)
+void
+clear_trusted_dir_servers(void)
 {
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,

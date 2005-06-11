@@ -184,6 +184,7 @@ event_to_log_severity(int event)
   }
 }
 
+/** DOCDOC */
 static INLINE int
 log_severity_to_event(int severity)
 {
@@ -199,7 +200,8 @@ log_severity_to_event(int severity)
 
 /** Set <b>global_event_mask</b> to the bitwise OR of each live control
  * connection's event_mask field. */
-static void update_global_event_mask(void)
+static void
+update_global_event_mask(void)
 {
   connection_t **conns;
   int n_conns, i;
@@ -215,7 +217,10 @@ static void update_global_event_mask(void)
   adjust_event_log_severity();
 }
 
-void adjust_event_log_severity(void) {
+/** DOCDOC */
+void
+adjust_event_log_severity(void)
+{
   int i;
   int min_log_event=EVENT_ERR_MSG, max_log_event=EVENT_DEBUG_MSG;
 
@@ -286,7 +291,9 @@ send_control_done(connection_t *conn)
   send_control_message(conn, CONTROL_CMD_DONE, 0, NULL);
 }
 
-static void send_control_done2(connection_t *conn, const char *msg, size_t len)
+/** DOCDOC */
+static void
+send_control_done2(connection_t *conn, const char *msg, size_t len)
 {
   if (len==0)
     len = strlen(msg);
@@ -527,6 +534,7 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
   return 0;
 }
 
+/** DOCDOC */
 static int
 handle_control_saveconf(connection_t *conn, uint32_t len,
                         const char *body)
@@ -540,6 +548,7 @@ handle_control_saveconf(connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** DOCDOC */
 static int
 handle_control_signal(connection_t *conn, uint32_t len,
                       const char *body)
@@ -555,6 +564,7 @@ handle_control_signal(connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** DOCDOC */
 static int
 handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
 {
@@ -663,6 +673,7 @@ handle_getinfo_helper(const char *question, char **answer)
   return 0;
 }
 
+/** DOCDOC */
 static int
 handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
 {
@@ -702,6 +713,8 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
 
   return 0;
 }
+
+/** DOCDOC */
 static int
 handle_control_extendcircuit(connection_t *conn, uint32_t len,
                              const char *body)
@@ -779,7 +792,10 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   smartlist_free(routers);
   return 0;
 }
-static int handle_control_attachstream(connection_t *conn, uint32_t len,
+
+/** DOCDOC */
+static int
+handle_control_attachstream(connection_t *conn, uint32_t len,
                                         const char *body)
 {
   uint32_t conn_id;
@@ -829,6 +845,8 @@ static int handle_control_attachstream(connection_t *conn, uint32_t len,
   send_control_done(conn);
   return 0;
 }
+
+/** DOCDOC */
 static int
 handle_control_postdescriptor(connection_t *conn, uint32_t len,
                               const char *body)
@@ -848,6 +866,8 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
 
   return 0;
 }
+
+/** DOCDOC */
 static int
 handle_control_redirectstream(connection_t *conn, uint32_t len,
                               const char *body)
@@ -873,6 +893,8 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
   send_control_done(conn);
   return 0;
 }
+
+/** DOCDOC */
 static int
 handle_control_closestream(connection_t *conn, uint32_t len,
                            const char *body)
@@ -901,6 +923,7 @@ handle_control_closestream(connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** DOCDOC */
 static int
 handle_control_closecircuit(connection_t *conn, uint32_t len,
                             const char *body)
@@ -930,6 +953,7 @@ handle_control_closecircuit(connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** DOCDOC */
 static int
 handle_control_fragments(connection_t *conn, uint16_t command_type,
                          uint32_t body_len, char *body)
@@ -972,7 +996,8 @@ handle_control_fragments(connection_t *conn, uint16_t command_type,
 
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
-connection_control_finished_flushing(connection_t *conn) {
+connection_control_finished_flushing(connection_t *conn)
+{
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CONTROL);
 
@@ -981,7 +1006,9 @@ connection_control_finished_flushing(connection_t *conn) {
 }
 
 /** Called when <b>conn</b> has gotten its socket closed. */
-int connection_control_reached_eof(connection_t *conn) {
+int
+connection_control_reached_eof(connection_t *conn)
+{
   log_fn(LOG_INFO,"Control connection reached EOF. Closing.");
   connection_mark_for_close(conn);
   return 0;
@@ -990,7 +1017,8 @@ int connection_control_reached_eof(connection_t *conn) {
 /** Called when <b>conn</b> has received more bytes on its inbuf.
  */
 int
-connection_control_process_inbuf(connection_t *conn) {
+connection_control_process_inbuf(connection_t *conn)
+{
   uint32_t body_len;
   uint16_t command_type;
   char *body;
@@ -1253,7 +1281,8 @@ control_event_logmsg(int severity, const char *msg)
  * interested control connections.  <b>routers</b> is a list of
  * DIGEST_LEN-byte identity digests.
  */
-int control_event_descriptors_changed(smartlist_t *routers)
+int
+control_event_descriptors_changed(smartlist_t *routers)
 {
   size_t len;
   char *msg;
@@ -1302,4 +1331,3 @@ init_cookie_authentication(int enabled)
 
   return 0;
 }
-

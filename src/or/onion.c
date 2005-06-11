@@ -31,7 +31,9 @@ static int ol_length=0;
 /** Add <b>circ</b> to the end of ol_list and return 0, except
  * if ol_list is too long, in which case do nothing and return -1.
  */
-int onion_pending_add(circuit_t *circ) {
+int
+onion_pending_add(circuit_t *circ)
+{
   struct onion_queue_t *tmp;
   time_t now = time(NULL);
 
@@ -73,7 +75,9 @@ int onion_pending_add(circuit_t *circ) {
 /** Remove the first item from ol_list and return it, or return
  * NULL if the list is empty.
  */
-circuit_t *onion_next_task(void) {
+circuit_t *
+onion_next_task(void)
+{
   circuit_t *circ;
 
   if (!ol_list)
@@ -90,7 +94,9 @@ circuit_t *onion_next_task(void) {
 /** Go through ol_list, find the onion_queue_t element which points to
  * circ, remove and free that element. Leave circ itself alone.
  */
-void onion_pending_remove(circuit_t *circ) {
+void
+onion_pending_remove(circuit_t *circ)
+{
   struct onion_queue_t *tmpo, *victim;
 
   if (!ol_list)
@@ -329,6 +335,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   return 0;
 }
 
+/** DOCDOC */
 int
 fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
                       char *handshake_reply_out, /* DIGEST_LEN*2 bytes */
@@ -359,6 +366,7 @@ fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
   return 0;
 }
 
+/** DOCDOC */
 int
 fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
                       const char *handshake_reply_out, /* DIGEST_LEN*2 bytes */
