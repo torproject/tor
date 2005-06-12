@@ -204,8 +204,9 @@ set_uint32(char *cp, uint32_t v)
 #endif
 
 /**
- * Rename the file 'from' to the file 'to'.  On unix, this is the same as
- * rename(2).  On windows, this removes 'to' first if it already exists.
+ * Rename the file <b>from</b> to the file <b>to</b>.  On unix, this is
+ * the same as rename(2).  On windows, this removes <b>to</b> first if
+ * it already exists.
  * Returns 0 on success.  Returns -1 and sets errno on failure.
  */
 int
@@ -607,12 +608,12 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
   }
 }
 
-/* Hold the result of our call to <b>uname</b>. */
+/** Hold the result of our call to <b>uname</b>. */
 static char uname_result[256];
-/* True iff uname_result is set. */
+/** True iff uname_result is set. */
 static int uname_result_is_set = 0;
 
-/* Return a pointer to a description of our platform.
+/** Return a pointer to a description of our platform.
  */
 const char *
 get_uname(void)
@@ -1052,8 +1053,8 @@ int
 network_init(void)
 {
 #ifdef MS_WINDOWS
-  /* This silly exercise is necessary before windows will allow gethostbyname to work.
-   */
+  /* This silly exercise is necessary before windows will allow
+   * gethostbyname to work. */
   WSADATA WSAData;
   int r;
   r = WSAStartup(0x101,&WSAData);
