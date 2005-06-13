@@ -2684,7 +2684,8 @@ check_libevent_version(const char *m, const char *v, int server)
   tor_assert(m && v);
 
   if (!strcmp(m, "kqueue")) {
-    if (!strcmp(v, "1.0c")) {
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e") ||
+        !strcmp(v, "1.1")) {
       buggy = 1;
     }
   } else if (!strcmp(m, "epoll")) {

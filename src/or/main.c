@@ -810,6 +810,7 @@ run_scheduled_events(time_t now)
 }
 
 static struct event *timeout_event = NULL;
+static int n_libevent_errors = 0;
 
 /** Libevent callback: invoked once every second. */
 static void
@@ -828,6 +829,8 @@ second_elapsed_callback(int fd, short event, void *args)
     one_second.tv_sec = 1;
     one_second.tv_usec = 0;
   }
+
+  n_libevent_errors = 0;
 
   /* log_fn(LOG_NOTICE, "Tick."); */
   tor_gettimeofday(&now);
@@ -883,6 +886,19 @@ second_elapsed_callback(int fd, short event, void *args)
   if (evtimer_add(timeout_event, &one_second))
     log_fn(LOG_ERR,
            "Error from libevent when setting one-second timeout event");
+}
+
+/** Called when a possibly ignorable libevent error occurs; ensures that we
+ * don't get into an infinite loop by ignoring too many errors from
+ * libevent. */
+int
+got_libevent_error(void)
+{
+  if (++n_libevent_errors > 8) {
+    log_fn(LOG_ERR, "Too many libevent errors in one second; dying");
+    return -1;
+  }
+  return 0;
 }
 
 /** Called when we get a SIGHUP: reload configuration files and keys,
@@ -1001,6 +1017,12 @@ do_main_loop(void)
                tor_socket_strerror(e), e);
 #endif
         return -1;
+#ifndef MS_WINDOWS
+      } else if (e == EINVAL) {
+        log_fn(LOG_WARN, "EINVAL from libevent: should you upgrade libevent?");
+        if (got_libevent_error())
+          return -1;
+#endif
       } else {
         if (ERRNO_IS_EINPROGRESS(e))
           log_fn(LOG_WARN,"libevent poll returned EINPROGRESS? Please report.");
