@@ -1,4 +1,4 @@
-Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
+Changes in version 0.1.0.10 (first stable release of 0.1.0.x)
   o Fixes on Win32:
     - Make NT services work and start on startup on Win32 (based on
       patch by Matt Edman). See the FAQ entry for details.
