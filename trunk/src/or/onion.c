@@ -265,7 +265,7 @@ onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN b
 
 #ifdef DEBUG_ONION_SKINS
   printf("Server: key material:");
-  PA(buf, DH_KEY_LEN);
+  PA(key_material, DH_KEY_LEN);
   puts("");
   printf("Server: keys out:");
   PA(key_out, key_out_len);
