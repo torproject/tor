@@ -10,6 +10,8 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
       has it bound_! So, don't do that on Win32.
     - Clean up the log messages when starting on Win32 with no config
       file.
+    - Allow seeding the RNG on Win32 even when you're not running as
+      Administrator. If seeding the RNG on Win32 fails, quit.
 
   o Assert / crash bugs:
     - Refuse relay cells that claim to have a length larger than the
@@ -29,11 +31,14 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
         reentry and threadsafeness.
       - Implement --disable-threads configure option. Disable threads on
         netbsd and openbsd by default, because they have no reentrant
-        resolver functions (!).
+        resolver functions (!), and on solaris since it has other
+        threading issues.
     - Fix possible bug on threading platforms (e.g. win32) which was
       leaking a file descriptor whenever a cpuworker or dnsworker died.
     - Fix a minor memory leak when somebody establishes an introduction
       point at your Tor server.
+    - Fix possible memory leak in tor_lookup_hostname(). (Thanks to
+      Adam Langley.)
     - Add ./configure --with-dmalloc option, to track memory leaks.
     - And try to free all memory on closing, so we can detect what
       we're leaking.
@@ -117,8 +122,12 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
       Corollary: only whine about clock skew from the dirserver if
       he's a trusted dirserver (since now even verified servers could
       have quite wrong clocks).
+    - Require servers that use the default dirservers to have public IP
+      addresses. We have too many servers that are configured with private
+      IPs and their admins never notice the log entries complaining that
+      their descriptors are being rejected.
 
-  o Code efficiency improvements:
+  o Efficiency improvements:
     - Use libevent. Now we can use faster async cores (like epoll, kpoll,
       and /dev/poll), and hopefully work better on Windows too.
       - Apple's OS X 10.4.0 ships with a broken kqueue API, and using
@@ -135,6 +144,10 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
       it uses *more* memory on average, but less cpu.
     - Switch our internal buffers implementation to use a ring buffer,
       to hopefully improve performance for fast servers a lot.
+    - Reenable the part of the code that tries to flush as soon as an
+      OR outbuf has a full TLS record available. Perhaps this will make
+      OR outbufs not grow as huge except in rare cases, thus saving lots
+      of CPU time plus memory.
     - Improve performance for dirservers: stop re-parsing the whole
       directory every time you regenerate it.
     - Keep a big splay tree of (circid,orconn)->circuit mappings to make
@@ -156,6 +169,8 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
       attempts to build a circuit.
     - Adjust maximum skew and age for rendezvous descriptors: let skew
       be 48 hours rather than 90 minutes.
+    - Reject malformed .onion addresses rather then passing them on as
+      normal web requests.
 
   o Controller:
     - More Tor controller support. See
@@ -238,6 +253,12 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
       wrong.
     - When a dirserver causes you to give a warn, mention which dirserver
       it was.
+    - Initialize libevent later in the startup process, so the logs are
+      already established by the time we start logging libevent warns.
+    - Use correct errno on win32 if libevent fails.
+    - Check and warn about known-bad/slow libevent versions.
+    - Stop warning about sigpipes in the logs. We're going to
+      pretend that getting these occassionally is normal and fine.
 
   o New contrib scripts:
     - New experimental script tor/contrib/exitlist: a simple python
@@ -253,6 +274,8 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
       "<hostname>.<path,separated by dots>.<length of path>.path"
     - New contributed script "privoxy-tor-toggle" to toggle whether
       Privoxy uses Tor. Seems to be configured for Debian by default.
+    - Have torctl.in/tor.sh.in check for location of su binary (needed
+      on FreeBSD)
 
   o Misc bugfixes:
     - chdir() to your datadirectory at the *end* of the daemonize process,
@@ -277,6 +300,10 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
     - If we're hibernating and we get a SIGINT, exit immediately.
     - tor-resolve requests were ignoring .exit if there was a working circuit
       they could use instead.
+    - Pay more attention to the ClientOnly config option.
+    - Resolve OS X installer bugs: stop claiming to be 0.0.9.2 in certain
+      installer screens; and don't put stuff into StartupItems unless
+      the user asks you to.
 
   o Misc features:
     - Rewrite address "serifos.exit" to "externalIP.serifos.exit"
@@ -305,6 +332,8 @@ Changes in version 0.1.0.9 (first stable release of 0.1.0.x)
     - Since we ship our own Privoxy on OS X, tweak it so it doesn't write
       cookies to disk and doesn't log each web request to disk. (Thanks
       to Brett Carrington for pointing this out.)
+    - Add OSX uninstall instructions. An actual uninstall script will
+      come later.
     - Add "opt hibernating 1" to server descriptor to make it clearer
       whether the server is hibernating.
 
