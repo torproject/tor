@@ -1,0 +1,125 @@
+#!/bin/sh
+#
+#tor    The Onion Router
+#
+# chkconfig: 2345 90 10
+# description: Onion Router
+
+TORUSER=
+TORGROUP=
+TORBIN=@BINDIR@/tor
+TORPID=@LOCALSTATEDIR@/run/tor/tor.pid
+TORLOG=@LOCALSTATEDIR@/log/tor/tor.log
+TORDATA=@LOCALSTATEDIR@/lib/tor
+
+TORCONF=@CONFDIR@/torrc
+# Strictly speaking, we don't need to su if we have --user and --group.
+# "Belt and suspenders," says jbash.
+TORARGS="--pidfile $TORPID --log \"notice file $TORLOG \" --runasdaemon 1 --datadirectory $TORDATA"
+if [ "x$TORUSER" != "x" ]; then
+    TORARGS="$TORARGS --user $TORUSER"
+fi
+if [ "x$TORGROUP" != "x" ]; then
+    TORARGS="$TORARGS --group $TORGROUP"
+fi
+RETVAL=0
+
+if [ -x /bin/su ] ; then
+    SUPROG=/bin/su
+elif [ -x /sbin/su ] ; then
+    SUPROG=/sbin/su
+elif [ -x /usr/bin/su ] ; then
+    SUPROG=/usr/bin/su
+elif [ -x /usr/sbin/su ] ; then
+    SUPROG=/usr/sbin/su
+else
+    SUPROG=/bin/su
+fi
+
+case "$1" in
+
+    start)
+    if [ -f $TORPID ]; then
+        echo "tor appears to be already running (pid file exists)"
+        echo "Maybe you should run: $0 restart ?"
+        RETVAL=1
+    else
+        echo -n "Starting tor..."
+        if  [ "x$TORUSER" = "x" ]; then
+            $TORBIN -f $TORCONF $TORARGS
+        else
+            $SUPROG -c "$TORBIN -f $TORCONF $TORARGS" $TORUSER
+        fi
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+            echo " ok"
+        else
+            echo " ERROR!"
+        fi
+    fi
+    ;;
+
+    stop)
+    if [ -f $TORPID ]; then
+        echo -n "Killing tor..."
+        kill `cat $TORPID`
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+            echo " ok"
+        else
+            echo " ERROR!"
+        fi
+    else
+        echo "Unable to kill tor: $TORPID does not exist. Assuming already dead."
+        RETVAL=0
+    fi
+    ;;
+
+    reload)
+    if [ -f $TORPID ]; then
+        echo -n "Sending HUP to tor..."
+        kill -HUP `cat $TORPID`
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+            echo " ok"
+        else
+            echo " ERROR!"
+        fi
+    else
+        echo "Unable to kill tor: $TORPID does not exist"
+        RETVAL=1
+    fi
+    ;;
+
+    restart)
+    $0 stop
+    if [ -f $TORPID ]; then
+            rm -f $TORPID
+    fi
+    $0 start
+    ;;
+
+    status)
+    PID=`cat $TORPID 2>/dev/null`
+    if [ "$PID" != "" ]; then
+        torstat=`ps -p $PID | grep -c "^$PID"`
+        if [ $torstat ]; then
+            echo "tor is running ($PID)"
+        else
+            echo "tor is not running (looks like it crashed, look for core?  $PID)"
+        fi
+    else
+        echo "tor is not running (exited gracefully)"
+    fi
+    ;;
+
+    log)
+    cat $TORLOG
+    ;;
+
+    *)
+    echo "Usage: $0 (start|stop|restart|status|log)"
+    exit 1
+esac
+
+exit $RETVAL
