@@ -46,9 +46,9 @@ For 0.1.0.x:
     - Is it the buf_shrink bug? (Quite possibly)
     - Instrument the 0.1.1 code to figure out where our memory is going;
       apply the results. (all platforms?)
-  - Why does kevent barf with EINVAL on some freebsd boxes?
-    - Submit libevent patch to Niels
-    - Warn on non-repeated EINVAL in Tor (don't die.)
+  . Why does kevent barf with EINVAL on some freebsd boxes?
+    o Submit libevent patch to Niels
+    o Warn on non-repeated EINVAL in Tor (don't die.)
     - Investigate why freebsd kernel actually does this: it doesn't seem
       simple to trigger.
 
