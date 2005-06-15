@@ -378,44 +378,6 @@ rep_history_clean(time_t before)
   }
 }
 
-#if 0
-void
-write_rep_history(const char *filename)
-{
-  FILE *f = NULL;
-  char *tmpfile;
-  int completed = 0;
-  or_history_t *or_history;
-  link_history_t *link_history;
-  strmap_iter_t *lhist_it;
-  strmap_iter_t *orhist_it;
-  void *or_history_p, *link_history_p;
-  const char *name1;
-
-  tmpfile = tor_malloc(strlen(filename)+5);
-  tor_snprintf(tmpfile, strlen(filename)+5, "%s_tmp", filename);
-
-  f = fopen(tmpfile, "w");
-  if (!f) goto done;
-  for (orhist_it = strmap_iter_init(history_map); !strmap_iter_done(orhist_it);
-       orhist_it = strmap_iter_next(history_map,orhist_it)) {
-    strmap_iter_get(orhist_it, &name1, &or_history_p);
-    or_history = (or_history_t*) or_history_p;
-    fprintf(f, "link %s connected:u%ld failed:%uld uptime:%uld",
-            name1, or_history->since1,
-  }
-
- done:
-  if (f)
-    fclose(f);
-  if (completed)
-    replace_file(filename, tmpfile);
-  else
-    unlink(tmpfile);
-  tor_free(tmpfile);
-}
-#endif
-
 #define NUM_SECS_ROLLING_MEASURE 10
 #define NUM_SECS_BW_SUM_IS_VALID (24*60*60) /* one day */
 #define NUM_SECS_BW_SUM_INTERVAL (15*60)

@@ -211,22 +211,6 @@ dirserv_get_nickname_by_digest(const char *digest)
   return NULL;
 }
 
-#if 0
-/** Return true iff any router named <b>nickname</b> with <b>digest</b>
- * is in the verified fingerprint list. */
-static int
-router_nickname_is_approved(const char *nickname, const char *digest)
-{
-  const char *n;
-
-  n = dirserv_get_nickname_by_digest(digest);
-  if (n && !strcasecmp(n,nickname))
-    return 1;
-  else
-    return 0;
-}
-#endif
-
 /** Clear the current fingerprint list. */
 void
 dirserv_free_fingerprint_list()

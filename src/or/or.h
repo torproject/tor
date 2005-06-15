@@ -251,10 +251,6 @@ typedef enum {
 /** State for an exit connection: waiting to be removed. */
 #define EXIT_CONN_STATE_RESOLVEFAILED 4
 #define _EXIT_CONN_STATE_MAX 4
-#if 0
-#define EXIT_CONN_STATE_CLOSE 3 /* flushing the buffer, then will close */
-#define EXIT_CONN_STATE_CLOSE_WAIT 4 /* have sent a destroy, awaiting a confirmation */
-#endif
 
 /* the AP state values must be disjoint from the EXIT state values */
 #define _AP_CONN_STATE_MIN 5

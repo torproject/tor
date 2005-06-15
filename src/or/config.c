@@ -285,9 +285,6 @@ options_act(void)
   or_options_t *options = get_options();
   static int libevent_initialized = 0;
 
-  /* XXXX009 We once had a reason to separate start_daemon and finish_daemon:
-   *    It let us have the parent process stick around until we were sure Tor
-   *    was started.  Should we make start_daemon get called earlier? -NM */
   if (options->RunAsDaemon) {
     start_daemon();
   }
@@ -395,18 +392,6 @@ options_act(void)
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
-
-#if 0
-  {
-    char *smin, *smax;
-    smin = config_dump_options(options, 1);
-    smax = config_dump_options(options, 0);
-    log_fn(LOG_DEBUG, "These are our options:\n%s",smax);
-    log_fn(LOG_DEBUG, "We changed these options:\n%s",smin);
-    tor_free(smin);
-    tor_free(smax);
-  }
-#endif
 
   /* Since our options changed, we might need to regenerate and upload our
    * server descriptor.  (We could probably be more clever about only calling
@@ -1502,11 +1487,6 @@ options_validate(or_options_t *options)
     log(LOG_WARN,"BandwidthBurst must be at least equal to BandwidthRate.");
     result = -1;
   }
-#if 0
-  if (2*options->BandwidthRate > options->BandwidthBurst) {
-    log(LOG_NOTICE,"You have chosen a BandwidthBurst less than twice BandwidthRate. Please consider setting your BandwidthBurst higher (at least %d), to provide better service to the Tor network.", (int)(2*options->BandwidthRate));
-  }
-#endif
 
   if (options->_MonthlyAccountingStart) {
     if (options->AccountingStart) {
@@ -2437,12 +2417,6 @@ validate_data_directory(or_options_t *options)
     log_fn(LOG_ERR, "DataDirectory is too long.");
     return -1;
   }
-#if 0
-  if (check_private_dir(options->DataDirectory, CPD_CHECK != 0)) {
-    log_fn(LOG_WARN, "Can't create directory %s", options->DataDirectory);
-    return -1;
-  }
-#endif
   return 0;
 }
 

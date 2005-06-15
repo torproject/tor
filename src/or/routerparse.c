@@ -1389,27 +1389,6 @@ get_next_token(const char **s, where_syntax where)
 
  done_tokenizing:
 
-#if 0
-  for (i = 0; token_table[i].t ; ++i) {
-    if (token_table[i].v == tok->tp) {
-      fputs(token_table[i].t, stdout);
-      break;
-      i = -1;
-    }
-  }
-  if (i) {
-    if (tok->tp == _UNRECOGNIZED) fputs("UNRECOGNIZED", stdout);
-    if (tok->tp == _ERR) fputs("ERR",stdout);
-    if (tok->tp == _EOF) fputs("EOF",stdout);
-    if (tok->tp == _NIL) fputs("_NIL",stdout);
-  }
-  for (i = 0; i < tok->n_args; ++i) {
-    fprintf(stdout," \"%s\"", tok->args[i]);
-  }
-  if (tok->error) { fprintf(stdout," *%s*", tok->error); }
-  fputs("\n",stdout);
-#endif
-
   return tok;
 #undef RET_ERR
 }

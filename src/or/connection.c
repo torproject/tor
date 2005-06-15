@@ -1792,13 +1792,6 @@ assert_connection_ok(connection_t *conn, time_t now)
     assert_buf_ok(conn->outbuf);
   }
 
-#if 0 /* computers often go back in time; no way to know */
-  tor_assert(!now || conn->timestamp_lastread <= now);
-  tor_assert(!now || conn->timestamp_lastwritten <= now);
-  tor_assert(conn->timestamp_created <= conn->timestamp_lastread);
-  tor_assert(conn->timestamp_created <= conn->timestamp_lastwritten);
-#endif
-
   /* XXX Fix this; no longer so.*/
 #if 0
   if (conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
