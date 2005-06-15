@@ -1,6 +1,6 @@
-tor (0.1.0.9-rc-1) UNRELEASED; urgency=low
+tor (0.1.0.10-0.pre.1) UNRELEASED; urgency=low
 
-  * New development version.
+  * New upstream version.
   * Add a watch file.
   * Forward port 03_tor_manpage_in_section_8.
   * Forward port 06_add_compile_time_defaults.
@@ -17,7 +17,7 @@ tor (0.1.0.9-rc-1) UNRELEASED; urgency=low
   * Don't fail in the init script when we cannot raise the ulimit.
     Instead just warn a bit (closes: #312882).
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 10 Jun 2005 18:08:44 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 15 Jun 2005 16:38:06 +0200
 
 tor (0.0.9.9-1) unstable; urgency=low
 
