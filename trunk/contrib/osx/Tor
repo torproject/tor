@@ -56,7 +56,7 @@ StopService ()
 
 RestartService () { StopService; StartService; }
 
-if [ "x$1" = x ]; then
+if [ "$#" = 0 ]; then
   echo "Syntax: tor {start|stop}"
   exit 1
 fi 
