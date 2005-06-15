@@ -900,12 +900,6 @@ new_route_len(double cw, uint8_t purpose, smartlist_t *routers)
     return -1;
   }
 #endif
-#if 0
-  for (routelen = 3; ; routelen++) { /* 3, increment until coinflip says we're done */
-    if (crypto_pseudo_rand_int(255) >= cw*255) /* don't extend */
-      break;
-  }
-#endif
   log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",routelen,
          smartlist_len(routers));
 

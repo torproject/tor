@@ -810,6 +810,7 @@ addressmap_register_virtual_address(int type, char *new_address)
 
 #if 0
   {
+    /* Try to catch possible bugs */
     addressmap_entry_t *ent;
     ent = strmap_get(addressmap, *addrp);
     tor_assert(ent);
