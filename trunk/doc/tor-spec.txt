@@ -31,8 +31,9 @@ TODO: (very soon)
 
    Unless otherwise specified, all symmetric ciphers are AES in counter
    mode, with an IV of all 0 bytes.  Asymmetric ciphers are either RSA
-   with 1024-bit keys and exponents of 65537, or DH with the safe prime
-   from rfc2409, section 6.2, whose hex representation is:
+   with 1024-bit keys and exponents of 65537, or DH where the generator
+   is 2 and the modulus is the safe prime from rfc2409, section 6.2,
+   whose hex representation is:
 
      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
      "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
@@ -43,7 +44,7 @@ TODO: (very soon)
    All "hashes" are 20-byte SHA1 cryptographic digests.
 
    When we refer to "the hash of a public key", we mean the SHA1 hash of the
-   ASN.1 encoding of an RSA public key (as specified in PKCS.1).
+   DER encoding of an ASN.1 RSA public key (as specified in PKCS.1).
 
 1. System overview
 
@@ -71,9 +72,9 @@ TODO: (very soon)
    least 128 bits, and digests of at least 160 bits.
 
    An OP or OR always sends a two-certificate chain, consisting of a
-   self-signed certificate containing the OR's identity key, and a second
-   certificate using a short-term connection key.  The commonName of the
-   second certificate is the OR's nickname, and the commonName of the first
+   certificate using a short-term connection key and a second, self-
+   signed certificate containing the OR's identity key. The commonName of the
+   first certificate is the OR's nickname, and the commonName of the second
    certificate is the OR's nickname, followed by a space and the string
    "<identity>".
 
@@ -164,13 +165,14 @@ TODO: (very soon)
    The payload for a CREATE cell is an 'onion skin', which consists
    of the first step of the DH handshake data (also known as g^x).
 
-   The data is encrypted to Bob's PK as follows: Suppose Bob's PK is
-   L octets long.  If the data to be encrypted is shorter than L-42,
-   then it is encrypted directly (with OAEP padding).  If the data is at
-   least as long as L-42, then a randomly generated 16-byte symmetric
-   key is prepended to the data, after which the first L-16-42 bytes
-   of the data are encrypted with Bob's PK; and the rest of the data is
-   encrypted with the symmetric key.
+   The data is encrypted to Bob's PK as follows: Suppose Bob's PK
+   modulus is L octets long. If the data to be encrypted is shorter
+   than L-42, then it is encrypted directly (with OAEP padding: see
+   ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf). If the
+   data is at least as long as L-42, then a randomly generated 16-byte
+   symmetric key is prepended to the data, after which the first L-16-42
+   bytes of the data are encrypted with Bob's PK; and the rest of the
+   data is encrypted with the symmetric key.
 
    So in this case, the onion skin on the wire looks like:
        RSA-encrypted:
@@ -265,7 +267,7 @@ TODO: (very soon)
          router's exit policy does not exclude all pending streams
          that need a circuit.
 
-      2. Choose a chain of (N-1) chain of N onion routers
+      2. Choose a chain of (N-1) onion routers
          (R_1...R_N-1) to constitute the path, such that no router
          appears in the path twice.
 
