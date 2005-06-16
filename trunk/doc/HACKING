@@ -66,8 +66,8 @@
   1. Begin every file that should be documented with
          /**
           * \file filename.c
-          * \brief Short desccription of the file
-          */
+          * \brief Short desccription of the file.
+          **/
 
      (Doxygen will recognize any comment beginning with /** as special.)
 
@@ -106,7 +106,7 @@
      $ doxygen -g
 
      To generate a file called 'Doxyfile'.  Edit that file and run 'doxygen' to
-     generate the aPI documentation.
+     generate the API documentation.
 
   6. See the Doxygen manual for more information; this summary just scratches
      the surface.
