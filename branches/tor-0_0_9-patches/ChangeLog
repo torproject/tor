@@ -1,3 +1,10 @@
+Changes in version 0.0.9.10 - 2005-06-16
+  o Bugfixes on 0.0.9.x (backported from 0.1.0.10):
+    - Refuse relay cells that claim to have a length larger than the
+      maximum allowed. This prevents a potential attack that could read
+      arbitrary memory (e.g. keys) from an exit server's process.
+
+
 Changes in version 0.0.9.9 - 2005-04-23
   o Bugfixes on 0.0.9.x:
     - If unofficial Tor clients connect and send weird TLS certs, our
