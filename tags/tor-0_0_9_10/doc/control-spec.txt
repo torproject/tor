@@ -1,0 +1,229 @@
+$Id$
+
+                            TC: A Tor control protocol
+
+0. Scope
+
+This document describes an implementation-specific protocol that is used
+for other programs (such as frontend user-interfaces) to communicate
+with a locally running Tor process.  It is not part of the Tor onion
+routing protocol.
+
+We're trying to be pretty extensible here, but not infinitely
+forward-compatible.
+
+1. Protocol outline
+
+TC is a bidirectional message-based protocol.  It assumes an underlying
+stream for communication between a controlling process (the "client") and
+a Tor process (the "server").  The stream may be implemented via TCP,
+TLS-over-TCP, a Unix-domain socket, or so on, but it must provide
+reliable in-order delivery.  For security, the stream should not be
+accessible by untrusted parties.
+
+In TC, the client and server send typed variable-length messages to each
+other over the underlying stream.  By default, all messages from the server
+are in response to messages from the client.  Some client requests, however,
+will cause the server to send messages to the client indefinitely far into
+the future.
+
+Servers respond to messages in the order they're received.
+
+2. Message format
+
+The messages take the following format:
+
+   Length [2 octets; big-endian]
+   Type   [2 octets; big-endian]
+   Body   [Length octets]
+
+Upon encountering a recognized Type, implementations behave as described in
+section 3 below.  If the type is not recognized, servers respond with a
+"STAT" message (code UNRECOGNIZED; see 3.1 below), and clients simply ignore
+the message.
+
+3. Message types
+
+3.1. ERROR (Type 0x0000)
+
+  Sent in response to a message that could not be processed as requested.
+
+  The body of the message begins with a 2-byte error code.  The following
+  values are defined:
+
+        0x0000 Unspecified error
+               []
+
+        0x0001 Internal error
+               [Something went wrong inside Tor, so that the client's
+                request couldn't be fulfilled.]
+
+        0x0002 Unrecognized message type
+               [The client sent a message type we don't understand.]
+
+        0x0003 Syntax error
+               [The client sent a message body in a format we can't parse.]
+
+        0x0004 Unrecognized configuration key
+               [The client tried to get or set a configuration option we don't
+                recognize.]
+
+        0x0005 Invalid configuration value
+               [The client tried to set a configuration option to an
+                incorrect, ill-formed, or impossible value.]
+
+        0x0006 Unrecognized event code
+               [The client tried to set an event code that we don't recognize.]
+
+        0x0007 Unauthorized.
+               [The client tried to send a command that requires
+                authorization, but it hasn't sent a valid AUTHENTICATE message.]
+
+        0x0008 Failed authentication attempt
+               [The client sent a well-formed authorization message.]
+
+  The rest of the body should be a human-readable description of the error.
+
+  In general, new error codes should only be added when they don't fall under
+  one of the existing error codes.
+
+3.2. DONE (Type 0x0001)
+
+  Sent from server to client in response to a request that was successfully
+  completed, with no more information needed.  The body is empty.
+
+3.3. SETCONF (Type 0x0002)
+
+  Change the value of a configuration variable. The body contains a list of
+  newline-terminated key-value configuration lines.
+  The server behaves as though it had just read the key-value pair in its
+  configuration file.
+
+  The server responds with a DONE message on success, or an ERROR message on
+  failure.
+
+  When a configuration options takes multiple values, or when multiple
+  configuration keys form a context-sensitive group (see below), then
+  setting _any_ of the options in a SETCONF command is taken to reset all of
+  the others.  For example, if two ORBindAddress values are configured,
+  and a SETCONF command arrives containing a single ORBindAddress value, the
+  new command's value replaces the two old values.
+
+  To _remove_ all settings for a given option entirely (and go back to its
+  default value), send a single line containing the key and no value.
+
+3.4. GETCONF (Type 0x0003)
+
+  Request the value of a configuration variable.  The body contains one or
+  more NL-terminated strings for configuration keys.  The server replies
+  with a CONFVALUE message.
+
+  If an option appears multiple times in the configuration, all of its
+  key-value pairs are returned in order.
+
+  Some options are context-sensitive, and depend on other options with
+  different keywords.  These cannot be fetched directly.  Currently there
+  is only one such option: clients should use the "HiddenServiceOptions"
+  virtual keyword to get all HiddenServiceDir, HiddenServicePort,
+  HiddenServiceNodes, and HiddenServiceExcludeNodes option settings.
+
+3.5. CONFVALUE (Type 0x0004)
+
+  Sent in response to a GETCONF message; contains a list of "Key Value\n"
+  (A non-whitespace keyword, a single space, a non-NL value, a NL)
+  strings.
+
+3.6. SETEVENTS (Type 0x0005)
+
+  Request the server to inform the client about interesting events.
+  The body contains a list of 2-byte event codes (see "event" below).
+  Sending SETEVENTS with an empty body turns off all event reporting.
+
+  The server responds with a DONE message on success, and an ERROR message
+  if one of the event codes isn't recognized.  (On error, the list of active
+  event codes isn't changed.)
+
+3.7. EVENT (Type 0x0006)
+
+  Sent from the server to the client when an event has occurred and the
+  client has requested that kind of event.  The body contains a 2-byte
+  event code followed by additional event-dependent information.  Event
+  codes are:
+      0x0001 -- Circuit status changed
+
+                Status [1 octet]
+                   (Launched=0,Built=1,Extended=2,Failed=3,Closed=4)
+                Circuit ID [4 octets]
+                   (Must be unique to Tor process/time)
+                Path [NUL-terminated comma-separated string]
+                   (For extended/failed, is the portion of the path that is
+                   built)
+
+      0x0002 -- Stream status changed
+
+                Status [1 octet]
+                   (Sent connect=0,sent resolve=1,succeeded=2,failed=3,
+                    closed=4)
+                Stream ID [4 octets]
+                   (Must be unique to Tor process/time)
+                Target (NUL-terminated address-port string]
+
+      0x0003 -- OR Connection status changed
+
+                Status [1 octet]
+                   (Launched=0,connected=1,failed=2,closed=3)
+                OR nickname/identity [NUL-terminated]
+
+      0x0004 -- Bandwidth used in the last second
+
+                Bytes read [4 octets]
+                Bytes written [4 octets]
+
+      0x0005 -- Notice/warning/error occurred
+
+                Message [NUL-terminated]
+
+3.8. AUTHENTICATE (Type 0x0007)
+
+  Sent from the client to the server.  Contains a 'magic cookie' to prove
+  that client is really the admin for this Tor process.  The server responds
+  with DONE or ERROR.
+
+3.9. SAVECONF (Type 0x0008)
+
+  Sent from the client to the server. Instructs the server to write out
+  its config options into its torrc. Server returns DONE if successful, or
+  ERROR if it can't write the file or some other error occurs.
+
+4. Implementation notes
+
+4.1. There are four ways we could authenticate, for now:
+
+ 1) Listen on 127.0.0.1; trust all local users.
+
+ 2) Write a named socket in tor's data-directory or in some other location;
+    rely on the OS to ensure that only authorized users can open it.  (NOTE:
+    the Linux unix(7) man page suggests that some BSDs don't enforce
+    authorization.)  If the OS has named sockets, and implements
+    authentication, trust all users who can read Tor's data directory.
+
+ 3) Write a random magic cookie to the FS in Tor's data-directory; use that
+    magic cookie for authentication.  Trust all users who can read Tor's data
+    directory.
+
+ 4) Store a salted-and-hashed passphrase in Tor's configuration.  Use the
+    passphrase for authentication.  Trust all users who know the passphrase.
+
+  On Win32, our only options are 1, 3, and 4.  Since the semantics for 2
+  and 3 are so similar, we chose to not support 2, and just always bind
+  on 127.0.0.1.  We've implemented 1, 3, and 4.
+
+  By default, the Tor client accepts authentication approach #1. If
+  the controller wants Tor to demand more authentication, it should use
+  setconf and saveconf to configure Tor to demand more next time.
+
+4.2. Don't let the buffer get too big.
+
+  If you ask for lots of events, and 16MB of them queue up on the buffer,
+  the Tor process will close the socket.
+
