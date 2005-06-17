@@ -53,6 +53,16 @@ For 0.1.0.x:
       simple to trigger.
 
 for 0.1.1.x:
+N . Controller improvements
+    . new controller protocol
+      . Specify
+      . Implement
+    - controller should have an event to learn about new addressmappings,
+      e.g. when we learn a hostname to IP mapping ?
+    - make sure err-level log events get flushed to the controller
+      immediately, since tor will exit right after.
+    - add new getinfo options to enumerate things we only find out about
+      currently via events.
   - switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back, out if we decide we prefer it the way it already is. hm.
@@ -65,16 +75,11 @@ for 0.1.1.x:
   - Handle rendezvousing with unverified nodes.
     - Specify: Stick rendezvous point's key in INTRODUCE cell.
       Bob should _always_ use key from INTRODUCE cell.
+    - Change to new rendezvous introduction cell format.  (It's currently #if
+      0'd out).  Unless we already did that.
     - Implement.
-  - make sure err-level log events get flushed to the controller
-    immediately, since tor will exit right after.
   - it looks like tor_assert writes to stderr. what happens if
     stderr was closed and is now something else? uh.
-  - new controller protocol
-    - Specify
-    - Implement
-  - controller should have an event to learn about new addressmappings,
-    e.g. when we learn a hostname to IP mapping ?
   - christian grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
