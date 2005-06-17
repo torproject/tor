@@ -286,9 +286,11 @@ typedef enum {
 #define _DIR_CONN_STATE_MAX 5
 
 #define _CONTROL_CONN_STATE_MIN 1
-#define CONTROL_CONN_STATE_OPEN 1
-#define CONTROL_CONN_STATE_NEEDAUTH 2
-#define _CONTROL_CONN_STATE_MAX 2
+#define CONTROL_CONN_STATE_OPEN_V0 1
+#define CONTROL_CONN_STATE_OPEN_V1 2
+#define CONTROL_CONN_STATE_NEEDAUTH_V0 3
+#define CONTROL_CONN_STATE_NEEDAUTH_V1 4
+#define _CONTROL_CONN_STATE_MAX 4
 
 #define _DIR_PURPOSE_MIN 1
 /** Purpose for connection to directory server: download a directory. */
@@ -655,10 +657,12 @@ struct connection_t {
 
   /* Used only by control connections */
   uint32_t event_mask;
-  uint16_t incoming_cmd_type;
   uint32_t incoming_cmd_len;
   uint32_t incoming_cmd_cur_len;
   char *incoming_cmd;
+
+  /* Used only by control v0 connections */
+  uint16_t incoming_cmd_type;
 };
 
 typedef struct connection_t connection_t;
@@ -1181,8 +1185,9 @@ int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
                         char **body_out, size_t *body_used, size_t max_bodylen);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
-int fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
-                           char **body_out);
+int fetch_from_buf_control0(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
+                            char **body_out, int check_for_v1);
+int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
 void assert_buf_ok(buf_t *buf);
 

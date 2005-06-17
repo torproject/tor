@@ -108,8 +108,20 @@ _buf_end(buf_t *buf)
 /** If the pointer <b>cp</b> has passed beyond the end of the buffer, wrap it
  * around. */
 static INLINE char *
-_wrap_ptr(buf_t *buf, char *cp) {
+_wrap_ptr(buf_t *buf, char *cp)
+{
   return (cp >= buf->mem + buf->len) ? (cp - buf->len) : cp;
+}
+
+/** Return the offset of <b>cp</b> within the buffer. */
+static INLINE int
+_buf_offset(buf_t *buf, char *cp)
+{
+  if (cp >= buf->cur)
+    return cp - buf->cur;
+  else
+    /* return (cp - buf->mem) + buf->mem+buf->len - buf->cur */
+    return cp + buf->len - buf->cur;
 }
 
 /** If the range of *<b>len</b> bytes starting at <b>at</b> wraps around the
@@ -1099,7 +1111,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
 
 #define CONTROL_CMD_FRAGMENTHEADER 0x0010
 #define CONTROL_CMD_FRAGMENT       0x0011
-/** If there is a complete control message waiting on buf, then store
+/** If there is a complete version 0control message waiting on buf, then store
  * its contents into *<b>type_out</b>, store its body's length into
  * *<b>len_out</b>, allocate and store a string for its body into
  * *<b>body_out</b>, and return 1.  (body_out will always be NUL-terminated,
@@ -1107,11 +1119,11 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
  *
  * If there is not a complete control message waiting, return 0.
  *
- * Return -1 on error.
+ * Return -1 on error; return -2 on "seems to be control protocol v1."
  */
 int
-fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
-                       char **body_out)
+fetch_from_buf_control0(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
+                        char **body_out, int check_for_v1)
 {
   uint32_t msglen;
   uint16_t type;
@@ -1128,10 +1140,13 @@ fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
   peek_from_buf(tmp, 4, buf);
 
   msglen = ntohs(get_uint16(tmp));
+  type = ntohs(get_uint16(tmp+2));
+  if (type > 255 && check_for_v1)
+    return -2;
+
   if (buf->datalen < 4 + (unsigned)msglen)
     return 0;
 
-  type = ntohs(get_uint16(tmp+2));
   *len_out = msglen;
   *type_out = type;
   buf_remove_from_front(buf, 4);
@@ -1144,6 +1159,57 @@ fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
   }
   return 1;
 }
+
+/** DOCDOC */
+static char *
+find_char_on_buf(buf_t *buf, char *start, size_t len, char c)
+{
+  size_t len_rest;
+  char *cp;
+  _split_range(buf, start, &len, &len_rest);
+  cp = memchr(buf->cur, c, len);
+  if (cp || !len_rest)
+    return cp;
+  return memchr(buf->mem, c, len_rest);
+}
+
+static char *
+find_crlf_on_buf(buf_t *buf, char *cp)
+{
+  char *next;
+  while (1) {
+    size_t remaining = buf->datalen - _buf_offset(buf,cp);
+    cp = find_char_on_buf(buf, cp, remaining, '\r');
+    if (!cp)
+      return NULL;
+    next = _wrap_ptr(buf, cp+1);
+    if (next == _buf_end(buf))
+      return NULL;
+    if (*next == '\n')
+      return cp;
+    cp = next;
+  }
+}
+
+/* DOCDOC : 0 means 'need to read more'. means done, -1 means "grow buffer." */
+int
+fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
+{
+  char *eol;
+  size_t sz;
+  /* Look for a CRLF. */
+  if (!(eol = find_crlf_on_buf(buf, buf->cur)))
+    return 0;
+  sz = _buf_offset(buf, eol);
+  if (sz+2 > *data_len) {
+    *data_len = sz+2;
+    return -1;
+  }
+  fetch_from_buf(data_out, sz+2, buf);
+  *data_len = sz+2;
+  return 1;
+}
+
 
 /** Log an error and exit if <b>buf</b> is corrupted.
  */

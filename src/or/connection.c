@@ -120,8 +120,12 @@ conn_state_to_string(int type, int state)
       break;
     case CONN_TYPE_CONTROL:
       switch (state) {
-        case CONTROL_CONN_STATE_OPEN: return "open";
-        case CONTROL_CONN_STATE_NEEDAUTH: return "waiting for authentication";
+        case CONTROL_CONN_STATE_OPEN_V0: return "open (protocol v0)";
+        case CONTROL_CONN_STATE_OPEN_V1: return "open (protocol v1)";
+        case CONTROL_CONN_STATE_NEEDAUTH_V0:
+          return "waiting for authentication (protocol unknown)";
+        case CONTROL_CONN_STATE_NEEDAUTH_V1:
+          return "waiting for authentication (protocol v1)";
       }
       break;
   }
@@ -667,7 +671,7 @@ connection_init_accepted_conn(connection_t *conn)
       conn->state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
       break;
     case CONN_TYPE_CONTROL:
-      conn->state = CONTROL_CONN_STATE_NEEDAUTH;
+      conn->state = CONTROL_CONN_STATE_NEEDAUTH_V0;
       break;
   }
   return 0;
@@ -1578,7 +1582,9 @@ connection_state_is_open(connection_t *conn)
   if ((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
       (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
       (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN) ||
-      (conn->type == CONN_TYPE_CONTROL && conn->state ==CONTROL_CONN_STATE_OPEN))
+      (conn->type == CONN_TYPE_CONTROL &&
+       (conn->state == CONTROL_CONN_STATE_OPEN_V0 ||
+        conn->state == CONTROL_CONN_STATE_OPEN_V1)))
     return 1;
 
   return 0;
