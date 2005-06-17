@@ -1198,18 +1198,19 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
   char *eol;
   size_t sz;
   /* Look for a CRLF. */
-  if (!(eol = find_crlf_on_buf(buf, buf->cur)))
+  if (!(eol = find_crlf_on_buf(buf, buf->cur))) {
     return 0;
+  }
   sz = _buf_offset(buf, eol);
-  if (sz+2 > *data_len) {
-    *data_len = sz+2;
+  if (sz+3 > *data_len) {
+    *data_len = sz+3;
     return -1;
   }
   fetch_from_buf(data_out, sz+2, buf);
+  data_out[sz+2] = '\0';
   *data_len = sz+2;
   return 1;
 }
-
 
 /** Log an error and exit if <b>buf</b> is corrupted.
  */

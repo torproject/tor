@@ -16,7 +16,9 @@ const char main_c_id[] = "$Id$";
 #include <dmalloc.h>
 #endif
 
-/* These signals are defined to help control_signal_act work. */
+/* These signals are defined to help control_signal_act work.
+ * XXXX Move into or.h or compat.h
+ */
 #ifndef SIGHUP
 #define SIGHUP 1
 #endif
