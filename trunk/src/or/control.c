@@ -368,6 +368,13 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
   return outp - *out;
 }
 
+static const char *
+get_escaped_string(const char *start, char **out, size_t *out_len)
+{
+  /* XXXX V1 */
+  return NULL;
+}
+
 
 static void
 connection_printf_to_buf(connection_t *conn, const char *format, ...)
@@ -582,23 +589,71 @@ get_stream(const char *id)
 static int
 handle_control_setconf(connection_t *conn, uint32_t len, char *body)
 {
-  /* XXXX V1 */
   int r;
   struct config_line_t *lines=NULL;
+  int v0 = STATE_IS_V0(conn->state);
 
-  if (config_get_lines(body, &lines) < 0) {
-    log_fn(LOG_WARN,"Controller gave us config lines we can't parse.");
-    send_control0_error(conn, ERR_SYNTAX, "Couldn't parse configuration");
-    return 0;
+  if (!v0) {
+    char *config = tor_malloc(len+1);
+    char *outp = config;
+    while (*body) {
+      char *eq = body;
+      while (!TOR_ISSPACE(*eq) && *eq != '=')
+        ++eq;
+      memcpy(outp, body, eq-body);
+      outp += (eq-body);
+      body = eq+1;
+      if (*eq == '=') {
+        if (*body != '\"') {
+          while (!TOR_ISSPACE(*body))
+            *outp++ = *body++;
+        } else {
+          char *val;
+          size_t val_len;
+          body = (char*)get_escaped_string(body, &val, &val_len);
+          if (!body) {
+            connection_write_str_to_buf("551 Couldn't parse string\r\n", conn);
+            tor_free(config);
+            return 0;
+          }
+          memcpy(outp, val, val_len);
+          outp += val_len;
+        }
+      }
+      while (TOR_ISSPACE(*body))
+        ++body;
+      *outp++ = '\n';
+    }
+    *outp = '\0';
+
+    if (config_get_lines(config, &lines) < 0) {
+      log_fn(LOG_WARN,"Controller gave us config lines we can't parse.");
+      connection_write_str_to_buf("551 Couldn't parse configuration\r\n", conn);
+      tor_free(config);
+      return 0;
+    }
+    tor_free(config);
+  } else {
+    if (config_get_lines(body, &lines) < 0) {
+      log_fn(LOG_WARN,"Controller gave us config lines we can't parse.");
+      send_control0_error(conn, ERR_SYNTAX, "Couldn't parse configuration");
+      return 0;
+    }
   }
 
   if ((r=config_trial_assign(lines, 1)) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
     if (r==-1) {
-      send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY,
-                         "Unrecognized option");
+      if (v0)
+        send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY,
+                            "Unrecognized option");
+      else
+        connection_write_str_to_buf("552 Unrecognzied option\r\n", conn);
     } else {
-      send_control0_error(conn, ERR_INVALID_CONFIG_VALUE,"Invalid option value");
+      if (v0)
+        send_control0_error(conn,ERR_INVALID_CONFIG_VALUE,"Invalid option value");
+      else
+        connection_write_str_to_buf("552 Invalid option value\r\n", conn);
     }
     config_free_lines(lines);
     return 0;
@@ -804,11 +859,37 @@ decode_hashed_password(char *buf, const char *hashed)
 static int
 handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
 {
-  /* XXXX V1 */
   or_options_t *options = get_options();
+  char *password;
+  size_t password_len;
+  if (STATE_IS_V0(conn->state)) {
+    password = (char*)body;
+    password_len = len;
+  } else {
+    if (TOR_ISXDIGIT(body[0])) {
+      int i = 0;
+      while (TOR_ISXDIGIT(body[i]))
+        ++i;
+      password = tor_malloc(i/2 + 1);
+      if (base16_decode(password, i/2+1, body, i)<0) {
+        connection_write_str_to_buf("551 Invalid hexadecimal encoding\r\n", conn);
+        tor_free(password);
+        return 0;
+      }
+      password_len = i/2;
+    } else if (TOR_ISSPACE(body[0])) {
+      password = tor_strdup("");
+      password_len = 0;
+    } else {
+      if (!get_escaped_string(body, &password, &password_len)) {
+        connection_write_str_to_buf("551 Invalid quoted string\r\n", conn);
+        return 0;
+      }
+    }
+  }
   if (options->CookieAuthentication) {
     if (len == AUTHENTICATION_COOKIE_LEN &&
-        !memcmp(authentication_cookie, body, len)) {
+        !memcmp(authentication_cookie, password, password_len)) {
       goto ok;
     }
   } else if (options->HashedControlPassword) {
@@ -818,7 +899,7 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
       log_fn(LOG_WARN,"Couldn't decode HashedControlPassword: invalid base64");
       goto err;
     }
-    secret_to_key(received,DIGEST_LEN,body,len,expected);
+    secret_to_key(received,DIGEST_LEN,password,password_len,expected);
     if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
       goto ok;
     goto err;
@@ -831,16 +912,20 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
  err:
   if (STATE_IS_V0(conn->state))
     send_control0_error(conn,ERR_REJECTED_AUTHENTICATION,"Authentication failed");
-  else
+  else {
+    tor_free(password);
     connection_write_str_to_buf("515 Authentication failed\r\n", conn);
+  }
   return 0;
  ok:
   log_fn(LOG_INFO, "Authenticated control connection (%d)", conn->s);
   send_control_done(conn);
   if (STATE_IS_V0(conn->state))
     conn->state = CONTROL_CONN_STATE_OPEN_V0;
-  else
+  else {
     conn->state = CONTROL_CONN_STATE_OPEN_V1;
+    tor_free(password);
+  }
   return 0;
 }
 
