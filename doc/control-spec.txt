@@ -76,8 +76,7 @@ $Id$
 
   ; Identifiers for servers.
   ServerID = Nickname / Fingerprint
-  Nickname = 1*NicknameChar
-[XXX perhaps this should be 1*19 NicknameChar ? -RD]
+  Nickname = 1*19 NicknameChar
   NicknameChar = "a"-"z" / "A"-"Z" / "0" - "9"
   Fingerprint = "$" 40*HEXDIG
 
@@ -202,7 +201,8 @@ about dns resolves, etc, so the controller can keep synced. -RD]
 
      "SIGNAL" SP Signal CRLF
 
-     Signal = "RELOAD" / "SHUTDOWN" / "DUMP" / "DEBUG" / "TERM"
+     Signal = "RELOAD" / "SHUTDOWN" / "DUMP" / "DEBUG" / "HALT" /
+              "HUP" / "INT" / "USR1" / "USR2" / "TERM"
 
   The meaning of the signals are:
 
@@ -213,7 +213,7 @@ about dns resolves, etc, so the controller can keep synced. -RD]
       DUMP      -- Dump stats: log information about open connections and
                    circuits. (like USR1)
       DEBUG     -- Debug: switch all open logs to loglevel debug. (like USR2)
-      TERM      -- Immediate shutdown: clean up and exit now. (like TERM)
+      HALT      -- Immediate shutdown: clean up and exit now. (like TERM)
 
   The server responds with "250 OK" if the signal is recognized (or simply
   closes the socket if it was asked to close immediately), or "552
@@ -344,11 +344,9 @@ about dns resolves, etc, so the controller can keep synced. -RD]
   request for the server to extend an existing circuit with that ID according
   to the specified path.
 
-  If the request is successful, the server sends a "250 OK" message containing
-  a message body consisting of the four-octet Circuit ID of the (maybe
-  newly created) circuit.
-
-[XXX four-octet? that sounds binary to me, yes? -RD]
+  If the request is successful, the server sends a "250 OK" message
+  containing a message body consisting of the Circuit ID of the (maybe newly
+  created) circuit.
 
 3.10 ATTACHSTREAM
 
@@ -359,7 +357,7 @@ about dns resolves, etc, so the controller can keep synced. -RD]
   associated with the specified circuit.  Each stream may be associated with
   at most one circuit, and multiple streams may share the same circuit.
   Streams can only be attached to completed circuits (that is, circuits that
-  have sent a circuit status 'built' event or are listed as built in a
+  have sent a circuit status 'BUILT' event or are listed as built in a
   GETINFO circuit-status request).
 
   If the circuit ID is 0, responsibility for attaching the given stream is
@@ -385,12 +383,11 @@ about dns resolves, etc, so the controller can keep synced. -RD]
   The descriptor, when parsed, must contain a number of well-specified
   fields, including fields for its nickname and identity.
 
-  If there is an error in parsing the descriptor, the server must send an
-  appropriate error message.
-[XXX let's specify the status code here too -RD]
-  If the descriptor is well-formed but the server
-  chooses not to add it, it must reply with a 251 message whose body
-  explains why the server was not added.
+  If there is an error in parsing the descriptor, the server must send a "554
+  Invalid descriptor" reply.  If the descriptor is well-formed but the server
+  chooses not to add it, it must reply with a 251 message whose body explains
+  why the server was not added.  If the descriptor is added, Tor replies with
+  "250 OK".
 
 3.12 REDIRECTSTREAM
 
@@ -492,7 +489,12 @@ about dns resolves, etc, so the controller can keep synced. -RD]
          [The client tried to set a configuration option to an
            incorrect, ill-formed, or impossible value.]
 
+     554 Invalid descriptor
+
      650 Asynchronous event notification
+
+  Unless specified to have specific contents, the human-readable messages
+  in error replies should not be relied upon to match those in this document.
 
 4.1 Asynchronous events
 
