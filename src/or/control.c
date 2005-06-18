@@ -257,6 +257,116 @@ connection_write_str_to_buf(const char *s, connection_t *conn)
   connection_write_to_buf(s, len, conn);
 }
 
+static size_t
+write_escaped_data(const char *data, size_t len, int translate_newlines,
+                   char **out)
+{
+  size_t sz_out = len+8;
+  char *outp;
+  const char *end;
+  int i;
+  int start_of_line;
+  for (i=0; i<len; ++i) {
+    if (data[i]== '\n')
+      ++sz_out;
+  }
+  *out = outp = tor_malloc(sz_out+1);
+  end = data+len;
+  start_of_line = 1;
+  while (data < end) {
+    if (*data == '\n') {
+      if (translate_newlines)
+        *outp++ = '\r';
+      start_of_line = 1;
+    } else if (*data == '.') {
+      if (start_of_line) {
+        start_of_line = 0;
+        *outp++ = '.';
+      }
+    } else {
+      start_of_line = 0;
+    }
+    *outp++ = *data++;
+  }
+  *outp++ = '\r';
+  *outp++ = '\n';
+  *outp++ = '.';
+  *outp++ = '\r';
+  *outp++ = '\n';
+  return outp - *out;
+}
+
+#if 0
+static void
+connection_write_escaped_data_to_buf(const char *data, size_t len,
+                                     int translate_newlines,
+                                     connection_t *conn)
+{
+  const char *next;
+
+  while (len) {
+    if (*data == '.')
+      connection_write_to_buf(".", 1, conn);
+
+    if (translate_newlines)
+      next = tor_memmem(data, len, "\r\n", 2);
+    else
+      next = tor_memmem(data, len, "\r\n.", 3);
+
+    if (next) {
+      if (translate_newlines) {
+        connection_write_to_buf(data, next-data, conn);
+        connection_write_to_buf("\n", 1, conn);
+        len -= (next-data+2);
+      } else {
+        connection_write_to_buf(data, next-data+2, conn);
+        len -= (next-data+2);
+      }
+      data = next + 2;
+    } else {
+      connection_write_to_buf(data, len, conn);
+      break;
+    }
+  }
+  connection_write_to_buf(".\r\n", 3, conn);
+}
+#endif
+
+static size_t
+read_escaped_data(const char *data, size_t len, int translate_newlines,
+                  char **out)
+{
+  char *outp;
+  const char *next;
+
+  *out = outp = tor_malloc(len);
+
+  while (len) {
+    if (*data == '.')
+      ++data;
+    if (translate_newlines)
+      next = tor_memmem(data, len, "\r\n", 2);
+    else
+      next = tor_memmem(data, len, "\r\n.", 3);
+    if (next) {
+      memcpy(outp, data, next-data);
+      outp += (next-data);
+      data = next+2;
+    } else {
+      memcpy(outp, data, len);
+      outp += len;
+      return outp - *out;
+    }
+    if (translate_newlines) {
+      *outp++ = '\n';
+    } else {
+      *outp++ = '\r';
+      *outp++ = '\n';
+    }
+  }
+
+  return outp - *out;
+}
 
 
 static void
@@ -439,6 +549,32 @@ send_control1_event(uint16_t event, const char *format, ...)
       }
     }
   }
+}
+
+static circuit_t *
+get_circ(const char *id)
+{
+  unsigned long n_id;
+  int ok;
+  n_id = tor_parse_ulong(id, 10, 0, ULONG_MAX, &ok, NULL);
+  if (!ok)
+    return NULL;
+  return circuit_get_by_global_id(n_id);
+}
+
+static connection_t *
+get_stream(const char *id)
+{
+  unsigned long n_id;
+  int ok;
+  connection_t *conn;
+  n_id = tor_parse_ulong(id, 10, 0, ULONG_MAX, &ok, NULL);
+  if (!ok)
+    return NULL;
+  conn = connection_get_by_global_id(n_id);
+  if (conn->type != CONN_TYPE_AP)
+    return NULL;
+  return conn;
 }
 
 /** Called when we receive a SETCONF message: parse the body and try
@@ -892,39 +1028,86 @@ handle_getinfo_helper(const char *question, char **answer)
 static int
 handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
 {
-  /* XXXX V1 */
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
+  smartlist_t *unrecognized = NULL;
   char *msg = NULL, *ans;
   size_t msg_len;
+  int v0 = STATE_IS_V0(conn->state);
 
   questions = smartlist_create();
-  smartlist_split_string(questions, body, "\n",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (v0)
+    smartlist_split_string(questions, body, "\n",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  else
+    smartlist_split_string(questions, body, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   answers = smartlist_create();
+  unrecognized = smartlist_create();
   SMARTLIST_FOREACH(questions, const char *, q,
   {
     if (handle_getinfo_helper(q, &ans) < 0) {
-      send_control0_error(conn, ERR_INTERNAL, body);
-      goto done;
-    } if (!ans) {
-      send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
+      if (v0)
+        send_control0_error(conn, ERR_INTERNAL, body);
+      else
+        connection_write_str_to_buf("551 Internal error\r\n", conn);
       goto done;
     }
-    smartlist_add(answers, tor_strdup(q));
-    smartlist_add(answers, ans);
+    if (!ans) {
+      if (v0) {
+        send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
+        goto done;
+      } else
+        smartlist_add(unrecognized, (char*)q);
+    } else {
+      smartlist_add(answers, tor_strdup(q));
+      smartlist_add(answers, ans);
+    }
   });
+  if (smartlist_len(unrecognized)) {
+    int i;
+    tor_assert(!v0);
+    for (i=0; i < len-1; ++i)
+      connection_printf_to_buf(conn,
+                               "552-Unrecognized configuration key \"%s\"\r\n",
+                               (char*)smartlist_get(unrecognized, i));
+    connection_printf_to_buf(conn,
+                             "552 Unrecognized configuration key \"%s\"\r\n",
+                             (char*)smartlist_get(unrecognized, len-1));
+    goto done;
+  }
 
-  msg = smartlist_join_strings2(answers, "\0", 1, 1, &msg_len);
-  tor_assert(msg_len > 0); /* it will at least be terminated */
-  send_control0_message(conn, CONTROL0_CMD_INFOVALUE,
-                       msg_len, msg);
+  if (v0) {
+    msg = smartlist_join_strings2(answers, "\0", 1, 1, &msg_len);
+    tor_assert(msg_len > 0); /* it will at least be terminated */
+    send_control0_message(conn, CONTROL0_CMD_INFOVALUE,
+                          msg_len, msg);
+  } else if (smartlist_len(answers)) {
+    int i;
+    for (i = 0; i < smartlist_len(answers); i += 2) {
+      char *k = smartlist_get(answers, i);
+      char *v = smartlist_get(answers, i+1);
+      /*XXXX Not an adequate test! XXXX011 */
+      if (!strchr(v, '\n') && !strchr(v, '\r')) {
+        connection_printf_to_buf(conn, "250-%s=%s\r\n", k, v);
+      } else {
+        char *esc = NULL;
+        size_t len;
+        len = write_escaped_data(v, strlen(v), 1, &esc);
+        connection_printf_to_buf(conn, "250+%s=", k);
+        connection_write_to_buf(esc, len, conn);
+        tor_free(esc);
+      }
+    }
+    connection_write_str_to_buf("250 OK\r\n", conn);
+  }
 
  done:
   if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
   if (questions) SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
   smartlist_free(answers);
   smartlist_free(questions);
+  smartlist_free(unrecognized);
   tor_free(msg);
 
   return 0;
@@ -1069,14 +1252,31 @@ static int
 handle_control_postdescriptor(connection_t *conn, uint32_t len,
                               const char *body)
 {
-  /* XXXX V1 */
+  char *desc;
+  int v0 = STATE_IS_V0(conn->state);
+  if (v0)
+    desc = (char*)body;
+  else {
+    const char *cp = memchr(body, '\n', len);
+    tor_assert(cp);
+    read_escaped_data(cp, len-(cp-body), 1, &desc);
+  }
+
   const char *msg=NULL;
-  switch (router_load_single_router(body, &msg)) {
+  switch (router_load_single_router(desc, &msg)) {
   case -1:
-    send_control0_error(conn,ERR_SYNTAX,msg?msg: "Could not parse descriptor");
+    if (!msg) msg = "Could not parse descriptor";
+    if (v0)
+      send_control0_error(conn,ERR_SYNTAX,msg);
+    else
+      connection_printf_to_buf(conn, "554 %s\r\n", msg);
     break;
   case 0:
-    send_control_done2(conn,msg?msg: "Descriptor not added",0);
+    if (!msg) msg = "Descriptor not added";
+    if (v0)
+      send_control_done2(conn,msg,0);
+    else
+      connection_printf_to_buf(conn, "251 %s\r\n",msg);
     break;
   case 1:
     send_control_done(conn);
@@ -1091,25 +1291,48 @@ static int
 handle_control_redirectstream(connection_t *conn, uint32_t len,
                               const char *body)
 {
-  /* XXXX V1 */
-  connection_t *ap_conn;
+  connection_t *ap_conn = NULL;
   uint32_t conn_id;
-  if (len < 6) {
-    send_control0_error(conn, ERR_SYNTAX, "redirectstream message too short");
-    return 0;
-  }
-  conn_id = ntohl(get_uint32(body));
+  char *new_addr = NULL;
+  if (STATE_IS_V0(conn->state)) {
+    if (len < 6) {
+      send_control0_error(conn, ERR_SYNTAX, "redirectstream message too short");
+      return 0;
+    }
+    conn_id = ntohl(get_uint32(body));
 
-  if (!(ap_conn = connection_get_by_global_id(conn_id))
-      || ap_conn->state != CONN_TYPE_AP
-      || !ap_conn->socks_request) {
-    send_control0_error(conn, ERR_NO_STREAM,
-                       "No AP connection found with given ID");
-    return 0;
+    if (!(ap_conn = connection_get_by_global_id(conn_id))
+        || ap_conn->state != CONN_TYPE_AP
+        || !ap_conn->socks_request) {
+      send_control0_error(conn, ERR_NO_STREAM,
+                          "No AP connection found with given ID");
+      return 0;
+    }
+    new_addr = tor_strdup(body+4);
+  } else {
+    smartlist_t *args;
+    args = smartlist_create();
+    smartlist_split_string(args, body, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    if (smartlist_len(args)<2)
+      connection_printf_to_buf(conn,"512 Missing argument to REDIRECTSTREAM\r\n");
+    else if (!(ap_conn = get_stream(smartlist_get(args, 0)))
+             || !ap_conn->socks_request) {
+      connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
+                               (char*)smartlist_get(args, 0));
+    } else {
+      new_addr = tor_strdup(smartlist_get(args, 1));
+    }
+
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+    if (!new_addr)
+      return 0;
   }
-  strlcpy(ap_conn->socks_request->address, body+4,
+
+  strlcpy(ap_conn->socks_request->address, new_addr,
           sizeof(ap_conn->socks_request->address));
-
+  tor_free(new_addr);
   send_control_done(conn);
   return 0;
 }
@@ -1119,26 +1342,52 @@ static int
 handle_control_closestream(connection_t *conn, uint32_t len,
                            const char *body)
 {
-  /* XXXX V1 */
-  uint32_t conn_id;
-  connection_t *ap_conn;
-  uint8_t reason;
+  connection_t *ap_conn=NULL;
+  uint8_t reason=0;
 
-  if (len < 6) {
-    send_control0_error(conn, ERR_SYNTAX, "closestream message too short");
-    return 0;
+  if (STATE_IS_V0(conn->state)) {
+    uint32_t conn_id;
+    if (len < 6) {
+      send_control0_error(conn, ERR_SYNTAX, "closestream message too short");
+      return 0;
+    }
+
+    conn_id = ntohl(get_uint32(body));
+    reason = *(uint8_t*)(body+4);
+
+    if (!(ap_conn = connection_get_by_global_id(conn_id))
+        || ap_conn->state != CONN_TYPE_AP
+        || !ap_conn->socks_request) {
+      send_control0_error(conn, ERR_NO_STREAM,
+                          "No AP connection found with given ID");
+      return 0;
+    }
+  } else {
+    smartlist_t *args;
+    int ok;
+    args = smartlist_create();
+    smartlist_split_string(args, body, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    if (smartlist_len(args)<2)
+      connection_printf_to_buf(conn, "512 Missing argument to CLOSECIRCUIT\r\n");
+    else if (!(ap_conn = get_stream(smartlist_get(args, 0))))
+      connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
+                               (char*)smartlist_get(args, 0));
+    else {
+      reason = (uint8_t) tor_parse_ulong(smartlist_get(args,1), 10, 0, 255,
+                                         &ok, NULL);
+      if (!ok) {
+        connection_printf_to_buf(conn, "552 Unrecognized reason \"%s\"\r\n",
+                                 (char*)smartlist_get(args, 1));
+        ap_conn = NULL;
+      }
+    }
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+    if (!ap_conn)
+      return 0;
   }
 
-  conn_id = ntohl(get_uint32(body));
-  reason = *(uint8_t*)(body+4);
-
-  if (!(ap_conn = connection_get_by_global_id(conn_id))
-      || ap_conn->state != CONN_TYPE_AP
-      || !ap_conn->socks_request) {
-    send_control0_error(conn, ERR_NO_STREAM,
-                       "No AP connection found with given ID");
-    return 0;
-  }
   connection_mark_unattached_ap(ap_conn, reason);
   send_control_done(conn);
   return 0;
@@ -1149,22 +1398,47 @@ static int
 handle_control_closecircuit(connection_t *conn, uint32_t len,
                             const char *body)
 {
-  /* XXXX V1 */
-  uint32_t circ_id;
-  circuit_t *circ;
-  int safe;
+  circuit_t *circ = NULL;
+  int safe = 0;
 
-  if (len < 5) {
-    send_control0_error(conn, ERR_SYNTAX, "closecircuit message too short");
-    return 0;
-  }
-  circ_id = ntohl(get_uint32(body));
-  safe = (*(uint8_t*)(body+4)) & 1;
+  if (STATE_IS_V0(conn->state)) {
+    uint32_t circ_id;
+    if (len < 5) {
+      send_control0_error(conn, ERR_SYNTAX, "closecircuit message too short");
+      return 0;
+    }
+    circ_id = ntohl(get_uint32(body));
+    safe = (*(uint8_t*)(body+4)) & 1;
 
-  if (!(circ = circuit_get_by_global_id(circ_id))) {
-    send_control0_error(conn, ERR_NO_CIRC,
-                       "No circuit found with given ID");
-    return 0;
+    if (!(circ = circuit_get_by_global_id(circ_id))) {
+      send_control0_error(conn, ERR_NO_CIRC,
+                          "No circuit found with given ID");
+      return 0;
+    }
+  } else {
+    smartlist_t *args;
+    args = smartlist_create();
+    smartlist_split_string(args, body, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    if (smartlist_len(args)<1)
+      connection_printf_to_buf(conn, "512 Missing argument to CLOSECIRCUIT\r\n");
+    else if (!(circ=get_circ(smartlist_get(args, 0))))
+      connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
+                               (char*)smartlist_get(args, 0));
+    else {
+      int i;
+      for (i=1; i < smartlist_len(args); ++i) {
+        if (!strcasecmp(smartlist_get(args, i), "IfUnused"))
+          safe = 1;
+        else
+          log_fn(LOG_INFO, "Skipping unknown option %s",
+                 (char*)smartlist_get(args,i));
+      }
+    }
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+    if (!circ)
+      return 0;
   }
 
   if (!safe || !circ->p_streams) {
@@ -1693,18 +1967,17 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 void
 control_event_logmsg(int severity, const char *msg)
 {
-  /* XXXX V1 */
   static int sending_logmsg=0;
   int oldlog, event;
 
   if (sending_logmsg)
     return;
 
-  oldlog = EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE) &&
+  oldlog = EVENT_IS_INTERESTING0(EVENT_LOG_OBSOLETE) &&
     (severity == LOG_NOTICE || severity == LOG_WARN || severity == LOG_ERR);
   event = log_severity_to_event(severity);
 
-  if (event<0 || !EVENT_IS_INTERESTING(event))
+  if (event<0 || !EVENT_IS_INTERESTING0(event))
     event = 0;
 
   if (oldlog || event) {
@@ -1715,6 +1988,28 @@ control_event_logmsg(int severity, const char *msg)
     if (oldlog)
       send_control0_event(EVENT_LOG_OBSOLETE, (uint32_t)(len+1), msg);
     sending_logmsg = 0;
+  }
+
+  event = log_severity_to_event(severity);
+  if (event >= 0 && EVENT_IS_INTERESTING1(event)) {
+    char *b = NULL;
+    const char *s;
+    if (strchr(msg, '\n')) {
+      char *cp;
+      b = tor_strdup(msg);
+      for (cp = b; *cp; ++cp)
+        if (*cp == '\r' || *cp == '\n')
+          *cp = ' ';
+    }
+    switch(severity) {
+      case LOG_INFO: s = "INFO"; break;
+      case LOG_NOTICE: s = "NOTICE"; break;
+      case LOG_WARN: s = "WARN"; break;
+      case LOG_ERR: s = "ERR"; break;
+      default: s = "UnknownLogSeverity"; break;
+    }
+    send_control1_event(event, "650 %s %s\r\n", s, b?b:msg);
+    tor_free(b);
   }
 }
 
