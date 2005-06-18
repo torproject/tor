@@ -13,7 +13,9 @@ const char compat_c_id[] = "$Id$";
  * the platform.
  **/
 
-/* This is required on rh7 to make strptime not complain. */
+/* This is required on rh7 to make strptime not complain.
+ * We also need it to make memmem get defined (where available)
+ */
 #define _GNU_SOURCE
 
 #include "orconfig.h"
@@ -132,6 +134,38 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   if (r < 0 || ((size_t)r) >= size)
     return -1;
   return r;
+}
+
+/** Given <b>hlen</b> bytes at <b>haystack</b> and <b>nlen</b> bytes at
+ * <b>needle</b>, return a pointer to the first occurence of the needle
+ * within the haystack, or NULL if there is no such occurrence.
+ *
+ * Requires that nlen be greater than zero.
+ */
+const void *
+tor_memmem(const void *haystack, size_t hlen, const void *needle, size_t nlen)
+{
+#if defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2)
+  tor_assert(nlen);
+  return memmem(haystack, hlen, needle, nlen);
+#else
+  /* This isn't as fast as the GLIBC implementation, but it doesn't need to be. */
+  const void *p, *end;
+  char first;
+  tor_assert(nlen);
+
+  p = haystack;
+  end = haystack + hlen;
+  first = *(const char*)needle;
+  while ((p = memchr(p, first, end-p))) {
+    if (end-p >= nlen)
+      return NULL;
+    if (!memcmp(p, needle, nlen))
+      return p;
+    ++p;
+  }
+  return NULL;
+#endif
 }
 
 /** Take a filename and return a pointer to its final element.  This
