@@ -137,7 +137,7 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
 }
 
 /** Given <b>hlen</b> bytes at <b>haystack</b> and <b>nlen</b> bytes at
- * <b>needle</b>, return a pointer to the first occurence of the needle
+ * <b>needle</b>, return a pointer to the first occurrence of the needle
  * within the haystack, or NULL if there is no such occurrence.
  *
  * Requires that nlen be greater than zero.
