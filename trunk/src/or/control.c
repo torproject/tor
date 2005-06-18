@@ -1118,58 +1118,90 @@ static int
 handle_control_extendcircuit(connection_t *conn, uint32_t len,
                              const char *body)
 {
-  /* XXXX V1 */
-  smartlist_t *router_nicknames, *routers;
+  smartlist_t *router_nicknames=NULL, *routers=NULL;
   uint32_t circ_id;
-  circuit_t *circ;
+  circuit_t *circ = NULL;
+  int zero_circ, v0;
   char reply[4];
-  if (len<5) {
-    send_control0_error(conn, ERR_SYNTAX, "extendcircuit message too short");
-    return 0;
-  }
 
+  v0 = STATE_IS_V0(conn->state);
   router_nicknames = smartlist_create();
-  routers = smartlist_create();
-  smartlist_split_string(router_nicknames, body+4, ",", 0, 0);
-  SMARTLIST_FOREACH(router_nicknames, const char *, n,
-    {
-      routerinfo_t *r = router_get_by_nickname(n);
-      if (!r) {
-        send_control0_error(conn, ERR_NO_ROUTER, n);
+
+  if (v0) {
+    if (len<5) {
+      send_control0_error(conn, ERR_SYNTAX, "extendcircuit message too short");
+      goto done;
+    }
+    smartlist_split_string(router_nicknames, body+4, ",", 0, 0);
+    circ_id = ntohl(get_uint32(body));
+    if (!circ_id) {
+      /* start a new circuit */
+      zero_circ = 1;
+    } else {
+      circ = circuit_get_by_global_id(circ_id);
+      zero_circ = 0;
+      if (!circ) {
+        send_control0_error(conn, ERR_NO_CIRC,
+                            "No circuit found with given ID");
         goto done;
       }
-      smartlist_add(routers, r);
-    });
+    }
+  } else {
+    smartlist_t *args;
+    args = smartlist_create();
+    smartlist_split_string(args, body, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    if (smartlist_len(args)<2)
+      connection_printf_to_buf(conn,"512 Missing argument to ATTACHSTREAM\r\n");
+
+    smartlist_split_string(router_nicknames, smartlist_get(args,0), ",", 0, 0);
+    zero_circ = !strcmp("0", (char*)smartlist_get(args,1));
+    if (!zero_circ && !(circ = get_circ(smartlist_get(args,1)))) {
+      connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
+                               (char*)smartlist_get(args, 1));
+    }
+
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+    if (!zero_circ && !circ)
+      return 0;
+  }
+
+  routers = smartlist_create();
+  SMARTLIST_FOREACH(router_nicknames, const char *, n,
+  {
+    routerinfo_t *r = router_get_by_nickname(n);
+    if (!r) {
+      if (v0)
+        send_control0_error(conn, ERR_NO_ROUTER, n);
+      else
+        connection_printf_to_buf(conn, "552 No such router \"%s\"\r\n", n);
+      goto done;
+    }
+    smartlist_add(routers, r);
+  });
   if (!smartlist_len(routers)) {
-    send_control0_error(conn, ERR_SYNTAX, "No router names provided");
+    if (v0)
+      send_control0_error(conn, ERR_SYNTAX, "No router names provided");
+    else
+      connection_write_str_to_buf("512 No router names provided\r\n", conn);
     goto done;
   }
 
-  circ_id = ntohl(get_uint32(body));
-  if (!circ_id) {
-    /* start a new circuit */
-    circ = circuit_init(CIRCUIT_PURPOSE_C_GENERAL, 0, 0, 0);
-  } else {
-    circ = circuit_get_by_global_id(circ_id);
-    if (!circ) {
-      send_control0_error(conn, ERR_NO_CIRC,
-                         "No circuit found with given ID");
-      goto done;
-    }
-  }
-
   /* now circ refers to something that is ready to be extended */
-
   SMARTLIST_FOREACH(routers, routerinfo_t *, r,
-    {
-      circuit_append_new_exit(circ, r);
-    });
+  {
+    circuit_append_new_exit(circ, r);
+  });
 
   /* now that we've populated the cpath, start extending */
-  if (!circ_id) {
+  if (zero_circ) {
     if (circuit_handle_first_hop(circ) < 0) {
       circuit_mark_for_close(circ);
-      send_control0_error(conn, ERR_INTERNAL, "couldn't start circuit");
+      if (v0)
+        send_control0_error(conn, ERR_INTERNAL, "couldn't start circuit");
+      else
+        connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
       goto done;
     }
   } else {
@@ -1178,14 +1210,22 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
       if (circuit_send_next_onion_skin(circ) < 0) {
         log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
         circuit_mark_for_close(circ);
-        send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
+        if (v0)
+          send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
+        else
+          connection_write_str_to_buf("551 Couldn't send onion skinr\n", conn);
         goto done;
       }
     }
   }
 
-  set_uint32(reply, htonl(circ->global_identifier));
-  send_control_done2(conn, reply, sizeof(reply));
+  if (v0) {
+    set_uint32(reply, htonl(circ->global_identifier));
+    send_control_done2(conn, reply, sizeof(reply));
+  } else {
+    connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
+                             (unsigned long)circ->global_identifier);
+  }
  done:
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
@@ -1196,51 +1236,90 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
 /** DOCDOC */
 static int
 handle_control_attachstream(connection_t *conn, uint32_t len,
-                                        const char *body)
+                            const char *body)
 {
-  /* XXXX V1 */
-  uint32_t conn_id;
-  uint32_t circ_id;
-  connection_t *ap_conn;
-  circuit_t *circ;
+  connection_t *ap_conn = NULL;
+  circuit_t *circ = NULL;
+  int zero_circ;
 
-  if (len < 8) {
-    send_control0_error(conn, ERR_SYNTAX, "attachstream message too short");
-    return 0;
+  if (STATE_IS_V0(conn->state)) {
+    uint32_t conn_id;
+    uint32_t circ_id;
+    if (len < 8) {
+      send_control0_error(conn, ERR_SYNTAX, "attachstream message too short");
+      return 0;
+    }
+
+    conn_id = ntohl(get_uint32(body));
+    circ_id = ntohl(get_uint32(body+4));
+    zero_circ = circ_id == 0;
+
+    if (!(ap_conn = connection_get_by_global_id(conn_id))) {
+      send_control0_error(conn, ERR_NO_STREAM,
+                          "No connection found with given ID");
+      return 0;
+    }
+    if (circ_id && !(circ = circuit_get_by_global_id(circ_id))) {
+      send_control0_error(conn, ERR_NO_CIRC, "No circuit found with given ID");
+      return 0;
+    }
+  } else {
+    smartlist_t *args;
+    args = smartlist_create();
+    smartlist_split_string(args, body, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    if (smartlist_len(args)<2)
+      connection_printf_to_buf(conn,"512 Missing argument to ATTACHSTREAM\r\n");
+
+    zero_circ = !strcmp("0", (char*)smartlist_get(args,1));
+
+    if (!(ap_conn = get_stream(smartlist_get(args, 0)))) {
+      connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
+                               (char*)smartlist_get(args, 0));
+    } else if (!zero_circ && !(circ = get_circ(smartlist_get(args, 1)))) {
+      connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
+                               (char*)smartlist_get(args, 1));
+    }
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+    if (!ap_conn || (!zero_circ && !circ))
+      return 0;
   }
 
-  conn_id = ntohl(get_uint32(body));
-  circ_id = ntohl(get_uint32(body+4));
 
-  if (!(ap_conn = connection_get_by_global_id(conn_id))) {
-    send_control0_error(conn, ERR_NO_STREAM,
-                       "No connection found with given ID");
-    return 0;
-  }
   if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT) {
-    send_control0_error(conn, ERR_NO_STREAM,
-                       "Connection was not managed by controller.");
+    if (STATE_IS_V0(conn->state)) {
+      send_control0_error(conn, ERR_NO_STREAM,
+                          "Connection is not managed by controller.");
+    } else {
+      connection_write_str_to_buf(
+                              "555 Connection is not managed by controller.\r\n",
+                                  conn);
+    }
     return 0;
   }
 
-  if (!circ_id) {
+  if (zero_circ) {
     ap_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     if (connection_ap_handshake_attach_circuit(ap_conn)<0)
       connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_CANT_ATTACH);
     send_control_done(conn);
     return 0;
   }
-
-  if (!(circ = circuit_get_by_global_id(circ_id))) {
-    send_control0_error(conn, ERR_NO_CIRC, "No circuit found with given ID");
-    return 0;
-  }
   if (circ->state != CIRCUIT_STATE_OPEN) {
-    send_control0_error(conn, ERR_INTERNAL, "Refuse to attach stream to non-open circ.");
+    if (STATE_IS_V0(conn->state))
+      send_control0_error(conn, ERR_INTERNAL, "Refuse to attach stream to non-open circ.");
+    else
+      connection_write_str_to_buf(
+                              "551 Can't attach stream to non-open circuit\r\n",
+                              conn);
     return 0;
   }
   if (connection_ap_handshake_attach_chosen_circuit(ap_conn, circ) != 1) {
-    send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");
+    if (STATE_IS_V0(conn->state))
+      send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");
+    else
+      connection_write_str_to_buf("551 Unable to attach stream\r\n", conn);
     return 0;
   }
   send_control_done(conn);
@@ -1283,6 +1362,8 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
     break;
   }
 
+  if (!v0)
+    tor_free(desc);
   return 0;
 }
 
