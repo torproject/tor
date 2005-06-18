@@ -1238,7 +1238,8 @@ static int tor_init(int argc, char *argv[]) {
     /* XXX really, this should get moved to do_main_loop */
   }
 
-  handle_signals(1);
+  if (get_options()->command == CMD_RUN_TOR)
+    handle_signals(1);
 
   crypto_global_init();
   if (crypto_seed_rng()) {
