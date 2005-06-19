@@ -693,7 +693,12 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
       }
     } else {
       struct config_line_t *answer = config_get_assigned_option(options,q);
-      /* XXXX handle non-set options in V1 at least*/
+      if (!v0 && !answer) {
+        size_t alen = strlen(q)+8;
+        char *astr = tor_malloc(alen);
+        tor_snprintf(astr, alen, "250-%s\r\n", q);
+        smartlist_add(answers, astr);
+      }
 
       while (answer) {
         struct config_line_t *next;
