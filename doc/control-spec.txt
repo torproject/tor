@@ -138,6 +138,9 @@ $Id$
   If all of the listed keywords exist in the Tor configuration, Tor replies
   with a series of reply lines of the form:
       250 keyword=value
+  If any option is set to a 'default' value semantically different from an
+  empty string, Tor may reply with a reply line of the form:
+      250 keyword
 
   If some of the listed keywords can't be found, Tor replies with a
    "552 unknown configuration keyword" message.
@@ -519,6 +522,15 @@ about dns resolves, etc, so the controller can keep synced. -RD]
      S: 250-SOCKSPORT=9050
      S: 650 CIRC 1000 EXTENDED moria1,moria2
      S: 250 ORPORT=0
+
+  Clients SHOULD tolerate more arguments in an asynchonous reply than
+  expected, and SHOULD tolerate more lines in an asynchronous reply than
+  expected.  For instance, a client that expects a CIRC message like:
+      650 CIRC 1000 EXTENDED moria1,moria2
+  should tolerate:
+      650+CIRC 1000 EXTENDED moria1,moria2 0xBEEF
+      650-EXTRAMAGIC=99
+      650 ANONYMITY=high
 
 4.1.1 Circuit status changed
 
