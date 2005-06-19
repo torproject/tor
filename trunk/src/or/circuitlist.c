@@ -154,6 +154,13 @@ circuit_close_all_marked(void)
   }
 }
 
+/** DOCDOC **/
+circuit_t *
+_circuit_get_global_list(void)
+{
+  return global_circuitlist;
+}
+
 /** Function to make circ-\>state human-readable */
 const char *
 circuit_state_to_string(int state) {

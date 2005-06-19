@@ -1219,6 +1219,7 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
 /********************************* circuitlist.c ***********************/
 
+circuit_t * _circuit_get_global_list(void);
 const char *circuit_state_to_string(int state);
 enum which_conn_changed_t { P_CONN_CHANGED=1, N_CONN_CHANGED=0 };
 void circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
@@ -1478,6 +1479,7 @@ int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
+int control_event_address_mapped(const char *from, const char *to,time_t expires);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);
