@@ -127,7 +127,7 @@ relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
  *  - Crypt it (encrypt APward, decrypt at AP, decrypt exitward).
  *  - Check if recognized (if exitward).
  *  - If recognized and the digest checks out, then find if there's
- *    a conn that the cell is intended for, and deliver it to·
+ *    a conn that the cell is intended for, and deliver it to
  *    connection_edge.
  *  - Else connection_or_write_cell_to_buf to the conn on the other
  *    side of the circuit.
