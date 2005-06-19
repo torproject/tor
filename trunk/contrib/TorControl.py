@@ -433,7 +433,7 @@ def do_main_loop(host,port):
                            (".", "abacinator.onion")])`
     print `extend_circuit(s,0,["moria1"])`
     print '========'
-    print `extend_circuit(s,0,[""])`
+    #print `extend_circuit(s,0,[""])`
     print '========'
     #send_signal(s,1)
     #save_conf(s)
