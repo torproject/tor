@@ -71,7 +71,8 @@ const char control_c_id[] = "$Id$";
 #define EVENT_NOTICE_MSG      0x0009
 #define EVENT_WARN_MSG        0x000A
 #define EVENT_ERR_MSG         0x000B
-#define _EVENT_MAX            0x000B
+#define EVENT_ADDRMAP         0x000C
+#define _EVENT_MAX            0x000C
 
 /** Array mapping from message type codes to human-readable message
  * type names.  */
@@ -161,6 +162,7 @@ static int handle_control_closestream(connection_t *conn, uint32_t len,
                                       const char *body);
 static int handle_control_closecircuit(connection_t *conn, uint32_t len,
                                        const char *body);
+static int write_stream_target_to_buf(connection_t *conn, char *buf, size_t len);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
  * human-readable string equivalent. */
@@ -250,6 +252,7 @@ adjust_event_log_severity(void)
                                control_event_logmsg);
 }
 
+/* DOCDOC */
 static INLINE void
 connection_write_str_to_buf(const char *s, connection_t *conn)
 {
@@ -257,6 +260,7 @@ connection_write_str_to_buf(const char *s, connection_t *conn)
   connection_write_to_buf(s, len, conn);
 }
 
+/* DOCDOC ; test */
 static size_t
 write_escaped_data(const char *data, size_t len, int translate_newlines,
                    char **out)
@@ -288,50 +292,17 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
     }
     *outp++ = *data++;
   }
-  *outp++ = '\r';
-  *outp++ = '\n';
+  if (outp < *out+2 || memcmp(outp-2, "\r\n", 2)) {
+    *outp++ = '\r';
+    *outp++ = '\n';
+  }
   *outp++ = '.';
   *outp++ = '\r';
   *outp++ = '\n';
   return outp - *out;
 }
 
-#if 0
-static void
-connection_write_escaped_data_to_buf(const char *data, size_t len,
-                                     int translate_newlines,
-                                     connection_t *conn)
-{
-  const char *next;
-
-  while (len) {
-    if (*data == '.')
-      connection_write_to_buf(".", 1, conn);
-
-    if (translate_newlines)
-      next = tor_memmem(data, len, "\r\n", 2);
-    else
-      next = tor_memmem(data, len, "\r\n.", 3);
-
-    if (next) {
-      if (translate_newlines) {
-        connection_write_to_buf(data, next-data, conn);
-        connection_write_to_buf("\n", 1, conn);
-        len -= (next-data+2);
-      } else {
-        connection_write_to_buf(data, next-data+2, conn);
-        len -= (next-data+2);
-      }
-      data = next + 2;
-    } else {
-      connection_write_to_buf(data, len, conn);
-      break;
-    }
-  }
-  connection_write_to_buf(".\r\n", 3, conn);
-}
-#endif
-
+/* DOCDOC ; test */
 static size_t
 read_escaped_data(const char *data, size_t len, int translate_newlines,
                   char **out)
@@ -368,14 +339,54 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
   return outp - *out;
 }
 
+/** DOCDOC; test **/
 static const char *
-get_escaped_string(const char *start, char **out, size_t *out_len)
+get_escaped_string(const char *start, size_t in_len_max,
+                   char **out, size_t *out_len)
 {
-  /* XXXX V1 */
-  return NULL;
+  const char *cp, *end;
+  char *outp;
+  size_t len=0;
+
+  if (*start != '\"')
+    return NULL;
+
+  cp = start+1;
+  end = start+in_len_max;
+
+  /* Calculate length. */
+  while (1) {
+    if (cp >= end)
+      return NULL;
+    else if (*cp == '\\') {
+      if (++cp == end)
+        return NULL; /* Can't escape EOS. */
+      ++cp;
+      ++len;
+    } else if (*cp == '\"') {
+      break;
+    } else {
+      ++cp;
+      ++len;
+    }
+  }
+  end = cp;
+  outp = *out = tor_malloc(len+1);
+  *out_len = len;
+
+  cp = start+1;
+  while (cp < end) {
+    if (*cp == '\\')
+      ++cp;
+    *outp++ = *cp++;
+  }
+  *outp = '\0';
+  tor_assert((outp - *out) == *out_len);
+
+  return end+1;
 }
 
-
+/* DOCDOC  */
 static void
 connection_printf_to_buf(connection_t *conn, const char *format, ...)
 {
@@ -394,29 +405,6 @@ connection_printf_to_buf(connection_t *conn, const char *format, ...)
   }
   connection_write_to_buf(buf, len, conn);
 }
-
-#if 0
-static void
-connection_write_reply_lines_to_buf(connection_t *conn,
-                                    const char *code, smartlist_t *lines)
-{
-  int i, len;
-
-  tor_assert(strlen(code) == 3);
-  len = smartlist_len(lines);
-  if (!len)
-    return;
-
-  for (i=0; i < len-1; ++i) {
-    connection_write_to_buf(code, 3, conn);
-    connection_write_to_buf("-", 1, conn);
-    connection_write_str_to_buf(smartlist_get(lines, i), conn);
-  }
-  connection_write_to_buf(code, 3, conn);
-  connection_write_to_buf(" ", 1, conn);
-  connection_write_str_to_buf(smartlist_get(lines, len-1), conn);
-}
-#endif
 
 /** Send a message of type <b>type</b> containing <b>len</b> bytes
  * from <b>body</b> along the control connection <b>conn</b> */
@@ -514,15 +502,15 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
         conns[i]->state == CONTROL_CONN_STATE_OPEN_V0 &&
         conns[i]->event_mask & (1<<event)) {
       send_control0_message(conns[i], CONTROL0_CMD_EVENT, buflen, buf);
-      if (event == EVENT_ERR_MSG) {
+      if (event == EVENT_ERR_MSG)
         _connection_controller_force_write(conns[i]);
-      }
     }
   }
 
   tor_free(buf);
 }
 
+/* DOCDOC */
 static void
 send_control1_event(uint16_t event, const char *format, ...)
 {
@@ -551,9 +539,8 @@ send_control1_event(uint16_t event, const char *format, ...)
         conns[i]->state == CONTROL_CONN_STATE_OPEN_V1 &&
         conns[i]->event_mask & (1<<event)) {
       connection_write_to_buf(buf, len, conns[i]);
-      if (event == EVENT_ERR_MSG) {
+      if (event == EVENT_ERR_MSG)
         _connection_controller_force_write(conns[i]);
-      }
     }
   }
 }
@@ -591,6 +578,7 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
 {
   int r;
   struct config_line_t *lines=NULL;
+  char *start = body;
   int v0 = STATE_IS_V0(conn->state);
 
   if (!v0) {
@@ -602,6 +590,7 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
         ++eq;
       memcpy(outp, body, eq-body);
       outp += (eq-body);
+      *outp++ = ' ';
       body = eq+1;
       if (*eq == '=') {
         if (*body != '\"') {
@@ -610,7 +599,8 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
         } else {
           char *val;
           size_t val_len;
-          body = (char*)get_escaped_string(body, &val, &val_len);
+          body = (char*)get_escaped_string(body, (len - (body-start)),
+                                           &val, &val_len);
           if (!body) {
             connection_write_str_to_buf("551 Couldn't parse string\r\n", conn);
             tor_free(config);
@@ -618,6 +608,7 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
           }
           memcpy(outp, val, val_len);
           outp += val_len;
+          tor_free(val);
         }
       }
       while (TOR_ISSPACE(*body))
@@ -702,6 +693,7 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
       }
     } else {
       struct config_line_t *answer = config_get_assigned_option(options,q);
+      /* XXXX handle non-set options in V1 at least*/
 
       while (answer) {
         struct config_line_t *next;
@@ -808,6 +800,8 @@ handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
           event_code = EVENT_ERR_MSG;
         else if (!strcasecmp(ev, "NEWDESC"))
           event_code = EVENT_NEW_DESC;
+        else if (!strcasecmp(ev, "ADDRMAP"))
+          event_code = EVENT_ADDRMAP;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
@@ -881,7 +875,7 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
       password = tor_strdup("");
       password_len = 0;
     } else {
-      if (!get_escaped_string(body, &password, &password_len)) {
+      if (!get_escaped_string(body, len, &password, &password_len)) {
         connection_write_str_to_buf("551 Invalid quoted string\r\n", conn);
         return 0;
       }
@@ -1003,21 +997,29 @@ handle_control_signal(connection_t *conn, uint32_t len,
 static int
 handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
 {
-  /* XXXX V1 */
   smartlist_t *elts;
   smartlist_t *lines;
   smartlist_t *reply;
   char *r;
   size_t sz;
+  int v0 = STATE_IS_V0(conn->state);
   lines = smartlist_create();
   elts = smartlist_create();
   reply = smartlist_create();
-  smartlist_split_string(lines, body, "\n",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (v0)
+    smartlist_split_string(lines, body, "\n",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  else
+    smartlist_split_string(lines, body, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  /* XXXX Make errors conformant. */
   SMARTLIST_FOREACH(lines, char *, line,
   {
     tor_strlower(line);
-    smartlist_split_string(elts, line, " ", 0, 2);
+    if (v0)
+      smartlist_split_string(elts, line, " ", 0, 2);
+    else
+      smartlist_split_string(elts, line, "=", 0, 2);
     if (smartlist_len(elts) == 2) {
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
@@ -1027,21 +1029,31 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
         log_fn(LOG_WARN,"Skipping invalid argument '%s' in MapAddress msg",to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
         const char *addr = addressmap_register_virtual_address(
-               strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
+              !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!addr) {
           log_fn(LOG_WARN,
                  "Unable to allocate address for '%s' in MapAddress msg",
                  safe_str(line));
         } else {
-          size_t anslen = strlen(addr)+strlen(to)+2;
+          size_t anslen = strlen(addr)+strlen(to)+8;
           char *ans = tor_malloc(anslen);
-          tor_snprintf(ans, anslen, "%s %s", addr, to);
+          if (v0)
+            tor_snprintf(ans, anslen, "%s %s", addr, to);
+          else
+            tor_snprintf(ans, anslen, "250-%s=%s", addr, to);
           smartlist_add(reply, ans);
         }
       } else {
         addressmap_register(from, tor_strdup(to), 1);
-        smartlist_add(reply, tor_strdup(line));
+        if (v0)
+          smartlist_add(reply, tor_strdup(line));
+        else {
+          size_t anslen = strlen(line)+8;
+          char *ans = tor_malloc(anslen);
+          tor_snprintf(ans, anslen, "250-%s", line);
+          smartlist_add(reply, ans);
+        }
       }
     } else {
       log_fn(LOG_WARN, "Skipping MapAddress line with wrong number of items.");
@@ -1053,8 +1065,15 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
   smartlist_free(lines);
   smartlist_free(elts);
 
-  r = smartlist_join_strings(reply, "\n", 1, &sz);
-  send_control_done2(conn,r,sz);
+  if (v0) {
+    r = smartlist_join_strings(reply, "\n", 1, &sz);
+    send_control_done2(conn,r,sz);
+  } else {
+    if (smartlist_len(reply))
+      ((char*)smartlist_get(reply,smartlist_len(reply)-1))[3] = ' ';
+    r = smartlist_join_strings(reply, "\r\n", 1, &sz);
+    connection_write_to_buf(r, sz, conn);
+  }
 
   SMARTLIST_FOREACH(reply, char *, cp, tor_free(cp));
   smartlist_free(reply);
@@ -1086,6 +1105,106 @@ handle_getinfo_helper(const char *question, char **answer)
         list_server_status(routerlist->routers, answer) < 0) {
       return -1;
     }
+  } else if (!strcmp(question, "circuit-status")) {
+    circuit_t *circ;
+    smartlist_t *status = smartlist_create();
+    for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
+      char *s, *path;
+      size_t slen;
+      const char *state;
+      if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
+        continue;
+      path = circuit_list_path(circ,0);
+      if (circ->state == CIRCUIT_STATE_OPEN)
+        state = "BUILT";
+      else if (strlen(path))
+        state = "EXTENDED";
+      else
+        state = "LAUNCHED";
+
+      slen = strlen(path)+strlen(state)+20;
+      s = tor_malloc(slen+1);
+      tor_snprintf(s, slen, "%lu %s %s", (unsigned long)circ->global_identifier,
+                   state, path);
+      smartlist_add(status, s);
+      tor_free(path);
+    }
+    *answer = smartlist_join_strings(status, "\r\n", 1, NULL);
+    SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
+    smartlist_free(status);
+  } else if (!strcmp(question, "stream-status")) {
+    connection_t **conns;
+    int n_conns, i;
+    char buf[256];
+    smartlist_t *status = smartlist_create();
+    get_connection_array(&conns, &n_conns);
+    for (i=0; i < n_conns; ++i) {
+      const char *state;
+      char *s;
+      size_t slen;
+      circuit_t *circ;
+      if (conns[i]->type != CONN_TYPE_AP ||
+          conns[i]->marked_for_close ||
+          conns[i]->state == AP_CONN_STATE_SOCKS_WAIT)
+        continue;
+      switch (conns[i]->state)
+        {
+        case AP_CONN_STATE_CONTROLLER_WAIT:
+        case AP_CONN_STATE_CIRCUIT_WAIT:
+          if (conns[i]->socks_request &&
+              conns[i]->socks_request->command == SOCKS_COMMAND_RESOLVE)
+            state = "NEWRESOLVE";
+          else
+            state = "NEW";
+          break;
+        case AP_CONN_STATE_RENDDESC_WAIT:
+        case AP_CONN_STATE_CONNECT_WAIT:
+          state = "SENTCONNECT"; break;
+        case AP_CONN_STATE_RESOLVE_WAIT:
+          state = "SENTRESOLVE"; break;
+        case AP_CONN_STATE_OPEN:
+          state = "SUCCEEDED"; break;
+        default:
+          log_fn(LOG_WARN, "Asked for stream in unknown state %d",
+                 conns[i]->state);
+          continue;
+        }
+      circ = circuit_get_by_edge_conn(conns[i]);
+      write_stream_target_to_buf(conns[i], buf, sizeof(buf));
+      slen = strlen(buf)+strlen(state)+32;
+      s = tor_malloc(slen+1);
+      tor_snprintf(s, slen, "%lu %s %lu %s",
+                   (unsigned long) conns[i]->global_identifier,state,
+                   circ?(unsigned long)circ->global_identifier : 0ul,
+                   buf);
+      smartlist_add(status, s);
+    }
+    *answer = smartlist_join_strings(status, "\r\n", 1, NULL);
+    SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
+    smartlist_free(status);
+  } else if (!strcmp(question, "orconn-status")) {
+    connection_t **conns;
+    int n_conns, i;
+    smartlist_t *status = smartlist_create();
+    get_connection_array(&conns, &n_conns);
+    for (i=0; i < n_conns; ++i) {
+      const char *state;
+      char *s;
+      size_t slen;
+      if (conns[i]->type != CONN_TYPE_OR || conns[i]->marked_for_close)
+        continue;
+      if (conns[i]->state == OR_CONN_STATE_OPEN)
+        state = "CONNECTED";
+      else
+        state = "LAUNCHED";
+      slen = strlen(conns[i]->nickname)+strlen(state)+2;
+      s = tor_malloc(slen+1);
+      tor_snprintf(s, slen, "%s %s",conns[i]->nickname,state);
+      smartlist_add(status, s);
+    }
+    *answer = smartlist_join_strings(status, "\r\n", 1, NULL);
+    SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
+    smartlist_free(status);
   } else if (!strcmpstart(question, "addr-mappings/")) {
     time_t min_e, max_e;
     smartlist_t *mappings;
@@ -1152,13 +1271,13 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   if (smartlist_len(unrecognized)) {
     int i;
     tor_assert(!v0);
-    for (i=0; i < len-1; ++i)
+    for (i=0; i < smartlist_len(unrecognized)-1; ++i)
       connection_printf_to_buf(conn,
-                               "552-Unrecognized configuration key \"%s\"\r\n",
+                               "552-Unrecognized key \"%s\"\r\n",
                                (char*)smartlist_get(unrecognized, i));
     connection_printf_to_buf(conn,
-                             "552 Unrecognized configuration key \"%s\"\r\n",
-                             (char*)smartlist_get(unrecognized, len-1));
+                             "552 Unrecognized key \"%s\"\r\n",
+                             (char*)smartlist_get(unrecognized, i));
     goto done;
   }
 
@@ -1174,12 +1293,14 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
       char *v = smartlist_get(answers, i+1);
       /*XXXX Not an adequate test! XXXX011 */
       if (!strchr(v, '\n') && !strchr(v, '\r')) {
-        connection_printf_to_buf(conn, "250-%s=%s\r\n", k, v);
+        connection_printf_to_buf(conn, "250-%s=", k);
+        connection_write_str_to_buf(v, conn);
+        connection_write_str_to_buf("\r\n", conn);
       } else {
         char *esc = NULL;
         size_t len;
         len = write_escaped_data(v, strlen(v), 1, &esc);
-        connection_printf_to_buf(conn, "250+%s=", k);
+        connection_printf_to_buf(conn, "250+%s=\r\n", k);
         connection_write_to_buf(esc, len, conn);
         tor_free(esc);
       }
@@ -1370,7 +1491,6 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
     if (!ap_conn || (!zero_circ && !circ))
       return 0;
   }
-
 
   if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT) {
     if (STATE_IS_V0(conn->state)) {
@@ -1679,6 +1799,7 @@ connection_control_reached_eof(connection_t *conn)
   return 0;
 }
 
+/* DOCDOC */
 static int
 connection_control_process_inbuf_v1(connection_t *conn)
 {
@@ -1812,6 +1933,7 @@ connection_control_process_inbuf_v1(connection_t *conn)
   goto again;
 }
 
+/* DOCDOC */
 static int
 connection_control_process_inbuf_v0(connection_t *conn)
 {
@@ -2015,6 +2137,22 @@ control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
   return 0;
 }
 
+/** DOCDOC */
+static int
+write_stream_target_to_buf(connection_t *conn, char *buf, size_t len)
+{
+  char buf2[256];
+  if (conn->chosen_exit_name)
+    if (tor_snprintf(buf2, sizeof(buf2), ".%s.exit", conn->chosen_exit_name)<0)
+      return -1;
+  if (tor_snprintf(buf, len, "%s%s:%d",
+                   conn->socks_request->address,
+                   conn->chosen_exit_name ? buf2 : "",
+                   conn->socks_request->port)<0)
+    return -1;
+  return 0;
+}
+
 /** Something has happened to the stream associated with AP connection
  * <b>conn</b>: tell any interested control connections. */
 int
@@ -2022,19 +2160,14 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
 {
   char *msg;
   size_t len;
-  char buf[256], buf2[256];
+  char buf[256];
   tor_assert(conn->type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
 
   if (!EVENT_IS_INTERESTING(EVENT_STREAM_STATUS))
     return 0;
 
-  if (conn->chosen_exit_name)
-    tor_snprintf(buf2, sizeof(buf2), ".%s.exit", conn->chosen_exit_name);
-  tor_snprintf(buf, sizeof(buf), "%s%s:%d",
-               conn->socks_request->address,
-               conn->chosen_exit_name ? buf2 : "",
-               conn->socks_request->port);
+  write_stream_target_to_buf(conn, buf, sizeof(buf));
   if (EVENT_IS_INTERESTING0(EVENT_STREAM_STATUS)) {
     len = strlen(buf);
     msg = tor_malloc(5+len+1);
@@ -2047,6 +2180,7 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
   }
   if (EVENT_IS_INTERESTING0(EVENT_STREAM_STATUS)) {
     const char *status;
+    circuit_t *circ;
     switch (tp)
       {
       case STREAM_EVENT_SENT_CONNECT: status = "SENTCONNECT"; break;
@@ -2061,10 +2195,12 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
         log_fn(LOG_WARN, "Unrecognized status code %d", (int)tp);
         return 0;
       }
+    circ = circuit_get_by_edge_conn(conn);
     send_control1_event(EVENT_STREAM_STATUS,
-                        "650 STREAM %lu %s %s\r\n",
-                        (unsigned long)conn->global_identifier,
-                        status, buf);
+                        "650 STREAM %lu %s %lu %s\r\n",
+                        (unsigned long)conn->global_identifier, status,
+                        circ?(unsigned long)circ->global_identifier : 0ul,
+                        buf);
   }
   return 0;
 }
@@ -2167,7 +2303,7 @@ control_event_logmsg(int severity, const char *msg)
         if (*cp == '\r' || *cp == '\n')
           *cp = ' ';
     }
-    switch(severity) {
+    switch (severity) {
       case LOG_INFO: s = "INFO"; break;
       case LOG_NOTICE: s = "NOTICE"; break;
       case LOG_WARN: s = "WARN"; break;
@@ -2211,6 +2347,25 @@ control_event_descriptors_changed(smartlist_t *routers)
   }
   SMARTLIST_FOREACH(identities, char *, cp, tor_free(cp));
   smartlist_free(identities);
+
+  return 0;
+}
+
+/** DOCDOC */
+int
+control_event_address_mapped(const char *from, const char *to, time_t expires)
+{
+  if (!EVENT_IS_INTERESTING1(EVENT_ADDRMAP))
+    return 0;
+
+  if (expires < 3)
+    send_control1_event(EVENT_ADDRMAP, "650 ADDRMAP %s %s NEVER\r\n", from, to);
+  else {
+    char buf[ISO_TIME_LEN+1];
+    format_local_iso_time(buf,expires);
+    send_control1_event(EVENT_ADDRMAP, "650 ADDRMAP %s %s \"%s\"\r\n",
+                        from, to, buf);
+  }
 
   return 0;
 }

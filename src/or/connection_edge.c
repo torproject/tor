@@ -513,6 +513,7 @@ addressmap_virtaddress_remove(const char *addr, addressmap_entry_t *ent)
   }
 }
 
+/* DOCDOC */
 static void
 addressmap_ent_remove(const char *addr, addressmap_entry_t *ent)
 {
@@ -637,6 +638,7 @@ addressmap_register(const char *address, char *new_address, time_t expires)
 
   log_fn(LOG_INFO, "Addressmap: (re)mapped '%s' to '%s'",
          safe_str(address), safe_str(ent->new_address));
+  control_event_address_mapped(address, ent->new_address, expires);
 }
 
 /** An attempt to resolve <b>address</b> failed at some OR.

@@ -54,15 +54,19 @@ For 0.1.0.x:
 
 for 0.1.1.x:
 N . Controller improvements
-    . new controller protocol
-      . Specify
-      . Implement
-    - controller should have an event to learn about new addressmappings,
-      e.g. when we learn a hostname to IP mapping ?
-    - make sure err-level log events get flushed to the controller
-      immediately, since tor will exit right after.
-    - add new getinfo options to enumerate things we only find out about
+    o new controller protocol
+      o Specify
+      o Implement
+      . Test, debug
+    o add new getinfo options to enumerate things we only find out about
       currently via events.
+    o controller should have an event to learn about new addressmappings,
+      e.g. when we learn a hostname to IP mapping ?
+    . make sure err-level log events get flushed to the controller
+      immediately, since tor will exit right after.
+      o Implement
+      - Test, debug
+    - Switch example controllers to use new protocol
   - switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back, out if we decide we prefer it the way it already is. hm.
