@@ -963,6 +963,13 @@ do_main_loop(void)
 {
   int loop_result;
 
+  /* only spawn dns handlers if we're a router */
+  if (server_mode(get_options())) {
+    dns_init(); /* initialize the dns resolve tree, and spawn workers */
+  }
+
+  handle_signals(1);
+
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
   if (! identity_key_is_set()) {
@@ -1312,14 +1319,6 @@ tor_init(int argc, char *argv[])
   if (geteuid()==0)
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
-
-  /* only spawn dns handlers if we're a router */
-  if (server_mode(get_options()) && get_options()->command == CMD_RUN_TOR) {
-    dns_init(); /* initialize the dns resolve tree, and spawn workers */
-    /* XXX really, this should get moved to do_main_loop */
-  }
-
-  handle_signals(1);
 
   crypto_global_init();
   if (crypto_seed_rng()) {
