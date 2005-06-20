@@ -893,7 +893,7 @@ second_elapsed_callback(int fd, short event, void *args)
 /** Called when a possibly ignorable libevent error occurs; ensures that we
  * don't get into an infinite loop by ignoring too many errors from
  * libevent. */
-int
+static int
 got_libevent_error(void)
 {
   if (++n_libevent_errors > 8) {
