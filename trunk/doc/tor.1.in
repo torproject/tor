@@ -154,6 +154,10 @@ minutes for clients, 15 minutes for servers)
 .TP
 \fBUser \fR\fIUID\fP
 On startup, setuid to this user.
+.TP
+\fBHardwareAccel \fR\fI0|1\fP
+If non-zero, try to use crypto hardware acceleration when
+available. (Default: 1. )
 
 .SH CLIENT OPTIONS
 .PP

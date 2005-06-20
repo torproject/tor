@@ -48,7 +48,7 @@ typedef struct crypto_digest_env_t crypto_digest_env_t;
 typedef struct crypto_dh_env_t crypto_dh_env_t;
 
 /* global state */
-int crypto_global_init(void);
+int crypto_global_init(int hardwareAccel);
 int crypto_global_cleanup(void);
 
 /* environment setup */

@@ -148,12 +148,11 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
 /** Initialize OpenSSL, unless it has already been initialized.
  */
 static void
-tor_tls_init(void) {
+tor_tls_init() {
   if (!tls_library_is_initialized) {
     SSL_library_init();
     SSL_load_error_strings();
-    crypto_global_init();
-    OpenSSL_add_all_algorithms();
+    crypto_global_init(-1);
     tls_library_is_initialized = 1;
   }
 }

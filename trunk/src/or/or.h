@@ -1137,6 +1137,8 @@ typedef struct {
                            * long do we wait before exiting? */
   int SafeLogging; /**< Boolean: are we allowed to log sensitive strings
                     * such as addresses (0), or do we scrub them first (1)? */
+  int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
+                      * acceleration where available? */
 } or_options_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024

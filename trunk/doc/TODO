@@ -107,7 +107,8 @@ N - Handle rendezvousing with unverified nodes.
     prefix.
   - cpu fixes:
     - see if we should make use of truncate to retry
-    - hardware accelerator support
+    o hardware accelerator support (configure engines.)
+    - hardware accelerator support (use instead of aes.c when reasonable)
 r   - kill dns workers more slowly
   - continue decentralizing the directory
     - Specify and design all of the below before implementing any.
