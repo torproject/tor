@@ -135,6 +135,7 @@ static config_var_t config_vars[] = {
   VAR("HttpProxyAuthenticator",STRING, HttpProxyAuthenticator,NULL),
   VAR("HttpsProxy",          STRING,   HttpsProxy,           NULL),
   VAR("HttpsProxyAuthenticator",STRING,HttpsProxyAuthenticator,NULL),
+  VAR("HardwareAccel",       BOOL,     HardwareAccel,        "1"),
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
@@ -1659,6 +1660,11 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
 
   if (!opt_streq(old->Group, new_val->Group)) {
     log_fn(LOG_WARN,"During reload, changing Group is not allowed. Failing.");
+    return -1;
+  }
+
+  if (old->HardwareAccel != new_val->HardwareAccel) {
+    log_fn(LOG_WARN,"During reload, changing HardwareAccel is not allowed. Failing.");
     return -1;
   }
 

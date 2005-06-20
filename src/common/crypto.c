@@ -22,6 +22,7 @@ const char crypto_c_id[] = "$Id$";
 
 #include <string.h>
 
+#include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -159,14 +160,46 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 
+static void
+log_engine(const char *fn, ENGINE *e)
+{
+  if (e) {
+    const char *name, *id;
+    name = ENGINE_get_name(e);
+    id = ENGINE_get_id(e);
+    log(LOG_NOTICE, "Using OpenSSL engine %s [%s] for %s",
+        name?name:"?", id?id:"?", fn);
+  } else {
+    log(LOG_INFO, "Using default implementation for %s", fn);
+  }
+}
+
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
-int crypto_global_init()
+int
+crypto_global_init(int useAccel)
 {
   if (!_crypto_global_initialized) {
-      ERR_load_crypto_strings();
-      _crypto_global_initialized = 1;
-      setup_openssl_threading();
+    ERR_load_crypto_strings();
+    OpenSSL_add_all_algorithms();
+    _crypto_global_initialized = 1;
+    setup_openssl_threading();
+    if (useAccel) {
+      if (useAccel < 0)
+        log_fn(LOG_WARN, "Initializing OpenSSL via tor_tls_init().");
+      log_fn(LOG_INFO, "Initializing OpenSSL engine support.");
+      ENGINE_load_builtin_engines();
+      if (!ENGINE_register_all_complete())
+        return -1;
+
+      /* XXXX make sure this isn't leaking. */
+      log_engine("RSA", ENGINE_get_default_RSA());
+      log_engine("DH", ENGINE_get_default_DH());
+      log_engine("RAND", ENGINE_get_default_RAND());
+      log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
+      log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
+      log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
+    }
   }
   return 0;
 }
@@ -176,6 +209,7 @@ int crypto_global_init()
 int crypto_global_cleanup()
 {
   ERR_free_strings();
+  ENGINE_cleanup();
 #ifdef TOR_IS_MULTITHREADED
   if (_n_openssl_mutexes) {
     int n = _n_openssl_mutexes;

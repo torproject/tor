@@ -1320,7 +1320,7 @@ tor_init(int argc, char *argv[])
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
 
-  crypto_global_init();
+  crypto_global_init(get_options()->HardwareAccel);
   if (crypto_seed_rng()) {
     log_fn(LOG_ERR, "Unable to seed random number generator. Exiting.");
     return -1;
