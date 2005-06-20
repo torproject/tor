@@ -251,9 +251,17 @@ $Id$
           RP     Rendezvous point's nickname  [20 octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
-       OR
+        OR
           VER    Version byte: set to 1.        [1 octet]
-          RP                                  [42 octets]
+          RP     Rendezvous point nick or ID  [42 octets]
+          RC     Rendezvous cookie            [20 octets]
+          g^x    Diffie-Hellman data, part 1 [128 octets]
+        OR
+          VER    Version byte: set to 2.        [1 octet]
+          IP     Rendezvous point's address    [4 octets]
+          PORT   Rendezvous point's OR port    [2 octets]
+          ID     Rendezvous point identity ID [20 octets]
+          KEY    Rendezvous point onion key  [128 octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
 
@@ -261,13 +269,14 @@ $Id$
    and must contain EITHER a nickname, or an identity key digest, encoded in
    hex, and prefixed with a '$'.
 
-   Implementations must accept both variants, but should only generate the
-   first so long as Tor 0.0.7 is in use.
+   Implementations must accept all variants, but should only generate the
+   first so long as any version of Tor before 0.1.1 is still in use.
+   Implementations should never generate the second version.
 
    The hybrid encryption to Bob's PK works just like the hybrid
    encryption in CREATE cells (see main spec). Thus the payload of the
    RELAY_INTRODUCE1 cell on the wire will contain 20+42+16+20+20+128=246
-   bytes.
+   bytes. [XXXX not really]
 
 1.9. Introduction: From the Introduction Point to Bob's OP
 
