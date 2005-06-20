@@ -819,20 +819,6 @@ dirserv_regenerate_directory(void)
     return -1;
   }
 
-#if 0
-  /* Now read the directory we just made in order to update our own
-   * router lists.  This does more signature checking than is strictly
-   * necessary, but safe is better than sorry. */
-  new_directory = tor_strdup(the_directory);
-  /* use a new copy of the dir, since get_dir_from_string scribbles on it */
-  if (router_load_routerlist_from_directory(new_directory,
-                                            get_identity_key(), 1, 0)) {
-    log_fn(LOG_ERR, "We just generated a directory we can't parse. Dying.");
-    tor_cleanup();
-    exit(0);
-  }
-  tor_free(new_directory);
-#endif
   the_directory_is_dirty = 0;
 
   /* Save the directory to disk so we re-load it quickly on startup.
@@ -962,12 +948,16 @@ dirserv_get_runningrouters(const char **rr, int compress)
  * <b>nickname_rcvd</b>.  When this happens, it's clear that any other
  * descriptors for that address/port combination must be unusable:
  * delete them if they are not verified.
+ *
+ * Also, if as_advertised is 1, then inform the reachability checker
+ * that we could get to this guy.
  */
 void
 dirserv_orconn_tls_done(const char *address,
                         uint16_t or_port,
                         const char *digest_rcvd,
-                        const char *nickname_rcvd)
+                        const char *nickname_rcvd,
+                        int as_advertised) //XXXRD
 {
   int i;
   tor_assert(address);
