@@ -430,7 +430,13 @@ connection_tls_continue_handshake(connection_t *conn)
 
 static char ZERO_DIGEST[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-/** DOCDOC */
+/** Return 1 if we initiated this connection, or 0 if it started
+ * out as an incoming connection.
+ *
+ * This is implemented for now by checking to see if
+ * conn-\>identity_digest is set or not. Perhaps we should add a flag
+ * one day so we're clearer.
+ */
 int
 connection_or_nonopen_was_started_here(connection_t *conn)
 {
@@ -443,42 +449,35 @@ connection_or_nonopen_was_started_here(connection_t *conn)
     return 1;
 }
 
-/** The tls handshake is finished.
+/** Conn just completed its handshake. Return 0 if all is well, and
+ * return -1 if he is lying, broken, or otherwise something is wrong.
  *
- * Make sure we are happy with the person we just handshaked with:
- * If it's an OP (that is, it has no certificate), make sure I'm an OR.
- * If it's an OR (it has a certificate), make sure it has a recognized
- * nickname, and its cert is signed by the identity key of that nickname.
- * If I initiated the connection, make sure it's the right guy; and if
- * he initiated the connection, make sure he's not already connected.
+ * Make sure he sent a correctly formed certificate. If it has a
+ * recognized (approved) nickname, make sure his identity key matches
+ * to it. If I initiated the connection, make sure it's the right guy.
  *
- * If he initiated the conn, also initialize conn from the information
- * in router.
+ * If we return 0, write a hash of the identity key into digest_rcvd,
+ * which must have DIGEST_LEN space in it. (If we return -1 this
+ * buffer is undefined.)
  *
- * If either of us is an OP, set bandwidth to the default OP bandwidth.
- *
- * If all is successful and he's an OR, then call circuit_n_conn_done()
- * to handle events that have been pending on the tls handshake
- * completion, and set the directory to be dirty (only matters if I'm
- * an authdirserver).
+ * As side effects,
+ * 1) Set conn->circ_id_type according to tor-spec.txt
+ * 2) If we're an authdirserver and we initiated the connection: drop all
+ *    descriptors that claim to be on that IP/port but that aren't
+ *    this guy; and note that this guy is reachable.
  */
-static int
-connection_tls_finish_handshake(connection_t *conn)
-{
+int
+connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd) {
   routerinfo_t *router;
-  char nickname[MAX_NICKNAME_LEN+1];
-  connection_t *c;
   crypto_pk_env_t *identity_rcvd=NULL;
-  char digest_rcvd[DIGEST_LEN];
+  char nickname[MAX_NICKNAME_LEN+1];
   or_options_t *options = get_options();
   int severity = (authdir_mode(options) || !server_mode(options))
                  ? LOG_WARN : LOG_INFO;
 
-  log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) {
     log_fn(LOG_INFO,"Peer didn't send a cert! Closing.");
-    /* XXX we should handle this case rather than just closing. */
     return -1;
   }
   check_no_tls_errors();
@@ -497,13 +496,6 @@ connection_tls_finish_handshake(connection_t *conn)
     return -1;
   }
   check_no_tls_errors();
-#if 0
-  if (tor_tls_check_lifetime(conn->tls, LOOSE_CERT_ALLOW_SKEW)<0) {
-    log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a very highly skewed clock, or an expired certificate.  Closing.",
-           nickname, conn->address, conn->port);
-    return -1;
-  }
-#endif
   log_fn(LOG_DEBUG,"The router's cert is valid.");
   crypto_pk_get_digest(identity_rcvd, digest_rcvd);
 
@@ -523,25 +515,9 @@ connection_tls_finish_handshake(connection_t *conn)
            nickname, conn->address, conn->port);
     return -1;
   }
-#if 0
-  if (router_get_by_digest(digest_rcvd)) {
-    /* This is a known router; don't cut it slack with its clock skew. */
-    if (tor_tls_check_lifetime(conn->tls, TIGHT_CERT_ALLOW_SKEW)<0) {
-      log_fn(LOG_WARN,"Router '%s' (%s:%d) has a skewed clock, or an expired certificate; or else our clock is skewed. Closing.",
-             nickname, conn->address, conn->port);
-      return -1;
-    }
-  }
-#endif
 
   if (connection_or_nonopen_was_started_here(conn)) {
-    if (authdir_mode(options)) {
-      /* We initiated this connection to address:port.  Drop all routers
-       * with the same address:port and a different key or nickname.
-       */
-      dirserv_orconn_tls_done(conn->address, conn->port,
-                              digest_rcvd, nickname);
-    }
+    int as_advertised = 1;
     if (conn->nickname[0] == '$') {
       /* I was aiming for a particular digest. Did I get it? */
       char d[HEX_DIGEST_LEN+1];
@@ -551,7 +527,7 @@ connection_tls_finish_handshake(connection_t *conn)
                "Identity key not as expected for router at %s:%d: wanted %s but got %s",
                conn->address, conn->port, conn->nickname, d);
         control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
-        return -1;
+        as_advertised = 0;
       }
     } else if (strcasecmp(conn->nickname, nickname)) {
       /* I was aiming for a nickname.  Did I get it? */
@@ -559,17 +535,54 @@ connection_tls_finish_handshake(connection_t *conn)
              "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
              conn->address, conn->port, nickname, conn->nickname);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
-      return -1;
+      as_advertised = 0;
     }
-  } else {
+    if (authdir_mode(options)) {
+      /* We initiated this connection to address:port.  Drop all routers
+       * with the same address:port and a different key or nickname.
+       */
+      dirserv_orconn_tls_done(conn->address, conn->port,
+                              digest_rcvd, nickname, as_advertised);
+    }
+    if (!as_advertised)
+      return -1;
+  }
+  return 0;
+}
+
+/** The tls handshake is finished.
+ *
+ * Make sure we are happy with the person we just handshaked with.
+ *
+ * If he initiated the connection, make sure he's not already connected,
+ * then initialize conn from the information in router.
+ *
+ * If I'm not a server, set bandwidth to the default OP bandwidth.
+ *
+ * If all is successful, call circuit_n_conn_done() to handle events
+ * that have been pending on the tls handshake completion. Also set the
+ * directory to be dirty (only matters if I'm an authdirserver).
+ */
+static int
+connection_tls_finish_handshake(connection_t *conn)
+{
+  char digest_rcvd[DIGEST_LEN];
+
+  log_fn(LOG_DEBUG,"tls handshake done. verifying.");
+  if (connection_or_check_valid_handshake(conn, digest_rcvd) < 0)
+    return -1;
+
+  if (!connection_or_nonopen_was_started_here(conn)) {
+    connection_t *c;
     if ((c=connection_get_by_identity_digest(digest_rcvd, CONN_TYPE_OR))) {
-      log_fn(LOG_INFO,"Router '%s' is already connected on fd %d. Dropping fd %d.", nickname, c->s, conn->s);
+      log_fn(LOG_INFO,"Router '%s' is already connected on fd %d. Dropping fd %d.",
+             c->nickname, c->s, conn->s);
       return -1;
     }
     connection_or_init_conn_from_address(conn,conn->addr,conn->port,digest_rcvd);
   }
 
-  if (!server_mode(options)) { /* If I'm an OP... */
+  if (!server_mode(get_options())) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
   }
 

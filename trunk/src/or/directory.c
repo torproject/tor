@@ -54,14 +54,6 @@ static int purpose_is_private(uint8_t purpose);
 
 static addr_policy_t *dir_policy = NULL;
 
-#if 0 /* commented out for now, since for now what clients send is
-         different from what servers want to receive */
-/** URL for publishing rendezvous descriptors. */
-char rend_publish_string[] = "/tor/rendezvous/publish";
-/** Prefix for downloading rendezvous descriptors. */
-char rend_fetch_url[] = "/tor/rendezvous/";
-#endif
-
 #define ALLOW_DIRECTORY_TIME_SKEW 30*60 /* 30 minutes */
 
 /********* END VARIABLES ************/

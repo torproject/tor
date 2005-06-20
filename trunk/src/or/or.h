@@ -1540,7 +1540,8 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
 void dirserv_orconn_tls_done(const char *address,
                              uint16_t or_port,
                              const char *digest_rcvd,
-                             const char *nickname);
+                             const char *nickname,
+                             int as_advertised);
 void dirserv_free_all(void);
 
 /********************************* dns.c ***************************/
@@ -1818,20 +1819,18 @@ typedef struct trusted_dir_server_t {
 
 int router_reload_router_list(void);
 void router_get_trusted_dir_servers(smartlist_t **outp);
-routerinfo_t *router_pick_directory_server(int requireothers,
+routerinfo_t *router_pick_directory_server(int requireother,
                                            int fascistfirewall,
                                            int for_running_routers,
                                            int retry_if_no_servers);
-trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
+trusted_dir_server_t *router_pick_trusteddirserver(int requireother,
                                                    int fascistfirewall,
                                                    int retry_if_no_servers);
 int all_trusted_directory_servers_down(void);
 struct smartlist_t;
 void routerlist_add_family(struct smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list, int warn_if_down);
-int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 routerinfo_t *routerlist_find_my_routerinfo(void);
-int router_nickname_matches(routerinfo_t *router, const char *nickname);
 int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
                                                  int warn);
 
@@ -1848,7 +1847,6 @@ routerinfo_t *router_choose_random_node(const char *preferred,
                                         struct smartlist_t *excludedsmartlist,
                                         int need_uptime, int need_bandwidth,
                                         int allow_unverified, int strict);
-routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_nickname(const char *nickname);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
@@ -1874,8 +1872,6 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
 int router_exit_policy_rejects_all(routerinfo_t *router);
 void running_routers_free(running_routers_t *rr);
 void routerlist_set_runningrouters(routerlist_t *list, running_routers_t *rr);
-void routerlist_update_from_runningrouters(routerlist_t *list,
-                                           running_routers_t *rr);
 int routers_update_status_from_entry(smartlist_t *routers,
                                         time_t list_time,
                                         const char *s);

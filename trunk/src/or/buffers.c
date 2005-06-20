@@ -263,34 +263,6 @@ buf_ensure_capacity(buf_t *buf, size_t capacity)
   return 0;
 }
 
-#if 0
-/** If the buffer is at least 2*MIN_GREEDY_SHRINK_SIZE bytes in capacity,
- * and if the buffer is less than 1/8 full, shrink the buffer until
- * one of the above no longer holds.  (We shrink the buffer by
- * dividing by powers of 2.)
- */
-static INLINE void
-buf_shrink_if_underfull(buf_t *buf) {
-  size_t new_len;
-  /* If the buffer is at least 1/8 full, or if shrinking the buffer would
-   * put it under MIN_GREEDY_SHRINK_SIZE, don't do it. */
-  if (buf->datalen >= (buf->len>>3) || buf->len < MIN_GREEDY_SHRINK_SIZE*2)
-    return;
-  /* Shrink new_len by powers of 2 until: datalen is at least 1/4 of
-   * new_len, OR shrinking new_len more would put it under
-   * MIN_GREEDY_SHRINK_SIZE.
-   */
-  new_len = (buf->len>>1);
-  while (buf->datalen < (new_len>>3) && new_len > MIN_GREEDY_SHRINK_SIZE*2)
-    new_len >>= 1;
-  log_fn(LOG_DEBUG,"Shrinking buffer from %d to %d bytes.",
-         (int)buf->len, (int)new_len);
-  buf_resize(buf, new_len);
-}
-#else
-#define buf_shrink_if_underfull(buf) do {} while (0)
-#endif
-
 /** Resize buf so it won't hold extra memory that we haven't been
  * using lately (that is, since the last time we called buf_shrink).
  * Try to shrink the buf until it is the largest factor of two that
@@ -326,7 +298,6 @@ buf_remove_from_front(buf_t *buf, size_t n) {
   } else {
     buf->cur = buf->mem;
   }
-  buf_shrink_if_underfull(buf);
   check();
 }
 
