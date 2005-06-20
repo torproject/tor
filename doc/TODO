@@ -66,6 +66,7 @@ N . Controller improvements
       immediately, since tor will exit right after.
       o Implement
       - Test, debug
+    - Allow EXTENDCIRCUIT to unknown server.
     . Switch example controllers to use new protocol
       . Python
         o Implement main controller interface
@@ -81,12 +82,13 @@ N . Controller improvements
     first place.)  Also, we should audit all users of get_pending_bytes().)
     - Make it harder to circumvent bandwidth caps: look at number of bytes
       sent across sockets, not number sent inside TLS stream.
-  - Handle rendezvousing with unverified nodes.
-    - Specify: Stick rendezvous point's key in INTRODUCE cell.
-      Bob should _always_ use key from INTRODUCE cell.
-    - Change to new rendezvous introduction cell format.  (It's currently #if
-      0'd out).  Unless we already did that.
-    - Implement.
+N - Handle rendezvousing with unverified nodes.
+    o Specify: Stick rendezvous point's address and port in INTRODUCE cell.
+    - Handle new format.
+      - Parse and generate new format (#if0 out the logic to generate it.)
+      - Support to extend circuit/target circuit to a chosen combination of
+        addr/port/ID/onionkey
+    - Verify that new code works.
   - it looks like tor_assert writes to stderr. what happens if
     stderr was closed and is now something else? uh.
   - christian grothoff's attack of infinite-length circuit.
