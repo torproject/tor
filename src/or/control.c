@@ -1543,6 +1543,8 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
 {
   char *desc;
   int v0 = STATE_IS_V0(conn->state);
+  const char *msg=NULL;
+
   if (v0)
     desc = (char*)body;
   else {
@@ -1551,7 +1553,6 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
     read_escaped_data(cp, len-(cp-body), 1, &desc);
   }
 
-  const char *msg=NULL;
   switch (router_load_single_router(desc, &msg)) {
   case -1:
     if (!msg) msg = "Could not parse descriptor";
