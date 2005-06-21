@@ -582,7 +582,7 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
         log_fn(LOG_WARN,"Skipping invalid argument '%s' in MapAddress msg",to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
         const char *addr = addressmap_register_virtual_address(
-               strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
+              !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!addr) {
           log_fn(LOG_WARN,
