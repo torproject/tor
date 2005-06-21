@@ -159,7 +159,7 @@ server <a href="#server">below</a>.</p>
 have contributed packages for Debian, Gentoo, and *BSD. See <a href="http://tor.eff.org/download.html">the download page</a> for pointers and details.
 
 <p>If you got Tor from a tarball, unpack it: <tt>tar xzf
-tor-0.0.9.9.tar.gz; cd tor-0.0.9.9</tt>. Run <tt>./configure</tt>, then
+tor-0.1.0.10.tar.gz; cd tor-0.1.0.10</tt>. Run <tt>./configure</tt>, then
 <tt>make</tt>, and then <tt>make install</tt> (as root if necessary). Then
 you can launch tor from the command-line by running <tt>tor</tt>.
 Otherwise, if you got it prepackaged, these steps are already done
@@ -176,6 +176,11 @@ for you, and you may even already have Tor started in the background
 default configuration file, and most people won't need to change any of
 the settings.</p>
 
+<p>See the <a href="tor-doc-win32.html">Windows instructions</a> or the
+<a href="tor-doc-osx.html">OS X instructions</a> if you're using those.
+The below are generic instructions for Linux, BSD, Solaris, etc.
+</p>
+
 <p>
 After installing Tor, you should install <a
 href="http://www.privoxy.org/">privoxy</a>, which is a filtering web
@@ -185,7 +190,7 @@ To configure privoxy to use Tor, add the line <br>
 <tt>forward-socks4a / localhost:9050 .</tt><br>
 (don't forget the dot) to privoxy's config file (you can just add it to the
 top). Then change your browser to http proxy at localhost port 8118.
-(In Mozilla, this is in Edit|Preferences|Advanced|Proxies.)
+(In Firefox on Linux, this is in Edit|Preferences|Advanced|Proxies.)
 You should also set your SSL proxy to the same
 thing, to hide your SSL traffic. Using privoxy is <b>necessary</b> because
 <a
