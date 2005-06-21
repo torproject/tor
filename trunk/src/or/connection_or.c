@@ -466,8 +466,9 @@ connection_or_nonopen_was_started_here(connection_t *conn)
  *    descriptors that claim to be on that IP/port but that aren't
  *    this guy; and note that this guy is reachable.
  */
-int
-connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd) {
+static int
+connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
+{
   routerinfo_t *router;
   crypto_pk_env_t *identity_rcvd=NULL;
   char nickname[MAX_NICKNAME_LEN+1];
