@@ -21,10 +21,10 @@ const char dirserv_c_id[] = "$Id$";
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
 
-static void directory_remove_unrecognized(void);
+static void directory_remove_invalid(void);
 static int dirserv_regenerate_directory(void);
 /* Should be static; exposed for testing */
-void add_fingerprint_to_dir(const char *nickname, const char *fp);
+int add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list);
 
 /************** Fingerprint handling code ************/
 
@@ -38,33 +38,36 @@ typedef struct fingerprint_entry_t {
 static smartlist_t *fingerprint_list = NULL;
 
 /** Add the fingerprint <b>fp</b> for the nickname <b>nickname</b> to
- * the global list of recognized identity key fingerprints.
+ * the smartlist of fingerprint_entry_t's <b>list</b>. Return 0 if it's
+ * new, or 1 if we replaced the old value.
  */
-void /* Should be static; exposed for testing */
-add_fingerprint_to_dir(const char *nickname, const char *fp)
+int /* Should be static; exposed for testing */
+add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list)
 {
   int i;
   fingerprint_entry_t *ent;
-  if (!fingerprint_list)
-    fingerprint_list = smartlist_create();
+  tor_assert(nickname);
+  tor_assert(fp);
+  tor_assert(list);
 
-  for (i = 0; i < smartlist_len(fingerprint_list); ++i) {
-    ent = smartlist_get(fingerprint_list, i);
+  for (i = 0; i < smartlist_len(list); ++i) {
+    ent = smartlist_get(list, i);
     if (!strcasecmp(ent->nickname,nickname)) {
       tor_free(ent->fingerprint);
       ent->fingerprint = tor_strdup(fp);
-      return;
+      return 1;
     }
   }
   ent = tor_malloc(sizeof(fingerprint_entry_t));
   ent->nickname = tor_strdup(nickname);
   ent->fingerprint = tor_strdup(fp);
   tor_strstrip(ent->fingerprint, " ");
-  smartlist_add(fingerprint_list, ent);
+  smartlist_add(list, ent);
+  return 0;
 }
 
-/** Add the nickname and fingerprint for this OR to the recognized list.
- */
+/** Add the nickname and fingerprint for this OR to the
+ * global list of recognized identity key fingerprints. */
 int
 dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
 {
@@ -73,7 +76,9 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
     log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
   }
-  add_fingerprint_to_dir(nickname, fp);
+  if (!fingerprint_list)
+    fingerprint_list = smartlist_create();
+  add_fingerprint_to_dir(nickname, fp, fingerprint_list);
   return 0;
 }
 
@@ -89,8 +94,7 @@ dirserv_parse_fingerprint_file(const char *fname)
   char *cf;
   char *nickname, *fingerprint;
   smartlist_t *fingerprint_list_new;
-  int i, result;
-  fingerprint_entry_t *ent;
+  int result;
   struct config_line_t *front=NULL, *list;
 
   cf = read_file_to_str(fname, 0);
@@ -127,27 +131,15 @@ dirserv_parse_fingerprint_file(const char *fname)
           DEFAULT_CLIENT_NICKNAME);
       continue;
     }
-    for (i = 0; i < smartlist_len(fingerprint_list_new); ++i) {
-      ent = smartlist_get(fingerprint_list_new, i);
-      if (0==strcasecmp(ent->nickname, nickname)) {
-        log(LOG_NOTICE, "Duplicate nickname '%s'. Skipping.",nickname);
-        break; /* out of the for. the 'if' below means skip to the next line. */
-      }
-    }
-    if (i == smartlist_len(fingerprint_list_new)) { /* not a duplicate */
-      ent = tor_malloc(sizeof(fingerprint_entry_t));
-      ent->nickname = tor_strdup(nickname);
-      ent->fingerprint = tor_strdup(fingerprint);
-      tor_strstrip(ent->fingerprint, " ");
-      smartlist_add(fingerprint_list_new, ent);
-    }
+    if (add_fingerprint_to_dir(nickname, fingerprint, fingerprint_list_new) != 0)
+      log(LOG_NOTICE, "Duplicate nickname '%s'.", nickname);
   }
 
   config_free_lines(front);
   dirserv_free_fingerprint_list();
   fingerprint_list = fingerprint_list_new;
   /* Delete any routers whose fingerprints we no longer recognize */
-  directory_remove_unrecognized();
+  directory_remove_invalid();
   return 0;
 }
 
@@ -418,12 +410,12 @@ dirserv_add_descriptor(const char **desc, const char **msg)
   return verified;
 }
 
-/** Remove all descriptors whose nicknames or fingerprints we don't
- * recognize.  (Descriptors that used to be good can become
- * unrecognized when we reload the fingerprint list.)
+/** Remove all descriptors whose nicknames or fingerprints no longer
+ * are allowed by our fingerprint list. (Descriptors that used to be
+ * good can become bad when we reload the fingerprint list.)
  */
 static void
-directory_remove_unrecognized(void)
+directory_remove_invalid(void)
 {
   int i;
   int r;
@@ -522,11 +514,6 @@ list_server_status(smartlist_t *routers, char **router_status_out)
   /* List of entries in a router-status style: An optional !, then an optional
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
   smartlist_t *rs_entries;
-  /* XXXX Really, we should merge descriptor_list into routerlist.  But
-   * this is potentially tricky, since the semantics of the two lists
-   * are not quite the same.  In any case, it's not for the 0.1.0.x
-   * series.
-   */
   int authdir_mode = get_options()->AuthoritativeDir;
   tor_assert(router_status_out);
 
