@@ -913,7 +913,7 @@ spawn_enough_dnsworkers(void)
   while (num_dnsworkers > num_dnsworkers_busy+MAX_IDLE_DNSWORKERS) { /* too many idle? */
     /* cull excess workers */
     log_fn(LOG_NOTICE,"%d of %d dnsworkers are idle. Killing one.",
-           num_dnsworkers-num_dnsworkers_needed, num_dnsworkers);
+           num_dnsworkers-num_dnsworkers_busy, num_dnsworkers);
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
     tor_assert(dnsconn);
     connection_mark_for_close(dnsconn);
