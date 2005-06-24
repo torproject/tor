@@ -853,7 +853,7 @@ router_parse_entry_from_string(const char *s, const char *end)
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword '%s'; skipping descriptor.",
+    log_fn(LOG_INFO, "Unrecognized critical keyword '%s'; skipping descriptor. (It may be from another version of Tor.)",
            tok->args[0]);
     goto err;
   }
