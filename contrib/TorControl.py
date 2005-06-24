@@ -3,6 +3,14 @@
 # Copyright 2005 Nick Mathewson -- See LICENSE for licensing information.
 #$Id$
 
+#    THIS MODULE IS OBSOLETE!
+#
+#    There is a "TorCtl.py" module in the "control" directory in Tor CVS;
+#    this new module supports the new ('version 1') Tor controller protocol
+#    and has a far nicer and more object-oriented design than this module does.
+#
+#    No further support will be done on this module.
+
 import socket
 import struct
 import sys
@@ -361,7 +369,6 @@ def post_descriptor(s, descriptor):
     send_message(s,MSG_TYPE.POSTDESCRIPTOR,descriptor)
     tp,body = receive_reply(s,[MSG_TYPE.DONE])
 
-
 def _unterminate(s):
     if s[-1] == '\0':
         return s[:-1]
@@ -437,7 +444,6 @@ def do_main_loop(host,port):
     print '========'
     #send_signal(s,1)
     #save_conf(s)
-
 
     #set_option(s,"1")
     #set_option(s,"bandwidthburstbytes 100000")
