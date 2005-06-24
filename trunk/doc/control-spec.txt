@@ -635,7 +635,11 @@ about dns resolves, etc, so the controller can keep synced. -RD]
 5.3. Backward compatibility
 
   For backward compatibility with the "version 0" control protocol, Tor checks
-  whether the third byte the first command is zero.  If it is, Tor
+  whether the third octet the first command is zero.  If it is, Tor
   assumes that version 0 is in use.  This feature is deprecated, and will be
   removed in the 0.1.2.x Tor development series.
 
+  In order to detect which version of the protocol is supported controllers
+  should send the sequence [00 00 0D 0A].  This is a valid and unrecognized
+  command in both protocol versions, and implementations can detect which
+  error they have received.
