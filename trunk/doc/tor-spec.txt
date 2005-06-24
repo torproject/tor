@@ -852,9 +852,14 @@ after "directory-signature".  This digest is then padded with PKCS.1,
 and signed with the directory server's signing key.
 
 If software encounters an unrecognized keyword in a single router descriptor,
-it should reject only that router descriptor, and continue using the
-others.  If it encounters an unrecognized keyword in the directory header,
-it should reject the entire directory.
+it MUST reject only that router descriptor, and continue using the
+others.  Because this mechanism is used to add 'critical' extensions to
+future versions of the router descriptor format, implementation should treat
+it as a normal occurrence and not, for example, report it to the user as an
+error.  [Versions of Tor prior to 0.1.1 did this.]
+
+If software encounters an unrecognized keyword in the directory header,
+it SHOULD reject the entire directory.
 
 7.4. Network-status descriptor
 
