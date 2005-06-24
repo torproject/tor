@@ -845,7 +845,6 @@ descriptors, and a single "directory-signature" item.
 
     "directory-signature" nickname-of-dirserver NL Signature
 
-Note:  The router descriptor for the directory server MUST appear first.
 The signature is computed by computing the SHA-1 hash of the
 directory, from the characters "signed-directory", through the newline
 after "directory-signature".  This digest is then padded with PKCS.1,
