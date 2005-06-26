@@ -43,7 +43,7 @@ than the version printed in this screenshot):
 </p>
 
 <img alt="tor installer splash page"
-src="http://tor.eff.org/img/screenshot-win32-installer-splash.jpg" />
+src="http://tor.eff.org/img/screenshot-win32-installer-splash.png" />
 
 <p>
 By default, Tor is not configured to run at startup.
@@ -53,7 +53,7 @@ Be sure to leave the other boxes checked.
 </p>
 
 <img alt="select components to install"
-src="http://tor.eff.org/img/screenshot-win32-installer-components.jpg" />
+src="http://tor.eff.org/img/screenshot-win32-installer-components.png" />
 
 <p>Once the installer is finished, it will run Tor in a window so
 you can see its logs and errors. (You can minimize this window, but do
@@ -61,7 +61,7 @@ not close it.)
 </p>
 
 <img alt="tor window screenshot"
-src="http://tor.eff.org/img/screenshot-win32-dos-window.jpg" />
+src="http://tor.eff.org/img/screenshot-win32-dos-window.png" />
 
 <p>Tor comes configured as a client by default. It uses a built-in
 default configuration file, and most people won't need to change any of
@@ -87,7 +87,7 @@ Programs:
 </p>
 
 <img border="1" alt="editing privoxy config"
-src="http://tor.eff.org/img/screenshot-win32-privoxy-config.jpg" />
+src="http://tor.eff.org/img/screenshot-win32-privoxy-config.png" />
 
 <p>Add the line <br>
 <tt>forward-socks4a / localhost:9050 .</tt><br>
@@ -96,16 +96,23 @@ The easiest way is to select the above line and copy/paste it into
 the file. Be sure to save.
 </p>
 
+<img border="1" alt="privoxy points to tor"
+src="http://tor.eff.org/img/screenshot-win32-privoxy-edit.png" />
+
 <p>Privoxy keeps a log file of everything passed through it.  In
-order to stop this you will need to comment out (insert a # before) the line <br>
+order to stop this you will need to comment out two lines by inserting a
+# before the line. The two lines are:<br>
 <tt>logfile privoxy.log</tt><br>
 and the line <br>
 <tt>jarfile jar.log</tt><br>
 Be sure to save.
 </p>
 
-<img border="1" alt="privoxy points to tor"
-src="http://tor.eff.org/img/screenshot-win32-privoxy-edit.jpg" />
+<img border="1" alt="comment out logfile"
+src="http://tor.eff.org/img/screenshot-win32-privoxy-edit-2.png" />
+
+<img border="1" alt="comment out jarfile"
+src="http://tor.eff.org/img/screenshot-win32-privoxy-edit-3.png" />
 
 <a name="using"></a>
 <h2>Step Three: Configure your applications to use Tor</h2>
