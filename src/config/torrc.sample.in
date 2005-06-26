@@ -45,7 +45,8 @@ AllowUnverifiedNodes middle,rendezvous
 #Log debug stderr
 
 ## Uncomment this to start the process in the background... or use
-## --runasdaemon 1 on the command line.
+## --runasdaemon 1 on the command line. This is ignored on Windows;
+## see the FAQ entry if you want Tor to run as an NT service.
 #RunAsDaemon 1
 
 ## Tor only trusts directories signed with one of these keys, and
