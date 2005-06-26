@@ -291,6 +291,10 @@ set_socket_nonblocking(int socket)
  * stack is down). And even if it succeeds, the socket pair will not
  * be able to read while localhost is down later (the socket pair may
  * even close, depending on OS-specific timeouts).
+ *
+ * XXX Bug: this function assumes errno is how you report errors, but
+ * that isn't the case for Windows, which is where it's most likely
+ * to be called.
  **/
 int
 tor_socketpair(int family, int type, int protocol, int fd[2])
