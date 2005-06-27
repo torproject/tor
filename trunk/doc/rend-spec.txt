@@ -110,7 +110,25 @@ $Id$
 
    The first time the OP provides an advertised service, it generates
    a public/private keypair (stored locally).  Periodically, the OP
-   generates a service descriptor, containing:
+   generates a pair of service descriptors, one "V1" and one "V0".
+
+   The "V1" descriptor contains:
+
+         V     Version byte: set to 1                [1 octet]
+         KL    Key length                            [2 octets]
+         PK    Bob's public key                      [KL octets]
+         TS    A timestamp                           [4 octets]
+         PROTO Protocol version: bitmask           [2 octets]
+         NI    Number of introduction points         [2 octets]
+         For each introduction point: (as in INTRODUCE2 cells)
+             IP     Rendezvous point's address       [4 octets]
+             PORT   Rendezvous point's OR port       [2 octets]
+             ID     Rendezvous point identity ID     [20 octets]
+             KLEN  Length of onion key               [2 octets]
+             KEY    Rendezvous point onion key       [KLEN octets]
+         SIG   Signature of above fields             [variable]
+
+   The "V0" descriptor contains:
 
          KL    Key length                            [2 octets]
          PK    Bob's public key                      [KL octets]
@@ -130,6 +148,9 @@ $Id$
    [It's ok for Bob to advertise 0 introduction points. He might want
     to do that if he previously advertised some introduction points,
     and now he doesn't have any. -RD]
+
+   [Once Tor 0.1.0.x is obsolete, we can stop generating or using V0
+    descriptors. -NM]
 
 1.3. Bob's OP establishes his introduction points.
 
@@ -159,23 +180,26 @@ $Id$
    currently associated with PK.  On success, the OR sends Bob a
    RELAY_INTRO_ESTABLISHED cell with an empty payload.
 
-1.4. Bob's OP advertises his service descriptor
+1.4. Bob's OP advertises his service descriptor(s)
 
    Bob's OP opens a stream to each directory server's directory port via Tor.
-   (He may re-use old circuits for this.)
-   Over this stream, Bob's OP makes an HTTP 'POST' request, to the URL
-   '/tor/rendezvous/publish' (relative to the directory server's root),
-   containing as its body Bob's service descriptor.  Upon receiving a
-   descriptor, the directory server checks the signature, and discards the
-   descriptor if the signature does not match the enclosed public key.  Next,
-   the directory server checks the timestamp.  If the timestamp is more than
-   24 hours in the past or more than 1 hour in the future, or the directory
-   server already has a newer descriptor with the same public key, the server
-   discards the descriptor.  Otherwise, the server discards any older
-   descriptors with the same public key, and associates the new descriptor
-   with the public key.  The directory server remembers this descriptor for
-   at least 24 hours after its timestamp.  At least every 24 hours, Bob's OP
-   uploads a fresh descriptor.
+   (He may re-use old circuits for this.)  Over this stream, Bob's OP makes
+   an HTTP 'POST' request, to a URL relative to the directory server's root,
+   containing as its body Bob's service descriptor.
+
+   For "V1" descriptors, the URL is /tor/rendezvous1/publish
+   For "V0" descriptors, the URL is /tor/rendezvous/publish
+
+   Upon receiving a descriptor, the directory server checks the signature,
+   and discards the descriptor if the signature does not match the enclosed
+   public key.  Next, the directory server checks the timestamp.  If the
+   timestamp is more than 24 hours in the past or more than 1 hour in the
+   future, or the directory server already has a newer descriptor with the
+   same public key, the server discards the descriptor.  Otherwise, the
+   server discards any older descriptors with the same public key, and
+   associates the new descriptor with the public key.  The directory server
+   remembers this descriptor for at least 24 hours after its timestamp.  At
+   least every 24 hours, Bob's OP uploads a fresh descriptor.
 
 1.5. Alice receives a y.onion address
 
@@ -197,12 +221,16 @@ $Id$
 
 1.6. Alice's OP retrieves a service descriptor
 
-   Alice opens a stream to a directory server via Tor, and makes an
-   HTTP GET request for the document '/tor/rendezvous/<y>', where
-   '<y> is replaced with the encoding of Bob's public key as described
-   above. (She may re-use old circuits for this.) The directory replies
-   with a 404 HTTP response if it does not recognize <y>, and otherwise
-   returns Bob's most recently uploaded service descriptor.
+   Alice opens a stream to a directory server via Tor, and makes an HTTP GET
+   request for the document '/tor/rendezvous/<y>' or '/tor/rendezvous1/<y>',
+   where '<y> is replaced with the encoding of Bob's public key as described
+   above. (She may re-use old circuits for this.) The directory replies with
+   a 404 HTTP response if it does not recognize <y>, and otherwise returns
+   Bob's most recently uploaded service descriptor of the appropriate
+   version.
+
+   (Alice should try to fetch the V1 descriptor first, and only try to fetch
+   a V0 descriptor if it is not available.)
 
    If Alice's OP receives a 404 response, it tries the other directory
    servers, and only fails the lookup if none recognizes the public key hash.
@@ -261,7 +289,8 @@ $Id$
           IP     Rendezvous point's address    [4 octets]
           PORT   Rendezvous point's OR port    [2 octets]
           ID     Rendezvous point identity ID [20 octets]
-          KEY    Rendezvous point onion key  [128 octets]
+          KLEN  Length of onion key            [2 octets]
+          KEY    Rendezvous point onion key  [KLEN octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
 
@@ -269,9 +298,11 @@ $Id$
    and must contain EITHER a nickname, or an identity key digest, encoded in
    hex, and prefixed with a '$'.
 
-   Implementations must accept all variants, but should only generate the
-   first so long as any version of Tor before 0.1.1 is still in use.
-   Implementations should never generate the second version.
+   Implementations SHOULD accept all variants, and list the variants they
+   accept in their V1 descriptor.  Implementations should only generate the
+   variants listed in the service's V1 descriptor; if no V1 descriptor is
+   available, only the first variant should be generated.  No version should
+   generate the second variant (version byte=1).
 
    The hybrid encryption to Bob's PK works just like the hybrid
    encryption in CREATE cells (see main spec). Thus the payload of the
