@@ -29,7 +29,8 @@ const char test_c_id[] = "$Id$";
 int have_failed = 0;
 
 /* These functions are file-local, but are exposed so we can test. */
-void add_fingerprint_to_dir(const char *nickname, const char *fp);
+void add_fingerprint_to_dir(const char *nickname, const char *fp,
+                            smartlist_t *list);
 void get_platform_str(char *platform, size_t len);
 int is_obsolete_version(const char *myversion, const char *start);
 
@@ -1245,10 +1246,14 @@ test_dir_format(void)
 #endif
 
   /* Okay, now for the directories. */
-  crypto_pk_get_fingerprint(pk2, buf, 1);
-  add_fingerprint_to_dir("Magri", buf);
-  crypto_pk_get_fingerprint(pk1, buf, 1);
-  add_fingerprint_to_dir("Fred", buf);
+  {
+    extern smartlist_t *fingerprint_list;
+    fingerprint_list = smartlist_create();
+    crypto_pk_get_fingerprint(pk2, buf, 1);
+    add_fingerprint_to_dir("Magri", buf, fingerprint_list);
+    crypto_pk_get_fingerprint(pk1, buf, 1);
+    add_fingerprint_to_dir("Fred", buf, fingerprint_list);
+  }
   /* Make sure routers aren't too far in the past any more. */
   r1.published_on = time(NULL);
   r2.published_on = time(NULL)-3*60*60;
