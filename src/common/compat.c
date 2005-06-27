@@ -143,14 +143,16 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
  * Requires that nlen be greater than zero.
  */
 const void *
-tor_memmem(const void *haystack, size_t hlen, const void *needle, size_t nlen)
+tor_memmem(const void *_haystack, size_t hlen, const void *_needle, size_t nlen)
 {
 #if defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2)
   tor_assert(nlen);
   return memmem(haystack, hlen, needle, nlen);
 #else
   /* This isn't as fast as the GLIBC implementation, but it doesn't need to be. */
-  const void *p, *end;
+  const char *p, *end;
+  const char *haystack = (const char*)_haystack;
+  const char *needle = (const char*)_needle;
   char first;
   tor_assert(nlen);
 

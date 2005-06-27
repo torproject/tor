@@ -16,25 +16,6 @@ const char main_c_id[] = "$Id$";
 #include <dmalloc.h>
 #endif
 
-/* These signals are defined to help control_signal_act work.
- * XXXX Move into or.h or compat.h
- */
-#ifndef SIGHUP
-#define SIGHUP 1
-#endif
-#ifndef SIGINT
-#define SIGINT 2
-#endif
-#ifndef SIGUSR1
-#define SIGUSR1 10
-#endif
-#ifndef SIGUSR2
-#define SIGUSR2 12
-#endif
-#ifndef SIGTERM
-#define SIGTERM 15
-#endif
-
 /********* PROTOTYPES **********/
 
 static void dumpmemusage(int severity);
