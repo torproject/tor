@@ -35,7 +35,8 @@ typedef struct fingerprint_entry_t {
 
 /** List of nickname-\>identity fingerprint mappings for all the routers
  * that we recognize. Used to prevent Sybil attacks. */
-static smartlist_t *fingerprint_list = NULL;
+/* Should be static; exposed for testing */
+smartlist_t *fingerprint_list = NULL;
 
 /** Add the fingerprint <b>fp</b> for the nickname <b>nickname</b> to
  * the smartlist of fingerprint_entry_t's <b>list</b>. Return 0 if it's
