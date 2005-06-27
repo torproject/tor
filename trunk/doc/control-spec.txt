@@ -177,7 +177,7 @@ about dns resolves, etc, so the controller can keep synced. -RD]
 3.4 AUTHENTICATE
 
   Sent from the client to the server.  The syntax is:
-     "AUTHENTICATE" SP 1*HEXDIG / QuotedString CRLF
+     "AUTHENTICATE" [ SP 1*HEXDIG / QuotedString ] CRLF
 
   The server responds with "250 OK" on success or "515 Bad authentication" if
   the authentication cookie is incorrect.
