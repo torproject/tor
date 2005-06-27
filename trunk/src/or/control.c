@@ -270,7 +270,7 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
   const char *end;
   int i;
   int start_of_line;
-  for (i=0; i<len; ++i) {
+  for (i=0; i<(int)len; ++i) {
     if (data[i]== '\n')
       ++sz_out;
   }

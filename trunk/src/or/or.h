@@ -139,6 +139,25 @@
 #include "../common/util.h"
 #include "../common/torgzip.h"
 
+/* These signals are defined to help control_signal_act work.
+ * XXXX Move into compat.h ?
+ */
+#ifndef SIGHUP
+#define SIGHUP 1
+#endif
+#ifndef SIGINT
+#define SIGINT 2
+#endif
+#ifndef SIGUSR1
+#define SIGUSR1 10
+#endif
+#ifndef SIGUSR2
+#define SIGUSR2 12
+#endif
+#ifndef SIGTERM
+#define SIGTERM 15
+#endif
+
 #if (SIZEOF_CELL_T != 0)
 /* On Irix, stdlib.h defines a cell_t type, so we need to make sure
  * that our stuff always calls cell_t something different. */
