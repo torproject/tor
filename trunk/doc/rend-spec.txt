@@ -114,11 +114,12 @@ $Id$
 
    The "V1" descriptor contains:
 
+         V     Format byte: set to 255               [1 octet]
          V     Version byte: set to 1                [1 octet]
          KL    Key length                            [2 octets]
          PK    Bob's public key                      [KL octets]
          TS    A timestamp                           [4 octets]
-         PROTO Protocol version: bitmask           [2 octets]
+         PROTO Protocol versions: bitmask          [2 octets]
          NI    Number of introduction points         [2 octets]
          For each introduction point: (as in INTRODUCE2 cells)
              IP     Rendezvous point's address       [4 octets]
@@ -184,11 +185,8 @@ $Id$
 
    Bob's OP opens a stream to each directory server's directory port via Tor.
    (He may re-use old circuits for this.)  Over this stream, Bob's OP makes
-   an HTTP 'POST' request, to a URL relative to the directory server's root,
-   containing as its body Bob's service descriptor.
-
-   For "V1" descriptors, the URL is /tor/rendezvous1/publish
-   For "V0" descriptors, the URL is /tor/rendezvous/publish
+   an HTTP 'POST' request, to a URL "/tor/rendezvous/publish" relative to the
+   directory server's root, containing as its body Bob's service descriptor.
 
    Upon receiving a descriptor, the directory server checks the signature,
    and discards the descriptor if the signature does not match the enclosed
@@ -226,11 +224,10 @@ $Id$
    where '<y> is replaced with the encoding of Bob's public key as described
    above. (She may re-use old circuits for this.) The directory replies with
    a 404 HTTP response if it does not recognize <y>, and otherwise returns
-   Bob's most recently uploaded service descriptor of the appropriate
-   version.
-
-   (Alice should try to fetch the V1 descriptor first, and only try to fetch
-   a V0 descriptor if it is not available.)
+   Bob's most recently uploaded service descriptor.  (If Alice requests
+   'rendezvous1', the directory server provides a V1 descriptor or a V0
+   descriptor if no V1 descriptor is available.  If Alice requests
+   'rendezvous', the directory server returns a V0 descriptor.)
 
    If Alice's OP receives a 404 response, it tries the other directory
    servers, and only fails the lookup if none recognizes the public key hash.
