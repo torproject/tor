@@ -1,0 +1,64 @@
+#!/bin/sh
+
+TORLOC=/Library/StartupItems/Tor/Tor.loc
+
+if [ -f $TORLOC ]; then
+ TORDIR=`cat /Library/StartupItems/Tor/Tor.loc`
+ if [ "x$TORDIR" = "x" -o ! -d $TORDIR -o ! -x $TORDIR/tor ]; then
+   TORDIR=/Library/Tor
+ fi
+else
+ TORDIR=/Library/Tor
+fi
+TORCONF=$TORDIR/torrc
+TORDATA=$TORDIR/var/lib/tor
+TORPID=/var/run/Tor.pid
+TORUSER=_tor
+TORGROUP=daemon
+TORCMD=$TORDIR/tor
+TORLOG=/var/log/tor/tor.log
+
+##
+# Tor Service
+##
+
+. /etc/rc.common
+
+StartService ()
+{
+
+    if [ -f $TORCMD ]; then
+        if pid=$(GetPID Tor); then
+            return 0
+        else
+		ConsoleMessage "Starting Tor Service"
+# Tentative
+# Making sure it is not running (I know it is not a best approarch)
+		killall tor 2>/dev/null
+		$TORCMD -f "$TORCONF" --runasdaemon 1 --pidfile "$TORPID" --datadirectory "$TORDATA" --user "$TORUSER" --group "$TORGROUP" --log "notice file $TORLOG" &
+	fi
+    fi
+}
+
+StopService ()
+{
+    if pid=$(GetPID Tor); then
+	ConsoleMessage "Stopping Tor Service"
+	kill -TERM "${pid}"
+# Just for sanity (sometimes necessary.)
+	killall tor 2>/dev/null
+    else
+	ConsoleMessage "Tor Service not responding."
+# Just for sanity (sometimes necessary.)
+	killall tor 2>/dev/null
+    fi
+}
+
+RestartService () { StopService; StartService; }
+
+if [ "$#" = 0 ]; then
+  echo "Syntax: tor {start|stop}"
+  exit 1
+fi 
+
+RunService "$1"

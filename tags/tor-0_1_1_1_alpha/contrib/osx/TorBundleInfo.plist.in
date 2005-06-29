@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>Tor Bundle</string>
+	<key>CFBundleGetInfoString</key>
+	<string>Tor Bundle @VERSION@</string>
+	<key>CFBundleIdentifier</key>
+	<string>net.freehaven.torbundle</string>
+	<key>CFBundleSortVersionString</key>
+	<string>@VERSION@</string>
+	<key>IFPkgFlagComponentDirectory</key>
+	<string>../.contained_packages</string>
+	<key>IFPkgFlagPackageList</key>
+	<array>
+		<dict>
+			<key>IFPkgFlagPackageLocation</key>
+			<string>Tor.pkg</string>
+			<key>IFPkgFlagPackageSelection</key>
+			<string>required</string>
+		</dict>
+		<dict>
+			<key>IFPkgFlagPackageLocation</key>
+			<string>Privoxy.pkg</string>
+			<key>IFPkgFlagPackageSelection</key>
+			<string>selected</string>
+		</dict>
+		<dict>
+			<key>IFPkgFlagPackageLocation</key>
+			<string>privoxyconf.pkg</string>
+			<key>IFPkgFlagPackageSelection</key>
+			<string>selected</string>
+		</dict>
+		<dict>
+			<key>IFPkgFlagPackageLocation</key>
+			<string>torstartup.pkg</string>
+			<key>IFPkgFlagPackageSelection</key>
+			<string>selected</string>
+		</dict>
+	</array>
+        <key>IFPkgFormatVersion</key>
+        <real>0.10000000149011612</real>
+</dict>
+</plist>
