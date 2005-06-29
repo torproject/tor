@@ -153,6 +153,9 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   crypto_dh_env_t *dh = NULL;
   int dhbytes, pkbytes;
 
+  tor_assert(dest_router_key);
+  tor_assert(handshake_state_out);
+  tor_assert(onion_skin_out);
   *handshake_state_out = NULL;
   memset(onion_skin_out, 0, ONIONSKIN_CHALLENGE_LEN);
 

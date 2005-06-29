@@ -633,11 +633,8 @@ connection_edge_process_end_not_open(
     log_fn(LOG_INFO,"Address '%s' refused due to '%s'. Considering retrying.",
            safe_str(conn->socks_request->address),
            connection_edge_end_reason_str(reason));
-    exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
-    if (!exitrouter) {
-      log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
-      return 0; /* this circuit is screwed and doesn't know it yet */
-    }
+    exitrouter =
+      router_get_by_digest(circ->build_state->chosen_exit->identity_digest);
     switch (reason) {
       case END_STREAM_REASON_EXITPOLICY:
         if (rh->length >= 5) {
@@ -652,15 +649,15 @@ connection_edge_process_end_not_open(
                                     conn->chosen_exit_name);
         }
         /* check if he *ought* to have allowed it */
-        if (rh->length < 5 ||
-            (!tor_inet_aton(conn->socks_request->address, &in) &&
-             !conn->chosen_exit_name)) {
+        if (exitrouter &&
+            (rh->length < 5 ||
+             (!tor_inet_aton(conn->socks_request->address, &in) &&
+              !conn->chosen_exit_name))) {
           log_fn(LOG_NOTICE,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
           addr_policy_free(exitrouter->exit_policy);
           exitrouter->exit_policy =
             router_parse_addr_policy_from_string("reject *:*");
         }
-
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
         /* else, conn will get closed below */
@@ -683,10 +680,11 @@ connection_edge_process_end_not_open(
         break;
       case END_STREAM_REASON_HIBERNATING:
       case END_STREAM_REASON_RESOURCELIMIT:
-        addr_policy_free(exitrouter->exit_policy);
-        exitrouter->exit_policy =
-          router_parse_addr_policy_from_string("reject *:*");
-
+        if (exitrouter) {
+          addr_policy_free(exitrouter->exit_policy);
+          exitrouter->exit_policy =
+            router_parse_addr_policy_from_string("reject *:*");
+        }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
         /* else, will close below */

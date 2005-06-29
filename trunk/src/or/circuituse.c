@@ -74,12 +74,7 @@ circuit_is_acceptable(circuit_t *circ,
    * circuit, it's the magical extra bob hop. so just check the nickname
    * of the one we meant to finish at.
    */
-  exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
-
-  if (!exitrouter) {
-    log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
-    return 0; /* this circuit is screwed and doesn't know it yet */
-  }
+  exitrouter = build_state_get_exit_router(circ->build_state);
 
   if (!circ->build_state->need_uptime &&
       smartlist_string_num_isin(get_options()->LongLivedPorts,
@@ -87,6 +82,11 @@ circuit_is_acceptable(circuit_t *circ,
     return 0;
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    if (!exitrouter) {
+      log_fn(LOG_DEBUG,"Not considering circuit with unknown router.");
+      return 0; /* this circuit is screwed and doesn't know it yet,
+                 * or is a rendezvous circuit. */
+    }
     if (!connection_ap_can_use_exit(conn, exitrouter)) {
       /* can't exit from this router */
       return 0;
@@ -296,7 +296,7 @@ circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         (!circ->timestamp_dirty ||
          circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now)) {
-      exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
+      exitrouter = build_state_get_exit_router(circ->build_state);
       if (exitrouter &&
           (!need_uptime || circ->build_state->need_uptime)) {
         int ok;
@@ -682,7 +682,7 @@ circuit_build_failed(circuit_t *circ)
       /* Don't increment failure count, since Alice may have picked
        * the rendezvous point maliciously */
       log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s (%s hop failed).",
-             circ->build_state->chosen_exit_name,
+             build_state_get_exit_nickname(circ->build_state),
              failed_at_last_hop?"last":"non-last");
       rend_service_relaunch_rendezvous(circ);
       break;
@@ -703,10 +703,32 @@ static int did_circs_fail_last_period = 0;
  * success. */
 #define MAX_CIRCUIT_FAILURES 5
 
-/** Launch a new circuit based on our arguments. */
+/** Launch a new circuit; see circuit_launch_by_extend_info for details on
+ * arguments. */
 circuit_t *
 circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
                          int need_uptime, int need_capacity, int internal)
+{
+  circuit_t *circ;
+  extend_info_t *info = NULL;
+  if (exit)
+    info = extend_info_from_router(exit);
+  circ = circuit_launch_by_extend_info(purpose, info, need_uptime, need_capacity,
+                                       internal);
+  if (info)
+    extend_info_free(info);
+  return circ;
+}
+
+/** Launch a new circuit with purpose <b>purpose</b> and exit node <b>info</b>
+ * (or NULL to select a random exit node).  If <b>need_uptime</b> is true,
+ * choose among routers with high uptime.  If <b>need_capacity</b> is true,
+ * choose among routers with high bandwidth.  If <b>internal</b> is true, the
+ * last hop need not be an exit node. Return the newly allocated circuit on
+ * success, or NULL on failure. */
+circuit_t *
+circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
+               int need_uptime, int need_capacity, int internal)
 {
   circuit_t *circ;
 
@@ -721,7 +743,7 @@ circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
     if ((circ = circuit_get_clean_open(CIRCUIT_PURPOSE_C_GENERAL, need_uptime,
                                        need_capacity, internal))) {
       log_fn(LOG_INFO,"Cannibalizing circ '%s' for purpose %d",
-             circ->build_state->chosen_exit_name, purpose);
+             build_state_get_exit_nickname(circ->build_state), purpose);
       circ->purpose = purpose;
       /* reset the birth date of this circ, else expire_building
        * will see it and think it's been trying to build since it
@@ -740,8 +762,8 @@ circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_CONNECT_REND:
           /* need to add a new hop */
-          tor_assert(exit);
-          if (circuit_extend_to_new_exit(circ, exit) < 0)
+          tor_assert(info);
+          if (circuit_extend_to_new_exit(circ, info) < 0)
             return NULL;
           break;
         default:
@@ -762,11 +784,12 @@ circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
   }
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
-  return circuit_establish_circuit(purpose, exit,
+  return circuit_establish_circuit(purpose, info,
                                    need_uptime, need_capacity, internal);
 }
 
-/** Launch a new circuit and return a pointer to it. Return NULL if you failed. */
+/** Launch a new circuit; see circuit_launch_by_extend_info for details on
+ * arguments. */
 circuit_t *
 circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
                            int need_uptime, int need_capacity, int internal)
@@ -867,30 +890,22 @@ circuit_get_open_circ_or_launch(connection_t *conn,
   /* is one already on the way? */
   circ = circuit_get_best(conn, 0, desired_circuit_purpose);
   if (!circ) {
-    char *exitname=NULL;
+    extend_info_t *extend_info=NULL;
     uint8_t new_circ_purpose;
     int is_internal;
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */
-try_an_intro_point:
-      exitname = rend_client_get_random_intro(conn->rend_query);
-      if (!exitname) {
+      extend_info = rend_client_get_random_intro(conn->rend_query);
+      if (!extend_info) {
         log_fn(LOG_INFO,"No intro points for '%s': refetching service descriptor.",
                safe_str(conn->rend_query));
         rend_client_refetch_renddesc(conn->rend_query);
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
-      if (!router_get_by_nickname(exitname)) {
-        log_fn(LOG_NOTICE,"Advertised intro point '%s' is not recognized for hidserv address '%s'. Skipping over.",
-               exitname, safe_str(conn->rend_query));
-        rend_client_remove_intro_point(exitname, conn->rend_query);
-        tor_free(exitname);
-        goto try_an_intro_point;
-      }
       log_fn(LOG_INFO,"Chose %s as intro point for %s.",
-             exitname, safe_str(conn->rend_query));
+             extend_info->nickname, safe_str(conn->rend_query));
     }
 
     /* If we have specified a particular exit node for our
@@ -898,13 +913,13 @@ try_an_intro_point:
      */
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (conn->chosen_exit_name) {
-        exitname = tor_strdup(conn->chosen_exit_name);
-        if (!router_get_by_nickname(exitname)) {
+        routerinfo_t *r;
+        if (!(r = router_get_by_nickname(conn->chosen_exit_name))) {
           log_fn(LOG_NOTICE,"Requested exit point '%s' is not known. Closing.",
-                 exitname);
-          tor_free(exitname);
+                 conn->chosen_exit_name);
           return -1;
         }
+        extend_info = extend_info_from_router(r);
       }
     }
 
@@ -916,9 +931,10 @@ try_an_intro_point:
       new_circ_purpose = desired_circuit_purpose;
 
     is_internal = (new_circ_purpose != CIRCUIT_PURPOSE_C_GENERAL || is_resolve);
-    circ = circuit_launch_by_nickname(new_circ_purpose, exitname, need_uptime,
-                                      1, is_internal);
-    tor_free(exitname);
+    circ = circuit_launch_by_extend_info(
+              new_circ_purpose, extend_info, need_uptime, 1, is_internal);
+    if (extend_info)
+      extend_info_free(extend_info);
 
     if (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL) {
       /* help predict this next time */
@@ -989,18 +1005,18 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ)
     }
   });
 
-  if (!found_needle)
+  if (!found_needle || !circ->build_state->chosen_exit)
     return;
 
   /* Add this exit/hostname pair to the addressmap. */
   len = strlen(conn->socks_request->address) + 1 /* '.' */ +
-        strlen(circ->build_state->chosen_exit_name) + 1 /* '.' */ +
+        strlen(circ->build_state->chosen_exit->nickname) + 1 /* '.' */ +
         strlen("exit") + 1 /* '\0' */;
   new_address = tor_malloc(len);
 
   tor_snprintf(new_address, len, "%s.%s.exit",
                conn->socks_request->address,
-               circ->build_state->chosen_exit_name);
+               circ->build_state->chosen_exit->nickname);
 
   addressmap_register(conn->socks_request->address, new_address,
                       time(NULL) + options->TrackHostExitsExpire);

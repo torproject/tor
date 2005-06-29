@@ -1400,30 +1400,89 @@ test_rend_fns(void)
   rend_service_descriptor_t *d1, *d2;
   char *encoded;
   size_t len;
-  crypto_pk_env_t *pk1;
+  crypto_pk_env_t *pk1, *pk2;
   time_t now;
   pk1 = crypto_new_pk_env();
-
+  pk2 = crypto_new_pk_env();
   test_assert(!crypto_pk_generate_key(pk1));
+  test_assert(!crypto_pk_generate_key(pk2));
+
+  /* Test unversioned descriptor */
   d1 = tor_malloc_zero(sizeof(rend_service_descriptor_t));
-  d1->pk = pk1;
+  d1->pk = crypto_pk_dup_key(pk1);
   now = time(NULL);
   d1->timestamp = now;
   d1->n_intro_points = 3;
+  d1->version = 0;
   d1->intro_points = tor_malloc(sizeof(char*)*3);
   d1->intro_points[0] = tor_strdup("tom");
   d1->intro_points[1] = tor_strdup("crow");
   d1->intro_points[2] = tor_strdup("joel");
-  test_assert(! rend_encode_service_descriptor(d1, pk1, &encoded, &len));
+  test_assert(! rend_encode_service_descriptor(d1, 0, pk1, &encoded, &len));
   d2 = rend_parse_service_descriptor(encoded, len);
   test_assert(d2);
 
   test_assert(!crypto_pk_cmp_keys(d1->pk, d2->pk));
   test_eq(d2->timestamp, now);
+  test_eq(d2->version, 0);
+  test_eq(d2->protocols, 1);
   test_eq(d2->n_intro_points, 3);
   test_streq(d2->intro_points[0], "tom");
   test_streq(d2->intro_points[1], "crow");
   test_streq(d2->intro_points[2], "joel");
+  test_eq(NULL, d2->intro_point_extend_info);
+
+  rend_service_descriptor_free(d1);
+  rend_service_descriptor_free(d2);
+  tor_free(encoded);
+
+  /* Test versioned descriptor. */
+  d1 = tor_malloc_zero(sizeof(rend_service_descriptor_t));
+  d1->pk = crypto_pk_dup_key(pk1);
+  now = time(NULL);
+  d1->timestamp = now;
+  d1->n_intro_points = 2;
+  d1->version = 1;
+  d1->protocols = 60;
+  d1->intro_points = tor_malloc(sizeof(char*)*2);
+  d1->intro_point_extend_info = tor_malloc(sizeof(extend_info_t*)*2);
+  d1->intro_points[0] = tor_strdup("tom");
+  d1->intro_points[1] = tor_strdup("crow");
+  d1->intro_point_extend_info[0] = tor_malloc_zero(sizeof(extend_info_t));
+  strcpy(d1->intro_point_extend_info[0]->nickname, "tom");
+  d1->intro_point_extend_info[0]->addr = 1234;
+  d1->intro_point_extend_info[0]->port = 4567;
+  d1->intro_point_extend_info[0]->onion_key = crypto_pk_dup_key(pk1);
+  memset(d1->intro_point_extend_info[0]->identity_digest, 'a', DIGEST_LEN);
+
+  d1->intro_point_extend_info[1] = tor_malloc_zero(sizeof(extend_info_t));
+  strcpy(d1->intro_point_extend_info[1]->nickname, "crow");
+  d1->intro_point_extend_info[1]->addr = 6060842;
+  d1->intro_point_extend_info[1]->port = 8000;
+  d1->intro_point_extend_info[1]->onion_key = crypto_pk_dup_key(pk2);
+  memset(d1->intro_point_extend_info[1]->identity_digest, 'b', DIGEST_LEN);
+
+  test_assert(! rend_encode_service_descriptor(d1, 1, pk1, &encoded, &len));
+  d2 = rend_parse_service_descriptor(encoded, len);
+  test_assert(d2);
+
+  test_assert(!crypto_pk_cmp_keys(d1->pk, d2->pk));
+  test_eq(d2->timestamp, now);
+  test_eq(d2->version, 1);
+  test_eq(d2->protocols, 60);
+  test_eq(d2->n_intro_points, 2);
+  test_streq(d2->intro_points[0], d2->intro_point_extend_info[0]->nickname);
+  test_streq(d2->intro_points[1], d2->intro_point_extend_info[1]->nickname);
+  test_eq(d2->intro_point_extend_info[0]->addr, 1234);
+  test_eq(d2->intro_point_extend_info[0]->port, 4567);
+  test_assert(!crypto_pk_cmp_keys(pk1,d2->intro_point_extend_info[0]->onion_key));
+  test_memeq(d2->intro_point_extend_info[0]->identity_digest,
+             d1->intro_point_extend_info[0]->identity_digest, DIGEST_LEN);
+  test_eq(d2->intro_point_extend_info[1]->addr, 6060842);
+  test_eq(d2->intro_point_extend_info[1]->port, 8000);
+
+  test_memeq(d2->intro_point_extend_info[1]->identity_digest,
+             d1->intro_point_extend_info[1]->identity_digest, DIGEST_LEN);
 
   test_eq(BAD_HOSTNAME, parse_extended_hostname(address1));
   test_eq(ONION_HOSTNAME, parse_extended_hostname(address2));
@@ -1432,6 +1491,8 @@ test_rend_fns(void)
 
   rend_service_descriptor_free(d1);
   rend_service_descriptor_free(d2);
+  crypto_free_pk_env(pk1);
+  crypto_free_pk_env(pk2);
 }
 
 int

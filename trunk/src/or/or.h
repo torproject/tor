@@ -664,7 +664,8 @@ struct connection_t {
   int done_receiving; /**< For half-open connections; not used currently. */
   char has_sent_end; /**< For debugging: set once we've set the stream end,
                         and check in circuit_about_to_close_connection(). */
-  struct circuit_t *on_circuit; /**< DOCDOC */
+  struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
+                                 * connection is using. */
 
   /* Used only by AP connections */
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
@@ -766,6 +767,17 @@ typedef struct {
   char *signing_router;
 } routerlist_t;
 
+/** Informetation on router used when extending a circuit.  (We don't need a
+ * full routerinfo_t to extend: we only need addr:port:keyid to build an OR
+ * connection, and onion_key to create the onionskin.) */
+typedef struct extend_info_t {
+  char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for display*/
+  char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key */
+  uint32_t addr; /**< IP address in host order */
+  uint16_t port; /**< OR port */
+  crypto_pk_env_t *onion_key; /**< Current onionskin key */
+} extend_info_t;
+
 #define CRYPT_PATH_MAGIC 0x70127012u
 
 /** Holds accounting information for a single step in the layered encryption
@@ -793,12 +805,8 @@ struct crypt_path_t {
   /** Negotiated key material shared with the OR at this step. */
   char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
 
-  /** IP4 address of the OR at this step. */
-  uint32_t addr;
-  /** Port of the OR at this step. */
-  uint16_t port;
-  /** Identity key digest of the OR at this step. */
-  char identity_digest[DIGEST_LEN];
+  /** Information to extend to the OR at this step. */
+  extend_info_t *extend_info;
 
   /** Is the circuit built to this step?  Must be one of:
    *    - CPATH_STATE_CLOSED (The circuit has not been extended to this step)
@@ -836,10 +844,8 @@ typedef struct crypt_path_t crypt_path_t;
 typedef struct {
   /** Intended length of the final circuit. */
   int desired_path_len;
-  /** Nickname of planned exit node. */
-  char *chosen_exit_name;
-  /** Identity of planned exit node. */
-  char chosen_exit_digest[DIGEST_LEN];
+  /** How to extend to the planned exit node. */
+  extend_info_t *chosen_exit;
   /** Whether every node in the circ must have adequate uptime. */
   int need_uptime;
   /** Whether every node in the circ must have adequate capacity. */
@@ -1220,7 +1226,7 @@ void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 circuit_t *circuit_init(uint8_t purpose, int need_uptime,
                         int need_capacity, int internal);
-circuit_t *circuit_establish_circuit(uint8_t purpose, routerinfo_t *exit,
+circuit_t *circuit_establish_circuit(uint8_t purpose, extend_info_t *exit,
                                      int need_uptime, int need_capacity, int internal);
 int circuit_handle_first_hop(circuit_t *circ);
 void circuit_n_conn_done(connection_t *or_conn, int status);
@@ -1234,9 +1240,14 @@ int onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *ke
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
-int circuit_append_new_exit(circuit_t *circ, routerinfo_t *exit);
-int circuit_extend_to_new_exit(circuit_t *circ, routerinfo_t *exit);
+int circuit_append_new_exit(circuit_t *circ, extend_info_t *info);
+int circuit_extend_to_new_exit(circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
+extend_info_t *extend_info_from_router(routerinfo_t *r);
+extend_info_t *extend_info_dup(extend_info_t *info);
+void extend_info_free(extend_info_t *info);
+routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
+const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 /********************************* circuitlist.c ***********************/
 
@@ -1280,6 +1291,9 @@ void circuit_has_opened(circuit_t *circ);
 void circuit_build_failed(circuit_t *circ);
 circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
                                       int need_uptime, int need_capacity, int is_internal);
+circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
+                                         extend_info_t *info,
+                                         int need_uptime, int need_capacity, int is_internal);
 circuit_t *circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
                                     int need_uptime, int need_capacity, int is_internal);
 void circuit_reset_failure_count(int timeout);
@@ -1707,22 +1721,34 @@ void rend_client_introcirc_has_opened(circuit_t *circ);
 void rend_client_rendcirc_has_opened(circuit_t *circ);
 int rend_client_introduction_acked(circuit_t *circ, const char *request, size_t request_len);
 void rend_client_refetch_renddesc(const char *query);
-int rend_client_remove_intro_point(char *failed_intro, const char *query);
+int rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query);
 int rend_client_rendezvous_acked(circuit_t *circ, const char *request, size_t request_len);
 int rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t request_len);
-void rend_client_desc_here(char *query);
+void rend_client_desc_here(const char *query);
 
-char *rend_client_get_random_intro(char *query);
+extend_info_t *rend_client_get_random_intro(const char *query);
 
 int rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc);
 
 /********************************* rendcommon.c ***************************/
 
+/** Information used to connect to a  hidden service. */
 typedef struct rend_service_descriptor_t {
-  crypto_pk_env_t *pk;
-  time_t timestamp;
-  int n_intro_points;
+  crypto_pk_env_t *pk; /**< This service's public key. */
+  int version; /**< 0 or 1 */
+  time_t timestamp; /**< Time when the descriptor was generated. */
+  uint16_t protocols; /**< Bitmask: which rendezvous protocols are supporeted?
+                       * (We allow bits '0', '1', and '2' to be set.) */
+  int n_intro_points; /**< Number of introduction points. */
+  /** Array of n_intro_points elements for this service's introduction points'
+   * nicknames.  Elements are removed from this array if introduction attempts
+   * fail. */
   char **intro_points;
+  /** Array of n_intro_points elements for this service's introduction points'
+   * extend_infos, or NULL if this descriptor is V0.  Elements are removed
+   * from this array if introduction attempts fail.  If this array is present,
+   * its elements correspond to the elements of intro_points. */
+  extend_info_t **intro_point_extend_info;
 } rend_service_descriptor_t;
 
 int rend_cmp_service_ids(const char *one, const char *two);
@@ -1732,6 +1758,7 @@ void rend_process_relay_cell(circuit_t *circ, int command, size_t length,
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
 int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
+                                   int version,
                                    crypto_pk_env_t *key,
                                    char **str_out,
                                    size_t *len_out);
@@ -1740,7 +1767,7 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out);
 
 typedef struct rend_cache_entry_t {
   size_t len; /* Length of desc */
-  time_t received; /* When did we get the descriptor? */
+  time_t received; /* When was the descriptor received? */
   char *desc; /* Service descriptor */
   rend_service_descriptor_t *parsed; /* Parsed value of 'desc' */
 } rend_cache_entry_t;
@@ -1749,8 +1776,8 @@ void rend_cache_init(void);
 void rend_cache_clean(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
-int rend_cache_lookup_desc(const char *query, const char **desc, size_t *desc_len);
-int rend_cache_lookup_entry(const char *query, rend_cache_entry_t **entry_out);
+int rend_cache_lookup_desc(const char *query, int version, const char **desc, size_t *desc_len);
+int rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **entry_out);
 int rend_cache_store(const char *desc, size_t desc_len);
 
 /********************************* rendservice.c ***************************/
