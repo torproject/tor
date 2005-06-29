@@ -1,4 +1,27 @@
-Changes in version 0.1.0.10 (first stable release of 0.1.0.x)
+Changes in version 0.1.1.1-alpha - 2005-06-29
+  o Bugfixes:
+    - Make OSX init script check for missing argument, so we don't
+      confuse users who invoke it incorrectly.
+    - Fix a seg fault in "tor --hash-password foo"
+    - Fix a possible way to DoS dirservers.
+    - When we complain that your exit policy implicitly allows local or
+      private address spaces, name them explicitly so operators can
+      fix it.
+    - Make the log message less scary when all the dirservers are
+      temporarily unreachable
+    - We were printing the number of idle dns workers incorrectly when
+      culling them.
+
+  o Features:
+    - Revised controller protocol (version 1) that uses ascii rather
+      than binary. Add supporting libraries in python and java so you
+      can use the controller from your applications without caring how
+      our protocol works.
+    - Spiffy new support for crypto hardware accelerators. Can somebody
+      test this?
+
+
+Changes in version 0.1.0.10 - 2005-06-14
   o Fixes on Win32:
     - Make NT services work and start on startup on Win32 (based on
       patch by Matt Edman). See the FAQ entry for details.
