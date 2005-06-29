@@ -272,9 +272,12 @@ rend_service_update_descriptor(rend_service_t *service)
   d = service->desc = tor_malloc(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
+  d->version = 1;
   n = smartlist_len(service->intro_nodes);
   d->n_intro_points = 0;
-  d->intro_points = tor_malloc(sizeof(char*)*n);
+  d->intro_points = tor_malloc_zero(sizeof(char*)*n);
+  d->intro_point_extend_info = tor_malloc_zero(sizeof(extend_info_t*)*n);
+  d->protocols = (1<<2) | (1<<0); /* We support protocol 2 and protocol 0. */
   for (i=0; i < n; ++i) {
     router = router_get_by_nickname(smartlist_get(service->intro_nodes, i));
     if (!router) {
@@ -285,7 +288,10 @@ rend_service_update_descriptor(rend_service_t *service)
     circ = find_intro_circuit(router, service->pk_digest);
     if (circ && circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
       /* We have an entirely established intro circuit. */
-      d->intro_points[d->n_intro_points++] = tor_strdup(router->nickname);
+      d->intro_points[d->n_intro_points] = tor_strdup(router->nickname);
+      d->intro_point_extend_info[d->n_intro_points] =
+        extend_info_from_router(router);
+      d->n_intro_points++;
     }
   }
 }
@@ -379,7 +385,8 @@ rend_service_requires_uptime(rend_service_t *service) {
 int
 rend_service_introduce(circuit_t *circuit, const char *request, size_t request_len)
 {
-  char *ptr, *rp_nickname, *r_cookie;
+  char *ptr, *r_cookie;
+  extend_info_t *extend_info = NULL;
   char buf[RELAY_PAYLOAD_SIZE];
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
   rend_service_t *service;
@@ -390,8 +397,6 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   crypt_path_t *cpath = NULL;
   char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
-  int version;
-  size_t nickname_field_len;
   int circ_needs_uptime;
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
@@ -441,34 +446,73 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
     return -1;
   }
   len = r;
-  if (*buf == 1) {
-    rp_nickname = buf+1;
-    nickname_field_len = MAX_HEX_NICKNAME_LEN+1;
-    version = 1;
+  if (*buf == 2) {
+    /* Version 2 INTRODUCE2 cell. */
+    int klen;
+    extend_info = tor_malloc_zero(sizeof(extend_info_t));
+    extend_info->addr = ntohl(get_uint32(buf+1));
+    extend_info->port = ntohs(get_uint16(buf+5));
+    memcpy(extend_info->identity_digest, buf+7, DIGEST_LEN);
+    extend_info->nickname[0] = '$';
+    base16_encode(extend_info->nickname+1, sizeof(extend_info->nickname)-1,
+                  extend_info->identity_digest, DIGEST_LEN);
+
+    klen = ntohs(get_uint16(buf+7+DIGEST_LEN));
+    if (len != 7+DIGEST_LEN+2+klen+20+128) {
+      log_fn(LOG_WARN, "Bad length %u for version 2 INTRODUCE2 cell.", (int)len);
+      goto err;
+    }
+    extend_info->onion_key = crypto_pk_asn1_decode(buf+7+DIGEST_LEN+2, klen);
+    if (!extend_info->onion_key) {
+      log_fn(LOG_WARN, "Error decoding onion key in version 2 INTRODUCE2 cell.");
+      goto err;
+    }
+    ptr = buf+7+DIGEST_LEN+2+klen;
+    len -= 7+DIGEST_LEN+2+klen;
   } else {
-    nickname_field_len = MAX_NICKNAME_LEN+1;
-    rp_nickname = buf;
-    version = 0;
+    char *rp_nickname;
+    size_t nickname_field_len;
+    routerinfo_t *router;
+    int version;
+    if (*buf == 1) {
+      rp_nickname = buf+1;
+      nickname_field_len = MAX_HEX_NICKNAME_LEN+1;
+      version = 1;
+    } else {
+      nickname_field_len = MAX_NICKNAME_LEN+1;
+      rp_nickname = buf;
+      version = 0;
+    }
+    /* XXX when 0.1.0.x is obsolete, change this to reject version != 2. */
+    ptr=memchr(rp_nickname,0,nickname_field_len);
+    if (!ptr || ptr == rp_nickname) {
+      log_fn(LOG_WARN, "Couldn't find a null-padded nickname in INTRODUCE2 cell");
+      return -1;
+    }
+    if ((version == 0 && !is_legal_nickname(rp_nickname)) ||
+        (version == 1 && !is_legal_nickname_or_hexdigest(rp_nickname))) {
+      log_fn(LOG_WARN, "Bad nickname in INTRODUCE2 cell.");
+      return -1;
+    }
+    /* Okay, now we know that a nickname is at the start of the buffer. */
+    ptr = rp_nickname+nickname_field_len;
+    len -= nickname_field_len;
+    len -= rp_nickname - buf; /* also remove header space used by version, if any */
+    router = router_get_by_nickname(rp_nickname);
+    if (!router) {
+      log_fn(LOG_WARN, "Couldn't found router '%s' named in rendezvous cell.",
+             rp_nickname);
+      goto err;
+    }
+
+    extend_info = extend_info_from_router(router);
   }
-  /* XXX when 0.0.9.x is obsolete, change this to reject version != 1. */
-  ptr=memchr(rp_nickname,0,nickname_field_len);
-  if (!ptr || ptr == rp_nickname) {
-    log_fn(LOG_WARN, "Couldn't find a null-padded nickname in INTRODUCE2 cell");
-    return -1;
-  }
-  if ((version == 0 && !is_legal_nickname(rp_nickname)) ||
-      (version == 1 && !is_legal_nickname_or_hexdigest(rp_nickname))) {
-    log_fn(LOG_WARN, "Bad nickname in INTRODUCE2 cell.");
-    return -1;
-  }
-  /* Okay, now we know that a nickname is at the start of the buffer. */
-  ptr = rp_nickname+nickname_field_len;
-  len -= nickname_field_len;
-  len -= rp_nickname - buf; /* also remove header space used by version, if any */
+
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
     log_fn(LOG_WARN, "Bad length %u for INTRODUCE2 cell.", (int)len);
     return -1;
   }
+
   r_cookie = ptr;
   base16_encode(hexcookie,9,r_cookie,4);
 
@@ -492,19 +536,20 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   /* Launch a circuit to alice's chosen rendezvous point.
    */
   for (i=0;i<MAX_REND_FAILURES;i++) {
-    launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname,
-                                          circ_needs_uptime, 1, 1);
+    launched = circuit_launch_by_extend_info(
+          CIRCUIT_PURPOSE_S_CONNECT_REND, extend_info, circ_needs_uptime, 1, 1);
+
     if (launched)
       break;
   }
   if (!launched) { /* give up */
     log_fn(LOG_WARN,"Giving up launching first hop of circuit to rendezvous point '%s' for service %s",
-           rp_nickname, serviceid);
+           extend_info->nickname, serviceid);
     goto err;
   }
   log_fn(LOG_INFO,
         "Accepted intro; launching circuit to '%s' (cookie %s) for service %s",
-         rp_nickname, hexcookie, serviceid);
+         extend_info->nickname, hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
   memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
@@ -522,11 +567,13 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   if (circuit_init_cpath_crypto(cpath,keys+DIGEST_LEN,1)<0)
     goto err;
   memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
+  if (extend_info) extend_info_free(extend_info);
 
   return 0;
  err:
   if (dh) crypto_dh_free(dh);
   if (launched) circuit_mark_for_close(launched);
+  if (extend_info) extend_info_free(extend_info);
   return -1;
 }
 
@@ -545,7 +592,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
       oldcirc->build_state->failure_count > MAX_REND_FAILURES ||
       oldcirc->build_state->expiry_time < time(NULL)) {
     log_fn(LOG_INFO,"Attempt to build circuit to %s for rendezvous has failed too many times or expired; giving up.",
-           oldcirc->build_state->chosen_exit_name);
+           oldcirc->build_state->chosen_exit->nickname);
     return;
   }
 
@@ -558,13 +605,13 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   }
 
   log_fn(LOG_INFO,"Reattempting rendezvous circuit to %s",
-         oldstate->chosen_exit_name);
+         oldstate->chosen_exit->nickname);
 
-  newcirc = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND,
-                               oldstate->chosen_exit_name, 0, 1, 1);
+  newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
+                               oldstate->chosen_exit, 0, 1, 1);
   if (!newcirc) {
     log_fn(LOG_WARN,"Couldn't relaunch rendezvous circuit to %s",
-           oldstate->chosen_exit_name);
+           oldstate->chosen_exit->nickname);
     return;
   }
   newstate = newcirc->build_state;
@@ -783,8 +830,8 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
     tor_assert(circ->cpath);
-    if (circ->build_state->chosen_exit_name &&
-        !strcasecmp(circ->build_state->chosen_exit_name, router->nickname)) {
+    if (circ->build_state->chosen_exit->nickname &&
+        !strcasecmp(circ->build_state->chosen_exit->nickname, router->nickname)) {
       return circ;
     }
   }
@@ -793,8 +840,8 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
     tor_assert(circ->cpath);
-    if (circ->build_state->chosen_exit_name &&
-        !strcasecmp(circ->build_state->chosen_exit_name, router->nickname)) {
+    if (circ->build_state->chosen_exit->nickname &&
+        !strcasecmp(circ->build_state->chosen_exit->nickname, router->nickname)) {
       return circ;
     }
   }
@@ -805,7 +852,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
  * and upload it to all the dirservers.
  */
 static void
-upload_service_descriptor(rend_service_t *service)
+upload_service_descriptor(rend_service_t *service, int version)
 {
   char *desc;
   size_t desc_len;
@@ -813,6 +860,7 @@ upload_service_descriptor(rend_service_t *service)
   /* Update the descriptor. */
   rend_service_update_descriptor(service);
   if (rend_encode_service_descriptor(service->desc,
+                                     version,
                                      service->private_key,
                                      &desc, &desc_len)<0) {
     log_fn(LOG_WARN, "Couldn't encode service descriptor; not uploading");
@@ -963,7 +1011,10 @@ rend_consider_services_upload(time_t now)
       /* if it's time, or if the directory servers have a wrong service
        * descriptor and ours has been stable for 5 seconds, upload a
        * new one. */
-      upload_service_descriptor(service);
+      upload_service_descriptor(service, 0);
+      /* XXXX011 NM Once directories understand versioned descriptors, enable
+       * this. */
+      // upload_service_descriptor(service, 1);
       service->next_upload_time = now + rendpostperiod;
     }
   }

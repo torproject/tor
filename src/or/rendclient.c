@@ -58,15 +58,16 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
   size_t payload_len;
   int r;
   char payload[RELAY_PAYLOAD_SIZE];
-  char tmp[1+(MAX_HEX_NICKNAME_LEN+1)+REND_COOKIE_LEN+DH_KEY_LEN];
+  char tmp[RELAY_PAYLOAD_SIZE];
   rend_cache_entry_t *entry;
   crypt_path_t *cpath;
+  off_t dh_offset;
 
   tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
   tor_assert(!rend_cmp_service_ids(introcirc->rend_query, rendcirc->rend_query));
 
-  if (rend_cache_lookup_entry(introcirc->rend_query, &entry) < 1) {
+  if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
            safe_str(introcirc->rend_query));
     goto err;
@@ -95,22 +96,28 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
   }
 
   /* write the remaining items into tmp */
-#if 0
-  tmp[0] = 1; /* version 1 of the cell format */
-  /* nul pads */
-  strncpy(tmp+1, rendcirc->build_state->chosen_exit_name, (MAX_HEX_NICKNAME_LEN+1));
-  memcpy(tmp+1+MAX_HEX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
-#else
-  strncpy(tmp, rendcirc->build_state->chosen_exit_name, (MAX_NICKNAME_LEN+1)); /* nul pads */
-  memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
-#endif
-  if (crypto_dh_get_public(cpath->dh_handshake_state,
-#if 0
-                           tmp+1+MAX_HEX_NICKNAME_LEN+1+REND_COOKIE_LEN,
-#else
-                           tmp+MAX_NICKNAME_LEN+1+REND_COOKIE_LEN,
-#endif
+  if (entry->parsed->protocols & (1<<2)) {
+    /* version 2 format */
+    extend_info_t *extend_info = rendcirc->build_state->chosen_exit;
+    int klen;
+    tmp[0] = 2; /* version 2 of the cell format */
+    /* nul pads */
+    set_uint32(tmp+1, htonl(extend_info->addr));
+    set_uint16(tmp+5, htons(extend_info->port));
+    memcpy(tmp+7, extend_info->identity_digest, DIGEST_LEN);
+    klen = crypto_pk_asn1_encode(extend_info->onion_key, tmp+7+DIGEST_LEN+2,
+                                 sizeof(tmp)-(7+DIGEST_LEN+2));
+    set_uint16(tmp+7+DIGEST_LEN, htons(klen));
+    memcpy(tmp+7+DIGEST_LEN+2+klen, rendcirc->rend_cookie, REND_COOKIE_LEN);
+    dh_offset = 7+DIGEST_LEN+2+klen+REND_COOKIE_LEN;
+  } else {
+    /* Version 0. */
+    strncpy(tmp, rendcirc->build_state->chosen_exit->nickname, (MAX_NICKNAME_LEN+1)); /* nul pads */
+    memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
+    dh_offset = MAX_NICKNAME_LEN+1+REND_COOKIE_LEN;
+  }
 
+  if (crypto_dh_get_public(cpath->dh_handshake_state, tmp+dh_offset,
                            DH_KEY_LEN)<0) {
     log_fn(LOG_WARN, "Couldn't extract g^x");
     goto err;
@@ -119,11 +126,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
   /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
    * to avoid buffer overflows? */
   r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, payload+DIGEST_LEN, tmp,
-#if 0
-                           1+MAX_HEX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
-#else
-                           MAX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
-#endif
+                                      dh_offset+DH_KEY_LEN,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_fn(LOG_WARN,"hybrid pk encrypt failed.");
@@ -174,7 +177,6 @@ int
 rend_client_introduction_acked(circuit_t *circ,
                                const char *request, size_t request_len)
 {
-  char *nickname;
   circuit_t *rendcirc;
 
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
@@ -184,7 +186,8 @@ rend_client_introduction_acked(circuit_t *circ,
     return -1;
   }
 
-  tor_assert(circ->build_state->chosen_exit_name);
+  tor_assert(circ->build_state->chosen_exit);
+  tor_assert(circ->build_state->chosen_exit->nickname);
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
@@ -209,27 +212,26 @@ rend_client_introduction_acked(circuit_t *circ,
      * points. If any remain, extend to a new one and try again.
      * If none remain, refetch the service descriptor.
      */
-    if (rend_client_remove_intro_point(circ->build_state->chosen_exit_name,
+    if (rend_client_remove_intro_point(circ->build_state->chosen_exit,
                                        circ->rend_query) > 0) {
       /* There are introduction points left. re-extend the circuit to
        * another intro point and try again. */
-      routerinfo_t *r;
-      nickname = rend_client_get_random_intro(circ->rend_query);
-      tor_assert(nickname);
-      log_fn(LOG_INFO,"Got nack for %s from %s, extending to %s.",
-             safe_str(circ->rend_query),
-             circ->build_state->chosen_exit_name, nickname);
-      if (!(r = router_get_by_nickname(nickname))) {
-        log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
-               nickname, safe_str(circ->rend_query));
-        tor_free(nickname);
+      extend_info_t *info;
+      int result;
+      info = rend_client_get_random_intro(circ->rend_query);
+      if (!info) {
+        log_fn(LOG_WARN, "No introduction points left for %s. Closing.",
+               safe_str(circ->rend_query));
         circuit_mark_for_close(circ);
         return -1;
       }
-      log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d)",
-             nickname, safe_str(circ->rend_query), circ->n_circ_id);
-      tor_free(nickname);
-      return circuit_extend_to_new_exit(circ, r);
+      log_fn(LOG_INFO,"Got nack for %s from %s, extending circ %d to %s.",
+             safe_str(circ->rend_query),
+             circ->build_state->chosen_exit->nickname, circ->n_circ_id,
+             info->nickname);
+      result = circuit_extend_to_new_exit(circ, info);
+      extend_info_free(info);
+      return result;
     }
   }
   return 0;
@@ -257,13 +259,13 @@ rend_client_refetch_renddesc(const char *query)
  * unrecognized, 1 if recognized and some intro points remain.
  */
 int
-rend_client_remove_intro_point(char *failed_intro, const char *query)
+rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 {
   int i, r;
   rend_cache_entry_t *ent;
   connection_t *conn;
 
-  r = rend_cache_lookup_entry(query, &ent);
+  r = rend_cache_lookup_entry(query, -1, &ent);
   if (r<0) {
     log_fn(LOG_WARN, "Malformed service ID '%s'", safe_str(query));
     return -1;
@@ -275,12 +277,31 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
     return 0;
   }
 
-  for (i=0; i < ent->parsed->n_intro_points; ++i) {
-    if (!strcasecmp(ent->parsed->intro_points[i], failed_intro)) {
-      tor_free(ent->parsed->intro_points[i]);
-      ent->parsed->intro_points[i] =
-        ent->parsed->intro_points[--ent->parsed->n_intro_points];
-      break;
+  if (ent->parsed->intro_point_extend_info) {
+    for (i=0; i < ent->parsed->n_intro_points; ++i) {
+      if (!memcmp(failed_intro->identity_digest,
+                  ent->parsed->intro_point_extend_info[i]->identity_digest,
+                  DIGEST_LEN)) {
+        tor_assert(!strcmp(ent->parsed->intro_points[i],
+                           ent->parsed->intro_point_extend_info[i]->nickname));
+        tor_free(ent->parsed->intro_points[i]);
+        extend_info_free(ent->parsed->intro_point_extend_info[i]);
+        --ent->parsed->n_intro_points;
+        ent->parsed->intro_points[i] =
+          ent->parsed->intro_points[ent->parsed->n_intro_points];
+        ent->parsed->intro_point_extend_info[i] =
+          ent->parsed->intro_point_extend_info[ent->parsed->n_intro_points];
+        break;
+      }
+    }
+  } else {
+    for (i=0; i < ent->parsed->n_intro_points; ++i) {
+      if (!strcasecmp(ent->parsed->intro_points[i], failed_intro->nickname)) {
+        tor_free(ent->parsed->intro_points[i]);
+        ent->parsed->intro_points[i] =
+          ent->parsed->intro_points[--ent->parsed->n_intro_points];
+        break;
+      }
     }
   }
 
@@ -385,7 +406,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
  * else fail them.
  */
 void
-rend_client_desc_here(char *query)
+rend_client_desc_here(const char *query)
 {
   connection_t *conn;
   rend_cache_entry_t *entry;
@@ -393,7 +414,7 @@ rend_client_desc_here(char *query)
 
   while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                                  AP_CONN_STATE_RENDDESC_WAIT, query))) {
-    if (rend_cache_lookup_entry(conn->rend_query, &entry) == 1 &&
+    if (rend_cache_lookup_entry(conn->rend_query, -1, &entry) == 1 &&
         entry->parsed->n_intro_points > 0) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
@@ -419,37 +440,42 @@ rend_client_desc_here(char *query)
   }
 }
 
-/** strdup a nickname for a random introduction
- * point of query. return NULL if error.
+/** Return a newly allocated extend_info_t* for a randomly chosen introduction
+ * point for the named hidden service.  Return NULL if all introduction points
+ * have been tried and failed.
  */
-char *
-rend_client_get_random_intro(char *query)
+extend_info_t *
+rend_client_get_random_intro(const char *query)
 {
   int i;
-  smartlist_t *sl;
-  char *choice;
-  char *nickname;
   rend_cache_entry_t *entry;
 
-  if (rend_cache_lookup_entry(query, &entry) < 1) {
+  if (rend_cache_lookup_entry(query, -1, &entry) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
            safe_str(query));
     return NULL;
   }
 
-  sl = smartlist_create();
-
-  /* add the intro point nicknames */
-  for (i=0;i<entry->parsed->n_intro_points;i++)
-    smartlist_add(sl,entry->parsed->intro_points[i]);
-
-  choice = smartlist_choose(sl);
-  if (!choice) {
-    smartlist_free(sl);
+ again:
+  if (!entry->parsed->n_intro_points)
     return NULL;
+
+  i = crypto_pseudo_rand_int(entry->parsed->n_intro_points);
+
+  if (entry->parsed->intro_point_extend_info) {
+    return extend_info_dup(entry->parsed->intro_point_extend_info[i]);
+  } else {
+    /* add the intro point nicknames */
+    char *choice = entry->parsed->intro_points[i];
+    routerinfo_t *router = router_get_by_nickname(choice);
+    if (!router) {
+      log_fn(LOG_WARN, "Unknown router with nickname %s; trying another.",choice);
+      tor_free(choice);
+      entry->parsed->intro_points[i] =
+        entry->parsed->intro_points[--entry->parsed->n_intro_points];
+      goto again;
+    }
+    return extend_info_from_router(router);
   }
-  nickname = tor_strdup(choice);
-  smartlist_free(sl);
-  return nickname;
 }
 

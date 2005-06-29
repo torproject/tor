@@ -1402,7 +1402,9 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   /* now circ refers to something that is ready to be extended */
   SMARTLIST_FOREACH(routers, routerinfo_t *, r,
   {
-    circuit_append_new_exit(circ, r);
+    extend_info_t *info = extend_info_from_router(r);
+    circuit_append_new_exit(circ, info);
+    extend_info_free(info);
   });
 
   /* now that we've populated the cpath, start extending */

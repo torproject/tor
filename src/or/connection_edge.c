@@ -1051,7 +1051,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
     log_fn(LOG_INFO,"Got a hidden service request for ID '%s'",
            safe_str(conn->rend_query));
     /* see if we already have it cached */
-    r = rend_cache_lookup_entry(conn->rend_query, &entry);
+    r = rend_cache_lookup_entry(conn->rend_query, -1, &entry);
     if (r<0) {
       log_fn(LOG_WARN,"Invalid service descriptor %s",
              safe_str(conn->rend_query));

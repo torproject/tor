@@ -24,7 +24,8 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 
 /********* END VARIABLES ************/
 
-/** DOCDOC This whole section */
+/** A map from OR connection and circuit ID to circuit.  (Lookup performance is
+ * very important here, since we need to do it every time a cell arrives.) */
 struct orconn_circid_circuit_map_t {
   RB_ENTRY(orconn_circid_circuit_map_t) node;
   connection_t *or_conn;
@@ -32,7 +33,9 @@ struct orconn_circid_circuit_map_t {
   circuit_t *circuit;
 };
 
-/** DOCDOC */
+/** helper for RB tree: compare the OR connection and circuit ID for a and b,
+ * and return less than, equal to, or greater than zero appropriately.
+ */
 static INLINE int
 compare_orconn_circid_entries(struct orconn_circid_circuit_map_t *a,
                               struct orconn_circid_circuit_map_t *b)
@@ -49,9 +52,15 @@ static RB_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_ci
 RB_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
 RB_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
 
+/** The most recently returned entyr from circuit_get_by_circid_orconn; used
+ * to improve performance when many cells arrive in a row from the same circuit.
+ */
+/* (We tried using splay trees, but round-robin turned out to make them suck.) */
 struct orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
-/** DOCDOC */
+/** Set the p_conn or n_conn field of a circuit <b>circ</b>, along with the
+ * corresponding circuit ID, and add the circuit as appropriate to the
+ * (orconn,id)-\>circuit map. */
 void
 circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
                           connection_t *conn,
@@ -154,7 +163,7 @@ circuit_close_all_marked(void)
   }
 }
 
-/** DOCDOC **/
+/** Return the head of the global linked list of circuits. **/
 circuit_t *
 _circuit_get_global_list(void)
 {
@@ -227,7 +236,8 @@ circuit_free(circuit_t *circ)
   if (circ->p_digest)
     crypto_free_digest_env(circ->p_digest);
   if (circ->build_state) {
-    tor_free(circ->build_state->chosen_exit_name);
+    if (circ->build_state->chosen_exit)
+      extend_info_free(circ->build_state->chosen_exit);
     if (circ->build_state->pending_final_cpath)
       circuit_free_cpath_node(circ->build_state->pending_final_cpath);
   }
@@ -296,6 +306,9 @@ circuit_free_cpath_node(crypt_path_t *victim)
     crypto_free_digest_env(victim->b_digest);
   if (victim->dh_handshake_state)
     crypto_dh_free(victim->dh_handshake_state);
+  if (victim->extend_info)
+    extend_info_free(victim->extend_info);
+
   victim->magic = 0xDEADBEEFu;
   tor_free(victim);
 }
@@ -367,7 +380,7 @@ circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
 
 }
 
-/** DOCDOC */
+/** Return the circuit that a given edge connection is using. */
 circuit_t *
 circuit_get_by_edge_conn(connection_t *conn)
 {
@@ -385,8 +398,9 @@ circuit_get_by_edge_conn(connection_t *conn)
   }
 
   circ = conn->on_circuit;
-  /* All this stuff here is sanity-checking. */
   tor_assert(circ->magic == CIRCUIT_MAGIC);
+#if 0
+  /* All this stuff here is sanity-checking. */
   for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
     if (tmpconn == conn)
       return circ;
@@ -398,6 +412,8 @@ circuit_get_by_edge_conn(connection_t *conn)
       return circ;
 
   tor_assert(0);
+#endif
+  return circ;
 }
 
 /** Return a circ such that circ is attached to <b>conn</b>, either as
@@ -592,10 +608,14 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
   }
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
+    tor_assert(circ->build_state->chosen_exit);
     /* treat this like getting a nack from it */
     log_fn(LOG_INFO,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
-           safe_str(circ->rend_query), safe_str(circ->build_state->chosen_exit_name));
-    rend_client_remove_intro_point(circ->build_state->chosen_exit_name, circ->rend_query);
+           safe_str(circ->rend_query),
+           safe_str(build_state_get_exit_nickname(circ->build_state)));
+    // XXXX NM
+    rend_client_remove_intro_point(circ->build_state->chosen_exit,
+                                   circ->rend_query);
   }
 
   if (circ->n_conn)

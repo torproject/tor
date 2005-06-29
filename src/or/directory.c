@@ -435,6 +435,9 @@ directory_send_command(connection_t *conn, const char *platform,
 
       httpcommand = "GET";
       tor_snprintf(url, sizeof(url), "/tor/rendezvous/%s", resource);
+      /* XXXX011 Once directories understand versioned descriptors, switch to this
+       * URL in order to get the most recent version */
+      // tor_snprintf(url, sizeof(url), "/tor/rendezvous1/%s", resource);
 
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
@@ -1004,10 +1007,13 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if (!strcmpstart(url,"/tor/rendezvous/")) {
+  if (!strcmpstart(url,"/tor/rendezvous/") ||
+      !strcmpstart(url,"/tor/rendezvous1/")) {
     /* rendezvous descriptor fetch */
     const char *descp;
     size_t desc_len;
+    int versioned = !strcmpstart(url,"/tor/rendezvous1/");
+    const char *query = url+strlen("/tor/rendezvous/")+(versioned?1:0);
 
     if (!authdir_mode(get_options())) {
       /* We don't hand out rend descs. In fact, it could be a security
@@ -1019,7 +1025,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
       tor_free(url);
       return 0;
     }
-    switch (rend_cache_lookup_desc(url+strlen("/tor/rendezvous/"), &descp, &desc_len)) {
+    switch (rend_cache_lookup_desc(query, versioned?-1:0, &descp, &desc_len)) {
       case 1: /* valid */
         format_rfc1123_time(date, time(NULL));
         tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
