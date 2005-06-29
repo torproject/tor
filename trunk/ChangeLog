@@ -1,14 +1,14 @@
 Changes in version 0.1.1.1-alpha - 2005-06-29
   o Bugfixes:
-    - Make OSX init script check for missing argument, so we don't
+    - Make OS X init script check for missing argument, so we don't
       confuse users who invoke it incorrectly.
-    - Fix a seg fault in "tor --hash-password foo"
+    - Fix a seg fault in "tor --hash-password foo".
     - Fix a possible way to DoS dirservers.
     - When we complain that your exit policy implicitly allows local or
       private address spaces, name them explicitly so operators can
       fix it.
     - Make the log message less scary when all the dirservers are
-      temporarily unreachable
+      temporarily unreachable.
     - We were printing the number of idle dns workers incorrectly when
       culling them.
 
