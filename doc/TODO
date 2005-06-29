@@ -13,6 +13,9 @@ PHOBOS  - phobos claims
         X Abandoned
 
 Non-Coding, Soon:
+N - contact umass folks
+N - Packaging logic and HOWTO for controller libs
+N - Mention controller libs someplace.
   - FAQ entry: why gnutls is bad/not good for tor
 P - flesh out the rest of the section 6 of the faq
 P - gather pointers to livecd distros that include tor
@@ -70,9 +73,12 @@ N . Controller improvements
     . Switch example controllers to use new protocol
       . Python
         o Implement main controller interface
-        - Glue code
-        - Testing
-      - Java
+        o Glue code
+        . Testing
+      . Java
+        o Implement main controller interface
+        o Glue code
+        . Testing
   - switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back, out if we decide we prefer it the way it already is. hm.
@@ -82,13 +88,22 @@ N . Controller improvements
     first place.)  Also, we should audit all users of get_pending_bytes().)
     - Make it harder to circumvent bandwidth caps: look at number of bytes
       sent across sockets, not number sent inside TLS stream.
-N - Handle rendezvousing with unverified nodes.
+N . Handle rendezvousing with unverified nodes.
     o Specify: Stick rendezvous point's address and port in INTRODUCE cell.
-    - Handle new format.
-      - Parse and generate new format (#if0 out the logic to generate it.)
-      - Support to extend circuit/target circuit to a chosen combination of
+    o Handle new format.
+      o Support to extend circuit/target circuit to a chosen combination of
         addr/port/ID/onionkey
-    - Verify that new code works.
+      o Parse new format
+      o Generate new format (#ifdef out the logic to generate it for now)
+    o Specify: make service descriptors contain onion key and identity.
+    o Implement new service desc format
+      - Think: are we okay with the partitioning?
+      o Implement new directory code
+      o Implement new server code (Don't enable till directory code is deployed)
+      o Implement new client code (Don't enable till directory code is deployed)
+        o Look for v1 descriptor if available, else look for v0 descriptor.
+        o Use new INTRODUCE protocol if allowed.
+    . Verify that new code works.
   - it looks like tor_assert writes to stderr. what happens if
     stderr was closed and is now something else? uh.
   - christian grothoff's attack of infinite-length circuit.
@@ -154,6 +169,8 @@ r   - kill dns workers more slowly
     - something, anything, for sys tray on Windows.
     - figure out how to make nt service stuff work?
       . Document it.
+    - Simple logic to estimate number of active/total users
+    - Add version number to directory.
 N   - Vet all pending installer patches
       - Win32 installer plus privoxy, sockscap/freecap, etc.
       - Vet win32 systray helper code
