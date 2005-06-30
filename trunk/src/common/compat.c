@@ -294,15 +294,17 @@ set_socket_nonblocking(int socket)
  * be able to read while localhost is down later (the socket pair may
  * even close, depending on OS-specific timeouts).
  *
- * XXX Bug: this function assumes errno is how you report errors, but
- * that isn't the case for Windows, which is where it's most likely
- * to be called.
+ * Returns 0 on success and -errno on failure; do not rely on the value
+ * of errno or WSAGetLastSocketError().
  **/
+/* It would be nicer just to set errno, but that won't work for windows. */
 int
 tor_socketpair(int family, int type, int protocol, int fd[2])
 {
 #ifdef HAVE_SOCKETPAIR
-    return socketpair(family, type, protocol, fd);
+  int r;
+  r = socketpair(family, type, protocol, fd);
+  return r < 0 ? -errno : r;
 #else
     /* This socketpair does not work when localhost is down. So
      * it's really not the same thing at all. But it's close enough
@@ -315,6 +317,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     struct sockaddr_in listen_addr;
     struct sockaddr_in connect_addr;
     int size;
+    int saved_errno = -1;
 
     if (protocol
 #ifdef AF_UNIX
@@ -322,24 +325,22 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 #endif
         ) {
 #ifdef MS_WINDOWS
-        errno = WSAEAFNOSUPPORT;
+      return -WSAEAFNOSUPPORT;
 #else
-        errno = EAFNOSUPPORT;
+      return -EAFNOSUPPORT;
 #endif
-        return -1;
     }
     if (!fd) {
-        errno = EINVAL;
-        return -1;
+      return -EINVAL;
     }
 
     listener = socket(AF_INET, type, 0);
     if (listener == -1)
-      return -1;
+      return -tor_socket_errno(-1);
     if (!SOCKET_IS_POLLABLE(listener)) {
       log_fn(LOG_WARN, "Too many connections; can't open socketpair");
       tor_close_socket(listener);
-      return -1;
+      return -ENCONN;
     }
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
@@ -347,13 +348,13 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     listen_addr.sin_port = 0;   /* kernel chooses port.  */
     if (bind(listener, (struct sockaddr *) &listen_addr, sizeof (listen_addr))
         == -1)
-        goto tidy_up_and_fail;
+      goto tidy_up_and_fail;
     if (listen(listener, 1) == -1)
-        goto tidy_up_and_fail;
+      goto tidy_up_and_fail;
 
     connector = socket(AF_INET, type, 0);
     if (connector == -1)
-        goto tidy_up_and_fail;
+      goto tidy_up_and_fail;
     if (!SOCKET_IS_POLLABLE(connector)) {
       log_fn(LOG_WARN, "Too many connections; can't open socketpair");
       goto tidy_up_and_fail;
@@ -361,33 +362,33 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     /* We want to find out the port number to connect to.  */
     size = sizeof(connect_addr);
     if (getsockname(listener, (struct sockaddr *) &connect_addr, &size) == -1)
-        goto tidy_up_and_fail;
+      goto tidy_up_and_fail;
     if (size != sizeof (connect_addr))
-        goto abort_tidy_up_and_fail;
+      goto abort_tidy_up_and_fail;
     if (connect(connector, (struct sockaddr *) &connect_addr,
                 sizeof(connect_addr)) == -1)
-        goto tidy_up_and_fail;
+      goto tidy_up_and_fail;
 
     size = sizeof(listen_addr);
     acceptor = accept(listener, (struct sockaddr *) &listen_addr, &size);
     if (acceptor == -1)
-        goto tidy_up_and_fail;
+      goto tidy_up_and_fail;
     if (!SOCKET_IS_POLLABLE(acceptor)) {
       log_fn(LOG_WARN, "Too many connections; can't open socketpair");
       goto tidy_up_and_fail;
     }
     if (size != sizeof(listen_addr))
-        goto abort_tidy_up_and_fail;
+      goto abort_tidy_up_and_fail;
     tor_close_socket(listener);
     /* Now check we are talking to ourself by matching port and host on the
        two sockets.  */
     if (getsockname(connector, (struct sockaddr *) &connect_addr, &size) == -1)
-        goto tidy_up_and_fail;
+      goto tidy_up_and_fail;
     if (size != sizeof (connect_addr)
         || listen_addr.sin_family != connect_addr.sin_family
         || listen_addr.sin_addr.s_addr != connect_addr.sin_addr.s_addr
         || listen_addr.sin_port != connect_addr.sin_port) {
-        goto abort_tidy_up_and_fail;
+      goto abort_tidy_up_and_fail;
     }
     fd[0] = connector;
     fd[1] = acceptor;
@@ -396,22 +397,20 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 
   abort_tidy_up_and_fail:
 #ifdef MS_WINDOWS
-  errno = WSAECONNABORTED;
+    saved_errno = WSAECONNABORTED;
 #else
-  errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
+    saved_errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
 #endif
   tidy_up_and_fail:
-    {
-        int save_errno = errno;
-        if (listener != -1)
-            tor_close_socket(listener);
-        if (connector != -1)
-            tor_close_socket(connector);
-        if (acceptor != -1)
-            tor_close_socket(acceptor);
-        errno = save_errno;
-        return -1;
-    }
+    if (saved_errno < 0)
+      saved_errno = errno;
+    if (listener != -1)
+      tor_close_socket(listener);
+    if (connector != -1)
+      tor_close_socket(connector);
+    if (acceptor != -1)
+      tor_close_socket(acceptor);
+    return -saved_errno;
 #endif
 }
 
