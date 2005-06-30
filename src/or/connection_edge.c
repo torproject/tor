@@ -1207,12 +1207,13 @@ connection_ap_make_bridge(char *address, uint16_t port)
 {
   int fd[2];
   connection_t *conn;
+  int err;
 
   log_fn(LOG_INFO,"Making AP bridge to %s:%d ...",safe_str(address),port);
 
-  if (tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
+  if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd)) < 0) {
     log(LOG_WARN,"Couldn't construct socketpair (%s). Network down? Delaying.",
-        tor_socket_strerror(tor_socket_errno(-1)));
+        tor_socket_strerror(-err));
     return -1;
   }
 

@@ -301,11 +301,11 @@ spawn_cpuworker(void)
   int *fdarray;
   int fd;
   connection_t *conn;
+  int err;
 
   fdarray = tor_malloc(sizeof(int)*2);
-  if (tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray) < 0) {
-    log(LOG_ERR, "Couldn't construct socketpair: %s",
-        tor_socket_strerror(tor_socket_errno(-1)));
+  if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
+    log(LOG_ERR, "Couldn't construct socketpair: %s", tor_socket_strerror(-err));
     tor_cleanup();
     tor_free(fdarray);
     exit(1);
