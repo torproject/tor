@@ -104,8 +104,9 @@ N . Handle rendezvousing with unverified nodes.
         o Look for v1 descriptor if available, else look for v0 descriptor.
         o Use new INTRODUCE protocol if allowed.
     . Verify that new code works.
-  - it looks like tor_assert writes to stderr. what happens if
-    stderr was closed and is now something else? uh.
+  X It looks like tor_assert writes to stderr. This isn't a problem, because
+    start_daemon doesn't close fd 2; it uses dup2 to replace it with
+    a file open to /dev/null.
   - christian grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
@@ -118,8 +119,8 @@ N . Handle rendezvousing with unverified nodes.
     (AGL had a patch; consider applying it.)
   - recommended-versions for client / server ?
   - warn if listening for SOCKS on public IP.
-  - Forward-compatibility: add "needclientversion" option or "opt critical"
-    prefix.
+  o Forward-compatibility: add "needclientversion" option or "opt critical"
+    prefix?  No, just make unknown keywords less critical.
   - cpu fixes:
     - see if we should make use of truncate to retry
     o hardware accelerator support (configure engines.)
