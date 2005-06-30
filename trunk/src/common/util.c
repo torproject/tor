@@ -1418,6 +1418,8 @@ void finish_daemon(const char *desired_cwd)
     log_fn(LOG_ERR,"dup2 failed. Exiting.");
     exit(1);
   }
+  if (nullfd > 2)
+    close(nullfd);
   write(daemon_filedes[1], &c, sizeof(char)); /* signal success */
   close(daemon_filedes[1]);
 }
