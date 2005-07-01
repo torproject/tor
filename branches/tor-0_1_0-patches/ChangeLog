@@ -1,4 +1,4 @@
-Changes in version 0.1.0.11 - 2005-07-xx
+Changes in version 0.1.0.11 - 2005-06-30
   o Bugfixes on 0.1.0.x:
     - Fix major security bug: servers were disregarding their
       exit policies if clients behaved unexpectedly.
