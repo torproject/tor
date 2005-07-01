@@ -1,3 +1,13 @@
+tor (0.1.0.11-0.pre.1) UNRELEASED; urgency=high
+
+  * New upstream version:
+    - Fixes a serious bug: servers now honor their exit policies -
+      In 0.1.0.x only clients enforced them so far.  0.0.9.x is
+      not affected.
+  * Build depend on libevent-dev >= 1.1.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  1 Jul 2005 09:21:31 +0200
+
 tor (0.1.0.10-0.pre.1) UNRELEASED; urgency=low
 
   * New upstream version.
