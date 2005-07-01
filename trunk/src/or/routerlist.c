@@ -1052,7 +1052,7 @@ router_resolve(routerinfo_t *router)
              router->address, router->nickname);
       return -1;
     }
-    memcpy((void *)router->addr, &iaddr.s_addr, 4);
+    memcpy((void *)&router->addr, &iaddr.s_addr, 4);
   } else {
     if (tor_lookup_hostname(router->address, &router->addr) != 0
         || !router->addr) {
@@ -1111,7 +1111,7 @@ router_resolve_routerlist(routerlist_t *rl)
  *
  * For now, the algorithm is pretty simple: we look for definite and
  * uncertain matches.  The first definite match is what we guess; if
- * it was proceded by no uncertain matches of the opposite policy,
+ * it was preceded by no uncertain matches of the opposite policy,
  * then the guess is definite; otherwise it is probable.  (If we
  * have a known addr and port, all matches are definite; if we have an
  * unknown addr/port, any address/port ranges other than "all" are
