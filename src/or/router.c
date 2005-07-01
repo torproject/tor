@@ -640,7 +640,7 @@ router_upload_dir_desc_to_dirservers(int force)
 }
 
 /** OR only: Check whether my exit policy says to allow connection to
- * conn.  Return false if we accept; true if we reject.
+ * conn.  Return 0 if we accept; non-0 if we reject.
  */
 int
 router_compare_to_my_exit_policy(connection_t *conn)

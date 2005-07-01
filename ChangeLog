@@ -21,6 +21,16 @@ Changes in version 0.1.1.1-alpha - 2005-06-29
       test this?
 
 
+Changes in version 0.1.0.11 - 2005-06-30
+  o Bugfixes on 0.1.0.x:
+    - Fix major security bug: servers were disregarding their
+      exit policies if clients behaved unexpectedly.
+    - Make OS X init script check for missing argument, so we don't
+      confuse users who invoke it incorrectly.
+    - Fix a seg fault in "tor --hash-password foo".
+    - The MAPADDRESS control command was broken.
+
+
 Changes in version 0.1.0.10 - 2005-06-14
   o Fixes on Win32:
     - Make NT services work and start on startup on Win32 (based on
