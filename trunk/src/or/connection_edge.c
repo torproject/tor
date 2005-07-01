@@ -1553,7 +1553,7 @@ connection_exit_connect(connection_t *conn)
   uint16_t port;
 
   if (!connection_edge_is_rendezvous_stream(conn) &&
-      router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
+      router_compare_to_my_exit_policy(conn)) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.",
            safe_str(conn->address), conn->port);
     connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, conn->cpath_layer);
