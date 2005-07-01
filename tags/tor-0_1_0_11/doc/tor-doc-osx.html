@@ -1,0 +1,182 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+<head>
+<title>Tor Mac OS X Install Instructions</title>
+<meta name="Author" content="Thomas Hardly">
+<meta name="Author" content="Roger Dingledine">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link rel="stylesheet" type="text/css" href="tor-doc.css">
+</head>
+
+<body>
+
+<h1>Running the <a href="http://tor.eff.org/">Tor</a> client on Mac OS X</h1>
+
+<a name="installing"></a>
+<h2>Step One: Download and Install Tor</h2>
+<p>
+<b>Note that these are the installation instructions for running a client on
+  Mac OS X. If you want to run a server (please do), read the "Configuring a
+  server" section at <a href="tor-doc.html#server">tor-doc.html</a>.</b>
+</p>
+<p>
+This document was updated June 09 2005.
+</p>
+<p>
+The latest beta release of Tor for Macintosh OS X is <a
+href="http://tor.eff.org/dist/osx/Tor 0.1.0.9-rc Bundle.dmg">0.1.0.9-rc</a>.
+Download it by clicking the link. You may be able to find experimental versions
+<a href="http://tor.freehaven.net/dist/osx/">here</a>, if you're looking for
+new features and new bugs.
+</p>
+
+<p>Our Tor installer should make everything pretty simple. Below is a
+screenshot of the setup page (your version will probably be newer than
+the version printed in this screenshot):
+</p>
+
+<img alt="tor installer splash page"
+src="http://tor.eff.org/img/screenshot-osx-installer-splash.png"
+border="1">
+
+<p>
+By default, Tor is configured to run at startup.  If you do not want Tor to
+run on startup, you can disable this by selecting "Customize" in the
+Installer, and then un-checking the "Tor Startup Script" box. Be sure to
+leave the other boxes checked.
+</p>
+
+<p>Once the installer is finished and your computer restarts, Tor will
+start automatically.  Tor comes configured as a client by default. It
+uses a built-in default configuration file in <tt>/Library/Tor/torrc</tt>,
+but most people won't need to change any of the settings. Tor is now
+installed.</p>
+
+<p>Privoxy is installed as part of the Tor bundle package
+installer. Privoxy is a filtering web proxy that integrates well with
+Tor. Once it's installed, it will start automatically when your computer
+is restarted.
+</p>
+
+<p>You do not need to configure Privoxy to use Tor. A custom Privoxy
+configuration for Tor has been installed as part of the installer package.
+</p>
+
+<a name="using"></a>
+<h2>Step Two: Configure your applications to use Tor</h2>
+
+<p>After installing Tor, you need to configure your applications to use
+it. The first step is to set up web browsing.
+Change your browser to HTTP proxy at localhost port 8118.
+(That's where Privoxy listens.)
+In Mozilla, this is in Mozilla|Preferences|Advanced|Proxies.
+In Firefox it's Firefox|Preferences|General|ConnectionSettings.
+You should set both your Web Proxy (HTTP) and your Secure Web Proxy
+(HTTPS or SSL) to localhost port 8118, to hide your SSL traffic too.
+
+<p>If you want to use Tor with Safari, you need to change your
+Network Settings. The process looks something like:</p>
+
+<img alt="LAN settings in IE"
+src="http://tor.eff.org/img/screenshot-osx-choose-network.png"
+border="1">
+
+<p>
+Select your Network Preferences from the Apple | Location menu.</p>
+
+<img alt="Proxy settings in IE"
+src="http://tor.eff.org/img/screenshot-osx-choose-interface.png"
+border="1">
+<P>
+
+<p>Select the Network Interface you want to enable Tor on. If you use
+more than one Interface you must change the proxy settings for each
+individually.</p>
+
+<img alt="Proxy settings in IE"
+src="http://tor.eff.org/img/screenshot-osx-proxy-settings.png"
+border="1">
+
+<p>Select and enter 127.0.0.1 and port 8118 for both Web Proxy (HTTP)
+and your Secure Web Proxy (HTTPS).  Leave your Use Passive FTP Mode (PASV) setting as is.</p>
+
+<p>Using privoxy is <strong>necessary</strong> because <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS">browsers
+leak your
+DNS requests when they use a SOCKS proxy directly</a>, which is bad for
+your anonymity. Privoxy also removes certain dangerous headers from your
+web requests, and blocks obnoxious ad sites like Doubleclick.</p>
+
+<p>To test if it's working, you need to know your normal IP address 
+so you can verify that the address really changes when running Tor.
+Your local IP address is shown by the <tt>ifconfig</tt> command.  
+If you are behind a NAT/Firewall you can use one of the sites listed 
+below to check which IP you are using.
+When that is done, start Tor and Privoxy and visit any of the sites again.
+If everything works, your IP address should have changed.
+</p>
+
+<p>
+<!--<a href="http://peertech.org/privacy-knoppix/">peertech</a>, -->
+<a href="http://www.showmyip.com/">showmyip.com</a> and
+<a href="http://ipid.shat.net">ipid.shat.net</a>
+are sites that show your current IP so you can see
+what address and country you're coming from.
+</p>
+
+<p>
+If you have a personal firewall that limits your computer's ability
+to connect to itself, be sure to allow connections from your local
+applications to
+local port 8118 and port 9050. If your firewall blocks outgoing connections,
+punch a hole so it can connect to at least TCP ports 80, 443, and 9001-9033.
+For more troubleshooting suggestions, see <a
+href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
+</p>
+
+<p>To Torify another application that supports HTTP, just point
+it at Privoxy (that is, localhost port 8118). To use SOCKS
+directly (for example, for instant messaging, Jabber, IRC, etc),
+point your application directly at Tor (localhost port 9050). For
+applications that support neither SOCKS nor HTTP, take a look at <a
+href="http://www.taiyo.co.jp/~gotoh/ssh/connect.html">connect</a> or
+<a href="http://www.dest-unreach.org/socat/">socat</a>.  
+<br />
+For more information how to Torify other applications in detail visit
+the <a href="http://wiki.noreply.org/wiki/TheOnionRouter/TorifyHOWTO">Torify HOWTO</a>.
+<p>If you have suggestions for improving this document, please post
+them on <a href="http://bugs.noreply.org/tor">our bugtracker</a> in the
+website category. Thanks!</p>
+
+<h2>How To Uninstall</h2>
+
+<p>The Tor 0.1.0.x series does not come with an uninstaller; this feature
+  will be added in the 0.1.1.x series.  If you want to remove Tor on OSX,
+  here's how:</p>
+
+<p>Change your application proxy settings back to their original values.
+   If you just want to stop using Tor, you can end at this point.</p>
+
+<p>To stop Tor and Privoxy from running on startup</b>, remove the
+   /Library/StartupItems/Tor and /Library/StartupItems/Privoxy directories
+   respectively. If you just want to stop Tor from running, you can end at this
+   point.</p>
+
+<p>To erase all remaining Tor and Privoxy files from your computer, delete
+  the following:
+   <ul><li>/Library/Tor</li>
+   <li>/Library/Privoxy</li>
+   <li>/usr/bin/tor</li>
+   <li>/usr/bin/tor_resolve</li>
+   <li>/var/log/tor</li>
+   <li>/usr/share/man/man1/tor.1</li>
+   <li>/usr/share/man/man1/tor-resolve.1</li>
+   <li>/usr/share/man/man1/torify.1</li>
+  </ul>
+</p>
+
+</body>
+</html>
+
