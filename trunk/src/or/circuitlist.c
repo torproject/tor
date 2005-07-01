@@ -385,7 +385,9 @@ circuit_t *
 circuit_get_by_edge_conn(connection_t *conn)
 {
   circuit_t *circ;
+#if 0
   connection_t *tmpconn;
+#endif
   tor_assert(CONN_IS_EDGE(conn));
 
   if (! conn->on_circuit) {
