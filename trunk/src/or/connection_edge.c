@@ -267,13 +267,17 @@ int
 connection_edge_finished_connecting(connection_t *conn)
 {
   char connected_payload[4];
+  char valbuf[INET_NTOA_BUF_LEN];
+  struct in_addr;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_EXIT);
   tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
 
-  log_fn(LOG_INFO,"Exit connection to %s:%u established.",
-         safe_str(conn->address),conn->port);
+  in.s_addr = htonl(conn->addr);
+  tor_inet_ntoa(&in,valbuf,sizeof(valbuf));
+  log_fn(LOG_INFO,"Exit connection to %s:%u (%s) established.",
+         safe_str(conn->address),conn->port,safe_str(valbuf));
 
   conn->state = EXIT_CONN_STATE_OPEN;
   connection_watch_events(conn, EV_READ); /* stop writing, continue reading */
