@@ -268,7 +268,7 @@ connection_edge_finished_connecting(connection_t *conn)
 {
   char connected_payload[4];
   char valbuf[INET_NTOA_BUF_LEN];
-  struct in_addr;
+  struct in_addr in;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_EXIT);
