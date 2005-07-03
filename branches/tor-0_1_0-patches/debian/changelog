@@ -1,12 +1,12 @@
-tor (0.1.0.11-0.pre.1) UNRELEASED; urgency=high
+tor (0.1.0.11-1) unstable; urgency=low
 
-  * New upstream version:
+  * New upstream version (closes: #316753):
     - Fixes a serious bug: servers now honor their exit policies -
       In 0.1.0.x only clients enforced them so far.  0.0.9.x is
       not affected.
   * Build depend on libevent-dev >= 1.1.
 
- -- Peter Palfrader <weasel@debian.org>  Fri,  1 Jul 2005 09:21:31 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat,  2 Jul 2005 15:17:33 +0200
 
 tor (0.1.0.10-0.pre.1) UNRELEASED; urgency=low
 
@@ -28,6 +28,16 @@ tor (0.1.0.10-0.pre.1) UNRELEASED; urgency=low
     Instead just warn a bit (closes: #312882).
 
  -- Peter Palfrader <weasel@debian.org>  Wed, 15 Jun 2005 16:38:06 +0200
+
+tor (0.0.9.10-1) unstable; urgency=high
+
+  * While we're waiting for a newer libevent to enter sid, make another
+    upload of the 0.0.9.x tree:
+    - Refuse relay cells that claim to have a length larger than the
+      maximum allowed. This prevents a potential attack that could read
+      arbitrary memory (e.g. keys) from an exit server's process.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 16 Jun 2005 22:56:11 +0200
 
 tor (0.0.9.9-1) unstable; urgency=low
 
