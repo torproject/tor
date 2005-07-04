@@ -1,12 +1,15 @@
-tor (0.1.0.11-1) unstable; urgency=low
+tor (0.1.0.11-1) unstable; urgency=high
 
   * New upstream version (closes: #316753):
     - Fixes a serious bug: servers now honor their exit policies -
       In 0.1.0.x only clients enforced them so far.  0.0.9.x is
       not affected.
   * Build depend on libevent-dev >= 1.1.
+  * Urgency high because 0.0.9.10-1 did not make it into testing after
+    like 3 weeks because of an impending ftp-master move.  So I might
+    just as well upload this one.
 
- -- Peter Palfrader <weasel@debian.org>  Sat,  2 Jul 2005 15:17:33 +0200
+ -- Peter Palfrader <weasel@debian.org>  Mon,  4 Jul 2005 17:53:48 +0200
 
 tor (0.1.0.10-0.pre.1) UNRELEASED; urgency=low
 
