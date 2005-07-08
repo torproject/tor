@@ -95,15 +95,13 @@ TODO: (very soon)
    of TLS records MUST NOT leak information about the type or contents
    of the cells.
 
-   OR-to-OR connections are never deliberately closed.  When an OR
-   starts or receives a new directory, it tries to open new
-   connections to any OR it is not already connected to.
-[not true, unused OR conns close after 5 mins too -RD]
-
-   OR-to-OP connections are not permanent. An OP should close a
+   TLS connections are not permanent. An OP or an OR may close a
    connection to an OR if there are no circuits running over the
    connection, and an amount of time (KeepalivePeriod, defaults to 5
    minutes) has passed.
+
+   (As an exception, directory servers may try to stay connected to all of
+   the ORs.)
 
 3. Cell Packet format
 
