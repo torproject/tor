@@ -1672,13 +1672,15 @@ tor_main(int argc, char *argv[])
 #ifdef MS_WINDOWS_SERVICE
   backup_argv = argv;
   backup_argc = argc;
-  if ((argc >= 2) && !strcmp(argv[1], "-install"))
-    return nt_service_install();
-  if ((argc >= 2) && !strcmp(argv[1], "-remove"))
-    return nt_service_remove();
-  if ((argc >= 2) && !strcmp(argv[1], "--nt-service")) {
-    nt_service_main();
-    return 0;
+  if (argc >= 2) {
+    if (!strcmp(argv[1], "-install") || !strcmp(argv[1], "--install"))
+      return nt_service_install();
+    if (!strcmp(argv[1], "-remove") || !strcmp(argv[1], "--remove"))
+      return nt_service_remove();
+    if (!strcmp(argv[1], "-nt-service") || !strcmp(argv[1], "--nt-service")) {
+      nt_service_main();
+      return 0;
+    }
   }
 #endif
   if (tor_init(argc, argv)<0)
