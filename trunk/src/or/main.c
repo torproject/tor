@@ -77,11 +77,19 @@ int has_completed_circuit=0;
 #define GENSRV_SERVICENAME  TEXT("tor")
 #define GENSRV_DISPLAYNAME  TEXT("Tor Win32 Service")
 #define GENSRV_DESCRIPTION  TEXT("Provides an anonymous Internet communication system")
+
+// Cheating: using the pre-defined error codes, tricks Windows into displaying
+//           a semi-related human-readable error message if startup fails as
+//           opposed to simply scaring people with Error: 0xffffffff
+#define NT_SERVICE_ERROR_NO_TORRC ERROR_FILE_NOT_FOUND
+#define NT_SERVICE_ERROR_TORINIT_FAILED ERROR_EXCEPTION_IN_SERVICE
+
 SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
 static char **backup_argv;
 static int backup_argc;
 static int nt_service_is_stopped(void);
+static char* nt_strerror(uint32_t errnum);
 #else
 #define nt_service_is_stopped() (0)
 #endif
@@ -1409,6 +1417,48 @@ do_hash_password(void)
 }
 
 #ifdef MS_WINDOWS_SERVICE
+/** Checks if torrc is present in the same directory
+ *  as the service executable.
+ *  Return 1 if it is, 0 if it is not present. */
+static int nt_torrc_is_present()
+{
+  HANDLE hFile;
+  TCHAR szPath[_MAX_PATH];
+  TCHAR szDrive[_MAX_DRIVE];
+  TCHAR szDir[_MAX_DIR];
+  char torrc[] = "torrc";
+  char *path_to_torrc;
+  int len = 0;
+
+  /* Get the service executable path */
+  if (0 == GetModuleFileName(NULL, szPath, MAX_PATH))
+    return 0;
+  _tsplitpath(szPath, szDrive, szDir, NULL, NULL);
+
+  /* Build the path to the torrc file */
+  len = _MAX_PATH + _MAX_DRIVE + _MAX_DIR + strlen(torrc) + 1;
+  path_to_torrc = tor_malloc(len);
+  if (tor_snprintf(path_to_torrc, len, "%s%s%s", szDrive,  szDir, torrc)<0) {
+    printf("Failed: tor_snprinf()\n");
+    free(path_to_torrc);
+    return 0;
+  }
+
+  /* See if torrc is present */
+  hFile = CreateFile(TEXT(path_to_torrc),
+                     GENERIC_READ, FILE_SHARE_READ, NULL,
+                     OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                     NULL);
+
+  tor_free(path_to_torrc);
+
+  if (hFile == INVALID_HANDLE_VALUE) {
+    return 0;
+  }
+  CloseHandle(hFile);
+  return 1;
+}
+
 /** If we're compile to run as an NT service, and the service has been
  * shut down, then change our current status and return 1.  Else
  * return 0.
@@ -1459,11 +1509,23 @@ nt_service_body(int argc, char **argv)
     return;
   }
 
-  err = tor_init(backup_argc, backup_argv); // refactor this part out of tor_main and do_main_loop
+  // check for torrc
+  if (nt_torrc_is_present()) {
+    err = tor_init(backup_argc, backup_argv); // refactor this part out of tor_main and do_main_loop
+    if (err) {
+      err = NT_SERVICE_ERROR_TORINIT_FAILED;
+    }
+  }
+  else {
+    log_fn(LOG_ERR, "torrc is not in the current working directory. The Tor service will not start.");
+    err = NT_SERVICE_ERROR_NO_TORRC;
+  }
+
   if (err) {
     // failed.
     service_status.dwCurrentState = SERVICE_STOPPED;
-    service_status.dwWin32ExitCode = -1;
+    service_status.dwWin32ExitCode = err;
+    service_status.dwServiceSpecificExitCode = err;
     SetServiceStatus(hStatus, &service_status);
     return;
   }
@@ -1480,6 +1542,7 @@ nt_service_main(void)
 {
   SERVICE_TABLE_ENTRY table[2];
   DWORD result = 0;
+  char *errmsg;
   table[0].lpServiceName = GENSRV_SERVICENAME;
   table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)nt_service_body;
   table[1].lpServiceName = NULL;
@@ -1487,7 +1550,9 @@ nt_service_main(void)
 
   if (!StartServiceCtrlDispatcher(table)) {
     result = GetLastError();
-    printf("Error was %d\n",result);
+    errmsg = nt_strerror(result);
+    printf("Service error %d : %s\n", result, errmsg);
+    LocalFree(errmsg);
     if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
       if (tor_init(backup_argc, backup_argv) < 0)
         return;
@@ -1510,6 +1575,113 @@ nt_service_main(void)
       tor_cleanup();
     }
   }
+}
+
+/** DOCDOC */
+SC_HANDLE
+nt_service_open_scm(void)
+{
+  SC_HANDLE hSCManager;
+  char *errmsg = NULL;
+
+  if ((hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
+    errmsg = nt_strerror(GetLastError());
+    printf("OpenSCManager() failed : %s\n", errmsg);
+    LocalFree(errmsg);
+  }
+  return hSCManager;
+}
+
+/** DOCDOC */
+SC_HANDLE
+nt_service_open(SC_HANDLE hSCManager)
+{
+  SC_HANDLE hService;
+  char *errmsg = NULL;
+
+  if ((hService = OpenService(hSCManager, GENSRV_SERVICENAME, SERVICE_ALL_ACCESS)) == NULL) {
+    errmsg = nt_strerror(GetLastError());
+    printf("OpenService() failed : %s\n", errmsg);
+    LocalFree(errmsg);
+  }
+  return hService;
+}
+
+/** DOCDOC */
+int
+nt_service_start(SC_HANDLE hService)
+{
+  char *errmsg = NULL;
+
+  QueryServiceStatus(hService, &service_status);
+  if (service_status.dwCurrentState == SERVICE_RUNNING) {
+    printf("Service is already running\n");
+    return 1;
+  }
+
+  if (StartService(hService, 0, NULL)) {
+    /* Loop until the service has finished attempting to start */
+    while (QueryServiceStatus(hService, &service_status)) {
+      if (service_status.dwCurrentState == SERVICE_START_PENDING)
+        Sleep(500);
+      else
+        break;
+    }
+
+    /* Check if it started successfully or not */
+    if (service_status.dwCurrentState == SERVICE_RUNNING) {
+      printf("Service started successfully\n");
+      return 1;
+    }
+    else {
+      errmsg = nt_strerror(service_status.dwWin32ExitCode);
+      printf("Service failed to start : %s\n", errmsg);
+      LocalFree(errmsg);
+    }
+  }
+  else {
+    errmsg = nt_strerror(GetLastError());
+    printf("StartService() failed : %s\n", errmsg);
+    LocalFree(errmsg);
+  }
+  return 0;
+}
+
+/** DOCDOC */
+int
+nt_service_stop(SC_HANDLE hService)
+{
+  char *errmsg = NULL;
+
+  QueryServiceStatus(hService, &service_status);
+  if (service_status.dwCurrentState == SERVICE_STOPPED) {
+    printf("Service is already stopped\n");
+    return 1;
+  }
+
+  if (ControlService(hService, SERVICE_CONTROL_STOP, &service_status)) {
+    while (QueryServiceStatus(hService, &service_status)) {
+      if (service_status.dwCurrentState == SERVICE_STOP_PENDING)
+        Sleep(500);
+      else
+        break;
+    }
+    if (service_status.dwCurrentState == SERVICE_STOPPED) {
+      printf("Service stopped successfully\n");
+      return 1;
+    }
+    else {
+      errmsg = nt_strerror(GetLastError());
+      printf("Service failed to stop : %s\n");
+      LocalFree(errmsg);
+    }
+  }
+  else {
+    errmsg = nt_strerror(GetLastError());
+    printf("ControlService() failed : %s\n", errmsg);
+    LocalFree(errmsg);
+  }
+  return 0;
 }
 
 /** DOCDOC */
@@ -1545,6 +1717,7 @@ nt_service_install(void)
   char cmd1[] = " -f ";
   char cmd2[] = "\\torrc";
   char *command;
+  char *errmsg;
   int len = 0;
 
   if (0 == GetModuleFileName(NULL, szPath, MAX_PATH))
@@ -1567,8 +1740,7 @@ nt_service_install(void)
     return 0;
   }
 
-  if ((hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
-    printf("Failed: OpenSCManager()\n");
+  if ((hSCManager = nt_service_open_scm()) == NULL) {
     free(command);
     return 0;
   }
@@ -1582,33 +1754,21 @@ nt_service_install(void)
                                 SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
                                 SERVICE_AUTO_START, SERVICE_ERROR_IGNORE, command,
                                 NULL, NULL, NULL, NULL, "")) == NULL) {
-    printf("Failed: CreateService()\n");
+    errmsg = nt_strerror(GetLastError());
+    printf("CreateService() failed : %s\n", errmsg);
     CloseServiceHandle(hSCManager);
+    LocalFree(errmsg);
     free(command);
     return 0;
   }
 
-  /* Start the service initially, so you don't have to muck with it in the SCM
-   */
   /* Set the service's description */
   sdBuff.lpDescription = GENSRV_DESCRIPTION;
   ChangeServiceConfig2(hService, SERVICE_CONFIG_DESCRIPTION, &sdBuff);
+  printf("Service installed successfully\n");
 
-  /* Start the service, so you don't have to muck with it in the SCM */
-  if (StartService(hService, 0, NULL)) {
-    /* Loop until the service has finished attempting to start */
-    while (QueryServiceStatus(hService, &service_status) &&
-           service_status.dwCurrentState == SERVICE_START_PENDING)
-      Sleep(500);
-
-    /* Check if it started successfully or not */
-    if (service_status.dwCurrentState == SERVICE_RUNNING)
-      printf("Service installed and started successfully.\n");
-    else
-      printf("Service installed, but failed to start.\n");
-  } else {
-    printf("Service installed, but failed to start.\n");
-  }
+  /* Start the service initially */
+  nt_service_start(hService);
 
   CloseServiceHandle(hService);
   CloseServiceHandle(hSCManager);
@@ -1623,45 +1783,94 @@ nt_service_remove(void)
 {
   SC_HANDLE hSCManager = NULL;
   SC_HANDLE hService = NULL;
-  SERVICE_STATUS service_status;
   BOOL result = FALSE;
+  char *errmsg;
 
-  if ((hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
-    printf("Failed: OpenSCManager()\n");
+  if ((hSCManager = nt_service_open_scm()) == NULL) {
     return 0;
   }
 
-  if ((hService = OpenService(hSCManager, GENSRV_SERVICENAME, SERVICE_ALL_ACCESS)) == NULL) {
-    printf("Failed: OpenService()\n");
+  if ((hService = nt_service_open(hSCManager)) == NULL) {
     CloseServiceHandle(hSCManager);
     return 0;
   }
 
-  result = ControlService(hService, SERVICE_CONTROL_STOP, &service_status);
-  if (result) {
-    while (QueryServiceStatus(hService, &service_status))
-    {
-      if (service_status.dwCurrentState == SERVICE_STOP_PENDING)
-        Sleep(500);
-      else
-        break;
+  if (nt_service_stop(hService)) {
+    if (DeleteService(hService)) {
+      printf("Removed service successfully\n");
     }
-    if (DeleteService(hService))
-      printf("Removed service successfully\n");
-    else
-      printf("Failed: DeleteService()\n");
-  } else {
-    result = DeleteService(hService);
-    if (result)
-      printf("Removed service successfully\n");
-    else
-      printf("Failed: DeleteService()\n");
+    else {
+      errmsg = nt_strerror(GetLastError());
+      printf("DeleteService() failed : %s\n", errmsg);
+      LocalFree(errmsg);
+    }
+  }
+  else {
+    printf("Service could not be removed\n");
   }
 
   CloseServiceHandle(hService);
   CloseServiceHandle(hSCManager);
 
   return 0;
+}
+
+/** DOCDOC */
+int
+nt_service_cmd_start(void)
+{
+  SC_HANDLE hSCManager;
+  SC_HANDLE hService;
+  int start;
+
+  if ((hSCManager = nt_service_open_scm()) == NULL)
+    return -1;
+  if ((hService = nt_service_open(hSCManager)) == NULL) {
+    CloseHandle(hSCManager);
+    return -1;
+  }
+
+  start = nt_service_start(hService);
+  CloseHandle(hService);
+  CloseHandle(hSCManager);
+
+  return start;
+}
+
+/** DOCDOC */
+int
+nt_service_cmd_stop(void)
+{
+  SC_HANDLE hSCManager;
+  SC_HANDLE hService;
+  int stop;
+
+  if ((hSCManager = nt_service_open_scm()) == NULL)
+    return -1;
+  if ((hService = nt_service_open(hSCManager)) == NULL) {
+    CloseHandle(hSCManager);
+    return -1;
+  }
+
+  stop = nt_service_stop(hService);
+  CloseHandle(hService);
+  CloseHandle(hSCManager);
+
+  return stop;
+}
+
+/** Given a Win32 error code, this attempts to make Windows
+ * return a human-readable error message. The char* returned
+ * is allocated by Windows, but should be freed with LocalFree()
+ * when finished with it. */
+static char*
+nt_strerror(uint32_t errnum)
+{
+   char *msgbuf;
+   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                 NULL, errnum, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                 (LPSTR)&msgbuf, 0, NULL);
+   return msgbuf;
 }
 #endif
 
@@ -1672,6 +1881,19 @@ tor_main(int argc, char *argv[])
 #ifdef MS_WINDOWS_SERVICE
   backup_argv = argv;
   backup_argc = argc;
+  if ((argc >= 3) && (!strcmp(argv[1], "-service") || !strcmp(argv[1], "--service"))) {
+    if (!strcmp(argv[2], "install"))
+      return nt_service_install();
+    if (!strcmp(argv[2], "remove"))
+      return nt_service_remove();
+    if (!strcmp(argv[2], "start"))
+      return nt_service_cmd_start();
+    if (!strcmp(argv[2], "stop"))
+      return nt_service_cmd_stop();
+    printf("Unrecognized service command '%s'\n", argv[2]);
+    return -1;
+  }
+  // These are left so as not to confuse people who are used to these options
   if (argc >= 2) {
     if (!strcmp(argv[1], "-install") || !strcmp(argv[1], "--install"))
       return nt_service_install();
