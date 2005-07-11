@@ -1337,6 +1337,7 @@ int config_parse_addr_policy(struct config_line_t *cfg,
 void config_append_default_exit_policy(addr_policy_t **policy);
 void addr_policy_free(addr_policy_t *p);
 int config_option_is_recognized(const char *key);
+const char *config_option_get_canonical_name(const char *key);
 struct config_line_t *config_get_assigned_option(or_options_t *options,
                                                  const char *key);
 char *config_dump_options(or_options_t *options, int minimal);
