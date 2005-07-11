@@ -508,6 +508,8 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
 
   conn = connection_new(type);
   conn->s = s;
+  conn->address = tor_strdup(bindaddress);
+  conn->port = usePort;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_WARN,"connection_add failed. Giving up.");
@@ -759,29 +761,6 @@ connection_connect(connection_t *conn, char *address,
   return 1;
 }
 
-/** If there exist any listeners of type <b>type</b> in the connection
- * array, mark them for close.
- */
-static void
-listener_close_if_present(int type)
-{
-  connection_t *conn;
-  connection_t **carray;
-  int i,n;
-  tor_assert(type == CONN_TYPE_OR_LISTENER ||
-             type == CONN_TYPE_AP_LISTENER ||
-             type == CONN_TYPE_DIR_LISTENER ||
-             type == CONN_TYPE_CONTROL_LISTENER);
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
-    if (conn->type == type && !conn->marked_for_close) {
-      connection_close_immediate(conn);
-      connection_mark_for_close(conn);
-    }
-  }
-}
-
 /**
  * Launch any configured listener connections of type <b>type</b>.  (A
  * listener is configured if <b>port_option</b> is non-zero.  If any
@@ -791,61 +770,90 @@ listener_close_if_present(int type)
  *
  * If <b>force</b> is true, close and re-open all listener connections.
  * Otherwise, only relaunch the listeners of this type if the number of
- * existing connections is not as configured (e.g., because one died).
+ * existing connections is not as configured (e.g., because one died),
+ * or if the existing connections do not match those configured.
  */
 static int
 retry_listeners(int type, struct config_line_t *cfg,
                 int port_option, const char *default_addr, int force)
 {
-  if (!force) {
-    int want, have, n_conn, i;
-    struct config_line_t *c;
-    connection_t *conn;
-    connection_t **carray;
-    /* How many should there be? */
-    if (cfg && port_option) {
-      want = 0;
-      for (c = cfg; c; c = c->next)
-        ++want;
-    } else if (port_option) {
-      want = 1;
-    } else {
-      want = 0;
+  struct smartlist_t *launch = smartlist_create();
+  int free_launch_elts = 1;
+  struct config_line_t *c;
+  int n_conn, i;
+  connection_t *conn;
+  connection_t **carray;
+  struct config_line_t *line;
+
+  if (cfg && port_option) {
+    for (c = cfg; c; c = c->next) {
+      smartlist_add(launch, c);
     }
-
-    /* How many are there actually? */
-    have = 0;
-    get_connection_array(&carray,&n_conn);
-    for (i=0;i<n_conn;i++) {
-      conn = carray[i];
-      if (conn->type == type && !conn->marked_for_close)
-        ++have;
-    }
-
-    /* If we have the right number of listeners, do nothing. */
-    if (have == want)
-      return 0;
-
-    /* Otherwise, warn the user and relaunch. */
-    log_fn(LOG_NOTICE,"We have %d %s(s) open, but we want %d; relaunching.",
-           have, conn_type_to_string(type), want);
+    free_launch_elts = 0;
+  } else if (port_option) {
+    line = tor_malloc_zero(sizeof(struct config_line_t));
+    line->key = tor_strdup("");
+    line->value = tor_strdup(default_addr);
+    smartlist_add(launch, line);
   }
 
-  listener_close_if_present(type);
-  if (port_option) {
-    if (!cfg) {
-           if (connection_create_listener(default_addr, (uint16_t) port_option,
+  get_connection_array(&carray,&n_conn);
+  for (i=0; i < n_conn; ++i) {
+    conn = carray[i];
+    if (conn->type != type || conn->marked_for_close)
+      continue;
+    if (force) {
+      /* It's a listener, and we're relaunching all listeners of this
+       * type. Close this one. */
+      log_fn(LOG_NOTICE, "Closing listener on %s:%d", conn->address, conn->port);
+      connection_close_immediate(conn);
+      connection_mark_for_close(conn);
+      continue;
+    }
+    /* Okay, so this is a listener.  Is it configured? */
+    line = NULL;
+    SMARTLIST_FOREACH(launch, struct config_line_t *, wanted,
+      {
+        char *addr;
+        uint16_t port;
+        if (! parse_addr_port(wanted->value, &addr, NULL, &port)) {
+          if (! port)
+            port = port_option;
+          if (port == conn->port && !strcasecmp(addr, conn->address)) {
+            line = wanted;
+            break;
+          }
+        }
+      });
+    if (! line) {
+      /* This one isn't configured. Close it. */
+      log_fn(LOG_NOTICE, "Closing listener on %s:%d", conn->address, conn->port);
+      connection_close_immediate(conn);
+      connection_mark_for_close(conn);
+    } else {
+      /* It's configured; we don't need to launch it. */
+      log_fn(LOG_INFO, "Already have listener on %s:%d",conn->address,conn->port);
+      smartlist_remove(launch, line);
+    }
+  }
+
+  /* Now open all the listeners that are configured but not opened. */
+  i = 0;
+  SMARTLIST_FOREACH(launch, struct config_line_t *, cfg,
+    {
+      log_fn(LOG_NOTICE, "Opening listener on %s:%d", cfg->value, port_option);
+      if (connection_create_listener(cfg->value, (uint16_t) port_option,
                                      type)<0)
-        return -1;
-    } else {
-      for ( ; cfg; cfg = cfg->next) {
-        if (connection_create_listener(cfg->value, (uint16_t) port_option,
-                                       type)<0)
-          return -1;
-      }
-    }
+        i = -1;
+  });
+
+  if (free_launch_elts) {
+    SMARTLIST_FOREACH(launch, struct config_line_t *, cfg,
+                      config_free_lines(cfg));
   }
-  return 0;
+  smartlist_free(launch);
+
+  return i;
 }
 
 /** (Re)launch listeners for each port you should have open.  If
