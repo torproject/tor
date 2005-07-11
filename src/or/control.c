@@ -694,9 +694,10 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
     } else {
       struct config_line_t *answer = config_get_assigned_option(options,q);
       if (!v0 && !answer) {
-        size_t alen = strlen(q)+8;
+        const char *name = config_option_get_canonical_name(q);
+        size_t alen = strlen(name)+8;
         char *astr = tor_malloc(alen);
-        tor_snprintf(astr, alen, "250-%s\r\n", q);
+        tor_snprintf(astr, alen, "250-%s\r\n", name);
         smartlist_add(answers, astr);
       }
 
