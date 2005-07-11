@@ -389,7 +389,7 @@ options_act(void)
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
-  if (!we_are_hibernating() && retry_all_listeners(1) < 0) {
+  if (!we_are_hibernating() && retry_all_listeners(0) < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
@@ -429,8 +429,8 @@ expand_abbrev(const char *option, int command_line)
 static struct config_line_t *
 config_get_commandlines(int argc, char **argv)
 {
-  struct config_line_t *new;
   struct config_line_t *front = NULL;
+  struct config_line_t **new = &front;
   char *s;
   int i = 1;
 
@@ -447,19 +447,19 @@ config_get_commandlines(int argc, char **argv)
       continue;
     }
 
-    new = tor_malloc(sizeof(struct config_line_t));
+    *new = tor_malloc_zero(sizeof(struct config_line_t));
     s = argv[i];
 
     while (*s == '-')
       s++;
 
-    new->key = tor_strdup(expand_abbrev(s, 1));
-    new->value = tor_strdup(argv[i+1]);
-
+    (*new)->key = tor_strdup(expand_abbrev(s, 1));
+    (*new)->value = tor_strdup(argv[i+1]);
+    (*new)->next = NULL;
     log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
-        new->key, new->value);
-    new->next = front;
-    front = new;
+        (*new)->key, (*new)->value);
+
+    new = &((*new)->next);
     i += 2;
   }
   return front;
@@ -692,6 +692,14 @@ config_option_is_recognized(const char *key)
 {
   config_var_t *var = config_find_option(key);
   return (var != NULL);
+}
+
+/** Return the canonical name of a configuration option. */
+const char *
+config_option_get_canonical_name(const char *key)
+{
+  config_var_t *var = config_find_option(key);
+  return var->name;
 }
 
 /** Return a canonicalized list of the options assigned for key.
