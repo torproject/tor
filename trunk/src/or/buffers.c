@@ -1105,6 +1105,9 @@ fetch_from_buf_control0(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
   tor_assert(type_out);
   tor_assert(body_out);
 
+  *len_out = 0;
+  *body_out = NULL;
+
   if (buf->datalen < 4)
     return 0;
 
@@ -1125,13 +1128,13 @@ fetch_from_buf_control0(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
     *body_out = tor_malloc(msglen+1);
     fetch_from_buf(*body_out, msglen, buf);
     (*body_out)[msglen] = '\0';
-  } else {
-    *body_out = NULL;
   }
   return 1;
 }
 
-/** DOCDOC */
+/** Helper: return a pointer to the first instance of <b>c</b> in the
+ * <b>len</b>characters after <b>start</b> on <b>buf</b>. Return NULL if the
+ * character isn't found. */
 static char *
 find_char_on_buf(buf_t *buf, char *start, size_t len, char c)
 {
@@ -1144,6 +1147,8 @@ find_char_on_buf(buf_t *buf, char *start, size_t len, char c)
   return memchr(buf->mem, c, len_rest);
 }
 
+/** Helper: return a pointer to the first CRLF after cp on <b>buf</b>. Return
+ * NULL if no CRLF is found. */
 static char *
 find_crlf_on_buf(buf_t *buf, char *cp)
 {
@@ -1162,7 +1167,12 @@ find_crlf_on_buf(buf_t *buf, char *cp)
   }
 }
 
-/* DOCDOC : 0 means 'need to read more'. means done, -1 means "grow buffer." */
+/** Try to read a single CRLF-terminated line from <b>buf</b>, and write it,
+ * NUL-terminated, into the *<b>data_len</b> byte buffer at <b>data_out</b>.
+ * Set *<b>data_len</b> to the number of bytes in the line, not counting the
+ * terminating NUL.  Return 1 if we read a whole line, return 0 if we don't
+ * have a whole line yet, and return -1 if we we need to grow the buffer.
+ */
 int
 fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
 {
