@@ -164,8 +164,7 @@ $Id$
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP"
 
-[XXX We should have an "ADDRESSMAP" event to hear when we learn
-about dns resolves, etc, so the controller can keep synced. -RD]
+[XXX DEBUG doesn't work. -NM]
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -555,9 +554,9 @@ about dns resolves, etc, so the controller can keep synced. -RD]
 
       StreamStatus =
                "NEW"          / ; New request to connect
-               "NEWRESOLVE"  / ; New request to resolve an address
-               "SENTCONNECT" / ; Sent a connect cell along a circuit
-               "SENTRESOLVE" / ; Sent a resolve cell along a circuit
+               "NEWRESOLVE"   / ; New request to resolve an address
+               "SENTCONNECT"  / ; Sent a connect cell along a circuit
+               "SENTRESOLVE"  / ; Sent a resolve cell along a circuit
                "SUCCEEDED"    / ; Received a reply; stream established
                "FAILED"       / ; Stream failed and not retriable.
                "CLOSED"       / ; Stream closed
