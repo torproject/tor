@@ -316,7 +316,7 @@ this will observe it through cookies or other protocol-specific means anyhow.
 .TP
 \fBTrackHostExitsExpire \fR\fINUM\fP
 Since exit servers go up and down, it is desirable to expire the association
-between host and exit server after NUM seconds of inactivity. The default
+between host and exit server after NUM seconds. The default
 is 1800 seconds (30 minutes).
 
 .SH SERVER OPTIONS
