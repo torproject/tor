@@ -1082,7 +1082,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
 
 #define CONTROL_CMD_FRAGMENTHEADER 0x0010
 #define CONTROL_CMD_FRAGMENT       0x0011
-/** If there is a complete version 0control message waiting on buf, then store
+/** If there is a complete version 0 control message waiting on buf, then store
  * its contents into *<b>type_out</b>, store its body's length into
  * *<b>len_out</b>, allocate and store a string for its body into
  * *<b>body_out</b>, and return 1.  (body_out will always be NUL-terminated,
