@@ -1948,7 +1948,7 @@ connection_control_process_inbuf_v0(connection_t *conn)
 {
   uint32_t body_len;
   uint16_t command_type;
-  char *body;
+  char *body=NULL;
 
  again:
   /* Try to suck a control message from the buffer. */
@@ -1957,7 +1957,7 @@ connection_control_process_inbuf_v0(connection_t *conn)
     {
     case -2:
       tor_free(body);
-      log_fn(LOG_INFO, "Detected v1 contol protocol on connection (fd %d)",
+      log_fn(LOG_INFO, "Detected v1 control protocol on connection (fd %d)",
              conn->s);
       conn->state = CONTROL_CONN_STATE_NEEDAUTH_V1;
       return connection_control_process_inbuf_v1(conn);
