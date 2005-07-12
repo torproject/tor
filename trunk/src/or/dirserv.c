@@ -579,7 +579,6 @@ int
 dirserv_dump_directory_to_string(char **dir_out,
                                  crypto_pk_env_t *private_key)
 {
-  char *cp;
   char *router_status;
   char *identity_pkey; /* Identity key, DER64-encoded. */
   char *recommended_versions;
@@ -646,8 +645,6 @@ dirserv_dump_directory_to_string(char **dir_out,
   tor_free(recommended_versions);
   tor_free(router_status);
   tor_free(identity_pkey);
-  i = strlen(buf);
-  cp = buf+i;
 
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
     if (strlcat(buf, ri->signed_descriptor, buf_len) >= buf_len)
@@ -675,12 +672,11 @@ dirserv_dump_directory_to_string(char **dir_out,
   }
   log(LOG_DEBUG,"generated directory digest begins with %s",hex_str(digest,4));
 
-  if (strlcat(cp, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
+  if (strlcat(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
     goto truncated;
 
   i = strlen(buf);
-  cp = buf+i;
-  if (base64_encode(cp, buf_len-i, signature, 128) < 0) {
+  if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
     log_fn(LOG_WARN,"couldn't base64-encode signature");
     tor_free(buf);
     return -1;
