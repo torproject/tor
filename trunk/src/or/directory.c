@@ -986,7 +986,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
 
   if (!strcmp(url,"/tor/running-routers") ||
       !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
-    int deflated = !strcmp(url,"/tor/dir.z");
+    int deflated = !strcmp(url,"/tor/running-routers.z");
     tor_free(url);
     dlen = dirserv_get_runningrouters(&cp, deflated);
     if (!dlen) { /* we failed to create/cache cp */
