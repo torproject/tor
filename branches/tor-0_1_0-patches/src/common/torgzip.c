@@ -209,6 +209,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   *out_len = stream->total_out;
   if (inflateEnd(stream)!=Z_OK) {
     log_fn(LOG_WARN, "Error freeing gzip structures");
+    tor_free(stream);
     goto err;
   }
   tor_free(stream);
