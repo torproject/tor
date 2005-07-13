@@ -147,6 +147,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   struct z_stream_s *stream = NULL;
   size_t out_size;
   off_t offset;
+  int r;
 
   tor_assert(out);
   tor_assert(out_len);
@@ -202,15 +203,15 @@ tor_gzip_uncompress(char **out, size_t *out_len,
                stream->msg ? stream->msg : "<no message>");
         goto err;
       }
-
   }
  done:
   *out_len = stream->total_out;
-  if (inflateEnd(stream)!=Z_OK) {
-    log_fn(LOG_WARN, "Error freeing gzip structures");
-    goto err; /* XXX this will try to inflateEnd again, right? is that bad? */
-  }
+  r = inflateEnd(stream);
   tor_free(stream);
+  if (r != Z_OK) {
+    log_fn(LOG_WARN, "Error freeing gzip structures");
+    goto err;
+  }
 
   /* NUL-terminate output. */
   if (out_size == *out_len)
