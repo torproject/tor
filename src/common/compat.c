@@ -160,7 +160,7 @@ tor_memmem(const void *_haystack, size_t hlen, const void *_needle, size_t nlen)
   end = haystack + hlen;
   first = *(const char*)needle;
   while ((p = memchr(p, first, end-p))) {
-    if (end-p >= nlen)
+    if (p+nlen >= end)
       return NULL;
     if (!memcmp(p, needle, nlen))
       return p;
@@ -340,7 +340,11 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     if (!SOCKET_IS_POLLABLE(listener)) {
       log_fn(LOG_WARN, "Too many connections; can't open socketpair");
       tor_close_socket(listener);
+#ifdef MS_WINDOWS
+      return -ENFILE;
+#else
       return -ENCONN;
+#endif
     }
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
