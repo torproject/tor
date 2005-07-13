@@ -923,12 +923,12 @@ tor_mutex_acquire(tor_mutex_t *m)
   r = WaitForSingleObject(m->handle, INFINITE);
   switch (r) {
     case WAIT_ABANDONED: /* holding thread exited. */
-        case WAIT_OBJECT_0: /* we got the mutex normally. */
+    case WAIT_OBJECT_0: /* we got the mutex normally. */
       break;
     case WAIT_TIMEOUT: /* Should never happen. */
-          tor_assert(0);
+      tor_assert(0);
       break;
-        case WAIT_FAILED:
+    case WAIT_FAILED:
       log_fn(LOG_WARN, "Failed to acquire mutex: %d", GetLastError());
   }
 }

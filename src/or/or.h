@@ -1513,7 +1513,7 @@ void enable_control_logging(void);
     int _log_conn_is_control = (conn && conn->type == CONN_TYPE_CONTROL); \
     if (_log_conn_is_control)                                           \
       disable_control_logging();                                        \
-    do {stmt;} while(0);                                                \
+    do {stmt;} while (0);                                               \
     if (_log_conn_is_control)                                           \
       enable_control_logging();                                         \
   } while (0)
