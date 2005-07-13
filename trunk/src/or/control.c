@@ -106,6 +106,9 @@ static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
 static uint32_t global_event_mask0 = 0;
 static uint32_t global_event_mask1 = 0;
 
+/** True iff we have disabled log messages from being sent to the controller */
+static int disable_log_messages = 0;
+
 /** Macro: true if any control connection is interested in events of type
  * <b>e</b>. */
 #define EVENT_IS_INTERESTING0(e) (global_event_mask0 & (1<<(e)))
@@ -219,12 +222,12 @@ update_global_event_mask(void)
     }
   }
 
-  adjust_event_log_severity();
+  control_adjust_event_log_severity();
 }
 
 /** DOCDOC */
 void
-adjust_event_log_severity(void)
+control_adjust_event_log_severity(void)
 {
   int i;
   int min_log_event=EVENT_ERR_MSG, max_log_event=EVENT_DEBUG_MSG;
@@ -795,7 +798,7 @@ handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
         else if (!strcasecmp(ev, "BW"))
           event_code = EVENT_BANDWIDTH_USED;
         else if (!strcasecmp(ev, "DEBUG"))
-          continue; /* Don't do debug messages */
+          event_code = EVENT_DEBUG_MSG;
         else if (!strcasecmp(ev, "INFO"))
           event_code = EVENT_INFO_MSG;
         else if (!strcasecmp(ev, "NOTICE"))
@@ -2274,14 +2277,28 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
   return 0;
 }
 
+/** DOCDOC */
+void
+disable_control_logging(void)
+{
+  ++disable_log_messages;
+}
+
+/** DOCDOC */
+void
+enable_control_logging(void)
+{
+  if (--disable_log_messages < 0)
+    tor_assert(0);
+}
+
 /** We got a log message: tell any interested control connections. */
 void
 control_event_logmsg(int severity, const char *msg)
 {
-  static int sending_logmsg=0;
   int oldlog, event;
 
-  if (sending_logmsg)
+  if (disable_log_messages)
     return;
 
   oldlog = EVENT_IS_INTERESTING0(EVENT_LOG_OBSOLETE) &&
@@ -2293,12 +2310,12 @@ control_event_logmsg(int severity, const char *msg)
 
   if (oldlog || event) {
     size_t len = strlen(msg);
-    sending_logmsg = 1;
+    disable_log_messages = 1;
     if (event)
       send_control0_event(event, (uint32_t)(len+1), msg);
     if (oldlog)
       send_control0_event(EVENT_LOG_OBSOLETE, (uint32_t)(len+1), msg);
-    sending_logmsg = 0;
+    disable_log_messages = 0;
   }
 
   event = log_severity_to_event(severity);
@@ -2313,13 +2330,16 @@ control_event_logmsg(int severity, const char *msg)
           *cp = ' ';
     }
     switch (severity) {
+      case LOG_DEBUG: s = "DEBUG"; break;
       case LOG_INFO: s = "INFO"; break;
       case LOG_NOTICE: s = "NOTICE"; break;
       case LOG_WARN: s = "WARN"; break;
       case LOG_ERR: s = "ERR"; break;
       default: s = "UnknownLogSeverity"; break;
     }
+    disable_log_messages = 1;
     send_control1_event(event, "650 %s %s\r\n", s, b?b:msg);
+    disable_log_messages = 0;
     tor_free(b);
   }
 }

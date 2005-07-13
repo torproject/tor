@@ -332,7 +332,7 @@ options_act(void)
    * gone. */
   close_temp_logs();
   add_callback_log(LOG_ERR, LOG_ERR, control_event_logmsg);
-  adjust_event_log_severity();
+  control_adjust_event_log_severity();
 
   /* Set up libevent. */
   if (!libevent_initialized) {

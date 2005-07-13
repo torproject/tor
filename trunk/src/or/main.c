@@ -364,7 +364,7 @@ conn_read_callback(int fd, short event, void *_conn)
 {
   connection_t *conn = _conn;
 
-  log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
+  LOG_FN_CONN(conn, (LOG_DEBUG,"socket %d wants to read.",conn->s));
 
   assert_connection_ok(conn, time(NULL));
 
@@ -393,7 +393,7 @@ conn_write_callback(int fd, short events, void *_conn)
 {
   connection_t *conn = _conn;
 
-  log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
+  LOG_FN_CONN(conn, (LOG_DEBUG,"socket %d wants to write.",conn->s));
 
   assert_connection_ok(conn, time(NULL));
 
@@ -454,7 +454,8 @@ conn_close_if_marked(int i)
     }
     if (retval >= 0 &&
        conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
-      log_fn(LOG_INFO,"Holding conn (fd %d) open for more flushing.",conn->s);
+      LOG_FN_CONN(conn,
+             (LOG_INFO,"Holding conn (fd %d) open for more flushing.",conn->s));
       /* XXX should we reset timestamp_lastwritten here? */
       return 0;
     }

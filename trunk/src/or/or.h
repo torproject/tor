@@ -1504,7 +1504,23 @@ typedef enum or_conn_status_event_t {
   OR_CONN_EVENT_CLOSED       = 3,
 } or_conn_status_event_t;
 
-void adjust_event_log_severity(void);
+void control_adjust_event_log_severity(void);
+void disable_control_logging(void);
+void enable_control_logging(void);
+
+#define CONN_LOG_PROTECT(conn, stmt)                                    \
+  do {                                                                  \
+    int _log_conn_is_control = (conn && conn->type == CONN_TYPE_CONTROL); \
+    if (_log_conn_is_control)                                           \
+      disable_control_logging();                                        \
+    do {stmt;} while(0);                                                \
+    if (_log_conn_is_control)                                           \
+      enable_control_logging();                                         \
+  } while (0)
+
+#define LOG_FN_CONN(conn, args)                 \
+  CONN_LOG_PROTECT(conn, log_fn args)
+
 int connection_control_finished_flushing(connection_t *conn);
 int connection_control_reached_eof(connection_t *conn);
 int connection_control_process_inbuf(connection_t *conn);
