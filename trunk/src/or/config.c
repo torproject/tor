@@ -2646,12 +2646,12 @@ init_libevent(void)
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
   /* Making this a NOTICE for now so we can link bugs to a libevent versions
    * or methods better. */
-  log(LOG_NOTICE, "Initialized libevent version %s using method %s",
+  log(LOG_NOTICE, "Initialized libevent version %s using method %s. Good.",
       event_get_version(), event_get_method());
   check_libevent_version(event_get_method(), event_get_version(),
                          get_options()->ORPort != 0);
 #else
-  log(LOG_NOTICE, "Initialized old libevent (version 1.0b or earlier)");
+  log(LOG_NOTICE, "Initialized old libevent (version 1.0b or earlier).");
   log(LOG_WARN, "You have a very old version of libevent.  It is likely to be buggy; please consider building Tor with a more recent version.");
 #endif
 
