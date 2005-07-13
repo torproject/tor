@@ -925,7 +925,7 @@ static void
 connection_consider_empty_buckets(connection_t *conn)
 {
   if (global_read_bucket <= 0) {
-    log_fn(LOG_DEBUG,"global bucket exhausted. Pausing.");
+    LOG_FN_CONN(conn, (LOG_DEBUG,"global bucket exhausted. Pausing."));
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
     return;
@@ -933,7 +933,7 @@ connection_consider_empty_buckets(connection_t *conn)
   if (connection_speaks_cells(conn) &&
       conn->state == OR_CONN_STATE_OPEN &&
       conn->receiver_bucket <= 0) {
-    log_fn(LOG_DEBUG,"receiver bucket exhausted. Pausing.");
+    LOG_FN_CONN(conn, (LOG_DEBUG,"receiver bucket exhausted. Pausing."));
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
   }
@@ -986,7 +986,7 @@ connection_bucket_refill(struct timeval *now)
             conn->state != OR_CONN_STATE_OPEN ||
             conn->receiver_bucket > 0)) {
       /* and either a non-cell conn or a cell conn with non-empty bucket */
-      log_fn(LOG_DEBUG,"waking up conn (fd %d)",conn->s);
+      LOG_FN_CONN(conn, (LOG_DEBUG,"waking up conn (fd %d)",conn->s));
       conn->wants_to_read = 0;
       connection_start_reading(conn);
       if (conn->wants_to_write == 1) {
@@ -1165,8 +1165,9 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     }
 
   } else {
-    result = read_to_buf(conn->s, at_most, conn->inbuf,
-                         &conn->inbuf_reached_eof);
+    CONN_LOG_PROTECT(conn,
+        result = read_to_buf(conn->s, at_most, conn->inbuf,
+                             &conn->inbuf_reached_eof));
 
 //  log_fn(LOG_DEBUG,"read_to_buf returned %d.",read_result);
 
@@ -1328,7 +1329,8 @@ connection_handle_write(connection_t *conn)
        */
     }
   } else {
-    result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
+    CONN_LOG_PROTECT(conn,
+             result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen));
     if (result < 0) {
       if (CONN_IS_EDGE(conn))
         connection_edge_end_errno(conn, conn->cpath_layer);
@@ -1369,7 +1371,8 @@ _connection_controller_force_write(connection_t *conn)
   if (conn->marked_for_close || conn->s < 0)
     return;
 
-  result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
+  CONN_LOG_PROTECT(conn,
+      result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen));
   if (result < 0) {
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     connection_mark_for_close(conn);
@@ -1395,13 +1398,15 @@ _connection_controller_force_write(connection_t *conn)
 void
 connection_write_to_buf(const char *string, size_t len, connection_t *conn)
 {
+  int r;
   if (!len)
     return;
   /* if it's marked for close, only allow write if we mean to flush it */
   if (conn->marked_for_close && !conn->hold_open_until_flushed)
     return;
 
-  if (write_to_buf(string, len, conn->outbuf) < 0) {
+  CONN_LOG_PROTECT(conn, r = write_to_buf(string, len, conn->outbuf));
+  if (r < 0) {
     if (CONN_IS_EDGE(conn)) {
       /* if it failed, it means we have our package/delivery windows set
          wrong compared to our max outbuf size. close the whole circuit. */

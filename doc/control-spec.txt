@@ -164,8 +164,6 @@ $Id$
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP"
 
-[XXX DEBUG doesn't work. -NM]
-
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
 
