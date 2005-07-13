@@ -28,6 +28,7 @@ This document was updated $Date$.
 The latest beta release of Tor for MS Windows is
 <a href="http://tor.eff.org/dist/win32/tor-0.1.0.11-win32.exe">0.1.0.11</a>.
 Download it by clicking the link. You may be able to find experimental versions
+
 <a href="http://tor.eff.org/dist/win32/">here</a>, if you're looking for
 new features and new bugs.
 </p>
@@ -56,8 +57,8 @@ Be sure to leave the other boxes checked.
 src="http://tor.eff.org/img/screenshot-win32-installer-components.png" />
 
 <p>Once the installer is finished, it will run Tor in a window so
-you can see its logs and errors. (You can minimize this window, but do
-not close it.)
+you can see its logs and errors. (When you wish to browse anonymously, 
+you may minimize this window, but do not close it.)
 </p>
 
 <img alt="tor window screenshot"
@@ -65,7 +66,8 @@ src="http://tor.eff.org/img/screenshot-win32-dos-window.png" />
 
 <p>Tor comes configured as a client by default. It uses a built-in
 default configuration file, and most people won't need to change any of
-the settings. Tor is now installed.</p>
+the settings. Tor is now installed. Close the Tor client for now by 
+closing the cmd window.</p>
 
 <a name="privoxy"></a>
 <h2>Step Two: Install Privoxy for Web Browsing</h2>
@@ -75,7 +77,9 @@ The first step is to set up web browsing. Start by installing <a
 href="http://www.privoxy.org/">Privoxy</a> (click on 'recent releases',
 then scroll down to the MS Windows installer packages). Privoxy is a filtering
 web proxy that integrates well with Tor. Once it's installed, it should
-appear in your system tray as a "P" in a circle, as pictured below:
+appear in your system tray as a "P" in a circle, as pictured below: Exit from 
+Privoxy for now by right clicking on the "P" icon and finding the exit option. 
+
 </p>
 
 <img alt="privoxy icon in the system tray"
@@ -143,9 +147,9 @@ web requests, and blocks obnoxious ad sites like Doubleclick.</p>
 <p>To test if it's working, you need to know your normal IP address so you can
 verify that the address really changes when running Tor.
 Go to the Start menu, click Run and enter <tt>cmd</tt>.
-At the command prompt, enter <tt>ipconfig</tt>. If you are behind a NAT/Firewall
+At the command prompt, enter <tt>ipconfig /a</tt>. If you are behind a NAT/Firewall/Router
 you can use one of the sites listed below to check which IP you are using.
-When that is done, start Tor and Privoxy and visit any of the sites again.
+When that is done, clear your browser's cache, start Tor and Privoxy and visit any of the sites again.
 If everything works, your IP address should have changed.
 </p>
 
@@ -179,6 +183,7 @@ href="http://www.hummingbird.com/products/nc/socks/index.html?cks=y">Hummingbird
 SOCKS client. (FreeCap is free software; the others are proprietary.)<br />
 For more information how to Torify other applications in detail visit
 the <a href="http://wiki.noreply.org/wiki/TheOnionRouter/TorifyHOWTO">Torify HOWTO</a>.
+
 <p>If you have suggestions for improving this document, please <a
 href="mailto:tor-bugs@freehaven.net">send them to us</a>. Thanks!</p>
 
