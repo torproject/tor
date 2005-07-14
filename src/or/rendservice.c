@@ -592,8 +592,8 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
       oldcirc->build_state->failure_count > MAX_REND_FAILURES ||
       oldcirc->build_state->expiry_time < time(NULL)) {
     log_fn(LOG_INFO,"Attempt to build circuit to %s for rendezvous has failed too many times or expired; giving up.",
-           oldcirc->build_state->chosen_exit->nickname);
-    /* XXX bug: if the first clause of the if triggers, we'll seg fault. */
+           oldcirc->build_state ? oldcirc->build_state->chosen_exit->nickname :
+           "*unknown*");
     return;
   }
 
@@ -831,9 +831,8 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
     tor_assert(circ->cpath);
-    /* XXX this is a bug. ->nickname will always be there. */
-    if (circ->build_state->chosen_exit->nickname &&
-        !strcasecmp(circ->build_state->chosen_exit->nickname, router->nickname)) {
+    if (!strcasecmp(circ->build_state->chosen_exit->nickname,
+                    router->nickname)) {
       return circ;
     }
   }
@@ -842,9 +841,8 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
     tor_assert(circ->cpath);
-    /* XXX this is a bug. ->nickname will always be there. */
-    if (circ->build_state->chosen_exit->nickname &&
-        !strcasecmp(circ->build_state->chosen_exit->nickname, router->nickname)) {
+    if (!strcasecmp(circ->build_state->chosen_exit->nickname,
+                    router->nickname)) {
       return circ;
     }
   }
