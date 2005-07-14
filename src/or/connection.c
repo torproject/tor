@@ -475,6 +475,8 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
   bindaddr.sin_family = AF_INET;
   bindaddr.sin_port = htons((uint16_t) usePort);
 
+  log_fn(LOG_NOTICE, "Opening listener on %s:%d", address, usePort);
+
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
     log_fn(LOG_WARN,"Socket creation failed.");
@@ -847,7 +849,6 @@ retry_listeners(int type, struct config_line_t *cfg,
   i = 0;
   SMARTLIST_FOREACH(launch, struct config_line_t *, cfg,
     {
-      log_fn(LOG_NOTICE, "Opening listener on %s:%d", cfg->value, port_option);
       if (connection_create_listener(cfg->value, (uint16_t) port_option,
                                      type)<0)
         i = -1;
