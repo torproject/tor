@@ -1,3 +1,38 @@
+Changes in version 0.1.1.2-alpha - 2005-07-14
+  o Bugfixes on 0.1.0.x, crashes/leaks:
+    - Port the servers-not-obeying-their-exit-policies fix from 0.1.0.11.
+    - Fix an fd leak in start_daemon().
+    - On Windows, you can't always reopen a port right after you've
+      closed it. So change retry_listeners() to only close and re-open
+      ports that have changed.
+    - Fix a possible double-free in tor_gzip_uncompress().
+
+  o Bugfixes on 0.1.0.x, usability:
+    - When tor_socketpair() fails in Windows, give a reasonable
+      Windows-style errno back.
+    - Let people type "tor --install" as well as "tor -install" when they
+      want to make it an NT service.
+    - NT service patch from Matt Edman to improve error messages.
+    - When the controller asks for a config option with an abbreviated
+      name, give the full name in our response.
+    - Correct the man page entry on TrackHostExitsExpire.
+    - Looks like we were never delivering deflated (i.e. compressed)
+      running-routers lists, even when asked. Oops.
+    - When --disable-threads is set, do not search for or link against
+      pthreads libraries.
+
+  o Bugfixes on 0.1.1.x:
+    - Fix a seg fault with autodetecting which controller version is
+      being used.
+
+  o Features:
+    - New hidden service descriptor format: put a version in it, and
+      let people specify introduction/rendezvous points that aren't
+      in "the directory" (which is subjective anyway).
+    - Allow the DEBUG controller event to work again. Mark certain log
+      entries as "don't tell this to controllers", so we avoid cycles.
+
+
 Changes in version 0.1.1.1-alpha - 2005-06-29
   o Bugfixes:
     - Make OS X init script check for missing argument, so we don't
@@ -369,6 +404,13 @@ Changes in version 0.1.0.10 - 2005-06-14
       come later.
     - Add "opt hibernating 1" to server descriptor to make it clearer
       whether the server is hibernating.
+
+
+Changes in version 0.0.9.10 - 2005-06-16
+  o Bugfixes on 0.0.9.x (backported from 0.1.0.10):
+    - Refuse relay cells that claim to have a length larger than the
+      maximum allowed. This prevents a potential attack that could read
+      arbitrary memory (e.g. keys) from an exit server's process.
 
 
 Changes in version 0.0.9.9 - 2005-04-23
