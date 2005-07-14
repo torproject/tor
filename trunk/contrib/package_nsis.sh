@@ -31,7 +31,7 @@ clean_localstatedir() {
     perl -pe 's/^\n$/\r\n/mg; s/([^\r])\n$/\1\r\n/mg; s{\@LOCALSTATEDIR\@/(lib|log)/tor/}{C:\\Documents and Settings\\Application Data\\Tor\\}' $1 >$2
 }
 
-for fn in CLIENTS tor-spec.txt HACKING rend-spec.txt control-spec.txt \
+for fn in tor-spec.txt HACKING rend-spec.txt control-spec.txt \
    tor-doc.html tor-doc.css version-spec.txt; do
     clean_newlines doc/$fn win_tmp/doc/$fn
 done
