@@ -119,7 +119,6 @@ SectionEnd
 
 Section "Documents" Docs
    SetOutPath "$INSTDIR\Documents"
-   File "..\doc\CLIENTS"
    File "..\doc\tor-spec.txt"
    #File "..\doc\FAQ"
    File "..\doc\HACKING"
