@@ -89,7 +89,7 @@ circuit_list_path(circuit_t *circ, int verbose)
                  circ->build_state->is_internal ? "internal" : "exit",
                  circ->build_state->need_uptime ? " (high-uptime)" : "",
                  circ->build_state->desired_path_len,
-                 nickname?nickname:"unnamed");
+                 nickname?nickname:"*unnamed*");
     smartlist_add(elements, tor_strdup(buf));
   }
 
@@ -103,6 +103,7 @@ circuit_list_path(circuit_t *circ, int verbose)
     if (!hop->extend_info)
       break;
     elt = hop->extend_info->nickname;
+    tor_assert(elt);
     if (verbose) {
       size_t len = strlen(elt)+2+strlen(states[hop->state])+1;
       char *v = tor_malloc(len);
@@ -309,6 +310,7 @@ circuit_handle_first_hop(circuit_t *circ)
 
   firsthop = onion_next_hop_in_cpath(circ->cpath);
   tor_assert(firsthop);
+  tor_assert(firsthop->extend_info);
 
   /* now see if we're already connected to the first OR in 'route' */
   in.s_addr = htonl(firsthop->extend_info->addr);
@@ -1229,7 +1231,8 @@ onion_pick_cpath_exit(circuit_t *circ, extend_info_t *exit)
     log_fn(LOG_INFO,"Using requested exit node '%s'", exit->nickname);
     exit = extend_info_dup(exit);
   } else { /* we have to decide one */
-    routerinfo_t *router = choose_good_exit_server(circ->purpose, rl,
+    routerinfo_t *router =
+           choose_good_exit_server(circ->purpose, rl,
                                    state->need_uptime, state->need_capacity);
     if (!router) {
       log_fn(LOG_WARN,"failed to choose an exit server");

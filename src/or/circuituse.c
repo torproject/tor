@@ -703,8 +703,8 @@ static int did_circs_fail_last_period = 0;
  * success. */
 #define MAX_CIRCUIT_FAILURES 5
 
-/** Launch a new circuit; see circuit_launch_by_extend_info for details on
- * arguments. */
+/** Launch a new circuit; see circuit_launch_by_extend_info() for
+ * details on arguments. */
 circuit_t *
 circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
                          int need_uptime, int need_capacity, int internal)
@@ -788,8 +788,8 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
                                    need_uptime, need_capacity, internal);
 }
 
-/** Launch a new circuit; see circuit_launch_by_extend_info for details on
- * arguments. */
+/** Launch a new circuit; see circuit_launch_by_extend_info() for
+ * details on arguments. */
 circuit_t *
 circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
                            int need_uptime, int need_capacity, int internal)

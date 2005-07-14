@@ -33,7 +33,7 @@ struct orconn_circid_circuit_map_t {
   circuit_t *circuit;
 };
 
-/** helper for RB tree: compare the OR connection and circuit ID for a and b,
+/** Helper for RB tree: compare the OR connection and circuit ID for a and b,
  * and return less than, equal to, or greater than zero appropriately.
  */
 static INLINE int
@@ -52,15 +52,17 @@ static RB_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_ci
 RB_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
 RB_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
 
-/** The most recently returned entyr from circuit_get_by_circid_orconn; used
- * to improve performance when many cells arrive in a row from the same circuit.
+/** The most recently returned entry from circuit_get_by_circid_orconn;
+ * used to improve performance when many cells arrive in a row from the
+ * same circuit.
  */
-/* (We tried using splay trees, but round-robin turned out to make them suck.) */
+/* (We tried using splay trees, but round-robin turned out to make them
+ * suck.) */
 struct orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
-/** Set the p_conn or n_conn field of a circuit <b>circ</b>, along with the
- * corresponding circuit ID, and add the circuit as appropriate to the
- * (orconn,id)-\>circuit map. */
+/** Set the p_conn or n_conn field of a circuit <b>circ</b>, along
+ * with the corresponding circuit ID, and add the circuit as appropriate
+ * to the (orconn,id)-\>circuit map. */
 void
 circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
                           connection_t *conn,
