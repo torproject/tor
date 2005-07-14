@@ -617,7 +617,6 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     log_fn(LOG_INFO,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
            safe_str(circ->rend_query),
            safe_str(build_state_get_exit_nickname(circ->build_state)));
-    // XXXX NM
     rend_client_remove_intro_point(circ->build_state->chosen_exit,
                                    circ->rend_query);
   }
