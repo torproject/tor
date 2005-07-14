@@ -475,7 +475,8 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
   bindaddr.sin_family = AF_INET;
   bindaddr.sin_port = htons((uint16_t) usePort);
 
-  log_fn(LOG_NOTICE, "Opening listener on %s:%d", address, usePort);
+  log_fn(LOG_NOTICE, "Opening %s on %s:%d",
+         conn_type_to_string(type), address, usePort);
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
@@ -496,13 +497,13 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
 #endif
 
   if (bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
-    log_fn(LOG_WARN,"Could not bind to port %u: %s",usePort,
+    log_fn(LOG_WARN, "Could not bind to port %u: %s", usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     goto err;
   }
 
   if (listen(s,SOMAXCONN) < 0) {
-    log_fn(LOG_WARN,"Could not listen on port %u: %s",usePort,
+    log_fn(LOG_WARN, "Could not listen on port %u: %s", usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     goto err;
   }
