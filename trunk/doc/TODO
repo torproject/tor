@@ -60,25 +60,30 @@ N . Controller improvements
     o new controller protocol
       o Specify
       o Implement
-      . Test, debug
+      o Test, debug
     o add new getinfo options to enumerate things we only find out about
       currently via events.
     o controller should have an event to learn about new addressmappings,
       e.g. when we learn a hostname to IP mapping ?
-    . make sure err-level log events get flushed to the controller
+    o make sure err-level log events get flushed to the controller
       immediately, since tor will exit right after.
       o Implement
-      - Test, debug
-    - Allow EXTENDCIRCUIT to unknown server.
+      o Test, debug
+    - Additional features
+      - Allow EXTENDCIRCUIT to unknown server.
+      - We need some way to adjust server status, and to tell tor not to
+        download directories/network-status, and a way to force a download.
+      - It would be nice to request address lookups from the controller
+        without using SOCKS.
     . Switch example controllers to use new protocol
       . Python
         o Implement main controller interface
         o Glue code
-        . Testing
+        o Testing
       . Java
         o Implement main controller interface
         o Glue code
-        . Testing
+        o Testing
   - switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back, out if we decide we prefer it the way it already is. hm.
