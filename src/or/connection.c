@@ -454,6 +454,7 @@ static int
 connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
 {
   struct sockaddr_in bindaddr; /* where to bind */
+  char *address = NULL;
   connection_t *conn;
   uint16_t usePort;
   uint32_t addr;
@@ -463,7 +464,7 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
 #endif
 
   memset(&bindaddr,0,sizeof(struct sockaddr_in));
-  if (parse_addr_port(bindaddress, NULL, &addr, &usePort)<0) {
+  if (parse_addr_port(bindaddress, &address, &addr, &usePort)<0) {
     log_fn(LOG_WARN, "Error parsing/resolving BindAddress %s",bindaddress);
     return -1;
   }
@@ -477,11 +478,11 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
     log_fn(LOG_WARN,"Socket creation failed.");
-    return -1;
+    goto err;
   } else if (!SOCKET_IS_POLLABLE(s)) {
     log_fn(LOG_WARN,"Too many connections; can't create pollable listener.");
     tor_close_socket(s);
-    return -1;
+    goto err;
   }
 
 #ifndef MS_WINDOWS
@@ -495,26 +496,27 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
   if (bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
     log_fn(LOG_WARN,"Could not bind to port %u: %s",usePort,
            tor_socket_strerror(tor_socket_errno(s)));
-    return -1;
+    goto err;
   }
 
   if (listen(s,SOMAXCONN) < 0) {
     log_fn(LOG_WARN,"Could not listen on port %u: %s",usePort,
            tor_socket_strerror(tor_socket_errno(s)));
-    return -1;
+    goto err;
   }
 
   set_socket_nonblocking(s);
 
   conn = connection_new(type);
   conn->s = s;
-  conn->address = tor_strdup(bindaddress);
+  conn->address = address;
+  address = NULL;
   conn->port = usePort;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_WARN,"connection_add failed. Giving up.");
     connection_free(conn);
-    return -1;
+    goto err;
   }
 
   log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string(type), usePort);
@@ -523,6 +525,10 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
   connection_start_reading(conn);
 
   return 0;
+
+ err:
+  tor_free(address);
+  return -1;
 }
 
 /** Do basic sanity checking on a newly received socket. Return 0
