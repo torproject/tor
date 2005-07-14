@@ -1,0 +1,498 @@
+$Id$
+
+                   TC: A Tor control protocol (Version 0)
+
+-1. Deprecation
+
+THIS PROTOCOL IS DEPRECATED.  It is still documented here because it is the
+only Tor control protocol supported in the Tor implementation right now.
+
+0. Scope
+
+This document describes an implementation-specific protocol that is used
+for other programs (such as frontend user-interfaces) to communicate
+with a locally running Tor process.  It is not part of the Tor onion
+routing protocol.
+
+We're trying to be pretty extensible here, but not infinitely
+forward-compatible.
+
+1. Protocol outline
+
+TC is a bidirectional message-based protocol.  It assumes an underlying
+stream for communication between a controlling process (the "client") and
+a Tor process (the "server").  The stream may be implemented via TCP,
+TLS-over-TCP, a Unix-domain socket, or so on, but it must provide
+reliable in-order delivery.  For security, the stream should not be
+accessible by untrusted parties.
+
+In TC, the client and server send typed variable-length messages to each
+other over the underlying stream.  By default, all messages from the server
+are in response to messages from the client.  Some client requests, however,
+will cause the server to send messages to the client indefinitely far into
+the future.
+
+Servers respond to messages in the order they're received.
+
+2. Message format
+
+The messages take the following format:
+
+   Length [2 octets; big-endian]
+   Type   [2 octets; big-endian]
+   Body   [Length octets]
+
+Upon encountering a recognized Type, implementations behave as described in
+section 3 below.  If the type is not recognized, servers respond with an
+"ERROR" message (code UNRECOGNIZED; see 3.1 below), and clients simply ignore
+the message.
+
+2.1. Types and encodings
+
+  All numbers are given in big-endian (network) order.
+
+  OR identities are given in hexadecimal, in the same format as identity key
+  fingerprints, but without spaces; see tor-spec.txt for more information.
+
+3. Message types
+
+  Message types are drawn from the following ranges:
+
+  0x0000-0xEFFF   : Reserved for use by official versions of this spec.
+  0xF000-0xFFFF   : Unallocated; usable by unofficial extensions.
+
+3.1. ERROR (Type 0x0000)
+
+  Sent in response to a message that could not be processed as requested.
+
+  The body of the message begins with a 2-byte error code.  The following
+  values are defined:
+
+        0x0000 Unspecified error
+               []
+
+        0x0001 Internal error
+               [Something went wrong inside Tor, so that the client's
+                request couldn't be fulfilled.]
+
+        0x0002 Unrecognized message type
+               [The client sent a message type we don't understand.]
+
+        0x0003 Syntax error
+               [The client sent a message body in a format we can't parse.]
+
+        0x0004 Unrecognized configuration key
+               [The client tried to get or set a configuration option we don't
+                recognize.]
+
+        0x0005 Invalid configuration value
+               [The client tried to set a configuration option to an
+                incorrect, ill-formed, or impossible value.]
+
+        0x0006 Unrecognized byte code
+               [The client tried to set a byte code (in the body) that
+                we don't recognize.]
+
+        0x0007 Unauthorized.
+               [The client tried to send a command that requires
+                authorization, but it hasn't sent a valid AUTHENTICATE
+                message.]
+
+        0x0008 Failed authentication attempt
+               [The client sent a well-formed authorization message.]
+
+        0x0009 Resource exhausted
+               [The server didn't have enough of a given resource to
+                fulfill a given request.]
+
+        0x000A No such stream
+
+        0x000B No such circuit
+
+        0x000C No such OR
+
+  The rest of the body should be a human-readable description of the error.
+
+  In general, new error codes should only be added when they don't fall under
+  one of the existing error codes.
+
+3.2. DONE (Type 0x0001)
+
+  Sent from server to client in response to a request that was successfully
+  completed, with no more information needed.  The body is usually empty but
+  may contain a message.
+
+3.3. SETCONF (Type 0x0002)
+
+  Change the value of a configuration variable. The body contains a list of
+  newline-terminated key-value configuration lines.  An individual key-value
+  configuration line consists of the key, followed by a space, followed by
+  the value. The server behaves as though it had just read the key-value pair
+  in its configuration file.
+
+  The server responds with a DONE message on success, or an ERROR message on
+  failure.
+
+  When a configuration options takes multiple values, or when multiple
+  configuration keys form a context-sensitive group (see below), then
+  setting _any_ of the options in a SETCONF command is taken to reset all of
+  the others.  For example, if two ORBindAddress values are configured,
+  and a SETCONF command arrives containing a single ORBindAddress value, the
+  new command's value replaces the two old values.
+
+  To _remove_ all settings for a given option entirely (and go back to its
+  default value), send a single line containing the key and no value.
+
+3.4. GETCONF (Type 0x0003)
+
+  Request the value of a configuration variable.  The body contains one or
+  more NL-terminated strings for configuration keys.  The server replies
+  with a CONFVALUE message.
+
+  If an option appears multiple times in the configuration, all of its
+  key-value pairs are returned in order.
+
+  Some options are context-sensitive, and depend on other options with
+  different keywords.  These cannot be fetched directly.  Currently there
+  is only one such option: clients should use the "HiddenServiceOptions"
+  virtual keyword to get all HiddenServiceDir, HiddenServicePort,
+  HiddenServiceNodes, and HiddenServiceExcludeNodes option settings.
+
+3.5. CONFVALUE (Type 0x0004)
+
+  Sent in response to a GETCONF message; contains a list of "Key Value\n"
+  (A non-whitespace keyword, a single space, a non-NL value, a NL)
+  strings.
+
+3.6. SETEVENTS (Type 0x0005)
+
+  Request the server to inform the client about interesting events.
+  The body contains a list of 2-byte event codes (see "event" below).
+  Any events *not* listed in the SETEVENTS body are turned off; thus, sending
+  SETEVENTS with an empty body turns off all event reporting.
+
+  The server responds with a DONE message on success, and an ERROR message
+  if one of the event codes isn't recognized.  (On error, the list of active
+  event codes isn't changed.)
+
+3.7. EVENT (Type 0x0006)
+
+  Sent from the server to the client when an event has occurred and the
+  client has requested that kind of event.  The body contains a 2-byte
+  event code followed by additional event-dependent information.  Event
+  codes are:
+      0x0001 -- Circuit status changed
+
+                Status [1 octet]
+                   0x00 Launched - circuit ID assigned to new circuit
+                   0x01 Built    - all hops finished, can now accept streams
+                   0x02 Extended - one more hop has been completed
+                   0x03 Failed   - circuit closed (was not built)
+                   0x04 Closed   - circuit closed (was built)
+                Circuit ID [4 octets]
+                   (Must be unique to Tor process/time)
+                Path [NUL-terminated comma-separated string]
+                   (For extended/failed, is the portion of the path that is
+                   built)
+
+      0x0002 -- Stream status changed
+
+                Status [1 octet]
+                   (Sent connect=0,sent resolve=1,succeeded=2,failed=3,
+                    closed=4, new connection=5, new resolve request=6,
+                    stream detached from circuit and still retriable=7)
+                Stream ID [4 octets]
+                   (Must be unique to Tor process/time)
+                Target (NUL-terminated address-port string]
+
+      0x0003 -- OR Connection status changed
+
+                Status [1 octet]
+                   (Launched=0,connected=1,failed=2,closed=3)
+                OR nickname/identity [NUL-terminated]
+
+      0x0004 -- Bandwidth used in the last second
+
+                Bytes read [4 octets]
+                Bytes written [4 octets]
+
+      0x0005 -- Notice/warning/error occurred
+
+                Message [NUL-terminated]
+
+                <obsolete: use 0x0007-0x000B instead.>
+
+      0x0006 -- New descriptors available
+
+                OR List [NUL-terminated, comma-delimited list of
+                    OR identity]
+
+      0x0007 -- Debug message occurred
+      0x0008 -- Info message occurred
+      0x0009 -- Notice message occurred
+      0x000A -- Warning message occurred
+      0x000B -- Error message occurred
+
+                Message [NUL-terminated]
+
+
+3.8. AUTHENTICATE (Type 0x0007)
+
+  Sent from the client to the server.  Contains a 'magic cookie' to prove
+  that client is really allowed to control this Tor process.  The server
+  responds with DONE or ERROR.
+
+  The format of the 'cookie' is implementation-dependent; see 4.1 below for
+  information on how the standard Tor implementation handles it.
+
+3.9. SAVECONF (Type 0x0008)
+
+  Sent from the client to the server. Instructs the server to write out
+  its config options into its torrc. Server returns DONE if successful, or
+  ERROR if it can't write the file or some other error occurs.
+
+3.10. SIGNAL (Type 0x0009)
+
+  Sent from the client to the server. The body contains one byte that
+  indicates the action the client wishes the server to take.
+
+       1 (0x01) -- Reload: reload config items, refetch directory.
+       2 (0x02) -- Controlled shutdown: if server is an OP, exit immediately.
+                   If it's an OR, close listeners and exit after 30 seconds.
+      10 (0x0A) -- Dump stats: log information about open connections and
+                   circuits.
+      12 (0x0C) -- Debug: switch all open logs to loglevel debug.
+      15 (0x0F) -- Immediate shutdown: clean up and exit now.
+
+  The server responds with DONE if the signal is recognized (or simply
+  closes the socket if it was asked to close immediately), else ERROR.
+
+3.11. MAPADDRESS (Type 0x000A)
+
+  Sent from the client to the server.  The body contains a sequence of
+  address mappings, each consisting of the address to be mapped, a single
+  space, the replacement address, and a NL character.
+
+  Addresses may be IPv4 addresses, IPv6 addresses, or hostnames.
+
+  The client sends this message to the server in order to tell it that future
+  SOCKS requests for connections to the original address should be replaced
+  with connections to the specified replacement address.  If the addresses
+  are well-formed, and the server is able to fulfill the request, the server
+  replies with a single DONE message containing the source and destination
+  addresses.  If request is malformed, the server replies with a syntax error
+  message.  The server can't fulfill the request, it replies with an internal
+  ERROR message.
+
+  The client may decline to provide a body for the original address, and
+  instead send a special null address ("0.0.0.0" for IPv4, "::0" for IPv6, or
+  "." for hostname), signifying that the server should choose the original
+  address itself, and return that address in the DONE message.  The server
+  should ensure that it returns an element of address space that is unlikely
+  to be in actual use.  If there is already an address mapped to the
+  destination address, the server may reuse that mapping.
+
+  If the original address is already mapped to a different address, the old
+  mapping is removed.  If the original address and the destination address
+  are the same, the server removes any mapping in place for the original
+  address.
+
+  {Note: This feature is designed to be used to help Tor-ify applications
+  that need to use SOCKS4 or hostname-less SOCKS5.  There are three
+  approaches to doing this:
+     1. Somehow make them use SOCKS4a or SOCKS5-with-hostnames instead.
+     2. Use tor-resolve (or another interface to Tor's resolve-over-SOCKS
+        feature) to resolve the hostname remotely.  This doesn't work
+        with special addresses like x.onion or x.y.exit.
+     3. Use MAPADDRESS to map an IP address to the desired hostname, and then
+        arrange to fool the application into thinking that the hostname
+        has resolved to that IP.
+  This functionality is designed to help implement the 3rd approach.}
+
+  [XXXX When, if ever, can mappings expire?  Should they expire?]
+  [XXXX What addresses, if any, are safe to use?]
+
+3.12 GETINFO (Type 0x000B)
+
+  Sent from the client to the server.  The message body is as for GETCONF:
+  one or more NL-terminated strings.  The server replies with an INFOVALUE
+  message.
+
+  Unlike GETCONF, this message is used for data that are not stored in the
+  Tor configuration file, but instead.
+
+  Recognized key and their values include:
+
+    "version" -- The version of the server's software, including the name
+      of the software. (example: "Tor 0.0.9.4")
+
+    "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest server
+      descriptor for a given OR, NUL-terminated.  If no such OR is known, the
+      corresponding value is an empty string.
+
+    "network-status" -- a space-separated list of all known OR identities.
+      This is in the same format as the router-status line in directories;
+      see tor-spec.txt for details.
+
+    "addr-mappings/all"
+    "addr-mappings/config"
+    "addr-mappings/cache"
+    "addr-mappings/control" -- a NL-terminated list of address mappings, each
+      in the form of "from-address" SP "to-address".  The 'config' key
+      returns those address mappings set in the configuration; the 'cache'
+      key returns the mappings in the client-side DNS cache; the 'control'
+      key returns the mappings set via the control interface; the 'all'
+      target returns the mappings set through any mechanism.
+
+3.13 INFOVALUE (Type 0x000C)
+
+  Sent from the server to the client in response to a GETINFO message.
+  Contains one or more items of the format:
+
+     Key          [(NUL-terminated string)]
+     Value        [(NUL-terminated string)]
+
+  The keys match those given in the GETINFO message.
+
+3.14 EXTENDCIRCUIT (Type 0x000D)
+
+  Sent from the client to the server.  The message body contains two fields:
+      Circuit ID [4 octets]
+      Path [NUL-terminated, comma-delimited string of OR nickname/identity]
+
+  This request takes one of two forms: either the Circuit ID is zero, in
+  which case it is a request for the server to build a new circuit according
+  to the specified path, or the Circuit ID is nonzero, in which case it is a
+  request for the server to extend an existing circuit with that ID according
+  to the specified path.
+
+  If the request is successful, the server sends a DONE message containing
+  a message body consisting of the four-octet Circuit ID of the newly created
+  circuit.
+
+3.15 ATTACHSTREAM (Type 0x000E)
+
+  Sent from the client to the server.  The message body contains two fields:
+      Stream ID [4 octets]
+      Circuit ID [4 octets]
+
+  This message informs the server that the specified stream should be
+  associated with the specified circuit.  Each stream may be associated with
+  at most one circuit, and multiple streams may share the same circuit.
+  Streams can only be attached to completed circuits (that is, circuits that
+  have sent a circuit status 'built' event).
+
+  If the circuit ID is 0, responsibility for attaching the given stream is
+  returned to Tor.
+
+  {Implementation note: By default, Tor automatically attaches streams to
+  circuits itself, unless the configuration variable
+  "__LeaveStreamsUnattached" is set to "1".  Attempting to attach streams
+  via TC when "__LeaveStreamsUnattached" is false may cause a race between
+  Tor and the controller, as both attempt to attach streams to circuits.}
+
+3.16 POSTDESCRIPTOR (Type 0x000F)
+
+  Sent from the client to the server.  The message body contains one field:
+      Descriptor [NUL-terminated string]
+
+  This message informs the server about a new descriptor.
+
+  The descriptor, when parsed, must contain a number of well-specified
+  fields, including fields for its nickname and identity.
+
+  If there is an error in parsing the descriptor, the server must send an
+  appropriate error message.  If the descriptor is well-formed but the server
+  chooses not to add it, it must reply with a DONE message whose body
+  explains why the server was not added.
+
+3.17 FRAGMENTHEADER (Type 0x0010)
+
+  Sent in either direction.  Used to encapsulate messages longer than 65535
+  bytes in length.
+
+      Underlying type [2 bytes]
+      Total Length    [4 bytes]
+      Data            [Rest of message]
+
+  A FRAGMENTHEADER message MUST be followed immediately by a number of
+  FRAGMENT messages, such that lengths of the "Data" fields of the
+  FRAGMENTHEADER and FRAGMENT messages add to the "Total Length" field of the
+  FRAGMENTHEADER message.
+
+  Implementations MUST NOT fragment messages of length less than 65536 bytes.
+  Implementations MUST be able to process fragmented messages that not
+  optimally packed.
+
+3.18 FRAGMENT (Type 0x0011)
+
+      Data           [Entire message]
+
+  See FRAGMENTHEADER for more information
+
+3.19 REDIRECTSTREAM (Type 0x0012)
+
+  Sent from the client to the server. The message body contains two fields:
+      Stream ID [4 octets]
+      Address [variable-length, NUL-terminated.]
+
+  Tells the server to change the exit address on the specified stream.  No
+  remapping is performed on the new provided address.
+
+  To be sure that the modified address will be used, this event must be sent
+  after a new stream event is received, and before attaching this stream to
+  a circuit.
+
+3.20 CLOSESTREAM (Type 0x0013)
+
+  Sent from the client to the server.  The message body contains three
+  fields:
+      Stream ID [4 octets]
+      Reason    [1 octet]
+      Flags     [1 octet]
+
+  Tells the server to close the specified stream.  The reason should be
+  one of the Tor RELAY_END reasons given in tor-spec.txt.  Flags is not
+  used currently.  Tor may hold the stream open for a while to flush
+  any data that is pending.
+
+3.21 CLOSECIRCUIT (Type 0x0014)
+
+  Sent from the client to the server.  The message body contains two
+  fields:
+     Circuit ID [4 octets]
+     Flags      [1 octet]
+
+  Tells the server to close the specified circuit.  If the LSB of the flags
+  field is nonzero, do not close the circuit unless it is unused.
+
+4. Implementation notes
+
+4.1. Authentication
+
+  By default, the current Tor implementation trusts all local users.
+
+  If the 'CookieAuthentication' option is true, Tor writes a "magic cookie"
+  file named "control_auth_cookie" into its data directory.  To authenticate,
+  the controller must send the contents of this file.
+
+  If the 'HashedControlPassword' option is set, it must contain the salted
+  hash of a secret password.  The salted hash is computed according to the
+  S2K algorithm in RFC 2440 (OpenPGP), and prefixed with the s2k specifier.
+  This is then encoded in hexadecimal, prefixed by the indicator sequence
+  "16:".  Thus, for example, the password 'foo' could encode to:
+     16:660537E3E1CD49996044A3BF558097A981F539FEA2F9DA662B4626C1C2
+        ++++++++++++++++**^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           salt                       hashed value
+                       indicator
+  You can generate the salt of a password by calling
+           'tor --hash-password <password>'
+  or by using the example code in the Python and Java controller libraries.
+  To authenticate under this scheme, the controller sends Tor the original
+  secret that was used to generate the password.
+
+4.2. Don't let the buffer get too big.
+
+  If you ask for lots of events, and 16MB of them queue up on the buffer,
+  the Tor process will close the socket.
+

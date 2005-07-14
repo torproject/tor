@@ -1,0 +1,52 @@
+Subject:
+Re: Anonymous/Nonymous Communication Coexisting?
+From:
+Kristian Köhntopp <kris@xn--khntopp-90a.de>
+Date:
+Fri, 10 Jun 2005 08:56:19 +0200
+To:
+or-talk@freehaven.net
+
+On Wednesday 08 June 2005 04:20, yancm@sdf.lonestar.org wrote:
+
+>> Is it possible to have a single application, such as a web
+>> browser or a p2p client behave normally with normal url's but
+>> use tor if the url is an xyz.onion address? Or is it
+>> everything or nothing?
+
+
+This is basically a question of using your proxy or not. You can 
+control the behaviour of your browser in great detail writing a 
+proxy.pac program in Javascript and setting that program as the 
+proxy autoconfiguration URL in your browser.
+
+An example:
+
+kris@jordan01:~> cat /srv/www/htdocs/proxy.pac
+
+function FindProxyForURL(url, host)
+{
+        var proxy_yes = "PROXY jordan01.int.cinetic.de:3128";
+        var proxy_no  = "DIRECT";
+
+        // Redirect all accesses to mlan hosts to the mlan proxy
+        if (dnsDomainIs(host, ".mlan.cinetic.de")) {
+                return proxy_yes;
+        }
+
+        // Everything else is direct
+        return proxy_no;
+}
+
+So here the program checks if the destination is a mlan-Host, and 
+if so, uses the appropriate proxy on jordan for the access, 
+while all other accesses are direct.
+
+You could do a similar thing with .onion accesses with a trivial 
+modification.
+
+Docs:
+http://wp.netscape.com/eng/mozilla/2.0/relnotes/demo/proxy-live.html
+
+Kristian
+
