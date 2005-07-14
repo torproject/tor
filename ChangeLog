@@ -1,4 +1,7 @@
 Changes in version 0.1.1.2-alpha - 2005-07-14
+  o New directory servers:
+    - tor26 has changed IP address.
+
   o Bugfixes on 0.1.0.x, crashes/leaks:
     - Port the servers-not-obeying-their-exit-policies fix from 0.1.0.11.
     - Fix an fd leak in start_daemon().
