@@ -813,7 +813,8 @@ retry_listeners(int type, struct config_line_t *cfg,
     if (force) {
       /* It's a listener, and we're relaunching all listeners of this
        * type. Close this one. */
-      log_fn(LOG_NOTICE, "Closing listener on %s:%d", conn->address, conn->port);
+      log_fn(LOG_NOTICE, "Closing %s on %s:%d",
+             conn_type_to_string(type), conn->address, conn->port);
       connection_close_immediate(conn);
       connection_mark_for_close(conn);
       continue;
@@ -835,12 +836,14 @@ retry_listeners(int type, struct config_line_t *cfg,
       });
     if (! line) {
       /* This one isn't configured. Close it. */
-      log_fn(LOG_NOTICE, "Closing listener on %s:%d", conn->address, conn->port);
+      log_fn(LOG_NOTICE, "Closing %s on %s:%d",
+             conn_type_to_string(type), conn->address, conn->port);
       connection_close_immediate(conn);
       connection_mark_for_close(conn);
     } else {
       /* It's configured; we don't need to launch it. */
-      log_fn(LOG_INFO, "Already have listener on %s:%d",conn->address,conn->port);
+      log_fn(LOG_INFO, "Already have %s on %s:%d",
+             conn_type_to_string(type), conn->address, conn->port);
       smartlist_remove(launch, line);
     }
   }
