@@ -767,15 +767,15 @@ typedef struct {
   char *signing_router;
 } routerlist_t;
 
-/** Informetation on router used when extending a circuit.  (We don't need a
+/** Information on router used when extending a circuit.  (We don't need a
  * full routerinfo_t to extend: we only need addr:port:keyid to build an OR
  * connection, and onion_key to create the onionskin.) */
 typedef struct extend_info_t {
-  char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for display*/
-  char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key */
-  uint32_t addr; /**< IP address in host order */
-  uint16_t port; /**< OR port */
-  crypto_pk_env_t *onion_key; /**< Current onionskin key */
+  char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for display. */
+  char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
+  uint32_t addr; /**< IP address in host order. */
+  uint16_t port; /**< OR port. */
+  crypto_pk_env_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u
@@ -1749,12 +1749,12 @@ int rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc);
 
 /********************************* rendcommon.c ***************************/
 
-/** Information used to connect to a  hidden service. */
+/** Information used to connect to a hidden service. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk; /**< This service's public key. */
-  int version; /**< 0 or 1 */
+  int version; /**< 0 or 1. */
   time_t timestamp; /**< Time when the descriptor was generated. */
-  uint16_t protocols; /**< Bitmask: which rendezvous protocols are supporeted?
+  uint16_t protocols; /**< Bitmask: which rendezvous protocols are supported?
                        * (We allow bits '0', '1', and '2' to be set.) */
   int n_intro_points; /**< Number of introduction points. */
   /** Array of n_intro_points elements for this service's introduction points'

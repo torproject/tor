@@ -38,10 +38,10 @@ conn_type_to_string(int type)
     case CONN_TYPE_OR_LISTENER: return "OR listener";
     case CONN_TYPE_OR: return "OR";
     case CONN_TYPE_EXIT: return "Exit";
-    case CONN_TYPE_AP_LISTENER: return "App listener";
-    case CONN_TYPE_AP: return "App";
-    case CONN_TYPE_DIR_LISTENER: return "Dir listener";
-    case CONN_TYPE_DIR: return "Dir";
+    case CONN_TYPE_AP_LISTENER: return "Socks listener";
+    case CONN_TYPE_AP: return "Socks";
+    case CONN_TYPE_DIR_LISTENER: return "Directory listener";
+    case CONN_TYPE_DIR: return "Directory";
     case CONN_TYPE_DNSWORKER: return "DNS worker";
     case CONN_TYPE_CPUWORKER: return "CPU worker";
     case CONN_TYPE_CONTROL_LISTENER: return "Control listener";

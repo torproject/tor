@@ -214,7 +214,7 @@ rend_client_introduction_acked(circuit_t *circ,
      */
     if (rend_client_remove_intro_point(circ->build_state->chosen_exit,
                                        circ->rend_query) > 0) {
-      /* There are introduction points left. re-extend the circuit to
+      /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
       extend_info_t *info;
       int result;
@@ -225,7 +225,7 @@ rend_client_introduction_acked(circuit_t *circ,
         circuit_mark_for_close(circ);
         return -1;
       }
-      log_fn(LOG_INFO,"Got nack for %s from %s, extending circ %d to %s.",
+      log_fn(LOG_INFO,"Got nack for %s from %s. Re-extending circ %d, this time to %s.",
              safe_str(circ->rend_query),
              circ->build_state->chosen_exit->nickname, circ->n_circ_id,
              info->nickname);
