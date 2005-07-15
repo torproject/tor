@@ -247,8 +247,8 @@ mark_all_trusteddirservers_up(void)
 {
   if (routerlist) {
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
-                 if (router_digest_is_trusted_dir(router->identity_digest)) {
-                   tor_assert(router->dir_port > 0);
+                 if (router_digest_is_trusted_dir(router->identity_digest) &&
+                     router->dir_port > 0) {
                    router->is_running = 1;
                    router->status_set_at = time(NULL);
                  });
