@@ -315,11 +315,12 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
 
   *out = outp = tor_malloc(len);
 
-  while (len) {
+  while (len) { /* XXX: len never changes during the loop? */
     if (*data == '.')
       ++data;
     if (translate_newlines)
       next = tor_memmem(data, len, "\r\n", 2);
+      /* XXX: as data increases, we're reading past our allowed buffer! */
     else
       next = tor_memmem(data, len, "\r\n.", 3);
     if (next) {
@@ -327,7 +328,7 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
       outp += (next-data);
       data = next+2;
     } else {
-      memcpy(outp, data, len);
+      memcpy(outp, data, len); /* len is constant. scribbling from past *out. */
       outp += len;
       return outp - *out;
     }
