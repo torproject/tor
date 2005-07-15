@@ -830,6 +830,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   const char *cp;
   routerinfo_t *ri_tmp;
 #endif
+  or_options_t *options = get_options();
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
@@ -888,7 +889,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     router->nickname,
     router->address,
     router->or_port,
-    check_whether_dirport_reachable() ? router->dir_port : 0,
+    (authdir_mode(options) || check_whether_dirport_reachable()) ?
+      router->dir_port : 0,
     router->platform,
     published,
     fingerprint,
@@ -909,9 +911,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   /* From now on, we use 'written' to remember the current length of 's'. */
   written = result;
 
-  if (get_options()->ContactInfo && strlen(get_options()->ContactInfo)) {
+  if (options->ContactInfo && strlen(options->ContactInfo)) {
     result = tor_snprintf(s+written,maxlen-written, "contact %s\n",
-                      get_options()->ContactInfo);
+                          options->ContactInfo);
     if (result<0)
       return -1;
     written += result;
