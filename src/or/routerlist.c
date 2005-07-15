@@ -890,7 +890,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
         log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
                router->nickname);
         routerinfo_free(router);
-        if (msg) *msg = "Already have verified router with same nickname and different key";
+        if (msg) *msg = "Already have verified router with same nickname and different key.";
         return -1;
       }
     }
@@ -944,10 +944,11 @@ router_load_single_router(const char *s, const char **msg)
 {
   routerinfo_t *ri;
   tor_assert(msg);
+  *msg = NULL;
 
   if (!(ri = router_parse_entry_from_string(s, NULL))) {
     log_fn(LOG_WARN, "Error parsing router descriptor; dropping.");
-    *msg = "Couldn't parse router descriptor";
+    *msg = "Couldn't parse router descriptor.";
     return -1;
   }
   if (router_is_me(ri)) {
@@ -969,7 +970,8 @@ router_load_single_router(const char *s, const char **msg)
                                         rr->running_routers);
   }
   if (router_add_to_routerlist(ri, msg)<0) {
-    log_fn(LOG_WARN, "Couldn't add router to list; dropping.");
+    log_fn(LOG_WARN, "Couldn't add router to list: %s Dropping.",
+           *msg?*msg:"(No message).");
     /* we've already assigned to *msg now, and ri is already freed */
     return 0;
   } else {
