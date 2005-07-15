@@ -1357,17 +1357,24 @@ nt_service_is_stopped(void)
     service_status.dwCurrentState = SERVICE_STOPPED;
     SetServiceStatus(hStatus, &service_status);
     return 1;
+  } else if (service_status.dwCurrentState == SERVICE_STOPPED) {
+    return 1;
   }
   return 0;
 }
 
 void nt_service_control(DWORD request)
 {
+  static struct timeval exit_now;
+  exit_now.tv_sec  = 0;
+  exit_now.tv_usec = 0;
+
   switch (request) {
     case SERVICE_CONTROL_STOP:
         case SERVICE_CONTROL_SHUTDOWN:
           log(LOG_ERR, "Got stop/shutdown request; shutting down cleanly.");
           service_status.dwCurrentState = SERVICE_STOP_PENDING;
+          event_loopexit(&exit_now);
           return;
   }
   SetServiceStatus(hStatus, &service_status);
