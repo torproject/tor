@@ -255,7 +255,9 @@ control_adjust_event_log_severity(void)
                                control_event_logmsg);
 }
 
-/* DOCDOC */
+/** Append a NUL-terminated string <b>s</b> to the end of
+ * <b>conn</b>-\>outbuf
+ */
 static INLINE void
 connection_write_str_to_buf(const char *s, connection_t *conn)
 {
@@ -263,8 +265,15 @@ connection_write_str_to_buf(const char *s, connection_t *conn)
   connection_write_to_buf(s, len, conn);
 }
 
-/* DOCDOC ; test */
-static size_t
+/** Given a <b>len</b>-character string in <b>data</b>, made of lines
+ * terminated by CRLF, allocate a new string in *<b>out</b>, and copy
+ * the contents of <b>data</b> into *<b>out</b>, adding a period
+ * before any period that that appears at the start of a line, and
+ * adding a period-CRLF line at the end. If <b>translate_newlines</b>
+ * is true, replace all LF characters sequences with CRLF.  Return the
+ * number of bytes in *<b>out</b>.
+ */
+/* static */ size_t
 write_escaped_data(const char *data, size_t len, int translate_newlines,
                    char **out)
 {
@@ -305,31 +314,39 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
   return outp - *out;
 }
 
-/* DOCDOC ; test */
-static size_t
+/** Given a <b>len</b>-character string in <b>data</b>, made of lines
+ * terminated by CRLF, allocate a new string in *<b>out</b>, and copy
+ * the contents of <b>data</b> into *<b>out</b>, removing any period
+ * that appears at the start of a line.  If <b>translate_newlines</b>
+ * is true, replace all CRLF sequences with LF.  Return the number of
+ * bytes in *<b>out</b>. */
+/*static*/ size_t
 read_escaped_data(const char *data, size_t len, int translate_newlines,
                   char **out)
 {
   char *outp;
   const char *next;
+  const char *end;
 
-  *out = outp = tor_malloc(len);
+  *out = outp = tor_malloc(len+1);
 
-  while (len) { /* XXX: len never changes during the loop? */
+  end = data+len;
+
+  while (data < end) {
     if (*data == '.')
       ++data;
     if (translate_newlines)
-      next = tor_memmem(data, len, "\r\n", 2);
-      /* XXX: as data increases, we're reading past our allowed buffer! */
+      next = tor_memmem(data, end-data, "\r\n", 2);
     else
-      next = tor_memmem(data, len, "\r\n.", 3);
+      next = tor_memmem(data, end-data, "\r\n.", 3);
     if (next) {
       memcpy(outp, data, next-data);
       outp += (next-data);
       data = next+2;
     } else {
-      memcpy(outp, data, len); /* len is constant. scribbling from past *out. */
-      outp += len;
+      memcpy(outp, data, end-data);
+      outp += (end-data);
+      *outp = '\0';
       return outp - *out;
     }
     if (translate_newlines) {
@@ -340,6 +357,7 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
     }
   }
 
+  *outp = '\0';
   return outp - *out;
 }
 
@@ -390,7 +408,10 @@ get_escaped_string(const char *start, size_t in_len_max,
   return end+1;
 }
 
-/* DOCDOC  */
+/** Acts like sprintf, but writes its formatted string to the end of
+ * <b>conn</b>-\>outbuf.  The message may be truncated if it is too long,
+ * but it will always end with a CRLF sequence.
+ */
 static void
 connection_printf_to_buf(connection_t *conn, const char *format, ...)
 {
@@ -1834,18 +1855,20 @@ connection_control_process_inbuf_v1(connection_t *conn)
   while (1) {
     size_t last_idx;
     int r;
+    /* First, fetch a line. */
     do {
       data_len = conn->incoming_cmd_len - conn->incoming_cmd_cur_len;
       r = fetch_from_buf_line(conn->inbuf,
-                                  conn->incoming_cmd+conn->incoming_cmd_cur_len,
-                                  &data_len);
+                              conn->incoming_cmd+conn->incoming_cmd_cur_len,
+                              &data_len);
       if (r == 0)
         /* Line not all here yet. Wait. */
         return 0;
       else if (r == -1) {
           while (conn->incoming_cmd_len < data_len+conn->incoming_cmd_cur_len)
             conn->incoming_cmd_len *= 2;
-          conn->incoming_cmd = tor_realloc(conn->incoming_cmd, conn->incoming_cmd_len);
+          conn->incoming_cmd = tor_realloc(conn->incoming_cmd,
+                                           conn->incoming_cmd_len);
       }
     } while (r != 1);
 
@@ -1859,9 +1882,11 @@ connection_control_process_inbuf_v1(connection_t *conn)
       /* One line command, didn't start with '+'. */
       break;
     if (last_idx+3 == conn->incoming_cmd_cur_len &&
-        !memcmp(conn->incoming_cmd + last_idx, ".\r\n", 3))
-      /* Just appended ".\r\n"; we're done. */
+        !memcmp(conn->incoming_cmd + last_idx, ".\r\n", 3)) {
+      /* Just appended ".\r\n"; we're done. Remove it. */
+      conn->incoming_cmd_cur_len -= 3;
       break;
+    }
     /* Otherwise, read another line. */
   }
   data_len = conn->incoming_cmd_cur_len;

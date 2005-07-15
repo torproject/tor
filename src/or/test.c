@@ -33,6 +33,8 @@ void add_fingerprint_to_dir(const char *nickname, const char *fp,
                             smartlist_t *list);
 void get_platform_str(char *platform, size_t len);
 int is_obsolete_version(const char *myversion, const char *start);
+size_t read_escaped_data(const char *data, size_t len, int translate_newlines,
+                         char **out);
 
 static char temp_dir[256];
 
@@ -1018,6 +1020,21 @@ test_strmap(void)
 }
 
 static void
+test_control_formats(void)
+{
+  char *out;
+  const char *inp = 
+    "..This is a test\r\nof the emergency \nbroadcast\r\n..system.\r\nZ.\r\n";
+  size_t sz;
+
+  sz = read_escaped_data(inp, strlen(inp), 1, &out);
+  test_streq(out,
+             ".This is a test\nof the emergency \nbroadcast\n.system.\nZ.\n");
+
+  tor_free(out);
+}
+
+static void
 test_onion(void)
 {
 #if 0
@@ -1521,6 +1538,7 @@ main(int c, char**v)
   test_gzip();
   test_util();
   test_strmap();
+  test_control_formats();
   puts("\n========================= Onion Skins =====================");
   test_onion();
   test_onion_handshake();
