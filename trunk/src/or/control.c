@@ -1426,6 +1426,11 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     goto done;
   }
 
+  if (!zero_circ) {
+    /* start a new circuit */
+    circ = circuit_init(CIRCUIT_PURPOSE_C_GENERAL, 0, 0, 0);
+  }
+
   /* now circ refers to something that is ready to be extended */
   SMARTLIST_FOREACH(routers, routerinfo_t *, r,
   {
