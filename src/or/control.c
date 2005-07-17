@@ -1696,7 +1696,7 @@ handle_control_closestream(connection_t *conn, uint32_t len,
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args)<2)
-      connection_printf_to_buf(conn, "512 Missing argument to CLOSECIRCUIT\r\n");
+      connection_printf_to_buf(conn, "512 Missing argument to CLOSESTREAM\r\n");
     else if (!(ap_conn = get_stream(smartlist_get(args, 0))))
       connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
                                (char*)smartlist_get(args, 0));
