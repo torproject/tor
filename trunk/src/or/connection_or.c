@@ -327,7 +327,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 
   if (server_mode(options) && (me=router_get_my_routerinfo()) &&
       !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
-    log_fn(LOG_WARN,"Client asked me to connect to myself! Refusing.");
+    log_fn(LOG_INFO,"Client asked me to connect to myself. Refusing.");
     return NULL;
   }
 
