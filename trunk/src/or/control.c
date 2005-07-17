@@ -2223,7 +2223,7 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
     send_control0_event(EVENT_STREAM_STATUS, (uint32_t)(5+len+1), msg);
     tor_free(msg);
   }
-  if (EVENT_IS_INTERESTING0(EVENT_STREAM_STATUS)) {
+  if (EVENT_IS_INTERESTING1(EVENT_STREAM_STATUS)) {
     const char *status;
     circuit_t *circ;
     switch (tp)
