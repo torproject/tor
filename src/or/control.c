@@ -1383,25 +1383,26 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
         goto done;
       }
     }
-  } else {
+  } else { /* v1 */
     smartlist_t *args;
     args = smartlist_create();
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args)<2)
-      connection_printf_to_buf(conn,"512 Missing argument to ATTACHSTREAM\r\n");
+      connection_printf_to_buf(conn,"512 Missing argument to EXTENDCIRCUIT\r\n");
 
-    smartlist_split_string(router_nicknames, smartlist_get(args,0), ",", 0, 0);
-    zero_circ = !strcmp("0", (char*)smartlist_get(args,1));
-    if (!zero_circ && !(circ = get_circ(smartlist_get(args,1)))) {
+    zero_circ = !strcmp("0", (char*)smartlist_get(args,0));
+    if (!zero_circ && !(circ = get_circ(smartlist_get(args,0)))) {
       connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
-                               (char*)smartlist_get(args, 1));
+                               (char*)smartlist_get(args, 0));
     }
+    smartlist_split_string(router_nicknames, smartlist_get(args,1), ",", 0, 0);
 
     SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
     smartlist_free(args);
-    if (!zero_circ && !circ)
-      return 0;
+    if (!zero_circ && !circ) {
+      goto done;
+    }
   }
 
   routers = smartlist_create();
@@ -1468,7 +1469,8 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
  done:
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
-  smartlist_free(routers);
+  if (routers)
+    smartlist_free(routers);
   return 0;
 }
 
