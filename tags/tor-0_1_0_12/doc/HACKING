@@ -1,0 +1,640 @@
+                        Guide to Hacking Tor
+
+(As of 8 October 2003, this was all accurate.  If you're reading this in
+the distant future, stuff may have changed.)
+
+0. Intro and required reading
+
+  Onion Routing is still very much in development stages. This document
+  aims to get you started in the right direction if you want to understand
+  the code, add features, fix bugs, etc.
+
+  Read the README file first, so you can get familiar with the basics of
+  installing and running an onion router.
+
+  Then, skim some of the introductory materials in tor-design.pdf,
+  tor-spec.txt, and the Tor FAQ to learn more about how the Tor protocol
+  is supposed to work.  This document will assume you know about Cells,
+  Circuits, Streams, Connections, Onion Routers, and Onion Proxies.
+
+1. Code organization
+
+1.1. The modules
+
+  The code is divided into two directories: ./src/common and ./src/or.
+  The "common" directory contains general purpose utility functions not
+  specific to onion routing.  The "or" directory implements all
+  onion-routing and onion-proxy specific functionality.
+
+  Files in ./src/common:
+
+     aes.[ch] -- Implements the AES cipher (with 128-bit keys and blocks),
+        and a counter-mode stream cipher on top of AES.  This code is
+        taken from the main Rijndael distribution.  (We include this
+        because many people are running older versions of OpenSSL without
+        AES support.)
+
+     compat.[ch] -- Wrappers to make calls more portable.  This code defines
+        functions such as tor_malloc, tor_snprintf, get/set various data types,
+        renaming, setting socket options, switching user IDs.  It is basically
+        where the non-portable items are conditionally included depending on
+        the platform.
+
+     container.[ch] -- Implements a smart list which is a resizable array along
+        with helper functions to use on these lists.  Also includes a
+        splay-tree implementation of the string-to-void* map.
+
+     crypto.[ch] -- Wrapper functions to present a consistent interface to
+        public-key and symmetric cryptography operations from OpenSSL.
+
+     log.[ch] -- Tor's logging subsystem.
+
+     strlcat.c -- Safer, size-bounded string concatenation.  Use this instead
+        of strncat because it has a safer API.  Included for platforms that
+        that don't already ship this code.
+
+     strlcpy.c -- Safer, size-bounded string copying.  Use this instead of
+        strncpy because it is a safer API which guarantees to NUL terminate.
+        Included for platforms that don't already ship this code.
+
+     test.h -- Macros used by unit tests.
+
+     torgzip.[ch] -- A simple in-memory gzip implementation.
+
+     torint.h -- Provides missing [u]int*_t types for environments that
+        don't have stdint.h.
+
+     tortls.[ch] -- Wrapper functions to present a consistent interface to
+        TLS, SSL, and X.509 functions from OpenSSL.
+
+     util.[ch] -- Miscellaneous portability and convenience functions.
+
+  Files in ./src/or:
+
+   [General-purpose modules]
+
+     or.h -- Common header file: include everything, define everything.
+
+     buffers.c -- Implements a generic buffer interface.  Buffers are
+        fairly opaque string holders that can read to or flush from:
+        memory, file descriptors, or TLS connections.
+
+        Also implements parsing functions to read HTTP and SOCKS commands
+        from buffers.
+
+     tree.h -- A splay tree implementation by Niels Provos.  Used by
+        dns.c for dns caching at exits, and by connection_edge.c for dns
+        caching at clients.
+
+     config.c -- Code to parse and validate the configuration file.
+
+   [Background processing modules]
+
+     cpuworker.c -- Implements a farm of 'CPU worker' processes to perform
+        CPU-intensive tasks in the background, so as not interrupt the
+        onion router.  (OR only)
+
+     dns.c -- Implements a farm of 'DNS worker' processes to perform DNS
+        lookups for onion routers and cache the results.  [This needs to
+        be done in the background because of the lack of a good,
+        ubiquitous asynchronous DNS implementation.] (OR only)
+
+   [Directory-related functionality.]
+
+     directory.c -- Code to send and fetch directories and router
+        descriptors via HTTP.  Directories use dirserv.c to generate the
+        results; clients use routers.c to parse them.
+
+     dirserv.c -- Code to manage directory contents and generate
+        directories. [Directory server only]
+
+     router.c -- Code to parse directories and router descriptors; and to
+        generate a router descriptor corresponding to this OR's
+        capabilities.  Also presents some high-level interfaces for
+        managing an OR or OP's view of the directory.
+
+   [Circuit-related modules.]
+
+     circuitbuild.c -- Creates circuits.
+
+     circuitlist.c -- Manage the global circuit list.
+
+     circuituse.c -- Launch the right type of circuits and attach streams
+        to them.
+
+     onion.c -- Code to generate and respond to "onion skins".
+
+     relay.c -- Handle relay cell encryption/decryption along with packaging
+        and receiving from circuits.
+
+   [Core protocol implementation.]
+
+     command.c -- Code to handle specific cell types.
+
+     connection.c -- Code used in common by all connection types.  See
+        1.2. below for more general information about connections.
+
+     connection_edge.c -- Code used only by edge connections.
+
+     connection_or.c -- Code to implement cell-speaking connections.
+
+   [Hidden services]
+
+     rendclient.c -- Client code to access location-hidden services.  This
+        allows clients and servers to run services and have people connect
+        without either end knowing who they are connecting to.
+
+     rendcommon.c -- Rendevzous implementation: Shared code between
+        introducers, services, clients, and rendezvous points.
+
+     rendmid.c -- Implement introduction and rendezvous points.
+
+     rendservice.c -- Hidden-service side of rendezvous functionality.
+
+   [Reputation]
+
+     rephist.c -- Basic history functionality for reputation module.
+
+   [Router lists]
+
+     routerlist.c -- Code to maintain and access global list of routerinfos for
+        known servers.
+
+     routerparse.c -- Code to parse and validate router descriptors and
+        directories.
+
+   [Bandwidth and GUI]
+
+     control.c -- Implementation of Tor's control socket interface.  Useful
+        for designing GUIs to interact with Tor.
+
+     hibernate.c -- Functions to close listeners, stop allowing new circuits,
+        and so on in preparation of closing down or going dormant.  Also used
+        to track bandwidth and time intervals to know when to hibernate.
+
+   [Toplevel modules.]
+
+     main.c -- Toplevel module.  Initializes keys, handles signals,
+        multiplexes between connections, implements main loop, and drives
+        scheduled events.
+
+     tor_main.c -- Stub module containing a main() function.  Allows unit
+        test binary to link against main.c
+
+   [Unit tests]
+
+     test.c -- Contains unit tests for many pieces of the lower level Tor
+        modules.
+
+
+1.2. All about connections
+
+  All sockets in Tor are handled as different types of nonblocking
+  'connections'.  (What the Tor spec calls a "Connection", the code refers
+  to as a "Cell-speaking" or "OR" connection.)
+
+  Connections are implemented by the connection_t struct, defined in or.h.
+  Not every kind of connection uses all the fields in connection_t; see
+  the comments in or.h and the assertions in assert_connection_ok() for
+  more information.
+
+  Every connection has a type and a state.  Connections never change their
+  type, but can go through many state changes in their lifetime.
+
+  The connection types break down as follows:
+
+     [Cell-speaking connections]
+       CONN_TYPE_OR -- A bidirectional TLS connection transmitting a
+          sequence of cells.  May be from an OR to an OR, or from an OP to
+          an OR.
+
+     [Edge connections]
+       CONN_TYPE_EXIT -- A TCP connection from an onion router to a
+          Stream's destination. [OR only]
+       CONN_TYPE_AP -- A SOCKS proxy connection from the end user
+          application to the onion proxy.  [OP only]
+
+     [Listeners]
+       CONN_TYPE_OR_LISTENER [OR only]
+       CONN_TYPE_AP_LISTENER [OP only]
+       CONN_TYPE_DIR_LISTENER [Directory server only]
+          -- Bound network sockets, waiting for incoming connections.
+
+     [Internal]
+       CONN_TYPE_DNSWORKER -- Connection from the main process to a DNS
+          worker process. [OR only]
+
+       CONN_TYPE_CPUWORKER -- Connection from the main process to a CPU
+          worker process. [OR only]
+
+   Connection states are documented in or.h.
+
+   Every connection has two associated input and output buffers.
+   Listeners don't use them.  For non-listener connections, incoming
+   data is appended to conn->inbuf, and outgoing data is taken from the
+   front of conn->outbuf.  Connections differ primarily in the functions
+   called to fill and drain these buffers.
+
+1.3. All about circuits.
+
+   A circuit_t structure fills two roles.  First, a circuit_t links two
+   connections together: either an edge connection and an OR connection,
+   or two OR connections.  (When joined to an OR connection, a circuit_t
+   affects only cells sent to a particular circID on that connection.  When
+   joined to an edge connection, a circuit_t affects all data.)
+
+   Second, a circuit_t holds the cipher keys and state for sending data
+   along a given circuit.  At the OP, it has a sequence of ciphers, each
+   of which is shared with a single OR along the circuit.  Separate
+   ciphers are used for data going "forward" (away from the OP) and
+   "backward" (towards the OP).  At the OR, a circuit has only two stream
+   ciphers: one for data going forward, and one for data going backward.
+
+1.4. Asynchronous IO and the main loop.
+
+   Tor uses the poll(2) system call (or it wraps select(2) to act like
+   poll, if poll is not available) to handle nonblocking (asynchronous)
+   IO.  If you're not familiar with nonblocking IO, check out the links
+   at the end of this document.
+
+   All asynchronous logic is handled in main.c.  The functions
+   'connection_add', 'connection_set_poll_socket', and 'connection_remove'
+   manage an array of connection_t*, and keep in synch with the array of
+   struct pollfd required by poll(2).  (This array of connection_t* is
+   accessible via get_connection_array, but users should generally call
+   one of the 'connection_get_by_*' functions in connection.c to look up
+   individual connections.)
+
+   To trap read and write events, connections call the functions
+   'connection_{is|stop|start}_{reading|writing}'. If you want
+   to completely reset the events you're watching for, use
+   'connection_watch_events'.
+
+   Every time poll() finishes, main.c calls conn_read and conn_write on
+   every connection. These functions dispatch events that have something
+   to read to connection_handle_read, and events that have something to
+   write to connection_handle_write, respectively.
+
+   When connections need to be closed, they can respond in two ways.  Most
+   simply, they can make connection_handle_* return an error (-1),
+   which will make conn_{read|write} close them.  But if it's not
+   convenient to return -1 (for example, processing one connection causes
+   you to realize that a second one should close), then you can also
+   mark a connection to close by setting conn->marked_for_close. Marked
+   connections will be closed at the end of the current iteration of
+   the main loop.
+
+   The main loop handles several other operations: First, it checks
+   whether any signals have been received that require a response (HUP,
+   KILL, USR1, CHLD).  Second, it calls prepare_for_poll to handle recurring
+   tasks and compute the necessary poll timeout.  These recurring tasks
+   include periodically fetching the directory, timing out unused
+   circuits, incrementing flow control windows and re-enabling connections
+   that were blocking for more bandwidth, and maintaining statistics.
+
+   A word about TLS: Using TLS on OR connections complicates matters in
+   two ways.
+   First, a TLS stream has its own read buffer independent of the
+   connection's read buffer.  (TLS needs to read an entire frame from
+   the network before it can decrypt any data.  Thus, trying to read 1
+   byte from TLS can require that several KB be read from the network
+   and decrypted.  The extra data is stored in TLS's decrypt buffer.)
+   Because the data hasn't been read by tor (it's still inside the TLS),
+   this means that sometimes a connection "has stuff to read" even when
+   poll() didn't return POLLIN. The tor_tls_get_pending_bytes function is
+   used in main.c to detect TLS objects with non-empty internal buffers.
+   Second, the TLS stream's events do not correspond directly to network
+   events: sometimes, before a TLS stream can read, the network must be
+   ready to write -- or vice versa.
+
+1.5. How data flows (An illustration.)
+
+   Suppose an OR receives 256 bytes along an OR connection.  These 256
+   bytes turn out to be a data relay cell, which gets decrypted and
+   delivered to an edge connection.  Here we give a possible call sequence
+   for the delivery of this data.
+
+   (This may be outdated quickly.)
+
+   do_main_loop -- Calls poll(2), receives a POLLIN event on a struct
+                 pollfd, then calls:
+    conn_read -- Looks up the corresponding connection_t, and calls:
+     connection_handle_read -- Calls:
+      connection_read_to_buf -- Notices that it has an OR connection so:
+       read_to_buf_tls -- Pulls data from the TLS stream onto conn->inbuf.
+      connection_process_inbuf -- Notices that it has an OR connection so:
+       connection_or_process_inbuf -- Checks whether conn is open, and calls:
+        connection_process_cell_from_inbuf -- Notices it has enough data for
+                 a cell, then calls:
+         connection_fetch_from_buf -- Pulls the cell from the buffer.
+         cell_unpack -- Decodes the raw cell into a cell_t
+         command_process_cell -- Notices it is a relay cell, so calls:
+          command_process_relay_cell -- Looks up the circuit for the cell,
+                 makes sure the circuit is live, then passes the cell to:
+           circuit_deliver_relay_cell -- Passes the cell to each of:
+            relay_crypt -- Strips a layer of encryption from the cell and
+                 notices that the cell is for local delivery.
+            connection_edge_process_relay_cell -- extracts the cell's
+                 relay command, and makes sure the edge connection is
+                 open.  Since it has a DATA cell and an open connection,
+                 calls:
+             circuit_consider_sending_sendme -- check if the total number
+                 of cells received by all streams on this circuit is
+                 enough that we should send back an acknowledgement
+                 (requesting that more cells be sent to any stream).
+             connection_write_to_buf -- To place the data on the outgoing
+                 buffer of the correct edge connection, by calling:
+              connection_start_writing -- To tell the main poll loop about
+                 the pending data.
+              write_to_buf -- To actually place the outgoing data on the
+                 edge connection.
+             connection_consider_sending_sendme -- if the outbuf waiting
+                 to flush to the exit connection is not too full, check
+                 if the total number of cells received on this stream
+                 is enough that we should send back an acknowledgement
+                 (requesting that more cells be sent to this stream).
+
+   In a subsequent iteration, main notices that the edge connection is
+   ready for writing:
+
+   do_main_loop -- Calls poll(2), receives a POLLOUT event on a struct
+                 pollfd, then calls:
+    conn_write -- Looks up the corresponding connection_t, and calls:
+     connection_handle_write -- This isn't a TLS connection, so calls:
+      flush_buf -- Delivers data from the edge connection's outbuf to the
+                 network.
+      connection_wants_to_flush -- Reports that all data has been flushed.
+      connection_finished_flushing -- Notices the connection is an exit,
+                 and calls:
+       connection_edge_finished_flushing -- The connection is open, so it
+                 calls:
+        connection_stop_writing -- Tells the main poll loop that this
+                 connection has no more data to write.
+        connection_consider_sending_sendme -- now that the outbuf
+                 is empty, check again if the total number of cells
+                 received on this stream is enough that we should send
+                 back an acknowledgement (requesting that more cells be
+                 sent to this stream).
+
+1.6. Routers, descriptors, and directories
+
+   All Tor processes need to keep track of a list of onion routers, for
+   several reasons:
+       - OPs need to establish connections and circuits to ORs.
+       - ORs need to establish connections to other ORs.
+       - OPs and ORs need to fetch directories from a directory server.
+       - ORs need to upload their descriptors to directory servers.
+       - Directory servers need to know which ORs are allowed onto the
+         network, what the descriptors are for those ORs, and which of
+         those ORs are currently live.
+
+   Thus, every Tor process keeps track of a list of all the ORs it knows
+   in a static variable 'directory' in the routers.c module.  This
+   variable contains a routerinfo_t object for each known OR. On startup,
+   the directory is initialized to a list of known directory servers (via
+   router_get_list_from_file()).  Later, the directory is updated via
+   router_get_dir_from_string().  (OPs and ORs retrieve fresh directories
+   from directory servers; directory servers generate their own.)
+
+   Every OR must periodically regenerate a router descriptor for itself.
+   The descriptor and the corresponding routerinfo_t are stored in the
+   'desc_routerinfo' and 'descriptor' static variables in routers.c.
+
+   Additionally, a directory server keeps track of a list of the
+   router descriptors it knows in a separate list in dirserv.c.  It
+   uses this list, checking which OR connections are open, to build
+   directories.
+
+1.7. Data model
+
+  [XXX]
+
+1.8. Flow control
+
+  [XXX]
+
+2. Coding conventions
+
+2.1. Details
+
+  Use tor_malloc, tor_free, tor_snprintf, tor_strdup, and tor_gettimeofday
+  instead of their generic equivalents.  (They always succeed or exit.)
+
+  Use INLINE instead of 'inline', so that we work properly on windows.
+
+2.2. Calling and naming conventions
+
+  Whenever possible, functions should return -1 on error and and 0 on
+  success.
+
+  For multi-word identifiers, use lowercase words combined with
+  underscores. (e.g., "multi_word_identifier").  Use ALL_CAPS for macros and
+  constants.
+
+  Typenames should end with "_t".
+
+  Function names should be prefixed with a module name or object name.  (In
+  general, code to manipulate an object should be a module with the same
+  name as the object, so it's hard to tell which convention is used.)
+
+  Functions that do things should have imperative-verb names
+  (e.g. buffer_clear, buffer_resize); functions that return booleans should
+  have predicate names (e.g. buffer_is_empty, buffer_needs_resizing).
+
+2.3. What To Optimize
+
+  Don't optimize anything if it's not in the critical path.  Right now,
+  the critical path seems to be AES, logging, and the network itself.
+  Feel free to do your own profiling to determine otherwise.
+
+2.4. Log conventions
+
+  Log convention: use only these four log severities.
+
+    ERR is if something fatal just happened.
+    WARN if something bad happened, but we're still running. The
+      bad thing is either a bug in the code, an attack or buggy
+      protocol/implementation of the remote peer, etc. The operator should
+      examine the bad thing and try to correct it.
+    NOTICE if it's something the operator will want to know about.
+    (No error or warning messages should be expected during normal OR or OP
+      operation. I expect most people to run on -l notice eventually. If a
+      library function is currently called such that failure always means
+      ERR, then the library function should log WARN and let the caller
+      log ERR.)
+    INFO means something happened (maybe bad, maybe ok), but there's nothing
+      you need to (or can) do about it.
+    DEBUG is for everything louder than INFO.
+
+  [XXX Proposed convention: every messages of severity INFO or higher should
+  either (A) be intelligible to end-users who don't know the Tor source; or
+  (B) somehow inform the end-users that they aren't expected to understand
+  the message (perhaps with a string like "internal error").  Option (A) is
+  to be preferred to option (B). -NM]
+
+2.5. Doxygen
+
+  We use the 'doxygen' utility to generate documentation from our source code.
+  Here's how to use it:
+
+  1. Begin every file that should be documented with
+         /**
+          * \file filename.c
+          * \brief Short desccription of the file
+          */
+
+     (Doxygen will recognize any comment beginning with /** as special.)
+
+  2. Before any function, structure, #define, or variable you want to
+     document, add a comment of the form:
+
+        /** Describe the function's actions in imperative sentences.
+         *
+         * Use blank lines for paragraph breaks
+         *   - and
+         *   - hyphens
+         *   - for
+         *   - lists.
+         *
+         * Write <b>argument_names</b> in boldface.
+         *
+         * \code
+         *     place_example_code();
+         *     between_code_and_endcode_commands();
+         * \endcode
+         */
+
+  3. Make sure to escape the characters "<", ">", "\", "%" and "#" as "\<",
+     "\>", "\\", "\%", and "\#".
+
+  4. To document structure members, you can use two forms:
+
+       struct foo {
+         /** You can put the comment before an element; */
+         int a;
+         int b; /**< Or use the less-than symbol to put the comment after the element. */
+       };
+
+  5. To generate documentation from the Tor source code, type:
+
+     $ doxygen -g
+
+     To generate a file called 'Doxyfile'.  Edit that file and run 'doxygen' to
+     generate the aPI documentation.
+
+  6. See the Doxygen manual for more information; this summary just scratches
+     the surface.
+
+3. References
+
+  About Tor
+
+     See http://tor.eff.org/
+         http://tor.eff.org/cvs/doc/tor-spec.txt
+         http://tor.eff.org/cvs/doc/tor-design.tex
+         http://tor.eff.org/cvs/doc/FAQ
+
+  About anonymity
+
+     See http://freehaven.net/anonbib/
+
+  About nonblocking IO
+
+     [XXX insert references]
+
+# ======================================================================
+# Old HACKING document; merge into the above, move into tor-design.tex,
+# or delete.
+# ======================================================================
+The pieces.
+
+  Routers. Onion routers, as far as the 'tor' program is concerned,
+  are a bunch of data items that are loaded into the router_array when
+  the program starts. Periodically it downloads a new set of routers
+  from a directory server, and updates the router_array. When a new OR
+  connection is started (see below), the relevant information is copied
+  from the router struct to the connection struct.
+
+  Connections. A connection is a long-standing tcp socket between
+  nodes. A connection is named based on what it's connected to -- an "OR
+  connection" has an onion router on the other end, an "OP connection" has
+  an onion proxy on the other end, an "exit connection" has a website or
+  other server on the other end, and an "AP connection" has an application
+  proxy (and thus a user) on the other end.
+
+  Circuits. A circuit is a path over the onion routing
+  network. Applications can connect to one end of the circuit, and can
+  create exit connections at the other end of the circuit. AP and exit
+  connections have only one circuit associated with them (and thus these
+  connection types are closed when the circuit is closed), whereas OP and
+  OR connections multiplex many circuits at once, and stay standing even
+  when there are no circuits running over them.
+
+  Streams. Streams are specific conversations between an AP and an exit.
+  Streams are multiplexed over circuits.
+
+  Cells. Some connections, specifically OR and OP connections, speak
+  "cells". This means that data over that connection is bundled into 256
+  byte packets (8 bytes of header and 248 bytes of payload). Each cell has
+  a type, or "command", which indicates what it's for.
+
+Robustness features.
+
+[XXX no longer up to date]
+ Bandwidth throttling. Each cell-speaking connection has a maximum
+  bandwidth it can use, as specified in the routers.or file. Bandwidth
+  throttling can occur on both the sender side and the receiving side. If
+  the LinkPadding option is on, the sending side sends cells at regularly
+  spaced intervals (e.g., a connection with a bandwidth of 25600B/s would
+  queue a cell every 10ms). The receiving side protects against misbehaving
+  servers that send cells more frequently, by using a simple token bucket:
+
+  Each connection has a token bucket with a specified capacity. Tokens are
+  added to the bucket each second (when the bucket is full, new tokens
+  are discarded.) Each token represents permission to receive one byte
+  from the network --- to receive a byte, the connection must remove a
+  token from the bucket. Thus if the bucket is empty, that connection must
+  wait until more tokens arrive. The number of tokens we add enforces a
+  longterm average rate of incoming bytes, yet we still permit short-term
+  bursts above the allowed bandwidth. Currently bucket sizes are set to
+  ten seconds worth of traffic.
+
+  The bandwidth throttling uses TCP to push back when we stop reading.
+  We extend it with token buckets to allow more flexibility for traffic
+  bursts.
+
+ Data congestion control. Even with the above bandwidth throttling,
+  we still need to worry about congestion, either accidental or intentional.
+  If a lot of people make circuits into same node, and they all come out
+  through the same connection, then that connection may become saturated
+  (be unable to send out data cells as quickly as it wants to). An adversary
+  can make a 'put' request through the onion routing network to a webserver
+  he owns, and then refuse to read any of the bytes at the webserver end
+  of the circuit. These bottlenecks can propagate back through the entire
+  network, mucking up everything.
+
+  (See the tor-spec.txt document for details of how congestion control
+  works.)
+
+  In practice, all the nodes in the circuit maintain a receive window
+  close to maximum except the exit node, which stays around 0, periodically
+  receiving a sendme and reading more data cells from the webserver.
+  In this way we can use pretty much all of the available bandwidth for
+  data, but gracefully back off when faced with multiple circuits (a new
+  sendme arrives only after some cells have traversed the entire network),
+  stalled network connections, or attacks.
+
+  We don't need to reimplement full tcp windows, with sequence numbers,
+  the ability to drop cells when we're full etc, because the tcp streams
+  already guarantee in-order delivery of each cell. Rather than trying
+  to build some sort of tcp-on-tcp scheme, we implement this minimal data
+  congestion control; so far it's enough.
+
+ Router twins. In many cases when we ask for a router with a given
+  address and port, we really mean a router who knows a given key. Router
+  twins are two or more routers that share the same private key. We thus
+  give routers extra flexibility in choosing the next hop in the circuit: if
+  some of the twins are down or slow, it can choose the more available ones.
+
+  Currently the code tries for the primary router first, and if it's down,
+  chooses the first available twin.
