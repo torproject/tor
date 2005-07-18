@@ -748,6 +748,13 @@ test_util(void)
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
+  cp = smartlist_join_strings(sl, "XY", 0, NULL);
+  test_streq(cp, "");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "XY", 1, NULL);
+  test_streq(cp, "XY");
+  tor_free(cp);
+
   smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   test_eq(3, smartlist_len(sl));
   test_streq("z", smartlist_get(sl, 0));
