@@ -358,14 +358,14 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   tor_assert(sl);
   tor_assert(join);
 
-  if (sl->num_used == 0)
-    n = join_len; /* special-case this one, to avoid underflow */
+  if (terminate)
+    n = join_len;
 
   for (i = 0; i < sl->num_used; ++i) {
     n += strlen(sl->list[i]);
-    n += join_len;
+    if (i+1 < sl->num_used) /* avoid double-counting the last one */
+      n += join_len;
   }
-  if (!terminate) n -= join_len;
   dst = r = tor_malloc(n+1);
   for (i = 0; i < sl->num_used; ) {
     for (src = sl->list[i]; *src; )
