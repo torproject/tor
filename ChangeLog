@@ -59,6 +59,21 @@ Changes in version 0.1.1.1-alpha - 2005-06-29
       test this?
 
 
+Changes in version 0.1.0.12 - 2005-07-18
+  o New directory servers:
+      - tor26 has changed IP address.
+
+  o Bugfixes on 0.1.0.x:
+    - Fix a possible double-free in tor_gzip_uncompress().
+    - When --disable-threads is set, do not search for or link against
+      pthreads libraries.
+    - Don't trigger an assert if an authoritative directory server
+      claims its dirport is 0.
+    - Fix bug with removing Tor as an NT service: some people were
+      getting "The service did not return an error." Thanks to Matt
+      Edman for the fix.
+
+
 Changes in version 0.1.0.11 - 2005-06-30
   o Bugfixes on 0.1.0.x:
     - Fix major security bug: servers were disregarding their
