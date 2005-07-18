@@ -1132,12 +1132,13 @@ dumpmemusage(int severity)
   extern uint64_t buf_total_used;
   extern uint64_t buf_total_alloc;
   extern uint64_t rephist_total_alloc;
+  extern uint32_t rephist_total_num;
 
   log(severity, "In buffers: "U64_FORMAT" used/"U64_FORMAT" allocated (%d conns).",
       U64_PRINTF_ARG(buf_total_used), U64_PRINTF_ARG(buf_total_alloc),
       nfds);
-  log(severity, "In rephist: "U64_FORMAT" used.",
-      U64_PRINTF_ARG(rephist_total_alloc));
+  log(severity, "In rephist: "U64_FORMAT" used by %d Tors.",
+      U64_PRINTF_ARG(rephist_total_alloc), rephist_total_num);
 }
 
 /** Write all statistics to the log, with log level 'severity'.  Called
