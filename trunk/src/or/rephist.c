@@ -15,7 +15,8 @@ const char rephist_c_id[] = "$Id$";
 static void bw_arrays_init(void);
 static void predicted_ports_init(void);
 
-uint64_t rephist_total_alloc;
+uint64_t rephist_total_alloc=0;
+uint32_t rephist_total_num=0;
 
 /** History of an OR-\>OR link. */
 typedef struct link_history_t {
@@ -73,6 +74,7 @@ get_or_history(const char* id)
   if (!hist) {
     hist = tor_malloc_zero(sizeof(or_history_t));
     rephist_total_alloc += sizeof(or_history_t);
+    rephist_total_num++;
     hist->link_history_map = strmap_new();
     hist->since = hist->changed = time(NULL);
     strmap_set(history_map, hexid, hist);
@@ -121,6 +123,7 @@ free_or_history(void *_hist)
   or_history_t *hist = _hist;
   strmap_free(hist->link_history_map, _free_link_history);
   rephist_total_alloc -= sizeof(or_history_t);
+  rephist_total_num--;
   tor_free(hist);
 }
 
