@@ -79,7 +79,6 @@ circuit_list_path(circuit_t *circ, int verbose)
   char buf[128];
   char *s;
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
-  tor_assert(circ->cpath);
 
   elements = smartlist_create();
 
