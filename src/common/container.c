@@ -357,6 +357,10 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 
   tor_assert(sl);
   tor_assert(join);
+
+  if (sl->num_used == 0)
+    n = join_len; /* special-case this one, to avoid underflow */
+
   for (i = 0; i < sl->num_used; ++i) {
     n += strlen(sl->list[i]);
     n += join_len;
@@ -370,6 +374,11 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
       memcpy(dst, join, join_len);
       dst += join_len;
     }
+  }
+  if (sl->num_used == 0 && terminate) {
+    /* another special case for length == 0 */
+    memcpy(dst, join, join_len);
+    dst += join_len;
   }
   *dst = '\0';
 
