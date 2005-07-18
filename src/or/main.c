@@ -872,8 +872,10 @@ second_elapsed_callback(int fd, short event, void *args)
 
   current_second = now.tv_sec; /* remember which second it is, for next time */
 
+#if 0
   if (current_second % 60 == 0)
     dumpmemusage(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
+#endif
 
   if (evtimer_add(timeout_event, &one_second))
     log_fn(LOG_ERR,
