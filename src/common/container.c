@@ -370,13 +370,12 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   for (i = 0; i < sl->num_used; ) {
     for (src = sl->list[i]; *src; )
       *dst++ = *src++;
-    if (++i < sl->num_used || terminate) {
+    if (++i < sl->num_used) {
       memcpy(dst, join, join_len);
       dst += join_len;
     }
   }
-  if (sl->num_used == 0 && terminate) {
-    /* another special case for length == 0 */
+  if (terminate) {
     memcpy(dst, join, join_len);
     dst += join_len;
   }
