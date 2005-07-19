@@ -21,17 +21,26 @@ between using a proxy and connecting to websites directly.</p>
 between using Privoxy and a direct connection. We assume you already
 have Firefox installed and working.</p>
 
+<p>The screenshots here are oriented towards Windows users, but
+SwitchProxy works anywhere Firefox works. Hopefully everybody else can
+follow along just fine.</p>
+
 <hr />
 
 <a name="zero"></a>
 <h3>Step Zero: Download and Install Tor and Privoxy</h3>
 
-<p>Before you start, you need to do <a
+<p>Before you start, you need to make sure 1) Tor is up and running,
+2) Privoxy is up and running, and 3) Privoxy is configured to point
+to Tor.</p>
+
+<p>For Windows users, this means <a
 href="http://tor.eff.org/doc/tor-doc-win32.html#installing">step one</a>
 and <a href="http://tor.eff.org/doc/tor-doc-win32.html#privoxy">step
-two</a> of the Tor installation howto. When you're done, Tor will be up
-and running, Privoxy will be up and running, and Privoxy will be configured
-to point to Tor.</p>
+two</a> of the Windows Tor installation howto. Mac OS X users just need
+to do <a href="http://tor.eff.org/doc/tor-doc-osx.html#installing">step
+one</a> of OS X Tor installation howto, since our OS X package includes
+Privoxy and configures it already.</p>
 
 <hr />
 
@@ -42,7 +51,7 @@ to point to Tor.</p>
 the process of installing a new plugin. First, go to the <a
 href="https://addons.mozilla.org/extensions/moreinfo.php?application=firefox&id=125">
 SwitchProxy</a> web page. It looks like this -- click on the "Install
-Now" button.</p>
+Now" button:</p>
 
 <img alt="switchproxy web page"
 src="http://tor.eff.org/img/screenshot-switchproxy-webpage.jpg" />
@@ -54,7 +63,7 @@ Click on "Install Now":
 <img alt="firefox plugin warning"
 src="http://tor.eff.org/img/screenshot-switchproxy-plugin-starting.jpg" />
 
-<p>Once the installer is finished, it will tell you that you SwitchProxy
+<p>Once the installer is finished, it will tell you that SwitchProxy
 will be working once you restart Firefox:</p>
 
 <img alt="firefox plugin finished"
@@ -65,14 +74,14 @@ src="http://tor.eff.org/img/screenshot-switchproxy-plugin-finished.jpg" />
 <a name="two"></a>
 <h3>Step Two: Configure SwitchProxy</h3>
 
-<p>Now restart your Firefox. You'll notice there's now a new toolbar
+<p>Now restart your Firefox. You'll notice there's a new toolbar
 that lets you control your proxies. Now we're going to set up a proxy
 configuration for Privoxy. Click on "add":</p>
 
 <img alt="new toolbar"
 src="http://tor.eff.org/img/screenshot-switchproxy-toolbar.jpg" />
 
-<p>It will ask to select a proxy type. Choose "Standard." (There's also
+<p>It will ask you to select a proxy type. Choose "Standard." (There's also
 an "anonymous" proxy type that uses an ad hoc set of anonymous proxies
 out there. You don't want this -- Tor is better.)</p>
 
@@ -81,7 +90,9 @@ src="http://tor.eff.org/img/screenshot-switchproxy-proxytype.jpg" />
 
 <p>Now it will show you the standard proxy config window for Firefox.
 Give this configuration a proxy label of "tor". Then fill in "localhost"
-and "8118" for the first two entries, as shown here. Then click "OK":</p>
+and "8118" for the first two entries, as shown here. (The first entry is
+HTTP, and the second one is typically called something like HTTPS, SSL,
+or Secure.) Then click "OK":</p>
 
 <img alt="proxy config"
 src="http://tor.eff.org/img/screenshot-switchproxy-proxyconfig.jpg" />
@@ -98,8 +109,10 @@ click "Apply" to make your change take effect:</p>
 <img alt="apply"
 src="http://tor.eff.org/img/screenshot-switchproxy-apply.jpg" />
 
-<p>Done! Firefox will reload your current page. In this example screenshot,
-it reloaded google.com and happened to get a German exit node:</p>
+<p>Done! Firefox will reload your current page. In
+this example screenshot, it reloaded the page and <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#GoogleLanguage">happened
+to get a German exit node</a>:</p>
 
 <img alt="german google"
 src="http://tor.eff.org/img/screenshot-switchproxy-german.jpg" />
