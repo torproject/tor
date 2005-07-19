@@ -354,19 +354,27 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 
   tor_assert(sl);
   tor_assert(join);
+
+  if (terminate)
+    n = join_len;
+
   for (i = 0; i < sl->num_used; ++i) {
     n += strlen(sl->list[i]);
-    n += join_len;
+    if (i+1 < sl->num_used) /* avoid double-counting the last one */
+      n += join_len;
   }
-  if (!terminate) n -= join_len;
   dst = r = tor_malloc(n+1);
   for (i = 0; i < sl->num_used; ) {
     for (src = sl->list[i]; *src; )
       *dst++ = *src++;
-    if (++i < sl->num_used || terminate) {
+    if (++i < sl->num_used) {
       memcpy(dst, join, join_len);
       dst += join_len;
     }
+  }
+  if (terminate) {
+    memcpy(dst, join, join_len);
+    dst += join_len;
   }
   *dst = '\0';
 
