@@ -526,7 +526,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
       if (strcasecmp(d,conn->nickname+1)) {
         log_fn(severity,
                "Identity key not as expected for router at %s:%d: wanted %s but got %s",
-               conn->address, conn->port, conn->nickname, d);
+               conn->address, conn->port, conn->nickname+1, d);
         control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
         as_advertised = 0;
       }
