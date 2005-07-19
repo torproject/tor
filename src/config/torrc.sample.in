@@ -1,6 +1,9 @@
-## Configuration file for a typical tor user
-## Built for Tor version @VERSION@
+## Configuration file for a typical Tor user
+## Last updated 19 July 2005 for Tor 0.1.1.3-alpha.
 ## (May or may not work for older or newer versions of Tor.)
+#
+## See the man page, or http://tor.eff.org/tor-manual.html, for more
+## options you can use in this file.
 #
 # On Unix, Tor will look for this file in someplace like "~/.tor/torrc" or
 # "/etc/torrc"
