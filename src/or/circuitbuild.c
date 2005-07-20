@@ -84,11 +84,13 @@ circuit_list_path(circuit_t *circ, int verbose)
 
   if (verbose) {
     const char *nickname = build_state_get_exit_nickname(circ->build_state);
-    tor_snprintf(buf, sizeof(buf)-1, "%s%s circ (length %d, exit %s):",
+    tor_snprintf(buf, sizeof(buf)-1, "%s%s circ (length %d%s%s):",
                  circ->build_state->is_internal ? "internal" : "exit",
                  circ->build_state->need_uptime ? " (high-uptime)" : "",
                  circ->build_state->desired_path_len,
-                 nickname?nickname:"*unnamed*");
+                 circ->state == CIRCUIT_STATE_OPEN ? "" : ", exit ",
+                 circ->state == CIRCUIT_STATE_OPEN ? "" :
+                   (nickname?nickname:"*unnamed*"));
     smartlist_add(elements, tor_strdup(buf));
   }
 
