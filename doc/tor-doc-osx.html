@@ -87,34 +87,32 @@ note</a> about Tor and ftp proxies.
 </p>
 
 <p>If you want to use Tor with Safari, you need to change your
-Network Settings. The process looks something like:</p>
+Network Settings. Select your Network Preferences from the Apple |
+Location menu:</p>
 
 <img alt="Network settings"
 src="http://tor.eff.org/img/screenshot-osx-choose-network.png"
 border="1">
 
-<p>
-Select your Network Preferences from the Apple | Location menu.</p>
+<p>Select the Network Interface on which you want to enable Tor. If you use
+more than one Interface you must change the proxy settings for each
+individually.</p>
 
 <img alt="Network preferences"
 src="http://tor.eff.org/img/screenshot-osx-choose-interface.png"
 border="1">
-<P>
+<p>
 
-<p>Select the Network Interface you want to enable Tor on. If you use
-more than one Interface you must change the proxy settings for each
-individually.</p>
+<p>Select and enter 127.0.0.1 and port 8118 for both
+Web Proxy (HTTP) and your Secure Web Proxy (HTTPS).
+You should also do this for "FTP Proxy" and "Gopher Proxy"; see <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#FtpProxy">this
+note</a> about Tor and ftp proxies. Leave your Use Passive FTP Mode
+(PASV) setting as is.</p>
 
 <img alt="Proxy settings"
 src="http://tor.eff.org/img/screenshot-osx-proxy-settings.png"
 border="1">
-
-<p>Select and enter 127.0.0.1 and port 8118 for both
-Web Proxy (HTTP) and your Secure Web Proxy (HTTPS).
-You should consider clicking on "FTP Proxy" too; see <a
-href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#FtpProxy">this
-note</a> about Tor and ftp proxies. Leave your Use Passive FTP Mode
-(PASV) setting as is.</p>
 
 <p>Using privoxy is <strong>necessary</strong> because <a
 href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS">browsers
@@ -196,6 +194,10 @@ FAQ entry</a> for hints.</p>
    <li>/usr/share/man/man1/tor.1</li>
    <li>/usr/share/man/man1/tor-resolve.1</li>
    <li>/usr/share/man/man1/torify.1</li>
+   <li>/Library/Receipts/Privoxy.pkg/</li>
+   <li>/Library/Receipts/privoxyconf.pkg/</li>
+   <li>/Library/Receipts/Tor.pkg/</li>
+   <li>/Library/Receipts/torstartup.pkg/</li>
   </ul>
 </p>
 
