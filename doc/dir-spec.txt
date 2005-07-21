@@ -1,5 +1,230 @@
 $Id$
 
+                  Tor directory protocol for 0.1.1.x series
+
+0. Scope and preliminaries
+
+   This document should eventually be merged into tor-spec.txt and replace
+   the existing notes on directories.
+
+   This is not a finalized version; what we actually wind up implementing
+   may be very different from the system described here.
+
+0.1. Goals
+
+   There are several problems with the way Tor handles directories right
+   now:
+      1. Directories are very large and use a lot of bandwidth.
+      2. Every directory server is a single point of failure.
+      3. Requiring every client to know every server won't scale.
+      4. Requiring every directory cache to know every server won't scale.
+      5. Our current "verified server" system is kind of nonsensical.
+      6. Getting more directory servers adds more points of failure and
+         worsens possible partitioning attacks.
+
+   This design tries to solve every problem except problems 3 and 4, and to
+   be compatible with likely eventual solutions to problems 3 and 4.
+
+1. Outline
+
+   There is no longer any such thing as a "signed directory".  Instead,
+   directory servers sign a very compressed 'network status' object that
+   lists the current descriptors and their status, and router descriptors
+   continue to be self-signed by servers.  Clients download network status
+   listings periodically, and download router descriptors as needed.  ORs
+   upload descriptors relatively infrequently.
+
+   There are multiple directory servers.  Rather than doing anything
+   complicated to coordinate themselves, clients simply rotate through them
+   in order, and only use servers that most of the last several directory
+   servers like.
+
+2. Router descriptors
+
+   Router descriptors are as described in the current tor-spec.txt
+   document.
+
+   ORs SHOULD generate a new router descriptor whenever any of the
+   following events have occurred:
+
+      - A period of time (24 hrs by default) has passed since the last
+        time a descriptor was generated.
+
+      - A descriptor field other than bandwidth or uptime has changed.
+
+      - Bandwidth has changed by more than +/- 50% from the last time a
+        descriptor was generated, and at least a given interval of time (1
+        hr by default) has passed since then.
+
+      - Uptime has been reset.
+
+   After generating a descriptor, ORs upload it to every directory
+   server they know.
+
+   The router descriptor format is unchanged from tor-spec.txt.
+
+3. Network status
+
+   Directory servers generate, sign, and compress a network-status document
+   as needed.  As an optimization, they may rate-limit the number of such
+   documents generated to once every few seconds.  Directory servers should
+   rate-limit at least to the point where these documents are generated no
+   faster than once per second.
+
+   The network status document contains a preamble, a set of router status
+   entries, and a signature, in that order.
+
+   We use the same meta-format as used for directories and router descriptors
+   in "tor-spec.txt".
+
+   The preamble contains:
+
+      "network-status-version" -- A document format version.  For this
+         specification, the version is "1".
+      "directory-source" -- The hostname, current IP address, and directory
+         port of the directory server, separated by spaces.
+      "directory-signing-key" -- The directory server's public signing key.
+      "client-versions" -- A comma-separated list of recommended client versions
+      "server-versions" -- A comma-separated list of recommended server versions
+      "published" -- The publication time for this network-status object.
+      "directory-options" -- A set of flags separated by spaces:
+          "Names" if this directory server performs name bindings
+
+   The directory-options entry is optional; the others are required and must
+   appear exactly once. The "network-status-version" entry must appear first;
+   the others may appear in any order.
+
+   For each router, the router entry contains:  (This format is designed for
+   conciseness.)
+
+      "r" -- followed by the following elements, separated by spaces:
+          - The OR's nickname,
+          - A hash of its identity key, encoded in base64, with trailing =
+            signs removed.
+          - A hash of its most recent descriptor, encoded in base64, with
+            trailing = signs removed.
+          - The publication time of its most recent descriptor.
+          - An IP
+          - An OR port
+          - A directory port (or "0" for none")
+      "s" -- A series of space-separated status flags:
+          "Exit" if the router is useful for building general-purpose exit
+             circuits
+          "Stable" if the router tends to stay up for a long time
+          "Fast" if the router has high bandwidth
+          "Running" if the router is currently usable
+          "Named" if the router's identity-nickname mapping is canonical.
+          "Valid" if the router has been 'validated'.
+
+      The "r" entry for each router must appear first and is required.  The
+      's" entry is optional.  Unrecognized flags, or extra elements on the
+      "r" line must be ignored.
+
+   The signature section contains:
+
+      "directory-signature". A signature of the rest of the document using
+      the directory server's signing key.
+
+   We compress the network status list with zlib before transmitting it.
+
+4. Directory server operation
+
+   By default, directory servers remember all non-expired, non-superseded OR
+   descriptors that they have seen.
+
+   For each OR, a directory server remembers whether the OR was running and
+   functional the last time they tried to connect to it, and possibly other
+   liveness information.
+
+   Directory server administrators may label some servers or IPs as
+   blacklisted, and elect not to include them in their network-status lists.
+
+   Otherwise, the network-status list includes all non-blacklisted,
+   non-expired, non-superseded descriptors for ORs that the directory has
+   observed at least once to be running.
+
+   Directory server administrators may decide to support name binding.  If
+   they do, then they must maintain a file of nickname-to-identity-key
+   mappings, and try to keep this file consistent with other directory
+   servers.  If they don't, they act as clients, and report bindings made by
+   other directory servers (name X is bound to identity Y if at least one
+   binding directory lists it, and no directory binds X to some other Y'.)
+
+   The authoritative directory published by a host should be available at:
+      http://<hostname>/tor/status/authority.z
+
+   The most recent descriptor for a server whose identity key has a
+   fingerprint of <F> should be available at:
+      http://<hostname>/tor/server/fp/<F>.z
+
+   A concatenated set of the most recent descriptors for all known servers
+   should be available at:
+      http://<hostname>/tor/server/all.z
+
+   [XXXX specify concatenation of several servers.]
+
+4.1. Caching
+
+   Directory caches (most ORs) regularly download network status documents,
+   and republish them at a URL based on the directory server's identity key:
+      http://<hostname>/tor/status/<identity fingerprint>.z
+
+   A concatenated list of all network-status documents should be available at:
+      http://<hostname>/tor/status/all.z
+
+5. Client operation
+
+   Every OP or OR, including directory servers, acts as a client to the
+   directory protocol.
+
+   Each client maintains a list of trusted directory servers.  Periodically
+   (currently 20 minutes) time, the client downloads a new network status. It
+   chooses the directory server from which its current information is most
+   out-of-date, and retries on failure until it finds a running server.
+
+   When choosing ORs to build circuits, clients proceed as follows;
+     - A server is "listed" if it is listed by more than half of the "live"
+       network status documents the clients have downloaded.  (A network
+       status is "live" if it is the most recently downloaded network status
+       document for a given directory server, and the server is a directory
+       server trusted by the client, and the network-status document is no
+       more than D (say, 10) days old.
+     - A server is "live" if it is listed as running by at more-than-half of
+       the last N (three) "live" downloaded network-status documents.
+
+   Clients store network status documents so long as they are live.
+
+5.1. Managing naming
+
+   In order to provide human-memorable names for individual server
+   identities, some directory servers bind names to IDs.  Clients handle
+   names in two ways:
+
+   If a client is encountering a name it has not mapped before:
+
+      If all the "binding" networks-status documents the client has so far
+      received same claim that the name binds to some identity X, and the
+      client has received at least three network-status documents, the client
+      maps the name to X.
+
+   If a client is encountering a name it has mapped before:
+
+      It uses the last-mapped identity value, unless all of the "binding"
+      network status documents bind the name to some other identity.
+
+6. Remaining issues
+
+   Client-knowledge partitioning is worrisome.  Most versions of this don't
+   seem to be worse than the Danezis-Murdoch tracing attack, since an
+   attacker can't do more than deduce probable exits from entries (or vice
+   versa).  But what about when the client connects to A and B but in a
+   different order?  How bad can it be partitioned based on its knowledge?
+
+
+================================================================================
+Everything below this line is obsolete.
+--------------------------------------------------------------------------------
+
                       Tor network discovery protocol
 
 0. Scope

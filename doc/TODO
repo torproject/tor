@@ -132,7 +132,7 @@ N . Handle rendezvousing with unverified nodes.
     - hardware accelerator support (use instead of aes.c when reasonable)
 r   - kill dns workers more slowly
   - continue decentralizing the directory
-    - Specify and design all of the below before implementing any.
+    o Specify and design all of the below before implementing any.
     - Figure out what to do about hidden service descriptors.
     M have two router descriptor formats
     - dirservers verify reachability claims
