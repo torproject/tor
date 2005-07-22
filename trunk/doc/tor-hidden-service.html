@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+  <title>Tor Hidden Service Configuration Instructions</title>
+  <meta name="Author" content="Roger Dingledine" />
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1" />
+  <link rel="stylesheet" type="text/css" href="/stylesheet.css" />
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+</head>
+
+<body>
+
+<!-- TITLE BAR & NAVIGATION -->
+
+<table class="banner" border="0" cellpadding="0" cellspacing="0">
+    <tr>
+        <td class="banner-left"></td>
+        <td class="banner-middle">
+            <a href="/index.html">Home</a>
+          | <a href="/howitworks.html">How It Works</a>
+          | <a href="/download.html">Download</a>
+          | <a href="/documentation.html">Docs</a>
+          | <a href="/users.html">Users</a>
+          | <a href="/faq.html">FAQs</a>
+          | <a href="/volunteer.html">Volunteer</a>
+          | <a href="/developers.html">Developers</a>
+          | <a href="/research.html">Research</a>
+          | <a href="/people.html">People</a>
+        </td>
+        <td class="banner-right"></td>
+    </tr>
+</table>
+ 
+<!-- END TITLE BAR & NAVIGATION -->
+
+<div class="center">
+
+<div class="main-column">
+
+<h1>Configuring Hidden Services for <a href="http://tor.eff.org/">Tor</a></h1>
+<hr />
+
+<p>Tor allows clients and servers to offer hidden services. That is,
+you can offer a web server, SSH server, etc., without revealing your
+IP to its users. In fact, because you don't need any public address,
+you can run a hidden service from behind your firewall.
+</p>
+
+<p>This howto describes the steps for setting up your own hidden service
+website.
+</p>
+
+<hr />
+<a name="zero"></a>
+<h3>Step Zero: Get Tor and Privoxy working</h3>
+
+<p>Before you start, you need to make sure 1) Tor is up and running,
+2) Privoxy is up and running, 3) Privoxy is configured to point
+to Tor, and 4) You actually set it up correctly.</p>
+
+<p>Windows users should follow the <a
+href="http://tor.eff.org/doc/tor-doc-win32.html">Windows
+howto</a>, and OS X users should follow the <a
+href=http://tor.eff.org/doc/tor-doc-osx.html">OS
+X howto</a>. Other users can find some hints <a
+href="http://tor.eff.org/doc/tor-doc.html#installing">here</a>.
+</p>
+
+<p>Once you've got Tor and Privoxy installed and configured,
+you can see hidden services in action by clicking on <a
+href="http://6sxoyfb3h2nvok2d.onion/">the hidden wiki</a>
+in your browser. It will typically take 10-60 seconds to load
+(or to decide that it is currently unreachable). If it fails
+immediately and your browser pops up an alert saying that that
+"www.6sxoyfb3h2nvok2d.onion could not be found, please check the name and
+try again" then you haven't configured Tor and Privoxy correctly; see <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ItDoesntWork">this
+FAQ entry</a> for some help.
+</p>
+
+<hr />
+<a name="one"></a>
+<h3>Step One: Configure an example hidden service</h3>
+
+<p>In this step, you're going to configure a hidden service that points
+to www.google.com. This way we can make sure you've gotten this step
+working before we start thinking about setting up a web server locally.
+</p>
+
+<p>First, open your torrc file in your favorite text editor. (See <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#torrc">this
+FAQ entry</a> to learn what this means.) Go to the middle section and
+look for the line<br />
+<tt>############### This section is just for location-hidden services ###</tt><br />
+</p>
+
+<p>
+This section of the file consists of groups of lines, each representing
+one hidden service. Right now they are all commented out (the lines
+start with #), so now hidden services are enabled. Each group of lines
+consists of one HiddenServiceDir line, and one or more HiddenServicePort
+lines:</p>
+<ul>
+<li><b>HiddenServiceDir</b> is a directory where Tor will store information
+about that hidden service.  In particular, Tor will create a file here named
+<i>hostname</i> which will tell you the onion URL.  You don't need to add any
+files to this directory.</li>
+<li><b>HiddenServicePort</b> lets you specify a virtual port (that is, what
+port people accessing the hidden service will think they're using) and an
+IP address and port for redirecting connections to this virtual port.</li>
+</ul>
+
+<p>In this example, we're going to set up a hidden service that points to
+Google. So add the following lines to your torrc:
+</p>
+
+<pre>
+HiddenServiceDir /home/yourname/hidserv/
+HiddenServicePort 80 www.google.com:80
+</pre>
+
+<p>The above directory is for Windows people. OS X or Unix people should
+use <tt>/tmp/hidserv</tt> instead.
+
+<hr />
+
+<p>If you have suggestions for improving this document, please <a
+href="mailto:tor-bugs@freehaven.net">send them to us</a>. Thanks!</p>
+
+  </div><!-- #main -->
+</div>
+  <div class="bottom" id="bottom">
+     <i><a href="mailto:tor-webmaster@freehaven.net"
+     class="smalllink">Webmaster</a></i> - $Id: overview.html,v 1.37
+     2005/07/15 22:19:37 arma Exp $
+  </div>
+</body>
+</html>
+
