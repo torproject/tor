@@ -269,14 +269,9 @@ as a server on Windows now as well.)
 <ul>
 <li>0. Verify that your clock is set correctly. If possible, synchronize
 your clock with public time servers.</li>
-<li>1. Edit the bottom part of your torrc (if you installed from source,
-you will need to copy torrc.sample to torrc first. Look for them in
-/usr/local/etc/tor/ on Unix).  If you installed a package, you should look
- for torrc:
-<ul><li>in <tt>/etc/torrc</tt> or <tt>/etc/tor/torrc</tt> on Unix.</li>
-    <li>in <tt>/Library/Tor/torrc</tt> on Macintosh OS X.</li>
-    <li>in <tt>\Application Data\tor\torrc</tt> or in <tt>\<i>username</i>\Application Data\tor\torrc</tt> on Windows.</li>
-</ul>
+<li>1. Edit the bottom part of your torrc. (See <a
+href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#torrc">this
+FAQ entry</a> for help.)
 Make sure to define at least Nickname and ORPort.
 Create the DataDirectory if necessary, and make
 sure it's owned by the user that will be running tor.
@@ -394,8 +389,9 @@ the middle.</p>
 you can <a href="http://6sxoyfb3h2nvok2d.onion/">go to the hidden wiki</a>
 to see hidden services in action.</p>
 
-<p>To set up a hidden service, copy torrc.sample to torrc (by default it's
-in /usr/local/etc/tor/), and edit the middle part. Then run Tor. It will
+<p>To set up a hidden service, edit the middle part of your torrc. (See
+<a href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#torrc">this
+FAQ entry</a> for help.) Then run Tor. It will
 create each HiddenServiceDir you have configured, and it will create a
 'hostname' file which specifies the url (xyz.onion) for that service. You
 can tell people the url, and they can connect to it via their Tor client,
