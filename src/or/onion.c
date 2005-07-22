@@ -13,18 +13,18 @@ const char onion_c_id[] = "$Id$";
 
 #include "or.h"
 
-struct onion_queue_t {
+typedef struct onion_queue_t {
   circuit_t *circ;
   time_t when_added;
   struct onion_queue_t *next;
-};
+} onion_queue_t;
 
 /** 5 seconds on the onion queue til we just send back a destroy */
 #define ONIONQUEUE_WAIT_CUTOFF 5
 
 /** Global (within this file) variables used by the next few functions */
-static struct onion_queue_t *ol_list=NULL;
-static struct onion_queue_t *ol_tail=NULL;
+static onion_queue_t *ol_list=NULL;
+static onion_queue_t *ol_tail=NULL;
 /** Length of ol_list */
 static int ol_length=0;
 
@@ -34,10 +34,10 @@ static int ol_length=0;
 int
 onion_pending_add(circuit_t *circ)
 {
-  struct onion_queue_t *tmp;
+  onion_queue_t *tmp;
   time_t now = time(NULL);
 
-  tmp = tor_malloc_zero(sizeof(struct onion_queue_t));
+  tmp = tor_malloc_zero(sizeof(onion_queue_t));
   tmp->circ = circ;
   tmp->when_added = now;
 
@@ -97,7 +97,7 @@ onion_next_task(void)
 void
 onion_pending_remove(circuit_t *circ)
 {
-  struct onion_queue_t *tmpo, *victim;
+  onion_queue_t *tmpo, *victim;
 
   if (!ol_list)
     return; /* nothing here. */
@@ -408,7 +408,7 @@ void
 clear_pending_onions(void)
 {
   while (ol_list) {
-    struct onion_queue_t *victim = ol_list;
+    onion_queue_t *victim = ol_list;
     ol_list = victim->next;
     tor_free(victim);
   }

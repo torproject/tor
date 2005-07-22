@@ -100,8 +100,6 @@ static void accounting_set_wakeup_time(void);
  * Functions for bandwidth accounting.
  * ************/
 
-
-
 /** Configure accounting start/end time settings based on
  * options->AccountingStart.  Return 0 on success, -1 on failure. If
  * <b>validate_only</b> is true, do not change the current settings. */
@@ -886,3 +884,4 @@ accounting_getinfo_helper(const char *question, char **answer)
   }
   return 0;
 }
+

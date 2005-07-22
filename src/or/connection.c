@@ -784,16 +784,16 @@ connection_connect(connection_t *conn, char *address,
  * or if the existing connections do not match those configured.
  */
 static int
-retry_listeners(int type, struct config_line_t *cfg,
+retry_listeners(int type, config_line_t *cfg,
                 int port_option, const char *default_addr, int force)
 {
-  struct smartlist_t *launch = smartlist_create();
+  smartlist_t *launch = smartlist_create();
   int free_launch_elts = 1;
-  struct config_line_t *c;
+  config_line_t *c;
   int n_conn, i;
   connection_t *conn;
   connection_t **carray;
-  struct config_line_t *line;
+  config_line_t *line;
 
   if (cfg && port_option) {
     for (c = cfg; c; c = c->next) {
@@ -801,7 +801,7 @@ retry_listeners(int type, struct config_line_t *cfg,
     }
     free_launch_elts = 0;
   } else if (port_option) {
-    line = tor_malloc_zero(sizeof(struct config_line_t));
+    line = tor_malloc_zero(sizeof(config_line_t));
     line->key = tor_strdup("");
     line->value = tor_strdup(default_addr);
     smartlist_add(launch, line);
@@ -823,7 +823,7 @@ retry_listeners(int type, struct config_line_t *cfg,
     }
     /* Okay, so this is a listener.  Is it configured? */
     line = NULL;
-    SMARTLIST_FOREACH(launch, struct config_line_t *, wanted,
+    SMARTLIST_FOREACH(launch, config_line_t *, wanted,
       {
         char *addr;
         uint16_t port;
@@ -852,7 +852,7 @@ retry_listeners(int type, struct config_line_t *cfg,
 
   /* Now open all the listeners that are configured but not opened. */
   i = 0;
-  SMARTLIST_FOREACH(launch, struct config_line_t *, cfg,
+  SMARTLIST_FOREACH(launch, config_line_t *, cfg,
     {
       if (connection_create_listener(cfg->value, (uint16_t) port_option,
                                      type)<0)
@@ -860,7 +860,7 @@ retry_listeners(int type, struct config_line_t *cfg,
   });
 
   if (free_launch_elts) {
-    SMARTLIST_FOREACH(launch, struct config_line_t *, cfg,
+    SMARTLIST_FOREACH(launch, config_line_t *, cfg,
                       config_free_lines(cfg));
   }
   smartlist_free(launch);

@@ -279,7 +279,7 @@ void
 routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
 {
   routerinfo_t *r;
-  struct config_line_t *cl;
+  config_line_t *cl;
 
   if (!router->declared_family)
     return;

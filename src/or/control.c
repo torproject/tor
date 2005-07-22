@@ -602,7 +602,7 @@ static int
 handle_control_setconf(connection_t *conn, uint32_t len, char *body)
 {
   int r;
-  struct config_line_t *lines=NULL;
+  config_line_t *lines=NULL;
   char *start = body;
   int v0 = STATE_IS_V0(conn->state);
 
@@ -717,7 +717,7 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
         smartlist_add(unrecognized, q);
       }
     } else {
-      struct config_line_t *answer = config_get_assigned_option(options,q);
+      config_line_t *answer = config_get_assigned_option(options,q);
       if (!v0 && !answer) {
         const char *name = config_option_get_canonical_name(q);
         size_t alen = strlen(name)+8;
@@ -727,7 +727,7 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
       }
 
       while (answer) {
-        struct config_line_t *next;
+        config_line_t *next;
         size_t alen = strlen(answer->key)+strlen(answer->value)+8;
         char *astr = tor_malloc(alen);
         if (v0)

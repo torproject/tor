@@ -193,7 +193,7 @@ parse_port_config(const char *string)
 int
 rend_config_services(or_options_t *options, int validate_only)
 {
-  struct config_line_t *line;
+  config_line_t *line;
   rend_service_t *service = NULL;
   rend_service_port_config_t *portcfg;
 

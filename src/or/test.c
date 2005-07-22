@@ -1030,7 +1030,7 @@ static void
 test_control_formats(void)
 {
   char *out;
-  const char *inp = 
+  const char *inp =
     "..This is a test\r\nof the emergency \nbroadcast\r\n..system.\r\nZ.\r\n";
   size_t sz;
 

@@ -388,18 +388,18 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 
 /* Splay-tree implementation of string-to-void* map
  */
-struct strmap_entry_t {
+typedef struct strmap_entry_t {
   SPLAY_ENTRY(strmap_entry_t) node;
   char *key;
   void *val;
-};
+} strmap_entry_t;
 
 struct strmap_t {
   SPLAY_HEAD(strmap_tree, strmap_entry_t) head;
 };
 
-static int compare_strmap_entries(struct strmap_entry_t *a,
-                                 struct strmap_entry_t *b)
+static int compare_strmap_entries(strmap_entry_t *a,
+                                  strmap_entry_t *b)
 {
   return strcmp(a->key, b->key);
 }
