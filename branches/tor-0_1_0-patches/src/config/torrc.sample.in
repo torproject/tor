@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 19 July 2005 for Tor 0.1.0.13.
+## Last updated 22 July 2005 for Tor 0.1.0.13.
 ## (May or may not work for older or newer versions of Tor.)
 #
 ## See the man page, or http://tor.eff.org/tor-manual.html, for more
@@ -127,7 +127,7 @@ AllowUnverifiedNodes middle,rendezvous
 ## default exit policy. Leave commented to just use the default, which is
 ## available in the man page or at http://tor.eff.org/documentation.html
 ##
-## Look at http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#Abuse
+## Look at http://tor.eff.org/faq-abuse.html#TypicalAbuses
 ## for issues you might encounter if you use the default exit policy.
 ##
 ## If certain IPs and ports are blocked externally, e.g. by your firewall,
