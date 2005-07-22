@@ -87,12 +87,14 @@ N . Controller improvements
         o Implement main controller interface
         o Glue code
         o Testing
+N - Make configuration parsing code switchable to different sets of
+    variables so we can use it for persistence.
 N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
     long time), replace it.  Store nodes on disk.
-    - Implement (basic case)
+    o Implement (basic case)
     - Implement (persistence)
-    - Test, debug
     - Document
+    - Test, debug
 N - Make a FirewallIPs to correspond to firewallPorts so I can use Tor at
     MIT when my directory is out of date.
   - switch accountingmax to count total in+out, not either in or
