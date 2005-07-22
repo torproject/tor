@@ -70,6 +70,9 @@ N . Controller improvements
       o Implement
       o Test, debug
     - Additional features
+      - Expose more information via getinfo
+        o Accounting status
+        - Helper node status
       - Allow EXTENDCIRCUIT to unknown server.
       - We need some way to adjust server status, and to tell tor not to
         download directories/network-status, and a way to force a download.
@@ -84,6 +87,14 @@ N . Controller improvements
         o Implement main controller interface
         o Glue code
         o Testing
+N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
+    long time), replace it.  Store nodes on disk.
+    - Implement (basic case)
+    - Implement (persistence)
+    - Test, debug
+    - Document
+N - Make a FirewallIPs to correspond to firewallPorts so I can use Tor at
+    MIT when my directory is out of date.
   - switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back, out if we decide we prefer it the way it already is. hm.
@@ -191,7 +202,6 @@ Reach (deferrable) items for 0.1.1.x:
 
 For 0.1.1.x, if we can figure out how:
   - rewrite how libevent does select() on win32 so it's not so very slow.
-  - helper nodes (at least preliminary)
   - enclaves (at least preliminary)
   - Write limiting; separate token bucket for write
   - Audit everything to make sure rend and intro points are just as likely to
