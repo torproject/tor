@@ -47,7 +47,7 @@ typedef struct config_abbrev_t {
 #define PLURAL(tok) { #tok, #tok "s", 0 }
 
 /* A list of command-line abbreviations. */
-static config_abbrev_t config_abbrevs[] = {
+static config_abbrev_t _config_abbrevs[] = {
   PLURAL(ExitNode),
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
@@ -92,7 +92,7 @@ typedef struct config_var_t {
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
  */
-static config_var_t config_vars[] = {
+static config_var_t _config_vars[] = {
   VAR("Address",             STRING,   Address,              NULL),
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
@@ -187,15 +187,33 @@ static config_var_t config_vars[] = {
 #undef VAR
 #undef OBSOLETE
 
+typedef int (*validate_fn_t)(void*);
+
+typedef struct {
+  size_t size;
+  uint32_t magic;
+  off_t magic_offset;
+  config_abbrev_t *abbrevs;
+  config_var_t *vars;
+  validate_fn_t validate_fn;
+} config_format_t;
+
+#define CHECK(fmt, cfg) do {                                            \
+    tor_assert(fmt && cfg);                                             \
+    tor_assert((fmt)->magic == *(uint32_t*)(((char*)(cfg))+fmt->magic_offset)); \
+  } while (0)
+
 /** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
 static void config_line_append(struct config_line_t **lst,
                                const char *key, const char *val);
-static void option_reset(or_options_t *options, config_var_t *var);
-static void options_free(or_options_t *options);
-static int option_is_same(or_options_t *o1, or_options_t *o2,const char *name);
-static or_options_t *options_dup(or_options_t *old);
+static void option_reset(config_format_t *fmt, or_options_t *options,
+                         config_var_t *var);
+static void options_free(config_format_t *fmt, or_options_t *options);
+static int option_is_same(config_format_t *fmt,
+                          or_options_t *o1, or_options_t *o2,const char *name);
+static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
 static int options_validate(or_options_t *options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
 static int check_nickname_list(const char *lst, const char *name);
@@ -215,6 +233,9 @@ static int add_single_log_option(or_options_t *options, int minSeverity,
 static int normalize_log_options(or_options_t *options);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
+static struct config_line_t *get_assigned_option(config_format_t *fmt,
+                                     or_options_t *options, const char *key);
+static void config_init(config_format_t *fmt, or_options_t *options);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
@@ -224,6 +245,17 @@ static int init_libevent(void);
 static void check_libevent_version(const char *m, const char *v, int server);
 #endif
 
+#define OR_OPTIONS_MAGIC 9090909
+
+static config_format_t config_format = {
+  sizeof(or_options_t),
+  OR_OPTIONS_MAGIC,
+  STRUCT_OFFSET(or_options_t, _magic),
+  _config_abbrevs,
+  _config_vars,
+  (validate_fn_t)options_validate
+};
+
 /*
  * Functions to read and write the global options pointer.
  */
@@ -232,6 +264,15 @@ static void check_libevent_version(const char *m, const char *v, int server);
 static or_options_t *global_options=NULL;
 /** Name of most recently read torrc file. */
 static char *config_fname = NULL;
+
+static void *
+config_alloc(config_format_t *fmt)
+{
+  void *opts = opts = tor_malloc_zero(fmt->size);
+  *(uint32_t*)(((char*)opts)+fmt->magic_offset) = fmt->magic;
+  CHECK(fmt, opts);
+  return opts;
+}
 
 /** Return the currently configured options. */
 or_options_t *
@@ -248,14 +289,14 @@ void
 set_options(or_options_t *new_val)
 {
   if (global_options)
-    options_free(global_options);
+    options_free(&config_format, global_options);
   global_options = new_val;
 }
 
 void
 config_free_all(void)
 {
-  options_free(global_options);
+  options_free(&config_format, global_options);
   tor_free(config_fname);
 }
 
@@ -417,14 +458,16 @@ options_act(void)
  * If <b>command_line</b> is set, apply all abbreviations.  Otherwise, only
  * apply abbreviations that work for the config file and the command line. */
 static const char *
-expand_abbrev(const char *option, int command_line)
+expand_abbrev(config_format_t *fmt, const char *option, int command_line)
 {
   int i;
-  for (i=0; config_abbrevs[i].abbreviated; ++i) {
+  if (! fmt->abbrevs)
+    return option;
+  for (i=0; fmt->abbrevs[i].abbreviated; ++i) {
     /* Abbreviations aren't casei. */
-    if (!strcasecmp(option,config_abbrevs[i].abbreviated) &&
-        (command_line || !config_abbrevs[i].commandline_only)) {
-      return config_abbrevs[i].full;
+    if (!strcasecmp(option,fmt->abbrevs[i].abbreviated) &&
+        (command_line || !fmt->abbrevs[i].commandline_only)) {
+      return fmt->abbrevs[i].full;
     }
   }
   return option;
@@ -458,7 +501,7 @@ config_get_commandlines(int argc, char **argv)
     while (*s == '-')
       s++;
 
-    (*new)->key = tor_strdup(expand_abbrev(s, 1));
+    (*new)->key = tor_strdup(expand_abbrev(&config_format, s, 1));
     (*new)->value = tor_strdup(argv[i+1]);
     (*new)->next = NULL;
     log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
@@ -545,24 +588,24 @@ config_free_lines(struct config_line_t *front)
  * warn, and return the corresponding config_var_t.  Otherwise return NULL.
  */
 static config_var_t *
-config_find_option(const char *key)
+config_find_option(config_format_t *fmt, const char *key)
 {
   int i;
   size_t keylen = strlen(key);
   if (!keylen)
     return NULL; /* if they say "--" on the commandline, it's not an option */
   /* First, check for an exact (case-insensitive) match */
-  for (i=0; config_vars[i].name; ++i) {
-    if (!strcasecmp(key, config_vars[i].name))
-      return &config_vars[i];
+  for (i=0; fmt->vars[i].name; ++i) {
+    if (!strcasecmp(key, fmt->vars[i].name))
+      return &fmt->vars[i];
   }
   /* If none, check for an abbreviated match */
-  for (i=0; config_vars[i].name; ++i) {
-    if (!strncasecmp(key, config_vars[i].name, keylen)) {
+  for (i=0; fmt->vars[i].name; ++i) {
+    if (!strncasecmp(key, fmt->vars[i].name, keylen)) {
       log_fn(LOG_WARN, "The abbreviation '%s' is deprecated. "
           "Tell Nick and Roger to make it official, or just use '%s' instead",
-             key, config_vars[i].name);
-      return &config_vars[i];
+             key, fmt->vars[i].name);
+      return &fmt->vars[i];
     }
   }
   /* Okay, unrecognized options */
@@ -577,13 +620,16 @@ config_find_option(const char *key)
  * option to its default value.
  */
 static int
-config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
+config_assign_line(config_format_t *fmt,
+                   or_options_t *options, struct config_line_t *c, int reset)
 {
   int i, ok;
   config_var_t *var;
   void *lvalue;
 
-  var = config_find_option(c->key);
+  CHECK(fmt, options);
+
+  var = config_find_option(fmt, c->key);
   if (!var) {
     log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", c->key);
     return -1;
@@ -595,7 +641,7 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
   }
 
   if (reset && !strlen(c->value)) {
-    option_reset(options, var);
+    option_reset(fmt, options, var);
     return 0;
   }
 
@@ -680,22 +726,24 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
 
 /** restore the option named <b>key</b> in options to its default value. */
 static void
-config_reset_line(or_options_t *options, const char *key)
+config_reset_line(config_format_t *fmt, or_options_t *options, const char *key)
 {
   config_var_t *var;
 
-  var = config_find_option(key);
+  CHECK(fmt, options);
+
+  var = config_find_option(fmt, key);
   if (!var)
     return; /* give error on next pass. */
 
-  option_reset(options, var);
+  option_reset(fmt, options, var);
 }
 
 /** Return true iff key is a valid configuration option. */
 int
 config_option_is_recognized(const char *key)
 {
-  config_var_t *var = config_find_option(key);
+  config_var_t *var = config_find_option(&config_format, key);
   return (var != NULL);
 }
 
@@ -703,14 +751,21 @@ config_option_is_recognized(const char *key)
 const char *
 config_option_get_canonical_name(const char *key)
 {
-  config_var_t *var = config_find_option(key);
+  config_var_t *var = config_find_option(&config_format, key);
   return var->name;
 }
+
 
 /** Return a canonicalized list of the options assigned for key.
  */
 struct config_line_t *
 config_get_assigned_option(or_options_t *options, const char *key)
+{
+  return get_assigned_option(&config_format, options, key);
+}
+
+static struct config_line_t *
+get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key)
 {
   config_var_t *var;
   const void *value;
@@ -718,7 +773,9 @@ config_get_assigned_option(or_options_t *options, const char *key)
   struct config_line_t *result;
   tor_assert(options && key);
 
-  var = config_find_option(key);
+  CHECK(fmt, options);
+
+  var = config_find_option(fmt, key);
   if (!var) {
     log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", key);
     return NULL;
@@ -808,14 +865,16 @@ config_get_assigned_option(or_options_t *options, const char *key)
  * -2 on bad value.
  */
 static int
-config_assign(or_options_t *options, struct config_line_t *list, int reset)
+config_assign(config_format_t *fmt,
+              or_options_t *options, struct config_line_t *list, int reset)
 {
   struct config_line_t *p;
-  tor_assert(options);
+
+  CHECK(fmt, options);
 
   /* pass 1: normalize keys */
   for (p = list; p; p = p->next) {
-    const char *full = expand_abbrev(p->key, 0);
+    const char *full = expand_abbrev(fmt, p->key, 0);
     if (strcmp(full,p->key)) {
       tor_free(p->key);
       p->key = tor_strdup(full);
@@ -826,13 +885,13 @@ config_assign(or_options_t *options, struct config_line_t *list, int reset)
    * linelists. */
   if (reset) {
     for (p = list; p; p = p->next)
-      config_reset_line(options, p->key);
+      config_reset_line(fmt, options, p->key);
   }
 
   /* pass 3: assign. */
   while (list) {
     int r;
-    if ((r=config_assign_line(options, list, reset)))
+    if ((r=config_assign_line(fmt, options, list, reset)))
       return r;
     list = list->next;
   }
@@ -849,20 +908,20 @@ int
 config_trial_assign(struct config_line_t *list, int reset)
 {
   int r;
-  or_options_t *trial_options = options_dup(get_options());
+  or_options_t *trial_options = options_dup(&config_format, get_options());
 
-  if ((r=config_assign(trial_options, list, reset)) < 0) {
-    options_free(trial_options);
+  if ((r=config_assign(&config_format, trial_options, list, reset)) < 0) {
+    options_free(&config_format, trial_options);
     return r;
   }
 
   if (options_validate(trial_options) < 0) {
-    options_free(trial_options);
+    options_free(&config_format, trial_options);
     return -2;
   }
 
   if (options_transition_allowed(get_options(), trial_options) < 0) {
-    options_free(trial_options);
+    options_free(&config_format, trial_options);
     return -3;
   }
 
@@ -873,10 +932,12 @@ config_trial_assign(struct config_line_t *list, int reset)
 /** Replace the option indexed by <b>var</b> in <b>options</b> with its
  * default value. */
 static void
-option_reset(or_options_t *options, config_var_t *var)
+option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
 {
   struct config_line_t *c;
   void *lvalue;
+
+  CHECK(fmt, options);
 
   lvalue = ((char*)options) + var->var_offset;
   switch (var->type) {
@@ -916,7 +977,7 @@ option_reset(or_options_t *options, config_var_t *var)
     c = tor_malloc_zero(sizeof(struct config_line_t));
     c->key = tor_strdup(var->name);
     c->value = tor_strdup(var->initvalue);
-    config_assign_line(options,c,0);
+    config_assign_line(fmt, options,c,0);
     config_free_lines(c);
   }
 }
@@ -1071,16 +1132,16 @@ get_default_nickname(void)
 
 /** Release storage held by <b>options</b> */
 static void
-options_free(or_options_t *options)
+options_free(config_format_t *fmt,or_options_t *options)
 {
   int i;
   void *lvalue;
 
   tor_assert(options);
 
-  for (i=0; config_vars[i].name; ++i) {
-    lvalue = ((char*)options) + config_vars[i].var_offset;
-    switch (config_vars[i].type) {
+  for (i=0; fmt->vars[i].name; ++i) {
+    lvalue = ((char*)options) + fmt->vars[i].var_offset;
+    switch (fmt->vars[i].type) {
       case CONFIG_TYPE_MEMUNIT:
       case CONFIG_TYPE_INTERVAL:
       case CONFIG_TYPE_UINT:
@@ -1115,12 +1176,16 @@ options_free(or_options_t *options)
  * and <b>o2</b>.  Must not be called for LINELIST_S or OBSOLETE options.
  */
 static int
-option_is_same(or_options_t *o1, or_options_t *o2, const char *name)
+option_is_same(config_format_t *fmt,
+               or_options_t *o1, or_options_t *o2, const char *name)
 {
   struct config_line_t *c1, *c2;
   int r = 1;
-  c1 = config_get_assigned_option(o1, name);
-  c2 = config_get_assigned_option(o2, name);
+  CHECK(fmt, o1);
+  CHECK(fmt, o2);
+
+  c1 = get_assigned_option(fmt, o1, name);
+  c2 = get_assigned_option(fmt, o2, name);
   while (c1 && c2) {
     if (strcasecmp(c1->key, c2->key) ||
         strcmp(c1->value, c2->value)) {
@@ -1140,21 +1205,21 @@ option_is_same(or_options_t *o1, or_options_t *o2, const char *name)
 
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
 static or_options_t *
-options_dup(or_options_t *old)
+options_dup(config_format_t *fmt, or_options_t *old)
 {
   or_options_t *newopts;
   int i;
   struct config_line_t *line;
 
-  newopts = tor_malloc_zero(sizeof(or_options_t));
-  for (i=0; config_vars[i].name; ++i) {
-    if (config_vars[i].type == CONFIG_TYPE_LINELIST_S)
+  newopts = config_alloc(fmt);
+  for (i=0; fmt->vars[i].name; ++i) {
+    if (fmt->vars[i].type == CONFIG_TYPE_LINELIST_S)
       continue;
-    if (config_vars[i].type == CONFIG_TYPE_OBSOLETE)
+    if (fmt->vars[i].type == CONFIG_TYPE_OBSOLETE)
       continue;
-    line = config_get_assigned_option(old, config_vars[i].name);
+    line = get_assigned_option(fmt, old, fmt->vars[i].name);
     if (line) {
-      if (config_assign(newopts, line, 0) < 0) {
+      if (config_assign(fmt, newopts, line, 0) < 0) {
         log_fn(LOG_WARN,"Bug: config_get_assigned_option() generated "
                "something we couldn't config_assign().");
         tor_assert(0);
@@ -1170,23 +1235,26 @@ options_dup(or_options_t *old)
 void
 options_init(or_options_t *options)
 {
+  config_init(&config_format, options);
+}
+
+static void
+config_init(config_format_t *fmt, or_options_t *options)
+{
   int i;
   config_var_t *var;
+  CHECK(fmt, options);
 
-  for (i=0; config_vars[i].name; ++i) {
-    var = &config_vars[i];
+  for (i=0; fmt->vars[i].name; ++i) {
+    var = &fmt->vars[i];
     if (!var->initvalue)
       continue; /* defaults to NULL or 0 */
-    option_reset(options, var);
+    option_reset(fmt, options, var);
   }
 }
 
-/** Return a string containing a possible configuration file that would give
- * the configuration in <b>options</b>.  If <b>minimal</b> is true, do not
- * include options that are the same as Tor's defaults.
- */
-char *
-config_dump_options(or_options_t *options, int minimal)
+static char *
+config_dump(config_format_t *fmt, or_options_t *options, int minimal)
 {
   smartlist_t *elements;
   or_options_t *defaults;
@@ -1194,21 +1262,21 @@ config_dump_options(or_options_t *options, int minimal)
   char *result;
   int i;
 
-  defaults = tor_malloc_zero(sizeof(or_options_t));
-  options_init(defaults);
-  options_validate(defaults); /* ??? will this work? */
+  defaults = config_alloc(fmt);
+  config_init(fmt, defaults);
+  fmt->validate_fn(options);
 
   elements = smartlist_create();
-  for (i=0; config_vars[i].name; ++i) {
-    if (config_vars[i].type == CONFIG_TYPE_OBSOLETE ||
-        config_vars[i].type == CONFIG_TYPE_LINELIST_S)
+  for (i=0; fmt->vars[i].name; ++i) {
+    if (fmt->vars[i].type == CONFIG_TYPE_OBSOLETE ||
+        fmt->vars[i].type == CONFIG_TYPE_LINELIST_S)
       continue;
     /* Don't save 'hidden' control variables. */
-    if (!strcmpstart(config_vars[i].name, "__"))
+    if (!strcmpstart(fmt->vars[i].name, "__"))
       continue;
-    if (minimal && option_is_same(options, defaults, config_vars[i].name))
+    if (minimal && option_is_same(fmt, options, defaults, fmt->vars[i].name))
       continue;
-    line = config_get_assigned_option(options, config_vars[i].name);
+    line = get_assigned_option(fmt, options, fmt->vars[i].name);
     for (; line; line = line->next) {
       size_t len = strlen(line->key) + strlen(line->value) + 3;
       char *tmp;
@@ -1226,6 +1294,16 @@ config_dump_options(or_options_t *options, int minimal)
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
   return result;
+}
+
+/** Return a string containing a possible configuration file that would give
+ * the configuration in <b>options</b>.  If <b>minimal</b> is true, do not
+ * include options that are the same as Tor's defaults.
+ */
+char *
+config_dump_options(or_options_t *options, int minimal)
+{
+  return config_dump(&config_format, options, minimal);
 }
 
 static int
@@ -1809,6 +1887,7 @@ init_from_config(int argc, char **argv)
   }
 
   newoptions = tor_malloc_zero(sizeof(or_options_t));
+  newoptions->_magic = OR_OPTIONS_MAGIC;
   options_init(newoptions);
 
   /* learn config file name, get config lines, assign them */
@@ -1875,7 +1954,7 @@ init_from_config(int argc, char **argv)
     tor_free(cf);
     if (retval < 0)
       goto err;
-    retval = config_assign(newoptions, cl, 0);
+    retval = config_assign(&config_format, newoptions, cl, 0);
     config_free_lines(cl);
     if (retval < 0)
       goto err;
@@ -1883,7 +1962,7 @@ init_from_config(int argc, char **argv)
 
   /* Go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
-  retval = config_assign(newoptions,cl,0);
+  retval = config_assign(&config_format, newoptions,cl,0);
   config_free_lines(cl);
   if (retval < 0)
     goto err;
@@ -1905,7 +1984,7 @@ init_from_config(int argc, char **argv)
   return 0;
  err:
   tor_free(fname);
-  options_free(newoptions);
+  options_free(&config_format, newoptions);
   return -1;
 }
 
