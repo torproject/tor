@@ -72,14 +72,14 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   set_uint16(cp, htons((uint16_t)desc->n_intro_points));
   cp += 2;
   if (version == 0) {
-    tor_assert(desc->intro_points);
     for (i=0; i < desc->n_intro_points; ++i) {
       char *ipoint = (char*)desc->intro_points[i];
       strlcpy(cp, ipoint, *len_out-(cp-*str_out));
       cp += strlen(ipoint)+1;
     }
   } else {
-    tor_assert(desc->intro_point_extend_info);
+    if (desc->n_intro_points)
+      tor_assert(desc->intro_point_extend_info);
     for (i=0; i < desc->n_intro_points; ++i) {
       extend_info_t *info = desc->intro_point_extend_info[i];
       int klen;
@@ -144,9 +144,9 @@ rend_parse_service_descriptor(const char *str, size_t len)
   }
   if (end-cp < 2) goto truncated;
   result->n_intro_points = ntohs(get_uint16(cp));
-
   cp += 2;
-  if (version == 0) {
+
+  if (version == 0 && result->n_intro_points != 0) {
     result->intro_points = tor_malloc_zero(sizeof(char*)*result->n_intro_points);
     for (i=0;i<result->n_intro_points;++i) {
       if (end-cp < 2) goto truncated;
@@ -155,7 +155,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
       result->intro_points[i] = tor_strdup(cp);
       cp = eos+1;
     }
-  } else {
+  } else if (version != 0 && result->n_intro_points != 0) {
     result->intro_point_extend_info =
       tor_malloc_zero(sizeof(extend_info_t*)*result->n_intro_points);
     result->intro_points = tor_malloc_zero(sizeof(char*)*result->n_intro_points);
