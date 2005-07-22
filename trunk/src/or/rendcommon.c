@@ -53,7 +53,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   char *end;
   int i;
   size_t asn1len;
-  cp = *str_out = tor_malloc(PK_BYTES*2*(desc->n_intro_points+1)); /*Too long, but ok*/
+  cp = *str_out = tor_malloc(PK_BYTES*2*(desc->n_intro_points+2)); /*Too long, but ok*/
   end = cp + PK_BYTES*2*(desc->n_intro_points+1);
   if (version) {
     *(uint8_t*)cp = (uint8_t)0xff;
