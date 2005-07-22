@@ -179,6 +179,8 @@ static config_var_t config_vars[] = {
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
+  VAR("UseHelperNodes",      BOOL,     UseHelperNodes,       "0"),
+  VAR("NumHelperNodes",      UINT,     NumHelperNodes,       "3"),
   VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -1561,6 +1563,11 @@ options_validate(or_options_t *options)
   }
   if (options->HashedControlPassword && options->CookieAuthentication) {
     log_fn(LOG_WARN,"Cannot enable both HashedControlPassword and CookieAuthentication");
+    result = -1;
+  }
+
+  if (options->UseHelperNodes && ! options->NumHelperNodes) {
+    log_fn(LOG_WARN, "Cannot enable UseHelperNodes with NumHelperNodes set to 0");
     result = -1;
   }
 

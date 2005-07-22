@@ -100,6 +100,8 @@ static void accounting_set_wakeup_time(void);
  * Functions for bandwidth accounting.
  * ************/
 
+
+
 /** Configure accounting start/end time settings based on
  * options->AccountingStart.  Return 0 on success, -1 on failure. If
  * <b>validate_only</b> is true, do not change the current settings. */
@@ -846,3 +848,41 @@ consider_hibernation(time_t now)
   }
 }
 
+/** DOCDOC */
+int
+accounting_getinfo_helper(const char *question, char **answer)
+{
+  if (!strcmp(question, "accounting/enabled")) {
+    *answer = tor_strdup(get_options()->AccountingMax ? "1" : "0");
+  } else if (!strcmp(question, "accounting/hibernating")) {
+    if (hibernate_state == HIBERNATE_STATE_DORMANT)
+      *answer = tor_strdup("hard");
+    else if (hibernate_state == HIBERNATE_STATE_LOWBANDWIDTH)
+      *answer = tor_strdup("soft");
+    else
+      *answer = tor_strdup("awake");
+  } else if (!strcmp(question, "accounting/bytes")) {
+    *answer = tor_malloc(32);
+    tor_snprintf(*answer, 32, U64_FORMAT" "U64_FORMAT,
+                 U64_PRINTF_ARG(n_bytes_read_in_interval),
+                 U64_PRINTF_ARG(n_bytes_written_in_interval));
+  } else if (!strcmp(question, "accounting/bytes-left")) {
+    *answer = tor_malloc(32);
+    uint64_t limit = get_options()->AccountingMax;
+    tor_snprintf(*answer, 32, U64_FORMAT" "U64_FORMAT,
+                 U64_PRINTF_ARG(limit - n_bytes_read_in_interval),
+                 U64_PRINTF_ARG(limit - n_bytes_written_in_interval));
+  } else if (!strcmp(question, "accounting/interval-start")) {
+    *answer = tor_malloc(ISO_TIME_LEN+1);
+    format_iso_time(*answer, interval_start_time);
+  } else if (!strcmp(question, "accounting/interval-wake")) {
+    *answer = tor_malloc(ISO_TIME_LEN+1);
+    format_iso_time(*answer, interval_wakeup_time);
+  } else if (!strcmp(question, "accounting/interval-end")) {
+    *answer = tor_malloc(ISO_TIME_LEN+1);
+    format_iso_time(*answer, interval_end_time);
+  } else {
+    *answer = NULL;
+  }
+  return 0;
+}

@@ -1164,6 +1164,9 @@ typedef struct {
                     * such as addresses (0), or do we scrub them first (1)? */
   int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
                       * acceleration where available? */
+  int UseHelperNodes; /**< Boolean: Do we try to enter from a smallish number
+                       * of fixed nodes? */
+  int NumHelperNodes; /**< How many helper nodes do we try to establish? */
 } or_options_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024
@@ -1619,6 +1622,8 @@ int accounting_record_bandwidth_usage(time_t now);
 void hibernate_begin_shutdown(void);
 int we_are_hibernating(void);
 void consider_hibernation(time_t now);
+int accounting_getinfo_helper(const char *question, char **answer);
+
 
 /********************************* main.c ***************************/
 
