@@ -86,7 +86,7 @@ get_unique_circ_id_by_conn(connection_t *conn)
 char *
 circuit_list_path(circuit_t *circ, int verbose)
 {
-  struct crypt_path_t *hop;
+  crypt_path_t *hop;
   smartlist_t *elements;
   const char *states[] = {"closed", "waiting for keys", "open"};
   char buf[128];
@@ -156,7 +156,7 @@ circuit_log_path(int severity, circuit_t *circ)
 void
 circuit_rep_hist_note_result(circuit_t *circ)
 {
-  struct crypt_path_t *hop;
+  crypt_path_t *hop;
   char *prev_digest = NULL;
   routerinfo_t *router;
   hop = circ->cpath;

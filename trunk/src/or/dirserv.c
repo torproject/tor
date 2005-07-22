@@ -96,7 +96,7 @@ dirserv_parse_fingerprint_file(const char *fname)
   char *nickname, *fingerprint;
   smartlist_t *fingerprint_list_new;
   int result;
-  struct config_line_t *front=NULL, *list;
+  config_line_t *front=NULL, *list;
 
   cf = read_file_to_str(fname, 0);
   if (!cf) {
@@ -608,7 +608,7 @@ dirserv_dump_directory_to_string(char **dir_out,
 
   {
     smartlist_t *versions;
-    struct config_line_t *ln;
+    config_line_t *ln;
     versions = smartlist_create();
     for (ln = get_options()->RecommendedVersions; ln; ln = ln->next) {
       smartlist_split_string(versions, ln->value, ",",

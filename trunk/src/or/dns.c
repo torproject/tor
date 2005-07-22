@@ -45,17 +45,17 @@ static int num_dnsworkers_busy=0;
 static time_t last_rotation_time=0;
 
 /** Linked list of connections waiting for a DNS answer. */
-struct pending_connection_t {
-  struct connection_t *conn;
+typedef struct pending_connection_t {
+  connection_t *conn;
   struct pending_connection_t *next;
-};
+} pending_connection_t;
 
 /** A DNS request: possibly completed, possibly pending; cached_resolve
  * structs are stored at the OR side in a splay tree, and as a linked
  * list from oldest to newest.
  */
-struct cached_resolve {
-  SPLAY_ENTRY(cached_resolve) node;
+typedef struct cached_resolve_t {
+  SPLAY_ENTRY(cached_resolve_t) node;
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
   uint32_t addr; /**< IPv4 addr for <b>address</b>. */
   char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve failed. */
@@ -63,13 +63,13 @@ struct cached_resolve {
 #define CACHE_STATE_VALID 1
 #define CACHE_STATE_FAILED 2
   uint32_t expire; /**< Remove items from cache after this time. */
-  struct pending_connection_t *pending_connections;
-  struct cached_resolve *next;
-};
+  pending_connection_t *pending_connections;
+  struct cached_resolve_t *next;
+} cached_resolve_t;
 
 static void purge_expired_resolves(uint32_t now);
 static int assign_to_dnsworker(connection_t *exitconn);
-static void dns_purge_resolve(struct cached_resolve *resolve);
+static void dns_purge_resolve(cached_resolve_t *resolve);
 static void dns_found_answer(char *address, uint32_t addr, char outcome);
 static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
@@ -77,18 +77,18 @@ static void spawn_enough_dnsworkers(void);
 static void send_resolved_cell(connection_t *conn, uint8_t answer_type);
 
 /** Splay tree of cached_resolve objects. */
-static SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
+static SPLAY_HEAD(cache_tree, cached_resolve_t) cache_root;
 
 /** Function to compare hashed resolves on their addresses; used to
  * implement splay trees. */
-static int compare_cached_resolves(struct cached_resolve *a,
-                                   struct cached_resolve *b) {
+static int compare_cached_resolves(cached_resolve_t *a,
+                                   cached_resolve_t *b) {
   /* make this smarter one day? */
   return strncmp(a->address, b->address, MAX_ADDRESSLEN);
 }
 
-SPLAY_PROTOTYPE(cache_tree, cached_resolve, node, compare_cached_resolves);
-SPLAY_GENERATE(cache_tree, cached_resolve, node, compare_cached_resolves);
+SPLAY_PROTOTYPE(cache_tree, cached_resolve_t, node, compare_cached_resolves);
+SPLAY_GENERATE(cache_tree, cached_resolve_t, node, compare_cached_resolves);
 
 /** Initialize the DNS cache. */
 static void
@@ -108,10 +108,10 @@ dns_init(void)
 
 /** Helper: free storage held by an entry in the DNS cache. */
 static void
-_free_cached_resolve(struct cached_resolve *r)
+_free_cached_resolve(cached_resolve_t *r)
 {
   while (r->pending_connections) {
-    struct pending_connection_t *victim = r->pending_connections;
+    pending_connection_t *victim = r->pending_connections;
     r->pending_connections = victim->next;
     tor_free(victim);
   }
@@ -122,7 +122,7 @@ _free_cached_resolve(struct cached_resolve *r)
 void
 dns_free_all(void)
 {
-  struct cached_resolve *ptr, *next;
+  cached_resolve_t *ptr, *next;
   for (ptr = SPLAY_MIN(cache_tree, &cache_root); ptr != NULL; ptr = next) {
     next = SPLAY_NEXT(cache_tree, &cache_root, ptr);
     SPLAY_REMOVE(cache_tree, &cache_root, ptr);
@@ -131,16 +131,16 @@ dns_free_all(void)
 }
 
 /** Linked list of resolved addresses, oldest to newest. */
-static struct cached_resolve *oldest_cached_resolve = NULL;
-static struct cached_resolve *newest_cached_resolve = NULL;
+static cached_resolve_t *oldest_cached_resolve = NULL;
+static cached_resolve_t *newest_cached_resolve = NULL;
 
 /** Remove every cached_resolve whose <b>expire</b> time is before <b>now</b>
  * from the cache. */
 static void
 purge_expired_resolves(uint32_t now)
 {
-  struct cached_resolve *resolve;
-  struct pending_connection_t *pend;
+  cached_resolve_t *resolve;
+  pending_connection_t *pend;
   connection_t *pendconn;
 
   /* this is fast because the linked list
@@ -212,7 +212,7 @@ send_resolved_cell(connection_t *conn, uint8_t answer_type)
 /** Link <b>r</b> into the tree of address-to-result mappings, and add it to
  * the linked list of resolves-by-age. */
 static void
-insert_resolve(struct cached_resolve *r)
+insert_resolve(cached_resolve_t *r)
 {
   /* add us to the linked list of resolves */
   if (!oldest_cached_resolve) {
@@ -238,9 +238,9 @@ insert_resolve(struct cached_resolve *r)
 int
 dns_resolve(connection_t *exitconn)
 {
-  struct cached_resolve *resolve;
-  struct cached_resolve search;
-  struct pending_connection_t *pending_connection;
+  cached_resolve_t *resolve;
+  cached_resolve_t search;
+  pending_connection_t *pending_connection;
   struct in_addr in;
   circuit_t *circ;
   uint32_t now = time(NULL);
@@ -271,7 +271,7 @@ dns_resolve(connection_t *exitconn)
       case CACHE_STATE_PENDING:
         /* add us to the pending list */
         pending_connection = tor_malloc_zero(
-                                      sizeof(struct pending_connection_t));
+                                      sizeof(pending_connection_t));
         pending_connection->conn = exitconn;
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
@@ -301,13 +301,13 @@ dns_resolve(connection_t *exitconn)
     tor_assert(0);
   }
   /* not there, need to add it */
-  resolve = tor_malloc_zero(sizeof(struct cached_resolve));
+  resolve = tor_malloc_zero(sizeof(cached_resolve_t));
   resolve->state = CACHE_STATE_PENDING;
   resolve->expire = now + MAX_DNS_ENTRY_AGE;
   strlcpy(resolve->address, exitconn->address, sizeof(resolve->address));
 
   /* add us to the pending list */
-  pending_connection = tor_malloc_zero(sizeof(struct pending_connection_t));
+  pending_connection = tor_malloc_zero(sizeof(pending_connection_t));
   pending_connection->conn = exitconn;
   resolve->pending_connections = pending_connection;
   exitconn->state = EXIT_CONN_STATE_RESOLVING;
@@ -360,9 +360,9 @@ assign_to_dnsworker(connection_t *exitconn)
 void
 connection_dns_remove(connection_t *conn)
 {
-  struct pending_connection_t *pend, *victim;
-  struct cached_resolve search;
-  struct cached_resolve *resolve;
+  pending_connection_t *pend, *victim;
+  cached_resolve_t search;
+  cached_resolve_t *resolve;
 
   tor_assert(conn->type == CONN_TYPE_EXIT);
   tor_assert(conn->state == EXIT_CONN_STATE_RESOLVING);
@@ -406,8 +406,8 @@ connection_dns_remove(connection_t *conn)
 void
 assert_connection_edge_not_dns_pending(connection_t *conn)
 {
-  struct pending_connection_t *pend;
-  struct cached_resolve *resolve;
+  pending_connection_t *pend;
+  cached_resolve_t *resolve;
 
   SPLAY_FOREACH(resolve, cache_tree, &cache_root) {
     for (pend = resolve->pending_connections;
@@ -423,8 +423,8 @@ assert_connection_edge_not_dns_pending(connection_t *conn)
 void
 assert_all_pending_dns_resolves_ok(void)
 {
-  struct pending_connection_t *pend;
-  struct cached_resolve *resolve;
+  pending_connection_t *pend;
+  cached_resolve_t *resolve;
 
   SPLAY_FOREACH(resolve, cache_tree, &cache_root) {
     for (pend = resolve->pending_connections;
@@ -444,9 +444,9 @@ assert_all_pending_dns_resolves_ok(void)
 void
 dns_cancel_pending_resolve(char *address)
 {
-  struct pending_connection_t *pend;
-  struct cached_resolve search;
-  struct cached_resolve *resolve;
+  pending_connection_t *pend;
+  cached_resolve_t search;
+  cached_resolve_t *resolve;
   connection_t *pendconn;
   circuit_t *circ;
 
@@ -493,9 +493,9 @@ dns_cancel_pending_resolve(char *address)
 /** Remove <b>resolve</b> from the cache.
  */
 static void
-dns_purge_resolve(struct cached_resolve *resolve)
+dns_purge_resolve(cached_resolve_t *resolve)
 {
-  struct cached_resolve *tmp;
+  cached_resolve_t *tmp;
 
   /* remove resolve from the linked list */
   if (resolve == oldest_cached_resolve) {
@@ -528,9 +528,9 @@ dns_purge_resolve(struct cached_resolve *resolve)
 static void
 dns_found_answer(char *address, uint32_t addr, char outcome)
 {
-  struct pending_connection_t *pend;
-  struct cached_resolve search;
-  struct cached_resolve *resolve;
+  pending_connection_t *pend;
+  cached_resolve_t search;
+  cached_resolve_t *resolve;
   connection_t *pendconn;
   circuit_t *circ;
 
@@ -540,7 +540,7 @@ dns_found_answer(char *address, uint32_t addr, char outcome)
   if (!resolve) {
     log_fn(LOG_INFO,"Resolved unasked address '%s'; caching anyway.",
            safe_str(address));
-    resolve = tor_malloc_zero(sizeof(struct cached_resolve));
+    resolve = tor_malloc_zero(sizeof(cached_resolve_t));
     resolve->state = (outcome == DNS_RESOLVE_SUCCEEDED) ?
       CACHE_STATE_VALID : CACHE_STATE_FAILED;
     resolve->addr = addr;

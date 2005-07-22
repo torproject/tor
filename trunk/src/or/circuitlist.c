@@ -26,19 +26,19 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 
 /** A map from OR connection and circuit ID to circuit.  (Lookup performance is
  * very important here, since we need to do it every time a cell arrives.) */
-struct orconn_circid_circuit_map_t {
+typedef struct orconn_circid_circuit_map_t {
   RB_ENTRY(orconn_circid_circuit_map_t) node;
   connection_t *or_conn;
   uint16_t circ_id;
   circuit_t *circuit;
-};
+} orconn_circid_circuit_map_t;
 
 /** Helper for RB tree: compare the OR connection and circuit ID for a and b,
  * and return less than, equal to, or greater than zero appropriately.
  */
 static INLINE int
-compare_orconn_circid_entries(struct orconn_circid_circuit_map_t *a,
-                              struct orconn_circid_circuit_map_t *b)
+compare_orconn_circid_entries(orconn_circid_circuit_map_t *a,
+                              orconn_circid_circuit_map_t *b)
 {
   if (a->or_conn < b->or_conn)
     return -1;
@@ -58,7 +58,7 @@ RB_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orcon
  */
 /* (We tried using splay trees, but round-robin turned out to make them
  * suck.) */
-struct orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
+orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
 /** Set the p_conn or n_conn field of a circuit <b>circ</b>, along
  * with the corresponding circuit ID, and add the circuit as appropriate
@@ -70,8 +70,8 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
 {
   uint16_t old_id;
   connection_t *old_conn;
-  struct orconn_circid_circuit_map_t search;
-  struct orconn_circid_circuit_map_t *found;
+  orconn_circid_circuit_map_t search;
+  orconn_circid_circuit_map_t *found;
 
   tor_assert(!conn || conn->type == CONN_TYPE_OR);
 
@@ -114,7 +114,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
   if (found) {
     found->circuit = circ;
   } else {
-    found = tor_malloc_zero(sizeof(struct orconn_circid_circuit_map_t));
+    found = tor_malloc_zero(sizeof(orconn_circid_circuit_map_t));
     found->circ_id = id;
     found->or_conn = conn;
     found->circuit = circ;
@@ -341,8 +341,8 @@ circuit_get_by_global_id(uint32_t id)
 circuit_t *
 circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
 {
-  struct orconn_circid_circuit_map_t search;
-  struct orconn_circid_circuit_map_t *found;
+  orconn_circid_circuit_map_t search;
+  orconn_circid_circuit_map_t *found;
 
   tor_assert(conn->type == CONN_TYPE_OR);
 

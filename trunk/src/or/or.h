@@ -782,7 +782,7 @@ typedef struct extend_info_t {
 
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
-struct crypt_path_t {
+typedef struct crypt_path_t {
   uint32_t magic;
 
   /* crypto environments */
@@ -827,7 +827,7 @@ struct crypt_path_t {
                        * at this step? */
   int deliver_window; /**< How many bytes are we willing to deliver originating
                        * at this step? */
-};
+} crypt_path_t;
 
 #define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
 
@@ -837,8 +837,6 @@ struct crypt_path_t {
                                  DH_KEY_LEN)
 #define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
 #define REND_COOKIE_LEN DIGEST_LEN
-
-typedef struct crypt_path_t crypt_path_t;
 
 /** Information used to build a circuit. */
 typedef struct {
@@ -853,7 +851,7 @@ typedef struct {
   /** Whether the last hop was picked with exiting in mind. */
   int is_internal;
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
-  struct crypt_path_t *pending_final_cpath;
+  crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
   int failure_count;
   /** At what time should we give up on this task? */
@@ -1015,6 +1013,12 @@ typedef struct exit_redirect_t {
   uint16_t port_dest;
 } exit_redirect_t;
 
+typedef struct config_line_t {
+  char *key;
+  char *value;
+  struct config_line_t *next;
+} config_line_t;
+
 /** Configuration options for a Tor process */
 typedef struct {
   uint32_t _magic;
@@ -1026,10 +1030,10 @@ typedef struct {
   } command;
   const char *command_arg; /**< Argument for command-line option. */
 
-  struct config_line_t *OldLogOptions; /**< List of configuration lines
+  config_line_t *OldLogOptions; /**< List of configuration lines
                                         * for logfiles, old style. */
 
-  struct config_line_t *Logs; /**< New-style list of configuration lines
+  config_line_t *Logs; /**< New-style list of configuration lines
                                * for logs */
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
@@ -1056,20 +1060,20 @@ typedef struct {
 
   smartlist_t *AllowUnverifiedNodes; /**< List of "entry", "middle", "exit" */
   int _AllowUnverified; /**< Bitmask; derived from AllowUnverifiedNodes; */
-  struct config_line_t *ExitPolicy; /**< Lists of exit policy components. */
-  struct config_line_t *SocksPolicy; /**< Lists of socks policy components */
-  struct config_line_t *DirPolicy; /**< Lists of dir policy components */
+  config_line_t *ExitPolicy; /**< Lists of exit policy components. */
+  config_line_t *SocksPolicy; /**< Lists of socks policy components */
+  config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Addresses to bind for listening for SOCKS connections. */
-  struct config_line_t *SocksBindAddress;
+  config_line_t *SocksBindAddress;
   /** Addresses to bind for listening for OR connections. */
-  struct config_line_t *ORBindAddress;
+  config_line_t *ORBindAddress;
   /** Addresses to bind for listening for directory connections. */
-  struct config_line_t *DirBindAddress;
+  config_line_t *DirBindAddress;
   /** Local address to bind outbound sockets */
   char *OutboundBindAddress;
   /** Directory server only: which versions of
    * Tor should we tell users to run? */
-  struct config_line_t *RecommendedVersions;
+  config_line_t *RecommendedVersions;
   /** Whether dirservers refuse router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
@@ -1095,7 +1099,7 @@ typedef struct {
   /** Should we try to reuse the same exit node for a given host */
   smartlist_t *TrackHostExits;
   int TrackHostExitsExpire; /**< Number of seconds until we expire an addressmap */
-  struct config_line_t *AddressMap; /**< List of address map directives. */
+  config_line_t *AddressMap; /**< List of address map directives. */
   int DirFetchPeriod; /**< How often do we fetch new directories? */
   int DirPostPeriod; /**< How often do we post our server descriptor to the
                       * authoritative directory servers? */
@@ -1120,7 +1124,7 @@ typedef struct {
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */
-  struct config_line_t *RendConfigLines; /**< List of configuration lines
+  config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
   char *ContactInfo; /**< Contact info to be published in the directory */
 
@@ -1134,12 +1138,12 @@ typedef struct {
   uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any */
   char *HttpsProxyAuthenticator; /**< username:password string, if any */
 
-  struct config_line_t *DirServers; /**< List of configuration lines
+  config_line_t *DirServers; /**< List of configuration lines
                                      * for directory servers. */
   char *MyFamily; /**< Declared family for this OR. */
-  struct config_line_t *NodeFamilies; /**< List of config lines for
+  config_line_t *NodeFamilies; /**< List of config lines for
                                        * node families */
-  struct config_line_t *RedirectExit; /**< List of config lines for simple
+  config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
   smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
   int _MonthlyAccountingStart; /**< Deprecated: day of month when accounting
@@ -1321,32 +1325,26 @@ extern unsigned long stats_n_destroy_cells_processed;
 
 /********************************* config.c ***************************/
 
-struct config_line_t {
-  char *key;
-  char *value;
-  struct config_line_t *next;
-};
-
 or_options_t *get_options(void);
 void set_options(or_options_t *new_val);
 int options_act(void);
 void config_free_all(void);
 const char *safe_str(const char *address);
 
-int config_get_lines(char *string, struct config_line_t **result);
-void config_free_lines(struct config_line_t *front);
-int config_trial_assign(struct config_line_t *list, int reset);
+int config_get_lines(char *string, config_line_t **result);
+void config_free_lines(config_line_t *front);
+int config_trial_assign(config_line_t *list, int reset);
 int resolve_my_address(or_options_t *options, uint32_t *addr);
 void options_init(or_options_t *options);
 int init_from_config(int argc, char **argv);
 int config_init_logs(or_options_t *options, int validate_only);
-int config_parse_addr_policy(struct config_line_t *cfg,
+int config_parse_addr_policy(config_line_t *cfg,
                              addr_policy_t **dest);
 void config_append_default_exit_policy(addr_policy_t **policy);
 void addr_policy_free(addr_policy_t *p);
 int config_option_is_recognized(const char *key);
 const char *config_option_get_canonical_name(const char *key);
-struct config_line_t *config_get_assigned_option(or_options_t *options,
+config_line_t *config_get_assigned_option(or_options_t *options,
                                                  const char *key);
 char *config_dump_options(or_options_t *options, int minimal);
 int save_current_config(void);
@@ -1628,7 +1626,6 @@ void hibernate_begin_shutdown(void);
 int we_are_hibernating(void);
 void consider_hibernation(time_t now);
 int accounting_getinfo_helper(const char *question, char **answer);
-
 
 /********************************* main.c ***************************/
 

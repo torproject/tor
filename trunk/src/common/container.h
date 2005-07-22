@@ -72,7 +72,6 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 
 /* Map from const char * to void*. Implemented with a splay tree. */
 typedef struct strmap_t strmap_t;
-typedef struct strmap_entry_t strmap_entry_t;
 typedef struct strmap_entry_t strmap_iter_t;
 strmap_t* strmap_new(void);
 void* strmap_set(strmap_t *map, const char *key, void *val);

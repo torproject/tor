@@ -206,7 +206,7 @@ typedef struct {
 /** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
-static void config_line_append(struct config_line_t **lst,
+static void config_line_append(config_line_t **lst,
                                const char *key, const char *val);
 static void option_reset(config_format_t *fmt, or_options_t *options,
                          config_var_t *var);
@@ -221,19 +221,19 @@ static void config_register_addressmaps(or_options_t *options);
 
 static int parse_dir_server_line(const char *line, int validate_only);
 static int parse_redirect_line(smartlist_t *result,
-                               struct config_line_t *line);
+                               config_line_t *line);
 static int parse_log_severity_range(const char *range, int *min_out,
                                     int *max_out);
 static int convert_log_option(or_options_t *options,
-                              struct config_line_t *level_opt,
-                              struct config_line_t *file_opt, int isDaemon);
+                              config_line_t *level_opt,
+                              config_line_t *file_opt, int isDaemon);
 static int add_single_log_option(or_options_t *options, int minSeverity,
                                  int maxSeverity,
                                  const char *type, const char *fname);
 static int normalize_log_options(or_options_t *options);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
-static struct config_line_t *get_assigned_option(config_format_t *fmt,
+static config_line_t *get_assigned_option(config_format_t *fmt,
                                      or_options_t *options, const char *key);
 static void config_init(config_format_t *fmt, or_options_t *options);
 
@@ -325,7 +325,7 @@ safe_str(const char *address)
 int
 options_act(void)
 {
-  struct config_line_t *cl;
+  config_line_t *cl;
   or_options_t *options = get_options();
   static int libevent_initialized = 0;
 
@@ -474,11 +474,11 @@ expand_abbrev(config_format_t *fmt, const char *option, int command_line)
 }
 
 /** Helper: Read a list of configuration options from the command line. */
-static struct config_line_t *
+static config_line_t *
 config_get_commandlines(int argc, char **argv)
 {
-  struct config_line_t *front = NULL;
-  struct config_line_t **new = &front;
+  config_line_t *front = NULL;
+  config_line_t **new = &front;
   char *s;
   int i = 1;
 
@@ -495,7 +495,7 @@ config_get_commandlines(int argc, char **argv)
       continue;
     }
 
-    *new = tor_malloc_zero(sizeof(struct config_line_t));
+    *new = tor_malloc_zero(sizeof(config_line_t));
     s = argv[i];
 
     while (*s == '-')
@@ -516,13 +516,13 @@ config_get_commandlines(int argc, char **argv)
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
  * append it to *<b>lst</b>. */
 static void
-config_line_append(struct config_line_t **lst,
+config_line_append(config_line_t **lst,
                    const char *key,
                    const char *val)
 {
-  struct config_line_t *newline;
+  config_line_t *newline;
 
-  newline = tor_malloc(sizeof(struct config_line_t));
+  newline = tor_malloc(sizeof(config_line_t));
   newline->key = tor_strdup(key);
   newline->value = tor_strdup(val);
   newline->next = NULL;
@@ -537,9 +537,9 @@ config_line_append(struct config_line_t **lst,
  * failed.  Return 0 on success, -1 on failure. Warn and ignore any
  * misformatted lines. */
 int
-config_get_lines(char *string, struct config_line_t **result)
+config_get_lines(char *string, config_line_t **result)
 {
-  struct config_line_t *list = NULL, **next;
+  config_line_t *list = NULL, **next;
   char *k, *v;
 
   next = &list;
@@ -553,7 +553,7 @@ config_get_lines(char *string, struct config_line_t **result)
       /* This list can get long, so we keep a pointer to the end of it
        * rather than using config_line_append over and over and getting n^2
        * performance.  This is the only really long list. */
-      *next = tor_malloc(sizeof(struct config_line_t));
+      *next = tor_malloc(sizeof(config_line_t));
       (*next)->key = tor_strdup(k);
       (*next)->value = tor_strdup(v);
       (*next)->next = NULL;
@@ -569,9 +569,9 @@ config_get_lines(char *string, struct config_line_t **result)
  * Free all the configuration lines on the linked list <b>front</b>.
  */
 void
-config_free_lines(struct config_line_t *front)
+config_free_lines(config_line_t *front)
 {
-  struct config_line_t *tmp;
+  config_line_t *tmp;
 
   while (front) {
     tmp = front;
@@ -621,7 +621,7 @@ config_find_option(config_format_t *fmt, const char *key)
  */
 static int
 config_assign_line(config_format_t *fmt,
-                   or_options_t *options, struct config_line_t *c, int reset)
+                   or_options_t *options, config_line_t *c, int reset)
 {
   int i, ok;
   config_var_t *var;
@@ -708,7 +708,7 @@ config_assign_line(config_format_t *fmt,
 
   case CONFIG_TYPE_LINELIST:
   case CONFIG_TYPE_LINELIST_S:
-    config_line_append((struct config_line_t**)lvalue, c->key, c->value);
+    config_line_append((config_line_t**)lvalue, c->key, c->value);
     break;
 
   case CONFIG_TYPE_OBSOLETE:
@@ -755,22 +755,21 @@ config_option_get_canonical_name(const char *key)
   return var->name;
 }
 
-
 /** Return a canonicalized list of the options assigned for key.
  */
-struct config_line_t *
+config_line_t *
 config_get_assigned_option(or_options_t *options, const char *key)
 {
   return get_assigned_option(&config_format, options, key);
 }
 
-static struct config_line_t *
+static config_line_t *
 get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key)
 {
   config_var_t *var;
   const void *value;
   char buf[32];
-  struct config_line_t *result;
+  config_line_t *result;
   tor_assert(options && key);
 
   CHECK(fmt, options);
@@ -788,10 +787,10 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
   if (var->type == CONFIG_TYPE_LINELIST ||
       var->type == CONFIG_TYPE_LINELIST_V) {
     /* Linelist requires special handling: we just copy and return it. */
-    const struct config_line_t *next_in = *(const struct config_line_t**)value;
-    struct config_line_t **next_out = &result;
+    const config_line_t *next_in = *(const config_line_t**)value;
+    config_line_t **next_out = &result;
     while (next_in) {
-      *next_out = tor_malloc(sizeof(struct config_line_t));
+      *next_out = tor_malloc(sizeof(config_line_t));
       (*next_out)->key = tor_strdup(next_in->key);
       (*next_out)->value = tor_strdup(next_in->value);
       next_in = next_in->next;
@@ -801,7 +800,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
     return result;
   }
 
-  result = tor_malloc_zero(sizeof(struct config_line_t));
+  result = tor_malloc_zero(sizeof(config_line_t));
   result->key = tor_strdup(var->name);
   switch (var->type)
     {
@@ -866,9 +865,9 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
  */
 static int
 config_assign(config_format_t *fmt,
-              or_options_t *options, struct config_line_t *list, int reset)
+              or_options_t *options, config_line_t *list, int reset)
 {
-  struct config_line_t *p;
+  config_line_t *p;
 
   CHECK(fmt, options);
 
@@ -905,7 +904,7 @@ config_assign(config_format_t *fmt,
  * keys, -2 on bad values, -3 on bad transition.
  */
 int
-config_trial_assign(struct config_line_t *list, int reset)
+config_trial_assign(config_line_t *list, int reset)
 {
   int r;
   or_options_t *trial_options = options_dup(&config_format, get_options());
@@ -934,7 +933,7 @@ config_trial_assign(struct config_line_t *list, int reset)
 static void
 option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
 {
-  struct config_line_t *c;
+  config_line_t *c;
   void *lvalue;
 
   CHECK(fmt, options);
@@ -964,8 +963,8 @@ option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
       break;
     case CONFIG_TYPE_LINELIST:
     case CONFIG_TYPE_LINELIST_S:
-      config_free_lines(*(struct config_line_t **)lvalue);
-      *(struct config_line_t **)lvalue = NULL;
+      config_free_lines(*(config_line_t **)lvalue);
+      *(config_line_t **)lvalue = NULL;
       break;
     case CONFIG_TYPE_LINELIST_V:
       /* handled by linelist_s. */
@@ -974,7 +973,7 @@ option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
       break;
   }
   if (var->initvalue) {
-    c = tor_malloc_zero(sizeof(struct config_line_t));
+    c = tor_malloc_zero(sizeof(config_line_t));
     c->key = tor_strdup(var->name);
     c->value = tor_strdup(var->initvalue);
     config_assign_line(fmt, options,c,0);
@@ -1154,8 +1153,8 @@ options_free(config_format_t *fmt,or_options_t *options)
         break;
       case CONFIG_TYPE_LINELIST:
       case CONFIG_TYPE_LINELIST_V:
-        config_free_lines(*(struct config_line_t**)lvalue);
-        *(struct config_line_t**)lvalue = NULL;
+        config_free_lines(*(config_line_t**)lvalue);
+        *(config_line_t**)lvalue = NULL;
         break;
       case CONFIG_TYPE_CSV:
         if (*(smartlist_t**)lvalue) {
@@ -1179,7 +1178,7 @@ static int
 option_is_same(config_format_t *fmt,
                or_options_t *o1, or_options_t *o2, const char *name)
 {
-  struct config_line_t *c1, *c2;
+  config_line_t *c1, *c2;
   int r = 1;
   CHECK(fmt, o1);
   CHECK(fmt, o2);
@@ -1209,7 +1208,7 @@ options_dup(config_format_t *fmt, or_options_t *old)
 {
   or_options_t *newopts;
   int i;
-  struct config_line_t *line;
+  config_line_t *line;
 
   newopts = config_alloc(fmt);
   for (i=0; fmt->vars[i].name; ++i) {
@@ -1258,7 +1257,7 @@ config_dump(config_format_t *fmt, or_options_t *options, int minimal)
 {
   smartlist_t *elements;
   or_options_t *defaults;
-  struct config_line_t *line;
+  config_line_t *line;
   char *result;
   int i;
 
@@ -1334,7 +1333,7 @@ static int
 options_validate(or_options_t *options)
 {
   int result = 0;
-  struct config_line_t *cl;
+  config_line_t *cl;
   addr_policy_t *addr_policy=NULL;
 
   if (options->ORPort < 0 || options->ORPort > 65535) {
@@ -1857,7 +1856,7 @@ int
 init_from_config(int argc, char **argv)
 {
   or_options_t *oldoptions, *newoptions;
-  struct config_line_t *cl;
+  config_line_t *cl;
   char *cf=NULL, *fname=NULL;
   int i, retval;
   int using_default_torrc;
@@ -1995,7 +1994,7 @@ static void
 config_register_addressmaps(or_options_t *options)
 {
   smartlist_t *elts;
-  struct config_line_t *opt;
+  config_line_t *opt;
   char *from, *to;
 
   addressmap_clear_configured();
@@ -2081,8 +2080,8 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
  * (LogFile/Syslog)] to a new-style option, and add the new option to
  * options->Logs. */
 static int
-convert_log_option(or_options_t *options, struct config_line_t *level_opt,
-                   struct config_line_t *file_opt, int isDaemon)
+convert_log_option(or_options_t *options, config_line_t *level_opt,
+                   config_line_t *file_opt, int isDaemon)
 {
   int levelMin = -1, levelMax = -1;
 
@@ -2120,7 +2119,7 @@ convert_log_option(or_options_t *options, struct config_line_t *level_opt,
 int
 config_init_logs(or_options_t *options, int validate_only)
 {
-  struct config_line_t *opt;
+  config_line_t *opt;
   int ok;
   smartlist_t *elts;
 
@@ -2222,7 +2221,7 @@ normalize_log_options(or_options_t *options)
 {
   /* The order of options is:  Level? (File Level?)+
    */
-  struct config_line_t *opt = options->OldLogOptions;
+  config_line_t *opt = options->OldLogOptions;
 
   /* Special case for if first option is LogLevel. */
   if (opt && !strcasecmp(opt->key, "LogLevel")) {
@@ -2280,7 +2279,7 @@ normalize_log_options(or_options_t *options)
 void
 config_append_default_exit_policy(addr_policy_t **policy)
 {
-  struct config_line_t tmp;
+  config_line_t tmp;
   addr_policy_t *ap;
 
   tmp.key = NULL;
@@ -2306,7 +2305,7 @@ config_append_default_exit_policy(addr_policy_t **policy)
  * are malformed, else return 0.
  */
 int
-config_parse_addr_policy(struct config_line_t *cfg,
+config_parse_addr_policy(config_line_t *cfg,
                          addr_policy_t **dest)
 {
   addr_policy_t **nextp;
@@ -2361,7 +2360,7 @@ addr_policy_free(addr_policy_t *p)
  *  <b>result</b> and return 0. Else if they are valid, return 0.
  *  Else return -1. */
 static int
-parse_redirect_line(smartlist_t *result, struct config_line_t *line)
+parse_redirect_line(smartlist_t *result, config_line_t *line)
 {
   smartlist_t *elements = NULL;
   exit_redirect_t *r;

@@ -733,14 +733,14 @@ get_uname(void)
  */
 
 #if defined(USE_PTHREADS)
-struct tor_pthread_data_t {
+typedef struct tor_pthread_data_t {
   int (*func)(void *);
   void *data;
-};
+} tor_pthread_data_t;
 static void *
 tor_pthread_helper_fn(void *_data)
 {
-  struct tor_pthread_data_t *data = _data;
+  tor_pthread_data_t *data = _data;
   int (*func)(void*);
   void *arg;
   func = data->func;
@@ -771,8 +771,8 @@ spawn_func(int (*func)(void *), void *data)
   return 0;
 #elif defined(USE_PTHREADS)
   pthread_t thread;
-  struct tor_pthread_data_t *d;
-  d = tor_malloc(sizeof(struct tor_pthread_data_t));
+  tor_pthread_data_t *d;
+  d = tor_malloc(sizeof(tor_pthread_data_t));
   d->data = data;
   d->func = func;
   if (pthread_create(&thread,NULL,tor_pthread_helper_fn,d))
