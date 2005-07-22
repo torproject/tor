@@ -1252,6 +1252,9 @@ void extend_info_free(extend_info_t *info);
 routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
+void helper_node_set_status(const char *digest, int succeeded);
+void helper_nodes_set_status_from_directory(void);
+
 /********************************* circuitlist.c ***********************/
 
 circuit_t * _circuit_get_global_list(void);

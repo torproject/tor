@@ -17,6 +17,15 @@ const char circuitbuild_c_id[] = "$Id$";
 /** A global list of all circuits at this hop. */
 extern circuit_t *global_circuitlist;
 
+typedef struct {
+  char nickname[MAX_NICKNAME_LEN+1];
+  char identity[DIGEST_LEN];
+  time_t down_since;
+  time_t unlisted_since;
+} helper_node_t;
+
+static smartlist_t *helper_nodes;
+
 /********* END VARIABLES ************/
 
 static int circuit_deliver_create_cell(circuit_t *circ,
@@ -27,6 +36,10 @@ static int onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
                               cpath_build_state_t *state);
 static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
+static void pick_helper_nodes(void);
+static routerinfo_t *choose_random_helper(void);
+static void clear_helper_nodes(void);
+static void remove_dead_helpers(void);
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
  * and with the high bit specified by circ_id_type (see
@@ -1368,7 +1381,10 @@ choose_good_middle_server(uint8_t purpose,
   return choice;
 }
 
-/** DOCDOC */
+/** DOCDOC
+ *
+ * state == null means 'pick a helper.'
+ */
 static routerinfo_t *
 choose_good_entry_server(cpath_build_state_t *state)
 {
@@ -1376,7 +1392,11 @@ choose_good_entry_server(cpath_build_state_t *state)
   smartlist_t *excluded = smartlist_create();
   or_options_t *options = get_options();
 
-  if ((r = build_state_get_exit_router(state))) {
+  if (state && options->UseHelperNodes) {
+    return choose_random_helper();
+  }
+
+  if (state && (r = build_state_get_exit_router(state))) {
     smartlist_add(excluded, r);
     routerlist_add_family(excluded, r);
   }
@@ -1400,7 +1420,8 @@ choose_good_entry_server(cpath_build_state_t *state)
     }
   }
   choice = router_choose_random_node(options->EntryNodes, options->ExcludeNodes,
-           excluded, state->need_uptime, state->need_capacity,
+           excluded, state ? state->need_uptime : 1,
+           state ? state->need_capacity : 0,
            options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY,
            options->StrictEntryNodes);
   smartlist_free(excluded);
@@ -1567,5 +1588,205 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
   if (!state || !state->chosen_exit)
     return NULL;
   return state->chosen_exit->nickname;
+}
+
+/** DOCDOC */
+static int
+n_live_helpers(void)
+{
+  int n = 0;
+  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
+                    if (! helper->down_since && ! helper->unlisted_since)
+                      ++n;);
+  return n;
+}
+
+/** DOCDOC */
+static void
+pick_helper_nodes(void)
+{
+  or_options_t *options = get_options();
+
+  if (! options->UseHelperNodes)
+    return;
+
+  if (helper_nodes == NULL)
+    helper_nodes = smartlist_create();
+
+  while (smartlist_len(helper_nodes) < options->NumHelperNodes) {
+    routerinfo_t *entry = choose_good_entry_server(NULL);
+    /* XXXX deal with duplicate entries. */
+    helper_node_t *helper = tor_malloc_zero(sizeof(helper_node_t));
+    /* XXXX Downgrade this to info before release. */
+    log_fn(LOG_NOTICE, "Chose '%s' as helper node.", entry->nickname);
+    strlcpy(helper->nickname, entry->nickname, sizeof(helper->nickname));
+    memcpy(helper->identity, entry->identity_digest, DIGEST_LEN);
+    smartlist_add(helper_nodes, helper);
+  }
+}
+
+/** DOCDOC */
+static void
+clear_helper_nodes(void)
+{
+  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h, tor_free(h));
+  smartlist_clear(helper_nodes);
+}
+
+#define HELPER_ALLOW_DOWNTIME 48*60*60
+#define HELPER_ALLOW_UNLISTED 48*60*60
+
+/** DOCDOC */
+static void
+remove_dead_helpers(void)
+{
+  char dbuf[HEX_DIGEST_LEN+1];
+  char tbuf[ISO_TIME_LEN+1];
+  time_t now = time(NULL);
+  int i;
+
+  for (i = 0; i < smartlist_len(helper_nodes); ) {
+    helper_node_t *helper = smartlist_get(helper_nodes, i);
+    char *why = NULL;
+    time_t since = 0;
+    if (helper->unlisted_since + HELPER_ALLOW_UNLISTED > now) {
+      why = "unlisted";
+      since = helper->unlisted_since;
+    } else if (helper->down_since + HELPER_ALLOW_DOWNTIME > now) {
+      why = "down";
+      since = helper->unlisted_since;
+    }
+    if (why) {
+      base16_encode(dbuf, sizeof(dbuf), helper->identity, DIGEST_LEN);
+      format_local_iso_time(tbuf, since);
+      log_fn(LOG_WARN, "Helper node '%s' (%s) has been %s since %s; removing.",
+             helper->nickname, dbuf, why, tbuf);
+      tor_free(helper);
+      smartlist_del(helper_nodes, i);
+    } else
+      ++i;
+  }
+}
+
+/** DOCDOC */
+void
+helper_nodes_set_status_from_directory(void)
+{
+  /* Don't call this on startup; only on a fresh download.  Otherwise we'll
+   * think that things are unlisted. */
+  routerlist_t *routers;
+  time_t now;
+  int changed = 0;
+  if (! helper_nodes)
+    return;
+
+  router_get_routerlist(&routers);
+  if (! routers)
+    return;
+
+  now = time(NULL);
+
+  /*XXXX Most of these warns should be non-warns. */
+
+  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
+    {
+      routerinfo_t *r = router_get_by_digest(helper->identity);
+      if (! r) {
+        if (! helper->unlisted_since) {
+        /* Watch out for skew here. XXXX */
+          helper->unlisted_since = routers->published_on;
+          ++changed;
+          log_fn(LOG_WARN,"Helper node '%s' is not published in latest directory",
+                 helper->nickname);
+        }
+      } else {
+        if (helper->unlisted_since) {
+          log_fn(LOG_WARN,"Helper node '%s' is listed again in latest directory",
+                 helper->nickname);
+          ++changed;
+        }
+        helper->unlisted_since = 0;
+        if (! r->is_running) {
+          if (! helper->down_since) {
+            helper->down_since = now;
+            log_fn(LOG_WARN, "Helper node '%s' is now down.", helper->nickname);
+            ++changed;
+          }
+        } else {
+          if (helper->down_since) {
+            log_fn(LOG_WARN,"Helper node '%s' is up in latest directory",
+                   helper->nickname);
+            ++changed;
+          }
+          helper->down_since = 0;
+        }
+      }
+    });
+
+  if (changed)
+    log_fn(LOG_WARN, "    (%d/%d helpers are usable)",
+           n_live_helpers(), smartlist_len(helper_nodes));
+
+  remove_dead_helpers();
+  pick_helper_nodes();
+}
+
+/** DOCDOC */
+void
+helper_node_set_status(const char *digest, int succeeded)
+{
+  if (! helper_nodes)
+    return;
+
+  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
+    {
+      if (!memcmp(helper->identity, digest, DIGEST_LEN)) {
+        if (succeeded) {
+          if (helper->down_since) {
+            /*XXXX shouldn't warn. */
+            log_fn(LOG_WARN,
+                   "Connection to formerly down helper node '%s' succeeeded. "
+                   "%d/%d helpers usable.", helper->nickname,
+                   n_live_helpers(), smartlist_len(helper_nodes));
+          }
+          helper->down_since = 0;
+        } else if (!helper->down_since) {
+          helper->down_since = time(NULL);
+          log_fn(LOG_WARN,
+                 "Connection to helper node '%s' failed. %d/%d helpers usable.",
+                 helper->nickname, n_live_helpers(), smartlist_len(helper_nodes));
+        }
+      }
+    });
+}
+
+/** DOCDOC */
+static routerinfo_t *
+choose_random_helper(void)
+{
+  smartlist_t *live_helpers = smartlist_create();
+  routerinfo_t *r;
+
+  if (! helper_nodes)
+    pick_helper_nodes();
+
+ retry:
+  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
+                    if (! helper->down_since && ! helper->unlisted_since) {
+                      if ((r = router_get_by_digest(helper->identity)))
+                        smartlist_add(live_helpers, r);
+                    });
+
+  if (! smartlist_len(live_helpers)) {
+    /* XXXX Is this right?  What if network is down? */
+    log_fn(LOG_WARN, "No functional helper nodes found; picking a new set.");
+    clear_helper_nodes();
+    pick_helper_nodes();
+    goto retry;
+  }
+
+  r = smartlist_choose(live_helpers);
+  smartlist_free(live_helpers);
+  return r;
 }
 

@@ -307,6 +307,9 @@ options_act(void)
     return -1;
   }
 
+  if (options->EntryNodes && strlen(options->EntryNodes))
+    options->UseHelperNodes = 0;
+
   /* Setuid/setgid as appropriate */
   if (options->User || options->Group) {
     if (switch_id(options->User, options->Group) != 0) {

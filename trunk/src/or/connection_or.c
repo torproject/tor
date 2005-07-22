@@ -358,6 +358,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
     case -1:
       if (!options->HttpsProxy)
         router_mark_as_down(conn->identity_digest);
+      helper_node_set_status(conn->identity_digest, 0);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       connection_free(conn);
       return NULL;
@@ -527,6 +528,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
         log_fn(severity,
                "Identity key not as expected for router at %s:%d: wanted %s but got %s",
                conn->address, conn->port, conn->nickname+1, d);
+        helper_node_set_status(conn->identity_digest, 0);
         control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
         as_advertised = 0;
       }
@@ -535,6 +537,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
       log_fn(severity,
              "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
              conn->address, conn->port, nickname, conn->nickname);
+      helper_node_set_status(conn->identity_digest, 0);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       as_advertised = 0;
     }
@@ -592,6 +595,7 @@ connection_tls_finish_handshake(connection_t *conn)
   connection_watch_events(conn, EV_READ);
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
   rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
+  helper_node_set_status(conn->identity_digest, 1);
   control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED);
   return 0;
 }

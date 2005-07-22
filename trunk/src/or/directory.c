@@ -758,6 +758,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       log_fn(LOG_INFO,"updated routers.");
     }
     /* do things we've been waiting to do */
+    helper_nodes_set_status_from_directory();
     directory_has_arrived(time(NULL), conn->identity_digest);
   }
 
@@ -780,6 +781,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     router_get_routerlist(&rl);
     if (rl) {
       routerlist_set_runningrouters(rl,rrs);
+      helper_nodes_set_status_from_directory();
     } else {
       running_routers_free(rrs);
     }
