@@ -1121,6 +1121,8 @@ handle_getinfo_helper(const char *question, char **answer)
   *answer = NULL; /* unrecognized key by default */
   if (!strcmp(question, "version")) {
     *answer = tor_strdup(VERSION);
+  } else if (!strcmpstart(question, "accounting/")) {
+    return accounting_getinfo_helper(question, answer);
   } else if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
     if (ri && ri->signed_descriptor)
