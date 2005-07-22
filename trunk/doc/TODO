@@ -87,14 +87,19 @@ N . Controller improvements
         o Implement main controller interface
         o Glue code
         o Testing
-N - Make configuration parsing code switchable to different sets of
+N . Make configuration parsing code switchable to different sets of
     variables so we can use it for persistence.
+    o Implement
+    o Add simple type-checking
+    - Rename functions to distinguish configuration-only functions from
+      cross-format functions
 N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
     long time), replace it.  Store nodes on disk.
     o Implement (basic case)
     - Implement (persistence)
     - Document
     - Test, debug
+    - On sighup, if usehelpernodes changed to 1, use new circs.
 N - Make a FirewallIPs to correspond to firewallPorts so I can use Tor at
     MIT when my directory is out of date.
   - switch accountingmax to count total in+out, not either in or

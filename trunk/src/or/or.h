@@ -1017,6 +1017,8 @@ typedef struct exit_redirect_t {
 
 /** Configuration options for a Tor process */
 typedef struct {
+  uint32_t _magic;
+
   /** What should the tor process actually do? */
   enum {
     CMD_RUN_TOR=0, CMD_LIST_FINGERPRINT, CMD_HASH_PASSWORD,
