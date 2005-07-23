@@ -865,8 +865,8 @@ accounting_getinfo_helper(const char *question, char **answer)
                  U64_PRINTF_ARG(n_bytes_read_in_interval),
                  U64_PRINTF_ARG(n_bytes_written_in_interval));
   } else if (!strcmp(question, "accounting/bytes-left")) {
-    *answer = tor_malloc(32);
     uint64_t limit = get_options()->AccountingMax;
+    *answer = tor_malloc(32);
     tor_snprintf(*answer, 32, U64_FORMAT" "U64_FORMAT,
                  U64_PRINTF_ARG(limit - n_bytes_read_in_interval),
                  U64_PRINTF_ARG(limit - n_bytes_written_in_interval));
