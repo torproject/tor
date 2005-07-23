@@ -1614,7 +1614,7 @@ num_live_helpers(void)
 }
 
 /** If the use of helper nodes is configured, choose more helper nodes until
- * we heave enough in the list. */
+ * we have enough in the list. */
 static void
 pick_helper_nodes(void)
 {
@@ -1772,7 +1772,7 @@ helper_node_set_status(const char *digest, int succeeded)
           if (helper->down_since) {
             /*XXXX shouldn't warn. */
             log_fn(LOG_WARN,
-                   "Connection to formerly down helper node '%s' succeeeded. "
+                   "Connection to formerly down helper node '%s' succeeded. "
                    "%d/%d helpers usable.", helper->nickname,
                    num_live_helpers(), smartlist_len(helper_nodes));
           }
