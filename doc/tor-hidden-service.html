@@ -230,13 +230,20 @@ using it as a hidden service?
 
 <p>If you want to forward multiple virtual ports for a single hidden
 service, just add more HiddenServicePort lines.
-</p>
-
-<p>If you want to run multiple hidden services from the same Tor
+If you want to run multiple hidden services from the same Tor
 client, just add another HiddenServiceDir line. All the following
 HiddenServicePort lines refer to this HiddenServiceDir line, until
-you add another HiddenServiceDir line.
+you add another HiddenServiceDir line:
 </p>
+
+<pre>
+HiddenServiceDir /usr/local/etc/tor/hidden_service/
+HiddenServicePort 80 127.0.0.1:8080
+
+HiddenServiceDir /usr/local/etc/tor/other_hidden_service/
+HiddenServicePort 6667 127.0.0.1:6667
+HiddenServicePort 22 127.0.0.1:22
+</pre>
 
 <p>There are some anonymity issues you should keep in mind too:
 </p>
