@@ -911,7 +911,7 @@ do_hup(void)
   addressmap_clear_transient();
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
-  if (init_from_config(0, NULL) < 0) {
+  if (options_init_from_torrc(0, NULL) < 0) {
     log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
     return -1;
   }
@@ -1303,7 +1303,7 @@ tor_init(int argc, char *argv[])
   }
   atexit(exit_function);
 
-  if (init_from_config(argc,argv) < 0) {
+  if (options_init_from_torrc(argc,argv) < 0) {
     log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
     return -1;
   }
