@@ -32,7 +32,7 @@
         <td class="banner-right"></td>
     </tr>
 </table>
- 
+
 <!-- END TITLE BAR & NAVIGATION -->
 
 <div class="center">
@@ -119,20 +119,15 @@ Google. So add the following lines to your torrc:
 </p>
 
 <pre>
-HiddenServiceDir /home/username/hidserv/
-HiddenServicePort 80 www.google.com:80
-</pre>
-
-<p>You're going to want to change the HiddenServiceDir line, so it
-points to an actual directory that is readable/writeable by the user that
-will be running Tor. For example, if you're using the OS X Tor package,
-you might pick:</p>
-<pre>
 HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/
 HiddenServicePort 80 www.google.com:80
 </pre>
-<p>On Unix, try "/home/username/hidserv/" and fill in your own username
-in place of "username". On Windows you might pick:</p>
+
+<p>You're going to want to change the HiddenServiceDir line, so it points
+to an actual directory that is readable/writeable by the user that will
+be running Tor. The above line should work if you're using the OS X Tor
+package. On Unix, try "/home/username/hidserv/" and fill in your own
+username in place of "username". On Windows you might pick:</p>
 <pre>
 HiddenServiceDir C:\Documents and Settings\username\Application Data\hidden_service\
 HiddenServicePort 80 www.google.com:80
