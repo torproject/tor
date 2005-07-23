@@ -17,14 +17,20 @@ const char circuitbuild_c_id[] = "$Id$";
 /** A global list of all circuits at this hop. */
 extern circuit_t *global_circuitlist;
 
+/** A helper_node_t represents our information about a chosen fixed entry, or
+ * "helper" node.  We can't just use a routerinfo_t, since we want to remember
+ * these even when we don't have a directory. */
 typedef struct {
   char nickname[MAX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
-  time_t down_since;
-  time_t unlisted_since;
+  time_t down_since; /**< 0 if this router is currently up, or the time at which
+                      * it was observed to go down. */
+  time_t unlisted_since; /**< 0 if this router is currently listed, or the time
+                          * at which it became unlisted */
 } helper_node_t;
 
-static smartlist_t *helper_nodes;
+/** A list of our chosen helper nodes. */
+static smartlist_t *helper_nodes = NULL;
 
 /********* END VARIABLES ************/
 
@@ -1381,9 +1387,13 @@ choose_good_middle_server(uint8_t purpose,
   return choice;
 }
 
-/** DOCDOC
+/** Pick a good entry server for the circuit to be built according to
+ * <b>state</b>.  Don't reuse a chosen exit (if any), don't use this router
+ * (if we're an OR), and respect firewall settings; if we're using helper nodes,
+ * return one.
  *
- * state == null means 'pick a helper.'
+ * If <b>state</b> is NULL, we're choosing entries to serve as helper nodes,
+ * not for any particular circuit.
  */
 static routerinfo_t *
 choose_good_entry_server(cpath_build_state_t *state)
@@ -1590,18 +1600,21 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
   return state->chosen_exit->nickname;
 }
 
-/** DOCDOC */
+/** Return the number of helper nodes that we think are usable. */
 static int
-n_live_helpers(void)
+num_live_helpers(void)
 {
   int n = 0;
+  if (! helper_nodes)
+    return 0;
   SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
                     if (! helper->down_since && ! helper->unlisted_since)
                       ++n;);
   return n;
 }
 
-/** DOCDOC */
+/** If the use of helper nodes is configured, choose more helper nodes until
+ * we heave enough in the list. */
 static void
 pick_helper_nodes(void)
 {
@@ -1625,7 +1638,7 @@ pick_helper_nodes(void)
   }
 }
 
-/** DOCDOC */
+/** Remove all elements from the list of helper nodes */
 static void
 clear_helper_nodes(void)
 {
@@ -1633,10 +1646,15 @@ clear_helper_nodes(void)
   smartlist_clear(helper_nodes);
 }
 
+/** How long (in seconds) do we allow a helper node to be nonfunctional before
+ * we give up on it? */
 #define HELPER_ALLOW_DOWNTIME 48*60*60
+/** How long (in seconds) do we allow a helper node to be unlisted in the
+ * directory before we give up on it? */
 #define HELPER_ALLOW_UNLISTED 48*60*60
 
-/** DOCDOC */
+/** Remove all helper nodes that have been down or unlisted for so long that
+ * we don't think they'll come up again. */
 static void
 remove_dead_helpers(void)
 {
@@ -1668,7 +1686,13 @@ remove_dead_helpers(void)
   }
 }
 
-/** DOCDOC */
+/** A new directory or router-status has arrived; update the down/listed status
+ * of the helper nodes.
+ *
+ * A helper is 'down' if the directory lists it as nonrunning, or if we tried
+ * to connect to it and failed.  A helper is 'unlisted' if the directory
+ * doesn't include it.
+ */
 void
 helper_nodes_set_status_from_directory(void)
 {
@@ -1725,13 +1749,16 @@ helper_nodes_set_status_from_directory(void)
 
   if (changed)
     log_fn(LOG_WARN, "    (%d/%d helpers are usable)",
-           n_live_helpers(), smartlist_len(helper_nodes));
+           num_live_helpers(), smartlist_len(helper_nodes));
 
   remove_dead_helpers();
   pick_helper_nodes();
 }
 
-/** DOCDOC */
+/** Called when a connection to an OR with the identity digest <b>digest</b>
+ * is established (<b>succeeded</b>==1) or has failed (<b>succeeded</b>==0).
+ * If the OR is a helper, change that helper's up/down status.
+ */
 void
 helper_node_set_status(const char *digest, int succeeded)
 {
@@ -1747,20 +1774,21 @@ helper_node_set_status(const char *digest, int succeeded)
             log_fn(LOG_WARN,
                    "Connection to formerly down helper node '%s' succeeeded. "
                    "%d/%d helpers usable.", helper->nickname,
-                   n_live_helpers(), smartlist_len(helper_nodes));
+                   num_live_helpers(), smartlist_len(helper_nodes));
           }
           helper->down_since = 0;
         } else if (!helper->down_since) {
           helper->down_since = time(NULL);
           log_fn(LOG_WARN,
                  "Connection to helper node '%s' failed. %d/%d helpers usable.",
-                 helper->nickname, n_live_helpers(), smartlist_len(helper_nodes));
+                 helper->nickname, num_live_helpers(), smartlist_len(helper_nodes));
         }
       }
     });
 }
 
-/** DOCDOC */
+/** Pick a live (up and listed) helper node from the list of helpers.  If
+ * no helpers are available, pick a new list. */
 static routerinfo_t *
 choose_random_helper(void)
 {
