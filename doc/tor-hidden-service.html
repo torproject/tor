@@ -133,7 +133,10 @@ HiddenServiceDir C:\Documents and Settings\username\Application Data\hidden_serv
 HiddenServicePort 80 www.google.com:80
 </pre>
 
-<p>Now save the torrc, and restart your Tor.
+<p>Now save the torrc, shut down
+your Tor, and then start it again.  (See <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#Restarting">this
+FAQ entry</a> for tips on restarting Tor.)
 </p>
 
 <p>If Tor starts up again, great. Otherwise, something is wrong. Look
@@ -155,7 +158,9 @@ do they will be able to impersonate your hidden service.
 a short summary of your public key -- it will look something like
 <tt>6sxoyfb3h2nvok2d.onion</tt>. This is the public name for your service,
 and you can tell it to people, publish it on websites, put it on business
-cards, etc.
+cards, etc. (If Tor runs as a different user than you, for example on
+OS X, Debian, or Red Hat, then you may need to become root to be able
+to view these files.)
 </p>
 
 <p>Now that you've restarted Tor, it is busy picking introduction points
@@ -179,7 +184,10 @@ look in your logs for some hints, and keep playing with it until it works.
 <p>Now that you've got hidden services working on Tor, you need to
 set up your web server locally. Setting up a web server is tricky,
 so we're just going to go over a few basics here. If you get stuck
-or want to do more, find a friend who can help you.
+or want to do more, find a friend who can help you. We recommend you
+install a new separate web server for your hidden service, since even
+if you already have one installed, you may be using it (or want to use
+it later) for an actual website.
 </p>
 
 <p>If you're on Unix or OS X and you're comfortable with
@@ -208,7 +216,9 @@ service.)
 </p>
 
 <p>Once you've got your web server set up, make sure it works: open your
-browser and go to "localhost:5222". Once it works, try putting a file
+browser and go to <a
+href="http://localhost:5222/">http://localhost:5222/</a>. Once it works,
+try putting a file
 in the main html directory, and make sure it shows up when you access
 the site.
 </p>
