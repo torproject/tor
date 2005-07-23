@@ -139,7 +139,7 @@ $Id$
    Directory server administrators may label some servers or IPs as
    blacklisted, and elect not to include them in their network-status lists.
 
-   Otherwise, the network-status list includes all non-blacklisted,
+   Thus, the network-status list includes all non-blacklisted,
    non-expired, non-superseded descriptors for ORs that the directory has
    observed at least once to be running.
 
@@ -178,7 +178,7 @@ $Id$
    directory protocol.
 
    Each client maintains a list of trusted directory servers.  Periodically
-   (currently 20 minutes) time, the client downloads a new network status. It
+   (currently every 20 minutes), the client downloads a new network status. It
    chooses the directory server from which its current information is most
    out-of-date, and retries on failure until it finds a running server.
 
