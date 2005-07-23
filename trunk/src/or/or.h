@@ -1333,21 +1333,21 @@ const char *safe_str(const char *address);
 
 int config_get_lines(char *string, config_line_t **result);
 void config_free_lines(config_line_t *front);
-int config_trial_assign(config_line_t *list, int reset);
+int options_trial_assign(config_line_t *list, int reset);
 int resolve_my_address(or_options_t *options, uint32_t *addr);
 void options_init(or_options_t *options);
-int init_from_config(int argc, char **argv);
-int config_init_logs(or_options_t *options, int validate_only);
+int options_init_from_torrc(int argc, char **argv);
+int options_init_logs(or_options_t *options, int validate_only);
 int config_parse_addr_policy(config_line_t *cfg,
                              addr_policy_t **dest);
-void config_append_default_exit_policy(addr_policy_t **policy);
+void options_append_default_exit_policy(addr_policy_t **policy);
 void addr_policy_free(addr_policy_t *p);
-int config_option_is_recognized(const char *key);
-const char *config_option_get_canonical_name(const char *key);
-config_line_t *config_get_assigned_option(or_options_t *options,
-                                                 const char *key);
-char *config_dump_options(or_options_t *options, int minimal);
-int save_current_config(void);
+int option_is_recognized(const char *key);
+const char *option_get_canonical_name(const char *key);
+config_line_t *option_get_assignment(or_options_t *options,
+                                     const char *key);
+char *options_dump(or_options_t *options, int minimal);
+int options_save_current(void);
 
 /********************************* connection.c ***************************/
 

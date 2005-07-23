@@ -1406,7 +1406,7 @@ test_exit_policies(void)
 
   /* Copied from router.c */
   policy = NULL;
-  config_append_default_exit_policy(&policy);
+  options_append_default_exit_policy(&policy);
   test_assert(policy);
   test_assert(!exit_policy_implicitly_allows_local_networks(policy, 1));
 

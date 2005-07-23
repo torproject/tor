@@ -657,7 +657,7 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
     }
   }
 
-  if ((r=config_trial_assign(lines, 1)) < 0) {
+  if ((r=options_trial_assign(lines, 1)) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
     if (r==-1) {
       if (v0)
@@ -709,7 +709,7 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
   unrecognized = smartlist_create();
   SMARTLIST_FOREACH(questions, char *, q,
   {
-    if (!config_option_is_recognized(q)) {
+    if (!option_is_recognized(q)) {
       if (v0) {
         send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, q);
         goto done;
@@ -717,9 +717,9 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
         smartlist_add(unrecognized, q);
       }
     } else {
-      config_line_t *answer = config_get_assigned_option(options,q);
+      config_line_t *answer = option_get_assignment(options,q);
       if (!v0 && !answer) {
-        const char *name = config_option_get_canonical_name(q);
+        const char *name = option_get_canonical_name(q);
         size_t alen = strlen(name)+8;
         char *astr = tor_malloc(alen);
         tor_snprintf(astr, alen, "250-%s\r\n", name);
@@ -959,7 +959,7 @@ static int
 handle_control_saveconf(connection_t *conn, uint32_t len,
                         const char *body)
 {
-  if (save_current_config()<0) {
+  if (options_save_current()<0) {
     if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_INTERNAL,
                           "Unable to write configuration to disk.");

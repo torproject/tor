@@ -371,7 +371,7 @@ options_act(void)
     return 0;
 
   mark_logs_temp(); /* Close current logs once new logs are open. */
-  if (config_init_logs(options, 0)<0) /* Configure the log(s) */
+  if (options_init_logs(options, 0)<0) /* Configure the log(s) */
     return -1;
 
   /* Close the temporary log we used while starting up, if it isn't already
@@ -741,7 +741,7 @@ config_reset_line(config_format_t *fmt, or_options_t *options, const char *key)
 
 /** Return true iff key is a valid configuration option. */
 int
-config_option_is_recognized(const char *key)
+option_is_recognized(const char *key)
 {
   config_var_t *var = config_find_option(&config_format, key);
   return (var != NULL);
@@ -749,7 +749,7 @@ config_option_is_recognized(const char *key)
 
 /** Return the canonical name of a configuration option. */
 const char *
-config_option_get_canonical_name(const char *key)
+option_get_canonical_name(const char *key)
 {
   config_var_t *var = config_find_option(&config_format, key);
   return var->name;
@@ -758,7 +758,7 @@ config_option_get_canonical_name(const char *key)
 /** Return a canonicalized list of the options assigned for key.
  */
 config_line_t *
-config_get_assigned_option(or_options_t *options, const char *key)
+option_get_assignment(or_options_t *options, const char *key)
 {
   return get_assigned_option(&config_format, options, key);
 }
@@ -904,7 +904,7 @@ config_assign(config_format_t *fmt,
  * keys, -2 on bad values, -3 on bad transition.
  */
 int
-config_trial_assign(config_line_t *list, int reset)
+options_trial_assign(config_line_t *list, int reset)
 {
   int r;
   or_options_t *trial_options = options_dup(&config_format, get_options());
@@ -1300,7 +1300,7 @@ config_dump(config_format_t *fmt, or_options_t *options, int minimal)
  * include options that are the same as Tor's defaults.
  */
 char *
-config_dump_options(or_options_t *options, int minimal)
+options_dump(or_options_t *options, int minimal)
 {
   return config_dump(&config_format, options, minimal);
 }
@@ -1386,7 +1386,7 @@ options_validate(or_options_t *options)
     config_line_append(&options->Logs, "Log", "notice stdout");
   }
 
-  if (config_init_logs(options, 1)<0) /* Validate the log(s) */
+  if (options_init_logs(options, 1)<0) /* Validate the log(s) */
     return -1;
 
   if (server_mode(options)) {
@@ -1672,7 +1672,7 @@ options_validate(or_options_t *options)
     log_fn(LOG_WARN, "Error in Exit Policy entry.");
     result = -1;
   }
-  config_append_default_exit_policy(&addr_policy);
+  options_append_default_exit_policy(&addr_policy);
   if (server_mode(options)) {
     exit_policy_implicitly_allows_local_networks(addr_policy, 1);
   }
@@ -1853,7 +1853,7 @@ check_nickname_list(const char *lst, const char *name)
  * validate them for consistency, then take actions based on them.
  * Return 0 if success, -1 if failure. */
 int
-init_from_config(int argc, char **argv)
+options_init_from_torrc(int argc, char **argv)
 {
   or_options_t *oldoptions, *newoptions;
   config_line_t *cl;
@@ -2117,7 +2117,7 @@ convert_log_option(or_options_t *options, config_line_t *level_opt,
  * Initialize the logs based on the configuration file.
  */
 int
-config_init_logs(or_options_t *options, int validate_only)
+options_init_logs(or_options_t *options, int validate_only)
 {
   config_line_t *opt;
   int ok;
@@ -2277,7 +2277,7 @@ normalize_log_options(or_options_t *options)
 /** Add the default exit policy entries to <b>policy</b>
  */
 void
-config_append_default_exit_policy(addr_policy_t **policy)
+options_append_default_exit_policy(addr_policy_t **policy)
 {
   config_line_t tmp;
   addr_policy_t *ap;
@@ -2552,7 +2552,7 @@ write_configuration_file(const char *fname, or_options_t *options)
     }
   }
 
-  if (!(new_conf = config_dump_options(options, 1))) {
+  if (!(new_conf = options_dump(options, 1))) {
     log_fn(LOG_WARN, "Couldn't get configuration string");
     goto err;
   }
@@ -2599,7 +2599,7 @@ write_configuration_file(const char *fname, or_options_t *options)
  * success, -1 on failure.
  **/
 int
-save_current_config(void)
+options_save_current(void)
 {
   char *fn;
   if (config_fname) {
