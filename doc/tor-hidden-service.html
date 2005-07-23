@@ -200,6 +200,17 @@ configure it to bind only to localhost. You should also figure out
 what port you're listening on, because you'll use it below.
 </p>
 
+<p>(The reason we bind the web server only to localhost is to make
+sure it isn't publically accessible. If people could get to it directly,
+they could confirm that your computer is the one offering the hidden
+service.)
+</p>
+
+<p>Once you've got your web server set up, make sure it works: open your
+browser and go to "localhost:5222". Once it works, try putting a file
+in the main html directory, and make sure it shows up when you access
+the site.
+</p>
 
 <hr />
 <a name="three"></a>
