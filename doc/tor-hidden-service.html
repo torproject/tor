@@ -44,7 +44,7 @@
 
 <p>Tor allows clients and servers to offer hidden services. That is,
 you can offer a web server, SSH server, etc., without revealing your
-IP to its users. In fact, because you don't need any public address,
+IP to its users. In fact, because you don't use any public address,
 you can run a hidden service from behind your firewall.
 </p>
 
@@ -147,9 +147,7 @@ FAQ entry</a> if you don't know how to enable or find your log file.)
 HiddenServiceDir that you specified. First, it will generate a new
 public/private keypair for your hidden service, and write it into a
 file called "private_key". Don't share this key with others -- if you
-do they will be able to impersonate your hidden service. If you plan to
-keep your service available for a long time, you might want to make a
-backup copy of the private_key somewhere.
+do they will be able to impersonate your hidden service.
 </p>
 
 <p>The other file it will create is called "hostname". This contains
@@ -193,7 +191,13 @@ and now you're running a webserver on port 5222. You can put files to
 serve in the hidserv directory.
 </p>
 
-<p>If you're on Windows, ...
+<p>If you're on Windows, ...what should we suggest here? Is there
+a good simple free software web server for Windows? Please
+let me know what we should say here. In the meantime,
+check out <a href="http://httpd.apache.org/">apache</a> or
+<a href="http://savant.sourceforge.net/">savant</a>, and be sure to
+configure them to bind only to localhost. You should also figure out
+what port you're listening on, because you'll use it below.
 </p>
 
 
@@ -206,6 +210,47 @@ HiddenServicePort line from "www.google.com:80" to "localhost:5222".
 Then restart Tor. Make sure that it's working by reloading your hidden
 service hostname in your browser.
 </p>
+
+<hr />
+<a name="four"></a>
+<h3>Step Four: More advanced tips</h3>
+
+<p>If you plan to keep your service available for a long time, you might
+want to make a backup copy of the private_key somewhere.
+</p>
+
+<p>We avoided recommending Apache above, a) because many people might
+already be running it for a public server, and b) because it's big
+and has lots of places where it might reveal your IP address or other
+identifying information, for example in 404 pages. For people who need
+more functionality, though, Apache may still be the right answer. Can
+somebody make us a checklist of ways to lock down your Apache when you're
+using it as a hidden service?
+</p>
+
+<p>If you want to forward multiple virtual ports for a single hidden
+service, just add more HiddenServicePort lines.
+</p>
+
+<p>If you want to run multiple hidden services from the same Tor
+client, just add another HiddenServiceDir line. All the following
+HiddenServicePort lines refer to this HiddenServiceDir line, until
+you add another HiddenServiceDir line.
+</p>
+
+<p>There are some anonymity issues you should keep in mind too:
+</p>
+<ul>
+<li>As mentioned above, be careful of letting your web server reveal
+identifying information about you, your computer, or your location.
+For example, readers can probably determine whether it's thttpd or
+Apache, and learn something about your operating system.</li>
+<li>If your computer isn't online all the time, your hidden service
+won't be either. This leaks information to an observant adversary.</li>
+<!-- increased risks over time -->
+</ul>
+
+
 
 <hr />
 
