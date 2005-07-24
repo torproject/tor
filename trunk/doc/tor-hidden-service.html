@@ -69,9 +69,9 @@ href="http://tor.eff.org/doc/tor-doc.html#installing">here</a>.
 </p>
 
 <p>Once you've got Tor and Privoxy installed and configured,
-you can see hidden services in action by clicking on <a
-href="http://6sxoyfb3h2nvok2d.onion/">the hidden wiki</a>
-in your browser. It will typically take 10-60 seconds to load
+you can see hidden services in action by following this link to <a
+href="http://6sxoyfb3h2nvok2d.onion/">the hidden wiki</a>.
+It will typically take 10-60 seconds to load
 (or to decide that it is currently unreachable). If it fails
 immediately and your browser pops up an alert saying that that
 "www.6sxoyfb3h2nvok2d.onion could not be found, please check the name and
@@ -85,7 +85,7 @@ FAQ entry</a> for some help.
 <h3>Step One: Configure an example hidden service</h3>
 
 <p>In this step, you're going to configure a hidden service that points
-to www.google.com. This way we can make sure you've gotten this step
+to www.google.com. This way we can make sure you have this step
 working before we start thinking about setting up a web server locally.
 </p>
 
@@ -147,8 +147,9 @@ href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#Logs">this
 FAQ entry</a> if you don't know how to enable or find your log file.)
 </p>
 
-<p>When Tor starts, it will automatically create two files in the
-HiddenServiceDir that you specified. First, it will generate a new
+<p>When Tor starts, it will automatically create the HiddenServiceDir
+that you specified (if necessary), and it will create two files there.
+First, it will generate a new
 public/private keypair for your hidden service, and write it into a
 file called "private_key". Don't share this key with others -- if you
 do they will be able to impersonate your hidden service.
@@ -181,7 +182,7 @@ look in your logs for some hints, and keep playing with it until it works.
 <a name="two"></a>
 <h3>Step Two: Now install a web server locally</h3>
 
-<p>Now that you've got hidden services working on Tor, you need to
+<p>Now that you have hidden services working on Tor, you need to
 set up your web server locally. Setting up a web server is tricky,
 so we're just going to go over a few basics here. If you get stuck
 or want to do more, find a friend who can help you. We recommend you
@@ -217,7 +218,7 @@ service.)
 
 <p>Once you've got your web server set up, make sure it works: open your
 browser and go to <a
-href="http://localhost:5222/">http://localhost:5222/</a>. Once it works,
+href="http://localhost:5222/">http://localhost:5222/</a>. Then
 try putting a file
 in the main html directory, and make sure it shows up when you access
 the site.
@@ -229,7 +230,9 @@ the site.
 
 <p>This part is very simple. Open up your torrc again, and change the
 HiddenServicePort line from "www.google.com:80" to "localhost:5222".
-Then restart Tor. Make sure that it's working by reloading your hidden
+Then <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#Restarting">restart
+Tor</a>. Make sure that it's working by reloading your hidden
 service hostname in your browser.
 </p>
 
@@ -238,14 +241,15 @@ service hostname in your browser.
 <h3>Step Four: More advanced tips</h3>
 
 <p>If you plan to keep your service available for a long time, you might
-want to make a backup copy of the private_key somewhere.
+want to make a backup copy of the private_key file somewhere.
 </p>
 
 <p>We avoided recommending Apache above, a) because many people might
-already be running it for a public server, and b) because it's big
+already be running it for a public web server on their computer, and b)
+because it's big
 and has lots of places where it might reveal your IP address or other
 identifying information, for example in 404 pages. For people who need
-more functionality, though, Apache may still be the right answer. Can
+more functionality, though, Apache may be the right answer. Can
 somebody make us a checklist of ways to lock down your Apache when you're
 using it as a hidden service?
 </p>
