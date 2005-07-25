@@ -290,7 +290,7 @@ rep_hist_dump_stats(time_t now, int severity)
   unsigned long upt, downt;
   routerinfo_t *r;
 
-  rep_history_clean(now-24*60*60);
+  rep_history_clean(now - get_options()->RephistTrackTime);
 
   log(severity, "--------------- Dumping history information:");
 

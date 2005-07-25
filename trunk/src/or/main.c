@@ -709,7 +709,7 @@ run_scheduled_events(time_t now)
     }
 
     /* Also, take this chance to remove old information from rephist. */
-    rep_history_clean(now-24*60*60);
+    rep_history_clean(now - options->RephistTrackTime);
   }
 
   if (time_to_fetch_running_routers < now) {
@@ -873,8 +873,10 @@ second_elapsed_callback(int fd, short event, void *args)
   current_second = now.tv_sec; /* remember which second it is, for next time */
 
 #if 0
-  if (current_second % 60 == 0)
+  if (current_second % 300 == 0) {
+    rep_history_clean(now - options->RephistTrackTime);
     dumpmemusage(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
+  }
 #endif
 
   if (evtimer_add(timeout_event, &one_second))

@@ -163,6 +163,7 @@ static config_var_t _config_vars[] = {
   VAR("LongLivedPorts",      CSV,      LongLivedPorts,       "21,22,706,1863,5050,5190,5222,5223,6667,8300,8888"),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
+  VAR("RephistTrackTime",    INTERVAL, RephistTrackTime,     "24 hours"),
   OBSOLETE("RouterFile"),
   VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "0"),
   VAR("RunTesting",          BOOL,     RunTesting,           "0"),

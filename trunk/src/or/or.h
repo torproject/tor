@@ -1173,6 +1173,7 @@ typedef struct {
   int UseHelperNodes; /**< Boolean: Do we try to enter from a smallish number
                        * of fixed nodes? */
   int NumHelperNodes; /**< How many helper nodes do we try to establish? */
+  int RephistTrackTime; /**< How many seconds do we keep rephist info? */
 } or_options_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024
