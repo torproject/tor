@@ -1,26 +1,58 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-<title>Tor Mac OS X Install Instructions</title>
-<meta name="Author" content="Thomas Hardly">
-<meta name="Author" content="Roger Dingledine">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta http-equiv="Content-Style-Type" content="text/css">
-<link rel="stylesheet" type="text/css" href="tor-doc.css">
+  <title>Tor SwitchProxy Install Instructions</title>
+  <meta name="Author" content="Roger Dingledine" />
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1" />
+  <link rel="stylesheet" type="text/css" href="http://tor.eff.org/stylesheet.css" />
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
 </head>
 
 <body>
 
-<h1>Running the <a href="http://tor.eff.org/">Tor</a> client on Mac OS X</h1>
+<!-- TITLE BAR & NAVIGATION -->
 
-<a name="installing"></a>
-<h2>Step One: Download and Install Tor</h2>
+<table class="banner" border="0" cellpadding="0" cellspacing="0">
+    <tr>
+        <td class="banner-left"></td>
+        <td class="banner-middle">
+            <a href="/index.html">Home</a>
+          | <a href="/howitworks.html">How It Works</a>
+          | <a href="/download.html">Download</a>
+          | <a href="/documentation.html">Docs</a>
+          | <a href="/users.html">Users</a>
+          | <a href="/faq.html">FAQs</a>
+          | <a href="/volunteer.html">Volunteer</a>
+          | <a href="/developers.html">Developers</a>
+          | <a href="/research.html">Research</a>
+          | <a href="/people.html">People</a>
+        </td>
+        <td class="banner-right"></td>
+    </tr>
+</table>
+ 
+<!-- END TITLE BAR & NAVIGATION -->
+
+<div class="center">
+
+<div class="main-column">
+
+<h1>Running the <a href="http://tor.eff.org/">Tor</a> client on Mac OS X</h1>
+<br />
+
 <p>
-<b>Note that these are the installation instructions for running a client on
+<b>Note that these are the installation instructions for running a Tor client on
   Mac OS X. If you want to run a server (please do), read the "Configuring a
   server" section at <a href="tor-doc.html#server">tor-doc.html</a>.</b>
 </p>
+
+<hr />
+<a id="installing"></a>
+<h2><a class="anchor" href="#installing">Step One: Download and Install Tor</a></h2>
+<br />
+
 <p>
 The latest beta release of Tor for Macintosh OS X is <a
 href="http://tor.eff.org/dist/osx/Tor 0.1.1.2-alpha Bundle.dmg">0.1.1.2-alpha</a>.
@@ -61,8 +93,10 @@ is restarted.
 configuration for Tor has been installed as part of the installer package.
 </p>
 
-<a name="using"></a>
-<h2>Step Two: Configure your applications to use Tor</h2>
+<hr />
+<a id="using"></a>
+<h2><a class="anchor" href="#using">Step Two: Configure your applications to use Tor</a></h2>
+<br />
 
 <p>After installing Tor and Privoxy, you need to configure your
 applications to use them. The first step is to set up web browsing.</p>
@@ -133,8 +167,10 @@ href="http://www.taiyo.co.jp/~gotoh/ssh/connect.html">connect</a> or
 HOWTO</a>.
 </p>
 
-<a name="verify"></a>
-<h2>Step Three: Make sure it's working</h2>
+<hr />
+<a id="verify"></a>
+<h2><a class="anchor" href="#verify">Step Three: Make sure it's working</a></h2>
+<br />
 
 <p>
 <a href="http://ipid.shat.net">ipid.shat.net</a> and
@@ -165,8 +201,10 @@ FAQ entry</a>.
 href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ItDoesntWork">this
 FAQ entry</a> for hints.</p>
 
-<a name="uninstall"></a>
-<h2>How To Uninstall Tor and Privoxy</h2>
+<hr />
+<a id="uninstall"></a>
+<h2><a class="anchor" href="#uninstall">How To Uninstall Tor and Privoxy</a></h2>
+<br />
 
 <p>The Tor 0.1.0.x series does not come with an uninstaller; this feature
   will be added in the 0.1.1.x series.  If you want to remove Tor on OSX,
@@ -204,8 +242,12 @@ FAQ entry</a> for hints.</p>
 them on <a href="http://bugs.noreply.org/tor">our bugtracker</a> in the
 website category. Thanks!</p>
 
-<p>$Id$</p>
-
+  </div><!-- #main -->
+</div>
+  <div class="bottom" id="bottom">
+     <i><a href="mailto:tor-webmaster@freehaven.net"
+     class="smalllink">Webmaster</a></i> - $Id$
+  </div>
 </body>
 </html>
 
