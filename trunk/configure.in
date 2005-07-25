@@ -335,6 +335,17 @@ AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(time_t)
+AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
+AC_TRY_RUN([
+int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }],
+  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes)
+])
+
+if test $tor_cv_time_t_signed = yes; then
+  AC_DEFINE([TIME_T_IS_SIGNED], 1,
+            [Define to 1 iff time_t is signed])
+fi
+
 AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
