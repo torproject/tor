@@ -1,28 +1,55 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
-<title>Tor MS Windows Install Instructions</title>
-<meta name="Author" content="Roger Dingledine">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta http-equiv="Content-Style-Type" content="text/css">
-<link rel="stylesheet" type="text/css" href="tor-doc.css">
+  <title>Tor SwitchProxy Install Instructions</title>
+  <meta name="Author" content="Roger Dingledine" />
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1" />
+  <link rel="stylesheet" type="text/css" href="http://tor.eff.org/stylesheet.css" />
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
 </head>
 
 <body>
 
+<!-- TITLE BAR & NAVIGATION -->
+
+<table class="banner" border="0" cellpadding="0" cellspacing="0">
+    <tr>
+        <td class="banner-left"></td>
+        <td class="banner-middle">
+            <a href="/index.html">Home</a>
+          | <a href="/howitworks.html">How It Works</a>
+          | <a href="/download.html">Download</a>
+          | <a href="/documentation.html">Docs</a>
+          | <a href="/users.html">Users</a>
+          | <a href="/faq.html">FAQs</a>
+          | <a href="/volunteer.html">Volunteer</a>
+          | <a href="/developers.html">Developers</a>
+          | <a href="/research.html">Research</a>
+          | <a href="/people.html">People</a>
+        </td>
+        <td class="banner-right"></td>
+    </tr>
+</table>
+ 
+<!-- END TITLE BAR & NAVIGATION -->
+
+<div class="center">
+
+<div class="main-column">
+
 <h1>Running the <a href="http://tor.eff.org/">Tor</a> client on MS Windows</h1>
 
+<hr />
 <a name="installing"></a>
-<h2>Step One: Download and Install Tor</h2>
+<h3>Step One: Download and Install Tor</h3>
+
 <p>
 <b>Note that these are the installation instructions for running a
 client on MS Windows (98, 98SE, NT4, 2000, XP, Server)
 If you want to run a server (please do), read the "Configuring a server" section at
 <a href="tor-doc.html#server">tor-doc.html</a>.</b>
-</p>
-<p>
-This document was updated $Date$.
 </p>
 <p>
 The latest beta release of Tor for MS Windows is
@@ -70,8 +97,9 @@ the settings. Tor is now installed. <!--Close the Tor client for now by
 closing the cmd window.-->
 </p>
 
+<hr />
 <a name="privoxy"></a>
-<h2>Step Two: Install Privoxy for Web Browsing</h2>
+<h3>Step Two: Install Privoxy for Web Browsing</h3>
 
 <p>After installing Tor, you need to configure your applications to use it.
 </p>
@@ -135,8 +163,9 @@ green "P" Privoxy icon.  Privoxy should appear in your system
 tray again.</li>
 </ol>
 
+<hr />
 <a name="using"></a>
-<h2>Step Three: Configure your applications to use Tor</h2>
+<h3>Step Three: Configure your applications to use Tor</h3>
 
 <p>After installing Tor and Privoxy, you need to configure your
 applications to use them. The first step is to set up web browsing.</p>
@@ -185,8 +214,9 @@ href="http://www.socks.permeo.com/Download/SocksCapDownload/index.asp">SocksCap<
 HOWTO</a>.
 </p>
 
+<hr />
 <a name="verify"></a>
-<h2>Step Four: Make sure it's working</h2>
+<h3>Step Four: Make sure it's working</h3>
 
 <p>
 <a href="http://ipid.shat.net">ipid.shat.net</a> and
