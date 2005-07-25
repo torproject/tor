@@ -874,7 +874,7 @@ second_elapsed_callback(int fd, short event, void *args)
 
 #if 0
   if (current_second % 300 == 0) {
-    rep_history_clean(now - options->RephistTrackTime);
+    rep_history_clean(current_second - options->RephistTrackTime);
     dumpmemusage(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
   }
 #endif
