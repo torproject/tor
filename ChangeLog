@@ -1,3 +1,32 @@
+Changes in version 0.1.1.3-alpha - 2005-07-25
+  o Bugfixes on 0.1.1.2-alpha:
+    - Fix a bug in handling the controller's "post descriptor"
+      function.
+    - Fix several bugs in handling the controller's "extend circuit"
+      function.
+    - Fix a bug in handling the controller's "stream status" event.
+    - Fix an assert failure if we have a controller listening for
+      circuit events and we go offline.
+    - Re-allow hidden service descriptors to publish 0 intro points.
+    - Fix a crash when generating your hidden service descriptor if
+      you don't have enough intro points already.
+
+  o New features on 0.1.1.2-alpha:
+    - New controller function "getinfo accounting", to ask how
+      many bytes we've used in this time period.
+    - Experimental support for helper nodes: a lot of the risk from
+      a small static adversary comes because users pick new random
+      nodes every time they rebuild a circuit. Now users will try to
+      stick to the same small set of entry nodes if they can. Not
+      enabled by default yet.
+
+  o Bugfixes on 0.1.0.12:
+    - If you're an auth dir server, always publish your dirport,
+      even if you haven't yet found yourself to be reachable.
+    - Fix a size_t underflow in smartlist_join_strings2() that made
+      it do bad things when you hand it an empty smartlist.
+
+
 Changes in version 0.1.1.2-alpha - 2005-07-14
   o New directory servers:
     - tor26 has changed IP address.
