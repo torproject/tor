@@ -53,8 +53,9 @@ website.
 </p>
 
 <hr />
-<a name="zero"></a>
-<h3>Step Zero: Get Tor and Privoxy working</h3>
+<a id="zero"></a>
+<h2><a class="anchor" href="#zero">Step Zero: Get Tor and Privoxy working</a></h2>
+<br />
 
 <p>Before you start, you need to make sure 1) Tor is up and running,
 2) Privoxy is up and running, 3) Privoxy is configured to point
@@ -81,8 +82,9 @@ FAQ entry</a> for some help.
 </p>
 
 <hr />
-<a name="one"></a>
-<h3>Step One: Configure an example hidden service</h3>
+<a id="one"></a>
+<h2><a class="anchor" href="#one">Step One: Configure an example hidden service</a></h2>
+<br />
 
 <p>In this step, you're going to configure a hidden service that points
 to www.google.com. This way we can make sure you have this step
@@ -179,8 +181,9 @@ look in your logs for some hints, and keep playing with it until it works.
 </p>
 
 <hr />
-<a name="two"></a>
-<h3>Step Two: Now install a web server locally</h3>
+<a id="two"></a>
+<h2><a class="anchor" href="#two">Step Two: Now install a web server locally</a></h2>
+<br />
 
 <p>Now that you have hidden services working on Tor, you need to
 set up your web server locally. Setting up a web server is tricky,
@@ -225,8 +228,9 @@ the site.
 </p>
 
 <hr />
-<a name="three"></a>
-<h3>Step Three: Connect your web server to your hidden service</h3>
+<a id="three"></a>
+<h2><a class="anchor" href="#three">Step Three: Connect your web server to your hidden service</a></h2>
+<br />
 
 <p>This part is very simple. Open up your torrc again, and change the
 HiddenServicePort line from "www.google.com:80" to "localhost:5222".
@@ -237,8 +241,9 @@ service hostname in your browser.
 </p>
 
 <hr />
-<a name="four"></a>
-<h3>Step Four: More advanced tips</h3>
+<a id="four"></a>
+<h2><a class="anchor" href="#four">Step Four: More advanced tips</a></h2>
+<br />
 
 <p>If you plan to keep your service available for a long time, you might
 want to make a backup copy of the private_key file somewhere.
@@ -294,8 +299,7 @@ href="mailto:tor-bugs@freehaven.net">send them to us</a>. Thanks!</p>
 </div>
   <div class="bottom" id="bottom">
      <i><a href="mailto:tor-webmaster@freehaven.net"
-     class="smalllink">Webmaster</a></i> - $Id: overview.html,v 1.37
-     2005/07/15 22:19:37 arma Exp $
+     class="smalllink">Webmaster</a></i> - $Id$
   </div>
 </body>
 </html>
