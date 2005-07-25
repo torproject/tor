@@ -224,6 +224,16 @@ typedef uint32_t uintptr_t;
 #endif
 #endif
 
+#ifndef INT_MAX
+#if (SIZEOF_INT == 4)
+#define INT_MAX 0x7fffffffL
+#elif (SIZEOF_INT == 8)
+#define INT_MAX 0x7fffffffffffffffL
+#else
+#error "Can't define INT_MAX"
+#endif
+#endif
+
 #ifndef UINT_MAX
 #if (SIZEOF_INT == 2)
 #define UINT_MAX 0xffffu
@@ -237,14 +247,28 @@ typedef uint32_t uintptr_t;
 #endif
 
 #ifndef TIME_MAX
+
+#ifdef TIME_T_IS_SIGNED
+
+#if (SIZEOF_TIME_T == SIZEOF_INT)
+#define TIME_MAX ((time_t)INT_MAX)
+#elif (SIZEOF_TIME_T == SIZEOF_LONG)
+#define TIME_MAX ((time_t)LONG_MAX)
+#else
+#error "Can't define (signed) TIME_MAX"
+#endif
+
+#else
+/* Unsigned case */
 #if (SIZEOF_TIME_T == 4)
 #define TIME_MAX ((time_t)UINT32_MAX)
 #elif (SIZEOF_TIME_T == 8)
 #define TIME_MAX ((time_t)UINT64_MAX)
 #else
-#error "Can't define TIME_MAX"
+#error "Can't define (unsigned) TIME_MAX"
 #endif
-#endif
+#endif /* time_t_is_signed */
+#endif /* ifndef(TIME_MAX) */
 
 /* Any size_t larger than this amount is likely to be an underflow. */
 #define SIZE_T_CEILING (sizeof(char)<<(sizeof(size_t)*8 - 1))
