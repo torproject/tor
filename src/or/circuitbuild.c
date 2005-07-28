@@ -1853,7 +1853,7 @@ helper_nodes_parse_state(or_state_t *state, int set, const char **err)
       }
       strlcpy(node->nickname, smartlist_get(args,0), MAX_NICKNAME_LEN+1);
       if (base16_decode(node->identity, DIGEST_LEN, smartlist_get(args,1),
-                        strlen(smartlist_get(args,11)))<0) {
+                        strlen(smartlist_get(args,1)))<0) {
         *err = "Bad hex digest for HelperNode";
         break;
       }
