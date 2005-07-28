@@ -539,6 +539,9 @@ accounting_record_bandwidth_usage(time_t now)
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
                get_options()->DataDirectory);
 
+
+ 
+
   return write_str_to_file(fname, buf, 0);
 }
 

@@ -31,6 +31,7 @@ typedef struct {
 
 /** A list of our chosen helper nodes. */
 static smartlist_t *helper_nodes = NULL;
+static int helper_nodes_dirty = 0;
 
 /********* END VARIABLES ************/
 
@@ -46,6 +47,7 @@ static void pick_helper_nodes(void);
 static routerinfo_t *choose_random_helper(void);
 static void clear_helper_nodes(void);
 static void remove_dead_helpers(void);
+static void helper_nodes_changed(void);
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
  * and with the high bit specified by circ_id_type (see
@@ -1635,6 +1637,7 @@ pick_helper_nodes(void)
     strlcpy(helper->nickname, entry->nickname, sizeof(helper->nickname));
     memcpy(helper->identity, entry->identity_digest, DIGEST_LEN);
     smartlist_add(helper_nodes, helper);
+    helper_nodes_changed();
   }
 }
 
@@ -1644,6 +1647,7 @@ clear_helper_nodes(void)
 {
   SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h, tor_free(h));
   smartlist_clear(helper_nodes);
+  helper_nodes_changed();
 }
 
 /** How long (in seconds) do we allow a helper node to be nonfunctional before
@@ -1681,6 +1685,7 @@ remove_dead_helpers(void)
              helper->nickname, dbuf, why, tbuf);
       tor_free(helper);
       smartlist_del(helper_nodes, i);
+      helper_nodes_changed();
     } else
       ++i;
   }
@@ -1747,9 +1752,11 @@ helper_nodes_set_status_from_directory(void)
       }
     });
 
-  if (changed)
+  if (changed) {
     log_fn(LOG_WARN, "    (%d/%d helpers are usable)",
            num_live_helpers(), smartlist_len(helper_nodes));
+    helper_nodes_changed();
+  }
 
   remove_dead_helpers();
   pick_helper_nodes();
@@ -1775,6 +1782,7 @@ helper_node_set_status(const char *digest, int succeeded)
                    "Connection to formerly down helper node '%s' succeeded. "
                    "%d/%d helpers usable.", helper->nickname,
                    num_live_helpers(), smartlist_len(helper_nodes));
+            helper_nodes_changed();
           }
           helper->down_since = 0;
         } else if (!helper->down_since) {
@@ -1782,6 +1790,7 @@ helper_node_set_status(const char *digest, int succeeded)
           log_fn(LOG_WARN,
                  "Connection to helper node '%s' failed. %d/%d helpers usable.",
                  helper->nickname, num_live_helpers(), smartlist_len(helper_nodes));
+          helper_nodes_changed();
         }
       }
     });
@@ -1818,3 +1827,115 @@ choose_random_helper(void)
   return r;
 }
 
+/** DOCDOC */
+int
+helper_nodes_parse_state(or_state_t *state, int set, const char **err)
+{
+  helper_node_t *node = NULL;
+  smartlist_t *helpers = smartlist_create();
+  config_line_t *line;
+
+  *err = NULL;
+  for (line = state->HelperNodes; line; line = line->next) {
+    if (!strcasecmp(line->key, "HelperNode")) {
+      smartlist_t *args = smartlist_create();
+      node = tor_malloc_zero(sizeof(helper_node_t));
+      smartlist_add(helpers, node);
+      smartlist_split_string(args, line->value, " ",
+                             SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+      if (smartlist_len(args)<2) {
+        *err = "Too few arguments to HelperNode";
+        break;
+      }
+      if (!is_legal_nickname(smartlist_get(args,0))) {
+        *err = "Bad nickname for HelperNode";
+        break;
+      }
+      strlcpy(node->nickname, smartlist_get(args,0), MAX_NICKNAME_LEN+1);
+      if (base16_decode(node->identity, DIGEST_LEN, smartlist_get(args,1),
+                        strlen(smartlist_get(args,11)))<0) {
+        *err = "Bad hex digest for HelperNode";
+        break;
+      }
+    } else {
+      time_t when;
+      if (!node) {
+        *err = "HelperNodeDownSince/UnlistedSince without HelperNode";
+        break;
+      }
+      if (parse_iso_time(line->value, &when)<0) {
+        *err = "Bad time in HelperNodeDownSince/UnlistedSince";
+        break;
+      }
+      if (!strcasecmp(line->key, "HelperNodeDownSince"))
+        node->down_since = when;
+      else
+        node->unlisted_since = when;
+    }
+  }
+
+  if (*err || !set) {
+    SMARTLIST_FOREACH(helpers, helper_node_t *, h, tor_free(h));
+    smartlist_free(helpers);
+  }
+  if (!*err && set) {
+    if (helper_nodes) {
+      SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h, tor_free(h));
+      smartlist_free(helper_nodes);
+    }
+    helper_nodes = helpers;
+    helper_nodes_dirty = 0;
+  }
+  return *err ? -1 : 0;
+}
+
+/** DOCDOC */
+static void
+helper_nodes_changed(void)
+{
+  helper_nodes_dirty = 1;
+
+  or_state_save();
+}
+
+/** DOCDOC */
+int
+helper_nodes_update_state(or_state_t *state)
+{
+  config_line_t **next, *line;
+  if (! helper_nodes_dirty)
+    return 0;
+
+  config_free_lines(state->HelperNodes);
+  next = &state->HelperNodes;
+  *next = NULL;
+  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
+    {
+      char dbuf[HEX_DIGEST_LEN+1];
+      *next = line = tor_malloc_zero(sizeof(config_line_t));
+      line->key = tor_strdup("HelperNode");
+      line->value = tor_malloc(HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2);
+      base16_encode(dbuf, sizeof(dbuf), h->identity, DIGEST_LEN);
+      tor_snprintf(line->value,HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2,
+                   "%s %s", h->nickname, dbuf);
+      next = &(line->next);
+      if (h->down_since) {
+        *next = line = tor_malloc_zero(sizeof(config_line_t));
+        line->key = tor_strdup("HelperNodeDownSince");
+        line->value = tor_malloc(ISO_TIME_LEN+1);
+        format_iso_time(line->value, h->down_since);
+        next = &(line->next);
+      }
+      if (h->unlisted_since) {
+        *next = line = tor_malloc_zero(sizeof(config_line_t));
+        line->key = tor_strdup("HelperNodeUnlistedSince");
+        line->value = tor_malloc(ISO_TIME_LEN+1);
+        format_iso_time(line->value, h->unlisted_since);
+        next = &(line->next);
+      }
+    });
+  state->dirty = 1;
+  helper_nodes_dirty = 0;
+
+  return 1;
+}
