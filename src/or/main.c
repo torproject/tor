@@ -1320,6 +1320,7 @@ tor_init(int argc, char *argv[])
     log_fn(LOG_ERR, "Unable to seed random number generator. Exiting.");
     return -1;
   }
+
   return 0;
 }
 

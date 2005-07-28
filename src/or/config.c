@@ -24,6 +24,7 @@ typedef enum config_type_t {
   CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
   CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
   CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
+  CONFIG_TYPE_ISOTIME,      /**< An ISO-formated time relative to GMT. */
   CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and optional
                               * whitespace. */
   CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
@@ -47,7 +48,7 @@ typedef struct config_abbrev_t {
 #define PLURAL(tok) { #tok, #tok "s", 0 }
 
 /* A list of command-line abbreviations. */
-static config_abbrev_t _config_abbrevs[] = {
+static config_abbrev_t _option_abbrevs[] = {
   PLURAL(ExitNode),
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
@@ -75,6 +76,7 @@ typedef struct config_var_t {
   config_type_t type; /**< How to interpret the type and turn it into a value. */
   off_t var_offset; /**< Offset of the corresponding member of or_options_t. */
   const char *initvalue; /**< String (or null) describing initial value. */
+  const char *description;
 } config_var_t;
 
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
@@ -83,7 +85,7 @@ typedef struct config_var_t {
  * CONFIG_TYPE_<b>conftype</b>, and corresponds to
  * or_options_t.<b>member</b>"
  */
-#define VAR(name,conftype,member,initvalue) \
+#define VAR(name,conftype,member,initvalue)                            \
   { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member), initvalue }
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
@@ -92,7 +94,7 @@ typedef struct config_var_t {
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
  */
-static config_var_t _config_vars[] = {
+static config_var_t _option_vars[] = {
   VAR("Address",             STRING,   Address,              NULL),
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
@@ -186,7 +188,49 @@ static config_var_t _config_vars[] = {
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
+
+#define VAR(name,conftype,member,initvalue) \
+  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member), initvalue }
+static config_var_t _state_vars[] = {
+  VAR("LastWritten",             ISOTIME,     LastWritten,          NULL),
+
+  VAR("AccountingIntervalStart", ISOTIME,  AccountingIntervalStart, NULL),
+  VAR("AccountingBytesWrittenInInterval", MEMUNIT,
+      AccountingBytesWrittenInInterval, NULL),
+  VAR("AccountingBytesReadInterval", MEMUNIT, AccountingBytesReadInInterval,NULL),
+  VAR("AccountingSecondsActive", INTERVAL,    AccountingSecondsActive, NULL),
+  VAR("AccountingExpectedUsage", MEMUNIT,     AccountingExpectedUsage, NULL),
+
+  VAR("HelperNodes",             LINELIST_V,  HelperNodes,          NULL),
+  VAR("HelperNode",              LINELIST_S,  HelperNodes,          NULL),
+  VAR("HelperNodeDownSince",     LINELIST_S,  HelperNodes,          NULL),
+  VAR("HelperNodeUnlistedSince", LINELIST_S,  HelperNodes,          NULL),
+  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+};
+
+#undef VAR
 #undef OBSOLETE
+
+/** DOCDOC*/
+typedef struct config_var_description_t {
+  const char *name;
+  const char *description;
+} config_var_description_t;
+
+static config_var_description_t options_description[] = {
+  { "Address", "The advertised (external) address we should use" },
+  // { "AccountingStart", ""},
+  { NULL, NULL },
+};
+
+static config_var_description_t state_description[] = {
+  { "HelperNode", "One of the nodes we have chosen as a fixed entry" },
+  { "HelperNodeDownSince",
+    "The last helper node has been down since this time." },
+  { "HelperNodeUnlistedSince",
+    "The last helper node has been unlisted since this time." },
+  { NULL, NULL },
+};
 
 typedef int (*validate_fn_t)(void*);
 
@@ -197,6 +241,7 @@ typedef struct {
   config_abbrev_t *abbrevs;
   config_var_t *vars;
   validate_fn_t validate_fn;
+  config_var_description_t *descriptions;
 } config_format_t;
 
 #define CHECK(fmt, cfg) do {                                            \
@@ -211,7 +256,7 @@ static void config_line_append(config_line_t **lst,
                                const char *key, const char *val);
 static void option_reset(config_format_t *fmt, or_options_t *options,
                          config_var_t *var);
-static void options_free(config_format_t *fmt, or_options_t *options);
+static void config_free(config_format_t *fmt, void *options);
 static int option_is_same(config_format_t *fmt,
                           or_options_t *o1, or_options_t *o2,const char *name);
 static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
@@ -236,7 +281,8 @@ static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
 static config_line_t *get_assigned_option(config_format_t *fmt,
                                      or_options_t *options, const char *key);
-static void config_init(config_format_t *fmt, or_options_t *options);
+static void config_init(config_format_t *fmt, void *options);
+static int or_state_validate(or_state_t *options);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
@@ -252,9 +298,22 @@ static config_format_t config_format = {
   sizeof(or_options_t),
   OR_OPTIONS_MAGIC,
   STRUCT_OFFSET(or_options_t, _magic),
-  _config_abbrevs,
-  _config_vars,
-  (validate_fn_t)options_validate
+  _option_abbrevs,
+  _option_vars,
+  (validate_fn_t)options_validate,
+  options_description
+};
+
+#define OR_STATE_MAGIC 0x57A73f57
+
+static config_format_t state_format = {
+  sizeof(or_state_t),
+  OR_STATE_MAGIC,
+  STRUCT_OFFSET(or_state_t, _magic),
+  NULL,
+  _state_vars,
+  (validate_fn_t)or_state_validate,
+  state_description
 };
 
 /*
@@ -262,9 +321,11 @@ static config_format_t config_format = {
  */
 
 /** Command-line and config-file options. */
-static or_options_t *global_options=NULL;
+static or_options_t *global_options = NULL;
 /** Name of most recently read torrc file. */
 static char *config_fname = NULL;
+/** Persistant serialized state. */
+static or_state_t *global_state = NULL;
 
 static void *
 config_alloc(config_format_t *fmt)
@@ -290,14 +351,14 @@ void
 set_options(or_options_t *new_val)
 {
   if (global_options)
-    options_free(&config_format, global_options);
+    config_free(&config_format, global_options);
   global_options = new_val;
 }
 
 void
 config_free_all(void)
 {
-  options_free(&config_format, global_options);
+  config_free(&config_format, global_options);
   tor_free(config_fname);
 }
 
@@ -387,6 +448,11 @@ options_act(void)
       return -1;
     libevent_initialized = 1;
   }
+
+  /* Load state */
+  if (! global_state)
+    if (or_state_load())
+      return -1;
 
   options->_ConnLimit =
     set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
@@ -695,6 +761,13 @@ config_assign_line(config_format_t *fmt,
     *(double *)lvalue = atof(c->value);
     break;
 
+  case CONFIG_TYPE_ISOTIME:
+    if (parse_iso_time(c->value, (time_t *)lvalue)) {
+      log(LOG_WARN, "Invalid time '%s' for keyword '%s'", c->value, c->key);
+      return -2;
+    }
+    break;
+
   case CONFIG_TYPE_CSV:
     if (*(smartlist_t**)lvalue) {
       SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
@@ -814,6 +887,15 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
         return NULL;
       }
       break;
+    case CONFIG_TYPE_ISOTIME:
+      if (*(time_t*)value) {
+        result->value = tor_malloc(ISO_TIME_LEN+1);
+        format_iso_time(result->value, *(time_t*)value);
+      } else {
+        tor_free(result->key);
+        tor_free(result);
+      }
+      break;
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
       /* This means every or_options_t uint or bool element
@@ -866,7 +948,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
  */
 static int
 config_assign(config_format_t *fmt,
-              or_options_t *options, config_line_t *list, int reset)
+              void *options, config_line_t *list, int reset)
 {
   config_line_t *p;
 
@@ -911,17 +993,17 @@ options_trial_assign(config_line_t *list, int reset)
   or_options_t *trial_options = options_dup(&config_format, get_options());
 
   if ((r=config_assign(&config_format, trial_options, list, reset)) < 0) {
-    options_free(&config_format, trial_options);
+    config_free(&config_format, trial_options);
     return r;
   }
 
   if (options_validate(trial_options) < 0) {
-    options_free(&config_format, trial_options);
+    config_free(&config_format, trial_options);
     return -2;
   }
 
   if (options_transition_allowed(get_options(), trial_options) < 0) {
-    options_free(&config_format, trial_options);
+    config_free(&config_format, trial_options);
     return -3;
   }
 
@@ -947,6 +1029,8 @@ option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
     case CONFIG_TYPE_DOUBLE:
       *(double*)lvalue = 0.0;
       break;
+    case CONFIG_TYPE_ISOTIME:
+      *(time_t*)lvalue = 0;
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
     case CONFIG_TYPE_BOOL:
@@ -1132,7 +1216,7 @@ get_default_nickname(void)
 
 /** Release storage held by <b>options</b> */
 static void
-options_free(config_format_t *fmt,or_options_t *options)
+config_free(config_format_t *fmt, void *options)
 {
   int i;
   void *lvalue;
@@ -1147,6 +1231,7 @@ options_free(config_format_t *fmt,or_options_t *options)
       case CONFIG_TYPE_UINT:
       case CONFIG_TYPE_BOOL:
       case CONFIG_TYPE_DOUBLE:
+      case CONFIG_TYPE_ISOTIME:
       case CONFIG_TYPE_OBSOLETE:
         break; /* nothing to free for these config types */
       case CONFIG_TYPE_STRING:
@@ -1238,8 +1323,9 @@ options_init(or_options_t *options)
   config_init(&config_format, options);
 }
 
+/* DOCDOC */
 static void
-config_init(config_format_t *fmt, or_options_t *options)
+config_init(config_format_t *fmt, void *options)
 {
   int i;
   config_var_t *var;
@@ -1253,14 +1339,15 @@ config_init(config_format_t *fmt, or_options_t *options)
   }
 }
 
+/* DOCDOC */
 static char *
-config_dump(config_format_t *fmt, or_options_t *options, int minimal)
+config_dump(config_format_t *fmt, void *options, int minimal)
 {
   smartlist_t *elements;
   or_options_t *defaults;
   config_line_t *line;
   char *result;
-  int i;
+  int i, j;
 
   defaults = config_alloc(fmt);
   config_init(fmt, defaults);
@@ -1276,6 +1363,18 @@ config_dump(config_format_t *fmt, or_options_t *options, int minimal)
       continue;
     if (minimal && option_is_same(fmt, options, defaults, fmt->vars[i].name))
       continue;
+
+    for (j=0; fmt->descriptions[j].name; ++j) {
+      if (!strcasecmp(fmt->vars[i].name, fmt->descriptions[j].name)) {
+        const char *desc = fmt->descriptions[j].description;
+        size_t len = strlen(desc)+8;
+        char *tmp = tor_malloc(len);
+        tor_snprintf(tmp, len, "# %s\n",desc);
+        smartlist_add(elements, tmp);
+        break;
+      }
+    }
+
     line = get_assigned_option(fmt, options, fmt->vars[i].name);
     for (; line; line = line->next) {
       size_t len = strlen(line->key) + strlen(line->value) + 3;
@@ -1735,32 +1834,32 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
   }
 
   if (old->RunAsDaemon != new_val->RunAsDaemon) {
-    log_fn(LOG_WARN,"During reload, changing RunAsDaemon is not allowed. Failing.");
+    log_fn(LOG_WARN,"While Tor is running, changing RunAsDaemon is not allowed. Failing.");
     return -1;
   }
 
   if (old->ORPort != new_val->ORPort) {
-    log_fn(LOG_WARN,"During reload, changing ORPort is not allowed. Failing.");
+    log_fn(LOG_WARN,"While Tor is running, changing ORPort is not allowed. Failing.");
     return -1;
   }
 
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    log_fn(LOG_WARN,"During reload, changing DataDirectory (%s->%s) is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
+    log_fn(LOG_WARN,"While Tor is running, changing DataDirectory (%s->%s) is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
     return -1;
   }
 
   if (!opt_streq(old->User, new_val->User)) {
-    log_fn(LOG_WARN,"During reload, changing User is not allowed. Failing.");
+    log_fn(LOG_WARN,"While Tor is running, changing User is not allowed. Failing.");
     return -1;
   }
 
   if (!opt_streq(old->Group, new_val->Group)) {
-    log_fn(LOG_WARN,"During reload, changing Group is not allowed. Failing.");
+    log_fn(LOG_WARN,"While Tor is running, changing Group is not allowed. Failing.");
     return -1;
   }
 
   if (old->HardwareAccel != new_val->HardwareAccel) {
-    log_fn(LOG_WARN,"During reload, changing HardwareAccel is not allowed. Failing.");
+    log_fn(LOG_WARN,"While Tor is running, changing HardwareAccel is not allowed. Failing.");
     return -1;
   }
 
@@ -1984,7 +2083,7 @@ options_init_from_torrc(int argc, char **argv)
   return 0;
  err:
   tor_free(fname);
-  options_free(&config_format, newoptions);
+  config_free(&config_format, newoptions);
   return -1;
 }
 
@@ -2794,6 +2893,162 @@ check_libevent_version(const char *m, const char *v, int server)
 
 }
 #endif
+
+/* Versioning issues and state: we want to be able to understand old state
+ * files, and not choke on new ones.
+ *
+ * We could preserve all unrecognized variables across invocations, but we could
+ * screw up order, if their order is significant with respect to existing
+ * options.
+ *
+ * We could just dump unrecognized variables if you downgrade.
+ *
+ * This needs thought. XXXX NM
+ */
+
+/** DOCDOC */
+or_state_t *
+get_or_state(void)
+{
+  return global_state;
+}
+
+/** DOCDOC */
+static char *
+get_or_state_fname(void)
+{
+  char *fname = NULL;
+  or_options_t *options = get_options();
+  size_t len = strlen(options->DataDirectory) + 16;
+  fname = tor_malloc(len);
+  tor_snprintf(fname, len, "%s/state", options->DataDirectory);
+  return fname;
+}
+
+/** DOCDOC */
+static int
+or_state_validate(or_state_t *state)
+{
+  const char *err;
+  if (helper_nodes_parse_state(state, 0, &err)<0) {
+    log_fn(LOG_WARN, "Unable to parse helper nodes: %s", err);
+    return -1;
+  }
+  return 0;
+}
+
+/** DOCDOC */
+static void
+or_state_set(or_state_t *new_state)
+{
+  const char *err;
+  tor_assert(new_state);
+  if (global_state)
+    config_free(&state_format, global_state);
+  global_state = new_state;
+  if (helper_nodes_parse_state(global_state, 1, &err)<0)
+    log_fn(LOG_WARN,"Unparseable helper nodes state: %s",err);
+
+}
+
+/* DOCDOC */
+int
+or_state_load(void)
+{
+  or_state_t *new_state = NULL;
+  char *contents = NULL, *fname;
+  int r = -1;
+
+  fname = get_or_state_fname();
+  switch (file_status(fname)) {
+    case FN_FILE:
+      if (!(contents = read_file_to_str(fname, 0))) {
+        log_fn(LOG_WARN, "Unable to read state file %s", fname);
+        goto done;
+      }
+      break;
+    case FN_NOENT:
+      break;
+    default:
+      log_fn(LOG_WARN,"State file %s is not a file? Failing.", fname);
+      goto done;
+  }
+  new_state = tor_malloc_zero(sizeof(or_state_t));
+  new_state->_magic = OR_STATE_MAGIC;
+  config_init(&state_format, new_state);
+  if (contents) {
+    config_line_t *lines=NULL;
+    int assign_retval;
+    if (config_get_lines(contents, &lines)<0)
+      goto done;
+    assign_retval = config_assign(&state_format, new_state, lines, 0);
+    config_free_lines(lines);
+    if (assign_retval<0)
+      goto done;
+  }
+
+  if (or_state_validate(new_state) < 0)
+    goto done;
+
+  if (contents)
+    log_fn(LOG_INFO, "Loaded state from %s", fname);
+  else
+    log_fn(LOG_INFO, "Initialized state");
+  or_state_set(new_state);
+  new_state = NULL;
+  if (!contents) {
+    global_state->dirty = 1;
+    or_state_save();
+  }
+
+  r = 0;
+ done:
+  tor_free(fname);
+  tor_free(contents);
+  if (new_state)
+    config_free(&state_format, new_state);
+
+  return r;
+}
+
+/** DOCDOC */
+int
+or_state_save(void)
+{
+  char *state, *contents;
+  char tbuf[ISO_TIME_LEN+1];
+  size_t len;
+  char *fname;
+
+  helper_nodes_update_state(global_state);
+
+  if (!global_state->dirty)
+    return 0;
+
+  global_state->LastWritten = time(NULL);
+  state = config_dump(&state_format, global_state, 0);
+  len = strlen(state)+128;
+  contents = tor_malloc(len);
+  format_local_iso_time(tbuf, time(NULL));
+  tor_snprintf(contents, len,
+               "# Tor state file last generated on %s\n"
+               "# You *do not* need to edit this file.\n\n%s",
+               tbuf, state);
+  tor_free(state);
+  fname = get_or_state_fname();
+  if (write_str_to_file(fname, contents, 0)<0) {
+    log_fn(LOG_WARN, "Unable to write state to file %s", fname);
+    tor_free(fname);
+    tor_free(contents);
+    return -1;
+  }
+  log_fn(LOG_INFO, "Saved state to %s", fname);
+  tor_free(fname);
+  tor_free(contents);
+
+  global_state->dirty = 0;
+  return 0;
+}
 
 /** Dump the version of every file to the log. */
 static void

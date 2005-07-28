@@ -1176,6 +1176,22 @@ typedef struct {
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
 } or_options_t;
 
+/** Persistent state for an onion router, as saved to disk. */
+typedef struct {
+  uint32_t _magic;
+  int dirty;
+
+  /* XXXX These options aren't actually attached to anything yet. */
+  time_t LastWritten;
+  time_t AccountingIntervalStart;
+  uint64_t AccountingBytesReadInInterval;
+  uint64_t AccountingBytesWrittenInInterval;
+  int AccountingSecondsActive;
+  uint64_t AccountingExpectedUsage;
+
+  config_line_t *HelperNodes;
+} or_state_t;
+
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
 #define SOCKS_COMMAND_CONNECT 0x01
@@ -1261,6 +1277,8 @@ const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 void helper_node_set_status(const char *digest, int succeeded);
 void helper_nodes_set_status_from_directory(void);
+int helper_nodes_update_state(or_state_t *state);
+int helper_nodes_parse_state(or_state_t *state, int set, const char **err);
 
 /********************************* circuitlist.c ***********************/
 
@@ -1349,6 +1367,10 @@ config_line_t *option_get_assignment(or_options_t *options,
                                      const char *key);
 char *options_dump(or_options_t *options, int minimal);
 int options_save_current(void);
+
+or_state_t *get_or_state(void);
+int or_state_load(void);
+int or_state_save(void);
 
 /********************************* connection.c ***************************/
 
