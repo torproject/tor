@@ -23,6 +23,7 @@ const char compat_c_id[] = "$Id$";
 
 #ifdef MS_WINDOWS
 #include <process.h>
+
 #endif
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
@@ -819,7 +820,27 @@ spawn_exit()
 void
 tor_gettimeofday(struct timeval *timeval)
 {
-#ifdef HAVE_GETTIMEOFDAY
+#ifdef MS_WINDOWS
+  /* Epoch bias copied from perl: number of units between windows epoch and
+   * unix epoch. */
+#define EPOCH_BIAS U64_LITERAL(116444736000000000)
+#define UNITS_PER_SEC U64_LITERAL(10000000)
+#define USEC_PER_SEC U64_LITERAL(1000000)
+#define UNITS_PER_USEC U64_LITERAL(10)
+  union {
+    uint64_t ft_64;
+    FILETIME ft_ft;
+  } ft;
+  /* number of 100-nsec units since Jan 1, 1601 */
+  GetSystemTimeAsFileTime(&ft.ft_ft);
+  if (ft.ft_64 < EPOCH_BIAS) {
+    log_fn(LOG_ERR, "System time is before 1970; failing.");
+    exit(1);
+  }
+  ft.ft_64 -= EPOCH_BIAS;
+  tv->tv_sec = ft.ft_64 / UNITS_PER_SEC;
+  tv->tv_usec = (ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC;
+#elif defined(HAVE_GETTIMEOFDAY)
   if (gettimeofday(timeval, NULL)) {
     log_fn(LOG_ERR, "gettimeofday failed.");
     /* If gettimeofday dies, we have either given a bad timezone (we didn't),
