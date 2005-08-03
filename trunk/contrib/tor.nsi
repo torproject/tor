@@ -132,6 +132,7 @@ Section "Documents" Docs
    File "..\README"
    File "..\AUTHORS"
    File "..\ChangeLog"
+   File "..\LICENSE"
 SectionEnd
 
 SubSection /e "Shortcuts" Shortcuts
@@ -147,7 +148,8 @@ Section "Start Menu" StartMenu
    CreateShortCut "$SMPROGRAMS\Tor\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
    IfFileExists "$INSTDIR\Documents\*.*" "" +4
       CreateDirectory "$SMPROGRAMS\Tor\Documents"
-      CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Documentation.lnk" "$INSTDIR\Documents\tor-doc.html"
+      CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Manual.lnk" "$INSTDIR\Documents\tor-doc.html"
+      CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Documentation.lnk" "$INSTDIR\Documents"
       CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Specification.lnk" "$INSTDIR\Documents\tor-spec.txt"
 SectionEnd
 
