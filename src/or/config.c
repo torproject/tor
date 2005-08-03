@@ -670,7 +670,7 @@ config_find_option(config_format_t *fmt, const char *key)
   for (i=0; fmt->vars[i].name; ++i) {
     if (!strncasecmp(key, fmt->vars[i].name, keylen)) {
       log_fn(LOG_WARN, "The abbreviation '%s' is deprecated. "
-          "Tell Nick and Roger to make it official, or just use '%s' instead",
+          "Please use '%s' instead",
              key, fmt->vars[i].name);
       return &fmt->vars[i];
     }
