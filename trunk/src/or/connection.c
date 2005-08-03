@@ -24,6 +24,10 @@ static int connection_reached_eof(connection_t *conn);
 static int connection_read_to_buf(connection_t *conn, int *max_to_read);
 static int connection_process_inbuf(connection_t *conn, int package_partial);
 static int connection_bucket_read_limit(connection_t *conn);
+static void client_check_address_changed(int sock);
+
+static uint32_t last_interface_ip = 0;
+static smartlist_t *outgoing_addrs = NULL;
 
 /**************************************************************/
 
@@ -251,11 +255,16 @@ connection_free(connection_t *conn)
   }
   connection_unregister(conn);
   _connection_free(conn);
+
+  SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
+  smartlist_free(outgoing_addrs);
+  outgoing_addrs = NULL;
 }
 
-/** Call _connection_free() on every connection in our array.
- * This is used by cpuworkers and dnsworkers when they fork,
- * so they don't keep resources held open (especially sockets).
+/** Call _connection_free() on every connection in our array, and release all
+ * storage helpd by connection.c. This is used by cpuworkers and dnsworkers
+ * when they fork, so they don't keep resources held open (especially
+ * sockets).
  *
  * Don't do the checks in connection_free(), because they will
  * fail.
@@ -701,7 +710,7 @@ int
 connection_connect(connection_t *conn, char *address,
                    uint32_t addr, uint16_t port)
 {
-  int s;
+  int s, inprogress = 0;
   struct sockaddr_in dest_addr;
   or_options_t *options = get_options();
 
@@ -754,21 +763,21 @@ connection_connect(connection_t *conn, char *address,
       tor_close_socket(s);
       return -1;
     } else {
-      /* it's in progress. set state appropriately and return. */
-      conn->s = s;
-      if (connection_add(conn) < 0) /* no space, forget it */
-        return -1;
-      log_fn(LOG_DEBUG,"connect in progress, socket %d.",s);
-      return 0;
+      inprogress = 1;
     }
   }
 
+  if (!server_mode(options))
+    client_check_address_changed(s);
+
   /* it succeeded. we're connected. */
-  log_fn(LOG_INFO,"Connection to %s:%u established.",safe_str(address),port);
+  log_fn(inprogress?LOG_DEBUG:LOG_INFO,
+         "Connection to %s:%u %s (sock %d).",safe_str(address),port,
+         inprogress?"in progress":"established",s);
   conn->s = s;
   if (connection_add(conn) < 0) /* no space, forget it */
     return -1;
-  return 1;
+  return inprogress ? 0 : 1;
 }
 
 /**
@@ -1678,6 +1687,57 @@ alloc_http_authenticator(const char *authenticator)
     base64_authenticator[strlen(base64_authenticator) - 1] = 0;
   }
   return base64_authenticator;
+}
+
+/** DOCDOC
+ * XXXX ipv6 NM
+ */
+static void
+client_check_address_changed(int sock)
+{
+  uint32_t iface_ip, ip_out;
+  struct sockaddr_in out_addr;
+  socklen_t out_addr_len = sizeof(out_addr);
+  uint32_t *ip;
+
+  if (!last_interface_ip)
+    get_interface_address(&last_interface_ip);
+  if (!outgoing_addrs)
+    outgoing_addrs = smartlist_create();
+
+  if (getsockname(sock, (struct sockaddr*)&out_addr, &out_addr_len)<0) {
+    int e = tor_socket_errno(sock);
+    log_fn(LOG_WARN, "getsockname() failed: %s", tor_socket_strerror(e));
+    return;
+  }
+
+  /* Okay.  If we've used this address previously, we're okay. */
+  ip_out = ntohl(out_addr.sin_addr.s_addr);
+  SMARTLIST_FOREACH(outgoing_addrs, uint32_t*, ip,
+                    if (*ip == ip_out) return;
+                    );
+
+  /* Uh-oh.  We haven't connected from this address before. Has the interface
+   * address changed? */
+  if (get_interface_address(&iface_ip)<0)
+    return;
+  ip = tor_malloc(sizeof(uint32_t));
+  *ip = ip_out;
+
+  if (iface_ip == last_interface_ip) {
+    /* Nope, it hasn't changed.  Add this address to the list. */
+    smartlist_add(outgoing_addrs, ip);
+  } else {
+    /* The interface changed.  We're a client, so we need to regenerate our
+     * keys.  First, reset the state. */
+    log_fn(LOG_NOTICE, "Our IP has changed.  Rotating keys...");
+    last_interface_ip = iface_ip;
+    SMARTLIST_FOREACH(outgoing_addrs, void*, ip, tor_free(ip));
+    smartlist_clear(outgoing_addrs);
+    smartlist_add(outgoing_addrs, ip);
+    /* Okay, now change our keys. */
+    init_keys(); /* XXXX NM return value-- safe to ignore? */
+  }
 }
 
 /** Process new bytes that have arrived on conn-\>inbuf.

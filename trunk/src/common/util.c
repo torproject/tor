@@ -695,7 +695,8 @@ int parse_iso_time(const char *cp, time_t *t) {
  * must be 1 if fd was returned by socket() or accept(), and 0 if fd
  * was returned by open().  Return the number of bytes written, or -1
  * on error.  Only use if fd is a blocking fd.  */
-int write_all(int fd, const char *buf, size_t count, int isSocket) {
+int
+write_all(int fd, const char *buf, size_t count, int isSocket) {
   size_t written = 0;
   int result;
 
@@ -716,7 +717,8 @@ int write_all(int fd, const char *buf, size_t count, int isSocket) {
  * was returned by socket() or accept(), and 0 if fd was returned by
  * open().  Return the number of bytes read, or -1 on error. Only use
  * if fd is a blocking fd. */
-int read_all(int fd, char *buf, size_t count, int isSocket) {
+int
+read_all(int fd, char *buf, size_t count, int isSocket) {
   size_t numread = 0;
   int result;
 
@@ -1317,6 +1319,59 @@ is_plausible_address(const char *name)
   }
 
   return 1;
+}
+
+/**
+ * Set *<b>addr</b> to the host-order IPv4 address (if any) of whatever
+ * interface connects to the internet.  This address should only be used in
+ * checking whether our address has changed.  Return 0 on success, -1 on
+ * failure.
+ */
+int
+get_interface_address(uint32_t *addr)
+{
+  int sock=-1, r=-1;
+  struct sockaddr_in target_addr, my_addr;
+  socklen_t my_addr_len = sizeof(my_addr);
+
+  tor_assert(addr);
+  *addr = 0;
+
+  sock = socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
+  if (sock < 0) {
+    int e = tor_socket_errno(-1);
+    log_fn(LOG_WARN, "unable to create socket: %s", tor_socket_strerror(e));
+    goto err;
+  }
+
+  memset(&target_addr, 0, sizeof(target_addr));
+  target_addr.sin_family = AF_INET;
+  /* discard port */
+  target_addr.sin_port = 9;
+  /* 18.0.0.1 (Don't worry: no packets are sent. We just need a real address
+   * on the internet.) */
+  target_addr.sin_addr.s_addr = htonl(0x12000001);
+
+  if (connect(sock,(struct sockaddr *)&target_addr,sizeof(target_addr))<0) {
+    int e = tor_socket_errno(sock);
+    log_fn(LOG_WARN, "connnect() failed: %s", tor_socket_strerror(e));
+    goto err;
+  }
+
+  /* XXXX Can this be right on IPv6 clients? */
+  if (getsockname(sock, &my_addr, &my_addr_len)) {
+    int e = tor_socket_errno(sock);
+    log_fn(LOG_WARN, "getsockname() failed: %s", tor_socket_strerror(e));
+    goto err;
+  }
+
+  *addr = ntohl(my_addr.sin_addr.s_addr);
+
+  r=0;
+ err:
+  if (sock >= 0)
+    tor_close_socket(sock);
+  return r;
 }
 
 /* =====
