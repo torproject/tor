@@ -838,8 +838,8 @@ tor_gettimeofday(struct timeval *timeval)
     exit(1);
   }
   ft.ft_64 -= EPOCH_BIAS;
-  tv->tv_sec = ft.ft_64 / UNITS_PER_SEC;
-  tv->tv_usec = (ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC;
+  timeval->tv_sec = (unsigned) (ft.ft_64 / UNITS_PER_SEC);
+  timeval->tv_usec = (unsigned) ((ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC);
 #elif defined(HAVE_GETTIMEOFDAY)
   if (gettimeofday(timeval, NULL)) {
     log_fn(LOG_ERR, "gettimeofday failed.");
