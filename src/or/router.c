@@ -245,8 +245,6 @@ init_keys(void)
   /* XXX009 Two problems with how this is called:
    * 1. It should be idempotent for servers, so we can call init_keys
    *    as much as we need to.
-   * 2. Clients should rotate their identity keys at least whenever
-   *    their IPs change.
    */
   char keydir[512];
   char keydir2[512];
