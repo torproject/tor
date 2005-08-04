@@ -106,6 +106,9 @@ Changes in version 0.1.0.13 - 2005-08-04
     - Fix Windows installer to ship Tor license (thanks to Aphex for
       pointing out this oversight) and put a link to the doc directory
       in the start menu.
+    - Explicitly set no-unaligned-access for sparc: it turns out the
+      new gcc's let you compile broken code, but that doesn't make it
+      not-broken.
 
 
 Changes in version 0.1.0.12 - 2005-07-18
