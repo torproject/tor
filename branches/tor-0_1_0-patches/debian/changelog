@@ -1,9 +1,16 @@
-tor (0.1.0.XXXX) unstable; urgency=low
+tor (0.1.0.13-1) unstable; urgency=high
 
+  * New upstream version:
+    - Explicitly set no-unaligned-access for sparc in configure.in.
+      it turns out the new gcc's let you compile broken code, but
+      that doesn't make it not-broken (closes: #320140).
+    - Fix a critical bug in the security of our crypto handshakes.
+      (Therefore set urgency to high).
+    and more (see upstream changelog).
   * Slightly improve init script to give you proper error messages when
     you do not run it as root.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 29 Jul 2005 12:01:16 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri,  5 Aug 2005 01:27:49 +0200
 
 tor (0.1.0.12-1) unstable; urgency=medium
 
