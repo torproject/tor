@@ -146,7 +146,7 @@ Section "Start Menu" StartMenu
    CreateShortCut "$SMPROGRAMS\Tor\Torrc.lnk" "Notepad.exe" "$configdir\torrc"
    CreateShortCut "$SMPROGRAMS\Tor\Tor Website.lnk" "$INSTDIR\Tor Website.url"
    CreateShortCut "$SMPROGRAMS\Tor\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-   IfFileExists "$INSTDIR\Documents\*.*" "" +4
+   IfFileExists "$INSTDIR\Documents\*.*" "" +5
       CreateDirectory "$SMPROGRAMS\Tor\Documents"
       CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Manual.lnk" "$INSTDIR\Documents\tor-doc.html"
       CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Documentation.lnk" "$INSTDIR\Documents"
