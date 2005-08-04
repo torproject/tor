@@ -325,6 +325,45 @@ $Id$
       form:
          ServerID SP ORStatus CRLF
 
+    "helper-nodes"
+      A series of lines listing the currently chosen helper nodes, if any.
+      Each is of the form:
+         ServerID  SP ((("down" / "unlisted") ISOTime) / "up")  CRLF
+
+    "accounting/enabled"
+    "accounting/hibernating"
+    "accounting/bytes"
+    "accounting/bytes-left"
+    "accounting/interval-start"
+    "accounting/interval-wake"
+    "accounting/interval-end"
+      Information about accounting status.  If accounting is enabled,
+      "enabled" is 1; otherwise it is 0.  The "hibernating" field is "hard"
+      if we are accepting no data; "soft" if we're accepting no new
+      connections, and "awake" if we're not hibernating at all.  The "bytes"
+      and "bytes-left" fields contain (read-bytes SP write-bytes), for the
+      start and the rest of the interval respectively.  The 'interval-start'
+      and 'interval-end' fields are the borders of the current interval; the
+      'interval-wake' field is the time within the current interval (if any)
+      where we plan[ned] to start being active.
+
+    "config/names"
+      A series of lines listing the available configuration options. Each is
+      of the form:
+         OptionName SP OptionType [ SP Documentation ] CRLF
+         OptionName = Keyword
+         OptionType = "Integer" / "TimeInterval" / "DataSize" / "Float" /
+           "Boolean" / "Time" / "CommaList" / "Dependant" / "Virtual" /
+           "String" / "LineList"
+         Documentation = Text
+
+    "info/names"
+      A series of lines listing the available GETINFO options.  Each is of
+      one of thes forms:
+         OptionName SP Documentation CRLF
+         OptionPrefix SP Documentation CRLF
+         OptionPrefix = OptionName "/*"
+
   Examples:
      C: GETINFO version desc/name/moria1
      S: 250+desc/name/moria=

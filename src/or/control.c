@@ -1112,6 +1112,34 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
   return 0;
 }
 
+/** DOCDOC */
+static char *
+list_getinfo_options(void)
+{
+  return tor_strdup(
+    "accounting/bytes Number of bytes read/written so far in interval.\n"
+    "accounting/bytes-left Number of bytes left to read/write in interval.\n"
+    "accounting/enabled Is accounting currently enabled?\n"
+    "accounting/hibernating Are we hibernating or awake?\n"
+    "accounting/interval-end Time when interval ends.\n"
+    "accounting/interval-start Time when interval starts.\n"
+    "accounting/interval-wake Time to wake up in this interval.\n"
+    "addr-mappings/all All current remapped addresses.\n"
+    "addr-mappings/cache Addresses remapped by DNS cache.\n"
+    "addr-mappings/configl Addresses remapped from configuration options.\n"
+    "addr-mappings/control Addresses remapped by a controller.\n"
+    "circuit-status Status of each current circuit.\n"
+    "config/names List of configuration options, types, and documentation.\n"
+    "desc/id/* Server descriptor by hex ID\n"
+    "desc/name/* Server descriptor by nickname.\n"
+    "helper-nodes Which nodes will we use as helpers?\n"
+    "info/names List of GETINFO options, types, and documentation.\n"
+    "network-status List of hex IDs, nicknames, server statuses.\n"
+    "orconn-status Status of each current OR connection.\n"
+    "stream-status Status of each current application stream.\n"
+    "version The current version of Tor.\n");
+}
+
 /** Lookup the 'getinfo' entry <b>question</b>, and return
  * the answer in <b>*answer</b> (or NULL if key not recognized).
  * Return 0 if success, or -1 if internal error. */
@@ -1123,6 +1151,12 @@ handle_getinfo_helper(const char *question, char **answer)
     *answer = tor_strdup(VERSION);
   } else if (!strcmpstart(question, "accounting/")) {
     return accounting_getinfo_helper(question, answer);
+  } else if (!strcmpstart(question, "helper-nodes")) {
+    return helper_nodes_getinfo_helper(question, answer);
+  } else if (!strcmpstart(question, "config/")) {
+    return config_getinfo_helper(question, answer);
+  } else if (!strcmp(question, "info/names")) {
+    *answer = list_getinfo_options();
   } else if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
     if (ri && ri->signed_descriptor)

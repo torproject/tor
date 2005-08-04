@@ -1279,6 +1279,7 @@ void helper_node_set_status(const char *digest, int succeeded);
 void helper_nodes_set_status_from_directory(void);
 int helper_nodes_update_state(or_state_t *state);
 int helper_nodes_parse_state(or_state_t *state, int set, const char **err);
+int helper_nodes_getinfo_helper(const char *question, char **answer);
 
 /********************************* circuitlist.c ***********************/
 
@@ -1371,6 +1372,8 @@ int options_save_current(void);
 or_state_t *get_or_state(void);
 int or_state_load(void);
 int or_state_save(void);
+
+int config_getinfo_helper(const char *question, char **answer);
 
 /********************************* connection.c ***************************/
 

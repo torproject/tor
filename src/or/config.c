@@ -218,7 +218,7 @@ typedef struct config_var_description_t {
 } config_var_description_t;
 
 static config_var_description_t options_description[] = {
-  { "Address", "The advertised (external) address we should use" },
+  { "Address", "The advertised (external) address we should use." },
   // { "AccountingStart", ""},
   { NULL, NULL },
 };
@@ -294,7 +294,7 @@ static void check_libevent_version(const char *m, const char *v, int server);
 
 #define OR_OPTIONS_MAGIC 9090909
 
-static config_format_t config_format = {
+static config_format_t options_format = {
   sizeof(or_options_t),
   OR_OPTIONS_MAGIC,
   STRUCT_OFFSET(or_options_t, _magic),
@@ -351,14 +351,14 @@ void
 set_options(or_options_t *new_val)
 {
   if (global_options)
-    config_free(&config_format, global_options);
+    config_free(&options_format, global_options);
   global_options = new_val;
 }
 
 void
 config_free_all(void)
 {
-  config_free(&config_format, global_options);
+  config_free(&options_format, global_options);
   tor_free(config_fname);
 }
 
@@ -568,7 +568,7 @@ config_get_commandlines(int argc, char **argv)
     while (*s == '-')
       s++;
 
-    (*new)->key = tor_strdup(expand_abbrev(&config_format, s, 1));
+    (*new)->key = tor_strdup(expand_abbrev(&options_format, s, 1));
     (*new)->value = tor_strdup(argv[i+1]);
     (*new)->next = NULL;
     log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
@@ -650,6 +650,18 @@ config_free_lines(config_line_t *front)
   }
 }
 
+/** DOCDOC */
+static const char *
+config_find_description(config_format_t *fmt, const char *name)
+{
+  int i;
+  for (i=0; fmt->descriptions[i].name; ++i) {
+    if (!strcasecmp(name, fmt->descriptions[i].name))
+      return fmt->descriptions[i].description;
+  }
+  return NULL;
+}
+
 /** If <b>key</b> is a configuration option, return the corresponding
  * config_var_t.  Otherwise, if <b>key</b> is a non-standard abbreviation,
  * warn, and return the corresponding config_var_t.  Otherwise return NULL.
@@ -663,8 +675,9 @@ config_find_option(config_format_t *fmt, const char *key)
     return NULL; /* if they say "--" on the commandline, it's not an option */
   /* First, check for an exact (case-insensitive) match */
   for (i=0; fmt->vars[i].name; ++i) {
-    if (!strcasecmp(key, fmt->vars[i].name))
+    if (!strcasecmp(key, fmt->vars[i].name)) {
       return &fmt->vars[i];
+    }
   }
   /* If none, check for an abbreviated match */
   for (i=0; fmt->vars[i].name; ++i) {
@@ -817,7 +830,7 @@ config_reset_line(config_format_t *fmt, or_options_t *options, const char *key)
 int
 option_is_recognized(const char *key)
 {
-  config_var_t *var = config_find_option(&config_format, key);
+  config_var_t *var = config_find_option(&options_format, key);
   return (var != NULL);
 }
 
@@ -825,7 +838,7 @@ option_is_recognized(const char *key)
 const char *
 option_get_canonical_name(const char *key)
 {
-  config_var_t *var = config_find_option(&config_format, key);
+  config_var_t *var = config_find_option(&options_format, key);
   return var->name;
 }
 
@@ -834,7 +847,7 @@ option_get_canonical_name(const char *key)
 config_line_t *
 option_get_assignment(or_options_t *options, const char *key)
 {
-  return get_assigned_option(&config_format, options, key);
+  return get_assigned_option(&options_format, options, key);
 }
 
 static config_line_t *
@@ -990,20 +1003,20 @@ int
 options_trial_assign(config_line_t *list, int reset)
 {
   int r;
-  or_options_t *trial_options = options_dup(&config_format, get_options());
+  or_options_t *trial_options = options_dup(&options_format, get_options());
 
-  if ((r=config_assign(&config_format, trial_options, list, reset)) < 0) {
-    config_free(&config_format, trial_options);
+  if ((r=config_assign(&options_format, trial_options, list, reset)) < 0) {
+    config_free(&options_format, trial_options);
     return r;
   }
 
   if (options_validate(trial_options) < 0) {
-    config_free(&config_format, trial_options);
+    config_free(&options_format, trial_options);
     return -2;
   }
 
   if (options_transition_allowed(get_options(), trial_options) < 0) {
-    config_free(&config_format, trial_options);
+    config_free(&options_format, trial_options);
     return -3;
   }
 
@@ -1320,7 +1333,7 @@ options_dup(config_format_t *fmt, or_options_t *old)
 void
 options_init(or_options_t *options)
 {
-  config_init(&config_format, options);
+  config_init(&options_format, options);
 }
 
 /* DOCDOC */
@@ -1347,7 +1360,8 @@ config_dump(config_format_t *fmt, void *options, int minimal)
   or_options_t *defaults;
   config_line_t *line;
   char *result;
-  int i, j;
+  int i;
+  const char *desc;
 
   defaults = config_alloc(fmt);
   config_init(fmt, defaults);
@@ -1364,15 +1378,13 @@ config_dump(config_format_t *fmt, void *options, int minimal)
     if (minimal && option_is_same(fmt, options, defaults, fmt->vars[i].name))
       continue;
 
-    for (j=0; fmt->descriptions[j].name; ++j) {
-      if (!strcasecmp(fmt->vars[i].name, fmt->descriptions[j].name)) {
-        const char *desc = fmt->descriptions[j].description;
-        size_t len = strlen(desc)+8;
-        char *tmp = tor_malloc(len);
-        tor_snprintf(tmp, len, "# %s\n",desc);
-        smartlist_add(elements, tmp);
-        break;
-      }
+
+    desc = config_find_description(fmt, fmt->vars[i].name);
+    if (desc) {
+      size_t len = strlen(desc)+8;
+      char *tmp = tor_malloc(len);
+      tor_snprintf(tmp, len, "# %s\n",desc);
+      smartlist_add(elements, tmp);
     }
 
     line = get_assigned_option(fmt, options, fmt->vars[i].name);
@@ -1402,7 +1414,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
 char *
 options_dump(or_options_t *options, int minimal)
 {
-  return config_dump(&config_format, options, minimal);
+  return config_dump(&options_format, options, minimal);
 }
 
 static int
@@ -2053,7 +2065,7 @@ options_init_from_torrc(int argc, char **argv)
     tor_free(cf);
     if (retval < 0)
       goto err;
-    retval = config_assign(&config_format, newoptions, cl, 0);
+    retval = config_assign(&options_format, newoptions, cl, 0);
     config_free_lines(cl);
     if (retval < 0)
       goto err;
@@ -2061,7 +2073,7 @@ options_init_from_torrc(int argc, char **argv)
 
   /* Go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
-  retval = config_assign(&config_format, newoptions,cl,0);
+  retval = config_assign(&options_format, newoptions,cl,0);
   config_free_lines(cl);
   if (retval < 0)
     goto err;
@@ -2083,7 +2095,7 @@ options_init_from_torrc(int argc, char **argv)
   return 0;
  err:
   tor_free(fname);
-  config_free(&config_format, newoptions);
+  config_free(&options_format, newoptions);
   return -1;
 }
 
@@ -3047,6 +3059,54 @@ or_state_save(void)
   tor_free(contents);
 
   global_state->dirty = 0;
+  return 0;
+}
+
+/** DOCDOC */
+int
+config_getinfo_helper(const char *question, char **answer)
+{
+  if (!strcmp(question, "config/names")) {
+    smartlist_t *sl = smartlist_create();
+    int i;
+    for (i = 0; _option_vars[i].name; ++i) {
+      config_var_t *var = &_option_vars[i];
+      const char *type, *desc;
+      char *line;
+      size_t len;
+      desc = config_find_description(&options_format, var->name);
+      switch (var->type) {
+        case CONFIG_TYPE_STRING: type = "String"; break; 
+        case CONFIG_TYPE_UINT: type = "Integer"; break;
+        case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break; 
+        case CONFIG_TYPE_MEMUNIT: type = "DataSize"; break;
+        case CONFIG_TYPE_DOUBLE: type = "Float"; break;
+        case CONFIG_TYPE_BOOL: type = "Boolean"; break;
+        case CONFIG_TYPE_ISOTIME: type = "Time"; break;
+        case CONFIG_TYPE_CSV: type = "CommaList"; break;
+        case CONFIG_TYPE_LINELIST: type = "LineList"; break;
+        case CONFIG_TYPE_LINELIST_S: type = "Dependant"; break;
+        case CONFIG_TYPE_LINELIST_V: type = "Virtual"; break;
+        default:
+        case CONFIG_TYPE_OBSOLETE:
+          type = NULL; break;
+      }
+      if (!type)
+        continue;
+      len = strlen(var->name)+strlen(type)+16;
+      if (desc)
+        len += strlen(desc);
+      line = tor_malloc(len);
+      if (desc)
+        tor_snprintf(line, len, "%s %s %s\n",var->name,type,desc);
+      else
+        tor_snprintf(line, len, "%s %s\n",var->name,type);
+      smartlist_add(sl, line);
+    }
+    *answer = smartlist_join_strings(sl, "", 0, NULL);
+    SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
+    smartlist_free(sl);
+  }
   return 0;
 }
 
