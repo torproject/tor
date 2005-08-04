@@ -1224,7 +1224,7 @@ crypto_digest_assign(crypto_digest_env_t *into,
 static BIGNUM *dh_param_p = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
-#define N_XX_GX 8
+#define N_XX_GX 10
 static BIGNUM *dh_gx_xx[N_XX_GX];
 
 /** Initialize dh_param_p and dh_param_g if they are not already
@@ -1277,7 +1277,7 @@ static void init_dh_param(void) {
   dh_param_g = g;
 
   ctx = BN_CTX_new();
-  for (i=0; i<4; ++i) {
+  for (i=0; i<5; ++i) {
     BIGNUM *x = BN_new(), *g_x = BN_new();
     char *x_s, *g_x_s;
     BN_copy(x, dh_param_p);
