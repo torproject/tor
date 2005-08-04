@@ -14,7 +14,7 @@ Quickstart version for users:
    more details.)
 6) point your browser to socks4 or socks5 proxy at localhost port
   9050. In mozilla, this is in edit|preferences|advanced|proxies. This
-  allows you to test to make sure tor is installed correctly.
+  allows you to test to make sure Tor is installed correctly.
   (If you have a personal firewall, be sure to allow local connections
    to port 9050.)
   (If your firewall blocks outgoing connections, punch a hole so it
@@ -32,7 +32,6 @@ Quickstart version for users:
   at localhost port 8118 (and no socks proxy). You should also set your
   SSL proxy to the same thing, to hide your https traffic. Using privoxy
   will give you good html scrubbing as well.
-  (See doc/CLIENTS for why direct socks gives you less anonymity.)
 
 *****If this works for you, you can stop reading here******
 
@@ -57,8 +56,10 @@ If the quickstart doesn't work for you:
   consider setting your LD_LIBRARY_PATH to the openssl lib directory.
   For example, "setenv LD_LIBRARY_PATH /usr/athena/lib".
 
-  Check out the list archives at http://archives.seul.org/or/dev/ and see
-  if somebody else has reported your problem. If not, please subscribe
-  and let us know what you did to fix it, or give us the details and
-  we'll see what we can do.
+  Check out the list archives at http://archives.seul.org/or/dev/ or
+  the bug tracker at
+  http://bugs.noreply.org/flyspray/index.php?tasks=all&project=4 and 
+  see if somebody else has reported your problem. If not, please 
+  subscribe and let us know what you did to fix it, or give us the 
+  details and we'll see what we can do.
 
