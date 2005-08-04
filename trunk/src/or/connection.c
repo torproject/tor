@@ -255,10 +255,6 @@ connection_free(connection_t *conn)
   }
   connection_unregister(conn);
   _connection_free(conn);
-
-  SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
-  smartlist_free(outgoing_addrs);
-  outgoing_addrs = NULL;
 }
 
 /** Call _connection_free() on every connection in our array, and release all
@@ -278,6 +274,12 @@ connection_free_all(void)
   get_connection_array(&carray,&n);
   for (i=0;i<n;i++)
     _connection_free(carray[i]);
+
+  if (outgoing_addrs) {
+    SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
+    smartlist_free(outgoing_addrs);
+    outgoing_addrs = NULL;
+  }
 }
 
 /** Do any cleanup needed:
