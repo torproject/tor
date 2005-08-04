@@ -1359,7 +1359,7 @@ get_interface_address(uint32_t *addr)
   }
 
   /* XXXX Can this be right on IPv6 clients? */
-  if (getsockname(sock, &my_addr, &my_addr_len)) {
+  if (getsockname(sock, (struct sockaddr*)&my_addr, &my_addr_len)) {
     int e = tor_socket_errno(sock);
     log_fn(LOG_WARN, "getsockname() failed: %s", tor_socket_strerror(e));
     goto err;
