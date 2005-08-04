@@ -108,6 +108,7 @@ RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
+static int tor_check_bignum(BIGNUM *bn);
 static int setup_openssl_threading(void);
 
 /** Return the number of bytes added by padding method <b>padding</b>.
@@ -1257,12 +1258,16 @@ crypto_digest_assign(crypto_digest_env_t *into,
 static BIGNUM *dh_param_p = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
+#define N_XX_GX 10
+static BIGNUM *dh_gx_xx[N_XX_GX];
 
 /** Initialize dh_param_p and dh_param_g if they are not already
  * set. */
 static void init_dh_param(void) {
+  static int xx[] = { 0, 1, 2, -1, -2 };
   BIGNUM *p, *g;
-  int r;
+  BN_CTX *ctx;
+  int r, i;
   if (dh_param_p && dh_param_g)
     return;
 
@@ -1288,6 +1293,23 @@ static void init_dh_param(void) {
   tor_assert(r);
   dh_param_p = p;
   dh_param_g = g;
+
+  ctx = BN_CTX_new();
+  for (i=0; i<4; ++i) {
+    BIGNUM *x = BN_new(), *g_x = BN_new();
+    char *x_s, *g_x_s;
+    BN_copy(x, dh_param_p);
+    if (xx[i]<0) BN_sub_word(x,-xx[i]); else BN_set_word(x,xx[i]);
+    BN_mod_exp(g_x, dh_param_g, x, dh_param_p, ctx);
+    x_s = BN_bn2hex(x);
+    g_x_s = BN_bn2hex(g_x);
+    dh_gx_xx[i*2]=x;
+    dh_gx_xx[i*2+1]=g_x;
+    log_fn(LOG_DEBUG, "%d,%d <- %s, %s", i*2, i*2+1, x_s, g_x_s);
+    OPENSSL_free(x_s);
+    OPENSSL_free(g_x_s);
+  }
+  BN_CTX_free(ctx);
 }
 
 /** Allocate and return a new DH object for a key exchange.
@@ -1363,6 +1385,29 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
   return 0;
 }
 
+/** DOCDOC later; 0 on ok, -1 on bad. */
+static int
+tor_check_bignum(BIGNUM *bn)
+{
+  int i;
+  tor_assert(bn);
+  if (!dh_param_p)
+    init_dh_param();
+  if (bn->neg) {
+    log_fn(LOG_WARN, "bn<0");
+    return -1;
+  }
+  for (i=0; i < N_XX_GX; ++i) {
+    if (!BN_cmp(bn, dh_gx_xx[i])) {
+      char *which = BN_bn2hex(dh_gx_xx[i]);
+      log_fn(LOG_WARN, "Tell Nick and Roger: bn #%d [%s]",i,which);
+      OPENSSL_free(which);
+      return -1;
+    }
+  }
+  return 0;
+}
+
 #undef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
 /** Given a DH key exchange object, and our peer's value of g^y (as a
@@ -1390,6 +1435,11 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
 
   if (!(pubkey_bn = BN_bin2bn((const unsigned char*)pubkey, pubkey_len, NULL)))
     goto error;
+  if (tor_check_bignum(pubkey_bn)<0) {
+    /* Check for invalid public keys. */
+    log_fn(LOG_WARN,"Rejected invalid g^x");
+    goto error;
+  }
   secret_tmp = tor_malloc(crypto_dh_get_bytes(dh)+1);
   result = DH_compute_key((unsigned char*)secret_tmp, pubkey_bn, dh->dh);
   if (result < 0) {
