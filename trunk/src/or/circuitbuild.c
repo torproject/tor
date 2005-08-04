@@ -1621,11 +1621,12 @@ static void
 pick_helper_nodes(void)
 {
   or_options_t *options = get_options();
+  int changed = 0;
 
   if (! options->UseHelperNodes)
     return;
 
-  if (helper_nodes == NULL)
+  if (!helper_nodes)
     helper_nodes = smartlist_create();
 
   while (smartlist_len(helper_nodes) < options->NumHelperNodes) {
@@ -1637,8 +1638,10 @@ pick_helper_nodes(void)
     strlcpy(helper->nickname, entry->nickname, sizeof(helper->nickname));
     memcpy(helper->identity, entry->identity_digest, DIGEST_LEN);
     smartlist_add(helper_nodes, helper);
-    helper_nodes_changed();
+    changed = 1;
   }
+  if (changed)
+    helper_nodes_changed();
 }
 
 /** Remove all elements from the list of helper nodes */
@@ -1810,8 +1813,9 @@ choose_random_helper(void)
  retry:
   SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
                     if (! helper->down_since && ! helper->unlisted_since) {
-                      if ((r = router_get_by_digest(helper->identity)))
+                      if ((r = router_get_by_digest(helper->identity))) {
                         smartlist_add(live_helpers, r);
+                      }
                     });
 
   if (! smartlist_len(live_helpers)) {
@@ -1909,6 +1913,8 @@ helper_nodes_update_state(or_state_t *state)
   config_free_lines(state->HelperNodes);
   next = &state->HelperNodes;
   *next = NULL;
+  if (!helper_nodes)
+    helper_nodes = smartlist_create();
   SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
     {
       char dbuf[HEX_DIGEST_LEN+1];
@@ -1938,4 +1944,45 @@ helper_nodes_update_state(or_state_t *state)
   helper_nodes_dirty = 0;
 
   return 1;
+}
+
+/** DOCDOC */
+int
+helper_nodes_getinfo_helper(const char *question, char **answer)
+{
+  if (!strcmp(question,"helper-nodes")) {
+    smartlist_t *sl = smartlist_create();
+    char tbuf[ISO_TIME_LEN+1];
+    char dbuf[HEX_DIGEST_LEN+1];
+    if (!helper_nodes)
+      helper_nodes = smartlist_create();
+    SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
+      {
+        size_t len = HEX_DIGEST_LEN+ISO_TIME_LEN+16;
+        char *c = tor_malloc(len);
+        const char *status = NULL;
+        time_t when = 0;
+        if (h->unlisted_since) {
+          when = h->unlisted_since;
+          status = "unlisted";
+        } else if (h->down_since) {
+          when = h->down_since;
+          status = "down";
+        } else {
+          status = "up";
+        }
+        base16_encode(dbuf, sizeof(dbuf), h->identity, DIGEST_LEN);
+        if (when) {
+          format_iso_time(tbuf, when);
+          tor_snprintf(c, len, "$%s %s %s\n", dbuf, status, tbuf);
+        } else {
+          tor_snprintf(c, len, "$%s %s\n", dbuf, status);
+        }
+        smartlist_add(sl, c);
+      });
+    *answer = smartlist_join_strings(sl, "", 0, NULL);
+    SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
+    smartlist_free(sl);
+  }
+  return 0;
 }
