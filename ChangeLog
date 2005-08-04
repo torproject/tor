@@ -1,3 +1,13 @@
+Changes in version 0.1.1.4-alpha - 2005-08-04
+  o Bugfixes included in 0.1.0.13.
+
+  o Features:
+    - Improve tor_gettimeofday() granularity on windows.
+    - Make clients regenerate their keys when their IP address changes.
+    - Implement some more GETINFO goodness: expose helper nodes, config
+      options, getinfo keys.
+
+
 Changes in version 0.1.1.3-alpha - 2005-07-25
   o Bugfixes on 0.1.1.2-alpha:
     - Fix a bug in handling the controller's "post descriptor"
@@ -86,6 +96,16 @@ Changes in version 0.1.1.1-alpha - 2005-06-29
       our protocol works.
     - Spiffy new support for crypto hardware accelerators. Can somebody
       test this?
+
+
+Changes in version 0.1.0.13 - 2005-08-04
+  o Bugfixes on 0.1.0.x:
+    - Fix a critical bug in the security of our crypto handshakes.
+    - Fix a size_t underflow in smartlist_join_strings2() that made
+      it do bad things when you hand it an empty smartlist.
+    - Fix Windows installer to ship Tor license (thanks to Aphex for
+      pointing out this oversight) and put a link to the doc directory
+      in the start menu.
 
 
 Changes in version 0.1.0.12 - 2005-07-18
