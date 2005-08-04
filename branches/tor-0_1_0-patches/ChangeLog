@@ -1,3 +1,13 @@
+Changes in version 0.1.0.13 - 2005-08-04
+  o Bugfixes on 0.1.0.x:
+    - Fix a critical bug in the security of our crypto handshakes.
+    - Fix a size_t underflow in smartlist_join_strings2() that made
+      it do bad things when you hand it an empty smartlist.
+    - Fix Windows installer to ship Tor license (thanks to Aphex for
+      pointing out this oversight) and put a link to the doc directory
+      in the start menu.
+
+
 Changes in version 0.1.0.12 - 2005-07-18
   o New directory servers:
       - tor26 has changed IP address.
