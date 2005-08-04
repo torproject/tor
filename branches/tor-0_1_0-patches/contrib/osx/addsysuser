@@ -4,6 +4,8 @@
 #
 # Modified for Tor installer by Nick Mathewson
 
+ROOTPROP=/
+
 if [ "`whoami`" != "root" ]; then
 echo "You must be root to execute this script."
 exit
@@ -16,8 +18,8 @@ username=$1
 realname=$2
 homedir=$3
 # GID 20 is "staff" which is the default. Change it if you want.
-gid=`niutil -readprop . /groups/daemon gid`
-if [ "x`niutil -list . /users|cut -f2 -d' '|grep $username`" != "x" ]; then
+gid=`niutil -readprop $ROOTPROP /groups/daemon gid`
+if [ "x`niutil -list $ROOTPROP /users|cut -f2 -d' '|grep $username`" != "x" ]; then
 echo The account $username already exists.
 exit 0
 fi
@@ -30,14 +32,14 @@ defhome="/Network/Servers/MyServer/Users"
 uiddef=`nidump passwd / | cut -d: -f3 | sort -n | grep -v '^[56789]..' |grep -v '^....$' | tail -n 1`
 uiddef=`echo $uiddef + 1 |bc`
 echo Creating account for $username...
-niutil -create . /users/$username
-niutil -createprop . /users/$username _writers_tim_passwd $username
-niutil -createprop . /users/$username realname $realname
-niutil -createprop . /users/$username _writers_passwd $username
-niutil -createprop . /users/$username uid $uiddef
-#niutil -createprop . /users/$username home_loc "<home_dir><url>afp://afp.server.com/Users/</url><path>$username</path></home_dir>"
-niutil -createprop . /users/$username gid $gid
-niutil -createprop . /users/$username home $homedir
-niutil -createprop . /users/$username name $username
-niutil -createprop . /users/$username passwd '*'
-niutil -createprop . /users/$username shell /dev/null
+niutil -create $ROOTPROP /users/$username
+niutil -createprop $ROOTPROP /users/$username _writers_tim_passwd $username
+niutil -createprop $ROOTPROP /users/$username realname $realname
+niutil -createprop $ROOTPROP /users/$username _writers_passwd $username
+niutil -createprop $ROOTPROP /users/$username uid $uiddef
+#niutil -createprop $ROOTPROP /users/$username home_loc "<home_dir><url>afp://afp.server.com/Users/</url><path>$username</path></home_dir>"
+niutil -createprop $ROOTPROP /users/$username gid $gid
+niutil -createprop $ROOTPROP /users/$username home $homedir
+niutil -createprop $ROOTPROP /users/$username name $username
+niutil -createprop $ROOTPROP /users/$username passwd '*'
+niutil -createprop $ROOTPROP /users/$username shell /dev/null
