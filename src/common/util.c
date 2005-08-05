@@ -1135,13 +1135,15 @@ int is_local_IP(uint32_t ip) {
  * <b>address</b> is provided, set *<b>address</b> to a copy of the
  * host portion of the string.  If <b>addr</b> is provided, try to
  * resolve the host portion of the string and store it into
- * *<b>addr</b> (in host byte order).  If <b>port</b> is provided,
- * store the port number into *<b>port</b>, or 0 if no port is given.
+ * *<b>addr</b> (in host byte order).  If <b>port_out</b> is provided,
+ * store the port number into *<b>port_out</b>, or 0 if no port is given.
+ * If <b>port_out</b> is NULL, then there must be no port number in
+ * <b>addrport</b>.
  * Return 0 on success, -1 on failure.
  */
 int
 parse_addr_port(const char *addrport, char **address, uint32_t *addr,
-                uint16_t *port)
+                uint16_t *port_out)
 {
   const char *colon;
   char *_address = NULL;
@@ -1149,7 +1151,6 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
   int ok = 1;
 
   tor_assert(addrport);
-  tor_assert(port);
 
   colon = strchr(addrport, ':');
   if (colon) {
@@ -1157,6 +1158,11 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
     _port = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);
     if (!_port) {
       log_fn(LOG_WARN, "Port '%s' out of range", colon+1);
+      ok = 0;
+    }
+    if (!port_out) {
+      log_fn(LOG_WARN, "Port '%s' given on '%s' when not required", colon+1,
+             addrport);
       ok = 0;
     }
   } else {
@@ -1181,8 +1187,8 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
       *address = NULL;
     tor_free(_address);
   }
-  if (port)
-    *port = ok ? ((uint16_t) _port) : 0;
+  if (port_out)
+    *port_out = ok ? ((uint16_t) _port) : 0;
 
   return ok ? 0 : -1;
 }
