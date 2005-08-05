@@ -1305,7 +1305,7 @@ static void init_dh_param(void) {
     BN_mod_exp(g_x, dh_param_g, x, dh_param_p, ctx);
     x_s = BN_bn2hex(x);
     g_x_s = BN_bn2hex(g_x);
-    p_x_s = BN_bn2hex(g_x);
+    p_x_s = BN_bn2hex(p_x);
     dh_gx_xx[i*3]=x;
     dh_gx_xx[i*3+1]=g_x;
     dh_gx_xx[i*3+2]=p_x;
