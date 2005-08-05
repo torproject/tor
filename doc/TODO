@@ -103,8 +103,8 @@ N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
     long time), replace it.  Store nodes on disk.
     o Implement (basic case)
     o Implement (persistence)
-    - Document
-    - Test, debug
+    o Document
+    . Test, debug
     - On sighup, if usehelpernodes changed to 1, use new circs.
 N - Make a FirewallIPs to correspond to firewallPorts so I can use Tor at
     MIT when my directory is out of date.
