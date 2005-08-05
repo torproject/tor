@@ -1379,6 +1379,10 @@ tor_check_bignum(BIGNUM *bn)
     log_fn(LOG_WARN, "bn<0");
     return -1;
   }
+  if (BN_cmp(bn,dh_param_p)>=0) {
+    log_fn(LOG_WARN, "bn>=p");
+    return -1;
+  }
   for (i=0; i < N_XX_GX; ++i) {
     if (!BN_cmp(bn, dh_gx_xx[i])) {
       char *which = BN_bn2hex(dh_gx_xx[i]);
