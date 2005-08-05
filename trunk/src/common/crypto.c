@@ -1258,7 +1258,7 @@ crypto_digest_assign(crypto_digest_env_t *into,
 static BIGNUM *dh_param_p = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
-#define N_XX_GX 10
+#define N_XX_GX 15
 static BIGNUM *dh_gx_xx[N_XX_GX];
 
 /** Initialize dh_param_p and dh_param_g if they are not already
@@ -1296,18 +1296,24 @@ static void init_dh_param(void) {
 
   ctx = BN_CTX_new();
   for (i=0; i<5; ++i) {
-    BIGNUM *x = BN_new(), *g_x = BN_new();
-    char *x_s, *g_x_s;
+    BIGNUM *x = BN_new(), *g_x = BN_new(), *p_x = BN_new();;
+    char *x_s, *g_x_s, *p_x_s;
     BN_copy(x, dh_param_p);
+    BN_copy(p_x, dh_param_p);
     if (xx[i]<0) BN_sub_word(x,-xx[i]); else BN_set_word(x,xx[i]);
+    if (xx[i]<0) BN_sub_word(p_x,-xx[i]); else BN_add_word(p_x,xx[i]);
     BN_mod_exp(g_x, dh_param_g, x, dh_param_p, ctx);
     x_s = BN_bn2hex(x);
     g_x_s = BN_bn2hex(g_x);
-    dh_gx_xx[i*2]=x;
-    dh_gx_xx[i*2+1]=g_x;
-    log_fn(LOG_DEBUG, "%d,%d <- %s, %s", i*2, i*2+1, x_s, g_x_s);
+    p_x_s = BN_bn2hex(g_x);
+    dh_gx_xx[i*3]=x;
+    dh_gx_xx[i*3+1]=g_x;
+    dh_gx_xx[i*3+2]=p_x;
+    log_fn(LOG_DEBUG, "%d,%d,%d <- %s, %s, %s", i*3, i*3+1, i*3+2,
+           x_s, g_x_s, p_x_s);
     OPENSSL_free(x_s);
     OPENSSL_free(g_x_s);
+    OPENSSL_free(p_x_s);
   }
   BN_CTX_free(ctx);
 }
@@ -1395,6 +1401,10 @@ tor_check_bignum(BIGNUM *bn)
     init_dh_param();
   if (bn->neg) {
     log_fn(LOG_WARN, "bn<0");
+    return -1;
+  }
+  if (BN_cmp(bn, dh_param_p)>=0){
+    log_fn(LOG_WARN, "bn>=p");
     return -1;
   }
   for (i=0; i < N_XX_GX; ++i) {
