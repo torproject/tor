@@ -1296,7 +1296,7 @@ static void init_dh_param(void) {
 
   ctx = BN_CTX_new();
   for (i=0; i<5; ++i) {
-    BIGNUM *x = BN_new(), *g_x = BN_new(), *p_x = BN_new();;
+    BIGNUM *x = BN_new(), *g_x = BN_new(), *p_x = BN_new();
     char *x_s, *g_x_s, *p_x_s;
     BN_copy(x, dh_param_p);
     BN_copy(p_x, dh_param_p);
