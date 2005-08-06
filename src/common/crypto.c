@@ -1458,6 +1458,12 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
   }
   secret_len = result;
   /* sometimes secret_len might be less than 128, e.g., 127. that's ok. */
+  /* Actually, http://www.faqs.org/rfcs/rfc2631.html says:
+   *   Leading zeros MUST be preserved, so that ZZ occupies as many
+   *   octets as p. For instance, if p is 1024 bits, ZZ should be 128
+   *   bytes long.
+   * What are the security implications here?
+   */
   for (i = 0; i < secret_bytes_out; i += DIGEST_LEN) {
     secret_tmp[secret_len] = (unsigned char) i/DIGEST_LEN;
     if (crypto_digest(hash, secret_tmp, secret_len+1))
