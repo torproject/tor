@@ -137,51 +137,55 @@ add_service(rend_service_t *service)
 static rend_service_port_config_t *
 parse_port_config(const char *string)
 {
+  smartlist_t *sl;
   int virtport;
   int realport;
   uint16_t p;
   uint32_t addr;
-  char *endptr;
-  rend_service_port_config_t *result;
+  const char *addrport;
+  rend_service_port_config_t *result = NULL;
 
-  virtport = (int) strtol(string, &endptr, 10);
-  if (endptr == string) {
-    log_fn(LOG_WARN, "Missing port in hidden service port configuration");
-    return NULL;
+  sl = smartlist_create();
+  smartlist_split_string(sl, string, " ", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (smartlist_len(sl) < 1 || smartlist_len(sl) > 2) {
+    log_fn(LOG_WARN, "Bad syntax in hidden service port configuration");
+    goto err;
   }
+
+  virtport = atoi(smartlist_get(sl,0));
   if (virtport < 1 || virtport > 65535) {
-    log_fn(LOG_WARN, "Port out of range in hidden service port configuration");
-    return NULL;
+    log_fn(LOG_WARN, "Missing or invalid port in hidden service port configuration");
+    goto err;
   }
-  string = endptr + strspn(endptr, " \t");
-  if (!*string) {
+
+  if (smartlist_len(sl) == 1) {
     /* No addr:port part; use default. */
     realport = virtport;
     addr = 0x7F000001u; /* 127.0.0.1 */
-  } else if (strchr(string, ':') || strchr(string, '.')) {
-    if (parse_addr_port(string, NULL, &addr, &p)<0) {
-      log_fn(LOG_WARN,"Unparseable address in hidden service port configuration");
-      return NULL;
-    }
-    realport = p?p:virtport;
   } else {
-    /* No addr:port, no addr -- must be port. */
-    realport = strtol(string, &endptr, 10);
-    if (*endptr) {
-      log_fn(LOG_WARN, "Unparseable or missing port in hidden service port configuration.");
-      return NULL;
+    addrport = smartlist_get(sl,1);
+    if (strchr(addrport, ':') || strchr(addrport, '.')) {
+      if (parse_addr_port(addrport, NULL, &addr, &p)<0) {
+        log_fn(LOG_WARN,"Unparseable address in hidden service port configuration");
+        goto err;
+      }
+      realport = p?p:virtport;
+    } else {
+      /* No addr:port, no addr -- must be port. */
+      realport = atoi(addrport);
+      if (realport < 1 || realport > 65535)
+        goto err;
+      addr = 0x7F000001u; /* Default to 127.0.0.1 */
     }
-    if (realport < 1 || realport > 65535) {
-      log_fn(LOG_WARN, "Port out of range");
-      return NULL;
-    }
-    addr = 0x7F000001u; /* Default to 127.0.0.1 */
   }
 
   result = tor_malloc(sizeof(rend_service_port_config_t));
   result->virtual_port = virtport;
   result->real_port = realport;
   result->real_address = addr;
+ err:
+  SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
+  smartlist_free(sl);
   return result;
 }
 
