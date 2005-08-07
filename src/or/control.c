@@ -523,6 +523,7 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
   get_connection_array(&conns, &n_conns);
   for (i = 0; i < n_conns; ++i) {
     if (conns[i]->type == CONN_TYPE_CONTROL &&
+        !conns[i]->marked_for_close &&
         conns[i]->state == CONTROL_CONN_STATE_OPEN_V0 &&
         conns[i]->event_mask & (1<<event)) {
       send_control0_message(conns[i], CONTROL0_CMD_EVENT, buflen, buf);
@@ -560,6 +561,7 @@ send_control1_event(uint16_t event, const char *format, ...)
   get_connection_array(&conns, &n_conns);
   for (i = 0; i < n_conns; ++i) {
     if (conns[i]->type == CONN_TYPE_CONTROL &&
+        !conns[i]->marked_for_close &&
         conns[i]->state == CONTROL_CONN_STATE_OPEN_V1 &&
         conns[i]->event_mask & (1<<event)) {
       connection_write_to_buf(buf, len, conns[i]);
