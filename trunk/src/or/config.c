@@ -1415,8 +1415,9 @@ options_dump(or_options_t *options, int minimal)
   return config_dump(&options_format, options, minimal);
 }
 
-/* Return 0 if every element of sl is string holding a decimal representation
- * of a port number, or if sl is NULL. Otherwise return -1. */
+/* Return 0 if every element of sl is a string holding a decimal
+ * representation of a port number, or if sl is NULL.
+ * Otherwise return -1. */
 static int
 validate_ports_csv(smartlist_t *sl, const char *name)
 {
@@ -1438,8 +1439,8 @@ validate_ports_csv(smartlist_t *sl, const char *name)
   return result;
 }
 
-/* Return 0 if every element of sl is string holding an IP with optional mask
- * and port, or if sl is NULL. Otherwise return -1. */
+/* Return 0 if every element of sl is a string holding an IP with
+ * optional mask and port, or if sl is NULL. Otherwise return -1. */
 static int
 validate_addr_port_ranges_csv(smartlist_t *sl, const char *name)
 {
@@ -1461,8 +1462,8 @@ validate_addr_port_ranges_csv(smartlist_t *sl, const char *name)
   return result;
 }
 
-/** Return true iff we are configured to thing that the local fascist firewall
- * (if any) will allow a connection to <b>addr</b>:<b>port</b> */
+/** Return true iff we are configured to think that the local fascist
+ * firewall (if any) will allow a connection to <b>addr</b>:<b>port</b> */
 int
 fascist_firewall_allows_address(or_options_t *options, uint32_t addr,
                                 uint16_t port)
