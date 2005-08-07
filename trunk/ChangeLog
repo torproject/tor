@@ -1,3 +1,12 @@
+Changes in version 0.1.1.5-alpha - 2005-08-08
+  o Bugfixes included in 0.1.0.14.
+
+  o Bugfixes on 0.1.0.x:
+    - If you write "HiddenServicePort 6667 127.0.0.1 6668" in your
+      torrc rather than "HiddenServicePort 6667 127.0.0.1:6668",
+      it would silently using ignore the 6668.
+
+
 Changes in version 0.1.1.4-alpha - 2005-08-04
   o Bugfixes included in 0.1.0.13.
 
