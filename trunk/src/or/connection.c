@@ -276,6 +276,13 @@ connection_free_all(void)
   connection_t **carray;
 
   get_connection_array(&carray,&n);
+
+  /* We don't want to log any messages to controllers. */
+  for (i=0;i<n;i++)
+    if (carray[i]->type == CONN_TYPE_CONTROL)
+      carray[i]->event_mask = 0;
+  control_update_global_event_mask();
+
   for (i=0;i<n;i++)
     _connection_free(carray[i]);
 
