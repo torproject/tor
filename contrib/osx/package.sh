@@ -11,6 +11,12 @@
 #
 # This script expects to be run from the toplevel makefile, with VERSION
 # set to the latest Tor version, and Tor already built.
+#
+# Building Tor for OSX in 3 easy steps:
+# 1) Make sure PRIVOXY_PKG_ZIP= is set to the correct path to find privoxyosx_setup_3.0.3.zip
+# 2) In the top level, this means ~/tor, not tor/contrib/osx, do a configure with these parameters:
+# configure --prefix=/Library/Tor --bindir=/Library/Tor --sysconfdir=/Library
+# 3) In same top level dir, make dist-osx.  You'll have a .dmg file when complete.
 
 # Where have we put the zip file containing Privoxy?  Edit this if your
 # privoxy lives somewhere else.
