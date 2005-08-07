@@ -1536,6 +1536,7 @@ typedef enum or_conn_status_event_t {
   OR_CONN_EVENT_CLOSED       = 3,
 } or_conn_status_event_t;
 
+void control_update_global_event_mask(void);
 void control_adjust_event_log_severity(void);
 void disable_control_logging(void);
 void enable_control_logging(void);
