@@ -108,8 +108,8 @@ RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
-static int tor_check_bignum(BIGNUM *bn);
 static int setup_openssl_threading(void);
+static int tor_check_dh_key(BIGNUM *bn);
 
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
@@ -1258,16 +1258,12 @@ crypto_digest_assign(crypto_digest_env_t *into,
 static BIGNUM *dh_param_p = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
-#define N_XX_GX 15
-static BIGNUM *dh_gx_xx[N_XX_GX];
 
 /** Initialize dh_param_p and dh_param_g if they are not already
  * set. */
 static void init_dh_param(void) {
-  static int xx[] = { 0, 1, 2, -1, -2 };
   BIGNUM *p, *g;
-  BN_CTX *ctx;
-  int r, i;
+  int r;
   if (dh_param_p && dh_param_g)
     return;
 
@@ -1292,29 +1288,6 @@ static void init_dh_param(void) {
   tor_assert(r);
   dh_param_p = p;
   dh_param_g = g;
-
-  ctx = BN_CTX_new();
-  for (i=0; i<5; ++i) {
-    BIGNUM *x = BN_new(), *g_x = BN_new(), *p_x = BN_new();
-    char *x_s, *g_x_s, *p_x_s;
-    BN_copy(x, dh_param_p);
-    BN_copy(p_x, dh_param_p);
-    if (xx[i]<0) BN_sub_word(x,-xx[i]); else BN_set_word(x,xx[i]);
-    if (xx[i]<0) BN_sub_word(p_x,-xx[i]); else BN_add_word(p_x,xx[i]);
-    BN_mod_exp(g_x, dh_param_g, x, dh_param_p, ctx);
-    x_s = BN_bn2hex(x);
-    g_x_s = BN_bn2hex(g_x);
-    p_x_s = BN_bn2hex(p_x);
-    dh_gx_xx[i*3]=x;
-    dh_gx_xx[i*3+1]=g_x;
-    dh_gx_xx[i*3+2]=p_x;
-    log_fn(LOG_DEBUG, "%d,%d,%d <- %s, %s, %s", i*3, i*3+1, i*3+2,
-           x_s, g_x_s, p_x_s);
-    OPENSSL_free(x_s);
-    OPENSSL_free(g_x_s);
-    OPENSSL_free(p_x_s);
-  }
-  BN_CTX_free(ctx);
 }
 
 /** Allocate and return a new DH object for a key exchange.
@@ -1358,9 +1331,18 @@ int crypto_dh_get_bytes(crypto_dh_env_t *dh)
  */
 int crypto_dh_generate_public(crypto_dh_env_t *dh)
 {
+ again:
   if (!DH_generate_key(dh->dh)) {
     crypto_log_errors(LOG_WARN, "generating DH key");
     return -1;
+  }
+  if (tor_check_dh_key(dh->dh->pub_key)<0) {
+    log_fn(LOG_WARN, "Weird! Our own DH key was invalid.  I guess once-in-the-universe chances really do happen.  Trying again.");
+    /* Free and clear the keys, so openssl will actually try again. */
+    BN_free(dh->dh->pub_key);
+    BN_free(dh->dh->priv_key);
+    dh->dh->pub_key = dh->dh->priv_key = NULL;
+    goto again;
   }
   return 0;
 }
@@ -1390,31 +1372,62 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
   return 0;
 }
 
-/** DOCDOC later; 0 on ok, -1 on bad. */
+/** Check for bad diffie-hellman public keys (g^x).  Return 0 if the key is
+ * okay, or -1 if it's bad.
+ */
 static int
-tor_check_bignum(BIGNUM *bn)
+tor_check_dh_key(BIGNUM *bn)
 {
-  int i;
+  /* There are about 2^116 ways to have a 1024-bit key with <= 16 bits set,
+   * and similarly for <= 16 bits unset.  This is negligible compared to the
+   * 2^1024 entry keyspace. */
+#define MIN_DIFFERING_BITS 16
+  /* This covers another 2^25 keys, which is still negligible. */
+#define MIN_DIST_FROM_EDGE (1<<24)
+  int i, n_bits, n_set;
+  BIGNUM *x = NULL;
+  char *s;
   tor_assert(bn);
+  x = BN_new();
   if (!dh_param_p)
     init_dh_param();
   if (bn->neg) {
-    log_fn(LOG_WARN, "bn<0");
+    log_fn(LOG_WARN, "Rejecting DH key < 0");
     return -1;
   }
   if (BN_cmp(bn, dh_param_p)>=0){
-    log_fn(LOG_WARN, "bn>=p");
+    log_fn(LOG_WARN, "Rejecting DH key >= p");
     return -1;
   }
-  for (i=0; i < N_XX_GX; ++i) {
-    if (!BN_cmp(bn, dh_gx_xx[i])) {
-      char *which = BN_bn2hex(dh_gx_xx[i]);
-      log_fn(LOG_WARN, "Tell Nick and Roger: bn #%d [%s]",i,which);
-      OPENSSL_free(which);
-      return -1;
-    }
+  n_bits = BN_num_bits(bn);
+  n_set = 0;
+  for (i=0; i <= n_bits; ++i) {
+    if (BN_is_bit_set(bn, i))
+      ++n_set;
   }
+  if (n_set < MIN_DIFFERING_BITS || n_set >= n_bits-MIN_DIFFERING_BITS) {
+    log_fn(LOG_WARN, "Too few/many bits in DH key (%d)", n_set);
+    goto err;
+  }
+  BN_set_word(x, MIN_DIST_FROM_EDGE);
+  if (BN_cmp(bn,x)<=0) {
+    log_fn(LOG_WARN, "DH key is too close to 0");
+    goto err;
+  }
+  BN_copy(x,dh_param_p);
+  BN_sub_word(x, MIN_DIST_FROM_EDGE);
+  if (BN_cmp(bn,x)>=0) {
+    log_fn(LOG_WARN, "DH key is too close to p");
+    goto err;
+  }
+  BN_free(x);
   return 0;
+ err:
+  BN_free(x);
+  s = BN_bn2hex(bn);
+  log_fn(LOG_WARN, "Rejecting invalid DH key [%s]", s);
+  OPENSSL_free(s);
+  return -1;
 }
 
 #undef MIN
@@ -1444,7 +1457,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
 
   if (!(pubkey_bn = BN_bin2bn((const unsigned char*)pubkey, pubkey_len, NULL)))
     goto error;
-  if (tor_check_bignum(pubkey_bn)<0) {
+  if (tor_check_dh_key(pubkey_bn)<0) {
     /* Check for invalid public keys. */
     log_fn(LOG_WARN,"Rejected invalid g^x");
     goto error;
