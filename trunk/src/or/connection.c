@@ -253,6 +253,10 @@ connection_free(connection_t *conn)
     if (conn->state == OR_CONN_STATE_OPEN)
       directory_set_dirty();
   }
+  if (conn->type == CONN_TYPE_CONTROL) {
+    conn->event_mask = 0;
+    control_update_global_event_mask();
+  }
   connection_unregister(conn);
   _connection_free(conn);
 }

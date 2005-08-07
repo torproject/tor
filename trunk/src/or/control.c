@@ -127,7 +127,6 @@ static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
 static void connection_printf_to_buf(connection_t *conn, const char *format, ...)
   CHECK_PRINTF(2,3);
-static void update_global_event_mask(void);
 static void send_control0_message(connection_t *conn, uint16_t type,
                                  uint32_t len, const char *body);
 static void send_control_done(connection_t *conn);
@@ -204,8 +203,8 @@ log_severity_to_event(int severity)
 
 /** Set <b>global_event_mask</b> to the bitwise OR of each live control
  * connection's event_mask field. */
-static void
-update_global_event_mask(void)
+void
+control_update_global_event_mask(void)
 {
   connection_t **conns;
   int n_conns, i;
@@ -847,7 +846,7 @@ handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
   }
   conn->event_mask = event_mask;
 
-  update_global_event_mask();
+  control_update_global_event_mask();
   send_control_done(conn);
   return 0;
 }
