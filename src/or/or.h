@@ -1094,6 +1094,7 @@ typedef struct {
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   smartlist_t *FirewallPorts; /**< Which ports our firewall allows (strings). */
+  smartlist_t *FirewallIPs; /**< Which IPs our firewall allows (strings). */
   /** Application ports that require all nodes in circ to have sufficient uptime. */
   smartlist_t *LongLivedPorts;
   /** Should we try to reuse the same exit node for a given host */
@@ -1375,6 +1376,9 @@ int or_state_save(void);
 
 int config_getinfo_helper(const char *question, char **answer);
 
+int fascist_firewall_allows_address(or_options_t *options, uint32_t addr,
+                                    uint16_t port);
+
 /********************************* connection.c ***************************/
 
 const char *conn_type_to_string(int type);
@@ -1653,6 +1657,7 @@ void hibernate_begin_shutdown(void);
 int we_are_hibernating(void);
 void consider_hibernation(time_t now);
 int accounting_getinfo_helper(const char *question, char **answer);
+void accounting_set_bandwidth_usage_from_state(or_state_t *state);
 
 /********************************* main.c ***************************/
 

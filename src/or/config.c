@@ -122,7 +122,8 @@ static config_var_t _option_vars[] = {
   VAR("ExitNodes",           STRING,   ExitNodes,            NULL),
   VAR("ExitPolicy",          LINELIST, ExitPolicy,           NULL),
   VAR("FascistFirewall",     BOOL,     FascistFirewall,      "0"),
-  VAR("FirewallPorts",       CSV,      FirewallPorts,        "80,443"),
+  VAR("FirewallPorts",       CSV,      FirewallPorts,        ""),
+  VAR("FirewallIPs",         CSV,      FirewallIPs,          NULL),
   VAR("Group",               STRING,   Group,                NULL),
   VAR("HardwareAccel",       BOOL,     HardwareAccel,        "1"),
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
@@ -1414,6 +1415,8 @@ options_dump(or_options_t *options, int minimal)
   return config_dump(&options_format, options, minimal);
 }
 
+/* Return 0 if every element of sl is string holding a decimal representation
+ * of a port number, or if sl is NULL. Otherwise return -1. */
 static int
 validate_ports_csv(smartlist_t *sl, const char *name)
 {
@@ -1433,6 +1436,58 @@ validate_ports_csv(smartlist_t *sl, const char *name)
     }
   });
   return result;
+}
+
+/* Return 0 if every element of sl is string holding an IP with optional mask
+ * and port, or if sl is NULL. Otherwise return -1. */
+static int
+validate_addr_port_ranges_csv(smartlist_t *sl, const char *name)
+{
+  uint32_t addr, mask;
+  uint16_t port_min, port_max;
+  int result = 0;
+  tor_assert(name);
+
+  if (!sl)
+    return 0;
+
+  SMARTLIST_FOREACH(sl, const char *, cp,
+  {
+    if (parse_addr_and_port_range(cp, &addr, &mask, &port_min, &port_max)<0) {
+      log(LOG_WARN, "IP/port range '%s' invalid in %s", cp, name);
+      result=-1;
+    }
+  });
+  return result;
+}
+
+/** Return true iff we are configured to thing that the local fascist firewall
+ * (if any) will allow a connection to <b>addr</b>:<b>port</b> */
+int
+fascist_firewall_allows_address(or_options_t *options, uint32_t addr,
+                                uint16_t port)
+{
+  uint32_t ipaddr, ipmask;
+  uint16_t portmin, portmax;
+  if (!options->FascistFirewall)
+    return 1;
+
+  if (smartlist_string_num_isin(options->FirewallPorts, port))
+    return 1;
+
+  if (!options->FirewallIPs)
+    return 0;
+
+  SMARTLIST_FOREACH(options->FirewallIPs, const char *, cp,
+    {
+      if (parse_addr_and_port_range(cp, &ipaddr, &ipmask, &portmin, &portmax)<0)
+        continue;
+      if ((addr&ipmask) == (ipaddr&ipmask) &&
+          (portmin <= port) && (port <= portmax))
+        return 1;
+    });
+
+  return 0;
 }
 
 /** Return 0 if every setting in <b>options</b> is reasonable.  Else
@@ -1575,6 +1630,17 @@ options_validate(or_options_t *options)
   if (validate_ports_csv(options->FirewallPorts,
                          "FirewallPorts") < 0)
     result = -1;
+
+  if (validate_addr_port_ranges_csv(options->FirewallIPs,
+                                    "FirewallIPs") < 0)
+    result = -1;
+
+  if (options->FascistFirewall &&
+      !smartlist_len(options->FirewallIPs) &&
+      !smartlist_len(options->FirewallPorts)) {
+    smartlist_add(options->FirewallPorts, tor_strdup("80"));
+    smartlist_add(options->FirewallPorts, tor_strdup("443"));
+  }
 
   if (validate_ports_csv(options->LongLivedPorts,
                          "LongLivedPorts") < 0)

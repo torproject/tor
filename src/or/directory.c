@@ -137,9 +137,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
       /* Pay attention to fascistfirewall when we're uploading a
        * router descriptor, but not when uploading a service
        * descriptor -- those use Tor. */
-      if (get_options()->FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR &&
-          !get_options()->HttpProxy) {
-        if (!smartlist_string_num_isin(get_options()->FirewallPorts, ds->dir_port))
+      if (purpose == DIR_PURPOSE_UPLOAD_DIR && !get_options()->HttpProxy) {
+        if (!fascist_firewall_allows_address(get_options(),ds->addr,ds->dir_port))
           continue;
       }
       directory_initiate_command_trusted_dir(ds, purpose, purpose_is_private(purpose),

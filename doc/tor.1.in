@@ -240,6 +240,14 @@ A list of ports that your firewall allows you to connect to.  Only used when
 \fBFascistFirewall\fR is set. (Default: 80, 443)
 .LP
 .TP
+\fBFirewallIPs \fR\fIADDR\fP[\fB/\fP\fIMASK\fP\fB][:\fP\fIPORT\fP]...\fP
+A comma-separated list of IPs that your firewall allows you to connect to.
+Only used when \fBFascistFirewall\fR is set.  The format is as for the
+addresses in ExitPolicy.  For example, 'FirewallIPs 99.0.0.0/8, *:80' means
+that your firewall allows connections to everything inside net 99, and to
+port 80 outside.
+.LP
+.TP
 \fBLongLivedPorts \fR\fIPORTS\fP
 A list of ports for services that tend to have long-running connections
 (e.g. chat and interactive shells). Circuits for streams that use these
