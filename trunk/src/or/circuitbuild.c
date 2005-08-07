@@ -1427,8 +1427,8 @@ choose_good_entry_server(cpath_build_state_t *state)
 
     for (i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
-      if (!smartlist_string_num_isin(options->FirewallPorts, r->or_port))
-         smartlist_add(excluded, r);
+      if (!fascist_firewall_allows_address(options,r->addr,r->or_port))
+        smartlist_add(excluded, r);
     }
   }
   choice = router_choose_random_node(options->EntryNodes, options->ExcludeNodes,
