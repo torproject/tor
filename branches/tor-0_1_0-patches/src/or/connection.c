@@ -232,6 +232,10 @@ void connection_free(connection_t *conn) {
     if (conn->state == OR_CONN_STATE_OPEN)
       directory_set_dirty();
   }
+  if (conn->type == CONN_TYPE_CONTROL) {
+    conn->event_mask = 0;
+    control_update_global_event_mask();
+  }
   connection_unregister(conn);
   _connection_free(conn);
 }
@@ -248,6 +252,12 @@ void connection_free_all(void) {
   connection_t **carray;
 
   get_connection_array(&carray,&n);
+
+  for (i=0;i<n;i++)
+    if (carray[i]->type == CONN_TYPE_CONTROL)
+      carray[i]->event_mask = 0;
+  control_update_global_event_mask();
+
   for (i=0;i<n;i++)
     _connection_free(carray[i]);
 }

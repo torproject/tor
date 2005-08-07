@@ -1436,6 +1436,7 @@ int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
+void control_update_global_event_mask(void);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);
