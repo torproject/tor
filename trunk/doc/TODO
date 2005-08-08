@@ -108,6 +108,8 @@ N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
     - On sighup, if usehelpernodes changed to 1, use new circs.
   o Make a FirewallIPs to correspond to firewallPorts so I can use Tor at
     MIT when my directory is out of date.
+    o Document, rename, deprecate fascistfirewall, and make it use
+      addr_policy_t logic.
   - switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back, out if we decide we prefer it the way it already is. hm.

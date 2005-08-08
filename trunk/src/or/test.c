@@ -1385,7 +1385,7 @@ test_exit_policies(void)
 {
   addr_policy_t *policy;
 
-  policy = router_parse_addr_policy_from_string("reject 192.168.0.0/16:*");
+  policy = router_parse_addr_policy_from_string("reject 192.168.0.0/16:*",-1);
   test_eq(NULL, policy->next);
   test_eq(ADDR_POLICY_REJECT, policy->policy_type);
   test_eq(0xc0a80000u, policy->addr);

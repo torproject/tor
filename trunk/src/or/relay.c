@@ -656,7 +656,7 @@ connection_edge_process_end_not_open(
           log_fn(LOG_NOTICE,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
           addr_policy_free(exitrouter->exit_policy);
           exitrouter->exit_policy =
-            router_parse_addr_policy_from_string("reject *:*");
+            router_parse_addr_policy_from_string("reject *:*", -1);
         }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
@@ -683,7 +683,7 @@ connection_edge_process_end_not_open(
         if (exitrouter) {
           addr_policy_free(exitrouter->exit_policy);
           exitrouter->exit_policy =
-            router_parse_addr_policy_from_string("reject *:*");
+            router_parse_addr_policy_from_string("reject *:*", -1);
         }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;

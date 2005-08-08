@@ -1094,7 +1094,9 @@ typedef struct {
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   smartlist_t *FirewallPorts; /**< Which ports our firewall allows (strings). */
-  smartlist_t *FirewallIPs; /**< Which IPs our firewall allows (strings). */
+  config_line_t *ReachableAddresses; /**< Which IP:ports our firewall allows
+                                      * (exit policy.) */
+
   /** Application ports that require all nodes in circ to have sufficient uptime. */
   smartlist_t *LongLivedPorts;
   /** Should we try to reuse the same exit node for a given host */
@@ -1175,6 +1177,8 @@ typedef struct {
                        * of fixed nodes? */
   int NumHelperNodes; /**< How many helper nodes do we try to establish? */
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
+
+  addr_policy_t *reachable_addr_policy; /**< Parsed from ReachableAddresses */
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -1360,7 +1364,8 @@ void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
 int options_init_logs(or_options_t *options, int validate_only);
 int config_parse_addr_policy(config_line_t *cfg,
-                             addr_policy_t **dest);
+                             addr_policy_t **dest,
+                             int assume_action);
 void options_append_default_exit_policy(addr_policy_t **policy);
 void addr_policy_free(addr_policy_t *p);
 int option_is_recognized(const char *key);
@@ -1376,8 +1381,8 @@ int or_state_save(void);
 
 int config_getinfo_helper(const char *question, char **answer);
 
-int fascist_firewall_allows_address(or_options_t *options, uint32_t addr,
-                                    uint16_t port);
+int firewall_is_fascist(void);
+int fascist_firewall_allows_address(uint32_t addr, uint16_t port);
 
 /********************************* connection.c ***************************/
 
@@ -2022,7 +2027,8 @@ running_routers_t *router_parse_runningrouters(const char *str,
                                                int write_to_cache);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
-addr_policy_t *router_parse_addr_policy_from_string(const char *s);
+addr_policy_t *router_parse_addr_policy_from_string(const char *s,
+                                                    int assume_action);
 int check_software_version_against_directory(const char *directory);
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);

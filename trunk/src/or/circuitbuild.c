@@ -1416,7 +1416,7 @@ choose_good_entry_server(cpath_build_state_t *state)
     smartlist_add(excluded, r);
     routerlist_add_family(excluded, r);
   }
-  if (options->FascistFirewall) {
+  if (firewall_is_fascist()) {
     /* exclude all ORs that listen on the wrong port */
     routerlist_t *rl;
     int i;
@@ -1427,7 +1427,7 @@ choose_good_entry_server(cpath_build_state_t *state)
 
     for (i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
-      if (!fascist_firewall_allows_address(options,r->addr,r->or_port))
+      if (!fascist_firewall_allows_address(r->addr,r->or_port))
         smartlist_add(excluded, r);
     }
   }
@@ -1986,3 +1986,4 @@ helper_nodes_getinfo_helper(const char *question, char **answer)
   }
   return 0;
 }
+
