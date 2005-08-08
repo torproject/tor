@@ -2,6 +2,10 @@ tor (0.1.0.14-1) unstable; urgency=high
 
   * New upstream version - changes, among others:
     - Fixes the other half of the bug with crypto handshakes.
+  * Since gs-gpl on s390 is broken (#321435) and unable to
+    build PDFs of our images for the design paper this version
+    ships them in the source and uses them on s390, should building
+    them from source really fail.
 
  -- Peter Palfrader <weasel@debian.org>  Mon,  8 Aug 2005 23:33:15 +0200
 
