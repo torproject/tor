@@ -1395,7 +1395,7 @@ tor_check_dh_key(BIGNUM *bn)
     log_fn(LOG_WARN, "Rejecting DH key < 0");
     return -1;
   }
-  if (BN_cmp(bn, dh_param_p)>=0){
+  if (BN_cmp(bn, dh_param_p)>=0) {
     log_fn(LOG_WARN, "Rejecting DH key >= p");
     return -1;
   }
