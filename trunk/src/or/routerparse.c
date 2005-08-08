@@ -313,8 +313,7 @@ get_recommended_software_from_directory(const char *str)
 /* Return 0 if myversion is supported; else log a message and return
  * -1 (or exit if ignoreversions is false) */
 int
-check_software_version_against_directory(const char *directory,
-                                         int ignoreversion)
+check_software_version_against_directory(const char *directory)
 {
   char *v;
   v = get_recommended_software_from_directory(directory);
@@ -326,21 +325,11 @@ check_software_version_against_directory(const char *directory,
     tor_free(v);
     return 0;
   }
-  log(ignoreversion ? LOG_WARN : LOG_ERR,
+  log(LOG_WARN,
      "You are running Tor version %s, which will not work with this network.\n"
      "Please use %s%s.",
       VERSION, strchr(v,',') ? "one of " : "", v);
   tor_free(v);
-
-  if (ignoreversion) {
-    log(LOG_WARN, "IgnoreVersion is set. If it breaks, we told you so.");
-    return -1;
-  } else {
-    fflush(0);
-    tor_cleanup();
-    exit(0);
-    return -1; /* never reached */
-  }
 }
 
 /** Parse a directory from <b>str</b> and, when done, store the
@@ -417,7 +406,7 @@ router_parse_routerlist_from_directory(const char *str,
 
   /* Now that we know the signature is okay, check the version. */
   if (check_version)
-    check_software_version_against_directory(str, get_options()->IgnoreVersion);
+    check_software_version_against_directory(str);
 
   /* Now try to parse the first part of the directory. */
   if ((end = strstr(str,"\nrouter "))) {
