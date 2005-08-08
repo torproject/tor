@@ -1,0 +1,52 @@
+#! /bin/sh -e
+## 06_add_compile_time_defaults.dpatch by  <weasel@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+if [ $# -lt 1 ]; then
+    echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch} ${2:+-d $2}"
+
+case "$1" in
+    -patch) patch -p1 ${patch_opts} < $0;;
+    -unpatch) patch -R -p1 ${patch_opts} < $0;;
+    *)
+        echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+        exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+diff -urNad tor-0.1.0.0-alpha-cvs/src/or/config.c /tmp/dpep.Xv4cHn/tor-0.1.0.0-alpha-cvs/src/or/config.c
+--- tor-0.1.0.0-alpha-cvs/src/or/config.c	2005-01-12 16:32:45.000000000 +0100
++++ /tmp/dpep.Xv4cHn/tor-0.1.0.0-alpha-cvs/src/or/config.c	2005-01-13 03:50:33.815693540 +0100
+@@ -103,7 +103,7 @@
+   VAR("ControlPort",         UINT,     ControlPort,          "0"),
+   VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
+   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
+-  VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
++  VAR("DataDirectory",       STRING,   DataDirectory,        "/var/lib/tor"),
+   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
+   VAR("DirPort",             UINT,     DirPort,              "0"),
+   VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
+@@ -149,12 +149,12 @@
+   VAR("ORPort",              UINT,     ORPort,               "0"),
+   VAR("ORBindAddress",       LINELIST, ORBindAddress,        NULL),
+   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
+-  VAR("PidFile",             STRING,   PidFile,              NULL),
++  VAR("PidFile",             STRING,   PidFile,              "/var/run/tor/tor.pid"),
+   VAR("LongLivedPorts",      CSV,      LongLivedPorts,       "21,22,706,1863,5050,5190,5222,5223,6667,8300,8888"),
+   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
+   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
+   OBSOLETE("RouterFile"),
+-  VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "0"),
++  VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "1"),
+   VAR("RunTesting",          BOOL,     RunTesting,           "0"),
+   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
+   VAR("RendNodes",           STRING,   RendNodes,            NULL),
