@@ -6,8 +6,10 @@ tor (0.1.0.14-1) unstable; urgency=high
     build PDFs of our images for the design paper this version
     ships them in the source and uses them on s390, should building
     them from source really fail.
+  * Increase standards-version from 3.6.1 to 3.6.2.  No changes
+    necessary.
 
- -- Peter Palfrader <weasel@debian.org>  Mon,  8 Aug 2005 23:33:15 +0200
+ -- Peter Palfrader <weasel@debian.org>  Mon,  8 Aug 2005 23:55:05 +0200
 
 tor (0.1.0.13-1) unstable; urgency=high
 
