@@ -749,7 +749,7 @@ router_rebuild_descriptor(int force)
   if (options->BandwidthRate > options->MaxAdvertisedBandwidth)
     ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
 
-  config_parse_addr_policy(get_options()->ExitPolicy, &ri->exit_policy);
+  config_parse_addr_policy(get_options()->ExitPolicy, &ri->exit_policy, -1);
   options_append_default_exit_policy(&ri->exit_policy);
 
   if (desc_routerinfo) /* inherit values */

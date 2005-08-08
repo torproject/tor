@@ -69,7 +69,7 @@ parse_dir_policy(void)
     addr_policy_free(dir_policy);
     dir_policy = NULL;
   }
-  config_parse_addr_policy(get_options()->DirPolicy, &dir_policy);
+  config_parse_addr_policy(get_options()->DirPolicy, &dir_policy, -1);
   /* ports aren't used. */
   for (n=dir_policy; n; n = n->next) {
     n->prt_min = 1;
@@ -138,7 +138,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
        * router descriptor, but not when uploading a service
        * descriptor -- those use Tor. */
       if (purpose == DIR_PURPOSE_UPLOAD_DIR && !get_options()->HttpProxy) {
-        if (!fascist_firewall_allows_address(get_options(),ds->addr,ds->dir_port))
+        if (!fascist_firewall_allows_address(ds->addr,ds->dir_port))
           continue;
       }
       directory_initiate_command_trusted_dir(ds, purpose, purpose_is_private(purpose),
@@ -159,7 +159,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
 {
   routerinfo_t *r = NULL;
   trusted_dir_server_t *ds = NULL;
-  int fascistfirewall = get_options()->FascistFirewall;
+  int fascistfirewall = firewall_is_fascist();
   int directconn = purpose == DIR_PURPOSE_FETCH_DIR ||
                    purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
   int fetch_fresh_first = advertised_server_mode();

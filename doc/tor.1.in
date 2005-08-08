@@ -233,19 +233,25 @@ If 1, Tor will only create outgoing connections to ORs running on ports that
 your firewall allows (defaults to 80 and 443; see \fBFirewallPorts\fR).  This will
 allow you to run Tor as a client behind a firewall with restrictive policies,
 but will not allow you to run as a server behind such a firewall.
+This option is deprecated; use
+ReachableAddresses instead.
 .LP
 .TP
 \fBFirewallPorts \fR\fIPORTS\fP
-A list of ports that your firewall allows you to connect to.  Only used when
-\fBFascistFirewall\fR is set. (Default: 80, 443)
+A list of ports that your firewall allows you to connect to.  Only
+used when \fBFascistFirewall\fR is set. This option is deprecated; use
+ReachableAddresses instead. (Default: 80, 443)
 .LP
 .TP
-\fBFirewallIPs \fR\fIADDR\fP[\fB/\fP\fIMASK\fP\fB][:\fP\fIPORT\fP]...\fP
-A comma-separated list of IPs that your firewall allows you to connect to.
-Only used when \fBFascistFirewall\fR is set.  The format is as for the
-addresses in ExitPolicy.  For example, 'FirewallIPs 99.0.0.0/8, *:80' means
-that your firewall allows connections to everything inside net 99, and to
-port 80 outside.
+\fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP\fB][:\fP\fIPORT\fP]...\fP
+A comma-separated list of IPs that your firewall allows you to connect
+to.  Only used when \fBFascistFirewall\fR is set.  The format is as
+for the addresses in ExitPolicy, except that "accept" is understood
+unless "reject" is explicitly provided.  For example, 'FirewallIPs
+99.0.0.0/8, reject 18.0.0.0/8:80, accept *:80' means that your
+firewall allows connections to everything inside net 99, rejects port
+80 connections to net 18, and accepts connections to port 80 otherwise.
+(Default: 'accept *:*'.)
 .LP
 .TP
 \fBLongLivedPorts \fR\fIPORTS\fP

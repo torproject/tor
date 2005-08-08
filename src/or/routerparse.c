@@ -1028,10 +1028,12 @@ router_parse_entry_from_string(const char *s, const char *end)
   return router;
 }
 
-/** Parse the exit policy in the string <b>s</b> and return it.
+/** Parse the exit policy in the string <b>s</b> and return it.  If
+ * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
+ * ADDR_POLICY_REJECT) for items that specify no action.
  */
 addr_policy_t *
-router_parse_addr_policy_from_string(const char *s)
+router_parse_addr_policy_from_string(const char *s, int assume_action)
 {
   directory_token_t *tok = NULL;
   const char *cp;
@@ -1047,6 +1049,15 @@ router_parse_addr_policy_from_string(const char *s)
   }
   tmp[len]='\n';
   tmp[len+1]='\0';
+  while (TOR_ISSPACE(*cp))
+    ++cp;
+  if ((*cp == '*' || TOR_ISDIGIT(*cp)) && assume_action >= 0) {
+    char *new_str = tor_malloc(len+10);
+    tor_snprintf(new_str, len+10, "%s %s\n",
+                 assume_action == ADDR_POLICY_ACCEPT?"accept":"reject", cp);
+    tor_free(tmp);
+    cp = tmp = new_str;
+  }
   tok = get_next_token(&cp, RTR_ONLY);
   if (tok->tp == _ERR) {
     log_fn(LOG_WARN, "Error reading exit policy: %s", tok->error);
@@ -1073,7 +1084,7 @@ int
 router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 {
   addr_policy_t *newe, *tmpe;
-  newe = router_parse_addr_policy_from_string(s);
+  newe = router_parse_addr_policy_from_string(s, -1);
   if (!newe)
     return -1;
   for (tmpe = router->exit_policy; tmpe; tmpe=tmpe->next)
@@ -1156,7 +1167,7 @@ assert_addr_policy_ok(addr_policy_t *t)
     tor_assert(t->policy_type == ADDR_POLICY_REJECT ||
                t->policy_type == ADDR_POLICY_ACCEPT);
     tor_assert(t->prt_min <= t->prt_max);
-    t2 = router_parse_addr_policy_from_string(t->string);
+    t2 = router_parse_addr_policy_from_string(t->string, -1);
     tor_assert(t2);
     tor_assert(t2->policy_type == t->policy_type);
     tor_assert(t2->addr == t->addr);

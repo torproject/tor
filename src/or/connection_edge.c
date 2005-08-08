@@ -1696,7 +1696,7 @@ parse_socks_policy(void)
     addr_policy_free(socks_policy);
     socks_policy = NULL;
   }
-  config_parse_addr_policy(get_options()->SocksPolicy, &socks_policy);
+  config_parse_addr_policy(get_options()->SocksPolicy, &socks_policy, -1);
   /* ports aren't used. */
   for (n=socks_policy; n; n = n->next) {
     n->prt_min = 1;

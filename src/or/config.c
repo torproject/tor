@@ -123,7 +123,6 @@ static config_var_t _option_vars[] = {
   VAR("ExitPolicy",          LINELIST, ExitPolicy,           NULL),
   VAR("FascistFirewall",     BOOL,     FascistFirewall,      "0"),
   VAR("FirewallPorts",       CSV,      FirewallPorts,        ""),
-  VAR("FirewallIPs",         CSV,      FirewallIPs,          NULL),
   VAR("Group",               STRING,   Group,                NULL),
   VAR("HardwareAccel",       BOOL,     HardwareAccel,        "1"),
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
@@ -160,6 +159,7 @@ static config_var_t _option_vars[] = {
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
   VAR("PidFile",             STRING,   PidFile,              NULL),
+  VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
@@ -285,6 +285,7 @@ static int or_state_validate(or_state_t *options);
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void print_cvs_version(void);
+static void parse_reachable_addresses(void);
 static int init_libevent(void);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 static void check_libevent_version(const char *m, const char *v, int server);
@@ -324,6 +325,8 @@ static or_options_t *global_options = NULL;
 static char *config_fname = NULL;
 /** Persistant serialized state. */
 static or_state_t *global_state = NULL;
+/** DOCDOC */
+static addr_policy_t *reachable_addr_policy = NULL;
 
 static void *
 config_alloc(config_format_t *fmt)
@@ -358,6 +361,8 @@ config_free_all(void)
 {
   config_free(&options_format, global_options);
   tor_free(config_fname);
+  addr_policy_free(reachable_addr_policy);
+  reachable_addr_policy = NULL;
 }
 
 /** If options->SafeLogging is on, return a not very useful string,
@@ -483,6 +488,7 @@ options_act(void)
   /* Update address policies. */
   parse_socks_policy();
   parse_dir_policy();
+  parse_reachable_addresses();
 
   init_cookie_authentication(options->CookieAuthentication);
 
@@ -1376,7 +1382,6 @@ config_dump(config_format_t *fmt, void *options, int minimal)
     if (minimal && option_is_same(fmt, options, defaults, fmt->vars[i].name))
       continue;
 
-
     desc = config_find_description(fmt, fmt->vars[i].name);
     if (desc) {
       size_t len = strlen(desc)+8;
@@ -1439,56 +1444,51 @@ validate_ports_csv(smartlist_t *sl, const char *name)
   return result;
 }
 
-/* Return 0 if every element of sl is a string holding an IP with
- * optional mask and port, or if sl is NULL. Otherwise return -1. */
-static int
-validate_addr_port_ranges_csv(smartlist_t *sl, const char *name)
+/** DOCDOC */
+static void
+parse_reachable_addresses(void)
 {
-  uint32_t addr, mask;
-  uint16_t port_min, port_max;
-  int result = 0;
-  tor_assert(name);
+  or_options_t *options = get_options();
 
-  if (!sl)
-    return 0;
+  addr_policy_free(reachable_addr_policy);
+  reachable_addr_policy = NULL;
 
-  SMARTLIST_FOREACH(sl, const char *, cp,
-  {
-    if (parse_addr_and_port_range(cp, &addr, &mask, &port_min, &port_max)<0) {
-      log(LOG_WARN, "IP/port range '%s' invalid in %s", cp, name);
-      result=-1;
-    }
-  });
-  return result;
+  if (config_parse_addr_policy(options->ReachableAddresses,
+                               &reachable_addr_policy,
+                               ADDR_POLICY_ACCEPT)) {
+    log_fn(LOG_WARN, "Error in ReachableAddresses entry; ignoring.");
+    return;
+  }
+}
+
+/** Return true iff the firewall options might block any address:port
+ * combination
+ */
+int
+firewall_is_fascist(void)
+{
+  return reachable_addr_policy ? 1 : 0;
 }
 
 /** Return true iff we are configured to think that the local fascist
  * firewall (if any) will allow a connection to <b>addr</b>:<b>port</b> */
 int
-fascist_firewall_allows_address(or_options_t *options, uint32_t addr,
-                                uint16_t port)
+fascist_firewall_allows_address(uint32_t addr, uint16_t port)
 {
-  uint32_t ipaddr, ipmask;
-  uint16_t portmin, portmax;
-  if (!options->FascistFirewall)
-    return 1;
+  addr_policy_result_t p = router_compare_addr_to_addr_policy(
+               addr, port, reachable_addr_policy);
 
-  if (smartlist_string_num_isin(options->FirewallPorts, port))
-    return 1;
-
-  if (!options->FirewallIPs)
-    return 0;
-
-  SMARTLIST_FOREACH(options->FirewallIPs, const char *, cp,
-    {
-      if (parse_addr_and_port_range(cp, &ipaddr, &ipmask, &portmin, &portmax)<0)
-        continue;
-      if ((addr&ipmask) == (ipaddr&ipmask) &&
-          (portmin <= port) && (port <= portmax))
-        return 1;
-    });
-
-  return 0;
+  switch (p) {
+    case ADDR_POLICY_PROBABLY_ACCEPTED:
+    case ADDR_POLICY_ACCEPTED:
+      return 1;
+    case ADDR_POLICY_PROBABLY_REJECTED:
+    case ADDR_POLICY_REJECTED:
+      return 0;
+    default:
+      log_fn(LOG_WARN, "Unexpected result: %d", (int)p);
+      return 0;
+  }
 }
 
 /** Return 0 if every setting in <b>options</b> is reasonable.  Else
@@ -1632,20 +1632,48 @@ options_validate(or_options_t *options)
                          "FirewallPorts") < 0)
     result = -1;
 
-  if (validate_addr_port_ranges_csv(options->FirewallIPs,
-                                    "FirewallIPs") < 0)
-    result = -1;
-
-  if (options->FascistFirewall &&
-      !smartlist_len(options->FirewallIPs) &&
-      !smartlist_len(options->FirewallPorts)) {
-    smartlist_add(options->FirewallPorts, tor_strdup("80"));
-    smartlist_add(options->FirewallPorts, tor_strdup("443"));
-  }
-
   if (validate_ports_csv(options->LongLivedPorts,
                          "LongLivedPorts") < 0)
     result = -1;
+
+  if (options->FascistFirewall) {
+    smartlist_t *instead = smartlist_create();
+    config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
+    new_line->key = tor_strdup("ReachableAddresses");
+    /* If we're configured with the old format, we need to prepend some
+     * open ports. */
+    if (!smartlist_len(options->FirewallPorts)) {
+      smartlist_add(options->FirewallPorts, tor_strdup("80"));
+      smartlist_add(options->FirewallPorts, tor_strdup("443"));
+    }
+    SMARTLIST_FOREACH(options->FirewallPorts, const char *, portno,
+      {
+        int p = atoi(portno);
+        char *s;
+        if (p<0) continue;
+        s = tor_malloc(16);
+        tor_snprintf(s, 16, "*:%d", p);
+        smartlist_add(instead, s);
+      });
+    new_line->value = smartlist_join_strings(instead,",",0,NULL);
+    /* These have been deprecated since 0.1.1.5-alpha-cvs */
+    log_fn(LOG_WARN, "FascistFirewall and FirewallPorts are deprecated.  Instead, use \"ReachableAddresses %s\"", new_line->value);
+    new_line->next = options->ReachableAddresses;
+    options->ReachableAddresses = new_line;
+    SMARTLIST_FOREACH(instead, char *, cp, tor_free(cp));
+    smartlist_free(instead);
+  }
+
+  if (options->FascistFirewall || options->ReachableAddresses) {
+    /* We need to end with a reject *:*, not an implicit accept *:* */
+    config_line_t **linep = &options->ReachableAddresses;
+    while (*linep) {
+      linep = &((*linep)->next);
+    }
+    *linep = tor_malloc_zero(sizeof(config_line_t));
+    (*linep)->key = tor_strdup("ReachableAddresses");
+    (*linep)->value = tor_strdup("reject *:*");
+  }
 
   options->_AllowUnverified = 0;
   if (options->AllowUnverifiedNodes) {
@@ -1844,7 +1872,7 @@ options_validate(or_options_t *options)
       result = -1;
   }
 
-  if (config_parse_addr_policy(options->ExitPolicy, &addr_policy)) {
+  if (config_parse_addr_policy(options->ExitPolicy, &addr_policy, -1)) {
     log_fn(LOG_WARN, "Error in Exit Policy entry.");
     result = -1;
   }
@@ -1854,12 +1882,17 @@ options_validate(or_options_t *options)
   }
   /* The rest of these calls *append* to addr_policy. So don't actually
    * use the results for anything other than checking if they parse! */
-  if (config_parse_addr_policy(options->DirPolicy, &addr_policy)) {
+  if (config_parse_addr_policy(options->DirPolicy, &addr_policy, -1)) {
     log_fn(LOG_WARN, "Error in DirPolicy entry.");
     result = -1;
   }
-  if (config_parse_addr_policy(options->SocksPolicy, &addr_policy)) {
+  if (config_parse_addr_policy(options->SocksPolicy, &addr_policy, -1)) {
     log_fn(LOG_WARN, "Error in SocksPolicy entry.");
+    result = -1;
+  }
+  if (config_parse_addr_policy(options->ReachableAddresses, &addr_policy,
+                               ADDR_POLICY_ACCEPT)) {
+    log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
     result = -1;
   }
   addr_policy_free(addr_policy);
@@ -2461,7 +2494,7 @@ options_append_default_exit_policy(addr_policy_t **policy)
   tmp.key = NULL;
   tmp.value = (char*)DEFAULT_EXIT_POLICY;
   tmp.next = NULL;
-  config_parse_addr_policy(&tmp, policy);
+  config_parse_addr_policy(&tmp, policy, -1);
 
   /* Remove redundant parts, if any. */
   for (ap=*policy; ap; ap=ap->next) {
@@ -2482,7 +2515,8 @@ options_append_default_exit_policy(addr_policy_t **policy)
  */
 int
 config_parse_addr_policy(config_line_t *cfg,
-                         addr_policy_t **dest)
+                         addr_policy_t **dest,
+                         int assume_action)
 {
   addr_policy_t **nextp;
   smartlist_t *entries;
@@ -2502,7 +2536,7 @@ config_parse_addr_policy(config_line_t *cfg,
     SMARTLIST_FOREACH(entries, const char *, ent,
     {
       log_fn(LOG_DEBUG,"Adding new entry '%s'",ent);
-      *nextp = router_parse_addr_policy_from_string(ent);
+      *nextp = router_parse_addr_policy_from_string(ent, assume_action);
       if (*nextp) {
         nextp = &((*nextp)->next);
       } else {
@@ -3140,9 +3174,9 @@ config_getinfo_helper(const char *question, char **answer)
       size_t len;
       desc = config_find_description(&options_format, var->name);
       switch (var->type) {
-        case CONFIG_TYPE_STRING: type = "String"; break; 
+        case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_UINT: type = "Integer"; break;
-        case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break; 
+        case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
         case CONFIG_TYPE_MEMUNIT: type = "DataSize"; break;
         case CONFIG_TYPE_DOUBLE: type = "Float"; break;
         case CONFIG_TYPE_BOOL: type = "Boolean"; break;

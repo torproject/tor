@@ -123,7 +123,7 @@ router_pick_directory_server(int requireother,
     return choice;
 
   log_fn(LOG_INFO,"Still no %s router entries. Reloading and trying again.",
-         get_options()->FascistFirewall ? "reachable" : "known");
+         firewall_is_fascist() ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
   if (router_reload_router_list()) {
     return NULL;
@@ -187,8 +187,7 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     if (requireother && router_is_me(router))
       continue;
     if (fascistfirewall) {
-      if (!fascist_firewall_allows_address(get_options(),router->addr,
-                                           router->dir_port))
+      if (!fascist_firewall_allows_address(router->addr, router->dir_port))
         continue;
     }
     /* before 0.0.9rc5-cvs, only trusted dirservers served status info. */
@@ -231,7 +230,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
           !memcmp(me->identity_digest, d->digest, DIGEST_LEN))
         continue;
       if (fascistfirewall) {
-        if (!fascist_firewall_allows_address(get_options(),d->addr,d->dir_port))
+        if (!fascist_firewall_allows_address(d->addr, d->dir_port))
           continue;
       }
       smartlist_add(sl, d);
