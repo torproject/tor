@@ -201,8 +201,8 @@ log_severity_to_event(int severity)
   }
 }
 
-/** Set <b>global_event_mask</b> to the bitwise OR of each live control
- * connection's event_mask field. */
+/** Set <b>global_event_maskX</b> (where X is 0 or 1) to the bitwise OR
+ * of each live control connection's event_mask field. */
 void
 control_update_global_event_mask(void)
 {
