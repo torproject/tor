@@ -837,7 +837,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_INFO,"Uploading rendezvous descriptor: finished with status 200 (\"%s\")", reason);
         break;
       case 400:
-        log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver. Malformed rendezvous descriptor?", reason);
+        log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver '%s'. Malformed rendezvous descriptor?", reason, conn->address);
         break;
       default:
         log_fn(LOG_WARN,"http status %d (\"%s\") response unexpected (server '%s').", status_code, reason, conn->address);
