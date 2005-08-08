@@ -1,3 +1,10 @@
+tor (0.1.0.14-1) unstable; urgency=high
+
+  * New upstream version - changes, among others:
+    - Fixes the other half of the bug with crypto handshakes.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  8 Aug 2005 23:33:15 +0200
+
 tor (0.1.0.13-1) unstable; urgency=high
 
   * New upstream version:
