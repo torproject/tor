@@ -307,9 +307,10 @@ static void close_log(logfile_t *victim)
     fclose(victim->file);
   } else if (victim->is_syslog) {
 #ifdef HAVE_SYSLOG_H
-    if (--syslog_count == 0)
+    if (--syslog_count == 0) {
       /* There are no other syslogs; close the logging facility. */
       closelog();
+    }
 #endif
   }
 }
