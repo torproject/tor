@@ -1,0 +1,166 @@
+<html>
+<head>
+<title>Tor Win32 Install Instructions</title>
+<meta name="Author" content="Roger Dingledine">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link rel="stylesheet" type="text/css" href="tor-doc.css">
+</head>
+
+<body>
+
+<h1>Running the <a href="http://tor.eff.org/">Tor</a> client on Win32</h1>
+
+<a name="installing"></a>
+<h2>Step One: Download and Install Tor</h2>
+<p>
+<b>Note that these are the installation instructions for running a client on Win32.
+If you want to run a server (please do), read the "Configuring a server" section at
+<a href="tor-doc.html#server">tor-doc.html</a>.</b>
+</p>
+<p>
+This document was updated June 09 2005.
+</p>
+<p>
+The latest beta release of Tor for Windows 32 is
+<a href="http://tor.eff.org/dist/win32/tor-0.1.0.9-rc-win32.exe">0.1.0.9-rc</a>.
+Download it by clicking the link. You may be able to find experimental versions
+<a href="http://tor.eff.org/dist/win32/">here</a>, if you're looking for
+new features and new bugs.
+</p>
+
+<p>
+If you want to run Tor in the system
+tray and/or as a service have a look at this <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#Win32SystemTrayService">FAQ
+entry</a>. If you dont mind running in a window (so you can see its logs
+and errors) our Tor installer should make everything pretty simple. Below
+is a screenshot of the setup page (your version will probably be newer
+than the version printed in this screenshot):
+</p>
+
+<img alt="tor installer splash page"
+src="http://tor.eff.org/img/screenshot-win32-installer-splash.jpg" />
+
+<p>
+By default, Tor is not configured to run at startup.
+<!--We highly recommend that you enable that feature, however. -->
+You can enable this by checking the "Run at startup" box as shown below.
+Be sure to leave the other boxes checked.
+</p>
+
+<img alt="select components to install"
+src="http://tor.eff.org/img/screenshot-win32-installer-components.jpg" />
+
+<p>Once the installer is finished, it will run Tor in a window so
+you can see its logs and errors. (You can minimize this window, but do
+not close it.)
+</p>
+
+<img alt="tor window screenshot"
+src="http://tor.eff.org/img/screenshot-win32-dos-window.jpg" />
+
+<p>Tor comes configured as a client by default. It uses a built-in
+default configuration file, and most people won't need to change any of
+the settings. Tor is now installed.</p>
+
+<a name="privoxy"></a>
+<h2>Step Two: Install Privoxy for Web Browsing</h2>
+
+<p>After installing Tor, you need to configure your applications to use it.
+The first step is to set up web browsing. Start by installing <a
+href="http://www.privoxy.org/">Privoxy</a> (click on 'recent releases',
+then scroll down to the Win32 installer packages). Privoxy is a filtering
+web proxy that integrates well with Tor. Once it's installed, it should
+appear in your system tray as a "P" in a circle, as pictured below:
+</p>
+
+<img alt="privoxy icon in the system tray"
+src="http://tor.eff.org/img/screenshot-win32-privoxy-icon.jpg" />
+
+<p>You need to configure Privoxy to use Tor.
+Open Privoxy's main config file by selecting it from Start Menu|All
+Programs:
+</p>
+
+<img border="1" alt="editing privoxy config"
+src="http://tor.eff.org/img/screenshot-win32-privoxy-config.jpg" />
+
+<p>Add the line <br>
+<tt>forward-socks4a / localhost:9050 .</tt><br>
+to Privoxy's config file. Don't forget to add the dot at the end.
+The easiest way is to select the above line and copy/paste it into
+the file. Be sure to save.
+</p>
+
+<img border="1" alt="privoxy points to tor"
+src="http://tor.eff.org/img/screenshot-win32-privoxy-edit.jpg" />
+
+<a name="using"></a>
+<h2>Step Three: Configure your applications to use Tor</h2>
+
+<p>Then change your browser to HTTP proxy at localhost port 8118.
+(That's where Privoxy listens.)
+In Firefox it's Tools|Options|General|Connection Settings.
+In Mozilla, this is in Edit|Preferences|Advanced|Proxies.
+In Opera 7.5x it's Tools|Preferences|Network|Proxy servers.
+In IE, it's Tools|Internet Options|Connections|LAN Settings|Advanced.
+You should also set your SSL proxy (IE calls it "Secure") to the same
+thing, to hide your SSL traffic too. In IE, this looks something like:</p>
+
+<img alt="LAN settings in IE"
+src="http://tor.eff.org/img/screenshot-win32-ie-lan.jpg" />
+<img alt="Proxy settings in IE"
+src="http://tor.eff.org/img/screenshot-win32-ie-proxies.jpg" />
+
+<p>Using privoxy is <strong>necessary</strong> because <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS">browsers
+leak your
+DNS requests when they use a SOCKS proxy directly</a>, which is bad for
+your anonymity. Privoxy also removes certain dangerous headers from your
+web requests, and blocks obnoxious ad sites like Doubleclick.</p>
+
+<p>To test if it's working, you need to know your normal IP address so you can
+verify that the address really changes when running Tor.
+Go to the Start menu, click Run and enter <tt>cmd</tt>.
+At the command prompt, enter <tt>ipconfig</tt>. If you are behind a NAT/Firewall
+you can use one of the sites listed below to check which IP you are using.
+When that is done, start Tor and Privoxy and visit any of the sites again.
+If everything works, your IP address should have changed.
+</p>
+
+<p>
+<!--<a href="http://peertech.org/privacy-knoppix/">peertech</a>, -->
+<a href="http://www.showmyip.com/">showmyip.com</a> and
+<a href="http://ipid.shat.net">ipid.shat.net</a>
+are sites that show your current IP so you can see
+what address and country you're coming from.
+</p>
+
+<p>
+If you have a personal firewall that limits your computer's ability
+to connect to itself, be sure to allow connections from your local
+applications to
+local port 8118 and port 9050. If your firewall blocks outgoing connections,
+punch a hole so it can connect to at least TCP ports 80, 443, and 9001-9033.
+For more troubleshooting suggestions, see <a
+href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
+</p>
+
+<p>To Torify another application that supports HTTP, just point it at Privoxy
+(that is, localhost port 8118). To use SOCKS directly (for example, for
+instant messaging, Jabber, IRC, etc), point your application directly at
+Tor (localhost port 9050). For applications that support neither SOCKS
+nor HTTP, take a look at <a
+href="http://www.socks.permeo.com/Download/SocksCapDownload/index.asp">SocksCap</a>,
+<a href="http://www.freecap.ru/eng/">FreeCap</a>,
+or the <a
+href="http://www.hummingbird.com/products/nc/socks/index.html?cks=y">Hummingbird</a>
+SOCKS client. (FreeCap is free software; the others are proprietary.)<br />
+For more information how to Torify other applications in detail visit
+the <a href="http://wiki.noreply.org/wiki/TheOnionRouter/TorifyHOWTO">Torify HOWTO</a>.
+<p>If you have suggestions for improving this document, please <a
+href="mailto:tor-bugs@freehaven.net">send them to us</a>. Thanks!</p>
+
+</body>
+</html>
