@@ -136,7 +136,7 @@ static config_var_t _option_vars[] = {
   VAR("HttpProxyAuthenticator",STRING, HttpProxyAuthenticator,NULL),
   VAR("HttpsProxy",          STRING,   HttpsProxy,           NULL),
   VAR("HttpsProxyAuthenticator",STRING,HttpsProxyAuthenticator,NULL),
-  VAR("IgnoreVersion",       BOOL,     IgnoreVersion,        "0"),
+  OBSOLETE("IgnoreVersion"),
   VAR("KeepalivePeriod",     INTERVAL, KeepalivePeriod,      "5 minutes"),
   VAR("Log",                 LINELIST, Logs,                 NULL),
   OBSOLETE("LinkPadding"),

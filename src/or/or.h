@@ -2023,8 +2023,7 @@ running_routers_t *router_parse_runningrouters(const char *str,
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s);
-int check_software_version_against_directory(const char *directory,
-                                             int ignoreversion);
+int check_software_version_against_directory(const char *directory);
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
