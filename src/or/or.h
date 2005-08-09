@@ -687,12 +687,14 @@ struct connection_t {
 
 typedef struct connection_t connection_t;
 
-#define ADDR_POLICY_ACCEPT 1
-#define ADDR_POLICY_REJECT 2
+typedef enum {
+  ADDR_POLICY_ACCEPT=1,
+  ADDR_POLICY_REJECT=2,
+} addr_policy_action_t;
 
 /** A linked list of policy rules */
 typedef struct addr_policy_t {
-  char policy_type; /**< One of ADDR_POLICY_ACCEPT or ADDR_POLICY_REJECT. */
+  addr_policy_action_t policy_type; /**< What to do when the policy matches.*/
   char *string; /**< String representation of this rule. */
   uint32_t addr; /**< Base address to accept or reject. */
   uint32_t msk; /**< Accept/reject all addresses <b>a</b> such that
