@@ -1197,7 +1197,7 @@ handle_getinfo_helper(const char *question, char **answer)
       smartlist_add(status, s);
       tor_free(path);
     }
-    *answer = smartlist_join_strings(status, "\r\n", 1, NULL);
+    *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
   } else if (!strcmp(question, "stream-status")) {
@@ -1247,7 +1247,7 @@ handle_getinfo_helper(const char *question, char **answer)
                    buf);
       smartlist_add(status, s);
     }
-    *answer = smartlist_join_strings(status, "\r\n", 1, NULL);
+    *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
   } else if (!strcmp(question, "orconn-status")) {
@@ -1270,7 +1270,7 @@ handle_getinfo_helper(const char *question, char **answer)
       tor_snprintf(s, slen, "%s %s",conns[i]->nickname,state);
       smartlist_add(status, s);
     }
-    *answer = smartlist_join_strings(status, "\r\n", 1, NULL);
+    *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
   } else if (!strcmpstart(question, "addr-mappings/")) {
@@ -1289,7 +1289,7 @@ handle_getinfo_helper(const char *question, char **answer)
     }
     mappings = smartlist_create();
     addressmap_get_mappings(mappings, min_e, max_e);
-    *answer = smartlist_join_strings(mappings, "\n", 1, NULL);
+    *answer = smartlist_join_strings(mappings, "\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
   }
