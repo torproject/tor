@@ -6,7 +6,8 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/sbin/tor
 NAME=tor
 DESC="tor daemon"
-TORPID=/var/run/tor/tor.pid
+TORPIDDIR=/var/run/tor
+TORPID=$TORPIDDIR/tor.pid
 DEFAULTSFILE=/etc/default/$NAME
 WAITFORDAEMON=60
 ARGS=""
@@ -50,20 +51,26 @@ case "$1" in
 	if [ "$RUN_DAEMON" != "yes" ]; then
 		echo "Not starting $DESC (Disabled in $DEFAULTSFILE)."
 	else
-		echo "Starting $DESC: $NAME..."
-		ulimit -n $MAX_FILEDESCRIPTORS
-		start-stop-daemon --start --quiet --oknodo \
-			--chuid debian-tor:debian-tor \
-			--pidfile $TORPID \
-			$NICE \
-			--exec $DAEMON -- $ARGS
-		echo "done."
+		if   test ! -d $TORPIDDIR; then echo "There is no $TORPIDDIR directory." >&2; exit 1
+		elif test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
+		else
+			echo "Starting $DESC: $NAME..."
+			ulimit -n $MAX_FILEDESCRIPTORS || echo "Warn: Could not set ulimit for number of file descriptors." >&2
+			start-stop-daemon --start --quiet --oknodo \
+				--chuid debian-tor:debian-tor \
+				--pidfile $TORPID \
+				$NICE \
+				--exec $DAEMON -- $ARGS
+			echo "done."
+		fi
 	fi
 	;;
   stop)
 	echo -n "Stopping $DESC: "
 	pid=`cat $TORPID 2>/dev/null` || true
-	if test ! -f $TORPID -o -z "$pid"
+	if   test ! -d $TORPIDDIR; then echo "There is no $TORPIDDIR directory." >&2; exit 1
+	elif test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
+	elif test ! -f $TORPID -o -z "$pid"
 	then
 		echo "not running (there is no $TORPID)."
 	elif start-stop-daemon --stop --signal INT --quiet --pidfile $TORPID --exec $DAEMON
@@ -80,7 +87,9 @@ case "$1" in
   reload|force-reload)
 	echo -n "Reloading $DESC configuration: "
 	pid=`cat $TORPID 2>/dev/null` || true
-	if test ! -f $TORPID -o -z "$pid"
+	if   test ! -d $TORPIDDIR; then echo "There is no $TORPIDDIR directory." >&2; exit 1
+	elif test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
+	elif test ! -f $TORPID -o -z "$pid"
 	then
 		echo "not running (there is no $TORPID)."
 	elif start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --exec $DAEMON
