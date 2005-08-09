@@ -1,4 +1,4 @@
-.TH TOR 1 "June 2005" "TOR"
+.TH TOR 1 "August 2005" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -243,7 +243,7 @@ used when \fBFascistFirewall\fR is set. This option is deprecated; use
 ReachableAddresses instead. (Default: 80, 443)
 .LP
 .TP
-\fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP\fB][:\fP\fIPORT\fP]...\fP
+\fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
 A comma-separated list of IPs that your firewall allows you to connect
 to.  Only used when \fBFascistFirewall\fR is set.  The format is as
 for the addresses in ExitPolicy, except that "accept" is understood
@@ -455,7 +455,7 @@ special target string "pass", which prevents subsequent rules from being
 considered.
 .LP
 .TP
-\fBShutdownWaitLength\fR\fINUM\fP
+\fBShutdownWaitLength\fR \fINUM\fP
 When we get a SIGINT and we're a server, we begin shutting down: we close
 listeners and start refusing new circuits. After \fBNUM\fP seconds,
 we exit. If we get a second SIGINT, we exit immediately.  (Default:
