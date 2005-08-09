@@ -1,6 +1,55 @@
-tor (0.1.0.7-rc-200505171420-1) UNRELEASED; urgency=low
+tor (0.1.0.14-1) unstable; urgency=high
 
-  * CVS snapshot: 2005-05-17 14:20 UTC.
+  * New upstream version - changes, among others:
+    - Fixes the other half of the bug with crypto handshakes.
+  * Since gs-gpl on s390 is broken (#321435) and unable to
+    build PDFs of our images for the design paper this version
+    ships them in the source and uses them on s390, should building
+    them from source really fail.
+  * Increase standards-version from 3.6.1 to 3.6.2.  No changes
+    necessary.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  8 Aug 2005 23:55:05 +0200
+
+tor (0.1.0.13-1) unstable; urgency=high
+
+  * New upstream version:
+    - Explicitly set no-unaligned-access for sparc in configure.in.
+      it turns out the new gcc's let you compile broken code, but
+      that doesn't make it not-broken (closes: #320140).
+    - Fix a critical bug in the security of our crypto handshakes.
+      (Therefore set urgency to high).
+    and more (see upstream changelog).
+  * Slightly improve init script to give you proper error messages when
+    you do not run it as root.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  5 Aug 2005 01:27:49 +0200
+
+tor (0.1.0.12-1) unstable; urgency=medium
+
+  * New upstream version:
+    - New IP for tor26 directory server,
+    - fix a possible double-free in tor_gzip_uncompress,
+    - and more (see upstream changelog).
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 19 Jul 2005 17:36:24 +0200
+
+tor (0.1.0.11-1) unstable; urgency=high
+
+  * New upstream version (closes: #316753):
+    - Fixes a serious bug: servers now honor their exit policies -
+      In 0.1.0.x only clients enforced them so far.  0.0.9.x is
+      not affected.
+  * Build depend on libevent-dev >= 1.1.
+  * Urgency high because 0.0.9.10-1 did not make it into testing after
+    like 3 weeks because of an impending ftp-master move.  So I might
+    just as well upload this one.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  4 Jul 2005 17:53:48 +0200
+
+tor (0.1.0.10-0.pre.1) UNRELEASED; urgency=low
+
+  * New upstream version.
   * Add a watch file.
   * Forward port 03_tor_manpage_in_section_8.
   * Forward port 06_add_compile_time_defaults.
@@ -14,8 +63,20 @@ tor (0.1.0.7-rc-200505171420-1) UNRELEASED; urgency=low
     Of course the -dev package needs to be installed.
   * Update README.Debian to say that upstream now does have a default
     for DataDirectory.
+  * Don't fail in the init script when we cannot raise the ulimit.
+    Instead just warn a bit (closes: #312882).
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 17 May 2005 16:18:35 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 15 Jun 2005 16:38:06 +0200
+
+tor (0.0.9.10-1) unstable; urgency=high
+
+  * While we're waiting for a newer libevent to enter sid, make another
+    upload of the 0.0.9.x tree:
+    - Refuse relay cells that claim to have a length larger than the
+      maximum allowed. This prevents a potential attack that could read
+      arbitrary memory (e.g. keys) from an exit server's process.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 16 Jun 2005 22:56:11 +0200
 
 tor (0.0.9.9-1) unstable; urgency=low
 
