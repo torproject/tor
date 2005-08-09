@@ -35,6 +35,7 @@ void get_platform_str(char *platform, size_t len);
 int is_obsolete_version(const char *myversion, const char *start);
 size_t read_escaped_data(const char *data, size_t len, int translate_newlines,
                          char **out);
+or_options_t *options_new(void);
 
 static char temp_dir[256];
 
@@ -1522,7 +1523,7 @@ test_rend_fns(void)
 int
 main(int c, char**v)
 {
-  or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
+  or_options_t *options = options_new();
   network_init();
   options_init(options);
   set_options(options);

@@ -1332,6 +1332,13 @@ options_dup(config_format_t *fmt, or_options_t *old)
   return newopts;
 }
 
+/** Return a new empty or_options_t.  Used for testing. */
+or_options_t *
+options_new(void)
+{
+  return config_alloc(&options_format);
+}
+
 /** Set <b>options</b> to hold reasonable defaults for most options.
  * Each option defaults to zero. */
 void
