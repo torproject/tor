@@ -330,6 +330,7 @@ check_software_version_against_directory(const char *directory)
      "Please use %s%s.",
       VERSION, strchr(v,',') ? "one of " : "", v);
   tor_free(v);
+  return 0;
 }
 
 /** Parse a directory from <b>str</b> and, when done, store the
