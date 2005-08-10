@@ -322,7 +322,7 @@ static config_format_t state_format = {
 /** Command-line and config-file options. */
 static or_options_t *global_options = NULL;
 /** Name of most recently read torrc file. */
-static char *config_fname = NULL;
+static char *torrc_fname = NULL;
 /** Persistant serialized state. */
 static or_state_t *global_state = NULL;
 /** DOCDOC */
@@ -360,7 +360,7 @@ void
 config_free_all(void)
 {
   config_free(&options_format, global_options);
-  tor_free(config_fname);
+  tor_free(torrc_fname);
   addr_policy_free(reachable_addr_policy);
   reachable_addr_policy = NULL;
 }
@@ -2026,16 +2026,16 @@ get_windows_conf_root(void)
 #endif
 
 /** Return the default location for our torrc file. */
-static char *
+static const char *
 get_default_conf_file(void)
 {
 #ifdef MS_WINDOWS
-  char *path = tor_malloc(MAX_PATH);
+  static char path[MAX_PATH+1];
   strlcpy(path, get_windows_conf_root(), MAX_PATH);
   strlcat(path,"\\torrc",MAX_PATH);
   return path;
 #else
-  return tor_strdup(CONFDIR "/torrc");
+  return (CONFDIR "/torrc");
 #endif
 }
 
@@ -2131,22 +2131,21 @@ options_init_from_torrc(int argc, char **argv)
 
   if (using_default_torrc) {
     /* didn't find one, try CONFDIR */
-    char *fn;
-    fn = get_default_conf_file();
-    if (fn && file_status(fn) == FN_FILE) {
-      fname = fn;
+    const char *dflt = get_default_conf_file();
+    char *fn = NULL;
+    if (dflt && file_status(dflt) == FN_FILE) {
+      fname = tor_strdup(dflt);
     } else {
-      tor_free(fn);
 #ifndef MS_WINDOWS
       fn = expand_filename("~/.torrc");
       if (fn && file_status(fn) == FN_FILE) {
         fname = fn;
       } else {
         tor_free(fn);
-        fname = get_default_conf_file();
+        fname = tor_strdup(dflt);
       }
 #else
-      fname = get_default_conf_file();
+      fname = tor_strdup(dflt);
 #endif
     }
   }
@@ -2194,14 +2193,26 @@ options_init_from_torrc(int argc, char **argv)
     log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
-  tor_free(config_fname);
-  config_fname = fname;
+  tor_free(torrc_fname);
+  torrc_fname = fname;
   return 0;
  err:
   tor_free(fname);
   config_free(&options_format, newoptions);
   return -1;
 }
+
+/** Return the location for our configuration file.
+ */
+const char *
+get_torrc_fname(void)
+{
+  if (torrc_fname)
+    return torrc_fname;
+  else
+    return get_default_conf_file();
+}
+
 
 /** Adjust the address map mased on the MapAddress elements in the
  * configuration <b>options</b>
@@ -2818,15 +2829,13 @@ write_configuration_file(const char *fname, or_options_t *options)
 int
 options_save_current(void)
 {
-  char *fn;
-  if (config_fname) {
+  if (torrc_fname) {
     /* XXX This fails if we can't write to our configuration file.
      *   Arguably, we should try falling back to datadirectory or something.
      *   But just as arguably, we shouldn't. */
-    return write_configuration_file(config_fname, get_options());
+    return write_configuration_file(torrc_fname, get_options());
   }
-  fn = get_default_conf_file();
-  return write_configuration_file(fn, get_options());
+  return write_configuration_file(get_default_conf_file(), get_options());
 }
 
 struct unit_table_t {

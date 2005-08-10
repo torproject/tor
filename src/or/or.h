@@ -1376,6 +1376,7 @@ config_line_t *option_get_assignment(or_options_t *options,
                                      const char *key);
 char *options_dump(or_options_t *options, int minimal);
 int options_save_current(void);
+const char *get_torrc_fname(void);
 
 or_state_t *get_or_state(void);
 int or_state_load(void);

@@ -1150,6 +1150,8 @@ handle_getinfo_helper(const char *question, char **answer)
   *answer = NULL; /* unrecognized key by default */
   if (!strcmp(question, "version")) {
     *answer = tor_strdup(VERSION);
+  } else if (!strcmp(question, "config-file")) {
+    *answer = tor_strdup(get_torrc_fname());
   } else if (!strcmpstart(question, "accounting/")) {
     return accounting_getinfo_helper(question, answer);
   } else if (!strcmpstart(question, "helper-nodes")) {

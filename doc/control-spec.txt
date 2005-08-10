@@ -294,6 +294,8 @@ $Id$
     "version" -- The version of the server's software, including the name
       of the software. (example: "Tor 0.0.9.4")
 
+    "config-file" -- The location of Tor's configuration file ("torrc").
+
     "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest server
       descriptor for a given OR, NUL-terminated.  If no such OR is known, the
       corresponding value is an empty string.
