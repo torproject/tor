@@ -23,9 +23,9 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad tor-0.0.9pre5/contrib/torify.1 /tmp/dpep.fOA3Mm/tor-0.0.9pre5/contrib/torify.1
---- tor-0.0.9pre5/contrib/torify.1	2004-11-10 03:27:09.608843380 +0100
-+++ /tmp/dpep.fOA3Mm/tor-0.0.9pre5/contrib/torify.1	2004-11-10 03:28:29.621248723 +0100
+diff -urNad tor-0.1.1.5/contrib/torify.1 /tmp/dpep.fOA3Mm/tor-0.1.1.5/contrib/torify.1
+--- tor-0.1.1.5/contrib/torify.1
++++ /tmp/dpep.fOA3Mm/tor-0.1.1.5/contrib/torify.1
 @@ -18,6 +18,6 @@
  to suid binaries.
  
@@ -34,12 +34,12 @@ diff -urNad tor-0.0.9pre5/contrib/torify.1 /tmp/dpep.fOA3Mm/tor-0.0.9pre5/contri
 +.BR tor (8),
  .BR tsocks (1),
  .BR tsocks.conf (5).
-diff -urNad tor-0.0.9pre5/doc/tor.1.in /tmp/dpep.fOA3Mm/tor-0.0.9pre5/doc/tor.1.in
---- tor-0.0.9pre5/doc/tor.1.in	2004-11-10 03:28:29.263327434 +0100
-+++ /tmp/dpep.fOA3Mm/tor-0.0.9pre5/doc/tor.1.in	2004-11-10 03:28:29.622248503 +0100
+diff -urNad tor-0.1.1.5/doc/tor.1.in /tmp/dpep.fOA3Mm/tor-0.1.1.5/doc/tor.1.in
+--- tor-0.1.1.5/doc/tor.1.in
++++ /tmp/dpep.fOA3Mm/tor-0.1.1.5/doc/tor.1.in
 @@ -1,4 +1,4 @@
--.TH TOR 1 "May 2005" "TOR"
-+.TH TOR 8 "May 2005" "TOR"
+-.TH TOR 1 "June 2005" "TOR"
++.TH TOR 8 "June 2005" "TOR"
  .SH NAME
  tor \- The second-generation onion router
  .SH SYNOPSIS
