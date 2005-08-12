@@ -71,7 +71,7 @@ build-stamp:  config.status
 	@echo
 	# Running unit tests
 	if [ "$(RUN_TEST)" != "no" ]; then \
-		src/or/test; \
+		src/or/test || true; \
 	else \
 		echo -e "\n\nSkipping unittests\n\n"; \
 	fi
