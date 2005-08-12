@@ -291,6 +291,8 @@ static int init_libevent(void);
 static void check_libevent_version(const char *m, const char *v, int server);
 #endif
 
+/*static*/ or_options_t *options_new(void);
+
 #define OR_OPTIONS_MAGIC 9090909
 
 static config_format_t options_format = {
@@ -2212,7 +2214,6 @@ get_torrc_fname(void)
   else
     return get_default_conf_file();
 }
-
 
 /** Adjust the address map mased on the MapAddress elements in the
  * configuration <b>options</b>

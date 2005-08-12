@@ -1672,7 +1672,7 @@ remove_dead_helpers(void)
 
   for (i = 0; i < smartlist_len(helper_nodes); ) {
     helper_node_t *helper = smartlist_get(helper_nodes, i);
-    char *why = NULL;
+    const char *why = NULL;
     time_t since = 0;
     if (helper->unlisted_since + HELPER_ALLOW_UNLISTED > now) {
       why = "unlisted";

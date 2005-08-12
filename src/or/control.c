@@ -127,6 +127,10 @@ static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
 static void connection_printf_to_buf(connection_t *conn, const char *format, ...)
   CHECK_PRINTF(2,3);
+/*static*/ size_t write_escaped_data(const char *data, size_t len,
+                                     int translate_newlines, char **out);
+/*static*/ size_t read_escaped_data(const char *data, size_t len,
+                                    int translate_newlines,  char **out);
 static void send_control0_message(connection_t *conn, uint16_t type,
                                  uint32_t len, const char *body);
 static void send_control_done(connection_t *conn);
@@ -1883,7 +1887,8 @@ connection_control_reached_eof(connection_t *conn)
 static int
 connection_control_process_inbuf_v1(connection_t *conn)
 {
-  size_t data_len, cmd_len;
+  size_t data_len;
+  int cmd_len;
   char *args;
 
   tor_assert(conn);

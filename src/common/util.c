@@ -77,6 +77,9 @@ const char util_c_id[] = "$Id$";
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
 
 #ifndef O_BINARY
 #define O_BINARY 0

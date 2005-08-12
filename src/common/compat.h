@@ -26,6 +26,9 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
 #include <stdarg.h>
 
 #ifndef NULL_REP_IS_ZERO_BYTES

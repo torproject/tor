@@ -676,12 +676,12 @@ test_util(void)
   smartlist_insert(sl, 1, (void*)22);
   smartlist_insert(sl, 0, (void*)0);
   smartlist_insert(sl, 5, (void*)555);
-  test_eq((void*)0,   smartlist_get(sl,0));
-  test_eq((void*)1,   smartlist_get(sl,1));
-  test_eq((void*)22,  smartlist_get(sl,2));
-  test_eq((void*)3,   smartlist_get(sl,3));
-  test_eq((void*)4,   smartlist_get(sl,4));
-  test_eq((void*)555, smartlist_get(sl,5));
+  test_eq_ptr((void*)0,   smartlist_get(sl,0));
+  test_eq_ptr((void*)1,   smartlist_get(sl,1));
+  test_eq_ptr((void*)22,  smartlist_get(sl,2));
+  test_eq_ptr((void*)3,   smartlist_get(sl,3));
+  test_eq_ptr((void*)4,   smartlist_get(sl,4));
+  test_eq_ptr((void*)555, smartlist_get(sl,5));
 
   smartlist_clear(sl);
   smartlist_split_string(sl, "abc", ":", 0, 0);
@@ -968,14 +968,14 @@ test_strmap(void)
   test_eq(v, NULL);
   v = strmap_set(map, "K1", (void*)100);
   test_eq(v, (void*)99);
-  test_eq(strmap_get(map,"K1"), (void*)100);
-  test_eq(strmap_get(map,"K2"), (void*)101);
-  test_eq(strmap_get(map,"K-not-there"), NULL);
+  test_eq_ptr(strmap_get(map,"K1"), (void*)100);
+  test_eq_ptr(strmap_get(map,"K2"), (void*)101);
+  test_eq_ptr(strmap_get(map,"K-not-there"), NULL);
 
   v = strmap_remove(map,"K2");
-  test_eq(v, (void*)101);
-  test_eq(strmap_get(map,"K2"), NULL);
-  test_eq(strmap_remove(map,"K2"), NULL);
+  test_eq_ptr(v, (void*)101);
+  test_eq_ptr(strmap_get(map,"K2"), NULL);
+  test_eq_ptr(strmap_remove(map,"K2"), NULL);
 
   strmap_set(map, "K2", (void*)101);
   strmap_set(map, "K3", (void*)102);
@@ -986,9 +986,9 @@ test_strmap(void)
   count = 0;
   strmap_foreach(map, _squareAndRemoveK4, &count);
   test_eq(count, 1);
-  test_eq(strmap_get(map, "K4"), NULL);
-  test_eq(strmap_get(map, "K1"), (void*)10000);
-  test_eq(strmap_get(map, "K6"), (void*)11025);
+  test_eq_ptr(strmap_get(map, "K4"), NULL);
+  test_eq_ptr(strmap_get(map, "K1"), (void*)10000);
+  test_eq_ptr(strmap_get(map, "K6"), (void*)11025);
 
   iter = strmap_iter_init(map);
   strmap_iter_get(iter,&k,&v);
@@ -1010,8 +1010,8 @@ test_strmap(void)
   test_assert(strmap_iter_done(iter));
 
   /* Make sure we removed K2, but not the others. */
-  test_eq(strmap_get(map, "K2"), NULL);
-  test_eq(strmap_get(map, "K5"), (void*)10816);
+  test_eq_ptr(strmap_get(map, "K2"), NULL);
+  test_eq_ptr(strmap_get(map, "K5"), (void*)10816);
 
   /* Clean up after ourselves. */
   strmap_free(map, NULL);
@@ -1019,11 +1019,11 @@ test_strmap(void)
   /* Now try some lc functions. */
   map = strmap_new();
   strmap_set_lc(map,"Ab.C", (void*)1);
-  test_eq(strmap_get(map,"ab.c"), (void*)1);
-  test_eq(strmap_get_lc(map,"AB.C"), (void*)1);
-  test_eq(strmap_get(map,"AB.C"), NULL);
-  test_eq(strmap_remove_lc(map,"aB.C"), (void*)1);
-  test_eq(strmap_get_lc(map,"AB.C"), NULL);
+  test_eq_ptr(strmap_get(map,"ab.c"), (void*)1);
+  test_eq_ptr(strmap_get_lc(map,"AB.C"), (void*)1);
+  test_eq_ptr(strmap_get(map,"AB.C"), NULL);
+  test_eq_ptr(strmap_remove_lc(map,"aB.C"), (void*)1);
+  test_eq_ptr(strmap_get_lc(map,"AB.C"), NULL);
   strmap_free(map,NULL);
 }
 
@@ -1396,11 +1396,11 @@ test_exit_policies(void)
   test_streq("reject 192.168.0.0/16:*", policy->string);
 
   test_assert(exit_policy_implicitly_allows_local_networks(policy, 0));
-  test_eq(ADDR_POLICY_ACCEPTED,
+  test_assert(ADDR_POLICY_ACCEPTED ==
           router_compare_addr_to_addr_policy(0x01020304u, 2, policy));
-  test_eq(ADDR_POLICY_PROBABLY_ACCEPTED,
+  test_assert(ADDR_POLICY_PROBABLY_ACCEPTED ==
           router_compare_addr_to_addr_policy(0, 2, policy));
-  test_eq(ADDR_POLICY_REJECTED,
+  test_assert(ADDR_POLICY_REJECTED ==
           router_compare_addr_to_addr_policy(0xc0a80102, 2, policy));
 
   addr_policy_free(policy);
@@ -1509,10 +1509,10 @@ test_rend_fns(void)
   test_memeq(d2->intro_point_extend_info[1]->identity_digest,
              d1->intro_point_extend_info[1]->identity_digest, DIGEST_LEN);
 
-  test_eq(BAD_HOSTNAME, parse_extended_hostname(address1));
-  test_eq(ONION_HOSTNAME, parse_extended_hostname(address2));
-  test_eq(EXIT_HOSTNAME, parse_extended_hostname(address3));
-  test_eq(NORMAL_HOSTNAME, parse_extended_hostname(address4));
+  test_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
+  test_assert(ONION_HOSTNAME == parse_extended_hostname(address2));
+  test_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
+  test_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
 
   rend_service_descriptor_free(d1);
   rend_service_descriptor_free(d2);
