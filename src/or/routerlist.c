@@ -458,8 +458,8 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
   for (i = 0; i < smartlist_len(sl); ++i) {
     router = smartlist_get(sl, i);
     if (router_is_unreliable(router, 1, 0)) {
-      log(LOG_DEBUG, "Router '%s' has insufficient uptime; deleting.",
-          router->nickname);
+//      log(LOG_DEBUG, "Router '%s' has insufficient uptime; deleting.",
+ //         router->nickname);
       smartlist_del(sl, i--);
     }
   }
