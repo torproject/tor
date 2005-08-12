@@ -1017,11 +1017,9 @@ rend_consider_services_upload(time_t now)
          service->desc_is_dirty < now-5)) {
       /* if it's time, or if the directory servers have a wrong service
        * descriptor and ours has been stable for 5 seconds, upload a
-       * new one. */
+       * new one of each format. */
       upload_service_descriptor(service, 0);
-      /* XXXX011 NM Once directories understand versioned descriptors, enable
-       * this. */
-      // upload_service_descriptor(service, 1);
+      upload_service_descriptor(service, 1);
       service->next_upload_time = now + rendpostperiod;
     }
   }
