@@ -655,6 +655,8 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
           sizeof(launched->rend_query));
   memcpy(launched->rend_pk_digest, service->pk_digest, DIGEST_LEN);
 
+  if (launched->state == CIRCUIT_STATE_OPEN)
+    rend_service_intro_has_opened(launched);
   return 0;
 }
 

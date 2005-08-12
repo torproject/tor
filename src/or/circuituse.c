@@ -751,13 +751,8 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
       circ->timestamp_created = time(NULL);
       switch (purpose) {
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-          /* it's ready right now */
-          /* XXX should we call control_event_circuit_status() here? */
-          rend_client_rendcirc_has_opened(circ);
-          break;
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
           /* it's ready right now */
-          rend_service_intro_has_opened(circ);
           break;
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_CONNECT_REND:
@@ -942,6 +937,9 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       if (circ) {
         /* write the service_id into circ */
         strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));
+        if (circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
+            circ->state == CIRCUIT_STATE_OPEN)
+          rend_client_rendcirc_has_opened(circ);
       }
     }
   }
