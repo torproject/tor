@@ -15,6 +15,7 @@ const char tortls_c_id[] = "$Id$";
  * functions and variables.)
  */
 
+#include "orconfig.h"
 #include "./crypto.h"
 #include "./tortls.h"
 #include "./util.h"
