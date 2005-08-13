@@ -467,6 +467,11 @@ $Id$
   Other flags may be defined in the future; Tor SHOULD ignore unrecognized
   flags.
 
+3.15 QUIT
+
+  Tells the server to hang up on this controller connection. This command
+  can be used before authenticating.
+
 4 Replies
 
   Reply codes follow the same 3-character format as used by SMTP, with the
