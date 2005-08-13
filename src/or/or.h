@@ -1621,6 +1621,7 @@ int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char **desc, const char **msg);
+char *dirserver_getinfo_unregistered(void);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors(void);
 int list_server_status(smartlist_t *routers, char **router_status_out);

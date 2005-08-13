@@ -442,6 +442,41 @@ directory_remove_invalid(void)
   }
 }
 
+/** Write a list of unregistered descriptors into a newly allocated
+ * string and return it. Used by dirserv operators to keep track of
+ * fast nodes that haven't registered.
+ */
+char *
+dirserver_getinfo_unregistered(void)
+{
+  int i, r;
+  smartlist_t *answerlist;
+  char buf[1024];
+  char *answer;
+  routerinfo_t *ent;
+
+  if (!descriptor_list)
+    return tor_strdup("");
+
+  answerlist = smartlist_create();
+  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
+    ent = smartlist_get(descriptor_list, i);
+    r = dirserv_router_fingerprint_is_known(ent);
+    if (ent->bandwidthcapacity > 100000 && r == 0) {
+      /* then log this one */
+      tor_snprintf(buf, sizeof(buf),
+                   "%s: BW %d on '%s'.",
+                   ent->nickname, ent->bandwidthcapacity,
+                   ent->platform ? ent->platform : "");
+      smartlist_add(answerlist, tor_strdup(buf));
+    }
+  }
+  answer = smartlist_join_strings(answerlist, "\r\n", 0, NULL);
+  SMARTLIST_FOREACH(answerlist, char *, cp, tor_free(cp));
+  smartlist_free(answerlist);
+  return answer;
+}
+
 /** Mark the directory as <b>dirty</b> -- when we're next asked for a
  * directory, we will rebuild it instead of reusing the most recently
  * generated one.

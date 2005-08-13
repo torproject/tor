@@ -75,7 +75,8 @@ const char control_c_id[] = "$Id$";
 #define _EVENT_MAX            0x000C
 
 /** Array mapping from message type codes to human-readable message
- * type names.  */
+ * type names. Used for compatibility with version 0 of the control
+ * protocol. */
 static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
   "error",
   "done",
@@ -1172,6 +1173,8 @@ handle_getinfo_helper(const char *question, char **answer)
     routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"));
     if (ri && ri->signed_descriptor)
       *answer = tor_strdup(ri->signed_descriptor);
+  } else if (!strcmp(question, "unregistered-servers")) {
+    *answer = dirserver_getinfo_unregistered();
   } else if (!strcmp(question, "network-status")) {
     routerlist_t *routerlist;
     router_get_routerlist(&routerlist);
@@ -1309,7 +1312,7 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
   smartlist_t *unrecognized = NULL;
-  char *msg = NULL, *ans;
+  char *msg = NULL, *ans = NULL;
   size_t msg_len;
   int v0 = STATE_IS_V0(conn->state);
 
@@ -1963,6 +1966,12 @@ connection_control_process_inbuf_v1(connection_t *conn)
   log_fn(LOG_NOTICE, "COMMAND IS: <%s>", conn->incoming_cmd);
   log_fn(LOG_NOTICE, "ARGS ARE: <%s>", args);
   */
+
+  if (!strcasecmp(conn->incoming_cmd, "QUIT")) {
+    connection_write_str_to_buf("250 closing connection\r\n", conn);
+    connection_mark_for_close(conn);
+    return 0;
+  }
 
   if (conn->state == CONTROL_CONN_STATE_NEEDAUTH_V1 &&
       strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
