@@ -1173,8 +1173,9 @@ handle_getinfo_helper(const char *question, char **answer)
     routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"));
     if (ri && ri->signed_descriptor)
       *answer = tor_strdup(ri->signed_descriptor);
-  } else if (!strcmp(question, "unregistered-servers")) {
-    *answer = dirserver_getinfo_unregistered();
+  } else if (!strcmpstart(question, "unregistered-servers-")) {
+    *answer = dirserver_getinfo_unregistered(question +
+                                             strlen("unregistered-servers-"));
   } else if (!strcmp(question, "network-status")) {
     routerlist_t *routerlist;
     router_get_routerlist(&routerlist);

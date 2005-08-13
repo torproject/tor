@@ -447,13 +447,14 @@ directory_remove_invalid(void)
  * fast nodes that haven't registered.
  */
 char *
-dirserver_getinfo_unregistered(void)
+dirserver_getinfo_unregistered(const char *question)
 {
   int i, r;
   smartlist_t *answerlist;
   char buf[1024];
   char *answer;
   routerinfo_t *ent;
+  int min_bw = atoi(question);
 
   if (!descriptor_list)
     return tor_strdup("");
@@ -462,7 +463,7 @@ dirserver_getinfo_unregistered(void)
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ent = smartlist_get(descriptor_list, i);
     r = dirserv_router_fingerprint_is_known(ent);
-    if (ent->bandwidthcapacity > 100000 && r == 0) {
+    if (ent->bandwidthcapacity >= min_bw && r == 0) {
       /* then log this one */
       tor_snprintf(buf, sizeof(buf),
                    "%s: BW %d on '%s'.",
