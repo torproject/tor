@@ -1846,6 +1846,7 @@ int rend_cache_store(const char *desc, size_t desc_len);
 
 /********************************* rendservice.c ***************************/
 
+int num_rend_services(void);
 int rend_config_services(or_options_t *options, int validate_only);
 int rend_service_load_keys(void);
 void rend_services_init(void);

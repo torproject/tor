@@ -748,8 +748,11 @@ rep_hist_note_used_hidserv(time_t now, int need_uptime, int need_capacity)
 int
 rep_hist_get_predicted_hidserv(time_t now, int *need_uptime, int *need_capacity)
 {
-  if (!predicted_hidserv_time) /* initialize it */
+  if (!predicted_hidserv_time) { /* initialize it */
     predicted_hidserv_time = now;
+    predicted_hidserv_uptime_time = now;
+    predicted_hidserv_capacity_time = now;
+  }
   if (predicted_hidserv_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
     return 0; /* too long ago */
   if (predicted_hidserv_uptime_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)

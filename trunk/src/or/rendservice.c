@@ -61,6 +61,13 @@ typedef struct rend_service_t {
  */
 static smartlist_t *rend_service_list = NULL;
 
+/** Return the number of rendezvous services we have configured. */
+int num_rend_services(void) {
+  if (!rend_service_list)
+    return 0;
+  return smartlist_len(rend_service_list);
+}
+
 /** Release the storage held by <b>service</b>.
  */
 static void
