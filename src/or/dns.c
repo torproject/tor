@@ -904,7 +904,7 @@ spawn_enough_dnsworkers(void)
 
   while (num_dnsworkers < num_dnsworkers_needed) {
     if (spawn_dnsworker() < 0) {
-      log(LOG_WARN,"spawn_enough_dnsworkers(): spawn failed!");
+      log_fn(LOG_WARN,"spawn failed!");
       return;
     }
     num_dnsworkers++;

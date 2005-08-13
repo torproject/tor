@@ -331,17 +331,9 @@ circuit_predict_and_launch_new(void)
   int num=0, num_internal=0, num_uptime_internal=0;
   int hidserv_needs_uptime=0, hidserv_needs_capacity=1;
   int port_needs_uptime=0, port_needs_capacity=1;
-  int need_ports, need_hidserv;
   time_t now = time(NULL);
 
-  /* check if we know of a port that's been requested recently
-   * and no circuit is currently available that can handle it. */
-  need_ports = !circuit_all_predicted_ports_handled(now, &port_needs_uptime,
-                                                    &port_needs_capacity);
-
-  need_hidserv = rep_hist_get_predicted_hidserv(now, &hidserv_needs_uptime,
-                                                &hidserv_needs_capacity);
-
+  /* First, count how many of each type of circuit we have already. */
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
@@ -358,21 +350,41 @@ circuit_predict_and_launch_new(void)
       num_uptime_internal++;
   }
 
-  if (num < MAX_UNUSED_OPEN_CIRCUITS) {
-    /* perhaps we want another */
-    if (need_ports) {
-      log_fn(LOG_INFO,"Have %d clean circs (%d internal), need another exit circ.",
-        num, num_internal);
-      circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
-                               port_needs_uptime, port_needs_capacity, 0);
-    } else if (need_hidserv &&
-               ((num_uptime_internal<2 && hidserv_needs_uptime) ||
-                num_internal<2)) {
-      log_fn(LOG_INFO,"Have %d clean circs (%d uptime-internal, %d internal),"
-        " need another hidserv circ.", num, num_uptime_internal, num_internal);
-      circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
-                               hidserv_needs_uptime, hidserv_needs_capacity, 1);
-    }
+  /* If that's enough, then stop now. */
+  if (num >= MAX_UNUSED_OPEN_CIRCUITS)
+    return; /* we already have many, making more probably will hurt */
+
+  /* Second, see if we need any more exit circuits. */
+  /* check if we know of a port that's been requested recently
+   * and no circuit is currently available that can handle it. */
+  if (!circuit_all_predicted_ports_handled(now, &port_needs_uptime,
+                                           &port_needs_capacity)) {
+    log_fn(LOG_INFO,"Have %d clean circs (%d internal), need another exit circ.",
+      num, num_internal);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
+                             port_needs_uptime, port_needs_capacity, 0);
+    return;
+  }
+
+  /* Third, see if we need any more hidden service (server) circuits. */
+  if (num_rend_services() && num_uptime_internal < 3) {
+    log_fn(LOG_INFO,"Have %d clean circs (%d internal), need another internal circ for my hidden service.",
+           num, num_internal);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
+                             1, 1, 1);
+    return;
+  }
+
+  /* Fourth, see if we need any more hidden service (client) circuits. */
+  if (rep_hist_get_predicted_hidserv(now, &hidserv_needs_uptime,
+                                     &hidserv_needs_capacity) &&
+      ((num_uptime_internal<2 && hidserv_needs_uptime) ||
+        num_internal<2)) {
+    log_fn(LOG_INFO,"Have %d clean circs (%d uptime-internal, %d internal),"
+      " need another hidserv circ.", num, num_uptime_internal, num_internal);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
+                             hidserv_needs_uptime, hidserv_needs_capacity, 1);
+    return;
   }
 }
 
