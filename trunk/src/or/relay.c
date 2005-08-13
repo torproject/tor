@@ -597,7 +597,7 @@ errno_to_end_reason(int e)
 }
 
 /** How many times will I retry a stream that fails due to DNS
- * resolve failure?
+ * resolve failure or misc error?
  */
 #define MAX_RESOLVE_FAILURES 3
 
@@ -609,7 +609,8 @@ edge_reason_is_retriable(int reason)
   return reason == END_STREAM_REASON_HIBERNATING ||
          reason == END_STREAM_REASON_RESOURCELIMIT ||
          reason == END_STREAM_REASON_EXITPOLICY ||
-         reason == END_STREAM_REASON_RESOLVEFAILED;
+         reason == END_STREAM_REASON_RESOLVEFAILED ||
+         reason == END_STREAM_REASON_MISC;
 }
 
 /** Called when we receive an END cell on a stream that isn't open yet.
@@ -663,6 +664,7 @@ connection_edge_process_end_not_open(
         /* else, conn will get closed below */
         break;
       case END_STREAM_REASON_RESOLVEFAILED:
+      case END_STREAM_REASON_MISC:
         if (client_dns_incr_failures(conn->socks_request->address)
             < MAX_RESOLVE_FAILURES) {
           /* We haven't retried too many times; reattach the connection. */
