@@ -463,7 +463,9 @@ dirserver_getinfo_unregistered(const char *question)
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ent = smartlist_get(descriptor_list, i);
     r = dirserv_router_fingerprint_is_known(ent);
-    if (ent->bandwidthcapacity >= min_bw && r == 0) {
+    if (ent->bandwidthcapacity >= min_bw &&
+        ent->bandwidthrate >= min_bw &&
+        r == 0) {
       /* then log this one */
       tor_snprintf(buf, sizeof(buf),
                    "%s: BW %d on '%s'.",
