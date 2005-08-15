@@ -432,8 +432,8 @@ options_act(void)
     return -1;
   }
 
-  /* Bail out at this point if we're not going to be a server: we want
-   * to not fork, and to log stuff to stderr. */
+  /* Bail out at this point if we're not going to be a client or server:
+   * we want to not fork, and to log stuff to stderr. */
   if (options->command != CMD_RUN_TOR)
     return 0;
 

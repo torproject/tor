@@ -102,8 +102,6 @@ void
 dns_init(void)
 {
   init_cache_tree();
-  last_rotation_time=time(NULL);
-  spawn_enough_dnsworkers();
 }
 
 /** Helper: free storage held by an entry in the DNS cache. */
@@ -718,7 +716,6 @@ void
 dnsworkers_rotate(void)
 {
   connection_t *dnsconn;
-  log_fn(LOG_INFO, "Rotating DNS workers.");
   while ((dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
                                                  DNSWORKER_STATE_IDLE))) {
     connection_mark_for_close(dnsconn);

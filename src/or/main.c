@@ -934,7 +934,7 @@ do_hup(void)
      * configuration options. */
     cpuworkers_rotate();
     dnsworkers_rotate();
-    /* Rebuild fresh descriptor, but leave old one on failure. */
+    /* Write out a fresh descriptor, but leave old one on failure. */
     router_rebuild_descriptor(1);
     descriptor = router_get_my_descriptor();
     if (!descriptor) {
@@ -957,9 +957,10 @@ do_main_loop(void)
 {
   int loop_result;
 
+  dns_init(); /* initialize the dns resolve tree */
   /* only spawn dns handlers if we're a router */
   if (server_mode(get_options())) {
-    dns_init(); /* initialize the dns resolve tree, and spawn workers */
+    dnsworkers_rotate();
   }
 
   handle_signals(1);
@@ -1750,7 +1751,7 @@ nt_service_install(void)
   if (tor_snprintf(command, len, "\"%s\" --nt-service -f \"%s%storrc\"",
                    szPath,  szDrive, szDir)<0) {
     printf("Failed: tor_snprinf()\n");
-    free(command);
+    tor_free(command);
     return 0;
   }
 

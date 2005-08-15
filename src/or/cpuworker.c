@@ -46,8 +46,7 @@ static void process_pending_task(connection_t *cpuworker);
 void
 cpu_init(void)
 {
-  last_rotation_time=time(NULL);
-  spawn_enough_cpuworkers();
+  cpuworkers_rotate();
 }
 
 /** Called when we're done sending a request to a cpuworker. */
