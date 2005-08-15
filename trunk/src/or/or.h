@@ -1151,8 +1151,6 @@ typedef struct {
   config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
   smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
-  int _MonthlyAccountingStart; /**< Deprecated: day of month when accounting
-                                * interval starts */
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting
