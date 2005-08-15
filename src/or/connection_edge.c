@@ -1009,7 +1009,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
         return -1;
       }
       if (tor_inet_aton(socks->address, &in)) { /* see if it's an IP already */
-        answer = in.s_addr;
+        answer = in.s_addr; /* leave it in network order */
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                                (char*)&answer);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
@@ -1023,20 +1023,34 @@ connection_ap_handshake_process_socks(connection_t *conn)
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
+
+      if (!conn->chosen_exit_name) {
+        /* see if we can find a suitable enclave exit */
+        routerinfo_t *r =
+          router_find_exact_exit_enclave(socks->address, socks->port);
+        if (r) {
+          log_fn(LOG_INFO,"Redirecting address %s to exit at enclave router %s",
+                 safe_str(socks->address), r->nickname);
+          /* use the hex digest, not nickname, in case there are two
+             routers with this nickname */
+          conn->chosen_exit_name =
+            tor_strdup(hex_str(r->identity_digest, DIGEST_LEN));
+        }
+      }
+
       rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
       control_event_stream_status(conn, STREAM_EVENT_NEW);
     }
-    if (! get_options()->LeaveStreamsUnattached) {
+    if (get_options()->LeaveStreamsUnattached) {
+      conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
+    } else {
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
         return -1;
       }
-      return 0;
-    } else {
-      conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
-      return 0;
     }
+    return 0;
   } else {
     /* it's a hidden-service request */
     rend_cache_entry_t *entry;

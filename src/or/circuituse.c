@@ -749,7 +749,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
     return NULL;
   }
 
-  if (purpose != CIRCUIT_PURPOSE_C_GENERAL &&
+  if ((info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
       purpose != CIRCUIT_PURPOSE_TESTING) {
     /* see if there are appropriate circs available to cannibalize. */
     if ((circ = circuit_get_clean_open(CIRCUIT_PURPOSE_C_GENERAL, need_uptime,
@@ -768,6 +768,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
           break;
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_CONNECT_REND:
+        case CIRCUIT_PURPOSE_C_GENERAL:
           /* need to add a new hop */
           tor_assert(info);
           if (circuit_extend_to_new_exit(circ, info) < 0)

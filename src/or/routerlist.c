@@ -433,6 +433,37 @@ routerlist_find_my_routerinfo(void)
   return NULL;
 }
 
+/** Find a router that's up, that has this IP address, and
+ * that allows exit to this address:port, or return NULL if there
+ * isn't a good one.
+ */
+routerinfo_t *
+router_find_exact_exit_enclave(const char *address, uint16_t port) {
+  int i;
+  routerinfo_t *router;
+  uint32_t addr;
+  struct in_addr in;
+
+  if (!tor_inet_aton(address, &in))
+    return NULL; /* it's not an IP already */
+  addr = ntohl(in.s_addr);
+
+  for (i=0;i < smartlist_len(routerlist->routers); i++) {
+    router = smartlist_get(routerlist->routers, i);
+    log_fn(LOG_DEBUG,"Considering %s: %d, %u==%u, %d.",
+           router->nickname,
+           router->is_running,
+           router->addr, addr,
+           router_compare_addr_to_addr_policy(addr, port, router->exit_policy));
+    if (router->is_running &&
+        router->addr == addr &&
+        router_compare_addr_to_addr_policy(addr, port, router->exit_policy) ==
+          ADDR_POLICY_ACCEPTED)
+      return router;
+  }
+  return NULL;
+}
+
 /** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
  * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
  * If <b>need_capacity</b> is non-zero, we require a minimum advertised

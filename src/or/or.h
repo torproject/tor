@@ -626,7 +626,7 @@ struct connection_t {
   char identity_digest[DIGEST_LEN]; /**< Hash of identity_pkey */
   char *nickname; /**< Nickname of OR on other side (if any). */
 
-  /** Nickname of planned exit node -- to be used with .exit support. */
+  /** Nickname of planned exit node -- used with .exit support. */
   char *chosen_exit_name;
 
 /* Used only by OR connections: */
@@ -1952,6 +1952,7 @@ int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
 #define ROUTER_REQUIRED_MIN_UPTIME (24*3600) /* a day */
 #define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
 
+routerinfo_t *router_find_exact_exit_enclave(const char *address, uint16_t port);
 int router_is_unreliable(routerinfo_t *router, int need_uptime, int need_capacity);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
 routerinfo_t *router_choose_random_node(const char *preferred,
