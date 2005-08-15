@@ -1955,11 +1955,6 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
     return -1;
   }
 
-  if (old->ORPort != new_val->ORPort) {
-    log_fn(LOG_WARN,"While Tor is running, changing ORPort is not allowed. Failing.");
-    return -1;
-  }
-
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
     log_fn(LOG_WARN,"While Tor is running, changing DataDirectory (%s->%s) is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
     return -1;
