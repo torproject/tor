@@ -678,6 +678,8 @@ connection_edge_process_end_not_open(
         } else {
           log_fn(LOG_NOTICE,"Have tried resolving address '%s' at %d different places. Giving up.",
                  safe_str(conn->socks_request->address), MAX_RESOLVE_FAILURES);
+          /* clear the failures, so it will have a full try next time */
+          client_dns_clear_failures(conn->socks_request->address);
         }
         break;
       case END_STREAM_REASON_HIBERNATING:

@@ -652,8 +652,7 @@ addressmap_register(const char *address, char *new_address, time_t expires)
 int
 client_dns_incr_failures(const char *address)
 {
-  addressmap_entry_t *ent;
-  ent = strmap_get(addressmap,address);
+  addressmap_entry_t *ent = strmap_get(addressmap, address);
   if (!ent) {
     ent = tor_malloc_zero(sizeof(addressmap_entry_t));
     ent->expires = time(NULL)+MAX_DNS_ENTRY_AGE;
@@ -663,6 +662,19 @@ client_dns_incr_failures(const char *address)
   log_fn(LOG_INFO,"Address %s now has %d resolve failures.",
          safe_str(address), ent->num_resolve_failures);
   return ent->num_resolve_failures;
+}
+
+/** If <b>address</b> is in the client dns addressmap, reset
+ * the number of resolve failures we have on record for it.
+ * This is used when we fail a stream because it won't resolve:
+ * otherwise future attempts on that address will only try once.
+ */
+void
+client_dns_clear_failures(const char *address)
+{
+  addressmap_entry_t *ent = strmap_get(addressmap, address);
+  if (ent)
+    ent->num_resolve_failures = 0;
 }
 
 /** Record the fact that <b>address</b> resolved to <b>val</b>.

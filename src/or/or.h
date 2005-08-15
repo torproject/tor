@@ -1490,6 +1490,7 @@ void addressmap_rewrite(char *address, size_t maxlen);
 int addressmap_already_mapped(const char *address);
 void addressmap_register(const char *address, char *new_address, time_t expires);
 int client_dns_incr_failures(const char *address);
+void client_dns_clear_failures(const char *address);
 void client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname);
 const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires);
