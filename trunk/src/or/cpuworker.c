@@ -100,7 +100,8 @@ cpuworkers_rotate(void)
     --num_cpuworkers;
   }
   last_rotation_time = time(NULL);
-  spawn_enough_cpuworkers();
+  if (server_mode(get_options()))
+    spawn_enough_cpuworkers();
 }
 
 /** If the cpuworker closes the connection,

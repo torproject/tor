@@ -1978,6 +1978,26 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
   return 0;
 }
 
+/** Return 1 if any option in <b>lines</b> will require us to rotate
+ * the cpu and dns workers; else return 0. */
+int
+options_transition_affects_workers(config_line_t *lines)
+{
+  config_line_t *p;
+  config_var_t *var;
+  for (p = lines; p; p = p->next) {
+    var = config_find_option(&options_format, p->key);
+    if (!var) continue;
+    if (!strcasecmp(var->name, "datadirectory") ||
+        !strcasecmp(var->name, "log") ||
+        !strcasecmp(var->name, "numcpus") ||
+        !strcasecmp(var->name, "orport") ||
+        !strcasecmp(var->name, "safelogging"))
+      return 1;
+  }
+  return 0;
+}
+
 #ifdef MS_WINDOWS
 /** Return the directory on windows where we expect to find our application
  * data. */
