@@ -1515,9 +1515,16 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
-  /* XXX might similarly want to check the other *BindAddress options */
   if (options->ORPort == 0 && options->ORBindAddress != NULL) {
     log(LOG_WARN, "ORPort must be defined if ORBindAddress is defined.");
+    result = -1;
+  }
+  if (options->DirPort == 0 && options->DirBindAddress != NULL) {
+    log(LOG_WARN, "DirPort must be defined if DirBindAddress is defined.");
+    result = -1;
+  }
+  if (options->SocksPort == 0 && options->SocksBindAddress != NULL) {
+    log(LOG_WARN, "SocksPort must be defined if SocksBindAddress is defined.");
     result = -1;
   }
 
