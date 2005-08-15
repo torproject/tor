@@ -1374,6 +1374,7 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
 
 /** Check for bad diffie-hellman public keys (g^x).  Return 0 if the key is
  * okay, or -1 if it's bad.
+ * See http://www.cl.cam.ac.uk/ftp/users/rja14/psandqs.ps.gz for some tips.
  */
 static int
 tor_check_dh_key(BIGNUM *bn)
