@@ -46,7 +46,7 @@
 SwitchProxy is a Firefox plugin that makes it easy for you to switch
 between using a proxy and connecting to websites directly.</p>
 
-<p>In this howto, you're going to set up SwitchProxy to let you change
+<p>In this howto, you'll set up SwitchProxy to let you change
 between using Tor and a direct connection. We assume you already
 have Firefox installed and working.</p>
 
@@ -165,6 +165,13 @@ you'll want to verify that your setup is working. Do
 of the Windows Tor installation howto, or
 <a href="http://tor.eff.org/doc/tor-doc-osx.html#verify">step three</a>
 of the OS X Tor installation howto.</p>
+
+<p>You should be aware of one anonymity gotcha: when you switch from
+using Tor to a direct connection (or vice versa), by default the page
+that's currently active will be reloaded through the new proxy setting.
+So make sure you're on a page that isn't sensitive, before switching.
+(You can also change this behavior in SwitchProxy's "Options |
+Preferences" menu.)</p>
 
 <hr />
 
