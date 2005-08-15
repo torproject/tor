@@ -146,7 +146,7 @@ static config_var_t _option_vars[] = {
   VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"128 TB"),
   VAR("MaxCircuitDirtiness", INTERVAL, MaxCircuitDirtiness,  "10 minutes"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
-  VAR("MonthlyAccountingStart",UINT,   _MonthlyAccountingStart,"0"),
+  OBSOLETE("MonthlyAccountingStart"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NewCircuitPeriod",    INTERVAL, NewCircuitPeriod,     "30 seconds"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
@@ -1743,19 +1743,19 @@ options_validate(or_options_t *options)
   }
 
   if (options->DirFetchPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, "DirFetchPeriod is too large; clipping.");
+    log(LOG_WARN, "DirFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
     options->DirFetchPeriod = MAX_DIR_PERIOD;
   }
   if (options->DirPostPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, "DirPostPeriod is too large; clipping.");
+    log(LOG_WARN, "DirPostPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
     options->DirPostPeriod = MAX_DIR_PERIOD;
   }
   if (options->StatusFetchPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, "StatusFetchPeriod is too large; clipping.");
+    log(LOG_WARN, "StatusFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
     options->StatusFetchPeriod = MAX_DIR_PERIOD;
   }
   if (options->RendPostPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, "RendPostPeriod is too large; clipping.");
+    log(LOG_WARN, "RendPostPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
   }
 
@@ -1782,6 +1782,7 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
+#if 0
   if (options->_MonthlyAccountingStart) {
     if (options->AccountingStart) {
       log(LOG_WARN,"Can't specify AccountingStart and MonthlyAccountingStart");
@@ -1797,6 +1798,7 @@ options_validate(or_options_t *options)
       }
     }
   }
+#endif
 
   if (accounting_parse_options(options, 1)<0) {
     result = -1;
