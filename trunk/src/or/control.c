@@ -670,7 +670,7 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
         send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY,
                             "Unrecognized option");
       else
-        connection_write_str_to_buf("552 Unrecognzied option\r\n", conn);
+        connection_write_str_to_buf("552 Unrecognized option\r\n", conn);
     } else {
       if (v0)
         send_control0_error(conn,ERR_INVALID_CONFIG_VALUE,"Invalid option value");
