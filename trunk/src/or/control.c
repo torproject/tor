@@ -2300,6 +2300,7 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
                         (unsigned long)conn->global_identifier, status,
                         circ?(unsigned long)circ->global_identifier : 0ul,
                         buf);
+    /* XXX need to specify its intended exit, etc? */
   }
   return 0;
 }
