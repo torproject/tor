@@ -102,6 +102,7 @@ void
 dns_init(void)
 {
   init_cache_tree();
+  dnsworkers_rotate();
 }
 
 /** Helper: free storage held by an entry in the DNS cache. */
@@ -722,7 +723,8 @@ dnsworkers_rotate(void)
     num_dnsworkers--;
   }
   last_rotation_time = time(NULL);
-  spawn_enough_dnsworkers();
+  if (server_mode(get_options()))
+    spawn_enough_dnsworkers();
 }
 
 /** Implementation for DNS workers; this code runs in a separate

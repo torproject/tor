@@ -957,11 +957,7 @@ do_main_loop(void)
 {
   int loop_result;
 
-  dns_init(); /* initialize the dns resolve tree */
-  /* only spawn dns handlers if we're a router */
-  if (server_mode(get_options())) {
-    dnsworkers_rotate();
-  }
+  dns_init(); /* initialize dns resolve tree, spawn workers if needed */
 
   handle_signals(1);
 

@@ -1361,6 +1361,7 @@ void config_free_lines(config_line_t *front);
 int options_trial_assign(config_line_t *list, int reset);
 int resolve_my_address(or_options_t *options, uint32_t *addr);
 void options_init(or_options_t *options);
+int options_transition_affects_workers(config_line_t *lines);
 int options_init_from_torrc(int argc, char **argv);
 int options_init_logs(or_options_t *options, int validate_only);
 int config_parse_addr_policy(config_line_t *cfg,
