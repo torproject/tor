@@ -27,8 +27,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
-static int router_resolve(routerinfo_t *router);
-static int router_resolve_routerlist(routerlist_t *dir);
+static void router_normalize_routerlist(routerlist_t *rl);
 
 /****************************************************************************/
 
@@ -883,9 +882,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
         log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
                router->nickname, r->nickname, hex_str(id_digest,DIGEST_LEN));
 //XXXRD        /* Remember whether we trust this router as a dirserver. */
-        /* If the address hasn't changed; no need to re-resolve. */
-        if (!strcasecmp(r->address, router->address))
-          router->addr = r->addr;
         routerinfo_free(r);
         smartlist_set(routerlist->routers, i, router);
         return 0;
@@ -988,12 +984,6 @@ router_load_single_router(const char *s, const char **msg)
     routerinfo_free(ri);
     return 0;
   }
-  if (router_resolve(ri)<0) {
-    log_fn(LOG_WARN, "Couldn't resolve router address '%s'; dropping.", ri->address);
-    *msg = "Couldn't resolve router address.";
-    routerinfo_free(ri);
-    return 0;
-  }
   if (routerlist && routerlist->running_routers) {
     running_routers_t *rr = routerlist->running_routers;
     router_update_status_from_smartlist(ri,
@@ -1061,10 +1051,7 @@ router_load_routerlist_from_directory(const char *s,
     routerlist = new_list;
     control_event_descriptors_changed(routerlist->routers);
   }
-  if (router_resolve_routerlist(routerlist)) {
-    log_fn(LOG_WARN, "Error resolving routerlist");
-    return -1;
-  }
+  router_normalize_routerlist(routerlist);
   if (get_options()->AuthoritativeDir) {
     /* Learn about the descriptors in the directory. */
     dirserv_load_from_directory_string(s);
@@ -1073,67 +1060,26 @@ router_load_routerlist_from_directory(const char *s,
   return 0;
 }
 
-/** Helper function: resolve the hostname for <b>router</b>. */
-static int
-router_resolve(routerinfo_t *router)
-{
-  if (authdir_mode(get_options())) {
-    /* don't let authdirservers do resolves; this is an easy DoS avenue */
-    struct in_addr iaddr;
-    if (!tor_inet_aton(router->address, &iaddr)) { /* not an IP */
-      log_fn(LOG_WARN,"Refusing to resolve non-IP address '%s' for router '%s'",
-             router->address, router->nickname);
-      return -1;
-    }
-    memcpy((void *)&router->addr, &iaddr.s_addr, 4);
-  } else {
-    if (tor_lookup_hostname(router->address, &router->addr) != 0
-        || !router->addr) {
-      log_fn(LOG_WARN,"Could not resolve address '%s' for router '%s'",
-             router->address, router->nickname);
-      return -1;
-    }
-  }
-  router->addr = ntohl(router->addr); /* get it back into host order */
-  return 0;
-}
-
-/** Helper function: resolve every router in rl, and ensure that our own
- * routerinfo is at the front.
+/** Ensure that our own routerinfo is at the front, and remove duplicates
+ * of our routerinfo.
  */
-static int
-router_resolve_routerlist(routerlist_t *rl)
+static void
+router_normalize_routerlist(routerlist_t *rl)
 {
-  int i, remove;
+  int i=0;
   routerinfo_t *r;
-  if (!rl)
-    rl = routerlist;
-
-  i = 0;
   if ((r = router_get_my_routerinfo())) {
     smartlist_insert(rl->routers, 0, routerinfo_copy(r));
     ++i;
   }
 
   for ( ; i < smartlist_len(rl->routers); ++i) {
-    remove = 0;
     r = smartlist_get(rl->routers,i);
     if (router_is_me(r)) {
-      remove = 1;
-    } else if (r->addr) {
-      /* already resolved. */
-    } else if (router_resolve(r)) {
-      log_fn(LOG_WARN, "Couldn't resolve address '%s' for router '%s'; not using",
-             r->address, r->nickname);
-      remove = 1;
-    }
-    if (remove) {
       routerinfo_free(r);
       smartlist_del_keeporder(rl->routers, i--);
     }
   }
-
-  return 0;
 }
 
 /** Decide whether a given addr:port is definitely accepted,
