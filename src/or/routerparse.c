@@ -823,6 +823,7 @@ router_parse_entry_from_string(const char *s, const char *end)
   directory_token_t *tok;
   int t;
   int ports_set, bw_set;
+  struct in_addr in;
 
   if (!end) {
     end = s + strlen(s);
@@ -865,7 +866,11 @@ router_parse_entry_from_string(const char *s, const char *end)
       goto err;
     }
     router->address = tor_strdup(tok->args[1]);
-    router->addr = 0;
+    if (!tor_inet_aton(router->address, &in)) {
+      log_fn(LOG_WARN,"Router address is not an IP.");
+      goto err;
+    }
+    router->addr = ntohl(in.s_addr);
 
     if (tok->n_args >= 5) {
       router->or_port = (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
@@ -1013,7 +1018,6 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
 
   goto done;
-  return router;
 
  err:
   routerinfo_free(router);
