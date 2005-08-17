@@ -60,7 +60,10 @@ href="download.html">download</a> page. We have packages for Debian,
 Red Hat, Gentoo, *BSD, etc there too.
 </p>
 
-<p>If you're building from source, run <tt>tar xzf tor-0.1.0.14.tar.gz;
+<p>If you're building from source, first install <a
+href="http://www.monkey.org/~provos/libevent/">libevent</a>, and
+make sure you have openssl and zlib (including the -devel packages if
+applicable). Then Run <tt>tar xzf tor-0.1.0.14.tar.gz;
 cd tor-0.1.0.14</tt>. Then <tt>./configure &amp;&amp; make</tt>. Now you
 can run tor as <tt>src/or/tor</tt>, or you can run <tt>make install</tt>
 (as root if necessary) to install it into /usr/local/, and then you can
