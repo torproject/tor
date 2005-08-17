@@ -163,18 +163,30 @@ the outside. This may take several minutes. The log entries will keep
 you informed of its progress.</p>
 
 <p>When it decides that it's reachable, it will upload a "server
-descriptor" to the directories. This will let other clients know
+descriptor" to the directories. This will let clients know
 what address, ports, keys, etc your server is using. You can <a
 href="http://belegost.seul.org/">load the directory manually</a> and
 look through it to find the nickname you configured, to make sure it's
 there. You may need to wait a few seconds to give enough time for it to
 make a fresh directory.</p>
 
-<li>Once you are convinced it's working, <b>Register your server.</b>
+<hr />
+<a id="three"></a>
+<h2><a class="anchor" href="#three">Step Three: Register your nickname</a></h2>
+<br />
+
+<p>
+Once you are convinced it's working, you should register your server.
+This reserves your nickname so nobody else can take it, and lets us
+contact you if you need to upgrade or something goes wrong.
+</p>
+
+<p>
 Send mail to <a
 href="mailto:tor-ops@freehaven.net">tor-ops@freehaven.net</a> with a
 subject of '[New Server] &lt;your server's nickname&gt;' and
 include the following information in the message:
+</p>
 <ul>
 <li>Your server's nickname</li>
 <li>The fingerprint for your server's key (the contents of the
@@ -186,17 +198,14 @@ look in /var/lib/tor or ~/.tor)
 <li>Who you are, so we know whom to contact if a problem arises</li>
 <li>What kind of connectivity the new server will have</li>
 </ul>
-Registering your server reserves your nickname so nobody else can take it,
-and lets us contact you if you need to upgrade or something goes wrong.
-</li>
 
 <hr />
-<a id="three"></a>
-<h2><a class="anchor" href="#three">Step Three: Once it's working</a></h2>
+<a id="four"></a>
+<h2><a class="anchor" href="#four">Step Four: Once it's working</a></h2>
 <br />
 
 <p>
-Optionally, we recommend the following steps as well:
+We recommend the following steps as well:
 </p>
 
 <p>
@@ -239,7 +248,8 @@ users are stuck behind firewalls that only let them browse the
 web, and this change will let them reach your Tor server. Win32
 servers can simply change their ORPort and DirPort directly
 in their torrc and restart Tor. OS X or Unix servers can't bind
-directly to these ports, so they will need to set up some sort of <a
+directly to these ports (since they don't run as root), so they will
+need to set up some sort of <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#ServerForFirewalledClients">
 port forwarding</a> so connections can reach their Tor server. If you are
 using ports 80 and 443 already but still want to help out, other useful
