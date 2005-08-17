@@ -91,7 +91,7 @@ low-bandwidth ones. Therefore having low-bandwidth servers is useful too.
 
 <hr />
 <a id="zero"></a>
-<h2><a class="anchor" href="#zero">Step Zero: Download and Install Tor and Privoxy</a></h2>
+<h2><a class="anchor" href="#zero">Step Zero: Download and Install Tor</a></h2>
 <br />
 
 <p>Before you start, you need to make sure that Tor is up and running.
@@ -114,34 +114,43 @@ while to make sure it's actually working.</p>
 <h2><a class="anchor" href="#one">Step One: Set it up as a server</a></h2>
 <br />
 
-<ul>
-<li>1. Verify that your clock is set correctly. If possible, synchronize
+<p>
+1. Verify that your clock is set correctly. If possible, synchronize
 your clock with public time servers. Make sure name resolution works
 (that is, your computer can resolve addresses correctly).
-</li>
-<li>2. Edit the bottom part of your torrc. (See <a
+</p>
+
+<p>2. Edit the bottom part of your torrc. (See <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#torrc">this
 FAQ entry</a> for help.)
 Make sure to define at least Nickname and ORPort. Create the DataDirectory
 if necessary, and make sure it's owned by the user that will be running
 tor.
-<li>3. If you are using a firewall, open a hole in your firewall so
+</p>
+
+<p>
+3. If you are using a firewall, open a hole in your firewall so
 incoming connections can reach the ports you configured (ORPort, plus
 DirPort if you enabled it). Make sure you allow all outgoing connections,
 so your server can reach the other Tor servers.
-<li>4. Start your server: if you installed from source you can just
+</p>
+
+<p>
+4. Start your server: if you installed from source you can just
 run <tt>tor</tt>, whereas packages typically launch Tor from their
 initscripts or startup scripts. If it logs any warnings, address them. (By
 default Tor logs to stdout, but some packages log to <tt>/var/log/tor/</tt>
 instead. You can edit your torrc to configure log locations.)
-<li>5. Subscribe to the <a
+</p>
+
+<p>
+5. Subscribe to the <a
 href="http://archives.seul.org/or/announce/">or-announce</a>
 mailing list. It is very low volume, and it will keep you informed
 of new stable releases. You might also consider subscribing to <a
 href="http://archives.seul.org/or/talk/">or-talk</a> (higher volume),
 where new development releases are announced.
-</li>
-</ul>
+</p>
 
 <hr />
 <a id="two"></a>
@@ -177,7 +186,6 @@ look in /var/lib/tor or ~/.tor)
 <li>Who you are, so we know whom to contact if a problem arises</li>
 <li>What kind of connectivity the new server will have</li>
 </ul>
-If you like, sign your mail using PGP.<br />
 Registering your server reserves your nickname so nobody else can take it,
 and lets us contact you if you need to upgrade or something goes wrong.
 </li>
@@ -191,8 +199,8 @@ and lets us contact you if you need to upgrade or something goes wrong.
 Optionally, we recommend the following steps as well:
 </p>
 
-<ul>
-<li>6 (Unix only). Make a separate user to run the server. If you
+<p>
+6. (Unix only). Make a separate user to run the server. If you
 installed the OS X package or the deb or the rpm, this is already
 done. Otherwise, you can do it by hand. (The Tor server doesn't need to
 be run as root, so it's good practice to not run it as root. Running
@@ -200,20 +208,32 @@ as a 'tor' user avoids issues with identd and other services that
 detect user name. If you're the paranoid sort, feel free to <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put Tor
 into a chroot jail</a>.)
-<li>7. Decide what exit policy you want. By default your server allows
+</p>
+
+<p>
+7. Decide what exit policy you want. By default your server allows
 access to many popular services, but we restrict some (such as port 25)
 due to abuse potential. You might want an exit policy that is
 less restrictive or more restrictive; edit your torrc appropriately.
 If you choose a particularly open exit policy, you might want to make
 sure your ISP is ok with that choice.
-<li>8. If you installed from source, you may find the initscripts in
+</p>
+
+<p>
+8. If you installed from source, you may find the initscripts in
 contrib/tor.sh or contrib/torctl useful if you want to set up Tor to
 start at boot.
-<li>9. If you control the name servers for your domain, consider setting
+</p>
+
+<p>
+9. If you control the name servers for your domain, consider setting
 your hostname to 'anonymous' or 'proxy' or 'tor-proxy', so when other
 people see the address in their web logs, they will more quickly
 understand what's going on.
-<li>10. If your computer isn't running a webserver, please consider
+</p>
+
+<p>
+10. If your computer isn't running a webserver, please consider
 changing your ORPort to 443 and your DirPort to 80. Many Tor
 users are stuck behind firewalls that only let them browse the
 web, and this change will let them reach your Tor server. Win32
@@ -224,7 +244,7 @@ href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#ServerForFirewalledClie
 port forwarding</a> so connections can reach their Tor server. If you are
 using ports 80 and 443 already but still want to help out, other useful
 ports are 22, 110, and 143.
-</ul>
+</p>
 
 When you change your Tor configuration, be sure to restart Tor, and
 remember to verify that your server still works correctly after the
