@@ -154,99 +154,12 @@ having even low-bandwidth servers is useful too.</li>
 server <a href="#server">below</a>.</p>
 
 <a name="installing"></a>
-<h2>Installing Tor</h2>
-
-<p>We have installers for Windows, Mac OS X 10.3, and Red Hat. We
-have contributed packages for Debian, Gentoo, and *BSD. See <a href="http://tor.eff.org/download.html">the download page</a> for pointers and details.
-
-<p>If you got Tor from a tarball, unpack it: <tt>tar xzf
-tor-0.1.0.10.tar.gz; cd tor-0.1.0.10</tt>. Run <tt>./configure</tt>, then
-<tt>make</tt>, and then <tt>make install</tt> (as root if necessary). Then
-you can launch tor from the command-line by running <tt>tor</tt>.
-Otherwise, if you got it prepackaged, these steps are already done
-for you, and you may even already have Tor started in the background
-(logging to /var/log/something).</p>
-
-<p>In any case, see the <a href="#client">next section</a> for what to
-<i>do</i> with it now that you've got it running.</p>
-
 <a name="client"></a>
-<h2>Configuring a client</h2>
+<h2>Installing and configuring Tor</h2>
 
-<p>Tor comes configured as a client by default. It uses a built-in
-default configuration file, and most people won't need to change any of
-the settings.</p>
-
-<p>See the <a href="tor-doc-win32.html">Windows instructions</a> or the
-<a href="tor-doc-osx.html">OS X instructions</a> if you're using those.
-The below are generic instructions for Linux, BSD, Solaris, etc.
-</p>
-
-<p>
-After installing Tor, you should install <a
-href="http://www.privoxy.org/">privoxy</a>, which is a filtering web
-proxy that integrates well with Tor. (If you installed the Win32 or OS
-X package, see those instructions instead.)
-To configure privoxy to use Tor, add the line <br>
-<tt>forward-socks4a / localhost:9050 .</tt><br>
-(don't forget the dot) to privoxy's config file (you can just add it to the
-top). Then change your browser to http proxy at localhost port 8118.
-(In Firefox on Linux, this is in Edit|Preferences|Advanced|Proxies.)
-You should also set your SSL proxy to the same
-thing, to hide your SSL traffic. Using privoxy is <b>necessary</b> because
-<a
-href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS">most
-browsers leak your
-DNS requests when they use a SOCKS proxy directly</a>. Privoxy also gives
-you good html scrubbing.</p>
-
-<p>To test if it's working, you need to know your normal IP address so you can
-verify that the address really changes when running Tor.
-If you are using Linux or OS X your local IP address is shown by the <tt>ifconfig</tt>
-command.  Under Windows go to the Start menu, click Run and enter <tt>cmd</tt>.
-At the command prompt, enter <tt>ipconfig</tt>. If you are behind a NAT/Firewall
- you can use one of the sites listed below to check which IP you are using.
-When that is done, start Tor and Privoxy and visit any of the sites again.
-If everything works, your IP address should have changed.
-</p>
-
-<p>
-<!--<a href="http://peertech.org/privacy-knoppix/">peertech</a>, -->
-<a href="http://www.showmyip.com/">showmyip.com</a> and
-<a href="http://ipid.shat.net">ipid.shat.net</a>
-are sites that show your current IP so you can see
-what address and country you're coming from.
-</p>
-
-<p>
-If you have a personal firewall that limits your computer's ability
-to connect to itself, be sure to allow connections from your local
-applications to
-local port 8118 and port 9050. If your firewall blocks outgoing connections,
-punch a hole so it can connect to at least TCP ports 80, 443, and 9001-9033.
-<!--If you're
-using Safari as your browser, keep in mind that OS X before 10.3 claims
-to support SOCKS but does not. -->
-For more troubleshooting suggestions, see <a
-href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
-</p>
-
-<p>To Torify an application that supports http, just point it at Privoxy
-(that is, localhost port 8118). To use SOCKS directly (for example, for
-instant messaging, Jabber, IRC, etc.), point your application directly at
-Tor (localhost port 9050). For applications that support neither SOCKS
-nor http, you should look at
-using <a href="http://tsocks.sourceforge.net/">tsocks</a>
-to dynamically replace the system calls in your program to
-route through Tor. If you want to use SOCKS 4A, consider using <a
-href="http://www.dest-unreach.org/socat/">socat</a> (specific instructions
-are in the <a
-href="http://wiki.noreply.org/noreply/TheOnionRouter/TorifyHOWTO#socat">
-Tor Wiki</a>).</p>
-
-<p>(Windows doesn't have tsocks; see the bottom of the
-<a href="tor-doc-win32.html">Win32 instructions</a> for alternatives.)
-</p>
+<p>See the <a href="tor-doc-win32.html">Windows</a>,
+<a href="tor-doc-osx.html">OS X</a>, and <a
+href="tor-doc-unix.html">Linux/BSD/Unix</a> documentation guides.
 
 <a name="server"></a>
 <h2>Configuring a server</h2>
@@ -423,14 +336,6 @@ line) in each approved-routers file. You can hup the tor process for
 each directory server to reload the approved-routers file (so you don't
 have to restart the process).
 </ul>
-
-<!--<h2>Other doc resources</h2>
-
-<ul>
-<li>Design paper
-<li>Spec and rend-spec
-<li>others
-</ul> -->
 
 </body>
 </html>
