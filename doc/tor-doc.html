@@ -91,68 +91,6 @@ all of these groups bother you? It shouldn't -- <a
 href="http://freehaven.net/doc/fc03/econymics.pdf">you need them for
 your security</a>.</p>
 
-<a name="client-or-server"></a>
-<h2>Should I run a client or a server?</h2>
-
-<p>You can run Tor in either client mode or server mode. By default,
-everybody is a <i>client</i>. This means you don't relay traffic for
-anybody but yourself.</p>
-
-<p>If your computer doesn't have a routable IP address or you're using
-a modem, you should stay a client. Otherwise, please consider being
-a server, to help out the network. (Currently each server uses 20-500
-gigabytes of traffic per month, depending on its capacity and its rate
-limiting configuration.)</p>
-
-<p>Note that you can be a server without allowing users to make
-connections from your computer to the outside world. This is called being
-a middleman server.</p>
-
-<p> Benefits of running a server include:
-<ul>
-<li>You may get stronger anonymity, since your destination can't know
-whether connections relayed through your computer originated at your
-computer or not.
-<li>You can also get stronger anonymity by configuring your Tor clients
-to use your Tor server for entry or for exit.
-<li>You're helping the Tor staff with development and scalability testing.
-<li>You're helping your fellow Internet users by providing a larger
-network. Also, having servers in many different pieces of the Internet
-gives users more robustness against curious telcos and brute force
-attacks.
-</ul>
-
-<p>Other things to note:</p>
-<ul>
-<li>Tor has built-in support for rate limiting; see BandwidthRate
-and BandwidthBurst config options. Further, if you have
-lots of capacity but don't want to spend that many bytes per
-month, check out the Accounting and Hibernation features. See <a
-href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>
-for details.</li>
-<li>It's fine if the server goes offline sometimes. The directories
-notice this quickly and stop advertising the server. Just try to make
-sure it's not too often, since connections using the server when it
-disconnects will break.</li>
-<li>We can handle servers with dynamic IPs just fine, as long as the
-server itself knows its IP. Have a look at this
-<a href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#DynamicIP">
-entry in the FAQ</a>.</li>
-<li>If your server is behind a NAT and it doesn't
-know its public IP (e.g. it has an IP of 192.168.x.y), you need to set
-up port forwarding.  Forwarding TCP connections is system dependent but
-<a href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerForFirewalledClients">
-this entry</a> offers some examples on how to do this.</li>
-<li>Your server will passively estimate and advertise its recent
-bandwidth capacity.
-Clients choose paths weighted by this capacity, so high-bandwidth
-servers will attract more paths than low-bandwidth ones. That's why
-having even low-bandwidth servers is useful too.</li>
-</ul>
-
-<p>You can read more about setting up Tor as a
-server <a href="#server">below</a>.</p>
-
 <a name="installing"></a>
 <a name="client"></a>
 <h2>Installing and configuring Tor</h2>
@@ -161,133 +99,15 @@ server <a href="#server">below</a>.</p>
 <a href="tor-doc-osx.html">OS X</a>, and <a
 href="tor-doc-unix.html">Linux/BSD/Unix</a> documentation guides.
 
+<a name="client-or-server"></a>
 <a name="server"></a>
 <h2>Configuring a server</h2>
 
-<p>We're looking for people with reasonably reliable Internet connections,
-that have at least 20 kilobytes/s each way. If you frequently have a
-lot of packet loss or really high latency, we can't handle your server
-yet. Otherwise, please help out!
-</p>
-
 <p>
-To read more about whether you should be a server, check out <a
-href="#client-or-server">the section above</a>.
+We've moved this section over to the new
+<a href="http://tor.eff.org/doc/tor-doc-server.html">Tor Server
+Configuration Guide</a>. Hope you like it.
 </p>
-
-<p>To set up a Tor server, do the following steps after installing Tor.
-(These instructions are Unix-centric; but Tor 0.0.9.5 and later is running
-as a server on Windows now as well.)
-</p>
-
-<ul>
-<li>0. Verify that your clock is set correctly. If possible, synchronize
-your clock with public time servers.</li>
-<li>1. Edit the bottom part of your torrc. (See <a
-href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#torrc">this
-FAQ entry</a> for help.)
-Make sure to define at least Nickname and ORPort.
-Create the DataDirectory if necessary, and make
-sure it's owned by the user that will be running tor.
-Make sure name resolution works.
-<li>2. If you are using a firewall, open a hole in your firewall so
-incoming connections can reach the ports you configured (i.e. ORPort,
-plus DirPort if you enabled it). Make sure you allow outgoing connections,
-to get to other onion routers plus any other addresses or ports your
-exit policy allows.
-<li>3. Start your server: if you installed from source you can just
-run <tt>tor</tt>, whereas packages typically launch Tor from their
-initscripts or startup scripts. If it logs any warnings, address them. (By
-default Tor logs to stdout, but some packages log to <tt>/var/log/tor/</tt>
-instead. You can edit your torrc to configure log locations.)
-<li>4. Once you are convinced it's working, <b>Register your server.</b>
-Send mail to <a
-href="mailto:tor-ops@freehaven.net">tor-ops@freehaven.net</a> with a
-subject of '[New Server] &lt;your server's nickname&gt;' and
-include the
-following information in the message:
-<ul>
-<li>Your server's nickname.</li>
-<li>The fingerprint for your server's key (the contents of the
-"fingerprint" file in your DataDirectory -- look in /var/lib/tor or ~/.tor
-on many platforms).</li>
-<li>Who you are, so we know whom to contact if a problem arises,
-and</li>
-<li>What kind of connectivity the new server will have.</li>
-</ul>
-If possible, sign your mail using PGP.<br />
-Registering your server reserves your nickname so nobody else can take it,
-and lets us contact you if you need to upgrade or something goes wrong.
-<li>5. Subscribe to the <a href="http://archives.seul.org/or/announce/">or-announce</a>
-mailing list. It is very low volume, and it will keep you informed
-of new stable releases. You might also consider subscribing to <a
-href="http://archives.seul.org/or/talk/">or-talk</a> (higher volume),
-where new development releases are announced.</li>
-</ul>
-
-<p>Here's where Tor puts its files on many common platforms:</p>
-<table>
-<tr><th></th><th>Unix</th><th>Windows</th><th>Mac OS X</th></tr>
-<tr><th>Configuration</th>
-    <td><tt>/etc/torrc</tt> <br />or <tt>/usr/local/etc/torrc</tt></td>
-    <td><tt>\<i>username</i>\Application&nbsp;Data\tor\torrc</tt> <br />or <tt>\Application&nbsp;Data\tor\torrc</tt></td>
-    <td><tt>/Library/Tor/torrc</tt></td></tr>
-<tr><th>Fingerprint</th>
-    <td><tt>/var/lib/tor/fingerprint</tt>
-    or <tt>~/.tor/fingerprint</tt></td>
-    <td><tt>\<i>username</i>\Application&nbsp;Data\tor\fingerprint</tt>
-       or <tt>\Application&nbsp;Data\tor\fingerprint</tt></td>
-    <td><tt>/Library/Tor/var/lib/tor/fingerprint</tt></td></tr>
-<tr><th>Logs</th>
-    <td><tt>/var/log/tor</tt>
-    or <tt>/usr/local/var/log/tor</tt></td>
-    <td><tt>\<i>username</i>\Application&nbsp;Data\tor\log</tt>
-       or <tt>\Application&nbsp;Data\tor\log</tt></td>
-    <td><tt>/var/log/tor</tt></td></tr>
-</table>
-
-
-<p>
-Optionally, we recommend the following steps as well:
-</p>
-
-<ul>
-<li>6 (Unix only). Make a separate user to run the server. If you
-installed the deb or the rpm, this is already done. Otherwise,
-you can do it by hand. (The Tor server doesn't need to be run as
-root, so it's good practice to not run it as root. Running as a
-'tor' user avoids issues with identd and other services that
-detect user name. If you're the paranoid sort, feel free to <a
-href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put Tor
-into a chroot jail</a>.)
-<li>7. Decide what exit policy you want. By default your server allows
-access to many popular services, but we restrict some (such as port 25)
-due to abuse potential. You might want an exit policy that is
-less restrictive or more restrictive; edit your torrc appropriately.
-If you choose a particularly open exit policy, you might want to make
-sure your upstream or ISP is ok with that choice.
-<li>8. If you installed from source, you may find the initscripts in
-contrib/tor.sh or contrib/torctl useful if you want to set up Tor to
-start at boot.
-<li>9. Consider setting your hostname to 'anonymous' or
-'proxy' or 'tor-proxy' if you can, so when other people see the address
-in their web logs or whatever, they will more quickly understand what's
-going on.
-<li>10. If you're not running anything else on port 80 or port 443,
-please consider setting up port-forwarding and advertising these
-low-numbered ports as your Tor server. This will help allow users behind
-particularly restrictive firewalls to access the Tor network. Win32
-servers can simply set their ORPort and DirPort directly. Other servers
-need to rig some sort of port forwarding; see <a
-href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#ServerForFirewalledClients">the
-FAQ</a> for details of how to set this up.
-</ul>
-
-<p>You can click <a href="http://moria.seul.org:9031/">here</a> or <a
-href="http://62.116.124.106:9030/">here</a> and look at the router-status
-line to see if your server is part of the network. It will be listed by
-nickname once we have added your server to the list of known servers;
-otherwise it is listed only by its fingerprint.</p>
 
 <a name="hidden-service"></a>
 <h2>Configuring a hidden service</h2>
@@ -339,3 +159,4 @@ have to restart the process).
 
 </body>
 </html>
+
