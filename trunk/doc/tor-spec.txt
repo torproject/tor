@@ -233,16 +233,31 @@ TODO: (very soon)
 
 4.2. Setting circuit keys
 
-   Once the handshake between the OP and an OR is completed, both
-   servers can now calculate g^xy with ordinary DH.  From the base key
-   material g^xy, they compute derivative key material as follows.
-   First, the server represents g^xy as a big-endian unsigned integer.
-   Next, the server computes 100 bytes of key data as K = SHA1(g^xy |
-   [00]) | SHA1(g^xy | [01]) | ... SHA1(g^xy | [04]) where "00" is
-   a single octet whose value is zero, [01] is a single octet whose
-   value is one, etc.  The first 20 bytes of K form KH, bytes 21-40 form
-   the forward digest Df, 41-60 form the backward digest Db, 61-76 form
-   Kf, and 77-92 form Kb.
+   Once the handshake between the OP and an OR is completed, both servers can
+   now calculate g^xy with ordinary DH.  Before computing g^xy, both client
+   and server MUST verify that the received g^x/g^y value is not degenerate;
+   that is, it must be strictly greater than 1 and strictly less than p-1
+   where p is the DH modulus.  Implementations MUST NOT complete a handshake
+   with degenerate keys.  Implementions MAY discard other "weak" g^x values.
+
+   (Discarding degenerate keys is critical for security; if bad keys are not
+   discarded, an attacker can substitute the server's CREATED cell's g^y with
+   0 or 1, thus creating a known g^xy and impersonating the server.)
+
+   (The mainline Tor implementation discards all g^x values that are less
+   than 2^24, that are greater than p-2^24, or that have more than 1024-16
+   identical bits.  This constitutes a negligible portion of the keyspace;
+   the chances of stumbling on such a key at random are astronomically
+   small.  Nevertheless, implementors may wish to make their implementations
+   discard such keys.)
+
+   From the base key material g^xy, they compute derivative key material as
+   follows.  First, the server represents g^xy as a big-endian unsigned
+   integer.  Next, the server computes 100 bytes of key data as K = SHA1(g^xy
+   | [00]) | SHA1(g^xy | [01]) | ... SHA1(g^xy | [04]) where "00" is a single
+   octet whose value is zero, [01] is a single octet whose value is one, etc.
+   The first 20 bytes of K form KH, bytes 21-40 form the forward digest Df,
+   41-60 form the backward digest Db, 61-76 form Kf, and 77-92 form Kb.
 
    KH is used in the handshake response to demonstrate knowledge of the
    computed shared key. Df is used to seed the integrity-checking hash
