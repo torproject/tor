@@ -1,3 +1,53 @@
+Changes in version 0.1.1.6-alpha - 2005-08-22
+  o Fixes on 0.1.1.5-alpha:
+    - We broke fascistfirewall in 0.1.1.5-alpha. Oops.
+    - Fix segfault in unit tests in 0.1.1.5-alpha. Oops.
+    - Resolve some solaris x86 compile warnings.
+
+  o New controller features/fixes:
+    - Add a "GETINFO config-file" to tell us where torrc is.
+    - Avoid sending blank lines when GETINFO replies should be empty.
+    - Add a QUIT command for the controller.
+
+  o New features:
+    - Implement exit enclaves: if we know an IP address for the
+      destination, and there's a running Tor server at that address
+      which allows exit to the destination, then extend the circuit to
+      that exit first. This provides end-to-end encryption and end-to-end
+      authentication. Also, if the user asks for a .exit node, cannibalize
+      a general circ for it so it's faster.
+    - Permit transitioning from ORPort=0 to ORPort!=0, and back, from the
+      controller. Also, rotate dns and cpu workers if the controller
+      changes options that will affect them; and initialize the dns
+      worker cache tree whether or not we start out as a server.
+    - Start using new rendezvous descriptor code, allowing us to specify
+      introduction points by key and location rather than nickname.
+
+  o Config option changes:
+    - Replace (Fascist)Firewall* config options with a new
+      ReachableAddresses option that understands address policies.
+      For example, "ReachableAddresses *:80,*:443"
+    - Get rid of IgnoreVersion undocumented config option, and make us
+      only warn, never exit, when we're running an obsolete version.
+    - Make MonthlyAccountingStart config option truly obsolete now.
+
+  o Fixes on 0.1.0.x:
+    - We weren't cannibalizing circuits correctly for
+      CIRCUIT_PURPOSE_C_ESTABLISH_REND and
+      CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, so we were being forced to
+      build those from scratch. This should make hidden services faster.
+    - Predict required circuits better, with an eye toward making hidden
+      services faster on the service end.
+    - Retry streams if the exit node sends back a 'misc' failure. This
+      should result in fewer random failures. Also, after failing
+      from resolve failed or misc, reset the num failures, so we give
+      it a fair shake next time we try.
+    - Require server descriptors to list IPv4 addresses -- hostnames
+      are no longer allowed. This also fixes some potential security
+      problems with people providing hostnames as their address and then
+      preferentially resolving them to partition users.
+
+
 Changes in version 0.1.1.5-alpha - 2005-08-08
   o Bugfixes included in 0.1.0.14.
 
