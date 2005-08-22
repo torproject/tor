@@ -2011,8 +2011,8 @@ config_lines_eq(config_line_t *a, config_line_t *b)
   return 1;
 }
 
-/** Return 1 if any option in <b>lines</b> will require us to rotate
- * the cpu and dns workers; else return 0. */
+/** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
+ * will require us to rotate the cpu and dns workers; else return 0. */
 static int
 options_transition_affects_workers(or_options_t *old_options,
                                    or_options_t *new_options)
@@ -2030,8 +2030,8 @@ options_transition_affects_workers(or_options_t *old_options,
   return 0;
 }
 
-/** Return 1 if any option in <b>lines</b> will require us to generate a new
- * descriptors; else return 0. */
+/** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
+ * will require us to generate a new descriptor; else return 0. */
 static int
 options_transition_affects_descriptor(or_options_t *old_options,
                                       or_options_t *new_options)
