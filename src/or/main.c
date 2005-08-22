@@ -847,12 +847,12 @@ second_elapsed_callback(int fd, short event, void *args)
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
     /* every 20 minutes, check and complain if necessary */
     routerinfo_t *me = router_get_my_routerinfo();
-    if (!check_whether_orport_reachable())
+    if (me && !check_whether_orport_reachable())
       log(LOG_WARN,"Your server (%s:%d) has not managed to confirm that its ORPort is reachable. Please check your firewalls, ports, address, /etc/hosts file, etc.",
-          me ? me->address : options->Address, options->ORPort);
-    if (!check_whether_dirport_reachable())
+          me->address, me->or_port);
+    if (me && !check_whether_dirport_reachable())
       log(LOG_WARN,"Your server (%s:%d) has not managed to confirm that its DirPort is reachable. Please check your firewalls, ports, address, /etc/hosts file, etc.",
-          me ? me->address : options->Address, options->DirPort);
+          me->address me->dir_port);
   }
 
   /* if more than 100s have elapsed, probably the clock jumped: doesn't count. */
