@@ -27,7 +27,7 @@ MAX_FILEDESCRIPTORS=4096
 #
 # Sometimes epoll is broken.  This happens to be the case on
 # at least the maintainer's desktop box running Linux 2.6.11-rc1
-# on adm64.
+# on amd64.
 #
 # If tor does not work at all for you, i.e. connection attempts
 # through tor just hang forever and never finish, then consider
