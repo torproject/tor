@@ -94,6 +94,7 @@ static char* nt_strerror(uint32_t errnum);
 #define nt_service_is_stopped() (0)
 #endif
 
+#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL 24*60*60 /* 1 day. */
 #define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
 #define BUF_SHRINK_INTERVAL 60 /* one minute */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
@@ -720,10 +721,8 @@ run_scheduled_events(time_t now)
   }
 
   if (time_to_force_upload_descriptor < now) {
-    consider_publishable_server(now, 1);
-
+    /*XXXX this should go elsewhere. */
     rend_cache_clean(); /* this should go elsewhere? */
-
     time_to_force_upload_descriptor = now + options->DirPostPeriod;
   }
 
@@ -731,6 +730,9 @@ run_scheduled_events(time_t now)
    * one is inaccurate. */
   if (time_to_check_descriptor < now) {
     time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
+    check_descriptor_bandwidth_changed(now);
+    mark_my_descriptor_dirty_if_older_than(
+                                    now - FORCE_REGENERATE_DESCRIPTOR_INTERVAL);
     consider_publishable_server(now, 0);
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */
