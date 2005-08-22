@@ -172,8 +172,11 @@ r   - kill dns workers more slowly
         before we approve them
       - other?
     - dirservers publish router-status with all these flags.
-    - Servers publish new descriptors when options change, when 12-24 hours
-      have passed, when uptime is reset, or when bandwidth changes a lot.
+    o Servers publish new descriptors when:
+      o options change
+      o when 12-24 hours have passed
+      o when uptime is reset
+      o When bandwidth changes a lot.
     - alices fetch many router-statuses and update descriptors as needed.
     - add if-newer-than fetch options
     - dirservers allow people to lookup by N descriptors, or to fetch all.

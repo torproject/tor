@@ -443,6 +443,7 @@ router_orport_found_reachable(void)
       log(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.%s",
           get_options()->NoPublish ? "" : " Publishing server descriptor.");
     can_reach_or_port = 1;
+    mark_my_descriptor_dirty();
     consider_publishable_server(time(NULL), 1);
   }
 }
@@ -554,7 +555,7 @@ consider_publishable_server(time_t now, int force)
 {
   if (decide_if_publishable_server(now)) {
     set_server_advertised(1);
-    if (router_rebuild_descriptor(force) == 0)
+    if (router_rebuild_descriptor(0) == 0)
       router_upload_dir_desc_to_dirservers(force);
   } else {
     set_server_advertised(0);
@@ -612,8 +613,9 @@ router_is_clique_mode(routerinfo_t *router)
 
 /** My routerinfo. */
 static routerinfo_t *desc_routerinfo = NULL;
-/** Boolean: do we need to regenerate the above? */
-static int desc_is_dirty = 1;
+/** Since when has our descriptor been "clean"?  0 if we need to regenerate it
+ * now. */
+static time_t desc_clean_since = 0;
 /** Boolean: do we need to regenerate the above? */
 static int desc_needs_upload = 0;
 
@@ -716,7 +718,7 @@ router_rebuild_descriptor(int force)
   or_options_t *options = get_options();
   char addrbuf[INET_NTOA_BUF_LEN];
 
-  if (!desc_is_dirty && !force)
+  if (desc_clean_since && !force)
     return 0;
 
   if (resolve_my_address(options, &addr) < 0) {
@@ -770,16 +772,48 @@ router_rebuild_descriptor(int force)
     routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
 
-  desc_is_dirty = 0;
+  desc_clean_since = time(NULL);
   desc_needs_upload = 1;
   return 0;
+}
+
+/** Mark descriptor out of date if it's older than <b>when</b> */
+void
+mark_my_descriptor_dirty_if_older_than(time_t when)
+{
+  if (desc_clean_since < when)
+    mark_my_descriptor_dirty();
 }
 
 /** Call when the current descriptor is out of date. */
 void
 mark_my_descriptor_dirty(void)
 {
-  desc_is_dirty = 1;
+  desc_clean_since = 0;
+}
+
+#define MAX_BANDWIDTH_CHANGE_FREQ 45*60
+/** Check whether bandwidth has changed a lot since the last time we announced
+ * bandwidth.  If so, mark our descriptor dirty.*/
+void
+check_descriptor_bandwidth_changed(time_t now)
+{
+  static time_t last_changed = 0;
+  uint64_t prev, cur;
+  if (!desc_routerinfo)
+    return;
+
+  prev = desc_routerinfo->bandwidthcapacity;
+  cur = we_are_hibernating() ? 0 : rep_hist_bandwidth_assess();
+  if ((prev != cur && (!prev || !cur)) ||
+      cur > prev*2 ||
+      cur < prev/2) {
+    if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now) {
+      log_fn(LOG_INFO,"Measured bandwidth has changed; rebuilding descriptor.");
+      mark_my_descriptor_dirty();
+      last_changed = now;
+    }
+  }
 }
 
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
