@@ -285,11 +285,11 @@ $Id$
   one ReplyLine is sent for each requested value, followed by a final 250 OK
   ReplyLine.  If a value fits on a single line, the format is:
       250-keyword=value
-  If avalue must be split over multiple lines, the format is:
+  If a value must be split over multiple lines, the format is:
       250+keyword=
       value
       .
-  Recognized key and their values include:
+  Recognized keys and their values include:
 
     "version" -- The version of the server's software, including the name
       of the software. (example: "Tor 0.0.9.4")
@@ -361,7 +361,7 @@ $Id$
 
     "info/names"
       A series of lines listing the available GETINFO options.  Each is of
-      one of thes forms:
+      one of these forms:
          OptionName SP Documentation CRLF
          OptionPrefix SP Documentation CRLF
          OptionPrefix = OptionName "/*"
