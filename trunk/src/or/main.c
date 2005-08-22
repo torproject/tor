@@ -46,8 +46,6 @@ long time_of_process_start = 0;
 long stats_n_seconds_working = 0;
 /** When do we next download a directory? */
 static time_t time_to_fetch_directory = 0;
-/** When do we next upload our descriptor? */
-static time_t time_to_force_upload_descriptor = 0;
 /** When do we next download a running-routers summary? */
 static time_t time_to_fetch_running_routers = 0;
 
@@ -94,7 +92,7 @@ static char* nt_strerror(uint32_t errnum);
 #define nt_service_is_stopped() (0)
 #endif
 
-#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL 24*60*60 /* 1 day. */
+#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL 18*60*60 /* 18 hours */
 #define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
 #define BUF_SHRINK_INTERVAL 60 /* one minute */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
@@ -545,9 +543,6 @@ directory_has_arrived(time_t now, char *identity_digest)
   if (!time_to_fetch_directory)
     time_to_fetch_directory = now + get_dir_fetch_period(options);
 
-  if (!time_to_force_upload_descriptor)
-    time_to_force_upload_descriptor = now + options->DirPostPeriod;
-
   if (!time_to_fetch_running_routers)
     time_to_fetch_running_routers = now + get_status_fetch_period(options);
 
@@ -709,8 +704,10 @@ run_scheduled_events(time_t now)
       time_to_fetch_running_routers = next_status_fetch;
     }
 
-    /* Also, take this chance to remove old information from rephist. */
+    /* Also, take this chance to remove old information from rephist
+     * and the rend cache. */
     rep_history_clean(now - options->RephistTrackTime);
+    rend_cache_clean();
   }
 
   if (time_to_fetch_running_routers < now) {
@@ -718,12 +715,6 @@ run_scheduled_events(time_t now)
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
     time_to_fetch_running_routers = now + get_status_fetch_period(options);
-  }
-
-  if (time_to_force_upload_descriptor < now) {
-    /*XXXX this should go elsewhere. */
-    rend_cache_clean(); /* this should go elsewhere? */
-    time_to_force_upload_descriptor = now + options->DirPostPeriod;
   }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
