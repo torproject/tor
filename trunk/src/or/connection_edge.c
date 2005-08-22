@@ -871,6 +871,9 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires)
    void *_val;
    addressmap_entry_t *val;
 
+   if (!addressmap)
+     addressmap_init();
+
    for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter); ) {
      strmap_iter_get(iter, &key, &_val);
      val = _val;
