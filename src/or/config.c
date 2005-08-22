@@ -115,7 +115,7 @@ static config_var_t _option_vars[] = {
   VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "0 seconds"),  /** DOCDOC **/
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
-  VAR("DirPostPeriod",       INTERVAL, DirPostPeriod,        "20 minutes"),
+  OBSOLETE("DirPostPeriod"),
   VAR("DirServer",           LINELIST, DirServers,           NULL),
   VAR("EntryNodes",          STRING,   EntryNodes,           NULL),
   VAR("ExcludeNodes",        STRING,   ExcludeNodes,         NULL),
@@ -1728,7 +1728,6 @@ options_validate(or_options_t *options)
   }
 
 #define MIN_DIR_FETCH_PERIOD 600
-#define MIN_DIR_POST_PERIOD 300
 #define MIN_REND_POST_PERIOD 300
 #define MIN_STATUS_FETCH_PERIOD 60
 
@@ -1745,11 +1744,6 @@ options_validate(or_options_t *options)
       options->StatusFetchPeriod < MIN_STATUS_FETCH_PERIOD) {
     log(LOG_WARN, "StatusFetchPeriod option must be at least %d seconds. Clipping.", MIN_STATUS_FETCH_PERIOD);
     options->StatusFetchPeriod = MIN_STATUS_FETCH_PERIOD;
-  }
-  if (options->DirPostPeriod < MIN_DIR_POST_PERIOD) {
-    log(LOG_WARN, "DirPostPeriod option must be at least %d seconds. Clipping.",
-        MIN_DIR_POST_PERIOD);
-    options->DirPostPeriod = MIN_DIR_POST_PERIOD;
   }
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
     log(LOG_WARN,"RendPostPeriod option must be at least %d seconds. Clipping.",
@@ -1771,10 +1765,6 @@ options_validate(or_options_t *options)
   if (options->DirFetchPeriod > MAX_DIR_PERIOD) {
     log(LOG_WARN, "DirFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
     options->DirFetchPeriod = MAX_DIR_PERIOD;
-  }
-  if (options->DirPostPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, "DirPostPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
-    options->DirPostPeriod = MAX_DIR_PERIOD;
   }
   if (options->StatusFetchPeriod > MAX_DIR_PERIOD) {
     log(LOG_WARN, "StatusFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
