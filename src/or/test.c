@@ -1525,11 +1525,13 @@ main(int c, char**v)
 {
   or_options_t *options = options_new();
   network_init();
+  setup_directory();
   options_init(options);
+  options->DataDirectory = tor_strdup(temp_dir);
   set_options(options);
 
   crypto_seed_rng();
-  setup_directory();
+
   rep_hist_init();
   atexit(remove_directory);
 
