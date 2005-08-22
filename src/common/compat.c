@@ -161,7 +161,7 @@ tor_memmem(const void *_haystack, size_t hlen, const void *_needle, size_t nlen)
   end = haystack + hlen;
   first = *(const char*)needle;
   while ((p = memchr(p, first, end-p))) {
-    if (p+nlen >= end)
+    if (p+nlen > end)
       return NULL;
     if (!memcmp(p, needle, nlen))
       return p;
