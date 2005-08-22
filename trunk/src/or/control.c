@@ -680,16 +680,6 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
     config_free_lines(lines);
     return 0;
   }
-
-  if (options_act() < 0) { /* acting on them failed. die. */
-    log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
-    exit(1);
-  }
-  if (options_transition_affects_workers(lines)) {
-    log_fn(LOG_INFO,"Worker-related options changed. Rotating workers.");
-    cpuworkers_rotate();
-    dnsworkers_rotate();
-  }
   config_free_lines(lines);
   send_control_done(conn);
   return 0;

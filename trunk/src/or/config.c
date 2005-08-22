@@ -259,7 +259,12 @@ static int option_is_same(config_format_t *fmt,
                           or_options_t *o1, or_options_t *o2,const char *name);
 static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
 static int options_validate(or_options_t *options);
+static int options_act(or_options_t *old_options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
+static int options_transition_affects_workers(or_options_t *old_options,
+                                              or_options_t *new_options);
+static int options_transition_affects_descriptor(or_options_t *old_options,
+                                                 or_options_t *new_options);
 static int check_nickname_list(const char *lst, const char *name);
 static void config_register_addressmaps(or_options_t *options);
 
@@ -347,15 +352,21 @@ get_options(void)
   return global_options;
 }
 
-/** Change the current global options to contain <b>new_val</b> instead
- * of their current value; free the old value as necessary.
+/** Change the current global options to contain <b>new_val</b> instead of
+ * their current value; take action based on the new value; free the old value
+ * as necessary.
  */
 void
 set_options(or_options_t *new_val)
 {
-  if (global_options)
-    config_free(&options_format, global_options);
+  or_options_t *old_options = global_options;
   global_options = new_val;
+  if (options_act(old_options) < 0) { /* acting on the options failed. die. */
+    log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
+    exit(1);
+  }
+  if (old_options)
+    config_free(&options_format, global_options);
 }
 
 void
@@ -379,18 +390,17 @@ safe_str(const char *address)
     return address;
 }
 
-/** Fetch the active option list, and take actions based on it. All
- * of the things we do should survive being done repeatedly.
- * Return 0 if all goes well, return -1 if it's time to die.
+/** Fetch the active option list, and take actions based on it. All of the
+ * things we do should survive being done repeatedly.  If present,
+ * <b>old_options</b> contains the previous value of the options.
  *
- * Note 1: <b>new_val</b> must have previously been validated with
- * options_validate(), or Tor may freak out and exit.
+ * Return 0 if all goes well, return -1 if it's time to die.
  *
  * Note 2: We haven't moved all the "act on new configuration" logic
  * here yet.  Some is still in do_hup() and other places.
  */
-int
-options_act(void)
+static int
+options_act(or_options_t *old_options)
 {
   config_line_t *cl;
   or_options_t *options = get_options();
@@ -513,11 +523,20 @@ options_act(void)
     return -1;
   }
 
+  /* Check for transitions that need action. */
+  if (old_options) {
+    if (options_transition_affects_workers(old_options, options)) {
+      log_fn(LOG_INFO,"Worker-related options changed. Rotating workers.");
+      cpuworkers_rotate();
+      dnsworkers_rotate();
+    }
+  }
+
   /* Since our options changed, we might need to regenerate and upload our
-   * server descriptor.  (We could probably be more clever about only calling
-   * this when something significant changed.)
+   * server descriptor.
    */
-  mark_my_descriptor_dirty();
+  if (!old_options || options_transition_affects_descriptor(old_options, options))
+    mark_my_descriptor_dirty();
 
   return 0;
 }
@@ -1978,23 +1997,61 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
   return 0;
 }
 
+/** Return true iff a and b contain identical keys and values in identical
+ * order. */
+static int
+config_lines_eq(config_line_t *a, config_line_t *b)
+{
+  while (a && b) {
+    if (strcasecmp(a->key, b->key) || strcmp(a->value, b->value))
+      return 0;
+  }
+  if (a || b)
+    return 0;
+  return 1;
+}
+
 /** Return 1 if any option in <b>lines</b> will require us to rotate
  * the cpu and dns workers; else return 0. */
-int
-options_transition_affects_workers(config_line_t *lines)
+static int
+options_transition_affects_workers(or_options_t *old_options,
+                                   or_options_t *new_options)
 {
-  config_line_t *p;
-  config_var_t *var;
-  for (p = lines; p; p = p->next) {
-    var = config_find_option(&options_format, p->key);
-    if (!var) continue;
-    if (!strcasecmp(var->name, "datadirectory") ||
-        !strcasecmp(var->name, "log") ||
-        !strcasecmp(var->name, "numcpus") ||
-        !strcasecmp(var->name, "orport") ||
-        !strcasecmp(var->name, "safelogging"))
-      return 1;
-  }
+  if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
+      old_options->NumCpus != new_options->NumCpus ||
+      old_options->ORPort != new_options->ORPort ||
+      old_options->SafeLogging != new_options->SafeLogging ||
+      !config_lines_eq(old_options->Logs, new_options->Logs))
+    return 1;
+
+  /* Check whether log options match. */
+
+  /* Nothing that changed matters. */
+  return 0;
+}
+
+/** Return 1 if any option in <b>lines</b> will require us to generate a new
+ * descriptors; else return 0. */
+static int
+options_transition_affects_descriptor(or_options_t *old_options,
+                                      or_options_t *new_options)
+{
+  if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
+      !opt_streq(old_options->Nickname,new_options->Nickname) ||
+      !opt_streq(old_options->Address,new_options->Address) ||
+      !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
+      old_options->ORPort != new_options->ORPort ||
+      old_options->DirPort != new_options->DirPort ||
+      old_options->ClientOnly != new_options->ClientOnly ||
+      old_options->NoPublish != new_options->NoPublish ||
+      old_options->BandwidthRate != new_options->BandwidthRate ||
+      old_options->BandwidthBurst != new_options->BandwidthBurst ||
+      !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
+      !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
+      !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
+      old_options->AccountingMax != new_options->AccountingMax)
+    return 1;
+
   return 0;
 }
 
@@ -2205,10 +2262,6 @@ options_init_from_torrc(int argc, char **argv)
     goto err;
 
   set_options(newoptions); /* frees and replaces old options */
-  if (options_act() < 0) { /* acting on them failed. die. */
-    log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
-    exit(1);
-  }
   tor_free(torrc_fname);
   torrc_fname = fname;
   return 0;
