@@ -2,6 +2,8 @@ Changes in version 0.1.1.6-alpha - 2005-08-22
   o Fixes on 0.1.1.5-alpha:
     - We broke fascistfirewall in 0.1.1.5-alpha. Oops.
     - Fix segfault in unit tests in 0.1.1.5-alpha. Oops.
+    - Fix bug with tor_memmem finding a match at the end of the string.
+    - Make unit tests run without segfaulting.
     - Resolve some solaris x86 compile warnings.
 
   o New controller features/fixes:
@@ -22,6 +24,8 @@ Changes in version 0.1.1.6-alpha - 2005-08-22
       worker cache tree whether or not we start out as a server.
     - Start using new rendezvous descriptor code, allowing us to specify
       introduction points by key and location rather than nickname.
+    - Only upload a new server descriptor when options change, 12-24
+      hours have passed, uptime is reset, or bandwidth changes a lot.
 
   o Config option changes:
     - Replace (Fascist)Firewall* config options with a new
@@ -46,6 +50,9 @@ Changes in version 0.1.1.6-alpha - 2005-08-22
       are no longer allowed. This also fixes some potential security
       problems with people providing hostnames as their address and then
       preferentially resolving them to partition users.
+    - Change log line for unreachability to explicitly suggest /etc/hosts
+      as the culprit. Also make it clearer what IP address and ports we're
+      testing for reachability.
 
 
 Changes in version 0.1.1.5-alpha - 2005-08-08
