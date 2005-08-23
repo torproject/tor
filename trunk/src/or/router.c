@@ -633,7 +633,7 @@ router_upload_dir_desc_to_dirservers(int force)
     log_fn(LOG_WARN, "No descriptor; skipping upload");
     return;
   }
-  if (!force || !desc_needs_upload)
+  if (!force && !desc_needs_upload)
     return;
   desc_needs_upload = 0;
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
