@@ -852,7 +852,7 @@ second_elapsed_callback(int fd, short event, void *args)
           me->address, me->or_port);
     if (me && !check_whether_dirport_reachable())
       log(LOG_WARN,"Your server (%s:%d) has not managed to confirm that its DirPort is reachable. Please check your firewalls, ports, address, /etc/hosts file, etc.",
-          me->address me->dir_port);
+          me->address, me->dir_port);
   }
 
   /* if more than 100s have elapsed, probably the clock jumped: doesn't count. */
