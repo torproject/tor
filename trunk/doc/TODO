@@ -42,49 +42,17 @@ For 0.1.0.x:
       apply the results. (all platforms?)
 
 for 0.1.1.x:
-  o Controller improvements
-    o new controller protocol
-      o Specify
-      o Implement
-      o Test, debug
-    o add new getinfo options to enumerate things we only find out about
-      currently via events.
-    o controller should have an event to learn about new addressmappings,
-      e.g. when we learn a hostname to IP mapping ?
-    o make sure err-level log events get flushed to the controller
-      immediately, since tor will exit right after.
-      o Implement
-      o Test, debug
-    o Switch example controllers to use new protocol
-      o Python
-        o Implement main controller interface
-        o Glue code
-        o Testing
-      o Java
-        o Implement main controller interface
-        o Glue code
-        o Testing
 N . Additional controller features
+      - change circuit status events to give more details, like purpose,
+        whether they're internal, etc.
       . Expose more information via getinfo:
-        o Accounting status
-        o Helper node status
-          o Document
-          o Implement
-        o List of available getinfo/getconf fields.
-          o Document
-          o Implement
+        - import and export rendezvous descriptors
         - Review all static fields for additional candidates
       - Allow EXTENDCIRCUIT to unknown server.
       - We need some way to adjust server status, and to tell tor not to
         download directories/network-status, and a way to force a download.
       - It would be nice to request address lookups from the controller
         without using SOCKS.
-  o Make configuration parsing code switchable to different sets of
-    variables so we can use it for persistence.
-    o Implement
-    o Add simple type-checking
-    o Rename functions to distinguish configuration-only functions from
-      cross-format functions
 N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
     long time), replace it.  Store nodes on disk.
     o Implement (basic case)
@@ -92,10 +60,6 @@ N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
     o Document
     . Test, debug
     - On sighup, if usehelpernodes changed to 1, use new circs.
-  o Make a FirewallIPs to correspond to firewallPorts so I can use Tor at
-    MIT when my directory is out of date.
-    o Document, rename, deprecate fascistfirewall, and make it use
-      addr_policy_t logic.
   - switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back, out if we decide we prefer it the way it already is. hm.
@@ -123,9 +87,6 @@ N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
         o Use new INTRODUCE protocol if allowed.
 N   . Verify that new code works.
     - Enable the new code
-  X It looks like tor_assert writes to stderr. This isn't a problem, because
-    start_daemon doesn't close fd 2; it uses dup2 to replace it with
-    a file open to /dev/null.
   - christian grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
@@ -138,18 +99,17 @@ N - Add private:* alias in exit policies to make it easier to ban all the
     (AGL had a patch; consider applying it.)
   - recommended-versions for client / server ?
 N - warn if listening for SOCKS on public IP.
-  o Forward-compatibility: add "needclientversion" option or "opt critical"
-    prefix?  No, just make unknown keywords less critical.
   - cpu fixes:
     - see if we should make use of truncate to retry
     o hardware accelerator support (configure engines.)
     - hardware accelerator support (use instead of aes.c when reasonable)
-r   - kill dns workers more slowly
+R   - kill dns workers more slowly
+R - remove the warnings from rendezvous stuff that shouldn't be warnings.
   - continue decentralizing the directory
     o Specify and design all of the below before implementing any.
     - Figure out what to do about hidden service descriptors.
-    M have two router descriptor formats
-    - dirservers verify reachability claims
+    X have two router descriptor formats
+R   - dirservers verify reachability claims
     - find 10 dirservers. (what are criteria to be a dirserver?)
     - some back-out mechanism?
       - dirservers have blacklist of IPs they hate
@@ -186,29 +146,28 @@ r   - kill dns workers more slowly
     - if the binding changes keys, the entry in her datadir will silently
       get corrected.
   - packaging and ui stuff:
-    - multiple sample torrc files (tyranix?)
+    . multiple sample torrc files
     - uninstallers
       . for os x
-    - something, anything, for sys tray on Windows.
-    - figure out how to make nt service stuff work?
+    . something, anything, for sys tray on Windows.
+    . figure out how to make nt service stuff work?
       . Document it.
-    - Simple logic to estimate number of active/total users
-    - Add version number to directory.
+    . Add version number to directory.
 N   - Vet all pending installer patches
       - Win32 installer plus privoxy, sockscap/freecap, etc.
       - Vet win32 systray helper code
-N  . Make logs go into platform default locations.
-     o OSX
-     - Windows. (?)
+  o Make logs go into platform default locations.
+    o OSX
+    X Windows. (?)
 
 Reach (deferrable) items for 0.1.1.x:
   - Start using create-fast cells as clients
-  - Let more config options (e.g. ORPort) change dynamically.
+  o Let more config options (e.g. ORPort) change dynamically.
   - start handling server descriptors without a socksport?
 
 For 0.1.1.x, if we can figure out how:
   - rewrite how libevent does select() on win32 so it's not so very slow.
-  - enclaves (at least preliminary)
+  o enclaves (at least preliminary)
   - Write limiting; separate token bucket for write
   - Audit everything to make sure rend and intro points are just as likely to
     be us as not.
@@ -223,7 +182,7 @@ Future version:
   - Hold-open-until-flushed now works by accident; it should work by
     design.
   - DoS protection: TLS puzzles, public key ops, bandwidth exhaustion.
-   - Specify?
+    - Specify?
   - tor-resolve script should use socks5 to get better error messages.
   - make min uptime a function of the available choices (say, choose 60th
     percentile, not 1 day.)
