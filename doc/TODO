@@ -29,31 +29,17 @@ P - gather pointers to livecd distros that include tor
 P - update window's docs to clarify which versions of windows, and why a
     DOS window, how it's used, for the less technical users
 NR- write a spec appendix for 'being nice with tor'
-  - Hunt for open socks ports on tor servers, send mail
   - tor-in-the-media page
-  - Ask schanzle@cas.homelinux.org about a patch for  rpm spec fixes against
+  - Ask schanzle@cas.homelinux.org about a patch for rpm spec fixes against
     tor-0.1.0.7.rc
   - Remove need for HACKING file.
 
-
 For 0.1.0.x:
-  o Why do solaris cpuworks go dormant?
-    (Apparently, disabling threads fixes this.)
-  o Fix the remaining flyspray bugs marked for 0.1.0.9
-  X Free remaining unfreed memory (arma will run valgrind)
-    (Not for a stable release)
-  o Note libevent/method/platform combos that are unlikely to work.
-  X change torrc to point to abuse-faq (once abuse-faq is posted)
   . Memory use on Linux: what's happening?
     - Is it threading?  (Maybe, maybe not)
     - Is it the buf_shrink bug? (Quite possibly)
     - Instrument the 0.1.1 code to figure out where our memory is going;
       apply the results. (all platforms?)
-  . Why does kevent barf with EINVAL on some freebsd boxes?
-    o Submit libevent patch to Niels
-    o Warn on non-repeated EINVAL in Tor (don't die.)
-    - Investigate why freebsd kernel actually does this: it doesn't seem
-      simple to trigger.
 
 for 0.1.1.x:
   o Controller improvements
