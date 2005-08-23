@@ -29,8 +29,8 @@ static int connection_or_process_cells_from_inbuf(connection_t *conn);
 static void
 cell_pack(char *dest, const cell_t *src)
 {
-  *(uint16_t*)dest     = htons(src->circ_id);
-  *(uint8_t*)(dest+2)  = src->command;
+  *(uint16_t*)dest    = htons(src->circ_id);
+  *(uint8_t*)(dest+2) = src->command;
   memcpy(dest+3, src->payload, CELL_PAYLOAD_SIZE);
 }
 
@@ -232,7 +232,9 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
   conn->address = tor_strdup(router->address);
 }
 
-/** DOCDOC */
+/** If we don't necessarily know the router we're connecting to, but we
+ * have an addr/port/id_digest, then fill in as much as we can. Start
+ * by checking to see if this describes a router we know. */
 static void
 connection_or_init_conn_from_address(connection_t *conn,
                                      uint32_t addr, uint16_t port,
@@ -269,7 +271,8 @@ connection_or_init_conn_from_address(connection_t *conn,
   tor_inet_ntoa(&in,conn->address,INET_NTOA_BUF_LEN);
 }
 
-/** DOCDOC */
+/** "update an OR connection nickname on the fly"
+ * Actually, nobody calls this. Should we remove it? */
 void
 connection_or_update_nickname(connection_t *conn)
 {
@@ -308,7 +311,7 @@ connection_or_update_nickname(connection_t *conn)
  * If <b>id_digest</b> is me, do nothing. If we're already connected to it,
  * return that connection. If the connect() is in progress, set the
  * new conn's state to 'connecting' and return it. If connect() succeeds,
- * call * connection_tls_start_handshake() on it.
+ * call connection_tls_start_handshake() on it.
  *
  * This function is called from router_retry_connections(), for
  * ORs connecting to ORs, and circuit_establish_circuit(), for
@@ -333,7 +336,6 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 
   /* this function should never be called if we're already connected to
    * id_digest, but check first to be sure */
-  /*XXX this is getting called, at least by dirservers. */
   conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
   if (conn) {
     tor_assert(conn->nickname);
@@ -455,7 +457,7 @@ connection_or_nonopen_was_started_here(connection_t *conn)
  *
  * Make sure he sent a correctly formed certificate. If it has a
  * recognized (approved) nickname, make sure his identity key matches
- * to it. If I initiated the connection, make sure it's the right guy.
+ * it. If I initiated the connection, make sure it's the right guy.
  *
  * If we return 0, write a hash of the identity key into digest_rcvd,
  * which must have DIGEST_LEN space in it. (If we return -1 this
@@ -520,23 +522,15 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
 
   if (connection_or_nonopen_was_started_here(conn)) {
     int as_advertised = 1;
-    if (conn->nickname[0] == '$') {
-      /* I was aiming for a particular digest. Did I get it? */
-      char d[HEX_DIGEST_LEN+1];
-      base16_encode(d, HEX_DIGEST_LEN+1, digest_rcvd, DIGEST_LEN);
-      if (strcasecmp(d,conn->nickname+1)) {
-        log_fn(severity,
-               "Identity key not as expected for router at %s:%d: wanted %s but got %s",
-               conn->address, conn->port, conn->nickname+1, d);
-        helper_node_set_status(conn->identity_digest, 0);
-        control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
-        as_advertised = 0;
-      }
-    } else if (strcasecmp(conn->nickname, nickname)) {
-      /* I was aiming for a nickname.  Did I get it? */
+    if (memcmp(digest_rcvd, conn->identity_digest, DIGEST_LEN)) {
+      /* I was aiming for a particular digest. I didn't get it! */
+      char seen[HEX_DIGEST_LEN+1];
+      char expected[HEX_DIGEST_LEN+1];
+      base16_encode(seen, sizeof(seen), digest_rcvd, DIGEST_LEN);
+      base16_encode(expected, sizeof(expected), conn->identity_digest, DIGEST_LEN);
       log_fn(severity,
-             "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
-             conn->address, conn->port, nickname, conn->nickname);
+             "Identity key not as expected for router at %s:%d: wanted %s but got %s",
+             conn->address, conn->port, expected, seen);
       helper_node_set_status(conn->identity_digest, 0);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       as_advertised = 0;
