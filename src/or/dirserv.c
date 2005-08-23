@@ -47,22 +47,25 @@ add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list)
 {
   int i;
   fingerprint_entry_t *ent;
+  char *fingerprint;
   tor_assert(nickname);
   tor_assert(fp);
   tor_assert(list);
+
+  fingerprint = tor_strdup(fp);
+  tor_strstrip(fingerprint, " ");
 
   for (i = 0; i < smartlist_len(list); ++i) {
     ent = smartlist_get(list, i);
     if (!strcasecmp(ent->nickname,nickname)) {
       tor_free(ent->fingerprint);
-      ent->fingerprint = tor_strdup(fp);
+      ent->fingerprint = fingerprint;
       return 1;
     }
   }
   ent = tor_malloc(sizeof(fingerprint_entry_t));
   ent->nickname = tor_strdup(nickname);
-  ent->fingerprint = tor_strdup(fp);
-  tor_strstrip(ent->fingerprint, " ");
+  ent->fingerprint = fingerprint;
   smartlist_add(list, ent);
   return 0;
 }
