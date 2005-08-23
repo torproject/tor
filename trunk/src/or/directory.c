@@ -49,6 +49,8 @@ directory_send_command(connection_t *conn, const char *platform,
 static int directory_handle_command(connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
 static int purpose_is_private(uint8_t purpose);
+static char *http_get_header(const char *headers, const char *which);
+static char *http_get_origin(const char *headers, connection_t *conn);
 
 /********* START VARIABLES **********/
 
@@ -508,6 +510,56 @@ parse_http_url(char *headers, char **url)
   return 0;
 }
 
+/** Return a copy of the first HTTP header in <b>headers</b> whose key is
+ * <b>which</b>.  The key should be given with a terminating colon and space;
+ * this function copies everything after, up to but not including the
+ * following newline. */
+static char *
+http_get_header(const char *headers, const char *which)
+{
+  const char *cp = headers;
+  while (cp) {
+    if (!strcmpstart(cp, which)) {
+      char *eos;
+      cp += strlen(which);
+      if ((eos = strchr(cp,'\n')))
+        return tor_strndup(cp, eos-cp);
+      else
+        return tor_strdup(cp);
+    }
+    cp = strchr(headers, '\n');
+    if (cp)
+      ++cp;
+  }
+  return NULL;
+}
+
+/** Allocate and return a string describing the source of an HTTP request with
+ * headers <b>headers</b> received on <b>conn</b>.  The format is either
+ * "'1.2.3.4'", or "'1.2.3.4' (forwarded for '5.6.7.8')".
+ */
+static char *
+http_get_origin(const char *headers, connection_t *conn)
+{
+  char *fwd;
+
+  fwd = http_get_header(headers, "Forwarded-For: ");
+  if (!fwd)
+    fwd = http_get_header(headers, "X-Forwarded-For: ");
+  if (fwd) {
+    size_t len = strlen(fwd)+strlen(conn->address)+32;
+    char *result = tor_malloc(len);
+    tor_snprintf(result, len, "'%s' (forwarded for '%s')", conn->address, fwd);
+    tor_free(fwd);
+    return result;
+  } else {
+    size_t len = strlen(conn->address)+3;
+    char *result = tor_malloc(len);
+    tor_snprintf(result, len, "'%s'", conn->address);
+    return result;
+  }
+}
+
 /** Parse an HTTP response string <b>headers</b> of the form
  * \verbatim
  * "HTTP/1.\%d \%d\%s\r\n...".
@@ -942,7 +994,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
 {
   size_t dlen;
   const char *cp;
-  char *url;
+  char *url = NULL;
   char tmp[8192];
   char date[RFC1123_TIME_LEN+1];
 
@@ -1060,7 +1112,8 @@ directory_handle_command_post(connection_t *conn, char *headers,
                               char *body, size_t body_len)
 {
   const char *cp;
-  char *url;
+  char *origin = NULL;
+  char *url = NULL;
 
   log_fn(LOG_DEBUG,"Received POST command.");
 
@@ -1078,6 +1131,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
     return 0;
   }
   log_fn(LOG_INFO,"rewritten url as '%s'.", url);
+  origin = http_get_origin(headers, conn);
 
   if (!strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg;
@@ -1087,7 +1141,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
       case -1:
         /* malformed descriptor, or something wrong */
         write_http_status_line(conn, 400, msg?msg:"Malformed or unacceptable server descriptor");
-        log_fn(LOG_NOTICE,"Rejected descriptor published by '%s'.", conn->address);
+        log_fn(LOG_NOTICE,"Rejected descriptor published by %s.", origin);
         break;
       case 0:
         /* descriptor was well-formed but server has not been approved */
@@ -1098,8 +1152,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
         write_http_status_line(conn, 200, msg?msg:"Verified server descriptor accepted");
         break;
     }
-    tor_free(url);
-    return 0;
+    goto done;
   }
 
   if (!strcmpstart(url,"/tor/rendezvous/publish")) {
@@ -1108,14 +1161,17 @@ directory_handle_command_post(connection_t *conn, char *headers,
       write_http_status_line(conn, 400, "Invalid service descriptor rejected");
     else
       write_http_status_line(conn, 200, "Service descriptor stored");
-    tor_free(url);
-    return 0;
+    goto done;
   }
 
   /* we didn't recognize the url */
   write_http_status_line(conn, 404, "Not found");
+
+ done:
   tor_free(url);
+  tor_free(origin);
   return 0;
+
 }
 
 /** Called when a dirserver receives data on a directory connection;
