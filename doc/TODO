@@ -42,6 +42,7 @@ For 0.1.0.x:
       apply the results. (all platforms?)
 
 for 0.1.1.x:
+R - are dirservers auto-verifying duplicate nicknames?
 N . Additional controller features
       - change circuit status events to give more details, like purpose,
         whether they're internal, etc.
@@ -60,6 +61,10 @@ N . helper nodes (Choose N nodes randomly; if a node dies (goes down for a
     o Document
     . Test, debug
     - On sighup, if usehelpernodes changed to 1, use new circs.
+    - If your helper nodes are unavailable, don't abandon them unless
+      other nodes *are* reachable.
+R   - If you think an OR conn is open but you can never establish a circuit
+      to it, reconsider whether it's actually open.
   - switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back, out if we decide we prefer it the way it already is. hm.
@@ -109,7 +114,10 @@ R - remove the warnings from rendezvous stuff that shouldn't be warnings.
     o Specify and design all of the below before implementing any.
     - Figure out what to do about hidden service descriptors.
     X have two router descriptor formats
-R   - dirservers verify reachability claims
+R   . dirservers verify reachability claims
+      o basic reachability testing, influencing network-status list.
+R     - rate-limiting the reporting of trouble servers
+R     - check reachability as soon as you hear about a new server
     - find 10 dirservers. (what are criteria to be a dirserver?)
     - some back-out mechanism?
       - dirservers have blacklist of IPs they hate
