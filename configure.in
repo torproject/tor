@@ -44,6 +44,12 @@ if test $enable_threads = "yes"; then
   AC_DEFINE(ENABLE_THREADS, 1, [Defined if we will try to use multithreading])
 fi
 
+case $host in
+   *-*-solaris* )
+     AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])
+     ;;
+esac
+
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
