@@ -737,6 +737,7 @@ typedef struct {
   /* local info */
   int is_running; /**< As far as we know, is this OR currently running? */
   time_t status_set_at; /**< When did we last update is_running? */
+  time_t last_reachable; /**< When was the last time we could reach this OR? */
   int is_verified; /**< Has a trusted dirserver validated this OR? */
 
   smartlist_t *declared_family; /**< Nicknames of router which this router
@@ -1901,7 +1902,7 @@ int server_mode(or_options_t *options);
 int advertised_server_mode(void);
 int proxy_mode(or_options_t *options);
 
-void router_retry_connections(void);
+void router_retry_connections(int force);
 int router_is_clique_mode(routerinfo_t *router);
 void router_upload_dir_desc_to_dirservers(int force);
 void mark_my_descriptor_dirty_if_older_than(time_t when);

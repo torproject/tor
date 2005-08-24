@@ -568,10 +568,13 @@ consider_publishable_server(time_t now, int force)
 
 /** OR only: if in clique mode, try to open connections to all of the
  * other ORs we know about. Otherwise, open connections to those we
- * think are in clique mode.
+ * think are in clique mode.o
+ *
+ * If <b>force</b> is zero, only open the connection if we don't already
+ * have one.
  */
 void
-router_retry_connections(void)
+router_retry_connections(int force)
 {
   int i;
   routerinfo_t *router;
@@ -588,10 +591,12 @@ router_retry_connections(void)
       continue;
     if (!clique_mode(options) && !router_is_clique_mode(router))
       continue;
-    if (!connection_get_by_identity_digest(router->identity_digest,
+    if (force ||
+        !connection_get_by_identity_digest(router->identity_digest,
                                            CONN_TYPE_OR)) {
-      /* not in the list */
-      log_fn(LOG_DEBUG,"connecting to OR at %s:%u.",router->address,router->or_port);
+      log_fn(LOG_INFO,"%sconnecting to %s at %s:%u.",
+             clique_mode(options) ? "(forced) " : "",
+             router->nickname, router->address, router->or_port);
       connection_or_connect(router->addr, router->or_port, router->identity_digest);
     }
   }
