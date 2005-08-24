@@ -397,7 +397,10 @@ dirserv_add_descriptor(const char **desc, const char **msg)
     }
     /* We don't already have a newer one; we'll update this one. */
     log_fn(LOG_INFO,"Dirserv updating desc for server %s (nickname '%s')",hex_digest,ri->nickname);
-    ri->last_reachable = ri_old->last_reachable; /* this carries over */
+    if (ri->addr == ri_old->addr && ri->or_port == ri_old->or_port) {
+      ri->last_reachable = ri_old->last_reachable; /* these carry over */
+      ri->testing_since = ri_old->testing_since;
+    }
     *msg = verified?"Verified server updated":"Unverified server updated. (Have you sent us your key fingerprint?)";
     routerinfo_free(ri_old);
     smartlist_del_keeporder(descriptor_list, found);
@@ -581,13 +584,7 @@ list_server_status(smartlist_t *routers, char **router_status_out)
       if (router_is_me(ri) && !we_are_hibernating()) {
         is_live = 1;
       } else if (conn && conn->state == OR_CONN_STATE_OPEN) {
-        if (now < ri->last_reachable + REACHABLE_TIMEOUT) {
-          is_live = 1;
-        } else {
-          log_fn(stats_n_seconds_working>REACHABLE_TIMEOUT ? LOG_NOTICE : LOG_INFO,
-                 "Router %s (%s:%d) is connected to us but not reachable by us.",
-                 ri->nickname, ri->address, ri->or_port);
-        }
+        is_live = now < ri->last_reachable + REACHABLE_TIMEOUT;
       }
     } else {
       is_live = ri->is_running;
@@ -601,6 +598,42 @@ list_server_status(smartlist_t *routers, char **router_status_out)
   smartlist_free(rs_entries);
 
   return 0;
+}
+
+/** Log complaints about each server that is connected to us and has
+ * been found unreachable for the past several testing periods.
+ */
+void
+dirserv_log_unreachable_servers(time_t now) {
+
+  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+  {
+    connection_t *conn;
+    conn = connection_get_by_identity_digest(
+                    ri->identity_digest, CONN_TYPE_OR);
+    if (conn && conn->state == OR_CONN_STATE_OPEN &&
+        now >= ri->last_reachable + 2*REACHABLE_TIMEOUT &&
+        ri->testing_since &&
+        now >= ri->testing_since + 2*REACHABLE_TIMEOUT) {
+      log_fn(LOG_NOTICE,
+             "Router %s (%s:%d) is connected to us but not reachable by us.",
+             ri->nickname, ri->address, ri->or_port);
+    }
+  });
+}
+
+/** Record the fact that we've started trying to determine reachability
+ * for the router with identity <b>digest</b>.
+ * (This function can go away when we merge descriptor-list and router-list.)
+ */
+void
+dirserv_router_has_begun_reachability_testing(char *digest, time_t now) {
+  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+  {
+    if (!memcmp(ri->identity_digest, digest, DIGEST_LEN))
+      if (!ri->testing_since)
+        ri->testing_since = now;
+  });
 }
 
 /** Remove any descriptors from the directory that are more than <b>age</b>

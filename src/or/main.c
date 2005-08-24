@@ -694,6 +694,7 @@ run_scheduled_events(time_t now)
     if (authdir_mode(options)) {
       /* Dump any old descriptors. */
       dirserv_remove_old_servers(ROUTER_MAX_AGE);
+      dirserv_log_unreachable_servers(now);
       if (!we_are_hibernating()) { /* try to determine reachability */
         router_retry_connections(1);
       }
