@@ -1944,7 +1944,7 @@ connection_control_process_inbuf_v1(connection_t *conn)
    * recognize it.
    */
   cmd_len = 0;
-  while (cmd_len < data_len && !isspace(conn->incoming_cmd[cmd_len]))
+  while (cmd_len < data_len && !TOR_ISSPACE(conn->incoming_cmd[cmd_len]))
     ++cmd_len;
 
   /*
