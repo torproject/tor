@@ -527,7 +527,7 @@ http_get_header(const char *headers, const char *which)
       else
         return tor_strdup(cp);
     }
-    cp = strchr(headers, '\n');
+    cp = strchr(cp, '\n');
     if (cp)
       ++cp;
   }
