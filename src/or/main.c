@@ -546,6 +546,9 @@ directory_has_arrived(time_t now, char *identity_digest)
   if (!time_to_fetch_running_routers)
     time_to_fetch_running_routers = now + get_status_fetch_period(options);
 
+  if (identity_digest) /* if it's fresh */
+    helper_nodes_set_status_from_directory();
+
   if (server_mode(options) && identity_digest) {
     /* if this is us, then our dirport is reachable */
     if (router_digest_is_me(identity_digest))
@@ -554,7 +557,8 @@ directory_has_arrived(time_t now, char *identity_digest)
 
   if (server_mode(options) &&
       !we_are_hibernating()) { /* connect to the appropriate routers */
-    router_retry_connections();
+    if (!authdir_mode(options))
+      router_retry_connections(0);
     if (identity_digest) /* we got a fresh directory */
       consider_testing_reachability();
   }
@@ -688,13 +692,11 @@ run_scheduled_events(time_t now)
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
 
     if (authdir_mode(options)) {
-      /* We're a directory; dump any old descriptors. */
+      /* Dump any old descriptors. */
       dirserv_remove_old_servers(ROUTER_MAX_AGE);
-    }
-    if (server_mode(options) && !we_are_hibernating()) {
-      /* dirservers try to reconnect, in case connections have failed;
-       * and normal servers try to reconnect to dirservers */
-      router_retry_connections();
+      if (!we_are_hibernating()) { /* try to determine reachability */
+        router_retry_connections(1);
+      }
     }
 
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
@@ -975,7 +977,7 @@ do_main_loop(void)
 
   if (authdir_mode(get_options())) {
     /* the directory is already here, run startup things */
-    router_retry_connections();
+    router_retry_connections(1);
   }
 
   if (server_mode(get_options())) {

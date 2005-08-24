@@ -738,7 +738,7 @@ check_directory_signature(const char *digest,
     return -1;
   }
   log_fn(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
-  if (memcmp(digest, signed_digest, 20)) {
+  if (memcmp(digest, signed_digest, DIGEST_LEN)) {
     log_fn(LOG_WARN, "Error reading directory: signature does not match.");
     return -1;
   }
@@ -992,7 +992,7 @@ router_parse_entry_from_string(const char *s, const char *end)
     log_fn(LOG_WARN, "Invalid signature %d",t);
     goto err;
   }
-  if (memcmp(digest, signed_digest, 20)) {
+  if (memcmp(digest, signed_digest, DIGEST_LEN)) {
     log_fn(LOG_WARN, "Mismatched signature");
     goto err;
   }

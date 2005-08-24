@@ -17,6 +17,8 @@ const char dirserv_c_id[] = "$Id$";
 /** How many seconds do we wait before regenerating the directory? */
 #define DIR_REGEN_SLACK_TIME 5
 
+extern long stats_n_seconds_working;
+
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
@@ -393,8 +395,9 @@ dirserv_add_descriptor(const char **desc, const char **msg)
       *desc = end;
       return verified;
     }
-    /* We don't alrady have a newer one; we'll update this one. */
+    /* We don't already have a newer one; we'll update this one. */
     log_fn(LOG_INFO,"Dirserv updating desc for server %s (nickname '%s')",hex_digest,ri->nickname);
+    ri->last_reachable = ri_old->last_reachable; /* this carries over */
     *msg = verified?"Verified server updated":"Unverified server updated. (Have you sent us your key fingerprint?)";
     routerinfo_free(ri_old);
     smartlist_del_keeporder(descriptor_list, found);
@@ -546,6 +549,9 @@ list_single_server_status(routerinfo_t *desc, int is_live)
   return tor_strdup(buf);
 }
 
+#define REACHABLE_TIMEOUT (60*60) /* an hour */
+/* Make sure this is 3 times the value of get_dir_fetch_period() */
+
 /** Based on the routerinfo_ts in <b>routers</b>, allocate the
  * contents of a router-status line, and store it in
  * *<b>router_status_out</b>.  Return 0 on success, -1 on failure.
@@ -556,6 +562,7 @@ list_server_status(smartlist_t *routers, char **router_status_out)
   /* List of entries in a router-status style: An optional !, then an optional
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
   smartlist_t *rs_entries;
+  time_t now = time(NULL);
   int authdir_mode = get_options()->AuthoritativeDir;
   tor_assert(router_status_out);
 
@@ -563,16 +570,25 @@ list_server_status(smartlist_t *routers, char **router_status_out)
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
   {
-    int is_live;
+    int is_live = 0;
     connection_t *conn;
     conn = connection_get_by_identity_digest(
                     ri->identity_digest, CONN_TYPE_OR);
     if (authdir_mode) {
       /* Treat a router as alive if
        *    - It's me, and I'm not hibernating.
-       * or - we're connected to it. */
-      is_live = (router_is_me(ri) && !we_are_hibernating()) ||
-        (conn && conn->state == OR_CONN_STATE_OPEN);
+       * or - we're connected to it and we've found it reachable recently. */
+      if (router_is_me(ri) && !we_are_hibernating()) {
+        is_live = 1;
+      } else if (conn && conn->state == OR_CONN_STATE_OPEN) {
+        if (now < ri->last_reachable + REACHABLE_TIMEOUT) {
+          is_live = 1;
+        } else {
+          log_fn(stats_n_seconds_working>REACHABLE_TIMEOUT ? LOG_NOTICE : LOG_INFO,
+                 "Router %s (%s:%d) is connected to us but not reachable by us.",
+                 ri->nickname, ri->address, ri->or_port);
+        }
+      }
     } else {
       is_live = ri->is_running;
     }
@@ -982,7 +998,7 @@ dirserv_orconn_tls_done(const char *address,
                         uint16_t or_port,
                         const char *digest_rcvd,
                         const char *nickname_rcvd,
-                        int as_advertised) //XXXRD
+                        int as_advertised)
 {
   int i;
   tor_assert(address);
@@ -995,10 +1011,9 @@ dirserv_orconn_tls_done(const char *address,
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     routerinfo_t *ri = smartlist_get(descriptor_list, i);
     int drop = 0;
-    if (ri->is_verified)
+    if (strcasecmp(address, ri->address) || or_port != ri->or_port)
       continue;
-    if (!strcasecmp(address, ri->address) &&
-        or_port == ri->or_port) {
+    if (!ri->is_verified) {
       /* We have a router at the same address! */
       if (strcasecmp(ri->nickname, nickname_rcvd)) {
         log_fn(LOG_NOTICE, "Dropping descriptor: nickname '%s' does not match nickname '%s' in cert from %s:%d",
@@ -1009,11 +1024,14 @@ dirserv_orconn_tls_done(const char *address,
                address, or_port);
         drop = 1;
       }
-      if (drop) {
-        routerinfo_free(ri);
-        smartlist_del(descriptor_list, i--);
-        directory_set_dirty();
-      }
+    }
+    if (drop) {
+      routerinfo_free(ri);
+      smartlist_del(descriptor_list, i--);
+      directory_set_dirty();
+    } else { /* correct nickname and digest. mark this router reachable! */
+      log_fn(LOG_INFO,"Found router %s to be reachable. Yay.", ri->nickname);
+      ri->last_reachable = time(NULL);
     }
   }
 }
