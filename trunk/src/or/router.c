@@ -577,6 +577,7 @@ void
 router_retry_connections(int force)
 {
   int i;
+  time_t now = time(NULL);
   routerinfo_t *router;
   routerlist_t *rl;
   or_options_t *options = get_options();
@@ -597,6 +598,7 @@ router_retry_connections(int force)
       log_fn(LOG_INFO,"%sconnecting to %s at %s:%u.",
              clique_mode(options) ? "(forced) " : "",
              router->nickname, router->address, router->or_port);
+      dirserv_router_has_begun_reachability_testing(router->identity_digest, now);
       connection_or_connect(router->addr, router->or_port, router->identity_digest);
     }
   }

@@ -738,6 +738,7 @@ typedef struct {
   int is_running; /**< As far as we know, is this OR currently running? */
   time_t status_set_at; /**< When did we last update is_running? */
   time_t last_reachable; /**< When was the last time we could reach this OR? */
+  time_t testing_since; /**< When did we start testing reachability for this OR? */
   int is_verified; /**< Has a trusted dirserver validated this OR? */
 
   smartlist_t *declared_family; /**< Nicknames of router which this router
@@ -1624,6 +1625,8 @@ char *dirserver_getinfo_unregistered(const char *question);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors(void);
 int list_server_status(smartlist_t *routers, char **router_status_out);
+void dirserv_log_unreachable_servers(time_t now);
+void dirserv_router_has_begun_reachability_testing(char *digest, time_t now);
 void dirserv_remove_old_servers(int age);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
