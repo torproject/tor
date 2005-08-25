@@ -125,17 +125,28 @@ R     - check reachability as soon as you hear about a new server
       - have new people be in limbo and need to demonstrate usefulness
         before we approve them
       - other?
-    - dirservers publish router-status with all these flags.
+N   . Authoritative dirservers publish very compressed network-status objects.
+      o Generate format
+      o Publish it
+N   . Everyone downloads network-status objects
+      - From all directories, round-robin
+      - Cache them, reload on restart
+      o Serve cached directories
+      - If DirPort, act as a cache.
+N   - Directories expose individual descriptors
+      o By server ID
+      o By 'all'
+      - By 'if-newer-than' (Does the spec require this??)
+      - Support compression.
+      o Expose "own most recent descriptor".
+N   - Alice acts on network-status objects, downloading descriptors as needed.
     o Servers publish new descriptors when:
       o options change
       o when 12-24 hours have passed
       o when uptime is reset
       o When bandwidth changes a lot.
-    - alices fetch many router-statuses and update descriptors as needed.
-    - add if-newer-than fetch options
-    - dirservers allow people to lookup by N descriptors, or to fetch all.
     - alices avoid duplicate class C nodes.
-    - everybody with a dirport will give you his descriptor.
+    o everybody with a dirport will give you his descriptor.
     - config option, on by default, to cache all descriptors.
     - Compress router desc sets before transmitting them
     M Analyze how bad the partitioning is or isn't.

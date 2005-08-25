@@ -179,6 +179,14 @@ router_get_runningrouters_hash(const char *s, char *digest)
                               "network-status","\ndirectory-signature");
 }
 
+/** DOCDOC */
+int
+router_get_networkstatus_v2_hash(const char *s, char *digest)
+{
+  return router_get_hash_impl(s,digest,
+                              "network-status-version","\ndirectory-signature");
+}
+
 /**
  * Find the first instance of "recommended-software ...\n" at the start of
  * a line; return a newly allocated string containing the "..." portion.
@@ -857,6 +865,8 @@ router_parse_entry_from_string(const char *s, const char *end)
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->signed_descriptor = tor_strndup(s, end-s);
+  router->signed_descriptor_len = end-s;
+  crypto_digest(router->signed_descriptor_digest, s, end-s);
   ports_set = bw_set = 0;
 
   if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {

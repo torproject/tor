@@ -161,6 +161,8 @@ static config_var_t _option_vars[] = {
   VAR("PidFile",             STRING,   PidFile,              NULL),
   VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
+  VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),
+  VAR("RecommendedServerVersions", LINELIST, RecommendedServerVersions,  NULL),
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
@@ -876,6 +878,22 @@ option_get_assignment(or_options_t *options, const char *key)
 }
 
 static config_line_t *
+config_lines_dup(const config_line_t *inp)
+{
+  config_line_t *result = NULL;
+  config_line_t **next_out = &result;
+  while (inp) {
+    *next_out = tor_malloc(sizeof(config_line_t));
+    (*next_out)->key = tor_strdup(inp->key);
+    (*next_out)->value = tor_strdup(inp->value);
+    inp = inp->next;
+    next_out = &((*next_out)->next);
+  }
+  (*next_out) = NULL;
+  return result;
+}
+
+static config_line_t *
 get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key)
 {
   config_var_t *var;
@@ -899,17 +917,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
   if (var->type == CONFIG_TYPE_LINELIST ||
       var->type == CONFIG_TYPE_LINELIST_V) {
     /* Linelist requires special handling: we just copy and return it. */
-    const config_line_t *next_in = *(const config_line_t**)value;
-    config_line_t **next_out = &result;
-    while (next_in) {
-      *next_out = tor_malloc(sizeof(config_line_t));
-      (*next_out)->key = tor_strdup(next_in->key);
-      (*next_out)->value = tor_strdup(next_in->value);
-      next_in = next_in->next;
-      next_out = &((*next_out)->next);
-    }
-    (*next_out) = NULL;
-    return result;
+    return config_lines_dup(*(const config_line_t**)value);
   }
 
   result = tor_malloc_zero(sizeof(config_line_t));
@@ -1133,11 +1141,13 @@ print_usage(void)
 
 /**
  * Based on <b>options-\>Address</b>, guess our public IP address and put it
- * in *<b>addr</b>. Return 0 if all is well, or -1 if we can't find a
- * suitable public IP address.
+ * in *<b>addr_out</b>. If <b>hostname_out</b> is provided, set
+ * *<b>hostname_out</b> to a new string holding the hostname we used to get
+ * the address. Return 0 if all is well, or -1 if we can't find a suitable
+ * public IP address.
  */
 int
-resolve_my_address(or_options_t *options, uint32_t *addr)
+resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_out)
 {
   struct in_addr in;
   struct hostent *rent;
@@ -1147,7 +1157,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr)
   static uint32_t old_addr=0;
   const char *address = options->Address;
 
-  tor_assert(addr);
+  tor_assert(addr_out);
 
   /* workaround: some people were leaving "Address  " in their torrc,
    * and they had a buggy resolver that resolved " " to 0.0.0.0. Oops.
@@ -1203,12 +1213,14 @@ resolve_my_address(or_options_t *options, uint32_t *addr)
   }
 
   log_fn(LOG_DEBUG, "Resolved Address to %s.", tmpbuf);
-  *addr = ntohl(in.s_addr);
-  if (old_addr && old_addr != *addr) {
+  *addr_out = ntohl(in.s_addr);
+  if (old_addr && old_addr != *addr_out) {
     log_fn(LOG_NOTICE,"Your IP seems to have changed. Updating.");
     server_has_changed_ip();
   }
-  old_addr = *addr;
+  old_addr = *addr_out;
+  if (hostname_out)
+    *hostname_out = tor_strdup(hostname);
   return 0;
 }
 
@@ -1582,7 +1594,7 @@ options_validate(or_options_t *options)
   if (server_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
-    if (resolve_my_address(options, &tmp) < 0)
+    if (resolve_my_address(options, &tmp, NULL) < 0)
       result = -1;
   }
 
@@ -1616,9 +1628,17 @@ options_validate(or_options_t *options)
     log(LOG_WARN, "StrictEntryNodes set, but no EntryNodes listed.");
   }
 
-  if (options->AuthoritativeDir && options->RecommendedVersions == NULL) {
-    log(LOG_WARN, "Directory servers must configure RecommendedVersions.");
-    result = -1;
+  if (options->AuthoritativeDir) {
+    if (!options->RecommendedVersions) {
+      log(LOG_WARN, "Directory servers must configure RecommendedVersions.");
+      result = -1;
+    }
+    if (!options->RecommendedClientVersions)
+      options->RecommendedClientVersions =
+        config_lines_dup(options->RecommendedVersions);
+    if (!options->RecommendedServerVersions)
+      options->RecommendedServerVersions =
+        config_lines_dup(options->RecommendedVersions);
   }
 
   if (options->AuthoritativeDir && !options->DirPort) {

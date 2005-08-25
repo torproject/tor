@@ -1057,6 +1057,60 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
+  if (!strcmpstart(url,"/tor/status/")) {
+    /* v2 network status fetch. */
+    size_t url_len = strlen(url);
+    int deflated = !strcmp(url+url_len-2, ".z");
+    const char *key = url + strlen("/tor/status/");
+    if (deflated)
+      url[url_len-2] = '\0';
+    dlen = dirserv_get_networkstatus_v2(&cp, key, deflated);
+    tor_free(url);
+    if (!dlen) { /* we failed to create/cache cp */
+      write_http_status_line(conn, 503, "Network status object unavailable");
+      /* try to get a new one now */
+      // XXXX NM
+      return 0;
+    }
+    format_rfc1123_time(date, time(NULL));
+    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
+                 date,
+                 (int)dlen,
+                 deflated?"deflate":"identity");
+    connection_write_to_buf(tmp, strlen(tmp), conn);
+    connection_write_to_buf(cp, strlen(cp), conn);
+    return 0;
+  }
+
+  if (!strcmpstart(url,"/tor/server/")) {
+    size_t url_len = strlen(url);
+    int deflated = !strcmp(url+url_len-2, ".z");
+    smartlist_t *descs = smartlist_create();
+    if (deflated)
+      url[url_len-2] = '\0';
+    dirserv_get_routerdescs(descs, url);
+    tor_free(url);
+    if (!smartlist_len(descs)) {
+      write_http_status_line(conn, 400, "Servers unavailable.");
+    } else {
+      size_t len = 0;
+      format_rfc1123_time(date, time(NULL));
+      SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
+                        len += ri->signed_descriptor_len);
+      /* XXXX We need to support deflate here. */
+      tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
+                   date,
+                   (int)len);
+      connection_write_to_buf(tmp, strlen(tmp), conn);
+      SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
+                        connection_write_to_buf(ri->signed_descriptor,
+                                                ri->signed_descriptor_len,
+                                                conn));
+    }
+    smartlist_free(descs);
+    return 0;
+  }
+
   if (!strcmpstart(url,"/tor/rendezvous/") ||
       !strcmpstart(url,"/tor/rendezvous1/")) {
     /* rendezvous descriptor fetch */
