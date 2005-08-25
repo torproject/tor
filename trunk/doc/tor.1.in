@@ -156,7 +156,7 @@ is only useful when you have multiple network interfaces, and you want all
 of Tor's outgoing connections to use a single one.
 .LP
 .TP
-\fBPIDFile \fR\fIFILE\fP
+\fBPidFile \fR\fIFILE\fP
 On startup, write our PID to FILE. On clean shutdown, remove FILE.
 .LP
 .TP
