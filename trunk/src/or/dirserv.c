@@ -631,6 +631,8 @@ dirserv_log_unreachable_servers(time_t now) {
  */
 void
 dirserv_router_has_begun_reachability_testing(char *digest, time_t now) {
+  if (!descriptor_list)
+    return;
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
   {
     if (!memcmp(ri->identity_digest, digest, DIGEST_LEN))
