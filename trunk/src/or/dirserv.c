@@ -22,11 +22,14 @@ extern long stats_n_seconds_working;
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
+static int networkstatus_v2_is_dirty = 1;
 
 static void directory_remove_invalid(void);
 static int dirserv_regenerate_directory(void);
+static char *format_versions_list(config_line_t *ln);
 /* Should be static; exposed for testing */
 int add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list);
+static int router_is_general_exit(routerinfo_t *ri);
 
 /************** Fingerprint handling code ************/
 
@@ -660,6 +663,55 @@ dirserv_remove_old_servers(int age)
   }
 }
 
+/* DOCDOC */
+static char *
+format_versions_list(config_line_t *ln)
+{
+  smartlist_t *versions;
+  char *result;
+  versions = smartlist_create();
+  for ( ; ln; ln = ln->next) {
+    smartlist_split_string(versions, ln->value, ",",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  }
+  result = smartlist_join_strings(versions,",",0,NULL);
+  SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
+  smartlist_free(versions);
+  return result;
+}
+
+/* DOCDOC */
+static int
+append_signature(char *buf, size_t buf_len, const char *digest,
+                 crypto_pk_env_t *private_key)
+{
+  char signature[PK_BYTES];
+  int i;
+
+  if (crypto_pk_private_sign(private_key, signature, digest, DIGEST_LEN) < 0) {
+
+    log_fn(LOG_WARN,"Couldn't sign digest.");
+    return -1;
+  }
+  if (strlcat(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
+    goto truncated;
+
+  i = strlen(buf);
+  if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
+    log_fn(LOG_WARN,"couldn't base64-encode signature");
+    tor_free(buf);
+    return -1;
+  }
+
+  if (strlcat(buf, "-----END SIGNATURE-----\n", buf_len) >= buf_len)
+    goto truncated;
+
+  return 0;
+ truncated:
+  log_fn(LOG_WARN,"tried to exceed string length.");
+  return -1;
+}
+
 /** Generate a new directory and write it into a newly allocated string.
  * Point *<b>dir_out</b> to the allocated string.  Sign the
  * directory with <b>private_key</b>.  Return 0 on success, -1 on
@@ -672,13 +724,11 @@ dirserv_dump_directory_to_string(char **dir_out,
   char *router_status;
   char *identity_pkey; /* Identity key, DER64-encoded. */
   char *recommended_versions;
-  char digest[20];
-  char signature[128];
-  char published[33];
+  char digest[DIGEST_LEN];
+  char published[ISO_TIME_LEN+1];
   time_t published_on;
   char *buf = NULL;
   size_t buf_len;
-  int i;
   size_t identity_pkey_len;
 
   tor_assert(dir_out);
@@ -696,18 +746,7 @@ dirserv_dump_directory_to_string(char **dir_out,
     return -1;
   }
 
-  {
-    smartlist_t *versions;
-    config_line_t *ln;
-    versions = smartlist_create();
-    for (ln = get_options()->RecommendedVersions; ln; ln = ln->next) {
-      smartlist_split_string(versions, ln->value, ",",
-                             SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    }
-    recommended_versions = smartlist_join_strings(versions,",",0,NULL);
-    SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
-    smartlist_free(versions);
-  }
+  recommended_versions = format_versions_list(get_options()->RecommendedVersions);
 
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
@@ -755,25 +794,10 @@ dirserv_dump_directory_to_string(char **dir_out,
     tor_free(buf);
     return -1;
   }
-  if (crypto_pk_private_sign(private_key, signature, digest, 20) < 0) {
-    log_fn(LOG_WARN,"couldn't sign digest");
+  if (append_signature(buf,buf_len,digest,private_key)<0) {
     tor_free(buf);
     return -1;
   }
-  log(LOG_DEBUG,"generated directory digest begins with %s",hex_str(digest,4));
-
-  if (strlcat(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
-    goto truncated;
-
-  i = strlen(buf);
-  if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
-    log_fn(LOG_WARN,"couldn't base64-encode signature");
-    tor_free(buf);
-    return -1;
-  }
-
-  if (strlcat(buf, "-----END SIGNATURE-----\n", buf_len) >= buf_len)
-    goto truncated;
 
   *dir_out = buf;
   return 0;
@@ -782,12 +806,6 @@ dirserv_dump_directory_to_string(char **dir_out,
   tor_free(buf);
   return -1;
 }
-
-/** Most recently generated encoded signed directory. */
-static char *the_directory = NULL;
-static size_t the_directory_len = 0;
-static char *the_directory_z = NULL;
-static size_t the_directory_z_len = 0;
 
 /** DOCDOC */
 typedef struct cached_dir_t {
@@ -798,21 +816,22 @@ typedef struct cached_dir_t {
   time_t published;
 } cached_dir_t;
 
+/** Most recently generated encoded signed directory. (auth dirservers only.)*/
+static cached_dir_t the_directory = { NULL, NULL, 0, 0, 0 };
+
 /* used only by non-auth dirservers */
 static cached_dir_t cached_directory = { NULL, NULL, 0, 0, 0 };
 static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0 };
 
-/** If we have no cached directory, or it is older than <b>when</b>, then
- * replace it with <b>directory</b>, published at <b>when</b>.
- */
-void
-dirserv_set_cached_directory(const char *directory, time_t when,
-                             int is_running_routers)
+/* Used for other dirservers' network statuses.  Map from hexdigest to
+ * cached_dir_t. */
+static strmap_t *cached_v2_networkstatus = NULL;
+
+/** DOCDOC */
+static void
+set_cached_dir(cached_dir_t *d, const char *directory, time_t when)
 {
-  time_t now;
-  cached_dir_t *d;
-  now = time(NULL);
-  d = is_running_routers ? &cached_runningrouters : &cached_directory;
+  time_t now = time(NULL);
   if (when<=d->published) {
     log_fn(LOG_INFO, "Ignoring old directory; not caching.");
   } else if (when>=now+ROUTER_MAX_AGE) {
@@ -829,13 +848,105 @@ dirserv_set_cached_directory(const char *directory, time_t when,
       log_fn(LOG_WARN,"Error compressing cached directory");
     }
     d->published = when;
-    if (!is_running_routers) {
-      char filename[512];
-      tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
-      if (write_str_to_file(filename,cached_directory.dir,0) < 0) {
-        log_fn(LOG_NOTICE, "Couldn't write cached directory to disk. Ignoring.");
+  }
+}
+
+static void
+clear_cached_dir(cached_dir_t *d)
+{
+  tor_free(d->dir);
+  tor_free(d->dir_z);
+  memset(d, 0, sizeof(cached_dir_t));
+}
+
+static void
+free_cached_dir(void *_d)
+{
+  cached_dir_t *d = (cached_dir_t *)_d;
+  clear_cached_dir(d);
+  tor_free(d);
+}
+
+/** If we have no cached directory, or it is older than <b>when</b>, then
+ * replace it with <b>directory</b>, published at <b>when</b>.
+ */
+void
+dirserv_set_cached_directory(const char *directory, time_t published,
+                             int is_running_routers)
+{
+  cached_dir_t *d;
+  d = is_running_routers ? &cached_runningrouters : &cached_directory;
+  set_cached_dir(d, directory, published);
+  if (!is_running_routers) {
+    char filename[512];
+    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
+    if (write_str_to_file(filename,cached_directory.dir,0) < 0) {
+      log_fn(LOG_NOTICE, "Couldn't write cached directory to disk. Ignoring.");
+    }
+  }
+}
+
+/** DOCDOC */
+void
+dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
+                                    time_t published)
+{
+  cached_dir_t *d;
+  char fname[512];
+  if (!cached_v2_networkstatus)
+    cached_v2_networkstatus = strmap_new();
+
+  tor_assert(strlen(fp) == HEX_DIGEST_LEN);
+
+  if (!(d = strmap_get(cached_v2_networkstatus, fp))) {
+    d = tor_malloc_zero(sizeof(cached_dir_t));
+    strmap_set(cached_v2_networkstatus, fp, d);
+  }
+
+  tor_assert(d);
+  set_cached_dir(d, directory, published);
+
+  if (!d->dir)
+    return;
+
+  tor_snprintf(fname,sizeof(fname), "%s/cached-status/%s",
+               get_options()->DataDirectory, fp);
+  if (write_str_to_file(fname, d->dir, 0)<0) {
+    log_fn(LOG_NOTICE, "Couldn't write cached network status to disk. Ignoring.");
+  }
+}
+
+static size_t
+dirserv_get_obj(const char **out, int compress,
+                cached_dir_t *cache_src,
+                cached_dir_t *auth_src,
+                time_t dirty, int (*regenerate)(void),
+                const char *name)
+{
+  cached_dir_t *d;
+  if (!get_options()->AuthoritativeDir || !auth_src) {
+    d = cache_src;
+  } else {
+    if (regenerate != NULL) {
+      if (dirty && dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
+        if (regenerate()) {
+          log_fn(LOG_ERR, "Couldn't generate %s?", name);
+          exit(1);
+        }
+      } else {
+        log_fn(LOG_INFO, "The %s is still clean; reusing.", name);
       }
     }
+    d = auth_src;
+  }
+  if (!d)
+    return 0;
+  *out = compress ? d->dir_z : d->dir;
+  if (*out) {
+    return compress ? d->dir_z_len : d->dir_len;
+  } else {
+    /* not yet available. */
+    return 0;
   }
 }
 
@@ -845,25 +956,11 @@ dirserv_set_cached_directory(const char *directory, time_t when,
 size_t
 dirserv_get_directory(const char **directory, int compress)
 {
-  if (!get_options()->AuthoritativeDir) {
-    cached_dir_t *d = &cached_directory;
-    *directory = compress ? d->dir_z : d->dir;
-    if (*directory) {
-      return compress ? d->dir_z_len : d->dir_len;
-    } else {
-      /* no directory yet retrieved */
-      return 0;
-    }
-  }
-  if (the_directory_is_dirty &&
-      the_directory_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
-    if (dirserv_regenerate_directory())
-      return 0;
-  } else {
-    log(LOG_INFO,"Directory still clean, reusing.");
-  }
-  *directory = compress ? the_directory_z : the_directory;
-  return compress ? the_directory_z_len : the_directory_len;
+  return dirserv_get_obj(directory, compress,
+                         &cached_directory, &the_directory,
+                         the_directory_is_dirty,
+                         dirserv_regenerate_directory,
+                         "server directory");
 }
 
 /**
@@ -880,45 +977,31 @@ dirserv_regenerate_directory(void)
     tor_free(new_directory);
     return -1;
   }
-  tor_free(the_directory);
-  the_directory = new_directory;
-  the_directory_len = strlen(the_directory);
-  log_fn(LOG_INFO,"New directory (size %d):\n%s",(int)the_directory_len,
-         the_directory);
-  tor_free(the_directory_z);
-  if (tor_gzip_compress(&the_directory_z, &the_directory_z_len,
-                        the_directory, the_directory_len,
-                        ZLIB_METHOD)) {
-    log_fn(LOG_WARN, "Error gzipping directory.");
-    return -1;
-  }
+  set_cached_dir(&the_directory, new_directory, time(NULL));
+  log_fn(LOG_INFO,"New directory (size %d):\n%s",(int)the_directory.dir_len,
+         the_directory.dir);
 
   the_directory_is_dirty = 0;
 
   /* Save the directory to disk so we re-load it quickly on startup.
    */
-  dirserv_set_cached_directory(the_directory, time(NULL), 0);
+  dirserv_set_cached_directory(the_directory.dir, time(NULL), 0);
 
   return 0;
 }
 
-static char *the_runningrouters=NULL;
-static size_t the_runningrouters_len=0;
-static char *the_runningrouters_z=NULL;
-static size_t the_runningrouters_z_len=0;
+static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0 };
 
 /** Replace the current running-routers list with a newly generated one. */
 static int
-generate_runningrouters(crypto_pk_env_t *private_key)
+generate_runningrouters(void)
 {
-  char *s=NULL, *cp;
+  char *s=NULL;
   char *router_status=NULL;
   char digest[DIGEST_LEN];
-  char signature[PK_BYTES];
-  int i;
-  char published[33];
+  char published[ISO_TIME_LEN+1];
   size_t len;
-  time_t published_on;
+  crypto_pk_env_t *private_key = get_identity_key();
   char *identity_pkey; /* Identity key, DER64-encoded. */
   size_t identity_pkey_len;
 
@@ -933,49 +1016,27 @@ generate_runningrouters(crypto_pk_env_t *private_key)
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     goto err;
   }
-  published_on = time(NULL);
-  format_iso_time(published, published_on);
+  format_iso_time(published, time(NULL));
 
   len = 2048+strlen(router_status);
   s = tor_malloc_zero(len);
-  tor_snprintf(s, len, "network-status\n"
-             "published %s\n"
-             "router-status %s\n"
-             "dir-signing-key\n%s"
-             "directory-signature %s\n"
-             "-----BEGIN SIGNATURE-----\n",
-          published, router_status, identity_pkey, get_options()->Nickname);
+  tor_snprintf(s, len,
+               "network-status\n"
+               "published %s\n"
+               "router-status %s\n"
+               "dir-signing-key\n%s"
+               "directory-signature %s\n",
+               published, router_status, identity_pkey, get_options()->Nickname);
   tor_free(router_status);
   tor_free(identity_pkey);
   if (router_get_runningrouters_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
     goto err;
   }
-  if (crypto_pk_private_sign(private_key, signature, digest, 20) < 0) {
-    log_fn(LOG_WARN,"couldn't sign digest");
+  if (append_signature(s, len, digest, private_key)<0)
     goto err;
-  }
 
-  i = strlen(s);
-  cp = s+i;
-  if (base64_encode(cp, len-i, signature, 128) < 0) {
-    log_fn(LOG_WARN,"couldn't base64-encode signature");
-    goto err;
-  }
-  if (strlcat(s, "-----END SIGNATURE-----\n", len) >= len) {
-    goto err;
-  }
-
-  tor_free(the_runningrouters);
-  the_runningrouters = s;
-  the_runningrouters_len = strlen(s);
-  tor_free(the_runningrouters_z);
-  if (tor_gzip_compress(&the_runningrouters_z, &the_runningrouters_z_len,
-                        the_runningrouters, the_runningrouters_len,
-                        ZLIB_METHOD)) {
-    log_fn(LOG_WARN, "Error gzipping runningrouters");
-    return -1;
-  }
+  set_cached_dir(&the_runningrouters, s, time(NULL));
   runningrouters_is_dirty = 0;
 
   /* We don't cache running-routers to disk, so there's no point in
@@ -995,25 +1056,255 @@ generate_runningrouters(crypto_pk_env_t *private_key)
 size_t
 dirserv_get_runningrouters(const char **rr, int compress)
 {
-  if (!get_options()->AuthoritativeDir) {
-    cached_dir_t *d = &cached_runningrouters;
-    *rr = compress ? d->dir_z : d->dir;
-    if (*rr) {
-      return compress ? d->dir_z_len : d->dir_len;
-    } else {
-      /* no directory yet retrieved */
-      return 0;
+  return dirserv_get_obj(rr, compress,
+                         &cached_runningrouters, &the_runningrouters,
+                         runningrouters_is_dirty,
+                         generate_runningrouters,
+                         "v1 network status list");
+}
+
+/** DOCDOC */
+static int
+router_is_general_exit(routerinfo_t *ri)
+{
+  static const int ports[] = { 80, 443, 194 };
+  int n_allowed = 3;
+  int i;
+  for (i = 0; i < 3; ++i) {
+    struct addr_policy_t *policy = ri->exit_policy;
+    for ( ; policy; policy = policy->next) {
+      if (policy->prt_min > ports[i] || policy->prt_max < ports[i])
+        continue; /* Doesn't cover our port. */
+      if ((policy->msk & 0x00fffffful) != 0)
+        continue; /* Wider than /8. */
+      if ((policy->addr & 0xff000000ul) == 0x7f000000ul)
+        continue; /* 127.x */
+      /* We have a match that is wider than /24. */
+      if (policy->policy_type != ADDR_POLICY_ACCEPT)
+        --n_allowed;
+      break;
     }
   }
-  if (runningrouters_is_dirty &&
-      runningrouters_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
-    if (generate_runningrouters(get_identity_key())) {
-      log_fn(LOG_ERR, "Couldn't generate running-routers list?");
-      return 0;
-    }
+  return n_allowed > 0;
+}
+
+static cached_dir_t the_v2_networkstatus = { NULL, NULL, 0, 0, 0 };
+
+static int
+generate_v2_networkstatus(void)
+{
+#define BASE64_DIGEST_LEN 29
+#define LONGEST_STATUS_FLAG_NAME_LEN 7
+#define N_STATUS_FLAGS 6
+#define RS_ENTRY_LEN                                                    \
+  ( /* first line */                                                    \
+   MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
+   5*2 /* ports */ + 10 /* punctuation */ +                             \
+   /* second line */                                                    \
+   (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
+
+  int r = -1;
+  size_t len, identity_pkey_len;
+  char *status = NULL, *client_versions = NULL, *server_versions = NULL,
+    *identity_pkey = NULL, *hostname = NULL;
+  char *outp, *endp;
+  or_options_t *options = get_options();
+  char fingerprint[FINGERPRINT_LEN+1];
+  char ipaddr[INET_NTOA_BUF_LEN+1];
+  char published[ISO_TIME_LEN];
+  char digest[DIGEST_LEN];
+  struct in_addr in;
+  uint32_t addr;
+  crypto_pk_env_t *private_key = get_identity_key();
+
+  if (resolve_my_address(options, &addr, &hostname)<0) {
+    log_fn(LOG_WARN, "Couldn't resolve my hostname");
+    goto done;
   }
-  *rr = compress ? the_runningrouters_z : the_runningrouters;
-  return compress ? the_runningrouters_z_len : the_runningrouters_len;
+  in.s_addr = htonl(addr);
+  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
+
+  format_iso_time(published, time(NULL));
+
+  client_versions = format_versions_list(options->RecommendedClientVersions);
+  server_versions = format_versions_list(options->RecommendedServerVersions);
+
+  if (crypto_pk_write_public_key_to_string(private_key, &identity_pkey,
+                                           &identity_pkey_len)<0) {
+    log_fn(LOG_WARN,"Writing public key to string failed.");
+    goto done;
+  }
+
+  if (crypto_pk_get_fingerprint(private_key, fingerprint, 0)<0) {
+    log_fn(LOG_ERR, "Error computing fingerprint");
+    return -1;
+  }
+
+  len = 2048+strlen(client_versions)+strlen(server_versions)+identity_pkey_len*2;
+  len += (RS_ENTRY_LEN)*smartlist_len(descriptor_list) ;
+
+  status = tor_malloc(len);
+  tor_snprintf(status, len,
+               "network-status-version 2\n"
+               "dir-source %s %s %d\n"
+               "dir-fingerprint %s\n"
+               "published %s\n"
+               "dir-options %s\n"
+               "client-versions %s\n"
+               "server-versions %s\n"
+               "dir-signing-key\n%s\n",
+               hostname, ipaddr, (int)options->DirPort,
+               fingerprint,
+               published,
+               "Names",
+               client_versions,
+               server_versions,
+               identity_pkey);
+  outp = status + strlen(status);
+  endp = status + len;
+
+  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri, {
+      int f_exit = router_is_general_exit(ri);
+      int f_stable = !router_is_unreliable(ri, 1, 0);
+      int f_fast = !router_is_unreliable(ri, 0, 1);
+      int f_running;
+      int f_named = ri->is_verified;
+      int f_valid = f_named;
+      char identity64[128];
+      char digest64[128];
+
+      if (options->AuthoritativeDir) {
+        connection_t *conn = connection_get_by_identity_digest(
+                                         ri->identity_digest, CONN_TYPE_OR);
+        f_running = (router_is_me(ri) && !we_are_hibernating()) ||
+          (conn && conn->state == OR_CONN_STATE_OPEN);
+      } else {
+        f_running = ri->is_running;
+      }
+
+      format_iso_time(published, ri->published_on);
+
+      if (base64_encode(identity64, sizeof(identity64),
+                        ri->identity_digest, DIGEST_LEN)<0)
+        goto done;
+      if (base64_encode(digest64, sizeof(digest64),
+                        ri->signed_descriptor_digest, DIGEST_LEN)<0)
+        goto done;
+      identity64[BASE64_DIGEST_LEN] = '\0';
+      digest64[BASE64_DIGEST_LEN] = '\0';
+
+      in.s_addr = htonl(ri->addr);
+      tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
+
+      if (tor_snprintf(outp, endp-outp,
+                       "r %s %s %s %s %s %d %d\n"
+                       "s%s%s%s%s%s%s\n",
+                       ri->nickname,
+                       identity64,
+                       digest64,
+                       published,
+                       ipaddr,
+                       ri->or_port,
+                       ri->dir_port,
+                       f_exit?" Exit":"",
+                       f_stable?" Stable":"",
+                       f_fast?" Fast":"",
+                       f_running?" Running":"",
+                       f_named?" Named":"",
+                       f_valid?" Valid":"")<0) {
+        log_fn(LOG_WARN, "Unable to print router status.");
+        goto done;
+      }
+      outp += strlen(outp);
+    });
+
+  if (tor_snprintf(outp, endp-outp, "directory-signature %s\n",
+                   get_options()->Nickname)<0) {
+    log_fn(LOG_WARN, "Unable to write signature line.");
+    goto done;
+  }
+
+  if (router_get_networkstatus_v2_hash(status, digest)<0) {
+    log_fn(LOG_WARN, "Unable to hash network status");
+    goto done;
+  }
+
+  if (append_signature(outp,endp-outp,digest,private_key)<0)
+    goto done;
+
+  set_cached_dir(&the_v2_networkstatus, status, time(NULL));
+  dirserv_set_cached_networkstatus_v2(status, fingerprint, time(NULL));
+
+  r = 0;
+ done:
+  tor_free(client_versions);
+  tor_free(server_versions);
+  tor_free(status);
+  tor_free(hostname);
+  tor_free(identity_pkey);
+  return r;
+}
+
+size_t
+dirserv_get_networkstatus_v2(const char **directory, const char *key,
+                             int compress)
+{
+  *directory = NULL;
+  if (!(strcmp(key,"authority"))) {
+    if (get_options()->AuthoritativeDir) {
+      return dirserv_get_obj(directory, compress, NULL,
+                             &the_v2_networkstatus,
+                             networkstatus_v2_is_dirty,
+                             generate_v2_networkstatus,
+                             "network status list");
+    }
+  } else if (!strcmp(key, "all")) {
+    // XXXX NM
+    return dirserv_get_networkstatus_v2(directory, "authority", compress);
+  } else if (strlen(key)==HEX_DIGEST_LEN) {
+    cached_dir_t *cached = strmap_get(cached_v2_networkstatus, key);
+    if (cached)
+      return dirserv_get_obj(directory, compress, cached, NULL, 0, NULL,
+                             "cached network status");
+  }
+  return 0;
+}
+
+void
+dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
+{
+
+  if (!strcmp(key, "/tor/server/all")) {
+    smartlist_add_all(descs_out, descriptor_list);
+  } else if (!strcmp(key, "/tor/server/authority")) {
+    routerinfo_t *ri = router_get_my_routerinfo();
+    if (ri)
+      smartlist_add(descs_out, ri);
+  } else if (!strcmpstart(key, "/tor/server/fp/")) {
+    smartlist_t *hexdigests = smartlist_create();
+    smartlist_t *digests = smartlist_create();
+    key += strlen("/tor/server/fp/");
+    smartlist_split_string(hexdigests, key, "+", 0, 0);
+    SMARTLIST_FOREACH(hexdigests, char *, cp,
+                      {
+                        char *d;
+                        if (strlen(cp) != HEX_DIGEST_LEN)
+                          continue;
+                        d = tor_malloc_zero(DIGEST_LEN);
+                        base16_decode(d, DIGEST_LEN, cp, HEX_DIGEST_LEN);
+                        tor_free(cp);
+                        smartlist_add(digests, d);
+                      });
+    smartlist_free(hexdigests);
+    SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+                      SMARTLIST_FOREACH(digests, const char *, d,
+                        if (!memcmp(d,ri->identity_digest,DIGEST_LEN)) {
+                          smartlist_add(descs_out,ri);
+                          break;
+                        }));
+    SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
+    smartlist_free(digests);
+  }
 }
 
 /** Called when a TLS handshake has completed successfully with a
@@ -1087,19 +1378,11 @@ dirserv_free_all(void)
     smartlist_free(descriptor_list);
     descriptor_list = NULL;
   }
-  tor_free(the_directory);
-  tor_free(the_directory_z);
-  the_directory_len = 0;
-  the_directory_z_len = 0;
-  tor_free(the_runningrouters);
-  tor_free(the_runningrouters_z);
-  the_runningrouters_len = 0;
-  the_runningrouters_z_len = 0;
-  tor_free(cached_directory.dir);
-  tor_free(cached_directory.dir_z);
-  tor_free(cached_runningrouters.dir);
-  tor_free(cached_runningrouters.dir_z);
-  memset(&cached_directory, 0, sizeof(cached_directory));
-  memset(&cached_runningrouters, 0, sizeof(cached_runningrouters));
+  clear_cached_dir(&the_directory);
+  clear_cached_dir(&the_runningrouters);
+  clear_cached_dir(&cached_directory);
+  clear_cached_dir(&cached_runningrouters);
+  strmap_free(cached_v2_networkstatus, free_cached_dir);
+  cached_v2_networkstatus = NULL;
 }
 

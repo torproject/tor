@@ -708,6 +708,8 @@ typedef struct addr_policy_t {
 /** Information about another onion router in the network. */
 typedef struct {
   char *signed_descriptor; /**< The original signed descriptor for this router*/
+  size_t signed_descriptor_len; /**< The length of signed_descriptor */
+  char signed_descriptor_digest[DIGEST_LEN]; /**< The digest of the signed descriptor. */
 
   char *address; /**< Location of OR: either a hostname or an IP address. */
   char *nickname; /**< Human-readable OR name. */
@@ -1078,6 +1080,8 @@ typedef struct {
   /** Directory server only: which versions of
    * Tor should we tell users to run? */
   config_line_t *RecommendedVersions;
+  config_line_t *RecommendedClientVersions;
+  config_line_t *RecommendedServerVersions;
   /** Whether dirservers refuse router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
@@ -1360,7 +1364,8 @@ const char *safe_str(const char *address);
 int config_get_lines(char *string, config_line_t **result);
 void config_free_lines(config_line_t *front);
 int options_trial_assign(config_line_t *list, int reset);
-int resolve_my_address(or_options_t *options, uint32_t *addr);
+int resolve_my_address(or_options_t *options, uint32_t *addr,
+                       char **hostname_out);
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
 int options_init_logs(or_options_t *options, int validate_only);
@@ -1635,6 +1640,11 @@ size_t dirserv_get_directory(const char **cp, int compress);
 size_t dirserv_get_runningrouters(const char **rr, int compress);
 void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
+void dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
+                                         time_t published);
+size_t dirserv_get_networkstatus_v2(const char **directory, const char *key,
+                                    int compress);
+void dirserv_get_routerdescs(smartlist_t *descs_out, const char *key);
 void dirserv_orconn_tls_done(const char *address,
                              uint16_t or_port,
                              const char *digest_rcvd,
@@ -2023,6 +2033,7 @@ typedef struct tor_version_t {
 int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
+int router_get_networkstatus_v2_hash(const char *s, char *digest);
 int router_parse_list_from_string(const char **s,
                                   routerlist_t **dest,
                                   smartlist_t *good_nickname_list,

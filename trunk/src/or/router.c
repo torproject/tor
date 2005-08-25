@@ -728,7 +728,7 @@ router_rebuild_descriptor(int force)
   if (desc_clean_since && !force)
     return 0;
 
-  if (resolve_my_address(options, &addr) < 0) {
+  if (resolve_my_address(options, &addr, NULL) < 0) {
     log_fn(LOG_WARN,"options->Address didn't resolve into an IP.");
     return -1;
   }
@@ -774,6 +774,9 @@ router_rebuild_descriptor(int force)
     log_fn(LOG_WARN, "Couldn't dump router to string.");
     return -1;
   }
+  ri->signed_descriptor_len = strlen(ri->signed_descriptor);
+  crypto_digest(ri->signed_descriptor_digest,
+                ri->signed_descriptor, ri->signed_descriptor_len);
 
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
