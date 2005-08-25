@@ -80,14 +80,15 @@ $Id$
    The preamble contains:
 
       "network-status-version" -- A document format version.  For this
-         specification, the version is "1".
-      "directory-source" -- The hostname, current IP address, and directory
+         specification, the version is "2".
+      "dir-source" -- The hostname, current IP address, and directory
          port of the directory server, separated by spaces.
-      "directory-signing-key" -- The directory server's public signing key.
+      "dir-fingerprint" -- XXXX DOCDOC
+      "dir-signing-key" -- The directory server's public signing key.
       "client-versions" -- A comma-separated list of recommended client versions
       "server-versions" -- A comma-separated list of recommended server versions
       "published" -- The publication time for this network-status object.
-      "directory-options" -- A set of flags separated by spaces:
+      "dir-options" -- A set of flags separated by spaces:
           "Names" if this directory server performs name bindings
 
    The directory-options entry is optional; the others are required and must
@@ -150,16 +151,34 @@ $Id$
    other directory servers (name X is bound to identity Y if at least one
    binding directory lists it, and no directory binds X to some other Y'.)
 
-   The authoritative directory published by a host should be available at:
+   The authoritative network-status published by a host should be available at:
       http://<hostname>/tor/status/authority.z
+
+   An authoritative network-status published by another host with fingerprint <F>
+   should be available at:
+      http://<hostname>/tor/status/<F>.z
+
+   The most recent network-status documents from all known authoritative
+   directories, concatenated, should be available at:
+         http://<hostname>/tor/status/all.z
 
    The most recent descriptor for a server whose identity key has a
    fingerprint of <F> should be available at:
       http://<hostname>/tor/server/fp/<F>.z
 
+   The most recent descriptors for servers have fingerprints <F1>,<F2>,<F3>
+   should be available at:
+      http://<hostname>/tor/server/fp/<F1>+<F2>+<F3>.z
+
+   The most recent descriptor for this server should be at:
+      http://<hostname>/tor/server/authority.z
+
    A concatenated set of the most recent descriptors for all known servers
    should be available at:
       http://<hostname>/tor/server/all.z
+
+   For debugging, directories MAY expose non-compressed objects at URLs like
+   the above, but without the final ".z".
 
    [XXXX specify concatenation of several servers.]
 
