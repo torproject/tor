@@ -1275,6 +1275,19 @@ dirserv_get_networkstatus_v2(const char **directory, const char *key,
 void
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
 {
+  smartlist_t *complete_list;
+
+  /* This is annoying. Can we unify these? */
+  if (descriptor_list)
+    complete_list = descriptor_list;
+  else {
+    routerlist_t *rlst;
+    router_get_routerlist(&rlst);
+    complete_list = rlst->routers;
+  }
+
+  if (!complete_list)
+    return;
 
   if (!strcmp(key, "/tor/server/all")) {
     smartlist_add_all(descs_out, descriptor_list);
