@@ -151,12 +151,19 @@ line.</li>
 dirservers. For each fingerprint, add a line like<br>
 <tt>DirServer 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF</tt><br>
 to the torrc of each client and server who will be using your network.</li>
-<li>4: Collect the 'fingerprint' lines from
+<li>4: Each server (including the dir-servers) should set
+"AssumeReachable 1" in their torrc. This bypasses the reachability detection
+and lets the network bootstrap.
+<li>5: If you are running the network using local/private IP space, the
+dirservers need to set "DirAllowPrivateAddresses 1" in their torrc, and
+all the servers need to explicitly set their Address to their IP in the
+torrc.
+<li>6: Collect the 'fingerprint' lines from
 each server (including directory servers), and include them (one per
 line) in each approved-routers file. You can hup the tor process for
 each directory server to reload the approved-routers file (so you don't
 have to restart the process).</li>
-<li>5: Be sure to start at least 4 servers including dir-servers. If
+<li>7: Be sure to start at least 4 servers including dir-servers. If
 they're not succeeding at building circuits, hup them until they do.</li>
 </ul>
 
