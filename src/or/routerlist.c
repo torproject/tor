@@ -893,9 +893,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
       if (router->published_on <= old_router->published_on) {
         log_fn(LOG_DEBUG, "Skipping not-new descriptor for router '%s'",
                router->nickname);
-        if (!authdir)
+        if (!authdir) {
           /* Update the is_running status to whatever we were told. */
           old_router->is_running = router->is_running;
+        }
         routerinfo_free(router);
         if (msg) *msg = "Router descriptor was not new.";
         return -1;
