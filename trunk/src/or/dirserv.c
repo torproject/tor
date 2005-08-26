@@ -235,22 +235,14 @@ dirserv_free_fingerprint_list()
  *    Descriptor list
  */
 
-/** List of routerinfo_t for all server descriptors that this dirserv
- * is holding.
- * XXXX This should eventually get coalesced into routerlist.c
- */
-static smartlist_t *descriptor_list = NULL;
-
-/** Release all storage that the dirserv is holding for server
- * descriptors. */
-void
-dirserv_free_descriptors()
+static smartlist_t *
+get_descriptor_list(void)
 {
-  if (!descriptor_list)
-    return;
-  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
-                    routerinfo_free(ri));
-  smartlist_clear(descriptor_list);
+  routerlist_t *routerlist;
+  router_get_routerlist(&routerlist);
+  if (!routerlist)
+    return NULL;
+  return routerlist->routers;
 }
 
 /** Return -1 if <b>ri</b> has a private or otherwise bad address,
@@ -274,6 +266,64 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
   return 0;
 }
 
+int
+dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
+                               const char **msg)
+{
+  /* Okay.  Now check whether the fingerprint is recognized. */
+  int r = dirserv_router_fingerprint_is_known(ri);
+  time_t now;
+  if (r==-1) {
+    log_fn(LOG_WARN, "Known nickname '%s', wrong fingerprint. Not adding (ContactInfo '%s', platform '%s').",
+           ri->nickname, ri->contact_info ? ri->contact_info : "",
+           ri->platform ? ri->platform : "");
+    *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
+    return -1;
+  } else if (r==0) {
+    char fp[FINGERPRINT_LEN+1];
+    log_fn(LOG_INFO, "Unknown nickname '%s' (%s:%d). Will try to add.",
+           ri->nickname, ri->address, ri->or_port);
+    if (crypto_pk_get_fingerprint(ri->identity_pkey, fp, 1) < 0) {
+      log_fn(LOG_WARN, "Error computing fingerprint for '%s'", ri->nickname);
+    } else {
+      log_fn(LOG_INFO, "Fingerprint line: %s %s", ri->nickname, fp);
+    }
+    *verified = 0;
+  } else {
+    *verified = 1;
+  }
+  /* Is there too much clock skew? */
+  now = time(NULL);
+  if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
+    log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding (ContactInfo '%s', platform '%s').",
+           ri->nickname, (int)((ri->published_on-now)/60),
+           ri->contact_info ? ri->contact_info : "",
+           ri->platform ? ri->platform : "");
+    *msg = "Rejected: Your clock is set too far in the future, or your timezone is not correct.";
+    return -1;
+  }
+  if (ri->published_on < now-ROUTER_MAX_AGE) {
+    log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
+           ri->nickname, (int)((now-ri->published_on)/60),
+           ri->contact_info ? ri->contact_info : "",
+           ri->platform ? ri->platform : "");
+    *msg = "Rejected: Server is expired, or your clock is too far in the past, or your timezone is not correct.";
+    return -1;
+  }
+  if (dirserv_router_has_valid_address(ri) < 0) {
+    log_fn(LOG_NOTICE, "Router with nickname '%s' has invalid address '%s'. Not adding (ContactInfo '%s', platform '%s').",
+           ri->nickname, ri->address,
+           ri->contact_info ? ri->contact_info : "",
+           ri->platform ? ri->platform : "");
+    *msg = "Rejected: Address is not an IP, or IP is a private address.";
+    return -1;
+  }
+
+  return 0;
+}
+
+
+
 /** Parse the server descriptor at *desc and maybe insert it into the
  * list of server descriptors, and (if the descriptor is well-formed)
  * advance *desc immediately past the descriptor's end.  Set msg to a
@@ -288,17 +338,12 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 int
 dirserv_add_descriptor(const char **desc, const char **msg)
 {
-  routerinfo_t *ri = NULL, *ri_old=NULL;
-  int i, r, found=-1;
+  routerinfo_t *ri = NULL;
   char *start, *end;
   char *desc_tmp = NULL;
   size_t desc_len;
-  time_t now;
-  int verified=1; /* whether we knew its fingerprint already */
   tor_assert(msg);
   *msg = NULL;
-  if (!descriptor_list)
-    descriptor_list = smartlist_create();
 
   start = strstr(*desc, "router ");
   if (!start) {
@@ -323,104 +368,11 @@ dirserv_add_descriptor(const char **desc, const char **msg)
     *msg = "Rejected: Couldn't parse server descriptor.";
     return -1;
   }
-  /* Okay.  Now check whether the fingerprint is recognized. */
-  r = dirserv_router_fingerprint_is_known(ri);
-  if (r==-1) {
-    log_fn(LOG_WARN, "Known nickname '%s', wrong fingerprint. Not adding (ContactInfo '%s', platform '%s').",
-           ri->nickname, ri->contact_info ? ri->contact_info : "",
-           ri->platform ? ri->platform : "");
-    *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
-    routerinfo_free(ri);
-    *desc = end;
+  if (router_add_to_routerlist(ri, msg)) {
     return -1;
-  } else if (r==0) {
-    char fp[FINGERPRINT_LEN+1];
-    log_fn(LOG_INFO, "Unknown nickname '%s' (%s:%d). Will try to add.",
-           ri->nickname, ri->address, ri->or_port);
-    if (crypto_pk_get_fingerprint(ri->identity_pkey, fp, 1) < 0) {
-      log_fn(LOG_WARN, "Error computing fingerprint for '%s'", ri->nickname);
-    } else {
-      log_fn(LOG_INFO, "Fingerprint line: %s %s", ri->nickname, fp);
-    }
-    verified = 0;
-  }
-  /* Is there too much clock skew? */
-  now = time(NULL);
-  if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding (ContactInfo '%s', platform '%s').",
-           ri->nickname, (int)((ri->published_on-now)/60),
-           ri->contact_info ? ri->contact_info : "",
-           ri->platform ? ri->platform : "");
-    *msg = "Rejected: Your clock is set too far in the future, or your timezone is not correct.";
-    routerinfo_free(ri);
-    *desc = end;
-    return -1;
-  }
-  if (ri->published_on < now-ROUTER_MAX_AGE) {
-    log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
-           ri->nickname, (int)((now-ri->published_on)/60),
-           ri->contact_info ? ri->contact_info : "",
-           ri->platform ? ri->platform : "");
-    *msg = "Rejected: Server is expired, or your clock is too far in the past, or your timezone is not correct.";
-    routerinfo_free(ri);
-    *desc = end;
-    return -1;
-  }
-  if (dirserv_router_has_valid_address(ri) < 0) {
-    log_fn(LOG_NOTICE, "Router with nickname '%s' has invalid address '%s'. Not adding (ContactInfo '%s', platform '%s').",
-           ri->nickname, ri->address,
-           ri->contact_info ? ri->contact_info : "",
-           ri->platform ? ri->platform : "");
-    *msg = "Rejected: Address is not an IP, or IP is a private address.";
-    routerinfo_free(ri);
-    *desc = end;
-    return -1;
-  }
-
-  /* Do we already have an entry for this router? */
-  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
-    ri_old = smartlist_get(descriptor_list, i);
-    if (!memcmp(ri->identity_digest, ri_old->identity_digest, DIGEST_LEN)) {
-      found = i;
-      break;
-    }
-  }
-  if (found >= 0) {
-    char hex_digest[HEX_DIGEST_LEN+1];
-    base16_encode(hex_digest, HEX_DIGEST_LEN+1, ri->identity_digest,DIGEST_LEN);
-    /* if so, decide whether to update it. */
-    if (ri_old->published_on >= ri->published_on) {
-      /* We already have a newer or equal-time descriptor */
-      log_fn(LOG_INFO,"We already have a new enough desc for server %s (nickname '%s'). Not adding.",hex_digest,ri->nickname);
-      *msg = "We already have a newer descriptor.";
-      /* This isn't really an error; return success. */
-      routerinfo_free(ri);
-      *desc = end;
-      return verified;
-    }
-    /* We don't already have a newer one; we'll update this one. */
-    log_fn(LOG_INFO,"Dirserv updating desc for server %s (nickname '%s')",hex_digest,ri->nickname);
-    if (ri->addr == ri_old->addr && ri->or_port == ri_old->or_port) {
-      ri->last_reachable = ri_old->last_reachable; /* these carry over */
-      ri->testing_since = ri_old->testing_since;
-    }
-    *msg = verified?"Verified server updated":"Unverified server updated. (Have you sent us your key fingerprint?)";
-    routerinfo_free(ri_old);
-    smartlist_del_keeporder(descriptor_list, found);
   } else {
-    /* Add at the end. */
-    log_fn(LOG_INFO,"Dirserv adding desc for nickname '%s'",ri->nickname);
-    *msg = verified?"Verified server added":"Unverified server added. (Have you sent us your key fingerprint?)";
+    return ri->is_verified ? 1 : 0;
   }
-
-  ri->is_verified = verified ||
-                    tor_version_as_new_as(ri->platform,"0.1.0.2-rc");
-  smartlist_add(descriptor_list, ri);
-
-  *desc = end;
-  directory_set_dirty();
-
-  return verified;
 }
 
 /** Remove all descriptors whose nicknames or fingerprints no longer
@@ -431,27 +383,33 @@ static void
 directory_remove_invalid(void)
 {
   int i;
-  int r;
-  routerinfo_t *ent;
+  int changed = 0;
+  smartlist_t *descriptor_list = get_descriptor_list();
+
   if (!descriptor_list)
-    descriptor_list = smartlist_create();
+    return;
 
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
-    ent = smartlist_get(descriptor_list, i);
-    r = dirserv_router_fingerprint_is_known(ent);
+    routerinfo_t *ent = smartlist_get(descriptor_list, i);
+    int r = dirserv_router_fingerprint_is_known(ent);
     if (r<0) {
       log(LOG_INFO, "Router '%s' is now verified with a key; removing old router with same name and different key.",
           ent->nickname);
       routerinfo_free(ent);
       smartlist_del(descriptor_list, i--);
+      changed = 1;
     } else if (r>0 && !ent->is_verified) {
       log(LOG_INFO, "Router '%s' is now approved.", ent->nickname);
       ent->is_verified = 1;
+      changed = 1;
     } else if (r==0 && ent->is_verified) {
       log(LOG_INFO, "Router '%s' is no longer approved.", ent->nickname);
       ent->is_verified = 0;
+      changed = 1;
     }
   }
+  if (changed)
+    directory_set_dirty();
 }
 
 /** Write a list of unregistered descriptors into a newly allocated
@@ -467,6 +425,7 @@ dirserver_getinfo_unregistered(const char *question)
   char *answer;
   routerinfo_t *ent;
   int min_bw = atoi(question);
+  smartlist_t *descriptor_list = get_descriptor_list();
 
   if (!descriptor_list)
     return tor_strdup("");
@@ -608,7 +567,11 @@ list_server_status(smartlist_t *routers, char **router_status_out)
  * been found unreachable for the past several testing periods.
  */
 void
-dirserv_log_unreachable_servers(time_t now) {
+dirserv_log_unreachable_servers(time_t now)
+{
+  smartlist_t *descriptor_list = get_descriptor_list();
+  if (!descriptor_list)
+    return;
 
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
   {
@@ -631,7 +594,9 @@ dirserv_log_unreachable_servers(time_t now) {
  * (This function can go away when we merge descriptor-list and router-list.)
  */
 void
-dirserv_router_has_begun_reachability_testing(char *digest, time_t now) {
+dirserv_router_has_begun_reachability_testing(char *digest, time_t now)
+{
+  smartlist_t *descriptor_list = get_descriptor_list();
   if (!descriptor_list)
     return;
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
@@ -640,30 +605,6 @@ dirserv_router_has_begun_reachability_testing(char *digest, time_t now) {
       if (!ri->testing_since)
         ri->testing_since = now;
   });
-}
-
-/** Remove any descriptors from the directory that are more than <b>age</b>
- * seconds old.
- */
-void
-dirserv_remove_old_servers(int age)
-{
-  int i;
-  time_t cutoff;
-  routerinfo_t *ent;
-  if (!descriptor_list)
-    descriptor_list = smartlist_create();
-
-  cutoff = time(NULL) - age;
-  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
-    ent = smartlist_get(descriptor_list, i);
-    if (ent->published_on <= cutoff) {
-      /* descriptor_list[i] is too old.  Remove it. */
-      routerinfo_free(ent);
-      smartlist_del(descriptor_list, i--);
-      directory_set_dirty();
-    }
-  }
 }
 
 /* Given a (possibly empty) list of config_line_t, each line of which contains
@@ -704,12 +645,13 @@ dirserv_dump_directory_to_string(char **dir_out,
   char *buf = NULL;
   size_t buf_len;
   size_t identity_pkey_len;
+  smartlist_t *descriptor_list = get_descriptor_list();
 
   tor_assert(dir_out);
   *dir_out = NULL;
 
   if (!descriptor_list)
-    descriptor_list = smartlist_create();
+    return -1;
 
   if (list_server_status(descriptor_list, &router_status))
     return -1;
@@ -722,14 +664,13 @@ dirserv_dump_directory_to_string(char **dir_out,
 
   recommended_versions = format_versions_list(get_options()->RecommendedVersions);
 
-  dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   format_iso_time(published, published_on);
 
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
-                    buf_len += strlen(ri->signed_descriptor));
+                    buf_len += ri->signed_descriptor_len);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
      function, though strictly speaking we shouldn't be able to exceed
@@ -997,9 +938,7 @@ generate_runningrouters(void)
   crypto_pk_env_t *private_key = get_identity_key();
   char *identity_pkey; /* Identity key, DER64-encoded. */
   size_t identity_pkey_len;
-
-  if (!descriptor_list)
-    descriptor_list = smartlist_create();
+  smartlist_t *descriptor_list = get_descriptor_list();
 
   if (list_server_status(descriptor_list, &router_status)) {
     goto err;
@@ -1113,6 +1052,12 @@ generate_v2_networkstatus(void)
   struct in_addr in;
   uint32_t addr;
   crypto_pk_env_t *private_key = get_identity_key();
+  smartlist_t *descriptor_list = get_descriptor_list();
+
+  if (!descriptor_list) {
+    log_fn(LOG_WARN, "Couldn't get router list.");
+    goto done;
+  }
 
   if (resolve_my_address(options, &addr, &hostname)<0) {
     log_fn(LOG_WARN, "Couldn't resolve my hostname");
@@ -1285,22 +1230,12 @@ dirserv_get_networkstatus_v2(const char **directory, const char *key,
 void
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
 {
-  smartlist_t *complete_list;
-
-  /* This is annoying. Can we unify these? */
-  if (descriptor_list)
-    complete_list = descriptor_list;
-  else {
-    routerlist_t *rlst;
-    router_get_routerlist(&rlst);
-    complete_list = rlst->routers;
-  }
-
+  smartlist_t *complete_list = get_descriptor_list();
   if (!complete_list)
     return;
 
   if (!strcmp(key, "/tor/server/all")) {
-    smartlist_add_all(descs_out, descriptor_list);
+    smartlist_add_all(descs_out, complete_list);
   } else if (!strcmp(key, "/tor/server/authority")) {
     routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
@@ -1323,7 +1258,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
     smartlist_free(hexdigests);
     /* XXXX should always return own descriptor. or special-case it. or
      * something. */
-    SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+    SMARTLIST_FOREACH(complete_list, routerinfo_t *, ri,
                       SMARTLIST_FOREACH(digests, const char *, d,
                         if (!memcmp(d,ri->identity_digest,DIGEST_LEN)) {
                           smartlist_add(descs_out,ri);
@@ -1352,6 +1287,7 @@ dirserv_orconn_tls_done(const char *address,
                         int as_advertised)
 {
   int i;
+  smartlist_t *descriptor_list = get_descriptor_list();
   tor_assert(address);
   tor_assert(digest_rcvd);
   tor_assert(nickname_rcvd);
@@ -1359,6 +1295,8 @@ dirserv_orconn_tls_done(const char *address,
   if (!descriptor_list)
     return;
 
+  // XXXXNM We should really have a better solution here than dropping
+  // XXXXNM whole routers; otherwise, they come back way too easily.
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     routerinfo_t *ri = smartlist_get(descriptor_list, i);
     int drop = 0;
@@ -1398,12 +1336,6 @@ dirserv_free_all(void)
                         tor_free(fp); });
     smartlist_free(fingerprint_list);
     fingerprint_list = NULL;
-  }
-  if (descriptor_list) {
-    SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
-                      routerinfo_free(ri));
-    smartlist_free(descriptor_list);
-    descriptor_list = NULL;
   }
   clear_cached_dir(&the_directory);
   clear_cached_dir(&the_runningrouters);

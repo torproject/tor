@@ -861,40 +861,59 @@ router_mark_as_down(const char *digest)
  * *<b>msg</b> a static string describing the reason for refusing the
  * routerinfo.
  */
-static int
+int
 router_add_to_routerlist(routerinfo_t *router, const char **msg)
 {
   int i;
-  routerinfo_t *r;
   char id_digest[DIGEST_LEN];
+  int authdir = get_options()->AuthoritativeDir;
+  int authdir_verified = 0;
 
   tor_assert(routerlist);
   crypto_pk_get_digest(router->identity_pkey, id_digest);
+
+  if (authdir) {
+    if (dirserv_wants_to_reject_router(router, &authdir_verified, msg))
+      return -1;
+    router->is_verified = authdir_verified;
+    if (tor_version_as_new_as(router->platform,"0.1.0.2-rc"))
+      router->is_verified = 1;
+  }
 
   /* If we have a router with this name, and the identity key is the same,
    * choose the newer one. If the identity key has changed, drop the router.
    */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
-    r = smartlist_get(routerlist->routers, i);
-
-    if (!crypto_pk_cmp_keys(router->identity_pkey, r->identity_pkey)) {
-      if (router->published_on > r->published_on) {
-        log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
-               router->nickname, r->nickname, hex_str(id_digest,DIGEST_LEN));
-//XXXRD        /* Remember whether we trust this router as a dirserver. */
-        routerinfo_free(r);
-        smartlist_set(routerlist->routers, i, router);
-        return 0;
-      } else {
+    routerinfo_t *old_router = smartlist_get(routerlist->routers, i);
+    if (!crypto_pk_cmp_keys(router->identity_pkey,old_router->identity_pkey)) {
+      if (router->published_on <= old_router->published_on) {
         log_fn(LOG_DEBUG, "Skipping not-new descriptor for router '%s'",
                router->nickname);
-        /* Update the is_running status to whatever we were told. */
-        r->is_running = router->is_running;
+        if (!authdir)
+          /* Update the is_running status to whatever we were told. */
+          old_router->is_running = router->is_running;
         routerinfo_free(router);
         if (msg) *msg = "Router descriptor was not new.";
         return -1;
+      } else {
+        log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
+               router->nickname, old_router->nickname,
+               hex_str(id_digest,DIGEST_LEN));
+        if (router->addr == old_router->addr &&
+            router->or_port == old_router->or_port) {
+          /* these carry over when the address and orport are unchanged.*/
+          router->last_reachable = old_router->last_reachable;
+          router->testing_since = old_router->testing_since;
+        }
+        if (msg)
+          *msg = authdir_verified ? "Verified server updated":
+          "Unverified server updated. (Have you sent us your key finerprint?)";
+        routerinfo_free(old_router);
+        smartlist_set(routerlist->routers, i, router);
+        directory_set_dirty();
+        return 0;
       }
-    } else if (!strcasecmp(router->nickname, r->nickname)) {
+    } else if (!strcasecmp(router->nickname, old_router->nickname)) {
       /* nicknames match, keys don't. */
       if (router->is_verified) {
         /* The new verified router replaces the old one; remove the
@@ -905,14 +924,15 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
          * make new ones with the new key.
          */
         connection_t *conn;
-        while ((conn = connection_get_by_identity_digest(r->identity_digest,
-                                                         CONN_TYPE_OR))) {
-          log_fn(LOG_INFO,"Closing conn to obsolete router '%s'", r->nickname);
+        while ((conn = connection_get_by_identity_digest(
+                                old_router->identity_digest, CONN_TYPE_OR))) {
+          log_fn(LOG_INFO,"Closing conn to obsolete router '%s'",
+                 old_router->nickname);
           connection_mark_for_close(conn);
         }
-        routerinfo_free(r);
+        routerinfo_free(old_router);
         smartlist_del_keeporder(routerlist->routers, i--);
-      } else if (r->is_verified) {
+      } else if (old_router->is_verified) {
         /* Can't replace a verified router with an unverified one. */
         log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
                router->nickname);
@@ -925,16 +945,13 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
   /* We haven't seen a router with this name before.  Add it to the end of
    * the list. */
   smartlist_add(routerlist->routers, router);
+  directory_set_dirty();
   return 0;
 }
 
 /** Remove any routers from the routerlist that are more than <b>age</b>
  * seconds old.
- *
- * (This function is just like dirserv_remove_old_servers. One day we should
- * merge them.)
  */
-//XXXRD
 void
 routerlist_remove_old_routers(int age)
 {
@@ -956,7 +973,7 @@ routerlist_remove_old_routers(int age)
   }
 }
 
-/*
+/**
  * Code to parse a single router descriptor and insert it into the
  * routerlist.  Return -1 if the descriptor was ill-formed; 0 if the
  * descriptor was well-formed but could not be added; and 1 if the
@@ -965,6 +982,8 @@ routerlist_remove_old_routers(int age)
  * If we don't add it and <b>msg</b> is not NULL, then assign to
  * *<b>msg</b> a static string describing the reason for refusing the
  * descriptor.
+ *
+ * This is used only by the controller.
  */
 int
 router_load_single_router(const char *s, const char **msg)
@@ -1350,6 +1369,7 @@ routers_update_status_from_entry(smartlist_t *routers,
                                  time_t list_time,
                                  const char *s)
 {
+  int authdir = get_options()->AuthoritativeDir;
   int is_running = 1;
   int is_verified = 0;
   int hex_digest_set = 0;
@@ -1421,13 +1441,22 @@ routers_update_status_from_entry(smartlist_t *routers,
   {
     int nickname_matches = is_verified && !strcasecmp(r->nickname, nickname);
     int digest_matches = !memcmp(digest, r->identity_digest, DIGEST_LEN);
-    if (nickname_matches && digest_matches)
-      r->is_verified = 1;
-    else if (digest_matches)
-      r->is_verified = 0;
+    if (!authdir) {
+      /* If we're not an authoritative directory, update verified status.
+       */
+      if (nickname_matches && digest_matches)
+        r->is_verified = 1;
+      else if (digest_matches)
+        r->is_verified = 0;
+    }
     if (digest_matches)
       if (r->status_set_at < list_time) {
-        r->is_running = is_running;
+        if (!authdir || is_running)
+          /* If we're an authoritative directory, only believe that servers
+           * are down when we hear it ourselves.  Otherwise, believe
+           * what we're told.
+           */
+          r->is_running = is_running;
         r->status_set_at = time(NULL);
       }
   });
