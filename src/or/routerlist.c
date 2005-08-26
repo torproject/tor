@@ -1076,11 +1076,13 @@ router_load_routerlist_from_directory(const char *s,
     control_event_descriptors_changed(routerlist->routers);
   }
   router_normalize_routerlist(routerlist);
+#if 0
   if (get_options()->AuthoritativeDir) {
     /* Learn about the descriptors in the directory. */
     dirserv_load_from_directory_string(s);
 //XXXRD
   }
+#endif
   return 0;
 }
 

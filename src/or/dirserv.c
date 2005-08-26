@@ -324,11 +324,9 @@ dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
 
 
 
-/** Parse the server descriptor at *desc and maybe insert it into the
- * list of server descriptors, and (if the descriptor is well-formed)
- * advance *desc immediately past the descriptor's end.  Set msg to a
- * message that should be passed back to the origin of this descriptor, or
- * to NULL.
+/** Parse the server descriptor at desc and maybe insert it into the list of
+ * server descriptors.  Set msg to a message that should be passed back to the
+ * origin of this descriptor, or to NULL.
  *
  * Return 1 if descriptor is well-formed and accepted;
  *  0 if well-formed and server is unapproved but accepted;
@@ -336,33 +334,15 @@ dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
  * -2 if we can't find a router descriptor in *desc.
  */
 int
-dirserv_add_descriptor(const char **desc, const char **msg)
+dirserv_add_descriptor(const char *desc, const char **msg)
 {
   routerinfo_t *ri = NULL;
-  char *start, *end;
-  char *desc_tmp = NULL;
   size_t desc_len;
   tor_assert(msg);
   *msg = NULL;
 
-  start = strstr(*desc, "router ");
-  if (!start) {
-    log_fn(LOG_WARN, "no 'router' line found. This is not a descriptor.");
-    return -2;
-  }
-  if ((end = strstr(start+6, "\nrouter "))) {
-    ++end; /* Include NL. */
-  } else if ((end = strstr(start+6, "\ndirectory-signature"))) {
-    ++end;
-  } else {
-    end = start+strlen(start);
-  }
-  desc_len = end-start;
-  desc_tmp = tor_strndup(start, desc_len); /* Is this strndup still needed???*/
-
   /* Check: is the descriptor syntactically valid? */
-  ri = router_parse_entry_from_string(desc_tmp, NULL);
-  tor_free(desc_tmp);
+  ri = router_parse_entry_from_string(desc, NULL);
   if (!ri) {
     log(LOG_WARN, "Couldn't parse descriptor");
     *msg = "Rejected: Couldn't parse server descriptor.";
@@ -470,6 +450,7 @@ directory_set_dirty()
     runningrouters_is_dirty = now;
 }
 
+#if 0
 /** Load all descriptors from a directory stored in the string
  * <b>dir</b>.
  */
@@ -489,6 +470,7 @@ dirserv_load_from_directory_string(const char *dir)
   }
   return 0;
 }
+#endif
 
 /**
  * Allocate and return a description of the status of the server <b>desc</b>,
