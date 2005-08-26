@@ -323,8 +323,6 @@ dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
   return 0;
 }
 
-
-
 /** Parse the server descriptor at desc and maybe insert it into the list of
  * server descriptors.  Set msg to a message that should be passed back to the
  * origin of this descriptor, or to NULL.
@@ -713,7 +711,6 @@ dirserv_dump_directory_to_string(char **dir_out,
   return -1;
 }
 
-
 /** A cached_dir_t represents a cacheable directory object, along with its
  * compressed form. */
 typedef struct cached_dir_t {
@@ -831,7 +828,6 @@ dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
     log_fn(LOG_NOTICE, "Couldn't write cached network status to disk. Ignoring.");
   }
 }
-
 
 /** Helper: If we're authoritative and <b>auth_src</b> is set, use
  * <b>auth_src</b>, otherwise use <b>cache_src</b>.  If we're using
@@ -1166,6 +1162,7 @@ generate_v2_networkstatus(void)
     goto done;
 
   set_cached_dir(&the_v2_networkstatus, status, time(NULL));
+  the_v2_networkstatus_is_dirty = 0;
   dirserv_set_cached_networkstatus_v2(status, fingerprint, time(NULL));
 
   r = 0;
