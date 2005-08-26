@@ -132,29 +132,32 @@ servers, and you need to configure each client and server so it knows
 about your directory servers rather than the default ones.
 
 <ul>
-<li>1: Grab the latest release. Use at least 0.0.9.5.
-<li>2: For each directory server you want,
+<li>1: Grab the latest release. Use at least 0.1.1.6-alpha.</li>
+<li>2: For each directory server you want,</li>
 <ul>
 <li>2a: Set it up as a server (see <a href="#server">"setting up a
 server"</a> above), with a least ORPort, DirPort, DataDirectory, and Nickname
-defined. Set "AuthoritativeDirectory 1".
-<li>2b: Set "RecommendedVersions" to a comma-separated list of acceptable
-versions of the code for clients and servers to be running.
+defined. Set "AuthoritativeDirectory 1", and set "RecommendedVersions"
+to a comma-separated list of acceptable
+versions of the code for clients and servers to be running.</li>
+<li>2b: Create a file called approved-routers in its DataDirectory.
+Leave it empty for now.</li>
 <li>2c: Run it: <tt>tor --list-fingerprint</tt> if your torrc is in
 the default place, or <tt>tor -f torrc --list-fingerprint</tt> to
-specify one. This will generate your keys and output a fingerprint
-line.
+specify a torrc. This will generate your keys and output a fingerprint
+line.</li>
 </ul>
 <li>3: Now you need to teach clients and servers to use the new
 dirservers. For each fingerprint, add a line like<br>
 <tt>DirServer 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF</tt><br>
-to the torrc of each client and server who will be using your network.
-<li>4: Create a file called approved-routers in the DataDirectory
-of each directory server. Collect the 'fingerprint' lines from
+to the torrc of each client and server who will be using your network.</li>
+<li>4: Collect the 'fingerprint' lines from
 each server (including directory servers), and include them (one per
 line) in each approved-routers file. You can hup the tor process for
 each directory server to reload the approved-routers file (so you don't
-have to restart the process).
+have to restart the process).</li>
+<li>5: Be sure to start at least 4 servers including dir-servers. If
+they're not succeeding at building circuits, hup them until they do.</li>
 </ul>
 
 </body>
