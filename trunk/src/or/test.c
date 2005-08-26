@@ -1529,7 +1529,6 @@ main(int c, char**v)
   options_init(options);
   options->DataDirectory = tor_strdup(temp_dir);
   set_options(options);
-  printf("a\n");
 
   crypto_seed_rng();
 
