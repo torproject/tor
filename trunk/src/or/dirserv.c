@@ -330,7 +330,7 @@ dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
  * origin of this descriptor, or to NULL.
  *
  * Return 1 if descriptor is well-formed and accepted;
- *  0 if well-formed and server is well-formed but rejected for timeliness.
+ *  0 if well-formed but redundant with one we already have;
  * -1 if it looks vaguely like a router descriptor but rejected;
  * -2 if we can't find a router descriptor in *desc.
  */
