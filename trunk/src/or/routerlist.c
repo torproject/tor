@@ -869,7 +869,11 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
   int authdir = get_options()->AuthoritativeDir;
   int authdir_verified = 0;
 
-  tor_assert(routerlist);
+  if (!routerlist) {
+    routerlist = tor_malloc_zero(sizeof(routerlist_t));
+    routerlist->routers = smartlist_create();
+  }
+
   crypto_pk_get_digest(router->identity_pkey, id_digest);
 
   if (authdir) {
