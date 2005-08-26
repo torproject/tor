@@ -1092,6 +1092,7 @@ typedef struct {
   int SocksPort; /**< Port to listen on for SOCKS connections. */
   int ControlPort; /**< Port to listen on for control connections. */
   int DirPort; /**< Port to listen on for directory connections. */
+  int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int NoPublish; /**< Boolean: should we never publish a descriptor? */

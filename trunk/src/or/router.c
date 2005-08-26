@@ -401,14 +401,20 @@ static int can_reach_dir_port = 0;
 int
 check_whether_orport_reachable(void)
 {
-  return clique_mode(get_options()) || can_reach_or_port;
+  or_options_t *options = get_options();
+  return clique_mode(options) ||
+         options->AssumeReachable ||
+         can_reach_or_port;
 }
 
 /** Return 1 if we don't have a dirport configured, or if it's reachable. */
 int
 check_whether_dirport_reachable(void)
 {
-  return !get_options()->DirPort || can_reach_dir_port;
+  or_options_t *options = get_options();
+  return !options->DirPort ||
+         options->AssumeReachable ||
+         can_reach_dir_port;
 }
 
 /**DOCDOC*/
@@ -720,10 +726,8 @@ router_rebuild_descriptor(int force)
   routerinfo_t *ri;
   uint32_t addr;
   char platform[256];
-  struct in_addr in;
   int hibernating = we_are_hibernating();
   or_options_t *options = get_options();
-  char addrbuf[INET_NTOA_BUF_LEN];
 
   if (desc_clean_since && !force)
     return 0;
@@ -734,9 +738,7 @@ router_rebuild_descriptor(int force)
   }
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
-  in.s_addr = htonl(addr);
-  tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
-  ri->address = tor_strdup(addrbuf);
+  ri->address = tor_dup_addr(addr);
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = options->ORPort;

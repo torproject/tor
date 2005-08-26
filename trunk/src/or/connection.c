@@ -669,10 +669,9 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   newconn->s = news;
 
   /* remember the remote address */
-  newconn->address = tor_malloc(INET_NTOA_BUF_LEN);
-  tor_inet_ntoa(&remote.sin_addr, newconn->address, INET_NTOA_BUF_LEN);
   newconn->addr = ntohl(remote.sin_addr.s_addr);
   newconn->port = ntohs(remote.sin_port);
+  newconn->address = tor_dup_addr(newconn->addr);
 
   if (connection_add(newconn) < 0) { /* no space, forget it */
     connection_free(newconn);
