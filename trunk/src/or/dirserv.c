@@ -337,7 +337,6 @@ int
 dirserv_add_descriptor(const char *desc, const char **msg)
 {
   routerinfo_t *ri = NULL;
-  size_t desc_len;
   tor_assert(msg);
   *msg = NULL;
 
