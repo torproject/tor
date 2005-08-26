@@ -1188,8 +1188,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
 
   if (!strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg;
-    cp = body;
-    switch (dirserv_add_descriptor(&cp, &msg)) {
+    switch (dirserv_add_descriptor(body, &msg)) {
       case -2:
       case -1:
         /* malformed descriptor, or something wrong */
