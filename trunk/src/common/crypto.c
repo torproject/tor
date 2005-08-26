@@ -422,7 +422,7 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
   /* Read the file into a string. */
   contents = read_file_to_str(keyfile, 0);
   if (!contents) {
-    log_fn(LOG_WARN, "Error reading private key from %s", keyfile);
+    log_fn(LOG_WARN, "Error reading private key from \"%s\"", keyfile);
     return -1;
   }
 
@@ -1550,7 +1550,7 @@ int crypto_seed_rng(void)
   for (i = 0; filenames[i]; ++i) {
     fd = open(filenames[i], O_RDONLY, 0);
     if (fd<0) continue;
-    log_fn(LOG_INFO, "Seeding RNG from %s", filenames[i]);
+    log_fn(LOG_INFO, "Seeding RNG from \"%s\"", filenames[i]);
     n = read_all(fd, buf, sizeof(buf), 0);
     close(fd);
     if (n != sizeof(buf)) {

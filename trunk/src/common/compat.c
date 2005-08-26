@@ -533,7 +533,7 @@ get_user_homedir(const char *username)
   tor_assert(username);
 
   if (!(pw = getpwnam(username))) {
-    log_fn(LOG_ERR,"User '%s' not found.", username);
+    log_fn(LOG_ERR,"User \"%s\" not found.", username);
     return NULL;
   }
   return tor_strdup(pw->pw_dir);
