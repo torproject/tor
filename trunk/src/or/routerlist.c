@@ -855,11 +855,15 @@ router_mark_as_down(const char *digest)
  * older entries (if any) with the same name.  Note: Callers should not hold
  * their pointers to <b>router</b> if this function fails; <b>router</b>
  * will either be inserted into the routerlist or freed.  Returns 0 if the
- * router was added; -1 if it was not.
+ * router was added; less than 0 if it was not.
  *
- * If we're returning -1 and <b>msg</b> is not NULL, then assign to
+ * If we're returning an error and <b>msg</b> is not NULL, then assign to
  * *<b>msg</b> a static string describing the reason for refusing the
  * routerinfo.
+ *
+ * If the return value is less than -1, there was a problem with the
+ * routerinfo.  If the return value is equal to -1, then the routerinfo was
+ * fine, but out-of-date.
  */
 int
 router_add_to_routerlist(routerinfo_t *router, const char **msg)
@@ -878,7 +882,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
 
   if (authdir) {
     if (dirserv_wants_to_reject_router(router, &authdir_verified, msg))
-      return -1;
+      return -2;
     router->is_verified = authdir_verified;
     if (tor_version_as_new_as(router->platform,"0.1.0.2-rc"))
       router->is_verified = 1;
@@ -943,7 +947,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
                router->nickname);
         routerinfo_free(router);
         if (msg) *msg = "Already have verified router with same nickname and different key.";
-        return -1;
+        return -2;
       }
     }
   }

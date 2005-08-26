@@ -266,6 +266,7 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
   return 0;
 }
 
+/** DOCDOC */
 int
 dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
                                const char **msg)
@@ -329,13 +330,14 @@ dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
  * origin of this descriptor, or to NULL.
  *
  * Return 1 if descriptor is well-formed and accepted;
- *  0 if well-formed and server is unapproved but accepted;
+ *  0 if well-formed and server is well-formed but rejected for timeliness.
  * -1 if it looks vaguely like a router descriptor but rejected;
  * -2 if we can't find a router descriptor in *desc.
  */
 int
 dirserv_add_descriptor(const char *desc, const char **msg)
 {
+  int r;
   routerinfo_t *ri = NULL;
   tor_assert(msg);
   *msg = NULL;
@@ -347,14 +349,18 @@ dirserv_add_descriptor(const char *desc, const char **msg)
     *msg = "Rejected: Couldn't parse server descriptor.";
     return -1;
   }
-  if (router_add_to_routerlist(ri, msg)) {
-    return -1;
+  if ((r = router_add_to_routerlist(ri, msg))<0) {
+    return r == -1 ? 0 : -1;
   } else {
     smartlist_t *changed = smartlist_create();
     smartlist_add(changed, ri);
     control_event_descriptors_changed(changed);
     smartlist_free(changed);
-    return ri->is_verified ? 1 : 0;
+    if (!*msg) {
+      *msg =  ri->is_verified ? "Verified server descriptor accepted" :
+        "Unverified server descriptor accepted";
+    }
+    return 1;
   }
 }
 
