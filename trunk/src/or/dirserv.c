@@ -22,7 +22,7 @@ extern long stats_n_seconds_working;
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
-static int networkstatus_v2_is_dirty = 1;
+static int the_v2_networkstatus_is_dirty = 1;
 
 static void directory_remove_invalid(void);
 static int dirserv_regenerate_directory(void);
@@ -1192,7 +1192,7 @@ dirserv_get_networkstatus_v2(const char **directory, const char *key,
     if (get_options()->AuthoritativeDir) {
       return dirserv_get_obj(directory, compress, NULL,
                              &the_v2_networkstatus,
-                             networkstatus_v2_is_dirty,
+                             the_v2_networkstatus_is_dirty,
                              generate_v2_networkstatus,
                              "network status list");
     }
