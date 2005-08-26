@@ -857,9 +857,8 @@ router_mark_as_down(const char *digest)
  * will either be inserted into the routerlist or freed.  Returns 0 if the
  * router was added; less than 0 if it was not.
  *
- * If we're returning an error and <b>msg</b> is not NULL, then assign to
- * *<b>msg</b> a static string describing the reason for refusing the
- * routerinfo.
+ * If we're returning an error, then assign to *<b>msg</b> a static string
+ * describing the reason for refusing the routerinfo.
  *
  * If the return value is less than -1, there was a problem with the
  * routerinfo.  If the return value is equal to -1, then the routerinfo was
@@ -872,6 +871,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
   char id_digest[DIGEST_LEN];
   int authdir = get_options()->AuthoritativeDir;
   int authdir_verified = 0;
+
+  tor_assert(msg);
 
   if (!routerlist) {
     routerlist = tor_malloc_zero(sizeof(routerlist_t));
@@ -1064,7 +1065,7 @@ router_load_routerlist_from_directory(const char *s,
     smartlist_t *changed = smartlist_create();
     SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
     {
-      char *msg;
+      const char *msg;
       if (router_add_to_routerlist(r,&msg)==0)
         smartlist_add(changed, r);
     });
