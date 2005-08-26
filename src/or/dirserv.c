@@ -1408,7 +1408,9 @@ dirserv_free_all(void)
   clear_cached_dir(&the_runningrouters);
   clear_cached_dir(&cached_directory);
   clear_cached_dir(&cached_runningrouters);
-  strmap_free(cached_v2_networkstatus, free_cached_dir);
-  cached_v2_networkstatus = NULL;
+  if (cached_v2_networkstatus) {
+    strmap_free(cached_v2_networkstatus, free_cached_dir);
+    cached_v2_networkstatus = NULL;
+  }
 }
 
