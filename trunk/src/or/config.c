@@ -408,6 +408,8 @@ static int
 options_act(or_options_t *old_options)
 {
   config_line_t *cl;
+  char *fn;
+  size_t len;
   or_options_t *options = get_options();
   static int libevent_initialized = 0;
 
@@ -446,6 +448,15 @@ options_act(or_options_t *old_options)
            options->DataDirectory);
     return -1;
   }
+  len = strlen(options->DataDirectory)+32;
+  fn = tor_malloc(len);
+  tor_snprintf(fn, len, "%s/cached-status", options->DataDirectory);
+  if (check_private_dir(fn, CPD_CREATE) != 0) {
+    log_fn(LOG_ERR, "Couldn't access/create private data directory \"%s\"",fn);
+    tor_free(fn);
+    return -1;
+  }
+  tor_free(fn);
 
   /* Bail out at this point if we're not going to be a client or server:
    * we want to not fork, and to log stuff to stderr. */
