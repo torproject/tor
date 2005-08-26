@@ -134,6 +134,7 @@ int parse_addr_and_port_range(const char *s, uint32_t *addr_out,
                               uint16_t *port_max_out);
 #define INET_NTOA_BUF_LEN 16
 int tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len);
+char *tor_dup_addr(uint32_t addr);
 int is_plausible_address(const char *name);
 int get_interface_address(uint32_t *addr);
 

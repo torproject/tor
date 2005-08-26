@@ -579,6 +579,7 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
    * something.
    */
   struct in_addr iaddr;
+  tor_assert(name);
   tor_assert(addr);
   if (!*name) {
     /* Empty address is an error. */
