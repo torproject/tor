@@ -364,12 +364,14 @@ set_options(or_options_t *new_val)
 {
   or_options_t *old_options = global_options;
   global_options = new_val;
+  /* Note that we pass the *old* options below, for comparison. It
+   * pulls the new options directly out of global_options. */
   if (options_act(old_options) < 0) { /* acting on the options failed. die. */
     log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
   if (old_options)
-    config_free(&options_format, global_options);
+    config_free(&options_format, old_options);
 }
 
 void
