@@ -357,6 +357,14 @@ The IP or fqdn of this server (e.g. moria.mit.edu). You can leave this
 unset, and Tor will guess your IP.
 .LP
 .TP
+\fBAssumeReachable \fR\fB0\fR|\fB1\fR\fP
+This option is used when bootstrapping a new Tor network. If set to 1,
+don't do self-reachability testing; just upload your server descriptor
+immediately. If \fBAuthoritativeDirectory\fP is also set, this option
+instructs the dirserver to bypass remote reachability testing too and
+list all connected servers as running.
+.LP
+.TP
 \fBContactInfo \fR\fIemail_address\fP
 Administrative contact information for server.
 .LP
