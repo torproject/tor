@@ -736,15 +736,16 @@ typedef struct {
   addr_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
   long uptime; /**< How many seconds the router claims to have been up */
+  smartlist_t *declared_family; /**< Nicknames of router which this router
+                                 * claims are its family. */
+  char *contact_info; /**< Declared contact info for this router. */
+
   /* local info */
   int is_running; /**< As far as we know, is this OR currently running? */
   time_t status_set_at; /**< When did we last update is_running? */
-  int is_verified; /**< Has a trusted dirserver validated this OR? */
-
-  smartlist_t *declared_family; /**< Nicknames of router which this router
-                                 * claims are its family. */
-
-  char *contact_info; /**< Declared contact info for this router. */
+  int is_verified; /**< Has a trusted dirserver validated this OR?
+                    * (For Authdir: Have we validated this OR?)
+                    */
 
   /* The below items are used only by authdirservers right now for
    * reachability testing. */
@@ -1636,7 +1637,6 @@ void dirserv_free_descriptors(void);
 int list_server_status(smartlist_t *routers, char **router_status_out);
 void dirserv_log_unreachable_servers(time_t now);
 void dirserv_router_has_begun_reachability_testing(char *digest, time_t now);
-void dirserv_remove_old_servers(int age);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
@@ -1654,6 +1654,8 @@ void dirserv_orconn_tls_done(const char *address,
                              const char *digest_rcvd,
                              const char *nickname,
                              int as_advertised);
+int dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
+                                   const char **msg);
 void dirserv_free_all(void);
 
 /********************************* dns.c ***************************/
@@ -1991,6 +1993,7 @@ void free_trusted_dir_servers(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
+int router_add_to_routerlist(routerinfo_t *router, const char **msg);
 int router_load_single_router(const char *s, const char **msg);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                         int dir_is_recent, int dir_is_cached);
