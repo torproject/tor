@@ -1168,6 +1168,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     smartlist_t *needed_ports = circuit_get_unhandled_ports(time(NULL));
 
     if (best_support == -1) {
+      if (need_uptime || need_capacity)
+        return choose_good_exit_server_general(dir, 0, 0);
       log(LOG_NOTICE, "All routers are down or middleman -- choosing a doomed exit at random.");
     }
     for (try = 0; try < 2; try++) {
