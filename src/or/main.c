@@ -917,7 +917,7 @@ do_hup(void)
   if (authdir_mode(options)) {
     /* reload the approved-routers file */
     tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", options->DataDirectory);
-    log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
+    log_fn(LOG_INFO,"Reloading approved fingerprints from \"%s\"...",keydir);
     if (dirserv_parse_fingerprint_file(keydir) < 0) {
       log_fn(LOG_NOTICE, "Error reloading fingerprints. Continuing with old list.");
     }
@@ -939,7 +939,7 @@ do_hup(void)
     }
     tor_snprintf(keydir,sizeof(keydir),"%s/router.desc",
                  options->DataDirectory);
-    log_fn(LOG_INFO,"Saving descriptor to %s...",keydir);
+    log_fn(LOG_INFO,"Saving descriptor to \"%s\"...",keydir);
     if (write_str_to_file(keydir, descriptor, 0)) {
       return 0;
     }
