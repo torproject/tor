@@ -1470,8 +1470,8 @@ add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
     log_fn(LOG_WARN, "Unable to lookup address for directory server at %s",
            address);
     return;
-    a = ntohl(a);
   }
+  a = ntohl(a);
 
   ent = tor_malloc(sizeof(trusted_dir_server_t));
   if (address) {
