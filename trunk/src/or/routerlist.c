@@ -1452,17 +1452,19 @@ router_update_status_from_smartlist(routerinfo_t *router,
 }
 
 /** Add to the list of authorized directory servers one at
- * <b>address</b>:<b>port</b>, with identity key <b>digest</b>. */
+ * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
+ * <b>address</b> is NULL, add ourself. */
 void
 add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
+  char *hostname = NULL;
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_create();
 
-  if (!address) { /* need to guess */
-    if (resolve_my_address(get_options(), &a, NULL) < 0) {
+  if (!address) { /* The address is us; we should guess. */
+    if (resolve_my_address(get_options(), &a, &hostname) < 0) {
       log_fn(LOG_WARN, "Couldn't find a suitable address. Returning.");
       return;
     }
@@ -1472,15 +1474,12 @@ add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
              address);
       return;
     }
+    hostname = tor_strdup(address);
     a = ntohl(a);
   }
 
   ent = tor_malloc(sizeof(trusted_dir_server_t));
-  if (address) {
-    ent->address = tor_strdup(address);
-  } else {
-    ent->address = tor_dup_addr(a);
-  }
+  ent->address = hostname;
   ent->addr = a;
   ent->dir_port = port;
   ent->is_running = 1;
