@@ -371,6 +371,10 @@ dirserv_add_descriptor(const char **desc, const char **msg)
   if (router_add_to_routerlist(ri, msg)) {
     return -1;
   } else {
+    smartlist_t *changed = smartlist_create();
+    smartlist_add(changed, ri);
+    control_event_descriptors_changed(changed);
+    smartlist_free(changed);
     return ri->is_verified ? 1 : 0;
   }
 }
