@@ -2035,6 +2035,8 @@ int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
 int router_get_networkstatus_v2_hash(const char *s, char *digest);
+int router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
+                                   crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
                                   routerlist_t **dest,
                                   smartlist_t *good_nickname_list,

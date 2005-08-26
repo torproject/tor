@@ -665,7 +665,10 @@ dirserv_remove_old_servers(int age)
   }
 }
 
-/* DOCDOC */
+/* Given a (possibly empty) list of config_line_t, each line of which contains
+ * a list of comma-separated version numbers surrounded by optional space,
+ * allocate and return a new string containing the version numbers, in order,
+ * separated by commas.  Used to generate Recommended(Client|Server)?Versions */
 static char *
 format_versions_list(config_line_t *ln)
 {
@@ -680,38 +683,6 @@ format_versions_list(config_line_t *ln)
   SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
   smartlist_free(versions);
   return result;
-}
-
-/* DOCDOC */
-static int
-append_signature(char *buf, size_t buf_len, const char *digest,
-                 crypto_pk_env_t *private_key)
-{
-  char signature[PK_BYTES];
-  int i;
-
-  if (crypto_pk_private_sign(private_key, signature, digest, DIGEST_LEN) < 0) {
-
-    log_fn(LOG_WARN,"Couldn't sign digest.");
-    return -1;
-  }
-  if (strlcat(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
-    goto truncated;
-
-  i = strlen(buf);
-  if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
-    log_fn(LOG_WARN,"couldn't base64-encode signature");
-    tor_free(buf);
-    return -1;
-  }
-
-  if (strlcat(buf, "-----END SIGNATURE-----\n", buf_len) >= buf_len)
-    goto truncated;
-
-  return 0;
- truncated:
-  log_fn(LOG_WARN,"tried to exceed string length.");
-  return -1;
 }
 
 /** Generate a new directory and write it into a newly allocated string.
@@ -796,7 +767,7 @@ dirserv_dump_directory_to_string(char **dir_out,
     tor_free(buf);
     return -1;
   }
-  if (append_signature(buf,buf_len,digest,private_key)<0) {
+  if (router_append_dirobj_signature(buf,buf_len,digest,private_key)<0) {
     tor_free(buf);
     return -1;
   }
@@ -809,27 +780,32 @@ dirserv_dump_directory_to_string(char **dir_out,
   return -1;
 }
 
-/** DOCDOC */
+
+/** A cached_dir_t represents a cacheable directory object, along with its
+ * compressed form. */
 typedef struct cached_dir_t {
-  char *dir;
-  char *dir_z;
-  size_t dir_len;
-  size_t dir_z_len;
-  time_t published;
+  char *dir; /**< Contents of this object */
+  char *dir_z; /**< Compressed contents of this object. */
+  size_t dir_len; /**< Length of <b>dir</b> */
+  size_t dir_z_len; /**< Length of <b>dir_z</b> */
+  time_t published; /**< When was this object published */
 } cached_dir_t;
 
 /** Most recently generated encoded signed directory. (auth dirservers only.)*/
 static cached_dir_t the_directory = { NULL, NULL, 0, 0, 0 };
 
-/* used only by non-auth dirservers */
+/* Used only by non-auth dirservers: The directory and runningrouters we'll
+* serve when requested. */
 static cached_dir_t cached_directory = { NULL, NULL, 0, 0, 0 };
 static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0 };
 
-/* Used for other dirservers' network statuses.  Map from hexdigest to
+/* Used for other dirservers' v2 network statuses.  Map from hexdigest to
  * cached_dir_t. */
 static strmap_t *cached_v2_networkstatus = NULL;
 
-/** DOCDOC */
+/** Possibly replace the contents of <b>d</b> with the value of
+ * <b>directory</b> published on <b>when</b>.  (Do nothing if <b>when</b> is
+ * older than the last value, or too far in the future. */
 static void
 set_cached_dir(cached_dir_t *d, const char *directory, time_t when)
 {
@@ -853,6 +829,7 @@ set_cached_dir(cached_dir_t *d, const char *directory, time_t when)
   }
 }
 
+/** Remove all storage held in <b>d</b>, but do not free <b>d</b> itself. */
 static void
 clear_cached_dir(cached_dir_t *d)
 {
@@ -861,6 +838,7 @@ clear_cached_dir(cached_dir_t *d)
   memset(d, 0, sizeof(cached_dir_t));
 }
 
+/** Free all storage held by the cached_dir_t in <b>d</b>. */
 static void
 free_cached_dir(void *_d)
 {
@@ -888,7 +866,7 @@ dirserv_set_cached_directory(const char *directory, time_t published,
   }
 }
 
-/** DOCDOC */
+/** Called when we've just received a DOCDOC */
 void
 dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
                                     time_t published)
@@ -1035,7 +1013,7 @@ generate_runningrouters(void)
     log_fn(LOG_WARN,"couldn't compute digest");
     goto err;
   }
-  if (append_signature(s, len, digest, private_key)<0)
+  if (router_append_dirobj_signature(s, len, digest, private_key)<0)
     goto err;
 
   set_cached_dir(&the_runningrouters, s, time(NULL));
@@ -1231,7 +1209,7 @@ generate_v2_networkstatus(void)
     goto done;
   }
 
-  if (append_signature(outp,endp-outp,digest,private_key)<0)
+  if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0)
     goto done;
 
   set_cached_dir(&the_v2_networkstatus, status, time(NULL));
@@ -1311,6 +1289,8 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
                         smartlist_add(digests, d);
                       });
     smartlist_free(hexdigests);
+    /* XXXX should always return own descriptor. or special-case it. or
+     * something. */
     SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
                       SMARTLIST_FOREACH(digests, const char *, d,
                         if (!memcmp(d,ri->identity_digest,DIGEST_LEN)) {

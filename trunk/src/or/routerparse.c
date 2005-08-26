@@ -187,6 +187,44 @@ router_get_networkstatus_v2_hash(const char *s, char *digest)
                               "network-status-version","\ndirectory-signature");
 }
 
+/** Helper: used to generate signatures for routers, directories and
+ * network-status objects.  Given a digest in <b>digest</b> and a secret
+ * <b>private_key</b>, generate an PKCS1-padded signature, BASE64-encode it,
+ * surround it with -----BEGIN/END----- pairs, and write it to the
+ * <b>buf_len</b>-byte buffer at <b>buf</b>.  Return 0 on success, -1 on
+ * failure.
+ */
+int
+router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
+                               crypto_pk_env_t *private_key)
+{
+  char signature[PK_BYTES];
+  int i;
+
+  if (crypto_pk_private_sign(private_key, signature, digest, DIGEST_LEN) < 0) {
+
+    log_fn(LOG_WARN,"Couldn't sign digest.");
+    return -1;
+  }
+  if (strlcat(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
+    goto truncated;
+
+  i = strlen(buf);
+  if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
+    log_fn(LOG_WARN,"couldn't base64-encode signature");
+    tor_free(buf);
+    return -1;
+  }
+
+  if (strlcat(buf, "-----END SIGNATURE-----\n", buf_len) >= buf_len)
+    goto truncated;
+
+  return 0;
+ truncated:
+  log_fn(LOG_WARN,"tried to exceed string length.");
+  return -1;
+}
+
 /**
  * Find the first instance of "recommended-software ...\n" at the start of
  * a line; return a newly allocated string containing the "..." portion.
