@@ -2016,6 +2016,8 @@ config_lines_eq(config_line_t *a, config_line_t *b)
   while (a && b) {
     if (strcasecmp(a->key, b->key) || strcmp(a->value, b->value))
       return 0;
+    a = a->next;
+    b = b->next;
   }
   if (a || b)
     return 0;
