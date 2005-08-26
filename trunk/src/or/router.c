@@ -145,7 +145,7 @@ rotate_onion_key(void)
       goto error;
   }
   if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-    log(LOG_ERR, "Couldn't write generated key to %s.", fname);
+    log(LOG_ERR, "Couldn't write generated key to \"%s\".", fname);
     goto error;
   }
   log_fn(LOG_INFO, "Rotating onion key");
@@ -175,7 +175,7 @@ init_key_from_file_name_changed(const char *fname_old,
 
   /* The old filename exists, and the new one doesn't.  Rename and load. */
   if (rename(fname_old, fname_new) < 0) {
-    log_fn(LOG_ERR, "Couldn't rename %s to %s: %s", fname_old, fname_new,
+    log_fn(LOG_ERR, "Couldn't rename \"%s\" to \"%s\": %s", fname_old, fname_new,
            strerror(errno));
     return NULL;
   }
@@ -200,10 +200,10 @@ init_key_from_file(const char *fname)
   switch (file_status(fname)) {
     case FN_DIR:
     case FN_ERROR:
-      log(LOG_ERR, "Can't read key from %s", fname);
+      log(LOG_ERR, "Can't read key from \"%s\"", fname);
       goto error;
     case FN_NOENT:
-      log(LOG_INFO, "No key found in %s; generating fresh key.", fname);
+      log(LOG_INFO, "No key found in \"%s\"; generating fresh key.", fname);
       if (crypto_pk_generate_key(prkey)) {
         log(LOG_ERR, "Error generating onion key");
         goto error;
@@ -214,7 +214,7 @@ init_key_from_file(const char *fname)
       }
       log(LOG_INFO, "Generated key seems valid");
       if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-        log(LOG_ERR, "Couldn't write generated key to %s.", fname);
+        log(LOG_ERR, "Couldn't write generated key to \"%s\".", fname);
         goto error;
       }
       return prkey;
@@ -291,14 +291,14 @@ init_keys(void)
   /* 1. Read identity key. Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/identity.key",datadir);
   tor_snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_id_key",datadir);
-  log_fn(LOG_INFO,"Reading/making identity key %s...",keydir2);
+  log_fn(LOG_INFO,"Reading/making identity key \"%s\"...",keydir2);
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_identity_key(prkey);
   /* 2. Read onion key.  Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/onion.key",datadir);
   tor_snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_onion_key",datadir);
-  log_fn(LOG_INFO,"Reading/making onion key %s...",keydir2);
+  log_fn(LOG_INFO,"Reading/making onion key \"%s\"...",keydir2);
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_onion_key(prkey);
@@ -337,13 +337,13 @@ init_keys(void)
   }
 
   tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", datadir);
-  log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
+  log_fn(LOG_INFO,"Dumping descriptor to \"%s\"...",keydir);
   if (write_str_to_file(keydir, mydesc,0)) {
     return -1;
   }
   /* 5. Dump fingerprint to 'fingerprint' */
   tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
-  log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
+  log_fn(LOG_INFO,"Dumping fingerprint to \"%s\"...",keydir);
   if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 1)<0) {
     log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
@@ -360,7 +360,7 @@ init_keys(void)
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
   tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
-  log_fn(LOG_INFO,"Loading approved fingerprints from %s...",keydir);
+  log_fn(LOG_INFO,"Loading approved fingerprints from \"%s\"...",keydir);
   if (dirserv_parse_fingerprint_file(keydir) < 0) {
     log_fn(LOG_ERR, "Error loading fingerprints");
     return -1;
@@ -372,13 +372,13 @@ init_keys(void)
   }
   /* 7. [authdirserver only] load old directory, if it's there */
   tor_snprintf(keydir,sizeof(keydir),"%s/cached-directory", datadir);
-  log_fn(LOG_INFO,"Loading cached directory from %s...",keydir);
+  log_fn(LOG_INFO,"Loading cached directory from \"%s\"...",keydir);
   cp = read_file_to_str(keydir,0);
   if (!cp) {
-    log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
+    log_fn(LOG_INFO,"Cached directory \"%s\" not present. Ok.",keydir);
   } else {
     if (dirserv_load_from_directory_string(cp) < 0) {
-      log_fn(LOG_WARN, "Cached directory %s is corrupt, only loaded part of it.", keydir);
+      log_fn(LOG_WARN, "Cached directory \"%s\" is corrupt, only loaded part of it.", keydir);
       tor_free(cp);
       return 0;
     }

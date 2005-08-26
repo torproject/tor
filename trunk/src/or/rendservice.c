@@ -122,7 +122,7 @@ add_service(rend_service_t *service)
   } else {
     smartlist_set_capacity(service->ports, -1);
     smartlist_add(rend_service_list, service);
-    log_fn(LOG_DEBUG,"Configuring service with directory %s",service->directory);
+    log_fn(LOG_DEBUG,"Configuring service with directory \"%s\"",service->directory);
     for (i = 0; i < smartlist_len(service->ports); ++i) {
       char addrbuf[INET_NTOA_BUF_LEN];
       p = smartlist_get(service->ports, i);
@@ -322,7 +322,7 @@ rend_service_load_keys(void)
     s = smartlist_get(rend_service_list,i);
     if (s->private_key)
       continue;
-    log_fn(LOG_INFO, "Loading hidden-service keys from '%s'", s->directory);
+    log_fn(LOG_INFO, "Loading hidden-service keys from \"%s\"", s->directory);
 
     /* Check/create directory */
     if (check_private_dir(s->directory, CPD_CREATE) < 0)
@@ -331,7 +331,7 @@ rend_service_load_keys(void)
     /* Load key */
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
         strlcat(fname,"/private_key",sizeof(fname)) >= sizeof(fname)) {
-      log_fn(LOG_WARN, "Directory name too long: '%s'", s->directory);
+      log_fn(LOG_WARN, "Directory name too long: \"%s\"", s->directory);
       return -1;
     }
     s->private_key = init_key_from_file(fname);
@@ -349,7 +349,7 @@ rend_service_load_keys(void)
     }
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
         strlcat(fname,"/hostname",sizeof(fname)) >= sizeof(fname)) {
-      log_fn(LOG_WARN, "Directory name too long: '%s'", s->directory);
+      log_fn(LOG_WARN, "Directory name too long: \"%s\"", s->directory);
       return -1;
     }
     tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
@@ -1046,7 +1046,7 @@ rend_service_dump_stats(int severity)
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
-    log(severity, "Service configured in %s:", service->directory);
+    log(severity, "Service configured in \"%s\":", service->directory);
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       nickname = smartlist_get(service->intro_nodes, j);
       router = router_get_by_nickname(smartlist_get(service->intro_nodes,j));

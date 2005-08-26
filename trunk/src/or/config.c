@@ -440,7 +440,7 @@ options_act(or_options_t *old_options)
 
   /* Ensure data directory is private; create if possible. */
   if (check_private_dir(options->DataDirectory, CPD_CREATE) != 0) {
-    log_fn(LOG_ERR, "Couldn't access/create private data directory %s",
+    log_fn(LOG_ERR, "Couldn't access/create private data directory \"%s\"",
            options->DataDirectory);
     return -1;
   }
@@ -969,14 +969,14 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
         result->value = tor_strdup("");
       break;
     case CONFIG_TYPE_OBSOLETE:
-      log_fn(LOG_WARN,"You asked me for the value of an obsolete config option %s.", key);
+      log_fn(LOG_WARN,"You asked me for the value of an obsolete config option '%s'.", key);
       tor_free(result->key);
       tor_free(result);
       return NULL;
     default:
       tor_free(result->key);
       tor_free(result);
-      log_fn(LOG_WARN,"Bug: unknown type %d for known key %s", var->type, key);
+      log_fn(LOG_WARN,"Bug: unknown type %d for known key '%s'", var->type, key);
       return NULL;
     }
 
@@ -1186,7 +1186,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
     explicit_ip = 0;
     rent = (struct hostent *)gethostbyname(hostname);
     if (!rent) {
-      log_fn(LOG_WARN,"Could not resolve local Address %s. Failing.", hostname);
+      log_fn(LOG_WARN,"Could not resolve local Address '%s'. Failing.", hostname);
       return -1;
     }
     tor_assert(rent->h_length == 4);
@@ -1213,7 +1213,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
     }
   }
 
-  log_fn(LOG_DEBUG, "Resolved Address to %s.", tmpbuf);
+  log_fn(LOG_DEBUG, "Resolved Address to '%s'.", tmpbuf);
   *addr_out = ntohl(in.s_addr);
   if (old_addr && old_addr != *addr_out) {
     log_fn(LOG_NOTICE,"Your IP seems to have changed. Updating.");
@@ -1569,7 +1569,7 @@ options_validate(or_options_t *options)
     if (server_mode(options)) {
       if (!(options->Nickname = get_default_nickname()))
         return -1;
-      log_fn(LOG_NOTICE, "Choosing default nickname %s", options->Nickname);
+      log_fn(LOG_NOTICE, "Choosing default nickname '%s'", options->Nickname);
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {
@@ -1986,7 +1986,7 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
   }
 
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    log_fn(LOG_WARN,"While Tor is running, changing DataDirectory (%s->%s) is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
+    log_fn(LOG_WARN,"While Tor is running, changing DataDirectory (\"%s\"->\"%s\") is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
     return -1;
   }
 
@@ -2089,7 +2089,7 @@ get_windows_conf_root(void)
                                             &idl))) {
     GetCurrentDirectory(MAX_PATH, path);
     is_set = 1;
-    log_fn(LOG_WARN, "I couldn't find your application data folder: are you running an ancient version of Windows 95? Defaulting to '%s'", path);
+    log_fn(LOG_WARN, "I couldn't find your application data folder: are you running an ancient version of Windows 95? Defaulting to \"%s\"", path);
     return path;
   }
   /* Convert the path from an "ID List" (whatever that is!) to a path. */
@@ -2234,16 +2234,16 @@ options_init_from_torrc(int argc, char **argv)
     }
   }
   tor_assert(fname);
-  log(LOG_DEBUG, "Opening config file '%s'", fname);
+  log(LOG_DEBUG, "Opening config file \"%s\"", fname);
 
   if (file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0))) {
     if (using_default_torrc == 1) {
-      log(LOG_NOTICE, "Configuration file '%s' not present, "
+      log(LOG_NOTICE, "Configuration file \"%s\" not present, "
           "using reasonable defaults.", fname);
       tor_free(fname); /* sets fname to NULL */
     } else {
-      log(LOG_WARN, "Unable to open configuration file '%s'.", fname);
+      log(LOG_WARN, "Unable to open configuration file \"%s\".", fname);
       tor_free(fname);
       goto err;
     }
@@ -2406,7 +2406,7 @@ convert_log_option(or_options_t *options, config_line_t *level_opt,
 
   if (file_opt && !strcasecmp(file_opt->key, "LogFile")) {
     if (add_single_log_option(options, levelMin, levelMax, "file", file_opt->value) < 0) {
-      log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", file_opt->value,
+      log_fn(LOG_WARN, "Cannot write to LogFile \"%s\": %s.", file_opt->value,
              strerror(errno));
       return -1;
     }
@@ -2796,13 +2796,13 @@ normalize_data_directory(or_options_t *options)
  if (strncmp(d,"~/",2) == 0) {
    char *fn = expand_filename(d);
    if (!fn) {
-     log_fn(LOG_ERR,"Failed to expand filename '%s'.", d);
+     log_fn(LOG_ERR,"Failed to expand filename \"%s\".", d);
      return -1;
    }
    if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
      /* If our homedir is /, we probably don't want to use it. */
      /* XXXX Default to /var/lib/tor? */
-     log_fn(LOG_WARN, "Default DataDirectory is ~/.tor, which works out to %s, which is probably not what you want.  Using %s/tor instead", fn, LOCALSTATEDIR);
+     log_fn(LOG_WARN, "Default DataDirectory is \"~/.tor\".  This expands to \"%s\", which is probably not what you want.  Using \"%s/tor\" instead", fn, LOCALSTATEDIR);
      tor_free(fn);
      fn = tor_strdup(LOCALSTATEDIR"/tor");
 
@@ -2854,7 +2854,7 @@ write_configuration_file(const char *fname, or_options_t *options)
       case FN_NOENT:
         break;
       default:
-        log_fn(LOG_WARN,"Config file %s is not a file? Failing.", fname);
+        log_fn(LOG_WARN,"Config file \"%s\" is not a file? Failing.", fname);
         return -1;
     }
   }
@@ -2884,7 +2884,7 @@ write_configuration_file(const char *fname, or_options_t *options)
         break;
       ++i;
     }
-    log_fn(LOG_NOTICE, "Renaming old configuration file to %s", fn_tmp);
+    log_fn(LOG_NOTICE, "Renaming old configuration file to \"%s\"", fn_tmp);
     rename(fname, fn_tmp);
     tor_free(fn_tmp);
   }
@@ -3168,14 +3168,14 @@ or_state_load(void)
   switch (file_status(fname)) {
     case FN_FILE:
       if (!(contents = read_file_to_str(fname, 0))) {
-        log_fn(LOG_WARN, "Unable to read state file %s", fname);
+        log_fn(LOG_WARN, "Unable to read state file \"%s\"", fname);
         goto done;
       }
       break;
     case FN_NOENT:
       break;
     default:
-      log_fn(LOG_WARN,"State file %s is not a file? Failing.", fname);
+      log_fn(LOG_WARN,"State file \"%s\" is not a file? Failing.", fname);
       goto done;
   }
   new_state = tor_malloc_zero(sizeof(or_state_t));
@@ -3196,7 +3196,7 @@ or_state_load(void)
     goto done;
 
   if (contents)
-    log_fn(LOG_INFO, "Loaded state from %s", fname);
+    log_fn(LOG_INFO, "Loaded state from \"%s\"", fname);
   else
     log_fn(LOG_INFO, "Initialized state");
   or_state_set(new_state);
@@ -3242,12 +3242,12 @@ or_state_save(void)
   tor_free(state);
   fname = get_or_state_fname();
   if (write_str_to_file(fname, contents, 0)<0) {
-    log_fn(LOG_WARN, "Unable to write state to file %s", fname);
+    log_fn(LOG_WARN, "Unable to write state to file \"%s\"", fname);
     tor_free(fname);
     tor_free(contents);
     return -1;
   }
-  log_fn(LOG_INFO, "Saved state to %s", fname);
+  log_fn(LOG_INFO, "Saved state to \"%s\"", fname);
   tor_free(fname);
   tor_free(contents);
 
