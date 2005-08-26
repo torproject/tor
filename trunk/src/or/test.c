@@ -114,7 +114,8 @@ remove_directory(void)
     /* Only "." and ".." start with ., since we don't create any dotfiles. */
     if (de->d_name[0] == '.') continue;
     if (unlink(get_fname(de->d_name))) {
-      perror("Error removing file");
+      printf("Couldn't remove temprorary file \"%s/%s\"",temp_dir,de->d_name);
+      perror("");
     }
 #if 0
     printf("==%s\n", de->d_name);
@@ -1522,6 +1523,7 @@ int
 main(int c, char**v)
 {
   or_options_t *options = options_new();
+  options->command = CMD_RUN_UNITTESTS;
   network_init();
   setup_directory();
   options_init(options);

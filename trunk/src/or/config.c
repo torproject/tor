@@ -411,9 +411,10 @@ options_act(or_options_t *old_options)
   char *fn;
   size_t len;
   or_options_t *options = get_options();
+  int running_tor = options->command == CMD_RUN_TOR;
   static int libevent_initialized = 0;
 
-  if (options->RunAsDaemon) {
+  if (running_tor && options->RunAsDaemon) {
     start_daemon();
   }
 
@@ -426,7 +427,7 @@ options_act(or_options_t *old_options)
     }
   }
 
-  if (rend_config_services(options, 0)<0) {
+  if (running_tor && rend_config_services(options, 0)<0) {
     log_fn(LOG_ERR,
            "Bug: Previously validated hidden services line could not be added!");
     return -1;
@@ -448,15 +449,18 @@ options_act(or_options_t *old_options)
            options->DataDirectory);
     return -1;
   }
-  len = strlen(options->DataDirectory)+32;
-  fn = tor_malloc(len);
-  tor_snprintf(fn, len, "%s/cached-status", options->DataDirectory);
-  if (check_private_dir(fn, CPD_CREATE) != 0) {
-    log_fn(LOG_ERR, "Couldn't access/create private data directory \"%s\"",fn);
+  if (running_tor) {
+    len = strlen(options->DataDirectory)+32;
+    fn = tor_malloc(len);
+    tor_snprintf(fn, len, "%s/cached-status", options->DataDirectory);
+    if (check_private_dir(fn, CPD_CREATE) != 0) {
+      log_fn(LOG_ERR, "Couldn't access/create private data directory \"%s\"",
+             fn);
+      tor_free(fn);
+      return -1;
+    }
     tor_free(fn);
-    return -1;
   }
-  tor_free(fn);
 
   /* Bail out at this point if we're not going to be a client or server:
    * we want to not fork, and to log stuff to stderr. */
@@ -474,7 +478,7 @@ options_act(or_options_t *old_options)
   control_adjust_event_log_severity();
 
   /* Set up libevent. */
-  if (!libevent_initialized) {
+  if (running_tor && !libevent_initialized) {
     if (init_libevent())
       return -1;
     libevent_initialized = 1;
@@ -500,14 +504,14 @@ options_act(or_options_t *old_options)
   }
 
   /* Finish backgrounding the process */
-  if (options->RunAsDaemon) {
+  if (running_tor && options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon(options->DataDirectory);
   }
 
   /* Write our pid to the pid file. If we do not have write permissions we
    * will log a warning */
-  if (options->PidFile)
+  if (running_tor && options->PidFile)
     write_pidfile(options->PidFile);
 
   /* Register addressmap directives */
@@ -533,6 +537,9 @@ options_act(or_options_t *old_options)
   }
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
+
+  if (!running_tor)
+    return 0;
 
   if (!we_are_hibernating() && retry_all_listeners(0) < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
