@@ -1196,12 +1196,11 @@ directory_handle_command_post(connection_t *conn, char *headers,
         log_fn(LOG_NOTICE,"Rejected descriptor published by %s.", origin);
         break;
       case 0:
-        /* descriptor was well-formed but server has not been approved */
-        write_http_status_line(conn, 200, msg?msg:"Unverified server descriptor accepted");
+        write_http_status_line(conn, 200, msg?msg:"Server okay, but not accepted.");
         break;
       case 1:
         dirserv_get_directory(&cp, 0); /* rebuild and write to disk */
-        write_http_status_line(conn, 200, msg?msg:"Verified server descriptor accepted");
+        write_http_status_line(conn, 200, msg?msg:"Server descriptor accepted");
         break;
     }
     goto done;
