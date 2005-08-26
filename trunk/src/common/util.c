@@ -1314,6 +1314,20 @@ tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len)
                       (int)(uint8_t)((a    )&0xff));
 }
 
+/** Given a host-order <b>addr</b>, call tor_inet_ntoa() on it
+ * and return a strdup of the resulting address.
+ */
+char *
+tor_dup_addr(uint32_t addr)
+{
+  char buf[INET_NTOA_BUF_LEN];
+  struct in_addr in;
+
+  in.s_addr = htonl(addr);
+  tor_inet_ntoa(&in, buf, sizeof(buf));
+  return tor_strdup(buf);
+}
+
 /* Return true iff <b>name</b> looks like it might be a hostname or IP
  * address of some kind. */
 int
