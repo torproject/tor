@@ -370,6 +370,7 @@ init_keys(void)
   if (!router_digest_is_trusted_dir(digest)) {
     add_trusted_dir_server(NULL, (uint16_t)options->DirPort, digest);
   }
+#if 0
   /* 7. [authdirserver only] load old directory, if it's there */
   tor_snprintf(keydir,sizeof(keydir),"%s/cached-directory", datadir);
   log_fn(LOG_INFO,"Loading cached directory from \"%s\"...",keydir);
@@ -384,6 +385,7 @@ init_keys(void)
     }
     tor_free(cp);
   }
+#endif
   /* success */
   return 0;
 }
