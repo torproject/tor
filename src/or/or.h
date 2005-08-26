@@ -773,8 +773,6 @@ typedef struct {
   time_t running_routers_updated_on;
   /** What is the most recently received running_routers structure? */
   running_routers_t *running_routers;
-  /** Which router is claimed to have signed it? */
-  char *signing_router;
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
