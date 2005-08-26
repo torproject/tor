@@ -154,9 +154,13 @@ $Id$
    The authoritative network-status published by a host should be available at:
       http://<hostname>/tor/status/authority.z
 
-   An authoritative network-status published by another host with fingerprint <F>
-   should be available at:
-      http://<hostname>/tor/status/<F>.z
+   An authoritative network-status published by another host with fingerprint
+   <F> should be available at:
+      http://<hostname>/tor/status/fp/<F>.z
+
+   An authoritative network-status published by other hosts with fingerprints
+   <F1>,<F2>,<F3> should be available at:
+      http://<hostname>/tor/status/fp/<F1>+<F2>+<F3>.z
 
    The most recent network-status documents from all known authoritative
    directories, concatenated, should be available at:
@@ -180,7 +184,11 @@ $Id$
    For debugging, directories MAY expose non-compressed objects at URLs like
    the above, but without the final ".z".
 
-   [XXXX specify concatenation of several servers.]
+   Clients MUST handle compressed concatenated information in two forms:
+     - A concatenated list of zlib-compressed objects.
+     - A zlib-compressed concatenated list of objects.
+   Directory servers MAY generate either format: the former requires less
+   CPU, but the latter requires less bandwidth.
 
 4.1. Caching
 
@@ -190,6 +198,9 @@ $Id$
 
    A concatenated list of all network-status documents should be available at:
       http://<hostname>/tor/status/all.z
+
+4.2. Compression
+
 
 5. Client operation
 
