@@ -100,6 +100,7 @@ static config_var_t _option_vars[] = {
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("Address",             STRING,   Address,              NULL),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
+  VAR("AssumeReachable",     BOOL,     AssumeReachable,      "0"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "5 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "2 MB"),
@@ -1141,7 +1142,7 @@ print_usage(void)
 
 /**
  * Based on <b>options-\>Address</b>, guess our public IP address and put it
- * in *<b>addr_out</b>. If <b>hostname_out</b> is provided, set
+ * (in host order) into *<b>addr_out</b>. If <b>hostname_out</b> is provided, set
  * *<b>hostname_out</b> to a new string holding the hostname we used to get
  * the address. Return 0 if all is well, or -1 if we can't find a suitable
  * public IP address.

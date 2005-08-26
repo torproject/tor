@@ -240,7 +240,6 @@ connection_or_init_conn_from_address(connection_t *conn,
                                      uint32_t addr, uint16_t port,
                                      const char *id_digest)
 {
-  struct in_addr in;
   const char *n;
   or_options_t *options = get_options();
   routerinfo_t *r = router_get_by_digest(id_digest);
@@ -265,10 +264,7 @@ connection_or_init_conn_from_address(connection_t *conn,
                   conn->identity_digest, DIGEST_LEN);
   }
   tor_free(conn->address);
-  in.s_addr = htonl(addr);
-
-  conn->address = tor_malloc(INET_NTOA_BUF_LEN);
-  tor_inet_ntoa(&in,conn->address,INET_NTOA_BUF_LEN);
+  conn->address = tor_dup_addr(addr);
 }
 
 /** "update an OR connection nickname on the fly"
