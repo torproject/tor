@@ -889,22 +889,22 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
   }
   if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:O_TEXT), 0600))
       < 0) {
-    log(LOG_WARN, "Couldn't open %s for writing: %s", tempname,
+    log(LOG_WARN, "Couldn't open \"%s\" for writing: %s", tempname,
         strerror(errno));
     goto err;
   }
   result = write_all(fd, str, len, 0);
   if (result < 0 || (size_t)result != len) {
-    log(LOG_WARN, "Error writing to %s: %s", tempname, strerror(errno));
+    log(LOG_WARN, "Error writing to \"%s\": %s", tempname, strerror(errno));
     close(fd);
     goto err;
   }
   if (close(fd)) {
-    log(LOG_WARN,"Error flushing to %s: %s", tempname, strerror(errno));
+    log(LOG_WARN,"Error flushing to \"%s\": %s", tempname, strerror(errno));
     goto err;
   }
   if (replace_file(tempname, fname)) {
-    log(LOG_WARN, "Error replacing %s: %s", fname, strerror(errno));
+    log(LOG_WARN, "Error replacing \"%s\": %s", fname, strerror(errno));
     goto err;
   }
   tor_free(tempname);
@@ -937,13 +937,13 @@ char *read_file_to_str(const char *filename, int bin) {
   r = stat(f, &statbuf);
   tor_free(f);
   if (r < 0) {
-    log_fn(LOG_INFO,"Could not stat %s.",filename);
+    log_fn(LOG_INFO,"Could not stat \"%s\".",filename);
     return NULL;
   }
 
   fd = open(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
   if (fd<0) {
-    log_fn(LOG_WARN,"Could not open %s.",filename);
+    log_fn(LOG_WARN,"Could not open \"%s\".",filename);
     return NULL;
   }
 
@@ -951,7 +951,7 @@ char *read_file_to_str(const char *filename, int bin) {
 
   r = read_all(fd,string,statbuf.st_size,0);
   if (r<0) {
-    log_fn(LOG_WARN,"Error reading from file '%s': %s", filename,
+    log_fn(LOG_WARN,"Error reading from file \"%s\": %s", filename,
            strerror(errno));
     tor_free(string);
     close(fd);
@@ -962,7 +962,7 @@ char *read_file_to_str(const char *filename, int bin) {
   if (bin && r != statbuf.st_size) {
     /* If we're in binary mode, then we'd better have an exact match for
      * size.  Otherwise, win32 encoding may throw us off, and that's okay. */
-    log_fn(LOG_WARN,"Could read only %d of %ld bytes of file '%s'.",
+    log_fn(LOG_WARN,"Could read only %d of %ld bytes of file \"%s\".",
            r, (long)statbuf.st_size,filename);
     tor_free(string);
     close(fd);
@@ -1078,7 +1078,7 @@ char *expand_filename(const char *filename)
       else
         username = tor_strdup(filename+1);
       if (!(home = get_user_homedir(username))) {
-        log_fn(LOG_WARN,"Couldn't get homedir for %s",username);
+        log_fn(LOG_WARN,"Couldn't get homedir for \"%s\"",username);
         tor_free(username);
         return NULL;
       }
@@ -1235,7 +1235,7 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
   } else if (tor_inet_aton(address, &in) != 0) {
     *addr_out = ntohl(in.s_addr);
   } else {
-    log_fn(LOG_WARN, "Malformed IP %s in address pattern; rejecting.",address);
+    log_fn(LOG_WARN, "Malformed IP \"%s\" in address pattern; rejecting.",address);
     goto err;
   }
 
@@ -1257,7 +1257,7 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
     } else if (tor_inet_aton(mask, &in) != 0) {
       *mask_out = ntohl(in.s_addr);
     } else {
-      log_fn(LOG_WARN, "Malformed mask %s on address range; rejecting.",
+      log_fn(LOG_WARN, "Malformed mask \"%s\" on address range; rejecting.",
              mask);
       goto err;
     }
@@ -1276,11 +1276,11 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
       *port_max_out = (uint16_t) tor_parse_long(port, 10, 1, 65535, NULL,
                                                 &endptr);
       if (*endptr || !*port_max_out) {
-      log_fn(LOG_WARN, "Malformed port %s on address range rejecting.",
+      log_fn(LOG_WARN, "Malformed port \"%s\" on address range rejecting.",
              port);
       }
     } else if (*endptr || !*port_min_out) {
-      log_fn(LOG_WARN, "Malformed port %s on address range; rejecting.",
+      log_fn(LOG_WARN, "Malformed port \"%s\" on address range; rejecting.",
              port);
       goto err;
     } else {
@@ -1476,7 +1476,7 @@ void finish_daemon(const char *desired_cwd)
     desired_cwd = "/";
    /* Don't hold the wrong FS mounted */
   if (chdir(desired_cwd) < 0) {
-    log_fn(LOG_ERR,"chdir to %s failed. Exiting.",desired_cwd);
+    log_fn(LOG_ERR,"chdir to \"%s\" failed. Exiting.",desired_cwd);
     exit(1);
   }
 
@@ -1514,7 +1514,7 @@ void write_pidfile(char *filename) {
   FILE *pidfile;
 
   if ((pidfile = fopen(filename, "w")) == NULL) {
-    log_fn(LOG_WARN, "Unable to open %s for writing: %s", filename,
+    log_fn(LOG_WARN, "Unable to open \"%s\" for writing: %s", filename,
            strerror(errno));
   } else {
     fprintf(pidfile, "%d\n", (int)getpid());
