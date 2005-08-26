@@ -1249,7 +1249,6 @@ generate_v2_networkstatus(void)
  * nothing was found; otherwise set *<b>directory</b> to the matching network
  * status and return its length.
  */
-If an appropriate network*/
 size_t
 dirserv_get_networkstatus_v2(const char **directory, const char *key,
                              int compress)
