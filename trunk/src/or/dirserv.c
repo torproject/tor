@@ -1033,7 +1033,7 @@ static cached_dir_t the_v2_networkstatus = { NULL, NULL, 0, 0, 0 };
 static int
 generate_v2_networkstatus(void)
 {
-#define BASE64_DIGEST_LEN 29
+#define BASE64_DIGEST_LEN 27
 #define LONGEST_STATUS_FLAG_NAME_LEN 7
 #define N_STATUS_FLAGS 6
 #define RS_ENTRY_LEN                                                    \
