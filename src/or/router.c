@@ -857,9 +857,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 {
   char *onion_pkey; /* Onion key, PEM-encoded. */
   char *identity_pkey; /* Identity key, PEM-encoded. */
-  char digest[20];
-  char signature[128];
-  char published[32];
+  char digest[DIGEST_LEN];
+  char published[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
   struct in_addr in;
   char addrbuf[INET_NTOA_BUF_LEN];
@@ -1017,18 +1016,11 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   if (router_get_router_hash(s, digest) < 0)
     return -1;
 
-  if (crypto_pk_private_sign(ident_key, signature, digest, 20) < 0) {
-    log_fn(LOG_WARN, "Error signing digest");
+  if (router_append_dirobj_signature(s+written,maxlen-written,
+                                     digest,ident_key)<0) {
+    log_fn(LOG_WARN, "Couldn't sign router descriptor");
     return -1;
   }
-  strlcat(s+written, "-----BEGIN SIGNATURE-----\n", maxlen-written);
-  written += strlen(s+written);
-  if (base64_encode(s+written, maxlen-written, signature, 128) < 0) {
-    log_fn(LOG_WARN, "Couldn't base64-encode signature");
-    return -1;
-  }
-  written += strlen(s+written);
-  strlcat(s+written, "-----END SIGNATURE-----\n", maxlen-written);
   written += strlen(s+written);
 
   if (written+2 > maxlen)
