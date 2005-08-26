@@ -1064,7 +1064,8 @@ router_load_routerlist_from_directory(const char *s,
     smartlist_t *changed = smartlist_create();
     SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
     {
-      if (router_add_to_routerlist(r,NULL)==0)
+      char *msg;
+      if (router_add_to_routerlist(r,&msg)==0)
         smartlist_add(changed, r);
     });
     smartlist_clear(new_list->routers);
