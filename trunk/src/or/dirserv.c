@@ -587,7 +587,8 @@ list_server_status(smartlist_t *routers, char **router_status_out)
       if (router_is_me(ri) && !we_are_hibernating()) {
         is_live = 1;
       } else if (conn && conn->state == OR_CONN_STATE_OPEN) {
-        is_live = now < ri->last_reachable + REACHABLE_TIMEOUT;
+        is_live = get_options()->AssumeReachable ||
+                  now < ri->last_reachable + REACHABLE_TIMEOUT;
       }
     } else {
       is_live = ri->is_running;
