@@ -739,14 +739,17 @@ typedef struct {
   /* local info */
   int is_running; /**< As far as we know, is this OR currently running? */
   time_t status_set_at; /**< When did we last update is_running? */
-  time_t last_reachable; /**< When was the last time we could reach this OR? */
-  time_t testing_since; /**< When did we start testing reachability for this OR? */
   int is_verified; /**< Has a trusted dirserver validated this OR? */
 
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
 
   char *contact_info; /**< Declared contact info for this router. */
+
+  /* The below items are used only by authdirservers right now for
+   * reachability testing. */
+  time_t last_reachable; /**< When was the last time we could reach this OR? */
+  time_t testing_since; /**< When did we start testing reachability for this OR? */
 } routerinfo_t;
 
 /** Contents of a running-routers list */
