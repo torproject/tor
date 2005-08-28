@@ -734,21 +734,26 @@ static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0 };
 static strmap_t *cached_v2_networkstatus = NULL;
 
 /** Possibly replace the contents of <b>d</b> with the value of
- * <b>directory</b> published on <b>when</b>.  (Do nothing if <b>when</b> is
- * older than the last value, or too far in the future. */
+ * <b>directory</b> published on <b>when</b>, unless <b>when</b> is older than
+ * the last value, or too far in the future.
+ *
+ * Does not copy <b>directory</b>; free it if it isn't used.
+ */
 static void
-set_cached_dir(cached_dir_t *d, const char *directory, time_t when)
+set_cached_dir(cached_dir_t *d, char *directory, time_t when)
 {
   time_t now = time(NULL);
   if (when<=d->published) {
     log_fn(LOG_INFO, "Ignoring old directory; not caching.");
+    tor_free(directory);
   } else if (when>=now+ROUTER_MAX_AGE) {
     log_fn(LOG_INFO, "Ignoring future directory; not caching.");
+    tor_free(directory);
   } else {
     /* if (when>d->published && when<now+ROUTER_MAX_AGE) */
     log_fn(LOG_DEBUG, "Caching directory.");
     tor_free(d->dir);
-    d->dir = tor_strdup(directory);
+    d->dir = directory;
     d->dir_len = strlen(directory);
     tor_free(d->dir_z);
     if (tor_gzip_compress(&(d->dir_z), &(d->dir_z_len), d->dir, d->dir_len,
@@ -786,7 +791,7 @@ dirserv_set_cached_directory(const char *directory, time_t published,
 {
   cached_dir_t *d;
   d = is_running_routers ? &cached_runningrouters : &cached_directory;
-  set_cached_dir(d, directory, published);
+  set_cached_dir(d, tor_strdup(directory), published);
   if (!is_running_routers) {
     char filename[512];
     tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
@@ -817,7 +822,7 @@ dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
   }
 
   tor_assert(d);
-  set_cached_dir(d, directory, published);
+  set_cached_dir(d, tor_strdup(directory), published);
 
   if (!d->dir)
     return;
@@ -957,10 +962,6 @@ generate_runningrouters(void)
 
   set_cached_dir(&the_runningrouters, s, time(NULL));
   runningrouters_is_dirty = 0;
-
-  /* We don't cache running-routers to disk, so there's no point in
-   * authdirservers caching it. */
-  /* dirserv_set_cached_directory(the_runningrouters, time(NULL), 1); */
 
   return 0;
  err:
@@ -1162,8 +1163,10 @@ generate_v2_networkstatus(void)
     goto done;
 
   set_cached_dir(&the_v2_networkstatus, status, time(NULL));
+  status = NULL; /* So it doesn't get double-freed. */
   the_v2_networkstatus_is_dirty = 0;
-  dirserv_set_cached_networkstatus_v2(status, fingerprint, time(NULL));
+  dirserv_set_cached_networkstatus_v2(the_v2_networkstatus.dir,
+                                      fingerprint, time(NULL));
 
   r = 0;
  done:
