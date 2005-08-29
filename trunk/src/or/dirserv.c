@@ -538,6 +538,8 @@ list_server_status(smartlist_t *routers, char **router_status_out)
         is_live = get_options()->AssumeReachable ||
                   now < ri->last_reachable + REACHABLE_TIMEOUT;
       }
+      /* Update router status in routerinfo_t. */
+      ri->is_running = is_live;
     } else {
       is_live = ri->is_running;
     }
@@ -1108,6 +1110,8 @@ generate_v2_networkstatus(void)
                                          ri->identity_digest, CONN_TYPE_OR);
         f_running = (router_is_me(ri) && !we_are_hibernating()) ||
           (conn && conn->state == OR_CONN_STATE_OPEN);
+        /* Update router status in routerinfo_t. */
+        ri->is_running = f_running;
       } else {
         f_running = ri->is_running;
       }
