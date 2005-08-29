@@ -908,7 +908,7 @@ test_gzip(void)
   char *buf1, *buf2=NULL, *buf3=NULL;
   size_t len1, len2;
 
-  buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   test_eq(detect_compression_method(buf1, strlen(buf1)), 0);
   if (is_gzip_supported()) {
     test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
@@ -934,6 +934,16 @@ test_gzip(void)
   test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1, ZLIB_METHOD));
   test_assert(buf3);
   test_streq(buf1,buf3);
+
+  tor_free(buf3);
+  buf2 = tor_realloc(buf2, len1*2);
+  memcpy(buf2+len1, buf2, len1);
+  test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2, ZLIB_METHOD));
+  test_eq(len2, (strlen(buf1)+1)*2);
+  test_memeq(buf3,
+             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
+             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0",
+             (strlen(buf1)+1)*2);
 
   tor_free(buf2);
   tor_free(buf3);

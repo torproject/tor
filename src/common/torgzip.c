@@ -30,6 +30,8 @@ const char torgzip_c_id[] = "$Id$";
 
 static int gzip_is_supported = -1;
 
+/** Return true iff we support gzip-based compression.  Otherwise, we need to
+ * use zlib. */
 int
 is_gzip_supported(void)
 {
@@ -53,6 +55,11 @@ method_bits(compress_method_t method)
   return method == GZIP_METHOD ? 15+16 : 15;
 }
 
+/** Given <b>in_len</b> bytes at <b>in</b>, compress them into a newly
+ * allocated buffer, using the method described in <b>method</b>.  Store the
+ * compressed string in *<b>out</b>, and its length in *<b>out_len</b>.
+ * Return 0 on success, -1 on failure.
+ */
 int
 tor_gzip_compress(char **out, size_t *out_len,
                   const char *in, size_t in_len,
@@ -138,7 +145,12 @@ tor_gzip_compress(char **out, size_t *out_len,
   return -1;
 }
 
-/* DOCDOC -- sets *out to NULL on failure. */
+/** Given or more zlib-compressed or gzip-compressed strings of total length
+ * <b>in_len</b> bytes at <b>in</b>, uncompress them into a newly allocated
+ * buffer, using the method described in <b>method</b>.  Store the uncompressed
+ * string in *<b>out</b>, and its length in *<b>out_len</b>.  Return 0 on
+ * success, -1 on failure.
+ */
 int
 tor_gzip_uncompress(char **out, size_t *out_len,
                     const char *in, size_t in_len,
@@ -186,13 +198,20 @@ tor_gzip_uncompress(char **out, size_t *out_len,
     switch (inflate(stream, Z_FINISH))
       {
       case Z_STREAM_END:
-        goto done;
+        if (stream->avail_in == 0)
+          goto done;
+        if (inflateInit2(stream, method_bits(method)) != Z_OK) {
+          log_fn(LOG_WARN, "Error from inflateInit2: %s",
+                 stream->msg?stream->msg:"<no message>");
+          goto err;
+        }
+        break;
       case Z_OK:
         /* In case zlib doesn't work as I think.... */
         if (stream->avail_out >= stream->avail_in+16)
           break;
       case Z_BUF_ERROR:
-        offset = stream->next_out - ((unsigned char*)*out);
+        offset = stream->next_out - (unsigned char*)*out;
         out_size *= 2;
         *out = tor_realloc(*out, out_size);
         stream->next_out = (unsigned char*)(*out + offset);
@@ -205,7 +224,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
       }
   }
  done:
-  *out_len = stream->total_out;
+  *out_len = stream->next_out - (unsigned char*)*out;
   r = inflateEnd(stream);
   tor_free(stream);
   if (r != Z_OK) {
