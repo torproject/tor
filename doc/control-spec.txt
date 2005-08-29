@@ -2,7 +2,7 @@ $Id$
 
                    TC: A Tor control protocol (Version 1)
 
-0 Scope
+0. Scope
 
   This document describes an implementation-specific protocol that is used
   for other programs (such as frontend user-interfaces) to communicate with a
@@ -14,7 +14,7 @@ $Id$
   recommended to avoid using TC directly, but instead to use a library that
   can easily be updated to use the newer protocol.
 
-1 Protocol outline
+1. Protocol outline
 
   TC is a bidirectional message-based protocol.  It assumes an underlying
   stream for communication between a controlling process (the "client"
@@ -34,9 +34,9 @@ $Id$
 
   Servers respond to messages in the order messages are received.
 
-2 Message format
+2. Message format
 
-2.1 Description format
+2.1. Description format
 
   The message formats listed below use ABNF as described in RFC2234.
   The protocol itself is loosely based on SMTP (see RFC 2821).
@@ -50,7 +50,7 @@ $Id$
   There are explicitly no limits on line length.  All 8-bit characters are
   permitted unless explicitly disallowed.
 
-2.2 Commands from controller to Tor
+2.2. Commands from controller to Tor
 
     Command = Keyword Arguments CRLF / "+" Keyword Arguments CRLF Data
     Keyword = 1*ALPHA
@@ -58,7 +58,7 @@ $Id$
 
   Specific commands and their arguments are described below in section 3.
 
-2.3 Replies from Tor to the controller
+2.3. Replies from Tor to the controller
 
     Reply = *(MidReplyLine / DataReplyLine) EndReplyLine
 
@@ -72,7 +72,7 @@ $Id$
   Specific replies are mentioned below in section 3, and described more fully
   in section 4.
 
-2.4 General-use tokens
+2.4. General-use tokens
 
   ; Identifiers for servers.
   ServerID = Nickname / Fingerprint
@@ -98,11 +98,11 @@ $Id$
   LineItem = NonCR / 1*CR NonCRLF
   NonDotItem = NonDotCR / 1*CR NonCRLF
 
-3 Commands
+3. Commands
 
   All commands and other keywords are case-insensitive.
 
-3.1 SETCONF
+3.1. SETCONF
 
   Change the value of one or more configuration variables.  The syntax is:
 
@@ -129,7 +129,7 @@ $Id$
   To _remove_ all settings for a given option entirely (and go back to its
   default value), send a single line containing the key and no value.
 
-3.2 GETCONF
+3.2. GETCONF
 
   Request the value of a configuration variable.  The syntax is:
 
@@ -154,7 +154,7 @@ $Id$
   virtual keyword to get all HiddenServiceDir, HiddenServicePort,
   HiddenServiceNodes, and HiddenServiceExcludeNodes option settings.
 
-3.3 SETEVENTS
+3.3. SETEVENTS
 
   Request the server to inform the client about interesting events.  The
   syntax is:
@@ -171,7 +171,7 @@ $Id$
   Unrecognized event" reply if one of the event codes isn't recognized.  (On
   error, the list of active event codes isn't changed.)
 
-3.4 AUTHENTICATE
+3.4. AUTHENTICATE
 
   Sent from the client to the server.  The syntax is:
      "AUTHENTICATE" [ SP 1*HEXDIG / QuotedString ] CRLF
@@ -186,7 +186,7 @@ $Id$
   AUTHENTICATE message, Tor sends a "514 authentication required" reply to
   any other kind of message.
 
-3.5 SAVECONF
+3.5. SAVECONF
 
   Sent from the client to the server.  The syntax is:
      "SAVECONF" CRLF
@@ -195,7 +195,7 @@ $Id$
   returns "250 OK" if successful, or "551 Unable to write configuration
   to disk" if it can't write the file or some other error occurs.
 
-3.6 SIGNAL
+3.6. SIGNAL
 
   Sent from the client to the server. The syntax is:
 
@@ -219,7 +219,7 @@ $Id$
   closes the socket if it was asked to close immediately), or "552
   Unrecognized signal" if the signal is unrecognized.
 
-3.7 MAPADDRESS
+3.7. MAPADDRESS
 
   Sent from the client to the server.  The syntax is:
 
@@ -273,7 +273,7 @@ $Id$
   a certain time, then it must explicitly un-map the address when that
   time has elapsed.
 
-3.8 GETINFO
+3.8. GETINFO
 
   Sent from the client to the server.  The syntax is as for GETCONF:
     "GETINFO" 1*(SP keyword) CRLF
@@ -374,7 +374,7 @@ $Id$
      S: 250-version=Tor 0.1.1.0-alpha-cvs
      S: 250 OK
 
-3.9 EXTENDCIRCUIT
+3.9. EXTENDCIRCUIT
 
   Sent from the client to the server.  The format is:
       "EXTENDCIRCUIT" SP CircuitID SP ServerID *("," ServerID) CRLF
@@ -389,7 +389,7 @@ $Id$
   body consisting of the Circuit ID of the (maybe newly created) circuit.
   The syntax is "250" SP "EXTENDED" SP CircuitID CRLF.
 
-3.10 ATTACHSTREAM
+3.10. ATTACHSTREAM
 
   Sent from the client to the server.  The syntax is:
      "ATTACHSTREAM" SP StreamID SP CircuitID CRLF
@@ -414,7 +414,7 @@ $Id$
   via TC when "__LeaveStreamsUnattached" is false may cause a race between
   Tor and the controller, as both attempt to attach streams to circuits.}
 
-3.11 POSTDESCRIPTOR
+3.11. POSTDESCRIPTOR
 
   Sent from the client to the server. The syntax is:
     "+POSTDESCRIPTOR" CRLF Descriptor CRLF "." CRLF
@@ -430,7 +430,7 @@ $Id$
   why the server was not added.  If the descriptor is added, Tor replies with
   "250 OK".
 
-3.12 REDIRECTSTREAM
+3.12. REDIRECTSTREAM
 
   Sent from the client to the server. The syntax is:
     "REDIRECTSTREAM" SP StreamID SP Address CRLF
@@ -444,7 +444,7 @@ $Id$
 
   Tor replies with "250 OK" on success.
 
-3.13 CLOSESTREAM
+3.13. CLOSESTREAM
 
   Sent from the client to the server.  The syntax is:
 
@@ -455,7 +455,7 @@ $Id$
   not used currently; Tor servers SHOULD ignore unrecognized flags.  Tor may
   hold the stream open for a while to flush any data that is pending.
 
-3.14 CLOSECIRCUIT
+3.14. CLOSECIRCUIT
 
    The syntax is:
      CLOSECIRCUIT SP CircuitID *(SP Flag) CRLF
@@ -467,12 +467,12 @@ $Id$
   Other flags may be defined in the future; Tor SHOULD ignore unrecognized
   flags.
 
-3.15 QUIT
+3.15. QUIT
 
   Tells the server to hang up on this controller connection. This command
   can be used before authenticating.
 
-4 Replies
+4. Replies
 
   Reply codes follow the same 3-character format as used by SMTP, with the
   first character defining a status, the second character defining a
@@ -544,7 +544,7 @@ $Id$
   Unless specified to have specific contents, the human-readable messages
   in error replies should not be relied upon to match those in this document.
 
-4.1 Asynchronous events
+4.1. Asynchronous events
 
   These replies can be sent after a corresponding SETEVENTS command has been
   received.  They will not be interleaved with other Reply elements, but they
@@ -575,7 +575,7 @@ $Id$
       650-EXTRAMAGIC=99
       650 ANONYMITY=high
 
-4.1.1 Circuit status changed
+4.1.1. Circuit status changed
 
    The syntax is:
 
@@ -611,21 +611,21 @@ $Id$
   The circuit ID designates which circuit this stream is attached to.  If
   the stream is unattached, the circuit ID "0" is given.
 
-4.1.3 OR Connection status changed
+4.1.3. OR Connection status changed
 
   The syntax is:
     "650" SP "ORCONN" SP ServerID SP ORStatus
 
     ORStatus = "LAUNCHED" / "CONNECTED" / "FAILED" / "CLOSED"
 
-4.1.3 Bandwidth used in the last second
+4.1.4. Bandwidth used in the last second
 
   The syntax is:
      "650" SP "BW" SP BytesRead SP BytesWritten
      BytesRead = 1*DIGIT
      BytesWritten = 1*DIGIT
 
-4.1.4 Log message
+4.1.5. Log message
 
   The syntax is:
      "650" SP Severity SP ReplyText
@@ -634,12 +634,12 @@ $Id$
 
      Severity = "DEBUG" / "INFO" / "NOTICE" / "WARN"/ "ERR"
 
-4.1.5 New descriptors available
+4.1.6. New descriptors available
 
   Syntax:
      "650" SP "NEWDESC" 1*(SP ServerID)
 
-4.1.6 New Address mapping
+4.1.7. New Address mapping
 
   Syntax:
      "650" SP "ADDRMAP" SP Address SP Address SP Expiry
