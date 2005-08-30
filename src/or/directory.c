@@ -844,7 +844,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver '%s'. Malformed server descriptor?", reason, conn->address);
         break;
       case 403:
-        log_fn(LOG_WARN,"http status 403 (\"%s\") response from dirserver '%s'. Is your clock skewed? Have you mailed us your key fingerprint? Are you using the right key? Are you using a private IP address? See http://tor.eff.org/doc/tor-doc.html#server.", reason, conn->address);
+        log_fn(LOG_WARN,"http status 403 (\"%s\") response from dirserver '%s'. Is your clock skewed? Have you mailed us your key fingerprint? Are you using the right key? Are you using a private IP address? See http://tor.eff.org/doc/tor-doc-server.html", reason, conn->address);
         break;
       default:
         log_fn(LOG_WARN,"http status %d (\"%s\") reason unexpected (server '%s').", status_code, reason, conn->address);

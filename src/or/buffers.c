@@ -1065,7 +1065,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
 "client accordingly.\n"
 "</p>\n"
 "<p>\n"
-"See <a href=\"http://tor.eff.org/doc/tor-doc.html#installing\">http://tor.eff.org/doc/tor-doc.html#installing</a> for more information.\n"
+"See <a href=\"http://tor.eff.org/documentation.html\">http://tor.eff.org/documentation.html</a> for more information.\n"
 "<!-- Plus this comment, to make the body response more than 512 bytes, so IE will be willing to display it. Comment comment comment comment comment comment comment comment comment comment comment comment.-->\n"
 "</p>\n"
 "</body>\n"
