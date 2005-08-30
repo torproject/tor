@@ -484,6 +484,40 @@ list_single_server_status(routerinfo_t *desc, int is_live)
 #define REACHABLE_TIMEOUT (60*60) /* an hour */
 /* Make sure this is 3 times the value of get_dir_fetch_period() */
 
+/** Treat a router as alive if
+ *    - It's me, and I'm not hibernating.
+ * or - we're connected to it and we've found it reachable recently. */
+static int
+dirserv_thinks_router_is_reachable(routerinfo_t *router, time_t now)
+{
+  connection_t *conn;
+  if (router_is_me(router) && !we_are_hibernating())
+    return 1;
+  conn = connection_get_by_identity_digest(router->identity_digest,
+                                           CONN_TYPE_OR);
+  if (conn && conn->state == OR_CONN_STATE_OPEN)
+    return get_options()->AssumeReachable ||
+           now < router->last_reachable + REACHABLE_TIMEOUT;
+  return 0;
+}
+
+/** Return 1 if we're confident that there's a problem with
+ * <b>router</b>'s reachability and its operator should be notified.
+ */
+static int
+dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router, time_t now)
+{
+  connection_t *conn;
+  conn = connection_get_by_identity_digest(router->identity_digest,
+                                           CONN_TYPE_OR);
+  if (conn && conn->state == OR_CONN_STATE_OPEN &&
+      now >= router->last_reachable + 2*REACHABLE_TIMEOUT &&
+      router->testing_since &&
+      now >= router->testing_since + 2*REACHABLE_TIMEOUT)
+    return 1;
+  return 0;
+}
+
 /** Based on the routerinfo_ts in <b>routers</b>, allocate the
  * contents of a router-status line, and store it in
  * *<b>router_status_out</b>.  Return 0 on success, -1 on failure.
@@ -502,29 +536,14 @@ list_server_status(smartlist_t *routers, char **router_status_out)
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
   {
-    int is_live = 0;
-    connection_t *conn;
-    conn = connection_get_by_identity_digest(
-                    ri->identity_digest, CONN_TYPE_OR);
     if (authdir_mode) {
-      /* Treat a router as alive if
-       *    - It's me, and I'm not hibernating.
-       * or - we're connected to it and we've found it reachable recently. */
-      if (router_is_me(ri) && !we_are_hibernating()) {
-        is_live = 1;
-      } else if (conn && conn->state == OR_CONN_STATE_OPEN) {
-        is_live = get_options()->AssumeReachable ||
-                  now < ri->last_reachable + REACHABLE_TIMEOUT;
-      }
       /* Update router status in routerinfo_t. */
-      ri->is_running = is_live;
-    } else {
-      is_live = ri->is_running;
+      ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
     }
-    smartlist_add(rs_entries, list_single_server_status(ri, is_live));
+    smartlist_add(rs_entries, list_single_server_status(ri, ri->is_running));
   });
 
-  *router_status_out = smartlist_join_strings(rs_entries, " ", 0,NULL);
+  *router_status_out = smartlist_join_strings(rs_entries, " ", 0, NULL);
 
   SMARTLIST_FOREACH(rs_entries, char *, cp, tor_free(cp));
   smartlist_free(rs_entries);
@@ -544,35 +563,10 @@ dirserv_log_unreachable_servers(time_t now)
 
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
   {
-    connection_t *conn;
-    conn = connection_get_by_identity_digest(
-                    ri->identity_digest, CONN_TYPE_OR);
-    if (conn && conn->state == OR_CONN_STATE_OPEN &&
-        now >= ri->last_reachable + 2*REACHABLE_TIMEOUT &&
-        ri->testing_since &&
-        now >= ri->testing_since + 2*REACHABLE_TIMEOUT) {
+    if (dirserv_thinks_router_is_blatantly_unreachable(ri, now))
       log_fn(LOG_NOTICE,
              "Router %s (%s:%d) is connected to us but not reachable by us.",
              ri->nickname, ri->address, ri->or_port);
-    }
-  });
-}
-
-/** Record the fact that we've started trying to determine reachability
- * for the router with identity <b>digest</b>.
- * (This function can go away when we merge descriptor-list and router-list.)
- */
-void
-dirserv_router_has_begun_reachability_testing(char *digest, time_t now)
-{
-  smartlist_t *descriptor_list = get_descriptor_list();
-  if (!descriptor_list)
-    return;
-  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
-  {
-    if (!memcmp(ri->identity_digest, digest, DIGEST_LEN))
-      if (!ri->testing_since)
-        ri->testing_since = now;
   });
 }
 
