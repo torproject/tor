@@ -736,6 +736,7 @@ typedef struct {
   addr_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
   long uptime; /**< How many seconds the router claims to have been up */
+  uint8_t is_hibernating; /**< Whether the router claims to be hibernating */
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
   char *contact_info; /**< Declared contact info for this router. */
@@ -747,7 +748,7 @@ typedef struct {
                     * (For Authdir: Have we validated this OR?)
                     */
 
-  /* The below items are used only by authdirservers right now for
+  /* The below items are used only by authdirservers for
    * reachability testing. */
   time_t last_reachable; /**< When was the last time we could reach this OR? */
   time_t testing_since; /**< When did we start testing reachability for this OR? */
