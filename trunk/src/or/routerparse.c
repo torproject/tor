@@ -968,6 +968,15 @@ router_parse_entry_from_string(const char *s, const char *end)
     }
   }
 
+  if ((tok = find_first_by_keyword(tokens, K_HIBERNATING))) {
+    if (tok->n_args < 1) {
+      log_fn(LOG_WARN, "Too few args on 'hibernating' keyword. Skipping.");
+    } else {
+      router->is_hibernating
+        = (tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL) != 0);
+    }
+  }
+
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
     log_fn(LOG_WARN, "Missing published time"); goto err;
   }
