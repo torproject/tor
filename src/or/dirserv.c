@@ -508,6 +508,8 @@ static int
 dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router, time_t now)
 {
   connection_t *conn;
+  if (router->is_hibernating)
+    return 0;
   conn = connection_get_by_identity_digest(router->identity_digest,
                                            CONN_TYPE_OR);
   if (conn && conn->state == OR_CONN_STATE_OPEN &&
