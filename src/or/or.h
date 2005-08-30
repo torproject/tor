@@ -1633,7 +1633,6 @@ char *dirserver_getinfo_unregistered(const char *question);
 void dirserv_free_descriptors(void);
 int list_server_status(smartlist_t *routers, char **router_status_out);
 void dirserv_log_unreachable_servers(time_t now);
-void dirserv_router_has_begun_reachability_testing(char *digest, time_t now);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);

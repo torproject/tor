@@ -606,7 +606,9 @@ router_retry_connections(int force)
       log_fn(LOG_INFO,"%sconnecting to %s at %s:%u.",
              clique_mode(options) ? "(forced) " : "",
              router->nickname, router->address, router->or_port);
-      dirserv_router_has_begun_reachability_testing(router->identity_digest, now);
+      /* Remember when we started trying to determine reachability */
+      if (!router->testing_since)
+        router->testing_since = now;
       connection_or_connect(router->addr, router->or_port, router->identity_digest);
     }
   }
