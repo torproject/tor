@@ -319,18 +319,19 @@ dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
     *msg = "Rejected: Address is not an IP, or IP is a private address.";
     return -1;
   }
-
   return 0;
 }
 
-/** Parse the server descriptor at desc and maybe insert it into the list of
- * server descriptors.  Set msg to a message that should be passed back to the
- * origin of this descriptor, or to NULL.
+/** Parse the server descriptor at <b>desc</b> and maybe insert it into
+ * the list of server descriptors. Set *<b>msg</b> to a message that
+ * should be passed back to the origin of this descriptor.
  *
- * Return 1 if descriptor is well-formed and accepted;
+ * Return 2 if descriptor is well-formed and accepted;
+ *  1 if well-formed and accepted but origin should hear *msg;
  *  0 if well-formed but redundant with one we already have;
  * -1 if it looks vaguely like a router descriptor but rejected;
- * -2 if we can't find a router descriptor in *desc.
+ * -2 if we can't find a router descriptor in <b>desc</b>.
+ *
  */
 int
 dirserv_add_descriptor(const char *desc, const char **msg)
@@ -345,7 +346,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   if (!ri) {
     log(LOG_WARN, "Couldn't parse descriptor");
     *msg = "Rejected: Couldn't parse server descriptor.";
-    return -1;
+    return -2;
   }
   if ((r = router_add_to_routerlist(ri, msg))<0) {
     return r == -1 ? 0 : -1;
@@ -358,7 +359,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
       *msg =  ri->is_verified ? "Verified server descriptor accepted" :
         "Unverified server descriptor accepted";
     }
-    return 1;
+    return r == 0 ? 2 : 1;
   }
 }
 
@@ -504,7 +505,7 @@ dirserv_thinks_router_is_reachable(routerinfo_t *router, time_t now)
 /** Return 1 if we're confident that there's a problem with
  * <b>router</b>'s reachability and its operator should be notified.
  */
-static int
+int
 dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router, time_t now)
 {
   connection_t *conn;

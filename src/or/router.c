@@ -329,7 +329,7 @@ init_keys(void)
       log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
       return -1;
     }
-    if (dirserv_add_descriptor(tmp, &m) != 1) {
+    if (dirserv_add_descriptor(tmp, &m) < 0) {
       log(LOG_ERR, "Unable to add own descriptor to directory: %s",
           m?m:"<unknown error>");
       return -1;

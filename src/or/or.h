@@ -1632,6 +1632,8 @@ const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char *desc, const char **msg);
 char *dirserver_getinfo_unregistered(const char *question);
 void dirserv_free_descriptors(void);
+int dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
+                                                   time_t now);
 int list_server_status(smartlist_t *routers, char **router_status_out);
 void dirserv_log_unreachable_servers(time_t now);
 int dirserv_dump_directory_to_string(char **dir_out,
