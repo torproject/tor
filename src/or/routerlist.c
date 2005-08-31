@@ -924,6 +924,11 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
         }
         unreachable = authdir &&
           dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL));
+        if (unreachable) {
+          log_fn(LOG_WARN, "Notifying server '%s' that it's unreachable. (ContactInfo '%s', platform '%s').",
+           router->nickname, router->contact_info ? router->contact_info : "",
+           router->platform ? router->platform : "");
+        }
         routerinfo_free(old_router);
         smartlist_set(routerlist->routers, i, router);
         directory_set_dirty();
