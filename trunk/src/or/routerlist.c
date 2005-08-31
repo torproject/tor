@@ -854,15 +854,18 @@ router_mark_as_down(const char *digest)
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
  * older entries (if any) with the same name.  Note: Callers should not hold
  * their pointers to <b>router</b> if this function fails; <b>router</b>
- * will either be inserted into the routerlist or freed.  Returns 0 if the
- * router was added; less than 0 if it was not.
+ * will either be inserted into the routerlist or freed.
  *
- * If we're returning an error, then assign to *<b>msg</b> a static string
- * describing the reason for refusing the routerinfo.
+ * Returns >= 0 if the router was added; less than 0 if it was not.
+ *
+ * If we're returning non-zero, then assign to *<b>msg</b> a static string
+ * describing the reason for not liking the routerinfo.
  *
  * If the return value is less than -1, there was a problem with the
- * routerinfo.  If the return value is equal to -1, then the routerinfo was
- * fine, but out-of-date.
+ * routerinfo. If the return value is equal to -1, then the routerinfo was
+ * fine, but out-of-date. If the return value is equal to 1, the
+ * routerinfo was accepted, but we should notify the generator of the
+ * descriptor using the message *<b>msg</b>.
  */
 int
 router_add_to_routerlist(routerinfo_t *router, const char **msg)
@@ -882,8 +885,11 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
   crypto_pk_get_digest(router->identity_pkey, id_digest);
 
   if (authdir) {
-    if (dirserv_wants_to_reject_router(router, &authdir_verified, msg))
+    if (dirserv_wants_to_reject_router(router, &authdir_verified, msg)) {
+      tor_assert(*msg);
+      routerinfo_free(router);
       return -2;
+    }
     router->is_verified = authdir_verified;
     if (tor_version_as_new_as(router->platform,"0.1.0.2-rc"))
       router->is_verified = 1;
@@ -903,9 +909,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
           old_router->is_running = router->is_running;
         }
         routerinfo_free(router);
-        if (msg) *msg = "Router descriptor was not new.";
+        *msg = "Router descriptor was not new.";
         return -1;
       } else {
+        int unreachable;
         log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
                router->nickname, old_router->nickname,
                hex_str(id_digest,DIGEST_LEN));
@@ -915,13 +922,15 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
           router->last_reachable = old_router->last_reachable;
           router->testing_since = old_router->testing_since;
         }
-        if (msg)
-          *msg = authdir_verified ? "Verified server updated":
-          "Unverified server updated. (Have you sent us your key finerprint?)";
+        unreachable = authdir &&
+          dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL));
         routerinfo_free(old_router);
         smartlist_set(routerlist->routers, i, router);
         directory_set_dirty();
-        return 0;
+        *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
+               authdir_verified ? "Verified server updated" :
+               "Unverified server updated. (Have you sent us your key fingerprint?)";
+        return unreachable ? 1 : 0;
       }
     } else if (!strcasecmp(router->nickname, old_router->nickname)) {
       /* nicknames match, keys don't. */
@@ -947,7 +956,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
         log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
                router->nickname);
         routerinfo_free(router);
-        if (msg) *msg = "Already have verified router with same nickname and different key.";
+        *msg = "Already have verified router with same nickname and different key.";
         return -2;
       }
     }
@@ -1066,7 +1075,7 @@ router_load_routerlist_from_directory(const char *s,
     SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
     {
       const char *msg;
-      if (router_add_to_routerlist(r,&msg)==0)
+      if (router_add_to_routerlist(r,&msg)>=0)
         smartlist_add(changed, r);
     });
     smartlist_clear(new_list->routers);
@@ -1082,13 +1091,6 @@ router_load_routerlist_from_directory(const char *s,
     control_event_descriptors_changed(routerlist->routers);
   }
   router_normalize_routerlist(routerlist);
-#if 0
-  if (get_options()->AuthoritativeDir) {
-    /* Learn about the descriptors in the directory. */
-    dirserv_load_from_directory_string(s);
-//XXXRD
-  }
-#endif
   return 0;
 }
 

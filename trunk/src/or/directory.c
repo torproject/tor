@@ -1188,19 +1188,21 @@ directory_handle_command_post(connection_t *conn, char *headers,
 
   if (!strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg;
-    switch (dirserv_add_descriptor(body, &msg)) {
+    int r = dirserv_add_descriptor(body, &msg);
+    tor_assert(msg);
+    if (r > 0)
+      dirserv_get_directory(&cp, 0); /* rebuild and write to disk */
+    switch (r) {
       case -2:
       case -1:
-        /* malformed descriptor, or something wrong */
-        write_http_status_line(conn, 400, msg?msg:"Malformed or unacceptable server descriptor");
-        log_fn(LOG_NOTICE,"Rejected descriptor published by %s.", origin);
-        break;
-      case 0:
-        write_http_status_line(conn, 200, msg?msg:"Server descriptor okay, but not accepted.");
-        break;
       case 1:
-        dirserv_get_directory(&cp, 0); /* rebuild and write to disk */
-        write_http_status_line(conn, 200, msg?msg:"Server descriptor accepted");
+        log_fn(LOG_NOTICE,"Rejected descriptor published by %s.", origin);
+        /* malformed descriptor, or something wrong */
+        write_http_status_line(conn, 400, msg);
+        break;
+      case 0: /* accepted but discarded */
+      case 2: /* accepted */
+        write_http_status_line(conn, 200, msg);
         break;
     }
     goto done;
