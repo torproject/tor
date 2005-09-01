@@ -1290,6 +1290,7 @@ dirserv_orconn_tls_done(const char *address,
     } else { /* correct nickname and digest. mark this router reachable! */
       log_fn(LOG_INFO,"Found router %s to be reachable. Yay.", ri->nickname);
       ri->last_reachable = time(NULL);
+      ri->num_unreachable_notifications = 0;
     }
   }
 }

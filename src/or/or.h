@@ -750,8 +750,13 @@ typedef struct {
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
-  time_t last_reachable; /**< When was the last time we could reach this OR? */
-  time_t testing_since; /**< When did we start testing reachability for this OR? */
+  /** When was the last time we could reach this OR? */
+  time_t last_reachable;
+  /** When did we start testing reachability for this OR? */
+  time_t testing_since;
+  /** How many times has a descriptor been posted and we believed
+   * this router to be unreachable? We only actually warn on the third. */
+  int num_unreachable_notifications;
 } routerinfo_t;
 
 /** Contents of a running-routers list */
