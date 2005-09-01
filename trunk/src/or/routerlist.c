@@ -912,7 +912,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
         *msg = "Router descriptor was not new.";
         return -1;
       } else {
-        int unreachable;
+        int unreachable = 0;
         log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
                router->nickname, old_router->nickname,
                hex_str(id_digest,DIGEST_LEN));
@@ -921,13 +921,20 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
           /* these carry over when the address and orport are unchanged.*/
           router->last_reachable = old_router->last_reachable;
           router->testing_since = old_router->testing_since;
+          router->num_unreachable_notifications =
+             old_router->num_unreachable_notifications;
         }
-        unreachable = authdir &&
-          dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL));
-        if (unreachable) {
-          log_fn(LOG_WARN, "Notifying server '%s' that it's unreachable. (ContactInfo '%s', platform '%s').",
-           router->nickname, router->contact_info ? router->contact_info : "",
-           router->platform ? router->platform : "");
+        if (authdir &&
+            dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL))) {
+          if (router->num_unreachable_notifications >= 3) {
+            unreachable = 1;
+            log_fn(LOG_WARN, "Notifying server '%s' that it's unreachable. (ContactInfo '%s', platform '%s').",
+              router->nickname, router->contact_info ? router->contact_info : "",
+              router->platform ? router->platform : "");
+          } else {
+            log_fn(LOG_NOTICE,"'%s' may be unreachable -- the %d previous descriptors were thought to be unreachable.", router->nickname, router->num_unreachable_notifications);
+            router->num_unreachable_notifications++;
+          }
         }
         routerinfo_free(old_router);
         smartlist_set(routerlist->routers, i, router);
