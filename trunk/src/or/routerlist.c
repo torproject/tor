@@ -904,7 +904,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
       if (router->published_on <= old_router->published_on) {
         log_fn(LOG_DEBUG, "Skipping not-new descriptor for router '%s'",
                router->nickname);
-        if (!authdir) {
+        if (authdir) {
+          /* Update the is_verified status based on our lookup. */
+          old_router->is_verified = router->is_verified;
+        } else {
           /* Update the is_running status to whatever we were told. */
           old_router->is_running = router->is_running;
         }
