@@ -228,7 +228,26 @@ $Id$
 
    Clients store network status documents so long as they are live.
 
-5.1. Managing naming
+5.1. Scheduling network status downloads
+
+   This download scheduling algorithm implements the approach described above
+   in a relatively low-state fashion.  It reflects the current Tor
+   implementation.
+
+   Clients maintain a list of authorities; each client tries to keep the same
+   list, in the same order.
+
+   Periodically, on startup, and on HUP, clients check whether they need to
+   download fresh network status documents.  The approach is as follows:
+     - If we have under X network status documents newer than OLD, we choose a
+       member of the list at random and try download XX documents starting
+       with that member's.
+     - Otherwise, if we have no network status documents newer than NEW, we
+       check to see which authority's document we retrieved most recently,
+       and try to retrieve the next authority's document.  If we can't, we
+       try the next authority in sequence, and so on.
+
+5.2. Managing naming
 
    In order to provide human-memorable names for individual server
    identities, some directory servers bind names to IDs.  Clients handle

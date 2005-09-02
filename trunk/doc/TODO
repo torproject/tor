@@ -115,9 +115,10 @@ R     - check reachability as soon as you hear about a new server
       - find 10 dirservers.
         - (what are criteria to be a dirserver?)
 N     . Dirservers publish compressed network-status objects.
-        - Support several-at-once
+        - Support retrieving several-at-once
 N     . Everyone downloads network-status objects
         - From all directories, round-robin
+        . Parse them
         - Cache them, reload on restart
         o Serve cached directories
 N     . Directories expose individual descriptors
@@ -152,6 +153,8 @@ Reach (deferrable) items for 0.1.1.x:
   - Start using create-fast cells as clients
   o Let more config options (e.g. ORPort) change dynamically.
   - start handling server descriptors without a socksport?
+  o Add TTLs to DNS-related replies, and use them (where present) to adjust
+    addressmap values.
 
   . Research memory use on Linux: what's happening?
     - Is it threading?  (Maybe, maybe not)
