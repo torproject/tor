@@ -83,7 +83,11 @@ $Id$
          specification, the version is "2".
       "dir-source" -- The hostname, current IP address, and directory
          port of the directory server, separated by spaces.
-      "dir-fingerprint" -- XXXX DOCDOC
+      "fingerprint" -- A base16-encoded hash of the signing key's
+         fingerprint, with no additional spaces added.
+      "contact" -- An arbitrary string describing how to contact the
+         directory server's administrator.  Administrators should include at
+         least an email address and a PGP fingerprint.
       "dir-signing-key" -- The directory server's public signing key.
       "client-versions" -- A comma-separated list of recommended client versions
       "server-versions" -- A comma-separated list of recommended server versions
