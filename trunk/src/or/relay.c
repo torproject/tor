@@ -640,14 +640,19 @@ connection_edge_process_end_not_open(
       case END_STREAM_REASON_EXITPOLICY:
         if (rh->length >= 5) {
           uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
+          int ttl;
           if (!addr) {
             log_fn(LOG_INFO,"Address '%s' resolved to 0.0.0.0. Closing,",
                    safe_str(conn->socks_request->address));
             connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
             return 0;
           }
+          if (rh->length >= 9)
+            ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+5));
+          else
+            ttl = -1;
           client_dns_set_addressmap(conn->socks_request->address, addr,
-                                    conn->chosen_exit_name);
+                                    conn->chosen_exit_name, ttl);
         }
         /* check if he *ought* to have allowed it */
         if (exitrouter &&
@@ -735,14 +740,19 @@ connection_edge_process_relay_cell_not_open(
            (int)(time(NULL) - conn->timestamp_lastread));
     if (rh->length >= 4) {
       uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
+      int ttl;
       if (!addr) {
         log_fn(LOG_INFO,"...but it claims the IP address was 0.0.0.0. Closing.");
         connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
+      if (rh->length >= 8)
+        ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+8));
+      else
+        ttl = -1;
       client_dns_set_addressmap(conn->socks_request->address, addr,
-                                conn->chosen_exit_name);
+                                conn->chosen_exit_name, ttl);
     }
     circuit_log_path(LOG_INFO,circ);
     connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_SUCCEEDED);
@@ -755,20 +765,28 @@ connection_edge_process_relay_cell_not_open(
     return 0;
   }
   if (conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_RESOLVED) {
+    int ttl;
+    int answer_len;
     if (conn->state != AP_CONN_STATE_RESOLVE_WAIT) {
       log_fn(LOG_WARN,"Got a 'resolved' cell while not in state resolve_wait. Dropping.");
       return 0;
     }
     tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
-    if (rh->length < 2 || cell->payload[RELAY_HEADER_SIZE+1]+2>rh->length) {
+    answer_len = cell->payload[RELAY_HEADER_SIZE+1];
+    if (rh->length < 2 || answer_len+2>rh->length) {
       log_fn(LOG_WARN, "Dropping malformed 'resolved' cell");
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return 0;
     }
+    if (rh->length >= answer_len+6)
+      ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+6));
+    else
+      ttl = -1;
     connection_ap_handshake_socks_resolved(conn,
                    cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
-                   cell->payload+RELAY_HEADER_SIZE+2); /* answer */
+                   cell->payload+RELAY_HEADER_SIZE+2,
+                   ttl); /* answer */
     connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
     return 0;
   }

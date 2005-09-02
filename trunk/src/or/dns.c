@@ -192,14 +192,21 @@ send_resolved_cell(connection_t *conn, uint8_t answer_type)
     case RESOLVED_TYPE_IPV4:
       buf[1] = 4;
       set_uint32(buf+2, htonl(conn->addr));
-      buflen = 6;
+      set_uint32(buf+6, htonl(MAX_DNS_ENTRY_AGE)); /*XXXX send a real TTL*/
+      buflen = 10;
       break;
     case RESOLVED_TYPE_ERROR_TRANSIENT:
     case RESOLVED_TYPE_ERROR:
-      buf[1] = 24; /* length of "error resolving hostname" */
-      strlcpy(buf+2, "error resolving hostname", sizeof(buf)-2);
-      buflen = 26;
-      break;
+      {
+        const char *errmsg = "Error resolving hostname";
+        int msglen = strlen(errmsg);
+        int ttl = (answer_type == RESOLVED_TYPE_ERROR ? MAX_DNS_ENTRY_AGE : 0);
+        buf[1] = msglen;
+        strlcpy(buf+2, errmsg, sizeof(buf)-2);
+        set_uint32(buf+2+msglen, htonl((uint32_t)ttl));
+        buflen = 6+msglen;
+        break;
+      }
     default:
       tor_assert(0);
     }
