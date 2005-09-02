@@ -469,8 +469,16 @@ TODO: (very soon)
    address cannot be resolved, or a connection can't be established, the
    exit node replies with a RELAY_END cell.  (See 5.4 below.)
    Otherwise, the exit node replies with a RELAY_CONNECTED cell, whose
-   payload is the 4-byte IPv4 address or the 16-byte IPv6 address to which
-   the connection was made.
+   payload is in one of the following formats:
+       The IPv4 address to which the connection was made [4 octets]
+       A number of seconds (TTL) for which the address may be cached [4 octets]
+    or
+       Four zero-valued octets [4 octets]
+       An address type (6)     [1 octet]
+       The IPv6 address to which the connection was made [16 octets]
+       A number of seconds (TTL) for which the address may be cached [4 octets]
+   [XXXX Versions of Tor before 0.1.1.6 ignore and do not generate the TTL
+   field.  No version of Tor currently generates the IPv6 format.]
 
    The OP waits for a RELAY_CONNECTED cell before sending any data.
    Once a connection has been established, the OP and exit node
@@ -511,7 +519,8 @@ TODO: (very soon)
                                    Tor protocol violations.)
 
    (With REASON_EXITPOLICY, the 4-byte IPv4 address or 16-byte IPv6 address
-   forms the optional data; no other reason currently has extra data.)
+   forms the optional data; no other reason currently has extra data.
+   As of 0.1.1.6, the body also contains a 4-byte TTL.)
 
    OPs and ORs MUST accept reasons not on the above list, since future
    versions of Tor may provide more fine-grained reasons.
@@ -558,6 +567,7 @@ TODO: (very soon)
        Type   (1 octet)
        Length (1 octet)
        Value  (variable-width)
+       TTL    (4 octets)
    "Length" is the length of the Value field.
    "Type" is one of:
       0x00 -- Hostname

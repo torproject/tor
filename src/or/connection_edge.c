@@ -48,7 +48,7 @@ _connection_mark_unattached_ap(connection_t *conn, int endreason,
     if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
       connection_ap_handshake_socks_reply(conn, NULL, 0, socksreason);
     else
-      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL,-1);
   }
 
   _connection_mark_for_close(conn, line, file);
@@ -194,7 +194,8 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
     /* this is safe even for rend circs, because they never fail
      * because of exitpolicy */
     set_uint32(payload+1, htonl(conn->addr));
-    payload_len += 4;
+    set_uint32(payload+5, htonl(MAX_DNS_ENTRY_AGE)); /* XXXXfill with a real TTL*/
+    payload_len += 8;
   }
 
   circ = circuit_get_by_edge_conn(conn);
@@ -266,7 +267,6 @@ connection_edge_finished_flushing(connection_t *conn)
 int
 connection_edge_finished_connecting(connection_t *conn)
 {
-  char connected_payload[4];
   char valbuf[INET_NTOA_BUF_LEN];
   struct in_addr in;
 
@@ -289,9 +289,12 @@ connection_edge_finished_connecting(connection_t *conn)
                                      RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
   } else {
-    *(uint32_t*)connected_payload = htonl(conn->addr);
+    char connected_payload[8];
+    set_uint32(connected_payload, htonl(htonl(conn->addr)));
+    set_uint32(connected_payload+4,
+               htonl(MAX_DNS_ENTRY_AGE)); /* XXXX fill with a real TTL */
     if (connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
-        RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
+        RELAY_COMMAND_CONNECTED, connected_payload, 8, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
   }
   tor_assert(conn->package_window > 0);
@@ -683,9 +686,13 @@ client_dns_clear_failures(const char *address)
  *
  * If <b>exitname</b> is defined, then append the addresses with
  * ".exitname.exit" before registering the mapping.
+ *
+ * If <b>ttl</b> is nonnegative, the mapping will be valid for
+ * <b>ttl</b>seconds.
  */
 void
-client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname)
+client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname,
+                          int ttl)
 {
   struct in_addr in;
   char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_HEX_NICKNAME_LEN+10];
@@ -693,6 +700,9 @@ client_dns_set_addressmap(const char *address, uint32_t val, const char *exitnam
   char extendedval[INET_NTOA_BUF_LEN+MAX_HEX_NICKNAME_LEN+10];
 
   tor_assert(address); tor_assert(val);
+
+  if (ttl<0 || ttl>MAX_DNS_ENTRY_AGE)
+    ttl = MAX_DNS_ENTRY_AGE;
 
   if (tor_inet_aton(address, &in))
     return; /* If address was an IP address already, don't add a mapping. */
@@ -709,8 +719,7 @@ client_dns_set_addressmap(const char *address, uint32_t val, const char *exitnam
     tor_snprintf(extendedval, sizeof(extendedval),
                  "%s", valbuf);
   }
-  addressmap_register(extendedaddress, tor_strdup(extendedval),
-                      time(NULL) + MAX_DNS_ENTRY_AGE);
+  addressmap_register(extendedaddress, tor_strdup(extendedval), time(NULL) + ttl);
 }
 
 /* Currently, we hand out 127.192.0.1 through 127.254.254.254.
@@ -1019,14 +1028,14 @@ connection_ap_handshake_process_socks(connection_t *conn)
       /* Reply to resolves immediately if we can. */
       if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
         log_fn(LOG_WARN,"Address to be resolved is too large. Failing.");
-        connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+        connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL,-1);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
         return -1;
       }
       if (tor_inet_aton(socks->address, &in)) { /* see if it's an IP already */
         answer = in.s_addr; /* leave it in network order */
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
-                                               (char*)&answer);
+                                               (char*)&answer,-1);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
         return 0;
       }
@@ -1075,7 +1084,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
       /* if it's a resolve request, fail it right now, rather than
        * building all the circuits and then realizing it won't work. */
       log_fn(LOG_WARN,"Resolve requests to hidden services not allowed. Failing.");
-      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL,-1);
       connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
       return -1;
     }
@@ -1299,16 +1308,17 @@ void
 connection_ap_handshake_socks_resolved(connection_t *conn,
                                        int answer_type,
                                        size_t answer_len,
-                                       const char *answer)
+                                       const char *answer,
+                                       int ttl)
 {
   char buf[256];
   size_t replylen;
 
   if (answer_type == RESOLVED_TYPE_IPV4) {
-    uint32_t a = get_uint32(answer);
+    uint32_t a = ntohl(get_uint32(answer));
     if (a)
       client_dns_set_addressmap(conn->socks_request->address, ntohl(a),
-                                conn->chosen_exit_name);
+                                conn->chosen_exit_name, ttl);
   }
 
   if (conn->socks_request->socks_version == 4) {
@@ -1581,7 +1591,6 @@ connection_exit_begin_resolve(cell_t *cell, circuit_t *circ)
 void
 connection_exit_connect(connection_t *conn)
 {
-  char connected_payload[4];
   uint32_t addr;
   uint16_t port;
 
@@ -1649,10 +1658,13 @@ connection_exit_connect(connection_t *conn)
                                  NULL, 0, conn->cpath_layer);
   } else { /* normal stream */
     /* This must be the original address, not the redirected address. */
-    *(uint32_t*)connected_payload = htonl(conn->addr);
+    char connected_payload[8];
+    set_uint32(connected_payload, htonl(htonl(conn->addr)));
+    set_uint32(connected_payload+4,
+               htonl(MAX_DNS_ENTRY_AGE)); /* XXXX fill with a real TTL */
     connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
                                  RELAY_COMMAND_CONNECTED,
-                                 connected_payload, 4, conn->cpath_layer);
+                                 connected_payload, 8, conn->cpath_layer);
   }
 }
 
