@@ -1650,8 +1650,12 @@ options_validate(or_options_t *options)
   }
 
   if (options->AuthoritativeDir) {
+    if (!options->ContactInfo) {
+      log(LOG_WARN, "Authoritative directory servers must set ContactInfo");
+      result = -1;
+    }
     if (!options->RecommendedVersions) {
-      log(LOG_WARN, "Directory servers must configure RecommendedVersions.");
+      log(LOG_WARN, "Authoritative directory servers must configure RecommendedVersions.");
       result = -1;
     }
     if (!options->RecommendedClientVersions)
