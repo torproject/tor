@@ -766,6 +766,42 @@ typedef struct running_routers_t {
   smartlist_t *running_routers;
 } running_routers_t;
 
+/** Contents of a network status object */
+typedef struct routerstatus_t {
+  time_t published_on;
+  char nickname[MAX_NICKNAME_LEN+1];
+  char identity_digest[DIGEST_LEN];
+  char descriptor_digest[DIGEST_LEN];
+  uint32_t addr;
+  uint16_t or_port;
+  uint16_t dir_port;
+  unsigned int is_exit:1;
+  unsigned int is_stable:1;
+  unsigned int is_fast:1;
+  unsigned int is_running:1;
+  unsigned int is_named:1;
+  unsigned int is_valid:1;
+} routerstatus_t;
+
+/** Contents of a network status object */
+typedef struct networkstatus_t {
+  time_t published_on;
+
+  char *source_address;
+  uint32_t source_addr;
+  uint16_t source_dirport;
+
+  char fingerprint[DIGEST_LEN];
+  char *contact;
+  crypto_pk_env_t *signing_key;
+  char *client_versions;
+  char *server_versions;
+
+  int binds_names:1;
+
+  smartlist_t *entries;
+} networkstatus_t;
+
 /** Contents of a directory of onion routers. */
 typedef struct {
   /** List of routerinfo_t */
@@ -1483,7 +1519,8 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
 void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
-                                            const char *answer);
+                                            const char *answer,
+                                            int ttl);
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ);
@@ -1504,7 +1541,7 @@ int addressmap_already_mapped(const char *address);
 void addressmap_register(const char *address, char *new_address, time_t expires);
 int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
-void client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname);
+void client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname, int ttl);
 const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires);
 
@@ -1963,9 +2000,8 @@ trusted_dir_server_t *router_pick_trusteddirserver(int requireother,
                                                    int fascistfirewall,
                                                    int retry_if_no_servers);
 int all_trusted_directory_servers_down(void);
-struct smartlist_t;
-void routerlist_add_family(struct smartlist_t *sl, routerinfo_t *router);
-void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list, int warn_if_down);
+void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
+void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
                                                  int warn);
@@ -1981,7 +2017,7 @@ int router_is_unreliable(routerinfo_t *router, int need_uptime, int need_capacit
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
-                                        struct smartlist_t *excludedsmartlist,
+                                        smartlist_t *excludedsmartlist,
                                         int need_uptime, int need_bandwidth,
                                         int allow_unverified, int strict);
 routerinfo_t *router_get_by_nickname(const char *nickname);
@@ -1992,6 +2028,8 @@ void router_get_routerlist(routerlist_t **prouterlist);
 time_t routerlist_get_published_time(void);
 void routerlist_free(routerlist_t *routerlist);
 void routerinfo_free(routerinfo_t *router);
+void routerstatus_free(routerstatus_t *routerstatus);
+void networkstatus_free(networkstatus_t *networkstatus);
 void routerlist_free_current(void);
 void free_trusted_dir_servers(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
@@ -2068,6 +2106,8 @@ int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
 void assert_addr_policy_ok(addr_policy_t *t);
+
+networkstatus_t *networkstatus_parse_from_string(const char *s);
 
 #endif
 
