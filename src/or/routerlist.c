@@ -818,6 +818,29 @@ routerlist_free_current(void)
   }
 }
 
+/** Free all storage held by the routerstatus object <b>rs</b>. */
+void
+routerstatus_free(routerstatus_t *rs)
+{
+  tor_free(rs);
+}
+
+/** Free all storage held by the networkstatus object <b>ns</b>. */
+void
+networkstatus_free(networkstatus_t *ns)
+{
+  tor_free(ns->source_address);
+  tor_free(ns->contact);
+  crypto_free_pk_env(ns->signing_key);
+  tor_free(ns->client_versions);
+  tor_free(ns->server_versions);
+  if (ns->entries) {
+    SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs, routerstatus_free(rs));
+    smartlist_free(ns->entries);
+  }
+  tor_free(ns);
+}
+
 /** Free all entries in the list of trusted directory servers. */
 void
 free_trusted_dir_servers(void)

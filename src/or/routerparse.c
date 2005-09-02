@@ -46,6 +46,13 @@ typedef enum {
   K_HIBERNATING,
   K_READ_HISTORY,
   K_WRITE_HISTORY,
+  K_NETWORK_STATUS_VERSION,
+  K_DIR_SOURCE,
+  K_DIR_OPTIONS,
+  K_CLIENT_VERSIONS,
+  K_SERVER_VERSIONS,
+  K_R,
+  K_S,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -91,40 +98,50 @@ typedef enum {
 
 /** Rules for where a keyword can appear. */
 typedef enum {
-  ANY = 0,    /**< Appears in router descriptor or in directory sections. */
-  DIR_ONLY,   /**< Appears only in directory. */
-  RTR_ONLY,   /**< Appears only in router descriptor or runningrouters */
+  DIR = 1,   /**< Appears only in directory. */
+  RTR = 2,   /**< Appears only in router descriptor or runningrouters */
+  NETSTATUS = 4,  /**< v2 or later ("versioned") network status. */
+  RTRSTATUS = 8,
+  ANY = 15,    /**< Appears in router descriptor or in directory sections. */
 } where_syntax;
 
 /** Table mapping keywords to token value and to argument rules. */
 static struct {
-  const char *t; int v; arg_syntax s; obj_syntax os; where_syntax ws;
+  const char *t; int v; arg_syntax s; obj_syntax os; int ws;
 } token_table[] = {
-  { "accept",              K_ACCEPT,              ARGS,    NO_OBJ,  RTR_ONLY },
-  { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ,DIR_ONLY},
-  { "reject",              K_REJECT,              ARGS,    NO_OBJ,  RTR_ONLY },
-  { "router",              K_ROUTER,              ARGS,    NO_OBJ,  RTR_ONLY },
-  { "recommended-software",K_RECOMMENDED_SOFTWARE,ARGS,    NO_OBJ,  DIR_ONLY },
-  { "signed-directory",    K_SIGNED_DIRECTORY,    NO_ARGS, NO_OBJ,  DIR_ONLY },
-  { "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY,RTR_ONLY },
-  { "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY,RTR_ONLY },
-  { "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ,RTR_ONLY },
-  { "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ,  DIR_ONLY },
-  { "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ,  DIR_ONLY },
-  { "ports",               K_PORTS,               ARGS,    NO_OBJ,  RTR_ONLY },
-  { "bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ,  RTR_ONLY },
-  { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR_ONLY },
+  { "accept",              K_ACCEPT,              ARGS,    NO_OBJ,  RTR },
+  { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ,DIR},
+  { "r",                   K_R,                   ARGS,    NO_OBJ,  RTRSTATUS },
+  { "s",                   K_S,                   ARGS,    NO_OBJ,  RTRSTATUS },
+  { "reject",              K_REJECT,              ARGS,    NO_OBJ,  RTR },
+  { "router",              K_ROUTER,              ARGS,    NO_OBJ,  RTR },
+  { "recommended-software",K_RECOMMENDED_SOFTWARE,ARGS,    NO_OBJ,  DIR },
+  { "signed-directory",    K_SIGNED_DIRECTORY,    NO_ARGS, NO_OBJ,  DIR },
+  { "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY,RTR },
+  { "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY,RTR },
+  { "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ,RTR },
+  { "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ,  DIR },
+  { "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ,  DIR },
+  { "ports",               K_PORTS,               ARGS,    NO_OBJ,  RTR },
+  { "bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ,  RTR },
+  { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR },
   { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ,  ANY },
   { "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK,  ANY },
   { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ,  ANY },
-  { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR_ONLY },
-  { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR_ONLY },
-  { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK,  DIR_ONLY },
-  { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR_ONLY },
+  { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR },
+  { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR },
+  { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK, DIR|NETSTATUS},
+  { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR },
   { "fingerprint",         K_FINGERPRINT,         ARGS,    NO_OBJ,  ANY },
-  { "hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ,  RTR_ONLY },
-  { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR_ONLY },
-  { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR_ONLY },
+  { "hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ,  RTR },
+  { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR },
+  { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR },
+  { "network-status-version", K_NETWORK_STATUS_VERSION,
+                                                  ARGS,    NO_OBJ, NETSTATUS },
+  { "dir-source",          K_DIR_SOURCE,          ARGS,    NO_OBJ, NETSTATUS },
+  { "dir-options",         K_DIR_OPTIONS,         ARGS,    NO_OBJ, NETSTATUS },
+  { "client-versions",     K_CLIENT_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
+  { "server-versions",     K_SERVER_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
   { NULL, -1, NO_ARGS, NO_OBJ, ANY }
 };
 
@@ -138,12 +155,13 @@ static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *find_first_by_keyword(smartlist_t *s,
                                                 directory_keyword keyword);
 static int tokenize_string(const char *start, const char *end,
-                           smartlist_t *out, int is_dir);
+                           smartlist_t *out, where_syntax where);
 static directory_token_t *get_next_token(const char **s, where_syntax where);
 static int check_directory_signature(const char *digest,
                                      directory_token_t *tok,
                                      crypto_pk_env_t *pkey,
-                                     crypto_pk_env_t *declared_key);
+                                     crypto_pk_env_t *declared_key,
+                                     int check_authority);
 static crypto_pk_env_t *find_dir_signing_key(const char *str);
 /* static */ int is_obsolete_version(const char *myversion,
                                      const char *versionlist);
@@ -426,7 +444,7 @@ router_parse_routerlist_from_directory(const char *str,
   }
   ++cp;
   tokens = smartlist_create();
-  if (tokenize_string(cp,strchr(cp,'\0'),tokens,1)) {
+  if (tokenize_string(cp,strchr(cp,'\0'),tokens,DIR)) {
     log_fn(LOG_WARN, "Error tokenizing directory signature"); goto err;
   }
   if (smartlist_len(tokens) != 1) {
@@ -437,7 +455,7 @@ router_parse_routerlist_from_directory(const char *str,
     log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
   }
   declared_key = find_dir_signing_key(str);
-  if (check_directory_signature(digest, tok, pkey, declared_key)<0)
+  if (check_directory_signature(digest, tok, pkey, declared_key, 1)<0)
     goto err;
 
   /* now we know tok->n_args == 1, so it's safe to access tok->args[0] */
@@ -465,7 +483,7 @@ router_parse_routerlist_from_directory(const char *str,
   }
 
   tokens = smartlist_create();
-  if (tokenize_string(str,end,tokens,1)) {
+  if (tokenize_string(str,end,tokens,DIR)) {
     log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
   }
   if (smartlist_len(tokens) < 1) {
@@ -599,7 +617,7 @@ router_parse_runningrouters(const char *str, int write_to_cache)
     goto err;
   }
   tokens = smartlist_create();
-  if (tokenize_string(str,str+strlen(str),tokens,1)) {
+  if (tokenize_string(str,str+strlen(str),tokens,DIR)) {
     log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
@@ -648,7 +666,7 @@ router_parse_runningrouters(const char *str, int write_to_cache)
     goto err;
   }
   declared_key = find_dir_signing_key(str);
-  if (check_directory_signature(digest, tok, NULL, declared_key) < 0)
+  if (check_directory_signature(digest, tok, NULL, declared_key, 1) < 0)
     goto err;
 
   goto done;
@@ -684,7 +702,7 @@ find_dir_signing_key(const char *str)
     return NULL;
   ++cp; /* Now cp points to the start of the token. */
 
-  tok = get_next_token(&cp, DIR_ONLY);
+  tok = get_next_token(&cp, DIR);
   if (!tok) {
     log_fn(LOG_WARN, "Unparseable dir-signing-key token");
     return NULL;
@@ -737,7 +755,7 @@ dir_signing_key_is_trusted(crypto_pk_env_t *key)
  *
  * If <b>declared_key</b> is set, the directory has declared what key
  * was used to sign it, so we will use that key only if it is an
- * authoritative directory signing key.
+ * authoritative directory signing key or if check_authority is 0.
  *
  * Otherwise, if pkey is provided, try to use it.
  *
@@ -748,7 +766,8 @@ static int
 check_directory_signature(const char *digest,
                           directory_token_t *tok,
                           crypto_pk_env_t *pkey,
-                          crypto_pk_env_t *declared_key)
+                          crypto_pk_env_t *declared_key,
+                          int check_authority)
 {
   char signed_digest[PK_BYTES];
   crypto_pk_env_t *_pkey = NULL;
@@ -759,7 +778,7 @@ check_directory_signature(const char *digest,
   }
 
   if (declared_key) {
-    if (dir_signing_key_is_trusted(declared_key))
+    if (!check_authority || dir_signing_key_is_trusted(declared_key))
       _pkey = declared_key;
   }
   if (!_pkey && pkey) {
@@ -880,7 +899,7 @@ router_parse_entry_from_string(const char *s, const char *end)
     return NULL;
   }
   tokens = smartlist_create();
-  if (tokenize_string(s,end,tokens,0)) {
+  if (tokenize_string(s,end,tokens,RTR)) {
     log_fn(LOG_WARN, "Error tokeninzing router descriptor.");
     goto err;
   }
@@ -1090,6 +1109,319 @@ router_parse_entry_from_string(const char *s, const char *end)
   return router;
 }
 
+/** Helper: given a string <b>s</b>, return the start of the next router-status
+ * object (starting with "r " at the start of a line).  If none is found,
+ * return the start of the next directory signature.  If none is found, return
+ * the end of the string. */
+static INLINE const char *
+find_start_of_next_routerstatus(const char *s)
+{
+  const char *eos = strstr(s, "\nr ");
+  if (!eos)
+    eos = strstr(s, "\ndirectory-signature");
+  if (eos)
+    return eos+1;
+  else
+    return s + strlen(s);
+}
+
+/** Given a string at *<b>s</b>, containing a routerstatus object, and an
+ * empty smartlist at <b>tokens</b>, parse and return the first router status
+ * object in the string, and advance *<b>s</b> to just after the end of the
+ * router status.  Return NULL and advance *<b>s</b> on error. */
+static routerstatus_t *
+routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
+{
+#define BASE64_DIGEST_LEN 27
+  const char *eos;
+  routerstatus_t *rs = NULL;
+  directory_token_t *tok;
+  char base64buf_in[BASE64_DIGEST_LEN+3];
+  char base64buf_out[128];
+  char timebuf[ISO_TIME_LEN+1];
+  struct in_addr in;
+
+  tor_assert(tokens);
+
+  eos = find_start_of_next_routerstatus(*s);
+
+  if (tokenize_string(*s, eos, tokens, RTRSTATUS)) {
+    log_fn(LOG_WARN, "Error tokenizing router status");
+    goto err;
+  }
+  if (smartlist_len(tokens) < 1) {
+    log_fn(LOG_WARN, "Impossibly short router status");
+    goto err;
+  }
+  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
+    log_fn(LOG_WARN, "Unrecognized keyword \"%s\" in router status; skipping.",
+           tok->args[0]);
+    goto err;
+  }
+  if (!(tok = find_first_by_keyword(tokens, K_R))) {
+    log_fn(LOG_WARN, "Missing 'r' keywork in router status; skipping.");
+    goto err;
+  }
+  if (tok->n_args < 8) {
+    log_fn(LOG_WARN,
+           "Too few arguments to 'r' keywork in router status; skipping.");
+  }
+  rs = tor_malloc_zero(sizeof(routerstatus_t));
+
+  if (!is_legal_nickname(tok->args[0])) {
+    log_fn(LOG_WARN,
+           "Invalid nickname '%s' in router status; skipping.", tok->args[0]);
+    goto err;
+  }
+  strlcpy(rs->nickname, tok->args[0], sizeof(rs->nickname));
+
+  if (strlen(tok->args[1]) != BASE64_DIGEST_LEN) {
+    log_fn(LOG_WARN, "Digest '%s' is wrong length in router status; skipping.",
+           tok->args[1]);
+    goto err;
+  }
+  memcpy(base64buf_in, tok->args[1], BASE64_DIGEST_LEN);
+  memcpy(base64buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
+  if (base64_decode(base64buf_out, sizeof(base64buf_out),
+                    base64buf_in, sizeof(base64buf_in)) != DIGEST_LEN) {
+    log_fn(LOG_WARN, "Error decoding digest '%s'", tok->args[1]);
+    goto err;
+  }
+  memcpy(rs->identity_digest, base64buf_out, DIGEST_LEN);
+
+  if (strlen(tok->args[2]) != BASE64_DIGEST_LEN) {
+    log_fn(LOG_WARN, "Digest '%s' is wrong length in router status; skipping.",
+           tok->args[2]);
+    goto err;
+  }
+  memcpy(base64buf_in, tok->args[2], BASE64_DIGEST_LEN);
+  memcpy(base64buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
+  if (base64_decode(base64buf_out, sizeof(base64buf_out),
+                    base64buf_in, sizeof(base64buf_in)) != DIGEST_LEN) {
+    log_fn(LOG_WARN, "Error decoding digest '%s'", tok->args[2]);
+    goto err;
+  }
+  memcpy(rs->descriptor_digest, base64buf_out, DIGEST_LEN);
+
+  if (tor_snprintf(timebuf, sizeof(timebuf), "%s %s",
+                   tok->args[3], tok->args[4]) < 0 ||
+      parse_iso_time(timebuf, &rs->published_on)<0) {
+    log_fn(LOG_WARN, "Error parsing time '%s %s'", tok->args[3], tok->args[4]);
+    goto err;
+  }
+
+  if (tor_inet_aton(tok->args[5], &in) != 0) {
+    log_fn(LOG_WARN, "Error parsing address '%s'", tok->args[5]);
+    goto err;
+  }
+  rs->addr = ntohl(in.s_addr);
+
+  rs->or_port =(uint16_t) tor_parse_long(tok->args[6],10,0,65535,NULL,NULL);
+  rs->dir_port = (uint16_t) tor_parse_long(tok->args[7],10,0,65535,NULL,NULL);
+
+  if ((tok = find_first_by_keyword(tokens, K_S))) {
+    int i;
+    for (i=0; i < tok->n_args; ++i) {
+      if (!strcmp(tok->args[i], "Exit"))
+        rs->is_exit = 1;
+      else if (!strcmp(tok->args[i], "Stable"))
+        rs->is_stable = 1;
+      else if (!strcmp(tok->args[i], "Fast"))
+        rs->is_fast = 1;
+      else if (!strcmp(tok->args[i], "Running"))
+        rs->is_running = 1;
+      else if (!strcmp(tok->args[i], "Named"))
+        rs->is_named = 1;
+      else if (!strcmp(tok->args[i], "Valid"))
+        rs->is_valid = 1;
+    }
+  }
+
+  goto done;
+ err:
+  if (rs)
+    routerstatus_free(rs);
+  rs = NULL;
+ done:
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  smartlist_clear(tokens);
+  *s = eos;
+
+  return rs;
+}
+
+/** Given a versioned (v2 or later) network-status object in <b>s</b>, try to
+ * parse it and return the result.  Return NULL on failure.  Check the
+ * signature of the network status, but do not (yet) check the signing key for
+ * authority.
+ */
+networkstatus_t *
+networkstatus_parse_from_string(const char *s)
+{
+  const char *eos;
+  smartlist_t *tokens = smartlist_create();
+  networkstatus_t *ns = NULL;
+  char ns_digest[DIGEST_LEN];
+  char tmp_digest[DIGEST_LEN];
+  struct in_addr in;
+  directory_token_t *tok;
+
+  if (router_get_networkstatus_v2_hash(s, ns_digest)) {
+    log_fn(LOG_WARN, "Unable to compute digest of network-status");
+    goto err;
+  }
+
+  eos = find_start_of_next_routerstatus(s);
+  if (tokenize_string(s, eos, tokens, NETSTATUS)) {
+    log_fn(LOG_WARN, "Error tokenizing network-status header.");
+    goto err;
+  }
+  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
+    log_fn(LOG_WARN, "Unrecognized keyword '%s'; can't parse network-status",
+           tok->args[0]);
+    goto err;
+  }
+  ns = tor_malloc_zero(sizeof(networkstatus_t));
+
+  if (!(tok = find_first_by_keyword(tokens, K_NETWORK_STATUS_VERSION))) {
+    log_fn(LOG_WARN, "Couldn't find network-status-version keyword");
+    goto err;
+  }
+  /* XXXX do something with the version? */
+
+  if (!(tok = find_first_by_keyword(tokens, K_DIR_SOURCE))) {
+    log_fn(LOG_WARN, "Couldn't find dir-source keyword");
+    goto err;
+  }
+  if (tok->n_args < 3) {
+    log_fn(LOG_WARN, "Too few arguments to dir-source keyword");
+    goto err;
+  }
+  ns->source_address = tok->args[0]; tok->args[0] = NULL;
+  if (tor_inet_aton(tok->args[1], &in) != 0) {
+    log_fn(LOG_WARN, "Error parsing address '%s'", tok->args[1]);
+    goto err;
+  }
+  ns->source_addr = ntohl(in.s_addr);
+  ns->source_dirport =
+    (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
+  if (ns->source_dirport == 0) {
+    log_fn(LOG_WARN, "Directory source without dirport; skipping.");
+    goto err;
+  }
+
+  if (!(tok = find_first_by_keyword(tokens, K_FINGERPRINT))) {
+    log_fn(LOG_WARN, "Couldn't find fingerprint keyword");
+    goto err;
+  }
+  if (tok->n_args < 1) {
+    log_fn(LOG_WARN, "Too few arguments to fingerprint");
+    goto err;
+  }
+  if (base16_decode(ns->fingerprint, DIGEST_LEN, tok->args[0],
+                    strlen(tok->args[0]))) {
+    log_fn(LOG_WARN, "Couldn't decode fingerprint '%s'", tok->args[0]);
+    goto err;
+  }
+
+  if ((tok = find_first_by_keyword(tokens, K_CONTACT)) && tok->n_args) {
+    ns->contact = tok->args[0];
+    tok->args[0] = NULL;
+  }
+
+  if (!(tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY)) || !tok->key) {
+    log_fn(LOG_WARN, "Missing dir-signing-key");
+    goto err;
+  }
+  ns->signing_key = tok->key;
+  tok->key = NULL;
+
+  if (crypto_pk_get_digest(ns->signing_key, tmp_digest)<0) {
+    log_fn(LOG_WARN, "Couldn't compute signing key digest");
+    goto err;
+  }
+  if (memcmp(tmp_digest, ns->fingerprint, DIGEST_LEN)) {
+    log_fn(LOG_WARN, "network-status fingerprint did not match dir-signing-key");
+    goto err;
+  }
+
+  if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1){
+    log_fn(LOG_WARN, "Missing client-versions");
+    goto err;
+  }
+  ns->client_versions = tok->args[0];
+
+  /* XXXX NM When to check these ?? */
+  if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1){
+    log_fn(LOG_WARN, "Missing client-versions");
+    goto err;
+  }
+  ns->client_versions = tok->args[0];
+  tok->args[0] = NULL;
+
+  if (!(tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS)) || tok->n_args<1){
+    log_fn(LOG_WARN, "Missing server-versions");
+    goto err;
+  }
+  ns->server_versions = tok->args[0];
+  tok->args[0] = NULL;
+
+  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
+    log_fn(LOG_WARN, "Missing published time on directory.");
+    goto err;
+  }
+  tor_assert(tok->n_args == 1);
+  if (parse_iso_time(tok->args[0], &ns->published_on) < 0) {
+     goto err;
+  }
+
+  if ((tok = find_first_by_keyword(tokens, K_DIR_OPTIONS))) {
+    int i;
+    for (i=0; i < tok->n_args; ++i) {
+      if (!strcmp(tok->args[i], "Names"))
+        ns->binds_names = 1;
+    }
+  }
+
+  ns->entries = smartlist_create();
+  s = eos;
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  smartlist_clear(tokens);
+  while (!strcmpstart(s, "r ")) {
+    routerstatus_t *rs;
+    if ((rs = routerstatus_parse_entry_from_string(&s, tokens)))
+      smartlist_add(ns->entries, rs);
+  }
+
+  if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
+    log_fn(LOG_WARN, "Error tokenizing network-status footer.");
+    goto err;
+  }
+  if (smartlist_len(tokens) < 1) {
+    log_fn(LOG_WARN, "Too few items in network-status footer.");
+    goto err;
+  }
+  tok = smartlist_get(tokens, smartlist_len(tokens)-1);
+  if (tok->tp != K_DIRECTORY_SIGNATURE) {
+    log_fn(LOG_WARN, "Expected network-status footer to end with a signature.");
+    goto err;
+  }
+
+  if (check_directory_signature(ns_digest, tok, NULL, ns->signing_key, 0))
+    goto err;
+
+  goto done;
+ err:
+  networkstatus_free(ns);
+  ns = NULL;
+ done:
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  smartlist_free(tokens);
+
+  return ns;
+}
+
+
 /** Parse the exit policy in the string <b>s</b> and return it.  If
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
  * ADDR_POLICY_REJECT) for items that specify no action.
@@ -1120,7 +1452,7 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
     tor_free(tmp);
     cp = tmp = new_str;
   }
-  tok = get_next_token(&cp, RTR_ONLY);
+  tok = get_next_token(&cp, RTR);
   if (tok->tp == _ERR) {
     log_fn(LOG_WARN, "Error reading exit policy: %s", tok->error);
     goto err;
@@ -1269,8 +1601,8 @@ token_free(directory_token_t *tok)
 }
 
 /** Helper function: read the next token from *s, advance *s to the end
- * of the token, and return the parsed token.  If 'where' is DIR_ONLY
- * or RTR_ONLY, reject all tokens of the wrong type.
+ * of the token, and return the parsed token.  If 'where' is DIR
+ * or RTR, reject all tokens of the wrong type.
  */
 static directory_token_t *
 get_next_token(const char **s, where_syntax where)
@@ -1317,11 +1649,15 @@ get_next_token(const char **s, where_syntax where)
       tok->tp = token_table[i].v;
       a_syn = token_table[i].s;
       o_syn = token_table[i].os;
-      if (token_table[i].ws != ANY && token_table[i].ws != where) {
-        if (where == DIR_ONLY) {
-          RET_ERR("Found a router-only token in a directory section");
+      if (!(token_table[i].ws & where)) {
+        if (where == DIR) {
+          RET_ERR("Found an out-of-place token in a directory section");
+        } else if (where == RTR) {
+          RET_ERR("Found an out-of-place token in a router descriptor");
+        } else if (where == NETSTATUS) {
+          RET_ERR("Found an out-of-place token in a network-status header");
         } else {
-          RET_ERR("Found a directory-only token in a router descriptor");
+          RET_ERR("Found an out-of-place token in a router status body");
         }
       }
       if (a_syn == ARGS) {
@@ -1461,11 +1797,10 @@ get_next_token(const char **s, where_syntax where)
  */
 static int
 tokenize_string(const char *start, const char *end, smartlist_t *out,
-                int is_dir)
+                where_syntax where)
 {
   const char **s;
   directory_token_t *tok = NULL;
-  where_syntax where = is_dir ? DIR_ONLY : RTR_ONLY;
   s = &start;
   while (*s < end && (!tok || tok->tp != _EOF)) {
     tok = get_next_token(s, where);
