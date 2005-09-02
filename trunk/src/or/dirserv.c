@@ -1018,6 +1018,7 @@ generate_v2_networkstatus(void)
   uint32_t addr;
   crypto_pk_env_t *private_key = get_identity_key();
   smartlist_t *descriptor_list = get_descriptor_list();
+  const char *contact;
 
   if (!descriptor_list) {
     log_fn(LOG_WARN, "Couldn't get router list.");
@@ -1047,6 +1048,10 @@ generate_v2_networkstatus(void)
     return -1;
   }
 
+  contact = get_options()->ContactInfo;
+  if (!contact)
+    contact = "(none)";
+
   len = 2048+strlen(client_versions)+strlen(server_versions)+identity_pkey_len*2;
   len += (RS_ENTRY_LEN)*smartlist_len(descriptor_list) ;
 
@@ -1054,7 +1059,8 @@ generate_v2_networkstatus(void)
   tor_snprintf(status, len,
                "network-status-version 2\n"
                "dir-source %s %s %d\n"
-               "dir-fingerprint %s\n"
+               "fingerprint %s\n"
+               "contact %s\n"
                "published %s\n"
                "dir-options %s\n"
                "client-versions %s\n"
@@ -1063,6 +1069,7 @@ generate_v2_networkstatus(void)
                hostname, ipaddr, (int)options->DirPort,
                fingerprint,
                published,
+               contact,
                "Names",
                client_versions,
                server_versions,
