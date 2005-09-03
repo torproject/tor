@@ -290,7 +290,7 @@ connection_edge_finished_connecting(connection_t *conn)
       return 0; /* circuit is closed, don't continue */
   } else {
     char connected_payload[8];
-    set_uint32(connected_payload, htonl(htonl(conn->addr)));
+    set_uint32(connected_payload, htonl(conn->addr));
     set_uint32(connected_payload+4,
                htonl(MAX_DNS_ENTRY_AGE)); /* XXXX fill with a real TTL */
     if (connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
@@ -1659,7 +1659,7 @@ connection_exit_connect(connection_t *conn)
   } else { /* normal stream */
     /* This must be the original address, not the redirected address. */
     char connected_payload[8];
-    set_uint32(connected_payload, htonl(htonl(conn->addr)));
+    set_uint32(connected_payload, htonl(conn->addr));
     set_uint32(connected_payload+4,
                htonl(MAX_DNS_ENTRY_AGE)); /* XXXX fill with a real TTL */
     connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
