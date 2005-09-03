@@ -748,7 +748,7 @@ connection_edge_process_relay_cell_not_open(
         return 0;
       }
       if (rh->length >= 8)
-        ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+8));
+        ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+4));
       else
         ttl = -1;
       client_dns_set_addressmap(conn->socks_request->address, addr,
