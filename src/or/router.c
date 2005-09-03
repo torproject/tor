@@ -769,6 +769,8 @@ router_rebuild_descriptor(int force)
 
   if (desc_routerinfo) /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;
+  if (authdir_mode(options))
+    ri->is_verified = 1; /* believe in yourself */
   if (options->MyFamily) {
     ri->declared_family = smartlist_create();
     smartlist_split_string(ri->declared_family, options->MyFamily, ",",
