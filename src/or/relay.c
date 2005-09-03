@@ -779,14 +779,14 @@ connection_edge_process_relay_cell_not_open(
       return 0;
     }
     if (rh->length >= answer_len+6)
-      ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+6));
+      ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+2+answer_len));
     else
       ttl = -1;
     connection_ap_handshake_socks_resolved(conn,
                    cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
-                   cell->payload+RELAY_HEADER_SIZE+2,
-                   ttl); /* answer */
+                   cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
+                   ttl);
     connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
     return 0;
   }
