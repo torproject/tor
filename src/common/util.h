@@ -123,6 +123,7 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
 char *read_file_to_str(const char *filename, int bin);
 char *parse_line_from_str(char *line, char **key_out, char **value_out);
 char *expand_filename(const char *filename);
+struct smartlist_t *tor_listdir(const char *dirname);
 
 /* Net helpers */
 int is_internal_IP(uint32_t ip);

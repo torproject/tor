@@ -19,10 +19,13 @@ const char util_c_id[] = "$Id$";
 #include "log.h"
 #include "crypto.h"
 #include "torint.h"
+#include "container.h"
 
 #ifdef MS_WINDOWS
 #include <io.h>
 #include <direct.h>
+#else
+#include <dirent.h>
 #endif
 
 #ifdef HAVE_CTYPE_H
@@ -1104,6 +1107,29 @@ char *expand_filename(const char *filename)
   } else {
     return tor_strdup(filename);
   }
+}
+
+/** Return a new list containing the filenames in the directory <b>dirname</b>.
+ * Return NULL on error or if <b>dirname</b> is not a directory.
+ */
+smartlist_t *
+tor_listdir(const char *dirname)
+{
+  DIR *d;
+  smartlist_t *result;
+  struct dirent *de;
+  if (!(d = opendir(dirname)))
+    return NULL;
+
+  result = smartlist_create();
+  while ((de = readdir(d))) {
+    if (!strcmp(de->d_name, ".") ||
+        !strcmp(de->d_name, ".."))
+      continue;
+    smartlist_add(result, tor_strdup(de->d_name));
+  }
+  closedir(d);
+  return result;
 }
 
 /* =====
