@@ -1317,7 +1317,7 @@ connection_ap_handshake_socks_resolved(connection_t *conn,
   if (answer_type == RESOLVED_TYPE_IPV4) {
     uint32_t a = ntohl(get_uint32(answer));
     if (a)
-      client_dns_set_addressmap(conn->socks_request->address, ntohl(a),
+      client_dns_set_addressmap(conn->socks_request->address, a,
                                 conn->chosen_exit_name, ttl);
   }
 
