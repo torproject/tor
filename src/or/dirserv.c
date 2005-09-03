@@ -554,25 +554,6 @@ list_server_status(smartlist_t *routers, char **router_status_out)
   return 0;
 }
 
-/** Log complaints about each server that is connected to us and has
- * been found unreachable for the past several testing periods.
- */
-void
-dirserv_log_unreachable_servers(time_t now)
-{
-  smartlist_t *descriptor_list = get_descriptor_list();
-  if (!descriptor_list)
-    return;
-
-  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
-  {
-    if (dirserv_thinks_router_is_blatantly_unreachable(ri, now))
-      log_fn(LOG_NOTICE,
-             "Router %s (%s:%d) is connected to us but not reachable by us.",
-             ri->nickname, ri->address, ri->or_port);
-  });
-}
-
 /* Given a (possibly empty) list of config_line_t, each line of which contains
  * a list of comma-separated version numbers surrounded by optional space,
  * allocate and return a new string containing the version numbers, in order,

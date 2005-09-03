@@ -692,7 +692,6 @@ run_scheduled_events(time_t now)
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
 
     if (authdir_mode(options)) {
-      dirserv_log_unreachable_servers(now);
       if (!we_are_hibernating()) { /* try to determine reachability */
         router_retry_connections(1);
       }

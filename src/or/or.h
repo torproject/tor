@@ -1677,7 +1677,6 @@ void dirserv_free_descriptors(void);
 int dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
                                                    time_t now);
 int list_server_status(smartlist_t *routers, char **router_status_out);
-void dirserv_log_unreachable_servers(time_t now);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
