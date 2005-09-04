@@ -1318,7 +1318,7 @@ networkstatus_parse_from_string(const char *s)
     log_fn(LOG_WARN, "Too few arguments to fingerprint");
     goto err;
   }
-  if (base16_decode(ns->fingerprint, DIGEST_LEN, tok->args[0],
+  if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
     log_fn(LOG_WARN, "Couldn't decode fingerprint '%s'", tok->args[0]);
     goto err;
@@ -1340,7 +1340,7 @@ networkstatus_parse_from_string(const char *s)
     log_fn(LOG_WARN, "Couldn't compute signing key digest");
     goto err;
   }
-  if (memcmp(tmp_digest, ns->fingerprint, DIGEST_LEN)) {
+  if (memcmp(tmp_digest, ns->identity_digest, DIGEST_LEN)) {
     log_fn(LOG_WARN, "network-status fingerprint did not match dir-signing-key");
     goto err;
   }
@@ -1351,7 +1351,6 @@ networkstatus_parse_from_string(const char *s)
   }
   ns->client_versions = tok->args[0];
 
-  /* XXXX NM When to check these ?? */
   if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1){
     log_fn(LOG_WARN, "Missing client-versions");
     goto err;

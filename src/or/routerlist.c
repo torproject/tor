@@ -37,10 +37,14 @@ static void router_normalize_routerlist(routerlist_t *rl);
  * descriptors.)
  ****/
 
-/** Global list of all of the routers that we, as an OR or OP, know about. */
+/** Global list of all of the routers that we know about. */
 static routerlist_t *routerlist = NULL;
 
 extern int has_fetched_directory; /**< from main.c */
+
+/** Global list of all of the current network_status documents that we know
+ * about. */
+static smartlist_t *networkstatus_list = NULL;
 
 /**
  * Reload the most recent cached directory (if present).
@@ -71,6 +75,36 @@ router_reload_router_list(void)
     }
     tor_free(s);
   }
+  return 0;
+}
+
+int
+router_reload_networkstatus(void)
+{
+  char filename[512];
+  struct stat st;
+  smartlist_t *entries;
+  char *s;
+  tor_assert(get_options()->DataDirectory);
+  if (!networkstatus_list)
+    networkstatus_list = smartlist_create();
+
+  tor_snprintf(filename,sizeof(filename),"%s/cached-status",
+               get_options()->DataDirectory);
+  entries = tor_listdir(filename);
+  SMARTLIST_FOREACH(entries, const char *, fn, {
+      tor_snprintf(filename,sizeof(filename),"%s/cached-status/%s",
+                   get_options()->DataDirectory, fn);
+      s = read_file_to_str(filename, 0);
+      if (s) {
+        networkstatus_t *ns;
+        stat(filename, &st);
+        log_fn(LOG_INFO, "Loading cached network status from %s", filename);
+        ns = networkstatus_parse_from_string(s);
+        ns->received_on = st.st_mtime;
+        smartlist_add(networkstatus_list, ns);
+      }
+    });
   return 0;
 }
 

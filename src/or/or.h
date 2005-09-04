@@ -766,40 +766,48 @@ typedef struct running_routers_t {
   smartlist_t *running_routers;
 } running_routers_t;
 
-/** Contents of a network status object */
+/** Contents of a single per-router entry in a network status object.
+ */
 typedef struct routerstatus_t {
-  time_t published_on;
-  char nickname[MAX_NICKNAME_LEN+1];
-  char identity_digest[DIGEST_LEN];
-  char descriptor_digest[DIGEST_LEN];
-  uint32_t addr;
-  uint16_t or_port;
-  uint16_t dir_port;
-  unsigned int is_exit:1;
-  unsigned int is_stable:1;
-  unsigned int is_fast:1;
-  unsigned int is_running:1;
-  unsigned int is_named:1;
-  unsigned int is_valid:1;
+  time_t published_on; /**< When was this router published? */
+  char nickname[MAX_NICKNAME_LEN+1]; /**<The nickname this router says it has*/
+  char identity_digest[DIGEST_LEN]; /**< Digest of the router's identity key*/
+  char descriptor_digest[DIGEST_LEN]; /**< Digest of the router's most recent
+                                       * descriptor */
+  uint32_t addr; /**< IPv4 address for this router */
+  uint16_t or_port; /**< OR port for this router */
+  uint16_t dir_port; /**< Directory port for this router */
+  unsigned int is_exit:1; /**< True iff this router is a good exit */
+  unsigned int is_stable:1; /**< True iff this router stays up a long time */
+  unsigned int is_fast:1; /**< True iff this router has good bandwidth */
+  unsigned int is_running:1; /**< True iff this router is up */
+  unsigned int is_named:1; /**< True iff "nickname" belongs to this router */
+  unsigned int is_valid:1; /**< True iff this router is validated */
 } routerstatus_t;
 
-/** Contents of a network status object */
+/** Contents of a (v2 or later) network status object */
 typedef struct networkstatus_t {
-  time_t published_on;
+  /** When did we receive the network-status document? */
+  time_t received_on;
 
-  char *source_address;
-  uint32_t source_addr;
-  uint16_t source_dirport;
+  /* These fields come from the actual network-status document.*/
+  time_t published_on; /**< Declared publication date. */
 
-  char fingerprint[DIGEST_LEN];
-  char *contact;
-  crypto_pk_env_t *signing_key;
-  char *client_versions;
-  char *server_versions;
+  char *source_address; /**< Canonical directory server hostname */
+  uint32_t source_addr; /**< Canonical directory server IP */
+  uint16_t source_dirport; /**< Canonical directory server dirport */
 
-  int binds_names:1;
+  char identity_digest[DIGEST_LEN]; /**< Digest of signing key */
+  char *contact; /**< How to contact directory admin? (may be NULL) */
+  crypto_pk_env_t *signing_key; /**< Key used to sign this directory */
+  char *client_versions; /**< comma-separated list of recommended client
+                          * versions */
+  char *server_versions; /**< comma-separated list of recommended server
+                          * versions */
 
-  smartlist_t *entries;
+  int binds_names:1; /**< True iff this directory server binds names. */
+
+  smartlist_t *entries; /**< List of router_status_t* */
 } networkstatus_t;
 
 /** Contents of a directory of onion routers. */
