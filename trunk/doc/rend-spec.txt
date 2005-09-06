@@ -14,26 +14,27 @@ $Id$
 
    Bob does this by anonymously advertising a public key for his
    service, along with a list of onion routers to act as "Introduction
-   Points" for his service.  He creates forward OR circuits to those
+   Points" for his service.  He creates forward circuits to those
    introduction points, and tells them about his public key.  To
-   connect to Bob, Alice first builds an OR circuit to an OR to act as
-   her "Rendezvous Point", then connects to one of Bob's chosen
-   introduction points, and asks it to tell him about her Rendezvous
-   Point (RP).  If Bob chooses to answer, he builds an OR circuit to her
-   RP, and tells it to connect him to Alice.  The RP joints their
+   connect to Bob, Alice first builds a circuit to an OR to act as
+   her "Rendezvous Point." She then connects to one of Bob's chosen
+   introduction points, optionally provides authentication or
+   authorization information, and asks it to tell him about her Rendezvous
+   Point (RP).  If Bob chooses to answer, he builds a circuit to her
+   RP, and tells it to connect him to Alice.  The RP joins their
    circuits together, and begins relaying cells.  Alice's 'BEGIN'
-   cells are received directly by Bob's OP, which responds by
-   communication with the local server implementing Bob's service.
+   cells are received directly by Bob's OP, which passes data to
+   and from the local server implementing Bob's service.
 
-   Below, we describe a network-level specification of this service,
+   Below we describe a network-level specification of this service,
    along with interfaces to make this process transparent to Alice
    (so long as she is using an OP).
 
 0.1. Notation, conventions and prerequisites
 
    In the specifications below, we use the same notation as in
-   "tor-spec.txt".  The service specified here also requires the existence of
-   an onion routing network as specified in "tor-spec.txt".
+   "tor-spec.txt".  The service specified here also requires the
+   existence of an onion routing network as specified in that file.
 
         H(x) is a SHA1 digest of x.
         PKSign(SK,x) is a PKCS.1-padded RSA signature of x with SK.
@@ -49,7 +50,8 @@ $Id$
 
 0.2. Protocol outline
 
-   1. Bob->Bob's OP: "Offer IP:Port as public-key-name:Port". [configuration]
+   1. Bob->Bob's OP: "Offer IP:Port as
+      public-key-name:Port". [configuration]
       (We do not specify this step; it is left to the implementor of
       Bob's OP.)
 
@@ -59,20 +61,22 @@ $Id$
    3. Bob's OP->Introduction point via Tor: [introduction setup]
         "This pk is me."
 
-   4. Bob's OP->directory service via Tor: publishes Bob's service descriptor
-      [advertisement]
+   4. Bob's OP->directory service via Tor: publishes Bob's service
+      descriptor [advertisement]
 
-   5. Out of band, Alice receives a y.onion:port address.  She opens a
-      SOCKS connection to her OP, and requests y.onion:port.
+   5. Out of band, Alice receives a [x.y.]z.onion:port address.
+      She opens a SOCKS connection to her OP, and requests
+      x.y.z.onion:port.
 
-   6. Alice's OP retrieves Bob's descriptor via Tor: [descriptor lookup.]
+   6. Alice's OP retrieves Bob's descriptor via Tor. [descriptor lookup.]
 
    7. Alice's OP chooses a rendezvous point, opens a circuit to that
       rendezvous point, and establishes a rendezvous circuit. [rendezvous
       setup.]
 
    8. Alice connects to the Introduction point via Tor, and tells it about
-      her rendezvous point.  (Encrypted to Bob.)  [Introduction 1]
+      her rendezvous point and optional authentication/authorization
+      information.  (Encrypted to Bob.)  [Introduction 1]
 
    9. The Introduction point passes this on to Bob's OP via Tor, along the
       introduction circuit. [Introduction 2]
@@ -112,21 +116,47 @@ $Id$
    a public/private keypair (stored locally).  Periodically, the OP
    generates a pair of service descriptors, one "V1" and one "V0".
 
-   The "V1" descriptor contains:
+   The "V1" descriptor in 0.1.1.6-alpha contains:
 
          V     Format byte: set to 255               [1 octet]
          V     Version byte: set to 1                [1 octet]
          KL    Key length                            [2 octets]
          PK    Bob's public key                      [KL octets]
          TS    A timestamp                           [4 octets]
-         PROTO Protocol versions: bitmask          [2 octets]
+         PROTO Rendezvous protocol versions: bitmask [2 octets]
+         NA    Number of auth mechanisms accepted    [1 octet]
+         For each auth mechanism:
+             AUTHT  The auth type that is supported  [2 octets]
+             AUTHL  Length of auth data              [1 octet]
+             AUTHD  Auth data                        [variable]
          NI    Number of introduction points         [2 octets]
          For each introduction point: (as in INTRODUCE2 cells)
-             IP     Rendezvous point's address       [4 octets]
-             PORT   Rendezvous point's OR port       [2 octets]
-             ID     Rendezvous point identity ID     [20 octets]
-             KLEN  Length of onion key               [2 octets]
-             KEY    Rendezvous point onion key       [KLEN octets]
+             ATYPE  An address type (typically 4)    [1 octet]
+             ADDR   Introduction point's IP address  [4 or 16 octets]
+             PORT   Introduction point's OR port     [2 octets]
+             AUTHT  The auth type that is supported  [2 octets]
+             AUTHL  Length of auth data              [1 octet]
+             AUTHD  Auth data                        [variable]
+             ID     Introduction point identity ID   [20 octets]
+             KLEN   Length of onion key              [2 octets]
+             KEY    Introduction point onion key     [KLEN octets]
+         SIG   Signature of above fields             [variable]
+
+   The "V1" descriptor in 0.1.1.5-alpha-cvs contains:
+
+         V     Format byte: set to 255               [1 octet]
+         V     Version byte: set to 1                [1 octet]
+         KL    Key length                            [2 octets]
+         PK    Bob's public key                      [KL octets]
+         TS    A timestamp                           [4 octets]
+         PROTO Protocol versions: bitmask            [2 octets]
+         NI    Number of introduction points         [2 octets]
+         For each introduction point: (as in INTRODUCE2 cells)
+             IP     Introduction point's address     [4 octets]
+             PORT   Introduction point's OR port     [2 octets]
+             ID     Introduction point identity ID   [20 octets]
+             KLEN   Length of onion key              [2 octets]
+             KEY    Introduction point onion key     [KLEN octets]
          SIG   Signature of above fields             [variable]
 
    The "V0" descriptor contains:
@@ -140,6 +170,12 @@ $Id$
 
    KL is the length of PK, in octets.  (Currently, KL must be 128.)
    TS is the number of seconds elapsed since Jan 1, 1970.
+
+   AUTHT specifies which authentication/authorization mechanism is
+   required by the hidden service or the introduction point. AUTHD
+   is arbitrary data that can be associated with an auth approach.
+   Currently only AUTHT of [00 00] is supported, with an AUTHL of 0.
+   See section 2 of this document for details on auth mechanisms.
 
    The members of Ipt may be either (a) nicknames, or (b) identity key
    digests, encoded in hex, and prefixed with a '$'.  Clients must
@@ -165,6 +201,8 @@ $Id$
         HS   Hash of session info                   [20 octets]
         SIG  Signature of above information         [variable]
 
+   [XXX011, need to add auth information here. -RD]
+
    To prevent replay attacks, the HS field contains a SHA-1 hash based on the
    shared secret KH between Bob's OP and the introduction point, as
    follows:
@@ -181,12 +219,15 @@ $Id$
    currently associated with PK.  On success, the OR sends Bob a
    RELAY_INTRO_ESTABLISHED cell with an empty payload.
 
-1.4. Bob's OP advertises his service descriptor(s)
+1.4. Bob's OP advertises his service descriptor(s).
 
    Bob's OP opens a stream to each directory server's directory port via Tor.
    (He may re-use old circuits for this.)  Over this stream, Bob's OP makes
    an HTTP 'POST' request, to a URL "/tor/rendezvous/publish" relative to the
    directory server's root, containing as its body Bob's service descriptor.
+
+   Bob should upload a service descriptor for each version format that
+   is supported in the current Tor network.
 
    Upon receiving a descriptor, the directory server checks the signature,
    and discards the descriptor if the signature does not match the enclosed
@@ -194,16 +235,18 @@ $Id$
    timestamp is more than 24 hours in the past or more than 1 hour in the
    future, or the directory server already has a newer descriptor with the
    same public key, the server discards the descriptor.  Otherwise, the
-   server discards any older descriptors with the same public key, and
-   associates the new descriptor with the public key.  The directory server
-   remembers this descriptor for at least 24 hours after its timestamp.  At
-   least every 24 hours, Bob's OP uploads a fresh descriptor.
+   server discards any older descriptors with the same public key and
+   version format, and associates the new descriptor with the public key.
+   The directory server remembers this descriptor for at least 24 hours
+   after its timestamp.  At least every 18 hours, Bob's OP uploads a
+   fresh descriptor.
 
-1.5. Alice receives a y.onion address
+1.5. Alice receives a x.y.z.onion address.
 
    When Alice receives a pointer to a location-hidden service, it is as a
-   hostname of the form "y.onion", where y is a base-32 encoding of a
-   10-octet hash of Bob's service's public key, computed as follows:
+   hostname of the form "z.onion" or "y.z.onion" or "x.y.z.onion", where
+   z is a base-32 encoding of a 10-octet hash of Bob's service's public
+   key, computed as follows:
 
          1. Let H = H(PK).
          2. Let H' = the first 80 bits of H, considering each octet from
@@ -215,22 +258,29 @@ $Id$
    need to worry about man-in-the-middle attacks, and because it will make
    handling the url's more convenient.)
 
+   The string "x", if present, is the base-32 encoding of the
+   authentication/authorization required by the introduction point.
+   The string "y", if present, is the base-32 encoding of the
+   authentication/authorization required by the hidden service.
+   Omitting a string is taken to mean auth type [00 00].
+   See section 2 of this document for details on auth mechanisms.
+
    [Yes, numbers are allowed at the beginning.  See RFC1123. -NM]
 
-1.6. Alice's OP retrieves a service descriptor
+1.6. Alice's OP retrieves a service descriptor.
 
    Alice opens a stream to a directory server via Tor, and makes an HTTP GET
-   request for the document '/tor/rendezvous/<y>' or '/tor/rendezvous1/<y>',
-   where '<y> is replaced with the encoding of Bob's public key as described
+   request for the document '/tor/rendezvous/<z>' or '/tor/rendezvous1/<z>',
+   where '<z>' is replaced with the encoding of Bob's public key as described
    above. (She may re-use old circuits for this.) The directory replies with
-   a 404 HTTP response if it does not recognize <y>, and otherwise returns
+   a 404 HTTP response if it does not recognize <z>, and otherwise returns
    Bob's most recently uploaded service descriptor.  (If Alice requests
    'rendezvous1', the directory server provides a V1 descriptor or a V0
    descriptor if no V1 descriptor is available.  If Alice requests
    'rendezvous', the directory server returns a V0 descriptor.)
 
    If Alice's OP receives a 404 response, it tries the other directory
-   servers, and only fails the lookup if none recognizes the public key hash.
+   servers, and only fails the lookup if none recognize the public key hash.
 
    Upon receiving a service descriptor, Alice verifies with the same process
    as the directory server uses, described above in section 1.4.
@@ -254,6 +304,8 @@ $Id$
 
         RC   Rendezvous cookie    [20 octets]
 
+   [XXX011 this looks like an auth mechanism. should we generalize here? -RD]
+
    The rendezvous cookie is an arbitrary 20-byte value, chosen randomly by
    Alice's OP.
 
@@ -271,6 +323,7 @@ $Id$
 
        Cleartext
           PK_ID  Identifier for Bob's PK      [20 octets]
+[XXX011 want to put intro-level auth info here, but no version. crap. -RD]
 
        Encrypted to Bob's PK:
           RP     Rendezvous point's nickname  [20 octets]
@@ -287,9 +340,22 @@ $Id$
           PORT   Rendezvous point's OR port    [2 octets]
           ID     Rendezvous point identity ID [20 octets]
           KLEN  Length of onion key            [2 octets]
-          KEY    Rendezvous point onion key  [KLEN octets]
+          KEY    Rendezvous point onion key [KLEN octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
+        OR
+          VER    Version byte: set to 3.           [1 octet]
+          ATYPE  An address type (typically 4)     [1 octet]
+          ADDR   Introduction point's IP address  [4 or 16 octets]
+          PORT   Rendezvous point's OR port       [2 octets]
+          AUTHT  The auth type that is supported  [2 octets]
+          AUTHL  Length of auth data               [1 octet]
+          AUTHD  Auth data                        [variable]
+          ID     Rendezvous point identity ID    [20 octets]
+          KLEN  Length of onion key               [2 octets]
+          KEY    Rendezvous point onion key    [KLEN octets]
+          RC     Rendezvous cookie               [20 octets]
+          g^x    Diffie-Hellman data, part 1    [128 octets]
 
    PK_ID is the hash of Bob's public key.  RP is NUL-padded and terminated,
    and must contain EITHER a nickname, or an identity key digest, encoded in
@@ -326,7 +392,7 @@ $Id$
 
 1.10. Rendezvous
 
-   Bob's OP build a new Tor circuit ending at Alice's chosen rendezvous
+   Bob's OP builds a new Tor circuit ending at Alice's chosen rendezvous
    point, and sends a RELAY_RENDEZVOUS1 cell along this circuit, containing:
        RC       Rendezvous cookie  [20 octets]
        g^y      Diffie-Hellman     [128 octets]
@@ -376,4 +442,8 @@ $Id$
    Alice MAY send multiple RELAY_BEGIN cells along the circuit, to open
    multiple streams to Bob.  Alice SHOULD NOT send RELAY_BEGIN cells for any
    other address along her circuit to Bob; if she does, Bob MUST reject them.
+
+2.0. Authentication and authorization.
+
+Foo.
 
