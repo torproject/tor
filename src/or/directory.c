@@ -436,8 +436,9 @@ directory_send_command(connection_t *conn, const char *platform,
 
       httpcommand = "GET";
       /* Request the most recent versioned descriptor. */
-      tor_snprintf(url, sizeof(url), "/tor/rendezvous1/%s", resource);
-      //tor_snprintf(url, sizeof(url), "/tor/rendezvous/%s", resource);
+      // XXXX011
+      //tor_snprintf(url, sizeof(url), "/tor/rendezvous1/%s", resource);
+      tor_snprintf(url, sizeof(url), "/tor/rendezvous/%s", resource);
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(!resource);

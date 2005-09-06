@@ -1026,7 +1026,7 @@ rend_consider_services_upload(time_t now)
        * descriptor and ours has been stable for 5 seconds, upload a
        * new one of each format. */
       upload_service_descriptor(service, 0);
-      upload_service_descriptor(service, 1);
+      // XXXX011 upload_service_descriptor(service, 1);
       service->next_upload_time = now + rendpostperiod;
     }
   }
