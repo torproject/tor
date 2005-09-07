@@ -21,9 +21,10 @@ static smartlist_t *trusted_dir_servers = NULL;
 /* static function prototypes */
 static routerinfo_t *
 router_pick_directory_server_impl(int requireother, int fascistfirewall,
-                                  int for_runningrouters);
+                                  int for_v2_directory);
 static trusted_dir_server_t *
-router_pick_trusteddirserver_impl(int requireother, int fascistfirewall);
+router_pick_trusteddirserver_impl(int need_v1_support,
+                                  int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
@@ -78,12 +79,13 @@ router_reload_router_list(void)
   return 0;
 }
 
+/** DOCDOC */
 int
 router_reload_networkstatus(void)
 {
   char filename[512];
   struct stat st;
-  smartlist_t *entries;
+  smartlist_t *entries, *bad_names;
   char *s;
   tor_assert(get_options()->DataDirectory);
   if (!networkstatus_list)
@@ -92,17 +94,24 @@ router_reload_networkstatus(void)
   tor_snprintf(filename,sizeof(filename),"%s/cached-status",
                get_options()->DataDirectory);
   entries = tor_listdir(filename);
+  bad_names = smartlist_create();
   SMARTLIST_FOREACH(entries, const char *, fn, {
+      char buf[DIGEST_LEN];
+      if (strlen(fn) != HEX_DIGEST_LEN ||
+          base16_decode(buf, sizeof(buf), fn, strlen(fn))) {
+        log_fn(LOG_INFO,
+               "Skipping cached-status file with unexpected name \"%s\"",fn);
+        continue;
+      }
       tor_snprintf(filename,sizeof(filename),"%s/cached-status/%s",
                    get_options()->DataDirectory, fn);
       s = read_file_to_str(filename, 0);
       if (s) {
-        networkstatus_t *ns;
         stat(filename, &st);
-        log_fn(LOG_INFO, "Loading cached network status from %s", filename);
-        ns = networkstatus_parse_from_string(s);
-        ns->received_on = st.st_mtime;
-        smartlist_add(networkstatus_list, ns);
+        if (router_set_networkstatus(s, st.st_mtime, 1)<0) {
+          log_fn(LOG_WARN, "Couldn't load networkstatus from \"%s\"",filename);
+        }
+        tor_free(s);
       }
     });
   return 0;
@@ -133,7 +142,7 @@ router_get_trusted_dir_servers(smartlist_t **outp)
 routerinfo_t *
 router_pick_directory_server(int requireother,
                              int fascistfirewall,
-                             int for_runningrouters,
+                             int for_v2_directory,
                              int retry_if_no_servers)
 {
   routerinfo_t *choice;
@@ -142,7 +151,7 @@ router_pick_directory_server(int requireother,
     return NULL;
 
   choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             for_runningrouters);
+                                             for_v2_directory);
   if (choice || !retry_if_no_servers)
     return choice;
 
@@ -151,7 +160,7 @@ router_pick_directory_server(int requireother,
   mark_all_trusteddirservers_up();
   /* try again */
   choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             for_runningrouters);
+                                             for_v2_directory);
   if (choice)
     return choice;
 
@@ -163,7 +172,7 @@ router_pick_directory_server(int requireother,
   }
   /* give it one last try */
   choice = router_pick_directory_server_impl(requireother, 0,
-                                             for_runningrouters);
+                                             for_v2_directory);
   return choice;
 }
 
@@ -171,21 +180,26 @@ router_pick_directory_server(int requireother,
  * trusted dirservers and <b>retry_if_no_servers</b> is non-zero,
  * set them all as running again, and try again.
  * Other args are as in router_pick_trusteddirserver_impl().
+ *
+ * DOCDOC need_v1_support
  */
 trusted_dir_server_t *
-router_pick_trusteddirserver(int requireother,
+router_pick_trusteddirserver(int need_v1_support,
+                             int requireother,
                              int fascistfirewall,
                              int retry_if_no_servers)
 {
   trusted_dir_server_t *choice;
 
-  choice = router_pick_trusteddirserver_impl(requireother, fascistfirewall);
+  choice = router_pick_trusteddirserver_impl(need_v1_support,
+                                             requireother, fascistfirewall);
   if (choice || !retry_if_no_servers)
     return choice;
 
   log_fn(LOG_INFO,"No trusted dirservers are reachable. Trying them all again.");
   mark_all_trusteddirservers_up();
-  return router_pick_trusteddirserver_impl(requireother, fascistfirewall);
+  return router_pick_trusteddirserver_impl(need_v1_support,
+                                           requireother, fascistfirewall);
 }
 
 /** Pick a random running verified directory server/mirror from our
@@ -193,13 +207,12 @@ router_pick_trusteddirserver(int requireother,
  * If <b>fascistfirewall</b> and we're not using a proxy,
  * make sure the port we pick is allowed by options-\>firewallports.
  * If <b>requireother</b>, it cannot be us.
- * If <b>for_runningrouters</b>, make sure we pick a dirserver that
- * can answer queries for running-routers (this option will become obsolete
- * once 0.0.9-rc5 is dead).
+ *
+ * DOCDOC need_v1_support, for_v2_directory
  */
 static routerinfo_t *
 router_pick_directory_server_impl(int requireother, int fascistfirewall,
-                                  int for_runningrouters)
+                                  int for_v2_directory)
 {
   int i;
   routerinfo_t *router;
@@ -223,9 +236,9 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
       if (!fascist_firewall_allows_address(router->addr, router->dir_port))
         continue;
     }
-    /* before 0.0.9rc5-cvs, only trusted dirservers served status info. */
-    if (for_runningrouters &&
-        !(tor_version_as_new_as(router->platform,"0.0.9rc5-cvs") ||
+    /* before 0.1.1.6-alpha, only trusted dirservers served status info. */
+    if (for_v2_directory &&
+        !(tor_version_as_new_as(router->platform,"0.1.1.6-alpha") ||
           router_digest_is_trusted_dir(router->identity_digest)))
       continue;
     smartlist_add(sl, router);
@@ -242,7 +255,8 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
  * If <b>requireother</b>, it cannot be us.
  */
 static trusted_dir_server_t *
-router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
+router_pick_trusteddirserver_impl(int need_v1_support,
+                                  int requireother, int fascistfirewall)
 {
   smartlist_t *sl;
   routerinfo_t *me;
@@ -259,6 +273,8 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
     {
       if (!d->is_running) continue;
+      if (need_v1_support && !d->supports_v1_protocol)
+        continue;
       if (requireother && me &&
           !memcmp(me->identity_digest, d->digest, DIGEST_LEN))
         continue;
@@ -1166,6 +1182,79 @@ router_load_routerlist_from_directory(const char *s,
   return 0;
 }
 
+/** DOCDOC returns 0 on no problems, -1 on problems.
+ */
+int
+router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
+{
+  networkstatus_t *ns;
+  int i, found;
+  time_t now;
+  char fp[HEX_DIGEST_LEN+1];
+
+  ns = networkstatus_parse_from_string(s);
+  if (!ns) {
+    log_fn(LOG_WARN, "Couldn't parse network status.");
+    return -1;
+  }
+  if (!router_digest_is_trusted_dir(ns->identity_digest)) {
+    log_fn(LOG_INFO, "Network status was signed, but not by an authoritative directory we recognize.");
+    return -1;
+  }
+  now = time(NULL);
+  if (arrived_at > now)
+    arrived_at = now;
+
+  ns->received_on = arrived_at;
+
+  /*XXXX Check publishing skew. NM*/
+
+  if (!networkstatus_list)
+    networkstatus_list = smartlist_create();
+
+  found = 0;
+  for (i=0; i < smartlist_len(networkstatus_list); ++i) {
+    networkstatus_t *old_ns = smartlist_get(networkstatus_list, i);
+
+    if (!memcmp(old_ns->identity_digest, ns->identity_digest, DIGEST_LEN)) {
+      if (!memcmp(old_ns->networkstatus_digest,
+                  ns->networkstatus_digest, DIGEST_LEN)) {
+        networkstatus_free(ns);
+        return 0;
+      } else if (old_ns->published_on >= ns->published_on) {
+        log_fn(LOG_INFO, "Dropping network-status; we have a newer one for this authority.");
+        networkstatus_free(ns);
+        return 0;
+      } else {
+        networkstatus_free(old_ns);
+        smartlist_set(networkstatus_list, i, ns);
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  if (!found)
+    smartlist_add(networkstatus_list, ns);
+
+  base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
+
+  if (!is_cached) {
+    const char *datadir = get_options()->DataDirectory;
+    char fp[HEX_DIGEST_LEN+1];
+    size_t len = strlen(datadir)+64;
+    char *fn = tor_malloc(len+1);
+    tor_snprintf(fn, len, "%s/cached-directory/%s",datadir,fp);
+    if (write_str_to_file(fn, s, 0)<0) {
+      log_fn(LOG_NOTICE, "Couldn't write cached network status to \"%s\"", fn);
+    }
+    tor_free(fn);
+  }
+
+  if (get_options()->DirPort)
+    dirserv_set_cached_networkstatus_v2(s, fp, ns->published_on);
+}
+
 /** Ensure that our own routerinfo is at the front, and remove duplicates
  * of our routerinfo.
  */
@@ -1571,7 +1660,8 @@ router_update_status_from_smartlist(routerinfo_t *router,
  * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
  * <b>address</b> is NULL, add ourself. */
 void
-add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
+add_trusted_dir_server(const char *address, uint16_t port, const char *digest,
+                       int supports_v1)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
@@ -1599,6 +1689,7 @@ add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
   ent->addr = a;
   ent->dir_port = port;
   ent->is_running = 1;
+  ent->supports_v1_protocol = supports_v1;
   memcpy(ent->digest, digest, DIGEST_LEN);
   smartlist_add(trusted_dir_servers, ent);
 }

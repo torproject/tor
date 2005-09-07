@@ -170,26 +170,25 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   if (directconn) {
     if (fetch_fresh_first) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_trusteddirserver(1, fascistfirewall,
+      ds = router_pick_trusteddirserver(1, 1, fascistfirewall,
                                         retry_if_no_servers);
     }
     if (!ds) {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(1, fascistfirewall,
-                                purpose==DIR_PURPOSE_FETCH_RUNNING_LIST,
+      r = router_pick_directory_server(1, fascistfirewall, 0,
                                        retry_if_no_servers);
       if (!r) {
         log_fn(LOG_INFO, "No router found for %s; falling back to dirserver list",
                purpose == DIR_PURPOSE_FETCH_RUNNING_LIST
                ? "status list" : "directory");
-        ds = router_pick_trusteddirserver(1, fascistfirewall,
+        ds = router_pick_trusteddirserver(1, 1, fascistfirewall,
                                           retry_if_no_servers);
       }
     }
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
     /* only ask authdirservers, any of them will do */
     /* Never use fascistfirewall; we're going via Tor. */
-    ds = router_pick_trusteddirserver(0, 0, retry_if_no_servers);
+    ds = router_pick_trusteddirserver(0, 0, 0, retry_if_no_servers);
   }
 
   if (r)
@@ -1062,24 +1061,39 @@ directory_handle_command_get(connection_t *conn, char *headers,
     /* v2 network status fetch. */
     size_t url_len = strlen(url);
     int deflated = !strcmp(url+url_len-2, ".z");
+    smartlist_t *dir_objs = smartlist_create();
     const char *key = url + strlen("/tor/status/");
     if (deflated)
       url[url_len-2] = '\0';
-    dlen = dirserv_get_networkstatus_v2(&cp, key, deflated);
+    if (dirserv_get_networkstatus_v2(dir_objs, key)) {
+      smartlist_free(dir_objs);
+      return 0;
+    }
     tor_free(url);
-    if (!dlen) { /* we failed to create/cache cp */
+    if (!smartlist_len(dir_objs)) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Network status object unavailable");
+      smartlist_free(dir_objs);
       /* try to get a new one now */
       // XXXX NM
       return 0;
     }
+    dlen = 0;
+    SMARTLIST_FOREACH(dir_objs, cached_dir_t *, d,
+                      dlen += deflated?d->dir_z_len:d->dir_len);
     format_rfc1123_time(date, time(NULL));
     tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
                  date,
                  (int)dlen,
                  deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
-    connection_write_to_buf(cp, strlen(cp), conn);
+    SMARTLIST_FOREACH(dir_objs, cached_dir_t *, d,
+       {
+         if (deflated)
+           connection_write_to_buf(d->dir_z, d->dir_z_len, conn);
+         else
+           connection_write_to_buf(d->dir, d->dir_len, conn);
+       });
+    smartlist_free(dir_objs);
     return 0;
   }
 
@@ -1098,15 +1112,42 @@ directory_handle_command_get(connection_t *conn, char *headers,
       format_rfc1123_time(date, time(NULL));
       SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
                         len += ri->signed_descriptor_len);
-      /* XXXX We need to support deflate here. */
-      tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
-                   date,
-                   (int)len);
-      connection_write_to_buf(tmp, strlen(tmp), conn);
-      SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
-                        connection_write_to_buf(ri->signed_descriptor,
-                                                ri->signed_descriptor_len,
-                                                conn));
+      if (deflated) {
+        size_t compressed_len;
+        char *compressed;
+        char *inp = tor_malloc(len+smartlist_len(descs)+1);
+        char *cp = inp;
+        SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
+           {
+             memcpy(cp, ri->signed_descriptor,
+                    ri->signed_descriptor_len);
+             cp += ri->signed_descriptor_len;
+             *cp++ = '\n';
+           });
+        *cp = '\0';
+        /* XXXX This could be way more efficiently handled. */
+        if (tor_gzip_compress(&compressed, &compressed_len,
+                              inp, cp-inp, ZLIB_METHOD)<0){
+          tor_free(cp);
+          smartlist_free(descs);
+          return -1;
+        }
+        tor_free(cp);
+        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
+                     date,
+                     (int)compressed_len);
+        connection_write_to_buf(tmp, strlen(tmp), conn);
+        connection_write_to_buf(compressed, compressed_len, conn);
+      } else {
+        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
+                     date,
+                     (int)len);
+        connection_write_to_buf(tmp, strlen(tmp), conn);
+        SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
+                          connection_write_to_buf(ri->signed_descriptor,
+                                                  ri->signed_descriptor_len,
+                                                  conn));
+      }
     }
     smartlist_free(descs);
     return 0;

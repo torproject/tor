@@ -118,12 +118,12 @@ N     . Dirservers publish compressed network-status objects.
         - Support retrieving several-at-once
 N     . Everyone downloads network-status objects
         - From all directories, round-robin
-        . Parse them
-        - Cache them, reload on restart
+        o Parse them
+        o Cache them, reload on restart
         o Serve cached directories
-N     . Directories expose individual descriptors
+      o Directories expose individual descriptors
         X By 'if-newer-than' (Does the spec require this??)
-        - Support compression.
+        o Support compression.
 N     - Alice acts on network-status objects
         - Alice downloads descriptors as needed.
         - Alice sets descriptor status from networks-status

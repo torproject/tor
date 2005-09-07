@@ -102,6 +102,8 @@ static config_var_t _option_vars[] = {
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
   VAR("AssumeReachable",     BOOL,     AssumeReachable,      "0"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
+  /* XXXX 011 change this default on 0.1.1.x */
+  VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "1"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "5 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "2 MB"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
@@ -1140,13 +1142,13 @@ add_default_trusted_dirservers(or_options_t *options)
 {
   /* moria1 */
   config_line_append(&options->DirServers, "DirServer",
-       "18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
+     "v1 18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
   /* moria2 */
   config_line_append(&options->DirServers, "DirServer",
-         "18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
+     "v1 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
   /* tor26 */
   config_line_append(&options->DirServers, "DirServer",
-     "86.59.5.130:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
+     "v1 86.59.5.130:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 //  "tor.noreply.org:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 }
 
@@ -2753,6 +2755,15 @@ parse_dir_server_line(const char *line, int validate_only)
   char *addrport, *address=NULL;
   uint16_t port;
   char digest[DIGEST_LEN];
+  int supports_v1 = 1; /*XXXX011 change default when clients support v2. */
+
+  while (TOR_ISSPACE(*line))
+    ++line;
+
+  if (!strcmpstart(line, "v1 ")) {
+    line += 3;
+    supports_v1 = 1;
+  }
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
@@ -2785,7 +2796,7 @@ parse_dir_server_line(const char *line, int validate_only)
   if (!validate_only) {
     log_fn(LOG_DEBUG, "Trusted dirserver at %s:%d (%s)", address, (int)port,
            (char*)smartlist_get(items,1));
-    add_trusted_dir_server(address, port, digest);
+    add_trusted_dir_server(address, port, digest, supports_v1);
   }
 
   r = 0;
