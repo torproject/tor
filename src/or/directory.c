@@ -291,6 +291,12 @@ directory_initiate_command(const char *address, uint32_t addr,
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       log_fn(LOG_DEBUG,"initiating running-routers fetch");
       break;
+    case DIR_PURPOSE_FETCH_NETWORKSTATUS:
+      log_fn(LOG_DEBUG,"initiating network-status fetch");
+      break;
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+      log_fn(LOG_DEBUG,"initiating server descriptor fetch");
+      break;
     default:
       log_fn(LOG_ERR, "Unrecognized directory connection purpose.");
       tor_assert(0);
@@ -362,12 +368,13 @@ directory_send_command(connection_t *conn, const char *platform,
                        int purpose, const char *resource,
                        const char *payload, size_t payload_len)
 {
-  char tmp[8192];
   char proxystring[256];
   char proxyauthstring[256];
   char hoststring[128];
-  char url[128];
+  char *url;
+  char request[8192];
   const char *httpcommand = NULL;
+  size_t len;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
@@ -410,19 +417,31 @@ directory_send_command(connection_t *conn, const char *platform,
       log_fn(LOG_DEBUG, "Asking for compressed directory from server running %s",
              platform?platform:"<unknown version>");
       httpcommand = "GET";
-      strlcpy(url, "/tor/dir.z", sizeof(url));
+      url = tor_strdup("/tor/dir.z");
       break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       tor_assert(!resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      strlcpy(url, "/tor/running-routers", sizeof(url));
+      url = tor_strdup("/tor/running-routers");
+      break;
+    case DIR_PURPOSE_FETCH_NETWORKSTATUS:
+      httpcommand = "GET";//XXXX
+      len = strlen(resource)+32;
+      url = tor_malloc(len);
+      tor_snprintf(url, len, "/tor/status/%s", resource);
+      break;
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+      httpcommand = "GET";//XXXX
+      len = strlen(resource)+32;
+      url = tor_malloc(len);
+      tor_snprintf(url, len, "/tor/server/%s", resource);
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
-      strlcpy(url, "/tor/", sizeof(url));
+      url = tor_strdup("/tor/");
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
       tor_assert(resource);
@@ -437,24 +456,28 @@ directory_send_command(connection_t *conn, const char *platform,
       /* Request the most recent versioned descriptor. */
       // XXXX011
       //tor_snprintf(url, sizeof(url), "/tor/rendezvous1/%s", resource);
-      tor_snprintf(url, sizeof(url), "/tor/rendezvous/%s", resource);
+      len = strlen(resource)+32;
+      url = tor_malloc(len);
+      tor_snprintf(url, len, "/tor/rendezvous/%s", resource);
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
-      tor_snprintf(url, sizeof(url), "/tor/rendezvous/publish");
+      url = tor_strdup("/tor/rendezvous/publish");
       break;
   }
+  tor_snprintf(request, sizeof(request), "%s %s", httpcommand, proxystring);
+  connection_write_to_buf(request, strlen(request), conn);
+  connection_write_to_buf(url, strlen(url), conn);
+  tor_free(url);
 
-  tor_snprintf(tmp, sizeof(tmp), "%s %s%s HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
-           httpcommand,
-           proxystring,
-           url,
+  tor_snprintf(request, len, " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
            payload ? (unsigned long)payload_len : 0,
            hoststring,
            proxyauthstring);
-  connection_write_to_buf(tmp, strlen(tmp), conn);
+  connection_write_to_buf(request, strlen(request), conn);
+
 
   if (payload) {
     /* then send the payload afterwards too */

@@ -323,14 +323,20 @@ typedef enum {
 /** Purpose for connection to directory server: set after a rendezvous
  * descriptor is downloaded. */
 #define DIR_PURPOSE_HAS_FETCHED_RENDDESC 4
+/** A connection to a directory server: downoad one or more network-status
+ * objects */
+#define DIR_PURPOSE_FETCH_NETWORKSTATUS 5
+/**  A connection to a directory server: downoad one or more server
+ * descriptors. */
+#define DIR_PURPOSE_FETCH_SERVERDESC 6
 /** Purpose for connection to directory server: upload a server descriptor. */
-#define DIR_PURPOSE_UPLOAD_DIR 5
+#define DIR_PURPOSE_UPLOAD_DIR 7
 /** Purpose for connection to directory server: upload a rendezvous
  * descriptor. */
-#define DIR_PURPOSE_UPLOAD_RENDDESC 6
+#define DIR_PURPOSE_UPLOAD_RENDDESC 8
 /** Purpose for connection at a directory server. */
-#define DIR_PURPOSE_SERVER 7
-#define _DIR_PURPOSE_MAX 7
+#define DIR_PURPOSE_SERVER 9
+#define _DIR_PURPOSE_MAX 9
 
 #define _EXIT_PURPOSE_MIN 1
 #define EXIT_PURPOSE_CONNECT 1
