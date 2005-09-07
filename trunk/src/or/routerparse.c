@@ -1282,6 +1282,7 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
   ns = tor_malloc_zero(sizeof(networkstatus_t));
+  memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
   if (!(tok = find_first_by_keyword(tokens, K_NETWORK_STATUS_VERSION))) {
     log_fn(LOG_WARN, "Couldn't find network-status-version keyword");

@@ -669,16 +669,6 @@ dirserv_dump_directory_to_string(char **dir_out,
   return -1;
 }
 
-/** A cached_dir_t represents a cacheable directory object, along with its
- * compressed form. */
-typedef struct cached_dir_t {
-  char *dir; /**< Contents of this object */
-  char *dir_z; /**< Compressed contents of this object. */
-  size_t dir_len; /**< Length of <b>dir</b> */
-  size_t dir_z_len; /**< Length of <b>dir_z</b> */
-  time_t published; /**< When was this object published */
-} cached_dir_t;
-
 /** Most recently generated encoded signed directory. (auth dirservers only.)*/
 static cached_dir_t the_directory = { NULL, NULL, 0, 0, 0 };
 
@@ -768,7 +758,6 @@ dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
                                     time_t published)
 {
   cached_dir_t *d;
-  char fname[512];
   if (!cached_v2_networkstatus)
     cached_v2_networkstatus = strmap_new();
 
@@ -781,35 +770,22 @@ dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
 
   tor_assert(d);
   set_cached_dir(d, tor_strdup(directory), published);
-
-  if (!d->dir)
-    return;
-
-  tor_snprintf(fname,sizeof(fname), "%s/cached-status/%s",
-               get_options()->DataDirectory, fp);
-  if (write_str_to_file(fname, d->dir, 0)<0) {
-    log_fn(LOG_NOTICE, "Couldn't write cached network status to disk. Ignoring.");
-  }
 }
 
-/** Helper: If we're authoritative and <b>auth_src</b> is set, use
- * <b>auth_src</b>, otherwise use <b>cache_src</b>.  If we're using
- * <b>auth_src</b> and it's been <b>dirty</b> for at least
- * DIR_REGEN_SLACK_TIME seconds, call <b>regenerate</b>() to make a fresh one.
- * Yields the compressed version of the directory object if <b>compress</b> is
- * set; otherwise return the uncompressed version.  (In either case, sets
- * *<b>out</b> and returns the size of the buffer in *<b>out</b>. */
-static size_t
-dirserv_get_obj(const char **out, int compress,
-                cached_dir_t *cache_src,
-                cached_dir_t *auth_src,
-                time_t dirty, int (*regenerate)(void),
-                const char *name)
+static cached_dir_t *
+dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
+                            cached_dir_t *auth_src,
+                            time_t dirty, int (*regenerate)(void),
+                            const char *name,
+                            int is_v1_object)
 {
-  cached_dir_t *d;
-  if (!get_options()->AuthoritativeDir || !auth_src) {
-    d = cache_src;
+  int authority = get_options()->AuthoritativeDir &&
+    (!is_v1_object || get_options()->V1AuthoritativeDir);
+
+  if (!authority) {
+    return cache_src;
   } else {
+    /* We're authoritative. */
     if (regenerate != NULL) {
       if (dirty && dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
         if (regenerate()) {
@@ -820,8 +796,32 @@ dirserv_get_obj(const char **out, int compress,
         log_fn(LOG_INFO, "The %s is still clean; reusing.", name);
       }
     }
-    d = auth_src;
+    return auth_src ? auth_src : cache_src;
   }
+}
+
+/** Helper: If we're authoritative and <b>auth_src</b> is set, use
+ * <b>auth_src</b>, otherwise use <b>cache_src</b>.  If we're using
+ * <b>auth_src</b> and it's been <b>dirty</b> for at least
+ * DIR_REGEN_SLACK_TIME seconds, call <b>regenerate</b>() to make a fresh one.
+ * Yields the compressed version of the directory object if <b>compress</b> is
+ * set; otherwise return the uncompressed version.  (In either case, sets
+ * *<b>out</b> and returns the size of the buffer in *<b>out</b>.
+ *
+ * DOCDOC is_v1_object
+ **/
+static size_t
+dirserv_get_obj(const char **out, int compress,
+                cached_dir_t *cache_src,
+                cached_dir_t *auth_src,
+                time_t dirty, int (*regenerate)(void),
+                const char *name,
+                int is_v1_object)
+{
+  cached_dir_t *d = dirserv_pick_cached_dir_obj(
+      cache_src, auth_src,
+      dirty, regenerate, name, is_v1_object);
+
   if (!d)
     return 0;
   *out = compress ? d->dir_z : d->dir;
@@ -843,7 +843,7 @@ dirserv_get_directory(const char **directory, int compress)
                          &cached_directory, &the_directory,
                          the_directory_is_dirty,
                          dirserv_regenerate_directory,
-                         "server directory");
+                         "server directory", 1);
 }
 
 /**
@@ -938,7 +938,7 @@ dirserv_get_runningrouters(const char **rr, int compress)
                          &cached_runningrouters, &the_runningrouters,
                          runningrouters_is_dirty,
                          generate_runningrouters,
-                         "v1 network status list");
+                         "v1 network status list", 1);
 }
 
 /** Return true iff <b>ri</b> is "useful as an exit node." */
@@ -1132,8 +1132,7 @@ generate_v2_networkstatus(void)
   set_cached_dir(&the_v2_networkstatus, status, time(NULL));
   status = NULL; /* So it doesn't get double-freed. */
   the_v2_networkstatus_is_dirty = 0;
-  dirserv_set_cached_networkstatus_v2(the_v2_networkstatus.dir,
-                                      fingerprint, time(NULL));
+  router_set_networkstatus(the_v2_networkstatus.dir, time(NULL), 0);
 
   r = 0;
  done:
@@ -1153,27 +1152,43 @@ generate_v2_networkstatus(void)
  * nothing was found; otherwise set *<b>directory</b> to the matching network
  * status and return its length.
  */
-size_t
-dirserv_get_networkstatus_v2(const char **directory, const char *key,
-                             int compress)
+int
+dirserv_get_networkstatus_v2(smartlist_t *result,
+                             const char *key)
 {
-  *directory = NULL;
+  tor_assert(result);
+
   if (!(strcmp(key,"authority"))) {
     if (get_options()->AuthoritativeDir) {
-      return dirserv_get_obj(directory, compress, NULL,
-                             &the_v2_networkstatus,
-                             the_v2_networkstatus_is_dirty,
-                             generate_v2_networkstatus,
-                             "network status list");
+      cached_dir_t *d =
+        dirserv_pick_cached_dir_obj(NULL,
+                                    &the_v2_networkstatus,
+                                    the_v2_networkstatus_is_dirty,
+                                    generate_v2_networkstatus,
+                                    "network status list", 0);
+      if (d)
+        smartlist_add(result, d);
     }
   } else if (!strcmp(key, "all")) {
-    // XXXX NM
-    return dirserv_get_networkstatus_v2(directory, "authority", compress);
-  } else if (strlen(key)==HEX_DIGEST_LEN) {
-    cached_dir_t *cached = strmap_get(cached_v2_networkstatus, key);
-    if (cached)
-      return dirserv_get_obj(directory, compress, cached, NULL, 0, NULL,
-                             "cached network status");
+    strmap_iter_t *iter = strmap_iter_init(cached_v2_networkstatus);
+    while (!strmap_iter_done(iter)) {
+      const char *fp;
+      void *val;
+      strmap_iter_get(iter, &fp, &val);
+      smartlist_add(result, val);
+    }
+  } else if (!strcmpstart(key, "fp/")) {
+    smartlist_t *hexdigests = smartlist_create();
+    smartlist_split_string(hexdigests, key+3, "+", 0, 0);
+    SMARTLIST_FOREACH(hexdigests, char *, cp,
+        {
+          cached_dir_t *cached;
+          tor_strlower(cp);
+          /* XXXX special-case own key? */
+          cached = strmap_get(cached_v2_networkstatus, cp);
+          if (cached)
+            smartlist_add(result, cached);
+        });
   }
   return 0;
 }

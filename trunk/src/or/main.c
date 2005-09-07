@@ -711,7 +711,7 @@ run_scheduled_events(time_t now)
   }
 
   if (time_to_fetch_running_routers < now) {
-    if (!authdir_mode(options)) {
+    if (!authdir_mode(options) || !options->V1AuthoritativeDir) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
     time_to_fetch_running_routers = now + get_status_fetch_period(options);
@@ -970,6 +970,9 @@ do_main_loop(void)
 
   /* load the routers file, or assign the defaults. */
   if (router_reload_router_list()) {
+    return -1;
+  }
+  if (router_reload_networkstatus()) {
     return -1;
   }
 

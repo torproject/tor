@@ -705,6 +705,17 @@ typedef struct addr_policy_t {
   struct addr_policy_t *next; /**< Next rule in list. */
 } addr_policy_t;
 
+
+/** A cached_dir_t represents a cacheable directory object, along with its
+ * compressed form. */
+typedef struct cached_dir_t {
+  char *dir; /**< Contents of this object */
+  char *dir_z; /**< Compressed contents of this object. */
+  size_t dir_len; /**< Length of <b>dir</b> */
+  size_t dir_z_len; /**< Length of <b>dir_z</b> */
+  time_t published; /**< When was this object published */
+} cached_dir_t;
+
 /** Information about another onion router in the network. */
 typedef struct {
   char *signed_descriptor; /**< The original signed descriptor for this router*/
@@ -789,6 +800,8 @@ typedef struct routerstatus_t {
 typedef struct networkstatus_t {
   /** When did we receive the network-status document? */
   time_t received_on;
+  /** What was the digest of the document? */
+  char networkstatus_digest[DIGEST_LEN];
 
   /* These fields come from the actual network-status document.*/
   time_t published_on; /**< Declared publication date. */
@@ -1146,6 +1159,7 @@ typedef struct {
   int DirPort; /**< Port to listen on for directory connections. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
+  int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int NoPublish; /**< Boolean: should we never publish a descriptor? */
   int ConnLimit; /**< Requested maximum number of simultaneous connections. */
@@ -1694,8 +1708,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
 void dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
                                          time_t published);
-size_t dirserv_get_networkstatus_v2(const char **directory, const char *key,
-                                    int compress);
+int dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
 void dirserv_get_routerdescs(smartlist_t *descs_out, const char *key);
 void dirserv_orconn_tls_done(const char *address,
                              uint16_t or_port,
@@ -1995,15 +2008,18 @@ typedef struct trusted_dir_server_t {
   uint16_t dir_port;
   char digest[DIGEST_LEN];
   int is_running;
+  int supports_v1_protocol;
 } trusted_dir_server_t;
 
 int router_reload_router_list(void);
+int router_reload_networkstatus(void);
 void router_get_trusted_dir_servers(smartlist_t **outp);
 routerinfo_t *router_pick_directory_server(int requireother,
                                            int fascistfirewall,
-                                           int for_running_routers,
+                                           int for_v2_directory,
                                            int retry_if_no_servers);
-trusted_dir_server_t *router_pick_trusteddirserver(int requireother,
+trusted_dir_server_t *router_pick_trusteddirserver(int need_v1_support,
+                                                   int requireother,
                                                    int fascistfirewall,
                                                    int retry_if_no_servers);
 int all_trusted_directory_servers_down(void);
@@ -2046,6 +2062,7 @@ int router_add_to_routerlist(routerinfo_t *router, const char **msg);
 int router_load_single_router(const char *s, const char **msg);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                         int dir_is_recent, int dir_is_cached);
+int router_set_networkstatus(const char *s, time_t arrived_at, int is_cached);
 addr_policy_result_t router_compare_addr_to_addr_policy(uint32_t addr,
                               uint16_t port, addr_policy_t *policy);
 
@@ -2061,7 +2078,8 @@ int routers_update_status_from_entry(smartlist_t *routers,
 int router_update_status_from_smartlist(routerinfo_t *r,
                                         time_t list_time,
                                         smartlist_t *running_list);
-void add_trusted_dir_server(const char *addr, uint16_t port,const char *digest);
+void add_trusted_dir_server(const char *addr, uint16_t port,
+                            const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
 
 /********************************* routerparse.c ************************/
