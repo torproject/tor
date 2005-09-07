@@ -1127,7 +1127,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
         *cp = '\0';
         /* XXXX This could be way more efficiently handled. */
         if (tor_gzip_compress(&compressed, &compressed_len,
-                              inp, cp-inp, ZLIB_METHOD)<0){
+                              inp, cp-inp, ZLIB_METHOD)<0) {
           tor_free(cp);
           smartlist_free(descs);
           return -1;
