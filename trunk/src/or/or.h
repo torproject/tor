@@ -705,7 +705,6 @@ typedef struct addr_policy_t {
   struct addr_policy_t *next; /**< Next rule in list. */
 } addr_policy_t;
 
-
 /** A cached_dir_t represents a cacheable directory object, along with its
  * compressed form. */
 typedef struct cached_dir_t {

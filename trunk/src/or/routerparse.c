@@ -1346,20 +1346,20 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1){
+  if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1) {
     log_fn(LOG_WARN, "Missing client-versions");
     goto err;
   }
   ns->client_versions = tok->args[0];
 
-  if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1){
+  if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1) {
     log_fn(LOG_WARN, "Missing client-versions");
     goto err;
   }
   ns->client_versions = tok->args[0];
   tok->args[0] = NULL;
 
-  if (!(tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS)) || tok->n_args<1){
+  if (!(tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS)) || tok->n_args<1) {
     log_fn(LOG_WARN, "Missing server-versions");
     goto err;
   }
@@ -1420,7 +1420,6 @@ networkstatus_parse_from_string(const char *s)
 
   return ns;
 }
-
 
 /** Parse the exit policy in the string <b>s</b> and return it.  If
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
