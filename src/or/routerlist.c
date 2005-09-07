@@ -1253,6 +1253,8 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
 
   if (get_options()->DirPort)
     dirserv_set_cached_networkstatus_v2(s, fp, ns->published_on);
+
+  return 0;
 }
 
 /** Ensure that our own routerinfo is at the front, and remove duplicates
