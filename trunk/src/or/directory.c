@@ -175,11 +175,14 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
 
   if (directconn) {
     if (fetch_fresh_first && purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS &&
-        strlen(resource) == HEX_DIGEST_LEN) {
+        !strcmpstart(resource,"fp/") && strlen(resource) == HEX_DIGEST_LEN+3) {
       /* Try to ask the actual dirserver its opinion. */
       char digest[DIGEST_LEN];
-      base16_decode(digest, DIGEST_LEN, resource, HEX_DIGEST_LEN);
+      base16_decode(digest, DIGEST_LEN, resource+3, HEX_DIGEST_LEN);
       ds = router_get_trusteddirserver_by_digest(digest);
+      // XXXXX NM remove this.
+      log_fn(LOG_NOTICE, "Going straight to the authority for %s? %s",resource,
+             ds? "Ok.":"Oops. I can't.");
     }
     if (!ds && fetch_fresh_first) {
       /* only ask authdirservers, and don't ask myself */
@@ -450,6 +453,7 @@ directory_send_command(connection_t *conn, const char *platform,
       httpcommand = "GET";//XXXX
       len = strlen(resource)+32;
       url = tor_malloc(len);
+      log_fn(LOG_NOTICE, "Asking for %s", resource);
       tor_snprintf(url, len, "/tor/status/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
@@ -884,7 +888,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     /* XXXX NM We *must* make certain we get the one(s) we asked for or we
      * could be partitioned. */
-    log_fn(LOG_INFO,"Received networkstatus objects (size %d)",(int) body_len);
+    log_fn(LOG_INFO,"Received networkstatus objects (size %d) from server '%s'",(int) body_len, conn->address);
     if (status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s'. Failing.",
              status_code, reason, conn->address);

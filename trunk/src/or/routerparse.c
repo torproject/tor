@@ -1212,7 +1212,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
     goto err;
   }
 
-  if (tor_inet_aton(tok->args[5], &in) != 0) {
+  if (tor_inet_aton(tok->args[5], &in) == 0) {
     log_fn(LOG_WARN, "Error parsing address '%s'", tok->args[5]);
     goto err;
   }
