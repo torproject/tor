@@ -469,7 +469,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
                   extend_info->identity_digest, DIGEST_LEN);
 
     klen = ntohs(get_uint16(buf+7+DIGEST_LEN));
-    if (len != 7+DIGEST_LEN+2+klen+20+128) {
+    if ((int)len != 7+DIGEST_LEN+2+klen+20+128) {
       log_fn(LOG_WARN, "Bad length %u for version 2 INTRODUCE2 cell.", (int)len);
       goto err;
     }
