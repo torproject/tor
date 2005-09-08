@@ -749,7 +749,7 @@ connection_dir_client_reached_eof(connection_t *conn)
                               &headers, MAX_HEADERS_SIZE,
                               &body, &body_len, MAX_DIR_SIZE)) {
     case -1: /* overflow */
-      log_fn(LOG_WARN,"'fetch' response too large (server '%s'). Failing.", conn->address);
+      log_fn(LOG_WARN,"'fetch' response too large (server '%s:%d'). Failing.", conn->address, conn->port);
       return -1;
     case 0:
       log_fn(LOG_INFO,"'fetch' response not all here, but we're at eof. Closing.");
@@ -759,23 +759,23 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (parse_http_response(headers, &status_code, &date_header,
                           &compression, &reason) < 0) {
-    log_fn(LOG_WARN,"Unparseable headers (server '%s'). Closing.", conn->address);
+    log_fn(LOG_WARN,"Unparseable headers (server '%s:%d'). Closing.", conn->address, conn->port);
     tor_free(body); tor_free(headers);
     return -1;
   }
   if (!reason) reason = tor_strdup("[no reason given]");
 
   log_fn(LOG_DEBUG,
-         "Received response from directory server '%s': %d \"%s\"",
-         conn->address, status_code, reason);
+         "Received response from directory server '%s:%d': %d \"%s\"",
+         conn->address, conn->port, status_code, reason);
 
   if (date_header > 0) {
     now = time(NULL);
     delta = now-date_header;
     if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
       log_fn(router_digest_is_trusted_dir(conn->identity_digest) ? LOG_WARN : LOG_INFO,
-             "Received directory with skewed time (server '%s'): we are %d minutes %s, or the directory is %d minutes %s.",
-             conn->address,
+             "Received directory with skewed time (server '%s:%d'): we are %d minutes %s, or the directory is %d minutes %s.",
+             conn->address, conn->port,
              abs(delta)/60, delta>0 ? "ahead" : "behind",
              abs(delta)/60, delta>0 ? "behind" : "ahead");
       skewed = 1; /* don't check the recommended-versions line */
@@ -809,9 +809,9 @@ connection_dir_client_reached_eof(connection_t *conn)
       else
         description2 = "uncompressed";
 
-      log_fn(LOG_INFO, "HTTP body from server '%s' was labeled %s, "
+      log_fn(LOG_INFO, "HTTP body from server '%s:%d' was labeled %s, "
              "but it seems to be %s.%s",
-             conn->address, description1, description2,
+             conn->address, conn->port, description1, description2,
              (compression>0 && guessed>0)?"  Trying both.":"");
     }
     /* Try declared compression first if we can. */
@@ -824,7 +824,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* If we're pretty sure that we have a compressed directory, and
      * we didn't manage to uncompress it, then warn and bail. */
     if (!plausible && !new_body) {
-      log_fn(LOG_WARN, "Unable to decompress HTTP body (server '%s').", conn->address);
+      log_fn(LOG_WARN, "Unable to decompress HTTP body (server '%s:%d').",
+             conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -837,8 +838,8 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR) {
     /* fetch/process the directory to learn about new routers. */
-    log_fn(LOG_INFO,"Received directory (size %d) from server '%s'",
-           (int)body_len, conn->address);
+    log_fn(LOG_INFO,"Received directory (size %d) from server '%s:%d'",
+           (int)body_len, conn->address, conn->port);
     if (status_code == 503 || body_len == 0) {
       log_fn(LOG_INFO,"Empty directory; status %d (\"%s\") Ignoring.",
              status_code, reason);
@@ -846,13 +847,13 @@ connection_dir_client_reached_eof(connection_t *conn)
       return 0;
     }
     if (status_code != 200) {
-      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s'. Failing.",
-             status_code, reason, conn->address);
+      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d'. Failing.",
+             status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (router_load_routerlist_from_directory(body, NULL, !skewed, 0) < 0) {
-      log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from %s:%d. Ignoring.", conn->address, conn->port);
+      log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from '%s:%d'. Ignoring.", conn->address, conn->port);
     } else {
       log_fn(LOG_INFO,"updated routers.");
     }
@@ -866,13 +867,14 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* just update our list of running routers, if this list is new info */
     log_fn(LOG_INFO,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
-      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s'. Failing.",
-             status_code, reason, conn->address);
+      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d'. Failing.",
+             status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (!(rrs = router_parse_runningrouters(body, 1))) {
-      log_fn(LOG_WARN, "Can't parse runningrouters list (server '%s')", conn->address);
+      log_fn(LOG_WARN, "Can't parse runningrouters list (server '%s:%d')",
+             conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -888,10 +890,10 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     /* XXXX NM We *must* make certain we get the one(s) we asked for or we
      * could be partitioned. */
-    log_fn(LOG_INFO,"Received networkstatus objects (size %d) from server '%s'",(int) body_len, conn->address);
+    log_fn(LOG_INFO,"Received networkstatus objects (size %d) from server '%s:%d'",(int) body_len, conn->address, conn->port);
     if (status_code != 200) {
-      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s'. Failing.",
-             status_code, reason, conn->address);
+      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d'. Failing.",
+             status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -919,13 +921,13 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_INFO,"eof (status 200) after uploading server descriptor: finished.");
         break;
       case 400:
-        log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver '%s'. Malformed server descriptor?", reason, conn->address);
+        log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver '%s:%d'. Malformed server descriptor?", reason, conn->address, conn->port);
         break;
       case 403:
-        log_fn(LOG_WARN,"http status 403 (\"%s\") response from dirserver '%s'. Is your clock skewed? Have you mailed us your key fingerprint? Are you using the right key? Are you using a private IP address? See http://tor.eff.org/doc/tor-doc-server.html", reason, conn->address);
+        log_fn(LOG_WARN,"http status 403 (\"%s\") response from dirserver '%s:%d'. Is your clock skewed? Have you mailed us your key fingerprint? Are you using the right key? Are you using a private IP address? See http://tor.eff.org/doc/tor-doc-server.html", reason, conn->address, conn->port);
         break;
       default:
-        log_fn(LOG_WARN,"http status %d (\"%s\") reason unexpected (server '%s').", status_code, reason, conn->address);
+        log_fn(LOG_WARN,"http status %d (\"%s\") reason unexpected (server '%s:%d').", status_code, reason, conn->address, conn->port);
         break;
     }
   }
@@ -953,7 +955,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_WARN,"http status 400 (\"%s\"). Dirserver didn't like our rendezvous query?", reason);
         break;
       default:
-        log_fn(LOG_WARN,"http status %d (\"%s\") response unexpected (server '%s').", status_code, reason, conn->address);
+        log_fn(LOG_WARN,"http status %d (\"%s\") response unexpected (server '%s:%d').", status_code, reason, conn->address, conn->port);
         break;
     }
   }
@@ -964,10 +966,10 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_INFO,"Uploading rendezvous descriptor: finished with status 200 (\"%s\")", reason);
         break;
       case 400:
-        log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver '%s'. Malformed rendezvous descriptor?", reason, conn->address);
+        log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver '%s:%d'. Malformed rendezvous descriptor?", reason, conn->address, conn->port);
         break;
       default:
-        log_fn(LOG_WARN,"http status %d (\"%s\") response unexpected (server '%s').", status_code, reason, conn->address);
+        log_fn(LOG_WARN,"http status %d (\"%s\") response unexpected (server '%s:%d').", status_code, reason, conn->address, conn->port);
         break;
     }
   }
