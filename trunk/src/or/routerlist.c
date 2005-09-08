@@ -1262,7 +1262,6 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
 
   if (!is_cached) {
     const char *datadir = get_options()->DataDirectory;
-    char fp[HEX_DIGEST_LEN+1];
     size_t len = strlen(datadir)+64;
     char *fn = tor_malloc(len+1);
     tor_snprintf(fn, len, "%s/cached-status/%s",datadir,fp);
