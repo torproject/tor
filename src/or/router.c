@@ -371,22 +371,6 @@ init_keys(void)
     add_trusted_dir_server(NULL, (uint16_t)options->DirPort, digest,
                            options->V1AuthoritativeDir);
   }
-#if 0
-  /* 7. [authdirserver only] load old directory, if it's there */
-  tor_snprintf(keydir,sizeof(keydir),"%s/cached-directory", datadir);
-  log_fn(LOG_INFO,"Loading cached directory from \"%s\"...",keydir);
-  cp = read_file_to_str(keydir,0);
-  if (!cp) {
-    log_fn(LOG_INFO,"Cached directory \"%s\" not present. Ok.",keydir);
-  } else {
-    if (dirserv_load_from_directory_string(cp) < 0) {
-      log_fn(LOG_WARN, "Cached directory \"%s\" is corrupt, only loaded part of it.", keydir);
-      tor_free(cp);
-      return 0;
-    }
-    tor_free(cp);
-  }
-#endif
   /* success */
   return 0;
 }
