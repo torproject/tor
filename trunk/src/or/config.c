@@ -1845,24 +1845,6 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
-#if 0
-  if (options->_MonthlyAccountingStart) {
-    if (options->AccountingStart) {
-      log(LOG_WARN,"Can't specify AccountingStart and MonthlyAccountingStart");
-      result = -1;
-    } else {
-      options->AccountingStart = tor_malloc(32);
-      if (tor_snprintf(options->AccountingStart, 32, "month %d 0:00",
-                       options->_MonthlyAccountingStart)<0) {
-        log_fn(LOG_WARN,"Error translating MonthlyAccountingStart");
-        result = -1;
-      } else {
-        log_fn(LOG_WARN,"MonthlyAccountingStart is deprecated.  Use 'AccountingStart %s' instead.", options->AccountingStart);
-      }
-    }
-  }
-#endif
-
   if (accounting_parse_options(options, 1)<0) {
     result = -1;
   }
