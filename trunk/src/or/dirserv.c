@@ -1182,6 +1182,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
       void *val;
       strmap_iter_get(iter, &fp, &val);
       smartlist_add(result, val);
+      iter = strmap_iter_next(cached_v2_networkstatus, iter);
     }
   } else if (!strcmpstart(key, "fp/")) {
     smartlist_t *hexdigests = smartlist_create();
