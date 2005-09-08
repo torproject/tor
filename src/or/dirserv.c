@@ -1195,7 +1195,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
   return 0;
 }
 
-/** Add a routerinfo_t to <b>descs_out</b> for each routers matching
+/** Add a routerinfo_t to <b>descs_out</b> for each router matching
  * <b>key</b>.  The key should be either "/tor/server/authority" for our own
  * routerinfo; "/tor/server/all" for all the routerinfos we have,
  * concatenated; or "/tor/server/FP" where FP is a plus-separated sequence of
