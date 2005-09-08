@@ -1349,7 +1349,6 @@ update_networkstatus_client_downloads(time_t now)
   int most_recent_idx = -1;
   trusted_dir_server_t *most_recent = NULL;
   time_t most_recent_received = 0;
-  smartlist_t *fp_list;
   char *resource, *cp;
   size_t resource_len;
 
