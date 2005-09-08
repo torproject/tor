@@ -1188,7 +1188,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
     SMARTLIST_FOREACH(hexdigests, char *, cp,
         {
           cached_dir_t *cached;
-          tor_strlower(cp);
+          tor_strupper(cp);
           /* XXXX special-case own key? */
           cached = strmap_get(cached_v2_networkstatus, cp);
           if (cached)
