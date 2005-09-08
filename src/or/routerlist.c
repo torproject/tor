@@ -1265,7 +1265,7 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
     char fp[HEX_DIGEST_LEN+1];
     size_t len = strlen(datadir)+64;
     char *fn = tor_malloc(len+1);
-    tor_snprintf(fn, len, "%s/cached-directory/%s",datadir,fp);
+    tor_snprintf(fn, len, "%s/cached-status/%s",datadir,fp);
     if (write_str_to_file(fn, s, 0)<0) {
       log_fn(LOG_NOTICE, "Couldn't write cached network status to \"%s\"", fn);
     }
