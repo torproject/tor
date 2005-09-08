@@ -86,16 +86,16 @@ typedef struct config_var_t {
  * or_options_t.<b>member</b>"
  */
 #define VAR(name,conftype,member,initvalue)                            \
-  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member), initvalue }
+  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member), initvalue, NULL }
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
-#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
+#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
 
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
  */
 static config_var_t _option_vars[] = {
-  VAR("AccountingMax",       MEMUNIT,   AccountingMax,        "0 bytes"),
+  VAR("AccountingMax",       MEMUNIT,   AccountingMax,       "0 bytes"),
   VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("Address",             STRING,   Address,              NULL),
@@ -189,12 +189,12 @@ static config_var_t _option_vars[] = {
   VAR("UseHelperNodes",      BOOL,     UseHelperNodes,       "0"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
 };
 #undef VAR
 
 #define VAR(name,conftype,member,initvalue) \
-  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member), initvalue }
+  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member), initvalue, NULL }
 static config_var_t _state_vars[] = {
   VAR("AccountingBytesReadInterval", MEMUNIT, AccountingBytesReadInInterval,NULL),
   VAR("AccountingBytesWrittenInInterval", MEMUNIT,
@@ -208,7 +208,7 @@ static config_var_t _state_vars[] = {
   VAR("HelperNodes",             LINELIST_V,  HelperNodes,          NULL),
   VAR("LastWritten",             ISOTIME,     LastWritten,          NULL),
 
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
 };
 
 #undef VAR

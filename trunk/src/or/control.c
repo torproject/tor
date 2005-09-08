@@ -409,7 +409,7 @@ get_escaped_string(const char *start, size_t in_len_max,
     *outp++ = *cp++;
   }
   *outp = '\0';
-  tor_assert((outp - *out) == *out_len);
+  tor_assert((outp - *out) == (int)*out_len);
 
   return end+1;
 }
@@ -1965,7 +1965,8 @@ connection_control_process_inbuf_v1(connection_t *conn)
    * recognize it.
    */
   cmd_len = 0;
-  while (cmd_len < data_len && !TOR_ISSPACE(conn->incoming_cmd[cmd_len]))
+  while ((size_t)cmd_len < data_len
+         && !TOR_ISSPACE(conn->incoming_cmd[cmd_len]))
     ++cmd_len;
 
   /*
