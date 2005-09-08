@@ -1222,16 +1222,17 @@ directory_handle_command_get(connection_t *conn, char *headers,
         /* XXXX NM This could be way more efficiently handled. */
         if (tor_gzip_compress(&compressed, &compressed_len,
                               inp, cp-inp, ZLIB_METHOD)<0) {
-          tor_free(cp);
+          tor_free(inp);
           smartlist_free(descs);
           return -1;
         }
-        tor_free(cp);
+        tor_free(inp);
         tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
                      date,
                      (int)compressed_len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
         connection_write_to_buf(compressed, compressed_len, conn);
+        tor_free(compressed);
       } else {
         tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
                      date,
