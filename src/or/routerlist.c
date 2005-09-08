@@ -896,7 +896,8 @@ networkstatus_free(networkstatus_t *ns)
 {
   tor_free(ns->source_address);
   tor_free(ns->contact);
-  crypto_free_pk_env(ns->signing_key);
+  if (ns->signing_key)
+    crypto_free_pk_env(ns->signing_key);
   tor_free(ns->client_versions);
   tor_free(ns->server_versions);
   if (ns->entries) {
@@ -1207,6 +1208,8 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
   time_t now;
   char fp[HEX_DIGEST_LEN+1];
 
+  log_fn(LOG_NOTICE, "setting status (%d)", is_cached);
+
   ns = networkstatus_parse_from_string(s);
   if (!ns) {
     log_fn(LOG_WARN, "Couldn't parse network status.");
@@ -1330,12 +1333,13 @@ update_networkstatus_downloads(void)
   /* XXXX NM This could compress multiple downloads into a single request.
    * It could also be smarter on failures. */
   for (i = most_recent_idx+1; needed; ++i) {
-    char resource[HEX_DIGEST_LEN+1];
+    char resource[HEX_DIGEST_LEN+4];
     trusted_dir_server_t *ds;
     if (i >= n_dirservers)
       i = 0;
     ds = smartlist_get(trusted_dir_servers, i);
-    base16_encode(resource, sizeof(resource), ds->digest, DIGEST_LEN);
+    strlcpy(resource, "fp/", sizeof(resource));
+    base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
     --needed;
   }
