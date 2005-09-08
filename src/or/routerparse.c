@@ -1396,7 +1396,6 @@ networkstatus_parse_from_string(const char *s)
       smartlist_add(ns->entries, rs);
   }
 
-  log_fn(LOG_NOTICE, "Footer is <<%s>>", s);
   if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
     log_fn(LOG_WARN, "Error tokenizing network-status footer.");
     goto err;
