@@ -786,22 +786,22 @@ typedef struct running_routers_t {
  */
 typedef struct routerstatus_t {
   time_t published_on; /**< When was this router published? */
-  char nickname[MAX_NICKNAME_LEN+1]; /**<The nickname this router says it has*/
-  char identity_digest[DIGEST_LEN]; /**< Digest of the router's identity key*/
+  char nickname[MAX_NICKNAME_LEN+1]; /**<The nickname this router says it has. */
+  char identity_digest[DIGEST_LEN]; /**< Digest of the router's identity key. */
   char descriptor_digest[DIGEST_LEN]; /**< Digest of the router's most recent
-                                       * descriptor */
-  uint32_t addr; /**< IPv4 address for this router */
-  uint16_t or_port; /**< OR port for this router */
-  uint16_t dir_port; /**< Directory port for this router */
-  unsigned int is_exit:1; /**< True iff this router is a good exit */
-  unsigned int is_stable:1; /**< True iff this router stays up a long time */
-  unsigned int is_fast:1; /**< True iff this router has good bandwidth */
-  unsigned int is_running:1; /**< True iff this router is up */
-  unsigned int is_named:1; /**< True iff "nickname" belongs to this router */
-  unsigned int is_valid:1; /**< True iff this router is validated */
+                                       * descriptor. */
+  uint32_t addr; /**< IPv4 address for this router. */
+  uint16_t or_port; /**< OR port for this router. */
+  uint16_t dir_port; /**< Directory port for this router. */
+  unsigned int is_exit:1; /**< True iff this router is a good exit. */
+  unsigned int is_stable:1; /**< True iff this router stays up a long time. */
+  unsigned int is_fast:1; /**< True iff this router has good bandwidth. */
+  unsigned int is_running:1; /**< True iff this router is up. */
+  unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
+  unsigned int is_valid:1; /**< True iff this router is validated. */
 } routerstatus_t;
 
-/** Contents of a (v2 or later) network status object */
+/** Contents of a (v2 or later) network status object. */
 typedef struct networkstatus_t {
   /** When did we receive the network-status document? */
   time_t received_on;
@@ -811,32 +811,31 @@ typedef struct networkstatus_t {
   /* These fields come from the actual network-status document.*/
   time_t published_on; /**< Declared publication date. */
 
-  char *source_address; /**< Canonical directory server hostname */
-  uint32_t source_addr; /**< Canonical directory server IP */
-  uint16_t source_dirport; /**< Canonical directory server dirport */
+  char *source_address; /**< Canonical directory server hostname. */
+  uint32_t source_addr; /**< Canonical directory server IP. */
+  uint16_t source_dirport; /**< Canonical directory server dirport. */
 
-  char identity_digest[DIGEST_LEN]; /**< Digest of signing key */
-  char *contact; /**< How to contact directory admin? (may be NULL) */
-  crypto_pk_env_t *signing_key; /**< Key used to sign this directory */
+  char identity_digest[DIGEST_LEN]; /**< Digest of signing key. */
+  char *contact; /**< How to contact directory admin? (may be NULL). */
+  crypto_pk_env_t *signing_key; /**< Key used to sign this directory. */
   char *client_versions; /**< comma-separated list of recommended client
-                          * versions */
+                          * versions. */
   char *server_versions; /**< comma-separated list of recommended server
-                          * versions */
+                          * versions. */
 
   int binds_names:1; /**< True iff this directory server binds names. */
 
-  smartlist_t *entries; /**< List of router_status_t* */
+  smartlist_t *entries; /**< List of router_status_t*. */
 } networkstatus_t;
 
 /** Contents of a directory of onion routers. */
 typedef struct {
-  /** List of routerinfo_t */
+  /** List of routerinfo_t. */
   smartlist_t *routers;
   /** Which versions of tor are recommended by this directory? */
   char *software_versions;
   /** When was the most recent directory that contributed to this list
-   * published?
-   */
+   * published? */
   time_t published_on;
   time_t running_routers_updated_on;
   /** What is the most recently received running_routers structure? */
