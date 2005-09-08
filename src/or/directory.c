@@ -889,6 +889,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     smartlist_t *which = NULL;
+    char *cp;
     log_fn(LOG_INFO,"Received networkstatus objects (size %d) from server '%s:%d'",(int) body_len, conn->address, conn->port);
     if (status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d'. Failing.",
@@ -901,14 +902,17 @@ connection_dir_client_reached_eof(connection_t *conn)
       which = smartlist_create();
       smartlist_split_string(which, conn->requested_resource+3, "+", 0, -1);
     }
-    while (*body) {
-      char *next = strstr(body, "\nnetwork-status-version");
+    cp = body;
+    while (*cp) {
+      char *next = strstr(cp, "\nnetwork-status-version");
       if (next)
-        *next = '\0';
-      if (router_set_networkstatus(body, time(NULL), NS_FROM_DIR, which)<0)
+        next[1] = '\0';
+      if (router_set_networkstatus(cp, time(NULL), NS_FROM_DIR, which)<0)
         break;
-      if (next)
-        body = next+1;
+      if (next) {
+        next[1] = 'n';
+        cp = next+1;
+      }
       else
         break;
     }
