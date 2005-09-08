@@ -1,17 +1,44 @@
-Changes in version 0.1.1.6-alpha - 2005-08-22
+Changes in version 0.1.1.6-alpha - 2005-09-08
   o Fixes on 0.1.1.5-alpha:
     - We broke fascistfirewall in 0.1.1.5-alpha. Oops.
     - Fix segfault in unit tests in 0.1.1.5-alpha. Oops.
     - Fix bug with tor_memmem finding a match at the end of the string.
     - Make unit tests run without segfaulting.
     - Resolve some solaris x86 compile warnings.
+    - Handle duplicate lines in approved-routers files without warning.
 
   o New controller features/fixes:
+    - Add a "RESETCONF" command so you can set config options like
+      AllowUnverifiedNodes and LongLivedPorts to "". Also, if you give
+      a config option in the torrc with no value, then it clears it
+      entirely (rather than setting it to its default).
     - Add a "GETINFO config-file" to tell us where torrc is.
     - Avoid sending blank lines when GETINFO replies should be empty.
-    - Add a QUIT command for the controller.
+    - Add a QUIT command for the controller (for using it manually).
+
+  o Start on the new directory design:
+    - Generate, publish, cache, serve new network-status format.
+    - Publish individual descriptors (by fingerprint, by "all", and by
+      "tell me yours.").
+    - Publish client and server recommended versions separately.
+    - Allow tor_gzip_uncompress() to handle multiple concatenated
+      compressed strings. Serve compressed groups of router
+      descriptors. The compression logic here could be more
+      memory-efficient.
+    - Distinguish v1 authorities (all currently trusted directories)
+      from v2 authorities (all trusted directories).
+    - Change DirServers config line to note which dirs are v1 authorities.
+    - Add configuration option "V1AuthoritativeDirectory 1" which
+      moria1, moria2, and tor26 should set.
+    - Remove option when getting directory cache to see whether they
+      support running-routers; they all do now. Replace it with one
+      to see whether caches support v2 stuff.
 
   o New features:
+    - Dirservers now do their own external reachability testing of each
+      Tor server, and only list them as running if they've been found to
+      be reachable. We also send back warnings to the server's logs if
+      it uploads a descriptor that we already believe is unreachable.
     - Implement exit enclaves: if we know an IP address for the
       destination, and there's a running Tor server at that address
       which allows exit to the destination, then extend the circuit to
@@ -22,10 +49,11 @@ Changes in version 0.1.1.6-alpha - 2005-08-22
       controller. Also, rotate dns and cpu workers if the controller
       changes options that will affect them; and initialize the dns
       worker cache tree whether or not we start out as a server.
-    - Start using new rendezvous descriptor code, allowing us to specify
-      introduction points by key and location rather than nickname.
-    - Only upload a new server descriptor when options change, 12-24
+    - Only upload a new server descriptor when options change, 18
       hours have passed, uptime is reset, or bandwidth changes a lot.
+    - Check [X-]Forwarded-For headers in HTTP requests when generating
+      log messages. This lets people run dirservers (and caches) behind
+      Apache but still know which IP addresses are causing warnings.
 
   o Config option changes:
     - Replace (Fascist)Firewall* config options with a new
@@ -36,6 +64,14 @@ Changes in version 0.1.1.6-alpha - 2005-08-22
     - Make MonthlyAccountingStart config option truly obsolete now.
 
   o Fixes on 0.1.0.x:
+    - It turns out we couldn't bootstrap a network since we added
+      reachability detection. Good thing the Tor network has never gone
+      down. Add an AssumeReachable config option to let servers and
+      dirservers bootstrap. When we're trying to build a high-uptime or
+      high-bandwidth circuit but there aren't enough suitable servers,
+      try being less picky rather than simply failing.
+    - Our logic to decide if the OR we connected to was the right guy
+      was brittle and maybe open to a mitm for unverified routers.
     - We weren't cannibalizing circuits correctly for
       CIRCUIT_PURPOSE_C_ESTABLISH_REND and
       CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, so we were being forced to
@@ -46,6 +82,13 @@ Changes in version 0.1.1.6-alpha - 2005-08-22
       should result in fewer random failures. Also, after failing
       from resolve failed or misc, reset the num failures, so we give
       it a fair shake next time we try.
+    - When we're shutting down and we do something like try to post a
+      server descriptor or rendezvous descriptor, don't complain that
+      we seem to be unreachable. Of course we are, we're shutting down.
+    - Add TTLs to RESOLVED, CONNECTED, and END_REASON_EXITPOLICY cells.
+      We don't use them yet, but maybe one day our DNS resolver will be
+      able to discover them.
+    - Make ContactInfo mandatory for authoritative directory servers.
     - Require server descriptors to list IPv4 addresses -- hostnames
       are no longer allowed. This also fixes some potential security
       problems with people providing hostnames as their address and then
@@ -53,6 +96,13 @@ Changes in version 0.1.1.6-alpha - 2005-08-22
     - Change log line for unreachability to explicitly suggest /etc/hosts
       as the culprit. Also make it clearer what IP address and ports we're
       testing for reachability.
+    - Put quotes around user-supplied strings when logging so users are
+      more likely to realize if they add bad characters (like quotes)
+      to the torrc.
+    - Let auth dir servers start without specifying an Address config
+      option.
+    - Make unit tests (and other invocations that aren't the real Tor)
+      run without launching listeners, creating subdirectories, and so on.
 
 
 Changes in version 0.1.1.5-alpha - 2005-08-08
