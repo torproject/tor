@@ -1301,7 +1301,7 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
   ns->source_address = tok->args[0]; tok->args[0] = NULL;
-  if (tor_inet_aton(tok->args[1], &in) != 0) {
+  if (tor_inet_aton(tok->args[1], &in) == 0) {
     log_fn(LOG_WARN, "Error parsing address '%s'", tok->args[1]);
     goto err;
   }
