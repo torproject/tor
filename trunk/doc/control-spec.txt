@@ -94,7 +94,7 @@ $Id$
   ; body of the data.  Leading periods on lines in the data are escaped with
   ; an additional leading period as in RFC2821 section 4.5.2
   Data = *DataLine "." CRLF
-  DataLine = CRLF / "." 1*LineItem CRLF/ NonDotItem *LineItem CRLF
+  DataLine = CRLF / "." 1*LineItem CRLF / NonDotItem *LineItem CRLF
   LineItem = NonCR / 1*CR NonCRLF
   NonDotItem = NonDotCR / 1*CR NonCRLF
 
@@ -126,10 +126,16 @@ $Id$
   SETCONF command arrives containing a single ORBindAddress value, the new
   command's value replaces the two old values.
 
-  To _remove_ all settings for a given option entirely (and go back to its
-  default value), send a single line containing the key and no value.
+3.2. RESETCONF
 
-3.2. GETCONF
+  Remove all settings for a given configuration option entirely, and go
+  back to its default value.  The syntax is:
+
+    "RESETCONF" 1*(SP keyword) CRLF
+
+  Otherwise it behaves like SETCONF above.
+
+3.3. GETCONF
 
   Request the value of a configuration variable.  The syntax is:
 
@@ -154,7 +160,7 @@ $Id$
   virtual keyword to get all HiddenServiceDir, HiddenServicePort,
   HiddenServiceNodes, and HiddenServiceExcludeNodes option settings.
 
-3.3. SETEVENTS
+3.4. SETEVENTS
 
   Request the server to inform the client about interesting events.  The
   syntax is:
@@ -171,7 +177,7 @@ $Id$
   Unrecognized event" reply if one of the event codes isn't recognized.  (On
   error, the list of active event codes isn't changed.)
 
-3.4. AUTHENTICATE
+3.5. AUTHENTICATE
 
   Sent from the client to the server.  The syntax is:
      "AUTHENTICATE" [ SP 1*HEXDIG / QuotedString ] CRLF
@@ -186,7 +192,7 @@ $Id$
   AUTHENTICATE message, Tor sends a "514 authentication required" reply to
   any other kind of message.
 
-3.5. SAVECONF
+3.6. SAVECONF
 
   Sent from the client to the server.  The syntax is:
      "SAVECONF" CRLF
@@ -195,7 +201,7 @@ $Id$
   returns "250 OK" if successful, or "551 Unable to write configuration
   to disk" if it can't write the file or some other error occurs.
 
-3.6. SIGNAL
+3.7. SIGNAL
 
   Sent from the client to the server. The syntax is:
 
@@ -219,7 +225,7 @@ $Id$
   closes the socket if it was asked to close immediately), or "552
   Unrecognized signal" if the signal is unrecognized.
 
-3.7. MAPADDRESS
+3.8. MAPADDRESS
 
   Sent from the client to the server.  The syntax is:
 
@@ -273,7 +279,7 @@ $Id$
   a certain time, then it must explicitly un-map the address when that
   time has elapsed.
 
-3.8. GETINFO
+3.9. GETINFO
 
   Sent from the client to the server.  The syntax is as for GETCONF:
     "GETINFO" 1*(SP keyword) CRLF
@@ -374,7 +380,7 @@ $Id$
      S: 250-version=Tor 0.1.1.0-alpha-cvs
      S: 250 OK
 
-3.9. EXTENDCIRCUIT
+3.10. EXTENDCIRCUIT
 
   Sent from the client to the server.  The format is:
       "EXTENDCIRCUIT" SP CircuitID SP ServerID *("," ServerID) CRLF
@@ -389,7 +395,7 @@ $Id$
   body consisting of the Circuit ID of the (maybe newly created) circuit.
   The syntax is "250" SP "EXTENDED" SP CircuitID CRLF.
 
-3.10. ATTACHSTREAM
+3.11. ATTACHSTREAM
 
   Sent from the client to the server.  The syntax is:
      "ATTACHSTREAM" SP StreamID SP CircuitID CRLF
@@ -414,7 +420,7 @@ $Id$
   via TC when "__LeaveStreamsUnattached" is false may cause a race between
   Tor and the controller, as both attempt to attach streams to circuits.}
 
-3.11. POSTDESCRIPTOR
+3.12. POSTDESCRIPTOR
 
   Sent from the client to the server. The syntax is:
     "+POSTDESCRIPTOR" CRLF Descriptor CRLF "." CRLF
@@ -430,7 +436,7 @@ $Id$
   why the server was not added.  If the descriptor is added, Tor replies with
   "250 OK".
 
-3.12. REDIRECTSTREAM
+3.13. REDIRECTSTREAM
 
   Sent from the client to the server. The syntax is:
     "REDIRECTSTREAM" SP StreamID SP Address CRLF
@@ -444,7 +450,7 @@ $Id$
 
   Tor replies with "250 OK" on success.
 
-3.13. CLOSESTREAM
+3.14. CLOSESTREAM
 
   Sent from the client to the server.  The syntax is:
 
@@ -455,7 +461,7 @@ $Id$
   not used currently; Tor servers SHOULD ignore unrecognized flags.  Tor may
   hold the stream open for a while to flush any data that is pending.
 
-3.14. CLOSECIRCUIT
+3.15. CLOSECIRCUIT
 
    The syntax is:
      CLOSECIRCUIT SP CircuitID *(SP Flag) CRLF
@@ -467,7 +473,7 @@ $Id$
   Other flags may be defined in the future; Tor SHOULD ignore unrecognized
   flags.
 
-3.15. QUIT
+3.16. QUIT
 
   Tells the server to hang up on this controller connection. This command
   can be used before authenticating.
