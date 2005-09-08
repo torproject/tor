@@ -1247,7 +1247,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   if (requested_fingerprints &&
       !smartlist_string_isin(requested_fingerprints, fp)) {
-    log_fn(LOG_WARN, "We received a network status with a fingerprint (%s) that we never requested. Dropping.", fp);
+    char *requested = smartlist_join_strings(requested_fingerprints," ",0,NULL);
+    log_fn(LOG_WARN, "We received a network status with a fingerprint (%s) that we never requested. (%s) Dropping.", fp, requested);
+    tor_free(requested);
     return 0;
   }
 
@@ -1333,7 +1335,6 @@ update_networkstatus_cache_downloads(time_t now)
   }
 }
 
-
 /*XXXX Should these be configurable? NM*/
 /** How old (in seconds) can a network-status be before we stop believing it? */
 #define NETWORKSTATUS_MAX_VALIDITY (48*60*60)
@@ -1405,8 +1406,9 @@ update_networkstatus_client_downloads(time_t now)
     ds = smartlist_get(trusted_dir_servers, i);
     base16_encode(cp, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
     cp += HEX_DIGEST_LEN;
-    *cp++ = '+';
     --needed;
+    if (needed)
+      *cp++ = '+';
   }
   memcpy(cp, ".z", 3);
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);

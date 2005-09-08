@@ -899,8 +899,12 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"fp/")) {
+      int n;
       which = smartlist_create();
       smartlist_split_string(which, conn->requested_resource+3, "+", 0, -1);
+      n = smartlist_len(which);
+      if (n && strlen(smartlist_get(which,n-1))==HEX_DIGEST_LEN+2)
+        ((char*)smartlist_get(which,n-1))[HEX_DIGEST_LEN] = '\0';
     }
     cp = body;
     while (*cp) {
