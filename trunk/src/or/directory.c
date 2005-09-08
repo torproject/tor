@@ -170,6 +170,8 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   int priv = purpose_is_private(purpose);
   int need_v1_support = purpose == DIR_PURPOSE_FETCH_DIR ||
                         purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
+  int need_v2_support = purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
+                        purpose == DIR_PURPOSE_FETCH_SERVERDESC;
 
   if (directconn) {
     if (fetch_fresh_first && purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS &&
@@ -186,7 +188,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
     }
     if (!ds) {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(1, fascistfirewall, 0,
+      r = router_pick_directory_server(1, fascistfirewall, need_v2_support,
                                        retry_if_no_servers);
       if (!r) {
         const char *which;

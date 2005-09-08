@@ -1294,12 +1294,14 @@ update_networkstatus_downloads(void)
    * publication time.  We want to download a new *one* if the most recent
    * one's publication time is under ABOUT_HALF_AN_HOUR.
    */
-
-  tor_assert(trusted_dir_servers);
+  if (!trusted_dir_servers || !smartlist_len(trusted_dir_servers))
+    return;
   n_dirservers = smartlist_len(trusted_dir_servers);
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
        networkstatus_t *ns = networkstatus_get_by_digest(ds->digest);
+       if (!ns)
+         continue;
        if (ns->published_on > now-ABOUT_TWO_DAYS)
          ++n_live;
        if (!most_recent || ns->received_on > most_recent_received) {
@@ -1330,7 +1332,7 @@ update_networkstatus_downloads(void)
   for (i = most_recent_idx+1; needed; ++i) {
     char resource[HEX_DIGEST_LEN+1];
     trusted_dir_server_t *ds;
-    if (i > n_dirservers)
+    if (i >= n_dirservers)
       i = 0;
     ds = smartlist_get(trusted_dir_servers, i);
     base16_encode(resource, sizeof(resource), ds->digest, DIGEST_LEN);
