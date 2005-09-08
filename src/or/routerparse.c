@@ -133,6 +133,8 @@ static struct {
   { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK, DIR|NETSTATUS},
   { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR },
   { "fingerprint",         K_FINGERPRINT,         ARGS,    NO_OBJ,  ANY },
+  /* XXXX NM obsolete; remove once tor26 upgrades. */
+  { "dir-fingerprint",     K_FINGERPRINT,         ARGS,    NO_OBJ,  NETSTATUS },
   { "hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ,  RTR },
   { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR },
   { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR },
@@ -1412,7 +1414,8 @@ networkstatus_parse_from_string(const char *s)
 
   goto done;
  err:
-  networkstatus_free(ns);
+  if (ns)
+    networkstatus_free(ns);
   ns = NULL;
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
