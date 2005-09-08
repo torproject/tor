@@ -1160,6 +1160,9 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
 {
   tor_assert(result);
 
+  if (!cached_v2_networkstatus)
+    cached_v2_networkstatus = strmap_new();
+
   if (!(strcmp(key,"authority"))) {
     if (get_options()->AuthoritativeDir) {
       cached_dir_t *d =
