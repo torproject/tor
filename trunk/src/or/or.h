@@ -2072,7 +2072,10 @@ int router_add_to_routerlist(routerinfo_t *router, const char **msg);
 int router_load_single_router(const char *s, const char **msg);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                         int dir_is_recent, int dir_is_cached);
-int router_set_networkstatus(const char *s, time_t arrived_at, int is_cached);
+typedef enum { NS_FROM_CACHE, NS_FROM_DIR, NS_GENERATED} networkstatus_source_t;
+int router_set_networkstatus(const char *s, time_t arrived_at,
+                             networkstatus_source_t source,
+                             smartlist_t *requested_fingerprints);
 addr_policy_result_t router_compare_addr_to_addr_policy(uint32_t addr,
                               uint16_t port, addr_policy_t *policy);
 
