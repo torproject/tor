@@ -95,7 +95,7 @@ typedef struct config_var_t {
  * be chosen first.
  */
 static config_var_t _option_vars[] = {
-  VAR("AccountingMax",       MEMUNIT,   AccountingMax,       "0 bytes"),
+  VAR("AccountingMax",       MEMUNIT,  AccountingMax,        "0 bytes"),
   VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("Address",             STRING,   Address,              NULL),
