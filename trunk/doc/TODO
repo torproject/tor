@@ -114,10 +114,13 @@ R     - check reachability as soon as you hear about a new server
       - Figure out what to do about hidden service descriptors.
       - find 10 dirservers.
         - (what are criteria to be a dirserver?)
-N     . Dirservers publish compressed network-status objects.
-        - Support retrieving several-at-once
-N     . Everyone downloads network-status objects
-        - From all directories, round-robin
+      o Dirservers publish compressed network-status objects.
+        o Support retrieving several-at-once
+      o Everyone downloads network-status objects
+N       . Clients: from all directories, round-robin
+          o Basic implementation: disable until 0.1.1.6 is out.
+          - On failure, mark trusted_dir_server as having failed once and
+            retry up to a point.
         o Parse them
         o Cache them, reload on restart
         o Serve cached directories
@@ -126,7 +129,7 @@ N     . Everyone downloads network-status objects
         o Support compression.
 N     - Alice acts on network-status objects
         - Alice downloads descriptors as needed.
-        - Alice sets descriptor status from networks-status
+        - Alice sets descriptor status from network-status
 
     - Security
       - Alices avoid duplicate class C nodes.
