@@ -731,6 +731,8 @@ run_scheduled_events(time_t now)
         stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
         !we_are_hibernating())
       consider_testing_reachability();
+
+    update_networkstatus_downloads();
   }
 
   /** 3a. Every second, we examine pending circuits and prune the

@@ -2027,6 +2027,8 @@ trusted_dir_server_t *router_pick_trusteddirserver(int need_v1_support,
                                                    int requireother,
                                                    int fascistfirewall,
                                                    int retry_if_no_servers);
+trusted_dir_server_t *router_get_trusteddirserver_by_digest(
+     const char *digest);
 int all_trusted_directory_servers_down(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down);
@@ -2086,6 +2088,8 @@ int router_update_status_from_smartlist(routerinfo_t *r,
 void add_trusted_dir_server(const char *addr, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
+networkstatus_t *networkstatus_get_by_digest(const char *digest);
+void update_networkstatus_downloads(void);
 
 /********************************* routerparse.c ************************/
 
