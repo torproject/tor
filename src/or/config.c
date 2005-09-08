@@ -257,6 +257,8 @@ typedef struct {
 
 static void config_line_append(config_line_t **lst,
                                const char *key, const char *val);
+static void option_clear(config_format_t *fmt, or_options_t *options,
+                         config_var_t *var);
 static void option_reset(config_format_t *fmt, or_options_t *options,
                          config_var_t *var);
 static void config_free(config_format_t *fmt, void *options);
@@ -1089,7 +1091,6 @@ options_trial_assign(config_line_t *list, int reset)
 static void
 option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
 {
-  config_line_t *c;
   void *lvalue = ((char*)options) + var->var_offset;
   switch (var->type) {
     case CONFIG_TYPE_STRING:
@@ -1126,6 +1127,7 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
     case CONFIG_TYPE_OBSOLETE:
       break;
   }
+}
 
 /** Replace the option indexed by <b>var</b> in <b>options</b> with its
  * default value. */
