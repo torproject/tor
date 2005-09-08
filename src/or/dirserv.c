@@ -1134,7 +1134,8 @@ generate_v2_networkstatus(void)
   set_cached_dir(&the_v2_networkstatus, status, time(NULL));
   status = NULL; /* So it doesn't get double-freed. */
   the_v2_networkstatus_is_dirty = 0;
-  router_set_networkstatus(the_v2_networkstatus.dir, time(NULL), 0);
+  router_set_networkstatus(the_v2_networkstatus.dir, time(NULL), NS_GENERATED,
+                           NULL);
 
   r = 0;
  done:

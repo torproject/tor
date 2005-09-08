@@ -401,7 +401,8 @@ directory_send_command(connection_t *conn, const char *platform,
   tor_assert(conn->type == CONN_TYPE_DIR);
 
   tor_free(conn->requested_resource);
-  conn->requested_resource = tor_strdup(resource);
+  if (resource)
+    conn->requested_resource = tor_strdup(resource);
 
   /* come up with a string for which Host: we want */
   if (conn->port == 80) {
@@ -450,13 +451,13 @@ directory_send_command(connection_t *conn, const char *platform,
       url = tor_strdup("/tor/running-routers");
       break;
     case DIR_PURPOSE_FETCH_NETWORKSTATUS:
-      httpcommand = "GET";//XXXX
+      httpcommand = "GET";
       len = strlen(resource)+32;
       url = tor_malloc(len);
       tor_snprintf(url, len, "/tor/status/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
-      httpcommand = "GET";//XXXX
+      httpcommand = "GET";
       len = strlen(resource)+32;
       url = tor_malloc(len);
       tor_snprintf(url, len, "/tor/server/%s", resource);
@@ -887,9 +888,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
-    /* XXXX NM We *must* make certain we get the one(s) we asked for or we
-     * could be partitioned. Also, never ask someone else for a status we
-     * generated! */
+    smartlist_t *which = NULL;
     log_fn(LOG_INFO,"Received networkstatus objects (size %d) from server '%s:%d'",(int) body_len, conn->address, conn->port);
     if (status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d'. Failing.",
@@ -897,16 +896,25 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
+    if (conn->requested_resource &&
+        !strcmpstart(conn->requested_resource,"fp/")) {
+      which = smartlist_create();
+      smartlist_split_string(which, conn->requested_resource+3, "+", 0, -1);
+    }
     while (*body) {
       char *next = strstr(body, "\nnetwork-status-version");
       if (next)
         *next = '\0';
-      if (router_set_networkstatus(body, time(NULL), 0)<0)
+      if (router_set_networkstatus(body, time(NULL), NS_FROM_DIR, which)<0)
         break;
       if (next)
         body = next+1;
       else
         break;
+    }
+    if (which) {
+      SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
+      smartlist_free(which);
     }
   }
 

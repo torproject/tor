@@ -108,7 +108,7 @@ router_reload_networkstatus(void)
       s = read_file_to_str(filename, 0);
       if (s) {
         stat(filename, &st);
-        if (router_set_networkstatus(s, st.st_mtime, 1)<0) {
+        if (router_set_networkstatus(s, st.st_mtime, NS_FROM_CACHE, NULL)<0) {
           log_fn(LOG_WARN, "Couldn't load networkstatus from \"%s\"",filename);
         }
         tor_free(s);
@@ -1199,9 +1199,11 @@ router_load_routerlist_from_directory(const char *s,
 }
 
 /** DOCDOC returns 0 on no problems, -1 on problems.
+ * requested fingerprints must be upcased.
  */
 int
-router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
+router_set_networkstatus(const char *s, time_t arrived_at,
+            networkstatus_source_t source, smartlist_t *requested_fingerprints)
 {
   networkstatus_t *ns;
   int i, found;
@@ -1215,6 +1217,7 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
   }
   if (!router_digest_is_trusted_dir(ns->identity_digest)) {
     log_fn(LOG_INFO, "Network status was signed, but not by an authoritative directory we recognize.");
+    networkstatus_free(ns);
     return -1;
   }
   now = time(NULL);
@@ -1227,6 +1230,20 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
 
   if (!networkstatus_list)
     networkstatus_list = smartlist_create();
+
+  if (source == NS_FROM_DIR && router_digest_is_me(ns->identity_digest)) {
+    /* Drop our own networkstatus when we get it from somebody else. */
+    networkstatus_free(ns);
+    return 0;
+  }
+
+  base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
+
+  if (requested_fingerprints &&
+      !smartlist_string_isin(requested_fingerprints, fp)) {
+    log_fn(LOG_WARN, "We received a network status with a fingerprint (%s) that we never requested. Dropping.", fp);
+    return 0;
+  }
 
   found = 0;
   for (i=0; i < smartlist_len(networkstatus_list); ++i) {
@@ -1256,9 +1273,7 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
   if (!found)
     smartlist_add(networkstatus_list, ns);
 
-  base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
-
-  if (!is_cached) {
+  if (source != NS_FROM_CACHE) {
     const char *datadir = get_options()->DataDirectory;
     size_t len = strlen(datadir)+64;
     char *fn = tor_malloc(len+1);
