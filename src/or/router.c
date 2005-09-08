@@ -251,7 +251,7 @@ init_keys(void)
   char fingerprint[FINGERPRINT_LEN+1];
   char fingerprint_line[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];/*nickname fp\n\0 */
   char *cp;
-  const char *tmp, *mydesc, *datadir;
+  const char *mydesc, *datadir;
   crypto_pk_env_t *prkey;
   char digest[20];
   or_options_t *options = get_options();
@@ -317,7 +317,7 @@ init_keys(void)
   }
   /* 4. Dump router descriptor to 'router.desc' */
   /* Must be called after keys are initialized. */
-  tmp = mydesc = router_get_my_descriptor();
+  mydesc = router_get_my_descriptor();
   if (!mydesc) {
     log_fn(LOG_ERR, "Error initializing descriptor.");
     return -1;
@@ -329,7 +329,7 @@ init_keys(void)
       log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
       return -1;
     }
-    if (dirserv_add_descriptor(tmp, &m) < 0) {
+    if (dirserv_add_descriptor(mydesc, &m) < 0) {
       log(LOG_ERR, "Unable to add own descriptor to directory: %s",
           m?m:"<unknown error>");
       return -1;
