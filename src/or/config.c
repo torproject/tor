@@ -1195,13 +1195,6 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
 
   tor_assert(addr_out);
 
-  /* workaround: some people were leaving "Address  " in their torrc,
-   * and they had a buggy resolver that resolved " " to 0.0.0.0. Oops.
-   */
-  if (address)
-    while (TOR_ISSPACE(*address))
-      address++;
-
   if (address && *address) {
     strlcpy(hostname, address, sizeof(hostname));
   } else { /* then we need to guess our address */
