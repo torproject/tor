@@ -673,7 +673,10 @@ struct connection_t {
   struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
                                  * connection is using. */
 
-  /* Used only by AP connections */
+/* Used only by Dir connections */
+  char *requested_resource; /**< Which 'resource' did we ask the directory for?*/
+
+/* Used only by AP connections */
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
                                    * only.) */
 
@@ -1997,6 +2000,7 @@ routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);
 int router_digest_is_me(const char *digest);
 int router_is_me(routerinfo_t *router);
+int router_fingerprint_is_me(const char *fp);
 int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
@@ -2088,7 +2092,8 @@ void add_trusted_dir_server(const char *addr, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
-void update_networkstatus_downloads(void);
+void update_networkstatus_cache_downloads(time_t now);
+void update_networkstatus_client_downloads(time_t now);
 
 /********************************* routerparse.c ************************/
 

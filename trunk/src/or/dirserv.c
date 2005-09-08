@@ -1183,15 +1183,13 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
       smartlist_add(result, val);
     }
   } else if (!strcmpstart(key, "fp/")) {
-    char own_fp[HEX_DIGEST_LEN+1];
-    crypto_pk_get_fingerprint(get_identity_key(), own_fp, 0);
     smartlist_t *hexdigests = smartlist_create();
     smartlist_split_string(hexdigests, key+3, "+", 0, 0);
     SMARTLIST_FOREACH(hexdigests, char *, cp,
         {
           cached_dir_t *cached;
           tor_strupper(cp);
-          if (!strcmp(cp, own_fp) &&
+          if (router_fingerprint_is_me(cp) &&
               get_options()->AuthoritativeDir &&
               the_v2_networkstatus_is_dirty &&
               the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL))

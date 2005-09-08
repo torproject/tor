@@ -732,7 +732,12 @@ run_scheduled_events(time_t now)
         !we_are_hibernating())
       consider_testing_reachability();
 
-    update_networkstatus_downloads();
+    if (server_mode(options) && options->DirPort)
+      update_networkstatus_cache_downloads(now);
+    /* XXXX Disabled until 0.1.1.6 is out: only servers need networkstatus.
+    else
+      update_networkstatus_client_downloads(now);
+    */
   }
 
   /** 3a. Every second, we examine pending circuits and prune the
