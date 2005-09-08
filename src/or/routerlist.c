@@ -1208,8 +1208,6 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
   time_t now;
   char fp[HEX_DIGEST_LEN+1];
 
-  log_fn(LOG_NOTICE, "setting status (%d)", is_cached);
-
   ns = networkstatus_parse_from_string(s);
   if (!ns) {
     log_fn(LOG_WARN, "Couldn't parse network status.");
@@ -1277,19 +1275,54 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
   return 0;
 }
 
+/* These should be configurable, perhaps. */
+#define AUTHORITY_NS_CACHE_INTERVAL 10*60
+#define NONAUTHORITY_NS_CACHE_INTERVAL 15*60
+void
+update_networkstatus_cache_downloads(time_t now)
+{
+  static time_t last_downloaded = 0;
+  int authority = authdir_mode(get_options());
+  int interval =
+    authority ? AUTHORITY_NS_CACHE_INTERVAL : NONAUTHORITY_NS_CACHE_INTERVAL;
+
+  if (last_downloaded + interval >= now)
+    return;
+  if (!trusted_dir_servers)
+    return;
+
+  last_downloaded = now;
+
+  if (authority) {
+    /* An authority launches a separate connection for everybody. */
+    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+       {
+         char resource[HEX_DIGEST_LEN+6];
+         if (router_digest_is_me(ds->digest))
+           continue;
+         strlcpy(resource, "fp/", sizeof(resource));
+         base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
+         strlcat(resource, ".z", sizeof(resource));
+         directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,resource,1);
+       });
+  } else {
+    /* A non-authority cache launches one connection to a random authority. */
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,"all.z",1);
+  }
+}
+
+#define ABOUT_TWO_DAYS (48*60*60)
+#define ABOUT_HALF_AN_HOUR (30*60)
 /** DOCDOC */
 void
-update_networkstatus_downloads(void)
+update_networkstatus_client_downloads(time_t now)
 {
   /* XXX Yes, these constants are supposed to be dumb, so we can choose better
    * values. */
-#define ABOUT_TWO_DAYS (48*60*60)
-#define ABOUT_HALF_AN_HOUR (30*60)
   int n_live = 0, needed = 0, n_dirservers, i;
   int most_recent_idx = -1;
   trusted_dir_server_t *most_recent = NULL;
   time_t most_recent_received = 0;
-  time_t now = time(NULL);
 
   /* This is a little tricky.  We want to download enough network-status
    * objects so that we have at least half of them under ABOUT_TWO_DAYS
@@ -1332,13 +1365,14 @@ update_networkstatus_downloads(void)
   /* XXXX NM This could compress multiple downloads into a single request.
    * It could also be smarter on failures. */
   for (i = most_recent_idx+1; needed; ++i) {
-    char resource[HEX_DIGEST_LEN+4];
+    char resource[HEX_DIGEST_LEN+6];
     trusted_dir_server_t *ds;
     if (i >= n_dirservers)
       i = 0;
     ds = smartlist_get(trusted_dir_servers, i);
     strlcpy(resource, "fp/", sizeof(resource));
     base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
+    strlcat(resource, ".z", sizeof(resource));
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
     --needed;
   }

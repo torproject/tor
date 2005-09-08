@@ -231,6 +231,7 @@ _connection_free(connection_t *conn)
   tor_free(conn->incoming_cmd);
   tor_free(conn->read_event); /* Probably already freed by connection_free. */
   tor_free(conn->write_event); /* Probably already freed by connection_free. */
+  tor_free(conn->requested_resource);
 
   if (conn->s >= 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
