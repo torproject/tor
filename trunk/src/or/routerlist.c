@@ -176,6 +176,21 @@ router_pick_directory_server(int requireother,
   return choice;
 }
 
+trusted_dir_server_t *
+router_get_trusteddirserver_by_digest(const char *digest)
+{
+  if (!trusted_dir_servers)
+    return NULL;
+
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+     {
+       if (!memcmp(ds->digest, digest, DIGEST_LEN))
+         return ds;
+     });
+
+  return NULL;
+}
+
 /** Try to find a running trusted dirserver. If there are no running
  * trusted dirservers and <b>retry_if_no_servers</b> is non-zero,
  * set them all as running again, and try again.
@@ -1219,7 +1234,10 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
     if (!memcmp(old_ns->identity_digest, ns->identity_digest, DIGEST_LEN)) {
       if (!memcmp(old_ns->networkstatus_digest,
                   ns->networkstatus_digest, DIGEST_LEN)) {
+        /* Same one we had before. */
         networkstatus_free(ns);
+        if (old_ns->received_on < arrived_at)
+          old_ns->received_on = arrived_at;
         return 0;
       } else if (old_ns->published_on >= ns->published_on) {
         log_fn(LOG_INFO, "Dropping network-status; we have a newer one for this authority.");
@@ -1255,6 +1273,70 @@ router_set_networkstatus(const char *s, time_t arrived_at, int is_cached)
     dirserv_set_cached_networkstatus_v2(s, fp, ns->published_on);
 
   return 0;
+}
+
+/** DOCDOC */
+void
+update_networkstatus_downloads(void)
+{
+  /* XXX Yes, these constants are supposed to be dumb, so we can choose better
+   * values. */
+#define ABOUT_TWO_DAYS (48*60*60)
+#define ABOUT_HALF_AN_HOUR (30*60)
+  int n_live = 0, needed = 0, n_dirservers, i;
+  int most_recent_idx = -1;
+  trusted_dir_server_t *most_recent = NULL;
+  time_t most_recent_received = 0;
+  time_t now = time(NULL);
+
+  /* This is a little tricky.  We want to download enough network-status
+   * objects so that we have at least half of them under ABOUT_TWO_DAYS
+   * publication time.  We want to download a new *one* if the most recent
+   * one's publication time is under ABOUT_HALF_AN_HOUR.
+   */
+
+  tor_assert(trusted_dir_servers);
+  n_dirservers = smartlist_len(trusted_dir_servers);
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+     {
+       networkstatus_t *ns = networkstatus_get_by_digest(ds->digest);
+       if (ns->published_on > now-ABOUT_TWO_DAYS)
+         ++n_live;
+       if (!most_recent || ns->received_on > most_recent_received) {
+         most_recent_idx = ds_sl_idx; /* magic variable from FOREACH*/
+         most_recent = ds;
+         most_recent_received = ns->received_on;
+       }
+     });
+
+  /* Download enough so we have at least half live, but no more than all the
+   * trusted dirservers we know.
+   */
+  if (n_live < (n_dirservers/2)+1)
+    needed = (n_dirservers/2)+1-n_live;
+  if (needed > n_dirservers)
+    needed = n_dirservers;
+  /* Also, download at least 1 every ABOUT_HALF_AN_HOUR. */
+  if (most_recent_received < now-ABOUT_HALF_AN_HOUR && needed < 1)
+    needed = 1;
+
+  /* If no networkstatus was found, choose a dirserver at random as "most
+   * recent". */
+  if (most_recent_idx<0)
+    most_recent_idx = crypto_pseudo_rand_int(n_dirservers);
+
+  /* XXXX NM This could compress multiple downloads into a single request.
+   * It could also be smarter on failures. */
+  for (i = most_recent_idx+1; needed; ++i) {
+    char resource[HEX_DIGEST_LEN+1];
+    trusted_dir_server_t *ds;
+    if (i > n_dirservers)
+      i = 0;
+    ds = smartlist_get(trusted_dir_servers, i);
+    base16_encode(resource, sizeof(resource), ds->digest, DIGEST_LEN);
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
+    --needed;
+  }
 }
 
 /** Ensure that our own routerinfo is at the front, and remove duplicates
@@ -1707,5 +1789,16 @@ clear_trusted_dir_servers(void)
   } else {
     trusted_dir_servers = smartlist_create();
   }
+}
+
+networkstatus_t *
+networkstatus_get_by_digest(const char *digest)
+{
+  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+    {
+      if (!memcmp(ns->identity_digest, digest, DIGEST_LEN))
+        return ns;
+    });
+  return NULL;
 }
 

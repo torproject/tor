@@ -163,14 +163,25 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   trusted_dir_server_t *ds = NULL;
   int fascistfirewall = firewall_is_fascist();
   int directconn = purpose == DIR_PURPOSE_FETCH_DIR ||
-                   purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
+                   purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
+                   purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
+                   purpose == DIR_PURPOSE_FETCH_SERVERDESC;
   int fetch_fresh_first = advertised_server_mode();
   int priv = purpose_is_private(purpose);
+  int need_v1_support = purpose == DIR_PURPOSE_FETCH_DIR ||
+                        purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
 
   if (directconn) {
-    if (fetch_fresh_first) {
+    if (fetch_fresh_first && purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS &&
+        strlen(resource) == HEX_DIGEST_LEN) {
+      /* Try to ask the actual dirserver its opinion. */
+      char digest[DIGEST_LEN];
+      base16_decode(digest, DIGEST_LEN, resource, HEX_DIGEST_LEN);
+      ds = router_get_trusteddirserver_by_digest(digest);
+    }
+    if (!ds && fetch_fresh_first) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_trusteddirserver(1, 1, fascistfirewall,
+      ds = router_pick_trusteddirserver(need_v1_support, 1, fascistfirewall,
                                         retry_if_no_servers);
     }
     if (!ds) {
@@ -178,9 +189,17 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
       r = router_pick_directory_server(1, fascistfirewall, 0,
                                        retry_if_no_servers);
       if (!r) {
-        log_fn(LOG_INFO, "No router found for %s; falling back to dirserver list",
-               purpose == DIR_PURPOSE_FETCH_RUNNING_LIST
-               ? "status list" : "directory");
+        const char *which;
+        if (purpose == DIR_PURPOSE_FETCH_DIR)
+          which = "directory";
+        else if (purpose == DIR_PURPOSE_FETCH_RUNNING_LIST)
+          which = "status list";
+        else if (purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
+          which = "network status";
+        else // if (purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
+          which = "server descriptors";
+        log_fn(LOG_INFO,
+               "No router found for %s; falling back to dirserver list",which);
         ds = router_pick_trusteddirserver(1, 1, fascistfirewall,
                                           retry_if_no_servers);
       }
@@ -466,18 +485,20 @@ directory_send_command(connection_t *conn, const char *platform,
       httpcommand = "POST";
       url = tor_strdup("/tor/rendezvous/publish");
       break;
+    default:
+      tor_assert(0);
+      return;
   }
   tor_snprintf(request, sizeof(request), "%s %s", httpcommand, proxystring);
   connection_write_to_buf(request, strlen(request), conn);
   connection_write_to_buf(url, strlen(url), conn);
   tor_free(url);
 
-  tor_snprintf(request, len, " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
+  tor_snprintf(request, sizeof(request), " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
            payload ? (unsigned long)payload_len : 0,
            hoststring,
            proxyauthstring);
   connection_write_to_buf(request, strlen(request), conn);
-
 
   if (payload) {
     /* then send the payload afterwards too */
@@ -856,6 +877,34 @@ connection_dir_client_reached_eof(connection_t *conn)
     } else {
       running_routers_free(rrs);
     }
+  }
+
+  if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
+    /* XXXX NM We *must* make certain we get the one(s) we asked for or we
+     * could be partitioned. */
+    log_fn(LOG_INFO,"Received networkstatus objects (size %d)",(int) body_len);
+    if (status_code != 200) {
+      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s'. Failing.",
+             status_code, reason, conn->address);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      return -1;
+    }
+    while (*body) {
+      char *next = strstr(body, "\nnetwork-status-version");
+      if (next)
+        *next = '\0';
+      if (router_set_networkstatus(body, time(NULL), 0)<0)
+        break;
+      if (next)
+        body = next+1;
+      else
+        break;
+    }
+  }
+
+  if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
+    /* XXXX NM implement this. */
+    log_fn(LOG_WARN, "Somehow, we requested some individual server descriptors. Skipping.");
   }
 
   if (conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
