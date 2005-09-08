@@ -69,6 +69,7 @@ char *_tor_strndup(const char *file, const int line, const char *s, size_t n);
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s);
+void tor_strupper(char *s);
 int strcmpstart(const char *s1, const char *s2);
 int strcasecmpstart(const char *s1, const char *s2);
 int strcmpend(const char *s1, const char *s2);

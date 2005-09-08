@@ -299,6 +299,16 @@ void tor_strlower(char *s)
   }
 }
 
+/** Convert all alphabetic characters in the nul-terminated string <b>s</b> to
+ * lowercase. */
+void tor_strupper(char *s)
+{
+  while (*s) {
+    *s = toupper(*s);
+    ++s;
+  }
+}
+
 /* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
