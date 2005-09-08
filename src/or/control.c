@@ -143,6 +143,8 @@ static void send_control1_event(uint16_t event, const char *format, ...)
   CHECK_PRINTF(2,3);
 static int handle_control_setconf(connection_t *conn, uint32_t len,
                                   char *body);
+static int handle_control_resetconf(connection_t *conn, uint32_t len,
+                                    char *body);
 static int handle_control_getconf(connection_t *conn, uint32_t len,
                                   const char *body);
 static int handle_control_setevents(connection_t *conn, uint32_t len,
@@ -602,10 +604,11 @@ get_stream(const char *id)
   return conn;
 }
 
-/** Called when we receive a SETCONF message: parse the body and try
- * to update our configuration.  Reply with a DONE or ERROR message. */
+/** Helper for setconf and resetconf. Acts like setconf, except
+ * it passes <b>reset</b> on to options_trial_assign().
+ */
 static int
-handle_control_setconf(connection_t *conn, uint32_t len, char *body)
+control_setconf_helper(connection_t *conn, uint32_t len, char *body, int reset)
 {
   int r;
   config_line_t *lines=NULL;
@@ -663,7 +666,7 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
     }
   }
 
-  if ((r=options_trial_assign(lines, 1)) < 0) {
+  if ((r=options_trial_assign(lines, reset)) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
     if (r==-1) {
       if (v0)
@@ -683,6 +686,24 @@ handle_control_setconf(connection_t *conn, uint32_t len, char *body)
   config_free_lines(lines);
   send_control_done(conn);
   return 0;
+}
+
+/** Called when we receive a SETCONF message: parse the body and try
+ * to update our configuration.  Reply with a DONE or ERROR message. */
+static int
+handle_control_setconf(connection_t *conn, uint32_t len, char *body)
+{
+  return control_setconf_helper(conn, len, body, 0);
+}
+
+/** Called when we receive a RESETCONF message: parse the body and try
+ * to update our configuration.  Reply with a DONE or ERROR message. */
+static int
+handle_control_resetconf(connection_t *conn, uint32_t len, char *body)
+{
+  int v0 = STATE_IS_V0(conn->state);
+  tor_assert(!v0);
+  return control_setconf_helper(conn, len, body, 1);
 }
 
 /** Called when we receive a GETCONF message.  Parse the request, and
@@ -1978,6 +1999,9 @@ connection_control_process_inbuf_v1(connection_t *conn)
 
   if (!strcasecmp(conn->incoming_cmd, "SETCONF")) {
     if (handle_control_setconf(conn, data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "RESETCONF")) {
+    if (handle_control_resetconf(conn, data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "GETCONF")) {
     if (handle_control_getconf(conn, data_len, args))
