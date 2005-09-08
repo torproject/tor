@@ -1952,6 +1952,9 @@ assert_connection_ok(connection_t *conn, time_t now)
   } else if (conn->type != CONN_TYPE_DIR) {
     tor_assert(!conn->purpose); /* only used for dir types currently */
   }
+  if (conn->type != CONN_TYPE_DIR) {
+    tor_assert(!conn->requested_resource);
+  }
 
   switch (conn->type)
     {
