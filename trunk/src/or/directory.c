@@ -113,7 +113,9 @@ purpose_is_private(uint8_t purpose)
 {
   if (purpose == DIR_PURPOSE_FETCH_DIR ||
       purpose == DIR_PURPOSE_UPLOAD_DIR ||
-      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST)
+      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
+      purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
+      purpose == DIR_PURPOSE_FETCH_SERVERDESC)
     return 0;
   return 1;
 }
@@ -162,12 +164,10 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   routerinfo_t *r = NULL;
   trusted_dir_server_t *ds = NULL;
   int fascistfirewall = firewall_is_fascist();
-  int directconn = purpose == DIR_PURPOSE_FETCH_DIR ||
-                   purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
-                   purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
-                   purpose == DIR_PURPOSE_FETCH_SERVERDESC;
-  int fetch_fresh_first = advertised_server_mode();
-  int priv = purpose_is_private(purpose);
+  or_options_t *options = get_options();
+  int fetch_fresh_first = server_mode(options) && options->DirPort != 0;
+  int directconn = !purpose_is_private(purpose);
+
   int need_v1_support = purpose == DIR_PURPOSE_FETCH_DIR ||
                         purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
   int need_v2_support = purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
@@ -213,9 +213,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   }
 
   if (r)
-    directory_initiate_command_router(r, purpose, priv, resource, NULL, 0);
+    directory_initiate_command_router(r, purpose, !directconn, resource, NULL, 0);
   else if (ds)
-    directory_initiate_command_trusted_dir(ds, purpose, priv, resource, NULL, 0);
+    directory_initiate_command_trusted_dir(ds, purpose, !directconn, resource, NULL, 0);
   else {
     log_fn(LOG_NOTICE,"No running dirservers known. Will try again later. (purpose %d)",
            purpose);
