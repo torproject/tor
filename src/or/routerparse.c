@@ -293,7 +293,6 @@ get_recommended_software_from_directory(const char *str)
     r, ret, same;
   static int warned_too_new=0;
   smartlist_t *version_sl;
-  int XXXpath;
 
   vl = versionlist;
 
@@ -340,18 +339,15 @@ get_recommended_software_from_directory(const char *str)
         warned_too_new = 1;
       }
       ret = 0;
-      XXXpath = 1;
     } else {
       /* We found a newer one in the same series; we're obsolete. */
       ret = 1;
-      XXXpath = 2;
     }
   } else {
     if (found_newer) {
       /* We belong to a series with no recommended members, and
        * a newer series is recommended. We're obsolete. */
       ret = 1;
-      XXXpath = 3;
     } else {
       /* We belong to a series with no recommended members, and it's
        * newer than any recommended series. We're probably okay. */
@@ -361,7 +357,6 @@ get_recommended_software_from_directory(const char *str)
         warned_too_new = 1;
       }
       ret = 0;
-      XXXpath = 4;
     }
   }
   /*
@@ -1291,7 +1286,7 @@ networkstatus_parse_from_string(const char *s)
     log_fn(LOG_WARN, "Couldn't find network-status-version keyword");
     goto err;
   }
-  /* XXXX do something with the version? */
+  /* XXXX do something with the version? NM */
 
   if (!(tok = find_first_by_keyword(tokens, K_DIR_SOURCE))) {
     log_fn(LOG_WARN, "Couldn't find dir-source keyword");
