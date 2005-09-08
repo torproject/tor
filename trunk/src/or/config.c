@@ -770,8 +770,11 @@ config_assign_line(config_format_t *fmt,
     c->key = tor_strdup(var->name);
   }
 
-  if (reset && !strlen(c->value)) {
-    option_reset(fmt, options, var);
+  if (!strlen(c->value)) { /* reset or clear it, then return */
+    if (reset)
+      option_reset(fmt, options, var);
+    else
+      option_clear(fmt, options, var);
     return 0;
   }
 
@@ -1012,8 +1015,10 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
  *
  * If <b>reset</b>, then interpret empty lines as meaning "restore to
  * default value", and interpret LINELIST* options as replacing (not
- * extending) their previous values.  Return 0 on success, -1 on bad key,
- * -2 on bad value.
+ * extending) their previous values. Otherwise, interpret empty lines
+ * as meaning "make the value 0 or null".
+ *
+ * Return 0 on success, -1 on bad key, -2 on bad value.
  */
 static int
 config_assign(config_format_t *fmt,
@@ -1080,17 +1085,12 @@ options_trial_assign(config_line_t *list, int reset)
   return 0;
 }
 
-/** Replace the option indexed by <b>var</b> in <b>options</b> with its
- * default value. */
+/** Reset config option <b>var</b> to 0, 0.0, "", or the equivalent. */
 static void
-option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
+option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
 {
   config_line_t *c;
-  void *lvalue;
-
-  CHECK(fmt, options);
-
-  lvalue = ((char*)options) + var->var_offset;
+  void *lvalue = ((char*)options) + var->var_offset;
   switch (var->type) {
     case CONFIG_TYPE_STRING:
       tor_free(*(char**)lvalue);
@@ -1126,6 +1126,17 @@ option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
     case CONFIG_TYPE_OBSOLETE:
       break;
   }
+
+/** Replace the option indexed by <b>var</b> in <b>options</b> with its
+ * default value. */
+static void
+option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
+{
+  config_line_t *c;
+  void *lvalue;
+  CHECK(fmt, options);
+  option_clear(fmt, options, var); /* clear it first */
+  lvalue = ((char*)options) + var->var_offset;
   if (var->initvalue) {
     c = tor_malloc_zero(sizeof(config_line_t));
     c->key = tor_strdup(var->name);
