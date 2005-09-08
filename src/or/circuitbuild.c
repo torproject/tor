@@ -1169,7 +1169,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 
     if (best_support == -1) {
       if (need_uptime || need_capacity) {
-        log_fn(LOG_INFO, "We couldn't find any live%s%s routers; falling back to list of all routers",
+        log_fn(LOG_INFO, "We couldn't find any live%s%s routers; falling back to list of all routers.",
                need_capacity?", fast":"",
                need_uptime?", stable":"");
         return choose_good_exit_server_general(dir, 0, 0);
