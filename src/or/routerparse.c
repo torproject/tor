@@ -110,7 +110,8 @@ static struct {
   const char *t; int v; arg_syntax s; obj_syntax os; int ws;
 } token_table[] = {
   { "accept",              K_ACCEPT,              ARGS,    NO_OBJ,  RTR },
-  { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ,DIR},
+  { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ,
+    DIR|NETSTATUS},
   { "r",                   K_R,                   ARGS,    NO_OBJ,  RTRSTATUS },
   { "s",                   K_S,                   ARGS,    NO_OBJ,  RTRSTATUS },
   { "reject",              K_REJECT,              ARGS,    NO_OBJ,  RTR },
@@ -1139,7 +1140,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   routerstatus_t *rs = NULL;
   directory_token_t *tok;
   char base64buf_in[BASE64_DIGEST_LEN+3];
-  char base64buf_out[128];
+  char base64buf_out[256];
   char timebuf[ISO_TIME_LEN+1];
   struct in_addr in;
 
@@ -1185,7 +1186,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   memcpy(base64buf_in, tok->args[1], BASE64_DIGEST_LEN);
   memcpy(base64buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
   if (base64_decode(base64buf_out, sizeof(base64buf_out),
-                    base64buf_in, sizeof(base64buf_in)) != DIGEST_LEN) {
+                    base64buf_in, sizeof(base64buf_in)-1) != DIGEST_LEN) {
     log_fn(LOG_WARN, "Error decoding digest '%s'", tok->args[1]);
     goto err;
   }
@@ -1199,7 +1200,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   memcpy(base64buf_in, tok->args[2], BASE64_DIGEST_LEN);
   memcpy(base64buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
   if (base64_decode(base64buf_out, sizeof(base64buf_out),
-                    base64buf_in, sizeof(base64buf_in)) != DIGEST_LEN) {
+                    base64buf_in, sizeof(base64buf_in)-1) != DIGEST_LEN) {
     log_fn(LOG_WARN, "Error decoding digest '%s'", tok->args[2]);
     goto err;
   }
@@ -1395,6 +1396,7 @@ networkstatus_parse_from_string(const char *s)
       smartlist_add(ns->entries, rs);
   }
 
+  log_fn(LOG_NOTICE, "Footer is <<%s>>", s);
   if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
     log_fn(LOG_WARN, "Error tokenizing network-status footer.");
     goto err;
@@ -1804,6 +1806,8 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
   const char **s;
   directory_token_t *tok = NULL;
   s = &start;
+  if (!end)
+    end = start+strlen(start);
   while (*s < end && (!tok || tok->tp != _EOF)) {
     tok = get_next_token(s, where);
     if (tok->tp == _ERR) {
