@@ -1238,14 +1238,16 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
                         smartlist_add(digests, d);
                       });
     smartlist_free(hexdigests);
-    /* XXXX should always return own descriptor. or special-case it. or
-     * something. */
-    SMARTLIST_FOREACH(complete_list, routerinfo_t *, ri,
-                      SMARTLIST_FOREACH(digests, const char *, d,
-                        if (!memcmp(d,ri->identity_digest,DIGEST_LEN)) {
-                          smartlist_add(descs_out,ri);
-                          break;
-                        }));
+    SMARTLIST_FOREACH(digests, const char *, d,
+       {
+         if (router_digest_is_me(d)) {
+           smartlist_add(descs_out, router_get_my_routerinfo());
+         } else {
+           routerinfo_t *ri = router_get_by_digest(d);
+           if (d)
+             smartlist_add(descs_out,ri);
+         }
+       });
     SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
     smartlist_free(digests);
   }

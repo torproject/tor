@@ -1198,6 +1198,8 @@ router_load_routerlist_from_directory(const char *s,
   return 0;
 }
 
+/** How far in the future do we allow a network-status to get? (seconds) */
+#define NETWORKSTATUS_ALLOW_SKEW (48*60*60)
 /** DOCDOC returns 0 on no problems, -1 on problems.
  * requested fingerprints must be upcased.
  */
@@ -1209,6 +1211,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   int i, found;
   time_t now;
   char fp[HEX_DIGEST_LEN+1];
+  int skewed = 0;
 
   ns = networkstatus_parse_from_string(s);
   if (!ns) {
@@ -1226,7 +1229,10 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   ns->received_on = arrived_at;
 
-  /*XXXX Check publishing skew. NM*/
+  if (ns->published_on > now + NETWORKSTATUS_ALLOW_SKEW) {
+    log_fn(LOG_WARN, "Network status was published in the future (?). Somebody is skewed here: check your clock. Not caching.");
+    skewed = 1;
+  }
 
   if (!networkstatus_list)
     networkstatus_list = smartlist_create();
@@ -1273,7 +1279,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   if (!found)
     smartlist_add(networkstatus_list, ns);
 
-  if (source != NS_FROM_CACHE) {
+  if (source != NS_FROM_CACHE && !skewed) {
     const char *datadir = get_options()->DataDirectory;
     size_t len = strlen(datadir)+64;
     char *fn = tor_malloc(len+1);
@@ -1284,15 +1290,16 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     tor_free(fn);
   }
 
-  if (get_options()->DirPort)
+  if (get_options()->DirPort && !skewed)
     dirserv_set_cached_networkstatus_v2(s, fp, ns->published_on);
 
   return 0;
 }
 
-/* These should be configurable, perhaps. */
+/* XXXX These should be configurable, perhaps? NM */
 #define AUTHORITY_NS_CACHE_INTERVAL 10*60
 #define NONAUTHORITY_NS_CACHE_INTERVAL 15*60
+/* DOCDOC*/
 void
 update_networkstatus_cache_downloads(time_t now)
 {
@@ -1326,23 +1333,30 @@ update_networkstatus_cache_downloads(time_t now)
   }
 }
 
-#define ABOUT_TWO_DAYS (48*60*60)
-#define ABOUT_HALF_AN_HOUR (30*60)
+
+/*XXXX Should these be configurable? NM*/
+/** How old (in seconds) can a network-status be before we stop believing it? */
+#define NETWORKSTATUS_MAX_VALIDITY (48*60*60)
+/** How long (in seconds) does a client wait after getting a network status
+ * before downloading the next in sequence? */
+#define NETWORKSTATUS_CLIENT_DL_INTERVAL (30*60)
+
 /** DOCDOC */
 void
 update_networkstatus_client_downloads(time_t now)
 {
-  /* XXX Yes, these constants are supposed to be dumb, so we can choose better
-   * values. */
   int n_live = 0, needed = 0, n_dirservers, i;
   int most_recent_idx = -1;
   trusted_dir_server_t *most_recent = NULL;
   time_t most_recent_received = 0;
+  smartlist_t *fp_list;
+  char *resource, *cp;
+  size_t resource_len;
 
   /* This is a little tricky.  We want to download enough network-status
-   * objects so that we have at least half of them under ABOUT_TWO_DAYS
+   * objects so that we have at least half of them under NETWORKSTATUS_MAX_VALIDITY
    * publication time.  We want to download a new *one* if the most recent
-   * one's publication time is under ABOUT_HALF_AN_HOUR.
+   * one's publication time is under NETWORKSTATUS_CLIENT_DL_INTERVAL.
    */
   if (!trusted_dir_servers || !smartlist_len(trusted_dir_servers))
     return;
@@ -1352,7 +1366,7 @@ update_networkstatus_client_downloads(time_t now)
        networkstatus_t *ns = networkstatus_get_by_digest(ds->digest);
        if (!ns)
          continue;
-       if (ns->published_on > now-ABOUT_TWO_DAYS)
+       if (ns->published_on > now-NETWORKSTATUS_MAX_VALIDITY)
          ++n_live;
        if (!most_recent || ns->received_on > most_recent_received) {
          most_recent_idx = ds_sl_idx; /* magic variable from FOREACH*/
@@ -1368,29 +1382,36 @@ update_networkstatus_client_downloads(time_t now)
     needed = (n_dirservers/2)+1-n_live;
   if (needed > n_dirservers)
     needed = n_dirservers;
-  /* Also, download at least 1 every ABOUT_HALF_AN_HOUR. */
-  if (most_recent_received < now-ABOUT_HALF_AN_HOUR && needed < 1)
+  /* Also, download at least 1 every NETWORKSTATUS_CLIENT_DL_INTERVAL. */
+  if (most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL && needed < 1)
     needed = 1;
+
+  if (!needed)
+    return;
 
   /* If no networkstatus was found, choose a dirserver at random as "most
    * recent". */
   if (most_recent_idx<0)
     most_recent_idx = crypto_pseudo_rand_int(n_dirservers);
 
-  /* XXXX NM This could compress multiple downloads into a single request.
-   * It could also be smarter on failures. */
+  /* Build a request string for all the resources we want. */
+  resource_len = needed * (HEX_DIGEST_LEN+1) + 6;
+  resource = tor_malloc(resource_len);
+  memcpy(resource, "fp/", 3);
+  cp = resource+3;
   for (i = most_recent_idx+1; needed; ++i) {
-    char resource[HEX_DIGEST_LEN+6];
     trusted_dir_server_t *ds;
     if (i >= n_dirservers)
       i = 0;
     ds = smartlist_get(trusted_dir_servers, i);
-    strlcpy(resource, "fp/", sizeof(resource));
-    base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
-    strlcat(resource, ".z", sizeof(resource));
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
+    base16_encode(cp, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
+    cp += HEX_DIGEST_LEN;
+    *cp++ = '+';
     --needed;
   }
+  memcpy(cp, ".z", 3);
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
+  tor_free(resource);
 }
 
 /** Ensure that our own routerinfo is at the front, and remove duplicates

@@ -1161,8 +1161,6 @@ directory_handle_command_get(connection_t *conn, char *headers,
     if (!smartlist_len(dir_objs)) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Network status object unavailable");
       smartlist_free(dir_objs);
-      /* try to get a new one now */
-      // XXXX NM
       return 0;
     }
     dlen = 0;
@@ -1213,7 +1211,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
              *cp++ = '\n';
            });
         *cp = '\0';
-        /* XXXX This could be way more efficiently handled. */
+        /* XXXX NM This could be way more efficiently handled. */
         if (tor_gzip_compress(&compressed, &compressed_len,
                               inp, cp-inp, ZLIB_METHOD)<0) {
           tor_free(cp);
