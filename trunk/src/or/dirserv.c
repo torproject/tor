@@ -941,11 +941,13 @@ dirserv_get_runningrouters(const char **rr, int compress)
                          "v1 network status list", 1);
 }
 
-/** Return true iff <b>ri</b> is "useful as an exit node." */
+/** Return true iff <b>ri</b> is "useful as an exit node", meaning
+ * it allows exit to at least one /8 address space for at least
+ * one of ports 80, 443, and 6667. */
 static int
 router_is_general_exit(routerinfo_t *ri)
 {
-  static const int ports[] = { 80, 443, 194 };
+  static const int ports[] = { 80, 443, 6667 };
   int n_allowed = 3;
   int i;
   for (i = 0; i < 3; ++i) {
@@ -954,10 +956,10 @@ router_is_general_exit(routerinfo_t *ri)
       if (policy->prt_min > ports[i] || policy->prt_max < ports[i])
         continue; /* Doesn't cover our port. */
       if ((policy->msk & 0x00fffffful) != 0)
-        continue; /* Wider than /8. */
+        continue; /* Narrower than a /8. */
       if ((policy->addr & 0xff000000ul) == 0x7f000000ul)
         continue; /* 127.x */
-      /* We have a match that is wider than /24. */
+      /* We have a match that is at least a /8. */
       if (policy->policy_type != ADDR_POLICY_ACCEPT)
         --n_allowed;
       break;
