@@ -2,8 +2,9 @@ tor (0.1.1.5-alpha-cvs-1) UNRELEASED; urgency=low
 
   * Even more experimental cvs snapshot.
   * Testsuite is mandatory again.
+  * Forward port 03_tor_manpage_in_section_8.dpatch
 
- -- Peter Palfrader <weasel@debian.org>  Fri,  9 Sep 2005 23:11:22 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri,  9 Sep 2005 23:16:53 +0200
 
 tor (0.1.1.5-alpha-1) UNRELEASED; urgency=low
 
