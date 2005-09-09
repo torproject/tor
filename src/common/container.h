@@ -50,6 +50,10 @@ int smartlist_len(const smartlist_t *sl);
 void smartlist_del(smartlist_t *sl, int idx);
 void smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
+void smartlist_sort(smartlist_t *sl,
+                    int (*compare)(const void **a, const void **b));
+void *smartlist_bsearch(smartlist_t *sl, const void *key,
+                        int (*compare)(const void *key, const void **member));
 
 #define SPLIT_SKIP_SPACE   0x01
 #define SPLIT_IGNORE_BLANK 0x02

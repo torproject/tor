@@ -387,6 +387,37 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   return r;
 }
 
+/** Sort the members of <b>sl</b> into an order defined by
+ * the ordering function <b>compare</b>, which returns less then 0 if a
+ * precedes b, greater than 0 if b precedes a, and 0 if a 'equals' b.
+ */
+void
+smartlist_sort(smartlist_t *sl, int (*compare)(const void **a, const void **b))
+{
+  if (!sl->num_used)
+    return;
+  qsort(sl->list, sl->num_used, sizeof(void*),
+        (int (*)(const void *,const void*))compare);
+}
+
+/** Assuming the members of <b>sl</b> are in order, return a pointer to the
+ * member which matches <b>key</b>.  Ordering and matching are defined by a
+ * <b>compare</b> function, which returns 0 on a match; less than 0 if key is
+ * less than member, and greater than 0 if key is greater then member.
+ */
+void *
+smartlist_bsearch(smartlist_t *sl, const void *key,
+                  int (*compare)(const void *key, const void **member))
+{
+  void ** r;
+  if (!sl->num_used)
+    return NULL;
+
+  r = bsearch(key, sl->list, sl->num_used, sizeof(void*),
+              (int (*)(const void *, const void *))compare);
+  return r ? *r : NULL;
+}
+
 /* Splay-tree implementation of string-to-void* map
  */
 typedef struct strmap_entry_t {
