@@ -563,7 +563,7 @@ parse_http_url(char *headers, char **url)
 /** Return a copy of the first HTTP header in <b>headers</b> whose key is
  * <b>which</b>.  The key should be given with a terminating colon and space;
  * this function copies everything after, up to but not including the
- * following newline. */
+ * following \\r\\n. */
 static char *
 http_get_header(const char *headers, const char *which)
 {
@@ -572,7 +572,7 @@ http_get_header(const char *headers, const char *which)
     if (!strcmpstart(cp, which)) {
       char *eos;
       cp += strlen(which);
-      if ((eos = strchr(cp,'\n')))
+      if ((eos = strchr(cp,'\r')))
         return tor_strndup(cp, eos-cp);
       else
         return tor_strdup(cp);
@@ -1333,7 +1333,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
       case -2:
       case -1:
       case 1:
-        log_fn(LOG_NOTICE,"Rejected descriptor published by %s.", origin);
+        log_fn(LOG_NOTICE,"Rejected descriptor from %s.", origin);
         /* malformed descriptor, or something wrong */
         write_http_status_line(conn, 400, msg);
         break;
