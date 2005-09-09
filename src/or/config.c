@@ -2594,7 +2594,7 @@ normalize_log_options(or_options_t *options)
   return 0;
 }
 
-#define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
+#define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:465,reject *:587,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
 /** Add the default exit policy entries to <b>policy</b>
  */
