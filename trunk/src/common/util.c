@@ -1125,8 +1125,32 @@ char *expand_filename(const char *filename)
 smartlist_t *
 tor_listdir(const char *dirname)
 {
-  DIR *d;
   smartlist_t *result;
+#ifdef MS_WINDOWS
+  char *pattern;
+  HANDLE handle;
+  WIN32_FIND_DATA findData;
+  size_t pattern_len = strlen(dirname)+16;
+  pattern = tor_malloc(pattern_len);
+  tor_snprintf(pattern, pattern_len, "%s\\*", dirname);
+  if (!(handle = FindFirstFile(pattern, &findData))) {
+    tor_free(pattern);
+    return NULL;
+  }
+  result = smartlist_create();
+  while (1) {
+    smartlist_add(findData.cFileName);
+    if (!FindNextFile(handle, &findData)) {
+      if (GetLastError() != ERROR_NO_MORE_FILES) {
+        log_fn(LOG_WARN, "Error reading directory.");
+      }
+      break;
+    }
+  }
+  FindClose(handle);
+  tor_free(pattern);
+#else
+  DIR *d;
   struct dirent *de;
   if (!(d = opendir(dirname)))
     return NULL;
@@ -1139,6 +1163,7 @@ tor_listdir(const char *dirname)
     smartlist_add(result, tor_strdup(de->d_name));
   }
   closedir(d);
+#endif
   return result;
 }
 
