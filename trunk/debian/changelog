@@ -1,3 +1,10 @@
+tor (0.1.1.5-alpha-cvs-1) UNRELEASED; urgency=low
+
+  * Even more experimental cvs snapshot.
+  * Testsuite is mandatory again.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  9 Sep 2005 23:11:22 +0200
+
 tor (0.1.1.5-alpha-1) UNRELEASED; urgency=low
 
   * Experimental upstream version.
