@@ -22,7 +22,6 @@ const char crypto_c_id[] = "$Id$";
 
 #include <string.h>
 
-#include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -63,6 +62,12 @@ const char crypto_c_id[] = "$Id$";
 #error "We require openssl >= 0.9.5"
 #elif OPENSSL_VERSION_NUMBER < 0x00906000l
 #define OPENSSL_095
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x00907000l
+#define NO_ENGINES
+#else
+#include <openssl/engine.h>
 #endif
 
 /* Certain functions that return a success code in OpenSSL 0.9.6 return void
@@ -161,6 +166,7 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 
+#ifndef NO_ENGINES
 static void
 log_engine(const char *fn, ENGINE *e)
 {
@@ -174,6 +180,7 @@ log_engine(const char *fn, ENGINE *e)
     log(LOG_INFO, "Using default implementation for %s", fn);
   }
 }
+#endif
 
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
@@ -185,6 +192,7 @@ crypto_global_init(int useAccel)
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
+#ifndef NO_ENGINES
     if (useAccel) {
       if (useAccel < 0)
         log_fn(LOG_WARN, "Initializing OpenSSL via tor_tls_init().");
@@ -201,6 +209,7 @@ crypto_global_init(int useAccel)
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
     }
+#endif
   }
   return 0;
 }
@@ -210,7 +219,9 @@ crypto_global_init(int useAccel)
 int crypto_global_cleanup()
 {
   ERR_free_strings();
+#ifndef NO_ENGINES
   ENGINE_cleanup();
+#endif
 #ifdef TOR_IS_MULTITHREADED
   if (_n_openssl_mutexes) {
     int n = _n_openssl_mutexes;
