@@ -1438,7 +1438,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
 
   defaults = config_alloc(fmt);
   config_init(fmt, defaults);
-  fmt->validate_fn(options);
+  fmt->validate_fn(defaults);
 
   elements = smartlist_create();
   for (i=0; fmt->vars[i].name; ++i) {
