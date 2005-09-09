@@ -892,8 +892,9 @@ connection_dir_client_reached_eof(connection_t *conn)
     char *cp;
     log_fn(LOG_INFO,"Received networkstatus objects (size %d) from server '%s:%d'",(int) body_len, conn->address, conn->port);
     if (status_code != 200) {
-      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d'. I'll try again soon.",
-             status_code, reason, conn->address, conn->port);
+      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
+             status_code, reason, conn->address, conn->port,
+             conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
