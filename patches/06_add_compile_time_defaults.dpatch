@@ -41,9 +41,9 @@ diff -urNad tor-0.1.1.5/src/or/config.c /tmp/dpep.Xv4cHn/tor-0.1.1.5/src/or/conf
    VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
 -  VAR("PidFile",             STRING,   PidFile,              NULL),
 +  VAR("PidFile",             STRING,   PidFile,              "/var/run/tor/tor.pid"),
+   VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
    VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
-   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
-   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
+   VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),
 @@ -167,7 +167,7 @@
    VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "20 minutes"),
    VAR("RephistTrackTime",    INTERVAL, RephistTrackTime,     "24 hours"),
