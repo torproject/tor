@@ -33,7 +33,7 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
   log_fn(LOG_INFO, "Sending an ESTABLISH_RENDEZVOUS cell");
 
   if (crypto_rand(circ->rend_cookie, REND_COOKIE_LEN) < 0) {
-    log_fn(LOG_WARN, "Couldn't get random cookie");
+    log_fn(LOG_WARN, "Internal error: Couldn't produce random cookie.");
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -75,7 +75,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   /* first 20 bytes of payload are the hash of bob's pk */
   if (crypto_pk_get_digest(entry->parsed->pk, payload)<0) {
-    log_fn(LOG_WARN, "Couldn't hash public key.");
+    log_fn(LOG_WARN, "Internal error: couldn't hash public key.");
     goto err;
   }
 
@@ -86,11 +86,11 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
       tor_malloc_zero(sizeof(crypt_path_t));
     cpath->magic = CRYPT_PATH_MAGIC;
     if (!(cpath->dh_handshake_state = crypto_dh_new())) {
-      log_fn(LOG_WARN, "Couldn't allocate DH");
+      log_fn(LOG_WARN, "Internal error: couldn't allocate DH.");
       goto err;
     }
     if (crypto_dh_generate_public(cpath->dh_handshake_state)<0) {
-      log_fn(LOG_WARN, "Couldn't generate g^x");
+      log_fn(LOG_WARN, "Internal error: couldn't generate g^x.");
       goto err;
     }
   }
@@ -119,7 +119,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   if (crypto_dh_get_public(cpath->dh_handshake_state, tmp+dh_offset,
                            DH_KEY_LEN)<0) {
-    log_fn(LOG_WARN, "Couldn't extract g^x");
+    log_fn(LOG_WARN, "Internal error: couldn't extract g^x.");
     goto err;
   }
 
@@ -129,7 +129,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
                                       dh_offset+DH_KEY_LEN,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
-    log_fn(LOG_WARN,"hybrid pk encrypt failed.");
+    log_fn(LOG_WARN,"Internal error: hybrid pk encrypt failed.");
     goto err;
   }
 
@@ -180,7 +180,7 @@ rend_client_introduction_acked(circuit_t *circ,
   circuit_t *rendcirc;
 
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
-    log_fn(LOG_WARN, "Received REND_INTRODUCE_ACK on unexpected circuit %d",
+    log_fn(LOG_WARN, "Received REND_INTRODUCE_ACK on unexpected circuit %d.",
            circ->n_circ_id);
     circuit_mark_for_close(circ);
     return -1;
@@ -267,7 +267,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 
   r = rend_cache_lookup_entry(query, -1, &ent);
   if (r<0) {
-    log_fn(LOG_WARN, "Malformed service ID '%s'", safe_str(query));
+    log_fn(LOG_WARN, "Bug: malformed service ID '%s'.", safe_str(query));
     return -1;
   }
   if (r==0) {
@@ -350,7 +350,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
   if ((circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
        circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
       || !circ->build_state->pending_final_cpath) {
-    log_fn(LOG_WARN,"Got rendezvous2 cell from Bob, but not expecting it. Closing.");
+    log_fn(LOG_WARN,"Got rendezvous2 cell from hidden service, but not expecting it. Closing.");
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -367,7 +367,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
   tor_assert(hop->dh_handshake_state);
   if (crypto_dh_compute_secret(hop->dh_handshake_state, request, DH_KEY_LEN,
                                keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
-    log_fn(LOG_WARN, "Couldn't complete DH handshake");
+    log_fn(LOG_WARN, "Couldn't complete DH handshake.");
     goto err;
   }
   /* ... and set up cpath. */
@@ -376,7 +376,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
 
   /* Check whether the digest is right... */
   if (memcmp(keys, request+DH_KEY_LEN, DIGEST_LEN)) {
-    log_fn(LOG_WARN, "Incorrect digest of key material");
+    log_fn(LOG_WARN, "Incorrect digest of key material.");
     goto err;
   }
 
@@ -429,7 +429,7 @@ rend_client_desc_here(const char *query)
 
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
-        log_fn(LOG_WARN,"attaching to a rend circ failed. Closing conn.");
+        log_fn(LOG_WARN,"Rendezvous attempt failed. Closing.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       }
       tor_assert(conn->state != AP_CONN_STATE_RENDDESC_WAIT); /* avoid loop */
@@ -451,7 +451,7 @@ rend_client_get_random_intro(const char *query)
   rend_cache_entry_t *entry;
 
   if (rend_cache_lookup_entry(query, -1, &entry) < 1) {
-    log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
+    log_fn(LOG_WARN,"Query '%s' didn't have valid rend desc in cache. Failing.",
            safe_str(query));
     return NULL;
   }
@@ -469,7 +469,7 @@ rend_client_get_random_intro(const char *query)
     char *choice = entry->parsed->intro_points[i];
     routerinfo_t *router = router_get_by_nickname(choice);
     if (!router) {
-      log_fn(LOG_WARN, "Unknown router with nickname %s; trying another.",choice);
+      log_fn(LOG_INFO, "Unknown router with nickname '%s'; trying another.",choice);
       tor_free(choice);
       entry->parsed->intro_points[i] =
         entry->parsed->intro_points[--entry->parsed->n_intro_points];
