@@ -1139,7 +1139,7 @@ tor_listdir(const char *dirname)
   }
   result = smartlist_create();
   while (1) {
-    smartlist_add(findData.cFileName);
+    smartlist_add(result, findData.cFileName);
     if (!FindNextFile(handle, &findData)) {
       if (GetLastError() != ERROR_NO_MORE_FILES) {
         log_fn(LOG_WARN, "Error reading directory.");
