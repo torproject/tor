@@ -604,6 +604,21 @@ test_crypto_s2k(void)
   test_memeq(buf, buf2, 29);
 }
 
+static int
+_compare_strs(const void **a, const void **b)
+{
+  const char *s1 = *a, *s2 = *b;
+  return strcmp(s1, s2);
+}
+
+static int
+_compare_without_first_ch(const void *a, const void **b)
+{
+  const char *s1 = a, *s2 = *b;
+  printf("%s v %s\n",s1, s2);
+  return strcasecmp(s1+1, s2);
+}
+
 static void
 test_util(void)
 {
@@ -775,6 +790,21 @@ test_util(void)
   smartlist_split_string(sl, "efgh", "\n", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   test_eq(2, smartlist_len(sl));
   test_streq("efgh", smartlist_get(sl, 1));
+
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Test smartlist sorting. */
+  smartlist_split_string(sl, "the,onion,router,by,arma,and,nickm", ",", 0, 0);
+  test_eq(7, smartlist_len(sl));
+  smartlist_sort(sl, _compare_strs);
+  cp = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp,"and,arma,by,nickm,onion,router,the");
+  tor_free(cp);
+
+  test_streq("nickm", smartlist_bsearch(sl, "zNicKM", _compare_without_first_ch));
+  test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
+  test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
 
   /* Test tor_strstrip() */
   strcpy(buf, "Testing 1 2 3");
