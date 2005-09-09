@@ -657,13 +657,16 @@ connection_edge_process_end_not_open(
         /* check if he *ought* to have allowed it */
         if (exitrouter &&
             (rh->length < 5 ||
-             (!tor_inet_aton(conn->socks_request->address, &in) &&
+             (tor_inet_aton(conn->socks_request->address, &in) &&
               !conn->chosen_exit_name))) {
           log_fn(LOG_NOTICE,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
           addr_policy_free(exitrouter->exit_policy);
           exitrouter->exit_policy =
             router_parse_addr_policy_from_string("reject *:*", -1);
         }
+        /* rewrite it to an IP if we learned one. */
+        addressmap_rewrite(conn->socks_request->address,
+                           sizeof(conn->socks_request->address));
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
         /* else, conn will get closed below */
