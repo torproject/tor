@@ -241,14 +241,23 @@ start at boot.
 </p>
 
 <p>
-9. If you control the name servers for your domain, consider setting
+9. (Unix only.) Your operating system probably limits the number of open
+file descriptors per process to 1024 (or even less). If you plan to be
+running a fast exit node, this is probably not enough. You should run
+"ulimit -n 8192" (as root) and then su to the user that will run Tor,
+or change your defaults (on Debian, add a line like "toruser hard nofile
+8192" to your /etc/security/limits.conf file).
+</p>
+
+<p>
+10. If you control the name servers for your domain, consider setting
 your hostname to 'anonymous' or 'proxy' or 'tor-proxy', so when other
 people see the address in their web logs, they will more quickly
 understand what's going on.
 </p>
 
 <p>
-10. If your computer isn't running a webserver, please consider
+11. If your computer isn't running a webserver, please consider
 changing your ORPort to 443 and your DirPort to 80. Many Tor
 users are stuck behind firewalls that only let them browse the
 web, and this change will let them reach your Tor server. Win32
