@@ -1209,7 +1209,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
           if (cached) {
             smartlist_add(result, cached);
           } else {
-            log_fn(LOG_WARN, "Don't know about any network status with fingerprint '%s'", cp);
+            log_fn(LOG_INFO, "Don't know about any network status with fingerprint '%s'", cp);
           }
           tor_free(cp);
         });
