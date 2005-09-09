@@ -185,7 +185,8 @@ rend_parse_service_descriptor(const char *str, size_t len)
   tor_assert(end-cp >= 0);
   if ((size_t)(end-cp) < keylen) goto truncated;
   if ((size_t)(end-cp) > keylen) {
-    log_fn(LOG_WARN, "Signature too long on service descriptor.");
+    log_fn(LOG_WARN, "Signature is %d bytes too long on service descriptor.",
+           (int)((size_t)(end-cp) - keylen));
     goto error;
   }
   if (crypto_pk_public_checksig_digest(result->pk,
