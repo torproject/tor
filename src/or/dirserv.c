@@ -1028,7 +1028,7 @@ generate_v2_networkstatus(void)
 
   if (crypto_pk_get_fingerprint(private_key, fingerprint, 0)<0) {
     log_fn(LOG_ERR, "Error computing fingerprint");
-    return -1;
+    goto done;
   }
 
   contact = get_options()->ContactInfo;
@@ -1084,11 +1084,15 @@ generate_v2_networkstatus(void)
       format_iso_time(published, ri->published_on);
 
       if (base64_encode(identity64, sizeof(identity64),
-                        ri->identity_digest, DIGEST_LEN)<0)
+                        ri->identity_digest, DIGEST_LEN)<0) {
+        log_fn(LOG_WARN, "Unable to encode router identity digest.");
         goto done;
+      }
       if (base64_encode(digest64, sizeof(digest64),
-                        ri->signed_descriptor_digest, DIGEST_LEN)<0)
+                        ri->signed_descriptor_digest, DIGEST_LEN)<0) {
+        log_fn(LOG_WARN, "Unable to encode router descriptor digest.");
         goto done;
+      }
       identity64[BASE64_DIGEST_LEN] = '\0';
       digest64[BASE64_DIGEST_LEN] = '\0';
 
@@ -1128,8 +1132,10 @@ generate_v2_networkstatus(void)
     goto done;
   }
 
-  if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0)
+  if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
+    log_fn(LOG_WARN, "Unable to sign router status.");
     goto done;
+  }
 
   set_cached_dir(&the_v2_networkstatus, status, time(NULL));
   status = NULL; /* So it doesn't get double-freed. */
@@ -1172,6 +1178,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
                                     the_v2_networkstatus_is_dirty,
                                     generate_v2_networkstatus,
                                     "network status list", 0);
+      log_fn(LOG_WARN, "Unable to generate an authoritative network stautus.");
       if (d)
         smartlist_add(result, d);
     }
@@ -1184,6 +1191,8 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
       smartlist_add(result, val);
       iter = strmap_iter_next(cached_v2_networkstatus, iter);
     }
+    if (smartlist_len(result) == 0)
+      log_fn(LOG_WARN, "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
     smartlist_t *hexdigests = smartlist_create();
     smartlist_split_string(hexdigests, key+3, "+", 0, 0);
@@ -1197,9 +1206,14 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
               the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL))
             generate_v2_networkstatus();
           cached = strmap_get(cached_v2_networkstatus, cp);
-          if (cached)
+          if (cached) {
             smartlist_add(result, cached);
+          } else {
+            log_fn(LOG_WARN, "Don't know about any network status with fingerprint '%s'", cp);
+          }
+          tor_free(cp);
         });
+    smartlist_free(hexdigests);
   }
   return 0;
 }
