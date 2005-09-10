@@ -38,6 +38,7 @@ NR- write a spec appendix for 'being nice with tor'
 for 0.1.1.x:
 R - are dirservers auto-verifying duplicate nicknames?
 
+N - controller libs should support resetconf command.
 N . Additional controller features
       - Find a way to make event info more extensible
       - change circuit status events to give more details, like purpose,
