@@ -1020,11 +1020,11 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
             dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL))) {
           if (router->num_unreachable_notifications >= 3) {
             unreachable = 1;
-            log_fn(LOG_WARN, "Notifying server '%s' that it's unreachable. (ContactInfo '%s', platform '%s').",
+            log_fn(LOG_NOTICE, "Notifying server '%s' that it's unreachable. (ContactInfo '%s', platform '%s').",
               router->nickname, router->contact_info ? router->contact_info : "",
               router->platform ? router->platform : "");
           } else {
-            log_fn(LOG_NOTICE,"'%s' may be unreachable -- the %d previous descriptors were thought to be unreachable.", router->nickname, router->num_unreachable_notifications);
+            log_fn(LOG_INFO,"'%s' may be unreachable -- the %d previous descriptors were thought to be unreachable.", router->nickname, router->num_unreachable_notifications);
             router->num_unreachable_notifications++;
           }
         }
