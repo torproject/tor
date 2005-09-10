@@ -74,56 +74,21 @@ get_fname(const char *name)
 static void
 remove_directory(void)
 {
-#ifdef MS_WINDOWS
-  char *pattern;
-  HANDLE handle;
-  WIN32_FIND_DATA findData;
-
-  setup_directory();
-  pattern = tor_malloc(strlen(temp_dir)+16);
-  tor_snprintf(pattern, strlen(temp_dir)+16, "%s\\*", temp_dir);
-  handle = FindFirstFile(pattern, &findData);
-  if (handle == INVALID_HANDLE_VALUE) {
-    perror("Can't remove");
-    return;
+  smartlist_t *elements = tor_listdir(temp_dir);
+  if (elements) {
+    SMARTLIST_FOREACH(elements, const char *, cp,
+       {
+         size_t len = strlen(cp)+strlen(temp_dir)+16;
+         char *tmp = tor_malloc(len);
+         tor_snprintf(tmp, len, "%s"PATH_SEPARATOR"%s", temp_dir, cp);
+         unlink(tmp);
+         tor_free(tmp);
+       });
+    SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
+    smartlist_free(elements);
   }
-  while (1) {
-    size_t dlen = strlen(findData.cFileName)+strlen(temp_dir)+16;
-    char *deleteable = tor_malloc(dlen);
-    tor_snprintf(deleteable, dlen, "%s\\%s", temp_dir, findData.cFileName);
-    unlink(deleteable);
-    tor_free(deleteable);
-    if (!FindNextFile(handle, &findData)) {
-      if (GetLastError() != ERROR_NO_MORE_FILES) {
-        perror("error reading dir");
-      }
-      break;
-    }
-  }
-  FindClose(handle);
-  tor_free(pattern);
-#else
-  DIR *dirp;
-  struct dirent *de;
-  setup_directory();
-  if (!(dirp = opendir(temp_dir))) {
-    perror("Can't open temporary directory to remove files");
-    return;
-  }
-  while ((de = readdir(dirp)) != NULL) {
-    /* Only "." and ".." start with ., since we don't create any dotfiles. */
-    if (de->d_name[0] == '.') continue;
-    if (unlink(get_fname(de->d_name))) {
-      printf("Couldn't remove temprorary file \"%s/%s\"",temp_dir,de->d_name);
-      perror("");
-    }
-#if 0
-    printf("==%s\n", de->d_name);
-#endif
-  }
-  closedir(dirp);
-#endif
   rmdir(temp_dir);
+  
 }
 
 static void
@@ -615,7 +580,6 @@ static int
 _compare_without_first_ch(const void *a, const void **b)
 {
   const char *s1 = a, *s2 = *b;
-  printf("%s v %s\n",s1, s2);
   return strcasecmp(s1+1, s2);
 }
 
