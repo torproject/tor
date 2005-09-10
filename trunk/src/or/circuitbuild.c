@@ -894,7 +894,8 @@ onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys)
  * is feasible, except if it's less than 2, in which case return -1.
  */
 static int
-new_route_len(double cw, uint8_t purpose, smartlist_t *routers)
+new_route_len(double cw, uint8_t purpose, extend_info_t *exit,
+              smartlist_t *routers)
 {
   int num_acceptable_routers;
   int routelen;
@@ -906,23 +907,11 @@ new_route_len(double cw, uint8_t purpose, smartlist_t *routers)
 #ifdef TOR_PERF
   routelen = 2;
 #else
-  if (purpose == CIRCUIT_PURPOSE_C_GENERAL)
-    routelen = 3;
-  else if (purpose == CIRCUIT_PURPOSE_TESTING)
-    routelen = 3;
-  else if (purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
-    routelen = 4;
-  else if (purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)
-    routelen = 3;
-  else if (purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
-    routelen = 3;
-  else if (purpose == CIRCUIT_PURPOSE_S_CONNECT_REND)
-    routelen = 4;
-  else {
-    log_fn(LOG_WARN,"Bug: unhandled purpose %d", purpose);
-    tor_fragile_assert();
-    return -1;
-  }
+  routelen = 3;
+  if (exit &&
+      purpose != CIRCUIT_PURPOSE_TESTING &&
+      purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
+    routelen++;
 #endif
   log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",routelen,
          smartlist_len(routers));
@@ -1259,7 +1248,8 @@ onion_pick_cpath_exit(circuit_t *circ, extend_info_t *exit)
     log_fn(LOG_WARN,"router_get_routerlist returned empty list; closing circ.");
     return -1;
   }
-  r = new_route_len(get_options()->PathlenCoinWeight, circ->purpose, rl->routers);
+  r = new_route_len(get_options()->PathlenCoinWeight, circ->purpose,
+                    exit, rl->routers);
   if (r < 1) /* must be at least 1 */
     return -1;
   state->desired_path_len = r;
