@@ -1,3 +1,9 @@
+tor (0.1.1.6-alpha-1) experimental; urgency=low
+
+  * Experimental upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 10 Sep 2005 10:17:43 +0200
+
 tor (0.1.1.5-alpha-cvs-1) UNRELEASED; urgency=low
 
   * Even more experimental cvs snapshot.
