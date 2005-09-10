@@ -128,6 +128,12 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 /* ===== File compatibility */
 int replace_file(const char *from, const char *to);
 
+#ifdef MS_WINDOWS
+#define PATH_SEPARATOR "\\"
+#else
+#define PATH_SEPARATOR "/"
+#endif
+
 /* ===== Net compatibility */
 #ifdef MS_WINDOWS
 /** On windows, you have to call close() on fds returned by open(),
