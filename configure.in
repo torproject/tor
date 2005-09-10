@@ -368,6 +368,14 @@ case $host in
  ia64-*-* | arm-*-* | sparc-*-* )
     tor_cv_unaligned_ok=no
     ;;
+ # On the following architectures unaligned access works, but is not done in
+ # hardware.  This means that when you try to do unaligned access the kernel
+ # gets to sort out an exception and then work around to somehow make your
+ # reqest work, which is quite expensive.  Therefore it's probably better to
+ # not even do it.
+ alpha-*-* | mips-*-* | mipsel-*-* )
+    tor_cv_unaligned_ok=no
+    ;;
  *)
 AC_CACHE_CHECK([whether unaligned int access is allowed], tor_cv_unaligned_ok,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
