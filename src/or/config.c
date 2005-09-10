@@ -744,16 +744,12 @@ config_find_option(config_format_t *fmt, const char *key)
   return NULL;
 }
 
-/** If <b>c</b> is a syntactically valid configuration line, update
- * <b>options</b> with its value and return 0.  Otherwise return -1 for bad key,
- * -2 for bad value.
- *
- * If 'reset' is set, and we get a line containing no value, restore the
- * option to its default value.
+/** <b>c</b>-\>key is known to be a real key. Update <b>options</b>
+ * with <b>c</b>-\>value and return 0, or return -1 if bad value.
  */
 static int
-config_assign_line(config_format_t *fmt,
-                   or_options_t *options, config_line_t *c, int reset)
+config_assign_value(config_format_t *fmt, or_options_t *options,
+                    config_line_t *c)
 {
   int i, ok;
   config_var_t *var;
@@ -762,25 +758,10 @@ config_assign_line(config_format_t *fmt,
   CHECK(fmt, options);
 
   var = config_find_option(fmt, c->key);
-  if (!var) {
-    log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", c->key);
-    return -1;
-  }
-  /* Put keyword into canonical case. */
-  if (strcmp(var->name, c->key)) {
-    tor_free(c->key);
-    c->key = tor_strdup(var->name);
-  }
-
-  if (!strlen(c->value)) { /* reset or clear it, then return */
-    if (reset)
-      option_reset(fmt, options, var);
-    else
-      option_clear(fmt, options, var);
-    return 0;
-  }
+  tor_assert(var);
 
   lvalue = ((char*)options) + var->var_offset;
+
   switch (var->type) {
 
   case CONFIG_TYPE_UINT:
@@ -788,7 +769,7 @@ config_assign_line(config_format_t *fmt,
     if (!ok) {
       log(LOG_WARN, "Int keyword '%s %s' is malformed or out of bounds.",
           c->key,c->value);
-      return -2;
+      return -1;
     }
     *(int *)lvalue = i;
     break;
@@ -796,7 +777,7 @@ config_assign_line(config_format_t *fmt,
   case CONFIG_TYPE_INTERVAL: {
     i = config_parse_interval(c->value, &ok);
     if (!ok) {
-      return -2;
+      return -1;
     }
     *(int *)lvalue = i;
     break;
@@ -805,7 +786,7 @@ config_assign_line(config_format_t *fmt,
   case CONFIG_TYPE_MEMUNIT: {
     uint64_t u64 = config_parse_memunit(c->value, &ok);
     if (!ok) {
-      return -2;
+      return -1;
     }
     *(uint64_t *)lvalue = u64;
     break;
@@ -815,7 +796,7 @@ config_assign_line(config_format_t *fmt,
     i = tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
       log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1.", c->key);
-      return -2;
+      return -1;
     }
     *(int *)lvalue = i;
     break;
@@ -832,7 +813,7 @@ config_assign_line(config_format_t *fmt,
   case CONFIG_TYPE_ISOTIME:
     if (parse_iso_time(c->value, (time_t *)lvalue)) {
       log(LOG_WARN, "Invalid time '%s' for keyword '%s'", c->value, c->key);
-      return -2;
+      return -1;
     }
     break;
 
@@ -858,11 +839,50 @@ config_assign_line(config_format_t *fmt,
     break;
   case CONFIG_TYPE_LINELIST_V:
     log_fn(LOG_WARN, "Can't provide value for virtual option '%s'", c->key);
-    return -2;
+    return -1;
   default:
     tor_assert(0);
     break;
   }
+  return 0;
+}
+
+/** If <b>c</b> is a syntactically valid configuration line, update
+ * <b>options</b> with its value and return 0.  Otherwise return -1 for bad key,
+ * -2 for bad value.
+ *
+ * If 'reset' is set, and we get a line containing no value, restore the
+ * option to its default value.
+ */
+static int
+config_assign_line(config_format_t *fmt, or_options_t *options,
+                   config_line_t *c, int reset)
+{
+  config_var_t *var;
+
+  CHECK(fmt, options);
+
+  var = config_find_option(fmt, c->key);
+  if (!var) {
+    log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", c->key);
+    return -1;
+  }
+  /* Put keyword into canonical case. */
+  if (strcmp(var->name, c->key)) {
+    tor_free(c->key);
+    c->key = tor_strdup(var->name);
+  }
+
+  if (!strlen(c->value)) { /* reset or clear it, then return */
+    if (reset)
+      option_reset(fmt, options, var);
+    else
+      option_clear(fmt, options, var);
+    return 0;
+  }
+
+  if (config_assign_value(fmt, options, c) < 0)
+    return -2;
   return 0;
 }
 
@@ -1143,7 +1163,7 @@ option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
     c = tor_malloc_zero(sizeof(config_line_t));
     c->key = tor_strdup(var->name);
     c->value = tor_strdup(var->initvalue);
-    config_assign_line(fmt, options,c,0);
+    config_assign_value(fmt, options, c);
     config_free_lines(c);
   }
 }
@@ -2275,8 +2295,8 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   /* Go through command-line variables too */
-  cl = config_get_commandlines(argc,argv);
-  retval = config_assign(&options_format, newoptions,cl,0);
+  cl = config_get_commandlines(argc, argv);
+  retval = config_assign(&options_format, newoptions, cl, 0);
   config_free_lines(cl);
   if (retval < 0)
     goto err;
