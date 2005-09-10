@@ -1,4 +1,4 @@
-Changes in version 0.1.1.6-alpha - 2005-09-08
+Changes in version 0.1.1.6-alpha - 2005-09-09
   o Fixes on 0.1.1.5-alpha:
     - We broke fascistfirewall in 0.1.1.5-alpha. Oops.
     - Fix segfault in unit tests in 0.1.1.5-alpha. Oops.
