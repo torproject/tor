@@ -6,6 +6,12 @@ Changes in version 0.1.1.6-alpha - 2005-09-08
     - Make unit tests run without segfaulting.
     - Resolve some solaris x86 compile warnings.
     - Handle duplicate lines in approved-routers files without warning.
+    - Fix bug where as soon as a server refused any requests due to his
+      exit policy (e.g. when we ask for localhost and he tells us that's
+      127.0.0.1 and he won't do it), we decided he wasn't obeying his
+      exit policy using him for any exits.
+    - Only do openssl hardware accelerator stuff if openssl version is
+      at least 0.9.7.
 
   o New controller features/fixes:
     - Add a "RESETCONF" command so you can set config options like
@@ -15,11 +21,13 @@ Changes in version 0.1.1.6-alpha - 2005-09-08
     - Add a "GETINFO config-file" to tell us where torrc is.
     - Avoid sending blank lines when GETINFO replies should be empty.
     - Add a QUIT command for the controller (for using it manually).
+    - Fix a bug in SAVECONF that was adding default dirservers and
+      other redundant entries to the torrc file.
 
   o Start on the new directory design:
     - Generate, publish, cache, serve new network-status format.
     - Publish individual descriptors (by fingerprint, by "all", and by
-      "tell me yours.").
+      "tell me yours").
     - Publish client and server recommended versions separately.
     - Allow tor_gzip_uncompress() to handle multiple concatenated
       compressed strings. Serve compressed groups of router
@@ -43,8 +51,9 @@ Changes in version 0.1.1.6-alpha - 2005-09-08
       destination, and there's a running Tor server at that address
       which allows exit to the destination, then extend the circuit to
       that exit first. This provides end-to-end encryption and end-to-end
-      authentication. Also, if the user asks for a .exit node, cannibalize
-      a general circ for it so it's faster.
+      authentication. Also, if the user wants a .exit address or enclave,
+      use 4 hops rather than 3, and cannibalize a general circ for it
+      if you can.
     - Permit transitioning from ORPort=0 to ORPort!=0, and back, from the
       controller. Also, rotate dns and cpu workers if the controller
       changes options that will affect them; and initialize the dns
@@ -64,12 +73,14 @@ Changes in version 0.1.1.6-alpha - 2005-09-08
     - Make MonthlyAccountingStart config option truly obsolete now.
 
   o Fixes on 0.1.0.x:
+    - Reject ports 465 and 587 in the default exit policy, since
+      people have started using them for spam too.
     - It turns out we couldn't bootstrap a network since we added
-      reachability detection. Good thing the Tor network has never gone
-      down. Add an AssumeReachable config option to let servers and
-      dirservers bootstrap. When we're trying to build a high-uptime or
-      high-bandwidth circuit but there aren't enough suitable servers,
-      try being less picky rather than simply failing.
+      reachability detection in 0.1.0.1-rc. Good thing the Tor network
+      has never gone down. Add an AssumeReachable config option to let
+      servers and dirservers bootstrap. When we're trying to build a
+      high-uptime or high-bandwidth circuit but there aren't enough
+      suitable servers, try being less picky rather than simply failing.
     - Our logic to decide if the OR we connected to was the right guy
       was brittle and maybe open to a mitm for unverified routers.
     - We weren't cannibalizing circuits correctly for
@@ -82,6 +93,8 @@ Changes in version 0.1.1.6-alpha - 2005-09-08
       should result in fewer random failures. Also, after failing
       from resolve failed or misc, reset the num failures, so we give
       it a fair shake next time we try.
+    - Clean up the rendezvous warn log msgs, and downgrade some to info.
+    - Reduce severity on logs about dns worker spawning and culling.
     - When we're shutting down and we do something like try to post a
       server descriptor or rendezvous descriptor, don't complain that
       we seem to be unreachable. Of course we are, we're shutting down.
