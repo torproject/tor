@@ -592,16 +592,18 @@ expand_abbrev(config_format_t *fmt, const char *option, int command_line)
   return option;
 }
 
-/** Helper: Read a list of configuration options from the command line. */
-static config_line_t *
-config_get_commandlines(int argc, char **argv)
+/** Helper: Read a list of configuration options from the command line.
+ * If successful, put them in *<b>result</b> and return 0, and return
+ * -1 and leave *<b>result</b> alone. */
+static int
+config_get_commandlines(int argc, char **argv, config_line_t **result)
 {
   config_line_t *front = NULL;
   config_line_t **new = &front;
   char *s;
   int i = 1;
 
-  while (i < argc-1) {
+  while (i < argc) {
     if (!strcmp(argv[i],"-f") ||
         !strcmp(argv[i],"--hash-password")) {
       i += 2; /* command-line option with argument. ignore them. */
@@ -612,6 +614,12 @@ config_get_commandlines(int argc, char **argv)
     } else if (!strcmp(argv[i],"--nt-service")) {
       i += 1;
       continue;
+    }
+    if (i == argc-1) {
+      log_fn(LOG_WARN,"Command-line option '%s' with no value. Failing.",
+             argv[i]);
+      config_free_lines(front);
+      return -1;
     }
 
     *new = tor_malloc_zero(sizeof(config_line_t));
@@ -629,7 +637,8 @@ config_get_commandlines(int argc, char **argv)
     new = &((*new)->next);
     i += 2;
   }
-  return front;
+  *result = front;
+  return 0;
 }
 
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
@@ -2225,7 +2234,7 @@ options_init_from_torrc(int argc, char **argv)
   newoptions->_magic = OR_OPTIONS_MAGIC;
   options_init(newoptions);
 
-  /* learn config file name, get config lines, assign them */
+  /* learn config file name */
   fname = NULL;
   using_default_torrc = 1;
   newoptions->command = CMD_RUN_TOR;
@@ -2248,7 +2257,6 @@ options_init_from_torrc(int argc, char **argv)
       newoptions->command = CMD_VERIFY_CONFIG;
     }
   }
-
   if (using_default_torrc) {
     /* didn't find one, try CONFDIR */
     const char *dflt = get_default_conf_file();
@@ -2272,6 +2280,7 @@ options_init_from_torrc(int argc, char **argv)
   tor_assert(fname);
   log(LOG_DEBUG, "Opening config file \"%s\"", fname);
 
+  /* get config lines, assign them */
   if (file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0))) {
     if (using_default_torrc == 1) {
@@ -2295,7 +2304,8 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   /* Go through command-line variables too */
-  cl = config_get_commandlines(argc, argv);
+  if (config_get_commandlines(argc, argv, &cl) < 0)
+    goto err;
   retval = config_assign(&options_format, newoptions, cl, 0);
   config_free_lines(cl);
   if (retval < 0)
