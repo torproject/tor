@@ -372,8 +372,7 @@ get_recommended_software_from_directory(const char *str)
   return ret;
 }
 
-/* Return 0 if myversion is supported; else log a message and return
- * -1 (or exit if ignoreversions is false) */
+/* Return 0 if myversion is supported; else warn and return -1. */
 int
 check_software_version_against_directory(const char *directory)
 {
@@ -392,7 +391,7 @@ check_software_version_against_directory(const char *directory)
      "Please use %s%s.",
       VERSION, strchr(v,',') ? "one of " : "", v);
   tor_free(v);
-  return 0;
+  return -1;
 }
 
 /** Parse a directory from <b>str</b> and, when done, store the
