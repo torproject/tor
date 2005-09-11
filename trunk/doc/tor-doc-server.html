@@ -215,49 +215,34 @@ We recommend the following steps as well:
 </p>
 
 <p>
-6. (Unix only). Make a separate user to run the server. If you
-installed the OS X package or the deb or the rpm, this is already
-done. Otherwise, you can do it by hand. (The Tor server doesn't need to
-be run as root, so it's good practice to not run it as root. Running
-as a 'tor' user avoids issues with identd and other services that
-detect user name. If you're the paranoid sort, feel free to <a
-href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put Tor
-into a chroot jail</a>.)
-</p>
-
-<p>
-7. Decide what exit policy you want. By default your server allows
+6. Decide what exit policy you want. By default your server allows
 access to many popular services, but we restrict some (such as port 25)
 due to abuse potential. You might want an exit policy that is
 less restrictive or more restrictive; edit your torrc appropriately.
-If you choose a particularly open exit policy, you might want to make
+Read the FAQ entry on <a
+href="http://tor.eff.org/faq-abuse.html#TypicalAbuses">issues you might
+encounter if you use the default exit policy</a>.
+If you choose a particularly open exit policy, you should make
 sure your ISP is ok with that choice.
 </p>
 
 <p>
-8. If you installed from source, you may find the initscripts in
-contrib/tor.sh or contrib/torctl useful if you want to set up Tor to
-start at boot.
+7. Decide about rate limiting. Cable modem, DSL, and other users
+who have asymmetric bandwidth (e.g. more down than up) should
+rate limit to their slower bandwidth, to avoid congestion. See the <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#LimitBandwidth">rate
+limiting FAQ entry</a> for details.
 </p>
 
 <p>
-9. (Unix only.) Your operating system probably limits the number of open
-file descriptors per process to 1024 (or even less). If you plan to be
-running a fast exit node, this is probably not enough. You should run
-"ulimit -n 8192" (as root) and then su to the user that will run Tor,
-or change your defaults (on Debian, add a line like "toruser hard nofile
-8192" to your /etc/security/limits.conf file).
-</p>
-
-<p>
-10. If you control the name servers for your domain, consider setting
+8. If you control the name servers for your domain, consider setting
 your hostname to 'anonymous' or 'proxy' or 'tor-proxy', so when other
 people see the address in their web logs, they will more quickly
 understand what's going on.
 </p>
 
 <p>
-11. If your computer isn't running a webserver, please consider
+9. If your computer isn't running a webserver, please consider
 changing your ORPort to 443 and your DirPort to 80. Many Tor
 users are stuck behind firewalls that only let them browse the
 web, and this change will let them reach your Tor server. Win32
@@ -269,6 +254,32 @@ href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#ServerForFirewalledClie
 port forwarding</a> so connections can reach their Tor server. If you are
 using ports 80 and 443 already but still want to help out, other useful
 ports are 22, 110, and 143.
+</p>
+
+<p>
+10. (Unix only). Make a separate user to run the server. If you
+installed the OS X package or the deb or the rpm, this is already
+done. Otherwise, you can do it by hand. (The Tor server doesn't need to
+be run as root, so it's good practice to not run it as root. Running
+as a 'tor' user avoids issues with identd and other services that
+detect user name. If you're the paranoid sort, feel free to <a
+href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put Tor
+into a chroot jail</a>.)
+</p>
+
+<p>
+11. (Unix only.) Your operating system probably limits the number of open
+file descriptors per process to 1024 (or even less). If you plan to be
+running a fast exit node, this is probably not enough. You should run
+"ulimit -n 8192" (as root) and then su to the user that will run Tor,
+or change your defaults (on Debian, add a line like "toruser hard nofile
+8192" to your /etc/security/limits.conf file).
+</p>
+
+<p>
+12. If you installed Tor via some package or installer, it probably starts
+Tor for you automatically on boot. But if you installed from source,
+you may find the initscripts in contrib/tor.sh or contrib/torctl useful.
 </p>
 
 When you change your Tor configuration, be sure to restart Tor, and
