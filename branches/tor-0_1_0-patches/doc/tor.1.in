@@ -1,4 +1,4 @@
-.TH TOR 1 "May 2005" "TOR"
+.TH TOR 1 "September 2005" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -365,7 +365,7 @@ redirection is to be performed on a given set of addresses by using the
 special target string "pass", which prevents subsequent rules from being
 considered.
 .TP
-\fBShutdownWaitLength\fR\fINUM\fP
+\fBShutdownWaitLength\fR \fINUM\fP
 When we get a SIGINT and we're a server, we begin shutting down: we close
 listeners and start refusing new circuits. After \fBNUM\fP seconds,
 we exit. If we get a second SIGINT, we exit immediately.  (Default:
