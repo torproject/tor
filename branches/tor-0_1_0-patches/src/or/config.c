@@ -140,7 +140,7 @@ static config_var_t config_vars[] = {
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceNodes",  LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceExcludeNodes", LINELIST_S, RendConfigLines, NULL),
-  VAR("IgnoreVersion",       BOOL,     IgnoreVersion,        "0"),
+  OBSOLETE("IgnoreVersion"),
   VAR("KeepalivePeriod",     INTERVAL, KeepalivePeriod,      "5 minutes"),
   VAR("Log",                 LINELIST, Logs,                 NULL),
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
