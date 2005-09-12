@@ -121,7 +121,7 @@ void smartlist_remove(smartlist_t *sl, void *element) {
     }
 }
 
-/** If there are any strings in sl equal to element, remove them.
+/** If there are any strings in sl equal to element, remove and free them.
  * Does not preserve order. */
 void
 smartlist_string_remove(smartlist_t *sl, const char *element)
@@ -131,6 +131,7 @@ smartlist_string_remove(smartlist_t *sl, const char *element)
   tor_assert(element);
   for (i = 0; i < sl->num_used; ++i) {
     if (!strcmp(element, sl->list[i])) {
+      tor_free(sl->list[i]);
       sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
     }
