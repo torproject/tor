@@ -51,6 +51,8 @@ static int body_is_plausible(const char *body, size_t body_len, int purpose);
 static int purpose_is_private(uint8_t purpose);
 static char *http_get_header(const char *headers, const char *which);
 static char *http_get_origin(const char *headers, connection_t *conn);
+static void connection_dir_download_networkstatus_failed(connection_t *conn);
+static void dir_networkstatus_download_failed(smartlist_t *failed);
 
 /********* START VARIABLES **********/
 
@@ -274,7 +276,34 @@ connection_dir_connect_failed(connection_t *conn)
            conn->address);
     directory_get_from_dirserver(conn->purpose, NULL,
                                  0 /* don't retry_if_no_servers */);
+  } else if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
+    log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying",
+           conn->address);
+    connection_dir_download_networkstatus_failed(conn);
   }
+}
+
+/** DOCDOC */
+static void
+connection_dir_download_networkstatus_failed(connection_t *conn)
+{
+    if (!strcmpstart(conn->requested_resource, "all")) {
+      directory_get_from_dirserver(conn->purpose, "all.z",
+                                   0 /* don't retry_if_no_servers */);
+    } else if (!strcmpstart(conn->requested_resource, "fp/")) {
+      smartlist_t *failed = smartlist_create();
+      smartlist_split_string(failed, conn->requested_resource+3, "+", 0, 0);
+      if (smartlist_len(failed)) {
+        char *last = smartlist_get(failed,smartlist_len(failed)-1);
+        size_t last_len = strlen(last);
+        if (!strcmp(last+last_len-2, ".z"))
+          last[last_len-2] = '\0';
+
+        dir_networkstatus_download_failed(failed);
+        SMARTLIST_FOREACH(failed, char *, cp, tor_free(cp));
+      }
+      smartlist_free(failed);
+    }
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
@@ -896,6 +925,7 @@ connection_dir_client_reached_eof(connection_t *conn)
              status_code, reason, conn->address, conn->port,
              conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
+      connection_dir_download_networkstatus_failed(conn);
       return -1;
     }
     if (conn->requested_resource &&
@@ -922,6 +952,9 @@ connection_dir_client_reached_eof(connection_t *conn)
         break;
     }
     if (which) {
+      if (smartlist_len(which)) {
+        dir_networkstatus_download_failed(which);
+      }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
     }
@@ -1449,5 +1482,20 @@ connection_dir_finished_connecting(connection_t *conn)
 
   conn->state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
   return 0;
+}
+
+/** DOCDOC */
+static void
+dir_networkstatus_download_failed(smartlist_t *failed)
+{
+  SMARTLIST_FOREACH(failed, const char *, fp,
+  {
+    char digest[DIGEST_LEN];
+    trusted_dir_server_t *dir;
+    base16_decode(digest, DIGEST_LEN, fp, strlen(fp));
+    dir = router_get_trusteddirserver_by_digest(digest);
+
+    ++dir->n_networkstatus_failures;
+  });
 }
 
