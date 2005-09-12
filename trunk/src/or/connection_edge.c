@@ -173,7 +173,7 @@ connection_edge_destroy(uint16_t circ_id, connection_t *conn)
 int
 connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
 {
-  char payload[5];
+  char payload[9];
   size_t payload_len=1;
   circuit_t *circ;
 
