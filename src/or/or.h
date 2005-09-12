@@ -298,11 +298,13 @@ typedef enum {
 #define DIR_CONN_STATE_CLIENT_SENDING 2
 /** State for connection to directory server: reading HTTP response. */
 #define DIR_CONN_STATE_CLIENT_READING 3
+/** State for connection to directory server: happy and finished. */
+#define DIR_CONN_STATE_CLIENT_FINISHED 4
 /** State for connection at directory server: waiting for HTTP request. */
-#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 4
+#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 5
 /** State for connection at directory server: sending HTTP response. */
-#define DIR_CONN_STATE_SERVER_WRITING 5
-#define _DIR_CONN_STATE_MAX 5
+#define DIR_CONN_STATE_SERVER_WRITING 6
+#define _DIR_CONN_STATE_MAX 6
 
 #define _CONTROL_CONN_STATE_MIN 1
 #define CONTROL_CONN_STATE_OPEN_V0 1
@@ -1697,7 +1699,7 @@ int connection_dir_reached_eof(connection_t *conn);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
-void connection_dir_connect_failed(connection_t *conn);
+void connection_dir_request_failed(connection_t *conn);
 void parse_dir_policy(void);
 void free_dir_policy(void);
 

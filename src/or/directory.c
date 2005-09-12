@@ -263,17 +263,17 @@ directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
                payload, payload_len);
 }
 
-/** Called when we are unable to complete our connection to a
+/** Called when we are unable to complete the client's request to a
  * directory server: Mark the router as down and try again if possible.
  */
 void
-connection_dir_connect_failed(connection_t *conn)
+connection_dir_request_failed(connection_t *conn)
 {
   router_mark_as_down(conn->identity_digest); /* don't try him again */
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR ||
       conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-    log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying",
-           conn->address);
+    log_fn(LOG_INFO, "Giving up on directory server at '%s:%d'; retrying",
+           conn->address, conn->port);
     directory_get_from_dirserver(conn->purpose, NULL,
                                  0 /* don't retry_if_no_servers */);
   } else if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
@@ -375,7 +375,7 @@ directory_initiate_command(const char *address, uint32_t addr,
 
     switch (connection_connect(conn, conn->address, addr, dir_port)) {
       case -1:
-        connection_dir_connect_failed(conn);
+        connection_dir_request_failed(conn); /* retry if we want */
         connection_free(conn);
         return;
       case 1:
@@ -757,8 +757,11 @@ body_is_plausible(const char *body, size_t len, int purpose)
 /** We are a client, and we've finished reading the server's
  * response. Parse and it and act appropriately.
  *
- * Return -1 if an error has occurred, or 0 normally. The caller
- * will take care of marking the connection for close.
+ * If we're happy with the result (we get it and it's useful),
+ * return 0. Otherwise return -1, and the caller should consider
+ * trying the request again.
+ *
+ * The caller will take care of marking the connection for close.
  */
 static int
 connection_dir_client_reached_eof(connection_t *conn)
@@ -873,7 +876,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       log_fn(LOG_INFO,"Empty directory; status %d (\"%s\") Ignoring.",
              status_code, reason);
       tor_free(body); tor_free(headers); tor_free(reason);
-      return 0;
+      return -1;
     }
     if (status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d'. I'll try again soon.",
@@ -883,9 +886,10 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     if (router_load_routerlist_from_directory(body, NULL, !skewed, 0) < 0) {
       log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from '%s:%d'. Ignoring.", conn->address, conn->port);
-    } else {
-      log_fn(LOG_INFO,"updated routers.");
+      tor_free(body); tor_free(headers); tor_free(reason);
+      return -1;
     }
+    log_fn(LOG_INFO,"updated routers.");
     /* do things we've been waiting to do */
     directory_has_arrived(time(NULL), conn->identity_digest);
   }
@@ -980,6 +984,8 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_WARN,"http status %d (\"%s\") reason unexpected (server '%s:%d').", status_code, reason, conn->address, conn->port);
         break;
     }
+    /* return 0 in all cases, since we don't want to mark any
+     * dirservers down just because they don't like us. */
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
@@ -1040,6 +1046,8 @@ connection_dir_reached_eof(connection_t *conn)
   }
 
   retval = connection_dir_client_reached_eof(conn);
+  if (retval == 0) /* success */
+    conn->state = DIR_CONN_STATE_CLIENT_FINISHED;
   connection_mark_for_close(conn);
   return retval;
 }
