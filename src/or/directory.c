@@ -938,7 +938,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_INFO,"eof (status 200) after uploading server descriptor: finished.");
         break;
       case 400:
-        log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver '%s:%d'. Malformed server descriptor?", reason, conn->address, conn->port);
+        log_fn(LOG_WARN,"http status 400 (\"%s\") response from dirserver '%s:%d'. Please correct.", reason, conn->address, conn->port);
         break;
       case 403:
         log_fn(LOG_WARN,"http status 403 (\"%s\") response from dirserver '%s:%d'. Is your clock skewed? Have you mailed us your key fingerprint? Are you using the right key? Are you using a private IP address? See http://tor.eff.org/doc/tor-doc-server.html", reason, conn->address, conn->port);
