@@ -570,7 +570,7 @@ _compare_tor_version_str_ptr(const void **_a, const void **_b)
     return -1;
   if (ca && !cb)
     return 1;
-  /* If neiher parses, compare strings.  Also, the directory server admin needs
+  /* If neither parses, compare strings.  Also, the directory server admin needs
   ** to be smacked upside the head.  But Tor is tolerant and gentle. */
   return strcmp(a,b);
 }
