@@ -229,8 +229,9 @@ $Id$
        half of the "recent" downloaded network-status documents.
        (A network status is "recent" if it was published in the last
        60 minutes.  If there are fewer than 3 such documents, the most
-       recently published 3 are "recent.")
-[and if there are fewer than 3 known at all? -RD]
+       recently published 3 are "recent."  If there are fewer than 3 in all,
+       all are "recent.")
+
 
    Clients store network status documents so long as they are live.
 
