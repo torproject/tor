@@ -420,9 +420,9 @@ smartlist_bsearch(smartlist_t *sl, const void *key,
 }
 
 static int
-_compare_string_ptrs(void **_a, void **_b)
+_compare_string_ptrs(const void **_a, const void **_b)
 {
-  return strcmp((char*)*_a, (char*)*_b);
+  return strcmp((const char*)*_a, (const char*)*_b);
 }
 
 void
