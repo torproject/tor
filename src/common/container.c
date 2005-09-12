@@ -419,6 +419,18 @@ smartlist_bsearch(smartlist_t *sl, const void *key,
   return r ? *r : NULL;
 }
 
+static int
+_compare_string_ptrs(void **_a, void **_b)
+{
+  return strcmp((char*)*_a, (char*)*_b);
+}
+
+void
+smartlist_sort_strings(smartlist_t *sl)
+{
+  smartlist_sort(sl, _compare_string_ptrs);
+}
+
 /* Splay-tree implementation of string-to-void* map
  */
 typedef struct strmap_entry_t {
