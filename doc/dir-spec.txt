@@ -216,7 +216,7 @@ $Id$
    chooses the directory server from which its current information is most
    out-of-date, and retries on failure until it finds a running server.
 
-   When choosing ORs to build circuits, clients proceed as follows;
+   When choosing ORs to build circuits, clients proceed as follows:
      - A server is "listed" if it is listed by more than half of the "live"
        network status documents the clients have downloaded.  (A network
        status is "live" if it is the most recently downloaded network status
@@ -225,10 +225,12 @@ $Id$
        more than D (say, 10) days old.)
      - A server is "valid" is it is listed as valid by more than half of the
        "live" downloaded" network-status document.
-     - A server is "running" if it is listed as running more than half of the
-       "recent" downloaded network-status documents.  (A network status is
-       "recent" if was published in the last 60 minutes.  If there are fewer
-       than 3 such documents, the most recently published 3 are "recent.")
+     - A server is "running" if it is listed as running by more than
+       half of the "recent" downloaded network-status documents.
+       (A network status is "recent" if it was published in the last
+       60 minutes.  If there are fewer than 3 such documents, the most
+       recently published 3 are "recent.")
+[and if there are fewer than 3 known at all? -RD]
 
    Clients store network status documents so long as they are live.
 
