@@ -599,7 +599,7 @@ get_stream(const char *id)
   if (!ok)
     return NULL;
   conn = connection_get_by_global_id(n_id);
-  if (conn->type != CONN_TYPE_AP)
+  if (!conn || conn->type != CONN_TYPE_AP)
     return NULL;
   return conn;
 }
