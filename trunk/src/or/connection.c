@@ -319,10 +319,10 @@ connection_about_to_close_connection(connection_t *conn)
 
   switch (conn->type) {
     case CONN_TYPE_DIR:
-      if (conn->state == DIR_CONN_STATE_CONNECTING) {
-        /* it's a directory server and connecting failed: forget about
-           this router */
-        connection_dir_connect_failed(conn);
+      if (conn->state < DIR_CONN_STATE_CLIENT_FINISHED) {
+        /* It's a directory connection and connecting or fetching
+         * failed: forget about this router, and maybe try again. */
+        connection_dir_request_failed(conn);
       }
       if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
         rend_client_desc_here(conn->rend_query); /* give it a try */
