@@ -1,3 +1,16 @@
+Changes in version 0.1.0.15 - 2005-09-12
+  o Bugfixes on 0.1.0.x:
+    - Reject ports 465 and 587 (spam targets) in default exit policy.
+    - Get rid of IgnoreVersion undocumented config option, and make us
+      only warn, never exit, when we're running an obsolete version.
+    - Don't try to print a null string when your server finds itself to
+      be unreachable and the Address config option is empty.
+    - Fix a minor memory leak in smartlist_string_remove().
+    - We were only allowing ourselves to upload a server descriptor at
+      most every 20 minutes, even if it changed earlier than that.
+    - Clean up log entries that pointed to old URLs.
+
+
 Changes in version 0.1.0.14 - 2005-08-08
   o Bugfixes on 0.1.0.x:
     - Fix the other half of the bug with crypto handshakes.
@@ -20,7 +33,7 @@ Changes in version 0.1.0.13 - 2005-08-04
 
 Changes in version 0.1.0.12 - 2005-07-18
   o New directory servers:
-      - tor26 has changed IP address.
+     - tor26 has changed IP address.
 
   o Bugfixes on 0.1.0.x:
     - Fix a possible double-free in tor_gzip_uncompress().
