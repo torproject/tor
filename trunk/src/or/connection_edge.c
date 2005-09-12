@@ -190,9 +190,8 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   }
 
   payload[0] = reason;
-  if (reason == END_STREAM_REASON_EXITPOLICY) {
-    /* this is safe even for rend circs, because they never fail
-     * because of exitpolicy */
+  if (reason == END_STREAM_REASON_EXITPOLICY &&
+      !connection_edge_is_rendezvous_stream(conn)) {
     set_uint32(payload+1, htonl(conn->addr));
     set_uint32(payload+5, htonl(MAX_DNS_ENTRY_AGE)); /* XXXXfill with a real TTL*/
     payload_len += 8;
