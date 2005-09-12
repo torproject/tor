@@ -755,17 +755,22 @@ typedef struct {
   addr_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
   long uptime; /**< How many seconds the router claims to have been up */
-  uint8_t is_hibernating; /**< Whether the router claims to be hibernating */
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
   char *contact_info; /**< Declared contact info for this router. */
+  unsigned int is_hibernating:1; /**< Whether the router claims to be
+                                  * hibernating */
 
   /* local info */
-  int is_running; /**< As far as we know, is this OR currently running? */
+  unsigned int is_running:1; /**< As far as we know, is this OR currently
+                              * running? */
+  unsigned int is_verified:1; /**< Has a trusted dirserver validated this OR?
+                               *  (For Authdir: Have we validated this OR?)
+                               */
+  /*XXXX Make this get used once we think we do naming right. NM */
+  unsigned int is_named:1; /* Do we believe the nickname that this OR gives us? */
+
   time_t status_set_at; /**< When did we last update is_running? */
-  int is_verified; /**< Has a trusted dirserver validated this OR?
-                    * (For Authdir: Have we validated this OR?)
-                    */
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
@@ -1504,6 +1509,9 @@ connection_t *connection_get_by_identity_digest(const char *digest, int type);
 connection_t *connection_get_by_global_id(uint32_t id);
 
 connection_t *connection_get_by_type(int type);
+connection_t *connection_get_by_type_purpose(int type, int purpose);
+connection_t *connection_get_by_type_addr_port_purpose(int type, uint32_t addr,
+                                                     uint16_t port, int purpose);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state, const char *rendquery);
@@ -2015,8 +2023,9 @@ typedef struct trusted_dir_server_t {
   uint32_t addr;
   uint16_t dir_port;
   char digest[DIGEST_LEN];
-  int is_running;
-  int supports_v1_protocol;
+  unsigned int is_running:1;
+  unsigned int supports_v1_protocol:1;
+  int n_networkstatus_failures;
 } trusted_dir_server_t;
 
 int router_reload_router_list(void);
@@ -2097,6 +2106,8 @@ void clear_trusted_dir_servers(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
 void update_networkstatus_cache_downloads(time_t now);
 void update_networkstatus_client_downloads(time_t now);
+void routers_update_status_from_networkstatus(smartlist_t *routers);
+smartlist_t *router_list_superseded(void);
 
 /********************************* routerparse.c ************************/
 

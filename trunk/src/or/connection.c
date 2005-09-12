@@ -1479,6 +1479,29 @@ connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port)
   return best;
 }
 
+/** Return a connection with give type, address, port, and purpose or NULL if
+ * no such connection exists. */
+connection_t *
+connection_get_by_type_addr_port_purpose(int type, uint32_t addr, uint16_t port,
+                                         int purpose)
+{
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for (i=0;i<n;i++) {
+    conn = carray[i];
+    if (conn->type == type &&
+        conn->addr == addr &&
+        conn->port == port &&
+        conn->purpose == purpose &&
+        !conn->marked_for_close)
+      return conn;
+  }
+  return NULL;
+}
+
 connection_t *
 connection_get_by_identity_digest(const char *digest, int type)
 {
@@ -1598,6 +1621,26 @@ connection_get_by_type_state_rendquery(int type, int state, const char *rendquer
         !conn->marked_for_close &&
         (!state || state == conn->state) &&
         !rend_cmp_service_ids(rendquery, conn->rend_query))
+      return conn;
+  }
+  return NULL;
+}
+
+/** Return an open, non-marked connection of a given type and purpose, or NULL
+ * if no such connection exists. */
+connection_t *
+connection_get_by_type_purpose(int type, int purpose)
+{
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for (i=0;i<n;i++) {
+    conn = carray[i];
+    if (conn->type == type &&
+        !conn->marked_for_close &&
+        (purpose == conn->purpose))
       return conn;
   }
   return NULL;

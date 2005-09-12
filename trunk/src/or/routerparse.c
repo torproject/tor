@@ -849,7 +849,7 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
 
     if (!good_nickname_list) {
       router->is_running = 1; /* start out assuming all dirservers are up */
-      router->is_verified = 1;
+      router->is_verified = router->is_named = 1;
       router->status_set_at = time(NULL);
     }
     smartlist_add(routers, router);
@@ -1245,6 +1245,14 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   return rs;
 }
 
+/** Helper to sort a smartlist of pointers to routerstatus_t */
+static int
+_compare_routerstatus_entries(const void **_a, const void **_b)
+{
+  const routerstatus_t *a = *_a, *b = *_b;
+  return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
+}
+
 /** Given a versioned (v2 or later) network-status object in <b>s</b>, try to
  * parse it and return the result.  Return NULL on failure.  Check the
  * signature of the network status, but do not (yet) check the signing key for
@@ -1387,6 +1395,7 @@ networkstatus_parse_from_string(const char *s)
     if ((rs = routerstatus_parse_entry_from_string(&s, tokens)))
       smartlist_add(ns->entries, rs);
   }
+  smartlist_sort(ns->entries, _compare_routerstatus_entries);
 
   if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
     log_fn(LOG_WARN, "Error tokenizing network-status footer.");

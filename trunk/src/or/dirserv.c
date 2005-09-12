@@ -388,11 +388,11 @@ directory_remove_invalid(void)
       changed = 1;
     } else if (r>0 && !ent->is_verified) {
       log(LOG_INFO, "Router '%s' is now approved.", ent->nickname);
-      ent->is_verified = 1;
+      ent->is_verified = ent->is_named = 1;
       changed = 1;
     } else if (r==0 && ent->is_verified) {
       log(LOG_INFO, "Router '%s' is no longer approved.", ent->nickname);
-      ent->is_verified = 0;
+      ent->is_verified = ent->is_named = 0;
       changed = 1;
     }
   }
@@ -752,6 +752,8 @@ dirserv_set_cached_directory(const char *directory, time_t published,
 /** We've just received a v2 network-status for an authoritative directory
  * with fingerprint <b>fp</b> (hex digest, no spaces), published at
  * <b>published</b>.  Store it so we can serve it to others.
+ *
+ * DOCDOC directory==NULL, published==0
  */
 void
 dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
@@ -764,12 +766,19 @@ dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
   tor_assert(strlen(fp) == HEX_DIGEST_LEN);
 
   if (!(d = strmap_get(cached_v2_networkstatus, fp))) {
+    if (!directory)
+      return;
     d = tor_malloc_zero(sizeof(cached_dir_t));
     strmap_set(cached_v2_networkstatus, fp, d);
   }
 
   tor_assert(d);
-  set_cached_dir(d, tor_strdup(directory), published);
+  if (directory) {
+    set_cached_dir(d, tor_strdup(directory), published);
+  } else {
+    free_cached_dir(d);
+    strmap_remove(cached_v2_networkstatus, fp);
+  }
 }
 
 static cached_dir_t *

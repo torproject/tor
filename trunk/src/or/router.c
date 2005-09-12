@@ -764,10 +764,13 @@ router_rebuild_descriptor(int force)
   config_parse_addr_policy(get_options()->ExitPolicy, &ri->exit_policy, -1);
   options_append_default_exit_policy(&ri->exit_policy);
 
-  if (desc_routerinfo) /* inherit values */
+  if (desc_routerinfo) { /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;
+    ri->is_running = desc_routerinfo->is_running;
+    ri->is_named = desc_routerinfo->is_named;
+  }
   if (authdir_mode(options))
-    ri->is_verified = 1; /* believe in yourself */
+    ri->is_verified = ri->is_named = 1; /* believe in yourself */
   if (options->MyFamily) {
     ri->declared_family = smartlist_create();
     smartlist_split_string(ri->declared_family, options->MyFamily, ",",
