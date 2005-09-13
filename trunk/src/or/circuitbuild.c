@@ -458,6 +458,26 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type, char *payload)
   return 0;
 }
 
+/** We've decided to start our reachability testing. If all
+ * is set, log this to the user. Return 1 if we did, or 0 if
+ * we chose not to log anything. */
+int
+inform_testing_reachability(void)
+{
+  char dirbuf[128];
+  routerinfo_t *me = router_get_my_routerinfo();
+  if (!me)
+    return 0;
+  if (me->dir_port)
+    tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
+                 me->address, me->dir_port);
+  log(LOG_NOTICE,"Now checking whether ORPort %s:%d%s %s reachable... (this may take several minutes)",
+      me->address, me->or_port,
+      me->dir_port ? dirbuf : "",
+      me->dir_port ? "are" : "is");
+  return 1;
+}
+
 extern int has_completed_circuit;
 
 /** This is the backbone function for building circuits.
@@ -531,20 +551,10 @@ circuit_send_next_onion_skin(circuit_t *circ)
       if (!has_completed_circuit) {
         or_options_t *options = get_options();
         has_completed_circuit=1;
-        /* XXX009 Log a count of known routers here */
+        /* FFFF Log a count of known routers here */
         log(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
         if (server_mode(options) && !check_whether_orport_reachable()) {
-          char dirbuf[128];
-          routerinfo_t *me = router_get_my_routerinfo();
-          if (me) {
-            if (me->dir_port)
-              tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
-                           me->address, me->dir_port);
-            log(LOG_NOTICE,"Now checking whether ORPort %s:%d%s %s reachable... (this may take several minutes)",
-                   me->address, me->or_port,
-                   me->dir_port ? dirbuf : "",
-                   me->dir_port ? "are" : "is");
-          }
+          inform_testing_reachability();
         }
       }
       circuit_rep_hist_note_result(circ);
