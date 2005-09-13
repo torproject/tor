@@ -170,7 +170,8 @@ binary-arch: build install
 #	dh_installcron
 	dh_installman
 	dh_link
-	#dh_strip
+	# Change this for debhelper compatibility level 5 or later!
+	dh_strip --dbg-package=tor
 	dh_compress
 	dh_fixperms
 	dh_installdeb

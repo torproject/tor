@@ -1,3 +1,11 @@
+tor (0.1.0.XXXX) UNRELEASED; urgency=low
+
+  * Ship debugging information in a separate package now, instead
+    of simply not stripping tor.  This is still useful while tor is
+    young.  Ideally it would go away some time.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 13 Sep 2005 18:45:28 +0200
+
 tor (0.1.0.14-1) unstable; urgency=high
 
   * New upstream version - changes, among others:
