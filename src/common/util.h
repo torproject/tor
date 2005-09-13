@@ -121,6 +121,16 @@ int check_private_dir(const char *dirname, cpd_check_t check);
 int write_str_to_file(const char *fname, const char *str, int bin);
 int write_bytes_to_file(const char *fname, const char *str, size_t len,
                         int bin);
+typedef struct sized_chunk_t {
+  const char *bytes;
+  size_t len;
+} sized_chunk_t;
+struct smartlist_t;
+int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
+                         int bin);
+int append_bytes_to_file(const char *fname, const char *str, size_t len,
+                         int bin);
+
 char *read_file_to_str(const char *filename, int bin);
 char *parse_line_from_str(char *line, char **key_out, char **value_out);
 char *expand_filename(const char *filename);
