@@ -42,7 +42,8 @@ struct smartlist_t {
 
 /** Allocate and return an empty smartlist.
  */
-smartlist_t *smartlist_create() {
+smartlist_t *
+smartlist_create() {
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
   sl->num_used = 0;
   sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
@@ -53,7 +54,8 @@ smartlist_t *smartlist_create() {
 /** Deallocate a smartlist.  Does not release storage associated with the
  * list's elements.
  */
-void smartlist_free(smartlist_t *sl) {
+void
+smartlist_free(smartlist_t *sl) {
   free(sl->list);
   free(sl);
 }
@@ -75,7 +77,8 @@ void smartlist_set_capacity(smartlist_t *sl, int n) {
 
 /** Remove all elements from the list.
  */
-void smartlist_clear(smartlist_t *sl) {
+void
+smartlist_clear(smartlist_t *sl) {
   sl->num_used = 0;
 }
 
@@ -83,14 +86,16 @@ void smartlist_clear(smartlist_t *sl) {
  * current size). Remove the last smartlist_len(sl)-len elements from the
  * list.
  */
-void smartlist_truncate(smartlist_t *sl, int len)
+void
+smartlist_truncate(smartlist_t *sl, int len)
 {
   tor_assert(len <= sl->num_used);
   sl->num_used = len;
 }
 
 /** Append element to the end of the list. */
-void smartlist_add(smartlist_t *sl, void *element) {
+void
+smartlist_add(smartlist_t *sl, void *element) {
   if (sl->num_used >= sl->capacity) {
     int higher = sl->capacity * 2;
     tor_assert(higher > sl->capacity); /* detect overflow */
@@ -101,7 +106,8 @@ void smartlist_add(smartlist_t *sl, void *element) {
 }
 
 /** Append each element from S2 to the end of S1. */
-void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
+void
+smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
 {
   SMARTLIST_FOREACH(s2, void *, element, smartlist_add(sl, element));
 }
@@ -110,7 +116,9 @@ void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
  * the order of any elements before E, but elements after E can be
  * rearranged.
  */
-void smartlist_remove(smartlist_t *sl, void *element) {
+void
+smartlist_remove(smartlist_t *sl, void *element)
+{
   int i;
   if (element == NULL)
     return;
@@ -140,7 +148,9 @@ smartlist_string_remove(smartlist_t *sl, const char *element)
 
 /** Return true iff some element E of sl has E==element.
  */
-int smartlist_isin(const smartlist_t *sl, void *element) {
+int
+smartlist_isin(const smartlist_t *sl, void *element)
+{
   int i;
   for (i=0; i < sl->num_used; i++)
     if (sl->list[i] == element)
@@ -148,7 +158,12 @@ int smartlist_isin(const smartlist_t *sl, void *element) {
   return 0;
 }
 
-int smartlist_string_isin(const smartlist_t *sl, const char *element) {
+/** Return true iff <b>sl</b> has some element E such that
+ * !strcmp(E,<b>element</b>)
+ */
+int
+smartlist_string_isin(const smartlist_t *sl, const char *element)
+{
   int i;
   if (!sl) return 0;
   for (i=0; i < sl->num_used; i++)
@@ -157,7 +172,12 @@ int smartlist_string_isin(const smartlist_t *sl, const char *element) {
   return 0;
 }
 
-int smartlist_string_num_isin(const smartlist_t *sl, int num) {
+/** Return true iff <b>sl</b> has some element E such that E is equal
+ * to the decimal encoding of <b>num</b>.
+ */
+int
+smartlist_string_num_isin(const smartlist_t *sl, int num)
+{
   char buf[16];
   tor_snprintf(buf,sizeof(buf),"%d", num);
   return smartlist_string_isin(sl, buf);
@@ -165,7 +185,9 @@ int smartlist_string_num_isin(const smartlist_t *sl, int num) {
 
 /** Return true iff some element E of sl2 has smartlist_isin(sl1,E).
  */
-int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
+int
+smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2)
+{
   int i;
   for (i=0; i < sl2->num_used; i++)
     if (smartlist_isin(sl1, sl2->list[i]))
@@ -176,7 +198,9 @@ int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
 /** Remove every element E of sl1 such that !smartlist_isin(sl2,E).
  * Does not preserve the order of sl1.
  */
-void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2) {
+void
+smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2)
+{
   int i;
   for (i=0; i < sl1->num_used; i++)
     if (!smartlist_isin(sl2, sl1->list[i])) {
@@ -188,7 +212,9 @@ void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2) {
 /** Remove every element E of sl1 such that smartlist_isin(sl2,E).
  * Does not preserve the order of sl1.
  */
-void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
+void
+smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2)
+{
   int i;
   for (i=0; i < sl2->num_used; i++)
     smartlist_remove(sl1, sl2->list[i]);
@@ -197,7 +223,8 @@ void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
 #ifndef FAST_SMARTLIST
 /** Return the <b>idx</b>th element of sl.
  */
-void *smartlist_get(const smartlist_t *sl, int idx)
+void *
+smartlist_get(const smartlist_t *sl, int idx)
 {
   tor_assert(sl);
   tor_assert(idx>=0);
@@ -206,7 +233,8 @@ void *smartlist_get(const smartlist_t *sl, int idx)
 }
 /** Change the value of the <b>idx</b>th element of sl to <b>val</b>.
  */
-void smartlist_set(smartlist_t *sl, int idx, void *val)
+void
+smartlist_set(smartlist_t *sl, int idx, void *val)
 {
   tor_assert(sl);
   tor_assert(idx>=0);
@@ -215,7 +243,8 @@ void smartlist_set(smartlist_t *sl, int idx, void *val)
 }
 /** Return the number of items in sl.
  */
-int smartlist_len(const smartlist_t *sl)
+int
+smartlist_len(const smartlist_t *sl)
 {
   return sl->num_used;
 }
@@ -225,7 +254,8 @@ int smartlist_len(const smartlist_t *sl)
  * element, swap the last element of sl into the <b>idx</b>th space.
  * Return the old value of the <b>idx</b>th element.
  */
-void smartlist_del(smartlist_t *sl, int idx)
+void
+smartlist_del(smartlist_t *sl, int idx)
 {
   tor_assert(sl);
   tor_assert(idx>=0);
@@ -236,7 +266,8 @@ void smartlist_del(smartlist_t *sl, int idx)
  * moving all subsequent elements back one space. Return the old value
  * of the <b>idx</b>th element.
  */
-void smartlist_del_keeporder(smartlist_t *sl, int idx)
+void
+smartlist_del_keeporder(smartlist_t *sl, int idx)
 {
   tor_assert(sl);
   tor_assert(idx>=0);
@@ -249,7 +280,8 @@ void smartlist_del_keeporder(smartlist_t *sl, int idx)
  * <b>sl</b>, moving all items previously at <b>idx</b> or later
  * forward one space.
  */
-void smartlist_insert(smartlist_t *sl, int idx, void *val)
+void
+smartlist_insert(smartlist_t *sl, int idx, void *val)
 {
   tor_assert(sl);
   tor_assert(idx>=0);
@@ -280,8 +312,9 @@ void smartlist_insert(smartlist_t *sl, int idx, void *val)
  * length 0.  If max>0, divide the string into no more than <b>max</b>
  * pieces.  If <b>sep</b> is NULL, split on any sequence of horizontal space.
  */
-int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
-                           int flags, int max)
+int
+smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
+                       int flags, int max)
 {
   const char *cp, *end, *next;
   int n = 0;
@@ -339,8 +372,9 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
  * the returned string. Requires that every element of <b>sl</b> is
  * NUL-terminated string.
  */
-char *smartlist_join_strings(smartlist_t *sl, const char *join,
-                             int terminate, size_t *len_out)
+char *
+smartlist_join_strings(smartlist_t *sl, const char *join,
+                       int terminate, size_t *len_out)
 {
   return smartlist_join_strings2(sl,join,strlen(join),terminate,len_out);
 }
@@ -350,8 +384,9 @@ char *smartlist_join_strings(smartlist_t *sl, const char *join,
  * at <b>join</b>.  (Useful for generating a sequence of NUL-terminated
  * strings.)
  */
-char *smartlist_join_strings2(smartlist_t *sl, const char *join,
-                              size_t join_len, int terminate, size_t *len_out)
+char *
+smartlist_join_strings2(smartlist_t *sl, const char *join,
+                        size_t join_len, int terminate, size_t *len_out)
 {
   int i;
   size_t n = 0;
@@ -419,19 +454,22 @@ smartlist_bsearch(smartlist_t *sl, const void *key,
   return r ? *r : NULL;
 }
 
+/** Helper: compare two const char **s. */
 static int
 _compare_string_ptrs(const void **_a, const void **_b)
 {
   return strcmp((const char*)*_a, (const char*)*_b);
 }
 
+/** Sort a smartlist <b>sl</b> containing strings into lexically ascending
+ * order. */
 void
 smartlist_sort_strings(smartlist_t *sl)
 {
   smartlist_sort(sl, _compare_string_ptrs);
 }
 
-/* Splay-tree implementation of string-to-void* map
+/** Splay-tree implementation of string-to-void* map
  */
 typedef struct strmap_entry_t {
   SPLAY_ENTRY(strmap_entry_t) node;
@@ -443,8 +481,10 @@ struct strmap_t {
   SPLAY_HEAD(strmap_tree, strmap_entry_t) head;
 };
 
-static int compare_strmap_entries(strmap_entry_t *a,
-                                  strmap_entry_t *b)
+/** Helper: compare strmap_entry_t objects by key value. */
+static int
+compare_strmap_entries(strmap_entry_t *a,
+                       strmap_entry_t *b)
 {
   return strcmp(a->key, b->key);
 }
@@ -454,7 +494,8 @@ SPLAY_GENERATE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
 
 /** Create a new empty map from strings to void*'s.
  */
-strmap_t* strmap_new(void)
+strmap_t *
+strmap_new(void)
 {
   strmap_t *result;
   result = tor_malloc(sizeof(strmap_t));
@@ -467,7 +508,8 @@ strmap_t* strmap_new(void)
  *
  * This function makes a copy of <b>key</b> if necessary, but not of <b>val</b>.
  */
-void* strmap_set(strmap_t *map, const char *key, void *val)
+void *
+strmap_set(strmap_t *map, const char *key, void *val)
 {
   strmap_entry_t *resolve;
   strmap_entry_t search;
@@ -493,7 +535,7 @@ void* strmap_set(strmap_t *map, const char *key, void *val)
 /** Return the current value associated with <b>key</b>, or NULL if no
  * value is set.
  */
-void* strmap_get(strmap_t *map, const char *key)
+void *strmap_get(strmap_t *map, const char *key)
 {
   strmap_entry_t *resolve;
   strmap_entry_t search;
@@ -514,7 +556,8 @@ void* strmap_get(strmap_t *map, const char *key)
  *
  * Note: you must free any storage associated with the returned value.
  */
-void* strmap_remove(strmap_t *map, const char *key)
+void *
+strmap_remove(strmap_t *map, const char *key)
 {
   strmap_entry_t *resolve;
   strmap_entry_t search;
@@ -535,7 +578,8 @@ void* strmap_remove(strmap_t *map, const char *key)
 }
 
 /** Same as strmap_set, but first converts <b>key</b> to lowercase. */
-void* strmap_set_lc(strmap_t *map, const char *key, void *val)
+void *
+strmap_set_lc(strmap_t *map, const char *key, void *val)
 {
   /* We could be a little faster by using strcasecmp instead, and a separate
    * type, but I don't think it matters. */
@@ -547,7 +591,8 @@ void* strmap_set_lc(strmap_t *map, const char *key, void *val)
   return v;
 }
 /** Same as strmap_get, but first converts <b>key</b> to lowercase. */
-void* strmap_get_lc(strmap_t *map, const char *key)
+void *
+strmap_get_lc(strmap_t *map, const char *key)
 {
   void *v;
   char *lc_key = tor_strdup(key);
@@ -557,7 +602,8 @@ void* strmap_get_lc(strmap_t *map, const char *key)
   return v;
 }
 /** Same as strmap_remove, but first converts <b>key</b> to lowercase */
-void* strmap_remove_lc(strmap_t *map, const char *key)
+void *
+strmap_remove_lc(strmap_t *map, const char *key)
 {
   void *v;
   char *lc_key = tor_strdup(key);
@@ -594,9 +640,10 @@ void* strmap_remove_lc(strmap_t *map, const char *key)
  *   strmap_foreach(map, upcase_and_remove_empty_vals, NULL);
  * \endcode
  */
-void strmap_foreach(strmap_t *map,
-                    void* (*fn)(const char *key, void *val, void *data),
-                    void *data)
+void
+strmap_foreach(strmap_t *map,
+               void* (*fn)(const char *key, void *val, void *data),
+               void *data)
 {
   strmap_entry_t *ptr, *next;
   tor_assert(map);
@@ -639,14 +686,16 @@ void strmap_foreach(strmap_t *map,
  * \endcode
  *
  */
-strmap_iter_t *strmap_iter_init(strmap_t *map)
+strmap_iter_t *
+strmap_iter_init(strmap_t *map)
 {
   tor_assert(map);
   return SPLAY_MIN(strmap_tree, &map->head);
 }
 /** Advance the iterator <b>iter</b> for map a single step to the next entry.
  */
-strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
+strmap_iter_t *
+strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 {
   tor_assert(map);
   tor_assert(iter);
@@ -655,7 +704,8 @@ strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 /** Advance the iterator <b>iter</b> a single step to the next entry, removing
  * the current entry.
  */
-strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
+strmap_iter_t *
+strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
 {
   strmap_iter_t *next;
   tor_assert(map);
@@ -668,7 +718,8 @@ strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
 }
 /** Set *keyp and *valp to the current entry pointed to by iter.
  */
-void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
+void
+strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
 {
   tor_assert(iter);
   tor_assert(keyp);
@@ -678,7 +729,8 @@ void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
 }
 /** Return true iff iter has advanced past the last entry of map.
  */
-int strmap_iter_done(strmap_iter_t *iter)
+int
+strmap_iter_done(strmap_iter_t *iter)
 {
   return iter == NULL;
 }
@@ -701,7 +753,10 @@ strmap_free(strmap_t *map, void (*free_val)(void*))
   tor_free(map);
 }
 
-int strmap_isempty(strmap_t *map)
+/* Return true iff <b>map</b> has no entries.
+ */
+int
+strmap_isempty(strmap_t *map)
 {
   return SPLAY_EMPTY(&map->head);
 }
