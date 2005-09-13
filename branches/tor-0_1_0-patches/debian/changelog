@@ -3,8 +3,12 @@ tor (0.1.0.XXXX) UNRELEASED; urgency=low
   * Ship debugging information in a separate package now, instead
     of simply not stripping tor.  This is still useful while tor is
     young.  Ideally it would go away some time.
+  * Add LSB comments to init script as suggested by Petter Reinholdtsen
+    on the debian-devel list:
+    - http://lists.debian.org/debian-devel/2005/08/msg01172.html
+    - http://wiki.debian.net/?LSBInitScripts
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 13 Sep 2005 18:45:28 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 13 Sep 2005 18:58:25 +0200
 
 tor (0.1.0.14-1) unstable; urgency=high
 
