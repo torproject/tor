@@ -413,10 +413,10 @@ accounting_run_housekeeping(time_t now)
   }
   if (time_to_record_bandwidth_usage(now)) {
     if (accounting_record_bandwidth_usage(now)) {
-      log_fn(LOG_ERR, "Couldn't record bandwidth usage; exiting.");
-      /* XXX this can fail when you're out of fd's, causing a crash.
-       * Perhaps the better answer is to hold the file open all the
-       * time? */
+      log_fn(LOG_ERR, "Couldn't record bandwidth usage to disk; exiting.");
+      /* This can fail when we're out of fd's, causing a crash.
+       * The current answer is to reserve 32 more than we need, in
+       * set_max_file_descriptors(). */
       exit(1);
     }
   }
