@@ -16,15 +16,16 @@ const char routerlist_c_id[] = "$Id$";
 
 /****************************************************************************/
 
+/** Global list of a trusted_dir_server_t object for each trusted directory
+ * server. */
 static smartlist_t *trusted_dir_servers = NULL;
 
 /* static function prototypes */
-static routerinfo_t *
-router_pick_directory_server_impl(int requireother, int fascistfirewall,
-                                  int for_v2_directory);
-static trusted_dir_server_t *
-router_pick_trusteddirserver_impl(int need_v1_support,
-                                  int requireother, int fascistfirewall);
+static routerinfo_t *router_pick_directory_server_impl(int requireother,
+                                                       int fascistfirewall,
+                                                       int for_v2_directory);
+static trusted_dir_server_t *router_pick_trusteddirserver_impl(
+                int need_v1_support, int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
@@ -44,7 +45,7 @@ static routerlist_t *routerlist = NULL;
 extern int has_fetched_directory; /**< from main.c */
 
 /** Global list of all of the current network_status documents that we know
- * about. */
+ * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
 
 /**
@@ -79,7 +80,8 @@ router_reload_router_list(void)
   return 0;
 }
 
-/** DOCDOC */
+/** Repopulate our list of network_status_t objects from the list cached on
+ * disk.  Return 0 on success, -1 on failure. */
 int
 router_reload_networkstatus(void)
 {
@@ -292,8 +294,6 @@ router_get_trusteddirserver_by_digest(const char *digest)
  * trusted dirservers and <b>retry_if_no_servers</b> is non-zero,
  * set them all as running again, and try again.
  * Other args are as in router_pick_trusteddirserver_impl().
- *
- * DOCDOC need_v1_support
  */
 trusted_dir_server_t *
 router_pick_trusteddirserver(int need_v1_support,
@@ -318,16 +318,15 @@ router_pick_trusteddirserver(int need_v1_support,
  * routerlist.
  * If <b>fascistfirewall</b> and we're not using a proxy,
  * make sure the port we pick is allowed by options-\>firewallports.
- * If <b>requireother</b>, it cannot be us.
- *
- * DOCDOC need_v1_support, for_v2_directory
+ * If <b>requireother</b>, it cannot be us.  If <b>for_v2_directory</b>,
+ * choose a directory server new enough to support the v2 directory
+ * functionality.
  */
 static routerinfo_t *
 router_pick_directory_server_impl(int requireother, int fascistfirewall,
                                   int for_v2_directory)
 {
-  int i;
-  routerinfo_t *router;
+  routerinfo_t *result;
   smartlist_t *sl;
 
   if (!routerlist)
@@ -338,8 +337,8 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
 
   /* Find all the running dirservers we know about. */
   sl = smartlist_create();
-  for (i=0;i < smartlist_len(routerlist->routers); i++) {
-    router = smartlist_get(routerlist->routers, i);
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
+  {
     if (!router->is_running || !router->dir_port || !router->is_verified)
       continue;
     if (requireother && router_is_me(router))
@@ -354,17 +353,18 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
           router_digest_is_trusted_dir(router->identity_digest)))
       continue;
     smartlist_add(sl, router);
-  }
+  });
 
-  router = smartlist_choose(sl);
+  result = smartlist_choose(sl);
   smartlist_free(sl);
-  return router;
+  return result;
 }
 
 /** Choose randomly from among the trusted dirservers that are up.
  * If <b>fascistfirewall</b> and we're not using a proxy,
  * make sure the port we pick is allowed by options-\>firewallports.
- * If <b>requireother</b>, it cannot be us.
+ * If <b>requireother</b>, it cannot be us.  If <b>need_v1_support</b>, choose
+ * a trusted authority for the v1 directory system.
  */
 static trusted_dir_server_t *
 router_pick_trusteddirserver_impl(int need_v1_support,
@@ -555,14 +555,11 @@ static void
 router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
                                         int need_uptime, int need_capacity)
 {
-  routerinfo_t *router;
-  int i;
-
   if (!routerlist)
     return;
 
-  for (i=0;i<smartlist_len(routerlist->routers);i++) {
-    router = smartlist_get(routerlist->routers, i);
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
+  {
     if (router->is_running &&
         (router->is_verified ||
         (allow_unverified &&
@@ -572,7 +569,7 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
        */
       smartlist_add(sl, router);
     }
-  }
+  });
 }
 
 /** Look through the routerlist until we find a router that has my key.
@@ -580,17 +577,14 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
 routerinfo_t *
 routerlist_find_my_routerinfo(void)
 {
-  routerinfo_t *router;
-  int i;
-
   if (!routerlist)
     return NULL;
 
-  for (i=0;i<smartlist_len(routerlist->routers);i++) {
-    router = smartlist_get(routerlist->routers, i);
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
+  {
     if (router_is_me(router))
       return router;
-  }
+  });
   return NULL;
 }
 
@@ -599,9 +593,8 @@ routerlist_find_my_routerinfo(void)
  * isn't a good one.
  */
 routerinfo_t *
-router_find_exact_exit_enclave(const char *address, uint16_t port) {
-  int i;
-  routerinfo_t *router;
+router_find_exact_exit_enclave(const char *address, uint16_t port)
+{
   uint32_t addr;
   struct in_addr in;
 
@@ -609,8 +602,8 @@ router_find_exact_exit_enclave(const char *address, uint16_t port) {
     return NULL; /* it's not an IP already */
   addr = ntohl(in.s_addr);
 
-  for (i=0;i < smartlist_len(routerlist->routers); i++) {
-    router = smartlist_get(routerlist->routers, i);
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
+  {
     log_fn(LOG_DEBUG,"Considering %s: %d, %u==%u, %d.",
            router->nickname,
            router->is_running,
@@ -621,7 +614,7 @@ router_find_exact_exit_enclave(const char *address, uint16_t port) {
         router_compare_addr_to_addr_policy(addr, port, router->exit_policy) ==
           ADDR_POLICY_ACCEPTED)
       return router;
-  }
+  });
   return NULL;
 }
 
@@ -800,8 +793,7 @@ router_nickname_matches(routerinfo_t *router, const char *nickname)
 routerinfo_t *
 router_get_by_nickname(const char *nickname)
 {
-  int i, maybedigest;
-  routerinfo_t *router;
+  int maybedigest;
   char digest[DIGEST_LEN];
 
   tor_assert(nickname);
@@ -816,13 +808,13 @@ router_get_by_nickname(const char *nickname)
   maybedigest = (strlen(nickname) == HEX_DIGEST_LEN) &&
     (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
 
-  for (i=0;i<smartlist_len(routerlist->routers);i++) {
-    router = smartlist_get(routerlist->routers, i);
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
+  {
     if (0 == strcasecmp(router->nickname, nickname) ||
         (maybedigest && 0 == memcmp(digest, router->identity_digest,
                                     DIGEST_LEN)))
       return router;
-  }
+  });
 
   return NULL;
 }
@@ -863,18 +855,15 @@ router_get_by_hexdigest(const char *hexdigest)
 routerinfo_t *
 router_get_by_digest(const char *digest)
 {
-  int i;
-  routerinfo_t *router;
-
   tor_assert(digest);
 
   if (!routerlist) return NULL;
 
-  for (i=0;i<smartlist_len(routerlist->routers);i++) {
-    router = smartlist_get(routerlist->routers, i);
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t*, router,
+  {
     if (0 == memcmp(router->identity_digest, digest, DIGEST_LEN))
       return router;
-  }
+  });
 
   return NULL;
 }
@@ -1297,7 +1286,8 @@ router_load_routerlist_from_directory(const char *s,
   return 0;
 }
 
-/**DOCDOC */
+/** Helper: return a newly allocated string containing the name of the filename
+ * where we plan to cache <b>ns</b>. */
 static char *
 networkstatus_get_cache_filename(const networkstatus_t *ns)
 {
@@ -1310,7 +1300,9 @@ networkstatus_get_cache_filename(const networkstatus_t *ns)
   return fn;
 
 }
-/** DOCDOC */
+
+/** Helper for smartlist_sort: Compare two networkstatus objects by
+ * publication date. */
 static int
 _compare_networkstatus_published_on(const void **_a, const void **_b)
 {
@@ -1323,11 +1315,25 @@ _compare_networkstatus_published_on(const void **_a, const void **_b)
     return 0;
 }
 
-/** How far in the future do we allow a network-status to get? (seconds) */
+/** How far in the future do we allow a network-status to get before removing
+ * it? (seconds) */
 #define NETWORKSTATUS_ALLOW_SKEW (48*60*60)
-/** DOCDOC returns 0 on no problems, -1 on problems.
- * requested fingerprints must be upcased.
- * removes and frees items from requested_fingerpritns
+/** Given a string <b>s</b> containing a network status that we received at
+ * <b>arrived_at</b> from <b>source</b>, try to parse it, see if we want to
+ * store it, and put it into our cache is necessary.
+ *
+ * If <b>source</b> is NS_FROM_DIR or NS_FROM_CACHE, do not replace our
+ * own networkstatus_t (if we're a directory server).
+ *
+ * If <b>source</b> is NS_FROM_CACHE, do not write our networkstatus_t to the
+ * cache.
+ *
+ * If <b>requested_fingerprints</b> is provided, it must contain a list of
+ * uppercased identity fingerprints.  Do not update any networkstatus whose
+ * fingerprint is not on the list; after updating a networkstatus, remove its
+ * fingerprint from the list.
+ *
+ * Return 0 on success, -1 on failure.
  */
 int
 router_set_networkstatus(const char *s, time_t arrived_at,
@@ -1430,8 +1436,10 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   return 0;
 }
 
+/** How old do we allow a network-status to get before removing it completely? */
 #define MAX_NETWORKSTATUS_AGE (10*24*60*60)
-/** DOCDOC */
+/** Remove all very-old network_status_t objects from memory and from the
+ * disk cache. */
 void
 networkstatus_list_clean(time_t now)
 {
@@ -1483,7 +1491,11 @@ networkstatus_find_entry(networkstatus_t *ns, const char *digest)
 /* XXXX These should be configurable, perhaps? NM */
 #define AUTHORITY_NS_CACHE_INTERVAL 10*60
 #define NONAUTHORITY_NS_CACHE_INTERVAL 15*60
-/* DOCDOC*/
+/** We are a directory server, and so cache network_status documents.
+ * Initiate downloads as needed to update them.  For authorities, this means
+ * asking each trusted directory for its network-status.  For caches, this means
+ * asking a random authority for all network-statuses.
+ */
 void
 update_networkstatus_cache_downloads(time_t now)
 {
@@ -1492,6 +1504,7 @@ update_networkstatus_cache_downloads(time_t now)
   int interval =
     authority ? AUTHORITY_NS_CACHE_INTERVAL : NONAUTHORITY_NS_CACHE_INTERVAL;
 
+  /*XXXXX NM we should retry on failure. */
   if (last_downloaded + interval >= now)
     return;
   if (!trusted_dir_servers)
@@ -1508,8 +1521,10 @@ update_networkstatus_cache_downloads(time_t now)
            continue;
          if (connection_get_by_type_addr_port_purpose(
                 CONN_TYPE_DIR, ds->addr, ds->dir_port,
-                DIR_PURPOSE_FETCH_NETWORKSTATUS))
+                DIR_PURPOSE_FETCH_NETWORKSTATUS)) {
+           /* We are already fetching this one. */
            continue;
+         }
          strlcpy(resource, "fp/", sizeof(resource));
          base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
          strlcat(resource, ".z", sizeof(resource));
@@ -1517,6 +1532,7 @@ update_networkstatus_cache_downloads(time_t now)
        });
   } else {
     /* A non-authority cache launches one connection to a random authority. */
+    /* (Check whether we're currently fetching network-status objects.) */
     if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
                                         DIR_PURPOSE_FETCH_NETWORKSTATUS))
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,"all.z",1);
@@ -1530,7 +1546,10 @@ update_networkstatus_cache_downloads(time_t now)
  * before downloading the next in sequence? */
 #define NETWORKSTATUS_CLIENT_DL_INTERVAL (30*60)
 
-/** DOCDOC */
+/** We are not a directory cache or authority.  Update our network-status list
+ * by launching a new directory fetch for enough network-status documents "as
+ * necessary".  See function comments for implementation details.
+ */
 void
 update_networkstatus_client_downloads(time_t now)
 {
@@ -1562,7 +1581,7 @@ update_networkstatus_client_downloads(time_t now)
        if (ns->published_on > now-NETWORKSTATUS_MAX_VALIDITY)
          ++n_live;
        if (!most_recent || ns->received_on > most_recent_received) {
-         most_recent_idx = ds_sl_idx; /* magic variable from FOREACH*/
+         most_recent_idx = ds_sl_idx; /* magic variable from FOREACH */
          most_recent = ds;
          most_recent_received = ns->received_on;
        }
@@ -1710,20 +1729,18 @@ int
 router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime)
 {
-  int i;
-  routerinfo_t *router;
   addr_policy_result_t r;
   if (!routerlist) return 1;
 
-  for (i=0;i<smartlist_len(routerlist->routers);i++) {
-    router = smartlist_get(routerlist->routers, i);
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
+  {
     if (router->is_running &&
         !router_is_unreliable(router, need_uptime, 0)) {
       r = router_compare_addr_to_addr_policy(addr, port, router->exit_policy);
       if (r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED)
         return 0; /* this one could be ok. good enough. */
     }
-  }
+  });
   return 1; /* all will reject. */
 }
 
@@ -2038,7 +2055,7 @@ add_trusted_dir_server(const char *address, uint16_t port, const char *digest,
     a = ntohl(a);
   }
 
-  ent = tor_malloc(sizeof(trusted_dir_server_t));
+  ent = tor_malloc_zero(sizeof(trusted_dir_server_t));
   ent->address = hostname;
   ent->addr = a;
   ent->dir_port = port;
@@ -2061,6 +2078,7 @@ clear_trusted_dir_servers(void)
   }
 }
 
+/** Return the network status with a given identity digest. */
 networkstatus_t *
 networkstatus_get_by_digest(const char *digest)
 {
@@ -2072,8 +2090,15 @@ networkstatus_get_by_digest(const char *digest)
   return NULL;
 }
 
+/** Allow any network-status newer than this to influence our view of who's
+ * running. */
 #define DEFAULT_RUNNING_INTERVAL 60*60
+/** If possible, always allow at least this many network-statuses to influence
+ * our view of who's running. */
 #define MIN_TO_INFLUENCE_RUNNING 3
+/** Given a list <b>routers</b> of routerinfo_t *, update each routers's
+ * is_named, is_verified, and is_running fields according to our current
+ * networkstatus_t documents. */
 void
 routers_update_status_from_networkstatus(smartlist_t *routers)
 {
@@ -2151,32 +2176,55 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
   });
 }
 
-/** Return new list of ID digests for superseded routers.
- * A router is superseded if any network-status has a router with a different
- * digest published more recently.
+/** Return new list of ID digests for superseded routers.  A router is
+ * superseded if any network-status has a router with a different digest
+ * published more recently, or it it is listed in the network-status but not
+ * in the router list.
  */
 smartlist_t *
 router_list_superseded(void)
 {
   smartlist_t *superseded = smartlist_create();
+  strmap_t *most_recent = NULL;
+  char fp[HEX_DIGEST_LEN+1];
+  routerstatus_t *rs_old;
 
   if (!routerlist || !networkstatus_list)
     return superseded;
 
-  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+  /* Build a map from fingerprint to most recent routerstatus_t. If this
+   * becomes inefficient, we can build most_recent lazily when a new
+   * networkstatus_t shows up.*/
+  most_recent = strmap_new();
+  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
   {
-    SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+    SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
     {
-      routerstatus_t *rs = networkstatus_find_entry(ns, ri->identity_digest);
-      if (memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)
-          && rs->published_on > ri->published_on) {
-        char *d = tor_malloc(DIGEST_LEN);
-        memcpy(d, ri->identity_digest, DIGEST_LEN);
-        smartlist_add(superseded, d);
-        break;
-      }
+      base16_encode(fp, sizeof(fp), rs->identity_digest, DIGEST_LEN);
+      rs_old = strmap_get(most_recent, fp);
+      if (!rs_old || rs_old->published_on < rs->published_on)
+        strmap_set(most_recent, fp, rs);
     });
   });
+
+  /* Compare each router to the most recent routerstatus. */
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+  {
+    routerstatus_t *rs;
+    base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
+    rs = strmap_get(most_recent, fp);
+    if (!rs)
+      continue;
+    if (memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)
+        && rs->published_on > ri->published_on) {
+      char *d = tor_malloc(DIGEST_LEN);
+      memcpy(d, ri->identity_digest, DIGEST_LEN);
+      smartlist_add(superseded, d);
+      break;
+    }
+  });
+  strmap_free(most_recent, NULL);
+
   return superseded;
 }
 
