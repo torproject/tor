@@ -110,7 +110,7 @@ $Id$
 
   Tor behaves as though it had just read each of the key-value pairs
   from its configuration file.  Keywords with no corresponding values have
-  their configuration values reset to 0 or "" (use RESETCONF if you want
+  their configuration values reset to 0 or NULL (use RESETCONF if you want
   to set it back to its default).  SETCONF is all-or-nothing: if there
   is an error in any of the configuration settings, Tor sets none of them.
 
