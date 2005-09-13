@@ -1290,7 +1290,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
            smartlist_add(descs_out, router_get_my_routerinfo());
          } else {
            routerinfo_t *ri = router_get_by_digest(d);
-           if (d)
+           if (ri)
              smartlist_add(descs_out,ri);
          }
        });
