@@ -884,10 +884,10 @@ write_str_to_file(const char *fname, const char *str, int bin)
   return write_bytes_to_file(fname, str, strlen(str), bin);
 }
 
-/** As write_str_to_file, but does not assume a NUL-terminated *
- * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
-int write_bytes_to_file(const char *fname, const char *str, size_t len,
-                        int bin)
+/* DOCDOC */
+static int
+write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
+                          int open_flags)
 {
   size_t tempname_len;
   char *tempname;
@@ -896,35 +896,83 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
   tempname_len = strlen(fname)+16;
   tor_assert(tempname_len > strlen(fname)); /*check for overflow*/
   tempname = tor_malloc(tempname_len);
-  if (tor_snprintf(tempname, tempname_len, "%s.tmp", fname)<0) {
-    log(LOG_WARN, "Failed to generate filename");
-    goto err;
+  if (open_flags & O_APPEND) {
+    strlcpy(tempname, fname, tempname_len);
+  } else {
+    if (tor_snprintf(tempname, tempname_len, "%s.tmp", fname)<0) {
+      log(LOG_WARN, "Failed to generate filename");
+      goto err;
+    }
   }
-  if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:O_TEXT), 0600))
+  if ((fd = open(tempname, open_flags, 0600))
       < 0) {
     log(LOG_WARN, "Couldn't open \"%s\" for writing: %s", tempname,
         strerror(errno));
     goto err;
   }
-  result = write_all(fd, str, len, 0);
-  if (result < 0 || (size_t)result != len) {
-    log(LOG_WARN, "Error writing to \"%s\": %s", tempname, strerror(errno));
-    close(fd);
-    goto err;
-  }
+  SMARTLIST_FOREACH(chunks, sized_chunk_t *, chunk,
+  {
+    result = write_all(fd, chunk->bytes, chunk->len, 0);
+    if (result < 0 || (size_t)result != chunk->len) {
+      log(LOG_WARN, "Error writing to \"%s\": %s", tempname, strerror(errno));
+      close(fd);
+      goto err;
+    }
+  });
   if (close(fd)) {
     log(LOG_WARN,"Error flushing to \"%s\": %s", tempname, strerror(errno));
     goto err;
   }
-  if (replace_file(tempname, fname)) {
-    log(LOG_WARN, "Error replacing \"%s\": %s", fname, strerror(errno));
-    goto err;
+  if (!(open_flags & O_APPEND)) {
+    if (replace_file(tempname, fname)) {
+      log(LOG_WARN, "Error replacing \"%s\": %s", fname, strerror(errno));
+      goto err;
+    }
   }
   tor_free(tempname);
   return 0;
  err:
   tor_free(tempname);
   return -1;
+}
+
+/* DOCDOC */
+int
+write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin)
+{
+  int flags = O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:O_TEXT);
+  return write_chunks_to_file_impl(fname, chunks, flags);
+}
+
+/** As write_str_to_file, but does not assume a NUL-terminated *
+ * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
+int
+write_bytes_to_file(const char *fname, const char *str, size_t len,
+                    int bin)
+{
+  int flags = O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:O_TEXT);
+  int r;
+  sized_chunk_t c = { str, len };
+  smartlist_t *chunks = smartlist_create();
+  smartlist_add(chunks, &c);
+  r = write_chunks_to_file_impl(fname, chunks, flags);
+  smartlist_free(chunks);
+  return r;
+}
+
+/* DOCDOC */
+int
+append_bytes_to_file(const char *fname, const char *str, size_t len,
+                     int bin)
+{
+  int flags = O_WRONLY|O_CREAT|O_APPEND|(bin?O_BINARY:O_TEXT);
+  int r;
+  sized_chunk_t c = { str, len };
+  smartlist_t *chunks = smartlist_create();
+  smartlist_add(chunks, &c);
+  r = write_chunks_to_file_impl(fname, chunks, flags);
+  smartlist_free(chunks);
+  return r;
 }
 
 /** Read the contents of <b>filename</b> into a newly allocated
