@@ -83,26 +83,27 @@ typedef struct directory_token_t {
 
 /** Rules for how many arguments a keyword can take. */
 typedef enum {
-  NO_ARGS,     /**<    (1) no arguments, ever */
-  ARGS,        /**<    (2) a list of arguments separated by spaces */
-  CONCAT_ARGS, /**< or (3) the rest of the line, treated as a single argument. */
+  NO_ARGS,     /**< No arguments, ever */
+  ARGS,        /**< A list of arguments separated by spaces */
+  CONCAT_ARGS, /**< The rest of the line, treated as a single argument. */
 } arg_syntax;
 
 /** Rules for whether the keyword needs an object. */
 typedef enum {
-  NO_OBJ,      /**<    (1) no object, ever */
-  NEED_OBJ,    /**<    (2) object is required */
-  NEED_KEY,    /**<    (3) object is required, and must be a public key. */
-  OBJ_OK,      /**< or (4) object is optional. */
+  NO_OBJ,      /**< No object, ever */
+  NEED_OBJ,    /**< Object is required */
+  NEED_KEY,    /**< Object is required, and must be a public key. */
+  OBJ_OK,      /**< Object is optional. */
 } obj_syntax;
 
 /** Rules for where a keyword can appear. */
 typedef enum {
-  DIR = 1,   /**< Appears only in directory. */
-  RTR = 2,   /**< Appears only in router descriptor or runningrouters */
+  DIR = 1,        /**< Appears only in directory. */
+  RTR = 2,        /**< Appears only in router descriptor or runningrouters */
   NETSTATUS = 4,  /**< v2 or later ("versioned") network status. */
-  RTRSTATUS = 8,
-  ANY = 15,    /**< Appears in router descriptor or in directory sections. */
+  ANYSIGNED = 7,  /**< Any "full" document (that is, not a router status.) */
+  RTRSTATUS = 8,  /**< Router-status portion of a versioned network status. */
+  ANY = 15,       /**< Appears in any document type */
 } where_syntax;
 
 /** Table mapping keywords to token value and to argument rules. */
@@ -111,9 +112,9 @@ static struct {
 } token_table[] = {
   { "accept",              K_ACCEPT,              ARGS,    NO_OBJ,  RTR },
   { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ,
-    DIR|NETSTATUS},
-  { "r",                   K_R,                   ARGS,    NO_OBJ,  RTRSTATUS },
-  { "s",                   K_S,                   ARGS,    NO_OBJ,  RTRSTATUS },
+                                                           DIR|NETSTATUS},
+  { "r",                   K_R,                   ARGS,    NO_OBJ, RTRSTATUS },
+  { "s",                   K_S,                   ARGS,    NO_OBJ, RTRSTATUS },
   { "reject",              K_REJECT,              ARGS,    NO_OBJ,  RTR },
   { "router",              K_ROUTER,              ARGS,    NO_OBJ,  RTR },
   { "recommended-software",K_RECOMMENDED_SOFTWARE,ARGS,    NO_OBJ,  DIR },
@@ -126,14 +127,15 @@ static struct {
   { "ports",               K_PORTS,               ARGS,    NO_OBJ,  RTR },
   { "bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ,  RTR },
   { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR },
-  { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ,  ANY },
-  { "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK,  ANY },
-  { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ,  ANY },
+  { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ, ANYSIGNED },
+  { "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK, ANY },
+  { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ, ANYSIGNED },
   { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR },
   { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR },
-  { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK, DIR|NETSTATUS},
+  { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK,
+                                                                DIR|NETSTATUS},
   { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR },
-  { "fingerprint",         K_FINGERPRINT,         ARGS,    NO_OBJ,  ANY },
+  { "fingerprint",         K_FINGERPRINT,         ARGS,    NO_OBJ, ANYSIGNED },
   { "hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ,  RTR },
   { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR },
   { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR },
@@ -169,7 +171,7 @@ static crypto_pk_env_t *find_dir_signing_key(const char *str);
 static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
- * <b>s</b>.  Return 0 on success, nonzero on failure.
+ * <b>s</b>.  Return 0 on success, -1 on failure.
  */
 int
 router_get_dir_hash(const char *s, char *digest)
@@ -179,7 +181,7 @@ router_get_dir_hash(const char *s, char *digest)
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the first router in
- * <b>s</b>. Return 0 on success, nonzero on failure.
+ * <b>s</b>. Return 0 on success, -1 on failure.
  */
 int
 router_get_router_hash(const char *s, char *digest)
@@ -189,7 +191,7 @@ router_get_router_hash(const char *s, char *digest)
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the running-routers
- * string in <b>s</b>. Return 0 on success, nonzero on failure.
+ * string in <b>s</b>. Return 0 on success, -1 on failure.
  */
 int
 router_get_runningrouters_hash(const char *s, char *digest)
@@ -198,12 +200,13 @@ router_get_runningrouters_hash(const char *s, char *digest)
                               "network-status","\ndirectory-signature");
 }
 
-/** DOCDOC */
+/** Set <b>digest</b> to the SHA-1 digest of the hash of the network-status
+ * string in <b>s</b>.  Return 0 on success, -1 on failure. */
 int
 router_get_networkstatus_v2_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "network-status-version","\ndirectory-signature");
+                            "network-status-version","\ndirectory-signature");
 }
 
 /** Helper: used to generate signatures for routers, directories and
@@ -1477,7 +1480,9 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
   return r;
 }
 
-/** DOCDOC */
+/** Given an exit policicy stored in <b>s</b>, parse it and add it to the end
+ * of the exit policy of <b>router</b>.  Return 0 on success, -1 on failure.
+ */
 int
 router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 {
@@ -1492,9 +1497,10 @@ router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
   return 0;
 }
 
-/** DOCDOC */
+/** Add an exit policy stored in the token <b>tok</b> to the router info in
+ * <b>router</b>.  Return 0 on success, -1 on failure. */
 static int
-router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
+router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 {
   addr_policy_t *newe, **tmpe;
   newe = router_parse_addr_policy(tok);
@@ -1556,7 +1562,7 @@ policy_read_failed:
   return NULL;
 }
 
-/** log and exit if <b>t</b> is malformed */
+/** Log and exit if <b>t</b> is malformed */
 void
 assert_addr_policy_ok(addr_policy_t *t)
 {

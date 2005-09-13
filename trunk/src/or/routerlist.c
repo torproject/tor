@@ -119,29 +119,44 @@ router_reload_networkstatus(void)
   return 0;
 }
 
-/* DOCDOC */
-static size_t router_log_len = 0;
+/* Router descriptor storage.
+ *
+ * Routerdescs are stored in a big file, named "cached-routers".  As new
+ * routerdescs arrive, we append them to a journal file named
+ * "cached-routers.jrn".
+ *
+ * From time to time, we replace "cached-routers" with a new file containing
+ * only the live, non-superseded descriptors, and clear cached-routers.log.
+ *
+ * On startup, we read both files.
+ */
+
+/** The size of the router log, in bytes. */
+static size_t router_journal_len = 0;
+/** The size of the router store, in bytes. */
 static size_t router_store_len = 0;
 
-/* DOCDOC */
+/** Helper: return 1 iff the router log is so big we want to rebuild the
+ * store. */
 static int
 router_should_rebuild_store(void)
 {
   if (router_store_len > (1<<16))
-    return router_log_len > router_store_len / 2;
+    return router_journal_len > router_store_len / 2;
   else
-    return router_log_len > (1<<15);
+    return router_journal_len > (1<<15);
 }
 
-/* DOCDOC */
+/** Add the <b>len</b>-type router descriptor in <b>s</b> to the router
+ * journal. */
 int
-router_append_to_log(const char *s, size_t len)
+router_append_to_journal(const char *s, size_t len)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
   char *fname = tor_malloc(len);
 
-  tor_snprintf(fname, fname_len, "%s/cached-routers.log",
+  tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
 
   if (!len)
@@ -158,7 +173,10 @@ router_append_to_log(const char *s, size_t len)
   return 0;
 }
 
-/* DOCDOC */
+/** If the journal is too long, or if <b>force</b> is true, then atomically
+ * replace the router store with the routers currently in our routerlist, and
+ * clear the journal.  Return 0 on success, -1 on failure.
+ */
 int
 router_rebuild_store(int force)
 {
@@ -199,7 +217,7 @@ router_rebuild_store(int force)
     goto done;
   }
 
-  tor_snprintf(fname, fname_len, "%s/cached-routers.log",
+  tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
 
   write_str_to_file(fname, "", 0);
@@ -216,7 +234,7 @@ router_rebuild_store(int force)
   return r;
 }
 
-/* Set *<b>outp</b> to a smartlist containing a list of
+/** Set *<b>outp</b> to a smartlist containing a list of
  * trusted_dir_server_t * for all known trusted dirservers.  Callers
  * must not modify the list or its contents.
  */

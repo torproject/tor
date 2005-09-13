@@ -88,7 +88,6 @@ remove_directory(void)
     smartlist_free(elements);
   }
   rmdir(temp_dir);
-  
 }
 
 static void

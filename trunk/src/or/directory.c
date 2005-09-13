@@ -283,27 +283,33 @@ connection_dir_request_failed(connection_t *conn)
   }
 }
 
-/** DOCDOC */
+/** Called when an attempt to download one or network status documents
+ * on connection <b>conn</b> failed.
+ */
 static void
 connection_dir_download_networkstatus_failed(connection_t *conn)
 {
-    if (!strcmpstart(conn->requested_resource, "all")) {
-      directory_get_from_dirserver(conn->purpose, "all.z",
-                                   0 /* don't retry_if_no_servers */);
-    } else if (!strcmpstart(conn->requested_resource, "fp/")) {
-      smartlist_t *failed = smartlist_create();
-      smartlist_split_string(failed, conn->requested_resource+3, "+", 0, 0);
-      if (smartlist_len(failed)) {
-        char *last = smartlist_get(failed,smartlist_len(failed)-1);
-        size_t last_len = strlen(last);
-        if (!strcmp(last+last_len-2, ".z"))
-          last[last_len-2] = '\0';
+  if (!strcmpstart(conn->requested_resource, "all")) {
+    /* We're a non-authoritative directory cache; try again. */
+    directory_get_from_dirserver(conn->purpose, "all.z",
+                                 0 /* don't retry_if_no_servers */);
+  } else if (!strcmpstart(conn->requested_resource, "fp/")) {
+    /* We were trying to download by fingerprint; mark them all has having
+     * failed, and possibly retry them later.*/
+    smartlist_t *failed = smartlist_create();
+    /* XXXX NM this splitting logic is duplicated someplace. Fix that. */
+    smartlist_split_string(failed, conn->requested_resource+3, "+", 0, 0);
+    if (smartlist_len(failed)) {
+      char *last = smartlist_get(failed,smartlist_len(failed)-1);
+      size_t last_len = strlen(last);
+      if (!strcmp(last+last_len-2, ".z"))
+        last[last_len-2] = '\0';
 
-        dir_networkstatus_download_failed(failed);
-        SMARTLIST_FOREACH(failed, char *, cp, tor_free(cp));
-      }
-      smartlist_free(failed);
+      dir_networkstatus_download_failed(failed);
+      SMARTLIST_FOREACH(failed, char *, cp, tor_free(cp));
     }
+    smartlist_free(failed);
+  }
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
@@ -1492,7 +1498,9 @@ connection_dir_finished_connecting(connection_t *conn)
   return 0;
 }
 
-/** DOCDOC */
+/** Called when one or more networkstatus fetches have failed (with uppercase
+ * fingerprints listed in <b>fp</>).  Mark those fingerprints has having
+ * failed once. */
 static void
 dir_networkstatus_download_failed(smartlist_t *failed)
 {

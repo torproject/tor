@@ -773,9 +773,9 @@ dirserv_set_cached_directory(const char *directory, time_t published,
 
 /** We've just received a v2 network-status for an authoritative directory
  * with fingerprint <b>fp</b> (hex digest, no spaces), published at
- * <b>published</b>.  Store it so we can serve it to others.
- *
- * DOCDOC directory==NULL, published==0
+ * <b>published</b>.  Store it so we can serve it to others.  If
+ * <b>directory</b> is NULL, remove the entry with the given fingerprint from
+ * the cache.
  */
 void
 dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
@@ -803,6 +803,11 @@ dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
   }
 }
 
+/** Helper: If we're an authority for the right directory version (the
+ * directory version is determined by <b>is_v1_object</b>), try to regenerate
+ * auth_src as appropriate and return it, falling back to cache_src on
+ * failure.  If we're a cache, return cach_src.
+ */
 static cached_dir_t *
 dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
                             cached_dir_t *auth_src,
@@ -837,9 +842,10 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
  * DIR_REGEN_SLACK_TIME seconds, call <b>regenerate</b>() to make a fresh one.
  * Yields the compressed version of the directory object if <b>compress</b> is
  * set; otherwise return the uncompressed version.  (In either case, sets
- * *<b>out</b> and returns the size of the buffer in *<b>out</b>.
+ * *<b>out</b> and returns the size of the buffer in *<b>out</b>.)
  *
- * DOCDOC is_v1_object
+ * Use <b>is_v1_object</b> to help determine whether we're authoritative for
+ * this kind of object.
  **/
 static size_t
 dirserv_get_obj(const char **out, int compress,

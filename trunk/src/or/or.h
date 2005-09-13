@@ -2020,14 +2020,18 @@ void router_free_all_keys(void);
 
 /********************************* routerlist.c ***************************/
 
+/** Represents information about a single trusted directory server. */
 typedef struct trusted_dir_server_t {
-  char *address;
-  uint32_t addr;
-  uint16_t dir_port;
-  char digest[DIGEST_LEN];
-  unsigned int is_running:1;
-  unsigned int supports_v1_protocol:1;
-  int n_networkstatus_failures;
+  char *address; /**< Hostname */
+  uint32_t addr; /**< IPv4 address */
+  uint16_t dir_port; /**< Directory port */
+  char digest[DIGEST_LEN]; /**< Digest of identity key */
+  unsigned int is_running:1; /**< True iff we think this server is running. */
+  unsigned int supports_v1_protocol:1; /**< True iff this server is an
+                                        * authority for the older ("v1")
+                                        * directory protocol.*/
+  int n_networkstatus_failures; /**< How many times have we asked for this
+                                 * server's network-status unsuccessfully? */
 } trusted_dir_server_t;
 
 int router_reload_router_list(void);
