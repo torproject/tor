@@ -169,7 +169,7 @@ router_append_to_journal(const char *s, size_t len)
   }
 
   tor_free(fname);
-  router_log_len += len;
+  router_journal_len += len;
   return 0;
 }
 
@@ -224,7 +224,7 @@ router_rebuild_store(int force)
 
   r = 0;
   router_store_len = len;
-  router_log_len = 0;
+  router_journal_len = 0;
  done:
   tor_free(fname);
   if (chunk_list) {
