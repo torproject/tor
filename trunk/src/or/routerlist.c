@@ -117,6 +117,103 @@ router_reload_networkstatus(void)
   return 0;
 }
 
+/* DOCDOC */
+static size_t router_log_len = 0;
+static size_t router_store_len = 0;
+
+/* DOCDOC */
+static int
+router_should_rebuild_store(void)
+{
+  if (router_store_len > (1<<16))
+    return router_log_len > router_store_len / 2;
+  else
+    return router_log_len > (1<<15);
+}
+
+/* DOCDOC */
+int
+router_append_to_log(const char *s, size_t len)
+{
+  or_options_t *options = get_options();
+  size_t fname_len = strlen(options->DataDirectory)+32;
+  char *fname = tor_malloc(len);
+
+  tor_snprintf(fname, fname_len, "%s/cached-routers.log",
+               options->DataDirectory);
+
+  if (!len)
+    len = strlen(s);
+
+  if (append_bytes_to_file(fname, s, len, 0)) {
+    log_fn(LOG_WARN, "Unable to store router descriptor");
+    tor_free(fname);
+    return -1;
+  }
+
+  tor_free(fname);
+  router_log_len += len;
+  return 0;
+}
+
+/* DOCDOC */
+int
+router_rebuild_store(int force)
+{
+  size_t len = 0;
+  or_options_t *options;
+  size_t fname_len;
+  smartlist_t *chunk_list = NULL;
+  char *fname = NULL;
+  int r = -1;
+
+  if (!force && !router_should_rebuild_store())
+    return 0;
+  if (!routerlist)
+    return 0;
+
+  options = get_options();
+  fname_len = strlen(options->DataDirectory)+32;
+  fname = tor_malloc(fname_len);
+  tor_snprintf(fname, fname_len, "%s/cached-routers", options->DataDirectory);
+  chunk_list = smartlist_create();
+
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+  {
+    sized_chunk_t *c;
+    if (!ri->signed_descriptor) {
+      log_fn(LOG_WARN, "Bug! No descriptor stored for router '%s'.",
+             ri->nickname);
+      goto done;
+    }
+    c = tor_malloc(sizeof(sized_chunk_t));
+    c->bytes = ri->signed_descriptor;
+    c->len = ri->signed_descriptor_len;
+    smartlist_add(chunk_list, c);
+  });
+
+  if (write_chunks_to_file(fname, chunk_list, 0)<0) {
+    log_fn(LOG_WARN, "Error writing router store to disk.");
+    goto done;
+  }
+
+  tor_snprintf(fname, fname_len, "%s/cached-routers.log",
+               options->DataDirectory);
+
+  write_str_to_file(fname, "", 0);
+
+  r = 0;
+  router_store_len = len;
+  router_log_len = 0;
+ done:
+  tor_free(fname);
+  if (chunk_list) {
+    SMARTLIST_FOREACH(chunk_list, sized_chunk_t *, c, tor_free(c));
+    smartlist_free(chunk_list);
+  }
+  return r;
+}
+
 /* Set *<b>outp</b> to a smartlist containing a list of
  * trusted_dir_server_t * for all known trusted dirservers.  Callers
  * must not modify the list or its contents.
