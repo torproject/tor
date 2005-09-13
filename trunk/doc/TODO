@@ -37,7 +37,7 @@ NR- write a spec appendix for 'being nice with tor'
 
 for 0.1.1.x:
 R - are dirservers auto-verifying duplicate nicknames?
-  - tor should auto-sort the recommended-versions strings 
+  o tor should auto-sort the recommended-versions strings 
     (with the new smartlist sort stuff maybe)
   - setconf SocksBindAddress kills tor if it fails to bind
 

@@ -268,12 +268,15 @@ into a chroot jail</a>.)
 </p>
 
 <p>
-11. (Unix only.) Your operating system probably limits the number of open
-file descriptors per process to 1024 (or even less). If you plan to be
-running a fast exit node, this is probably not enough. You should run
-"ulimit -n 8192" (as root) and then su to the user that will run Tor,
-or change your defaults (on Debian, add a line like "toruser hard nofile
-8192" to your /etc/security/limits.conf file).
+11. (Unix only.) Your operating system probably limits the number
+of open file descriptors per process to 1024 (or even less). If
+you plan to be running a fast exit node, this is probably not
+enough. On Linux, you should add a line like "toruser hard nofile
+8192" to your /etc/security/limits.conf file, where toruser is
+the user that runs the Tor process. If that doesn't work, see <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#FileDescriptors">this
+FAQ entry</a> for other suggested ways to run "ulimit -n 8192" before
+you launch Tor.
 </p>
 
 <p>
