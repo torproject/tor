@@ -433,7 +433,7 @@ router_orport_found_reachable(void)
 {
   if (!can_reach_or_port) {
     if (!clique_mode(get_options()))
-      log(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.%s",
+      log(LOG_NOTICE,"Self-testing indicates your ORPort is reachable from the outside. Excellent.%s",
           get_options()->NoPublish ? "" : " Publishing server descriptor.");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
@@ -446,7 +446,7 @@ void
 router_dirport_found_reachable(void)
 {
   if (!can_reach_dir_port) {
-    log(LOG_NOTICE,"Your DirPort is reachable from the outside. Excellent.");
+    log(LOG_NOTICE,"Self-testing indicates your DirPort is reachable from the outside. Excellent.");
     can_reach_dir_port = 1;
   }
 }
