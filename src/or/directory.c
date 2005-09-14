@@ -269,6 +269,8 @@ directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
 void
 connection_dir_request_failed(connection_t *conn)
 {
+  if (router_digest_is_me(conn->identity_digest))
+    return; /* this was a test fetch. don't retry. */
   router_mark_as_down(conn->identity_digest); /* don't try him again */
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR ||
       conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
