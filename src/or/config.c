@@ -873,7 +873,7 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
  */
 static int
 config_assign_line(config_format_t *fmt, or_options_t *options,
-                   config_line_t *c, int use_defaults, int clear_first)
+                   config_line_t *c, int use_defaults)
 {
   config_var_t *var;
 
@@ -1077,7 +1077,7 @@ There are three call cases for config_assign() currently.
 
 Case one: Torrc entry
 options_init_from_torrc() calls config_assign(0, 0)
-  calls config_assign_line(0, 0).
+  calls config_assign_line(0).
     if value is empty, calls option_reset(0) and returns.
     calls config_assign_value(), appends.
 
@@ -1086,7 +1086,7 @@ options_trial_assign() calls config_assign(0, 1)
   calls config_reset_line(0)
     calls option_reset(0)
       calls option_clear().
-  calls config_assign_line(0, 1).
+  calls config_assign_line(0).
     if value is empty, calls option_reset(0) and returns.
     calls config_assign_value(), appends.
 
@@ -1096,7 +1096,7 @@ options_trial_assign() calls config_assign(1, 1)
     calls option_reset(1)
       calls option_clear().
       calls config_assign_value(default)
-  calls config_assign_line(1, 1).
+  calls config_assign_line(1).
     calls option_reset(1) and returns.
 */
 static int
@@ -1126,7 +1126,7 @@ config_assign(config_format_t *fmt, void *options,
   /* pass 3: assign. */
   while (list) {
     int r;
-    if ((r=config_assign_line(fmt, options, list, use_defaults, clear_first)))
+    if ((r=config_assign_line(fmt, options, list, use_defaults)))
       return r;
     list = list->next;
   }
