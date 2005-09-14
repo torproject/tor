@@ -1,10 +1,12 @@
-tor (0.1.1.6-alphaXX) experimental; urgency=low
+tor (0.1.1.7-alpha-1) experimental; urgency=low
 
+  * New upstream version.
   * More merging from 0.1.0.14+XXXX:
     - The tor-dbg package does not really need its own copy of copyright
       and changelog in usr/share/doc/tor-dbg.
+  * Forward port 03_tor_manpage_in_section_8.dpatch
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 14 Sep 2005 16:44:26 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 14 Sep 2005 17:52:35 +0200
 
 tor (0.1.1.6-alpha-2) experimental; urgency=low
 
