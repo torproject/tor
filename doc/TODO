@@ -121,10 +121,11 @@ R     - check reachability as soon as you hear about a new server
       o Dirservers publish compressed network-status objects.
         o Support retrieving several-at-once
       o Everyone downloads network-status objects
-N       . Clients: from all directories, round-robin
+        o Clients: from all directories, round-robin
           o Basic implementation: disable until 0.1.1.x is out.
           o On failure, mark trusted_dir_server as having failed
-          - Retry, up to a point.
+          o Retry, up to a point.
+          - Launch retry immediately on failure.
         o Parse them
         o Cache them, reload on restart
         o Serve cached directories
@@ -140,9 +141,9 @@ N     - Alice acts on network-status objects
             - Implement reload-from-store
             - Store downloaded descriptors
           - Retry descriptors on failure for a while
-        - Alice sets descriptor status from network-status
+        o Alice sets descriptor status from network-status
           o Implement
-          - Use
+          o Use
 
     - Security
       - Alices avoid duplicate class C nodes.

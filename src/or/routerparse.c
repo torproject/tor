@@ -419,9 +419,8 @@ router_parse_routerlist_from_directory(const char *str,
   char digest[DIGEST_LEN];
   routerlist_t *new_dir = NULL;
   char *versions = NULL;
-  smartlist_t *good_nickname_list = NULL;
   time_t published_on;
-  int i, r;
+  int r;
   const char *end, *cp;
   smartlist_t *tokens = NULL;
   char dirnickname[MAX_NICKNAME_LEN+1];
@@ -531,42 +530,17 @@ router_parse_routerlist_from_directory(const char *str,
     goto err;
   }
 
-  good_nickname_list = smartlist_create();
-  for (i=0; i<tok->n_args; ++i) {
-    smartlist_add(good_nickname_list, tok->args[i]);
-  }
-  tok->n_args = 0; /* Don't free the strings in good_nickname_list yet. */
-
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
   str = end;
   if (router_parse_list_from_string(&str, &new_dir,
-                                    good_nickname_list,
-                                    tok->tp==K_RUNNING_ROUTERS,
                                     published_on)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
   }
 
-  /* Determine if my routerinfo is considered verified. */
-  {
-    static int have_warned_about_unverified_status = 0;
-    routerinfo_t *me = router_get_my_routerinfo();
-    if (me) {
-      if (router_update_status_from_smartlist(me,
-            published_on, good_nickname_list)==1 &&
-          me->is_verified == 0 && !have_warned_about_unverified_status) {
-        log_fn(LOG_WARN,"Dirserver '%s' lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
-        have_warned_about_unverified_status = 1;
-      }
-    }
-  }
-
   new_dir->software_versions = versions; versions = NULL;
   new_dir->published_on = published_on;
-  new_dir->running_routers = tor_malloc_zero(sizeof(running_routers_t));
-  new_dir->running_routers->published_on = published_on;
-  new_dir->running_routers->running_routers = good_nickname_list;
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
@@ -583,10 +557,6 @@ router_parse_routerlist_from_directory(const char *str,
   if (new_dir)
     routerlist_free(new_dir);
   tor_free(versions);
-  if (good_nickname_list) {
-    SMARTLIST_FOREACH(good_nickname_list, char *, n, tor_free(n));
-    smartlist_free(good_nickname_list);
-  }
  done:
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
@@ -596,17 +566,15 @@ router_parse_routerlist_from_directory(const char *str,
   return r;
 }
 
-/** Read a signed router status statement from <b>str</b>.  On
- * success, return it, and cache the original string if
- * <b>write_to_cache</b> is set.  Otherwise, return NULL.  */
-running_routers_t *
-router_parse_runningrouters(const char *str, int write_to_cache)
+/** Read a signed router status statement from <b>str</b>.  If it's well-formed,
+ * return 0.  Otherwise, return -1.  If we're a directory cache, cache it.*/
+int
+router_parse_runningrouters(const char *str)
 {
   char digest[DIGEST_LEN];
-  running_routers_t *new_list = NULL;
   directory_token_t *tok;
   time_t published_on;
-  int i;
+  int r = -1;
   crypto_pk_env_t *declared_key = NULL;
   smartlist_t *tokens = NULL;
 
@@ -637,28 +605,6 @@ router_parse_runningrouters(const char *str, int write_to_cache)
   if (parse_iso_time(tok->args[0], &published_on) < 0) {
      goto err;
   }
-
-  /* Now that we know the signature is okay, and we have a
-   * publication time, cache the list. */
-  if (!get_options()->AuthoritativeDir && write_to_cache)
-    dirserv_set_cached_directory(str, published_on, 1);
-
-  if (!(tok = find_first_by_keyword(tokens, K_ROUTER_STATUS))) {
-    if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
-      log_fn(LOG_WARN,
-             "Missing running-routers/router-status line from directory.");
-      goto err;
-    }
-  }
-
-  new_list = tor_malloc_zero(sizeof(running_routers_t));
-  new_list->published_on = published_on;
-  new_list->running_routers = smartlist_create();
-  for (i=0;i<tok->n_args;++i) {
-    smartlist_add(new_list->running_routers, tok->args[i]);
-  }
-  tok->n_args = 0; /* Don't free the elements of tok->args. */
-
   if (!(tok = find_first_by_keyword(tokens, K_DIRECTORY_SIGNATURE))) {
     log_fn(LOG_WARN, "Missing signature on running-routers");
     goto err;
@@ -667,19 +613,19 @@ router_parse_runningrouters(const char *str, int write_to_cache)
   if (check_directory_signature(digest, tok, NULL, declared_key, 1) < 0)
     goto err;
 
-  goto done;
+  /* Now that we know the signature is okay, and we have a
+   * publication time, cache the list. */
+  if (get_options()->DirPort && !get_options()->V1AuthoritativeDir)
+    dirserv_set_cached_directory(str, published_on, 1);
+
+  r = 0;
  err:
-  if (new_list) {
-    running_routers_free(new_list);
-    new_list = NULL;
-  }
- done:
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
     smartlist_free(tokens);
   }
-  return new_list;
+  return r;
 }
 
 /** Given a directory or running-routers string in <b>str</b>, try to
@@ -818,8 +764,7 @@ check_directory_signature(const char *digest,
  */
 int
 router_parse_list_from_string(const char **s, routerlist_t **dest,
-                              smartlist_t *good_nickname_list,
-                              int rr_format, time_t published_on)
+                              time_t published_on)
 {
   routerinfo_t *router;
   smartlist_t *routers;
@@ -850,19 +795,10 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
       continue;
     }
 
-    if (!good_nickname_list) {
-      router->is_running = 1; /* start out assuming all dirservers are up */
-      router->is_verified = router->is_named = 1;
-      router->status_set_at = time(NULL);
-    }
     smartlist_add(routers, router);
-//    log_fn(LOG_DEBUG,"just added router #%d.",smartlist_len(routers));
   }
 
-  if (good_nickname_list) {
-    SMARTLIST_FOREACH(good_nickname_list, const char *, cp,
-                  routers_update_status_from_entry(routers, published_on, cp));
-  }
+  routers_update_status_from_networkstatus(routers);
 
   if (*dest)
     routerlist_free(*dest);

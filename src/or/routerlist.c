@@ -47,6 +47,11 @@ extern int has_fetched_directory; /**< from main.c */
 /** Global list of all of the current network_status documents that we know
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
+/** True iff networkstatus_list has changed since the last time we called
+ * routers_update_all_from_networkstatus.  Set by router_set_networkstatus;
+ * cleared by routers_update_all_from_networkstatus.
+ */
+static int networkstatus_list_has_changed = 0;
 
 /**
  * Reload the most recent cached directory (if present).
@@ -116,6 +121,7 @@ router_reload_networkstatus(void)
         tor_free(s);
       }
     });
+  routers_update_all_from_networkstatus();
   return 0;
 }
 
@@ -437,7 +443,10 @@ mark_all_trusteddirservers_up(void)
   }
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
-                      dir->is_running = 1);
+    {
+      dir->is_running = 1;
+      dir->n_networkstatus_failures = 0;
+    });
   }
 }
 
@@ -971,7 +980,6 @@ routerlist_free(routerlist_t *rl)
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   smartlist_free(rl->routers);
-  running_routers_free(rl->running_routers);
   tor_free(rl->software_versions);
   tor_free(rl);
 }
@@ -1235,12 +1243,16 @@ router_load_single_router(const char *s, const char **msg)
     routerinfo_free(ri);
     return 0;
   }
+#if 0
   if (routerlist && routerlist->running_routers) {
     running_routers_t *rr = routerlist->running_routers;
     router_update_status_from_smartlist(ri,
                                         rr->published_on,
                                         rr->running_routers);
   }
+#endif
+  /* XXXX011 update router status from networkstatus!! */
+
   if (router_add_to_routerlist(ri, msg)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list: %s Dropping.",
            *msg?*msg:"(No message).");
@@ -1422,11 +1434,13 @@ router_set_networkstatus(const char *s, time_t arrived_at,
                   ns->networkstatus_digest, DIGEST_LEN)) {
         /* Same one we had before. */
         networkstatus_free(ns);
+        log_fn(LOG_NOTICE, "Dropping network-status (%s); already have it.",fp);
         if (old_ns->received_on < arrived_at)
+          /* XXXX We should touch the cache file. NM */
           old_ns->received_on = arrived_at;
         return 0;
       } else if (old_ns->published_on >= ns->published_on) {
-        log_fn(LOG_INFO, "Dropping network-status; we have a newer one for this authority.");
+        log_fn(LOG_NOTICE, "Dropping network-status (%s); we have a newer one for this authority.", fp);
         networkstatus_free(ns);
         return 0;
       } else {
@@ -1440,6 +1454,13 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   if (!found)
     smartlist_add(networkstatus_list, ns);
+
+  /*XXXX011 downgrade to INFO NM */
+  log_fn(LOG_NOTICE, "New networkstatus %s (%s).",
+         source == NS_FROM_CACHE?"from our cache":
+         (source==NS_FROM_DIR?"from a directory server":"from this authority"),
+         fp);
+  networkstatus_list_has_changed = 1;
 
   smartlist_sort(networkstatus_list, _compare_networkstatus_published_on);
 
@@ -1561,12 +1582,14 @@ update_networkstatus_cache_downloads(time_t now)
 }
 
 /*XXXX Should these be configurable? NM*/
-/** How old (in seconds) can a network-status be before we stop believing it? */
+/** How old (in seconds) can a network-status be before we try replacing it? */
 #define NETWORKSTATUS_MAX_VALIDITY (48*60*60)
 /** How long (in seconds) does a client wait after getting a network status
  * before downloading the next in sequence? */
 #define NETWORKSTATUS_CLIENT_DL_INTERVAL (30*60)
-
+/* How many times do we allow a networkstatus download to fail before we
+ * assume that the authority isn't publishing? */
+#define NETWORKSTATUS_N_ALLOWABLE_FAILURES 3
 /** We are not a directory cache or authority.  Update our network-status list
  * by launching a new directory fetch for enough network-status documents "as
  * necessary".  See function comments for implementation details.
@@ -1574,7 +1597,7 @@ update_networkstatus_cache_downloads(time_t now)
 void
 update_networkstatus_client_downloads(time_t now)
 {
-  int n_live = 0, needed = 0, n_dirservers, i;
+  int n_live = 0, needed = 0, n_running_dirservers, n_dirservers, i;
   int most_recent_idx = -1;
   trusted_dir_server_t *most_recent = NULL;
   time_t most_recent_received = 0;
@@ -1593,12 +1616,16 @@ update_networkstatus_client_downloads(time_t now)
    */
   if (!trusted_dir_servers || !smartlist_len(trusted_dir_servers))
     return;
-  n_dirservers = smartlist_len(trusted_dir_servers);
+  n_dirservers = n_running_dirservers = smartlist_len(trusted_dir_servers);
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
        networkstatus_t *ns = networkstatus_get_by_digest(ds->digest);
        if (!ns)
          continue;
+       if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
+         --n_running_dirservers;
+         continue;
+       }
        if (ns->published_on > now-NETWORKSTATUS_MAX_VALIDITY)
          ++n_live;
        if (!most_recent || ns->received_on > most_recent_received) {
@@ -1613,11 +1640,22 @@ update_networkstatus_client_downloads(time_t now)
    */
   if (n_live < (n_dirservers/2)+1)
     needed = (n_dirservers/2)+1-n_live;
-  if (needed > n_dirservers)
-    needed = n_dirservers;
+  if (needed > n_running_dirservers)
+    needed = n_running_dirservers;
+
+  if (needed)
+    /* XXXX001 Downgrade to info NM */
+    log_fn(LOG_NOTICE, "For %d/%d running directory servers, we have %d live"
+           " network-status documents. Downloading %d.",
+           n_running_dirservers, n_dirservers, n_live, needed);
+
   /* Also, download at least 1 every NETWORKSTATUS_CLIENT_DL_INTERVAL. */
-  if (most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL && needed < 1)
+  if (n_running_dirservers &&
+      most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL && needed < 1) {
+    log_fn(LOG_NOTICE, "Our most recent network-status document is %d"
+           " seconds old; downloading another.", (int)(now-most_recent_received));
     needed = 1;
+  }
 
   if (!needed)
     return;
@@ -1637,6 +1675,8 @@ update_networkstatus_client_downloads(time_t now)
     if (i >= n_dirservers)
       i = 0;
     ds = smartlist_get(trusted_dir_servers, i);
+    if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES)
+      continue;
     base16_encode(cp, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
     cp += HEX_DIGEST_LEN;
     --needed;
@@ -1860,6 +1900,7 @@ router_exit_policy_rejects_all(routerinfo_t *router)
     == ADDR_POLICY_REJECTED;
 }
 
+#if 0
 /** Release all space held in <b>rr</b>. */
 void
 running_routers_free(running_routers_t *rr)
@@ -2047,6 +2088,7 @@ router_update_status_from_smartlist(routerinfo_t *router,
   smartlist_free(rl);
   return 0;
 }
+#endif
 
 /** Add to the list of authorized directory servers one at
  * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
@@ -2111,6 +2153,40 @@ networkstatus_get_by_digest(const char *digest)
   return NULL;
 }
 
+/** If the network-status list has changed since the last time we called this
+ * function, update the status of every router from the network-status list.
+ */
+void
+routers_update_all_from_networkstatus(void)
+{
+  static int have_warned_about_unverified_status = 0;
+  routerinfo_t *me;
+  if (!routerlist || !networkstatus_list || !networkstatus_list_has_changed)
+    return;
+
+  routers_update_status_from_networkstatus(routerlist->routers);
+
+  me = router_get_my_routerinfo();
+  if (me) {
+    /* We could be more sophisticated about this whole business.  How many
+     * dirservers list us as named, valid, etc. */
+    smartlist_t *lst = smartlist_create();
+    smartlist_add(lst, me);
+    routers_update_status_from_networkstatus(lst);
+    if (me->is_verified == 0) {
+      log_fn(LOG_WARN, "Many directory servers list us as unverified. Please consider sending your identity fingerprint to the tor-ops.");
+      have_warned_about_unverified_status = 1;
+    } else if (me->is_named == 0) {
+      log_fn(LOG_WARN, "Many directory servers list us as unnamed. Please consider sending your identity fingerprint to the tor-ops.");
+      have_warned_about_unverified_status = 1;
+    }
+  }
+
+  helper_nodes_set_status_from_directory();
+
+  networkstatus_list_has_changed = 0;
+}
+
 /** Allow any network-status newer than this to influence our view of who's
  * running. */
 #define DEFAULT_RUNNING_INTERVAL 60*60
@@ -2127,6 +2203,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
     n_recent;
   int i;
   time_t now = time(NULL);
+  trusted_dir_server_t *ds;
 
   if (authdir_mode(get_options())) {
     /* An authoritative directory should never believer someone else about
@@ -2164,6 +2241,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, router,
   {
+    ds = router_get_trusteddirserver_by_digest(router->identity_digest);
     n_listing = n_valid = n_naming = n_named = n_running = 0;
 
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
@@ -2194,6 +2272,10 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
     router->is_named = (n_named > n_naming/2);
     router->is_verified = (n_valid > n_statuses/2);
     router->is_running = (n_running > n_recent/2);
+
+    if (router->is_running && ds)
+      /*Hm. What about authorities? When do they reset n_networkstatus_failures?*/
+      ds->n_networkstatus_failures = 0;
   });
 }
 

@@ -785,12 +785,14 @@ typedef struct {
   int num_unreachable_notifications;
 } routerinfo_t;
 
+#if 0
 /** Contents of a running-routers list */
 typedef struct running_routers_t {
   time_t published_on; /**< When was the list marked as published? */
   /** Which ORs are on the list?  Entries may be prefixed with ! and $. */
   smartlist_t *running_routers;
 } running_routers_t;
+#endif
 
 /** Contents of a single per-router entry in a network status object.
  */
@@ -848,9 +850,11 @@ typedef struct {
   /** When was the most recent directory that contributed to this list
    * published? */
   time_t published_on;
+#if 0
   time_t running_routers_updated_on;
   /** What is the most recently received running_routers structure? */
   running_routers_t *running_routers;
+#endif
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
@@ -2100,6 +2104,7 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
 
 int router_exit_policy_rejects_all(routerinfo_t *router);
+#if 0
 void running_routers_free(running_routers_t *rr);
 void routerlist_set_runningrouters(routerlist_t *list, running_routers_t *rr);
 int routers_update_status_from_entry(smartlist_t *routers,
@@ -2108,12 +2113,14 @@ int routers_update_status_from_entry(smartlist_t *routers,
 int router_update_status_from_smartlist(routerinfo_t *r,
                                         time_t list_time,
                                         smartlist_t *running_list);
+#endif
 void add_trusted_dir_server(const char *addr, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
 void update_networkstatus_cache_downloads(time_t now);
 void update_networkstatus_client_downloads(time_t now);
+void routers_update_all_from_networkstatus(void);
 void routers_update_status_from_networkstatus(smartlist_t *routers);
 smartlist_t *router_list_superseded(void);
 
@@ -2147,16 +2154,13 @@ int router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
                                   routerlist_t **dest,
-                                  smartlist_t *good_nickname_list,
-                                  int rr_format,
                                   time_t published);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey,
                                            int check_version,
                                            int write_to_cache);
-running_routers_t *router_parse_runningrouters(const char *str,
-                                               int write_to_cache);
+int router_parse_runningrouters(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
