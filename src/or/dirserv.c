@@ -452,6 +452,8 @@ directory_set_dirty()
     the_directory_is_dirty = now;
   if (!runningrouters_is_dirty)
     runningrouters_is_dirty = now;
+  if (!the_v2_networkstatus_is_dirty)
+    the_v2_networkstatus_is_dirty = now;
 }
 
 /**
