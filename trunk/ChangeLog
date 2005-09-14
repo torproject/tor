@@ -1,10 +1,10 @@
 Changes in version 0.1.1.7-alpha - 2005-09-14
   o Fixes on 0.1.1.6-alpha:
-    - Exit servers were crashing when people asked them to make a connection
-      to an address not in their exit policy.
+    - Exit servers were crashing when people asked them to make a
+      connection to an address not in their exit policy.
     - Looking up a non-existent stream for a v1 control connection would
       cause a segfault.
-    - Fix a seg fault if we ask an authdirserver for a descriptor by
+    - Fix a seg fault if we ask a dirserver for a descriptor by
       fingerprint but he doesn't know about him.
     - SETCONF was appending items to linelists, not clearing them.
     - SETCONF SocksBindAddress killed Tor if it fails to bind. Now back
@@ -30,9 +30,10 @@ Changes in version 0.1.1.7-alpha - 2005-09-14
       from a given dirserver (we were retrying before, but only if
       we fail to connect).
     - When writing the RecommendedVersions line, sort them first.
-    - When the client asked for a rendezvous port that the hidden service
-      didn't want to provide, we were sending an IP address back along
-      with the end cell. Fortunately, it was zero. But stop that anyway.
+    - When the client asked for a rendezvous port that the hidden
+      service didn't want to provide, we were sending an IP address
+      back along with the end cell. Fortunately, it was zero. But stop
+      that anyway.
     - Correct "your server is reachable" log entries to indicate that
       it was self-testing that told us so.
 
