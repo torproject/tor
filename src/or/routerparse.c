@@ -533,13 +533,15 @@ router_parse_routerlist_from_directory(const char *str,
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
   str = end;
-  if (router_parse_list_from_string(&str, &new_dir,
+  new_dir = tor_malloc_zero(sizeof(routerlist_t));
+  new_dir->routers = smartlist_create();
+  if (router_parse_list_from_string(&str, new_dir->routers,
                                     published_on)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
   }
 
-  new_dir->published_on = published_on;
+  new_dir->published_on_xx = published_on;
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
@@ -754,15 +756,12 @@ check_directory_signature(const char *digest,
 }
 
 /** Given a string *<b>s</b> containing a concatenated sequence of router
- * descriptors, parses them and stores the result in *<b>dest</b>.  If
- * good_nickname_list is provided, then routers are marked as
- * running/nonrunning and verified/unverified based on their status in the
- * list.  Otherwise, all routers are marked running and verified.  Advances
- * *s to a point immediately following the last router entry.  Returns 0 on
- * success and -1 on failure.
+ * descriptors, parses them and stores the result in <b>dest</b>.  All routers
+ * are marked running and verified.  Advances *s to a point immediately
+ * following the last router entry.  Returns 0 on success and -1 on failure.
  */
 int
-router_parse_list_from_string(const char **s, routerlist_t **dest,
+router_parse_list_from_string(const char **s, smartlist_t *dest,
                               time_t published_on)
 {
   routerinfo_t *router;
@@ -799,10 +798,7 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
 
   routers_update_status_from_networkstatus(routers);
 
-  if (*dest)
-    routerlist_free(*dest);
-  *dest = tor_malloc_zero(sizeof(routerlist_t));
-  (*dest)->routers = routers;
+  smartlist_add_all(dest, routers);
 
   return 0;
 }

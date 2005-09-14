@@ -772,8 +772,6 @@ typedef struct {
   /*XXXX Make this get used once we think we do naming right. NM */
   unsigned int is_named:1; /* Do we believe the nickname that this OR gives us? */
 
-  time_t status_set_at; /**< When did we last update is_running? */
-
   /* The below items are used only by authdirservers for
    * reachability testing. */
   /** When was the last time we could reach this OR? */
@@ -847,7 +845,9 @@ typedef struct {
   smartlist_t *routers;
   /** When was the most recent directory that contributed to this list
    * published? */
-  time_t published_on;
+  /* XXXX011 NM This field is only used in moribund code; remove it
+   * once the moribund code is dead. */
+  time_t published_on_xx; 
 #if 0
   /** Which versions of tor are recommended by this directory? */
   char *software_versions;
@@ -2079,13 +2079,14 @@ routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 int router_digest_is_trusted_dir(const char *digest);
 void router_get_routerlist(routerlist_t **prouterlist);
+#if 0
 time_t routerlist_get_published_time(void);
+#endif
 void routerlist_free(routerlist_t *routerlist);
 void routerinfo_free(routerinfo_t *router);
 void routerstatus_free(routerstatus_t *routerstatus);
 void networkstatus_free(networkstatus_t *networkstatus);
-void routerlist_free_current(void);
-void free_trusted_dir_servers(void);
+void routerlist_free_all(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
@@ -2153,7 +2154,7 @@ int router_get_networkstatus_v2_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
-                                  routerlist_t **dest,
+                                  smartlist_t *dest,
                                   time_t published);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
