@@ -1001,7 +1001,12 @@ tor_mutex_free(tor_mutex_t *m)
 unsigned long
 tor_get_thread_id(void)
 {
-  return (unsigned long)pthread_self();
+  union {
+    pthread_t thr;
+    unsigned long id;
+  } r;
+  r.thr = pthread_self();
+  return r.id;
 }
 #else
 struct tor_mutex_t {

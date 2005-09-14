@@ -554,7 +554,8 @@ list_server_status(smartlist_t *routers, char **router_status_out)
   return 0;
 }
 
-int
+/* DOCDOC */
+static int
 _compare_tor_version_str_ptr(const void **_a, const void **_b)
 {
   const char *a = *_a, *b = *_b;
@@ -695,7 +696,7 @@ dirserv_dump_directory_to_string(char **dir_out,
 static cached_dir_t the_directory = { NULL, NULL, 0, 0, 0 };
 
 /* Used only by non-auth dirservers: The directory and runningrouters we'll
-* serve when requested. */
+ * serve when requested. */
 static cached_dir_t cached_directory = { NULL, NULL, 0, 0, 0 };
 static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0 };
 
