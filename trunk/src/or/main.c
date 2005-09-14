@@ -480,6 +480,7 @@ void
 directory_all_unreachable(time_t now)
 {
   connection_t *conn;
+  /* XXXX011 NM Update this to reflect new directories? */
 
   has_fetched_directory=0;
   stats_n_seconds_working=0; /* reset it */
@@ -533,6 +534,9 @@ void
 directory_has_arrived(time_t now, char *identity_digest)
 {
   or_options_t *options = get_options();
+  /* XXXX011 NM Update this to reflect new directories.  In particular, we
+   * can't start building circuits until we have descriptors and networkstatus
+   * docs.*/
 
   log_fn(LOG_INFO, "A directory has arrived.");
 
@@ -710,7 +714,8 @@ run_scheduled_events(time_t now)
     rend_cache_clean();
   }
 
-  if (time_to_fetch_running_routers < now) {
+  /* Caches need to fetch running_routers; directory clients don't. */
+  if (options->DirPort && time_to_fetch_running_routers < now) {
     if (!authdir_mode(options) || !options->V1AuthoritativeDir) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
@@ -732,12 +737,13 @@ run_scheduled_events(time_t now)
         !we_are_hibernating())
       consider_testing_reachability();
 
+    /* Also, once per minute, check whether we want to download any
+     * networkstatus documents.
+     */
     if (server_mode(options) && options->DirPort)
       update_networkstatus_cache_downloads(now);
-    /* XXXX Disabled until 0.1.1.6 is out: only servers need networkstatus.
     else
       update_networkstatus_client_downloads(now);
-    */
   }
 
   /** 3a. Every second, we examine pending circuits and prune the
@@ -980,6 +986,7 @@ do_main_loop(void)
   if (router_reload_router_list()) {
     return -1;
   }
+  /* load the networkstatuses. */
   if (router_reload_networkstatus()) {
     return -1;
   }

@@ -903,8 +903,6 @@ connection_dir_client_reached_eof(connection_t *conn)
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-    running_routers_t *rrs;
-    routerlist_t *rl;
     /* just update our list of running routers, if this list is new info */
     log_fn(LOG_INFO,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
@@ -913,6 +911,13 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
+    if (router_parse_runningrouters(body)<0) {
+      log_fn(LOG_WARN,"Bad running-routers from server '%s:%d'. I'll try again soon.",
+             conn->address, conn->port);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      return -1;
+    }
+#if 0
     if (!(rrs = router_parse_runningrouters(body, 1))) {
       log_fn(LOG_WARN, "Can't parse runningrouters list (server '%s:%d')",
              conn->address, conn->port);
@@ -926,6 +931,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     } else {
       running_routers_free(rrs);
     }
+#endif
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
@@ -963,6 +969,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       else
         break;
     }
+    routers_update_all_from_networkstatus();
     if (which) {
       if (smartlist_len(which)) {
         dir_networkstatus_download_failed(which);
