@@ -11,7 +11,7 @@ tor (0.1.0.XXXX) UNRELEASED; urgency=low
     it to the wrong IP.  We now catch such cases in debian/rules, shout
     at the buildd maintainer, and ignore the result of our test suite.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 13 Sep 2005 19:18:39 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 14 Sep 2005 16:38:20 +0200
 
 tor (0.1.0.14-1) unstable; urgency=high
 

@@ -154,6 +154,9 @@ install: build
 
 	rm -f $(CURDIR)/debian/tor/usr/bin/tor-control.py
 
+	install -d -m 755 $(CURDIR)/debian/tor-dbg/usr/share/doc
+	ln -s tor $(CURDIR)/debian/tor-dbg/usr/share/doc/tor-dbg
+
 
 # Build architecture-independent files here.
 binary-indep: build install
