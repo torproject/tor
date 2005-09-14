@@ -365,9 +365,12 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
       if (!fascist_firewall_allows_address(router->addr, router->dir_port))
         continue;
     }
-    /* before 0.1.1.6-alpha, only trusted dirservers served status info. */
+    /* Before 0.1.1.6-alpha, only trusted dirservers served status info.
+     * Before 0.1.1.7-alpha, retrieving nonexistent server IDs could bork
+     * the directory server.
+     */
     if (for_v2_directory &&
-        !(tor_version_as_new_as(router->platform,"0.1.1.6-alpha") ||
+        !(tor_version_as_new_as(router->platform,"0.1.1.7-alpha") ||
           router_digest_is_trusted_dir(router->identity_digest)))
       continue;
     smartlist_add(sl, router);
