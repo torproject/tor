@@ -89,11 +89,11 @@ $Id$
          directory server's administrator.  Administrators should include at
          least an email address and a PGP fingerprint.
       "dir-signing-key" -- The directory server's public signing key.
-      "client-versions" -- A comma-separated list of recommended client versions
-      "server-versions" -- A comma-separated list of recommended server versions
+      "client-versions" -- A comma-separated list of recommended client versions.
+      "server-versions" -- A comma-separated list of recommended server versions.
       "published" -- The publication time for this network-status object.
       "dir-options" -- A set of flags separated by spaces:
-          "Names" if this directory server performs name bindings
+          "Names" if this directory server performs name bindings.
 
    The directory-options entry is optional; the others are required and must
    appear exactly once. The "network-status-version" entry must appear first;
@@ -114,10 +114,10 @@ $Id$
           - A directory port (or "0" for none")
       "s" -- A series of space-separated status flags:
           "Exit" if the router is useful for building general-purpose exit
-             circuits
-          "Stable" if the router tends to stay up for a long time
-          "Fast" if the router has high bandwidth
-          "Running" if the router is currently usable
+             circuits.
+          "Stable" if the router tends to stay up for a long time.
+          "Fast" if the router has high bandwidth.
+          "Running" if the router is currently usable.
           "Named" if the router's identity-nickname mapping is canonical.
           "Valid" if the router has been 'validated'.
 
