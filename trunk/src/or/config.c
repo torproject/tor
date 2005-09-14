@@ -260,10 +260,10 @@ static void config_line_append(config_line_t **lst,
 static void option_clear(config_format_t *fmt, or_options_t *options,
                          config_var_t *var);
 static void option_reset(config_format_t *fmt, or_options_t *options,
-                         config_var_t *var);
+                         config_var_t *var, int use_defaults);
 static void config_free(config_format_t *fmt, void *options);
 static int option_is_same(config_format_t *fmt,
-                          or_options_t *o1, or_options_t *o2,const char *name);
+                          or_options_t *o1, or_options_t *o2, const char *name);
 static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
 static int options_validate(or_options_t *options);
 static int options_act(or_options_t *old_options);
@@ -753,8 +753,14 @@ config_find_option(config_format_t *fmt, const char *key)
   return NULL;
 }
 
+/*
+ * Functions to assign config options.
+ */
+
 /** <b>c</b>-\>key is known to be a real key. Update <b>options</b>
  * with <b>c</b>-\>value and return 0, or return -1 if bad value.
+ *
+ * Called from config_assign_line() and option_reset().
  */
 static int
 config_assign_value(config_format_t *fmt, or_options_t *options,
@@ -827,10 +833,10 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     break;
 
   case CONFIG_TYPE_CSV:
-    if (*(smartlist_t**)lvalue) {
-      SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
-      smartlist_clear(*(smartlist_t**)lvalue);
-    } else {
+    if (!*(smartlist_t**)lvalue) {
+//      SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
+//      smartlist_clear(*(smartlist_t**)lvalue);
+//    } else {
       *(smartlist_t**)lvalue = smartlist_create();
     }
 
@@ -860,12 +866,14 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
  * <b>options</b> with its value and return 0.  Otherwise return -1 for bad key,
  * -2 for bad value.
  *
- * If 'reset' is set, and we get a line containing no value, restore the
- * option to its default value.
+ * If <b>clear_first</b> is set, clear the value first. Then if
+ * <b>use_defaults</b> is set, set the value to the default.
+ *
+ * Called from config_assign().
  */
 static int
 config_assign_line(config_format_t *fmt, or_options_t *options,
-                   config_line_t *c, int reset)
+                   config_line_t *c, int use_defaults, int clear_first)
 {
   config_var_t *var;
 
@@ -883,10 +891,7 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
   }
 
   if (!strlen(c->value)) { /* reset or clear it, then return */
-    if (reset)
-      option_reset(fmt, options, var);
-    else
-      option_clear(fmt, options, var);
+    option_reset(fmt, options, var, use_defaults);
     return 0;
   }
 
@@ -895,9 +900,11 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
   return 0;
 }
 
-/** restore the option named <b>key</b> in options to its default value. */
+/** Restore the option named <b>key</b> in options to its default value.
+ * Called from config_assign(). */
 static void
-config_reset_line(config_format_t *fmt, or_options_t *options, const char *key)
+config_reset_line(config_format_t *fmt, or_options_t *options,
+                  const char *key, int use_defaults)
 {
   config_var_t *var;
 
@@ -907,7 +914,7 @@ config_reset_line(config_format_t *fmt, or_options_t *options, const char *key)
   if (!var)
     return; /* give error on next pass. */
 
-  option_reset(fmt, options, var);
+  option_reset(fmt, options, var, use_defaults);
 }
 
 /** Return true iff key is a valid configuration option. */
@@ -1044,16 +1051,56 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
  * If an item is unrecognized, return -1 immediately,
  * else return 0 for success.
  *
- * If <b>reset</b>, then interpret empty lines as meaning "restore to
- * default value", and interpret LINELIST* options as replacing (not
- * extending) their previous values. Otherwise, interpret empty lines
- * as meaning "make the value 0 or null".
+ * If <b>clear_first</b>, interpret config options as replacing (not
+ * extending) their previous values. If <b>clear_first</b> is set,
+ * then <b>use_defaults</b> to decide if you set to defaults after
+ * clearing, or make the value 0 or NULL.
  *
+ * Here are the use cases:
+ * 1. A non-empty AllowUnverified line in your torrc. Appends to current.
+ * 2. An empty AllowUnverified line in your torrc. Should clear it.
+ * 3. "RESETCONF AllowUnverified" sets it to default.
+ * 4. "SETCONF AllowUnverified" makes it NULL.
+ * 5. "SETCONF AllowUnverified=foo" clears it and sets it to "foo".
+ *
+ * Use_defaults   Clear_first
+ *    0                0       "append"
+ *    1                0       undefined, don't use
+ *    0                1       "set to null first"
+ *    1                1       "set to defaults first"
  * Return 0 on success, -1 on bad key, -2 on bad value.
  */
+
+/*
+There are three call cases for config_assign() currently.
+
+Case one: Torrc entry
+options_init_from_torrc() calls config_assign(0, 0)
+  calls config_assign_line(0, 0).
+    if value is empty, calls option_reset(0) and returns.
+    calls config_assign_value(), appends.
+
+Case two: setconf
+options_trial_assign() calls config_assign(0, 1)
+  calls config_reset_line(0)
+    calls option_reset(0)
+      calls option_clear().
+  calls config_assign_line(0, 1).
+    if value is empty, calls option_reset(0) and returns.
+    calls config_assign_value(), appends.
+
+Case three: resetconf
+options_trial_assign() calls config_assign(1, 1)
+  calls config_reset_line(1)
+    calls option_reset(1)
+      calls option_clear().
+      calls config_assign_value(default)
+  calls config_assign_line(1, 1).
+    calls option_reset(1) and returns.
+*/
 static int
-config_assign(config_format_t *fmt,
-              void *options, config_line_t *list, int reset)
+config_assign(config_format_t *fmt, void *options,
+              config_line_t *list, int use_defaults, int clear_first)
 {
   config_line_t *p;
 
@@ -1068,17 +1115,17 @@ config_assign(config_format_t *fmt,
     }
   }
 
-  /* pass 2: if we're reading from a resetting source, clear all mentioned
-   * linelists. */
-  if (reset) {
+  /* pass 2: if we're reading from a resetting source, clear all
+   * mentioned config options, and maybe set to their defaults. */
+  if (clear_first) {
     for (p = list; p; p = p->next)
-      config_reset_line(fmt, options, p->key);
+      config_reset_line(fmt, options, p->key, use_defaults);
   }
 
   /* pass 3: assign. */
   while (list) {
     int r;
-    if ((r=config_assign_line(fmt, options, list, reset)))
+    if ((r=config_assign_line(fmt, options, list, use_defaults, clear_first)))
       return r;
     list = list->next;
   }
@@ -1092,12 +1139,13 @@ config_assign(config_format_t *fmt,
  * keys, -2 on bad values, -3 on bad transition.
  */
 int
-options_trial_assign(config_line_t *list, int reset)
+options_trial_assign(config_line_t *list, int use_defaults, int clear_first)
 {
   int r;
   or_options_t *trial_options = options_dup(&options_format, get_options());
 
-  if ((r=config_assign(&options_format, trial_options, list, reset)) < 0) {
+  if ((r=config_assign(&options_format, trial_options,
+                       list, use_defaults, clear_first)) < 0) {
     config_free(&options_format, trial_options);
     return r;
   }
@@ -1116,7 +1164,8 @@ options_trial_assign(config_line_t *list, int reset)
   return 0;
 }
 
-/** Reset config option <b>var</b> to 0, 0.0, "", or the equivalent. */
+/** Reset config option <b>var</b> to 0, 0.0, NULL, or the equivalent.
+ * Called from option_reset() and config_free(). */
 static void
 option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
 {
@@ -1158,15 +1207,19 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
   }
 }
 
-/** Replace the option indexed by <b>var</b> in <b>options</b> with its
- * default value. */
+/** Clear the option indexed by <b>var</b> in <b>options</b>. Then if
+ * <b>use_defaults</b>, set it to its default value.
+ * Called by config_init() and option_reset_line() and option_assign_line(). */
 static void
-option_reset(config_format_t *fmt, or_options_t *options, config_var_t *var)
+option_reset(config_format_t *fmt, or_options_t *options,
+             config_var_t *var, int use_defaults)
 {
   config_line_t *c;
   void *lvalue;
   CHECK(fmt, options);
   option_clear(fmt, options, var); /* clear it first */
+  if (!use_defaults)
+    return; /* all done */
   lvalue = ((char*)options) + var->var_offset;
   if (var->initvalue) {
     c = tor_malloc_zero(sizeof(config_line_t));
@@ -1327,42 +1380,28 @@ static void
 config_free(config_format_t *fmt, void *options)
 {
   int i;
-  void *lvalue;
 
   tor_assert(options);
 
-  for (i=0; fmt->vars[i].name; ++i) {
-    lvalue = ((char*)options) + fmt->vars[i].var_offset;
-    switch (fmt->vars[i].type) {
-      case CONFIG_TYPE_MEMUNIT:
-      case CONFIG_TYPE_INTERVAL:
-      case CONFIG_TYPE_UINT:
-      case CONFIG_TYPE_BOOL:
-      case CONFIG_TYPE_DOUBLE:
-      case CONFIG_TYPE_ISOTIME:
-      case CONFIG_TYPE_OBSOLETE:
-        break; /* nothing to free for these config types */
-      case CONFIG_TYPE_STRING:
-        tor_free(*(char **)lvalue);
-        break;
-      case CONFIG_TYPE_LINELIST:
-      case CONFIG_TYPE_LINELIST_V:
-        config_free_lines(*(config_line_t**)lvalue);
-        *(config_line_t**)lvalue = NULL;
-        break;
-      case CONFIG_TYPE_CSV:
-        if (*(smartlist_t**)lvalue) {
-          SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
-          smartlist_free(*(smartlist_t**)lvalue);
-          *(smartlist_t**)lvalue = NULL;
-        }
-        break;
-      case CONFIG_TYPE_LINELIST_S:
-        /* will be freed by corresponding LINELIST_V. */
-        break;
-    }
-  }
+  for (i=0; fmt->vars[i].name; ++i)
+    option_clear(fmt, options, &(fmt->vars[i]));
   tor_free(options);
+}
+
+/** Return true iff a and b contain identical keys and values in identical
+ * order. */
+static int
+config_lines_eq(config_line_t *a, config_line_t *b)
+{
+  while (a && b) {
+    if (strcasecmp(a->key, b->key) || strcmp(a->value, b->value))
+      return 0;
+    a = a->next;
+    b = b->next;
+  }
+  if (a || b)
+    return 0;
+  return 1;
 }
 
 /** Return true iff the option <b>var</b> has the same value in <b>o1</b>
@@ -1379,18 +1418,7 @@ option_is_same(config_format_t *fmt,
 
   c1 = get_assigned_option(fmt, o1, name);
   c2 = get_assigned_option(fmt, o2, name);
-  while (c1 && c2) {
-    if (strcasecmp(c1->key, c2->key) ||
-        strcmp(c1->value, c2->value)) {
-      r = 0;
-      break;
-    }
-    c1 = c1->next;
-    c2 = c2->next;
-  }
-  if (r && (c1 || c2)) {
-    r = 0;
-  }
+  r = config_lines_eq(c1, c2);
   config_free_lines(c1);
   config_free_lines(c2);
   return r;
@@ -1412,7 +1440,7 @@ options_dup(config_format_t *fmt, or_options_t *old)
       continue;
     line = get_assigned_option(fmt, old, fmt->vars[i].name);
     if (line) {
-      if (config_assign(fmt, newopts, line, 0) < 0) {
+      if (config_assign(fmt, newopts, line, 0, 0) < 0) {
         log_fn(LOG_WARN,"Bug: config_get_assigned_option() generated "
                "something we couldn't config_assign().");
         tor_assert(0);
@@ -1450,7 +1478,7 @@ config_init(config_format_t *fmt, void *options)
     var = &fmt->vars[i];
     if (!var->initvalue)
       continue; /* defaults to NULL or 0 */
-    option_reset(fmt, options, var);
+    option_reset(fmt, options, var, 1);
   }
 }
 
@@ -2051,22 +2079,6 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
   return 0;
 }
 
-/** Return true iff a and b contain identical keys and values in identical
- * order. */
-static int
-config_lines_eq(config_line_t *a, config_line_t *b)
-{
-  while (a && b) {
-    if (strcasecmp(a->key, b->key) || strcmp(a->value, b->value))
-      return 0;
-    a = a->next;
-    b = b->next;
-  }
-  if (a || b)
-    return 0;
-  return 1;
-}
-
 /** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
  * will require us to rotate the cpu and dns workers; else return 0. */
 static int
@@ -2297,7 +2309,7 @@ options_init_from_torrc(int argc, char **argv)
     tor_free(cf);
     if (retval < 0)
       goto err;
-    retval = config_assign(&options_format, newoptions, cl, 0);
+    retval = config_assign(&options_format, newoptions, cl, 0, 0);
     config_free_lines(cl);
     if (retval < 0)
       goto err;
@@ -2306,7 +2318,7 @@ options_init_from_torrc(int argc, char **argv)
   /* Go through command-line variables too */
   if (config_get_commandlines(argc, argv, &cl) < 0)
     goto err;
-  retval = config_assign(&options_format, newoptions, cl, 0);
+  retval = config_assign(&options_format, newoptions, cl, 0, 0);
   config_free_lines(cl);
   if (retval < 0)
     goto err;
@@ -3241,7 +3253,7 @@ or_state_load(void)
     int assign_retval;
     if (config_get_lines(contents, &lines)<0)
       goto done;
-    assign_retval = config_assign(&state_format, new_state, lines, 0);
+    assign_retval = config_assign(&state_format, new_state, lines, 0, 0);
     config_free_lines(lines);
     if (assign_retval<0)
       goto done;

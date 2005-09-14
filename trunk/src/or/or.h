@@ -1444,7 +1444,7 @@ const char *safe_str(const char *address);
 
 int config_get_lines(char *string, config_line_t **result);
 void config_free_lines(config_line_t *front);
-int options_trial_assign(config_line_t *list, int reset);
+int options_trial_assign(config_line_t *list, int use_defaults, int clear_first);
 int resolve_my_address(or_options_t *options, uint32_t *addr,
                        char **hostname_out);
 void options_init(or_options_t *options);
