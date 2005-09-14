@@ -833,7 +833,7 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     break;
 
   case CONFIG_TYPE_CSV:
-    if (!*(smartlist_t**)lvalue) {
+    if (*(smartlist_t**)lvalue) {
       SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
       smartlist_clear(*(smartlist_t**)lvalue);
     } else {
