@@ -845,12 +845,12 @@ typedef struct networkstatus_t {
 typedef struct {
   /** List of routerinfo_t. */
   smartlist_t *routers;
-  /** Which versions of tor are recommended by this directory? */
-  char *software_versions;
   /** When was the most recent directory that contributed to this list
    * published? */
   time_t published_on;
 #if 0
+  /** Which versions of tor are recommended by this directory? */
+  char *software_versions;
   time_t running_routers_updated_on;
   /** What is the most recently received running_routers structure? */
   running_routers_t *running_routers;

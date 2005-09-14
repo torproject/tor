@@ -539,7 +539,6 @@ router_parse_routerlist_from_directory(const char *str,
     goto err;
   }
 
-  new_dir->software_versions = versions; versions = NULL;
   new_dir->published_on = published_on;
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));

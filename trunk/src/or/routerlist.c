@@ -980,7 +980,6 @@ routerlist_free(routerlist_t *rl)
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   smartlist_free(rl->routers);
-  tor_free(rl->software_versions);
   tor_free(rl);
 }
 
@@ -1305,9 +1304,6 @@ router_load_routerlist_from_directory(const char *s,
     });
     smartlist_clear(new_list->routers);
     routerlist->published_on = new_list->published_on;
-    tor_free(routerlist->software_versions);
-    routerlist->software_versions = new_list->software_versions;
-    new_list->software_versions = NULL;
     routerlist_free(new_list);
     control_event_descriptors_changed(changed);
     smartlist_free(changed);
