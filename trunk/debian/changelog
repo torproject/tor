@@ -1,3 +1,11 @@
+tor (0.1.1.6-alphaXX) experimental; urgency=low
+
+  * More merging from 0.1.0.14+XXXX:
+    - The tor-dbg package does not really need its own copy of copyright
+      and changelog in usr/share/doc/tor-dbg.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 14 Sep 2005 16:44:26 +0200
+
 tor (0.1.1.6-alpha-2) experimental; urgency=low
 
   * Merge 0.1.0.14+XXXX changes.
