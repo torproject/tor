@@ -1740,15 +1740,14 @@ helper_nodes_set_status_from_directory(void)
       routerinfo_t *r = router_get_by_digest(helper->identity);
       if (! r) {
         if (! helper->unlisted_since) {
-        /* Watch out for skew here. XXXX */
-          helper->unlisted_since = routers->published_on;
+          helper->unlisted_since = time(NULL);
           ++changed;
-          log_fn(LOG_WARN,"Helper node '%s' is not published in latest directory",
+          log_fn(LOG_WARN,"Helper node '%s' is not listed by directories",
                  helper->nickname);
         }
       } else {
         if (helper->unlisted_since) {
-          log_fn(LOG_WARN,"Helper node '%s' is listed again in latest directory",
+          log_fn(LOG_WARN,"Helper node '%s' is listed again by directories",
                  helper->nickname);
           ++changed;
         }
@@ -1761,7 +1760,7 @@ helper_nodes_set_status_from_directory(void)
           }
         } else {
           if (helper->down_since) {
-            log_fn(LOG_WARN,"Helper node '%s' is up in latest directory",
+            log_fn(LOG_WARN,"Helper node '%s' is up in latest directories",
                    helper->nickname);
             ++changed;
           }

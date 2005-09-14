@@ -76,7 +76,7 @@ router_reload_router_list(void)
       log_fn(LOG_WARN, "Cached directory at '%s' was unparseable; ignoring.", filename);
     }
     if (routerlist &&
-        ((routerlist->published_on > time(NULL) - MIN_ONION_KEY_LIFETIME/2)
+        ((routerlist->published_on_xx > time(NULL) - MIN_ONION_KEY_LIFETIME/2)
          || is_recent)) {
       directory_has_arrived(st.st_mtime, NULL); /* do things we've been waiting to do */
     }
@@ -438,7 +438,6 @@ mark_all_trusteddirservers_up(void)
                  if (router_digest_is_trusted_dir(router->identity_digest) &&
                      router->dir_port > 0) {
                    router->is_running = 1;
-                   router->status_set_at = time(NULL);
                  });
   }
   if (trusted_dir_servers) {
@@ -840,6 +839,8 @@ router_get_by_nickname(const char *nickname)
 
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
   {
+    /* XXXX001 NM Should this restrict by Named rouers, or warn on
+     * non-named routers, or something? */
     if (0 == strcasecmp(router->nickname, nickname) ||
         (maybedigest && 0 == memcmp(digest, router->identity_digest,
                                     DIGEST_LEN)))
@@ -905,6 +906,7 @@ router_get_routerlist(routerlist_t **prouterlist)
   *prouterlist = routerlist;
 }
 
+#if 0
 /** Return the publication time on the current routerlist, or 0 if we have no
  * routerlist. */
 time_t
@@ -912,6 +914,8 @@ routerlist_get_published_time(void)
 {
   return routerlist ? routerlist->published_on : 0;
 }
+#endif
+
 
 /** Free all storage held by <b>router</b>. */
 void
@@ -983,9 +987,9 @@ routerlist_free(routerlist_t *rl)
   tor_free(rl);
 }
 
-/** Free all entries in the current router list. */
+/** Free all memory held by the rouerlist module */
 void
-routerlist_free_current(void)
+routerlist_free_all(void)
 {
   if (routerlist)
     routerlist_free(routerlist);
@@ -994,6 +998,18 @@ routerlist_free_current(void)
     SMARTLIST_FOREACH(warned_nicknames, char *, cp, tor_free(cp));
     smartlist_free(warned_nicknames);
     warned_nicknames = NULL;
+  }
+  if (trusted_dir_servers) {
+    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+                      { tor_free(ds->address); tor_free(ds); });
+    smartlist_free(trusted_dir_servers);
+    trusted_dir_servers = NULL;
+  }
+  if (networkstatus_list) {
+    SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+                      networkstatus_free(ns));
+    smartlist_free(networkstatus_list);
+    networkstatus_list = NULL;
   }
 }
 
@@ -1021,18 +1037,6 @@ networkstatus_free(networkstatus_t *ns)
   tor_free(ns);
 }
 
-/** Free all entries in the list of trusted directory servers. */
-void
-free_trusted_dir_servers(void)
-{
-  if (trusted_dir_servers) {
-    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
-                      { tor_free(ds->address); tor_free(ds); });
-    smartlist_free(trusted_dir_servers);
-    trusted_dir_servers = NULL;
-  }
-}
-
 /** Mark the router with ID <b>digest</b> as non-running in our routerlist. */
 void
 router_mark_as_down(const char *digest)
@@ -1051,7 +1055,6 @@ router_mark_as_down(const char *digest)
   if (router_is_me(router) && !we_are_hibernating())
     log_fn(LOG_WARN, "We just marked ourself as down. Are your external addresses reachable?");
   router->is_running = 0;
-  router->status_set_at = time(NULL);
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
@@ -1303,7 +1306,7 @@ router_load_routerlist_from_directory(const char *s,
         smartlist_add(changed, r);
     });
     smartlist_clear(new_list->routers);
-    routerlist->published_on = new_list->published_on;
+    routerlist->published_on_xx = new_list->published_on_xx;
     routerlist_free(new_list);
     control_event_descriptors_changed(changed);
     smartlist_free(changed);
@@ -1374,6 +1377,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   int skewed = 0;
   trusted_dir_server_t *trusted_dir;
   char fp[HEX_DIGEST_LEN+1];
+  char published[ISO_TIME_LEN+1];
 
   ns = networkstatus_parse_from_string(s);
   if (!ns) {
@@ -1391,8 +1395,10 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   ns->received_on = arrived_at;
 
+  format_iso_time(published, ns->published_on);
+
   if (ns->published_on > now + NETWORKSTATUS_ALLOW_SKEW) {
-    log_fn(LOG_WARN, "Network status was published in the future (?). Somebody is skewed here: check your clock. Not caching.");
+    log_fn(LOG_WARN, "Network status was published in the future (%s GMT). Somebody is skewed here: check your clock. Not caching.", published);
     skewed = 1;
   }
 
@@ -1412,7 +1418,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
       smartlist_string_remove(requested_fingerprints, fp);
     } else {
       char *requested = smartlist_join_strings(requested_fingerprints," ",0,NULL);
-      log_fn(LOG_WARN, "We received a network status with a fingerprint (%s) that we never requested. (%s) Dropping.", fp, requested);
+      log_fn(LOG_WARN, "We received a network status with a fingerprint (%s) that we never requested. (We asked for: %s.) Dropping.", fp, requested);
       tor_free(requested);
       return 0;
     }
@@ -1430,13 +1436,27 @@ router_set_networkstatus(const char *s, time_t arrived_at,
                   ns->networkstatus_digest, DIGEST_LEN)) {
         /* Same one we had before. */
         networkstatus_free(ns);
-        log_fn(LOG_NOTICE, "Dropping network-status (%s); already have it.",fp);
-        if (old_ns->received_on < arrived_at)
-          /* XXXX We should touch the cache file. NM */
+        log_fn(LOG_NOTICE,
+            "Dropping network-status from %s:%d (published %s); already have it.",
+               trusted_dir->address, trusted_dir->dir_port, published);
+        if (old_ns->received_on < arrived_at) {
+          if (source != NS_FROM_CACHE) {
+            char *fn = networkstatus_get_cache_filename(old_ns);
+            /* We use mtime to tell when it arrived, so update that. */
+            touch_file(fn);
+            tor_free(fn);
+          }
           old_ns->received_on = arrived_at;
+        }
         return 0;
       } else if (old_ns->published_on >= ns->published_on) {
-        log_fn(LOG_NOTICE, "Dropping network-status (%s); we have a newer one for this authority.", fp);
+        char old_published[ISO_TIME_LEN+1];
+        format_iso_time(old_published, old_ns->published_on);
+        log_fn(LOG_NOTICE,
+               "Dropping network-status from %s:%d (published %s);"
+               " we have a newer one (published %s) for this authority.",
+               trusted_dir->address, trusted_dir->dir_port, published,
+               old_published);
         networkstatus_free(ns);
         return 0;
       } else {
@@ -1452,10 +1472,10 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     smartlist_add(networkstatus_list, ns);
 
   /*XXXX011 downgrade to INFO NM */
-  log_fn(LOG_NOTICE, "New networkstatus %s (%s).",
-         source == NS_FROM_CACHE?"from our cache":
-         (source==NS_FROM_DIR?"from a directory server":"from this authority"),
-         fp);
+  log_fn(LOG_NOTICE, "Setting networkstatus %s %s:%d (published %s)",
+         source == NS_FROM_CACHE?"cached from":
+         (source==NS_FROM_DIR?"downloaded from":"generated for"),
+         trusted_dir->address, trusted_dir->dir_port, published);
   networkstatus_list_has_changed = 1;
 
   smartlist_sort(networkstatus_list, _compare_networkstatus_published_on);
