@@ -835,7 +835,8 @@ typedef struct networkstatus_t {
 
   int binds_names:1; /**< True iff this directory server binds names. */
 
-  smartlist_t *entries; /**< List of router_status_t*. */
+  smartlist_t *entries; /**< List of router_status_t*.   This list is kept
+                         * sorted by identity_digest. */
 } networkstatus_t;
 
 /** Contents of a directory of onion routers. */
