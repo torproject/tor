@@ -834,9 +834,9 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
 
   case CONFIG_TYPE_CSV:
     if (!*(smartlist_t**)lvalue) {
-//      SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
-//      smartlist_clear(*(smartlist_t**)lvalue);
-//    } else {
+      SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
+      smartlist_clear(*(smartlist_t**)lvalue);
+    } else {
       *(smartlist_t**)lvalue = smartlist_create();
     }
 
@@ -1057,7 +1057,8 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
  * clearing, or make the value 0 or NULL.
  *
  * Here are the use cases:
- * 1. A non-empty AllowUnverified line in your torrc. Appends to current.
+ * 1. A non-empty AllowUnverified line in your torrc. Appends to current
+ *    if linelist, replaces current if csv.
  * 2. An empty AllowUnverified line in your torrc. Should clear it.
  * 3. "RESETCONF AllowUnverified" sets it to default.
  * 4. "SETCONF AllowUnverified" makes it NULL.
