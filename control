@@ -2,7 +2,7 @@ Source: tor
 Section: comm
 Priority: optional
 Maintainer: Peter Palfrader <weasel@debian.org>
-Build-Depends: debhelper (>= 4.1.65), libssl-dev, dpatch, zlib1g-dev, libevent-dev (>= 1.1), tetex-bin, tetex-extra, transfig, gs
+Build-Depends: debhelper (>= 4.1.65), libssl-dev, dpatch, zlib1g-dev, libevent-dev (>= 1.1), tetex-bin, tetex-extra, transfig, gs, binutils (>= 2.14.90.0.7)
 Standards-Version: 3.6.2
 
 Package: tor
@@ -46,3 +46,13 @@ Description: anonymizing overlay network for TCP
  The latest information can be found at http://tor.eff.org/, or on the
  mailing lists, archived at http://archives.seul.org/or/talk/ or
  http://archives.seul.org/or/announce/.
+
+Package: tor-dbg
+Architecture: any
+Depends: tor (= ${Source-Version})
+Suggests: gdb
+Priority: extra
+Description: debugging symbols for Tor
+ This package provides the debugging symbols for Tor, The Onion Router.
+ Those symbols allow your debugger to assign names to your backtraces, which
+ makes it somewhat easier to interpret core dumps.

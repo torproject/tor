@@ -1,3 +1,9 @@
+tor (0.1.1.6-alpha-2) experimental; urgency=low
+
+  * Merge 0.1.0.14+XXXX changes.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 14 Sep 2005 15:05:16 +0200
+
 tor (0.1.1.6-alpha-1) experimental; urgency=low
 
   * Experimental upstream version.
@@ -21,6 +27,21 @@ tor (0.1.1.5-alpha-1) UNRELEASED; urgency=low
   * Forward port debian/ patches.
 
  -- Peter Palfrader <weasel@debian.org>  Fri, 12 Aug 2005 17:02:23 +0200
+
+tor (0.1.0.14+XXXX) UNRELEASED; urgency=low
+
+  * Ship debugging information in a separate package now, instead
+    of simply not stripping tor.  This is still useful while tor is
+    young.  Ideally it would go away some time.
+  * Add LSB comments to init script as suggested by Petter Reinholdtsen
+    on the debian-devel list:
+    - http://lists.debian.org/debian-devel/2005/08/msg01172.html
+    - http://wiki.debian.net/?LSBInitScripts
+  * Work around broken chroots that do not resolve localhost or resolve
+    it to the wrong IP.  We now catch such cases in debian/rules, shout
+    at the buildd maintainer, and ignore the result of our test suite.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 13 Sep 2005 19:18:39 +0200
 
 tor (0.1.0.14-1) unstable; urgency=high
 
