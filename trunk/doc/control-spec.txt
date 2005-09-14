@@ -128,10 +128,12 @@ $Id$
 
 3.2. RESETCONF
 
-  Remove all settings for a given configuration option entirely, and go
-  back to its default value.  The syntax is:
+  Remove all settings for a given configuration option entirely, assign
+  its default value (if any), and then assign the String provided.
+  Typically the String is left empty, to simply set an option back to
+  its default. The syntax is:
 
-    "RESETCONF" 1*(SP keyword) CRLF
+    "RESETCONF" 1*(SP keyword ["=" String]) CRLF
 
   Otherwise it behaves like SETCONF above.
 
