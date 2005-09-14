@@ -266,6 +266,7 @@ static int option_is_same(config_format_t *fmt,
                           or_options_t *o1, or_options_t *o2, const char *name);
 static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
 static int options_validate(or_options_t *options);
+static int options_act_reversible(or_options_t *old_options);
 static int options_act(or_options_t *old_options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
 static int options_transition_affects_workers(or_options_t *old_options,
@@ -363,19 +364,25 @@ get_options(void)
  * their current value; take action based on the new value; free the old value
  * as necessary.
  */
-void
+int
 set_options(or_options_t *new_val)
 {
   or_options_t *old_options = global_options;
   global_options = new_val;
   /* Note that we pass the *old* options below, for comparison. It
    * pulls the new options directly out of global_options. */
+  if (options_act_reversible(old_options)<0) {
+    global_options = old_options;
+    return -1;
+  }
   if (options_act(old_options) < 0) { /* acting on the options failed. die. */
     log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
   if (old_options)
     config_free(&options_format, old_options);
+
+  return 0;
 }
 
 void
@@ -403,6 +410,98 @@ safe_str(const char *address)
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
  *
+ * Return 0 if all goes well, return -1 if things went badly.
+ */
+static int
+options_act_reversible(or_options_t *old_options)
+{
+  smartlist_t *new_listeners = smartlist_create();
+  smartlist_t *replaced_listeners = smartlist_create();
+  static int libevent_initialized = 0;
+  or_options_t *options = get_options();
+  int running_tor = options->command == CMD_RUN_TOR;
+  int set_conn_limit = 0;
+  int r = -1;
+
+  if (running_tor && options->RunAsDaemon) {
+    /* No need to roll back, since you can't change the value. */
+    start_daemon();
+  }
+
+  /* Setuid/setgid as appropriate */
+  if (options->User || options->Group) {
+    if (switch_id(options->User, options->Group) != 0) {
+      /* No need to roll back, since you can't change the value. */
+      goto done;
+    }
+  }
+
+  /* Set up libevent. */
+  if (running_tor && !libevent_initialized) {
+    if (init_libevent())
+      goto done;
+    libevent_initialized = 1;
+  }
+
+  /* Ensure data directory is private; create if possible. */
+  if (check_private_dir(options->DataDirectory, CPD_CREATE)<0) {
+    log_fn(LOG_ERR, "Couldn't access/create private data directory \"%s\"",
+           options->DataDirectory);
+    /* No need to roll back, since you can't change the value. */
+    goto done;
+  }
+
+  /* Bail out at this point if we're not going to be a client or server:
+   * we don't run  */
+  if (options->command != CMD_RUN_TOR)
+    goto commit;
+
+  options->_ConnLimit =
+    set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
+  if (options->_ConnLimit < 0)
+    goto rollback;
+  set_conn_limit = 1;
+
+  if (retry_all_listeners(0, replaced_listeners, new_listeners) < 0) {
+    log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
+    goto rollback;
+  }
+
+ commit:
+  r = 0;
+  SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
+  {
+    log_fn(LOG_NOTICE, "Closing old %s on %s:%d",
+           conn_type_to_string(conn->type), conn->address, conn->port);
+    connection_close_immediate(conn);
+    connection_mark_for_close(conn);
+  });
+  goto done;
+
+ rollback:
+  r = -1;
+
+  if (set_conn_limit && old_options)
+    set_max_file_descriptors((unsigned)old_options->ConnLimit,MAXCONNECTIONS);
+
+  SMARTLIST_FOREACH(new_listeners, connection_t *, conn,
+  {
+    log_fn(LOG_NOTICE, "Closing %s on %s:%d",
+           conn_type_to_string(conn->type), conn->address, conn->port);
+    connection_close_immediate(conn);
+    connection_mark_for_close(conn);
+  });
+
+ done:
+  smartlist_free(new_listeners);
+  smartlist_free(replaced_listeners);
+  return r;
+}
+
+/** Fetch the active option list, and take actions based on it. All of the
+ * things we do should survive being done repeatedly.  If present,
+ * <b>old_options</b> contains the previous value of the options.
+ *
  * Return 0 if all goes well, return -1 if it's time to die.
  *
  * Note 2: We haven't moved all the "act on new configuration" logic
@@ -416,11 +515,6 @@ options_act(or_options_t *old_options)
   size_t len;
   or_options_t *options = get_options();
   int running_tor = options->command == CMD_RUN_TOR;
-  static int libevent_initialized = 0;
-
-  if (running_tor && options->RunAsDaemon) {
-    start_daemon();
-  }
 
   clear_trusted_dir_servers();
   for (cl = options->DirServers; cl; cl = cl->next) {
@@ -440,19 +534,6 @@ options_act(or_options_t *old_options)
   if (options->EntryNodes && strlen(options->EntryNodes))
     options->UseHelperNodes = 0;
 
-  /* Setuid/setgid as appropriate */
-  if (options->User || options->Group) {
-    if (switch_id(options->User, options->Group) != 0) {
-      return -1;
-    }
-  }
-
-  /* Ensure data directory is private; create if possible. */
-  if (check_private_dir(options->DataDirectory, CPD_CREATE) != 0) {
-    log_fn(LOG_ERR, "Couldn't access/create private data directory \"%s\"",
-           options->DataDirectory);
-    return -1;
-  }
   if (running_tor) {
     len = strlen(options->DataDirectory)+32;
     fn = tor_malloc(len);
@@ -481,22 +562,10 @@ options_act(or_options_t *old_options)
   add_callback_log(LOG_ERR, LOG_ERR, control_event_logmsg);
   control_adjust_event_log_severity();
 
-  /* Set up libevent. */
-  if (running_tor && !libevent_initialized) {
-    if (init_libevent())
-      return -1;
-    libevent_initialized = 1;
-  }
-
   /* Load state */
   if (! global_state)
     if (or_state_load())
       return -1;
-
-  options->_ConnLimit =
-    set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
-  if (options->_ConnLimit < 0)
-    return -1;
 
   {
     smartlist_t *sl = smartlist_create();
@@ -544,11 +613,6 @@ options_act(or_options_t *old_options)
 
   if (!running_tor)
     return 0;
-
-  if (!we_are_hibernating() && retry_all_listeners(0) < 0) {
-    log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
-    return -1;
-  }
 
   /* Check for transitions that need action. */
   if (old_options) {
@@ -1138,7 +1202,7 @@ config_assign(config_format_t *fmt, void *options,
  * options, assigning list to the new one, then validating it. If it's
  * ok, then throw out the old one and stick with the new one. Else,
  * revert to old and return failure.  Return 0 on success, -1 on bad
- * keys, -2 on bad values, -3 on bad transition.
+ * keys, -2 on bad values, -3 on bad transition, and -4 on failed-to-set.
  */
 int
 options_trial_assign(config_line_t *list, int use_defaults, int clear_first)
@@ -1162,7 +1226,12 @@ options_trial_assign(config_line_t *list, int use_defaults, int clear_first)
     return -3;
   }
 
-  set_options(trial_options); /* we liked it. put it in place. */
+  if (set_options(trial_options)<0) {
+    config_free(&options_format, trial_options);
+    return -4;
+  }
+
+  /* we liked it. put it in place. */
   return 0;
 }
 
@@ -2332,7 +2401,8 @@ options_init_from_torrc(int argc, char **argv)
   if (options_transition_allowed(oldoptions, newoptions) < 0)
     goto err;
 
-  set_options(newoptions); /* frees and replaces old options */
+  if (set_options(newoptions))
+    goto err; /* frees and replaces old options */
   tor_free(torrc_fname);
   torrc_fname = fname;
   return 0;

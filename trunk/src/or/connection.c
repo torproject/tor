@@ -13,8 +13,8 @@ const char connection_c_id[] = "$Id$";
 
 #include "or.h"
 
-static int connection_create_listener(const char *bindaddress,
-                                      uint16_t bindport, int type);
+static connection_t *connection_create_listener(const char *bindaddress,
+                                                uint16_t bindport, int type);
 static int connection_init_accepted_conn(connection_t *conn);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_receiver_bucket_should_increase(connection_t *conn);
@@ -474,8 +474,9 @@ connection_expire_held_open(void)
  * If <b>bindaddress</b> includes a port, we bind on that port; otherwise, we
  * use bindport.
  */
-static int
-connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
+static connection_t *
+connection_create_listener(const char *bindaddress, uint16_t bindport,
+                           int type)
 {
   struct sockaddr_in bindaddr; /* where to bind */
   char *address = NULL;
@@ -490,7 +491,7 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
   memset(&bindaddr,0,sizeof(struct sockaddr_in));
   if (parse_addr_port(bindaddress, &address, &addr, &usePort)<0) {
     log_fn(LOG_WARN, "Error parsing/resolving BindAddress %s",bindaddress);
-    return -1;
+    return NULL;
   }
 
   if (usePort==0)
@@ -551,11 +552,11 @@ connection_create_listener(const char *bindaddress, uint16_t bindport, int type)
   conn->state = LISTENER_STATE_READY;
   connection_start_reading(conn);
 
-  return 0;
+  return conn;
 
  err:
   tor_free(address);
-  return -1;
+  return NULL;
 }
 
 /** Do basic sanity checking on a newly received socket. Return 0
@@ -804,10 +805,15 @@ connection_connect(connection_t *conn, char *address,
  * Otherwise, only relaunch the listeners of this type if the number of
  * existing connections is not as configured (e.g., because one died),
  * or if the existing connections do not match those configured.
+ *
+ * Add all old conns that should be closed to <b>replaced_conns</b>.
+ * Add all new connections to <b>new_conns</b>.
  */
 static int
 retry_listeners(int type, config_line_t *cfg,
-                int port_option, const char *default_addr, int force)
+                int port_option, const char *default_addr, int force,
+                smartlist_t *replaced_conns,
+                smartlist_t *new_conns)
 {
   smartlist_t *launch = smartlist_create();
   int free_launch_elts = 1;
@@ -828,6 +834,11 @@ retry_listeners(int type, config_line_t *cfg,
     line->value = tor_strdup(default_addr);
     smartlist_add(launch, line);
   }
+
+  /*
+  SMARTLIST_FOREACH(launch, config_line_t *, l,
+                    log_fn(LOG_NOTICE, "#%s#%s", l->key, l->value));
+  */
 
   get_connection_array(&carray,&n_conn);
   for (i=0; i < n_conn; ++i) {
@@ -862,8 +873,12 @@ retry_listeners(int type, config_line_t *cfg,
       /* This one isn't configured. Close it. */
       log_fn(LOG_NOTICE, "Closing %s on %s:%d",
              conn_type_to_string(type), conn->address, conn->port);
-      connection_close_immediate(conn);
-      connection_mark_for_close(conn);
+      if (replaced_conns) {
+        smartlist_add(replaced_conns, conn);
+      } else {
+        connection_close_immediate(conn);
+        connection_mark_for_close(conn);
+      }
     } else {
       /* It's configured; we don't need to launch it. */
       log_fn(LOG_INFO, "Already have %s on %s:%d",
@@ -876,9 +891,14 @@ retry_listeners(int type, config_line_t *cfg,
   i = 0;
   SMARTLIST_FOREACH(launch, config_line_t *, cfg,
     {
-      if (connection_create_listener(cfg->value, (uint16_t) port_option,
-                                     type)<0)
+      conn = connection_create_listener(cfg->value, (uint16_t) port_option,
+                                        type);
+      if (!conn) {
         i = -1;
+      } else {
+        if (new_conns)
+          smartlist_add(new_conns, conn);
+      }
   });
 
   if (free_launch_elts) {
@@ -894,24 +914,32 @@ retry_listeners(int type, config_line_t *cfg,
  * <b>force</b> is true, close and relaunch all listeners. If <b>force</b>
  * is false, then only relaunch listeners when we have the wrong number of
  * connections for a given type.
+ *
+ * Add all old conns that should be closed to <b>replaced_conns</b>.
+ * Add all new connections to <b>new_conns</b>.
  */
 int
-retry_all_listeners(int force)
+retry_all_listeners(int force, smartlist_t *replaced_conns,
+                    smartlist_t *new_conns)
 {
   or_options_t *options = get_options();
 
   if (server_mode(options) &&
       retry_listeners(CONN_TYPE_OR_LISTENER, options->ORBindAddress,
-                      options->ORPort, "0.0.0.0", force)<0)
+                      options->ORPort, "0.0.0.0", force,
+                      replaced_conns, new_conns)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirBindAddress,
-                      options->DirPort, "0.0.0.0", force)<0)
+                      options->DirPort, "0.0.0.0", force,
+                      replaced_conns, new_conns)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksBindAddress,
-                      options->SocksPort, "127.0.0.1", force)<0)
+                      options->SocksPort, "127.0.0.1", force,
+                      replaced_conns, new_conns)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER, NULL,
-                      options->ControlPort, "127.0.0.1", force)<0)
+                      options->ControlPort, "127.0.0.1", force,
+                      replaced_conns, new_conns)<0)
     return -1;
 
   return 0;
