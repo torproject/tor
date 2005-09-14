@@ -605,10 +605,11 @@ get_stream(const char *id)
 }
 
 /** Helper for setconf and resetconf. Acts like setconf, except
- * it passes <b>reset</b> on to options_trial_assign().
+ * it passes <b>use_defaults</b> on to options_trial_assign().
  */
 static int
-control_setconf_helper(connection_t *conn, uint32_t len, char *body, int reset)
+control_setconf_helper(connection_t *conn, uint32_t len, char *body,
+                       int use_defaults, int clear_first)
 {
   int r;
   config_line_t *lines=NULL;
@@ -666,7 +667,7 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body, int reset)
     }
   }
 
-  if ((r=options_trial_assign(lines, reset)) < 0) {
+  if ((r=options_trial_assign(lines, use_defaults, clear_first)) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
     if (r==-1) {
       if (v0)
@@ -693,7 +694,7 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body, int reset)
 static int
 handle_control_setconf(connection_t *conn, uint32_t len, char *body)
 {
-  return control_setconf_helper(conn, len, body, 0);
+  return control_setconf_helper(conn, len, body, 0, 1);
 }
 
 /** Called when we receive a RESETCONF message: parse the body and try
@@ -703,7 +704,7 @@ handle_control_resetconf(connection_t *conn, uint32_t len, char *body)
 {
   int v0 = STATE_IS_V0(conn->state);
   tor_assert(!v0);
-  return control_setconf_helper(conn, len, body, 1);
+  return control_setconf_helper(conn, len, body, 1, 1);
 }
 
 /** Called when we receive a GETCONF message.  Parse the request, and
