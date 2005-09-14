@@ -461,7 +461,7 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type, char *payload)
 /** We've decided to start our reachability testing. If all
  * is set, log this to the user. Return 1 if we did, or 0 if
  * we chose not to log anything. */
-int
+static int
 inform_testing_reachability(void)
 {
   char dirbuf[128];

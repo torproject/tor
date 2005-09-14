@@ -3171,7 +3171,7 @@ init_libevent(void)
    */
   suppress_libevent_log_msg("Function not implemented");
 #ifdef __APPLE__
-  putenv("EVENT_NOKQUEUE=1");
+  setenv("EVENT_NOKQUEUE","1",1);
 #endif
   event_init();
   suppress_libevent_log_msg(NULL);
