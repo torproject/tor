@@ -39,7 +39,7 @@ for 0.1.1.x:
 R - are dirservers auto-verifying duplicate nicknames?
   o tor should auto-sort the recommended-versions strings 
     (with the new smartlist sort stuff maybe)
-  - setconf SocksBindAddress kills tor if it fails to bind
+  o setconf SocksBindAddress kills tor if it fails to bind
 
 N - controller libs should support resetconf command.
 N . Additional controller features
@@ -73,7 +73,7 @@ R   - If you think an OR conn is open but you can never establish a circuit
       first place.)  Also, we should audit all users of get_pending_bytes().)
         - Make it harder to circumvent bandwidth caps: look at number of bytes
           sent across sockets, not number sent inside TLS stream.
-R   - remove the warnings from rendezvous stuff that shouldn't be warnings.
+R   o remove the warnings from rendezvous stuff that shouldn't be warnings.
 
 N . Handle rendezvousing with unverified nodes.
     o Implement everything
@@ -122,7 +122,7 @@ R     - check reachability as soon as you hear about a new server
         o Support retrieving several-at-once
       o Everyone downloads network-status objects
 N       . Clients: from all directories, round-robin
-          o Basic implementation: disable until 0.1.1.6 is out.
+          o Basic implementation: disable until 0.1.1.x is out.
           - On failure, mark trusted_dir_server as having failed once and
             retry up to a point.
         o Parse them
@@ -160,7 +160,7 @@ Reach (deferrable) items for 0.1.1.x:
   - Start using create-fast cells as clients
   o Let more config options (e.g. ORPort) change dynamically.
   - start handling server descriptors without a socksport?
-  o Add TTLs to DNS-related replies, and use them (where present) to adjust
+  o Add TTLs to DNS-related replies, and use them (when present) to adjust
     addressmap values.
 
   . Research memory use on Linux: what's happening?
