@@ -123,8 +123,8 @@ R     - check reachability as soon as you hear about a new server
       o Everyone downloads network-status objects
 N       . Clients: from all directories, round-robin
           o Basic implementation: disable until 0.1.1.x is out.
-          - On failure, mark trusted_dir_server as having failed once and
-            retry up to a point.
+          o On failure, mark trusted_dir_server as having failed
+          - Retry, up to a point.
         o Parse them
         o Cache them, reload on restart
         o Serve cached directories
@@ -133,14 +133,27 @@ N       . Clients: from all directories, round-robin
         o Support compression.
 N     - Alice acts on network-status objects
         - Alice downloads descriptors as needed.
+          o Figure out what's needed
+          - Download it
+          - Store it
+            o Implement store
+            - Implement reload-from-store
+            - Store downloaded descriptors
+          - Retry descriptors on failure for a while
         - Alice sets descriptor status from network-status
+          o Implement
+          - Use
 
     - Security
       - Alices avoid duplicate class C nodes.
       - Analyze how bad the partitioning is or isn't.
 
-N   - Naming:
+N   - Naming and validation:
       - Separate naming from validation in authdirs.
+      - Authdirs need to be able to decline to validate based on
+        IP range and key
+      - Authdirs need to be able to decline to include baased on
+        IP range and key.
       - Clients choose names based on network-status options.
       - Names are remembered in client status.
 
