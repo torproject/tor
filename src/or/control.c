@@ -668,18 +668,32 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
   }
 
   if ((r=options_trial_assign(lines, use_defaults, clear_first)) < 0) {
+    int v0_err;
+    const char *msg;
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
-    if (r==-1) {
-      if (v0)
-        send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY,
-                            "Unrecognized option");
-      else
-        connection_write_str_to_buf("552 Unrecognized option\r\n", conn);
+    switch (r) {
+      case -1:
+        v0_err = ERR_UNRECOGNIZED_CONFIG_KEY;
+        msg = "Unrecognized option";
+        break;
+      case -2:
+        v0_err = ERR_INVALID_CONFIG_VALUE;
+        msg = "Unrecognized option value";
+        break;
+      case -3:
+        v0_err = ERR_INVALID_CONFIG_VALUE;
+        msg = "Transition not allowed";
+        break;
+      case -4:
+      default:
+        v0_err = ERR_INVALID_CONFIG_VALUE;
+        msg = "Unable to set option";
+        break;
+    }
+    if (v0) {
+      send_control0_error(conn, v0_err, msg);
     } else {
-      if (v0)
-        send_control0_error(conn,ERR_INVALID_CONFIG_VALUE,"Invalid option value");
-      else
-        connection_write_str_to_buf("552 Invalid option value\r\n", conn);
+      connection_printf_to_buf(conn, "552 %s\r\n", msg);
     }
     config_free_lines(lines);
     return 0;

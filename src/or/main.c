@@ -760,7 +760,8 @@ run_scheduled_events(time_t now)
 
   /** 3d. And every 60 seconds, we relaunch listeners if any died. */
   if (!we_are_hibernating() && time_to_check_listeners < now) {
-    retry_all_listeners(0); /* 0 means "only if some died." */
+    /* 0 means "only launch the ones that died." */
+    retry_all_listeners(0, NULL, NULL);
     time_to_check_listeners = now+60;
   }
 

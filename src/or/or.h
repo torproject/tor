@@ -1439,7 +1439,7 @@ extern unsigned long stats_n_destroy_cells_processed;
 /********************************* config.c ***************************/
 
 or_options_t *get_options(void);
-void set_options(or_options_t *new_val);
+int set_options(or_options_t *new_val);
 void config_free_all(void);
 const char *safe_str(const char *address);
 
@@ -1492,7 +1492,8 @@ void _connection_mark_for_close(connection_t *conn,int line, const char *file);
 void connection_expire_held_open(void);
 
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
-int retry_all_listeners(int force);
+int retry_all_listeners(int force, smartlist_t *replaced_conns,
+                        smartlist_t *new_conns);
 
 void connection_bucket_init(void);
 void connection_bucket_refill(struct timeval *now);
