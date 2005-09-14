@@ -1,3 +1,42 @@
+Changes in version 0.1.1.7-alpha - 2005-09-14
+  o Fixes on 0.1.1.6-alpha:
+    - Exit servers were crashing when people asked them to make a connection
+      to an address not in their exit policy.
+    - Looking up a non-existent stream for a v1 control connection would
+      cause a segfault.
+    - Fix a seg fault if we ask an authdirserver for a descriptor by
+      fingerprint but he doesn't know about him.
+    - SETCONF was appending items to linelists, not clearing them.
+    - SETCONF SocksBindAddress killed Tor if it fails to bind. Now back
+      out and refuse the setconf if it would fail.
+    - Downgrade the dirserver log messages when whining about
+      unreachability.
+
+  o New features:
+    - Add Peter Palfrader's check-tor script to tor/contrib/
+      It lets you easily check whether a given server (referenced by
+      nickname) is reachable by you.
+    - Numerous changes to move towards client-side v2 directories. Not
+      enabled yet.
+
+  o Fixes on 0.1.0.x:
+    - If the user gave tor an odd number of command-line arguments,
+      we were silently ignoring the last one. Now we complain and fail.
+      [This wins the oldest-bug prize -- this bug has been present since
+       November 2002, as released in Tor 0.0.0.]
+    - Do not use unaligned memory access on alpha, mips, or mipsel.
+      It *works*, but is very slow, so we treat them as if it doesn't.
+    - Retry directory requests if we fail to get an answer we like
+      from a given dirserver (we were retrying before, but only if
+      we fail to connect).
+    - When writing the RecommendedVersions line, sort them first.
+    - When the client asked for a rendezvous port that the hidden service
+      didn't want to provide, we were sending an IP address back along
+      with the end cell. Fortunately, it was zero. But stop that anyway.
+    - Correct "your server is reachable" log entries to indicate that
+      it was self-testing that told us so.
+
+
 Changes in version 0.1.1.6-alpha - 2005-09-09
   o Fixes on 0.1.1.5-alpha:
     - We broke fascistfirewall in 0.1.1.5-alpha. Oops.
