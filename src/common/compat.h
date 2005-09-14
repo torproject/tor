@@ -127,6 +127,7 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 
 /* ===== File compatibility */
 int replace_file(const char *from, const char *to);
+int touch_file(const char *fname);
 
 #ifdef MS_WINDOWS
 #define PATH_SEPARATOR "\\"

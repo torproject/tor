@@ -80,6 +80,12 @@ const char compat_c_id[] = "$Id$";
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
 #endif
+#ifdef HAVE_UTIME_H
+#include <utime.h>
+#endif
+#ifdef HAVE_SYS_UTIME_H
+#include <sys/utime.h>
+#endif
 
 #include "log.h"
 #include "util.h"
@@ -267,6 +273,15 @@ replace_file(const char *from, const char *to)
     }
   return rename(from,to);
 #endif
+}
+
+/** Change <b>fname</b>'s modification time to now. */
+int
+touch_file(const char *fname)
+{
+  if (utime(fname, NULL)!=0)
+    return -1;
+  return 0;
 }
 
 /** Turn <b>socket</b> into a nonblocking socket.
