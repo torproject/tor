@@ -6,5 +6,5 @@ Legend:
         D Deferred
         X Abandoned
 
-- strip debugging symbols when tor is more mature
+o strip debugging symbols when tor is more mature
 - don't enable coredumps by default
