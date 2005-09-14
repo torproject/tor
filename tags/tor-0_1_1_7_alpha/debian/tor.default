@@ -1,0 +1,45 @@
+# Defaults for tor initscript
+# sourced by /etc/init.d/tor
+# installed at /etc/default/tor by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+RUN_DAEMON="yes"
+
+#
+# Servers sometimes may need more than the default 1024 file descriptors
+# if they are very busy and have many clients connected to them.
+#  (ulimit -n)
+#
+MAX_FILEDESCRIPTORS=4096
+
+#
+# If tor is seriously hogging your CPU, taking away too much cycles from
+# other system resources, then you can renice tor.  See nice(1) for a
+# bit more information.  Another way to limit the CPU usage of an Onion
+# Router is to set a lower BandwidthRate, as CPU usage is mostly a function
+# of the amount of traffic flowing through your node.  Consult the torrc(5)
+# manual page for more information on setting BandwidthRate.
+#
+# NICE="--nicelevel 5"
+
+#
+# Sometimes epoll is broken.  This happens to be the case on
+# at least the maintainer's desktop box running Linux 2.6.11-rc1
+# on amd64.
+#
+# If tor does not work at all for you, i.e. connection attempts
+# through tor just hang forever and never finish, then consider
+# setting EVENT_NOEPOLL, so libevent does not use epoll.  If that
+# happens to fix it for you, please let the mainainer (weasel@debian.org)
+# know, mentioning your kernel version, libevent version, and architecture.
+# Thanks!
+#
+# EVENT_NOEPOLL=yes
+# export EVENT_NOEPOLL
+
+#
+# Uncomment this if you want to get coredumps
+#
+ulimit -c unlimited

@@ -1,0 +1,640 @@
+$Id$
+
+                  Tor directory protocol for 0.1.1.x series
+
+0. Scope and preliminaries
+
+   This document should eventually be merged into tor-spec.txt and replace
+   the existing notes on directories.
+
+   This is not a finalized version; what we actually wind up implementing
+   may be very different from the system described here.
+
+0.1. Goals
+
+   There are several problems with the way Tor handles directories right
+   now:
+      1. Directories are very large and use a lot of bandwidth.
+      2. Every directory server is a single point of failure.
+      3. Requiring every client to know every server won't scale.
+      4. Requiring every directory cache to know every server won't scale.
+      5. Our current "verified server" system is kind of nonsensical.
+      6. Getting more directory servers adds more points of failure and
+         worsens possible partitioning attacks.
+
+   This design tries to solve every problem except problems 3 and 4, and to
+   be compatible with likely eventual solutions to problems 3 and 4.
+
+1. Outline
+
+   There is no longer any such thing as a "signed directory".  Instead,
+   directory servers sign a very compressed 'network status' object that
+   lists the current descriptors and their status, and router descriptors
+   continue to be self-signed by servers.  Clients download network status
+   listings periodically, and download router descriptors as needed.  ORs
+   upload descriptors relatively infrequently.
+
+   There are multiple directory servers.  Rather than doing anything
+   complicated to coordinate themselves, clients simply rotate through them
+   in order, and only use servers that most of the last several directory
+   servers like.
+
+2. Router descriptors
+
+   Router descriptors are as described in the current tor-spec.txt
+   document.
+
+   ORs SHOULD generate a new router descriptor whenever any of the
+   following events have occurred:
+
+      - A period of time (24 hrs by default) has passed since the last
+        time a descriptor was generated.
+
+      - A descriptor field other than bandwidth or uptime has changed.
+
+      - Bandwidth has changed by more than +/- 50% from the last time a
+        descriptor was generated, and at least a given interval of time (1
+        hr by default) has passed since then.
+
+      - Uptime has been reset.
+
+   After generating a descriptor, ORs upload it to every directory
+   server they know.
+
+   The router descriptor format is unchanged from tor-spec.txt.
+
+3. Network status
+
+   Directory servers generate, sign, and compress a network-status document
+   as needed.  As an optimization, they may rate-limit the number of such
+   documents generated to once every few seconds.  Directory servers should
+   rate-limit at least to the point where these documents are generated no
+   faster than once per second.
+
+   The network status document contains a preamble, a set of router status
+   entries, and a signature, in that order.
+
+   We use the same meta-format as used for directories and router descriptors
+   in "tor-spec.txt".
+
+   The preamble contains:
+
+      "network-status-version" -- A document format version.  For this
+         specification, the version is "2".
+      "dir-source" -- The hostname, current IP address, and directory
+         port of the directory server, separated by spaces.
+      "fingerprint" -- A base16-encoded hash of the signing key's
+         fingerprint, with no additional spaces added.
+      "contact" -- An arbitrary string describing how to contact the
+         directory server's administrator.  Administrators should include at
+         least an email address and a PGP fingerprint.
+      "dir-signing-key" -- The directory server's public signing key.
+      "client-versions" -- A comma-separated list of recommended client versions
+      "server-versions" -- A comma-separated list of recommended server versions
+      "published" -- The publication time for this network-status object.
+      "dir-options" -- A set of flags separated by spaces:
+          "Names" if this directory server performs name bindings
+
+   The directory-options entry is optional; the others are required and must
+   appear exactly once. The "network-status-version" entry must appear first;
+   the others may appear in any order.
+
+   For each router, the router entry contains:  (This format is designed for
+   conciseness.)
+
+      "r" -- followed by the following elements, separated by spaces:
+          - The OR's nickname,
+          - A hash of its identity key, encoded in base64, with trailing =
+            signs removed.
+          - A hash of its most recent descriptor, encoded in base64, with
+            trailing = signs removed.
+          - The publication time of its most recent descriptor.
+          - An IP
+          - An OR port
+          - A directory port (or "0" for none")
+      "s" -- A series of space-separated status flags:
+          "Exit" if the router is useful for building general-purpose exit
+             circuits
+          "Stable" if the router tends to stay up for a long time
+          "Fast" if the router has high bandwidth
+          "Running" if the router is currently usable
+          "Named" if the router's identity-nickname mapping is canonical.
+          "Valid" if the router has been 'validated'.
+
+      The "r" entry for each router must appear first and is required.  The
+      's" entry is optional.  Unrecognized flags, or extra elements on the
+      "r" line must be ignored.
+
+   The signature section contains:
+
+      "directory-signature". A signature of the rest of the document using
+      the directory server's signing key.
+
+   We compress the network status list with zlib before transmitting it.
+
+4. Directory server operation
+
+   By default, directory servers remember all non-expired, non-superseded OR
+   descriptors that they have seen.
+
+   For each OR, a directory server remembers whether the OR was running and
+   functional the last time they tried to connect to it, and possibly other
+   liveness information.
+
+   Directory server administrators may label some servers or IPs as
+   blacklisted, and elect not to include them in their network-status lists.
+
+   Thus, the network-status list includes all non-blacklisted,
+   non-expired, non-superseded descriptors for ORs that the directory has
+   observed at least once to be running.
+
+   Directory server administrators may decide to support name binding.  If
+   they do, then they must maintain a file of nickname-to-identity-key
+   mappings, and try to keep this file consistent with other directory
+   servers.  If they don't, they act as clients, and report bindings made by
+   other directory servers (name X is bound to identity Y if at least one
+   binding directory lists it, and no directory binds X to some other Y'.)
+
+   The authoritative network-status published by a host should be available at:
+      http://<hostname>/tor/status/authority.z
+
+   An authoritative network-status published by another host with fingerprint
+   <F> should be available at:
+      http://<hostname>/tor/status/fp/<F>.z
+
+   An authoritative network-status published by other hosts with fingerprints
+   <F1>,<F2>,<F3> should be available at:
+      http://<hostname>/tor/status/fp/<F1>+<F2>+<F3>.z
+
+   The most recent network-status documents from all known authoritative
+   directories, concatenated, should be available at:
+         http://<hostname>/tor/status/all.z
+
+   The most recent descriptor for a server whose identity key has a
+   fingerprint of <F> should be available at:
+      http://<hostname>/tor/server/fp/<F>.z
+
+   The most recent descriptors for servers have fingerprints <F1>,<F2>,<F3>
+   should be available at:
+      http://<hostname>/tor/server/fp/<F1>+<F2>+<F3>.z
+
+   The most recent descriptor for this server should be at:
+      http://<hostname>/tor/server/authority.z
+
+   A concatenated set of the most recent descriptors for all known servers
+   should be available at:
+      http://<hostname>/tor/server/all.z
+
+   For debugging, directories MAY expose non-compressed objects at URLs like
+   the above, but without the final ".z".
+
+   Clients MUST handle compressed concatenated information in two forms:
+     - A concatenated list of zlib-compressed objects.
+     - A zlib-compressed concatenated list of objects.
+   Directory servers MAY generate either format: the former requires less
+   CPU, but the latter requires less bandwidth.
+
+4.1. Caching
+
+   Directory caches (most ORs) regularly download network status documents,
+   and republish them at a URL based on the directory server's identity key:
+      http://<hostname>/tor/status/<identity fingerprint>.z
+
+   A concatenated list of all network-status documents should be available at:
+      http://<hostname>/tor/status/all.z
+
+4.2. Compression
+
+
+5. Client operation
+
+   Every OP or OR, including directory servers, acts as a client to the
+   directory protocol.
+
+   Each client maintains a list of trusted directory servers.  Periodically
+   (currently every 20 minutes), the client downloads a new network status. It
+   chooses the directory server from which its current information is most
+   out-of-date, and retries on failure until it finds a running server.
+
+   When choosing ORs to build circuits, clients proceed as follows:
+     - A server is "listed" if it is listed by more than half of the "live"
+       network status documents the clients have downloaded.  (A network
+       status is "live" if it is the most recently downloaded network status
+       document for a given directory server, and the server is a directory
+       server trusted by the client, and the network-status document is no
+       more than D (say, 10) days old.)
+     - A server is "valid" is it is listed as valid by more than half of the
+       "live" downloaded" network-status document.
+     - A server is "running" if it is listed as running by more than
+       half of the "recent" downloaded network-status documents.
+       (A network status is "recent" if it was published in the last
+       60 minutes.  If there are fewer than 3 such documents, the most
+       recently published 3 are "recent."  If there are fewer than 3 in all,
+       all are "recent.")
+
+
+   Clients store network status documents so long as they are live.
+
+5.1. Scheduling network status downloads
+
+   This download scheduling algorithm implements the approach described above
+   in a relatively low-state fashion.  It reflects the current Tor
+   implementation.
+
+   Clients maintain a list of authorities; each client tries to keep the same
+   list, in the same order.
+
+   Periodically, on startup, and on HUP, clients check whether they need to
+   download fresh network status documents.  The approach is as follows:
+     - If we have under X network status documents newer than OLD, we choose a
+       member of the list at random and try download XX documents starting
+       with that member's.
+     - Otherwise, if we have no network status documents newer than NEW, we
+       check to see which authority's document we retrieved most recently,
+       and try to retrieve the next authority's document.  If we can't, we
+       try the next authority in sequence, and so on.
+
+5.2. Managing naming
+
+   In order to provide human-memorable names for individual server
+   identities, some directory servers bind names to IDs.  Clients handle
+   names in two ways:
+
+   If a client is encountering a name it has not mapped before:
+
+      If all the "binding" networks-status documents the client has so far
+      received same claim that the name binds to some identity X, and the
+      client has received at least three network-status documents, the client
+      maps the name to X.
+
+   If a client is encountering a name it has mapped before:
+
+      It uses the last-mapped identity value, unless all of the "binding"
+      network status documents bind the name to some other identity.
+
+6. Remaining issues
+
+   Client-knowledge partitioning is worrisome.  Most versions of this don't
+   seem to be worse than the Danezis-Murdoch tracing attack, since an
+   attacker can't do more than deduce probable exits from entries (or vice
+   versa).  But what about when the client connects to A and B but in a
+   different order?  How bad can it be partitioned based on its knowledge?
+
+
+================================================================================
+Everything below this line is obsolete.
+--------------------------------------------------------------------------------
+
+                      Tor network discovery protocol
+
+0. Scope
+
+This document proposes a way of doing more distributed network discovery
+while maintaining some amount of admission control. We don't recommend
+you implement this as-is; it needs more discussion.
+
+Terminology:
+  - Client: The Tor component that chooses paths.
+  - Server: A relay node that passes traffic along.
+
+1. Goals.
+
+We want more decentralized discovery for network topology and status.
+In particular:
+
+1a. We want to let clients learn about new servers from anywhere
+    and build circuits through them if they wish. This means that
+    Tor nodes need to be able to Extend to nodes they don't already
+    know about.
+
+1b. We want to let servers limit the addresses and ports they're
+    willing to extend to. This is necessary e.g. for middleman nodes
+    who have jerks trying to extend from them to badmafia.com:80 all
+    day long and it's drawing attention.
+
+1b'. While we're at it, we also want to handle servers that *can't*
+    extend to some addresses/ports, e.g. because they're behind NAT or
+    otherwise firewalled. (See section 5 below.)
+
+1c. We want to provide a robust (available) and not-too-centralized
+    mechanism for tracking network status (which nodes are up and working)
+    and admission (which nodes are "recommended" for certain uses).
+
+2. Assumptions.
+
+2a. People get the code from us, and they trust us (or our gpg keys, or
+    something down the trust chain that's equivalent).
+
+2b. Even if the software allows humans to change the client configuration,
+    most of them will use the default that's provided. so we should
+    provide one that is the right balance of robust and safe. That is,
+    we need to hard-code enough "first introduction" locations that new
+    clients will always have an available way to get connected.
+
+2c. Assume that the current "ask them to email us and see if it seems
+    suspiciously related to previous emails" approach will not catch
+    the strong Sybil attackers. Therefore, assume the Sybil attackers
+    we do want to defend against can produce only a limited number of
+    not-obviously-on-the-same-subnet nodes.
+
+2d. Roger has only a limited amount of time for approving nodes; shouldn't
+    be the time bottleneck anyway; and is doing a poor job at keeping
+    out some adversaries.
+
+2e. Some people would be willing to offer servers but will be put off
+    by the need to send us mail and identify themselves.
+2e'. Some evil people will avoid doing evil things based on the perception
+    (however true or false) that there are humans monitoring the network
+    and discouraging evil behavior.
+2e''. Some people will trust the network, and the code, more if they
+    have the perception that there are trustworthy humans guiding the
+    deployed network.
+
+2f. We can trust servers to accurately report their characteristics
+    (uptime, capacity, exit policies, etc), as long as we have some
+    mechanism for notifying clients when we notice that they're lying.
+
+2g. There exists a "main" core Internet in which most locations can access
+    most locations. We'll focus on it (first).
+
+3. Some notes on how to achieve.
+
+Piece one: (required)
+
+  We ship with N (e.g. 20) directory server locations and fingerprints.
+
+  Directory servers serve signed network-status pages, listing their
+  opinions of network status and which routers are good (see 4a below).
+
+  Dirservers collect and provide server descriptors as well. These don't
+  need to be signed by the dirservers, since they're self-certifying
+  and timestamped.
+
+  (In theory the dirservers don't need to be the ones serving the
+  descriptors, but in practice the dirservers would need to point people
+  at the place that does, so for simplicity let's assume that they do.)
+
+  Clients then get network-status pages from a threshold of dirservers,
+  fetch enough of the corresponding server descriptors to make them happy,
+  and proceed as now.
+
+Piece two: (optional)
+
+  We ship with S (e.g. 3) seed keys (trust anchors), and ship with
+  signed timestamped certs for each dirserver. Dirservers also serve a
+  list of certs, maybe including a "publish all certs since time foo"
+  functionality. If at least two seeds agree about something, then it
+  is so.
+
+  Now dirservers can be added, and revoked, without requiring users to
+  upgrade to a new version. If we only ship with dirserver locations
+  and not fingerprints, it also means that dirservers can rotate their
+  signing keys transparently.
+
+  But, keeping track of the seed keys becomes a critical security issue.
+  And rotating them in a backward-compatible way adds complexity. Also,
+  dirserver locations must be at least somewhere static, since each lost
+  dirserver degrades reachability for old clients. So as the dirserver
+  list rolls over we have no choice but to put out new versions.
+
+
+Piece three: (optional)
+
+  Notice that this doesn't preclude other approaches to discovering
+  different concurrent Tor networks. For example, a Tor network inside
+  China could ship Tor with a different torrc and poof, they're using
+  a different set of dirservers. Some smarter clients could be made to
+  learn about both networks, and be told which nodes bridge the networks.
+  ...
+
+4. Unresolved issues.
+
+4a. How do the dirservers decide whether to recommend a server? We
+    could have them do it based on contact from the human, but by
+    assumptions 2c and 2d above, that's going to be less effective, and
+    more of a hassle, as we scale up. Thus I propose that they simply
+    do some basic automatic measuring themselves, starting with the
+    current "are they connected to me" measurement, and that's all
+    that is done.
+
+    We could blacklist as we notice evil servers, but then we're in
+    the same boat all the irc networks are in. We could whitelist as we
+    notice new servers, and stop whitelisting (maybe rolling back a bit)
+    once an attack is in progress. If we assume humans aren't particularly
+    good at this anyway, we could just do automated delayed whitelisting,
+    and have a "you're under attack" switch the human can enable for a
+    while to start acting more conservatively.
+
+    Once upon a time we collected contact info for servers, which was
+    mainly used to remind people that their servers are down and could
+    they please restart. Now that we have a critical mass of servers,
+    I've stopped doing that reminding. So contact info is less important.
+
+4b. What do we do about recommended-versions? Do we need a threshold of
+    dirservers to claim that your version is obsolete before you believe
+    them? Or do we make it have less effect -- e.g. print a warning but
+    never actually quit? Coordinating all the humans to upgrade their
+    recommended-version strings at once seems bad. Maybe if we have
+    seeds, the seeds can sign a recommended-version and upload it to
+    the dirservers.
+
+4c. What does it mean to bind a nickname to a key? What if each dirserver
+    does it differently, so one nickname corresponds to several keys?
+    Maybe the solution is that nickname<=>key bindings should be
+    individually configured by clients in their torrc (if they want to
+    refer to nicknames in their torrc), and we stop thinking of nicknames
+    as globally unique.
+
+4d. What new features need to be added to server descriptors so they
+    remain compact yet support new functionality? Section 5 is a start
+    of discussion of one answer to this.
+
+
+
+5. Regarding "Blossom: an unstructured overlay network for end-to-end
+connectivity."
+
+SECTION 5A: Blossom Architecture
+
+Define "transport domain" as a set of nodes who can all mutually name each
+other directly, using transport-layer (e.g. HOST:PORT) naming.
+
+Define "clique" as a set of nodes who can all mutually contact each other directly,
+using transport-layer (e.g. HOST:PORT) naming.
+
+Neither transport domains and cliques form a partition of the set of all nodes.
+Just as cliques may overlap in theoretical graphs, transport domains and
+cliques may overlap in the context of Blossom.
+
+In this section we address possible solutions to the problem of how to allow
+Tor routers in different transport domains to communicate.
+
+First, we presume that for every interface between transport domains A and B,
+one Tor router T_A exists in transport domain A, one Tor router T_B exists in
+transport domain B, and (without loss of generality) T_A can open a persistent
+connection to T_B.  Any Tor traffic between the two routers will occur over
+this connection, which effectively renders the routers equal partners in
+bridging between the two transport domains.  We refer to the established link
+between two transport domains as a "bridge" (we use this term because there is
+no serious possibility of confusion with the notion of a layer 2 bridge).
+
+Next, suppose that the universe consists of transport domains connected by
+persistent connections in this manner.  An individual router can open multiple
+connections to routers within the same foreign transport domain, and it can
+establish separate connections to routers within multiple foreign transport
+domains.
+
+As in regular Tor, each Blossom router pushes its descriptor to directory
+servers.  These directory servers can be within the same transport domain, but
+they need not be.  The trick is that if a directory server is in another
+transport domain, then that directory server must know through which Tor
+routers to send messages destined for the Tor router in question.
+
+Blossom routers can advertise themselves to other transport domains in two
+ways:
+
+(1) Directly push the descriptor to a directory server in the other transport
+domain.  This probably works particularly well if the other transport domain is
+"the Internet", or if there are hard-coded directory servers in "the Internet".
+The router has the responsibility to inform the directory server about which
+routers can be used to reach it.
+
+(2) Push the descriptor to a directory server in the same transport domain.
+This is the easiest solution for the router, but it relies upon the existence
+of a directory server in the same transport domain that is capable of
+communicating with directory servers in the remote transport domain.  In order
+for this to work, some individual Tor routers must have published their
+descriptors in remote transport domains (i.e. followed the first option) in
+order to provide a link by which directory servers can communiate
+bidirectionally.
+
+If all directory servers are within the same transport domain, then approach
+(1) is sufficient: routers can exist within multiple transport domains, and as
+long as the network of transport domains is fully connected by bridges, any
+router will be able to access any other router in a foreign transport domain
+simply by extending along the path specified by the directory server.  However,
+we want the system to be truly decentralized, which means not electing any
+particular transport domain to be the master domain in which entries are
+published.
+
+This is the explanation for (2): in order for a directory server to share
+information with a directory server in a foreign transport domain to which it
+cannot speak directly, it must use Tor, which means referring to the other
+directory server by using a router in the foreign transport domain.  However,
+in order to use Tor, it must be able to reach that router, which means that a
+descriptor for that router must exist in its table, along with a means of
+reaching it.  Therefore, in order for a mutual exchange of information between
+routers in transport domain A and those in transport domain B to be possible,
+when routers in transport domain A cannot establish direct connections with
+routers in transport domain B, then some router in transport domain B must have
+pushed its descriptor to a directory server in transport domain A, so that the
+directory server in transport domain A can use that router to reach the
+directory server in transport domain B.
+
+Descriptors for Blossom routers are read-only, as for regular Tor routers, so
+directory servers cannot modify them.  However, Tor directory servers also
+publish a "network-status" page that provide information about which nodes are
+up and which are not.  Directory servers could provide an additional field for
+Blossom nodes.  For each Blossom node, the directory server specifies a set of
+paths (may be only one) through the overlay (i.e. an ordered list of router
+names/IDs) to a router in a foreign transport domain.  (This field may be a set
+of paths rather than a single path.)
+
+A new router publishing to a directory server in a foreign transport should
+include a list of routers.  This list should be either:
+
+a. ...a list of routers to which the router has persistent connections, or, if
+the new router does not have any persistent connections,
+
+b. ...a (not necessarily exhaustive) list of fellow routers that are in the
+same transport domain.
+
+The directory server will be able to use this information to derive a path to
+the new router, as follows.  If the new router used approach (a), then the
+directory server will define the set of paths to the new router as union of the
+set of paths to the routers on the list with the name of the last hop appended
+to each path.  If the new router used approach (b), then the directory server
+will define the paths to the new router as the union of the set of paths to the
+routers specified in the list.  The directory server will then insert the newly
+defined path into the field in the network-status page from the router.
+
+When confronted with the choice of multiple different paths to reach the same
+router, the Blossom nodes may use a route selection protocol similar in design
+to that used by BGP (may be a simple distance-vector route selection procedure
+that only takes into account path length, or may be more complex to avoid
+loops, cache results, etc.) in order to choose the best one.
+
+If a .exit name is not provided, then a path will be chosen whose nodes are all
+among the set of nodes provided by the directory server that are believed to be
+in the same transport domain (i.e. no explicit path).  Thus, there should be no
+surprises to the client.  All routers should be careful to define their exit
+policies carefully, with the knowledge that clients from potentially any
+transport domain could access that which is not explicitly restricted.
+
+SECTION 5B: Tor+Blossom desiderata
+
+The interests of Blossom would be best served by implementing the following
+modifications to Tor:
+
+I. CLIENTS
+
+Objectives: Ultimately, we want Blossom requests to be indistinguishable in
+format from non-Blossom .exit requests, i.e. hostname.forwarder.exit.
+
+Proposal: Blossom is a process that manipulates Tor, so it should be
+implemented as a Tor Control, extending control-spec.txt.  For each request,
+Tor uses the control protocol to ask the Blossom process whether it (the
+Blossom process) wants to build or assign a particular circuit to service the
+request.  Blossom chooses one of the following responses:
+
+a. (Blossom exit node, circuit cached) "use this circuit" -- provides a circuit
+ID
+
+b. (Blossom exit node, circuit not cached) "I will build one" -- provides a
+list of routers, gets a circuit ID.
+
+c. (Regular (non-Blossom) exit node) "No, do it yourself" -- provides nothing.
+
+II. ROUTERS
+
+Objectives: Blossom routers are like regular Tor routers, except that Blossom
+routers need these features as well:
+
+a. the ability to open peresistent connections,
+
+b. the ability to know whwther they should use a persistent connection to reach
+another router,
+
+c. the ability to define a set of routers to which to establish persistent
+connections, as readable from a configuration file, and
+
+d. the ability to tell a directory server that (1) it is Blossom-enabled, and
+(2) it can be reached by some set of routers to which it explicitly establishes
+persistent connections.
+
+Proposal: Address the aforementioned points as follows.
+
+a. need the ability to open a specified number of persistent connections.  This
+can be accomplished by implementing a generic should_i_close_this_conn() and
+which_conns_should_i_try_to_open_even_when_i_dont_need_them().
+
+b. The Tor design already supports this, but we must be sure to establish the
+persistent connections explicitly, re-establish them when they are lost, and
+not close them unnecessarily.
+
+c. We must modify Tor to add a new configuration option, allowing either (a)
+explicit specification of the set of routers to which to establish persistent
+connections, or (b) a random choice of some nodes to which to establish
+persistent connections, chosen from the set of nodes local to the transport
+domain of the specified directory server (for example).
+
+III. DIRSERVERS
+
+Objective: Blossom directory servers may provide extra
+fields in their network-status pages.  Blossom directory servers may
+communicate with Blossom clients/routers in nonstandard ways in addition to
+standard ways.
+
+Proposal: Geoff should be able to implement a directory server according to the
+Tor specification (dir-spec.txt).
+
