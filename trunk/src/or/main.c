@@ -527,43 +527,32 @@ get_status_fetch_period(or_options_t *options)
     return 30*60;
 }
 
-/** This function is called whenever we successfully pull down a directory.
- * If <b>identity_digest</b> is defined, it contains the digest of the
- * router that just gave us this directory. */
+/** This function is called whenever we successfully pull down some directory
+ * information. */
 void
-directory_has_arrived(time_t now, char *identity_digest)
+directory_info_has_arrived(time_t now, int from_cache)
 {
   or_options_t *options = get_options();
   /* XXXX011 NM Update this to reflect new directories.  In particular, we
    * can't start building circuits until we have descriptors and networkstatus
    * docs.*/
 
-  log_fn(LOG_INFO, "A directory has arrived.");
+  if (!router_have_minimum_dir_info()) {
+    log_fn(LOG_NOTICE, "I know too little.");
+    return;
+  }
+
+  if (!has_fetched_directory) {
+    log_fn(LOG_NOTICE, "We have enough directory information to build circuits.");
+  }
 
   has_fetched_directory=1;
-  /* Don't try to upload or download anything for a while
-   * after the directory we had when we started.
-   */
-  if (!time_to_fetch_directory)
-    time_to_fetch_directory = now + get_dir_fetch_period(options);
-
-  if (!time_to_fetch_running_routers)
-    time_to_fetch_running_routers = now + get_status_fetch_period(options);
-
-  if (identity_digest) /* if it's fresh */
-    helper_nodes_set_status_from_directory();
-
-  if (server_mode(options) && identity_digest) {
-    /* if this is us, then our dirport is reachable */
-    if (router_digest_is_me(identity_digest))
-      router_dirport_found_reachable();
-  }
 
   if (server_mode(options) &&
       !we_are_hibernating()) { /* connect to the appropriate routers */
     if (!authdir_mode(options))
       router_retry_connections(0);
-    if (identity_digest) /* we got a fresh directory */
+    if (!from_cache)
       consider_testing_reachability();
   }
 }
@@ -691,7 +680,6 @@ run_scheduled_events(time_t now)
    * new running-routers list, and/or force-uploading our descriptor
    * (if we've passed our internal checks). */
   if (time_to_fetch_directory < now) {
-    time_t next_status_fetch;
     /* purge obsolete entries */
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
 
@@ -701,12 +689,15 @@ run_scheduled_events(time_t now)
       }
     }
 
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
-    time_to_fetch_directory = now + get_dir_fetch_period(options);
-    next_status_fetch = now + get_status_fetch_period(options);
-    if (time_to_fetch_running_routers < next_status_fetch) {
-      time_to_fetch_running_routers = next_status_fetch;
+    /* Only caches actually need to fetch directories now. */
+    if (options->DirPort && !options->V1AuthoritativeDir) {
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
+
+    /* Try to get any routers we don't have. */
+    update_router_descriptor_downloads(now);
+
+    time_to_fetch_directory = now + get_dir_fetch_period(options);
 
     /* Also, take this chance to remove old information from rephist
      * and the rend cache. */
@@ -986,10 +977,13 @@ do_main_loop(void)
   if (router_reload_router_list()) {
     return -1;
   }
-  /* load the networkstatuses. */
+  /* load the networkstatuses. (This launches a download for new routers as
+   * appropriate.)
+   */
   if (router_reload_networkstatus()) {
     return -1;
   }
+  directory_info_has_arrived(time(NULL),1);
 
   if (authdir_mode(get_options())) {
     /* the directory is already here, run startup things */

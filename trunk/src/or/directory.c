@@ -52,7 +52,9 @@ static int purpose_is_private(uint8_t purpose);
 static char *http_get_header(const char *headers, const char *which);
 static char *http_get_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(connection_t *conn);
+static void connection_dir_download_routerdesc_failed(connection_t *conn);
 static void dir_networkstatus_download_failed(smartlist_t *failed);
+static void dir_routerdesc_download_failed(smartlist_t *failed);
 
 /********* START VARIABLES **********/
 
@@ -282,6 +284,10 @@ connection_dir_request_failed(connection_t *conn)
     log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying",
            conn->address);
     connection_dir_download_networkstatus_failed(conn);
+  } else if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
+    log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying",
+           conn->address);
+    connection_dir_download_routerdesc_failed(conn);
   }
 }
 
@@ -312,6 +318,16 @@ connection_dir_download_networkstatus_failed(connection_t *conn)
     }
     smartlist_free(failed);
   }
+}
+
+/** Called when an attempt to download one or network status documents
+ * on connection <b>conn</b> failed.
+ */
+static void
+connection_dir_download_routerdesc_failed(connection_t *conn)
+{
+  /* try again. */
+  update_router_descriptor_downloads(time(NULL));
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
@@ -892,14 +908,18 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
+    if (router_parse_directory(body) < 0) {
+      log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from '%s:%d'. Ignoring.", conn->address, conn->port);
+    }
+#if 0
     if (router_load_routerlist_from_directory(body, NULL, !skewed, 0) < 0) {
       log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from '%s:%d'. Ignoring.", conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    log_fn(LOG_INFO,"updated routers.");
     /* do things we've been waiting to do */
     directory_has_arrived(time(NULL), conn->identity_digest);
+#endif
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
@@ -969,7 +989,8 @@ connection_dir_client_reached_eof(connection_t *conn)
       else
         break;
     }
-    routers_update_all_from_networkstatus();
+    routers_update_all_from_networkstatus();/*launches router downloads*/
+    directory_info_has_arrived(time(NULL),0);
     if (which) {
       if (smartlist_len(which)) {
         dir_networkstatus_download_failed(which);
@@ -980,8 +1001,36 @@ connection_dir_client_reached_eof(connection_t *conn)
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
+    smartlist_t *which = NULL;
     /* XXXX NM implement this. */
-    log_fn(LOG_WARN, "Somehow, we requested some individual server descriptors. Skipping.");
+    log_fn(LOG_INFO,"Received server info (size %d) from server '%s:%d'",
+           (int)body_len, conn->address, conn->port);
+    if (status_code != 200) {
+      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/server/%s\". I'll try again soon.",
+             status_code, reason, conn->address, conn->port,
+             conn->requested_resource);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      connection_dir_download_routerdesc_failed(conn);
+      return -1;
+    }
+    if (conn->requested_resource &&
+        !strcmpstart(conn->requested_resource,"fp/")) {
+      int n;
+      which = smartlist_create();
+      smartlist_split_string(which, conn->requested_resource+3, "+", 0, -1);
+      n = smartlist_len(which);
+      if (n && strlen(smartlist_get(which,n-1))==HEX_DIGEST_LEN+2)
+        ((char*)smartlist_get(which,n-1))[HEX_DIGEST_LEN] = '\0';
+    }
+    router_load_routers_from_string(body, 0, which);
+    directory_info_has_arrived(time(NULL),0);
+    if (which) {
+      if (smartlist_len(which)) {
+        dir_routerdesc_download_failed(which);
+      }
+      SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
+      smartlist_free(which);
+    }
   }
 
   if (conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
@@ -1522,5 +1571,12 @@ dir_networkstatus_download_failed(smartlist_t *failed)
 
     ++dir->n_networkstatus_failures;
   });
+}
+
+/* DOCDOC */
+static void
+dir_routerdesc_download_failed(smartlist_t *failed)
+{
+  /* XXXX writeme!  Give up after a while! */
 }
 

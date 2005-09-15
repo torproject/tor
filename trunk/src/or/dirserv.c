@@ -39,6 +39,8 @@ int add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *li
 static int router_is_general_exit(routerinfo_t *ri);
 static router_status_t dirserv_router_get_status(const routerinfo_t *router,
                                                  const char **msg);
+static int dirserv_thinks_router_is_reachable(routerinfo_t *router,
+                                              time_t now);
 
 /************** Fingerprint handling code ************/
 
@@ -283,7 +285,8 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 }
 
 /** Check whether we, as a directory server, want to accept <b>ri</b>.  If so,
- * return 0, and set its is_valid and is_named fields.  Otherwise, return -1.
+ * return 0, and set its is_valid,named,running fields.  Otherwise, return -1.
+ *
  * DOCDOC msg
  */
 int
@@ -366,7 +369,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
     *msg = "Rejected: Couldn't parse server descriptor.";
     return -2;
   }
-  if ((r = router_add_to_routerlist(ri, msg))<0) {
+  if ((r = router_add_to_routerlist(ri, msg, 0))<0) {
     return r == -1 ? 0 : -1;
   } else {
     smartlist_t *changed = smartlist_create();
@@ -801,13 +804,6 @@ dirserv_set_cached_directory(const char *directory, time_t published,
   cached_dir_t *d;
   d = is_running_routers ? &cached_runningrouters : &cached_directory;
   set_cached_dir(d, tor_strdup(directory), published);
-  if (!is_running_routers) {
-    char filename[512];
-    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
-    if (write_str_to_file(filename,cached_directory.dir,0) < 0) {
-      log_fn(LOG_NOTICE, "Couldn't write cached directory to disk. Ignoring.");
-    }
-  }
 }
 
 /** We've just received a v2 network-status for an authoritative directory
@@ -1077,6 +1073,7 @@ generate_v2_networkstatus(void)
   uint32_t addr;
   crypto_pk_env_t *private_key = get_identity_key();
   smartlist_t *descriptor_list = get_descriptor_list();
+  time_t now = time(NULL);
   const char *contact;
 
   if (!descriptor_list) {
@@ -1147,15 +1144,9 @@ generate_v2_networkstatus(void)
       char digest64[128];
 
       if (options->AuthoritativeDir) {
-        connection_t *conn = connection_get_by_identity_digest(
-                                         ri->identity_digest, CONN_TYPE_OR);
-        f_running = (router_is_me(ri) && !we_are_hibernating()) ||
-          (conn && conn->state == OR_CONN_STATE_OPEN);
-        /* Update router status in routerinfo_t. */
-        ri->is_running = f_running;
-      } else {
-        f_running = ri->is_running;
+        ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
       }
+      f_running = ri->is_running;
 
       format_iso_time(published, ri->published_on);
 
