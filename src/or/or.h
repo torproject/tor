@@ -847,7 +847,7 @@ typedef struct {
    * published? */
   /* XXXX011 NM This field is only used in moribund code; remove it
    * once the moribund code is dead. */
-  time_t published_on_xx; 
+  time_t published_on_xx;
 #if 0
   /** Which versions of tor are recommended by this directory? */
   char *software_versions;
@@ -1713,7 +1713,6 @@ void free_dir_policy(void);
 
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
-int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char *desc, const char **msg);
@@ -1738,7 +1737,7 @@ void dirserv_orconn_tls_done(const char *address,
                              const char *digest_rcvd,
                              const char *nickname,
                              int as_advertised);
-int dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
+int authdir_wants_to_reject_router(routerinfo_t *ri,
                                    const char **msg);
 void dirserv_free_all(void);
 
