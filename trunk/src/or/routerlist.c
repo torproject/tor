@@ -2397,6 +2397,8 @@ router_list_downloadable(void)
       if (memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)
           && rs->published_on > ri->published_on) {
         char *d = tor_malloc(HEX_DIGEST_LEN+1);
+        log_fn(LOG_INFO, "A networkstatus implies '%s' is out-of-date.",
+               ri->nickname);
         base16_encode(d, HEX_DIGEST_LEN+1, ri->identity_digest, DIGEST_LEN);
         smartlist_add(superseded, d);
         break;
@@ -2438,6 +2440,7 @@ update_router_descriptor_downloads(time_t now)
 
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2) {
     resource = tor_strdup("all.z");
+    log_fn(LOG_NOTICE, "Launching request for all routers");
   } else {
     smartlist_t *downloadable = router_list_downloadable();
     if (smartlist_len(downloadable)) {
@@ -2446,6 +2449,8 @@ update_router_descriptor_downloads(time_t now)
       /* Damn, that's an ugly way to do this. XXXX011 NM */
       resource = tor_malloc(r_len);
       tor_snprintf(resource, r_len, "fp/%s.z", dl);
+      log_fn(LOG_NOTICE, "Launching request for %d routers",
+             smartlist_len(downloadable));
       tor_free(dl);
     }
     SMARTLIST_FOREACH(downloadable, char *, c, tor_free(c));
@@ -2457,7 +2462,6 @@ update_router_descriptor_downloads(time_t now)
     return;
   }
 
-  log_fn(LOG_NOTICE, "Launching request for routers: %s", resource);
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
   tor_free(resource);
 }
