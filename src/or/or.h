@@ -2089,6 +2089,7 @@ void routerlist_free_all(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
+void networkstatus_list_clean(time_t now);
 int router_add_to_routerlist(routerinfo_t *router, const char **msg,
                              int from_cache);
 int router_load_single_router(const char *s, const char **msg);

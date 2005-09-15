@@ -682,6 +682,7 @@ run_scheduled_events(time_t now)
   if (time_to_fetch_directory < now) {
     /* purge obsolete entries */
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
+    networkstatus_list_clean(now);
 
     if (authdir_mode(options)) {
       if (!we_are_hibernating()) { /* try to determine reachability */
