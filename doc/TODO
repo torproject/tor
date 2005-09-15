@@ -133,30 +133,37 @@ R     - check reachability as soon as you hear about a new server
         X By 'if-newer-than' (Does the spec require this??)
         o Support compression.
 N     - Alice acts on network-status objects
-        - Alice downloads descriptors as needed.
+        . Alice downloads descriptors as needed.
           o Figure out what's needed
-          - Download it
-          - Store it
+          o Store it
             o Implement store
-            - Implement reload-from-store
-            - Store downloaded descriptors
-          - Retry descriptors on failure for a while
+            o Implement reload-from-store
+            o Store downloaded descriptors
+          o Download it
+            o As-needed if we have 2 network-status objs.
+            o Download "all" if we have less than 2 network-status objs.
+              (This has vulnerabilities if we're not careful)
+            o Call directory_has_arrived as needed; rename it.
+            o Set has_fetched_directory properly.
+          o Retry descriptors on failure
+          - Give up after a while.
         o Alice sets descriptor status from network-status
           o Implement
           o Use
+      - Call dirport_is_reachable from somewhere else.
 
     - Security
       - Alices avoid duplicate class C nodes.
       - Analyze how bad the partitioning is or isn't.
 
-N   - Naming and validation:
-      - Separate naming from validation in authdirs.
+N   . Naming and validation:
+      o Separate naming from validation in authdirs.
       - Authdirs need to be able to decline to validate based on
         IP range and key
       - Authdirs need to be able to decline to include baased on
         IP range and key.
       - Clients choose names based on network-status options.
-      - Names are remembered in client status.
+      - Names are remembered in client state
 
   - packaging and ui stuff:
     . multiple sample torrc files

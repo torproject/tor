@@ -247,6 +247,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
   return -1;
 }
 
+#if 0
 /**
  * Find the first instance of "recommended-software ...\n" at the start of
  * a line; return a newly allocated string containing the "..." portion.
@@ -273,6 +274,7 @@ get_recommended_software_from_directory(const char *str)
   return tor_strndup(cp, eol-cp);
 #undef REC
 }
+#endif
 
 /** Return 1 if <b>myversion</b> is not in <b>versionlist</b>, and if at least
  * one version of Tor on <b>versionlist</b> is newer than <b>myversion</b>.
@@ -373,6 +375,7 @@ get_recommended_software_from_directory(const char *str)
   return ret;
 }
 
+#if 0
 /* Return 0 if myversion is supported; else warn and return -1. */
 int
 check_software_version_against_directory(const char *directory)
@@ -394,37 +397,23 @@ check_software_version_against_directory(const char *directory)
   tor_free(v);
   return -1;
 }
+#endif
 
-/** Parse a directory from <b>str</b> and, when done, store the
- * resulting routerlist in *<b>dest</b>, freeing the old value if
- * necessary.
- *
- * If <b>pkey</b> is provided, we check the directory signature with pkey.
- *
- * If <b>check_version</b> is non-zero, then examine the
- * Recommended-versions * line in the directory, and warn or quit
- * as needed.
- *
- * If <b>write_to_cache</b> is non-zero, then store this directory in
- * memory and/or disk as well.
+/** Read a signed directory from <b>str</b>.  If it's well-formed, return 0.
+ * Otherwise, return -1.  If we're a directory cache, cache it.
  */
-int /* Should be static; exposed for unit tests */
-router_parse_routerlist_from_directory(const char *str,
-                                       routerlist_t **dest,
-                                       crypto_pk_env_t *pkey,
-                                       int check_version,
-                                       int write_to_cache)
+int
+router_parse_directory(const char *str)
 {
   directory_token_t *tok;
   char digest[DIGEST_LEN];
-  routerlist_t *new_dir = NULL;
-  char *versions = NULL;
   time_t published_on;
   int r;
   const char *end, *cp;
   smartlist_t *tokens = NULL;
-  char dirnickname[MAX_NICKNAME_LEN+1];
   crypto_pk_env_t *declared_key = NULL;
+
+  /* XXXX011 This could be simplified a lot! NM */
 
   if (router_get_dir_hash(str, digest)) {
     log_fn(LOG_WARN, "Unable to compute digest of directory");
@@ -452,23 +441,12 @@ router_parse_routerlist_from_directory(const char *str,
     log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
   }
   declared_key = find_dir_signing_key(str);
-  if (check_directory_signature(digest, tok, pkey, declared_key, 1)<0)
+  if (check_directory_signature(digest, tok, NULL, declared_key, 1)<0)
     goto err;
-
-  /* now we know tok->n_args == 1, so it's safe to access tok->args[0] */
-  if (!is_legal_nickname(tok->args[0])) {
-    log_fn(LOG_WARN, "Directory nickname '%s' is misformed", tok->args[0]);
-    goto err;
-  }
-  strlcpy(dirnickname, tok->args[0], sizeof(dirnickname));
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
   tokens = NULL;
-
-  /* Now that we know the signature is okay, check the version. */
-  if (check_version)
-    check_software_version_against_directory(str);
 
   /* Now try to parse the first part of the directory. */
   if ((end = strstr(str,"\nrouter "))) {
@@ -483,20 +461,6 @@ router_parse_routerlist_from_directory(const char *str,
   if (tokenize_string(str,end,tokens,DIR)) {
     log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
   }
-  if (smartlist_len(tokens) < 1) {
-    log_fn(LOG_WARN, "Impossibly short directory header"); goto err;
-  }
-  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword \"%s\" in directory header; can't parse directory.",
-           tok->args[0]);
-    goto err;
-  }
-
-  tok = smartlist_get(tokens,0);
-  if (tok->tp != K_SIGNED_DIRECTORY) {
-    log_fn(LOG_WARN, "Directory doesn't start with signed-directory.");
-    goto err;
-  }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
     log_fn(LOG_WARN, "Missing published time on directory.");
@@ -510,54 +474,13 @@ router_parse_routerlist_from_directory(const char *str,
 
   /* Now that we know the signature is okay, and we have a
    * publication time, cache the directory. */
-  if (!get_options()->AuthoritativeDir && write_to_cache)
+  if (get_options()->DirPort && !get_options()->V1AuthoritativeDir)
     dirserv_set_cached_directory(str, published_on, 0);
-
-  if (!(tok = find_first_by_keyword(tokens, K_RECOMMENDED_SOFTWARE))) {
-    log_fn(LOG_WARN, "Missing recommended-software line from directory.");
-    goto err;
-  }
-  if (tok->n_args > 1) {
-    log_fn(LOG_WARN, "Invalid recommended-software line");
-    goto err;
-  }
-  versions = tok->n_args ? tor_strdup(tok->args[0]) : tor_strdup("");
-
-  /* Prefer router-status, then running-routers. */
-  if (!(tok = find_first_by_keyword(tokens, K_ROUTER_STATUS))) {
-    log_fn(LOG_WARN,
-           "Missing router-status line from directory.");
-    goto err;
-  }
-
-  /* Read the router list from s, advancing s up past the end of the last
-   * router. */
-  str = end;
-  new_dir = tor_malloc_zero(sizeof(routerlist_t));
-  new_dir->routers = smartlist_create();
-  if (router_parse_list_from_string(&str, new_dir->routers,
-                                    published_on)) {
-    log_fn(LOG_WARN, "Error reading routers from directory");
-    goto err;
-  }
-
-  new_dir->published_on_xx = published_on;
-
-  SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
-  smartlist_free(tokens);
-  tokens = NULL;
-
-  if (*dest)
-    routerlist_free(*dest);
-  *dest = new_dir;
 
   r = 0;
   goto done;
  err:
   r = -1;
-  if (new_dir)
-    routerlist_free(new_dir);
-  tor_free(versions);
  done:
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
@@ -567,8 +490,9 @@ router_parse_routerlist_from_directory(const char *str,
   return r;
 }
 
-/** Read a signed router status statement from <b>str</b>.  If it's well-formed,
- * return 0.  Otherwise, return -1.  If we're a directory cache, cache it.*/
+/** Read a signed router status statement from <b>str</b>.  If it's
+ * well-formed, return 0.  Otherwise, return -1.  If we're a directory cache,
+ * cache it.*/
 int
 router_parse_runningrouters(const char *str)
 {
@@ -761,8 +685,7 @@ check_directory_signature(const char *digest,
  * following the last router entry.  Returns 0 on success and -1 on failure.
  */
 int
-router_parse_list_from_string(const char **s, smartlist_t *dest,
-                              time_t published_on)
+router_parse_list_from_string(const char **s, smartlist_t *dest)
 {
   routerinfo_t *router;
   smartlist_t *routers;

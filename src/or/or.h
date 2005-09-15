@@ -1789,7 +1789,7 @@ void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
 void directory_all_unreachable(time_t now);
-void directory_has_arrived(time_t now, char *identity_digest);
+void directory_info_has_arrived(time_t now, int from_cache);
 
 int control_signal_act(int the_signal);
 void handle_signals(int is_parent);
@@ -2089,10 +2089,15 @@ void routerlist_free_all(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
-int router_add_to_routerlist(routerinfo_t *router, const char **msg);
+int router_add_to_routerlist(routerinfo_t *router, const char **msg,
+                             int from_cache);
 int router_load_single_router(const char *s, const char **msg);
+void router_load_routers_from_string(const char *s, int from_cache,
+                                     smartlist_t *requested_fingerprints);
+#if 0
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                         int dir_is_recent, int dir_is_cached);
+#endif
 typedef enum { NS_FROM_CACHE, NS_FROM_DIR, NS_GENERATED} networkstatus_source_t;
 int router_set_networkstatus(const char *s, time_t arrived_at,
                              networkstatus_source_t source,
@@ -2120,9 +2125,11 @@ void clear_trusted_dir_servers(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
 void update_networkstatus_cache_downloads(time_t now);
 void update_networkstatus_client_downloads(time_t now);
+void update_router_descriptor_downloads(time_t now);
 void routers_update_all_from_networkstatus(void);
 void routers_update_status_from_networkstatus(smartlist_t *routers);
 smartlist_t *router_list_superseded(void);
+int router_have_minimum_dir_info(void);
 
 /********************************* routerparse.c ************************/
 
@@ -2153,19 +2160,21 @@ int router_get_networkstatus_v2_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
-                                  smartlist_t *dest,
-                                  time_t published);
+                                  smartlist_t *dest);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey,
                                            int check_version,
                                            int write_to_cache);
 int router_parse_runningrouters(const char *str);
+int router_parse_directory(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
                                                     int assume_action);
+#if 0
 int check_software_version_against_directory(const char *directory);
+#endif
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);

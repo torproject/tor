@@ -29,7 +29,6 @@ static trusted_dir_server_t *router_pick_trusteddirserver_impl(
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
-static void router_normalize_routerlist(routerlist_t *rl);
 
 /****************************************************************************/
 
@@ -52,38 +51,6 @@ static smartlist_t *networkstatus_list = NULL;
  * cleared by routers_update_all_from_networkstatus.
  */
 static int networkstatus_list_has_changed = 0;
-
-/**
- * Reload the most recent cached directory (if present).
- */
-int
-router_reload_router_list(void)
-{
-  char filename[512];
-  int is_recent;
-  struct stat st;
-  char *s;
-  tor_assert(get_options()->DataDirectory);
-
-  tor_snprintf(filename,sizeof(filename),"%s/cached-directory",
-               get_options()->DataDirectory);
-  s = read_file_to_str(filename,0);
-  if (s) {
-    stat(filename, &st); /* if s is true, stat probably worked */
-    log_fn(LOG_INFO, "Loading cached directory from %s", filename);
-    is_recent = st.st_mtime > time(NULL) - 60*15;
-    if (router_load_routerlist_from_directory(s, NULL, is_recent, 1) < 0) {
-      log_fn(LOG_WARN, "Cached directory at '%s' was unparseable; ignoring.", filename);
-    }
-    if (routerlist &&
-        ((routerlist->published_on_xx > time(NULL) - MIN_ONION_KEY_LIFETIME/2)
-         || is_recent)) {
-      directory_has_arrived(st.st_mtime, NULL); /* do things we've been waiting to do */
-    }
-    tor_free(s);
-  }
-  return 0;
-}
 
 /** Repopulate our list of network_status_t objects from the list cached on
  * disk.  Return 0 on success, -1 on failure. */
@@ -129,10 +96,10 @@ router_reload_networkstatus(void)
  *
  * Routerdescs are stored in a big file, named "cached-routers".  As new
  * routerdescs arrive, we append them to a journal file named
- * "cached-routers.jrn".
+ * "cached-routers.new".
  *
  * From time to time, we replace "cached-routers" with a new file containing
- * only the live, non-superseded descriptors, and clear cached-routers.log.
+ * only the live, non-superseded descriptors, and clear cached-routers.new.
  *
  * On startup, we read both files.
  */
@@ -198,6 +165,9 @@ router_rebuild_store(int force)
   if (!routerlist)
     return 0;
 
+  /* Don't save deadweight. */
+  routerlist_remove_old_routers(ROUTER_MAX_AGE);
+
   options = get_options();
   fname_len = strlen(options->DataDirectory)+32;
   fname = tor_malloc(fname_len);
@@ -238,6 +208,50 @@ router_rebuild_store(int force)
     smartlist_free(chunk_list);
   }
   return r;
+}
+
+/* DOCDOC */
+int
+router_reload_router_list(void)
+{
+  or_options_t *options = get_options();
+  size_t fname_len = strlen(options->DataDirectory)+32;
+  char *fname = tor_malloc(fname_len);
+  struct stat st;
+  int j;
+
+  if (!routerlist) {
+    routerlist = tor_malloc_zero(sizeof(routerlist_t));
+    routerlist->routers = smartlist_create();
+  }
+
+  router_journal_len = router_store_len = 0;
+
+  for (j = 0; j < 2; ++j) {
+    char *contents;
+    tor_snprintf(fname, fname_len,
+                 (j==0)?"%s/cached-routers":"%s/cached-routers.new",
+                 options->DataDirectory);
+    contents = read_file_to_str(fname, 0);
+    if (contents) {
+      stat(fname, &st);
+      if (j==0)
+        router_store_len = st.st_size;
+      else
+        router_journal_len = st.st_size;
+      router_load_routers_from_string(contents, 1, NULL);
+      tor_free(contents);
+    }
+  }
+
+  /* Don't cache expired routers. */
+  routerlist_remove_old_routers(ROUTER_MAX_AGE);
+
+  if (router_journal_len) {
+    /* Always clear the journal on startup.*/
+    router_rebuild_store(1);
+  }
+  return 0;
 }
 
 /** Set *<b>outp</b> to a smartlist containing a list of
@@ -1072,10 +1086,15 @@ router_mark_as_down(const char *digest)
  * routerinfo was accepted, but we should notify the generator of the
  * descriptor using the message *<b>msg</b>.
  *
- * DOCDOC very changed.  Also, MUST call update_status_from_networkstatus first.
+ * DOCDOC very changed.  Also, MUST call update_status_from_networkstatus
+ * first, and should call router_rebuild_store and
+ * control_event_descriptors_changed after.
+ *
+ * XXXX never replace your own descriptor.
  */
 int
-router_add_to_routerlist(routerinfo_t *router, const char **msg)
+router_add_to_routerlist(routerinfo_t *router, const char **msg,
+                         int from_cache)
 {
   int i;
   char id_digest[DIGEST_LEN];
@@ -1138,6 +1157,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
         }
         routerinfo_free(old_router);
         smartlist_set(routerlist->routers, i, router);
+        if (!from_cache)
+          router_append_to_journal(router->signed_descriptor,
+                                   router->signed_descriptor_len);
         directory_set_dirty();
         *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
                authdir_verified ? "Verified server updated" :
@@ -1176,6 +1198,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
   /* We haven't seen a router with this name before.  Add it to the end of
    * the list. */
   smartlist_add(routerlist->routers, router);
+  if (!from_cache)
+    router_append_to_journal(router->signed_descriptor,
+                             router->signed_descriptor_len);
   directory_set_dirty();
   return 0;
 }
@@ -1244,7 +1269,7 @@ router_load_single_router(const char *s, const char **msg)
 #endif
   /* XXXX011 update router status from networkstatus!! */
 
-  if (router_add_to_routerlist(ri, msg)<0) {
+  if (router_add_to_routerlist(ri, msg, 0)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list: %s Dropping.",
            *msg?*msg:"(No message).");
     /* we've already assigned to *msg now, and ri is already freed */
@@ -1260,6 +1285,48 @@ router_load_single_router(const char *s, const char **msg)
   return 1;
 }
 
+/* DOCDOC */
+void
+router_load_routers_from_string(const char *s, int from_cache,
+                                smartlist_t *requested_fingerprints)
+{
+  smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
+  char fp[HEX_DIGEST_LEN+1];
+  const char *msg;
+
+  router_parse_list_from_string(&s, routers);
+
+  routers_update_status_from_networkstatus(routers);
+
+  SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
+  {
+    base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
+    if (requested_fingerprints) {
+      if (smartlist_string_isin(requested_fingerprints, fp)) {
+        smartlist_string_remove(requested_fingerprints, fp);
+      } else {
+        char *requested =
+          smartlist_join_strings(requested_fingerprints," ",0,NULL);
+        log_fn(LOG_WARN, "We received a router descriptor with a fingerprint (%s) that we never requested. (We asked for: %s.) Dropping.", fp, requested);
+        tor_free(requested);
+        routerinfo_free(ri);
+        continue;
+      }
+    }
+
+    if (router_add_to_routerlist(ri, &msg, from_cache) >= 0)
+      smartlist_add(changed, ri);
+  });
+
+  control_event_descriptors_changed(changed);
+
+  router_rebuild_store(0);
+
+  smartlist_free(routers);
+  smartlist_free(changed);
+}
+
+#if 0
 /** Add to the current routerlist each router stored in the
  * signed directory <b>s</b>.  If pkey is provided, check the signature
  * against pkey; else check against the pkey of the signing directory
@@ -1291,7 +1358,7 @@ router_load_routerlist_from_directory(const char *s,
     SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
     {
       const char *msg;
-      if (router_add_to_routerlist(r,&msg)>=0)
+      if (router_add_to_routerlist(r,&msg,0)>=0)
         smartlist_add(changed, r);
     });
     smartlist_clear(new_list->routers);
@@ -1306,6 +1373,7 @@ router_load_routerlist_from_directory(const char *s,
   router_normalize_routerlist(routerlist);
   return 0;
 }
+#endif
 
 /** Helper: return a newly allocated string containing the name of the filename
  * where we plan to cache <b>ns</b>. */
@@ -1319,7 +1387,6 @@ networkstatus_get_cache_filename(const networkstatus_t *ns)
   base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
   tor_snprintf(fn, len, "%s/cached-status/%s",datadir,fp);
   return fn;
-
 }
 
 /** Helper for smartlist_sort: Compare two networkstatus objects by
@@ -1694,28 +1761,6 @@ update_networkstatus_client_downloads(time_t now)
   memcpy(cp, ".z", 3);
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
   tor_free(resource);
-}
-
-/** Ensure that our own routerinfo is at the front, and remove duplicates
- * of our routerinfo.
- */
-static void
-router_normalize_routerlist(routerlist_t *rl)
-{
-  int i=0;
-  routerinfo_t *r;
-  if ((r = router_get_my_routerinfo())) {
-    smartlist_insert(rl->routers, 0, routerinfo_copy(r));
-    ++i;
-  }
-
-  for ( ; i < smartlist_len(rl->routers); ++i) {
-    r = smartlist_get(rl->routers,i);
-    if (router_is_me(r)) {
-      routerinfo_free(r);
-      smartlist_del_keeporder(rl->routers, i--);
-    }
-  }
 }
 
 /** Decide whether a given addr:port is definitely accepted,
@@ -2192,6 +2237,8 @@ routers_update_all_from_networkstatus(void)
 
   helper_nodes_set_status_from_directory();
 
+  update_router_descriptor_downloads(time(NULL));
+
   networkstatus_list_has_changed = 0;
 }
 
@@ -2287,20 +2334,21 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
   });
 }
 
-/** Return new list of ID digests for superseded routers.  A router is
+/** Return new list of ID fingerprints for superseded routers.  A router is
  * superseded if any network-status has a router with a different digest
  * published more recently, or it it is listed in the network-status but not
  * in the router list.
  */
 smartlist_t *
-router_list_superseded(void)
+router_list_downloadable(void)
 {
   smartlist_t *superseded = smartlist_create();
   strmap_t *most_recent = NULL;
   char fp[HEX_DIGEST_LEN+1];
   routerstatus_t *rs_old;
+  strmap_iter_t *iter;
 
-  if (!routerlist || !networkstatus_list)
+  if (!networkstatus_list)
     return superseded;
 
   /* Build a map from fingerprint to most recent routerstatus_t. If this
@@ -2313,29 +2361,93 @@ router_list_superseded(void)
     {
       base16_encode(fp, sizeof(fp), rs->identity_digest, DIGEST_LEN);
       rs_old = strmap_get(most_recent, fp);
-      if (!rs_old || rs_old->published_on < rs->published_on)
+      if (!rs_old || rs_old->published_on < rs->published_on) {
         strmap_set(most_recent, fp, rs);
+      }
     });
   });
 
   /* Compare each router to the most recent routerstatus. */
-  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
-  {
-    routerstatus_t *rs;
-    base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
-    rs = strmap_get(most_recent, fp);
-    if (!rs)
-      continue;
-    if (memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)
-        && rs->published_on > ri->published_on) {
-      char *d = tor_malloc(DIGEST_LEN);
-      memcpy(d, ri->identity_digest, DIGEST_LEN);
-      smartlist_add(superseded, d);
-      break;
-    }
-  });
+  if (routerlist) {
+    SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+    {
+      routerstatus_t *rs;
+      base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
+      rs = strmap_get(most_recent, fp);
+      if (!rs)
+        continue;
+      if (memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)
+          && rs->published_on > ri->published_on) {
+        char *d = tor_malloc(HEX_DIGEST_LEN+1);
+        base16_encode(d, HEX_DIGEST_LEN+1, ri->identity_digest, DIGEST_LEN);
+        smartlist_add(superseded, d);
+        break;
+      }
+      strmap_remove(most_recent, fp);
+    });
+  }
+
+  /* Anything left over, we don't even know about yet. */
+  for (iter = strmap_iter_init(most_recent); !strmap_iter_done(iter);
+       iter = strmap_iter_next(most_recent, iter)) {
+    const char *key;
+    void *val;
+    strmap_iter_get(iter, &key, &val);
+    smartlist_add(superseded, tor_strdup(key));
+  }
+
   strmap_free(most_recent, NULL);
 
   return superseded;
+}
+
+/* DOCDOC */
+void
+update_router_descriptor_downloads(time_t now)
+{
+  char *resource = NULL;
+
+  if (connection_get_by_type_purpose(CONN_TYPE_DIR,
+                                     DIR_PURPOSE_FETCH_SERVERDESC))
+    return;
+
+  if (!networkstatus_list || smartlist_len(networkstatus_list)<2) {
+    resource = tor_strdup("all.z");
+  } else {
+    smartlist_t *downloadable = router_list_downloadable();
+    if (smartlist_len(downloadable)) {
+      char *dl = smartlist_join_strings(downloadable,"+",0,NULL);
+      size_t r_len = smartlist_len(downloadable)*(DIGEST_LEN+1)+16;
+      /* Damn, that's an ugly way to do this. XXXX011 NM */
+      resource = tor_malloc(r_len);
+      tor_snprintf(resource, r_len, "fp/%s.z", dl);
+      tor_free(dl);
+    }
+    SMARTLIST_FOREACH(downloadable, char *, c, tor_free(c));
+    smartlist_free(downloadable);
+  }
+
+  if (!resource) {
+    log_fn(LOG_NOTICE, "No routers to download.");
+    return;
+  }
+
+  log_fn(LOG_NOTICE, "Launching request for routers: %s", resource);
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
+  tor_free(resource);
+}
+
+/* DOCDOC */
+int
+router_have_minimum_dir_info(void)
+{
+  int tot = 0, avg;
+  if (!networkstatus_list || smartlist_len(networkstatus_list)<2 ||
+      !routerlist)
+    return 0;
+  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+                    tot += smartlist_len(ns->entries));
+  avg = tot / smartlist_len(networkstatus_list);
+  return smartlist_len(routerlist->routers) > (avg/4);
 }
 
