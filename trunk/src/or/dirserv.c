@@ -171,9 +171,9 @@ dirserv_parse_fingerprint_file(const char *fname)
       continue;
     }
     if (!is_legal_nickname(nickname) &&
-        !strcasecmp(nickname, "!reject") &&
-        !strcasecmp(nickname, "!invalid")) {
-      log(LOG_NOTICE, "Invalid nickname '%s' too long in fingerprint file. Skipping.", nickname);
+        strcasecmp(nickname, "!reject") &&
+        strcasecmp(nickname, "!invalid")) {
+      log(LOG_NOTICE, "Invalid nickname '%s' in fingerprint file. Skipping.", nickname);
       continue;
     }
     if (strlen(fingerprint) != FINGERPRINT_LEN ||
