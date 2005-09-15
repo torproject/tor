@@ -2270,10 +2270,12 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
   int i;
   time_t now = time(NULL);
   trusted_dir_server_t *ds;
+  or_options_t *options = get_options();
+  int authdir = options->AuthoritativeDir;
 
-  if (authdir_mode(get_options())) {
-    /* An authoritative directory should never believer someone else about
-     * a server's status. */
+  if (authdir && options->NamingAuthoritativeDir) {
+    /* A completely authoritative directory should never believer someone else
+     * about a server's status. */
     return;
   }
 
@@ -2336,12 +2338,17 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
            n_running, n_recent);
 
     router->is_named = (n_named > n_naming/2);
-    router->is_verified = (n_valid > n_statuses/2);
-    router->is_running = (n_running > n_recent/2);
+    if (authdir) {
+      /* We're a non-naming authdir; don't believe others. */
+      router->is_verified = (n_valid > n_statuses/2);
+      router->is_running = (n_running > n_recent/2);
 
-    if (router->is_running && ds)
-      /*Hm. What about authorities? When do they reset n_networkstatus_failures?*/
-      ds->n_networkstatus_failures = 0;
+      if (router->is_running && ds) {
+        /* XXXX001 NM Hm. What about authorities? When do they reset
+         * n_networkstatus_failures? */
+        ds->n_networkstatus_failures = 0;
+      }
+    }
   });
 }
 

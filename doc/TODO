@@ -158,10 +158,11 @@ N     - Alice acts on network-status objects
 
 N   . Naming and validation:
       o Separate naming from validation in authdirs.
-      - Authdirs need to be able to decline to validate based on
+      o Authdirs need to be able to decline to validate based on
         IP range and key
-      - Authdirs need to be able to decline to include baased on
+      o Authdirs need to be able to decline to include baased on
         IP range and key.
+      o Not all authdirs name.
       - Clients choose names based on network-status options.
       - Names are remembered in client state
 

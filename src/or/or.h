@@ -1178,7 +1178,10 @@ typedef struct {
   int DirPort; /**< Port to listen on for directory connections. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
-  int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
+  int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory?
+                           * for version 1 directories? */
+  int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory
+                               * that's willing to bind names? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int NoPublish; /**< Boolean: should we never publish a descriptor? */
   int ConnLimit; /**< Requested maximum number of simultaneous connections. */
@@ -1243,6 +1246,10 @@ typedef struct {
   config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
   smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
+  config_line_t *AuthDirReject; /**< Address policy for descriptors to
+                                 * reject. */
+  config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
+                                  * never mark as valid. */
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting
@@ -1711,6 +1718,7 @@ void free_dir_policy(void);
 
 /********************************* dirserv.c ***************************/
 
+void parse_authdir_policy(void);
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
 void dirserv_free_fingerprint_list(void);

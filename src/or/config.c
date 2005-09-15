@@ -101,9 +101,9 @@ static config_var_t _option_vars[] = {
   VAR("Address",             STRING,   Address,              NULL),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
   VAR("AssumeReachable",     BOOL,     AssumeReachable,      "0"),
+  VAR("AuthDirInvalid",      LINELIST, AuthDirInvalid,       NULL),
+  VAR("AuthDirReject",       LINELIST, AuthDirReject,        NULL),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
-  /* XXXX 011 change this default on 0.1.1.x */
-  VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "1"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "5 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "2 MB"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
@@ -152,6 +152,8 @@ static config_var_t _option_vars[] = {
   OBSOLETE("MonthlyAccountingStart"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NewCircuitPeriod",    INTERVAL, NewCircuitPeriod,     "30 seconds"),
+  /* XXXX 011 change this default on 0.1.1.x */
+  VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "1"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
   VAR("NoPublish",           BOOL,     NoPublish,            "0"),
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
@@ -188,6 +190,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("TrafficShaping"),
   VAR("UseHelperNodes",      BOOL,     UseHelperNodes,       "0"),
   VAR("User",                STRING,   User,                 NULL),
+  VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
 };
@@ -593,6 +596,7 @@ options_act(or_options_t *old_options)
   /* Update address policies. */
   parse_socks_policy();
   parse_dir_policy();
+  parse_authdir_policy();
   parse_reachable_addresses();
 
   init_cookie_authentication(options->CookieAuthentication);
@@ -2071,6 +2075,16 @@ options_validate(or_options_t *options)
     result = -1;
   }
   if (config_parse_addr_policy(options->ReachableAddresses, &addr_policy,
+                               ADDR_POLICY_ACCEPT)) {
+    log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
+    result = -1;
+  }
+  if (config_parse_addr_policy(options->AuthDirReject, &addr_policy,
+                               ADDR_POLICY_ACCEPT)) {
+    log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
+    result = -1;
+  }
+  if (config_parse_addr_policy(options->AuthDirInvalid, &addr_policy,
                                ADDR_POLICY_ACCEPT)) {
     log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
     result = -1;

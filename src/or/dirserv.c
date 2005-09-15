@@ -44,6 +44,39 @@ static int dirserv_thinks_router_is_reachable(routerinfo_t *router,
 
 /************** Fingerprint handling code ************/
 
+static addr_policy_t *authdir_reject_policy = NULL;
+static addr_policy_t *authdir_invalid_policy = NULL;
+
+/** Parse authdir policy strings from the configuration.
+ */
+void
+parse_authdir_policy(void) {
+  addr_policy_t *n;
+  if (authdir_reject_policy) {
+    addr_policy_free(authdir_reject_policy);
+    authdir_reject_policy = NULL;
+  }
+  config_parse_addr_policy(get_options()->AuthDirReject,
+                           &authdir_reject_policy, ADDR_POLICY_ACCEPT);
+  /* ports aren't used. */
+  for (n=authdir_reject_policy; n; n = n->next) {
+    n->prt_min = 1;
+    n->prt_max = 65535;
+  }
+
+  if (authdir_invalid_policy) {
+    addr_policy_free(authdir_invalid_policy);
+    authdir_invalid_policy = NULL;
+  }
+  config_parse_addr_policy(get_options()->AuthDirInvalid,
+                           &authdir_invalid_policy, ADDR_POLICY_ACCEPT);
+  /* ports aren't used. */
+  for (n=authdir_invalid_policy; n; n = n->next) {
+    n->prt_min = 1;
+    n->prt_max = 65535;
+  }
+}
+
 typedef struct fingerprint_entry_t {
   char *nickname;
   char *fingerprint; /**< Stored as HEX_DIGEST_LEN characters, followed by a NUL */
@@ -137,6 +170,12 @@ dirserv_parse_fingerprint_file(const char *fname)
       log(LOG_NOTICE, "Nickname '%s' too long in fingerprint file. Skipping.", nickname);
       continue;
     }
+    if (!is_legal_nickname(nickname) &&
+        !strcasecmp(nickname, "!reject") &&
+        !strcasecmp(nickname, "!invalid")) {
+      log(LOG_NOTICE, "Invalid nickname '%s' too long in fingerprint file. Skipping.", nickname);
+      continue;
+    }
     if (strlen(fingerprint) != FINGERPRINT_LEN ||
         !crypto_pk_check_fingerprint_syntax(fingerprint)) {
       log_fn(LOG_NOTICE, "Invalid fingerprint (nickname '%s', fingerprint %s). Skipping.",
@@ -173,32 +212,62 @@ dirserv_parse_fingerprint_file(const char *fname)
 static router_status_t
 dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 {
-  fingerprint_entry_t *nn_ent = NULL;
+  fingerprint_entry_t *nn_ent = NULL, *fp_ent = NULL;
   char fp[FINGERPRINT_LEN+1];
 
   if (!fingerprint_list)
     fingerprint_list = smartlist_create();
 
+  if (crypto_pk_get_fingerprint(router->identity_pkey, fp, 0)) {
+    log_fn(LOG_WARN,"Error computing fingerprint");
+    return -1;
+  }
+
   log_fn(LOG_DEBUG, "%d fingerprints known.", smartlist_len(fingerprint_list));
   SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t *, ent,
   {
-    if (!strcasecmp(router->nickname,ent->nickname)) {
+    if (!strcasecmp(fp,ent->fingerprint))
+      fp_ent = ent;
+    if (!strcasecmp(router->nickname,ent->nickname))
       nn_ent = ent;
-      break;
-    }
   });
 
+  if (fp_ent) {
+    if (!strcasecmp(fp_ent->nickname, "!reject")) {
+      if (msg)
+        *msg = "Fingerprint is marked rejected";
+      return FP_REJECT;
+    } else if (!strcasecmp(fp_ent->nickname, "!invalid")) {
+      if (msg)
+        *msg = "Fingerprint is marged invalid";
+      return FP_INVALID;
+    }
+  }
+
   if (!nn_ent) { /* No such server known with that nickname */
+    addr_policy_result_t rej = router_compare_addr_to_addr_policy(
+                       router->addr, router->or_port, authdir_reject_policy);
+    addr_policy_result_t inv = router_compare_addr_to_addr_policy(
+                       router->addr, router->or_port, authdir_invalid_policy);
+
+    if (rej == ADDR_POLICY_PROBABLY_ACCEPTED || rej == ADDR_POLICY_ACCEPTED) {
+      log_fn(LOG_INFO, "Rejecting '%s' because of address %s",
+             router->nickname, router->address);
+      if (msg)
+        *msg = "Authdir is rejecting routers in this range.";
+      return FP_REJECT;
+    }
+    if (inv == ADDR_POLICY_PROBABLY_ACCEPTED || inv == ADDR_POLICY_ACCEPTED) {
+      log_fn(LOG_INFO, "Not marking '%s' valid because of address %s",
+             router->nickname, router->address);
+      return FP_INVALID;
+    }
     if (tor_version_as_new_as(router->platform,"0.1.0.2-rc"))
       return FP_VALID;
     else
       return FP_INVALID;
     log_fn(LOG_INFO,"No fingerprint found for '%s'",router->nickname);
     return 0;
-  }
-  if (crypto_pk_get_fingerprint(router->identity_pkey, fp, 0)) {
-    log_fn(LOG_WARN,"Error computing fingerprint");
-    return -1;
   }
   if (0==strcasecmp(nn_ent->fingerprint, fp)) {
     log_fn(LOG_DEBUG,"Good fingerprint for '%s'",router->nickname);
@@ -1080,6 +1149,7 @@ generate_v2_networkstatus(void)
   crypto_pk_env_t *private_key = get_identity_key();
   smartlist_t *descriptor_list = get_descriptor_list();
   time_t now = time(NULL);
+  int naming = options->NamingAuthoritativeDir;
   const char *contact;
 
   if (!descriptor_list) {
@@ -1124,7 +1194,7 @@ generate_v2_networkstatus(void)
                "fingerprint %s\n"
                "contact %s\n"
                "published %s\n"
-               "dir-options %s\n"
+               "dir-options%s\n"
                "client-versions %s\n"
                "server-versions %s\n"
                "dir-signing-key\n%s\n",
@@ -1132,7 +1202,7 @@ generate_v2_networkstatus(void)
                fingerprint,
                contact,
                published,
-               "Names",
+               naming ? " Names" : "",
                client_versions,
                server_versions,
                identity_pkey);
@@ -1144,8 +1214,8 @@ generate_v2_networkstatus(void)
       int f_stable = !router_is_unreliable(ri, 1, 0);
       int f_fast = !router_is_unreliable(ri, 0, 1);
       int f_running;
-      int f_named = ri->is_verified;
-      int f_valid = f_named;
+      int f_named = naming && ri->is_named;
+      int f_valid = ri->is_verified;
       char identity64[128];
       char digest64[128];
 
@@ -1410,6 +1480,10 @@ dirserv_free_all(void)
     smartlist_free(fingerprint_list);
     fingerprint_list = NULL;
   }
+  if (authdir_reject_policy)
+    addr_policy_free(authdir_reject_policy);
+  if (authdir_invalid_policy)
+    addr_policy_free(authdir_invalid_policy);
   clear_cached_dir(&the_directory);
   clear_cached_dir(&the_runningrouters);
   clear_cached_dir(&cached_directory);
