@@ -165,8 +165,10 @@ dirserv_parse_fingerprint_file(const char *fname)
 
 /** Check whether <b>router</b> has a nickname/identity key combination that
  * we recognize from the fingerprint list, or an IP we automatically act on
- * according to our configuration.  Return the appropriate disposition.
- * DOCDOC msg is set on reject, if provided.
+ * according to our configuration.  Return the appropriate router status.
+ *
+ * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
+ * *<b>msg</b> to an explanation of why.
  */
 static router_status_t
 dirserv_router_get_status(const routerinfo_t *router, const char **msg)
@@ -287,7 +289,8 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 /** Check whether we, as a directory server, want to accept <b>ri</b>.  If so,
  * return 0, and set its is_valid,named,running fields.  Otherwise, return -1.
  *
- * DOCDOC msg
+ * If the router is rejected and <b>msg</b> is provided, set
+ * *<b>msg</b> to an explanation of why.
  */
 int
 authdir_wants_to_reject_router(routerinfo_t *ri,
@@ -595,7 +598,9 @@ list_server_status(smartlist_t *routers, char **router_status_out)
   return 0;
 }
 
-/* DOCDOC */
+/** Helper: Given pointers to two strings describing tor versions, return -1
+ * if _a precedes _b, 1 if _b preceeds _a, and 0 if they are equivalent.
+ * Used to sort a list of versions. */
 static int
 _compare_tor_version_str_ptr(const void **_a, const void **_b)
 {
@@ -620,7 +625,8 @@ _compare_tor_version_str_ptr(const void **_a, const void **_b)
 /* Given a (possibly empty) list of config_line_t, each line of which contains
  * a list of comma-separated version numbers surrounded by optional space,
  * allocate and return a new string containing the version numbers, in order,
- * separated by commas.  Used to generate Recommended(Client|Server)?Versions */
+ * separated by commas.  Used to generate Recommended(Client|Server)?Versions
+ */
 static char *
 format_versions_list(config_line_t *ln)
 {

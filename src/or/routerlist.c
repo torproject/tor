@@ -211,7 +211,9 @@ router_rebuild_store(int force)
   return r;
 }
 
-/* DOCDOC */
+/* Load all cached router descriptors from the store. Return 0 on success and
+ * -1 on failure.
+ */
 int
 router_reload_router_list(void)
 {
@@ -1072,7 +1074,7 @@ router_mark_as_down(const char *digest)
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
- * older entries (if any) with the same name.  Note: Callers should not hold
+ * older entries (if any) with the same key.  Note: Callers should not hold
  * their pointers to <b>router</b> if this function fails; <b>router</b>
  * will either be inserted into the routerlist or freed.
  *
@@ -1087,9 +1089,9 @@ router_mark_as_down(const char *digest)
  * routerinfo was accepted, but we should notify the generator of the
  * descriptor using the message *<b>msg</b>.
  *
- * DOCDOC very changed.  Also, MUST call update_status_from_networkstatus
- * first, and should call router_rebuild_store and
- * control_event_descriptors_changed after.
+ * This function should be called *after*
+ * routers_update_status_from_networkstatus; subsequenctly, you should call
+ * router_rebuild_store and control_event_descriptors_changed.
  *
  * XXXX never replace your own descriptor.
  */
@@ -1286,7 +1288,15 @@ router_load_single_router(const char *s, const char **msg)
   return 1;
 }
 
-/* DOCDOC */
+/** Given a string <b>s</b> containing some routerdescs, parse it and put the
+ * routers into our directory.  If <b>from_cache</b> is false, the routers
+ * have come from the network: cache them.
+ *
+ * If <b>requested_fingerprints</b> is provided, it must contain a list of
+ * uppercased identity fingerprints.  Do not update any router whose
+ * fingerprint is not on the list; after updating a router, remove its
+ * fingerprint from the list.
+ */
 void
 router_load_routers_from_string(const char *s, int from_cache,
                                 smartlist_t *requested_fingerprints)
@@ -1422,7 +1432,7 @@ _compare_networkstatus_published_on(const void **_a, const void **_b)
  * fingerprint is not on the list; after updating a networkstatus, remove its
  * fingerprint from the list.
  *
- * Return 0 on success, -1 on failure.
+o * Return 0 on success, -1 on failure.
  */
 int
 router_set_networkstatus(const char *s, time_t arrived_at,
@@ -2402,7 +2412,14 @@ router_list_downloadable(void)
   return superseded;
 }
 
-/* DOCDOC */
+/** Initiate new router downloads as needed.
+ *
+ * We only allow one router descriptor download at a time.
+ * If we have less than two network-status documents, we ask
+ * a directory for "all descriptors."
+ * Otherwise, we ask for all descriptors that we think are different
+ * from what we have.
+ */
 void
 update_router_descriptor_downloads(time_t now)
 {
@@ -2438,7 +2455,9 @@ update_router_descriptor_downloads(time_t now)
   tor_free(resource);
 }
 
-/* DOCDOC */
+/** Return true iff we have enough networkstatus and router information to
+ * start building circuits.  Right now, this means "at least 2 networkstatus
+ * documents, and at least 1/4 of expected routers." */
 int
 router_have_minimum_dir_info(void)
 {
