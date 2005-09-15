@@ -1002,6 +1002,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
     smartlist_t *which = NULL;
+    int n_asked_for = 0;
     /* XXXX NM implement this. */
     log_fn(LOG_INFO,"Received server info (size %d) from server '%s:%d'",
            (int)body_len, conn->address, conn->port);
@@ -1022,9 +1023,13 @@ connection_dir_client_reached_eof(connection_t *conn)
       if (n && strlen(smartlist_get(which,n-1))==HEX_DIGEST_LEN+2)
         ((char*)smartlist_get(which,n-1))[HEX_DIGEST_LEN] = '\0';
     }
+    if (which)
+      n_asked_for = smartlist_len(which);
     router_load_routers_from_string(body, 0, which);
     directory_info_has_arrived(time(NULL),0);
     if (which) {
+      log_fn(LOG_NOTICE, "Received %d/%d routers.",
+             n_asked_for-smartlist_len(which), n_asked_for);
       if (smartlist_len(which)) {
         dir_routerdesc_download_failed(which);
       }
