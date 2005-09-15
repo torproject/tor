@@ -1557,7 +1557,7 @@ connection_dir_finished_connecting(connection_t *conn)
 }
 
 /** Called when one or more networkstatus fetches have failed (with uppercase
- * fingerprints listed in <b>fp</>).  Mark those fingerprints has having
+ * fingerprints listed in <b>failed</>).  Mark those fingerprints has having
  * failed once. */
 static void
 dir_networkstatus_download_failed(smartlist_t *failed)
@@ -1573,7 +1573,8 @@ dir_networkstatus_download_failed(smartlist_t *failed)
   });
 }
 
-/* DOCDOC */
+/** Called when one or more networkstatus fetches have failed (with uppercase
+ * fingerprints listed in <b>failed</>). */
 static void
 dir_routerdesc_download_failed(smartlist_t *failed)
 {
