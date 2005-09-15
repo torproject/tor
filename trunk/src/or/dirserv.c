@@ -19,6 +19,13 @@ const char dirserv_c_id[] = "$Id$";
 
 extern long stats_n_seconds_working;
 
+typedef enum {
+  FP_NAMED, /**< Listed in fingerprint file. */
+  FP_VALID, /**< Unlisted but believed valid. */
+  FP_INVALID, /**< Believed invalid. */
+  FP_REJECT, /**< We will not publish this router. */
+} router_status_t;
+
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
@@ -30,6 +37,8 @@ static char *format_versions_list(config_line_t *ln);
 /* Should be static; exposed for testing */
 int add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list);
 static int router_is_general_exit(routerinfo_t *ri);
+static router_status_t dirserv_router_get_status(const routerinfo_t *router,
+                                                 const char **msg);
 
 /************** Fingerprint handling code ************/
 
@@ -153,44 +162,51 @@ dirserv_parse_fingerprint_file(const char *fname)
 }
 
 /** Check whether <b>router</b> has a nickname/identity key combination that
- * we recognize from the fingerprint list.  Return 1 if router's
- * identity and nickname match, -1 if we recognize the nickname but
- * the identity key is wrong, and 0 if the nickname is not known. */
-int
-dirserv_router_fingerprint_is_known(const routerinfo_t *router)
+ * we recognize from the fingerprint list, or an IP we automatically act on
+ * according to our configuration.  Return the appropriate disposition.
+ * DOCDOC msg is set on reject, if provided.
+ */
+static router_status_t
+dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 {
-  int i, found=0;
-  fingerprint_entry_t *ent =NULL;
+  fingerprint_entry_t *nn_ent = NULL;
   char fp[FINGERPRINT_LEN+1];
 
   if (!fingerprint_list)
     fingerprint_list = smartlist_create();
 
   log_fn(LOG_DEBUG, "%d fingerprints known.", smartlist_len(fingerprint_list));
-  for (i=0;i<smartlist_len(fingerprint_list);++i) {
-    ent = smartlist_get(fingerprint_list, i);
-    log_fn(LOG_DEBUG,"%s vs %s", router->nickname, ent->nickname);
+  SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t *, ent,
+  {
     if (!strcasecmp(router->nickname,ent->nickname)) {
-      found = 1;
+      nn_ent = ent;
       break;
     }
-  }
+  });
 
-  if (!found) { /* No such server known */
-    log_fn(LOG_INFO,"no fingerprint found for '%s'",router->nickname);
+  if (!nn_ent) { /* No such server known with that nickname */
+    if (tor_version_as_new_as(router->platform,"0.1.0.2-rc"))
+      return FP_VALID;
+    else
+      return FP_INVALID;
+    log_fn(LOG_INFO,"No fingerprint found for '%s'",router->nickname);
     return 0;
   }
   if (crypto_pk_get_fingerprint(router->identity_pkey, fp, 0)) {
-    log_fn(LOG_WARN,"error computing fingerprint");
+    log_fn(LOG_WARN,"Error computing fingerprint");
     return -1;
   }
-  if (0==strcasecmp(ent->fingerprint, fp)) {
-    log_fn(LOG_DEBUG,"good fingerprint for '%s'",router->nickname);
-    return 1; /* Right fingerprint. */
+  if (0==strcasecmp(nn_ent->fingerprint, fp)) {
+    log_fn(LOG_DEBUG,"Good fingerprint for '%s'",router->nickname);
+    return FP_NAMED; /* Right fingerprint. */
   } else {
-    log_fn(LOG_WARN,"mismatched fingerprint for '%s': expected '%s' got '%s'",
-           router->nickname, ent->fingerprint, fp);
-    return -1; /* Wrong fingerprint. */
+    log_fn(LOG_WARN,"Mismatched fingerprint for '%s': expected '%s' got '%s'. ContactInfo '%s', platform '%s'.)",
+           router->nickname, nn_ent->fingerprint, fp,
+           router->contact_info ? router->contact_info : "",
+           router->platform ? router->platform : "");
+    if (msg)
+      *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
+    return FP_REJECT; /* Wrong fingerprint. */
   }
 }
 
@@ -266,33 +282,20 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
   return 0;
 }
 
-/** DOCDOC */
+/** Check whether we, as a directory server, want to accept <b>ri</b>.  If so,
+ * return 0, and set its is_valid and is_named fields.  Otherwise, return -1.
+ * DOCDOC msg
+ */
 int
-dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
+authdir_wants_to_reject_router(routerinfo_t *ri,
                                const char **msg)
 {
   /* Okay.  Now check whether the fingerprint is recognized. */
-  int r = dirserv_router_fingerprint_is_known(ri);
+  router_status_t status = dirserv_router_get_status(ri, msg);
   time_t now;
-  if (r==-1) {
-    log_fn(LOG_WARN, "Known nickname '%s', wrong fingerprint. Not adding (ContactInfo '%s', platform '%s').",
-           ri->nickname, ri->contact_info ? ri->contact_info : "",
-           ri->platform ? ri->platform : "");
-    *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
-    return -1;
-  } else if (r==0) {
-    char fp[FINGERPRINT_LEN+1];
-    log_fn(LOG_INFO, "Unknown nickname '%s' (%s:%d). Will try to add.",
-           ri->nickname, ri->address, ri->or_port);
-    if (crypto_pk_get_fingerprint(ri->identity_pkey, fp, 1) < 0) {
-      log_fn(LOG_WARN, "Error computing fingerprint for '%s'", ri->nickname);
-    } else {
-      log_fn(LOG_INFO, "Fingerprint line: %s %s", ri->nickname, fp);
-    }
-    *verified = 0;
-  } else {
-    *verified = 1;
-  }
+  if (status == FP_REJECT)
+    return -1; /* msg is already set. */
+
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
@@ -319,6 +322,22 @@ dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
     *msg = "Rejected: Address is not an IP, or IP is a private address.";
     return -1;
   }
+  /* Okay, looks like we're willing to accept this one. */
+  switch (status) {
+    case FP_NAMED:
+      ri->is_named = ri->is_verified = 1;
+      break;
+    case FP_VALID:
+      ri->is_named = 0;
+      ri->is_verified = 1;
+      break;
+    case FP_INVALID:
+      ri->is_named = ri->is_verified = 0;
+      break;
+    default:
+      tor_assert(0);
+  }
+
   return 0;
 }
 
@@ -331,7 +350,6 @@ dirserv_wants_to_reject_router(routerinfo_t *ri, int *verified,
  *  0 if well-formed but redundant with one we already have;
  * -1 if it looks vaguely like a router descriptor but rejected;
  * -2 if we can't find a router descriptor in <b>desc</b>.
- *
  */
 int
 dirserv_add_descriptor(const char *desc, const char **msg)
@@ -378,22 +396,39 @@ directory_remove_invalid(void)
     return;
 
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
+    const char *msg;
     routerinfo_t *ent = smartlist_get(descriptor_list, i);
-    int r = dirserv_router_fingerprint_is_known(ent);
-    if (r<0) {
-      log(LOG_INFO, "Router '%s' is now verified with a key; removing old router with same name and different key.",
-          ent->nickname);
-      routerinfo_free(ent);
-      smartlist_del(descriptor_list, i--);
-      changed = 1;
-    } else if (r>0 && !ent->is_verified) {
-      log(LOG_INFO, "Router '%s' is now approved.", ent->nickname);
-      ent->is_verified = ent->is_named = 1;
-      changed = 1;
-    } else if (r==0 && ent->is_verified) {
-      log(LOG_INFO, "Router '%s' is no longer approved.", ent->nickname);
-      ent->is_verified = ent->is_named = 0;
-      changed = 1;
+    router_status_t r = dirserv_router_get_status(ent, &msg);
+    switch (r) {
+      case FP_REJECT:
+        log(LOG_INFO, "Router '%s' is now rejected: %s",
+            ent->nickname, msg?msg:"");
+        routerinfo_free(ent);
+        smartlist_del(descriptor_list, i--);
+        changed = 1;
+        break;
+      case FP_NAMED:
+        if (!ent->is_verified || !ent->is_named) {
+          log(LOG_INFO, "Router '%s' is now verified and named.", ent->nickname);
+          ent->is_verified = ent->is_named = 1;
+          changed = 1;
+        }
+        break;
+      case FP_VALID:
+        if (!ent->is_verified || ent->is_named) {
+          log(LOG_INFO, "Router '%s' is now verified.", ent->nickname);
+          ent->is_verified = 1;
+          ent->is_named = 0;
+          changed = 1;
+        }
+        break;
+      case FP_INVALID:
+        if (ent->is_verified || ent->is_named) {
+          log(LOG_INFO, "Router '%s' is no longer verified.", ent->nickname);
+          ent->is_verified = ent->is_named = 0;
+          changed = 1;
+        }
+        break;
     }
   }
   if (changed)
@@ -407,7 +442,8 @@ directory_remove_invalid(void)
 char *
 dirserver_getinfo_unregistered(const char *question)
 {
-  int i, r;
+  int i;
+  router_status_t r;
   smartlist_t *answerlist;
   char buf[1024];
   char *answer;
@@ -421,10 +457,10 @@ dirserver_getinfo_unregistered(const char *question)
   answerlist = smartlist_create();
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ent = smartlist_get(descriptor_list, i);
-    r = dirserv_router_fingerprint_is_known(ent);
+    r = dirserv_router_get_status(ent, NULL);
     if (ent->bandwidthcapacity >= (size_t)min_bw &&
         ent->bandwidthrate >= (size_t)min_bw &&
-        r == 0) {
+        r != FP_NAMED) {
       /* then log this one */
       tor_snprintf(buf, sizeof(buf),
                    "%s: BW %d on '%s'.",

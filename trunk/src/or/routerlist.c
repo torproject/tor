@@ -916,7 +916,6 @@ routerlist_get_published_time(void)
 }
 #endif
 
-
 /** Free all storage held by <b>router</b>. */
 void
 routerinfo_free(routerinfo_t *router)
@@ -1072,6 +1071,8 @@ router_mark_as_down(const char *digest)
  * fine, but out-of-date. If the return value is equal to 1, the
  * routerinfo was accepted, but we should notify the generator of the
  * descriptor using the message *<b>msg</b>.
+ *
+ * DOCDOC very changed.  Also, MUST call update_status_from_networkstatus first.
  */
 int
 router_add_to_routerlist(routerinfo_t *router, const char **msg)
@@ -1091,15 +1092,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
   crypto_pk_get_digest(router->identity_pkey, id_digest);
 
   if (authdir) {
-    if (dirserv_wants_to_reject_router(router, &authdir_verified, msg)) {
-      tor_assert(*msg);
-      routerinfo_free(router);
+    if (authdir_wants_to_reject_router(router, msg))
       return -2;
-    }
-    router->is_verified = authdir_verified;
-    router->is_named = router->is_verified; /*XXXX NM not right. */
-    if (tor_version_as_new_as(router->platform,"0.1.0.2-rc"))
-      router->is_verified = 1;
+    authdir_verified = router->is_verified;
   }
 
   /* If we have a router with this name, and the identity key is the same,
@@ -1109,20 +1104,14 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
     routerinfo_t *old_router = smartlist_get(routerlist->routers, i);
     if (!crypto_pk_cmp_keys(router->identity_pkey,old_router->identity_pkey)) {
       if (router->published_on <= old_router->published_on) {
+        /* Same key, but old */
         log_fn(LOG_DEBUG, "Skipping not-new descriptor for router '%s'",
                router->nickname);
-        if (authdir) {
-          /* Update the is_verified status based on our lookup. */
-          old_router->is_verified = router->is_verified;
-          old_router->is_named = router->is_named;
-        } else {
-          /* Update the is_running status to whatever we were told. */
-          old_router->is_running = router->is_running;
-        }
         routerinfo_free(router);
         *msg = "Router descriptor was not new.";
         return -1;
       } else {
+        /* Same key, new. */
         int unreachable = 0;
         log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
                router->nickname, old_router->nickname,
@@ -1157,7 +1146,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
       }
     } else if (!strcasecmp(router->nickname, old_router->nickname)) {
       /* nicknames match, keys don't. */
-      if (router->is_verified) {
+      if (router->is_named) {
         /* The new verified router replaces the old one; remove the
          * old one.  And carry on to the end of the list, in case
          * there are more old unverified routers with this nickname
@@ -1174,7 +1163,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg)
         }
         routerinfo_free(old_router);
         smartlist_del_keeporder(routerlist->routers, i--);
-      } else if (old_router->is_verified) {
+      } else if (old_router->is_named) {
         /* Can't replace a verified router with an unverified one. */
         log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
                router->nickname);
@@ -1668,8 +1657,11 @@ update_networkstatus_client_downloads(time_t now)
   /* Also, download at least 1 every NETWORKSTATUS_CLIENT_DL_INTERVAL. */
   if (n_running_dirservers &&
       most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL && needed < 1) {
-    log_fn(LOG_NOTICE, "Our most recent network-status document is %d"
-           " seconds old; downloading another.", (int)(now-most_recent_received));
+    const char *addr = most_recent?most_recent->address:"nobody";
+    int port = most_recent?most_recent->dir_port:0;
+    log_fn(LOG_NOTICE, "Our most recent network-status document (from %s:%d) "
+           "is %d seconds old; downloading another.",
+           addr, port, (int)(now-most_recent_received));
     needed = 1;
   }
 
