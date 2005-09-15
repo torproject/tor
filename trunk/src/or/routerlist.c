@@ -88,6 +88,7 @@ router_reload_networkstatus(void)
         tor_free(s);
       }
     });
+  networkstatus_list_clean(time(NULL));
   routers_update_all_from_networkstatus();
   return 0;
 }
@@ -122,7 +123,7 @@ router_should_rebuild_store(void)
 
 /** Add the <b>len</b>-type router descriptor in <b>s</b> to the router
  * journal. */
-int
+static int
 router_append_to_journal(const char *s, size_t len)
 {
   or_options_t *options = get_options();
@@ -150,7 +151,7 @@ router_append_to_journal(const char *s, size_t len)
  * replace the router store with the routers currently in our routerlist, and
  * clear the journal.  Return 0 on success, -1 on failure.
  */
-int
+static int
 router_rebuild_store(int force)
 {
   size_t len = 0;
@@ -1595,7 +1596,7 @@ _compare_digest_to_routerstatus_entry(const void *_key, const void **_member)
 
 /** Return the entry in <b>ns</b> for the identity digest <b>digest</b>, or
  * NULL if none was found. */
-routerstatus_t *
+static routerstatus_t *
 networkstatus_find_entry(networkstatus_t *ns, const char *digest)
 {
   return smartlist_bsearch(ns->entries, digest,
@@ -2339,7 +2340,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
  * published more recently, or it it is listed in the network-status but not
  * in the router list.
  */
-smartlist_t *
+static smartlist_t *
 router_list_downloadable(void)
 {
   smartlist_t *superseded = smartlist_create();
