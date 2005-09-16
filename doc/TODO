@@ -147,6 +147,7 @@ N     - Alice acts on network-status objects
             o Set has_fetched_directory properly.
           o Retry descriptors on failure
           - Give up after a while.
+        - Check software versions according to some sane plan.
         o Alice sets descriptor status from network-status
           o Implement
           o Use
@@ -165,6 +166,8 @@ N   . Naming and validation:
       o Not all authdirs name.
       - Clients choose names based on network-status options.
       - Names are remembered in client state
+      - Okay to have two valid servers with same nickname, but not
+        two named servers with same nickname.  Update logic.
 
   - packaging and ui stuff:
     . multiple sample torrc files
