@@ -2338,8 +2338,8 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
            n_running, n_recent);
 
     router->is_named = (n_named > n_naming/2);
-    if (authdir) {
-      /* We're a non-naming authdir; don't believe others. */
+    if (!authdir) {
+      /* If we're an authdir, don't believe others. */
       router->is_verified = (n_valid > n_statuses/2);
       router->is_running = (n_running > n_recent/2);
 
