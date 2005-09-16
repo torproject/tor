@@ -2401,7 +2401,6 @@ router_list_downloadable(void)
                ri->nickname);
         base16_encode(d, HEX_DIGEST_LEN+1, ri->identity_digest, DIGEST_LEN);
         smartlist_add(superseded, d);
-        break;
       }
       strmap_remove(most_recent, fp);
     });
@@ -2417,6 +2416,9 @@ router_list_downloadable(void)
   }
 
   strmap_free(most_recent, NULL);
+
+  /* Send the keys in sorted order. */
+  smartlist_sort_strings(superseded);
 
   return superseded;
 }
@@ -2445,7 +2447,7 @@ update_router_descriptor_downloads(time_t now)
     smartlist_t *downloadable = router_list_downloadable();
     if (smartlist_len(downloadable)) {
       char *dl = smartlist_join_strings(downloadable,"+",0,NULL);
-      size_t r_len = smartlist_len(downloadable)*(DIGEST_LEN+1)+16;
+      size_t r_len = smartlist_len(downloadable)*(HEX_DIGEST_LEN+1)+16;
       /* Damn, that's an ugly way to do this. XXXX011 NM */
       resource = tor_malloc(r_len);
       tor_snprintf(resource, r_len, "fp/%s.z", dl);
