@@ -29,7 +29,6 @@ const char directory_c_id[] = "$Id$";
  * - connection_dir_finished_connecting(), called from
  *   connection_finished_connecting() in connection.c
  */
-
 static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
                                       uint8_t purpose, int private_connection,
@@ -305,14 +304,9 @@ connection_dir_download_networkstatus_failed(connection_t *conn)
     /* We were trying to download by fingerprint; mark them all has having
      * failed, and possibly retry them later.*/
     smartlist_t *failed = smartlist_create();
-    /* XXXX NM this splitting logic is duplicated someplace. Fix that. */
-    smartlist_split_string(failed, conn->requested_resource+3, "+", 0, 0);
+    dir_split_resource_into_fingerprints(conn->requested_resource+3,
+                                         failed, NULL);
     if (smartlist_len(failed)) {
-      char *last = smartlist_get(failed,smartlist_len(failed)-1);
-      size_t last_len = strlen(last);
-      if (!strcmp(last+last_len-2, ".z"))
-        last[last_len-2] = '\0';
-
       dir_networkstatus_download_failed(failed);
       SMARTLIST_FOREACH(failed, char *, cp, tor_free(cp));
     }
@@ -968,12 +962,9 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"fp/")) {
-      int n;
       which = smartlist_create();
-      smartlist_split_string(which, conn->requested_resource+3, "+", 0, -1);
-      n = smartlist_len(which);
-      if (n && strlen(smartlist_get(which,n-1))==HEX_DIGEST_LEN+2)
-        ((char*)smartlist_get(which,n-1))[HEX_DIGEST_LEN] = '\0';
+      dir_split_resource_into_fingerprints(conn->requested_resource+3,
+                                           which, NULL);
     }
     cp = body;
     while (*cp) {
@@ -1016,12 +1007,9 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"fp/")) {
-      int n;
       which = smartlist_create();
-      smartlist_split_string(which, conn->requested_resource+3, "+", 0, -1);
-      n = smartlist_len(which);
-      if (n && strlen(smartlist_get(which,n-1))==HEX_DIGEST_LEN+2)
-        ((char*)smartlist_get(which,n-1))[HEX_DIGEST_LEN] = '\0';
+      dir_split_resource_into_fingerprints(conn->requested_resource+3,
+                                           which, NULL);
     }
     if (which)
       n_asked_for = smartlist_len(which);
@@ -1584,5 +1572,24 @@ static void
 dir_routerdesc_download_failed(smartlist_t *failed)
 {
   /* XXXX writeme!  Give up after a while! */
+}
+
+/* DOCDOC */
+int
+dir_split_resource_into_fingerprints(const char *resource,
+                                     smartlist_t *fp_out, int *compressed_out)
+{
+  smartlist_split_string(fp_out, resource, "+", 0, 0);
+  if (compressed_out)
+    *compressed_out = 0;
+  if (smartlist_len(fp_out)) {
+    char *last = smartlist_get(fp_out,smartlist_len(fp_out)-1);
+    size_t last_len = strlen(last);
+    if (last_len > 2 && !strcmp(last+last_len-2, ".z")) {
+      last[last_len-2] = '\0';
+      if (compressed_out)
+        *compressed_out = 1;
+    }
+  }
 }
 

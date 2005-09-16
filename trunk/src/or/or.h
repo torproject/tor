@@ -1715,6 +1715,8 @@ int connection_dir_finished_connecting(connection_t *conn);
 void connection_dir_request_failed(connection_t *conn);
 void parse_dir_policy(void);
 void free_dir_policy(void);
+int dir_split_resource_into_fingerprints(const char *resource,
+                               smartlist_t *fp_out, int *compresseed_out);
 
 /********************************* dirserv.c ***************************/
 
