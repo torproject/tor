@@ -1338,7 +1338,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
       log_fn(LOG_WARN, "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
     smartlist_t *hexdigests = smartlist_create();
-    smartlist_split_string(hexdigests, key+3, "+", 0, 0);
+    dir_split_resource_into_fingerprints(key+3, hexdigests, NULL);
     SMARTLIST_FOREACH(hexdigests, char *, cp,
         {
           cached_dir_t *cached;
@@ -1384,7 +1384,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
     smartlist_t *hexdigests = smartlist_create();
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/fp/");
-    smartlist_split_string(hexdigests, key, "+", 0, 0);
+    dir_split_resource_into_fingerprints(key, hexdigests, NULL);
     SMARTLIST_FOREACH(hexdigests, char *, cp,
                       {
                         char *d;
