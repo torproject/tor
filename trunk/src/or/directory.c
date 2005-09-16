@@ -905,15 +905,6 @@ connection_dir_client_reached_eof(connection_t *conn)
     if (router_parse_directory(body) < 0) {
       log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from '%s:%d'. Ignoring.", conn->address, conn->port);
     }
-#if 0
-    if (router_load_routerlist_from_directory(body, NULL, !skewed, 0) < 0) {
-      log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from '%s:%d'. Ignoring.", conn->address, conn->port);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
-    }
-    /* do things we've been waiting to do */
-    directory_has_arrived(time(NULL), conn->identity_digest);
-#endif
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
@@ -931,21 +922,6 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-#if 0
-    if (!(rrs = router_parse_runningrouters(body, 1))) {
-      log_fn(LOG_WARN, "Can't parse runningrouters list (server '%s:%d')",
-             conn->address, conn->port);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
-    }
-    router_get_routerlist(&rl);
-    if (rl) {
-      routerlist_set_runningrouters(rl,rrs);
-      helper_nodes_set_status_from_directory();
-    } else {
-      running_routers_free(rrs);
-    }
-#endif
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
