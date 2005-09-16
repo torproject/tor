@@ -533,12 +533,9 @@ void
 directory_info_has_arrived(time_t now, int from_cache)
 {
   or_options_t *options = get_options();
-  /* XXXX011 NM Update this to reflect new directories.  In particular, we
-   * can't start building circuits until we have descriptors and networkstatus
-   * docs.*/
 
   if (!router_have_minimum_dir_info()) {
-    log_fn(LOG_NOTICE, "I know too little.");
+    log_fn(LOG_NOTICE, "I learned some more directory information, but not enough to build a circuit.");
     return;
   }
 

@@ -413,7 +413,9 @@ router_parse_directory(const char *str)
   smartlist_t *tokens = NULL;
   crypto_pk_env_t *declared_key = NULL;
 
-  /* XXXX011 This could be simplified a lot! NM */
+  /* XXXX This could be simplified a lot, but it will all go away
+   * once pre-0.1.1.8 is obsolete, and for now it's better not to
+   * tuoch it. */
 
   if (router_get_dir_hash(str, digest)) {
     log_fn(LOG_WARN, "Unable to compute digest of directory");
@@ -1148,7 +1150,7 @@ networkstatus_parse_from_string(const char *s)
     log_fn(LOG_WARN, "Couldn't find network-status-version keyword");
     goto err;
   }
-  /* XXXX do something with the version? NM */
+  /* XXXX011 do something with the version! NM */
 
   if (!(tok = find_first_by_keyword(tokens, K_DIR_SOURCE))) {
     log_fn(LOG_WARN, "Couldn't find dir-source keyword");

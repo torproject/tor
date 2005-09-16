@@ -856,7 +856,7 @@ router_get_by_nickname(const char *nickname)
 
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
   {
-    /* XXXX001 NM Should this restrict by Named rouers, or warn on
+    /* XXXX011 NM Should this restrict by Named rouers, or warn on
      * non-named routers, or something? */
     if (0 == strcasecmp(router->nickname, nickname) ||
         (maybedigest && 0 == memcmp(digest, router->identity_digest,
@@ -1727,7 +1727,7 @@ update_networkstatus_client_downloads(time_t now)
     needed = n_running_dirservers;
 
   if (needed)
-    /* XXXX001 Downgrade to info NM */
+    /* XXXX011 Downgrade to info NM */
     log_fn(LOG_NOTICE, "For %d/%d running directory servers, we have %d live"
            " network-status documents. Downloading %d.",
            n_running_dirservers, n_dirservers, n_live, needed);
@@ -2344,7 +2344,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
       router->is_running = (n_running > n_recent/2);
 
       if (router->is_running && ds) {
-        /* XXXX001 NM Hm. What about authorities? When do they reset
+        /* XXXX011 NM Hm. What about authorities? When do they reset
          * n_networkstatus_failures? */
         ds->n_networkstatus_failures = 0;
       }
@@ -2448,7 +2448,7 @@ update_router_descriptor_downloads(time_t now)
     if (smartlist_len(downloadable)) {
       char *dl = smartlist_join_strings(downloadable,"+",0,NULL);
       size_t r_len = smartlist_len(downloadable)*(HEX_DIGEST_LEN+1)+16;
-      /* Damn, that's an ugly way to do this. XXXX011 NM */
+      /* XXXX Damn, that's an ugly way to do this. */
       resource = tor_malloc(r_len);
       tor_snprintf(resource, r_len, "fp/%s.z", dl);
       log_fn(LOG_NOTICE, "Launching request for %d routers",
