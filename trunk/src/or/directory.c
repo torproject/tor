@@ -994,7 +994,6 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
     smartlist_t *which = NULL;
     int n_asked_for = 0;
-    /* XXXX NM implement this. */
     log_fn(LOG_INFO,"Received server info (size %d) from server '%s:%d'",
            (int)body_len, conn->address, conn->port);
     if (status_code != 200) {
@@ -1318,7 +1317,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
              *cp++ = '\n';
            });
         *cp = '\0';
-        /* XXXX NM This could be way more efficiently handled. */
+        /* XXXX This could be way more efficiently handled; let's see if it
+         * shows up under oprofile. */
         if (tor_gzip_compress(&compressed, &compressed_len,
                               inp, cp-inp, ZLIB_METHOD)<0) {
           tor_free(inp);
