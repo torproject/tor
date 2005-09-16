@@ -419,11 +419,7 @@ consider_testing_reachability(void)
   }
 
   if (!check_whether_dirport_reachable()) {
-    if (me) {
-      directory_initiate_command_router(me, DIR_PURPOSE_FETCH_DIR, 1, NULL, NULL, 0);
-    } else {
-      log(LOG_NOTICE,"Delaying checking DirPort reachability; can't build descriptor.");
-    }
+    directory_initiate_command_router(me, DIR_PURPOSE_FETCH_DIR, 1, NULL, NULL, 0);
   }
 }
 
