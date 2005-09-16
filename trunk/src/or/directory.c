@@ -1591,5 +1591,6 @@ dir_split_resource_into_fingerprints(const char *resource,
         *compressed_out = 1;
     }
   }
+  return 0;
 }
 
