@@ -783,15 +783,6 @@ typedef struct {
   int num_unreachable_notifications;
 } routerinfo_t;
 
-#if 0
-/** Contents of a running-routers list */
-typedef struct running_routers_t {
-  time_t published_on; /**< When was the list marked as published? */
-  /** Which ORs are on the list?  Entries may be prefixed with ! and $. */
-  smartlist_t *running_routers;
-} running_routers_t;
-#endif
-
 /** Contents of a single per-router entry in a network status object.
  */
 typedef struct routerstatus_t {
@@ -848,13 +839,6 @@ typedef struct {
   /* XXXX011 NM This field is only used in moribund code; remove it
    * once the moribund code is dead. */
   time_t published_on_xx;
-#if 0
-  /** Which versions of tor are recommended by this directory? */
-  char *software_versions;
-  time_t running_routers_updated_on;
-  /** What is the most recently received running_routers structure? */
-  running_routers_t *running_routers;
-#endif
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
@@ -2088,9 +2072,6 @@ routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 int router_digest_is_trusted_dir(const char *digest);
 void router_get_routerlist(routerlist_t **prouterlist);
-#if 0
-time_t routerlist_get_published_time(void);
-#endif
 void routerlist_free(routerlist_t *routerlist);
 void routerinfo_free(routerinfo_t *router);
 void routerstatus_free(routerstatus_t *routerstatus);
@@ -2105,10 +2086,6 @@ int router_add_to_routerlist(routerinfo_t *router, const char **msg,
 int router_load_single_router(const char *s, const char **msg);
 void router_load_routers_from_string(const char *s, int from_cache,
                                      smartlist_t *requested_fingerprints);
-#if 0
-int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
-                                        int dir_is_recent, int dir_is_cached);
-#endif
 typedef enum { NS_FROM_CACHE, NS_FROM_DIR, NS_GENERATED} networkstatus_source_t;
 int router_set_networkstatus(const char *s, time_t arrived_at,
                              networkstatus_source_t source,
@@ -2120,16 +2097,6 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
 
 int router_exit_policy_rejects_all(routerinfo_t *router);
-#if 0
-void running_routers_free(running_routers_t *rr);
-void routerlist_set_runningrouters(routerlist_t *list, running_routers_t *rr);
-int routers_update_status_from_entry(smartlist_t *routers,
-                                        time_t list_time,
-                                        const char *s);
-int router_update_status_from_smartlist(routerinfo_t *r,
-                                        time_t list_time,
-                                        smartlist_t *running_list);
-#endif
 void add_trusted_dir_server(const char *addr, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
@@ -2183,9 +2150,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
                                                     int assume_action);
-#if 0
-int check_software_version_against_directory(const char *directory);
-#endif
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);

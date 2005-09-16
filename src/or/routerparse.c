@@ -247,35 +247,6 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
   return -1;
 }
 
-#if 0
-/**
- * Find the first instance of "recommended-software ...\n" at the start of
- * a line; return a newly allocated string containing the "..." portion.
- * Return NULL if no such instance was found.
- */
-static char *
-get_recommended_software_from_directory(const char *str)
-{
-#define REC "recommended-software "
-  const char *cp = str, *eol;
-  size_t len = strlen(REC);
-  cp = str;
-  if (strcmpstart(str, REC)==0) {
-    cp += len;
-  } else {
-    cp = strstr(str, "\n"REC);
-    if (!cp)
-      return NULL;
-    cp += len+1;
-  }
-  eol = strchr(cp, '\n');
-  if (!eol)
-    return NULL;
-  return tor_strndup(cp, eol-cp);
-#undef REC
-}
-#endif
-
 /** Return 1 if <b>myversion</b> is not in <b>versionlist</b>, and if at least
  * one version of Tor on <b>versionlist</b> is newer than <b>myversion</b>.
 
