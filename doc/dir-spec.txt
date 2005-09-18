@@ -107,7 +107,8 @@ $Id$
           - A hash of its identity key, encoded in base64, with trailing =
             signs removed.
           - A hash of its most recent descriptor, encoded in base64, with
-            trailing = signs removed.
+            trailing = signs removed.  (The hash is calculated as for
+            computing the signature of a descriptor.)
           - The publication time of its most recent descriptor.
           - An IP
           - An OR port
