@@ -805,6 +805,9 @@ typedef struct routerstatus_t {
                                 * recent descriptor. */
 } routerstatus_t;
 
+/*XXXX001 make this configurable! */
+#define MAX_ROUTERDESC_DOWNLOAD_FAILURES 16
+
 /** Contents of a (v2 or later) network status object. */
 typedef struct networkstatus_t {
   /** When did we receive the network-status document? */
@@ -2107,11 +2110,13 @@ void add_trusted_dir_server(const char *addr, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
+routerstatus_t *router_get_combined_status_by_digest(const char *digest);
 void update_networkstatus_cache_downloads(time_t now);
 void update_networkstatus_client_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);
 void routers_update_all_from_networkstatus(void);
-void routers_update_status_from_networkstatus(smartlist_t *routers);
+void routers_update_status_from_networkstatus(smartlist_t *routers,
+                                              int reset_failures);
 smartlist_t *router_list_superseded(void);
 int router_have_minimum_dir_info(void);
 void networkstatus_list_update_recent(time_t now);

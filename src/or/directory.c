@@ -283,7 +283,7 @@ connection_dir_request_failed(connection_t *conn)
     log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying",
            conn->address);
     connection_dir_download_networkstatus_failed(conn);
-  } else if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
+  } else if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
     log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying",
            conn->address);
     connection_dir_download_routerdesc_failed(conn);
@@ -320,7 +320,8 @@ connection_dir_download_networkstatus_failed(connection_t *conn)
 static void
 connection_dir_download_routerdesc_failed(connection_t *conn)
 {
-  /* try again. */
+  /* Try again. */
+  /*XXXX011 plays poorly with multiple conns. */
   update_router_descriptor_downloads(time(NULL));
 }
 
@@ -1547,7 +1548,13 @@ dir_networkstatus_download_failed(smartlist_t *failed)
 static void
 dir_routerdesc_download_failed(smartlist_t *failed)
 {
-  /* XXXX writeme!  Give up after a while! */
+  SMARTLIST_FOREACH(failed, const char *, cp,
+  {
+    routerstatus_t *rs = router_get_combined_status_by_digest(cp);
+    if (!rs || rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
+      continue;
+    ++rs->n_download_failures;
+  });
 }
 
 /* DOCDOC */

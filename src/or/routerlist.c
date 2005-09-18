@@ -29,7 +29,6 @@ static trusted_dir_server_t *router_pick_trusteddirserver_impl(
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
-static routerstatus_t *router_get_combined_status_by_digest(const char *d);
 static void routerstatus_list_update_from_networkstatus(time_t now);
 
 /****************************************************************************/
@@ -1292,7 +1291,7 @@ router_load_routers_from_string(const char *s, int from_cache,
 
   router_parse_list_from_string(&s, routers);
 
-  routers_update_status_from_networkstatus(routers);
+  routers_update_status_from_networkstatus(routers, !from_cache);
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
   {
@@ -1554,7 +1553,8 @@ networkstatus_find_entry(networkstatus_t *ns, const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
-static routerstatus_t *
+/*DOCDOC*/
+routerstatus_t *
 router_get_combined_status_by_digest(const char *digest)
 {
   if (!routerstatus_list)
@@ -1562,7 +1562,6 @@ router_get_combined_status_by_digest(const char *digest)
   return smartlist_bsearch(routerstatus_list, digest,
                            _compare_digest_to_routerstatus_entry);
 }
-
 
 /* XXXX These should be configurable, perhaps? NM */
 #define AUTHORITY_NS_CACHE_INTERVAL 10*60
@@ -1995,7 +1994,7 @@ routers_update_all_from_networkstatus(void)
   if (networkstatus_list_has_changed)
     routerstatus_list_update_from_networkstatus(now);
 
-  routers_update_status_from_networkstatus(routerlist->routers);
+  routers_update_status_from_networkstatus(routerlist->routers, 0);
 
   me = router_get_my_routerinfo();
   if (me) {
@@ -2003,7 +2002,7 @@ routers_update_all_from_networkstatus(void)
      * dirservers list us as named, valid, etc. */
     smartlist_t *lst = smartlist_create();
     smartlist_add(lst, me);
-    routers_update_status_from_networkstatus(lst);
+    routers_update_status_from_networkstatus(lst, 1);
     if (me->is_verified == 0) {
       log_fn(LOG_WARN, "Many directory servers list us as unverified. Please consider sending your identity fingerprint to the tor-ops.");
       have_warned_about_unverified_status = 1;
@@ -2179,7 +2178,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
  * is_named, is_verified, and is_running fields according to our current
  * networkstatus_t documents. */
 void
-routers_update_status_from_networkstatus(smartlist_t *routers)
+routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failures)
 {
   trusted_dir_server_t *ds;
   routerstatus_t *rs;
@@ -2197,6 +2196,9 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
 
     if (!rs)
       continue;
+
+    if (reset_failures)
+      rs->n_download_failures = 0;
 
     if (!namingdir)
       router->is_named = rs->is_named;
@@ -2250,8 +2252,10 @@ router_list_downloadable(void)
         // log_fn(LOG_NOTICE, "No status for %s", fp);
         continue;
       }
-      if (!memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)
-          || rs->published_on <= ri->published_on) {
+      /*XXXX001 reset max_routerdesc_download_failures somewhere! */
+      if (rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES ||
+          !memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)||
+          rs->published_on <= ri->published_on) {
         /* Same digest, or earlier. No need to download it. */
         // log_fn(LOG_NOTICE, "Up-to-date status for %s", fp);
         strmap_remove(status_map, fp);

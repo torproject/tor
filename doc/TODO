@@ -133,7 +133,7 @@ R     - check reachability as soon as you hear about a new server
         X By 'if-newer-than' (Does the spec require this??)
         o Support compression.
 N     - Alice acts on network-status objects
-        . Alice downloads descriptors as needed.
+        o Alice downloads descriptors as needed.
           o Figure out what's needed
           o Store it
             o Implement store
@@ -146,7 +146,8 @@ N     - Alice acts on network-status objects
             o Call directory_has_arrived as needed; rename it.
             o Set has_fetched_directory properly.
           o Retry descriptors on failure
-          - Give up after a while.
+          o Give up after a while.
+          - But try again after a long while (???)
         - Check software versions according to some sane plan.
         o Alice sets descriptor status from network-status
           o Implement
