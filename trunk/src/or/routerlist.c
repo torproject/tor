@@ -29,6 +29,8 @@ static trusted_dir_server_t *router_pick_trusteddirserver_impl(
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
+static routerstatus_t *router_get_combined_status_by_digest(const char *d);
+static void routerstatus_list_update_from_networkstatus(time_t now);
 
 /****************************************************************************/
 
@@ -46,11 +48,12 @@ extern int has_fetched_directory; /**< from main.c */
 /** Global list of all of the current network_status documents that we know
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
-/** True iff networkstatus_list has changed since the last time we called
- * routers_update_all_from_networkstatus.  Set by router_set_networkstatus;
- * cleared by routers_update_all_from_networkstatus.
- */
+/** Global list of routerstatuses_t for each router, known or unknown. */
+static smartlist_t *routerstatus_list = NULL;
+/*DOCDOC */
 static int networkstatus_list_has_changed = 0;
+/*DOCDOC */
+static int routerstatus_list_has_changed = 0;
 
 /** Repopulate our list of network_status_t objects from the list cached on
  * disk.  Return 0 on success, -1 on failure. */
@@ -1365,7 +1368,10 @@ _compare_networkstatus_published_on(const void **_a, const void **_b)
  * fingerprint is not on the list; after updating a networkstatus, remove its
  * fingerprint from the list.
  *
-o * Return 0 on success, -1 on failure.
+ * Return 0 on success, -1 on failure.
+ *
+ * Callers should make sure that routers_update_all_from_networkstatus() is
+ * invoked after this function succeeds.
  */
 int
 router_set_networkstatus(const char *s, time_t arrived_at,
@@ -1488,6 +1494,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     tor_free(fn);
   }
 
+  networkstatus_list_update_recent(now);
+
   if (get_options()->DirPort && !skewed)
     dirserv_set_cached_networkstatus_v2(s, fp, ns->published_on);
 
@@ -1545,6 +1553,16 @@ networkstatus_find_entry(networkstatus_t *ns, const char *digest)
   return smartlist_bsearch(ns->entries, digest,
                            _compare_digest_to_routerstatus_entry);
 }
+
+static routerstatus_t *
+router_get_combined_status_by_digest(const char *digest)
+{
+  if (!routerstatus_list)
+    return NULL;
+  return smartlist_bsearch(routerstatus_list, digest,
+                           _compare_digest_to_routerstatus_entry);
+}
+
 
 /* XXXX These should be configurable, perhaps? NM */
 #define AUTHORITY_NS_CACHE_INTERVAL 10*60
@@ -1968,8 +1986,14 @@ routers_update_all_from_networkstatus(void)
 {
   static int have_warned_about_unverified_status = 0;
   routerinfo_t *me;
-  if (!routerlist || !networkstatus_list || !networkstatus_list_has_changed)
+  time_t now;
+  if (!routerlist || !networkstatus_list ||
+      (!networkstatus_list_has_changed && !routerstatus_list_has_changed))
     return;
+
+  now = time(NULL);
+  if (networkstatus_list_has_changed)
+    routerstatus_list_update_from_networkstatus(now);
 
   routers_update_status_from_networkstatus(routerlist->routers);
 
@@ -1993,7 +2017,7 @@ routers_update_all_from_networkstatus(void)
 
   update_router_descriptor_downloads(time(NULL));
 
-  networkstatus_list_has_changed = 0;
+  routerstatus_list_has_changed = 0;
 }
 
 /** Allow any network-status newer than this to influence our view of who's
@@ -2002,28 +2026,66 @@ routers_update_all_from_networkstatus(void)
 /** If possible, always allow at least this many network-statuses to influence
  * our view of who's running. */
 #define MIN_TO_INFLUENCE_RUNNING 3
-/** Given a list <b>routers</b> of routerinfo_t *, update each routers's
- * is_named, is_verified, and is_running fields according to our current
- * networkstatus_t documents. */
-void
-routers_update_status_from_networkstatus(smartlist_t *routers)
-{
-  int n_trusted, n_statuses, n_valid, n_naming, n_named, n_running, n_listing,
-    n_recent;
-  int i;
-  time_t now = time(NULL);
-  trusted_dir_server_t *ds;
-  or_options_t *options = get_options();
-  int authdir = options->AuthoritativeDir;
 
-  if (authdir && options->NamingAuthoritativeDir) {
-    /* A completely authoritative directory should never believer someone else
-     * about a server's status. */
-    return;
-  }
+/** DOCDOC */
+void
+networkstatus_list_update_recent(time_t now)
+{
+  int n_statuses, n_recent, changed, i;
+  char published[ISO_TIME_LEN+1];
 
   if (!networkstatus_list)
+    return;
+
+  n_statuses = smartlist_len(networkstatus_list);
+  n_recent = 0;
+  changed = 0;
+  for (i=n_statuses-1; i >= 0; --i) {
+    networkstatus_t *ns = smartlist_get(networkstatus_list, i);
+    if (n_recent < MIN_TO_INFLUENCE_RUNNING ||
+        ns->published_on + DEFAULT_RUNNING_INTERVAL > now) {
+      if (!ns->is_recent) {
+        format_iso_time(published, ns->published_on);
+        log_fn(LOG_NOTICE,
+               "Networkstatus from %s:%d (published %s) is now \"recent\"",
+               ns->source_address, ns->source_dirport, published);
+        changed = 1;
+      }
+      ns->is_recent = 1;
+      ++n_recent;
+    } else {
+      if (ns->is_recent) {
+        format_iso_time(published, ns->published_on);
+        log_fn(LOG_NOTICE,
+               "Networkstatus from %s:%d (published %s) is no longer \"recent\"",
+               ns->source_address, ns->source_dirport, published);
+        changed = 1;
+        ns->is_recent = 0;
+      }
+    }
+  }
+  if (changed)
+    networkstatus_list_has_changed = 1;
+}
+
+/* DOCDOC */
+static void
+routerstatus_list_update_from_networkstatus(time_t now)
+{
+  int n_trusted, n_statuses, n_recent=0, n_naming=0;
+  int n_distinct = 0;
+  int i;
+  smartlist_t *all_statuses, *result;
+  routerstatus_t *prev_rs;
+
+  networkstatus_list_update_recent(now);
+
+  if (!networkstatus_list_has_changed)
+    return;
+  if (!networkstatus_list)
     networkstatus_list = smartlist_create();
+  if (!routerstatus_list)
+    routerstatus_list = smartlist_create();
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_create();
 
@@ -2032,59 +2094,117 @@ routers_update_status_from_networkstatus(smartlist_t *routers)
 
   if (n_statuses < (n_trusted/2)+1) {
     /* Not enough statuses to adjust status. */
+    log_fn(LOG_NOTICE,"Not enough statuses to update router status list. (%d/%d)",
+           n_statuses, n_trusted);
     return;
   }
 
-  if (n_statuses < MIN_TO_INFLUENCE_RUNNING) {
-    n_recent = n_statuses;
-  } else {
-    n_recent = 0;
-    for (i=smartlist_len(networkstatus_list)-1; i >= 0; --i) {
-      networkstatus_t *ns = smartlist_get(networkstatus_list, i);
-      if (ns->published_on + DEFAULT_RUNNING_INTERVAL < now)
-        break;
-      ++n_recent;
-    }
-    if (n_recent < MIN_TO_INFLUENCE_RUNNING) {
-      n_recent = MIN_TO_INFLUENCE_RUNNING;
-    }
-  }
+  log_fn(LOG_NOTICE, "rebuilding router status list.");
 
-  SMARTLIST_FOREACH(routers, routerinfo_t *, router,
+  all_statuses = smartlist_create();
+  result = smartlist_create();
+
+  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
   {
-    ds = router_get_trusteddirserver_by_digest(router->identity_digest);
-    n_listing = n_valid = n_naming = n_named = n_running = 0;
+    if (ns->binds_names)
+      ++n_naming;
+    if (ns->is_recent)
+      ++n_recent;
+    smartlist_add_all(all_statuses, ns->entries);
+  });
 
+  sort_routerstatus_entries(all_statuses);
+  for (i=0; i < smartlist_len(all_statuses); ++i) {
+    int n_running=0, n_named=0, n_valid=0, n_listing=0;
+    const char *the_name = NULL;
+    routerstatus_t *d_rs = smartlist_get(all_statuses, i);
+    routerstatus_t *rs_out, *rs, *most_recent;
+    if (i>0 && ! memcmp(d_rs->identity_digest,
+            ((routerstatus_t*)smartlist_get(all_statuses,i-1))->identity_digest,
+                        DIGEST_LEN))
+      continue;
+    ++n_distinct;
+    prev_rs = most_recent = d_rs;
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
-      routerstatus_t *rs = networkstatus_find_entry(ns, router->identity_digest);
-      if (ns->binds_names)
-        ++n_naming;
+      rs = networkstatus_find_entry(ns, d_rs->identity_digest);
       if (!rs)
         continue;
       ++n_listing;
-      if (rs->is_named && !strcasecmp(rs->nickname, router->nickname))
-        ++n_named;
+      if (rs->published_on > most_recent->published_on)
+        most_recent = rs;
+      if (rs->is_named && ns->binds_names) {
+        if (!the_name)
+          the_name = rs->nickname;
+        if (!strcasecmp(rs->nickname, the_name)) {
+          ++n_named;
+        } else {
+          the_name = "**mismatch**";
+        }
+      }
       if (rs->is_valid)
         ++n_valid;
-      if (ns_sl_idx >= smartlist_len(networkstatus_list)-n_recent) {
-        if (rs->is_running)
-          ++n_running;
-      }
+      if (rs->is_running && ns->is_recent)
+        ++n_running;
     });
-
-    log_fn(LOG_DEBUG, "Router '%s' at %s:%d is listed by %d/%d directories, "
+    rs_out = tor_malloc(sizeof(routerstatus_t));
+    memcpy(rs_out, most_recent, sizeof(routerstatus_t));
+    if ((rs = router_get_combined_status_by_digest(d_rs->identity_digest))) {
+      rs_out->n_download_failures = rs->n_download_failures;
+    }
+    smartlist_add(result, rs_out);
+    log_fn(LOG_DEBUG, "Router '%s' is listed by %d/%d directories, "
            "named by %d/%d, validated by %d/%d, and %d/%d recent directories "
            "think it's running.",
-           router->nickname, router->address, router->or_port,
+           rs_out->nickname,
            n_listing, n_statuses, n_named, n_naming, n_valid, n_statuses,
            n_running, n_recent);
+    rs_out->is_named = the_name && strcmp(the_name, "**mismatch**") &&
+      n_named > n_naming/2;
+    if (rs_out->is_named)
+      strlcpy(rs_out->nickname, the_name, sizeof(rs_out->nickname));
+    rs_out->is_valid = n_valid > n_statuses/2;
+    rs_out->is_running = n_running > n_recent/2;
+  }
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
+                    routerstatus_free(rs));
+  smartlist_free(routerstatus_list);
+  routerstatus_list = result;
 
-    router->is_named = (n_named > n_naming/2);
+  networkstatus_list_has_changed = 0;
+  routerstatus_list_has_changed = 1;
+}
+
+/** Given a list <b>routers</b> of routerinfo_t *, update each routers's
+ * is_named, is_verified, and is_running fields according to our current
+ * networkstatus_t documents. */
+void
+routers_update_status_from_networkstatus(smartlist_t *routers)
+{
+  trusted_dir_server_t *ds;
+  routerstatus_t *rs;
+  or_options_t *options = get_options();
+  int authdir = options->AuthoritativeDir;
+  int namingdir =  options->NamingAuthoritativeDir;
+
+  if (!routerstatus_list)
+    return;
+
+  SMARTLIST_FOREACH(routers, routerinfo_t *, router,
+  {
+    rs = router_get_combined_status_by_digest(router->identity_digest);
+    ds = router_get_trusteddirserver_by_digest(router->identity_digest);
+
+    if (!rs)
+      continue;
+
+    if (!namingdir)
+      router->is_named = rs->is_named;
+
     if (!authdir) {
       /* If we're an authdir, don't believe others. */
-      router->is_verified = (n_valid > n_statuses/2);
-      router->is_running = (n_running > n_recent/2);
+      router->is_verified = rs->is_valid;
+      router->is_running = rs->is_running;
 
       if (router->is_running && ds) {
         /* XXXX011 NM Hm. What about authorities? When do they reset
@@ -2104,61 +2224,66 @@ static smartlist_t *
 router_list_downloadable(void)
 {
   smartlist_t *superseded = smartlist_create();
-  strmap_t *most_recent = NULL;
-  char fp[HEX_DIGEST_LEN+1];
-  routerstatus_t *rs_old;
   strmap_iter_t *iter;
+  routerstatus_t *rs;
+  time_t now = time(NULL);
+  strmap_t *status_map = NULL;
+  char fp[HEX_DIGEST_LEN+1];
 
-  if (!networkstatus_list)
+  if (!routerstatus_list)
     return superseded;
 
-  /* Build a map from fingerprint to most recent routerstatus_t. If this
-   * becomes inefficient, we can build most_recent lazily when a new
-   * networkstatus_t shows up.*/
-  most_recent = strmap_new();
-  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+  routerstatus_list_update_from_networkstatus(now);
+
+  status_map = strmap_new();
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
   {
-    SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-    {
-      base16_encode(fp, sizeof(fp), rs->identity_digest, DIGEST_LEN);
-      rs_old = strmap_get(most_recent, fp);
-      if (!rs_old || rs_old->published_on < rs->published_on) {
-        strmap_set(most_recent, fp, rs);
-      }
-    });
+    base16_encode(fp, sizeof(fp), rs->identity_digest, DIGEST_LEN);
+    strmap_set(status_map, fp, rs);
   });
 
-  /* Compare each router to the most recent routerstatus. */
   if (routerlist) {
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
     {
-      routerstatus_t *rs;
       base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
-      rs = strmap_get(most_recent, fp);
-      if (!rs)
+      if (!(rs = strmap_get(status_map, fp))) {
+        // log_fn(LOG_NOTICE, "No status for %s", fp);
         continue;
-      if (memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)
-          && rs->published_on > ri->published_on) {
-        char *d = tor_malloc(HEX_DIGEST_LEN+1);
-        log_fn(LOG_INFO, "A networkstatus implies '%s' is out-of-date.",
-               ri->nickname);
-        base16_encode(d, HEX_DIGEST_LEN+1, ri->identity_digest, DIGEST_LEN);
-        smartlist_add(superseded, d);
       }
-      strmap_remove(most_recent, fp);
+      if (!memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)
+          || rs->published_on <= ri->published_on) {
+        /* Same digest, or earlier. No need to download it. */
+        // log_fn(LOG_NOTICE, "Up-to-date status for %s", fp);
+        strmap_remove(status_map, fp);
+      }
+#if 0
+      else {
+        char t1[ISO_TIME_LEN+1];
+        char t2[ISO_TIME_LEN+1];
+        format_iso_time(t1, rs->published_on);
+        format_iso_time(t2, ri->published_on);
+        log_fn(LOG_NOTICE, "Out-of-date status for %s %s (%d %d) [%s %s]", fp,
+               ri->nickname,
+               !memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN),
+               rs->published_on < ri->published_on,
+               t1, t2);
+
+      }
+#endif
     });
   }
 
-  /* Anything left over, we don't even know about yet. */
-  for (iter = strmap_iter_init(most_recent); !strmap_iter_done(iter);
-       iter = strmap_iter_next(most_recent, iter)) {
+  /* For all remaining entries in statuses, we either have no descriptor, or
+   * our descriptor is out of date. */
+  for (iter = strmap_iter_init(status_map); !strmap_iter_done(iter);
+       iter = strmap_iter_next(status_map, iter)) {
     const char *key;
     void *val;
     strmap_iter_get(iter, &key, &val);
     smartlist_add(superseded, tor_strdup(key));
   }
 
-  strmap_free(most_recent, NULL);
+  strmap_free(status_map, NULL);
 
   /* Send the keys in sorted order. */
   smartlist_sort_strings(superseded);
@@ -2177,38 +2302,59 @@ router_list_downloadable(void)
 void
 update_router_descriptor_downloads(time_t now)
 {
-  char *resource = NULL;
+#define AVG_ROUTER_LEN 1300
+#define DL_PER_REQUEST 128
+  smartlist_t *downloadable = NULL;
+  int get_all = 0;
 
   if (connection_get_by_type_purpose(CONN_TYPE_DIR,
                                      DIR_PURPOSE_FETCH_SERVERDESC))
     return;
 
-  if (!networkstatus_list || smartlist_len(networkstatus_list)<2) {
-    resource = tor_strdup("all.z");
-    log_fn(LOG_NOTICE, "Launching request for all routers");
-  } else {
-    smartlist_t *downloadable = router_list_downloadable();
-    if (smartlist_len(downloadable)) {
-      char *dl = smartlist_join_strings(downloadable,"+",0,NULL);
-      size_t r_len = smartlist_len(downloadable)*(HEX_DIGEST_LEN+1)+16;
-      /* XXXX Damn, that's an ugly way to do this. */
-      resource = tor_malloc(r_len);
-      tor_snprintf(resource, r_len, "fp/%s.z", dl);
-      log_fn(LOG_NOTICE, "Launching request for %d routers",
-             smartlist_len(downloadable));
-      tor_free(dl);
+  if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
+    get_all = 1;
+
+  if (!get_all) {
+    /* Check whether we aren't just better off downloading everybody. */
+    int excess;
+    downloadable = router_list_downloadable();
+    excess = smartlist_len(routerstatus_list)-smartlist_len(downloadable);
+    if (smartlist_len(downloadable)*(HEX_DIGEST_LEN+1) >
+        excess*AVG_ROUTER_LEN) {
+      get_all = 1;
     }
+  }
+
+  if (get_all) {
+    log_fn(LOG_NOTICE, "Launching request for all routers");
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,"all.z",1);
+  } else if (smartlist_len(downloadable)) {
+    int i, j, n;
+    size_t r_len = DL_PER_REQUEST*(HEX_DIGEST_LEN+1)+16;
+    char *resource = tor_malloc(r_len);
+    n = smartlist_len(downloadable);
+    log_fn(LOG_NOTICE, "Launching request for %d routers", n);
+    for (i=0; i < n; i += DL_PER_REQUEST) {
+      char *cp = resource;
+      memcpy(resource, "fp/", 3);
+      cp = resource + 3;
+      for (j=i; j < i+DL_PER_REQUEST && j < n; ++j) {
+        memcpy(cp, smartlist_get(downloadable, j), HEX_DIGEST_LEN);
+        cp += HEX_DIGEST_LEN;
+        *cp++ = '+';
+      }
+      memcpy(cp-1, ".z", 3);
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
+    }
+    tor_free(resource);
+  } else {
+    log_fn(LOG_NOTICE, "No routers to download.");
+  }
+
+  if (downloadable) {
     SMARTLIST_FOREACH(downloadable, char *, c, tor_free(c));
     smartlist_free(downloadable);
   }
-
-  if (!resource) {
-    log_fn(LOG_NOTICE, "No routers to download.");
-    return;
-  }
-
-  directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
-  tor_free(resource);
 }
 
 /** Return true iff we have enough networkstatus and router information to

@@ -800,14 +800,20 @@ typedef struct routerstatus_t {
   unsigned int is_running:1; /**< True iff this router is up. */
   unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
   unsigned int is_valid:1; /**< True iff this router is validated. */
+  uint8_t n_download_failures; /**< Only used in summary list: number of
+                                * failures trying to download the most
+                                * recent descriptor. */
 } routerstatus_t;
 
 /** Contents of a (v2 or later) network status object. */
 typedef struct networkstatus_t {
   /** When did we receive the network-status document? */
   time_t received_on;
+
   /** What was the digest of the document? */
   char networkstatus_digest[DIGEST_LEN];
+
+  int is_recent; /** Is this recent enough to influence running status? */
 
   /* These fields come from the actual network-status document.*/
   time_t published_on; /**< Declared publication date. */
@@ -2108,6 +2114,7 @@ void routers_update_all_from_networkstatus(void);
 void routers_update_status_from_networkstatus(smartlist_t *routers);
 smartlist_t *router_list_superseded(void);
 int router_have_minimum_dir_info(void);
+void networkstatus_list_update_recent(time_t now);
 
 /********************************* routerparse.c ************************/
 
@@ -2154,6 +2161,7 @@ int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
 void assert_addr_policy_ok(addr_policy_t *t);
+void sort_routerstatus_entries(smartlist_t *sl);
 
 networkstatus_t *networkstatus_parse_from_string(const char *s);
 

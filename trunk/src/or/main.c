@@ -726,6 +726,11 @@ run_scheduled_events(time_t now)
         !we_are_hibernating())
       consider_testing_reachability();
 
+    /* If any networkstatus documents are no longer recent, we need to
+     * update all the descriptors' running status. */
+    networkstatus_list_update_recent(now);
+    routers_update_all_from_networkstatus();
+
     /* Also, once per minute, check whether we want to download any
      * networkstatus documents.
      */
