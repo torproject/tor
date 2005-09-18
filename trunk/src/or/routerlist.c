@@ -2253,8 +2253,7 @@ router_list_downloadable(void)
         continue;
       }
       /*XXXX001 reset max_routerdesc_download_failures somewhere! */
-      if (rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES ||
-          !memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)||
+      if (!memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)||
           rs->published_on <= ri->published_on) {
         /* Same digest, or earlier. No need to download it. */
         // log_fn(LOG_NOTICE, "Up-to-date status for %s", fp);
@@ -2284,7 +2283,11 @@ router_list_downloadable(void)
     const char *key;
     void *val;
     strmap_iter_get(iter, &key, &val);
+    rs = val;
+    if (rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
+      continue;
     smartlist_add(superseded, tor_strdup(key));
+    log_fn(LOG_NOTICE, "!!!!%d", ((routerstatus_t*)val)->n_download_failures);
   }
 
   strmap_free(status_map, NULL);

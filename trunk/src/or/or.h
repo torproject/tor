@@ -805,8 +805,8 @@ typedef struct routerstatus_t {
                                 * recent descriptor. */
 } routerstatus_t;
 
-/*XXXX001 make this configurable! */
-#define MAX_ROUTERDESC_DOWNLOAD_FAILURES 16
+/*XXXX011 make this configurable? */
+#define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8
 
 /** Contents of a (v2 or later) network status object. */
 typedef struct networkstatus_t {
