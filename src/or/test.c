@@ -511,6 +511,16 @@ test_crypto(void)
   test_eq(j, 71);
   test_assert(data2[i] == '\0');
 
+  crypto_rand(data1, DIGEST_LEN);
+  memset(data2, 100, 1024);
+  digest_to_base64(data2, data1);
+  test_eq(BASE64_DIGEST_LEN, strlen(data2));
+  test_eq(100, data2[BASE64_DIGEST_LEN+2]);
+  memset(data3, 99, 1024);
+  digest_from_base64(data3, data2);
+  test_memeq(data1, data3, DIGEST_LEN);
+  test_eq(99, data3[DIGEST_LEN+1]);
+
   /* Base32 tests */
   strcpy(data1, "5chrs");
   /* bit pattern is:  [35 63 68 72 73] ->

@@ -748,7 +748,7 @@ router_parse_entry_from_string(const char *s, const char *end)
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->signed_descriptor = tor_strndup(s, end-s);
   router->signed_descriptor_len = end-s;
-  crypto_digest(router->signed_descriptor_digest, s, end-s);
+  memcpy(router->signed_descriptor_digest, digest, DIGEST_LEN);
   ports_set = bw_set = 0;
 
   if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {
@@ -957,12 +957,9 @@ find_start_of_next_routerstatus(const char *s)
 static routerstatus_t *
 routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
 {
-#define BASE64_DIGEST_LEN 27
   const char *eos;
   routerstatus_t *rs = NULL;
   directory_token_t *tok;
-  char base64buf_in[BASE64_DIGEST_LEN+3];
-  char base64buf_out[256];
   char timebuf[ISO_TIME_LEN+1];
   struct in_addr in;
 
@@ -1000,33 +997,15 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   }
   strlcpy(rs->nickname, tok->args[0], sizeof(rs->nickname));
 
-  if (strlen(tok->args[1]) != BASE64_DIGEST_LEN) {
-    log_fn(LOG_WARN, "Digest '%s' is wrong length in router status; skipping.",
-           tok->args[1]);
-    goto err;
-  }
-  memcpy(base64buf_in, tok->args[1], BASE64_DIGEST_LEN);
-  memcpy(base64buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
-  if (base64_decode(base64buf_out, sizeof(base64buf_out),
-                    base64buf_in, sizeof(base64buf_in)-1) != DIGEST_LEN) {
+  if (digest_from_base64(rs->identity_digest, tok->args[1])) {
     log_fn(LOG_WARN, "Error decoding digest '%s'", tok->args[1]);
     goto err;
   }
-  memcpy(rs->identity_digest, base64buf_out, DIGEST_LEN);
 
-  if (strlen(tok->args[2]) != BASE64_DIGEST_LEN) {
-    log_fn(LOG_WARN, "Digest '%s' is wrong length in router status; skipping.",
-           tok->args[2]);
-    goto err;
-  }
-  memcpy(base64buf_in, tok->args[2], BASE64_DIGEST_LEN);
-  memcpy(base64buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
-  if (base64_decode(base64buf_out, sizeof(base64buf_out),
-                    base64buf_in, sizeof(base64buf_in)-1) != DIGEST_LEN) {
+  if (digest_from_base64(rs->descriptor_digest, tok->args[2])) {
     log_fn(LOG_WARN, "Error decoding digest '%s'", tok->args[2]);
     goto err;
   }
-  memcpy(rs->descriptor_digest, base64buf_out, DIGEST_LEN);
 
   if (tor_snprintf(timebuf, sizeof(timebuf), "%s %s",
                    tok->args[3], tok->args[4]) < 0 ||
@@ -1083,6 +1062,12 @@ _compare_routerstatus_entries(const void **_a, const void **_b)
   return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
 }
 
+void
+sort_routerstatus_entries(smartlist_t *sl)
+{
+  smartlist_sort(sl, _compare_routerstatus_entries);
+}
+
 /** Given a versioned (v2 or later) network-status object in <b>s</b>, try to
  * parse it and return the result.  Return NULL on failure.  Check the
  * signature of the network status, but do not (yet) check the signing key for
@@ -1098,6 +1083,7 @@ networkstatus_parse_from_string(const char *s)
   char tmp_digest[DIGEST_LEN];
   struct in_addr in;
   directory_token_t *tok;
+  int i;
 
   if (router_get_networkstatus_v2_hash(s, ns_digest)) {
     log_fn(LOG_WARN, "Unable to compute digest of network-status");
@@ -1209,7 +1195,6 @@ networkstatus_parse_from_string(const char *s)
   }
 
   if ((tok = find_first_by_keyword(tokens, K_DIR_OPTIONS))) {
-    int i;
     for (i=0; i < tok->n_args; ++i) {
       if (!strcmp(tok->args[i], "Names"))
         ns->binds_names = 1;
@@ -1226,6 +1211,18 @@ networkstatus_parse_from_string(const char *s)
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, _compare_routerstatus_entries);
+
+  /* Kill duplicate entries. */
+  for (i=0; i < smartlist_len(ns->entries)-1; ++i) {
+    routerstatus_t *rs1 = smartlist_get(ns->entries, i);
+    routerstatus_t *rs2 = smartlist_get(ns->entries, i+1);
+    if (!memcmp(rs1->identity_digest,
+                rs2->identity_digest, DIGEST_LEN)) {
+      log_fn(LOG_WARN, "Network-status has two entries for the same router. Dropping one.");
+      smartlist_del_keeporder(ns->entries, i--);
+      routerstatus_free(rs1);
+    }
+  }
 
   if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
     log_fn(LOG_WARN, "Error tokenizing network-status footer.");

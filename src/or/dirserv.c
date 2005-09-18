@@ -1124,7 +1124,6 @@ static cached_dir_t the_v2_networkstatus = { NULL, NULL, 0, 0, 0 };
 static int
 generate_v2_networkstatus(void)
 {
-#define BASE64_DIGEST_LEN 27
 #define LONGEST_STATUS_FLAG_NAME_LEN 7
 #define N_STATUS_FLAGS 6
 #define RS_ENTRY_LEN                                                    \
@@ -1216,8 +1215,8 @@ generate_v2_networkstatus(void)
       int f_running;
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_verified;
-      char identity64[128];
-      char digest64[128];
+      char identity64[BASE64_DIGEST_LEN+1];
+      char digest64[BASE64_DIGEST_LEN+1];
 
       if (options->AuthoritativeDir) {
         ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
@@ -1226,18 +1225,8 @@ generate_v2_networkstatus(void)
 
       format_iso_time(published, ri->published_on);
 
-      if (base64_encode(identity64, sizeof(identity64),
-                        ri->identity_digest, DIGEST_LEN)<0) {
-        log_fn(LOG_WARN, "Unable to encode router identity digest.");
-        goto done;
-      }
-      if (base64_encode(digest64, sizeof(digest64),
-                        ri->signed_descriptor_digest, DIGEST_LEN)<0) {
-        log_fn(LOG_WARN, "Unable to encode router descriptor digest.");
-        goto done;
-      }
-      identity64[BASE64_DIGEST_LEN] = '\0';
-      digest64[BASE64_DIGEST_LEN] = '\0';
+      digest_to_base64(identity64, ri->identity_digest);
+      digest_to_base64(digest64, ri->signed_descriptor_digest);
 
       in.s_addr = htonl(ri->addr);
       tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
