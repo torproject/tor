@@ -2287,7 +2287,6 @@ router_list_downloadable(void)
     if (rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;
     smartlist_add(superseded, tor_strdup(key));
-    log_fn(LOG_NOTICE, "!!!!%d", ((routerstatus_t*)val)->n_download_failures);
   }
 
   strmap_free(status_map, NULL);
