@@ -973,22 +973,27 @@ connection_dir_client_reached_eof(connection_t *conn)
     int n_asked_for = 0;
     log_fn(LOG_INFO,"Received server info (size %d) from server '%s:%d'",
            (int)body_len, conn->address, conn->port);
-    if (status_code != 200) {
-      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/server/%s\". I'll try again soon.",
-             status_code, reason, conn->address, conn->port,
-             conn->requested_resource);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      connection_dir_download_routerdesc_failed(conn);
-      return -1;
-    }
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"fp/")) {
       which = smartlist_create();
       dir_split_resource_into_fingerprints(conn->requested_resource+3,
                                            which, NULL);
-    }
-    if (which)
       n_asked_for = smartlist_len(which);
+    }
+    if (status_code != 200) {
+      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/server/%s\". I'll try again soon.",
+             status_code, reason, conn->address, conn->port,
+             conn->requested_resource);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      if (!which) {
+        connection_dir_download_routerdesc_failed(conn);
+      } else {
+        dir_routerdesc_download_failed(which);
+        SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
+        smartlist_free(which);
+        return -1;
+      }
+    }
     router_load_routers_from_string(body, 0, which);
     directory_info_has_arrived(time(NULL),0);
     if (which) {
@@ -1548,9 +1553,12 @@ dir_networkstatus_download_failed(smartlist_t *failed)
 static void
 dir_routerdesc_download_failed(smartlist_t *failed)
 {
+  char digest[DIGEST_LEN];
+  routerstatus_t *rs;
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
-    routerstatus_t *rs = router_get_combined_status_by_digest(cp);
+    base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
+    rs = router_get_combined_status_by_digest(digest);
     if (!rs || rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;
     ++rs->n_download_failures;
