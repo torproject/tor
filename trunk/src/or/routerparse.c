@@ -692,8 +692,6 @@ router_parse_list_from_string(const char **s, smartlist_t *dest)
     smartlist_add(routers, router);
   }
 
-  routers_update_status_from_networkstatus(routers);
-
   smartlist_add_all(dest, routers);
 
   return 0;
