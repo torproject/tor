@@ -24,6 +24,9 @@
 /** Length of our DH keys. */
 #define DH_BYTES (1024/8)
 
+/* DOCDOC */
+#define BASE64_DIGEST_LEN 27
+
 /** Constants used to indicate no padding for public-key encryption */
 #define PK_NO_PADDING         60000
 /** Constants used to indicate PKCS1 padding for public-key encryption */
@@ -154,6 +157,9 @@ int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
 void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
+
+int digest_to_base64(char *d64, const char *digest);
+int digest_from_base64(char *digest, const char *d64);
 
 #define S2K_SPECIFIER_LEN 9
 void secret_to_key(char *key_out, size_t key_out_len, const char *secret,

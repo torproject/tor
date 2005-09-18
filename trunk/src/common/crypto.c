@@ -1688,6 +1688,31 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   return ret;
 }
 
+int
+digest_to_base64(char *d64, const char *digest)
+{
+  char buf[256];
+  base64_encode(buf, sizeof(buf), digest, DIGEST_LEN);
+  buf[BASE64_DIGEST_LEN] = '\0';
+  memcpy(d64, buf, BASE64_DIGEST_LEN+1);
+  return 0;
+}
+
+int
+digest_from_base64(char *digest, const char *d64)
+{
+  char buf_in[BASE64_DIGEST_LEN+3];
+  char buf[256];
+  if (strlen(d64) != BASE64_DIGEST_LEN)
+    return -1;
+  memcpy(buf_in, d64, BASE64_DIGEST_LEN);
+  memcpy(buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
+  if (base64_decode(buf, sizeof(buf), buf_in, strlen(buf_in)) != DIGEST_LEN)
+    return -1;
+  memcpy(digest, buf, DIGEST_LEN);
+  return 0;
+}
+
 /** Implements base32 encoding as in rfc3548.  Limitation: Requires
  * that srclen*8 is a multiple of 5.
  */
