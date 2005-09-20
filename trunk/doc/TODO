@@ -102,8 +102,8 @@ R   - kill dns workers more slowly
 
   . Directory changes
     o recommended-versions for client / server ?
-    - Some back-out mechanism for auto-approval
-      - dirservers have blacklist of IPs they hate
+    . Some back-out mechanism for auto-approval
+      o dirservers have blacklist of IPs and keys they hate
       - a way of rolling back approvals to before a timestamp
       - have new people be in limbo and need to demonstrate usefulness
         before we approve them
@@ -111,7 +111,7 @@ R   - kill dns workers more slowly
 
 R   . Dirservers verify reachability claims
       o basic reachability testing, influencing network-status list.
-R     - rate-limiting the reporting of trouble servers
+      X rate-limiting the reporting of trouble servers
 R     - check reachability as soon as you hear about a new server
 
     - Decentralization
