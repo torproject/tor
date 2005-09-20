@@ -41,27 +41,24 @@ $Id$
 
 2. Router descriptors
 
-   Router descriptors are as described in the current tor-spec.txt
-   document.
+   The router descriptor format is unchanged from tor-spec.txt.
 
    ORs SHOULD generate a new router descriptor whenever any of the
    following events have occurred:
 
-      - A period of time (24 hrs by default) has passed since the last
+      - A period of time (18 hrs by default) has passed since the last
         time a descriptor was generated.
 
       - A descriptor field other than bandwidth or uptime has changed.
 
       - Bandwidth has changed by more than +/- 50% from the last time a
-        descriptor was generated, and at least a given interval of time (1
-        hr by default) has passed since then.
+        descriptor was generated, and at least a given interval of time
+        (20 mins by default) has passed since then.
 
       - Uptime has been reset.
 
    After generating a descriptor, ORs upload it to every directory
    server they know.
-
-   The router descriptor format is unchanged from tor-spec.txt.
 
 3. Network status
 
