@@ -259,8 +259,8 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
  * (versionlist is a comma-separated list of version strings,
  * optionally prefixed with "Tor".  Versions that can't be parsed are
  * ignored.) */
-/* static */ int is_obsolete_version(const char *myversion,
-                           const char *versionlist) {
+/* static */ int
+is_obsolete_version(const char *myversion, const char *versionlist) {
   const char *vl;
   tor_version_t mine, other;
   int found_newer = 0, found_newer_in_series = 0, found_any_in_series = 0,
@@ -270,7 +270,8 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
 
   vl = versionlist;
 
-  log_fn(LOG_DEBUG,"Checking whether version '%s' is in '%s'", myversion, versionlist);
+  log_fn(LOG_DEBUG,"Checking whether version '%s' is in '%s'",
+         myversion, versionlist);
 
   if (tor_version_parse(myversion, &mine)) {
     log_fn(LOG_ERR, "I couldn't parse my own version (%s)", myversion);
@@ -308,7 +309,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
       /* We belong to a series with recommended members, and we are newer than
        * any recommended member. We're probably okay. */
       if (!warned_too_new) {
-        log(LOG_WARN, "This version of Tor (%s) is newer than any in the same series on the recommended list (%s)",
+        log(LOG_WARN, "This version of Tor (%s) is newer than any in the same series on the recommended list (%s).",
             myversion, versionlist);
         warned_too_new = 1;
       }
@@ -326,7 +327,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
       /* We belong to a series with no recommended members, and it's
        * newer than any recommended series. We're probably okay. */
       if (!warned_too_new) {
-        log(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
+        log(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s).",
             myversion, versionlist);
         warned_too_new = 1;
       }
