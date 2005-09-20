@@ -1095,7 +1095,7 @@ static int
 router_is_general_exit(routerinfo_t *ri)
 {
   static const int ports[] = { 80, 443, 6667 };
-  int n_allowed = 3;
+  int n_allowed = 0;
   int i;
   for (i = 0; i < 3; ++i) {
     struct addr_policy_t *policy = ri->exit_policy;
@@ -1107,8 +1107,8 @@ router_is_general_exit(routerinfo_t *ri)
       if ((policy->addr & 0xff000000ul) == 0x7f000000ul)
         continue; /* 127.x */
       /* We have a match that is at least a /8. */
-      if (policy->policy_type != ADDR_POLICY_ACCEPT)
-        --n_allowed;
+      if (policy->policy_type == ADDR_POLICY_ACCEPT)
+        ++n_allowed;
       break;
     }
   }
