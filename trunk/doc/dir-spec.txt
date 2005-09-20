@@ -270,6 +270,70 @@ $Id$
       It uses the last-mapped identity value, unless all of the "binding"
       network status documents bind the name to some other identity.
 
+5.3. Notes on what we do now.
+
+   THIS SECTION SHOULD BE FOLDED INTO THE EARLIER SECTIONS; THEY ARE WRONG;
+   THIS IS RIGHT.
+
+   All downloaded networkstatuses are discarded once they are 10 days old (by
+   published date).
+
+   Authdirs download each others' networkstatus every
+   AUTHORITY_NS_CACHE_INTERVAL minutes (currently 10).
+
+   Directory caches download authorities' networkstatus every
+   NONAUTHORITY_NS_CACHE_INTERVAL minutes (currently 10).
+
+   Clients always try to replace any networkstatus received over
+   NETWORKSTATUS_MAX_VALIDITY ago (currently 2 days). Also, when the most
+   recently received networkstatus is more than
+   NETWORKSTATUS_CLIENT_DL_INTERVAL (30 minutes) old, and we do not have any
+   open directory connections fetching a networkstatus, clients try to
+   download the networkstatus on their list after the most recently received
+   networkstatus, skipping failed networkstatuses.  A networkstatus is
+   "failed" if NETWORKSTATUS_N_ALLOWABLE_FAILURES (3) attempts in a row have
+   all failed.
+
+   We do not update router statuses if we have less than half of the
+   networkstatuses.
+
+   A networkstatus is "live" if it is the most recent we have received signed
+   by a given trusted authority.
+
+   A networkstatus is "recent" if it is "live" and:
+       - it was received in the last DEFAULT_RUNNING_INTERVAL (currently 60
+         minutes)
+   OR  - it was one of the MIN_TO_INFLUENCE_RUNNING (3) most recently received
+         networkstatuses.
+
+   Authorities always believe their own opinion as to a router's status.  For
+   other tors:
+     - a router is valid if more than half of the live networkstatuses think
+       it's valid.
+     - a router is named if more than half of the live networkstatuses from
+       naming authorities think it's named, and they all think it has the
+       same name.
+     - a router is running if more than half of the recent networkstatuses
+       think it's running.
+
+   Everyone downloads router descriptors as follows:
+
+     - If any networkstatus lists a more recently published routerdesc with a
+       different descriptor digest, and no more than
+       MAX_ROUTERDESC_DOWNLOAD_FAILURES attempts to retrieve that routerdesc
+       have failed, then that routerdesc is "downloadable".
+
+     - Every DirFetchInterval, or whenever a request for routerdescs returns
+       no routerdescs, we launch a set of requests for all downloadable
+       routerdescs.  We divide the downloadable routerdescs into groups of no
+       more than DL_PER_REQUEST, and send a request for each group to
+       directory servers chosen independently.
+
+     - We also launch a request as above when a request for routerdescs
+       fails and we have no directory connections fetching routerdescs.
+
+
+
 6. Remaining issues
 
    Client-knowledge partitioning is worrisome.  Most versions of this don't
