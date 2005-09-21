@@ -2042,8 +2042,8 @@ routers_update_all_from_networkstatus(void)
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
       version_status_t vs;
-      if (ns->received_on + SELF_OPINION_INTERVAL < now )
-        // XXXX NM enable this! || !ns->recommends_versions)
+      if (!ns->recommends_versions ||
+          ns->received_on + SELF_OPINION_INTERVAL < now )
         continue;
       vs = tor_version_is_obsolete(
               VERSION, is_server ? ns->server_versions : ns->client_versions);
@@ -2070,7 +2070,7 @@ routers_update_all_from_networkstatus(void)
         have_warned_about_old_version = 1;
       }
     } else {
-      log_fn(LOG_NOTICE, "%d/%d recent directories think my version is ok.",
+      log_fn(LOG_INFO, "%d/%d recent directories think my version is ok.",
              n_recommended, n_recent);
     }
   }

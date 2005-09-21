@@ -1077,7 +1077,6 @@ networkstatus_parse_from_string(const char *s)
     log_fn(LOG_WARN, "Couldn't find network-status-version keyword");
     goto err;
   }
-  /* XXXX011 do something with the version! NM */
 
   if (!(tok = find_first_by_keyword(tokens, K_DIR_SOURCE))) {
     log_fn(LOG_WARN, "Couldn't find dir-source keyword");
@@ -1144,7 +1143,7 @@ networkstatus_parse_from_string(const char *s)
     }
   }
 
-  if (ns->recommends_versions || 1) { //XXXX NM re-enable conditional.
+  if (ns->recommends_versions) {
     if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) ||
         tok->n_args<1) {
       log_fn(LOG_WARN, "Missing client-versions");
