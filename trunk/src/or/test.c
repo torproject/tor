@@ -32,7 +32,6 @@ int have_failed = 0;
 void add_fingerprint_to_dir(const char *nickname, const char *fp,
                             smartlist_t *list);
 void get_platform_str(char *platform, size_t len);
-int is_obsolete_version(const char *myversion, const char *start);
 size_t read_escaped_data(const char *data, size_t len, int translate_newlines,
                          char **out);
 or_options_t *options_new(void);
@@ -1368,28 +1367,35 @@ test_dir_format(void)
   test_eq(IS_NOT_CVS, ver1.cvs);
   test_streq("", ver1.status_tag);
 
-  /* make sure is_obsolete_version() works */
-  test_eq(1, is_obsolete_version("0.0.1", "Tor 0.0.2"));
-  test_eq(1, is_obsolete_version("0.0.1", "0.0.2, Tor 0.0.3"));
-  test_eq(1, is_obsolete_version("0.0.1", "0.0.2,Tor 0.0.3"));
-  test_eq(1, is_obsolete_version("0.0.1", "0.0.3,BetterTor 0.0.1"));
-  test_eq(0, is_obsolete_version("0.0.2", "Tor 0.0.2,Tor 0.0.3"));
-  test_eq(0, is_obsolete_version("0.0.2", "Tor 0.0.2pre1,Tor 0.0.3"));
-  test_eq(1, is_obsolete_version("0.0.2", "Tor 0.0.2.1,Tor 0.0.3"));
-  test_eq(0, is_obsolete_version("0.1.0", "Tor 0.0.2,Tor 0.0.3"));
-  test_eq(0, is_obsolete_version("0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8"));
-  test_eq(0, is_obsolete_version("0.0.5", "0.0.5-cvs"));
-  test_eq(0, is_obsolete_version("0.0.5.1-cvs", "0.0.5"));
+  /* make sure tor_version_is_obsolete() works */
+  test_eq(VS_OLD, tor_version_is_obsolete("0.0.1", "Tor 0.0.2"));
+  test_eq(VS_OLD, tor_version_is_obsolete("0.0.1", "0.0.2, Tor 0.0.3"));
+  test_eq(VS_OLD, tor_version_is_obsolete("0.0.1", "0.0.2,Tor 0.0.3"));
+  test_eq(VS_OLD, tor_version_is_obsolete("0.0.1", "0.0.3,BetterTor 0.0.1"));
+  test_eq(VS_RECOMMENDED,tor_version_is_obsolete("0.0.2", "Tor 0.0.2,Tor 0.0.3"));
+  test_eq(VS_NEW_IN_SERIES,
+          tor_version_is_obsolete("0.0.2", "Tor 0.0.2pre1,Tor 0.0.3"));
+  test_eq(VS_OLD, tor_version_is_obsolete("0.0.2", "Tor 0.0.2.1,Tor 0.0.3"));
+  test_eq(VS_NEW, tor_version_is_obsolete("0.1.0", "Tor 0.0.2,Tor 0.0.3"));
+  test_eq(VS_RECOMMENDED,
+          tor_version_is_obsolete("0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8"));
+  test_eq(VS_OLD, tor_version_is_obsolete("0.0.5.0", "0.0.5.1-cvs"));
+  test_eq(VS_NEW_IN_SERIES, tor_version_is_obsolete("0.0.5.1-cvs", "0.0.5"));
   /* Not on list, but newer than any in same series. */
-  test_eq(0, is_obsolete_version("0.1.0.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_eq(VS_NEW_IN_SERIES,
+       tor_version_is_obsolete("0.1.0.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
   /* Series newer than any on list. */
-  test_eq(0, is_obsolete_version("0.1.1.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_eq(VS_NEW,
+       tor_version_is_obsolete("0.1.2.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
   /* Series older than any on list. */
-  test_eq(1, is_obsolete_version("0.0.1.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_eq(VS_OLD,
+       tor_version_is_obsolete("0.0.1.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
   /* Not on list, not newer than any on same series. */
-  test_eq(1, is_obsolete_version("0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_eq(VS_UNRECOMMENDED,
+       tor_version_is_obsolete("0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
   /* On list, not newer than any on same series. */
-  test_eq(1, is_obsolete_version("0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_eq(VS_UNRECOMMENDED,
+       tor_version_is_obsolete("0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
 
   test_eq(0, tor_version_as_new_as("Tor 0.0.5", "0.0.9pre1-cvs"));
   test_eq(1, tor_version_as_new_as(

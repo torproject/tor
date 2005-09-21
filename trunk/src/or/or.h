@@ -816,7 +816,8 @@ typedef struct networkstatus_t {
   /** What was the digest of the document? */
   char networkstatus_digest[DIGEST_LEN];
 
-  int is_recent; /** Is this recent enough to influence running status? */
+  unsigned int is_recent; /**< Is this recent enough to influence running
+                           * status? */
 
   /* These fields come from the actual network-status document.*/
   time_t published_on; /**< Declared publication date. */
@@ -833,7 +834,10 @@ typedef struct networkstatus_t {
   char *server_versions; /**< comma-separated list of recommended server
                           * versions. */
 
-  int binds_names:1; /**< True iff this directory server binds names. */
+  unsigned int binds_names:1; /**< True iff this directory server binds names. */
+  unsigned int recommends_versions:1; /**< True iff this directory server
+                                       * recommends client and server software
+                                       * versions. */
 
   smartlist_t *entries; /**< List of router_status_t*.   This list is kept
                          * sorted by identity_digest. */
@@ -1175,6 +1179,8 @@ typedef struct {
                            * for version 1 directories? */
   int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that's willing to bind names? */
+  int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative directory
+                                   * that's willing to recommend versions? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int NoPublish; /**< Boolean: should we never publish a descriptor? */
   int ConnLimit; /**< Requested maximum number of simultaneous connections. */
@@ -2143,6 +2149,15 @@ typedef struct tor_version_t {
   char status_tag[MAX_STATUS_TAG_LEN];
 } tor_version_t;
 
+typedef enum version_status_t {
+  VS_RECOMMENDED=0, /**< This version is listed as recommended. */
+  VS_OLD=1, /**< This version is older than any recommended version. */
+  VS_NEW=2, /**< This version is newer than any recommended version. */
+  VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
+                       * in its series, and such recommended versions exist. */
+  VS_UNRECOMMENDED=4 /**< This version is not recommended (general case) */
+} version_status_t;
+
 int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
@@ -2162,6 +2177,9 @@ routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
                                                     int assume_action);
+version_status_t tor_version_is_obsolete(const char *myversion,
+                                         const char *versionlist);
+version_status_t version_status_join(version_status_t a, version_status_t b);
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);

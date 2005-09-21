@@ -166,8 +166,6 @@ static int check_directory_signature(const char *digest,
                                      crypto_pk_env_t *declared_key,
                                      int check_authority);
 static crypto_pk_env_t *find_dir_signing_key(const char *str);
-/* static */ int is_obsolete_version(const char *myversion,
-                                     const char *versionlist);
 static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
@@ -258,14 +256,17 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
  * Otherwise return 0.
  * (versionlist is a comma-separated list of version strings,
  * optionally prefixed with "Tor".  Versions that can't be parsed are
- * ignored.) */
-/* static */ int
-is_obsolete_version(const char *myversion, const char *versionlist) {
+ * ignored.)
+ *
+ * DOCDOC interface changed */
+version_status_t
+tor_version_is_obsolete(const char *myversion, const char *versionlist)
+{
   const char *vl;
   tor_version_t mine, other;
-  int found_newer = 0, found_newer_in_series = 0, found_any_in_series = 0,
-    r, ret, same;
-  static int warned_too_new=0;
+  int found_newer = 0, found_older = 0, found_newer_in_series = 0,
+    found_any_in_series = 0, r, same;
+  version_status_t ret = VS_UNRECOMMENDED;
   smartlist_t *version_sl;
 
   vl = versionlist;
@@ -292,54 +293,28 @@ is_obsolete_version(const char *myversion, const char *versionlist) {
         found_any_in_series = 1;
       r = tor_version_compare(&mine, &other);
       if (r==0) {
-        ret = 0;
+        ret = VS_RECOMMENDED;
         goto done;
       } else if (r<0) {
         found_newer = 1;
         if (same)
           found_newer_in_series = 1;
+      } else if (r>0) {
+        found_older = 1;
       }
     }
   });
 
   /* We didn't find the listed version. Is it new or old? */
-
-  if (found_any_in_series) {
-    if (!found_newer_in_series) {
-      /* We belong to a series with recommended members, and we are newer than
-       * any recommended member. We're probably okay. */
-      if (!warned_too_new) {
-        log(LOG_WARN, "This version of Tor (%s) is newer than any in the same series on the recommended list (%s).",
-            myversion, versionlist);
-        warned_too_new = 1;
-      }
-      ret = 0;
-    } else {
-      /* We found a newer one in the same series; we're obsolete. */
-      ret = 1;
-    }
+  if (found_any_in_series && !found_newer_in_series) {
+    ret = VS_NEW_IN_SERIES;
+  } else if (found_newer && !found_older) {
+    ret = VS_OLD;
+  } else if (found_older && !found_newer) {
+    ret = VS_NEW;
   } else {
-    if (found_newer) {
-      /* We belong to a series with no recommended members, and
-       * a newer series is recommended. We're obsolete. */
-      ret = 1;
-    } else {
-      /* We belong to a series with no recommended members, and it's
-       * newer than any recommended series. We're probably okay. */
-      if (!warned_too_new) {
-        log(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s).",
-            myversion, versionlist);
-        warned_too_new = 1;
-      }
-      ret = 0;
-    }
+    ret = VS_UNRECOMMENDED;
   }
-  /*
-  log_fn(LOG_DEBUG,
-         "Decided that %s is %sobsolete relative to %s: %d, %d, %d\n",
-         myversion, ret?"":"not ", versionlist, found_newer,
-         found_any_in_series, found_newer_in_series);
-  */
 
  done:
   SMARTLIST_FOREACH(version_sl, char *, version, tor_free(version));
@@ -347,29 +322,25 @@ is_obsolete_version(const char *myversion, const char *versionlist) {
   return ret;
 }
 
-#if 0
-/* Return 0 if myversion is supported; else warn and return -1. */
-int
-check_software_version_against_directory(const char *directory)
+/** DOCDOC */
+version_status_t
+version_status_join(version_status_t a, version_status_t b)
 {
-  char *v;
-  v = get_recommended_software_from_directory(directory);
-  if (!v) {
-    log_fn(LOG_WARN, "No recommended-versions string found in directory");
-    return -1;
-  }
-  if (!is_obsolete_version(VERSION, v)) {
-    tor_free(v);
-    return 0;
-  }
-  log(LOG_WARN,
-     "You are running Tor version %s, which will not work with this network.\n"
-     "Please use %s%s.",
-      VERSION, strchr(v,',') ? "one of " : "", v);
-  tor_free(v);
-  return -1;
+  if (a == b)
+    return a;
+  else if (a == VS_UNRECOMMENDED || b == VS_UNRECOMMENDED)
+    return VS_UNRECOMMENDED;
+  else if (a == VS_RECOMMENDED)
+    return b;
+  else if (b == VS_RECOMMENDED)
+    return a;
+  /* Okay.  Neither is 'recommended' or 'unrecommended', and they differ. */
+  else if (a == VS_OLD || b == VS_OLD)
+    return VS_UNRECOMMENDED;
+  /* One is VS_NEW, the other is VS_NEW_IN_SERIES */
+  else
+    return VS_NEW_IN_SERIES;
 }
-#endif
 
 /** Read a signed directory from <b>str</b>.  If it's well-formed, return 0.
  * Otherwise, return -1.  If we're a directory cache, cache it.
@@ -1164,25 +1135,31 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1) {
-    log_fn(LOG_WARN, "Missing client-versions");
-    goto err;
+  if ((tok = find_first_by_keyword(tokens, K_DIR_OPTIONS))) {
+    for (i=0; i < tok->n_args; ++i) {
+      if (!strcmp(tok->args[i], "Names"))
+        ns->binds_names = 1;
+      if (!strcmp(tok->args[i], "Versions"))
+        ns->recommends_versions = 1;
+    }
   }
-  ns->client_versions = tok->args[0];
 
-  if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) || tok->n_args<1) {
-    log_fn(LOG_WARN, "Missing client-versions");
-    goto err;
-  }
-  ns->client_versions = tok->args[0];
-  tok->args[0] = NULL;
+  if (ns->recommends_versions || 1) { //XXXX NM re-enable conditional.
+    if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) ||
+        tok->n_args<1) {
+      log_fn(LOG_WARN, "Missing client-versions");
+    }
+    ns->client_versions = tok->args[0];
+    tok->args[0] = NULL;
 
-  if (!(tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS)) || tok->n_args<1) {
-    log_fn(LOG_WARN, "Missing server-versions");
-    goto err;
+    if (!(tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS)) ||
+        tok->n_args<1) {
+      log_fn(LOG_WARN, "Missing server-versions on versioning directory");
+      goto err;
+    }
+    ns->server_versions = tok->args[0];
+    tok->args[0] = NULL;
   }
-  ns->server_versions = tok->args[0];
-  tok->args[0] = NULL;
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
     log_fn(LOG_WARN, "Missing published time on directory.");
@@ -1191,13 +1168,6 @@ networkstatus_parse_from_string(const char *s)
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &ns->published_on) < 0) {
      goto err;
-  }
-
-  if ((tok = find_first_by_keyword(tokens, K_DIR_OPTIONS))) {
-    for (i=0; i < tok->n_args; ++i) {
-      if (!strcmp(tok->args[i], "Names"))
-        ns->binds_names = 1;
-    }
   }
 
   ns->entries = smartlist_create();
