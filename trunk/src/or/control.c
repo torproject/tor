@@ -290,7 +290,7 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
   int start_of_line;
   for (i=0; i<(int)len; ++i) {
     if (data[i]== '\n')
-      ++sz_out;
+      sz_out += 2; /* Maybe add a CR; maybe add a dot. */
   }
   *out = outp = tor_malloc(sz_out+1);
   end = data+len;
@@ -317,6 +317,8 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
   *outp++ = '.';
   *outp++ = '\r';
   *outp++ = '\n';
+  *outp = '\0'; /* NUL-terminate just in case. */
+  tor_assert((outp - *out) <= (sz_out));
   return outp - *out;
 }
 
