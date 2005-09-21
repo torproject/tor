@@ -132,7 +132,7 @@ R     - check reachability as soon as you hear about a new server
       o Directories expose individual descriptors
         X By 'if-newer-than' (Does the spec require this??)
         o Support compression.
-N     - Alice acts on network-status objects
+      o Alice acts on network-status objects
         o Alice downloads descriptors as needed.
           o Figure out what's needed
           o Store it
@@ -148,15 +148,44 @@ N     - Alice acts on network-status objects
           o Retry descriptors on failure
           o Give up after a while.
           - But try again after a long while (???)
-        - Check software versions according to some sane plan.
+        o Check software versions according to some sane plan.
+          - Warn again after 24 hours.
         o Alice sets descriptor status from network-status
           o Implement
           o Use
+N     - Routerdesc download changes
+        - Refactor combined-status to be its own type.
+        - Change rule from "do not launch new connections when one exists" to
+          "do not request any fingerprint that we're currently requesting."
+        - Launch connections every minute, or whenever a download fails
+        - Retry failed routerdescs after 0, 1, 5, 10 minutes.
+          - Mirrors retry harder and more often.
+        - Reset failure count every 60 minutes
+        - Only use a routerdesc if you recognize its hash.
+          - Must defer till dirservers are upgraded to latest.
+          - Of course, authdirservers must not do this.
+          - Should directory mirrors do something else entirely?
+        - Use has_fetched_directory sanely, whatever that means.
+          - What *does* that mean?
+        - If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
+          fetch a new one if it was published in the last 2 hours.
+          - How does this interact with the 'recognized hash' rule?
+        - Drop fallback to download-all.  Also, always split download.
+      - Downgrade new directory events from notice to info
+      - Clients should estimate their skew as median of skew from directory
+        connections over last N seconds.
       - Call dirport_is_reachable from somewhere else.
-
+      - Networkstatus should list who's an authority.
+      - Add nickname element to dirserver line.  Log this along with IP:Port.
+      - Warn when using non-default directory servers.
+      - When giving up on a non-finished dir request, log how many bytes
+        dropped, to see whether it's worthwhile to use partial info.
     - Security
       - Alices avoid duplicate class C nodes.
       - Analyze how bad the partitioning is or isn't.
+
+    - Make authorities rate-limit logging their complaints about given
+      servers?
 
 N   . Naming and validation:
       o Separate naming from validation in authdirs.
@@ -165,6 +194,8 @@ N   . Naming and validation:
       o Authdirs need to be able to decline to include baased on
         IP range and key.
       o Not all authdirs name.
+      - Change naming rule: N->K iff any naming authdir says N->K,
+        and none says N->K' or N'->K.
       - Clients choose names based on network-status options.
       - Names are remembered in client state
       - Okay to have two valid servers with same nickname, but not
@@ -194,6 +225,8 @@ Reach (deferrable) items for 0.1.1.x:
     - Is it the buf_shrink bug? (Quite possibly)
     - Instrument the 0.1.1 code to figure out where our memory is going;
       apply the results. (all platforms?)
+
+  - Make router_is_general_exit() a bit smarter once we're sure what it's for.
 
 For 0.1.1.x, if we can figure out how:
   - rewrite how libevent does select() on win32 so it's not so very slow.
