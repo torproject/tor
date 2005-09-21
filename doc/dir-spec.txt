@@ -335,11 +335,9 @@ $Id$
        fails and we have no directory connections fetching routerdescs.
 
    TODO Specify here:
-    - Retry-on-failure.
-    - When to 0-out failure count for routerdesc?
     - When to 0-out failure count for networkstatus?
 
-    - Fallback to download-all.
+    - Drop fallback to download-all.  Also, always split download.
 
     - For versions: if you're listed by more than half of live versioning
       networkstatuses, good.  if less than half of networkstatuses are live,
@@ -359,12 +357,19 @@ $Id$
 
     - Describe when router is "out of date".  (Any dirserver says so.)
 
-    - Warn when using non-default directory servers.
+    - Change rule from "do not launch new connections when one exists" to
+      "do not request any fingerprint that we're currently requesting."
 
-    - When giving up on a non-finished dir request, log how many bytes
-      dropped.
+    - Launch new connections every minute, plus whenever a download fails.
+    - Reset routerdesc failure count after 60 minutes, or when
+      when network comes back on after absence.
+    - Make "I didn't get the one I thought was most recent" a failure.
+      - Retry these every 5 minutes if you're a client.
+      - Mirrors should retry these harder and more often.
+    - If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
+      fetch a new one if it was published in the last 2 hours. (??)
 
-    - 
+    
 
 
 6. Remaining issues
