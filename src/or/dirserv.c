@@ -358,13 +358,13 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 /** Check whether we, as a directory server, want to accept <b>ri</b>.  If so,
  * return 0, and set its is_valid,named,running fields.  Otherwise, return -1.
  *
- * If the router is rejected and <b>msg</b> is provided, set
- * *<b>msg</b> to an explanation of why.
+ * If the router is rejected, set *<b>msg</b> to an explanation of why.
  */
 int
 authdir_wants_to_reject_router(routerinfo_t *ri,
                                const char **msg)
 {
+  tor_assert(msg);
   /* Okay.  Now check whether the fingerprint is recognized. */
   router_status_t status = dirserv_router_get_status(ri, msg);
   time_t now;
