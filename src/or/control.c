@@ -71,6 +71,7 @@ const char control_c_id[] = "$Id$";
 #define EVENT_NOTICE_MSG      0x0009
 #define EVENT_WARN_MSG        0x000A
 #define EVENT_ERR_MSG         0x000B
+#define LAST_V0_EVENT         0x000B
 #define EVENT_ADDRMAP         0x000C
 #define _EVENT_MAX            0x000C
 
@@ -522,7 +523,7 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
   size_t buflen;
   char *buf;
 
-  tor_assert(event >= _EVENT_MIN && event <= _EVENT_MAX);
+  tor_assert(event >= _EVENT_MIN && event <= LAST_V0_EVENT);
 
   buflen = len + 2;
   buf = tor_malloc_zero(buflen);
@@ -837,7 +838,7 @@ handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
 
     for (; len; len -= 2, body += 2) {
       event_code = ntohs(get_uint16(body));
-      if (event_code < _EVENT_MIN || event_code > _EVENT_MAX) {
+      if (event_code < _EVENT_MIN || event_code > LAST_V0_EVENT) {
         send_control0_error(conn, ERR_UNRECOGNIZED_EVENT_CODE,
                             "Unrecognized event code");
         return 0;
