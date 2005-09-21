@@ -91,8 +91,10 @@ $Id$
       "published" -- The publication time for this network-status object.
       "dir-options" -- A set of flags separated by spaces:
           "Names" if this directory server performs name bindings.
+          "Versions" if this directory server recommends software versions.
 
-   The directory-options entry is optional; the others are required and must
+   The dir-options entry is optional.  The "-versions" entries are required if
+   the "Versions" flag is present.  The other entries are required and must
    appear exactly once. The "network-status-version" entry must appear first;
    the others may appear in any order.
 
@@ -332,6 +334,37 @@ $Id$
      - We also launch a request as above when a request for routerdescs
        fails and we have no directory connections fetching routerdescs.
 
+   TODO Specify here:
+    - Retry-on-failure.
+    - When to 0-out failure count for routerdesc?
+    - When to 0-out failure count for networkstatus?
+
+    - Fallback to download-all.
+
+    - For versions: if you're listed by more than half of live versioning
+      networkstatuses, good.  if less than half of networkstatuses are live,
+      don't do anything.  If half are live, and half of less of the
+      versioning ones list you, warn.  Only warn once every 24 hours.
+
+    - For names: warn if an unnamed router is specified by nickname.
+      Rate-limit these warnings.
+      - Also, don't believe N->K if another naming authdir says N->K'.
+      - Revise naming rule: N->K is true if any naming directory says N->K,
+        and no other naming directory says N->K' or N'->K.
+
+    - Minimum info to build circuits.
+
+    - Revise: always split requests when we have too little info to build
+      circuits.
+
+    - Describe when router is "out of date".  (Any dirserver says so.)
+
+    - Warn when using non-default directory servers.
+
+    - When giving up on a non-finished dir request, log how many bytes
+      dropped.
+
+    - 
 
 
 6. Remaining issues
