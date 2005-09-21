@@ -1149,6 +1149,7 @@ generate_v2_networkstatus(void)
   smartlist_t *descriptor_list = get_descriptor_list();
   time_t now = time(NULL);
   int naming = options->NamingAuthoritativeDir;
+  int versioning = options->VersioningAuthoritativeDir;
   const char *contact;
 
   if (!descriptor_list) {
@@ -1193,7 +1194,7 @@ generate_v2_networkstatus(void)
                "fingerprint %s\n"
                "contact %s\n"
                "published %s\n"
-               "dir-options%s\n"
+               "dir-options%s%s\n"
                "client-versions %s\n"
                "server-versions %s\n"
                "dir-signing-key\n%s\n",
@@ -1202,6 +1203,7 @@ generate_v2_networkstatus(void)
                contact,
                published,
                naming ? " Names" : "",
+               versioning ? " Versions" : "",
                client_versions,
                server_versions,
                identity_pkey);

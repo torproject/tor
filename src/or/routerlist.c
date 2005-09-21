@@ -1983,7 +1983,10 @@ networkstatus_get_by_digest(const char *digest)
 void
 routers_update_all_from_networkstatus(void)
 {
+#define SELF_OPINION_INTERVAL 90*60
   static int have_warned_about_unverified_status = 0;
+  static int have_warned_about_old_version = 0;
+  static int have_warned_about_new_version = 0;
   routerinfo_t *me;
   time_t now;
   if (!routerlist || !networkstatus_list ||
@@ -1997,24 +2000,80 @@ routers_update_all_from_networkstatus(void)
   routers_update_status_from_networkstatus(routerlist->routers, 0);
 
   me = router_get_my_routerinfo();
-  if (me) {
-    /* We could be more sophisticated about this whole business.  How many
-     * dirservers list us as named, valid, etc. */
-    smartlist_t *lst = smartlist_create();
-    smartlist_add(lst, me);
-    routers_update_status_from_networkstatus(lst, 1);
-    if (me->is_verified == 0) {
-      log_fn(LOG_WARN, "Many directory servers list us as unverified. Please consider sending your identity fingerprint to the tor-ops.");
-      have_warned_about_unverified_status = 1;
-    } else if (me->is_named == 0) {
-      log_fn(LOG_WARN, "Many directory servers list us as unnamed. Please consider sending your identity fingerprint to the tor-ops.");
-      have_warned_about_unverified_status = 1;
+  if (me && !have_warned_about_unverified_status) {
+    int n_recent = 0, n_listing = 0, n_valid = 0, n_named = 0;
+    routerstatus_t *rs;
+    SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+    {
+      if (ns->received_on + SELF_OPINION_INTERVAL < now)
+        continue;
+      ++n_recent;
+      if (!(rs = networkstatus_find_entry(ns, me->identity_digest)))
+        continue;
+      ++n_listing;
+      if (rs->is_valid)
+        ++n_valid;
+      if (rs->is_named)
+        ++n_named;
+    });
+
+    if (n_recent >= 2 && n_listing >= 2) {
+      if (n_valid <= n_recent/2)  {
+        log_fn(LOG_WARN, "%d/%d recent directory servers list us as invalid. Please consider sending your identity fingerprint to the tor-ops.",
+               n_recent-n_valid, n_recent);
+        have_warned_about_unverified_status = 1;
+      } else if (n_named <= n_recent/2)  {
+        log_fn(LOG_WARN, "%d/%d recent directory servers list us as unnamed. Please consider sending your identity fingerprint to the tor-ops.",
+               n_recent-n_valid, n_recent);
+        have_warned_about_unverified_status = 1;
+      }
     }
   }
 
   helper_nodes_set_status_from_directory();
 
   update_router_descriptor_downloads(time(NULL));
+
+  if (!have_warned_about_old_version) {
+    int n_recent = 0;
+    int n_recommended = 0;
+    int is_server = server_mode(get_options());
+    version_status_t consensus = VS_RECOMMENDED;
+    SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+    {
+      version_status_t vs;
+      if (ns->received_on + SELF_OPINION_INTERVAL < now )
+        // XXXX NM enable this! || !ns->recommends_versions)
+        continue;
+      vs = tor_version_is_obsolete(
+              VERSION, is_server ? ns->server_versions : ns->client_versions);
+      if (vs == VS_RECOMMENDED)
+        ++n_recommended;
+      if (n_recent++ == 0) {
+        consensus = vs;
+      } else if (consensus != vs) {
+        consensus = version_status_join(consensus, vs);
+      }
+    });
+    if (n_recent > 2 && n_recommended < n_recent/2) {
+      if (consensus == VS_NEW || consensus == VS_NEW_IN_SERIES) {
+        if (!have_warned_about_new_version) {
+          log_fn(LOG_NOTICE, "This version of Tor (%s) is newer than any recommended version%s, according to %d/%d recent network statuses.",
+                 VERSION, consensus == VS_NEW_IN_SERIES ? " in its series" : "",
+                 n_recent-n_recommended, n_recent);
+          have_warned_about_new_version = 1;
+        }
+      } else {
+        log_fn(LOG_NOTICE, "This version of Tor (%s) is %s, according to %d/%d recent network statuses.",
+               VERSION, consensus == VS_OLD ? "obsolete" : "not recommended",
+               n_recent-n_recommended, n_recent);
+        have_warned_about_old_version = 1;
+      }
+    } else {
+      log_fn(LOG_NOTICE, "%d/%d recent directories think my version is ok.",
+             n_recommended, n_recent);
+    }
+  }
 
   routerstatus_list_has_changed = 0;
 }
