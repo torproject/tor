@@ -800,10 +800,14 @@ typedef struct routerstatus_t {
   unsigned int is_running:1; /**< True iff this router is up. */
   unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
   unsigned int is_valid:1; /**< True iff this router is validated. */
-  uint8_t n_download_failures; /**< Only used in summary list: number of
-                                * failures trying to download the most
-                                * recent descriptor. */
 } routerstatus_t;
+
+/** DOCDOC */
+typedef struct local_routerstatus_t {
+  routerstatus_t status;
+  uint8_t n_download_failures; /**< Number of failures trying to download the
+                                * most recent descriptor. */
+} local_routerstatus_t;
 
 /*XXXX011 make this configurable? */
 #define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8
@@ -2116,7 +2120,7 @@ void add_trusted_dir_server(const char *addr, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
-routerstatus_t *router_get_combined_status_by_digest(const char *digest);
+local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
 void update_networkstatus_cache_downloads(time_t now);
 void update_networkstatus_client_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);

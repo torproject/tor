@@ -1554,7 +1554,7 @@ networkstatus_find_entry(networkstatus_t *ns, const char *digest)
 }
 
 /*DOCDOC*/
-routerstatus_t *
+local_routerstatus_t *
 router_get_combined_status_by_digest(const char *digest)
 {
   if (!routerstatus_list)
@@ -2133,8 +2133,9 @@ routerstatus_list_update_from_networkstatus(time_t now)
   int n_trusted, n_statuses, n_recent=0, n_naming=0;
   int n_distinct = 0;
   int i;
-  smartlist_t *all_statuses, *result;
-  routerstatus_t *prev_rs;
+  int *index, *size;
+  networkstatus_t **networkstatus;
+  smartlist_t *result;
 
   networkstatus_list_update_recent(now);
 
@@ -2159,37 +2160,66 @@ routerstatus_list_update_from_networkstatus(time_t now)
 
   log_fn(LOG_NOTICE, "rebuilding router status list.");
 
-  all_statuses = smartlist_create();
+  index = tor_malloc(sizeof(int)*n_statuses);
+  size = tor_malloc(sizeof(int)*n_statuses);
+  networkstatus = tor_malloc(sizeof(networkstatus_t *)*n_statuses);
+  for (i = 0; i < n_statuses; ++i) {
+    index[i] = 0;
+    networkstatus[i] = smartlist_get(networkstatus_list, i);
+    size[i] = smartlist_len(networkstatus[i]->entries);
+    if (networkstatus[i]->binds_names)
+      ++n_naming;
+    if (networkstatus[i]->is_recent)
+      ++n_recent;
+  }
+
   result = smartlist_create();
 
-  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
-  {
-    if (ns->binds_names)
-      ++n_naming;
-    if (ns->is_recent)
-      ++n_recent;
-    smartlist_add_all(all_statuses, ns->entries);
-  });
-
-  sort_routerstatus_entries(all_statuses);
-  for (i=0; i < smartlist_len(all_statuses); ++i) {
+  /* Iterate through all of the sorted routerstatus lists in step.
+   * Invariants:
+   *  - For 0 <= i < n_statuses: index[i] is an index into
+   *    networkstatus[i]->entries, which has size[i] elements.
+   *  - For i1, i2, j such that 0 <= i1 < n_statuses, 0 <= i2 < n_statues, 0 <=
+   *    j < index[i1], networkstatus[i1]->entries[j]->identity_digest <
+   *    networkstatus[i2]->entries[index[i2]]->identity_digest.
+   *
+   *    (That is, the indices are always advanced past lower digest before
+   *    higher.)
+   */
+  while (1) {
     int n_running=0, n_named=0, n_valid=0, n_listing=0;
     const char *the_name = NULL;
-    routerstatus_t *d_rs = smartlist_get(all_statuses, i);
-    routerstatus_t *rs_out, *rs, *most_recent;
-    if (i>0 && ! memcmp(d_rs->identity_digest,
-            ((routerstatus_t*)smartlist_get(all_statuses,i-1))->identity_digest,
-                        DIGEST_LEN))
-      continue;
+    local_routerstatus_t *rs_out, *rs_old;
+    routerstatus_t *rs, *most_recent;
+    networkstatus_t *ns;
+    const char *lowest = NULL;
+    /* Find out which of the digests appears first. */
+    for (i = 0; i < n_statuses; ++i) {
+      if (index[i] < size[i]) {
+        rs = smartlist_get(networkstatus[i]->entries, index[i]);
+        if (!lowest || memcmp(rs->identity_digest, lowest, DIGEST_LEN)<0)
+          lowest = rs->identity_digest;
+      }
+    }
+    if (!lowest) {
+      /* We're out of routers. Great! */
+      break;
+    }
+    /* Okay. The routers at networkstatus[i]->entries[index[i]] whose digests
+     * match "lowest" are next in order. Iterate over them, incrementing those
+     * index[i] as we go. */
     ++n_distinct;
-    prev_rs = most_recent = d_rs;
-    SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
-    {
-      rs = networkstatus_find_entry(ns, d_rs->identity_digest);
-      if (!rs)
+    most_recent = NULL;
+    for (i = 0; i < n_statuses; ++i) {
+      if (index[i] >= size[i])
         continue;
+      ns = networkstatus[i];
+      rs = smartlist_get(ns->entries, index[i]);
+      if (memcmp(rs->identity_digest, lowest, DIGEST_LEN))
+        continue;
+      ++index[i];
       ++n_listing;
-      if (rs->published_on > most_recent->published_on)
+      if (!most_recent || rs->published_on > most_recent->published_on)
         most_recent = rs;
       if (rs->is_named && ns->binds_names) {
         if (!the_name)
@@ -2204,30 +2234,34 @@ routerstatus_list_update_from_networkstatus(time_t now)
         ++n_valid;
       if (rs->is_running && ns->is_recent)
         ++n_running;
-    });
-    rs_out = tor_malloc(sizeof(routerstatus_t));
-    memcpy(rs_out, most_recent, sizeof(routerstatus_t));
-    if ((rs = router_get_combined_status_by_digest(d_rs->identity_digest))) {
-      rs_out->n_download_failures = rs->n_download_failures;
+    }
+    rs_out = tor_malloc(sizeof(local_routerstatus_t));
+    memcpy(&rs_out->status, most_recent, sizeof(routerstatus_t));
+    if ((rs_old = router_get_combined_status_by_digest(lowest))) {
+      rs_out->n_download_failures = rs_old->n_download_failures;
     }
     smartlist_add(result, rs_out);
     log_fn(LOG_DEBUG, "Router '%s' is listed by %d/%d directories, "
            "named by %d/%d, validated by %d/%d, and %d/%d recent directories "
            "think it's running.",
-           rs_out->nickname,
+           rs_out->status.nickname,
            n_listing, n_statuses, n_named, n_naming, n_valid, n_statuses,
            n_running, n_recent);
-    rs_out->is_named = the_name && strcmp(the_name, "**mismatch**") &&
+    rs_out->status.is_named = the_name && strcmp(the_name, "**mismatch**") &&
       n_named > n_naming/2;
-    if (rs_out->is_named)
-      strlcpy(rs_out->nickname, the_name, sizeof(rs_out->nickname));
-    rs_out->is_valid = n_valid > n_statuses/2;
-    rs_out->is_running = n_running > n_recent/2;
+    if (rs_out->status.is_named)
+      strlcpy(rs_out->status.nickname, the_name, sizeof(rs_out->status.nickname));
+    rs_out->status.is_valid = n_valid > n_statuses/2;
+    rs_out->status.is_running = n_running > n_recent/2;
   }
   SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
                     routerstatus_free(rs));
   smartlist_free(routerstatus_list);
   routerstatus_list = result;
+
+  tor_free(networkstatus);
+  tor_free(index);
+  tor_free(size);
 
   networkstatus_list_has_changed = 0;
   routerstatus_list_has_changed = 1;
@@ -2240,7 +2274,7 @@ void
 routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failures)
 {
   trusted_dir_server_t *ds;
-  routerstatus_t *rs;
+  local_routerstatus_t *rs;
   or_options_t *options = get_options();
   int authdir = options->AuthoritativeDir;
   int namingdir =  options->NamingAuthoritativeDir;
@@ -2260,12 +2294,12 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
       rs->n_download_failures = 0;
 
     if (!namingdir)
-      router->is_named = rs->is_named;
+      router->is_named = rs->status.is_named;
 
     if (!authdir) {
       /* If we're an authdir, don't believe others. */
-      router->is_verified = rs->is_valid;
-      router->is_running = rs->is_running;
+      router->is_verified = rs->status.is_valid;
+      router->is_running = rs->status.is_running;
 
       if (router->is_running && ds) {
         /* XXXX011 NM Hm. What about authorities? When do they reset
@@ -2286,7 +2320,6 @@ router_list_downloadable(void)
 {
   smartlist_t *superseded = smartlist_create();
   strmap_iter_t *iter;
-  routerstatus_t *rs;
   time_t now = time(NULL);
   strmap_t *status_map = NULL;
   char fp[HEX_DIGEST_LEN+1];
@@ -2297,15 +2330,16 @@ router_list_downloadable(void)
   routerstatus_list_update_from_networkstatus(now);
 
   status_map = strmap_new();
-  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
   {
-    base16_encode(fp, sizeof(fp), rs->identity_digest, DIGEST_LEN);
+    base16_encode(fp, sizeof(fp), rs->status.identity_digest, DIGEST_LEN);
     strmap_set(status_map, fp, rs);
   });
 
   if (routerlist) {
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
     {
+      routerstatus_t *rs;
       base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
       if (!(rs = strmap_get(status_map, fp))) {
         // log_fn(LOG_NOTICE, "No status for %s", fp);
@@ -2341,6 +2375,7 @@ router_list_downloadable(void)
        iter = strmap_iter_next(status_map, iter)) {
     const char *key;
     void *val;
+    local_routerstatus_t *rs;
     strmap_iter_get(iter, &key, &val);
     rs = val;
     if (rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)

@@ -1557,7 +1557,7 @@ static void
 dir_routerdesc_download_failed(smartlist_t *failed)
 {
   char digest[DIGEST_LEN];
-  routerstatus_t *rs;
+  local_routerstatus_t *rs;
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
     base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
