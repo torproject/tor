@@ -807,6 +807,8 @@ typedef struct local_routerstatus_t {
   routerstatus_t status;
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
+  time_t next_attempt_at; /**< When should we try this descriptor again? */
+  unsigned int should_download:1; /**< DOCDOC */
 } local_routerstatus_t;
 
 /*XXXX011 make this configurable? */
@@ -2130,6 +2132,7 @@ void routers_update_status_from_networkstatus(smartlist_t *routers,
 smartlist_t *router_list_superseded(void);
 int router_have_minimum_dir_info(void);
 void networkstatus_list_update_recent(time_t now);
+void router_reset_descriptor_download_failures(void);
 
 /********************************* routerparse.c ************************/
 

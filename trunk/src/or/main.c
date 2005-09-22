@@ -95,6 +95,8 @@ static char* nt_strerror(uint32_t errnum);
 #define FORCE_REGENERATE_DESCRIPTOR_INTERVAL 18*60*60 /* 18 hours */
 #define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
 #define BUF_SHRINK_INTERVAL 60 /* one minute */
+#define DESCRIPTOR_RETRY_INTERVAL 60
+#define DESCRIPTOR_FAILURE_RESET_INTERVAL 60*60
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
 
 /********* END VARIABLES ************/
@@ -628,6 +630,8 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
   static time_t time_to_shrink_buffers = 0;
+  static time_t time_to_try_getting_descriptors = 0;
+  static time_t time_to_reset_descriptor_failures = 0;
   or_options_t *options = get_options();
   int i;
 
@@ -651,6 +655,16 @@ run_scheduled_events(time_t now)
     }
     if (advertised_server_mode())
       router_upload_dir_desc_to_dirservers(0);
+  }
+
+  if (time_to_try_getting_descriptors < now) {
+    update_router_descriptor_downloads(now);
+    time_to_try_getting_descriptors = now + DESCRIPTOR_RETRY_INTERVAL;
+  }
+
+  if (time_to_reset_descriptor_failures < now) {
+    router_reset_descriptor_download_failures();
+    time_to_try_getting_descriptors = now + DESCRIPTOR_FAILURE_RESET_INTERVAL;
   }
 
   /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */

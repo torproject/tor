@@ -320,8 +320,8 @@ connection_dir_download_networkstatus_failed(connection_t *conn)
 static void
 connection_dir_download_routerdesc_failed(connection_t *conn)
 {
-  /* Try again. */
-  /*XXXX011 plays poorly with multiple conns. */
+  /* Try again. No need to increment the failure count for routerdescs, since
+   * it's not their fault.*/
   update_router_descriptor_downloads(time(NULL));
 }
 
@@ -1558,6 +1558,8 @@ dir_routerdesc_download_failed(smartlist_t *failed)
 {
   char digest[DIGEST_LEN];
   local_routerstatus_t *rs;
+  time_t now = time(NULL);
+  int server = server_mode(get_options()) && get_options()->DirPort;
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
     base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
@@ -1565,7 +1567,38 @@ dir_routerdesc_download_failed(smartlist_t *failed)
     if (!rs || rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;
     ++rs->n_download_failures;
+    if (server) {
+      switch (rs->n_download_failures) {
+        case 1: rs->next_attempt_at = 0; break;
+        case 2: rs->next_attempt_at = 0; break;
+        case 3: rs->next_attempt_at = now+60; break;
+        case 4: rs->next_attempt_at = now+60; break;
+        case 5: rs->next_attempt_at = now+60*2; break;
+        case 6: rs->next_attempt_at = now+60*5; break;
+        case 7: rs->next_attempt_at = now+60*15; break;
+        default: rs->next_attempt_at = TIME_MAX; break;
+      }
+    } else {
+      switch (rs->n_download_failures) {
+        case 1: rs->next_attempt_at = 0; break;
+        case 2: rs->next_attempt_at = now+60; break;
+        case 3: rs->next_attempt_at = now+60*5; break;
+        case 4: rs->next_attempt_at = now+60*10; break;
+        default: rs->next_attempt_at = TIME_MAX; break;
+      }
+    }
+    if (rs->next_attempt_at == 0)
+      log_fn(LOG_NOTICE, "%s failed %d time(s); I'll try again immediately.",
+             cp, (int)rs->n_download_failures);
+    else if (rs->next_attempt_at < TIME_MAX)
+      log_fn(LOG_NOTICE, "%s failed %d time(s); I'll try again in %d seconds.",
+             cp, (int)rs->n_download_failures, (int)(rs->next_attempt_at-now));
+    else
+      log_fn(LOG_NOTICE, "%s failed %d time(s); Giving up for a while.",
+             cp, (int)rs->n_download_failures);
   });
+
+  update_router_descriptor_downloads(time(NULL));
 }
 
 /* DOCDOC */

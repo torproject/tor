@@ -1215,11 +1215,11 @@ generate_v2_networkstatus(void)
       int f_stable = !router_is_unreliable(ri, 1, 0);
       int f_fast = !router_is_unreliable(ri, 0, 1);
       int f_running;
+      int f_authority = router_digest_is_trusted_dir(ri->identity_digest);
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_verified;
       char identity64[BASE64_DIGEST_LEN+1];
       char digest64[BASE64_DIGEST_LEN+1];
-
       if (options->AuthoritativeDir) {
         ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
       }
@@ -1235,7 +1235,7 @@ generate_v2_networkstatus(void)
 
       if (tor_snprintf(outp, endp-outp,
                        "r %s %s %s %s %s %d %d\n"
-                       "s%s%s%s%s%s%s\n",
+                       "s%s%s%s%s%s%s%s\n",
                        ri->nickname,
                        identity64,
                        digest64,
@@ -1243,15 +1243,16 @@ generate_v2_networkstatus(void)
                        ipaddr,
                        ri->or_port,
                        ri->dir_port,
+                       f_authority?" Authority":"",
                        f_exit?" Exit":"",
-                       f_stable?" Stable":"",
                        f_fast?" Fast":"",
-                       f_running?" Running":"",
                        f_named?" Named":"",
+                       f_stable?" Stable":"",
+                       f_running?" Running":"",
                        f_valid?" Valid":"")<0) {
         log_fn(LOG_WARN, "Unable to print router status.");
         goto done;
-      }
+        }
       outp += strlen(outp);
     });
 

@@ -2032,8 +2032,6 @@ routers_update_all_from_networkstatus(void)
 
   helper_nodes_set_status_from_directory();
 
-  update_router_descriptor_downloads(time(NULL));
-
   if (!have_warned_about_old_version) {
     int n_recent = 0;
     int n_recommended = 0;
@@ -2136,6 +2134,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
   int *index, *size;
   networkstatus_t **networkstatus;
   smartlist_t *result;
+  strmap_t *name_map;
+  char conflict[DIGEST_LEN];
 
   networkstatus_list_update_recent(now);
 
@@ -2171,6 +2171,30 @@ routerstatus_list_update_from_networkstatus(time_t now)
       ++n_naming;
     if (networkstatus[i]->is_recent)
       ++n_recent;
+  }
+
+  name_map = strmap_new();
+  memset(conflict, 0xff, sizeof(conflict));
+  for (i = 0; i < n_statuses; ++i) {
+    if (!networkstatus[i]->binds_names)
+      continue;
+    SMARTLIST_FOREACH(networkstatus[i]->entries, routerstatus_t *, rs,
+    {
+      const char *other_digest;
+      if (!rs->is_named)
+        continue;
+      other_digest = strmap_get_lc(name_map, rs->nickname);
+      if (!other_digest)
+        strmap_set_lc(name_map, rs->nickname, rs->identity_digest);
+      else if (memcmp(other_digest, rs->identity_digest, DIGEST_LEN) &&
+               other_digest != conflict) {
+        /*XXXX011 rate-limit this?*/
+        log_fn(LOG_WARN,
+               "Naming authorities disagree about which key goes with %s.",
+               rs->nickname);
+        strmap_set_lc(name_map, rs->nickname, conflict);
+      }
+    });
   }
 
   result = smartlist_create();
@@ -2226,7 +2250,11 @@ routerstatus_list_update_from_networkstatus(time_t now)
           the_name = rs->nickname;
         if (!strcasecmp(rs->nickname, the_name)) {
           ++n_named;
-        } else {
+        } else if (strcmp(the_name,"**mismatch**")) {
+          char hd[HEX_DIGEST_LEN+1];
+          base16_encode(hd, HEX_DIGEST_LEN+1, rs->identity_digest, DIGEST_LEN);
+          log_fn(LOG_WARN, "Naming authorities disagree about nicknames for $%s",
+                 hd);
           the_name = "**mismatch**";
         }
       }
@@ -2239,6 +2267,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     memcpy(&rs_out->status, most_recent, sizeof(routerstatus_t));
     if ((rs_old = router_get_combined_status_by_digest(lowest))) {
       rs_out->n_download_failures = rs_old->n_download_failures;
+      rs_out->next_attempt_at = rs_old->next_attempt_at;
     }
     smartlist_add(result, rs_out);
     log_fn(LOG_DEBUG, "Router '%s' is listed by %d/%d directories, "
@@ -2247,8 +2276,12 @@ routerstatus_list_update_from_networkstatus(time_t now)
            rs_out->status.nickname,
            n_listing, n_statuses, n_named, n_naming, n_valid, n_statuses,
            n_running, n_recent);
-    rs_out->status.is_named = the_name && strcmp(the_name, "**mismatch**") &&
-      n_named > n_naming/2;
+    rs_out->status.is_named  = 0;
+    if (the_name && strcmp(the_name, "**mismatch**") && n_named > 0) {
+      const char *d = strmap_get_lc(name_map, the_name);
+      if (d && d != conflict)
+        rs_out->status.is_named = 1;
+    }
     if (rs_out->status.is_named)
       strlcpy(rs_out->status.nickname, the_name, sizeof(rs_out->status.nickname));
     rs_out->status.is_valid = n_valid > n_statuses/2;
@@ -2262,6 +2295,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
   tor_free(networkstatus);
   tor_free(index);
   tor_free(size);
+  strmap_free(name_map, NULL);
 
   networkstatus_list_has_changed = 0;
   routerstatus_list_has_changed = 1;
@@ -2290,8 +2324,10 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
     if (!rs)
       continue;
 
-    if (reset_failures)
+    if (reset_failures) {
       rs->n_download_failures = 0;
+      rs->next_attempt_at = 0;
+    }
 
     if (!namingdir)
       router->is_named = rs->status.is_named;
@@ -2318,39 +2354,76 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
 static smartlist_t *
 router_list_downloadable(void)
 {
+  int n_conns, i, n_downloadable = 0;
+  connection_t **carray;
   smartlist_t *superseded = smartlist_create();
-  strmap_iter_t *iter;
+  smartlist_t *downloading;
   time_t now = time(NULL);
-  strmap_t *status_map = NULL;
-  char fp[HEX_DIGEST_LEN+1];
 
   if (!routerstatus_list)
     return superseded;
 
+  get_connection_array(&carray, &n_conns);
+
   routerstatus_list_update_from_networkstatus(now);
 
-  status_map = strmap_new();
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
   {
-    base16_encode(fp, sizeof(fp), rs->status.identity_digest, DIGEST_LEN);
-    strmap_set(status_map, fp, rs);
+    if (rs->next_attempt_at < now) {
+      rs->should_download = 1;
+      ++n_downloadable;
+    } else {
+      rs->should_download = 0;
+    }
   });
+
+  downloading = smartlist_create();
+  for (i = 0; i < n_conns; ++i) {
+    connection_t *conn = carray[i];
+    if (conn->type == CONN_TYPE_DIR &&
+        conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
+        !conn->marked_for_close) {
+      if (!strcmpstart(conn->requested_resource, "all"))
+        n_downloadable = 0;
+      dir_split_resource_into_fingerprints(conn->requested_resource,
+                                           downloading, NULL);
+    }
+  }
+  if (n_downloadable) {
+    SMARTLIST_FOREACH(downloading, const char *, dl,
+    {
+      char d[DIGEST_LEN];
+      local_routerstatus_t *rs;
+      base16_decode(d, DIGEST_LEN, dl, strlen(dl));
+      if ((rs = router_get_combined_status_by_digest(d)) && rs->should_download) {
+        rs->should_download = 0;
+        --n_downloadable;
+      }
+    });
+  }
+  SMARTLIST_FOREACH(downloading, char *, cp, tor_free(cp));
+  smartlist_free(downloading);
+  if (!n_downloadable)
+    return superseded;
 
   if (routerlist) {
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
     {
-      routerstatus_t *rs;
-      base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
-      if (!(rs = strmap_get(status_map, fp))) {
+      local_routerstatus_t *rs;
+      if (!(rs = router_get_combined_status_by_digest(ri->identity_digest)) ||
+          !rs->should_download) {
         // log_fn(LOG_NOTICE, "No status for %s", fp);
         continue;
       }
-      /*XXXX001 reset max_routerdesc_download_failures somewhere! */
-      if (!memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN)||
-          rs->published_on <= ri->published_on) {
+      /* Change this "or" to be an "and" once dirs generate hashes right.
+       * XXXXX. NM */
+      if (!memcmp(ri->signed_descriptor_digest, rs->status.descriptor_digest,
+                  DIGEST_LEN) ||
+          rs->status.published_on <= ri->published_on) {
         /* Same digest, or earlier. No need to download it. */
         // log_fn(LOG_NOTICE, "Up-to-date status for %s", fp);
-        strmap_remove(status_map, fp);
+        rs->should_download = 0;
+        --n_downloadable;
       }
 #if 0
       else {
@@ -2369,24 +2442,17 @@ router_list_downloadable(void)
     });
   }
 
-  /* For all remaining entries in statuses, we either have no descriptor, or
-   * our descriptor is out of date. */
-  for (iter = strmap_iter_init(status_map); !strmap_iter_done(iter);
-       iter = strmap_iter_next(status_map, iter)) {
-    const char *key;
-    void *val;
-    local_routerstatus_t *rs;
-    strmap_iter_get(iter, &key, &val);
-    rs = val;
-    if (rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
-      continue;
-    smartlist_add(superseded, tor_strdup(key));
-  }
+  if (!n_downloadable)
+    return superseded;
 
-  strmap_free(status_map, NULL);
-
-  /* Send the keys in sorted order. */
-  smartlist_sort_strings(superseded);
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+  {
+    if (rs->should_download) {
+      char *fp = tor_malloc(HEX_DIGEST_LEN+1);
+      base16_encode(fp, HEX_DIGEST_LEN+1, rs->status.identity_digest, DIGEST_LEN);
+      smartlist_add(superseded, fp);
+    }
+  });
 
   return superseded;
 }
@@ -2402,53 +2468,60 @@ router_list_downloadable(void)
 void
 update_router_descriptor_downloads(time_t now)
 {
-#define AVG_ROUTER_LEN 1300
-#define DL_PER_REQUEST 128
+#define MAX_DL_PER_REQUEST 128
+#define MIN_REQUESTS 3
   smartlist_t *downloadable = NULL;
   int get_all = 0;
-
-  if (connection_get_by_type_purpose(CONN_TYPE_DIR,
-                                     DIR_PURPOSE_FETCH_SERVERDESC))
-    return;
 
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
     get_all = 1;
 
   if (!get_all) {
     /* Check whether we aren't just better off downloading everybody. */
-    int excess;
     downloadable = router_list_downloadable();
+#if 0
+    /* Actually, asking a single source for "all" routers can be horribly
+     * dangerous. Let's disable this.
+     */
+#define AVG_ROUTER_LEN 1300
+    int excess;
     excess = smartlist_len(routerstatus_list)-smartlist_len(downloadable);
     if (smartlist_len(downloadable)*(HEX_DIGEST_LEN+1) >
         excess*AVG_ROUTER_LEN) {
       get_all = 1;
     }
+#endif
   }
 
   if (get_all) {
     log_fn(LOG_NOTICE, "Launching request for all routers");
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,"all.z",1);
   } else if (smartlist_len(downloadable)) {
-    int i, j, n;
-    size_t r_len = DL_PER_REQUEST*(HEX_DIGEST_LEN+1)+16;
+    int i, j, n, n_per_request;
+    size_t r_len = MAX_DL_PER_REQUEST*(HEX_DIGEST_LEN+1)+16;
     char *resource = tor_malloc(r_len);
     n = smartlist_len(downloadable);
-    log_fn(LOG_NOTICE, "Launching request for %d routers", n);
-    for (i=0; i < n; i += DL_PER_REQUEST) {
+    n_per_request = (n+MIN_REQUESTS-1) / MIN_REQUESTS;
+    if (n_per_request > MAX_DL_PER_REQUEST)
+      n_per_request = MAX_DL_PER_REQUEST;
+    if (n_per_request < 1)
+      n_per_request = 1;
+    for (i=0; i < n; i += n_per_request) {
       char *cp = resource;
       memcpy(resource, "fp/", 3);
       cp = resource + 3;
-      for (j=i; j < i+DL_PER_REQUEST && j < n; ++j) {
+      for (j=i; j < i+n_per_request && j < n; ++j) {
         memcpy(cp, smartlist_get(downloadable, j), HEX_DIGEST_LEN);
         cp += HEX_DIGEST_LEN;
         *cp++ = '+';
       }
       memcpy(cp-1, ".z", 3);
+      log_fn(LOG_NOTICE, "Launching request for %d routers", j-i);
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
     }
     tor_free(resource);
   } else {
-    log_fn(LOG_NOTICE, "No routers to download.");
+    log_fn(LOG_DEBUG, "No routers to download.");
   }
 
   if (downloadable) {
@@ -2473,3 +2546,15 @@ router_have_minimum_dir_info(void)
   return smartlist_len(routerlist->routers) > (avg/4);
 }
 
+/** DOCDOC */
+void
+router_reset_descriptor_download_failures(void)
+{
+  if (!routerstatus_list)
+    return;
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+  {
+    rs->n_download_failures = 0;
+    rs->next_attempt_at = 0;
+  });
+}
