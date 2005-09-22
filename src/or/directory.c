@@ -1201,9 +1201,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
     log_fn(LOG_DEBUG,"Dumping %sdirectory to client.",
            deflated?"deflated ":"");
     format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
+    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
              date,
              (int)dlen,
+             deflated?"application/octet-stream":"text/plain",
              deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, dlen, conn);
@@ -1224,9 +1225,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
 
     format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
+    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
                  date,
                  (int)dlen,
+                 deflated?"application/octet-stream":"text/plain",
                  deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, strlen(cp), conn);
@@ -1255,9 +1257,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
     SMARTLIST_FOREACH(dir_objs, cached_dir_t *, d,
                       dlen += deflated?d->dir_z_len:d->dir_len);
     format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
+    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
                  date,
                  (int)dlen,
+                 deflated?"application/octet-stream":"text/plain",
                  deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
     SMARTLIST_FOREACH(dir_objs, cached_dir_t *, d,
@@ -1315,7 +1318,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
         connection_write_to_buf(compressed, compressed_len, conn);
         tor_free(compressed);
       } else {
-        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
+        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
                      date,
                      (int)len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
