@@ -652,11 +652,6 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
 
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
   {
-    log_fn(LOG_DEBUG,"Considering %s: %d, %u==%u, %d.",
-           router->nickname,
-           router->is_running,
-           router->addr, addr,
-           router_compare_addr_to_addr_policy(addr, port, router->exit_policy));
     if (router->is_running &&
         router->addr == addr &&
         router_compare_addr_to_addr_policy(addr, port, router->exit_policy) ==
