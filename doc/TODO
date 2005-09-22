@@ -153,14 +153,15 @@ R     - check reachability as soon as you hear about a new server
         o Alice sets descriptor status from network-status
           o Implement
           o Use
-N     - Routerdesc download changes
-        - Refactor combined-status to be its own type.
-        - Change rule from "do not launch new connections when one exists" to
+N     . Routerdesc download changes
+        o Refactor combined-status to be its own type.
+        o Change rule from "do not launch new connections when one exists" to
           "do not request any fingerprint that we're currently requesting."
-        - Launch connections every minute, or whenever a download fails
-        - Retry failed routerdescs after 0, 1, 5, 10 minutes.
-          - Mirrors retry harder and more often.
-        - Reset failure count every 60 minutes
+        o Launch connections every minute, or whenever a download fails
+        o Retry failed routerdescs after 0, 1, 5, 10 minutes.
+          o Mirrors retry harder and more often. (0, 0, 1, 1, 2, 5, and 15)
+        o Reset failure count every 60 minutes
+        o Drop fallback to download-all.  Also, always split download.
         - Only use a routerdesc if you recognize its hash.
           - Must defer till dirservers are upgraded to latest.
           - Of course, authdirservers must not do this.
@@ -170,12 +171,11 @@ N     - Routerdesc download changes
         - If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
           fetch a new one if it was published in the last 2 hours.
           - How does this interact with the 'recognized hash' rule?
-        - Drop fallback to download-all.  Also, always split download.
-      - Downgrade new directory events from notice to info
+      . Downgrade new directory events from notice to info
       - Clients should estimate their skew as median of skew from directory
         connections over last N seconds.
       - Call dirport_is_reachable from somewhere else.
-      - Networkstatus should list who's an authority.
+      o Networkstatus should list who's an authority.
       - Add nickname element to dirserver line.  Log this along with IP:Port.
       - Warn when using non-default directory servers.
       - When giving up on a non-finished dir request, log how many bytes
@@ -194,10 +194,10 @@ N   . Naming and validation:
       o Authdirs need to be able to decline to include baased on
         IP range and key.
       o Not all authdirs name.
-      - Change naming rule: N->K iff any naming authdir says N->K,
+      o Change naming rule: N->K iff any naming authdir says N->K,
         and none says N->K' or N'->K.
       - Clients choose names based on network-status options.
-      - Names are remembered in client state
+      - Names are remembered in client state (?)
       - Okay to have two valid servers with same nickname, but not
         two named servers with same nickname.  Update logic.
 

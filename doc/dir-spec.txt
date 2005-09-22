@@ -120,6 +120,7 @@ $Id$
           "Running" if the router is currently usable.
           "Named" if the router's identity-nickname mapping is canonical.
           "Valid" if the router has been 'validated'.
+          "Authority" if the router is a directory authority.
 
       The "r" entry for each router must appear first and is required.  The
       's" entry is optional.  Unrecognized flags, or extra elements on the
