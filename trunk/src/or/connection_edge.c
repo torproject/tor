@@ -952,6 +952,8 @@ connection_ap_handshake_process_socks(connection_t *conn)
   } /* else socks handshake is done, continue processing */
 
   tor_strlower(socks->address); /* normalize it */
+  log_fn(LOG_DEBUG,"Client asked for %s:%d", safe_str(socks->address),
+         socks->port);
 
   /* For address map controls, remap the address */
   addressmap_rewrite(socks->address, sizeof(socks->address));
