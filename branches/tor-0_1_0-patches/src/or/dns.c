@@ -70,7 +70,7 @@ static void dns_purge_resolve(struct cached_resolve *resolve);
 static void dns_found_answer(char *address, uint32_t addr, char outcome);
 static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
-static void spawn_enough_dnsworkers(void);
+static int spawn_enough_dnsworkers(void);
 static void send_resolved_cell(connection_t *conn, uint8_t answer_type);
 
 /** Splay tree of cached_resolve objects. */
@@ -309,7 +309,10 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   tor_assert(exitconn->state == EXIT_CONN_STATE_RESOLVING);
   tor_assert(exitconn->s == -1);
 
-  spawn_enough_dnsworkers(); /* respawn here, to be sure there are enough */
+  /* respawn here, to be sure there are enough */
+  if (spawn_enough_dnsworkers() < 0) {
+    goto err;
+  }
 
   dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
 
@@ -317,8 +320,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
     log_fn(LOG_WARN,"no idle dns workers. Failing.");
     if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
       send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
-    dns_cancel_pending_resolve(exitconn->address); /* also sends end and frees! */
-    return -1;
+    goto err;
   }
 
   log_fn(LOG_DEBUG, "Connection (fd %d) needs to resolve '%s'; assigning to DNSWorker (fd %d)",
@@ -334,6 +336,9 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   connection_write_to_buf(dnsconn->address, len, dnsconn);
 
   return 0;
+err:
+  dns_cancel_pending_resolve(exitconn->address); /* also sends end and frees! */
+  return -1;
 }
 
 /** Remove <b>conn</b> from the list of connections waiting for conn-\>address.
@@ -786,11 +791,10 @@ static int spawn_dnsworker(void) {
 
   fdarray = tor_malloc(sizeof(int)*2);
   if (tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray) < 0) {
-    log(LOG_ERR, "Couldn't construct socketpair: %s",
+    log(LOG_WARN, "Couldn't construct socketpair: %s",
         tor_socket_strerror(tor_socket_errno(-1)));
-    tor_cleanup();
     tor_free(fdarray);
-    exit(1);
+    return -1;
   }
 
   /* log_fn(LOG_NOTICE,"Before spawn: fdarray @%d has %d:%d", (int)fdarray, fdarray[0],fdarray[1]); */
@@ -824,8 +828,10 @@ static int spawn_dnsworker(void) {
 }
 
 /** If we have too many or too few DNS workers, spawn or kill some.
+ * Return 0 if we are happy, return -1 if we tried to spawn more but
+ * we couldn't.
  */
-static void spawn_enough_dnsworkers(void) {
+static int spawn_enough_dnsworkers(void) {
   int num_dnsworkers_needed; /* aim to have 1 more than needed,
                            * but no less than min and no more than max */
   connection_t *dnsconn;
@@ -861,8 +867,8 @@ static void spawn_enough_dnsworkers(void) {
 
   while (num_dnsworkers < num_dnsworkers_needed) {
     if (spawn_dnsworker() < 0) {
-      log(LOG_WARN,"spawn_enough_dnsworkers(): spawn failed!");
-      return;
+      log_fn(LOG_WARN,"Spawn failed. Will try again later.");
+      return -1;
     }
     num_dnsworkers++;
   }
@@ -876,5 +882,6 @@ static void spawn_enough_dnsworkers(void) {
     connection_mark_for_close(dnsconn);
     num_dnsworkers--;
   }
+  return 0;
 }
 
