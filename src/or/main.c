@@ -706,9 +706,6 @@ run_scheduled_events(time_t now)
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
 
-    /* Try to get any routers we don't have. */
-    update_router_descriptor_downloads(now);
-
     time_to_fetch_directory = now + get_dir_fetch_period(options);
 
     /* Also, take this chance to remove old information from rephist
