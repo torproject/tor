@@ -293,7 +293,7 @@ cpuworker_main(void *data)
   return 0; /* windows wants this function to return an int */
 }
 
-/** Launch a new cpuworker.
+/** Launch a new cpuworker. Return 0 if we're happy, -1 if we failed.
  */
 static int
 spawn_cpuworker(void)
@@ -305,10 +305,9 @@ spawn_cpuworker(void)
 
   fdarray = tor_malloc(sizeof(int)*2);
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
-    log(LOG_ERR, "Couldn't construct socketpair: %s", tor_socket_strerror(-err));
-    tor_cleanup();
+    log(LOG_WARN, "Couldn't construct socketpair: %s", tor_socket_strerror(-err));
     tor_free(fdarray);
-    exit(1);
+    return -1;
   }
 
   fd = fdarray[0];
@@ -354,7 +353,7 @@ spawn_enough_cpuworkers(void)
 
   while (num_cpuworkers < num_cpuworkers_needed) {
     if (spawn_cpuworker() < 0) {
-      log_fn(LOG_WARN,"spawn failed!");
+      log_fn(LOG_WARN,"Spawn failed. Will try again later.");
       return;
     }
     num_cpuworkers++;
