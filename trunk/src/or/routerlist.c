@@ -2479,6 +2479,7 @@ update_router_descriptor_downloads(time_t now)
 #define MIN_REQUESTS 3
   smartlist_t *downloadable = NULL;
   int get_all = 0;
+  int always_split = server_mode(get_options()) && get_options()->DirPort;
 
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
     get_all = 1;
@@ -2491,19 +2492,18 @@ update_router_descriptor_downloads(time_t now)
 
   downloadable = router_list_downloadable();
   if (smartlist_len(downloadable)) {
-    int i, j, n, n_per_request;
+    int i, j, n, n_per_request=MAX_DL_PER_REQUEST;
     size_t r_len = MAX_DL_PER_REQUEST*(HEX_DIGEST_LEN+1)+16;
     char *resource = tor_malloc(r_len);
 
     n = smartlist_len(downloadable);
-    /*
-    n_per_request = (n+MIN_REQUESTS-1) / MIN_REQUESTS;
-    if (n_per_request > MAX_DL_PER_REQUEST)
-      n_per_request = MAX_DL_PER_REQUEST;
-    if (n_per_request < MIN_DL_PER_REQUEST)
-      n_per_request = MIN_DL_PER_REQUEST;
-    */
-    n_per_request = MAX_DL_PER_REQUEST;
+    if (always_split) {
+      n_per_request = (n+MIN_REQUESTS-1) / MIN_REQUESTS;
+      if (n_per_request > MAX_DL_PER_REQUEST)
+        n_per_request = MAX_DL_PER_REQUEST;
+      if (n_per_request < MIN_DL_PER_REQUEST)
+        n_per_request = MIN_DL_PER_REQUEST;
+    }
     log_fn(LOG_NOTICE, "Launching %d request%s for %d router%s, %d at a time",
            (n+n_per_request-1)/n_per_request, n>n_per_request?"s":"",
            n, n>1?"s":"", n_per_request);
