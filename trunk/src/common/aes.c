@@ -14,18 +14,21 @@ const char aes_c_id[] = "$Id$";
  **/
 
 #include "orconfig.h"
+#include <openssl/opensslv.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "aes.h"
 #include "util.h"
 
+#if OPENSSL_VERSION_NUMBER >= 0x0090700fl
+#define USE_OPENSSL_AES
+#include <openssl/aes.h>
+#endif
+
+#ifndef USE_OPENSSL_AES
 /*======================================================================*/
 /* From rijndael-alg-fst.h */
-
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef uint8_t u8;
 
 #define MAXKC   (256/32)
 #define MAXKB   (256/8)
@@ -33,13 +36,22 @@ typedef uint8_t u8;
 
 static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits);
 static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]);
+#endif
+
+typedef uint64_t u64;
+typedef uint32_t u32;
+typedef uint8_t u8;
 
 /*======================================================================*/
 /* Interface to AES code, and counter implementation */
 
 struct aes_cnt_cipher {
+#ifdef USE_OPENSSL_AES
+  AES_KEY key;
+#else
   u32 rk[4*(MAXNR+1)];
   int nr;
+#endif
   u32 counter1;
   u32 counter0;
   u8 buf[16];
@@ -66,7 +78,11 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
   buf[ 9] = (counter1 >> 16) & 0xff;
   buf[ 8] = (counter1 >> 24) & 0xff;
 
+#ifdef USE_OPENSSL_AES
+  AES_encrypt(buf, cipher->buf, &(cipher->key));
+#else
   rijndaelEncrypt(cipher->rk, cipher->nr, buf, cipher->buf);
+#endif
 }
 
 /**
@@ -75,9 +91,7 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
 aes_cnt_cipher_t*
 aes_new_cipher()
 {
-  aes_cnt_cipher_t* result = tor_malloc(sizeof(aes_cnt_cipher_t));
-  memset(result->rk, 0, 4*(MAXNR+1));
-  memset(result->buf, 0, 16);
+  aes_cnt_cipher_t* result = tor_malloc_zero(sizeof(aes_cnt_cipher_t));
 
   return result;
 }
@@ -89,8 +103,12 @@ aes_new_cipher()
 void
 aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
 {
+#ifdef USE_OPENSSL_AES
+  AES_set_encrypt_key((const unsigned char *)key, key_bits, &(cipher->key));
+#else
   cipher->nr = rijndaelKeySetupEnc(cipher->rk, (const unsigned char*)key,
                                    key_bits);
+#endif
   cipher->counter0 = 0;
   cipher->counter1 = 0;
   cipher->pos = 0;
@@ -158,6 +176,7 @@ aes_adjust_counter(aes_cnt_cipher_t *cipher, long delta)
   aes_set_counter(cipher, counter);
 }
 
+#ifndef USE_OPENSSL_AES
 /*======================================================================*/
 /* From rijndael-alg-fst.c */
 
@@ -815,4 +834,5 @@ void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 c
                 rk[3];
         PUTU32(ct + 12, s3);
 }
+#endif
 
