@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 19 July 2005 for Tor 0.1.1.3-alpha.
+## Last updated 23 September 2005 for Tor 0.1.1.8-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 #
 ## See the man page, or http://tor.eff.org/tor-manual.html, for more
@@ -113,6 +113,12 @@ AllowUnverifiedNodes middle,rendezvous
 ## below. You'll need to do ipchains or other port forwarding yourself
 ## to make this work.
 #DirBindAddress 0.0.0.0:9091
+
+## Uncomment this if you run more than one Tor server, and add the
+## nickname of each Tor server you control, even if they're on different
+## networks. We declare it here so clients can avoid using more than
+## one of your servers in a given circuit.
+#MyFamily nickname1,nickname2,...
 
 ## A comma-separated list of exit policies. They're considered first
 ## to last, and the first match wins. If you want to *replace*
