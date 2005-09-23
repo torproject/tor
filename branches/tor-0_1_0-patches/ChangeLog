@@ -7,6 +7,8 @@ Changes in version 0.1.0.15 - 2005-09-23
       only warn, never exit, when we're running an obsolete version.
     - Don't try to print a null string when your server finds itself to
       be unreachable and the Address config option is empty.
+    - Make the numbers in read-history and write-history into uint64s,
+      so they don't overflow and publish negatives in the descriptor.
     - Fix a minor memory leak in smartlist_string_remove().
     - We were only allowing ourselves to upload a server descriptor at
       most every 20 minutes, even if it changed earlier than that.
