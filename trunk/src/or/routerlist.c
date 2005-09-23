@@ -2258,7 +2258,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
       if (rs->is_running && ns->is_recent)
         ++n_running;
     }
-    rs_out = tor_malloc(sizeof(local_routerstatus_t));
+    rs_out = tor_malloc_zero(sizeof(local_routerstatus_t));
     memcpy(&rs_out->status, most_recent, sizeof(routerstatus_t));
     if ((rs_old = router_get_combined_status_by_digest(lowest))) {
       rs_out->n_download_failures = rs_old->n_download_failures;
@@ -2368,6 +2368,10 @@ router_list_downloadable(void)
       rs->should_download = 1;
       ++n_downloadable;
     } else {
+      char fp[HEX_DIGEST_LEN+1];
+      base16_encode(fp, HEX_DIGEST_LEN+1, rs->status.identity_digest, DIGEST_LEN);
+      log_fn(LOG_NOTICE, "Not yet ready to download %s (%d more seconds)", fp,
+             (int)(rs->next_attempt_at-now));
       rs->should_download = 0;
     }
   });
@@ -2384,6 +2388,12 @@ router_list_downloadable(void)
                                            downloading, NULL);
     }
   }
+
+  /*
+  log_fn(LOG_NOTICE, "%d downloads already in progress",
+         smartlist_len(downloading));
+  smartlist_sort_strings(downloading);
+  */
   if (n_downloadable) {
     SMARTLIST_FOREACH(downloading, const char *, dl,
     {
@@ -2393,6 +2403,7 @@ router_list_downloadable(void)
       if ((rs = router_get_combined_status_by_digest(d)) && rs->should_download) {
         rs->should_download = 0;
         --n_downloadable;
+        // log_fn(LOG_NOTICE, "%s is in-progress; not fetching", dl);
       }
     });
   }
@@ -2464,6 +2475,7 @@ void
 update_router_descriptor_downloads(time_t now)
 {
 #define MAX_DL_PER_REQUEST 128
+#define MIN_DL_PER_REQUEST 4
 #define MIN_REQUESTS 3
   smartlist_t *downloadable = NULL;
   int get_all = 0;
@@ -2471,36 +2483,30 @@ update_router_descriptor_downloads(time_t now)
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
     get_all = 1;
 
-  if (!get_all) {
-    /* Check whether we aren't just better off downloading everybody. */
-    downloadable = router_list_downloadable();
-#if 0
-    /* Actually, asking a single source for "all" routers can be horribly
-     * dangerous. Let's disable this.
-     */
-#define AVG_ROUTER_LEN 1300
-    int excess;
-    excess = smartlist_len(routerstatus_list)-smartlist_len(downloadable);
-    if (smartlist_len(downloadable)*(HEX_DIGEST_LEN+1) >
-        excess*AVG_ROUTER_LEN) {
-      get_all = 1;
-    }
-#endif
-  }
-
   if (get_all) {
     log_fn(LOG_NOTICE, "Launching request for all routers");
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,"all.z",1);
-  } else if (smartlist_len(downloadable)) {
+    return;
+  }
+
+  downloadable = router_list_downloadable();
+  if (smartlist_len(downloadable)) {
     int i, j, n, n_per_request;
     size_t r_len = MAX_DL_PER_REQUEST*(HEX_DIGEST_LEN+1)+16;
     char *resource = tor_malloc(r_len);
+
     n = smartlist_len(downloadable);
+    /*
     n_per_request = (n+MIN_REQUESTS-1) / MIN_REQUESTS;
     if (n_per_request > MAX_DL_PER_REQUEST)
       n_per_request = MAX_DL_PER_REQUEST;
-    if (n_per_request < 1)
-      n_per_request = 1;
+    if (n_per_request < MIN_DL_PER_REQUEST)
+      n_per_request = MIN_DL_PER_REQUEST;
+    */
+    n_per_request = MAX_DL_PER_REQUEST;
+    log_fn(LOG_NOTICE, "Launching %d request%s for %d router%s, %d at a time",
+           (n+n_per_request-1)/n_per_request, n>n_per_request?"s":"",
+           n, n>1?"s":"", n_per_request);
     for (i=0; i < n; i += n_per_request) {
       char *cp = resource;
       memcpy(resource, "fp/", 3);
@@ -2511,18 +2517,14 @@ update_router_descriptor_downloads(time_t now)
         *cp++ = '+';
       }
       memcpy(cp-1, ".z", 3);
-      log_fn(LOG_NOTICE, "Launching request for %d routers", j-i);
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
     }
     tor_free(resource);
   } else {
-    log_fn(LOG_DEBUG, "No routers to download.");
+    log_fn(LOG_NOTICE, "No routers to download.");
   }
-
-  if (downloadable) {
-    SMARTLIST_FOREACH(downloadable, char *, c, tor_free(c));
-    smartlist_free(downloadable);
-  }
+  SMARTLIST_FOREACH(downloadable, char *, c, tor_free(c));
+  smartlist_free(downloadable);
 }
 
 /** Return true iff we have enough networkstatus and router information to
