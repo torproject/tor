@@ -322,7 +322,7 @@ connection_dir_download_routerdesc_failed(connection_t *conn)
 {
   /* Try again. No need to increment the failure count for routerdescs, since
    * it's not their fault.*/
-  update_router_descriptor_downloads(time(NULL));
+  /* update_router_descriptor_downloads(time(NULL)); */
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
@@ -1598,7 +1598,7 @@ dir_routerdesc_download_failed(smartlist_t *failed)
              cp, (int)rs->n_download_failures);
   });
 
-  update_router_descriptor_downloads(time(NULL));
+  /* update_router_descriptor_downloads(time(NULL)); */
 }
 
 /* DOCDOC */
