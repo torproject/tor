@@ -49,7 +49,7 @@ Changes in version 0.1.1.6-alpha - 2005-09-09
     - Fix bug where as soon as a server refused any requests due to his
       exit policy (e.g. when we ask for localhost and he tells us that's
       127.0.0.1 and he won't do it), we decided he wasn't obeying his
-      exit policy using him for any exits.
+      exit policy and stopped using him for any exits.
     - Only do openssl hardware accelerator stuff if openssl version is
       at least 0.9.7.
 
