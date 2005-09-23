@@ -2432,21 +2432,18 @@ router_list_downloadable(void)
         // log_fn(LOG_NOTICE, "Up-to-date status for %s", fp);
         rs->should_download = 0;
         --n_downloadable;
-      }
-#if 0
-      else {
+      } /* else {
         char t1[ISO_TIME_LEN+1];
         char t2[ISO_TIME_LEN+1];
-        format_iso_time(t1, rs->published_on);
+        format_iso_time(t1, rs->satus.published_on);
         format_iso_time(t2, ri->published_on);
         log_fn(LOG_NOTICE, "Out-of-date status for %s %s (%d %d) [%s %s]", fp,
                ri->nickname,
-               !memcmp(ri->signed_descriptor_digest,rs->descriptor_digest,DIGEST_LEN),
+               !memcmp(ri->signed_descriptor_digest,rs->status.descriptor_digest,
+                       DIGEST_LEN),
                rs->published_on < ri->published_on,
                t1, t2);
-
-      }
-#endif
+      } */
     });
   }
 
