@@ -2553,3 +2553,4 @@ router_reset_descriptor_download_failures(void)
     rs->next_attempt_at = 0;
   });
 }
+

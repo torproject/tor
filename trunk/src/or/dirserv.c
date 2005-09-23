@@ -364,10 +364,10 @@ int
 authdir_wants_to_reject_router(routerinfo_t *ri,
                                const char **msg)
 {
-  tor_assert(msg);
   /* Okay.  Now check whether the fingerprint is recognized. */
   router_status_t status = dirserv_router_get_status(ri, msg);
   time_t now;
+  tor_assert(msg);
   if (status == FP_REJECT)
     return -1; /* msg is already set. */
 
