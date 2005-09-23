@@ -83,12 +83,17 @@ their current liveness status. A value of "0 seconds" tells Tor to choose an
 appropriate default. (Default: 1 hour for clients, 20 minutes for servers)
 .LP
 .TP
-\fBDirServer \fR\fIaddress:port fingerprint\fP
+\fBDirServer \fR[v1] \fIaddress:port fingerprint\fP
 Use a nonstandard authoritative directory server at the provided
 address and port, with the specified key fingerprint.  This option can
 be repeated many times, for multiple authoritative directory
-servers. If no \fBdirserver\fP line is given, Tor will use the default
-directory servers: moria1, moria2, and tor26.
+servers.  If the "v1" option is provided, Tor will use this server as an
+authority for old-style (v1) directories as well.  (Only directory mirrors
+care about this.) If no \fBdirserver\fP line is given, Tor will use the default
+directory servers: moria1, moria2, and tor26.  NOTE: this option is intended
+for setting up a private Tor network with its own directory authorities.  If
+you use it, you will be distinguishable from other users, because you won't
+believe the same authorities they do.
 .LP
 .TP
 \fBGroup \fR\fIGID\fP
