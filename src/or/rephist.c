@@ -399,7 +399,7 @@ typedef struct bw_array_t {
   int total_obs; /**< Total for all members of obs except obs[cur_obs_idx] */
   int max_total; /**< Largest value that total_obs has taken on in the current
                   * period. */
-  int total_in_period; /**< Total bytes transferred in the current period. */
+  uint64_t total_in_period; /**< Total bytes transferred in the current period. */
 
   /** When does the next period begin? */
   time_t next_period;
@@ -414,7 +414,7 @@ typedef struct bw_array_t {
   int maxima[NUM_TOTALS];
   /** Circular array of the total bandwidth usage for the last NUM_TOTALS
    * periods */
-  int totals[NUM_TOTALS];
+  uint64_t totals[NUM_TOTALS];
 } bw_array_t;
 
 /** Shift the current period of b forward by one.
@@ -590,15 +590,16 @@ rep_hist_get_bandwidth_lines(void)
   size_t len;
 
   /* opt (read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n,n,n... */
-  len = (60+12*NUM_TOTALS)*2;
+  len = (60+20*NUM_TOTALS)*2;
   buf = tor_malloc_zero(len);
   cp = buf;
   for (r=0;r<2;++r) {
     b = r?read_array:write_array;
     tor_assert(b);
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
-    tor_snprintf(cp, len-(cp-buf), "opt %s %s (%d s) ", r?"read-history ":"write-history", t,
-            NUM_SECS_BW_SUM_INTERVAL);
+    tor_snprintf(cp, len-(cp-buf), "opt %s %s (%d s) ",
+                 r ? "read-history " : "write-history", t,
+                 NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
 
     if (b->num_maxes_set <= b->next_max_idx)
@@ -612,9 +613,11 @@ rep_hist_get_bandwidth_lines(void)
     for (n=0; n<b->num_maxes_set; ++n,++i) {
       while (i >= NUM_TOTALS) i -= NUM_TOTALS;
       if (n==(b->num_maxes_set-1))
-        tor_snprintf(cp, len-(cp-buf), "%d", b->totals[i]);
+        tor_snprintf(cp, len-(cp-buf), U64_FORMAT,
+                     U64_PRINTF_ARG(b->totals[i]));
       else
-        tor_snprintf(cp, len-(cp-buf), "%d,", b->totals[i]);
+        tor_snprintf(cp, len-(cp-buf), U64_FORMAT",",
+                     U64_PRINTF_ARG(b->totals[i]));
       cp += strlen(cp);
     }
     strlcat(cp, "\n", len-(cp-buf));

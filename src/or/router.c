@@ -775,7 +775,7 @@ router_rebuild_descriptor(int force)
   ri->signed_descriptor = tor_malloc(8192);
   if (router_dump_router_to_string(ri->signed_descriptor, 8192,
                                    ri, get_identity_key())<0) {
-    log_fn(LOG_WARN, "Couldn't dump router to string.");
+    log_fn(LOG_WARN, "Couldn't allocate string for descriptor.");
     return -1;
   }
   ri->signed_descriptor_len = strlen(ri->signed_descriptor);
