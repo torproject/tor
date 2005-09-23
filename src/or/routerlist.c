@@ -2356,6 +2356,7 @@ router_list_downloadable(void)
   smartlist_t *superseded = smartlist_create();
   smartlist_t *downloading;
   time_t now = time(NULL);
+  int mirror = server_mode(get_options()) && get_options()->DirPort;
 
   if (!routerstatus_list)
     return superseded;
@@ -2434,7 +2435,8 @@ router_list_downloadable(void)
         ++n_uptodate;
         rs->should_download = 0;
         --n_downloadable;
-      } else if (ri->platform &&
+      } else if (!mirror &&
+                 ri->platform &&
                  !tor_version_as_new_as(ri->platform, "0.1.1.6-alpha") &&
                  ri->published_on + MAX_OLD_SERVER_DOWNLOAD_RATE > now)  {
         /* Same digest, or date is up-to-date, or we have a comparatively recent
