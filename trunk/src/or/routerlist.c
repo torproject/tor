@@ -2349,7 +2349,9 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
 static smartlist_t *
 router_list_downloadable(void)
 {
+#define MAX_OLD_SERVER_DOWNLOAD_RATE 2*60*60
   int n_conns, i, n_downloadable = 0;
+  int n_uptodate=0,n_skip_old=0;
   connection_t **carray;
   smartlist_t *superseded = smartlist_create();
   smartlist_t *downloading;
@@ -2424,12 +2426,22 @@ router_list_downloadable(void)
         continue;
       }
       /* Change this "or" to be an "and" once dirs generate hashes right.
+       * Remove the version check once older versions are uncommon.
        * XXXXX. NM */
       if (!memcmp(ri->signed_descriptor_digest, rs->status.descriptor_digest,
                   DIGEST_LEN) ||
           rs->status.published_on <= ri->published_on) {
-        /* Same digest, or earlier. No need to download it. */
+        ++n_uptodate;
+        rs->should_download = 0;
+        --n_downloadable;
+      } else if (ri->platform &&
+                 !tor_version_as_new_as(ri->platform, "0.1.1.6-alpha") &&
+                 ri->published_on + MAX_OLD_SERVER_DOWNLOAD_RATE > now)  {
+        /* Same digest, or date is up-to-date, or we have a comparatively recent
+         * server with an old version.
+         * No need to download it. */
         // log_fn(LOG_NOTICE, "Up-to-date status for %s", fp);
+        ++n_skip_old;
         rs->should_download = 0;
         --n_downloadable;
       } /* else {
@@ -2446,6 +2458,9 @@ router_list_downloadable(void)
       } */
     });
   }
+
+  if (n_skip_old)
+    log_fn(LOG_INFO, "Skipped %d updatable pre-0.1.1.6 servers.", n_skip_old);
 
   if (!n_downloadable)
     return superseded;
@@ -2479,7 +2494,6 @@ update_router_descriptor_downloads(time_t now)
   smartlist_t *downloadable = NULL;
   int get_all = 0;
   int always_split = !server_mode(get_options()) || !get_options()->DirPort;
-
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
     get_all = 1;
 
@@ -2519,8 +2533,6 @@ update_router_descriptor_downloads(time_t now)
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
     }
     tor_free(resource);
-  } else {
-    log_fn(LOG_NOTICE, "No routers to download.");
   }
   SMARTLIST_FOREACH(downloadable, char *, c, tor_free(c));
   smartlist_free(downloadable);
