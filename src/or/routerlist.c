@@ -2368,10 +2368,12 @@ router_list_downloadable(void)
       rs->should_download = 1;
       ++n_downloadable;
     } else {
+      /*
       char fp[HEX_DIGEST_LEN+1];
       base16_encode(fp, HEX_DIGEST_LEN+1, rs->status.identity_digest, DIGEST_LEN);
       log_fn(LOG_NOTICE, "Not yet ready to download %s (%d more seconds)", fp,
              (int)(rs->next_attempt_at-now));
+      */
       rs->should_download = 0;
     }
   });
@@ -2479,7 +2481,7 @@ update_router_descriptor_downloads(time_t now)
 #define MIN_REQUESTS 3
   smartlist_t *downloadable = NULL;
   int get_all = 0;
-  int always_split = server_mode(get_options()) && get_options()->DirPort;
+  int always_split = !server_mode(get_options()) || !get_options()->DirPort;
 
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
     get_all = 1;

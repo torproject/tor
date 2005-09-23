@@ -664,7 +664,7 @@ run_scheduled_events(time_t now)
 
   if (time_to_reset_descriptor_failures < now) {
     router_reset_descriptor_download_failures();
-    time_to_try_getting_descriptors = now + DESCRIPTOR_FAILURE_RESET_INTERVAL;
+    time_to_reset_descriptor_failures = now + DESCRIPTOR_FAILURE_RESET_INTERVAL;
   }
 
   /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
