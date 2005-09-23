@@ -981,7 +981,9 @@ connection_dir_client_reached_eof(connection_t *conn)
       n_asked_for = smartlist_len(which);
     }
     if (status_code != 200) {
-      log_fn(LOG_WARN,"Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/server/%s\". I'll try again soon.",
+      /* 404 means that it didn't have them; no big deal. */
+      log_fn(status_code == 404 ? LOG_INFO : LOG_WARN,
+             "Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/server/%s\". I'll try again soon.",
              status_code, reason, conn->address, conn->port,
              conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
@@ -1283,7 +1285,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     dirserv_get_routerdescs(descs, url);
     tor_free(url);
     if (!smartlist_len(descs)) {
-      write_http_status_line(conn, 400, "Servers unavailable.");
+      write_http_status_line(conn, 404, "Servers unavailable.");
     } else {
       size_t len = 0;
       format_rfc1123_time(date, time(NULL));
@@ -1588,13 +1590,13 @@ dir_routerdesc_download_failed(smartlist_t *failed)
       }
     }
     if (rs->next_attempt_at == 0)
-      log_fn(LOG_NOTICE, "%s failed %d time(s); I'll try again immediately.",
+      log_fn(LOG_INFO, "%s failed %d time(s); I'll try again immediately.",
              cp, (int)rs->n_download_failures);
     else if (rs->next_attempt_at < TIME_MAX)
-      log_fn(LOG_NOTICE, "%s failed %d time(s); I'll try again in %d seconds.",
+      log_fn(LOG_INFO, "%s failed %d time(s); I'll try again in %d seconds.",
              cp, (int)rs->n_download_failures, (int)(rs->next_attempt_at-now));
     else
-      log_fn(LOG_NOTICE, "%s failed %d time(s); Giving up for a while.",
+      log_fn(LOG_INFO, "%s failed %d time(s); Giving up for a while.",
              cp, (int)rs->n_download_failures);
   });
 

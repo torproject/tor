@@ -169,7 +169,7 @@ N     . Routerdesc download changes
           - Should directory mirrors do something else entirely?
         - Use has_fetched_directory sanely, whatever that means.
           - What *does* that mean?
-        - If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
+        o If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
           fetch a new one if it was published in the last 2 hours.
           - How does this interact with the 'recognized hash' rule?
       . Downgrade new directory events from notice to info
