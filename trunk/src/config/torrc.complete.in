@@ -66,12 +66,20 @@
 ## (Default: 1 hour for clients, 20 minutes for servers)
 #DirFetchPeriod N seconds|minutes|hours|days|weeks
 
-## Use a nonstandard authoritative directory server at the pro-
-## vided address and port, with the specified key fingerprint.
-## This option can be repeated many times, for multiple authorita-
-## tive directory servers. If no dirserver line is given, Tor will
-## use the default directory servers: moria1, moria2, and tor26.
-#DirServer address:port fingerprint
+## Tor only trusts directories signed with one of these keys, and
+## uses the given addresses to connect to the trusted directory
+## servers. If no DirServer lines are specified, Tor uses the built-in
+## defaults (moria1, moria2, tor26), so you can leave this alone unless
+## you need to change it.
+##
+## WARNING! Changing these options will make your Tor behave
+## differently from everyone else's, and hurt your anonymity.  Even
+## uncommenting these lines is a bad idea.  They are the defaults now,
+## but the defaults may change in the future, leaving you behind.
+##
+#DirServer v1 18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441
+#DirServer v1 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF
+#DirServer v1 86.59.5.130:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D
 
 ## On startup, setgid to this user.
 #Group GID

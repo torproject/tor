@@ -2101,6 +2101,7 @@ options_validate(or_options_t *options)
   if (!options->DirServers) {
     add_default_trusted_dirservers(options);
   } else {
+    log_fn(LOG_WARN, "You have used DirServer to specify directory authorities in your configuration.  This is potentially dangerous: it can make you look different from all other Tor users, and hurt your anonymity.  Even if you've specified the same authorities as Tor uses by default, the defaults could change in the future.  Be sure you know what you're doing.");
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 1)<0)
         result = -1;

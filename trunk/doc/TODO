@@ -163,7 +163,8 @@ N     . Routerdesc download changes
         o Reset failure count every 60 minutes
         o Drop fallback to download-all.  Also, always split download.
         - Only use a routerdesc if you recognize its hash.
-          - Must defer till dirservers are upgraded to latest.
+          - (Must defer till dirservers are upgraded to latest code, which
+            actually generates these hashes.)
           - Of course, authdirservers must not do this.
           - Should directory mirrors do something else entirely?
         - Use has_fetched_directory sanely, whatever that means.
@@ -177,7 +178,7 @@ N     . Routerdesc download changes
       - Call dirport_is_reachable from somewhere else.
       o Networkstatus should list who's an authority.
       - Add nickname element to dirserver line.  Log this along with IP:Port.
-      - Warn when using non-default directory servers.
+      o Warn when using non-default directory servers.
       - When giving up on a non-finished dir request, log how many bytes
         dropped, to see whether it's worthwhile to use partial info.
     - Security
