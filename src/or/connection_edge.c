@@ -18,7 +18,6 @@ static addr_policy_t *socks_policy = NULL;
 static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-static int address_is_in_virtual_range(const char *addr);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -735,7 +734,7 @@ client_dns_set_addressmap(const char *address, uint32_t val, const char *exitnam
  * Return true iff <b>addr</b> is likely to have been returned by
  * client_dns_get_unused_address.
  **/
-static int
+int
 address_is_in_virtual_range(const char *addr)
 {
   struct in_addr in;
