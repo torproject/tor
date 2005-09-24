@@ -1,3 +1,10 @@
+tor (0.1.0.15-1) unstable; urgency=low
+
+  * New upstream release.
+  * Forward port 03_tor_manpage_in_section_8.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 24 Sep 2005 15:15:34 +0200
+
 tor (0.1.0.14-2) unstable; urgency=low
 
   * Ship debugging information in a separate package now, instead
