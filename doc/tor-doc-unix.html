@@ -62,8 +62,8 @@ Red Hat, Gentoo, *BSD, etc there too.
 <p>If you're building from source, first install <a
 href="http://www.monkey.org/~provos/libevent/">libevent</a>, and
 make sure you have openssl and zlib (including the -devel packages if
-applicable). Then Run <tt>tar xzf tor-0.1.0.14.tar.gz;
-cd tor-0.1.0.14</tt>. Then <tt>./configure &amp;&amp; make</tt>. Now you
+applicable). Then Run <tt>tar xzf tor-0.1.0.15.tar.gz;
+cd tor-0.1.0.15</tt>. Then <tt>./configure &amp;&amp; make</tt>. Now you
 can run tor as <tt>src/or/tor</tt>, or you can run <tt>make install</tt>
 (as root if necessary) to install it into /usr/local/, and then you can
 start it just by running <tt>tor</tt>.
@@ -174,8 +174,10 @@ to Privoxy, and 4) see whether your IP address has changed.
 </p>
 
 <p>If you have a personal firewall that limits your computer's
-ability to connect to itself, be sure to allow connections from
-your local applications to local port 8118 and port 9050. If
+ability to connect to itself (this includes something like SELinux on
+Fedora Core 4), be sure to allow connections from
+your local applications to Privoxy (local port 8118) and Tor (local port
+9050). If
 your firewall blocks outgoing connections, punch a hole so
 it can connect to at least TCP ports 80 and 443, and then see <a
 href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#FirewalledClient">this
