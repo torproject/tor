@@ -21,6 +21,8 @@ const char aes_c_id[] = "$Id$";
 #include "aes.h"
 #include "util.h"
 
+/* Use OpenSSL's AES if we're running 0.9.7 or later.  (The f at the end of
+ * the version below means "release"; see opensslv.h) */
 #if OPENSSL_VERSION_NUMBER >= 0x0090700fl
 #define USE_OPENSSL_AES
 #include <openssl/aes.h>
