@@ -26,10 +26,14 @@ const char aes_c_id[] = "$Id$";
 #include <openssl/aes.h>
 #endif
 
-#ifndef USE_OPENSSL_AES
 /*======================================================================*/
 /* From rijndael-alg-fst.h */
 
+typedef uint64_t u64;
+typedef uint32_t u32;
+typedef uint8_t u8;
+
+#ifndef USE_OPENSSL_AES
 #define MAXKC   (256/32)
 #define MAXKB   (256/8)
 #define MAXNR   14
@@ -37,10 +41,6 @@ const char aes_c_id[] = "$Id$";
 static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits);
 static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]);
 #endif
-
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef uint8_t u8;
 
 /*======================================================================*/
 /* Interface to AES code, and counter implementation */
