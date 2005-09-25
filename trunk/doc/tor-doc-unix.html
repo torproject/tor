@@ -181,7 +181,11 @@ your local applications to Privoxy (local port 8118) and Tor (local port
 your firewall blocks outgoing connections, punch a hole so
 it can connect to at least TCP ports 80 and 443, and then see <a
 href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#FirewalledClient">this
-FAQ entry</a>.
+FAQ entry</a>.  If your SELinux config is not allowing tor or privoxy to
+run correctly, create a file named booleans.local in the directory
+/etc/selinux/targeted.  Edit this file in your favorite text editor and
+insert "allow_ypbind=1".  Restart your machine for this change to take
+effect.
 </p>
 
 <p>If it's still not working, look at <a
