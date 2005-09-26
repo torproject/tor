@@ -296,6 +296,12 @@ connection_dir_request_failed(connection_t *conn)
 static void
 connection_dir_download_networkstatus_failed(connection_t *conn)
 {
+  if (!conn->requested_resource) {
+    /* We never reached directory_send_command, which means that we never
+     * opened a network connection.  Either we're out of sockets, or the
+     * network is down.  Either way, retrying would be pointless. */
+    return;
+  }
   if (!strcmpstart(conn->requested_resource, "all")) {
     /* We're a non-authoritative directory cache; try again. */
     directory_get_from_dirserver(conn->purpose, "all.z",
