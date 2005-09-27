@@ -20,12 +20,23 @@ const char aes_c_id[] = "$Id$";
 #include <string.h>
 #include "aes.h"
 #include "util.h"
+#include "log.h"
 
 /* Use OpenSSL's AES if we're running 0.9.7 or later.  (The f at the end of
  * the version below means "release"; see opensslv.h) */
 #if OPENSSL_VERSION_NUMBER >= 0x0090700fl
 #define USE_OPENSSL_AES
 #include <openssl/aes.h>
+#include <openssl/evp.h>
+#endif
+
+/* For now, if OpenSSL supports AES, we always use the EVP_CIPHER_CTX version
+ * of it, so OpenSSL can use an engine instead if available.  If the overhead
+ * turns out to suck, we should maybe switch to use OpenSSL's AES directly
+ * when no engine exists.
+ */
+#ifdef USE_OPENSSL_AES
+#define USE_OPENSSL_EVP
 #endif
 
 /*======================================================================*/
@@ -48,7 +59,9 @@ static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16
 /* Interface to AES code, and counter implementation */
 
 struct aes_cnt_cipher {
-#ifdef USE_OPENSSL_AES
+#if defined(USE_OPENSSL_EVP)
+  EVP_CIPHER_CTX key;
+#elif defined(USE_OPENSSL_AES)
   AES_KEY key;
 #else
   u32 rk[4*(MAXNR+1)];
@@ -67,6 +80,12 @@ struct aes_cnt_cipher {
 static void
 _aes_fill_buf(aes_cnt_cipher_t *cipher)
 {
+  /* We don't currently use OpenSSL's counter mode implementation because:
+   *  1) some versions have known bugs
+   *  2) its attitude towards IVs is not our own
+   *  3) changing the counter position was not trivial, last time I looked.
+   * None of these issues are insurmountable in principle.
+   */
   u32 counter0 = cipher->counter0;
   u32 counter1 = cipher->counter1;
   u8 buf[16];
@@ -80,8 +99,13 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
   buf[ 9] = (counter1 >> 16) & 0xff;
   buf[ 8] = (counter1 >> 24) & 0xff;
 
-#ifdef USE_OPENSSL_AES
-  AES_encrypt(buf, cipher->buf, &(cipher->key));
+#if defined(USE_OPENSSL_EVP)
+  {
+    int outl=16, inl=16;
+    EVP_EncryptUpdate(&cipher->key, cipher->buf, &outl, buf, inl);
+  }
+#elif defined(USE_OPENSSL_AES)
+  AES_encrypt(buf, cipher->buf, &cipher->key);
 #else
   rijndaelEncrypt(cipher->rk, cipher->nr, buf, cipher->buf);
 #endif
@@ -105,7 +129,16 @@ aes_new_cipher()
 void
 aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
 {
-#ifdef USE_OPENSSL_AES
+#if defined(USE_OPENSSL_EVP)
+  const EVP_CIPHER *c;
+  switch (key_bits) {
+    case 128: c = EVP_aes_128_ecb(); break;
+    case 192: c = EVP_aes_192_ecb(); break;
+    case 256: c = EVP_aes_256_ecb(); break;
+    default: tor_assert(0);
+  }
+  EVP_EncryptInit(&cipher->key, c, (const unsigned char*)key, NULL);
+#elif defined(USE_OPENSSL_AES)
   AES_set_encrypt_key((const unsigned char *)key, key_bits, &(cipher->key));
 #else
   cipher->nr = rijndaelKeySetupEnc(cipher->rk, (const unsigned char*)key,
