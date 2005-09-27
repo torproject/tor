@@ -41,7 +41,7 @@ R - are dirservers auto-verifying duplicate nicknames?
     (with the new smartlist sort stuff maybe)
   o setconf SocksBindAddress kills tor if it fails to bind
 
-N - controller libs should support resetconf command.
+  o controller libs should support resetconf command.
 N . Additional controller features
       - Find a way to make event info more extensible
       - change circuit status events to give more details, like purpose,
@@ -97,7 +97,10 @@ N - warn if listening for SOCKS on public IP.
   - cpu fixes:
     - see if we should make use of truncate to retry
     o hardware accelerator support (configure engines.)
-    - hardware accelerator support (use instead of aes.c when reasonable)
+    o hardware accelerator support (use instead of aes.c when reasonable)
+      - Benchmark this somehow to see whether using EVP_foo is slower in the
+        non-engine case than AES_foo.  If so, check for AES engine and fall
+        back to AES_foo when it's not found.
 R   - kill dns workers more slowly
 
   . Directory changes
