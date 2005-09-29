@@ -83,15 +83,15 @@ typedef struct directory_token_t {
 
 /** Rules for how many arguments a keyword can take. */
 typedef enum {
-  NO_ARGS,     /**< No arguments, ever */
-  ARGS,        /**< A list of arguments separated by spaces */
+  NO_ARGS,     /**< No arguments, ever. */
+  ARGS,        /**< A list of arguments separated by spaces. */
   CONCAT_ARGS, /**< The rest of the line, treated as a single argument. */
 } arg_syntax;
 
 /** Rules for whether the keyword needs an object. */
 typedef enum {
-  NO_OBJ,      /**< No object, ever */
-  NEED_OBJ,    /**< Object is required */
+  NO_OBJ,      /**< No object, ever. */
+  NEED_OBJ,    /**< Object is required. */
   NEED_KEY,    /**< Object is required, and must be a public key. */
   OBJ_OK,      /**< Object is optional. */
 } obj_syntax;
@@ -99,11 +99,11 @@ typedef enum {
 /** Rules for where a keyword can appear. */
 typedef enum {
   DIR = 1,        /**< Appears only in directory. */
-  RTR = 2,        /**< Appears only in router descriptor or runningrouters */
+  RTR = 2,        /**< Appears only in router descriptor or runningrouters. */
   NETSTATUS = 4,  /**< v2 or later ("versioned") network status. */
   ANYSIGNED = 7,  /**< Any "full" document (that is, not a router status.) */
   RTRSTATUS = 8,  /**< Router-status portion of a versioned network status. */
-  ANY = 15,       /**< Appears in any document type */
+  ANY = 15,       /**< Appears in any document type. */
 } where_syntax;
 
 /** Table mapping keywords to token value and to argument rules. */
