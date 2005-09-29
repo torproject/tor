@@ -447,7 +447,9 @@ consider_testing_reachability(void)
   }
 
   if (!check_whether_dirport_reachable()) {
-    directory_initiate_command_router(me, DIR_PURPOSE_FETCH_DIR, 1, NULL, NULL, 0);
+    /* ask myself, via tor, for my server descriptor. */
+    directory_initiate_command_router(me, DIR_PURPOSE_FETCH_SERVERDESC,
+                                      1, "authority", NULL, 0);
   }
 }
 
