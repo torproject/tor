@@ -1216,7 +1216,7 @@ test_dir_format(void)
   memset(buf, 0, 2048);
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
 
-  strcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
+  strcpy(buf2, "router Magri 18.244.0.1 9000 0 0\n"
          "platform Tor "VERSION" on ");
   strcat(buf2, get_uname());
   strcat(buf2, "\n"
@@ -1246,7 +1246,7 @@ test_dir_format(void)
   test_assert(rp1);
   test_streq(rp1->address, r1.address);
   test_eq(rp1->or_port, r1.or_port);
-  test_eq(rp1->dir_port, r1.dir_port);
+  //test_eq(rp1->dir_port, r1.dir_port);
   test_eq(rp1->bandwidthrate, r1.bandwidthrate);
   test_eq(rp1->bandwidthburst, r1.bandwidthburst);
   test_eq(rp1->bandwidthcapacity, r1.bandwidthcapacity);
