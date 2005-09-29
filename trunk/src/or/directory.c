@@ -294,8 +294,9 @@ connection_dir_request_failed(connection_t *conn)
   }
 }
 
-/** Called when an attempt to download one or network status documents
- * on connection <b>conn</b> failed.
+/** Called when an attempt to download one or more network status
+ * documents on connection <b>conn</b> failed. Decide whether to
+ * retry the fetch now, later, or never.
  */
 static void
 connection_dir_download_networkstatus_failed(connection_t *conn)
@@ -324,7 +325,7 @@ connection_dir_download_networkstatus_failed(connection_t *conn)
   }
 }
 
-/** Called when an attempt to download one or network status documents
+/** Called when an attempt to download one or more router descriptors
  * on connection <b>conn</b> failed.
  */
 static void
@@ -958,6 +959,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       char *next = strstr(cp, "\nnetwork-status-version");
       if (next)
         next[1] = '\0';
+      /* learn from it, and then remove it from 'which' */
       if (router_set_networkstatus(cp, time(NULL), NS_FROM_DIR, which)<0)
         break;
       if (next) {
@@ -967,7 +969,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       else
         break;
     }
-    routers_update_all_from_networkstatus();/*launches router downloads*/
+    routers_update_all_from_networkstatus(); /*launches router downloads*/
     directory_info_has_arrived(time(NULL), 0);
     if (which) {
       if (smartlist_len(which)) {
@@ -1006,9 +1008,10 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
+    /* as we learn from them, we remove them from 'which' */
+    router_load_routers_from_string(body, 0, which);
+    directory_info_has_arrived(time(NULL), 0);
     if (which) {
-      router_load_routers_from_string(body, 0, which);
-      directory_info_has_arrived(time(NULL), 0);
       log_fn(LOG_NOTICE, "Received %d/%d routers.",
              n_asked_for-smartlist_len(which), n_asked_for);
       if (smartlist_len(which)) {
