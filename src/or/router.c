@@ -404,6 +404,34 @@ check_whether_dirport_reachable(void)
          can_reach_dir_port;
 }
 
+/** Look at a variety of factors, and return 0 if we don't want to
+ * advertise the fact that we have a DirPort open. Else return the
+ * DirPort we want to advertise. */
+static int
+decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
+{
+  if (!router->dir_port) /* short circuit the rest of the function */
+    return 0;
+  if (authdir_mode(options)) /* always publish */
+    return router->dir_port;
+  if (we_are_hibernating())
+    return 0;
+  if (!check_whether_dirport_reachable())
+    return 0;
+  if (router->bandwidthcapacity >= router->bandwidthrate) {
+    /* check if we might potentially hibernate. */
+    if (options->AccountingMax != 0)
+      return 0;
+    /* also check if we're advertising a small amount, and have
+       a "boring" DirPort. */
+    if (router->bandwidthrate < 50000 && router->dir_port > 1024)
+      return 0;
+  }
+
+  /* Sounds like a great idea. Let's publish it. */
+  return router->dir_port;
+}
+
 /**DOCDOC*/
 void
 consider_testing_reachability(void)
@@ -739,8 +767,7 @@ router_rebuild_descriptor(int force)
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = options->ORPort;
-  ri->dir_port = hibernating ?
-                 0 : options->DirPort;
+  ri->dir_port = options->DirPort;
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
@@ -934,8 +961,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     router->nickname,
     router->address,
     router->or_port,
-    (authdir_mode(options) || check_whether_dirport_reachable()) ?
-      router->dir_port : 0,
+    decide_to_advertise_dirport(options, router),
     router->platform,
     published,
     fingerprint,
