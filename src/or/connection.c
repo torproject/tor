@@ -2000,8 +2000,10 @@ assert_connection_ok(connection_t *conn, time_t now)
     tor_assert(!conn->cpath_layer);
     tor_assert(!conn->package_window);
     tor_assert(!conn->deliver_window);
+#if 0
     tor_assert(!conn->done_sending);
     tor_assert(!conn->done_receiving);
+#endif
   } else {
     /* XXX unchecked: package window, deliver window. */
   }

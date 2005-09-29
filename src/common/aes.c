@@ -115,7 +115,7 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
  * Return a newly allocated counter-mode AES128 cipher implementation.
  */
 aes_cnt_cipher_t*
-aes_new_cipher()
+aes_new_cipher(void)
 {
   aes_cnt_cipher_t* result = tor_malloc_zero(sizeof(aes_cnt_cipher_t));
 

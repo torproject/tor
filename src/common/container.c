@@ -43,7 +43,7 @@ struct smartlist_t {
 /** Allocate and return an empty smartlist.
  */
 smartlist_t *
-smartlist_create() {
+smartlist_create(void) {
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
   sl->num_used = 0;
   sl->capacity = SMARTLIST_DEFAULT_CAPACITY;

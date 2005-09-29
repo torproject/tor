@@ -591,24 +591,29 @@ struct connection_t {
   uint8_t type; /**< What kind of connection is this? */
   uint8_t state; /**< Current state of this connection. */
   uint8_t purpose; /**< Only used for DIR types currently. */
-  uint8_t wants_to_read; /**< Boolean: should we start reading again once
-                          * the bandwidth throttler allows it?
-                          */
-  uint8_t wants_to_write; /**< Boolean: should we start writing again once
-                           * the bandwidth throttler allows reads?
-                           */
+  unsigned wants_to_read:1; /**< Boolean: should we start reading again once
+                            * the bandwidth throttler allows it?
+                            */
+  unsigned wants_to_write:1; /**< Boolean: should we start writing again once
+                             * the bandwidth throttler allows reads?
+                             */
+  unsigned marked_for_close:1; /**< Boolean: should we close this conn on the
+                               * next iteration of the main loop?
+                               */
+  unsigned hold_open_until_flushed:1; /**< Despite this connection's being
+                                      * marked for close, do we flush it
+                                      * before closing it?
+                                      */
+  unsigned has_sent_end:1; /**< For debugging; only used on edge connections.
+                         * Set once we've set the stream end,
+                         * and check in circuit_about_to_close_connection(). */
+
   int s; /**< Our socket; -1 if this connection is closed. */
   int poll_index; /* XXXX rename. */
   struct event *read_event; /**< libevent event structure. */
   struct event *write_event; /**< libevent event structure. */
-  int marked_for_close; /**< Boolean: should we close this conn on the next
-                         * iteration of the main loop?
-                         */
   const char *marked_for_close_file; /**< For debugging: in which file were
                                       * we marked for close? */
-  int hold_open_until_flushed; /**< Despite this connection's being marked
-                                * for close, do we flush it before closing it?
-                                */
 
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
   int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn? */
@@ -668,10 +673,10 @@ struct connection_t {
   int deliver_window; /**< How many more relay cells can end at me? (Edge
                        * only.) */
 
+#if 0
   int done_sending; /**< For half-open connections; not used currently. */
   int done_receiving; /**< For half-open connections; not used currently. */
-  char has_sent_end; /**< For debugging: set once we've set the stream end,
-                        and check in circuit_about_to_close_connection(). */
+#endif
   struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
                                  * connection is using. */
 
@@ -805,9 +810,9 @@ typedef struct routerstatus_t {
 /** DOCDOC */
 typedef struct local_routerstatus_t {
   routerstatus_t status;
+  time_t next_attempt_at; /**< When should we try this descriptor again? */
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
-  time_t next_attempt_at; /**< When should we try this descriptor again? */
   unsigned int should_download:1; /**< DOCDOC */
 } local_routerstatus_t;
 
@@ -1101,9 +1106,9 @@ typedef struct exit_redirect_t {
   uint16_t port_min;
   uint16_t port_max;
 
-  int is_redirect;
   uint32_t addr_dest;
   uint16_t port_dest;
+  unsigned is_redirect:1;
 } exit_redirect_t;
 
 typedef struct config_line_t {

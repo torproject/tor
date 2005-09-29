@@ -216,7 +216,7 @@ crypto_global_init(int useAccel)
 
 /** Uninitialize the crypto library. Return 0 on success, -1 on failure.
  */
-int crypto_global_cleanup()
+int crypto_global_cleanup(void)
 {
   ERR_free_strings();
 #ifndef NO_ENGINES
@@ -354,7 +354,7 @@ crypto_create_init_cipher(const char *key, int encrypt_mode)
 
 /** Allocate and return a new symmetric cipher.
  */
-crypto_cipher_env_t *crypto_new_cipher_env()
+crypto_cipher_env_t *crypto_new_cipher_env(void)
 {
   crypto_cipher_env_t *env;
 
@@ -1303,7 +1303,7 @@ static void init_dh_param(void) {
 
 /** Allocate and return a new DH object for a key exchange.
  */
-crypto_dh_env_t *crypto_dh_new()
+crypto_dh_env_t *crypto_dh_new(void)
 {
   crypto_dh_env_t *res = NULL;
 

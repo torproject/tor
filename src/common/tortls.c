@@ -177,6 +177,9 @@ tor_tls_free_all(void)
 static int always_accept_verify_cb(int preverify_ok,
                                    X509_STORE_CTX *x509_ctx)
 {
+  /* avoid "unused parameter" warning. */
+  preverify_ok = 0;
+  x509_ctx = NULL;
   return 1;
 }
 
