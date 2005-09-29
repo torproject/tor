@@ -319,7 +319,7 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
   *outp++ = '\r';
   *outp++ = '\n';
   *outp = '\0'; /* NUL-terminate just in case. */
-  tor_assert((outp - *out) <= (sz_out));
+  tor_assert((outp - *out) <= (int)sz_out);
   return outp - *out;
 }
 

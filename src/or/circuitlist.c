@@ -11,6 +11,10 @@ const char circuitlist_c_id[] = "$Id$";
  **/
 
 #include "or.h"
+
+/* Define RB_AUGMENT to avoid warnings about if statements with emtpy bodies.
+ */
+#define RB_AUGMENT(x) do{}while(0)
 #include "tree.h"
 
 /********* START VARIABLES **********/
