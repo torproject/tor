@@ -1008,10 +1008,14 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    /* as we learn from them, we remove them from 'which' */
-    router_load_routers_from_string(body, 0, which);
-    directory_info_has_arrived(time(NULL), 0);
     if (which) {
+      /* We only call these if it's a "fp/" request, since
+       * it's the only way we'll be adding new server descriptors
+       * and thus the only way we'd affect has_fetched_directory. */
+
+      /* as we learn from them, we remove them from 'which' */
+      router_load_routers_from_string(body, 0, which);
+      directory_info_has_arrived(time(NULL), 0);
       log_fn(LOG_NOTICE, "Received %d/%d routers.",
              n_asked_for-smartlist_len(which), n_asked_for);
       if (smartlist_len(which)) {
@@ -1019,6 +1023,16 @@ connection_dir_client_reached_eof(connection_t *conn)
       }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
+    }
+    if (conn->requested_resource &&
+        !strcmpstart(conn->requested_resource,"authority")) {
+      /* this might have been a dirport reachability test. see if it is. */
+      routerinfo_t *me = router_get_my_routerinfo();
+      if (me &&
+          !memcmp(me->identity_digest, conn->identity_digest, DIGEST_LEN) &&
+          me->addr == conn->addr &&
+          me->dir_port == conn->port)
+        router_dirport_found_reachable();
     }
   }
 
