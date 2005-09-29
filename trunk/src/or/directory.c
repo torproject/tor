@@ -148,7 +148,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
         if (!fascist_firewall_allows_address(ds->addr,ds->dir_port))
           continue;
       }
-      directory_initiate_command_trusted_dir(ds, purpose, purpose_is_private(purpose),
+      directory_initiate_command_trusted_dir(ds, purpose,
+                                             purpose_is_private(purpose),
                                              NULL, payload, payload_len);
     });
 }
@@ -216,9 +217,11 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   }
 
   if (r)
-    directory_initiate_command_router(r, purpose, !directconn, resource, NULL, 0);
+    directory_initiate_command_router(r, purpose, !directconn,
+                                      resource, NULL, 0);
   else if (ds)
-    directory_initiate_command_trusted_dir(ds, purpose, !directconn, resource, NULL, 0);
+    directory_initiate_command_trusted_dir(ds, purpose, !directconn,
+                                           resource, NULL, 0);
   else {
     log_fn(LOG_NOTICE,"No running dirservers known. Will try again later. (purpose %d)",
            purpose);
@@ -259,8 +262,9 @@ directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
                                        const char *resource,
                                        const char *payload, size_t payload_len)
 {
-  directory_initiate_command(dirserv->address, dirserv->addr,dirserv->dir_port,
-               NULL, dirserv->digest, purpose, private_connection, resource,
+  directory_initiate_command(dirserv->address, dirserv->addr,
+               dirserv->dir_port, NULL, dirserv->digest, purpose,
+               private_connection, resource,
                payload, payload_len);
 }
 
@@ -964,7 +968,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         break;
     }
     routers_update_all_from_networkstatus();/*launches router downloads*/
-    directory_info_has_arrived(time(NULL),0);
+    directory_info_has_arrived(time(NULL), 0);
     if (which) {
       if (smartlist_len(which)) {
         dir_networkstatus_download_failed(which);
@@ -992,19 +996,19 @@ connection_dir_client_reached_eof(connection_t *conn)
              "Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/server/%s\". I'll try again soon.",
              status_code, reason, conn->address, conn->port,
              conn->requested_resource);
-      tor_free(body); tor_free(headers); tor_free(reason);
       if (!which) {
         connection_dir_download_routerdesc_failed(conn);
       } else {
         dir_routerdesc_download_failed(which);
         SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
         smartlist_free(which);
-        return -1;
       }
+      tor_free(body); tor_free(headers); tor_free(reason);
+      return -1;
     }
-    router_load_routers_from_string(body, 0, which);
-    directory_info_has_arrived(time(NULL),0);
     if (which) {
+      router_load_routers_from_string(body, 0, which);
+      directory_info_has_arrived(time(NULL), 0);
       log_fn(LOG_NOTICE, "Received %d/%d routers.",
              n_asked_for-smartlist_len(which), n_asked_for);
       if (smartlist_len(which)) {
