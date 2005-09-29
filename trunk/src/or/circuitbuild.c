@@ -979,6 +979,8 @@ circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
   uint16_t *port;
   smartlist_t *sl = circuit_get_unhandled_ports(now);
   smartlist_t *LongLivedServices = get_options()->LongLivedPorts;
+  tor_assert(need_uptime);
+  tor_assert(need_capacity);
   enough = (smartlist_len(sl) == 0);
   for (i = 0; i < smartlist_len(sl); ++i) {
     port = smartlist_get(sl, i);
@@ -1380,6 +1382,8 @@ choose_good_middle_server(uint8_t purpose,
   routerinfo_t *r, *choice;
   crypt_path_t *cpath;
   smartlist_t *excluded;
+  tor_assert(_CIRCUIT_PURPOSE_MIN <= purpose &&
+             purpose <= _CIRCUIT_PURPOSE_MAX);
 
   log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
   excluded = smartlist_create();

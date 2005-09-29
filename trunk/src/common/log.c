@@ -258,7 +258,7 @@ void _log_fn(int severity, const char *format, ...)
 #endif
 
 /** Close all open log files. */
-void close_logs()
+void close_logs(void)
 {
   logfile_t *victim;
   while (logfiles) {
@@ -271,7 +271,7 @@ void close_logs()
 }
 
 /** Close and re-open all log files; used to rotate logs on SIGHUP. */
-void reset_logs()
+void reset_logs(void)
 {
   logfile_t *lf = logfiles;
   while (lf) {

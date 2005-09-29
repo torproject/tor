@@ -303,7 +303,7 @@ dirserv_get_nickname_by_digest(const char *digest)
 
 /** Clear the current fingerprint list. */
 void
-dirserv_free_fingerprint_list()
+dirserv_free_fingerprint_list(void)
 {
   int i;
   fingerprint_entry_t *ent;
@@ -555,7 +555,7 @@ dirserver_getinfo_unregistered(const char *question)
  * generated one.
  */
 void
-directory_set_dirty()
+directory_set_dirty(void)
 {
   time_t now = time(NULL);
 

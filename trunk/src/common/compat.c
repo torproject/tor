@@ -817,7 +817,7 @@ spawn_func(int (*func)(void *), void *data)
 /** End the current thread/process.
  */
 void
-spawn_exit()
+spawn_exit(void)
 {
 #if defined(USE_WIN32_THREADS)
   _endthread();

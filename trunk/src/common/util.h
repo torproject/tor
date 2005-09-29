@@ -47,24 +47,32 @@
  } } while (0)
 #endif
 
+#ifdef USE_DMALLOC
+#define DMALLOC_PARAMS const char *file, const int line,
+#define DMALLOC_ARGS _SHORT_FILE_, __LINE__,
+#else
+#define DMALLOC_PARAMS
+#define DMALLOC_ARGS
+#endif
+
 /** Define this if you want Tor to crash when any problem comes up,
  * so you can get a coredump and track things down. */
 // #define tor_fragile_assert() tor_assert(0)
 #define tor_fragile_assert()
 
 /* Memory management */
-void *_tor_malloc(const char *file, const int line, size_t size);
-void *_tor_malloc_zero(const char *file, const int line, size_t size);
-void *_tor_realloc(const char *file, const int line, void *ptr, size_t size);
-char *_tor_strdup(const char *file, const int line, const char *s);
-char *_tor_strndup(const char *file, const int line, const char *s, size_t n);
+void *_tor_malloc(DMALLOC_PARAMS size_t size);
+void *_tor_malloc_zero(DMALLOC_PARAMS size_t size);
+void *_tor_realloc(DMALLOC_PARAMS void *ptr, size_t size);
+char *_tor_strdup(DMALLOC_PARAMS const char *s);
+char *_tor_strndup(DMALLOC_PARAMS const char *s, size_t n);
 #define tor_free(p) do { if (p) {free(p); (p)=NULL;} } while (0)
 
-#define tor_malloc(size)       _tor_malloc(_SHORT_FILE_, __LINE__, size)
-#define tor_malloc_zero(size)  _tor_malloc_zero(_SHORT_FILE_, __LINE__, size)
-#define tor_realloc(ptr, size) _tor_realloc(_SHORT_FILE_, __LINE__, ptr, size)
-#define tor_strdup(s)          _tor_strdup(_SHORT_FILE_, __LINE__, s)
-#define tor_strndup(s, n)      _tor_strndup(_SHORT_FILE_, __LINE__, s, n)
+#define tor_malloc(size)       _tor_malloc(DMALLOC_ARGS size)
+#define tor_malloc_zero(size)  _tor_malloc_zero(DMALLOC_ARGS size)
+#define tor_realloc(ptr, size) _tor_realloc(DMALLOC_ARGS ptr, size)
+#define tor_strdup(s)          _tor_strdup(DMALLOC_ARGS s)
+#define tor_strndup(s, n)      _tor_strndup(DMALLOC_ARGS s, n)
 
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
