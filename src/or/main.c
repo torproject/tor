@@ -529,8 +529,8 @@ get_status_fetch_period(or_options_t *options)
     return 30*60;
 }
 
-/** This function is called whenever we successfully pull down some directory
- * information. */
+/** This function is called whenever we successfully pull down some new
+ * network statuses or server descriptors. */
 void
 directory_info_has_arrived(time_t now, int from_cache)
 {
