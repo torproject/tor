@@ -2343,7 +2343,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
 
 /** Return new list of ID fingerprints for superseded routers.  A router is
  * superseded if any network-status has a router with a different digest
- * published more recently, or it it is listed in the network-status but not
+ * published more recently, or if it is listed in the network-status but not
  * in the router list.
  */
 static smartlist_t *
