@@ -93,6 +93,8 @@ router_reload_networkstatus(void)
         tor_free(s);
       }
     });
+  SMARTLIST_FOREACH(entries, char *, fn, tor_free(fn));
+  smartlist_free(entries);
   networkstatus_list_clean(time(NULL));
   routers_update_all_from_networkstatus();
   return 0;
