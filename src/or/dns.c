@@ -81,8 +81,10 @@ static SPLAY_HEAD(cache_tree, cached_resolve_t) cache_root;
 
 /** Function to compare hashed resolves on their addresses; used to
  * implement splay trees. */
-static int compare_cached_resolves(cached_resolve_t *a,
-                                   cached_resolve_t *b) {
+static int
+compare_cached_resolves(cached_resolve_t *a,
+                        cached_resolve_t *b)
+{
   /* make this smarter one day? */
   return strncmp(a->address, b->address, MAX_ADDRESSLEN);
 }

@@ -50,7 +50,8 @@ static addr_policy_t *authdir_invalid_policy = NULL;
 /** Parse authdir policy strings from the configuration.
  */
 void
-parse_authdir_policy(void) {
+parse_authdir_policy(void)
+{
   addr_policy_t *n;
   if (authdir_reject_policy) {
     addr_policy_free(authdir_reject_policy);

@@ -46,7 +46,9 @@ typedef struct logfile_t {
 } logfile_t;
 
 /** Helper: map a log severity to descriptive string. */
-static INLINE const char *sev_to_string(int severity) {
+static INLINE const char *
+sev_to_string(int severity)
+{
   switch (severity) {
     case LOG_DEBUG:   return "debug";
     case LOG_INFO:    return "info";
@@ -97,7 +99,8 @@ _log_prefix(char *buf, size_t buf_len, int severity)
  *
  * Return -1 if the log is broken and needs to be deleted, else return 0.
  */
-static int log_tor_version(logfile_t *lf, int reset)
+static int
+log_tor_version(logfile_t *lf, int reset)
 {
   char buf[256];
   size_t n;
@@ -132,9 +135,10 @@ static int log_tor_version(logfile_t *lf, int reset)
  * than once.)  Return a pointer to the first character of the message
  * portion of the formatted string.
  */
-static INLINE char *format_msg(char *buf, size_t buf_len,
-                              int severity, const char *funcname,
-                              const char *format, va_list ap)
+static INLINE char *
+format_msg(char *buf, size_t buf_len,
+           int severity, const char *funcname,
+           const char *format, va_list ap)
 {
   size_t n;
   int r;
@@ -228,7 +232,8 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
 }
 
 /** Output a message to the log. */
-void _log(int severity, const char *format, ...)
+void
+_log(int severity, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -238,7 +243,8 @@ void _log(int severity, const char *format, ...)
 
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
 #ifdef __GNUC__
-void _log_fn(int severity, const char *fn, const char *format, ...)
+void
+_log_fn(int severity, const char *fn, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -247,7 +253,8 @@ void _log_fn(int severity, const char *fn, const char *format, ...)
 }
 #else
 const char *_log_fn_function_name=NULL;
-void _log_fn(int severity, const char *format, ...)
+void
+_log_fn(int severity, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -258,7 +265,8 @@ void _log_fn(int severity, const char *format, ...)
 #endif
 
 /** Close all open log files. */
-void close_logs(void)
+void
+close_logs(void)
 {
   logfile_t *victim;
   while (logfiles) {
@@ -271,7 +279,8 @@ void close_logs(void)
 }
 
 /** Close and re-open all log files; used to rotate logs on SIGHUP. */
-void reset_logs(void)
+void
+reset_logs(void)
 {
   logfile_t *lf = logfiles;
   while (lf) {
@@ -291,7 +300,9 @@ void reset_logs(void)
  * called). After this function is called, the caller shouldn't refer
  * to <b>victim</b> anymore.
  */
-static void delete_log(logfile_t *victim) {
+static void
+delete_log(logfile_t *victim)
+{
   logfile_t *tmpl;
   if (victim == logfiles)
     logfiles = victim->next;
@@ -307,7 +318,8 @@ static void delete_log(logfile_t *victim) {
 
 /** Helper: release system resources (but not memory) held by a single
  * logfile_t. */
-static void close_log(logfile_t *victim)
+static void
+close_log(logfile_t *victim)
 {
   if (victim->needs_close && victim->file) {
     fclose(victim->file);
@@ -324,7 +336,8 @@ static void close_log(logfile_t *victim)
 /** Helper: reset a single logfile_t.  For a file log, this involves
  * closing and reopening the log, and maybe writing the version.  For
  * other log types, do nothing. */
-static int reset_log(logfile_t *lf)
+static int
+reset_log(logfile_t *lf)
 {
   if (lf->needs_close) {
     if (fclose(lf->file)==EOF ||
@@ -340,7 +353,8 @@ static int reset_log(logfile_t *lf)
 
 /** Add a log handler to send all messages of severity <b>loglevel</b>
  * or higher to <b>stream</b>. */
-void add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *stream)
+void
+add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *stream)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
@@ -355,7 +369,8 @@ void add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *st
 /** Add a log handler to receive messages during startup (before the real
  * logs are initialized).
  */
-void add_temp_log(void)
+void
+add_temp_log(void)
 {
   add_stream_log(LOG_NOTICE, LOG_ERR, "<temp>", stdout);
   logfiles->is_temporary = 1;
@@ -366,7 +381,8 @@ void add_temp_log(void)
  * <b>logLevelmin</b> and <b>logLevelMax</b> to the function
  * <b>cb</b>.
  */
-int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
+int
+add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
@@ -379,8 +395,9 @@ int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
   return 0;
 }
 
-void change_callback_log_severity(int loglevelMin, int loglevelMax,
-                                  log_callback cb)
+void
+change_callback_log_severity(int loglevelMin, int loglevelMax,
+                             log_callback cb)
 {
   logfile_t *lf;
   for (lf = logfiles; lf; lf = lf->next) {
@@ -392,7 +409,8 @@ void change_callback_log_severity(int loglevelMin, int loglevelMax,
 }
 
 /** Close any log handlers added by add_temp_log or marked by mark_logs_temp */
-void close_temp_logs(void)
+void
+close_temp_logs(void)
 {
   logfile_t *lf, **p;
   for (p = &logfiles; *p; ) {
@@ -410,7 +428,8 @@ void close_temp_logs(void)
 }
 
 /** Configure all log handles to be closed by close_temp_logs */
-void mark_logs_temp(void)
+void
+mark_logs_temp(void)
 {
   logfile_t *lf;
   for (lf = logfiles; lf; lf = lf->next)
@@ -422,7 +441,8 @@ void mark_logs_temp(void)
  * the logfile fails, -1 is returned and errno is set appropriately
  * (by fopen).
  */
-int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
+int
+add_file_log(int loglevelMin, int loglevelMax, const char *filename)
 {
   FILE *f;
   f = fopen(filename, "a");
@@ -439,7 +459,8 @@ int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
 /**
  * Add a log handler to send messages to they system log facility.
  */
-int add_syslog_log(int loglevelMin, int loglevelMax)
+int
+add_syslog_log(int loglevelMin, int loglevelMax)
 {
   logfile_t *lf;
   if (syslog_count++ == 0)
@@ -459,7 +480,9 @@ int add_syslog_log(int loglevelMin, int loglevelMax)
 
 /** If <b>level</b> is a valid log severity, return the corresponding
  * numeric value.  Otherwise, return -1. */
-int parse_log_level(const char *level) {
+int
+parse_log_level(const char *level)
+{
   if (!strcasecmp(level, "err"))
     return LOG_ERR;
   if (!strcasecmp(level, "warn"))
@@ -474,13 +497,15 @@ int parse_log_level(const char *level) {
 }
 
 /** Return the string equivalent of a given log level. */
-const char *log_level_to_string(int level)
+const char *
+log_level_to_string(int level)
 {
   return sev_to_string(level);
 }
 
 /** Return the least severe log level that any current log is interested in. */
-int get_min_log_level(void)
+int
+get_min_log_level(void)
 {
   logfile_t *lf;
   int min = LOG_ERR;
@@ -492,7 +517,8 @@ int get_min_log_level(void)
 }
 
 /** Switch all logs to output at most verbose level. */
-void switch_logs_debug(void)
+void
+switch_logs_debug(void)
 {
   logfile_t *lf;
   for (lf = logfiles; lf; lf=lf->next) {
@@ -531,16 +557,24 @@ libevent_logging_callback(int severity, const char *msg)
       break;
   }
 }
-void configure_libevent_logging(void)
+void
+configure_libevent_logging(void)
 {
   event_set_log_callback(libevent_logging_callback);
 }
-void suppress_libevent_log_msg(const char *msg)
+void
+suppress_libevent_log_msg(const char *msg)
 {
   suppress_msg = msg;
 }
 #else
-void configure_libevent_logging(void) {}
-void suppress_libevent_log_msg(const char *msg) {}
+void
+configure_libevent_logging(void)
+{
+}
+void
+suppress_libevent_log_msg(const char *msg)
+{
+}
 #endif
 

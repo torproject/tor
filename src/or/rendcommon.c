@@ -12,13 +12,16 @@ const char rendcommon_c_id[] = "$Id$";
 #include "or.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */
-int rend_cmp_service_ids(const char *one, const char *two) {
+int
+rend_cmp_service_ids(const char *one, const char *two)
+{
   return strcasecmp(one,two);
 }
 
 /** Free the storage held by the service descriptor <b>desc</b>.
  */
-void rend_service_descriptor_free(rend_service_descriptor_t *desc)
+void
+rend_service_descriptor_free(rend_service_descriptor_t *desc)
 {
   int i;
   if (desc->pk)

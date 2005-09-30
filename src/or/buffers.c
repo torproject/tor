@@ -289,7 +289,8 @@ buf_shrink(buf_t *buf)
 
 /** Remove the first <b>n</b> bytes from buf. */
 static INLINE void
-buf_remove_from_front(buf_t *buf, size_t n) {
+buf_remove_from_front(buf_t *buf, size_t n)
+{
   tor_assert(buf->datalen >= n);
   buf->datalen -= n;
   buf_total_used -= n;
@@ -313,7 +314,8 @@ buf_nul_terminate(buf_t *buf)
 
 /** Create and return a new buf with capacity <b>size</b>. */
 buf_t *
-buf_new_with_capacity(size_t size) {
+buf_new_with_capacity(size_t size)
+{
   buf_t *buf;
   buf = tor_malloc_zero(sizeof(buf_t));
   buf->magic = BUFFER_MAGIC;
@@ -646,7 +648,8 @@ flush_buf_tls_impl(tor_tls *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 
 /** As flush_buf(), but writes data to a TLS connection.
  */
-int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
+int
+flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
 {
   int r;
   size_t flushed=0;
@@ -1198,7 +1201,8 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
 
 /** Log an error and exit if <b>buf</b> is corrupted.
  */
-void assert_buf_ok(buf_t *buf)
+void
+assert_buf_ok(buf_t *buf)
 {
   tor_assert(buf);
   tor_assert(buf->magic == BUFFER_MAGIC);

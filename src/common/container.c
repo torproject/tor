@@ -43,7 +43,8 @@ struct smartlist_t {
 /** Allocate and return an empty smartlist.
  */
 smartlist_t *
-smartlist_create(void) {
+smartlist_create(void)
+{
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
   sl->num_used = 0;
   sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
@@ -55,7 +56,8 @@ smartlist_create(void) {
  * list's elements.
  */
 void
-smartlist_free(smartlist_t *sl) {
+smartlist_free(smartlist_t *sl)
+{
   free(sl->list);
   free(sl);
 }
@@ -66,7 +68,9 @@ smartlist_free(smartlist_t *sl) {
  * currently in the list, reduce the list's capacity as much as
  * possible without losing elements.
  */
-void smartlist_set_capacity(smartlist_t *sl, int n) {
+void
+smartlist_set_capacity(smartlist_t *sl, int n)
+{
   if (n < sl->num_used)
     n = sl->num_used;
   if (sl->capacity != n) {
@@ -78,7 +82,8 @@ void smartlist_set_capacity(smartlist_t *sl, int n) {
 /** Remove all elements from the list.
  */
 void
-smartlist_clear(smartlist_t *sl) {
+smartlist_clear(smartlist_t *sl)
+{
   sl->num_used = 0;
 }
 
@@ -95,7 +100,8 @@ smartlist_truncate(smartlist_t *sl, int len)
 
 /** Append element to the end of the list. */
 void
-smartlist_add(smartlist_t *sl, void *element) {
+smartlist_add(smartlist_t *sl, void *element)
+{
   if (sl->num_used >= sl->capacity) {
     int higher = sl->capacity * 2;
     tor_assert(higher > sl->capacity); /* detect overflow */

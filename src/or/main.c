@@ -1377,7 +1377,8 @@ tor_free_all(int postfork)
 
 /** Do whatever cleanup is necessary before shutting Tor down. */
 void
-tor_cleanup(void) {
+tor_cleanup(void)
+{
   or_options_t *options = get_options();
   /* Remove our pid file. We don't care if there was an error when we
    * unlink, nothing we could do about it anyways. */
@@ -1442,7 +1443,8 @@ do_hash_password(void)
 /** Checks if torrc is present in the same directory
  *  as the service executable.
  *  Return 1 if it is, 0 if it is not present. */
-static int nt_torrc_is_present()
+static int
+nt_torrc_is_present()
 {
   HANDLE hFile;
   TCHAR szPath[_MAX_PATH];

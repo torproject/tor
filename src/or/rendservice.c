@@ -62,7 +62,9 @@ typedef struct rend_service_t {
 static smartlist_t *rend_service_list = NULL;
 
 /** Return the number of rendezvous services we have configured. */
-int num_rend_services(void) {
+int
+num_rend_services(void)
+{
   if (!rend_service_list)
     return 0;
   return smartlist_len(rend_service_list);
@@ -374,7 +376,8 @@ rend_service_get_by_pk_digest(const char* digest)
  * to have good uptime. Else return 0.
  */
 static int
-rend_service_requires_uptime(rend_service_t *service) {
+rend_service_requires_uptime(rend_service_t *service)
+{
   int i;
   rend_service_port_config_t *p;
 

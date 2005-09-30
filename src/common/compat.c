@@ -440,7 +440,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
  * have a low soft limit.) Make sure we set it to at least
  * <b>limit</b>. Return a new limit if we can, or -1 if we fail. */
 int
-set_max_file_descriptors(unsigned long limit, unsigned long cap) {
+set_max_file_descriptors(unsigned long limit, unsigned long cap)
+{
 #ifndef HAVE_GETRLIMIT
   log_fn(LOG_INFO,"This platform is missing getrlimit(). Proceeding.");
   if (limit > cap) {
@@ -488,7 +489,8 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap) {
  * success.  On failure, log and return -1.
  */
 int
-switch_id(char *user, char *group) {
+switch_id(char *user, char *group)
+{
 #ifndef MS_WINDOWS
   struct passwd *pw = NULL;
   struct group *gr = NULL;
@@ -1041,7 +1043,8 @@ struct tor_mutex_t {
  * socket to get the error.
  */
 #ifdef MS_WINDOWS
-int tor_socket_errno(int sock)
+int
+tor_socket_errno(int sock)
 {
   int optval, optvallen=sizeof(optval);
   int err = WSAGetLastError();
