@@ -550,7 +550,8 @@ strmap_set(strmap_t *map, const char *key, void *val)
 /** Return the current value associated with <b>key</b>, or NULL if no
  * value is set.
  */
-void *strmap_get(strmap_t *map, const char *key)
+void *
+strmap_get(strmap_t *map, const char *key)
 {
   strmap_entry_t *resolve;
   strmap_entry_t search;

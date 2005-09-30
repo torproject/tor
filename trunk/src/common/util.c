@@ -115,7 +115,8 @@ const char util_c_id[] = "$Id$";
  * <b>file</b> and <b>line</b> are used if dmalloc is enabled, and
  * ignored otherwise.
  */
-void *_tor_malloc(DMALLOC_PARAMS size_t size)
+void *
+_tor_malloc(DMALLOC_PARAMS size_t size)
 {
   void *result;
 

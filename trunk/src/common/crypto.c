@@ -242,7 +242,8 @@ crypto_global_cleanup(void)
 }
 
 /** used by tortls.c: wrap an RSA* in a crypto_pk_env_t. */
-crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
+crypto_pk_env_t *
+_crypto_new_pk_env_rsa(RSA *rsa)
 {
   crypto_pk_env_t *env;
   tor_assert(rsa);
@@ -253,14 +254,16 @@ crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
 }
 
 /** used by tortls.c: return the RSA* from a crypto_pk_env_t. */
-RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
+RSA *
+_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {
   return env->key;
 }
 
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_env_t.  Iff
  * private is set, include the private-key portion of the key. */
-EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
+EVP_PKEY *
+_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
 {
   RSA *key = NULL;
   EVP_PKEY *pkey = NULL;
@@ -287,7 +290,8 @@ EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
 
 /** Used by tortls.c: Get the DH* from a crypto_dh_env_t.
  */
-DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh)
+DH *
+_crypto_dh_env_get_dh(crypto_dh_env_t *dh)
 {
   return dh->dh;
 }
@@ -295,7 +299,8 @@ DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh)
 /** Allocate and return storage for a public key.  The key itself will not yet
  * be set.
  */
-crypto_pk_env_t *crypto_new_pk_env(void)
+crypto_pk_env_t *
+crypto_new_pk_env(void)
 {
   RSA *rsa;
 
@@ -358,7 +363,8 @@ crypto_create_init_cipher(const char *key, int encrypt_mode)
 
 /** Allocate and return a new symmetric cipher.
  */
-crypto_cipher_env_t *crypto_new_cipher_env(void)
+crypto_cipher_env_t *
+crypto_new_cipher_env(void)
 {
   crypto_cipher_env_t *env;
 

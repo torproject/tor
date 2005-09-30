@@ -484,7 +484,8 @@ add_obs(bw_array_t *b, time_t when, int n)
 
 /** Allocate, initialize, and return a new bw_array.
  */
-static bw_array_t *bw_array_new(void)
+static bw_array_t *
+bw_array_new(void)
 {
   bw_array_t *b;
   time_t start;
