@@ -516,9 +516,9 @@ AC_DEFINE([LOCALSTATEDIR], [], [Default location to store state files.])
 CFLAGS="$CFLAGS -Wall -g -O2"
 # Add some more warnings which we use in the cvs version but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
-#CFLAGS="$CFLAGS -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls"
+#CFLAGS="$CFLAGS -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline"
 # Add these in when you feel like fun.
-#CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement"
+#CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement -Wold-style-definitions"
 
 echo "confdir: $CONFDIR"
 
