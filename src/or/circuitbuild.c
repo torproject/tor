@@ -1672,6 +1672,16 @@ clear_helper_nodes(void)
   helper_nodes_changed();
 }
 
+/** Release all storage held by the list of helper nodes */
+void
+helper_nodes_free_all(void)
+{
+  /* Don't call clear_helper_nodes(); that will flush our state change to disk */
+  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h, tor_free(h));
+  smartlist_free(helper_nodes);
+  helper_nodes = NULL;
+}
+
 /** How long (in seconds) do we allow a helper node to be nonfunctional before
  * we give up on it? */
 #define HELPER_ALLOW_DOWNTIME 48*60*60
@@ -1899,6 +1909,7 @@ helper_nodes_parse_state(or_state_t *state, int set, const char **err)
   if (*err || !set) {
     SMARTLIST_FOREACH(helpers, helper_node_t *, h, tor_free(h));
     smartlist_free(helpers);
+    helpers = NULL;
   }
   if (!*err && set) {
     if (helper_nodes) {

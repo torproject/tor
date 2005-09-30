@@ -1396,6 +1396,7 @@ void helper_nodes_set_status_from_directory(void);
 int helper_nodes_update_state(or_state_t *state);
 int helper_nodes_parse_state(or_state_t *state, int set, const char **err);
 int helper_nodes_getinfo_helper(const char *question, char **answer);
+void helper_nodes_free_all(void);
 
 /********************************* circuitlist.c ***********************/
 
