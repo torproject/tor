@@ -642,13 +642,11 @@ int
 router_parse_list_from_string(const char **s, smartlist_t *dest)
 {
   routerinfo_t *router;
-  smartlist_t *routers;
   const char *end;
 
   tor_assert(s);
   tor_assert(*s);
-
-  routers = smartlist_create();
+  tor_assert(dest);
 
   while (1) {
     *s = eat_whitespace(*s);
@@ -670,10 +668,8 @@ router_parse_list_from_string(const char **s, smartlist_t *dest)
       continue;
     }
 
-    smartlist_add(routers, router);
+    smartlist_add(dest, router);
   }
-
-  smartlist_add_all(dest, routers);
 
   return 0;
 }

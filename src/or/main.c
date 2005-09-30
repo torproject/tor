@@ -1303,7 +1303,8 @@ static int
 tor_init(int argc, char *argv[])
 {
   time_of_process_start = time(NULL);
-  closeable_connection_lst = smartlist_create();
+  if (!closeable_connection_lst)
+    closeable_connection_lst = smartlist_create();
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
