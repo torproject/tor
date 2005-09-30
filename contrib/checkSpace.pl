@@ -81,6 +81,25 @@ for $fn (@ARGV) {
                     print "     fn ():$fn:$.\n";
                 }
             }
+	    ## Warn about functions not declared at start of line.
+	    if ($in_func_head || ($fn !~ /\.h$/ && /^[a-zA-Z0-9_]/ &&
+				  ! /^(?:static )?(?:typedef|struct|union)/ &&
+				  ! /= *\{$/ && ! /;$/)) {
+		
+		if (/.\{$/){
+		    print "fn() {:$fn:$.\n";
+		    $in_func_head = 0;
+		} elsif (/^\S[^\(]* +[a-zA-Z0-9_]+\(/) {
+		    $in_func_head = -1; # started with tp fn
+		} elsif (/;$/) {
+		    $in_func_head = 0;
+		} elsif (/\{/) {
+		    if ($in_func_head == -1) {
+			print "tp fn():$fn:$.\n";
+		    }
+		    $in_func_head = 0;
+		}
+	    }
         }
     }
     if (! $lastnil) {
