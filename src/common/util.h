@@ -66,7 +66,18 @@ void *_tor_malloc_zero(DMALLOC_PARAMS size_t size);
 void *_tor_realloc(DMALLOC_PARAMS void *ptr, size_t size);
 char *_tor_strdup(DMALLOC_PARAMS const char *s);
 char *_tor_strndup(DMALLOC_PARAMS const char *s, size_t n);
+#ifdef USE_DMALLOC
+extern int dmalloc_free(const char *file, const int line, void *pnt,
+                        const int func_id);
+#define tor_free(p) do { \
+    if (p) {                                        \
+      dmalloc_free(_SHORT_FILE_, __LINE__, (p), 0); \
+      (p)=NULL;                                     \
+    }                                               \
+  } while (0)
+#else
 #define tor_free(p) do { if (p) {free(p); (p)=NULL;} } while (0)
+#endif
 
 #define tor_malloc(size)       _tor_malloc(DMALLOC_ARGS size)
 #define tor_malloc_zero(size)  _tor_malloc_zero(DMALLOC_ARGS size)
