@@ -3154,7 +3154,8 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
  * and return the number of bytes specified.  Otherwise, set
  * *<b>ok</b> to false and return 0. */
 static uint64_t
-config_parse_memunit(const char *s, int *ok) {
+config_parse_memunit(const char *s, int *ok)
+{
   return config_parse_units(s, memory_units, ok);
 }
 
@@ -3163,7 +3164,8 @@ config_parse_memunit(const char *s, int *ok) {
  * the provided interval.  Otherwise, set *<b>ok</b> to 0 and return -1.
  */
 static int
-config_parse_interval(const char *s, int *ok) {
+config_parse_interval(const char *s, int *ok)
+{
   uint64_t r;
   r = config_parse_units(s, time_units, ok);
   if (!ok)

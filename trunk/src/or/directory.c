@@ -1122,7 +1122,8 @@ connection_dir_reached_eof(connection_t *conn)
 /** Read handler for directory connections.  (That's connections <em>to</em>
  * directory servers and connections <em>at</em> directory servers.)
  */
-int connection_dir_process_inbuf(connection_t *conn)
+int
+connection_dir_process_inbuf(connection_t *conn)
 {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);

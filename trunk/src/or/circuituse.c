@@ -585,7 +585,8 @@ circuit_testing_opened(circuit_t *circ)
 
 /** A testing circuit has failed to build. Take whatever stats we want. */
 static void
-circuit_testing_failed(circuit_t *circ, int at_last_hop) {
+circuit_testing_failed(circuit_t *circ, int at_last_hop)
+{
 #if 0
   routerinfo_t *me = router_get_my_routerinfo();
 

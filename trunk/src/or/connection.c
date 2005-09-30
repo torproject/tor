@@ -1637,7 +1637,8 @@ connection_get_by_type_state_lastwritten(int type, int state)
  * is non-zero, conn must be of that state too.
  */
 connection_t *
-connection_get_by_type_state_rendquery(int type, int state, const char *rendquery) {
+connection_get_by_type_state_rendquery(int type, int state, const char *rendquery)
+{
   int i, n;
   connection_t *conn;
   connection_t **carray;

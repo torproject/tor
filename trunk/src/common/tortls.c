@@ -174,8 +174,9 @@ tor_tls_free_all(void)
  * it: We always accept peer certs and complete the handshake.  We
  * don't validate them until later.
  */
-static int always_accept_verify_cb(int preverify_ok,
-                                   X509_STORE_CTX *x509_ctx)
+static int
+always_accept_verify_cb(int preverify_ok,
+                        X509_STORE_CTX *x509_ctx)
 {
   /* avoid "unused parameter" warning. */
   preverify_ok = 0;
@@ -672,7 +673,8 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, size_t buflen)
   return r;
 }
 
-static void log_cert_lifetime(X509 *cert, const char *problem)
+static void
+log_cert_lifetime(X509 *cert, const char *problem)
 {
   BIO *bio = NULL;
   BUF_MEM *buf;
@@ -842,13 +844,15 @@ tor_tls_get_pending_bytes(tor_tls *tls)
 }
 
 /** Return the number of bytes read across the underlying socket. */
-unsigned long tor_tls_get_n_bytes_read(tor_tls *tls)
+unsigned long
+tor_tls_get_n_bytes_read(tor_tls *tls)
 {
   tor_assert(tls);
   return BIO_number_read(SSL_get_rbio(tls->ssl));
 }
 /** Return the number of bytes written across the underlying socket. */
-unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
+unsigned long
+tor_tls_get_n_bytes_written(tor_tls *tls)
 {
   tor_assert(tls);
   return BIO_number_written(SSL_get_wbio(tls->ssl));
@@ -856,7 +860,8 @@ unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
 
 /** Implement check_no_tls_errors: If there are any pending OpenSSL
  * errors, log an error message and assert(0). */
-void _check_no_tls_errors(const char *fname, int line)
+void
+_check_no_tls_errors(const char *fname, int line)
 {
   if (ERR_peek_error() == 0)
     return;

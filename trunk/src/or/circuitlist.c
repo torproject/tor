@@ -178,7 +178,8 @@ _circuit_get_global_list(void)
 
 /** Function to make circ-\>state human-readable */
 const char *
-circuit_state_to_string(int state) {
+circuit_state_to_string(int state)
+{
   static char buf[64];
   switch (state) {
     case CIRCUIT_STATE_BUILDING: return "doing handshakes";

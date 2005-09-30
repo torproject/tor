@@ -119,7 +119,8 @@ static int tor_check_dh_key(BIGNUM *bn);
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
 static INLINE int
-crypto_get_rsa_padding_overhead(int padding) {
+crypto_get_rsa_padding_overhead(int padding)
+{
   switch (padding)
     {
     case RSA_NO_PADDING: return 0;
@@ -132,7 +133,8 @@ crypto_get_rsa_padding_overhead(int padding) {
 /** Given a padding method <b>padding</b>, return the correct OpenSSL constant.
  */
 static INLINE int
-crypto_get_rsa_padding(int padding) {
+crypto_get_rsa_padding(int padding)
+{
   switch (padding)
     {
     case PK_NO_PADDING: return RSA_NO_PADDING;
@@ -216,7 +218,8 @@ crypto_global_init(int useAccel)
 
 /** Uninitialize the crypto library. Return 0 on success, -1 on failure.
  */
-int crypto_global_cleanup(void)
+int
+crypto_global_cleanup(void)
 {
   ERR_free_strings();
 #ifndef NO_ENGINES
@@ -304,7 +307,8 @@ crypto_pk_env_t *crypto_new_pk_env(void)
 /** Release a reference to an asymmetric key; when all the references
  * are released, free the key.
  */
-void crypto_free_pk_env(crypto_pk_env_t *env)
+void
+crypto_free_pk_env(crypto_pk_env_t *env)
 {
   tor_assert(env);
 
@@ -365,7 +369,8 @@ crypto_cipher_env_t *crypto_new_cipher_env(void)
 
 /** Free a symmetric cipher.
  */
-void crypto_free_cipher_env(crypto_cipher_env_t *env)
+void
+crypto_free_cipher_env(crypto_cipher_env_t *env)
 {
   tor_assert(env);
 
@@ -379,7 +384,8 @@ void crypto_free_cipher_env(crypto_cipher_env_t *env)
 /** Generate a new public/private keypair in <b>env</b>.  Return 0 on
  * success, -1 on failure.
  */
-int crypto_pk_generate_key(crypto_pk_env_t *env)
+int
+crypto_pk_generate_key(crypto_pk_env_t *env)
 {
   tor_assert(env);
 
@@ -397,8 +403,9 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
 /** Read a PEM-encoded private key from the string <b>s</b> into <b>env</b>.
  * Return 0 on success, -1 on failure.
  */
-static int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
-                                                  const char *s)
+static int
+crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
+                                       const char *s)
 {
   BIO *b;
 
@@ -425,7 +432,8 @@ static int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
 /** Read a PEM-encoded private key from the file named by
  * <b>keyfile</b> into <b>env</b>.  Return 0 on success, -1 on failure.
  */
-int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile)
+int
+crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile)
 {
   char *contents;
   int r;
@@ -455,7 +463,9 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
  * string, *<b>len</b> to the string's length, and return 0.  On
  * failure, return -1.
  */
-int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size_t *len) {
+int
+crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size_t *len)
+{
   BUF_MEM *buf;
   BIO *b;
 
@@ -491,7 +501,9 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size
  * <b>src</b>, and store the result in <b>env</b>.  Return 0 on success, -1 on
  * failure.
  */
-int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, size_t len) {
+int
+crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, size_t len)
+{
   BIO *b;
 
   tor_assert(env);
@@ -556,7 +568,8 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
  * directories containing "opt keyword\n-----BEGIN OBJECT----" entries
  * in versions of Tor up to 0.0.9pre2.</i>
  */
-int crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **out)
+int
+crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **out)
 {
   int len;
   char buf[PK_BYTES*2]; /* Too long, but hey, stacks are big. */
@@ -585,7 +598,8 @@ int crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **out)
  * directories containing "opt keyword\n-----BEGIN OBJECT----" entries
  * in versions of Tor up to 0.0.9pre2.</i>
  */
-crypto_pk_env_t *crypto_pk_DER64_decode_public_key(const char *in)
+crypto_pk_env_t *
+crypto_pk_DER64_decode_public_key(const char *in)
 {
   char partitioned[PK_BYTES*2 + 16];
   char buf[PK_BYTES*2];
@@ -611,7 +625,8 @@ crypto_pk_env_t *crypto_pk_DER64_decode_public_key(const char *in)
 
 /** Return true iff <b>env</b> has a valid key.
  */
-int crypto_pk_check_key(crypto_pk_env_t *env)
+int
+crypto_pk_check_key(crypto_pk_env_t *env)
 {
   int r;
   tor_assert(env);
@@ -625,7 +640,9 @@ int crypto_pk_check_key(crypto_pk_env_t *env)
 /** Compare the public-key components of a and b.  Return -1 if a\<b, 0
  * if a==b, and 1 if a\>b.
  */
-int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
+int
+crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b)
+{
   int result;
 
   if (!a || !b)
@@ -643,7 +660,8 @@ int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
 }
 
 /** Return the size of the public key modulus in <b>env</b>, in bytes. */
-size_t crypto_pk_keysize(crypto_pk_env_t *env)
+size_t
+crypto_pk_keysize(crypto_pk_env_t *env)
 {
   tor_assert(env);
   tor_assert(env->key);
@@ -653,7 +671,9 @@ size_t crypto_pk_keysize(crypto_pk_env_t *env)
 
 /** Increase the reference count of <b>env</b>, and return it.
  */
-crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
+crypto_pk_env_t *
+crypto_pk_dup_key(crypto_pk_env_t *env)
+{
   tor_assert(env);
   tor_assert(env->key);
 
@@ -827,11 +847,12 @@ crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to,
  *     padded and encrypted with the public key; followed by the rest of
  *     the source data encrypted in AES-CTR mode with the symmetric key.
  */
-int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
-                                    char *to,
-                                    const char *from,
-                                    size_t fromlen,
-                                    int padding, int force)
+int
+crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
+                                char *to,
+                                const char *from,
+                                size_t fromlen,
+                                int padding, int force)
 {
   int overhead, outlen, r, symlen;
   size_t pkeylen;
@@ -890,11 +911,12 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
 }
 
 /** Invert crypto_pk_public_hybrid_encrypt. */
-int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
-                                     char *to,
-                                     const char *from,
-                                     size_t fromlen,
-                                     int padding, int warnOnFailure)
+int
+crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
+                                 char *to,
+                                 const char *from,
+                                 size_t fromlen,
+                                 int padding, int warnOnFailure)
 {
   int overhead, outlen, r;
   size_t pkeylen;
@@ -937,7 +959,8 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
 /** ASN.1-encode the public portion of <b>pk</b> into <b>dest</b>.
  * Return -1 on error, or the number of characters used on success.
  */
-int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
+int
+crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
 {
   int len;
   unsigned char *buf, *cp;
@@ -962,7 +985,8 @@ int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
 /** Decode an ASN.1-encoded public key from <b>str</b>; return the result on
  * success and NULL on failure.
  */
-crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, size_t len)
+crypto_pk_env_t *
+crypto_pk_asn1_decode(const char *str, size_t len)
 {
   RSA *rsa;
   unsigned char *buf;
@@ -989,7 +1013,8 @@ crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, size_t len)
  * public key into <b>digest_out</b> (must have DIGEST_LEN bytes of space).
  * Return 0 on success, -1 on failure.
  */
-int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
+int
+crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
 {
   unsigned char *buf, *bufp;
   int len;
@@ -1063,7 +1088,8 @@ crypto_pk_check_fingerprint_syntax(const char *s)
 /** Generate a new random key for the symmetric cipher in <b>env</b>.
  * Return 0 on success, -1 on failure.  Does not initialize the cipher.
  */
-int crypto_cipher_generate_key(crypto_cipher_env_t *env)
+int
+crypto_cipher_generate_key(crypto_cipher_env_t *env)
 {
   tor_assert(env);
 
@@ -1074,7 +1100,8 @@ int crypto_cipher_generate_key(crypto_cipher_env_t *env)
  * CIPHER_KEY_LEN bytes of <b>key</b>. Does not initialize the cipher.
  * Return 0 on success, -1 on failure.
  */
-int crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key)
+int
+crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key)
 {
   tor_assert(env);
   tor_assert(key);
@@ -1089,7 +1116,8 @@ int crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key)
 
 /** Return a pointer to the key set for the cipher in <b>env</b>.
  */
-const char *crypto_cipher_get_key(crypto_cipher_env_t *env)
+const char *
+crypto_cipher_get_key(crypto_cipher_env_t *env)
 {
   return env->key;
 }
@@ -1097,7 +1125,8 @@ const char *crypto_cipher_get_key(crypto_cipher_env_t *env)
 /** Initialize the cipher in <b>env</b> for encryption.  Return 0 on
  * success, -1 on failure.
  */
-int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
+int
+crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
 {
   tor_assert(env);
 
@@ -1108,7 +1137,8 @@ int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
 /** Initialize the cipher in <b>env</b> for decryption. Return 0 on
  * success, -1 on failure.
  */
-int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
+int
+crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
 {
   tor_assert(env);
 
@@ -1175,7 +1205,8 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
  * Return 0 on success, -1 on failure.
  */
-int crypto_digest(char *digest, const char *m, size_t len)
+int
+crypto_digest(char *digest, const char *m, size_t len)
 {
   tor_assert(m);
   tor_assert(digest);
@@ -1200,7 +1231,8 @@ crypto_new_digest_env(void)
 /** Deallocate a digest object.
  */
 void
-crypto_free_digest_env(crypto_digest_env_t *digest) {
+crypto_free_digest_env(crypto_digest_env_t *digest)
+{
   tor_free(digest);
 }
 
@@ -1224,8 +1256,9 @@ crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
  * object; write the first out_len bytes of the result to <b>out</b>.
  * <b>out_len</b> must be \<= DIGEST_LEN.
  */
-void crypto_digest_get_digest(crypto_digest_env_t *digest,
-                              char *out, size_t out_len)
+void
+crypto_digest_get_digest(crypto_digest_env_t *digest,
+                         char *out, size_t out_len)
 {
   static unsigned char r[DIGEST_LEN];
   SHA_CTX tmpctx;
@@ -1272,7 +1305,9 @@ static BIGNUM *dh_param_g = NULL;
 
 /** Initialize dh_param_p and dh_param_g if they are not already
  * set. */
-static void init_dh_param(void) {
+static void
+init_dh_param(void)
+{
   BIGNUM *p, *g;
   int r;
   if (dh_param_p && dh_param_g)
@@ -1303,7 +1338,8 @@ static void init_dh_param(void) {
 
 /** Allocate and return a new DH object for a key exchange.
  */
-crypto_dh_env_t *crypto_dh_new(void)
+crypto_dh_env_t *
+crypto_dh_new(void)
 {
   crypto_dh_env_t *res = NULL;
 
@@ -1331,7 +1367,8 @@ crypto_dh_env_t *crypto_dh_new(void)
 
 /** Return the length of the DH key in <b>dh</b>, in bytes.
  */
-int crypto_dh_get_bytes(crypto_dh_env_t *dh)
+int
+crypto_dh_get_bytes(crypto_dh_env_t *dh)
 {
   tor_assert(dh);
   return DH_size(dh->dh);
@@ -1340,7 +1377,8 @@ int crypto_dh_get_bytes(crypto_dh_env_t *dh)
 /** Generate \<x,g^x\> for our part of the key exchange.  Return 0 on
  * success, -1 on failure.
  */
-int crypto_dh_generate_public(crypto_dh_env_t *dh)
+int
+crypto_dh_generate_public(crypto_dh_env_t *dh)
 {
  again:
   if (!DH_generate_key(dh->dh)) {
@@ -1362,7 +1400,8 @@ int crypto_dh_generate_public(crypto_dh_env_t *dh)
  * as a <b>pubkey_len</b>-byte value into <b>pubkey</b>. Return 0 on
  * success, -1 on failure.  <b>pubkey_len</b> must be \>= DH_BYTES.
  */
-int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
+int
+crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
 {
   int bytes;
   tor_assert(dh);
@@ -1454,9 +1493,10 @@ tor_check_dh_key(BIGNUM *bn)
  *         SHA1( g^xy || "\x00" ) || SHA1( g^xy || "\x01" ) || ...
  * where || is concatenation.)
  */
-int crypto_dh_compute_secret(crypto_dh_env_t *dh,
-                             const char *pubkey, size_t pubkey_len,
-                             char *secret_out, size_t secret_bytes_out)
+int
+crypto_dh_compute_secret(crypto_dh_env_t *dh,
+                         const char *pubkey, size_t pubkey_len,
+                         char *secret_out, size_t secret_bytes_out)
 {
   char hash[DIGEST_LEN];
   char *secret_tmp = NULL;
@@ -1512,7 +1552,8 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
 
 /** Free a DH key exchange object.
  */
-void crypto_dh_free(crypto_dh_env_t *dh)
+void
+crypto_dh_free(crypto_dh_env_t *dh)
 {
   tor_assert(dh);
   tor_assert(dh->dh);
@@ -1525,7 +1566,8 @@ void crypto_dh_free(crypto_dh_env_t *dh)
 /** Seed OpenSSL's random number generator with DIGEST_LEN bytes from the
  * operating system.  Return 0 on success, -1 on failure.
  */
-int crypto_seed_rng(void)
+int
+crypto_seed_rng(void)
 {
 #ifdef MS_WINDOWS
   static int provider_set = 0;
@@ -1580,7 +1622,8 @@ int crypto_seed_rng(void)
 /** Write n bytes of strong random data to <b>to</b>. Return 0 on
  * success, -1 on failure.
  */
-int crypto_rand(char *to, size_t n)
+int
+crypto_rand(char *to, size_t n)
 {
   int r;
   tor_assert(to);
@@ -1593,7 +1636,8 @@ int crypto_rand(char *to, size_t n)
 /** Write n bytes of pseudorandom data to <b>to</b>. Return 0 on
  * success, -1 on failure.
  */
-void crypto_pseudo_rand(char *to, size_t n)
+void
+crypto_pseudo_rand(char *to, size_t n)
 {
   tor_assert(to);
   if (RAND_pseudo_bytes((unsigned char*)to, n) == -1) {
@@ -1605,7 +1649,9 @@ void crypto_pseudo_rand(char *to, size_t n)
 
 /** Return a pseudorandom integer, chosen uniformly from the values
  * between 0 and max-1. */
-int crypto_pseudo_rand_int(unsigned int max) {
+int
+crypto_pseudo_rand_int(unsigned int max)
+{
   unsigned int val;
   unsigned int cutoff;
   tor_assert(max < UINT_MAX);
@@ -1625,7 +1671,9 @@ int crypto_pseudo_rand_int(unsigned int max) {
 
 /** Return a randomly chosen element of sl; or NULL if sl is empty.
  */
-void *smartlist_choose(const smartlist_t *sl) {
+void *
+smartlist_choose(const smartlist_t *sl)
+{
   size_t len;
   len = smartlist_len(sl);
   if (len)
@@ -1793,8 +1841,10 @@ _openssl_locking_cb(int mode, int n, const char *file, int line)
   else
     tor_mutex_release(_openssl_mutexes[n]);
 }
+
 static int
-setup_openssl_threading(void) {
+setup_openssl_threading(void)
+{
   int i;
   int n = CRYPTO_num_locks();
   _n_openssl_mutexes = n;
@@ -1806,6 +1856,10 @@ setup_openssl_threading(void) {
   return 0;
 }
 #else
-static int setup_openssl_threading(void) { return 0; }
+static int
+setup_openssl_threading(void)
+{
+  return 0;
+}
 #endif
 

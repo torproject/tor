@@ -139,7 +139,9 @@ void *_tor_malloc(DMALLOC_PARAMS size_t size)
  * zero bytes, and return a pointer to the result.  Log and terminate
  * the process on error.  (Same as calloc(size,1), but never returns NULL.)
  */
-void *_tor_malloc_zero(DMALLOC_PARAMS size_t size) {
+void *
+_tor_malloc_zero(DMALLOC_PARAMS size_t size)
+{
   void *result = _tor_malloc(DMALLOC_FN_ARGS size);
   memset(result, 0, size);
   return result;
@@ -149,7 +151,9 @@ void *_tor_malloc_zero(DMALLOC_PARAMS size_t size) {
  * bytes long; return the new memory block.  On error, log and
  * terminate. (Like realloc(ptr,size), but never returns NULL.)
  */
-void *_tor_realloc(DMALLOC_PARAMS void *ptr, size_t size) {
+void *
+_tor_realloc(DMALLOC_PARAMS void *ptr, size_t size)
+{
   void *result;
 
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
@@ -164,7 +168,9 @@ void *_tor_realloc(DMALLOC_PARAMS void *ptr, size_t size) {
  * error, log and terminate.  (Like strdup(s), but never returns
  * NULL.)
  */
-char *_tor_strdup(DMALLOC_PARAMS const char *s) {
+char *
+_tor_strdup(DMALLOC_PARAMS const char *s)
+{
   char *dup;
   tor_assert(s);
 
@@ -182,7 +188,9 @@ char *_tor_strdup(DMALLOC_PARAMS const char *s) {
  * always NUL-terminated.  (Like strndup(s,n), but never returns
  * NULL.)
  */
-char *_tor_strndup(DMALLOC_PARAMS const char *s, size_t n) {
+char *
+_tor_strndup(DMALLOC_PARAMS const char *s, size_t n)
+{
   char *dup;
   tor_assert(s);
   dup = _tor_malloc(DMALLOC_FN_ARGS n+1);
@@ -201,7 +209,8 @@ char *_tor_strndup(DMALLOC_PARAMS const char *s, size_t n) {
 
 /** Remove from the string <b>s</b> every character which appears in
  * <b>strip</b>.  Return the number of characters removed. */
-int tor_strstrip(char *s, const char *strip)
+int
+tor_strstrip(char *s, const char *strip)
 {
   char *read = s;
   while (*read) {
@@ -226,9 +235,10 @@ int tor_strstrip(char *s, const char *strip)
  * If <b>rule</b> is TERMINATE_IF_EVEN, then end the string with <b>insert</b>
  * exactly when its length <i>is</i> a multiple of <b>n</b>.
  */
-int tor_strpartition(char *dest, size_t dest_len,
-                     const char *s, const char *insert, size_t n,
-                     part_finish_rule_t rule)
+int
+tor_strpartition(char *dest, size_t dest_len,
+                 const char *s, const char *insert, size_t n,
+                 part_finish_rule_t rule)
 {
   char *destp;
   size_t len_in, len_out, len_ins;
@@ -283,7 +293,8 @@ int tor_strpartition(char *dest, size_t dest_len,
  * result does not need to be deallocated, but repeated calls to
  * hex_str will trash old results.
  */
-const char *hex_str(const char *from, size_t fromlen)
+const char *
+hex_str(const char *from, size_t fromlen)
 {
   static char buf[65];
   if (fromlen>(sizeof(buf)-1)/2)
@@ -294,7 +305,8 @@ const char *hex_str(const char *from, size_t fromlen)
 
 /** Convert all alphabetic characters in the nul-terminated string <b>s</b> to
  * lowercase. */
-void tor_strlower(char *s)
+void
+tor_strlower(char *s)
 {
   while (*s) {
     *s = tolower(*s);
@@ -304,7 +316,8 @@ void tor_strlower(char *s)
 
 /** Convert all alphabetic characters in the nul-terminated string <b>s</b> to
  * lowercase. */
-void tor_strupper(char *s)
+void
+tor_strupper(char *s)
 {
   while (*s) {
     *s = toupper(*s);
@@ -315,7 +328,8 @@ void tor_strupper(char *s)
 /* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
-int strcmpstart(const char *s1, const char *s2)
+int
+strcmpstart(const char *s1, const char *s2)
 {
   size_t n = strlen(s2);
   return strncmp(s1, s2, n);
@@ -324,7 +338,8 @@ int strcmpstart(const char *s1, const char *s2)
 /* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcasecmp.
  */
-int strcasecmpstart(const char *s1, const char *s2)
+int
+strcasecmpstart(const char *s1, const char *s2)
 {
   size_t n = strlen(s2);
   return strncasecmp(s1, s2, n);
@@ -333,7 +348,8 @@ int strcasecmpstart(const char *s1, const char *s2)
 /* Compares the last strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
-int strcmpend(const char *s1, const char *s2)
+int
+strcmpend(const char *s1, const char *s2)
 {
   size_t n1 = strlen(s1), n2 = strlen(s2);
   if (n2>n1)
@@ -345,7 +361,8 @@ int strcmpend(const char *s1, const char *s2)
 /* Compares the last strlen(s2) characters of s1 with s2.  Returns as for
  * strcasecmp.
  */
-int strcasecmpend(const char *s1, const char *s2)
+int
+strcasecmpend(const char *s1, const char *s2)
 {
   size_t n1 = strlen(s1), n2 = strlen(s2);
   if (n2>n1) /* then they can't be the same; figure out which is bigger */
@@ -357,7 +374,9 @@ int strcasecmpend(const char *s1, const char *s2)
 /** Return a pointer to the first char of s that is not whitespace and
  * not a comment, or to the terminating NUL if no such character exists.
  */
-const char *eat_whitespace(const char *s) {
+const char *
+eat_whitespace(const char *s)
+{
   tor_assert(s);
 
   while (TOR_ISSPACE(*s) || *s == '#') {
@@ -375,7 +394,9 @@ const char *eat_whitespace(const char *s) {
 
 /** Return a pointer to the first char of s that is not a space or a tab,
  * or to the terminating NUL if no such character exists. */
-const char *eat_whitespace_no_nl(const char *s) {
+const char *
+eat_whitespace_no_nl(const char *s)
+{
   while (*s == ' ' || *s == '\t')
     ++s;
   return s;
@@ -384,7 +405,9 @@ const char *eat_whitespace_no_nl(const char *s) {
 /** Return a pointer to the first char of s that is whitespace or <b>#</b>,
  * or to the terminating NUL if no such character exists.
  */
-const char *find_whitespace(const char *s) {
+const char *
+find_whitespace(const char *s)
+{
   tor_assert(s);
 
   while (*s && !TOR_ISSPACE(*s) && *s != '#')
@@ -470,7 +493,8 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
   CHECK_STRTOX_RESULT();
 }
 
-void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
+void
+base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   const char *end;
   char *cp;
@@ -490,7 +514,8 @@ void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 
 static const char HEX_DIGITS[] = "0123456789ABCDEFabcdef";
 
-static INLINE int hex_decode_digit(char c)
+static INLINE int
+hex_decode_digit(char c)
 {
   const char *cp;
   int n;
@@ -504,7 +529,8 @@ static INLINE int hex_decode_digit(char c)
     return n-6; /* lowercase */
 }
 
-int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
+int
+base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   const char *end;
   int v1,v2;
@@ -548,7 +574,9 @@ tv_udiff(struct timeval *start, struct timeval *end)
 
 /** Return -1 if *a \< *b, 0 if *a==*b, and 1 if *a \> *b.
  */
-int tv_cmp(struct timeval *a, struct timeval *b) {
+int
+tv_cmp(struct timeval *a, struct timeval *b)
+{
   if (a->tv_sec > b->tv_sec)
     return 1;
   if (a->tv_sec < b->tv_sec)
@@ -562,7 +590,9 @@ int tv_cmp(struct timeval *a, struct timeval *b) {
 
 /** Increment *a by the number of seconds and microseconds in *b.
  */
-void tv_add(struct timeval *a, struct timeval *b) {
+void
+tv_add(struct timeval *a, struct timeval *b)
+{
   a->tv_usec += b->tv_usec;
   a->tv_sec += b->tv_sec + (a->tv_usec / 1000000);
   a->tv_usec %= 1000000;
@@ -570,14 +600,18 @@ void tv_add(struct timeval *a, struct timeval *b) {
 
 /** Increment *a by <b>ms</b> milliseconds.
  */
-void tv_addms(struct timeval *a, long ms) {
+void
+tv_addms(struct timeval *a, long ms)
+{
   a->tv_usec += (ms * 1000) % 1000000;
   a->tv_sec += ((ms * 1000) / 1000000) + (a->tv_usec / 1000000);
   a->tv_usec %= 1000000;
 }
 
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
-static int n_leapdays(int y1, int y2) {
+static int
+n_leapdays(int y1, int y2)
+{
   --y1;
   --y2;
   return (y2/4 - y1/4) - (y2/100 - y1/100) + (y2/400 - y1/400);
@@ -590,7 +624,8 @@ static const int days_per_month[] =
  * does not account for leap seconds.
  */
 time_t
-tor_timegm(struct tm *tm) {
+tor_timegm(struct tm *tm)
+{
   /* This is a pretty ironclad timegm implementation, snarfed from Python2.2.
    * It's way more brute-force than fiddling with tzset().
    */
@@ -621,7 +656,9 @@ static const char *MONTH_NAMES[] =
   { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
-void format_rfc1123_time(char *buf, time_t t) {
+void
+format_rfc1123_time(char *buf, time_t t)
+{
   struct tm tm;
 
   tor_gmtime_r(&t, &tm);
@@ -635,7 +672,9 @@ void format_rfc1123_time(char *buf, time_t t) {
   memcpy(buf+8, MONTH_NAMES[tm.tm_mon], 3);
 }
 
-int parse_rfc1123_time(const char *buf, time_t *t) {
+int
+parse_rfc1123_time(const char *buf, time_t *t)
+{
   struct tm tm;
   char month[4];
   char weekday[4];
@@ -669,17 +708,23 @@ int parse_rfc1123_time(const char *buf, time_t *t) {
   return 0;
 }
 
-void format_local_iso_time(char *buf, time_t t) {
+void
+format_local_iso_time(char *buf, time_t t)
+{
   struct tm tm;
   strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_localtime_r(&t, &tm));
 }
 
-void format_iso_time(char *buf, time_t t) {
+void
+format_iso_time(char *buf, time_t t)
+{
   struct tm tm;
   strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_gmtime_r(&t, &tm));
 }
 
-int parse_iso_time(const char *cp, time_t *t) {
+int
+parse_iso_time(const char *cp, time_t *t)
+{
   struct tm st_tm;
 #ifdef HAVE_STRPTIME
   if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
@@ -715,7 +760,8 @@ int parse_iso_time(const char *cp, time_t *t) {
  * was returned by open().  Return the number of bytes written, or -1
  * on error.  Only use if fd is a blocking fd.  */
 int
-write_all(int fd, const char *buf, size_t count, int isSocket) {
+write_all(int fd, const char *buf, size_t count, int isSocket)
+{
   size_t written = 0;
   int result;
 
@@ -737,7 +783,8 @@ write_all(int fd, const char *buf, size_t count, int isSocket) {
  * open().  Return the number of bytes read, or -1 on error. Only use
  * if fd is a blocking fd. */
 int
-read_all(int fd, char *buf, size_t count, int isSocket) {
+read_all(int fd, char *buf, size_t count, int isSocket)
+{
   size_t numread = 0;
   int result;
 
@@ -783,7 +830,8 @@ clean_name_for_stat(char *name)
 /** Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
  * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
  * directory. */
-file_status_t file_status(const char *fname)
+file_status_t
+file_status(const char *fname)
 {
   struct stat st;
   char *f;
@@ -811,7 +859,8 @@ file_status_t file_status(const char *fname)
  * and return 0 on success. If it does not exist, and
  * check==CPD_CHECK, and we think we can create it, return 0.  Else
  * return -1. */
-int check_private_dir(const char *dirname, cpd_check_t check)
+int
+check_private_dir(const char *dirname, cpd_check_t check)
 {
   int r;
   struct stat st;
@@ -988,7 +1037,9 @@ append_bytes_to_file(const char *fname, const char *str, size_t len,
  * the call to stat and the call to read_all: the resulting string will
  * be truncated.
  */
-char *read_file_to_str(const char *filename, int bin) {
+char *
+read_file_to_str(const char *filename, int bin)
+{
   int fd; /* router file */
   struct stat statbuf;
   char *string, *f;
@@ -1117,7 +1168,8 @@ parse_line_from_str(char *line, char **key_out, char **value_out)
 
 /** Expand any homedir prefix on 'filename'; return a newly allocated
  * string. */
-char *expand_filename(const char *filename)
+char *
+expand_filename(const char *filename)
 {
   tor_assert(filename);
   if (*filename == '~') {
@@ -1225,8 +1277,9 @@ tor_listdir(const char *dirname)
 /** Return true iff <b>ip</b> (in host order) is an IP reserved to localhost,
  * or reserved for local networks by RFC 1918.
  */
-int is_internal_IP(uint32_t ip) {
-
+int
+is_internal_IP(uint32_t ip)
+{
   if (((ip & 0xff000000) == 0x0a000000) || /*       10/8 */
       ((ip & 0xff000000) == 0x00000000) || /*        0/8 */
       ((ip & 0xff000000) == 0x7f000000) || /*      127/8 */
@@ -1242,7 +1295,9 @@ int is_internal_IP(uint32_t ip) {
  *
  * XXX Also check if it's on the same class C network as our public IP.
  */
-int is_local_IP(uint32_t ip) {
+int
+is_local_IP(uint32_t ip)
+{
   return is_internal_IP(ip);
 }
 
@@ -1523,7 +1578,8 @@ static int daemon_filedes[2];
  * until finish_daemon is called.  (Note: it's safe to call this more
  * than once: calls after the first are ignored.)
  */
-void start_daemon(void)
+void
+start_daemon(void)
 {
   pid_t pid;
 
@@ -1574,7 +1630,8 @@ void start_daemon(void)
  * calls after the first are ignored.  Calls start_daemon first if it hasn't
  * been called already.)
  */
-void finish_daemon(const char *desired_cwd)
+void
+finish_daemon(const char *desired_cwd)
 {
   int nullfd;
   char c = '.';
@@ -1615,13 +1672,21 @@ void finish_daemon(const char *desired_cwd)
 }
 #else
 /* defined(MS_WINDOWS) */
-void start_daemon(void) {}
-void finish_daemon(const char *cp) {}
+void
+start_daemon(void)
+{
+}
+void
+finish_daemon(const char *cp)
+{
+}
 #endif
 
 /** Write the current process ID, followed by NL, into <b>filename</b>.
  */
-void write_pidfile(char *filename) {
+void
+write_pidfile(char *filename)
+{
 #ifndef MS_WINDOWS
   FILE *pidfile;
 
