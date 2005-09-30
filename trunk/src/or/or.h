@@ -1669,6 +1669,12 @@ void control_adjust_event_log_severity(void);
 void disable_control_logging(void);
 void enable_control_logging(void);
 
+/** Execute the statement <b>stmt</b>, which may log events concerning the
+ * connection <b>conn</b>.  To prevent infinite loops, disable log messages
+ * being stent to controllers if <b>conn</b> is a control connection.
+ *
+ * Stmt must not contain any return or goto statements.
+ */
 #define CONN_LOG_PROTECT(conn, stmt)                                    \
   do {                                                                  \
     int _log_conn_is_control = (conn && conn->type == CONN_TYPE_CONTROL); \
@@ -1679,6 +1685,11 @@ void enable_control_logging(void);
       enable_control_logging();                                         \
   } while (0)
 
+/** Log information about the connection <b>conn</b>, protecting it as with
+ * CONN_LOG_PROTECT. Example:
+ *
+ * LOG_FN_CONN(conn, (LOG_DEBUG, "Socket %d wants to write", conn->s));
+ **/
 #define LOG_FN_CONN(conn, args)                 \
   CONN_LOG_PROTECT(conn, log_fn args)
 

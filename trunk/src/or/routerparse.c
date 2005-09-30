@@ -245,20 +245,19 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
   return -1;
 }
 
-/** Return 1 if <b>myversion</b> is not in <b>versionlist</b>, and if at least
- * one version of Tor on <b>versionlist</b> is newer than <b>myversion</b>.
-
- * Return 1 if no version from the same series as <b>myversion</b> is
- * in <b>versionlist</b> (and <b>myversion</b> is not the newest
- * version), or if a newer version from the same series is in
- * <b>versionlist</b>.
+/** Return VS_RECOMMENDED if <b>myversion</b> is contained in
+ * <b>versionlist</b>.  Else, return VS_OLD if every member of
+ * <b>versionlist</b> is newer than <b>myversion</b>.  Else, return
+ * VS_NEW_IN_SERIES if there is at least one member of <b>versionlist</b> in
+ * the same series (major.minor.micro) as <b>myversion</b>, but no such member
+ * is newer than <b>myversion.</b>.  Else, return VS_NEW if every memeber of
+ * <b>versionlist</b> is older than <b>myversion</b>.  Else, return
+ * VS_UNRECOMMENDED.
  *
- * Otherwise return 0.
  * (versionlist is a comma-separated list of version strings,
  * optionally prefixed with "Tor".  Versions that can't be parsed are
  * ignored.)
- *
- * DOCDOC interface changed */
+ */
 version_status_t
 tor_version_is_obsolete(const char *myversion, const char *versionlist)
 {
@@ -322,7 +321,17 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
   return ret;
 }
 
-/** DOCDOC */
+/** Return the combined status of the current version, given that we know of
+ * one set of networkstatuses that give us status <b>a</b>, and another that
+ * gives us status <b>b</b>.
+ *
+ * For example, if one authority thinks that we're NEW, and another thinks
+ * we're OLD, we're simply UNRECOMMENDED.
+ *
+ * This function does not handle calculating whether we're RECOMMENDED; that
+ * follows a simple majority rule.  This function simply calculates *why*
+ * we're not recommended (if we're not).
+ */
 version_status_t
 version_status_join(version_status_t a, version_status_t b)
 {

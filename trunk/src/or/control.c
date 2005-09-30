@@ -182,6 +182,8 @@ control_cmd_to_string(uint16_t cmd)
   return (cmd<=_CONTROL0_CMD_MAX_RECOGNIZED) ? CONTROL0_COMMANDS[cmd] : "Unknown";
 }
 
+/** Given a control event code for a message event, return the corresponding
+ * log severity. */
 static INLINE int
 event_to_log_severity(int event)
 {
@@ -195,7 +197,7 @@ event_to_log_severity(int event)
   }
 }
 
-/** DOCDOC */
+/** Given a log severity, return the corresponding control event code. */
 static INLINE int
 log_severity_to_event(int severity)
 {
@@ -232,7 +234,9 @@ control_update_global_event_mask(void)
   control_adjust_event_log_severity();
 }
 
-/** DOCDOC */
+/** Adjust the log severities that result in control_event_logmsg being called
+ * to match the severity of log messages that any controllers are interested
+ * in. */
 void
 control_adjust_event_log_severity(void)
 {
@@ -370,7 +374,14 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
   return outp - *out;
 }
 
-/** DOCDOC; test **/
+/** Given a pointer to a string starting at <b>start</b> containing
+ * <b>in_len_max</b> characters, decode a string beginning with a single
+ * quote, containing any number of non-quote characters or characters escaped
+ * with a backslash, and ending with a final quote.  Place the resulting
+ * string (unquoted, unescaped) into a newly allocated string in *<b>out</b>;
+ * store its length in <b>out_len</b>.  On success, return a pointer to the
+ * character immediately following the escaped string.  On failure, return
+ * NULL. **/
 static const char *
 get_escaped_string(const char *start, size_t in_len_max,
                    char **out, size_t *out_len)
@@ -489,7 +500,9 @@ send_control_done(connection_t *conn)
   }
 }
 
-/** DOCDOC */
+/** Send a "DONE" message down the v0 control message <b>conn</b>, with body
+ * as provided in the <b>len</b> bytes at <b>msg</b>.
+ */
 static void
 send_control_done2(connection_t *conn, const char *msg, size_t len)
 {
@@ -545,7 +558,9 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
   tor_free(buf);
 }
 
-/* DOCDOC */
+/* Send an event to all v1 controllers that are listening for code
+ * <b>event</b>.  The event's body is created by the printf-style format in
+ * <b>format</b>, and other arguments as provided. */
 static void
 send_control1_event(uint16_t event, const char *format, ...)
 {
@@ -581,6 +596,7 @@ send_control1_event(uint16_t event, const char *format, ...)
   }
 }
 
+/** Given a text circuit <b>id</b>, return the corresponding circuit. */
 static circuit_t *
 get_circ(const char *id)
 {
@@ -592,6 +608,7 @@ get_circ(const char *id)
   return circuit_get_by_global_id(n_id);
 }
 
+/** Given a text stream <b>id</b>, return the corresponding AP connection. */
 static connection_t *
 get_stream(const char *id)
 {
@@ -994,7 +1011,8 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we get a SAVECONF command. Try to flush the current options to
+ * disk, and report success or failure. */
 static int
 handle_control_saveconf(connection_t *conn, uint32_t len,
                         const char *body)
@@ -1012,7 +1030,9 @@ handle_control_saveconf(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we get a SIGNAL command. React to the provided signal, and
+ * report success or failure. (If the signal results in a shutdown, success
+ * may not be reported.) */
 static int
 handle_control_signal(connection_t *conn, uint32_t len,
                       const char *body)
@@ -1064,7 +1084,8 @@ handle_control_signal(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we get a MAPADDRESS command; try to bind all listed addresses,
+ * and report success or failrue. */
 static int
 handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
 {
@@ -1152,7 +1173,8 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
   return 0;
 }
 
-/** DOCDOC */
+/** Return a newly allocated string listing all valid GETINFO fields as
+ * required by GETINFO info/names. */
 static char *
 list_getinfo_options(void)
 {
@@ -1340,7 +1362,8 @@ handle_getinfo_helper(const char *question, char **answer)
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we receive a GETINFO command.  Try to fetch all requested
+ * information, and reply with information or error message. */
 static int
 handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
 {
@@ -1431,7 +1454,8 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   return 0;
 }
 
-/** DOCDOC */
+/** Callled when we get an EXTENDCIRCUIT message.  Try to extend the listed
+ * circuit, and report succcess or failure. */
 static int
 handle_control_extendcircuit(connection_t *conn, uint32_t len,
                              const char *body)
@@ -1560,7 +1584,8 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Callled when we get an ATTACHSTREAM message.  Try to attach the requested
+ * stream, and report succcess or failure. */
 static int
 handle_control_attachstream(connection_t *conn, uint32_t len,
                             const char *body)
@@ -1652,7 +1677,9 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+
+/** Callled when we get a POSTDESCRIPTORT message.  Try to learn the provided
+ * descriptor, and report succcess or failure. */
 static int
 handle_control_postdescriptor(connection_t *conn, uint32_t len,
                               const char *body)
@@ -1694,7 +1721,8 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we receive a REDIRECTSTERAM command.  Try to change the target
+ * adderess of the named AP steream, and report success or failure. */
 static int
 handle_control_redirectstream(connection_t *conn, uint32_t len,
                               const char *body)
@@ -1745,7 +1773,8 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we get a CLOSESTREAM command; try to close the named stream
+ * and report success or failure. */
 static int
 handle_control_closestream(connection_t *conn, uint32_t len,
                            const char *body)
@@ -1801,7 +1830,8 @@ handle_control_closestream(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we get a CLOSECIRCUIT command; try to close the named circuit
+ * and report success or failure. */
 static int
 handle_control_closecircuit(connection_t *conn, uint32_t len,
                             const char *body)
@@ -1857,7 +1887,11 @@ handle_control_closecircuit(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we get a v0 FRAGMENTHEADER or FRAGMENT command; try to append
+ * the data to conn->incoming_cmd, setting conn->incoming_(type|len|cur_len)
+ * as appropriate.  If the command is malformed, drop it and all pending
+ * fragments and report failure.
+ */
 static int
 handle_control_fragments(connection_t *conn, uint16_t command_type,
                          uint32_t body_len, char *body)
@@ -1921,7 +1955,9 @@ connection_control_reached_eof(connection_t *conn)
   return 0;
 }
 
-/* DOCDOC */
+/** Called when data has arrived on a v1 control connection: Try to fetch
+ * commands from conn->inbuf, and execute them.
+ */
 static int
 connection_control_process_inbuf_v1(connection_t *conn)
 {
@@ -2070,7 +2106,9 @@ connection_control_process_inbuf_v1(connection_t *conn)
   goto again;
 }
 
-/* DOCDOC */
+/** Called when data has arrived on a v0 control connection: Try to fetch
+ * commands from conn->inbuf, and execute them.
+ */
 static int
 connection_control_process_inbuf_v0(connection_t *conn)
 {
@@ -2274,7 +2312,10 @@ control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
   return 0;
 }
 
-/** DOCDOC */
+/** Given an AP connection <b>conn</b> and a <b>len</b>-character buffer
+ * <b>buf</b>, determine the address:port combination requested on
+ * <b>conn</b>, and write it to <b>buf</b>.  Return 0 on success, -1 on
+ * failure. */
 static int
 write_stream_target_to_buf(connection_t *conn, char *buf, size_t len)
 {
@@ -2403,14 +2444,17 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we are sending a log message to the controllers: suspend
+ * sending further log messages to the controllers until we're done.  Used by
+ * CONN_LOG_PROTECT. */
 void
 disable_control_logging(void)
 {
   ++disable_log_messages;
 }
 
-/** DOCDOC */
+/** We're done sending a log message to the controllers: re-enable controller
+ * logging.  Used by CONN_LOG_PROTECT. */
 void
 enable_control_logging(void)
 {
@@ -2436,12 +2480,12 @@ control_event_logmsg(int severity, const char *msg)
 
   if (oldlog || event) {
     size_t len = strlen(msg);
-    disable_log_messages = 1;
+    ++disable_log_messages;
     if (event)
       send_control0_event(event, (uint32_t)(len+1), msg);
     if (oldlog)
       send_control0_event(EVENT_LOG_OBSOLETE, (uint32_t)(len+1), msg);
-    disable_log_messages = 0;
+    --disable_log_messages;
   }
 
   event = log_severity_to_event(severity);
@@ -2463,9 +2507,9 @@ control_event_logmsg(int severity, const char *msg)
       case LOG_ERR: s = "ERR"; break;
       default: s = "UnknownLogSeverity"; break;
     }
-    disable_log_messages = 1;
+    ++disable_log_messages;
     send_control1_event(event, "650 %s %s\r\n", s, b?b:msg);
-    disable_log_messages = 0;
+    --disable_log_messages;
     tor_free(b);
   }
 }
@@ -2506,7 +2550,8 @@ control_event_descriptors_changed(smartlist_t *routers)
   return 0;
 }
 
-/** DOCDOC */
+/** Called whenever an address mapping on <b>from<b> from changes to <b>to</b>.
+ * <b>expires</b> values less than 3 are special; see connection_edge.c. */
 int
 control_event_address_mapped(const char *from, const char *to, time_t expires)
 {

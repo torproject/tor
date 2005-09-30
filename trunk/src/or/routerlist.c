@@ -49,9 +49,11 @@ extern int has_fetched_directory; /**< from main.c */
 static smartlist_t *networkstatus_list = NULL;
 /** Global list of routerstatuses_t for each router, known or unknown. */
 static smartlist_t *routerstatus_list = NULL;
-/*DOCDOC */
+/** True iff any member of networkstatus_list has changed since the last time
+ * we called routerstatus_list_update_from_networkstatus(). */
 static int networkstatus_list_has_changed = 0;
-/*DOCDOC */
+/** True iff any element of routerstatus_list has changed since the last
+ * time we called routers_update_all_from_networkstatus().*/
 static int routerstatus_list_has_changed = 0;
 
 /** Repopulate our list of network_status_t objects from the list cached on
@@ -1548,7 +1550,8 @@ networkstatus_find_entry(networkstatus_t *ns, const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
-/*DOCDOC*/
+/** Return the consensus view of the status of the router whose digest is
+ * <b>digest</b>, or NULL if we don't know about any such router. */
 local_routerstatus_t *
 router_get_combined_status_by_digest(const char *digest)
 {
@@ -2078,7 +2081,11 @@ routers_update_all_from_networkstatus(void)
  * our view of who's running. */
 #define MIN_TO_INFLUENCE_RUNNING 3
 
-/** DOCDOC */
+/** Change the is_recent field of each member of networkstatus_list so that
+ * all members more recent than DEFAULT_RUNNING_INTERVAL are recent, and
+ * at least the MIN_TO_INFLUENCE_RUNNING most recent members are resent, and no
+ * others are recent.  Set networkstatus_list_has_changed if anything happeed.
+ */
 void
 networkstatus_list_update_recent(time_t now)
 {
@@ -2119,7 +2126,11 @@ networkstatus_list_update_recent(time_t now)
     networkstatus_list_has_changed = 1;
 }
 
-/* DOCDOC */
+/** Update our view of router status (as stored in routerstatus_list) from
+ * the current set of network status documents (as stored in networkstatus_list).
+ * Do nothing unless the network status list has changed since the last time
+ * this function was called.
+ */
 static void
 routerstatus_list_update_from_networkstatus(time_t now)
 {
@@ -2493,26 +2504,33 @@ update_router_descriptor_downloads(time_t now)
 #define MAX_DL_PER_REQUEST 128
 #define MIN_DL_PER_REQUEST 4
 #define MIN_REQUESTS 3
+#define MAX_DL_TO_DELAY 16
+#define MAX_INTERVAL_WITHOUT_REQUEST 10*60
   smartlist_t *downloadable = NULL;
   int get_all = 0;
-  int always_split = !server_mode(get_options()) || !get_options()->DirPort;
+  int mirror = server_mode(get_options()) && get_options()->DirPort;
+  static time_t last_download_attempted = 0;
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
     get_all = 1;
 
   if (get_all) {
     log_fn(LOG_NOTICE, "Launching request for all routers");
+    last_download_attempted = now;
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,"all.z",1);
     return;
   }
 
   downloadable = router_list_downloadable();
-  if (smartlist_len(downloadable)) {
+  if (smartlist_len(downloadable) >= MAX_DL_TO_DELAY ||
+      (smartlist_len(downloadable) &&
+       (mirror ||
+        last_download_attempted + MAX_INTERVAL_WITHOUT_REQUEST < now))) {
     int i, j, n, n_per_request=MAX_DL_PER_REQUEST;
     size_t r_len = MAX_DL_PER_REQUEST*(HEX_DIGEST_LEN+1)+16;
     char *resource = tor_malloc(r_len);
 
     n = smartlist_len(downloadable);
-    if (always_split) {
+    if (! mirror) {
       n_per_request = (n+MIN_REQUESTS-1) / MIN_REQUESTS;
       if (n_per_request > MAX_DL_PER_REQUEST)
         n_per_request = MAX_DL_PER_REQUEST;
@@ -2532,6 +2550,7 @@ update_router_descriptor_downloads(time_t now)
         *cp++ = '+';
       }
       memcpy(cp-1, ".z", 3);
+      last_download_attempted = now;
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
     }
     tor_free(resource);
@@ -2556,7 +2575,9 @@ router_have_minimum_dir_info(void)
   return smartlist_len(routerlist->routers) > (avg/4);
 }
 
-/** DOCDOC */
+/** Reset the descriptor download failure count on all routers, so that we
+ * can retry any long-failed routers immediately.
+ */
 void
 router_reset_descriptor_download_failures(void)
 {
