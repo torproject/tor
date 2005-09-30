@@ -95,6 +95,8 @@ get_onion_key_set_at(void)
 void
 set_identity_key(crypto_pk_env_t *k)
 {
+  if (identitykey)
+    crypto_free_pk_env(identitykey);
   identitykey = k;
 }
 
