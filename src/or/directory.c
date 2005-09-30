@@ -1008,20 +1008,10 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    if (which) {
-      /* We only call these if it's a "fp/" request, since
-       * it's the only way we'll be adding new server descriptors
-       * and thus the only way we'd affect has_fetched_directory.
-       *
-       * XXXX Not so.  We will fetch "all" routers if we have zero or one
-       * networkstatus, so we can bootstrap faster.  See
-       * update_router_descriptor_downloads(). One of these behaviors is
-       * wrong.
-       **/
-
-      /* as we learn from them, we remove them from 'which' */
-      router_load_routers_from_string(body, 0, which);
-      directory_info_has_arrived(time(NULL), 0);
+    /* as we learn from them, we remove them from 'which' */
+    router_load_routers_from_string(body, 0, which);
+    directory_info_has_arrived(time(NULL), 0);
+    if (which) { /* mark remaining ones as failed */
       log_fn(LOG_NOTICE, "Received %d/%d routers.",
              n_asked_for-smartlist_len(which), n_asked_for);
       if (smartlist_len(which)) {
