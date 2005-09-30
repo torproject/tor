@@ -64,7 +64,7 @@ router_reload_networkstatus(void)
 {
   char filename[512];
   struct stat st;
-  smartlist_t *entries, *bad_names;
+  smartlist_t *entries;
   char *s;
   tor_assert(get_options()->DataDirectory);
   if (!networkstatus_list)
@@ -73,7 +73,6 @@ router_reload_networkstatus(void)
   tor_snprintf(filename,sizeof(filename),"%s/cached-status",
                get_options()->DataDirectory);
   entries = tor_listdir(filename);
-  bad_names = smartlist_create();
   SMARTLIST_FOREACH(entries, const char *, fn, {
       char buf[DIGEST_LEN];
       if (strlen(fn) != HEX_DIGEST_LEN ||
