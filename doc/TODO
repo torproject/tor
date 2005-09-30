@@ -75,10 +75,16 @@ R   - If you think an OR conn is open but you can never establish a circuit
           sent across sockets, not number sent inside TLS stream.
 R   o remove the warnings from rendezvous stuff that shouldn't be warnings.
 
-N . Handle rendezvousing with unverified nodes.
-    o Implement everything
-    . Enable the new code
-    . Verify that new code works.
+  . Update the hidden service stuff for the new dir approach.
+    - switch to an ascii format.
+    - authdirservers publish blobs of them.
+    - other authdirservers fetch these blobs.
+    - hidserv people have the option of not uploading their blobs.
+    - you can insert a blob via the controller.
+    - and there's some amount of backwards compatibility.
+    - teach clients, intro points, and hidservs about auth mechanisms.
+    - come up with a few more auth mechanisms.
+
 
   - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
@@ -178,7 +184,7 @@ N     . Routerdesc download changes
       . Downgrade new directory events from notice to info
       - Clients should estimate their skew as median of skew from directory
         connections over last N seconds.
-      - Call dirport_is_reachable from somewhere else.
+      o Call dirport_is_reachable from somewhere else.
       o Networkstatus should list who's an authority.
       - Add nickname element to dirserver line.  Log this along with IP:Port.
       o Warn when using non-default directory servers.
@@ -216,6 +222,9 @@ N   . Naming and validation:
 N   - Vet all pending installer patches
       - Win32 installer plus privoxy, sockscap/freecap, etc.
       - Vet win32 systray helper code
+
+  o openssl patch to check for degenerate keys in DH handshake
+    o accepted and put into openssl
 
 Reach (deferrable) items for 0.1.1.x:
   - Start using create-fast cells as clients
