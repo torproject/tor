@@ -370,8 +370,10 @@ $Id$
     - If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
       fetch a new one if it was published in the last 2 hours. (??)
 
+    - Describe what we do with old server versions.
     
-
+    - If we have less than 16 to download, do not download unless 10 minutes
+      have passed since last download.
 
 6. Remaining issues
 
