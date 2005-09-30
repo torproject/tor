@@ -30,6 +30,7 @@ static void mark_all_trusteddirservers_up(void);
 static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void routerstatus_list_update_from_networkstatus(time_t now);
+static void local_routerstatus_free(local_routerstatus_t *rs);
 
 /****************************************************************************/
 
@@ -1016,11 +1017,24 @@ routerlist_free_all(void)
     smartlist_free(networkstatus_list);
     networkstatus_list = NULL;
   }
+  if (routerstatus_list) {
+    SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+                      local_routerstatus_free(rs));
+    smartlist_free(routerstatus_list);
+    routerstatus_list = NULL;
+  }
 }
 
 /** Free all storage held by the routerstatus object <b>rs</b>. */
 void
 routerstatus_free(routerstatus_t *rs)
+{
+  tor_free(rs);
+}
+
+/** Free all storage held by the local_routerstatus object <b>rs</b>. */
+static void
+local_routerstatus_free(local_routerstatus_t *rs)
 {
   tor_free(rs);
 }
@@ -2293,8 +2307,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
     rs_out->status.is_valid = n_valid > n_statuses/2;
     rs_out->status.is_running = n_running > n_recent/2;
   }
-  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
-                    routerstatus_free(rs));
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+                    local_routerstatus_free(rs));
   smartlist_free(routerstatus_list);
   routerstatus_list = result;
 
