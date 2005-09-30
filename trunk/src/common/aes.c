@@ -157,7 +157,7 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
 {
   assert(cipher);
   memset(cipher, 0, sizeof(cipher));
-  free(cipher);
+  tor_free(cipher);
 }
 
 /** Encrypt <b>len</b> bytes from <b>input</b>, storing the result in

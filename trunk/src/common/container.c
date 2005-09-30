@@ -58,8 +58,8 @@ smartlist_create(void)
 void
 smartlist_free(smartlist_t *sl)
 {
-  free(sl->list);
-  free(sl);
+  tor_free(sl->list);
+  tor_free(sl);
 }
 
 /** Change the capacity of the smartlist to <b>n</b>, so that we can grow
