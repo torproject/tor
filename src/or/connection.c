@@ -858,11 +858,11 @@ retry_listeners(int type, config_line_t *cfg,
     line = NULL;
     SMARTLIST_FOREACH(launch, config_line_t *, wanted,
       {
-        char *addr=NULL;
+        char *address=NULL;
         uint16_t port;
-        if (! parse_addr_port(wanted->value, &addr, NULL, &port)) {
-          int addr_matches = !strcasecmp(addr, conn->address);
-          tor_free(addr);
+        if (! parse_addr_port(wanted->value, &address, NULL, &port)) {
+          int addr_matches = !strcasecmp(address, conn->address);
+          tor_free(address);
           if (! port)
             port = port_option;
           if (port == conn->port && addr_matches) {
