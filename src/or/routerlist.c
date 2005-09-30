@@ -251,6 +251,7 @@ router_reload_router_list(void)
       tor_free(contents);
     }
   }
+  tor_free(fname);
 
   /* Don't cache expired routers. */
   routerlist_remove_old_routers(ROUTER_MAX_AGE);
