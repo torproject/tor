@@ -597,9 +597,6 @@ struct connection_t {
   unsigned wants_to_write:1; /**< Boolean: should we start writing again once
                              * the bandwidth throttler allows reads?
                              */
-  unsigned marked_for_close:1; /**< Boolean: should we close this conn on the
-                               * next iteration of the main loop?
-                               */
   unsigned hold_open_until_flushed:1; /**< Despite this connection's being
                                       * marked for close, do we flush it
                                       * before closing it?
@@ -612,6 +609,10 @@ struct connection_t {
   int poll_index; /* XXXX rename. */
   struct event *read_event; /**< libevent event structure. */
   struct event *write_event; /**< libevent event structure. */
+  int marked_for_close; /**< Should we close this conn on the next iteration
+                         * of the main loop? (If true, holds the line number
+                         * where this connection was marked.)
+                         */
   const char *marked_for_close_file; /**< For debugging: in which file were
                                       * we marked for close? */
 
@@ -984,7 +985,8 @@ struct circuit_t {
   uint32_t magic; /**< For memory debugging: must equal CIRCUIT_MAGIC. */
 
   int marked_for_close; /**< Should we close this circuit at the end of the
-                         * main loop? */
+                         * main loop? (If true, holds the line number where
+                         * this circuit was marked.) */
   const char *marked_for_close_file; /**< For debugging: in which file was this
                                       * circuit marked for close? */
 
