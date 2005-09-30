@@ -394,6 +394,7 @@ void
 config_free_all(void)
 {
   config_free(&options_format, global_options);
+  config_free(&state_format, global_state);
   tor_free(torrc_fname);
   addr_policy_free(reachable_addr_policy);
   reachable_addr_policy = NULL;
