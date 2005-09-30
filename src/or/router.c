@@ -432,7 +432,17 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
   return router->dir_port;
 }
 
-/**DOCDOC*/
+/** Some time has passed, or we just got new directory information.
+ * See if we currently believe our ORPort or DirPort to be
+ * unreachable. If so, launch a new test for it.
+ *
+ * For ORPort, we simply try making a circuit that ends at ourselves.
+ * Success is noticed in onionskin_answer().
+ *
+ * For DirPort, we make a connection via Tor to our DirPort and ask
+ * for our own server descriptor.
+ * Success is noticed in connection_dir_client_reached_eof().
+ */
 void
 consider_testing_reachability(void)
 {
