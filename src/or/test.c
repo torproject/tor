@@ -543,9 +543,9 @@ test_crypto(void)
   test_eq(i,0);
   test_memeq(data2, "\xf0\xd6\x78\xaf\xfc\x00\x01\x00",8);
 
-  free(data1);
-  free(data2);
-  free(data3);
+  tor_free(data1);
+  tor_free(data2);
+  tor_free(data3);
 }
 
 static void

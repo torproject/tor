@@ -323,7 +323,7 @@ crypto_free_pk_env(crypto_pk_env_t *env)
   if (env->key)
     RSA_free(env->key);
 
-  free(env);
+  tor_free(env);
 }
 
 /** Create a new symmetric cipher for a given key and encryption flag
@@ -561,7 +561,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   s[len]='\0';
   r = write_str_to_file(fname, s, 0);
   BIO_free(bio);
-  free(s);
+  tor_free(s);
   return r;
 }
 
@@ -1032,14 +1032,14 @@ crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
   len = i2d_RSAPublicKey(pk->key, &bufp);
   if (len < 0) {
     crypto_log_errors(LOG_WARN,"encoding public key");
-    free(buf);
+    tor_free(buf);
     return -1;
   }
   if (crypto_digest(digest_out, (char*)buf, len) < 0) {
-    free(buf);
+    tor_free(buf);
     return -1;
   }
-  free(buf);
+  tor_free(buf);
   return 0;
 }
 
@@ -1367,7 +1367,7 @@ crypto_dh_new(void)
  err:
   crypto_log_errors(LOG_WARN, "creating DH object");
   if (res && res->dh) DH_free(res->dh); /* frees p and g too */
-  if (res) free(res);
+  if (res) tor_free(res);
   return NULL;
 }
 
@@ -1564,7 +1564,7 @@ crypto_dh_free(crypto_dh_env_t *dh)
   tor_assert(dh);
   tor_assert(dh->dh);
   DH_free(dh->dh);
-  free(dh);
+  tor_free(dh);
 }
 
 /* random numbers */

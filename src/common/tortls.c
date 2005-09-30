@@ -408,7 +408,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   if (result && result->client_only_ctx)
     SSL_CTX_free(result->client_only_ctx);
   if (result)
-    free(result);
+    tor_free(result);
   if (cert)
     X509_free(cert);
   if (idcert)

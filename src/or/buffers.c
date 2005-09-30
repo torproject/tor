@@ -83,14 +83,15 @@ buf_normalize(buf_t *buf)
   if (buf->cur + buf->datalen <= buf->mem+buf->len) {
     return;
   } else {
-    char *newmem;
+    char *newmem, *oldmem;
     size_t sz = (buf->mem+buf->len)-buf->cur;
     log_fn(LOG_WARN, "Unexpected non-normalized buffer.");
     newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(buf->len)));
     SET_GUARDS(newmem, buf->len);
     memcpy(newmem, buf->cur, sz);
     memcpy(newmem+sz, buf->mem, buf->datalen-sz);
-    free(RAW_MEM(buf->mem));
+    oldmem = RAW_MEM(buf->mem);
+    tor_free(oldmem); /* Can't use tor_free directly. */
     buf->mem = buf->cur = newmem;
     check();
   }
@@ -196,11 +197,11 @@ buf_resize(buf_t *buf, size_t new_capacity)
       !buf->datalen &&
       buf->len >= 1<<16) {
     /* don't realloc; free and malloc */
-    char *newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(new_capacity)));
+    char *oldmem, *newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(new_capacity)));
     SET_GUARDS(newmem, new_capacity);
-    free(RAW_MEM(buf->mem));
+    oldmem = RAW_MEM(buf->mem);
+    tor_free(oldmem);
     buf->mem = buf->cur = newmem;
-
   } else {
     buf->mem = GUARDED_MEM(tor_realloc(RAW_MEM(buf->mem),
                                        ALLOC_LEN(new_capacity)));
@@ -371,9 +372,11 @@ _buf_peek_raw_buffer(const buf_t *buf)
 void
 buf_free(buf_t *buf)
 {
+  char *oldmem;
   assert_buf_ok(buf);
   buf->magic = 0xDEADBEEF;
-  free(RAW_MEM(buf->mem));
+  oldmem = RAW_MEM(buf->mem);
+  tor_free(oldmem);
   buf_total_alloc -= buf->len;
   buf_total_used -= buf->datalen;
   tor_free(buf);

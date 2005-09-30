@@ -1464,7 +1464,7 @@ nt_torrc_is_present()
   path_to_torrc = tor_malloc(len);
   if (tor_snprintf(path_to_torrc, len, "%s%s%s", szDrive,  szDir, torrc)<0) {
     printf("Failed: tor_snprinf()\n");
-    free(path_to_torrc);
+    tor_free(path_to_torrc);
     return 0;
   }
 
@@ -1772,7 +1772,7 @@ nt_service_install(void)
   }
 
   if ((hSCManager = nt_service_open_scm()) == NULL) {
-    free(command);
+    tor_free(command);
     return 0;
   }
 
@@ -1789,7 +1789,7 @@ nt_service_install(void)
     printf("CreateService() failed : %s\n", errmsg);
     CloseServiceHandle(hSCManager);
     LocalFree(errmsg);
-    free(command);
+    tor_free(command);
     return 0;
   }
 
