@@ -96,7 +96,7 @@ const char util_c_id[] = "$Id$";
  * ===== */
 #ifdef USE_DMALLOC
  #include <dmalloc.h>
- #define DMALLOC_FN_ARGS file, line,
+ #define DMALLOC_FN_ARGS , file, line
 #else
  #define dmalloc_strdup(file, line, string, xalloc_b) strdup(string)
 
@@ -116,7 +116,7 @@ const char util_c_id[] = "$Id$";
  * ignored otherwise.
  */
 void *
-_tor_malloc(DMALLOC_PARAMS size_t size)
+_tor_malloc(size_t size DMALLOC_PARAMS)
 {
   void *result;
 
@@ -141,9 +141,9 @@ _tor_malloc(DMALLOC_PARAMS size_t size)
  * the process on error.  (Same as calloc(size,1), but never returns NULL.)
  */
 void *
-_tor_malloc_zero(DMALLOC_PARAMS size_t size)
+_tor_malloc_zero(size_t size DMALLOC_PARAMS)
 {
-  void *result = _tor_malloc(DMALLOC_FN_ARGS size);
+  void *result = _tor_malloc(size DMALLOC_FN_ARGS);
   memset(result, 0, size);
   return result;
 }
@@ -153,7 +153,7 @@ _tor_malloc_zero(DMALLOC_PARAMS size_t size)
  * terminate. (Like realloc(ptr,size), but never returns NULL.)
  */
 void *
-_tor_realloc(DMALLOC_PARAMS void *ptr, size_t size)
+_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
 {
   void *result;
 
@@ -170,7 +170,7 @@ _tor_realloc(DMALLOC_PARAMS void *ptr, size_t size)
  * NULL.)
  */
 char *
-_tor_strdup(DMALLOC_PARAMS const char *s)
+_tor_strdup(const char *s DMALLOC_PARAMS)
 {
   char *dup;
   tor_assert(s);
@@ -190,11 +190,11 @@ _tor_strdup(DMALLOC_PARAMS const char *s)
  * NULL.)
  */
 char *
-_tor_strndup(DMALLOC_PARAMS const char *s, size_t n)
+_tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
 {
   char *dup;
   tor_assert(s);
-  dup = _tor_malloc(DMALLOC_FN_ARGS n+1);
+  dup = _tor_malloc((n+1) DMALLOC_FN_ARGS);
   /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
    * much faster than strlcpy when strlen(s) is much longer than n.
