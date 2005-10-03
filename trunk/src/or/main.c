@@ -1907,10 +1907,23 @@ nt_strerror(uint32_t errnum)
 }
 #endif
 
+#ifdef USE_DMALLOC
+#include <openssl/crypto.h>
+static void
+_tor_dmalloc_free(void *p)
+{
+  tor_free(p);
+}
+#endif
+
 /** DOCDOC */
 int
 tor_main(int argc, char *argv[])
 {
+#ifdef USE_DMALLOC
+    int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc, _tor_dmalloc_free);
+    log_fn(LOG_NOTICE, "r = %d", r);
+#endif
 #ifdef MS_WINDOWS_SERVICE
   backup_argv = argv;
   backup_argc = argc;
@@ -1963,4 +1976,3 @@ tor_main(int argc, char *argv[])
   tor_cleanup();
   return -1;
 }
-
