@@ -221,6 +221,7 @@ crypto_global_init(int useAccel)
 int
 crypto_global_cleanup(void)
 {
+  EVP_cleanup();
   ERR_free_strings();
 #ifndef NO_ENGINES
   ENGINE_cleanup();
