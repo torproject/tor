@@ -1663,7 +1663,7 @@ pick_helper_nodes(void)
     helper_nodes_changed();
 }
 
-/** Remove all elements from the list of helper nodes */
+/** Remove all elements from the list of helper nodes. */
 static void
 clear_helper_nodes(void)
 {
@@ -1672,7 +1672,7 @@ clear_helper_nodes(void)
   helper_nodes_changed();
 }
 
-/** Release all storage held by the list of helper nodes */
+/** Release all storage held by the list of helper nodes. */
 void
 helper_nodes_free_all(void)
 {

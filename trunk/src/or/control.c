@@ -381,7 +381,7 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
  * string (unquoted, unescaped) into a newly allocated string in *<b>out</b>;
  * store its length in <b>out_len</b>.  On success, return a pointer to the
  * character immediately following the escaped string.  On failure, return
- * NULL. **/
+ * NULL. */
 static const char *
 get_escaped_string(const char *start, size_t in_len_max,
                    char **out, size_t *out_len)
