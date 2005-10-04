@@ -2521,10 +2521,12 @@ update_router_descriptor_downloads(time_t now)
 #define MIN_DL_PER_REQUEST 4
 #define MIN_REQUESTS 3
 #define MAX_DL_TO_DELAY 16
-#define MAX_INTERVAL_WITHOUT_REQUEST 10*60
+#define MAX_CLIENT_INTERVAL_WITHOUT_REQUEST 10*60
+#define MAX_SERVER_INTERVAL_WITHOUT_REQUEST 1*60
   smartlist_t *downloadable = NULL;
   int get_all = 0;
-  int mirror = server_mode(get_options()) && get_options()->DirPort;
+  int dirserv = server_mode(get_options()) && get_options()->DirPort;
+  int should_delay, n_downloadable;
   static time_t last_download_attempted = 0;
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
     get_all = 1;
@@ -2537,30 +2539,39 @@ update_router_descriptor_downloads(time_t now)
   }
 
   downloadable = router_list_downloadable();
-  if (smartlist_len(downloadable) >= MAX_DL_TO_DELAY ||
-      (smartlist_len(downloadable) &&
-       (mirror ||
-        last_download_attempted + MAX_INTERVAL_WITHOUT_REQUEST < now))) {
-    int i, j, n, n_per_request=MAX_DL_PER_REQUEST;
+  n_downloadable = smartlist_len(downloadable);
+  if (n_downloadable >= MAX_DL_TO_DELAY)
+    should_delay = 0;
+  else if (n_downloadable == 0)
+    should_delay = 1;
+  else if (dirserv)
+    should_delay = (last_download_attempted +
+                    MAX_SERVER_INTERVAL_WITHOUT_REQUEST) < now;
+  else
+    should_delay = (last_download_attempted +
+                    MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) < now;
+
+  if (! should_delay) {
+    int i, j, n_per_request=MAX_DL_PER_REQUEST;
     size_t r_len = MAX_DL_PER_REQUEST*(HEX_DIGEST_LEN+1)+16;
     char *resource = tor_malloc(r_len);
 
-    n = smartlist_len(downloadable);
-    if (! mirror) {
-      n_per_request = (n+MIN_REQUESTS-1) / MIN_REQUESTS;
+    if (! dirserv) {
+      n_per_request = (n_downloadable+MIN_REQUESTS-1) / MIN_REQUESTS;
       if (n_per_request > MAX_DL_PER_REQUEST)
         n_per_request = MAX_DL_PER_REQUEST;
       if (n_per_request < MIN_DL_PER_REQUEST)
         n_per_request = MIN_DL_PER_REQUEST;
     }
     log_fn(LOG_NOTICE, "Launching %d request%s for %d router%s, %d at a time",
-           (n+n_per_request-1)/n_per_request, n>n_per_request?"s":"",
-           n, n>1?"s":"", n_per_request);
-    for (i=0; i < n; i += n_per_request) {
+           (n_downloadable+n_per_request-1)/n_per_request,
+           n_downloadable>n_per_request?"s":"",
+           n_downloadable, n_downloadable>1?"s":"", n_per_request);
+    for (i=0; i < n_downloadable; i += n_per_request) {
       char *cp = resource;
       memcpy(resource, "fp/", 3);
       cp = resource + 3;
-      for (j=i; j < i+n_per_request && j < n; ++j) {
+      for (j=i; j < i+n_per_request && j < n_downloadable; ++j) {
         memcpy(cp, smartlist_get(downloadable, j), HEX_DIGEST_LEN);
         cp += HEX_DIGEST_LEN;
         *cp++ = '+';
