@@ -1313,15 +1313,12 @@ option_reset(config_format_t *fmt, or_options_t *options,
 static void
 add_default_trusted_dirservers(or_options_t *options)
 {
-  /* moria1 */
   config_line_append(&options->DirServers, "DirServer",
-     "v1 18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
-  /* moria2 */
+     "moria1 v1 18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
   config_line_append(&options->DirServers, "DirServer",
-     "v1 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
-  /* tor26 */
+     "moria2 v1 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
   config_line_append(&options->DirServers, "DirServer",
-     "v1 86.59.5.130:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
+     "tor26 v1 86.59.5.130:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 //  "tor.noreply.org:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 }
 
@@ -2871,23 +2868,31 @@ static int
 parse_dir_server_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
-  int r;
-  char *addrport, *address=NULL;
+  int r, idx;
+  char *addrport, *address=NULL, *nickname=NULL, *fingerprint=NULL;
   uint16_t port;
   char digest[DIGEST_LEN];
   int supports_v1 = 1; /*XXXX011 change default when clients support v2. */
 
-  while (TOR_ISSPACE(*line))
-    ++line;
-
-  if (!strcmpstart(line, "v1 ")) {
-    line += 3;
-    supports_v1 = 1;
-  }
-
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+  if (smartlist_len(items) < 2) {
+  }
+
+  idx = 0;
+  if (is_legal_nickname(smartlist_get(items, 0))) {
+    nickname = smartlist_get(items, 0);
+    smartlist_del_keeporder(items, 0);
+  }
+
+  if (!strcmp(smartlist_get(items, 0), "v1")) {
+    char *v1 = smartlist_get(items, 0);
+    tor_free(v1);
+    supports_v1 = 1;
+    smartlist_del_keeporder(items, 0);
+  }
+
   if (smartlist_len(items) < 2) {
     log_fn(LOG_WARN, "Too few arguments to DirServer line.");
     goto err;
@@ -2901,14 +2906,14 @@ parse_dir_server_line(const char *line, int validate_only)
     log_fn(LOG_WARN, "Missing port in DirServer address '%s'",addrport);
     goto err;
   }
+  smartlist_del_keeporder(items, 0);
 
-  tor_strstrip(smartlist_get(items, 1), " ");
-  if (strlen(smartlist_get(items, 1)) != HEX_DIGEST_LEN) {
+  fingerprint = smartlist_join_strings(items, "", 0, NULL);
+  if (strlen(fingerprint) != HEX_DIGEST_LEN) {
     log_fn(LOG_WARN, "Key digest for DirServer is wrong length.");
     goto err;
   }
-  if (base16_decode(digest, DIGEST_LEN,
-                    smartlist_get(items,1), HEX_DIGEST_LEN)<0) {
+  if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
     log_fn(LOG_WARN, "Unable to decode DirServer key digest.");
     goto err;
   }
@@ -2916,7 +2921,7 @@ parse_dir_server_line(const char *line, int validate_only)
   if (!validate_only) {
     log_fn(LOG_DEBUG, "Trusted dirserver at %s:%d (%s)", address, (int)port,
            (char*)smartlist_get(items,1));
-    add_trusted_dir_server(address, port, digest, supports_v1);
+    add_trusted_dir_server(nickname, address, port, digest, supports_v1);
   }
 
   r = 0;
@@ -2929,6 +2934,8 @@ parse_dir_server_line(const char *line, int validate_only)
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(address);
+  tor_free(nickname);
+  tor_free(fingerprint);
   return r;
 }
 
