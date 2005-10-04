@@ -996,7 +996,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
       }
     } else {
       struct in_addr in;
-      routerinfo_t *r = router_get_by_nickname(socks->address);
+      routerinfo_t *r = router_get_by_nickname(socks->address, 1);
       if (r) {
         conn->chosen_exit_name = tor_strdup(socks->address);
         /* XXXX Should this use server->address instead? */
@@ -1703,7 +1703,7 @@ connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
    * make sure the exit node of the existing circuit matches exactly.
    */
   if (conn->chosen_exit_name) {
-    if (router_get_by_nickname(conn->chosen_exit_name) != exit) {
+    if (router_get_by_nickname(conn->chosen_exit_name, 1) != exit) {
       /* doesn't match */
       log_fn(LOG_DEBUG,"Requested node '%s', considering node '%s'. No.",
              conn->chosen_exit_name, exit->nickname);

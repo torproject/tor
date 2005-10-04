@@ -292,7 +292,7 @@ rend_service_update_descriptor(rend_service_t *service)
   d->intro_point_extend_info = tor_malloc_zero(sizeof(extend_info_t*)*n);
   d->protocols = (1<<2) | (1<<0); /* We support protocol 2 and protocol 0. */
   for (i=0; i < n; ++i) {
-    router = router_get_by_nickname(smartlist_get(service->intro_nodes, i));
+    router = router_get_by_nickname(smartlist_get(service->intro_nodes, i),1);
     if (!router) {
       log_fn(LOG_INFO,"Router '%s' not found. Skipping.",
              (char*)smartlist_get(service->intro_nodes, i));
@@ -512,7 +512,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
     ptr = rp_nickname+nickname_field_len;
     len -= nickname_field_len;
     len -= rp_nickname - buf; /* also remove header space used by version, if any */
-    router = router_get_by_nickname(rp_nickname);
+    router = router_get_by_nickname(rp_nickname, 0);
     if (!router) {
       log_fn(LOG_INFO, "Couldn't find router '%s' named in rendezvous cell.",
              rp_nickname);
@@ -934,7 +934,7 @@ rend_services_introduce(void)
     /* Find out which introduction points we have in progress for this service. */
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
-      router = router_get_by_nickname(intro);
+      router = router_get_by_nickname(intro, 1);
       if (!router || !find_intro_circuit(router,service->pk_digest)) {
         log_fn(LOG_INFO,"Giving up on %s as intro point for %s.",
                 intro, service->service_id);
@@ -1052,7 +1052,7 @@ rend_service_dump_stats(int severity)
     log(severity, "Service configured in \"%s\":", service->directory);
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       nickname = smartlist_get(service->intro_nodes, j);
-      router = router_get_by_nickname(smartlist_get(service->intro_nodes,j));
+      router = router_get_by_nickname(smartlist_get(service->intro_nodes,j),1);
       if (!router) {
         log(severity, "  Intro point at %s: unrecognized router",nickname);
         continue;

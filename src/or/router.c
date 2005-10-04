@@ -810,9 +810,33 @@ router_rebuild_descriptor(int force)
   if (authdir_mode(options))
     ri->is_verified = ri->is_named = 1; /* believe in yourself */
   if (options->MyFamily) {
+    smartlist_t *family = smartlist_create();
     ri->declared_family = smartlist_create();
-    smartlist_split_string(ri->declared_family, options->MyFamily, ",",
+    smartlist_split_string(family, options->MyFamily, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    SMARTLIST_FOREACH(family, char *, name,
+     {
+       routerinfo_t *member;
+       if (!strcasecmp(name, options->Nickname))
+         member = ri;
+       else
+         member = router_get_by_nickname(name, 1);
+       if (!member) {
+         log_fn(LOG_WARN, "I have no descriptor for the router named \"%s\" "
+                "in my declared family; I'll use the nickname verbatim, but "
+                "this may confuse clients.", name);
+         smartlist_add(ri->declared_family, name);
+         name = NULL;
+       } else {
+         char *fp = tor_malloc(HEX_DIGEST_LEN+2);
+         fp[0] = '$';
+         base16_encode(fp+1,HEX_DIGEST_LEN+1,
+                       member->identity_digest, DIGEST_LEN);
+         smartlist_add(ri->declared_family, fp);
+       }
+       tor_free(name);
+     });
+    smartlist_free(family);
   }
   ri->signed_descriptor = tor_malloc(8192);
   if (router_dump_router_to_string(ri->signed_descriptor, 8192,

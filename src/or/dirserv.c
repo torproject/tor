@@ -105,12 +105,14 @@ add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list)
   fingerprint = tor_strdup(fp);
   tor_strstrip(fingerprint, " ");
 
-  for (i = 0; i < smartlist_len(list); ++i) {
-    ent = smartlist_get(list, i);
-    if (!strcasecmp(ent->nickname,nickname)) {
-      tor_free(ent->fingerprint);
-      ent->fingerprint = fingerprint;
-      return 1;
+  if (nickname[0] != '!') {
+    for (i = 0; i < smartlist_len(list); ++i) {
+      ent = smartlist_get(list, i);
+      if (!strcasecmp(ent->nickname,nickname)) {
+        tor_free(ent->fingerprint);
+        ent->fingerprint = fingerprint;
+        return 1;
+      }
     }
   }
   ent = tor_malloc(sizeof(fingerprint_entry_t));

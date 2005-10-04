@@ -467,7 +467,7 @@ rend_client_get_random_intro(const char *query)
   } else {
     /* add the intro point nicknames */
     char *choice = entry->parsed->intro_points[i];
-    routerinfo_t *router = router_get_by_nickname(choice);
+    routerinfo_t *router = router_get_by_nickname(choice, 0);
     if (!router) {
       log_fn(LOG_INFO, "Unknown router with nickname '%s'; trying another.",choice);
       tor_free(choice);

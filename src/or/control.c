@@ -1226,7 +1226,7 @@ handle_getinfo_helper(const char *question, char **answer)
     if (ri && ri->signed_descriptor)
       *answer = tor_strdup(ri->signed_descriptor);
   } else if (!strcmpstart(question, "desc/name/")) {
-    routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"));
+    routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"),1);
     if (ri && ri->signed_descriptor)
       *answer = tor_strdup(ri->signed_descriptor);
   } else if (!strcmpstart(question, "unregistered-servers-")) {
@@ -1513,7 +1513,7 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   routers = smartlist_create();
   SMARTLIST_FOREACH(router_nicknames, const char *, n,
   {
-    routerinfo_t *r = router_get_by_nickname(n);
+    routerinfo_t *r = router_get_by_nickname(n, 1);
     if (!r) {
       if (v0)
         send_control0_error(conn, ERR_NO_ROUTER, n);
