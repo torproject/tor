@@ -502,7 +502,7 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
    * declares familyhood with router. */
   SMARTLIST_FOREACH(router->declared_family, const char *, n,
     {
-      if (!(r = router_get_by_nickname(n)))
+      if (!(r = router_get_by_nickname(n, 0)))
         continue;
       if (!r->declared_family)
         continue;
@@ -516,7 +516,7 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   /* If the user declared any families locally, honor those too. */
   for (cl = get_options()->NodeFamilies; cl; cl = cl->next) {
     if (router_nickname_is_in_list(router, cl->value)) {
-      add_nickname_list_to_smartlist(sl, cl->value, 0);
+      add_nickname_list_to_smartlist(sl, cl->value, 1, 1);
     }
   }
 }
@@ -530,7 +530,7 @@ static smartlist_t *warned_nicknames = NULL;
  * currently running.  Add the routerinfos for those routers to <b>sl</b>.
  */
 void
-add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down)
+add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down, int warn_if_unnamed)
 {
   routerinfo_t *router;
   smartlist_t *nickname_list;
@@ -552,7 +552,7 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
       log_fn(LOG_WARN,"Nickname %s is misformed; skipping", nick);
       continue;
     }
-    router = router_get_by_nickname(nick);
+    router = router_get_by_nickname(nick, warn_if_unnamed);
     warned = smartlist_string_isin(warned_nicknames, nick);
     if (router) {
       if (router->is_running) {
@@ -770,12 +770,12 @@ router_choose_random_node(const char *preferred,
   routerinfo_t *choice;
 
   excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,excluded,0);
+  add_nickname_list_to_smartlist(excludednodes,excluded,0,1);
 
   /* Try the preferred nodes first. Ignore need_uptime and need_capacity,
    * since the user explicitly asked for these nodes. */
   sl = smartlist_create();
-  add_nickname_list_to_smartlist(sl,preferred,1);
+  add_nickname_list_to_smartlist(sl,preferred,1,1);
   smartlist_subtract(sl,excludednodes);
   if (excludedsmartlist)
     smartlist_subtract(sl,excludedsmartlist);
@@ -839,10 +839,12 @@ router_nickname_matches(routerinfo_t *router, const char *nickname)
  * <b>nickname</b>.  Return NULL if no such router is known.
  */
 routerinfo_t *
-router_get_by_nickname(const char *nickname)
+router_get_by_nickname(const char *nickname, int warn_if_unnamed)
 {
   int maybedigest;
   char digest[DIGEST_LEN];
+  routerinfo_t *best_match=NULL;
+  int n_matches = 0;
 
   tor_assert(nickname);
   if (!routerlist)
@@ -860,11 +862,68 @@ router_get_by_nickname(const char *nickname)
   {
     /* XXXX011 NM Should this restrict by Named rouers, or warn on
      * non-named routers, or something? */
-    if (0 == strcasecmp(router->nickname, nickname) ||
-        (maybedigest && 0 == memcmp(digest, router->identity_digest,
-                                    DIGEST_LEN)))
+    if (!strcasecmp(router->nickname, nickname)) {
+      if (router->is_named)
+        return router;
+      else {
+        ++n_matches;
+        best_match = router;
+      }
+    } else if (maybedigest &&
+               !memcmp(digest, router->identity_digest, DIGEST_LEN)) {
       return router;
+    }
   });
+
+  if (best_match) {
+    if (n_matches>1) {
+      smartlist_t *fps = smartlist_create();
+      int any_unwarned = 0;
+      SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
+        {
+          local_routerstatus_t *rs;
+          char *desc;
+          size_t dlen;
+          char fp[HEX_DIGEST_LEN+1];
+          if (strcasecmp(router->nickname, nickname))
+            continue;
+          rs=router_get_combined_status_by_digest(router->identity_digest);
+          if (!rs->name_lookup_warned) {
+            rs->name_lookup_warned = 1;
+            any_unwarned = 1;
+          }
+          base16_encode(fp, sizeof(fp), router->identity_digest, DIGEST_LEN);
+          dlen = 32 + HEX_DIGEST_LEN + strlen(router->address);
+          desc = tor_malloc(dlen);
+          tor_snprintf(desc, dlen, "\"$%s\" for the one at %s:%d",
+                       fp, router->address, router->or_port);
+          smartlist_add(fps, desc);
+        });
+      if (any_unwarned) {
+        char *alternatives = smartlist_join_strings(fps, "; ",0,NULL);
+        log_fn(LOG_WARN, "There are multiple matches for the nickname \"%s\","
+               " but none is listed as named by the directory authories. "
+               "Choosing one arbitrarily.  If you meant one in particular, "
+               "you should say %s.", nickname, alternatives);
+        tor_free(alternatives);
+      }
+      SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
+      smartlist_free(fps);
+    } else if (warn_if_unnamed) {
+      local_routerstatus_t *rs =
+        router_get_combined_status_by_digest(best_match->identity_digest);
+      if (rs && !rs->name_lookup_warned) {
+        char fp[HEX_DIGEST_LEN+1];
+        base16_encode(fp, sizeof(fp), best_match->identity_digest, DIGEST_LEN);
+        log_fn(LOG_WARN, "You specified a server \"%s\" by name, but the "
+               "directory authorities do not have a listing for this name. "
+               "To make sure you get the same server in the future, refer to "
+               "it by key, as \"$%s\".", nickname, fp);
+        rs->name_lookup_warned = 1;
+      }
+    }
+    return best_match;
+  }
 
   return NULL;
 }
@@ -2313,6 +2372,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     if ((rs_old = router_get_combined_status_by_digest(lowest))) {
       rs_out->n_download_failures = rs_old->n_download_failures;
       rs_out->next_attempt_at = rs_old->next_attempt_at;
+      rs_out->name_lookup_warned = rs_old->name_lookup_warned;
     }
     smartlist_add(result, rs_out);
     log_fn(LOG_DEBUG, "Router '%s' is listed by %d/%d directories, "
@@ -2356,7 +2416,8 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
   local_routerstatus_t *rs;
   or_options_t *options = get_options();
   int authdir = options->AuthoritativeDir;
-  int namingdir =  options->NamingAuthoritativeDir;
+  int namingdir = options->AuthoritativeDir &&
+    options->NamingAuthoritativeDir;
 
   if (!routerstatus_list)
     return;
@@ -2600,9 +2661,9 @@ update_router_descriptor_downloads(time_t now)
         *cp++ = '+';
       }
       memcpy(cp-1, ".z", 3);
-      last_download_attempted = now;
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
     }
+    last_download_attempted = now;
     tor_free(resource);
   }
   SMARTLIST_FOREACH(downloadable, char *, c, tor_free(c));

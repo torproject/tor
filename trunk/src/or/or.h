@@ -775,8 +775,8 @@ typedef struct {
   unsigned int is_verified:1; /**< Has a trusted dirserver validated this OR?
                                *  (For Authdir: Have we validated this OR?)
                                */
-  /*XXXX Make this get used once we think we do naming right. NM */
-  unsigned int is_named:1; /* Do we believe the nickname that this OR gives us? */
+  unsigned int is_named:1; /**< Do we believe the nickname that this OR gives
+                            * us? */
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
@@ -815,6 +815,9 @@ typedef struct local_routerstatus_t {
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
   unsigned int should_download:1; /**< DOCDOC */
+  unsigned int name_lookup_warned:1; /*< Have we warned the user for referring
+                                      * to this (unnamed) router by nickname?
+                                      */
 } local_routerstatus_t;
 
 /*XXXX011 make this configurable? */
@@ -2091,7 +2094,7 @@ trusted_dir_server_t *router_get_trusteddirserver_by_digest(
      const char *digest);
 int all_trusted_directory_servers_down(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
-void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down);
+void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down, int warn_if_unnamed);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
                                                  int warn);
@@ -2110,7 +2113,8 @@ routerinfo_t *router_choose_random_node(const char *preferred,
                                         smartlist_t *excludedsmartlist,
                                         int need_uptime, int need_bandwidth,
                                         int allow_unverified, int strict);
-routerinfo_t *router_get_by_nickname(const char *nickname);
+routerinfo_t *router_get_by_nickname(const char *nickname,
+                                     int warn_if_unnamed);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 int router_digest_is_trusted_dir(const char *digest);

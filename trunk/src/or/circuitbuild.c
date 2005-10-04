@@ -1053,7 +1053,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   or_options_t *options = get_options();
 
   preferredentries = smartlist_create();
-  add_nickname_list_to_smartlist(preferredentries,options->EntryNodes,1);
+  add_nickname_list_to_smartlist(preferredentries,options->EntryNodes,1,1);
 
   get_connection_array(&carray, &n_connections);
 
@@ -1142,10 +1142,10 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
          n_best_support, best_support, n_pending_connections);
 
   preferredexits = smartlist_create();
-  add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1);
+  add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1,1);
 
   excludedexits = smartlist_create();
-  add_nickname_list_to_smartlist(excludedexits,options->ExcludeNodes,0);
+  add_nickname_list_to_smartlist(excludedexits,options->ExcludeNodes,0,1);
 
   sl = smartlist_create();
 
@@ -1506,7 +1506,7 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
          state->desired_path_len);
 
   excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,get_options()->ExcludeNodes,0);
+  add_nickname_list_to_smartlist(excludednodes,get_options()->ExcludeNodes,0,1);
 
   if (cur_len == state->desired_path_len - 1) { /* Picking last node */
     info = extend_info_dup(state->chosen_exit);

@@ -497,9 +497,9 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
   }
   crypto_free_pk_env(identity_rcvd);
 
-  router = router_get_by_nickname(nickname);
+  router = router_get_by_nickname(nickname, 0);
   if (router && /* we know this nickname */
-      router->is_verified && /* make sure it's the right guy */
+      router->is_named && /* make sure it's the right guy */
       memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
     log_fn(severity,
            "Identity key not as expected for router claiming to be '%s' (%s:%d)",

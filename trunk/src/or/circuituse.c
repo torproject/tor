@@ -806,7 +806,7 @@ circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
   routerinfo_t *router = NULL;
 
   if (exit_nickname) {
-    router = router_get_by_nickname(exit_nickname);
+    router = router_get_by_nickname(exit_nickname, 1);
     if (!router) {
       log_fn(LOG_WARN, "No such OR as '%s'", exit_nickname);
       return NULL;
@@ -923,7 +923,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (conn->chosen_exit_name) {
         routerinfo_t *r;
-        if (!(r = router_get_by_nickname(conn->chosen_exit_name))) {
+        if (!(r = router_get_by_nickname(conn->chosen_exit_name, 1))) {
           log_fn(LOG_NOTICE,"Requested exit point '%s' is not known. Closing.",
                  conn->chosen_exit_name);
           return -1;
@@ -1097,7 +1097,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     circuit_t *circ=NULL;
 
     if (conn->chosen_exit_name) {
-      routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name);
+      routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       if (!router) {
         log_fn(LOG_WARN,"Requested exit point '%s' is not known. Closing.",
                conn->chosen_exit_name);

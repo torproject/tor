@@ -186,7 +186,7 @@ N     . Routerdesc download changes
         connections over last N seconds.
       o Call dirport_is_reachable from somewhere else.
       o Networkstatus should list who's an authority.
-      - Add nickname element to dirserver line.  Log this along with IP:Port.
+      o Add nickname element to dirserver line.  Log this along with IP:Port.
       o Warn when using non-default directory servers.
       - When giving up on a non-finished dir request, log how many bytes
         dropped, to see whether it's worthwhile to use partial info.
@@ -206,8 +206,8 @@ N   . Naming and validation:
       o Not all authdirs name.
       o Change naming rule: N->K iff any naming authdir says N->K,
         and none says N->K' or N'->K.
-      - Clients choose names based on network-status options.
-      - Names are remembered in client state (?)
+      o Clients choose names based on network-status options.
+      o Names are remembered in client state (?)
       - Okay to have two valid servers with same nickname, but not
         two named servers with same nickname.  Update logic.
 
