@@ -2062,6 +2062,8 @@ void router_free_all_keys(void);
 
 /** Represents information about a single trusted directory server. */
 typedef struct trusted_dir_server_t {
+  char *description;
+  char *nickname;
   char *address; /**< Hostname */
   uint32_t addr; /**< IPv4 address */
   uint16_t dir_port; /**< Directory port */
@@ -2138,7 +2140,8 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
 
 int router_exit_policy_rejects_all(routerinfo_t *router);
-void add_trusted_dir_server(const char *addr, uint16_t port,
+void add_trusted_dir_server(const char *nickname,
+                            const char *addr, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);

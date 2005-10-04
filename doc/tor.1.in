@@ -83,7 +83,7 @@ their current liveness status. A value of "0 seconds" tells Tor to choose an
 appropriate default. (Default: 1 hour for clients, 20 minutes for servers)
 .LP
 .TP
-\fBDirServer \fR[v1] \fIaddress:port fingerprint\fP
+\fBDirServer \fR[\fInickname\fR] [\fBv1\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
 Use a nonstandard authoritative directory server at the provided
 address and port, with the specified key fingerprint.  This option can
 be repeated many times, for multiple authoritative directory

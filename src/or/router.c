@@ -370,7 +370,8 @@ init_keys(void)
   /* 6b. [authdirserver only] add own key to approved directories. */
   crypto_pk_get_digest(get_identity_key(), digest);
   if (!router_digest_is_trusted_dir(digest)) {
-    add_trusted_dir_server(NULL, (uint16_t)options->DirPort, digest,
+    add_trusted_dir_server(options->Nickname, NULL,
+                           (uint16_t)options->DirPort, digest,
                            options->V1AuthoritativeDir);
   }
   /* success */

@@ -1416,7 +1416,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   format_iso_time(published, ns->published_on);
 
   if (ns->published_on > now + NETWORKSTATUS_ALLOW_SKEW) {
-    log_fn(LOG_WARN, "Network status was published in the future (%s GMT). Somebody is skewed here: check your clock. Not caching.", published);
+    log_fn(LOG_WARN, "Network status from %s was published in the future (%s GMT). Somebody is skewed here: check your clock. Not caching.", trusted_dir->description, published);
     skewed = 1;
   }
 
@@ -1455,8 +1455,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
         /* Same one we had before. */
         networkstatus_free(ns);
         log_fn(LOG_NOTICE,
-            "Dropping network-status from %s:%d (published %s); already have it.",
-               trusted_dir->address, trusted_dir->dir_port, published);
+            "Dropping network-status from %s (published %s); already have it.",
+               trusted_dir->description, published);
         if (old_ns->received_on < arrived_at) {
           if (source != NS_FROM_CACHE) {
             char *fn = networkstatus_get_cache_filename(old_ns);
@@ -1471,9 +1471,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
         char old_published[ISO_TIME_LEN+1];
         format_iso_time(old_published, old_ns->published_on);
         log_fn(LOG_NOTICE,
-               "Dropping network-status from %s:%d (published %s);"
+               "Dropping network-status from %s (published %s);"
                " we have a newer one (published %s) for this authority.",
-               trusted_dir->address, trusted_dir->dir_port, published,
+               trusted_dir->description, published,
                old_published);
         networkstatus_free(ns);
         return 0;
@@ -1490,10 +1490,10 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     smartlist_add(networkstatus_list, ns);
 
   /*XXXX011 downgrade to INFO NM */
-  log_fn(LOG_NOTICE, "Setting networkstatus %s %s:%d (published %s)",
+  log_fn(LOG_NOTICE, "Setting networkstatus %s %s (published %s)",
          source == NS_FROM_CACHE?"cached from":
          (source==NS_FROM_DIR?"downloaded from":"generated for"),
-         trusted_dir->address, trusted_dir->dir_port, published);
+         trusted_dir->description, published);
   networkstatus_list_has_changed = 1;
 
   smartlist_sort(networkstatus_list, _compare_networkstatus_published_on);
@@ -1699,11 +1699,10 @@ update_networkstatus_client_downloads(time_t now)
   /* Also, download at least 1 every NETWORKSTATUS_CLIENT_DL_INTERVAL. */
   if (n_running_dirservers &&
       most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL && needed < 1) {
-    const char *addr = most_recent?most_recent->address:"nobody";
-    int port = most_recent?most_recent->dir_port:0;
-    log_fn(LOG_NOTICE, "Our most recent network-status document (from %s:%d) "
+    log_fn(LOG_NOTICE, "Our most recent network-status document (from %s) "
            "is %d seconds old; downloading another.",
-           addr, port, (int)(now-most_recent_received));
+           most_recent?most_recent->description:"nobody",
+           (int)(now-most_recent_received));
     needed = 1;
   }
 
@@ -1932,12 +1931,13 @@ router_exit_policy_rejects_all(routerinfo_t *router)
  * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
  * <b>address</b> is NULL, add ourself. */
 void
-add_trusted_dir_server(const char *address, uint16_t port, const char *digest,
-                       int supports_v1)
+add_trusted_dir_server(const char *nickname, const char *address,
+                       uint16_t port, const char *digest, int supports_v1)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
   char *hostname = NULL;
+  size_t dlen;
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_create();
 
@@ -1957,12 +1957,23 @@ add_trusted_dir_server(const char *address, uint16_t port, const char *digest,
   }
 
   ent = tor_malloc_zero(sizeof(trusted_dir_server_t));
+  ent->nickname = nickname ? tor_strdup(nickname) : NULL;
   ent->address = hostname;
   ent->addr = a;
   ent->dir_port = port;
   ent->is_running = 1;
   ent->supports_v1_protocol = supports_v1;
   memcpy(ent->digest, digest, DIGEST_LEN);
+
+  dlen = 64 + strlen(hostname) + (nickname?strlen(nickname):0);
+  ent->description = tor_malloc(dlen);
+  if (nickname)
+    tor_snprintf(ent->description, dlen, "directory server \"%s\" at %s:%d",
+                 nickname, hostname, (int)port);
+  else
+    tor_snprintf(ent->description, dlen, "directory server at %s:%d",
+                 hostname, (int)port);
+
   smartlist_add(trusted_dir_servers, ent);
 }
 
@@ -1972,7 +1983,12 @@ clear_trusted_dir_servers(void)
 {
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
-                      { tor_free(ent->address); tor_free(ent); });
+      {
+        tor_free(ent->nickname);
+        tor_free(ent->description);
+        tor_free(ent->address);
+        tor_free(ent);
+      });
     smartlist_clear(trusted_dir_servers);
   } else {
     trusted_dir_servers = smartlist_create();
@@ -2116,13 +2132,16 @@ networkstatus_list_update_recent(time_t now)
   changed = 0;
   for (i=n_statuses-1; i >= 0; --i) {
     networkstatus_t *ns = smartlist_get(networkstatus_list, i);
+    trusted_dir_server_t *ds =
+      router_get_trusteddirserver_by_digest(ns->identity_digest);
+    const char *src = ds?ds->description:ns->source_address;
     if (n_recent < MIN_TO_INFLUENCE_RUNNING ||
         ns->published_on + DEFAULT_RUNNING_INTERVAL > now) {
       if (!ns->is_recent) {
         format_iso_time(published, ns->published_on);
         log_fn(LOG_NOTICE,
-               "Networkstatus from %s:%d (published %s) is now \"recent\"",
-               ns->source_address, ns->source_dirport, published);
+               "Networkstatus from %s (published %s) is now \"recent\"",
+               src, published);
         changed = 1;
       }
       ns->is_recent = 1;
@@ -2131,8 +2150,8 @@ networkstatus_list_update_recent(time_t now)
       if (ns->is_recent) {
         format_iso_time(published, ns->published_on);
         log_fn(LOG_NOTICE,
-               "Networkstatus from %s:%d (published %s) is no longer \"recent\"",
-               ns->source_address, ns->source_dirport, published);
+               "Networkstatus from %s (published %s) is no longer \"recent\"",
+               src, published);
         changed = 1;
         ns->is_recent = 0;
       }
@@ -2211,9 +2230,13 @@ routerstatus_list_update_from_networkstatus(time_t now)
       else if (memcmp(other_digest, rs->identity_digest, DIGEST_LEN) &&
                other_digest != conflict) {
         /*XXXX011 rate-limit this?*/
+        char fp1[HEX_DIGEST_LEN+1];
+        char fp2[HEX_DIGEST_LEN+1];
+        base16_encode(fp1, sizeof(fp1), other_digest, DIGEST_LEN);
+        base16_encode(fp2, sizeof(fp2), rs->identity_digest, DIGEST_LEN);
         log_fn(LOG_WARN,
-               "Naming authorities disagree about which key goes with %s.",
-               rs->nickname);
+               "Naming authorities disagree about which key goes with %s. ($%s vs $%s)",
+               rs->nickname, fp1, fp2);
         strmap_set_lc(name_map, rs->nickname, conflict);
       }
     });
@@ -2275,8 +2298,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
         } else if (strcmp(the_name,"**mismatch**")) {
           char hd[HEX_DIGEST_LEN+1];
           base16_encode(hd, HEX_DIGEST_LEN+1, rs->identity_digest, DIGEST_LEN);
-          log_fn(LOG_WARN, "Naming authorities disagree about nicknames for $%s",
-                 hd);
+          log_fn(LOG_WARN, "Naming authorities disagree about nicknames for $%s (\"%s\" vs \"%s\")",
+                 hd, the_name, rs->nickname);
           the_name = "**mismatch**";
         }
       }
