@@ -2083,12 +2083,12 @@ options_validate(or_options_t *options)
     result = -1;
   }
   if (config_parse_addr_policy(options->AuthDirReject, &addr_policy,
-                               ADDR_POLICY_ACCEPT)) {
+                               ADDR_POLICY_REJECT)) {
     log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
     result = -1;
   }
   if (config_parse_addr_policy(options->AuthDirInvalid, &addr_policy,
-                               ADDR_POLICY_ACCEPT)) {
+                               ADDR_POLICY_REJECT)) {
     log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
     result = -1;
   }
