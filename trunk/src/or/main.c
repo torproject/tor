@@ -575,6 +575,12 @@ run_connection_housekeeping(int i, time_t now)
       conn->timestamp_lastwritten + 5*60 < now) {
     log_fn(LOG_INFO,"Expiring wedged directory conn (fd %d, purpose %d)",
            conn->s, conn->purpose);
+    /* This check is temporary; it's to let us know whether we should consider
+     * parsing partial serverdesc responses. */
+    if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
+      log_fn(LOG_NOTICE, "Expired wedged directory conn was downloading server descriptors; dropping %d bytes.",
+             buf_datalen(conn->inbuf));
+    }
     connection_mark_for_close(conn);
     return;
   }

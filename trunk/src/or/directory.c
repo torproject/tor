@@ -1111,6 +1111,12 @@ connection_dir_reached_eof(connection_t *conn)
   int retval;
   if (conn->state != DIR_CONN_STATE_CLIENT_READING) {
     log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
+    /* This check is temporary; it's to let us know whether we should consider
+     * parsing partial serverdesc responses. */
+    if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
+      log_fn(LOG_NOTICE, "Reached EOF while downloading server descriptors; dropping %d bytes.",
+             buf_datalen(conn->inbuf));
+    }
     connection_close_immediate(conn); /* it was an error; give up on flushing */
     connection_mark_for_close(conn);
     return -1;
