@@ -188,7 +188,7 @@ N     . Routerdesc download changes
       o Networkstatus should list who's an authority.
       o Add nickname element to dirserver line.  Log this along with IP:Port.
       o Warn when using non-default directory servers.
-      - When giving up on a non-finished dir request, log how many bytes
+      o When giving up on a non-finished dir request, log how many bytes
         dropped, to see whether it's worthwhile to use partial info.
     - Security
       - Alices avoid duplicate class C nodes.
