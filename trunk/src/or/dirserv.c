@@ -58,7 +58,7 @@ parse_authdir_policy(void)
     authdir_reject_policy = NULL;
   }
   config_parse_addr_policy(get_options()->AuthDirReject,
-                           &authdir_reject_policy, ADDR_POLICY_ACCEPT);
+                           &authdir_reject_policy, ADDR_POLICY_REJECT);
   /* ports aren't used. */
   for (n=authdir_reject_policy; n; n = n->next) {
     n->prt_min = 1;
@@ -70,7 +70,7 @@ parse_authdir_policy(void)
     authdir_invalid_policy = NULL;
   }
   config_parse_addr_policy(get_options()->AuthDirInvalid,
-                           &authdir_invalid_policy, ADDR_POLICY_ACCEPT);
+                           &authdir_invalid_policy, ADDR_POLICY_REJECT);
   /* ports aren't used. */
   for (n=authdir_invalid_policy; n; n = n->next) {
     n->prt_min = 1;
@@ -251,14 +251,14 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
     addr_policy_result_t inv = router_compare_addr_to_addr_policy(
                        router->addr, router->or_port, authdir_invalid_policy);
 
-    if (rej == ADDR_POLICY_PROBABLY_ACCEPTED || rej == ADDR_POLICY_ACCEPTED) {
+    if (rej == ADDR_POLICY_PROBABLY_REJECTED || rej == ADDR_POLICY_REJECTED) {
       log_fn(LOG_INFO, "Rejecting '%s' because of address %s",
              router->nickname, router->address);
       if (msg)
         *msg = "Authdir is rejecting routers in this range.";
       return FP_REJECT;
     }
-    if (inv == ADDR_POLICY_PROBABLY_ACCEPTED || inv == ADDR_POLICY_ACCEPTED) {
+    if (inv == ADDR_POLICY_PROBABLY_REJECTED || inv == ADDR_POLICY_REJECTED) {
       log_fn(LOG_INFO, "Not marking '%s' valid because of address %s",
              router->nickname, router->address);
       return FP_INVALID;
