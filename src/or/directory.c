@@ -1113,8 +1113,9 @@ connection_dir_reached_eof(connection_t *conn)
     log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
     /* This check is temporary; it's to let us know whether we should consider
      * parsing partial serverdesc responses. */
-    if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
-      log_fn(LOG_NOTICE, "Reached EOF while downloading server descriptors; dropping %d bytes.",
+    if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
+        buf_datalen(conn->inbuf)>=(24*1024)) {
+      log_fn(LOG_NOTICE, "Directory connection closed early after downloading %d bytes of descriptors.  If this happens often, please file a bug report.",
              buf_datalen(conn->inbuf));
     }
     connection_close_immediate(conn); /* it was an error; give up on flushing */
