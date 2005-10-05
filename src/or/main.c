@@ -943,6 +943,12 @@ do_hup(void)
       log_fn(LOG_NOTICE, "Error reloading fingerprints. Continuing with old list.");
     }
   }
+
+  /* Rotate away from the old dirty circuits. This has to be done
+   * after we've read the new options, but before we start using
+   * circuits for directory fetches. */
+  circuit_expire_all_dirty_circs();
+
   /* retry appropriate downloads */
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
