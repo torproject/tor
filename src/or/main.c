@@ -752,10 +752,7 @@ run_scheduled_events(time_t now)
     /* Also, once per minute, check whether we want to download any
      * networkstatus documents.
      */
-    if (server_mode(options) && options->DirPort)
-      update_networkstatus_cache_downloads(now);
-    else
-      update_networkstatus_client_downloads(now);
+    update_networkstatus_downloads(now);
   }
 
   /** 3a. Every second, we examine pending circuits and prune the
@@ -946,8 +943,14 @@ do_hup(void)
       log_fn(LOG_NOTICE, "Error reloading fingerprints. Continuing with old list.");
     }
   }
-  /* XXXX011 NM This should be a generic "retry all directory fetches". */
-  directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1); /*XXXX011NM*/
+  /* retry appropriate downloads */
+  router_reset_status_download_failures();
+  router_reset_descriptor_download_failures();
+  update_networkstatus_downloads(time(NULL));
+
+  /* We'll retry routerstatus downloads in about 10 seconds; no need to
+   * force a retry there. */
+
   if (server_mode(options)) {
     const char *descriptor;
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
