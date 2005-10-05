@@ -1120,7 +1120,7 @@ connection_dir_reached_eof(connection_t *conn)
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         buf_datalen(conn->inbuf)>=(24*1024)) {
       log_fn(LOG_NOTICE, "Directory connection closed early after downloading %d bytes of descriptors.  If this happens often, please file a bug report.",
-             buf_datalen(conn->inbuf));
+             (int)buf_datalen(conn->inbuf));
     }
     connection_close_immediate(conn); /* it was an error; give up on flushing */
     connection_mark_for_close(conn);

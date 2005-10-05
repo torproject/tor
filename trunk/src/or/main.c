@@ -580,7 +580,7 @@ run_connection_housekeeping(int i, time_t now)
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         buf_datalen(conn->inbuf)>=(24*1024)) {
       log_fn(LOG_NOTICE, "Expired a wedged directory connection that had already downloaded %d bytes of descriptors.  If this happens often, please file a bug report.",
-             buf_datalen(conn->inbuf));
+             (int)buf_datalen(conn->inbuf));
     }
     connection_mark_for_close(conn);
     return;
