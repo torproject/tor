@@ -567,6 +567,27 @@ circuit_mark_all_unused_circs(void)
   }
 }
 
+/** Go through the circuitlist; for each circuit that starts at us
+ * and is dirty, frob its timestamp_dirty so we won't use it for any
+ * new streams.
+ *
+ * This is useful for letting the user change pseudonyms, so new
+ * streams will not be linkable to old streams.
+ */
+void
+circuit_expire_all_dirty_circs(void)
+{
+  circuit_t *circ;
+  or_options_t *options = get_options();
+
+  for (circ=global_circuitlist; circ; circ = circ->next) {
+    if (CIRCUIT_IS_ORIGIN(circ) &&
+        !circ->marked_for_close &&
+        circ->timestamp_dirty)
+      circ->timestamp_dirty -= options->MaxCircuitDirtiness;
+  }
+}
+
 /** Mark <b>circ</b> to be closed next time we call
  * circuit_close_all_marked(). Do any cleanup needed:
  *   - If state is onionskin_pending, remove circ from the onion_pending
