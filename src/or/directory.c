@@ -993,8 +993,11 @@ connection_dir_client_reached_eof(connection_t *conn)
       n_asked_for = smartlist_len(which);
     }
     if (status_code != 200) {
-      /* 404 means that it didn't have them; no big deal. */
-      log_fn(status_code == 404 ? LOG_INFO : LOG_WARN,
+      int no_warn = status_code == 404 ||
+        (status_code == 400 && !strcmp(reason, "Servers unavailable."));
+      /* 404 means that it didn't have them; no big deal.
+       * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
+      log_fn(no_warn ? LOG_INFO : LOG_WARN,
              "Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/server/%s\". I'll try again soon.",
              status_code, reason, conn->address, conn->port,
              conn->requested_resource);
@@ -1020,8 +1023,9 @@ connection_dir_client_reached_eof(connection_t *conn)
       directory_info_has_arrived(time(NULL), 0);
     }
     if (which) { /* mark remaining ones as failed */
-      log_fn(LOG_NOTICE, "Received %d/%d routers.",
-             n_asked_for-smartlist_len(which), n_asked_for);
+      log_fn(LOG_INFO, "Received %d/%d routers requested from %s:%d",
+             n_asked_for-smartlist_len(which), n_asked_for,
+             conn->address, (int)conn->port);
       if (smartlist_len(which)) {
         dir_routerdesc_download_failed(which);
       }

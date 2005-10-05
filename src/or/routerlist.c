@@ -1257,7 +1257,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
                router->nickname);
         routerinfo_free(router);
-        *msg = "Already have verified router with same nickname and different key.";
+        *msg = "Already have named router with same nickname and different key.";
         return -2;
       }
     }
@@ -1313,6 +1313,7 @@ router_load_single_router(const char *s, const char **msg)
 {
   routerinfo_t *ri;
   tor_assert(msg);
+  smartlist_t *lst;
   *msg = NULL;
 
   if (!(ri = router_parse_entry_from_string(s, NULL))) {
@@ -1326,22 +1327,23 @@ router_load_single_router(const char *s, const char **msg)
     routerinfo_free(ri);
     return 0;
   }
-  /* XXXX011 update router status from networkstatus!! */
+
+  lst = smartlist_create();
+  smartlist_add(lst, ri);
+  routers_update_status_from_networkstatus(lst, 0);
 
   if (router_add_to_routerlist(ri, msg, 0)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list: %s Dropping.",
            *msg?*msg:"(No message).");
     /* we've already assigned to *msg now, and ri is already freed */
+    smartlist_free(lst);
     return 0;
   } else {
-    smartlist_t *changed = smartlist_create();
-    smartlist_add(changed, ri);
-    control_event_descriptors_changed(changed);
-    smartlist_free(changed);
+    control_event_descriptors_changed(lst);
+    smartlist_free(lst);
+    log_fn(LOG_DEBUG, "Added router to list");
+    return 1;
   }
-
-  log_fn(LOG_DEBUG, "Added router to list");
-  return 1;
 }
 
 /** Given a string <b>s</b> containing some routerdescs, parse it and put the
@@ -1513,8 +1515,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
                   ns->networkstatus_digest, DIGEST_LEN)) {
         /* Same one we had before. */
         networkstatus_free(ns);
-        log_fn(LOG_NOTICE,
-            "Dropping network-status from %s (published %s); already have it.",
+        log_fn(LOG_INFO,
+               "Not replacing network-status from %s (published %s); "
+               "we already have it.",
                trusted_dir->description, published);
         if (old_ns->received_on < arrived_at) {
           if (source != NS_FROM_CACHE) {
@@ -1529,8 +1532,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
       } else if (old_ns->published_on >= ns->published_on) {
         char old_published[ISO_TIME_LEN+1];
         format_iso_time(old_published, old_ns->published_on);
-        log_fn(LOG_NOTICE,
-               "Dropping network-status from %s (published %s);"
+        log_fn(LOG_INFO,
+               "Not replacing network-status from %s (published %s);"
                " we have a newer one (published %s) for this authority.",
                trusted_dir->description, published,
                old_published);
@@ -1548,8 +1551,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   if (!found)
     smartlist_add(networkstatus_list, ns);
 
-  /*XXXX011 downgrade to INFO NM */
-  log_fn(LOG_NOTICE, "Setting networkstatus %s %s (published %s)",
+  log_fn(LOG_INFO, "Setting networkstatus %s %s (published %s)",
          source == NS_FROM_CACHE?"cached from":
          (source==NS_FROM_DIR?"downloaded from":"generated for"),
          trusted_dir->description, published);
@@ -1750,15 +1752,14 @@ update_networkstatus_client_downloads(time_t now)
     needed = n_running_dirservers;
 
   if (needed)
-    /* XXXX011 Downgrade to info NM */
-    log_fn(LOG_NOTICE, "For %d/%d running directory servers, we have %d live"
+    log_fn(LOG_INFO, "For %d/%d running directory servers, we have %d live"
            " network-status documents. Downloading %d.",
            n_running_dirservers, n_dirservers, n_live, needed);
 
   /* Also, download at least 1 every NETWORKSTATUS_CLIENT_DL_INTERVAL. */
   if (n_running_dirservers &&
       most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL && needed < 1) {
-    log_fn(LOG_NOTICE, "Our most recent network-status document (from %s) "
+    log_fn(LOG_INFO, "Our most recent network-status document (from %s) "
            "is %d seconds old; downloading another.",
            most_recent?most_recent->description:"nobody",
            (int)(now-most_recent_received));
@@ -2198,7 +2199,7 @@ networkstatus_list_update_recent(time_t now)
         ns->published_on + DEFAULT_RUNNING_INTERVAL > now) {
       if (!ns->is_recent) {
         format_iso_time(published, ns->published_on);
-        log_fn(LOG_NOTICE,
+        log_fn(LOG_INFO,
                "Networkstatus from %s (published %s) is now \"recent\"",
                src, published);
         changed = 1;
@@ -2208,7 +2209,7 @@ networkstatus_list_update_recent(time_t now)
     } else {
       if (ns->is_recent) {
         format_iso_time(published, ns->published_on);
-        log_fn(LOG_NOTICE,
+        log_fn(LOG_INFO,
                "Networkstatus from %s (published %s) is no longer \"recent\"",
                src, published);
         changed = 1;
@@ -2258,7 +2259,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     return;
   }
 
-  log_fn(LOG_NOTICE, "rebuilding router status list.");
+  log_fn(LOG_INFO, "Rebuilding router status list.");
 
   index = tor_malloc(sizeof(int)*n_statuses);
   size = tor_malloc(sizeof(int)*n_statuses);
@@ -2647,7 +2648,7 @@ update_router_descriptor_downloads(time_t now)
       if (n_per_request < MIN_DL_PER_REQUEST)
         n_per_request = MIN_DL_PER_REQUEST;
     }
-    log_fn(LOG_NOTICE, "Launching %d request%s for %d router%s, %d at a time",
+    log_fn(LOG_INFO, "Launching %d request%s for %d router%s, %d at a time",
            (n_downloadable+n_per_request-1)/n_per_request,
            n_downloadable>n_per_request?"s":"",
            n_downloadable, n_downloadable>1?"s":"", n_per_request);
