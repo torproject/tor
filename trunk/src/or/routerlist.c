@@ -56,6 +56,12 @@ static int networkstatus_list_has_changed = 0;
 /** True iff any element of routerstatus_list has changed since the last
  * time we called routers_update_all_from_networkstatus().*/
 static int routerstatus_list_has_changed = 0;
+/** List of strings for nicknames we've already warned about and that are
+ * still unknown / unavailable. */
+static smartlist_t *warned_nicknames = NULL;
+/** List of strings for nicknames or fingerprints we've already warned about
+ * and that are still conflicted. */
+static smartlist_t *warned_conflicts = NULL;
 
 /** Repopulate our list of network_status_t objects from the list cached on
  * disk.  Return 0 on success, -1 on failure. */
@@ -521,10 +527,6 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   }
 }
 
-/** List of strings for nicknames we've already warned about and that are
- * still unknown / unavailable. */
-static smartlist_t *warned_nicknames = NULL;
-
 /** Given a comma-and-whitespace separated list of nicknames, see which
  * nicknames in <b>list</b> name routers in our routerlist that are
  * currently running.  Add the routerinfos for those routers to <b>sl</b>.
@@ -860,8 +862,6 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
 
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
   {
-    /* XXXX011 NM Should this restrict by Named rouers, or warn on
-     * non-named routers, or something? */
     if (!strcasecmp(router->nickname, nickname)) {
       if (router->is_named)
         return router;
@@ -1064,6 +1064,11 @@ routerlist_free_all(void)
   if (warned_nicknames) {
     SMARTLIST_FOREACH(warned_nicknames, char *, cp, tor_free(cp));
     smartlist_free(warned_nicknames);
+    warned_nicknames = NULL;
+  }
+  if (warned_conflicts) {
+    SMARTLIST_FOREACH(warned_conflicts, char *, cp, tor_free(cp));
+    smartlist_free(warned_conflicts);
     warned_nicknames = NULL;
   }
   if (trusted_dir_servers) {
@@ -1654,7 +1659,6 @@ update_networkstatus_cache_downloads(time_t now)
   int interval =
     authority ? AUTHORITY_NS_CACHE_INTERVAL : NONAUTHORITY_NS_CACHE_INTERVAL;
 
-  /*XXXXX NM we should retry on failure. */
   if (last_downloaded + interval >= now)
     return;
   if (!trusted_dir_servers)
@@ -2229,9 +2233,10 @@ networkstatus_list_update_recent(time_t now)
 static void
 routerstatus_list_update_from_networkstatus(time_t now)
 {
+  or_options_t *options = get_options();
   int n_trusted, n_statuses, n_recent=0, n_naming=0;
   int n_distinct = 0;
-  int i;
+  int i, warned;
   int *index, *size;
   networkstatus_t **networkstatus;
   smartlist_t *result;
@@ -2248,6 +2253,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
     routerstatus_list = smartlist_create();
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_create();
+  if (!warned_conflicts)
+    warned_conflicts = smartlist_create();
 
   n_trusted = smartlist_len(trusted_dir_servers);
   n_statuses = smartlist_len(networkstatus_list);
@@ -2285,19 +2292,28 @@ routerstatus_list_update_from_networkstatus(time_t now)
       if (!rs->is_named)
         continue;
       other_digest = strmap_get_lc(name_map, rs->nickname);
-      if (!other_digest)
+      warned = smartlist_string_isin(warned_conflicts, rs->nickname);
+      if (!other_digest) {
         strmap_set_lc(name_map, rs->nickname, rs->identity_digest);
-      else if (memcmp(other_digest, rs->identity_digest, DIGEST_LEN) &&
-               other_digest != conflict) {
-        /*XXXX011 rate-limit this?*/
-        char fp1[HEX_DIGEST_LEN+1];
-        char fp2[HEX_DIGEST_LEN+1];
-        base16_encode(fp1, sizeof(fp1), other_digest, DIGEST_LEN);
-        base16_encode(fp2, sizeof(fp2), rs->identity_digest, DIGEST_LEN);
-        log_fn(LOG_WARN,
-               "Naming authorities disagree about which key goes with %s. ($%s vs $%s)",
-               rs->nickname, fp1, fp2);
-        strmap_set_lc(name_map, rs->nickname, conflict);
+        if (warned)
+          smartlist_string_remove(warned_conflicts, rs->nickname);
+      } else if (memcmp(other_digest, rs->identity_digest, DIGEST_LEN) &&
+                 other_digest != conflict) {
+        if (!warned) {
+          int should_warn = options->DirPort && options->AuthoritativeDir;
+          char fp1[HEX_DIGEST_LEN+1];
+          char fp2[HEX_DIGEST_LEN+1];
+          base16_encode(fp1, sizeof(fp1), other_digest, DIGEST_LEN);
+          base16_encode(fp2, sizeof(fp2), rs->identity_digest, DIGEST_LEN);
+          log_fn(should_warn ? LOG_WARN : LOG_INFO,
+                 "Naming authorities disagree about which key goes with %s. ($%s vs $%s)",
+                 rs->nickname, fp1, fp2);
+          strmap_set_lc(name_map, rs->nickname, conflict);
+          smartlist_add(warned_conflicts, tor_strdup(rs->nickname));
+        }
+      } else {
+        if (warned)
+          smartlist_string_remove(warned_conflicts, rs->nickname);
       }
     });
   }
@@ -2358,8 +2374,11 @@ routerstatus_list_update_from_networkstatus(time_t now)
         } else if (strcmp(the_name,"**mismatch**")) {
           char hd[HEX_DIGEST_LEN+1];
           base16_encode(hd, HEX_DIGEST_LEN+1, rs->identity_digest, DIGEST_LEN);
-          log_fn(LOG_WARN, "Naming authorities disagree about nicknames for $%s (\"%s\" vs \"%s\")",
-                 hd, the_name, rs->nickname);
+          if (! smartlist_string_isin(warned_conflicts, hd)) {
+            log_fn(LOG_WARN, "Naming authorities disagree about nicknames for $%s (\"%s\" vs \"%s\")",
+                   hd, the_name, rs->nickname);
+            smartlist_add(warned_conflicts, tor_strdup(hd));
+          }
           the_name = "**mismatch**";
         }
       }
@@ -2387,6 +2406,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
       const char *d = strmap_get_lc(name_map, the_name);
       if (d && d != conflict)
         rs_out->status.is_named = 1;
+      if (smartlist_string_isin(warned_conflicts, rs->nickname))
+        smartlist_string_remove(warned_conflicts, rs->nickname);
     }
     if (rs_out->status.is_named)
       strlcpy(rs_out->status.nickname, the_name, sizeof(rs_out->status.nickname));
@@ -2443,12 +2464,9 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
       /* If we're an authdir, don't believe others. */
       router->is_verified = rs->status.is_valid;
       router->is_running = rs->status.is_running;
-
-      if (router->is_running && ds) {
-        /* XXXX011 NM Hm. What about authorities? When do they reset
-         * n_networkstatus_failures? */
-        ds->n_networkstatus_failures = 0;
-      }
+    }
+    if (router->is_running && ds) {
+      ds->n_networkstatus_failures = 0;
     }
   });
 }
