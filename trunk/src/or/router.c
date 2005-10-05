@@ -756,6 +756,9 @@ router_get_my_descriptor(void)
   return desc_routerinfo->signed_descriptor;
 }
 
+/*DOCDOC*/
+static smartlist_t *warned_nonexistent_family = NULL;
+
 /** If <b>force</b> is true, or our descriptor is out-of-date, rebuild
  * a fresh routerinfo and signed server descriptor for this OR.
  * Return 0 on success, -1 on error.
@@ -810,6 +813,8 @@ router_rebuild_descriptor(int force)
   if (authdir_mode(options))
     ri->is_verified = ri->is_named = 1; /* believe in yourself */
   if (options->MyFamily) {
+    if (!warned_nonexistent_family)
+      warned_nonexistent_family = smartlist_create();
     smartlist_t *family = smartlist_create();
     ri->declared_family = smartlist_create();
     smartlist_split_string(family, options->MyFamily, ",",
@@ -822,9 +827,12 @@ router_rebuild_descriptor(int force)
        else
          member = router_get_by_nickname(name, 1);
        if (!member) {
-         log_fn(LOG_WARN, "I have no descriptor for the router named \"%s\" "
-                "in my declared family; I'll use the nickname verbatim, but "
-                "this may confuse clients.", name);
+         if (!smartlist_string_isin(warned_nonexistent_family, name)) {
+           log_fn(LOG_WARN, "I have no descriptor for the router named \"%s\" "
+                  "in my declared family; I'll use the nickname as is, but "
+                  "this may confuse clients.", name);
+           smartlist_add(warned_nonexistent_family, tor_strdup(name));
+         }
          smartlist_add(ri->declared_family, name);
          name = NULL;
        } else {
@@ -833,6 +841,8 @@ router_rebuild_descriptor(int force)
          base16_encode(fp+1,HEX_DIGEST_LEN+1,
                        member->identity_digest, DIGEST_LEN);
          smartlist_add(ri->declared_family, fp);
+         if (smartlist_string_isin(warned_nonexistent_family, name))
+           smartlist_string_remove(warned_nonexistent_family, name);
        }
        tor_free(name);
      });
@@ -1135,9 +1145,20 @@ is_legal_nickname_or_hexdigest(const char *s)
   return len == HEX_DIGEST_LEN+1 && strspn(s+1,HEX_CHARACTERS)==len-1;
 }
 
-/** Release all resources held in router keys. */
+/** Forget that we have issued any router-related warnings, so that we'll
+ * warn again if we see the same errors. */
 void
-router_free_all_keys(void)
+router_reset_warnings(void)
+{
+  if (warned_nonexistent_family) {
+    SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));
+    smartlist_clear(warned_nonexistent_family);
+  }
+}
+
+/** Release all static resources held in router.c */
+void
+router_free_all(void)
 {
   if (onionkey)
     crypto_free_pk_env(onionkey);
@@ -1149,5 +1170,8 @@ router_free_all_keys(void)
     tor_mutex_free(key_lock);
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
+  if (warned_nonexistent_family) {
+    SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));
+    smartlist_free(warned_nonexistent_family);
+  }
 }
-

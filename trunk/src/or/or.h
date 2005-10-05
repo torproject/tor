@@ -2055,7 +2055,8 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
-void router_free_all_keys(void);
+void router_reset_warnings(void);
+void router_free_all(void);
 
 /********************************* routerlist.c ***************************/
 
