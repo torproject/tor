@@ -862,11 +862,6 @@ typedef struct networkstatus_t {
 typedef struct {
   /** List of routerinfo_t. */
   smartlist_t *routers;
-  /** When was the most recent directory that contributed to this list
-   * published? */
-  /* XXXX011 NM This field is only used in moribund code; remove it
-   * once the moribund code is dead. */
-  time_t published_on_xx;
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
