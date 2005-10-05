@@ -1317,8 +1317,8 @@ int
 router_load_single_router(const char *s, const char **msg)
 {
   routerinfo_t *ri;
-  tor_assert(msg);
   smartlist_t *lst;
+  tor_assert(msg);
   *msg = NULL;
 
   if (!(ri = router_parse_entry_from_string(s, NULL))) {
@@ -2406,8 +2406,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
       const char *d = strmap_get_lc(name_map, the_name);
       if (d && d != conflict)
         rs_out->status.is_named = 1;
-      if (smartlist_string_isin(warned_conflicts, rs->nickname))
-        smartlist_string_remove(warned_conflicts, rs->nickname);
+      if (smartlist_string_isin(warned_conflicts, rs_out->status.nickname))
+        smartlist_string_remove(warned_conflicts, rs_out->status.nickname);
     }
     if (rs_out->status.is_named)
       strlcpy(rs_out->status.nickname, the_name, sizeof(rs_out->status.nickname));

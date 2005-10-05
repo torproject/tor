@@ -18,7 +18,7 @@ static circuit_t *find_intro_circuit(routerinfo_t *router, const char *pk_digest
 typedef struct rend_service_port_config_t {
   uint16_t virtual_port;
   uint16_t real_port;
-  uint32_t real_address;
+  uint32_t real_addr;
 } rend_service_port_config_t;
 
 /** Try to maintain this many intro points per service if possible. */
@@ -128,7 +128,7 @@ add_service(rend_service_t *service)
     for (i = 0; i < smartlist_len(service->ports); ++i) {
       char addrbuf[INET_NTOA_BUF_LEN];
       p = smartlist_get(service->ports, i);
-      addr.s_addr = htonl(p->real_address);
+      addr.s_addr = htonl(p->real_addr);
       tor_inet_ntoa(&addr, addrbuf, sizeof(addrbuf));
       log_fn(LOG_DEBUG,"Service maps port %d to %s:%d",
              p->virtual_port, addrbuf, p->real_port);
@@ -191,7 +191,7 @@ parse_port_config(const char *string)
   result = tor_malloc(sizeof(rend_service_port_config_t));
   result->virtual_port = virtport;
   result->real_port = realport;
-  result->real_address = addr;
+  result->real_addr = addr;
  err:
   SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
   smartlist_free(sl);
@@ -1094,7 +1094,7 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
   for (i = 0; i < smartlist_len(service->ports); ++i) {
     p = smartlist_get(service->ports, i);
     if (conn->port == p->virtual_port) {
-      conn->addr = p->real_address;
+      conn->addr = p->real_addr;
       conn->port = p->real_port;
       return 0;
     }

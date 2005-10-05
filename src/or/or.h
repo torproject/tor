@@ -2140,7 +2140,7 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
 
 int router_exit_policy_rejects_all(routerinfo_t *router);
 void add_trusted_dir_server(const char *nickname,
-                            const char *addr, uint16_t port,
+                            const char *address, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);

@@ -1120,20 +1120,20 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
       } else if (!is_plausible_address(to)) {
         log_fn(LOG_WARN,"Skipping invalid argument '%s' in MapAddress msg",to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
-        const char *addr = addressmap_register_virtual_address(
+        const char *address = addressmap_register_virtual_address(
               !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
-        if (!addr) {
+        if (!address) {
           log_fn(LOG_WARN,
                  "Unable to allocate address for '%s' in MapAddress msg",
                  safe_str(line));
         } else {
-          size_t anslen = strlen(addr)+strlen(to)+8;
+          size_t anslen = strlen(address)+strlen(to)+8;
           char *ans = tor_malloc(anslen);
           if (v0)
-            tor_snprintf(ans, anslen, "%s %s", addr, to);
+            tor_snprintf(ans, anslen, "%s %s", address, to);
           else
-            tor_snprintf(ans, anslen, "250-%s=%s", addr, to);
+            tor_snprintf(ans, anslen, "250-%s=%s", address, to);
           smartlist_add(reply, ans);
         }
       } else {
@@ -1676,7 +1676,6 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
   send_control_done(conn);
   return 0;
 }
-
 
 /** Callled when we get a POSTDESCRIPTORT message.  Try to learn the provided
  * descriptor, and report succcess or failure. */
