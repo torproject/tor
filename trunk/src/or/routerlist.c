@@ -31,6 +31,9 @@ static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void routerstatus_list_update_from_networkstatus(time_t now);
 static void local_routerstatus_free(local_routerstatus_t *rs);
+static void trusted_dir_server_free(trusted_dir_server_t *ds);
+static void update_networkstatus_cache_downloads(time_t now);
+static void update_networkstatus_client_downloads(time_t now);
 
 /****************************************************************************/
 
@@ -62,6 +65,11 @@ static smartlist_t *warned_nicknames = NULL;
 /** List of strings for nicknames or fingerprints we've already warned about
  * and that are still conflicted. */
 static smartlist_t *warned_conflicts = NULL;
+
+/* DOCDOC */
+static time_t last_routerdesc_download_attempted = 0;
+/* DOCDOC */
+static time_t last_networkstatus_download_attempted = 0;
 
 /*DOCDOC*/
 static int have_warned_about_unverified_status = 0;
@@ -482,6 +490,15 @@ mark_all_trusteddirservers_up(void)
       dir->n_networkstatus_failures = 0;
     });
   }
+  last_networkstatus_download_attempted = 0;
+}
+
+/** Reset all internal variables used to count failed downloads of network
+ * status objects. */
+void
+router_reset_status_download_failures(void)
+{
+  mark_all_trusteddirservers_up();
 }
 
 /** Return 0 if \\exists an authoritative dirserver that's currently
@@ -1078,7 +1095,7 @@ routerlist_free_all(void)
   }
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
-                      { tor_free(ds->address); tor_free(ds); });
+                      trusted_dir_server_free(ds));
     smartlist_free(trusted_dir_servers);
     trusted_dir_servers = NULL;
   }
@@ -1679,20 +1696,19 @@ router_get_combined_status_by_digest(const char *digest)
  * asking each trusted directory for its network-status.  For caches, this means
  * asking a random authority for all network-statuses.
  */
-void
+static void
 update_networkstatus_cache_downloads(time_t now)
 {
-  static time_t last_downloaded = 0;
   int authority = authdir_mode(get_options());
   int interval =
     authority ? AUTHORITY_NS_CACHE_INTERVAL : NONAUTHORITY_NS_CACHE_INTERVAL;
 
-  if (last_downloaded + interval >= now)
+  if (last_networkstatus_download_attempted + interval >= now)
     return;
   if (!trusted_dir_servers)
     return;
 
-  last_downloaded = now;
+  last_networkstatus_download_attempted = now;
 
   if (authority) {
     /* An authority launches a separate connection for everybody. */
@@ -1734,7 +1750,7 @@ update_networkstatus_cache_downloads(time_t now)
  * by launching a new directory fetch for enough network-status documents "as
  * necessary".  See function comments for implementation details.
  */
-void
+static void
 update_networkstatus_client_downloads(time_t now)
 {
   int n_live = 0, needed = 0, n_running_dirservers, n_dirservers, i;
@@ -1827,6 +1843,17 @@ update_networkstatus_client_downloads(time_t now)
   memcpy(cp, ".z", 3);
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
   tor_free(resource);
+}
+
+/*DOCDOC*/
+void
+update_networkstatus_downloads(time_t now)
+{
+  or_options_t *options = get_options();
+  if (server_mode(options) && options->DirPort)
+      update_networkstatus_cache_downloads(time(NULL));
+    else
+      update_networkstatus_client_downloads(time(NULL));
 }
 
 /** Decide whether a given addr:port is definitely accepted,
@@ -2069,18 +2096,23 @@ add_trusted_dir_server(const char *nickname, const char *address,
   smartlist_add(trusted_dir_servers, ent);
 }
 
+/** Free storage held in <b>ds</b> */
+void
+trusted_dir_server_free(trusted_dir_server_t *ds)
+{
+  tor_free(ds->nickname);
+  tor_free(ds->description);
+  tor_free(ds->address);
+  tor_free(ds);
+}
+
 /** Remove all members from the list of trusted dir servers. */
 void
 clear_trusted_dir_servers(void)
 {
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
-      {
-        tor_free(ent->nickname);
-        tor_free(ent->description);
-        tor_free(ent->address);
-        tor_free(ent);
-      });
+                      trusted_dir_server_free(ent));
     smartlist_clear(trusted_dir_servers);
   } else {
     trusted_dir_servers = smartlist_create();
@@ -2655,13 +2687,12 @@ update_router_descriptor_downloads(time_t now)
   int get_all = 0;
   int dirserv = server_mode(get_options()) && get_options()->DirPort;
   int should_delay, n_downloadable;
-  static time_t last_download_attempted = 0;
   if (!networkstatus_list || smartlist_len(networkstatus_list)<2)
     get_all = 1;
 
   if (get_all) {
     log_fn(LOG_NOTICE, "Launching request for all routers");
-    last_download_attempted = now;
+    last_routerdesc_download_attempted = now;
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,"all.z",1);
     return;
   }
@@ -2673,10 +2704,10 @@ update_router_descriptor_downloads(time_t now)
   else if (n_downloadable == 0)
     should_delay = 1;
   else if (dirserv)
-    should_delay = (last_download_attempted +
+    should_delay = (last_routerdesc_download_attempted +
                     MAX_SERVER_INTERVAL_WITHOUT_REQUEST) < now;
   else
-    should_delay = (last_download_attempted +
+    should_delay = (last_routerdesc_download_attempted +
                     MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) < now;
 
   if (! should_delay) {
@@ -2707,7 +2738,7 @@ update_router_descriptor_downloads(time_t now)
       memcpy(cp-1, ".z", 3);
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,resource,1);
     }
-    last_download_attempted = now;
+    last_routerdesc_download_attempted = now;
     tor_free(resource);
   }
   SMARTLIST_FOREACH(downloadable, char *, c, tor_free(c));
@@ -2743,5 +2774,6 @@ router_reset_descriptor_download_failures(void)
     rs->n_download_failures = 0;
     rs->next_attempt_at = 0;
   });
+  last_routerdesc_download_attempted = 0;
 }
 
