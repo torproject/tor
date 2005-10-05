@@ -1633,13 +1633,13 @@ dir_routerdesc_download_failed(smartlist_t *failed)
       }
     }
     if (rs->next_attempt_at == 0)
-      log_fn(LOG_INFO, "%s failed %d time(s); I'll try again immediately.",
+      log_fn(LOG_DEBUG, "%s failed %d time(s); I'll try again immediately.",
              cp, (int)rs->n_download_failures);
     else if (rs->next_attempt_at < TIME_MAX)
-      log_fn(LOG_INFO, "%s failed %d time(s); I'll try again in %d seconds.",
+      log_fn(LOG_DEBUG, "%s failed %d time(s); I'll try again in %d seconds.",
              cp, (int)rs->n_download_failures, (int)(rs->next_attempt_at-now));
     else
-      log_fn(LOG_INFO, "%s failed %d time(s); Giving up for a while.",
+      log_fn(LOG_DEBUG, "%s failed %d time(s); Giving up for a while.",
              cp, (int)rs->n_download_failures);
   });
 
