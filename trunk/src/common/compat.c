@@ -693,12 +693,13 @@ get_uname(void)
 #endif
       {
 #ifdef MS_WINDOWS
-        OSVERSIONINFO info;
+        OSVERSIONINFOEX info;
         int i;
         const char *plat = NULL;
         static struct {
           int major; int minor; const char *version;
         } win_version_table[] = {
+          { 6, 0, "Windows \"Longhorn\"" },
           { 5, 2, "Windows Server 2003" },
           { 5, 1, "Windows XP" },
           { 5, 0, "Windows 2000" },
@@ -726,10 +727,11 @@ get_uname(void)
           }
         }
         if (plat) {
-          strlcpy(uname_result, plat, sizeof(uname_result));
+          tor_snprtint(uname_result, sizeof(uname_result), "%s %s",
+                       plat, info.szCSDVersion);
         } else {
-          if (info.dwMajorVersion > 5 ||
-              (info.dwMajorVersion==5 && info.dwMinorVersion>2))
+          if (info.dwMajorVersion > 6 ||
+              (info.dwMajorVersion==6 && info.dwMinorVersion>0))
             tor_snprintf(uname_result, sizeof(uname_result),
                          "Very recent version of Windows [major=%d,minor=%d]",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion);
@@ -737,6 +739,28 @@ get_uname(void)
             tor_snprintf(uname_result, sizeof(uname_result),
                          "Unrecognized version of Windows [major=%d,minor=%d]",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion);
+        }
+        if (info.dwProductType == VER_NT_DOMAIN_CONTROLLER) {
+          strlcat(uname_result, " [domain controller]", sizeof(uname_result));
+        } else if (info.dwProductType == VER_NT_SERVER) {
+          strlcat(uname_result, " [server]", sizeof(uname_result));
+        } else if (info.dwProductType == VER_NT_WORKSTATION) {
+          strlcat(uname_result, " [workstation]", sizeof(uname_result));
+        }
+        if (info.dwSuiteMask & VER_SUITE_DATACENTER) {
+          strlcat(uname_result, " {datacenter}", sizeof(uname_result));
+        }
+        if (info.dwSuiteMask & VER_SUITE_ENTERPRISE) {
+          strlcat(uname_result, " {enterprise}", sizeof(uname_result));
+        }
+        if (info.dwSuiteMask & VER_SUITE_PERSONAL) {
+          strlcat(uname_result, " {personal}", sizeof(uname_result));
+        }
+        if (info.dwSuiteMask & VER_SUITE_EMBEDDED) {
+          strlcat(uname_result, " {personal}", sizeof(uname_result));
+        }
+        if (info.dwSuiteMask & VER_SUITE_PERSONAL) {
+          strlcat(uname_result, " {personal}", sizeof(uname_result));
         }
 #else
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
