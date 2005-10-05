@@ -267,6 +267,23 @@ Changes in version 0.1.1.1-alpha - 2005-06-29
       test this?
 
 
+Changes in version 0.1.0.15 - 2005-09-23
+  o Bugfixes on 0.1.0.x:
+    - Reject ports 465 and 587 (spam targets) in default exit policy.
+    - Don't crash when we don't have any spare file descriptors and we
+      try to spawn a dns or cpu worker.
+    - Get rid of IgnoreVersion undocumented config option, and make us
+      only warn, never exit, when we're running an obsolete version.
+    - Don't try to print a null string when your server finds itself to
+      be unreachable and the Address config option is empty.
+    - Make the numbers in read-history and write-history into uint64s,
+      so they don't overflow and publish negatives in the descriptor.
+    - Fix a minor memory leak in smartlist_string_remove().
+    - We were only allowing ourselves to upload a server descriptor at
+      most every 20 minutes, even if it changed earlier than that.
+    - Clean up log entries that pointed to old URLs.
+
+
 Changes in version 0.1.0.14 - 2005-08-08
   o Bugfixes on 0.1.0.x:
       - Fix the other half of the bug with crypto handshakes.
