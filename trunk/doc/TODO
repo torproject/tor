@@ -57,7 +57,7 @@ N . Additional controller features
 
   . Helper nodes
     . More testing and debugging
-    - On sighup, if usehelpernodes changed to 1, use new circuits?
+    o On sighup, if usehelpernodes changed to 1, use new circuits?
     - If your helper nodes are unavailable, don't abandon them unless
       other nodes *are* reachable.
 R   - If you think an OR conn is open but you can never establish a circuit
