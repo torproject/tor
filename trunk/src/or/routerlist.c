@@ -2538,12 +2538,13 @@ router_list_downloadable(void)
 {
 #define MAX_OLD_SERVER_DOWNLOAD_RATE 2*60*60
   int n_conns, i, n_downloadable = 0;
-  int n_uptodate=0,n_skip_old=0;
   connection_t **carray;
   smartlist_t *superseded = smartlist_create();
   smartlist_t *downloading;
   time_t now = time(NULL);
   int mirror = server_mode(get_options()) && get_options()->DirPort;
+  /* these are just used for logging */
+  int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0, n_skip_old = 0;
 
   if (!routerstatus_list)
     return superseded;
@@ -2565,6 +2566,7 @@ router_list_downloadable(void)
              (int)(rs->next_attempt_at-now));
       */
       rs->should_download = 0;
+      ++n_not_ready;
     }
   });
 
@@ -2595,6 +2597,7 @@ router_list_downloadable(void)
       if ((rs = router_get_combined_status_by_digest(d)) && rs->should_download) {
         rs->should_download = 0;
         --n_downloadable;
+        ++n_in_progress;
         // log_fn(LOG_NOTICE, "%s is in-progress; not fetching", dl);
       }
     });
@@ -2604,7 +2607,7 @@ router_list_downloadable(void)
   if (!n_downloadable)
     return superseded;
 
-  if (routerlist) {
+  if (routerlist && n_downloadable) {
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
     {
       local_routerstatus_t *rs;
@@ -2648,8 +2651,11 @@ router_list_downloadable(void)
     });
   }
 
-  if (n_skip_old)
-    log_fn(LOG_INFO, "Skipped %d updatable pre-0.1.1.6 servers.", n_skip_old);
+  log_fn(LOG_INFO, "%d router descriptors are downloadable; "
+         "%d are up to date; %d are in progress; "
+         "%d are not ready to retry; "
+         "%d are running pre-0.1.1.6 Tors and aren't stale enough to replace.",
+         n_downloadable, n_uptodate, n_in_progress, n_not_ready, n_skip_old);
 
   if (!n_downloadable)
     return superseded;
@@ -2699,16 +2705,26 @@ update_router_descriptor_downloads(time_t now)
 
   downloadable = router_list_downloadable();
   n_downloadable = smartlist_len(downloadable);
-  if (n_downloadable >= MAX_DL_TO_DELAY)
+  if (n_downloadable >= MAX_DL_TO_DELAY) {
+    log_fn(LOG_DEBUG,
+           "There are enough downloadable routerdescs to launch requests.");
     should_delay = 0;
-  else if (n_downloadable == 0)
+  } else if (n_downloadable == 0) {
+    log_fn(LOG_DEBUG, "No routerdescs need to be downloaded.");
     should_delay = 1;
-  else if (dirserv)
-    should_delay = (last_routerdesc_download_attempted +
-                    MAX_SERVER_INTERVAL_WITHOUT_REQUEST) < now;
-  else
-    should_delay = (last_routerdesc_download_attempted +
-                    MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) < now;
+  } else {
+    if (dirserv) {
+      should_delay = (last_routerdesc_download_attempted +
+                      MAX_SERVER_INTERVAL_WITHOUT_REQUEST) < now;
+    } else {
+      should_delay = (last_routerdesc_download_attempted +
+                      MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) < now;
+    }
+    if (should_delay)
+      log_fn(LOG_INFO, "There are not many downloadable routerdescs; waiting till we have some more.");
+    else
+      log_fn(LOG_INFO, "There are not many downloadable routerdescs, but we've been waiting long enough. Downloading.");
+  }
 
   if (! should_delay) {
     int i, j, n_per_request=MAX_DL_PER_REQUEST;
