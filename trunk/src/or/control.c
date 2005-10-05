@@ -1454,8 +1454,8 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   return 0;
 }
 
-/** Callled when we get an EXTENDCIRCUIT message.  Try to extend the listed
- * circuit, and report succcess or failure. */
+/** Called when we get an EXTENDCIRCUIT message.  Try to extend the listed
+ * circuit, and report success or failure. */
 static int
 handle_control_extendcircuit(connection_t *conn, uint32_t len,
                              const char *body)
@@ -1584,8 +1584,8 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** Callled when we get an ATTACHSTREAM message.  Try to attach the requested
- * stream, and report succcess or failure. */
+/** Called when we get an ATTACHSTREAM message.  Try to attach the requested
+ * stream, and report success or failure. */
 static int
 handle_control_attachstream(connection_t *conn, uint32_t len,
                             const char *body)
@@ -1677,8 +1677,8 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** Callled when we get a POSTDESCRIPTORT message.  Try to learn the provided
- * descriptor, and report succcess or failure. */
+/** Called when we get a POSTDESCRIPTOR message.  Try to learn the provided
+ * descriptor, and report success or failure. */
 static int
 handle_control_postdescriptor(connection_t *conn, uint32_t len,
                               const char *body)
