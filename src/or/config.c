@@ -623,6 +623,12 @@ options_act(or_options_t *old_options)
 
   /* Check for transitions that need action. */
   if (old_options) {
+    if (options->UseHelperNodes && !old_options->UseHelperNodes) {
+      log_fn(LOG_INFO, "Switching to helper nodes; abandoning previous circuits");
+      circuit_mark_all_unused_circs();
+      circuit_expire_all_dirty_circs();
+    }
+
     if (options_transition_affects_workers(old_options, options)) {
       log_fn(LOG_INFO,"Worker-related options changed. Rotating workers.");
       cpuworkers_rotate();
