@@ -1417,6 +1417,7 @@ circuit_t *circuit_get_rendezvous(const char *cookie);
 circuit_t *circuit_get_clean_open(uint8_t purpose, int need_uptime,
                                   int need_capacity, int internal);
 void circuit_mark_all_unused_circs(void);
+void circuit_expire_all_dirty_circs(void);
 void _circuit_mark_for_close(circuit_t *circ, int line, const char *file);
 
 #define circuit_mark_for_close(c) \
