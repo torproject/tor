@@ -946,8 +946,8 @@ do_hup(void)
       log_fn(LOG_NOTICE, "Error reloading fingerprints. Continuing with old list.");
     }
   }
-  /* Fetch a new directory. Even authdirservers do this. */
-  directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
+  /* XXXX011 NM This should be a generic "retry all directory fetches". */
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1); /*XXXX011NM*/
   if (server_mode(options)) {
     const char *descriptor;
     /* Restart cpuworker and dnsworker processes, so they get up-to-date

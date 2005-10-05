@@ -870,7 +870,8 @@ circuit_get_open_circ_or_launch(connection_t *conn,
   if (!has_fetched_directory) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
       log(LOG_NOTICE,"Application request when we're believed to be offline. Optimistically trying again.");
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
+      /* XXXX011 NM This should be a generic "retry all directory fetches". */
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1); /*XXXX011NM*/
     }
     /* the stream will be dealt with when has_fetched_directory becomes
      * 1, or when all directory attempts fail and directory_all_unreachable()
