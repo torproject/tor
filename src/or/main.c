@@ -926,6 +926,7 @@ do_hup(void)
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
 
+  router_reset_warnings();
   routerlist_reset_warnings();
   addressmap_clear_transient();
   /* first, reload config variables, in case they've changed */
@@ -1382,7 +1383,7 @@ tor_free_all(int postfork)
   connection_free_all();
   if (!postfork) {
     config_free_all();
-    router_free_all_keys();
+    router_free_all();
   }
   tor_tls_free_all();
   /* stuff in main.c */
