@@ -2715,15 +2715,16 @@ update_router_descriptor_downloads(time_t now)
   } else {
     if (dirserv) {
       should_delay = (last_routerdesc_download_attempted +
-                      MAX_SERVER_INTERVAL_WITHOUT_REQUEST) < now;
+                      MAX_SERVER_INTERVAL_WITHOUT_REQUEST) > now;
     } else {
       should_delay = (last_routerdesc_download_attempted +
-                      MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) < now;
+                      MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
     }
     if (should_delay)
-      log_fn(LOG_INFO, "There are not many downloadable routerdescs; waiting till we have some more.");
+      log_fn(LOG_DEBUG, "There are not many downloadable routerdescs; waiting till we have some more.");
     else
-      log_fn(LOG_INFO, "There are not many downloadable routerdescs, but we've been waiting long enough. Downloading.");
+      log_fn(LOG_INFO, "There are not many downloadable routerdescs, but we've been waiting long enough (%d seconds). Downloading.",
+             (int)(now-last_routerdesc_download_attempted));
   }
 
   if (! should_delay) {
