@@ -48,7 +48,7 @@ extern int has_fetched_directory; /**< from main.c */
 /** Global list of all of the current network_status documents that we know
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
-/** Global list of routerstatuses_t for each router, known or unknown. */
+/** Global list of local_routerstatus_t for each router, known or unknown. */
 static smartlist_t *routerstatus_list = NULL;
 /** True iff any member of networkstatus_list has changed since the last time
  * we called routerstatus_list_update_from_networkstatus(). */
@@ -62,6 +62,11 @@ static smartlist_t *warned_nicknames = NULL;
 /** List of strings for nicknames or fingerprints we've already warned about
  * and that are still conflicted. */
 static smartlist_t *warned_conflicts = NULL;
+
+/*DOCDOC*/
+static int have_warned_about_unverified_status = 0;
+static int have_warned_about_old_version = 0;
+static int have_warned_about_new_version = 0;
 
 /** Repopulate our list of network_status_t objects from the list cached on
  * disk.  Return 0 on success, -1 on failure. */
@@ -1069,7 +1074,7 @@ routerlist_free_all(void)
   if (warned_conflicts) {
     SMARTLIST_FOREACH(warned_conflicts, char *, cp, tor_free(cp));
     smartlist_free(warned_conflicts);
-    warned_nicknames = NULL;
+    warned_conflicts = NULL;
   }
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
@@ -1120,6 +1125,29 @@ networkstatus_free(networkstatus_t *ns)
     smartlist_free(ns->entries);
   }
   tor_free(ns);
+}
+
+/** Forget that we have issued any router-related warnings, so that we'll
+ * warn again if we see the same errors. */
+void
+routerlist_reset_warnings(void)
+{
+  if (!warned_nicknames)
+    warned_nicknames = smartlist_create();
+  SMARTLIST_FOREACH(warned_nicknames, char *, cp, tor_free(cp));
+  smartlist_clear(warned_nicknames); /* now the list is empty. */
+
+  if (!warned_conflicts)
+    warned_conflicts = smartlist_create();
+  SMARTLIST_FOREACH(warned_conflicts, char *, cp, tor_free(cp));
+  smartlist_clear(warned_conflicts); /* now the list is empty. */
+
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+                    rs->name_lookup_warned = 0);
+
+  have_warned_about_unverified_status = 0;
+  have_warned_about_old_version = 0;
+  have_warned_about_new_version = 0;
 }
 
 /** Mark the router with ID <b>digest</b> as non-running in our routerlist. */
@@ -2078,9 +2106,6 @@ void
 routers_update_all_from_networkstatus(void)
 {
 #define SELF_OPINION_INTERVAL 90*60
-  static int have_warned_about_unverified_status = 0;
-  static int have_warned_about_old_version = 0;
-  static int have_warned_about_new_version = 0;
   routerinfo_t *me;
   time_t now;
   if (!routerlist || !networkstatus_list ||
