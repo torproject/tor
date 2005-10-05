@@ -499,16 +499,16 @@ addressmap_virtaddress_ent_free(void *_ent)
 
 /** Free storage held by a virtaddress_entry_t* entry in <b>ent</b> */
 static void
-addressmap_virtaddress_remove(const char *addr, addressmap_entry_t *ent)
+addressmap_virtaddress_remove(const char *address, addressmap_entry_t *ent)
 {
   if (ent && ent->new_address && address_is_in_virtual_range(ent->new_address)) {
     virtaddress_entry_t *ve =
       strmap_get(virtaddress_reversemap, ent->new_address);
     /*log_fn(LOG_NOTICE,"remove reverse mapping for %s",ent->new_address);*/
     if (ve) {
-      if (!strcmp(addr, ve->ipv4_address))
+      if (!strcmp(address, ve->ipv4_address))
         tor_free(ve->ipv4_address);
-      if (!strcmp(addr, ve->hostname_address))
+      if (!strcmp(address, ve->hostname_address))
         tor_free(ve->hostname_address);
       if (!ve->ipv4_address && !ve->hostname_address) {
         tor_free(ve);
@@ -520,9 +520,9 @@ addressmap_virtaddress_remove(const char *addr, addressmap_entry_t *ent)
 
 /* DOCDOC */
 static void
-addressmap_ent_remove(const char *addr, addressmap_entry_t *ent)
+addressmap_ent_remove(const char *address, addressmap_entry_t *ent)
 {
-  addressmap_virtaddress_remove(addr, ent);
+  addressmap_virtaddress_remove(address, ent);
   addressmap_ent_free(ent);
 }
 
@@ -735,15 +735,15 @@ client_dns_set_addressmap(const char *address, uint32_t val, const char *exitnam
  * client_dns_get_unused_address.
  **/
 int
-address_is_in_virtual_range(const char *addr)
+address_is_in_virtual_range(const char *address)
 {
   struct in_addr in;
-  tor_assert(addr);
-  if (!strcasecmpend(addr, ".virtual")) {
+  tor_assert(address);
+  if (!strcasecmpend(address, ".virtual")) {
     return 1;
-  } else if (tor_inet_aton(addr, &in)) {
-    uint32_t a = ntohl(in.s_addr);
-    if (a >= MIN_UNUSED_IPV4 && a <= MAX_UNUSED_IPV4)
+  } else if (tor_inet_aton(address, &in)) {
+    uint32_t addr = ntohl(in.s_addr);
+    if (addr >= MIN_UNUSED_IPV4 && addr <= MAX_UNUSED_IPV4)
       return 1;
   }
   return 0;
