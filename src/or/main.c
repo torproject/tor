@@ -929,6 +929,7 @@ do_hup(void)
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
 
+  routerlist_reset_warnings();
   addressmap_clear_transient();
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */

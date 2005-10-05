@@ -2114,6 +2114,7 @@ routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 int router_digest_is_trusted_dir(const char *digest);
 void router_get_routerlist(routerlist_t **prouterlist);
+void routerlist_reset_warnings(void);
 void routerlist_free(routerlist_t *routerlist);
 void routerinfo_free(routerinfo_t *router);
 void routerstatus_free(routerstatus_t *routerstatus);
