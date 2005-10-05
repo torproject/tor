@@ -193,6 +193,9 @@ N     . Routerdesc download changes
     - Security
       - Alices avoid duplicate class C nodes.
       - Analyze how bad the partitioning is or isn't.
+    - Flags
+      - Clients use Stable and Fast instead of uptime and bandwidth to
+        pick which servers are stable/fast.
 
     - Make authorities rate-limit logging their complaints about given
       servers?
