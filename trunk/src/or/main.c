@@ -98,6 +98,7 @@ static char* nt_strerror(uint32_t errnum);
 #define DESCRIPTOR_RETRY_INTERVAL 10
 #define DESCRIPTOR_FAILURE_RESET_INTERVAL 60*60
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
+#define ENTROPY_INTERVAL 60*60
 
 /********* END VARIABLES ************/
 
@@ -639,6 +640,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_shrink_buffers = 0;
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
+  static time_t time_to_add_entropy = 0;
   or_options_t *options = get_options();
   int i;
 
@@ -687,6 +689,14 @@ run_scheduled_events(time_t now)
     last_rotated_certificate = now;
     /* XXXX We should rotate TLS connections as well; this code doesn't change
      *      them at all. */
+  }
+
+  if (time_to_add_entropy == 0)
+    time_to_add_entropy = now + ENTROPY_INTERVAL;
+  if (time_to_add_entropy < now) {
+    /* We already seeded once, so don't die on failure. */
+    crypto_seed_rng();
+    time_to_add_entropy = now + ENTROPY_INTERVAL;
   }
 
   /** 1c. If we have to change the accounting interval or record
