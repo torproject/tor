@@ -644,7 +644,7 @@ struct connection_t {
   char *chosen_exit_name;
 
 /* Used only by OR connections: */
-  tor_tls *tls; /**< TLS connection state (OR only.) */
+  tor_tls_t *tls; /**< TLS connection state (OR only.) */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
                           * range 0..1<<15-1. (OR only.)*/
@@ -1100,6 +1100,8 @@ typedef struct circuit_t circuit_t;
 #define ALLOW_UNVERIFIED_RENDEZVOUS   8
 #define ALLOW_UNVERIFIED_INTRODUCTION 16
 
+/** An entry specifying a set of addresses and ports that should be remapped
+ * to another address and port before exiting this exit node. */
 typedef struct exit_redirect_t {
   uint32_t addr;
   uint32_t mask;
@@ -1111,6 +1113,7 @@ typedef struct exit_redirect_t {
   unsigned is_redirect:1;
 } exit_redirect_t;
 
+/** A linked list of lines in a config file. */
 typedef struct config_line_t {
   char *key;
   char *value;
@@ -1341,10 +1344,10 @@ size_t buf_capacity(const buf_t *buf);
 const char *_buf_peek_raw_buffer(const buf_t *buf);
 
 int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof);
-int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf);
+int read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf);
 
 int flush_buf(int s, buf_t *buf, size_t *buf_flushlen);
-int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen);
+int flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t *buf_flushlen);
 
 int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
@@ -1965,10 +1968,11 @@ int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, size_t len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
 
+/** A cached rendezvous descriptor. */
 typedef struct rend_cache_entry_t {
-  size_t len; /* Length of desc */
-  time_t received; /* When was the descriptor received? */
-  char *desc; /* Service descriptor */
+  size_t len; /** Length of <b>desc</b> */
+  time_t received; /** When was the descriptor received? */
+  char *desc; /** Service descriptor */
   rend_service_descriptor_t *parsed; /* Parsed value of 'desc' */
 } rend_cache_entry_t;
 

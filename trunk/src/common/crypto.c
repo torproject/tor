@@ -91,18 +91,22 @@ static tor_mutex_t **_openssl_mutexes = NULL;
 static int _n_openssl_mutexes = -1;
 #endif
 
+/** A public key, or a public/private keypair. */
 struct crypto_pk_env_t
 {
   int refs; /* reference counting so we don't have to copy keys */
   RSA *key;
 };
 
+/** Key and stream information for a stream cipher. */
 struct crypto_cipher_env_t
 {
   char key[CIPHER_KEY_LEN];
   aes_cnt_cipher_t *cipher;
 };
 
+/** A structure to hold the first half (x, g^x) of a Diffie-Hellman handshake
+ * while we're waiting for the second.*/
 struct crypto_dh_env_t {
   DH *dh;
 };
@@ -1220,6 +1224,7 @@ crypto_digest(char *digest, const char *m, size_t len)
   return (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
 }
 
+/** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_env_t {
   SHA_CTX d;
 };

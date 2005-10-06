@@ -13,6 +13,8 @@ const char onion_c_id[] = "$Id$";
 
 #include "or.h"
 
+/** Type for a linked list of circuits that are waiting for a free CPU worker
+ * to process a waiting onion handshake. */
 typedef struct onion_queue_t {
   circuit_t *circ;
   time_t when_added;

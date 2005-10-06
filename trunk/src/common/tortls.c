@@ -35,15 +35,16 @@ const char tortls_c_id[] = "$Id$";
 /** How long do identity certificates live? (sec) */
 #define IDENTITY_CERT_LIFETIME  (365*24*60*60)
 
-typedef struct tor_tls_context_st {
+/* DOCDOC */
+typedef struct tor_tls_context_t {
   SSL_CTX *ctx;
   SSL_CTX *client_only_ctx;
-} tor_tls_context;
+} tor_tls_context_t;
 
 /** Holds a SSL object and its associated data.  Members are only
  * accessed from within tortls.c.
  */
-struct tor_tls_st {
+struct tor_tls_t {
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
   enum {
@@ -63,7 +64,7 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
 /** Global tls context. We keep it here because nobody else needs to
  * touch it. */
-static tor_tls_context *global_tls_context = NULL;
+static tor_tls_context_t *global_tls_context = NULL;
 /** True iff tor_tls_init() has been called. */
 static int tls_library_is_initialized = 0;
 
@@ -111,7 +112,7 @@ tls_log_errors(int severity, const char *doing)
  * current action as <b>doing</b>.
  */
 static int
-tor_tls_get_error(tor_tls *tls, int r, int extra,
+tor_tls_get_error(tor_tls_t *tls, int r, int extra,
                   const char *doing, int severity)
 {
   int err = SSL_get_error(tls->ssl, r);
@@ -308,7 +309,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   crypto_pk_env_t *rsa = NULL;
   crypto_dh_env_t *dh = NULL;
   EVP_PKEY *pkey = NULL;
-  tor_tls_context *result = NULL;
+  tor_tls_context_t *result = NULL;
   X509 *cert = NULL, *idcert = NULL;
   char nn2[128];
   int client_only;
@@ -337,7 +338,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     }
   }
 
-  result = tor_malloc(sizeof(tor_tls_context));
+  result = tor_malloc(sizeof(tor_tls_context_t));
   result->ctx = result->client_only_ctx = NULL;
   for (client_only=0; client_only <= 1; ++client_only) {
     ctx = client_only ? &result->client_only_ctx : &result->ctx;
@@ -419,10 +420,10 @@ tor_tls_context_new(crypto_pk_env_t *identity,
 /** Create a new TLS object from a file descriptor, and a flag to
  * determine whether it is functioning as a server.
  */
-tor_tls *
+tor_tls_t *
 tor_tls_new(int sock, int isServer, int use_no_cert)
 {
-  tor_tls *result = tor_malloc(sizeof(tor_tls));
+  tor_tls_t *result = tor_malloc(sizeof(tor_tls_t));
   SSL_CTX *ctx;
   tor_assert(global_tls_context); /* make sure somebody made it first */
   ctx = use_no_cert ? global_tls_context->client_only_ctx
@@ -445,7 +446,7 @@ tor_tls_new(int sock, int isServer, int use_no_cert)
 /** Return whether this tls initiated the connect (client) or
  * received it (server). */
 int
-tor_tls_is_server(tor_tls *tls)
+tor_tls_is_server(tor_tls_t *tls)
 {
   tor_assert(tls);
   return tls->isServer;
@@ -455,7 +456,7 @@ tor_tls_is_server(tor_tls *tls)
  * underlying file descriptor.
  */
 void
-tor_tls_free(tor_tls *tls)
+tor_tls_free(tor_tls_t *tls)
 {
   tor_assert(tls && tls->ssl);
   SSL_free(tls->ssl);
@@ -469,7 +470,7 @@ tor_tls_free(tor_tls *tls)
  * TOR_TLS_CLOSE, TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
  */
 int
-tor_tls_read(tor_tls *tls, char *cp, size_t len)
+tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
 {
   int r, err;
   tor_assert(tls);
@@ -496,7 +497,7 @@ tor_tls_read(tor_tls *tls, char *cp, size_t len)
  * TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
  */
 int
-tor_tls_write(tor_tls *tls, char *cp, size_t n)
+tor_tls_write(tor_tls_t *tls, char *cp, size_t n)
 {
   int r, err;
   tor_assert(tls);
@@ -528,7 +529,7 @@ tor_tls_write(tor_tls *tls, char *cp, size_t n)
  * or TOR_TLS_WANTWRITE.
  */
 int
-tor_tls_handshake(tor_tls *tls)
+tor_tls_handshake(tor_tls_t *tls)
 {
   int r;
   tor_assert(tls);
@@ -556,7 +557,7 @@ tor_tls_handshake(tor_tls *tls)
  * or TOR_TLS_WANTWRITE.
  */
 int
-tor_tls_shutdown(tor_tls *tls)
+tor_tls_shutdown(tor_tls_t *tls)
 {
   int r, err;
   char buf[128];
@@ -616,7 +617,7 @@ tor_tls_shutdown(tor_tls *tls)
 /** Return true iff this TLS connection is authenticated.
  */
 int
-tor_tls_peer_has_cert(tor_tls *tls)
+tor_tls_peer_has_cert(tor_tls_t *tls)
 {
   X509 *cert;
   cert = SSL_get_peer_certificate(tls->ssl);
@@ -633,7 +634,7 @@ tor_tls_peer_has_cert(tor_tls *tls)
  * NUL-terminate.  Return 0 on success, -1 on failure.
  */
 int
-tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, size_t buflen)
+tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
 {
   X509 *cert = NULL;
   X509_NAME *name = NULL;
@@ -726,7 +727,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
  * 0.  Else, return -1.
  */
 int
-tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
+tor_tls_verify(tor_tls_t *tls, crypto_pk_env_t **identity_key)
 {
   X509 *cert = NULL, *id_cert = NULL;
   STACK_OF(X509) *chain = NULL;
@@ -795,7 +796,7 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
  * NOTE: you should call tor_tls_verify before tor_tls_check_lifetime.
  */
 int
-tor_tls_check_lifetime(tor_tls *tls, int tolerance)
+tor_tls_check_lifetime(tor_tls_t *tls, int tolerance)
 {
   time_t now, t;
   X509 *cert;
@@ -830,7 +831,7 @@ tor_tls_check_lifetime(tor_tls *tls, int tolerance)
 /** Return the number of bytes available for reading from <b>tls</b>.
  */
 int
-tor_tls_get_pending_bytes(tor_tls *tls)
+tor_tls_get_pending_bytes(tor_tls_t *tls)
 {
   tor_assert(tls);
 #if OPENSSL_VERSION_NUMBER < 0x0090700fl
@@ -845,14 +846,14 @@ tor_tls_get_pending_bytes(tor_tls *tls)
 
 /** Return the number of bytes read across the underlying socket. */
 unsigned long
-tor_tls_get_n_bytes_read(tor_tls *tls)
+tor_tls_get_n_bytes_read(tor_tls_t *tls)
 {
   tor_assert(tls);
   return BIO_number_read(SSL_get_rbio(tls->ssl));
 }
 /** Return the number of bytes written across the underlying socket. */
 unsigned long
-tor_tls_get_n_bytes_written(tor_tls *tls)
+tor_tls_get_n_bytes_written(tor_tls_t *tls)
 {
   tor_assert(tls);
   return BIO_number_written(SSL_get_wbio(tls->ssl));

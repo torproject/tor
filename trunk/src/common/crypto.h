@@ -24,7 +24,8 @@
 /** Length of our DH keys. */
 #define DH_BYTES (1024/8)
 
-/* DOCDOC */
+/** Length of a message digest when encoded in base64 with trailing = signs
+ * removed. */
 #define BASE64_DIGEST_LEN 27
 
 /** Constants used to indicate no padding for public-key encryption */

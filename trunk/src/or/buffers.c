@@ -49,6 +49,7 @@ const char buffers_c_id[] = "$Id$";
 #endif
 
 #define BUFFER_MAGIC 0xB0FFF312u
+/** A resizeable buffer, optimized for reading and writing. */
 struct buf_t {
   uint32_t magic; /**< Magic cookie for debugging: Must be set to BUFFER_MAGIC */
   char *mem;      /**< Storage for data in the buffer */
@@ -473,7 +474,7 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
  * -1 on failure.
  */
 static INLINE int
-read_to_buf_tls_impl(tor_tls *tls, size_t at_most, buf_t *buf, char *next)
+read_to_buf_tls_impl(tor_tls_t *tls, size_t at_most, buf_t *buf, char *next)
 {
   int r;
 
@@ -512,7 +513,7 @@ read_to_buf_tls_impl(tor_tls *tls, size_t at_most, buf_t *buf, char *next)
  * ready to write -- or vice versa.
  */
 int
-read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf)
+read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
 {
   int r;
   char *next;
@@ -634,7 +635,7 @@ flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
  * Return the number of bytes written on success, -1 on failure.
  */
 static INLINE int
-flush_buf_tls_impl(tor_tls *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
+flush_buf_tls_impl(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   int r;
 
@@ -652,7 +653,7 @@ flush_buf_tls_impl(tor_tls *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 /** As flush_buf(), but writes data to a TLS connection.
  */
 int
-flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
+flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t *buf_flushlen)
 {
   int r;
   size_t flushed=0;

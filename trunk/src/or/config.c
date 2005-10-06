@@ -36,7 +36,7 @@ typedef enum config_type_t {
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
 } config_type_t;
 
-/* An abbreviation for a configuration option allowed on the command line */
+/** An abbreviation for a configuration option allowed on the command line */
 typedef struct config_abbrev_t {
   const char *abbreviated;
   const char *full;
@@ -242,6 +242,9 @@ static config_var_description_t state_description[] = {
 
 typedef int (*validate_fn_t)(void*);
 
+/** Information on the keys, value types, key-to-struct-member mappings,
+ * variable descriptions, validation functions, and abbreviations for a
+ * configuration or storage format. */
 typedef struct {
   size_t size;
   uint32_t magic;
@@ -3087,6 +3090,8 @@ options_save_current(void)
   return write_configuration_file(get_default_conf_file(), get_options());
 }
 
+/** Mapping from a unit name to a multiplier for converting that unit into a
+ * base unit. */
 struct unit_table_t {
   const char *unit;
   uint64_t multiplier;

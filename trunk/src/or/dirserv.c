@@ -78,13 +78,19 @@ parse_authdir_policy(void)
   }
 }
 
+/** A member of fingerprint_list: maps a name to a fingerprint.
+ **/
 typedef struct fingerprint_entry_t {
-  char *nickname;
+  char *nickname; /**< The name of a router (if this fingerprint is bound to a
+                   * name); the string "!reject" (if this fingerprint should
+                   * always be rejected); or the string "!invalid" (if this
+                   * fingerprint should be accepted but never marked as
+                   * valid. */
   char *fingerprint; /**< Stored as HEX_DIGEST_LEN characters, followed by a NUL */
 } fingerprint_entry_t;
 
 /** List of nickname-\>identity fingerprint mappings for all the routers
- * that we recognize. Used to prevent Sybil attacks. */
+ * that we name.  Used to prevent router impersonation. */
 /* Should be static; exposed for testing */
 smartlist_t *fingerprint_list = NULL;
 

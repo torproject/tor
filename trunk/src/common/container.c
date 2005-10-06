@@ -29,8 +29,9 @@ const char container_c_id[] = "$Id$";
 #define SMARTLIST_DEFAULT_CAPACITY 32
 
 #ifndef FAST_SMARTLIST
+/** A resizeable list of pointers, with associated helpful functionality. */
 struct smartlist_t {
-  /** <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
+  /* <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
    * before it needs to be resized.  Only the first <b>num_used</b> (\<=
    * capacity) elements point to valid data.
    */
@@ -484,14 +485,14 @@ smartlist_sort_strings(smartlist_t *sl)
   smartlist_sort(sl, _compare_string_ptrs);
 }
 
-/** Splay-tree implementation of string-to-void* map
- */
+/** A node in a strmap_t string-to-void* map. */
 typedef struct strmap_entry_t {
   SPLAY_ENTRY(strmap_entry_t) node;
   char *key;
   void *val;
 } strmap_entry_t;
 
+/** Splay-tree implementation of string-to-void* map */
 struct strmap_t {
   SPLAY_HEAD(strmap_tree, strmap_entry_t) head;
 };
