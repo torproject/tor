@@ -1645,24 +1645,10 @@ crypto_rand(char *to, size_t n)
   return (r == 1) ? 0 : -1;
 }
 
-/** Write n bytes of pseudorandom data to <b>to</b>. Return 0 on
- * success, -1 on failure.
- */
-void
-crypto_pseudo_rand(char *to, size_t n)
-{
-  tor_assert(to);
-  if (RAND_pseudo_bytes((unsigned char*)to, n) == -1) {
-    log_fn(LOG_ERR, "RAND_pseudo_bytes failed unexpectedly.");
-    crypto_log_errors(LOG_WARN, "generating random data");
-    exit(1);
-  }
-}
-
 /** Return a pseudorandom integer, chosen uniformly from the values
  * between 0 and max-1. */
 int
-crypto_pseudo_rand_int(unsigned int max)
+crypto_rand_int(unsigned int max)
 {
   unsigned int val;
   unsigned int cutoff;
@@ -1675,7 +1661,7 @@ crypto_pseudo_rand_int(unsigned int max)
    */
   cutoff = UINT_MAX - (UINT_MAX%max);
   while (1) {
-    crypto_pseudo_rand((char*)&val, sizeof(val));
+    crypto_rand((char*)&val, sizeof(val));
     if (val < cutoff)
       return val % max;
   }
@@ -1689,7 +1675,7 @@ smartlist_choose(const smartlist_t *sl)
   size_t len;
   len = smartlist_len(sl);
   if (len)
-    return smartlist_get(sl,crypto_pseudo_rand_int(len));
+    return smartlist_get(sl,crypto_rand_int(len));
   return NULL; /* no elements to choose from */
 }
 

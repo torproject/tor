@@ -176,7 +176,7 @@ connection_new(int type)
     conn->socks_request = tor_malloc_zero(sizeof(socks_request_t));
   }
 
-  conn->next_circ_id = crypto_pseudo_rand_int(1<<15);
+  conn->next_circ_id = crypto_rand_int(1<<15);
 
   conn->timestamp_created = now;
   conn->timestamp_lastread = now;

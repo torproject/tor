@@ -1020,7 +1020,7 @@ rend_consider_services_upload(time_t now)
     service = smartlist_get(rend_service_list, i);
     if (!service->next_upload_time) { /* never been uploaded yet */
       service->next_upload_time =
-        now + crypto_pseudo_rand_int(2*rendpostperiod);
+        now + crypto_rand_int(2*rendpostperiod);
     }
     if (service->next_upload_time < now ||
         (service->desc_is_dirty &&
