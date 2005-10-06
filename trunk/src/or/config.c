@@ -36,7 +36,7 @@ typedef enum config_type_t {
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
 } config_type_t;
 
-/** An abbreviation for a configuration option allowed on the command line */
+/** An abbreviation for a configuration option allowed on the command line. */
 typedef struct config_abbrev_t {
   const char *abbreviated;
   const char *full;
