@@ -460,7 +460,7 @@ rend_client_get_random_intro(const char *query)
   if (!entry->parsed->n_intro_points)
     return NULL;
 
-  i = crypto_pseudo_rand_int(entry->parsed->n_intro_points);
+  i = crypto_rand_int(entry->parsed->n_intro_points);
 
   if (entry->parsed->intro_point_extend_info) {
     return extend_info_dup(entry->parsed->intro_point_extend_info[i]);

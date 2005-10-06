@@ -757,7 +757,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
     return smartlist_choose(sl);
   }
   /* Second, choose a random value from the bandwidth weights. */
-  rand_bw = crypto_pseudo_rand_int(total_bw);
+  rand_bw = crypto_rand_int(total_bw);
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
   for (i=0; ; i++) {
@@ -1820,7 +1820,7 @@ update_networkstatus_client_downloads(time_t now)
   /* If no networkstatus was found, choose a dirserver at random as "most
    * recent". */
   if (most_recent_idx<0)
-    most_recent_idx = crypto_pseudo_rand_int(n_dirservers);
+    most_recent_idx = crypto_rand_int(n_dirservers);
 
   /* Build a request string for all the resources we want. */
   resource_len = needed * (HEX_DIGEST_LEN+1) + 6;

@@ -219,7 +219,7 @@ circuit_new(uint16_t p_circ_id, connection_t *p_conn)
   circ->package_window = CIRCWINDOW_START;
   circ->deliver_window = CIRCWINDOW_START;
 
-  circ->next_stream_id = crypto_pseudo_rand_int(1<<16);
+  circ->next_stream_id = crypto_rand_int(1<<16);
   circ->global_identifier = n_circuits_allocated++;
 
   circuit_add(circ);

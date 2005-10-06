@@ -148,8 +148,7 @@ void crypto_dh_free(crypto_dh_env_t *dh);
 /* random numbers */
 int crypto_seed_rng(void);
 int crypto_rand(char *to, size_t n);
-void crypto_pseudo_rand(char *to, size_t n);
-int crypto_pseudo_rand_int(unsigned int max);
+int crypto_rand_int(unsigned int max);
 
 struct smartlist_t;
 void *smartlist_choose(const struct smartlist_t *sl);
