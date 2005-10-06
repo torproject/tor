@@ -349,7 +349,7 @@ AC_CHECK_SIZEOF(cell_t)
 # Now, let's see about alignment requirements.  On some platforms, we override
 # the default.
 case $host in
- ia64-*-* | arm-*-* | sparc-*-* )
+ ia64-*-* | arm-*-* | sparc-*-* | sparc64-*-* )
     tor_cv_unaligned_ok=no
     ;;
  *)
