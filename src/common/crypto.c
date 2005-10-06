@@ -1575,16 +1575,16 @@ crypto_dh_free(crypto_dh_env_t *dh)
 
 /* random numbers */
 
-/** Seed OpenSSL's random number generator with DIGEST_LEN bytes from the
+/** Seed OpenSSL's random number generator with bytes from the
  * operating system.  Return 0 on success, -1 on failure.
  */
 int
 crypto_seed_rng(void)
 {
+  char buf[64];
 #ifdef MS_WINDOWS
   static int provider_set = 0;
   static HCRYPTPROV provider;
-  char buf[DIGEST_LEN+1];
 
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
@@ -1610,7 +1610,6 @@ crypto_seed_rng(void)
   };
   int fd;
   int i, n;
-  char buf[DIGEST_LEN+1];
 
   for (i = 0; filenames[i]; ++i) {
     fd = open(filenames[i], O_RDONLY, 0);
