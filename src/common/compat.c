@@ -776,6 +776,9 @@ get_uname(void)
  */
 
 #if defined(USE_PTHREADS)
+/** Wraps a an int (*)(void*) function and its argument so we can
+ * invoke them in a way pthreads would expect.
+ */
 typedef struct tor_pthread_data_t {
   int (*func)(void *);
   void *data;
@@ -961,6 +964,7 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
 #endif
 
 #ifdef USE_WIN32_THREADS
+/** A generic lock structure for multithreaded builds. */
 struct tor_mutex_t {
   HANDLE handle;
 };
@@ -1010,6 +1014,7 @@ tor_get_thread_id(void)
   return (unsigned long)GetCurrentThreadId();
 }
 #elif defined(USE_PTHREADS)
+/** A generic lock structure for multithreaded builds. */
 struct tor_mutex_t {
   pthread_mutex_t mutex;
 };
@@ -1050,6 +1055,7 @@ tor_get_thread_id(void)
   return r.id;
 }
 #else
+/** A generic lock structure for multithreaded builds. */
 struct tor_mutex_t {
   int _unused;
 };

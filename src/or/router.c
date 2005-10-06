@@ -1175,3 +1175,4 @@ router_free_all(void)
     smartlist_free(warned_nonexistent_family);
   }
 }
+

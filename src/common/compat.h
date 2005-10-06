@@ -236,6 +236,7 @@ void spawn_exit(void);
 
 /* Because we use threads instead of processes on Windows, we need locking on
  * Windows.  On Unixy platforms, these functions are no-ops. */
+
 typedef struct tor_mutex_t tor_mutex_t;
 #ifdef TOR_IS_MULTITHREADED
 tor_mutex_t *tor_mutex_new(void);

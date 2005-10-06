@@ -451,6 +451,7 @@ typedef struct {
   int num_resolve_failures;
 } addressmap_entry_t;
 
+/** Entry for mapping addresses to which virtual address we mapped them to. */
 typedef struct {
   char *ipv4_address;
   char *hostname_address;
@@ -1728,7 +1729,7 @@ connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 /** A helper function for socks_policy_permits_address() below.
  *
  * Parse options->SocksPolicy in the same way that the exit policy
- * is parsed, and put the processed version in &socks_policy.
+ * is parsed, and put the processed version in socks_policy.
  * Ignore port specifiers.
  */
 void
@@ -1788,10 +1789,10 @@ set_exit_redirects(smartlist_t *lst)
 }
 
 /** If address is of the form "y.onion" with a well-formed handle y:
- *     Put a \code{'\0'} after y, lower-case it, and return ONION_HOSTNAME.
+ *     Put a NUL after y, lower-case it, and return ONION_HOSTNAME.
  *
  * If address is of the form "y.exit":
- *     Put a \code{'\0'} after y and return EXIT_HOSTNAME.
+ *     Put a NUL after y and return EXIT_HOSTNAME.
  *
  * Otherwise:
  *     Return NORMAL_HOSTNAME and change nothing.
