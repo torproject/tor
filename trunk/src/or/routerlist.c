@@ -2544,7 +2544,8 @@ router_list_downloadable(void)
   time_t now = time(NULL);
   int mirror = server_mode(get_options()) && get_options()->DirPort;
   /* these are just used for logging */
-  int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0, n_skip_old = 0;
+  int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0, n_skip_old = 0,
+    n_obsolete = 0;
 
   if (!routerstatus_list)
     return superseded;
@@ -2555,7 +2556,10 @@ router_list_downloadable(void)
 
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
   {
-    if (rs->next_attempt_at < now) {
+    if (rs->status.published_on + ROUTER_MAX_AGE < now) {
+      rs->should_download = 0;
+      ++n_obsolete;
+    } if (rs->next_attempt_at < now) {
       rs->should_download = 1;
       ++n_downloadable;
     } else {
@@ -2654,8 +2658,10 @@ router_list_downloadable(void)
   log_fn(LOG_INFO, "%d router descriptors are downloadable; "
          "%d are up to date; %d are in progress; "
          "%d are not ready to retry; "
+         "%d are not published recently enough to be worthwhile; "
          "%d are running pre-0.1.1.6 Tors and aren't stale enough to replace.",
-         n_downloadable, n_uptodate, n_in_progress, n_not_ready, n_skip_old);
+         n_downloadable, n_uptodate, n_in_progress, n_not_ready,
+         n_obsolete, n_skip_old);
 
   if (!n_downloadable)
     return superseded;
