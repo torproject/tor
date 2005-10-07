@@ -1620,14 +1620,14 @@ crypto_seed_rng(void)
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
       if (GetLastError() != NTE_BAD_KEYSET) {
-        log_fn(LOG_ERR,"Can't get CryptoAPI provider [1]");
+        log_fn(LOG_WARN, "Can't get CryptoAPI provider [1]");
         return rand_poll_status ? 0 : -1;
       }
     }
     provider_set = 1;
   }
   if (!CryptGenRandom(provider, sizeof(buf), buf)) {
-    log_fn(LOG_ERR,"Can't get entropy from CryptoAPI.");
+    log_fn(LOG_WARN, "Can't get entropy from CryptoAPI.");
     return rand_poll_status ? 0 : -1;
   }
   RAND_seed(buf, sizeof(buf));
