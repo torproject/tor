@@ -813,9 +813,10 @@ router_rebuild_descriptor(int force)
   if (authdir_mode(options))
     ri->is_verified = ri->is_named = 1; /* believe in yourself */
   if (options->MyFamily) {
+    smartlist_t *family;
     if (!warned_nonexistent_family)
       warned_nonexistent_family = smartlist_create();
-    smartlist_t *family = smartlist_create();
+    family = smartlist_create();
     ri->declared_family = smartlist_create();
     smartlist_split_string(family, options->MyFamily, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
