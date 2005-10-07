@@ -711,7 +711,7 @@ get_uname(void)
           { -1, -1, NULL }
         };
         info.dwOSVersionInfoSize = sizeof(info);
-        GetVersionEx(&info);
+        GetVersionEx((LPOSVERSIONINFO)&info);
         if (info.dwMajorVersion == 4 && info.dwMinorVersion == 0) {
           if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)
             plat = "Windows NT 4.0";
@@ -727,7 +727,7 @@ get_uname(void)
           }
         }
         if (plat) {
-          tor_snprtint(uname_result, sizeof(uname_result), "%s %s",
+          tor_snprintf(uname_result, sizeof(uname_result), "%s %s",
                        plat, info.szCSDVersion);
         } else {
           if (info.dwMajorVersion > 6 ||
@@ -740,26 +740,26 @@ get_uname(void)
                          "Unrecognized version of Windows [major=%d,minor=%d]",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion);
         }
-        if (info.dwProductType == VER_NT_DOMAIN_CONTROLLER) {
+        if (info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
           strlcat(uname_result, " [domain controller]", sizeof(uname_result));
-        } else if (info.dwProductType == VER_NT_SERVER) {
+        } else if (info.wProductType == VER_NT_SERVER) {
           strlcat(uname_result, " [server]", sizeof(uname_result));
-        } else if (info.dwProductType == VER_NT_WORKSTATION) {
+        } else if (info.wProductType == VER_NT_WORKSTATION) {
           strlcat(uname_result, " [workstation]", sizeof(uname_result));
         }
-        if (info.dwSuiteMask & VER_SUITE_DATACENTER) {
+        if (info.wSuiteMask & VER_SUITE_DATACENTER) {
           strlcat(uname_result, " {datacenter}", sizeof(uname_result));
         }
-        if (info.dwSuiteMask & VER_SUITE_ENTERPRISE) {
+        if (info.wSuiteMask & VER_SUITE_ENTERPRISE) {
           strlcat(uname_result, " {enterprise}", sizeof(uname_result));
         }
-        if (info.dwSuiteMask & VER_SUITE_PERSONAL) {
+        if (info.wSuiteMask & VER_SUITE_PERSONAL) {
           strlcat(uname_result, " {personal}", sizeof(uname_result));
         }
-        if (info.dwSuiteMask & VER_SUITE_EMBEDDED) {
+        if (info.wSuiteMask & VER_SUITE_EMBEDDEDNT) {
           strlcat(uname_result, " {personal}", sizeof(uname_result));
         }
-        if (info.dwSuiteMask & VER_SUITE_PERSONAL) {
+        if (info.wSuiteMask & VER_SUITE_PERSONAL) {
           strlcat(uname_result, " {personal}", sizeof(uname_result));
         }
 #else
