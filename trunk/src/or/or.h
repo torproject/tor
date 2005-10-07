@@ -815,7 +815,7 @@ typedef struct local_routerstatus_t {
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
   unsigned int should_download:1; /**< DOCDOC */
-  unsigned int name_lookup_warned:1; /*< Have we warned the user for referring
+  unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
                                       * to this (unnamed) router by nickname?
                                       */
 } local_routerstatus_t;
