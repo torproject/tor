@@ -1,3 +1,81 @@
+Changes in version 0.1.1.8-alpha - 2005-10-07
+  o New features (major):
+    - Clients don't download or use the directory anymore. Now they
+      download and use network-statuses from the trusted dirservers,
+      and fetch individual server descriptors as needed from mirrors.
+      See dir-spec.txt for all the gory details.
+    - Be more conservative about whether to advertise our DirPort.
+      The main change is to not advertise if we're running at capacity
+      and either a) we could hibernate or b) our capacity is low and
+      we're using a default DirPort.
+    - Use OpenSSL's AES when OpenSSL has version 0.9.7 or later.
+
+  o New features (minor):
+    - Try to be smart about when to retry network-status and
+      server-descriptor fetches. Still needs some tuning.
+    - Stop parsing, storing, or using running-routers output (but
+      mirrors still cache and serve it).
+    - Consider a threshold of versioning dirservers (dirservers who have
+      an opinion about which Tor versions are still recommended) before
+      deciding whether to warn the user that he's obsolete.
+    - Dirservers can now reject/invalidate by key and IP, with the
+      config options "AuthDirInvalid" and "AuthDirReject". This is
+      useful since currently we automatically list servers as running
+      and usable even if we know they're jerks.
+    - Provide dire warnings to any users who set DirServer; move it out
+      of torrc.sample and into torrc.complete.
+    - Add MyFamily to torrc.sample in the server section.
+    - Add nicknames to the DirServer line, so we can refer to them
+      without requiring all our users to memorize their IP addresses.
+    - When we get an EOF or a timeout on a directory connection, note
+      how many bytes of serverdesc we are dropping. This will help
+      us determine whether it is smart to parse incomplete serverdesc
+      responses.
+    - Add a new function to "change pseudonyms" -- that is, to stop
+      using any currently-dirty circuits for new streams, so we don't
+      link new actions to old actions. Currently it's only called on
+      HUP (or SIGNAL RELOAD).
+    - On sighup, if UseHelperNodes changed to 1, use new circuits.
+    - Start using RAND_bytes rather than RAND_pseudo_bytes from
+      OpenSSL. Also, reseed our entropy every hour, not just at
+      startup. And entropy in 512-bit chunks, not 160-bit chunks.
+
+  o Fixes on 0.1.1.7-alpha:
+    - Nobody ever implemented EVENT_ADDRMAP for control protocol
+      version 0, so don't let version 0 controllers ask for it.
+    - If you requested something with too many newlines via the
+      v1 controller protocol, you could crash tor.
+    - Fix a number of memory leaks, including some pretty serious ones.
+    - Re-enable DirPort testing again, so Tor servers will be willing
+      to advertise their DirPort if it's reachable.
+    - On TLS handshake, only check the other router's nickname against
+      its expected nickname if is_named is set.
+
+  o Fixes forward-ported from 0.1.0.15:
+    - Don't crash when we don't have any spare file descriptors and we
+      try to spawn a dns or cpu worker.
+    - Make the numbers in read-history and write-history into uint64s,
+      so they don't overflow and publish negatives in the descriptor.
+
+  o Fixes on 0.1.0.x:
+    - For the OS X package's modified privoxy config file, comment
+      out the "logfile" line so we don't log everything passed
+      through privoxy.
+    - We were whining about using socks4 or socks5-with-local-lookup
+      even when it's an IP in the "virtual" range we designed exactly
+      for this case.
+    - We were leaking some memory every time the client changes IPs.
+    - Never call free() on tor_malloc()d memory. This will help us
+      use dmalloc to detect memory leaks.
+    - Check for named servers when looking them up by nickname;
+      warn when we'recalling a non-named server by its nickname;
+      don't warn twice about the same name.
+    - Try to list MyFamily elements by key, not by nickname, and warn
+      if we've not heard of the server.
+    - Make windows platform detection (uname equivalent) smarter.
+    - It turns out sparc64 doesn't like unaligned access either.
+
+
 Changes in version 0.1.1.7-alpha - 2005-09-14
   o Fixes on 0.1.1.6-alpha:
     - Exit servers were crashing when people asked them to make a
