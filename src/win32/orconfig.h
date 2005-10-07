@@ -125,6 +125,9 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H
 
+/* Define to 1 if you have the <sys/utime.h> header file. */
+#define HAVE_SYS_UTIME_H
+
 /* Define to 1 if you have the <sys/wait.h> header file. */
 #undef HAVE_SYS_WAIT_H
 
