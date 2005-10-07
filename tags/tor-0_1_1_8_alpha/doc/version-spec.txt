@@ -1,0 +1,46 @@
+$Id$
+
+HOW TOR VERSION NUMBERS WORK
+============================
+
+The Old Way
+-----------
+
+Before 0.1.0, versions were of the format:
+    MAJOR.MINOR.MICRO(status(PATCHLEVEL))?(-cvs)?
+where MAJOR, MINOR, MICRO, and PATCHLEVEL are numbers, status is one
+of "pre" (for an alpha release), "rc" (for a release candidate), or
+"." for a release.  As a special case, "a.b.c" was equivalent to
+"a.b.c.0".  We compare the elements in order (major, minor, micro,
+status, patchlevel, cvs), with "cvs" preceding non-cvs.
+
+We would start each development branch with a final version in mind:
+say, "0.0.8".  Our first pre-release would be "0.0.8pre1", followed by
+(for example) "0.0.8pre2-cvs", "0.0.8pre2", "0.0.8pre3-cvs",
+"0.0.8rc1", "0.0.8rc2-cvs", and "0.0.8rc2".  Finally, we'd release
+0.0.8.  The stable CVS branch would then be versioned "0.0.8.1-cvs",
+and any eventual bugfix release would be "0.0.8.1".
+
+
+The New Way
+-----------
+
+After 0.1.0, versions are of the format:
+   MAJOR.MINOR.MICRO(.PATCHLEVEL)(-status_tag)
+The stuff in parenthesis is optional.  As before, MAJOR, MINOR, MICRO,
+and PATCHLEVEL are numbers, with an absent number equivalent to 0.
+All versions should be distinguishable purely by those four
+numbers. The status tag is purely informational, and lets you know how
+stable we think the release is: "alpha" is pretty unstable; "rc" is a
+release candidate; and no tag at all means that we have a final
+release. If the tag ends with "-cvs", you're looking at a development
+snapshot that came after a given release.  If we *do* encounter two
+versions that differ only by status tag, we compare them lexically.
+
+Now, we start each development branch with (say) 0.1.1.1-alpha.  The
+patchlevel increments consistently as the status tag changes, for
+example, as in: 0.1.1.2-alpha, 0.1.1.3-alpha, 0.1.1.4-rc 0.1.1.5-rc,
+Eventually, we release 0.1.1.6.  The next patch release is 0.1.1.7.
+
+Between these releases, CVS is versioned with a -cvs tag: after
+0.1.1.1-alpha comes 0.1.1.1-alpha-cvs, and so on.
