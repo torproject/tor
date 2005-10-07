@@ -1575,42 +1575,63 @@ crypto_dh_free(crypto_dh_env_t *dh)
 
 /* random numbers */
 
+/* This is how much entropy OpenSSL likes to add right now, so maybe it will
+ * work for us too. */
+#define ADD_ENTROPY 32
+
+/* Use RAND_poll if openssl is 0.9.6 release or later.  (The "f" means
+   "release".)  */
+#define USE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
+
 /** Seed OpenSSL's random number generator with bytes from the
  * operating system.  Return 0 on success, -1 on failure.
  */
 int
 crypto_seed_rng(void)
 {
-  char buf[64];
+  char buf[ADD_ENTROPY];
+  int rand_poll_status;
+
+  /* local variables */
 #ifdef MS_WINDOWS
   static int provider_set = 0;
   static HCRYPTPROV provider;
-
-  if (!provider_set) {
-    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
-      if (GetLastError() != NTE_BAD_KEYSET) {
-        log_fn(LOG_ERR,"Can't get CryptoAPI provider [1]");
-        return -1;
-      }
-    }
-    provider_set = 1;
-  }
-  if (!CryptGenRandom(provider, sizeof(buf), buf)) {
-    log_fn(LOG_ERR,"Can't get entropy from CryptoAPI.");
-    return -1;
-  }
-  RAND_seed(buf, sizeof(buf));
-  /* And add the current screen state to the entropy pool for
-   * good measure. */
-  RAND_screen();
-  return 0;
 #else
   static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
   int fd;
   int i, n;
+#endif
 
+#if USE_RAND_POLL
+  /* OpenSSL 0.9.6 adds a RAND_poll function that knows about more kinds of
+   * entropy than we do.  We'll try calling that, *and* calling our own entropy
+   * functions.  If one succeeds, we'll accept the RNG as seeded. */
+  rand_poll_status = RAND_poll();
+  if (rand_poll_status == 0)
+    log_fn(LOG_WARN, "RAND_poll() failed.");
+#else
+  rand_poll_status = 0;
+#endif
+
+#ifdef MS_WINDOWS
+  if (!provider_set) {
+    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+      if (GetLastError() != NTE_BAD_KEYSET) {
+        log_fn(LOG_ERR,"Can't get CryptoAPI provider [1]");
+        return rand_poll_status ? 0 : -1;
+      }
+    }
+    provider_set = 1;
+  }
+  if (!CryptGenRandom(provider, sizeof(buf), buf)) {
+    log_fn(LOG_ERR,"Can't get entropy from CryptoAPI.");
+    return rand_poll_status ? 0 : -1;
+  }
+  RAND_seed(buf, sizeof(buf));
+  return 0;
+#else
   for (i = 0; filenames[i]; ++i) {
     fd = open(filenames[i], O_RDONLY, 0);
     if (fd<0) continue;
@@ -1626,7 +1647,7 @@ crypto_seed_rng(void)
   }
 
   log_fn(LOG_WARN, "Cannot seed RNG -- no entropy source found.");
-  return -1;
+  return rand_poll_status ? 0 : -1;
 #endif
 }
 
