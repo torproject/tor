@@ -522,13 +522,13 @@ connection_create_listener(const char *bindaddress, uint16_t bindport,
 #endif
 
   if (bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
-    log_fn(LOG_WARN, "Could not bind to port %u: %s", usePort,
+    log_fn(LOG_WARN, "Could not bind to %s:%u: %s", address, usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     goto err;
   }
 
   if (listen(s,SOMAXCONN) < 0) {
-    log_fn(LOG_WARN, "Could not listen on port %u: %s", usePort,
+    log_fn(LOG_WARN, "Could not listen on %s%u: %s", address, usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     goto err;
   }
