@@ -934,7 +934,7 @@ rend_services_introduce(void)
     /* Find out which introduction points we have in progress for this service. */
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
-      router = router_get_by_nickname(intro, 1);
+      router = router_get_by_nickname(intro, 0);
       if (!router || !find_intro_circuit(router,service->pk_digest)) {
         log_fn(LOG_INFO,"Giving up on %s as intro point for %s.",
                 intro, service->service_id);
@@ -963,6 +963,7 @@ rend_services_introduce(void)
     smartlist_add_all(exclude_routers, intro_routers);
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
+      char *hex_digest;
       router = router_choose_random_node(service->intro_prefer_nodes,
                service->intro_exclude_nodes, exclude_routers, 1, 0,
                get_options()->_AllowUnverified & ALLOW_UNVERIFIED_INTRODUCTION, 0);
@@ -972,10 +973,13 @@ rend_services_introduce(void)
         break;
       }
       changed = 1;
+      hex_digest = tor_malloc_zero(HEX_DIGEST_LEN+2);
+      hex_digest[0] = '$';
+      base16_encode(hex_digest+1, HEX_DIGEST_LEN+1, router->identity_digest,
+                    DIGEST_LEN);
       smartlist_add(intro_routers, router);
       smartlist_add(exclude_routers, router);
-/*XXX009 should strdup the hexdigest, not nickname */
-      smartlist_add(service->intro_nodes, tor_strdup(router->nickname));
+      smartlist_add(service->intro_nodes, hex_digest);
       log_fn(LOG_INFO,"Picked router %s as an intro point for %s.", router->nickname,
              service->service_id);
     }
