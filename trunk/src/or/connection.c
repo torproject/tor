@@ -528,7 +528,7 @@ connection_create_listener(const char *bindaddress, uint16_t bindport,
   }
 
   if (listen(s,SOMAXCONN) < 0) {
-    log_fn(LOG_WARN, "Could not listen on %s%u: %s", address, usePort,
+    log_fn(LOG_WARN, "Could not listen on %s:%u: %s", address, usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     goto err;
   }
