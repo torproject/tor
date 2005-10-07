@@ -694,6 +694,10 @@ router_parse_entry_from_string(const char *s, const char *end)
     end = s + strlen(s);
   }
 
+  /* point 'end' to a point immediately after the final newline. */
+  while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
+    --end;
+
   if (router_get_router_hash(s, digest) < 0) {
     log_fn(LOG_WARN, "Couldn't compute router hash.");
     return NULL;
