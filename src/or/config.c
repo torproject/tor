@@ -152,8 +152,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("MonthlyAccountingStart"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NewCircuitPeriod",    INTERVAL, NewCircuitPeriod,     "30 seconds"),
-  /* XXXX 011 change this default on 0.1.1.x */
-  VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "1"),
+  VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
   VAR("NoPublish",           BOOL,     NoPublish,            "0"),
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
@@ -191,8 +190,7 @@ static config_var_t _option_vars[] = {
   VAR("UseHelperNodes",      BOOL,     UseHelperNodes,       "0"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
-  /* XXXX 011 change this default on 0.1.1.x */
-  VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "1"),
+  VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
 };
