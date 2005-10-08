@@ -731,6 +731,7 @@ int
 dirserv_dump_directory_to_string(char **dir_out,
                                  crypto_pk_env_t *private_key)
 {
+  char *cp;
   char *router_status;
   char *identity_pkey; /* Identity key, DER64-encoded. */
   char *recommended_versions;
@@ -765,7 +766,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
-                    buf_len += ri->signed_descriptor_len);
+                    buf_len += ri->signed_descriptor_len+1);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
      function, though strictly speaking we shouldn't be able to exceed
@@ -785,9 +786,17 @@ dirserv_dump_directory_to_string(char **dir_out,
   tor_free(router_status);
   tor_free(identity_pkey);
 
+  cp = buf + strlen(buf);
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
-    if (strlcat(buf, ri->signed_descriptor, buf_len) >= buf_len)
-      goto truncated);
+    {
+      if (cp+ri->signed_descriptor_len+1 >= buf+buf_len)
+        goto truncated;
+      memcpy(cp, ri->signed_descriptor, ri->signed_descriptor_len);
+      cp += ri->signed_descriptor_len;
+      *cp++ = '\n'; /* add an extra newline in case somebody was depending on
+                     * it. */
+    });
+  *cp = '\0';
 
   /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
      signature.
