@@ -1,8 +1,12 @@
 tor (0.1.1.8-alpha-1) experimental; urgency=low
 
   * New upstream version.
+  * Add patch from CVS to
+    "Insert a newline between all router descriptors when generating (old
+    style) signed directories, in case somebody was counting on that".
+    r1.247 of dirserv.c, <20051008060243.85F41140808C@moria.seul.org>
 
- -- Peter Palfrader <weasel@debian.org>  Sat,  8 Oct 2005 00:26:29 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat,  8 Oct 2005 20:24:39 +0200
 
 tor (0.1.1.7-alpha-1) experimental; urgency=low
 
