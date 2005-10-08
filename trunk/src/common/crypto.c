@@ -1581,8 +1581,7 @@ crypto_dh_free(crypto_dh_env_t *dh)
 
 /* Use RAND_poll if openssl is 0.9.6 release or later.  (The "f" means
    "release".)  */
-// #define USE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
-#define USE_RAND_POLL 0
+#define USE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
 
 /** Seed OpenSSL's random number generator with bytes from the
  * operating system.  Return 0 on success, -1 on failure.
