@@ -66,12 +66,16 @@ static smartlist_t *warned_nicknames = NULL;
  * and that are still conflicted. */
 static smartlist_t *warned_conflicts = NULL;
 
-/* DOCDOC */
+/** The last time we tried to download any routerdesc, or 0 for "never".  We
+ * use this to rate-limit download attempts when the number of routerdescs to
+ * download is low. */
 static time_t last_routerdesc_download_attempted = 0;
-/* DOCDOC */
+/** The last time we tried to download a networkstatus, or 0 for "never".  We
+ * use this to rate-limit download attempts for directory caches (including
+ * mirrors).  Clients don't use this now. */
 static time_t last_networkstatus_download_attempted = 0;
 
-/*DOCDOC*/
+/* DOCDOC */
 static int have_warned_about_unverified_status = 0;
 static int have_warned_about_old_version = 0;
 static int have_warned_about_new_version = 0;
@@ -898,7 +902,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
   });
 
   if (best_match) {
-    if (n_matches>1) {
+    if (warn_if_unnamed && n_matches > 1) {
       smartlist_t *fps = smartlist_create();
       int any_unwarned = 0;
       SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
@@ -1693,8 +1697,8 @@ router_get_combined_status_by_digest(const char *digest)
 #define NONAUTHORITY_NS_CACHE_INTERVAL 15*60
 /** We are a directory server, and so cache network_status documents.
  * Initiate downloads as needed to update them.  For authorities, this means
- * asking each trusted directory for its network-status.  For caches, this means
- * asking a random authority for all network-statuses.
+ * asking each trusted directory for its network-status.  For caches, this
+ * means asking a random authority for all network-statuses.
  */
 static void
 update_networkstatus_cache_downloads(time_t now)
