@@ -1489,6 +1489,7 @@ int options_init_logs(or_options_t *options, int validate_only);
 int config_parse_addr_policy(config_line_t *cfg,
                              addr_policy_t **dest,
                              int assume_action);
+int config_cmp_addr_policies(addr_policy_t *a, addr_policy_t *b);
 void options_append_default_exit_policy(addr_policy_t **policy);
 void addr_policy_free(addr_policy_t *p);
 int option_is_recognized(const char *key);
@@ -2165,12 +2166,14 @@ void update_networkstatus_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);
 void routers_update_all_from_networkstatus(void);
 void routers_update_status_from_networkstatus(smartlist_t *routers,
-                                              int reset_failures);
+                                              int reset_failures,
+                                              int assume_recognized);
 smartlist_t *router_list_superseded(void);
 int router_have_minimum_dir_info(void);
 void networkstatus_list_update_recent(time_t now);
 void router_reset_descriptor_download_failures(void);
 void router_reset_status_download_failures(void);
+int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
 
 /********************************* routerparse.c ************************/
 

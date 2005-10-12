@@ -2800,6 +2800,32 @@ config_parse_addr_policy(config_line_t *cfg,
   return r;
 }
 
+/** Compare two provided address policies, and return -1, 0, or 1 if the first
+ * is less than, equal to, or greater than the second. */
+int
+config_cmp_addr_policies(addr_policy_t *a, addr_policy_t *b)
+{
+  int r;
+  while (a && b) {
+    if (r=((int)a->addr - (int)b->addr))
+      return r;
+    if (r=((int)a->msk - (int)b->msk))
+      return r;
+    if (r=((int)a->prt_min - (int)b->prt_min))
+      return r;
+    if (r=((int)a->prt_max - (int)b->prt_max))
+      return r;
+    a = a->next;
+    b = b->next;
+  }
+  if (!a && !b)
+    return 0;
+  if (a)
+    return -1;
+  if (b)
+    return 1;
+}
+
 /** Release all storage held by <b>p</b> */
 void
 addr_policy_free(addr_policy_t *p)

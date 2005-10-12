@@ -167,7 +167,7 @@ $Id$
   Request the server to inform the client about interesting events.  The
   syntax is:
 
-     "SETEVENTS" *(SP EventCode) CRLF
+     "SETEVENTS" [SP "EXTENDED"] *(SP EventCode) CRLF
 
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP"
@@ -178,6 +178,12 @@ $Id$
   The server responds with a "250 OK" reply on success, and a "552
   Unrecognized event" reply if one of the event codes isn't recognized.  (On
   error, the list of active event codes isn't changed.)
+
+  If the flag string "EXTENDED" is provided, Tor may provide extra
+  information with events for this connection; see 4.1 for more information.
+  NOTE: All events on a given connection will be provided in extended format,
+  or none.
+  NOTE: "EXTENDED" is only supported in Tor 0.1.1.9-alpha or later.
 
 3.5. AUTHENTICATE
 
@@ -579,9 +585,18 @@ $Id$
   expected.  For instance, a client that expects a CIRC message like:
       650 CIRC 1000 EXTENDED moria1,moria2
   should tolerate:
-      650+CIRC 1000 EXTENDED moria1,moria2 0xBEEF
+      650-CIRC 1000 EXTENDED moria1,moria2 0xBEEF
       650-EXTRAMAGIC=99
       650 ANONYMITY=high
+
+  If clients ask for extended events, then each event line as specified below
+  will be followed by additional extensions.  Clients that do so MUST
+  tolerate additional arguments and lines.  Additional lines will be of the
+  form
+      "650" ("-"/" ") KEYWORD ["=" ARGUMENTS] CRLF
+  Additional arguments will be of the form
+      SP KEYWORD ["=" ( QuoutedString / * NonSpDquote ) ]
+  Such clients MUST tolerate lines with keywords they do not recognize.
 
 4.1.1. Circuit status changed
 
