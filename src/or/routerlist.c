@@ -2533,8 +2533,6 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
   if (!routerstatus_list)
     return;
 
-  log_fn(LOG_NOTICE, "Here, %d %d", reset_failures, assume_recognized);
-
   SMARTLIST_FOREACH(routers, routerinfo_t *, router,
   {
     rs = router_get_combined_status_by_digest(router->identity_digest);
@@ -2864,10 +2862,18 @@ router_reset_descriptor_download_failures(void)
 int
 router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
 {
+  tor_assert(r1 && r2);
+
   /* post-0.1.1.6 servers know what they're doing. */
   if (tor_version_as_new_as(r1->platform, "0.1.1.6-alpha") ||
       tor_version_as_new_as(r1->platform, "0.1.1.6-alpha"))
     return 0;
+
+  if (r1->published_on > r2->published_on) {
+    routerinfo_t *ri_tmp = r2;
+    r2 = r1;
+    r1 = ri_tmp;
+  }
 
   /* If any key fields differ, they're different. */
   if (strcasecmp(r1->address, r2->address) ||
@@ -2901,8 +2907,12 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
     return 0;
 
   /* Did more than 6 hours pass? */
-  if (r1->published_on + 6*60*60 < r2->published_on ||
-      r2->published_on + 6*60*60 < r1->published_on)
+  if (r1->published_on + 6*60*60 < r2->published_on)
+    return 0;
+
+  /* Did uptime fail to increase by approximately the amount we would think,
+   * give or take 30 minutes? */
+  if (abs(r2->uptime - (r1->uptime + (r2->published_on-r1->published_on)))>30*60)
     return 0;
 
   /* Otherwise, the difference is cosmetic. */
