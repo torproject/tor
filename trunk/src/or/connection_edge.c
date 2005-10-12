@@ -556,9 +556,14 @@ addressmap_clean(time_t now)
 void
 addressmap_free_all(void)
 {
-  strmap_free(addressmap, addressmap_ent_free);
-  addressmap = NULL;
-  strmap_free(virtaddress_reversemap, addressmap_virtaddress_ent_free);
+  if (addressmap) {
+    strmap_free(addressmap, addressmap_ent_free);
+    addressmap = NULL;
+  }
+  if (virtaddress_reversemap) {
+    strmap_free(virtaddress_reversemap, addressmap_virtaddress_ent_free);
+    virtaddress_reversemap = NULL;
+  }
 }
 
 /** Look at address, and rewrite it until it doesn't want any

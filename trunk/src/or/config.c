@@ -394,11 +394,19 @@ set_options(or_options_t *new_val)
 void
 config_free_all(void)
 {
-  config_free(&options_format, global_options);
-  config_free(&state_format, global_state);
+  if (global_options) {
+    config_free(&options_format, global_options);
+    global_options = NULL;
+  }
+  if (global_state) {
+    config_free(&state_format, global_state);
+    global_state = NULL;
+  }
   tor_free(torrc_fname);
-  addr_policy_free(reachable_addr_policy);
-  reachable_addr_policy = NULL;
+  if (reachable_addr_policy) {
+    addr_policy_free(reachable_addr_policy);
+    reachable_addr_policy = NULL;
+  }
 }
 
 /** If options->SafeLogging is on, return a not very useful string,
