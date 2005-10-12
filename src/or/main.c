@@ -94,6 +94,7 @@ static char* nt_strerror(uint32_t errnum);
 
 #define FORCE_REGENERATE_DESCRIPTOR_INTERVAL 18*60*60 /* 18 hours */
 #define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
+#define CHECK_IPADDRESS_INTERVAL (5*60) /* five minutes */
 #define BUF_SHRINK_INTERVAL 60 /* one minute */
 #define DESCRIPTOR_RETRY_INTERVAL 10
 #define DESCRIPTOR_FAILURE_RESET_INTERVAL 60*60
@@ -637,6 +638,7 @@ run_scheduled_events(time_t now)
   static time_t last_rotated_certificate = 0;
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
+  static time_t time_to_check_ipaddress = 0;
   static time_t time_to_shrink_buffers = 0;
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
@@ -744,6 +746,10 @@ run_scheduled_events(time_t now)
   if (time_to_check_descriptor < now) {
     time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
     check_descriptor_bandwidth_changed(now);
+    if (time_to_check_ipaddress < now) {
+      time_to_check_ipaddress = now + CHECK_IPADDRESS_INTERVAL;
+      check_descriptor_ipaddress_changed(now);
+    }
     mark_my_descriptor_dirty_if_older_than(
                                     now - FORCE_REGENERATE_DESCRIPTOR_INTERVAL);
     consider_publishable_server(now, 0);
