@@ -2807,13 +2807,13 @@ config_cmp_addr_policies(addr_policy_t *a, addr_policy_t *b)
 {
   int r;
   while (a && b) {
-    if (r=((int)a->addr - (int)b->addr))
+    if ((r=((int)a->addr - (int)b->addr)))
       return r;
-    if (r=((int)a->msk - (int)b->msk))
+    if ((r=((int)a->msk - (int)b->msk)))
       return r;
-    if (r=((int)a->prt_min - (int)b->prt_min))
+    if ((r=((int)a->prt_min - (int)b->prt_min)))
       return r;
-    if (r=((int)a->prt_max - (int)b->prt_max))
+    if ((r=((int)a->prt_max - (int)b->prt_max)))
       return r;
     a = a->next;
     b = b->next;
