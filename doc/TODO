@@ -43,9 +43,22 @@ R - are dirservers auto-verifying duplicate nicknames?
 
   o controller libs should support resetconf command.
 N . Additional controller features
-      - Find a way to make event info more extensible
+      o Find a way to make event info more extensible
       - change circuit status events to give more details, like purpose,
-        whether they're internal, etc.
+        whether they're internal, when they become dirty, when they become
+        too dirty for further circuits, etc.
+R       - What do we want here, exactly?
+N       - Specify and implement it.
+      - Change stream status events analogously.
+R       - What do we want here, exactly?
+N       - Specify and implement it.
+      - Make other events "better".
+      - Change stream status events analogously.
+R       - What do we want here, exactly?
+N       - Specify and implement it.
+      - Make other events "better" analogously
+R       - What do we want here, exactly?
+N       - Specify and implement it.
       . Expose more information via getinfo:
         - import and export rendezvous descriptors
         - Review all static fields for additional candidates

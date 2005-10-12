@@ -1237,6 +1237,14 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     if (authdir_wants_to_reject_router(router, msg))
       return -2;
     authdir_verified = router->is_verified;
+    /*
+  } else {
+    if (! router->xx_is_recognized) {
+      log_fn(LOG_WARN, "Dropping unrecognized descriptor for router '%s'",
+             router->nickname);
+      return -1;
+    }
+    */
   }
 
   /* If we have a router with this name, and the identity key is the same,
@@ -1386,7 +1394,7 @@ router_load_single_router(const char *s, const char **msg)
 
   lst = smartlist_create();
   smartlist_add(lst, ri);
-  routers_update_status_from_networkstatus(lst, 0);
+  routers_update_status_from_networkstatus(lst, 0, 1);
 
   if (router_add_to_routerlist(ri, msg, 0)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list: %s Dropping.",
@@ -1418,17 +1426,14 @@ router_load_routers_from_string(const char *s, int from_cache,
   smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
   char fp[HEX_DIGEST_LEN+1];
   const char *msg;
-  int xx_n_unrecognized = 0;
 
   router_parse_list_from_string(&s, routers);
 
-  routers_update_status_from_networkstatus(routers, !from_cache);
+  routers_update_status_from_networkstatus(routers, !from_cache, from_cache);
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
   {
     base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
-    if (! ri->xx_is_recognized)
-      ++xx_n_unrecognized;
     if (requested_fingerprints) {
       if (smartlist_string_isin(requested_fingerprints, fp)) {
         smartlist_string_remove(requested_fingerprints, fp);
@@ -1445,12 +1450,6 @@ router_load_routers_from_string(const char *s, int from_cache,
     if (router_add_to_routerlist(ri, &msg, from_cache) >= 0)
       smartlist_add(changed, ri);
   });
-
-  if (xx_n_unrecognized && !from_cache) {
-    log_fn(LOG_WARN, "Under proposed rules I would reject %d of the %d desc(s)"
-           " I just downloaded because no networkstatus can confirm their"
-           " digest(s).", xx_n_unrecognized, smartlist_len(routers));
-  }
 
   control_event_descriptors_changed(changed);
 
@@ -2181,7 +2180,7 @@ routers_update_all_from_networkstatus(void)
   if (networkstatus_list_has_changed)
     routerstatus_list_update_from_networkstatus(now);
 
-  routers_update_status_from_networkstatus(routerlist->routers, 0);
+  routers_update_status_from_networkstatus(routerlist->routers, 0, 0);
 
   me = router_get_my_routerinfo();
   if (me && !have_warned_about_unverified_status) {
@@ -2522,7 +2521,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
  * is_named, is_verified, and is_running fields according to our current
  * networkstatus_t documents. */
 void
-routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failures)
+routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failures, int assume_recognized)
 {
   trusted_dir_server_t *ds;
   local_routerstatus_t *rs;
@@ -2534,6 +2533,8 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
   if (!routerstatus_list)
     return;
 
+  log_fn(LOG_NOTICE, "Here, %d %d", reset_failures, assume_recognized);
+
   SMARTLIST_FOREACH(routers, routerinfo_t *, router,
   {
     rs = router_get_combined_status_by_digest(router->identity_digest);
@@ -2541,11 +2542,6 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
 
     if (!rs)
       continue;
-
-    if (reset_failures) {
-      rs->n_download_failures = 0;
-      rs->next_attempt_at = 0;
-    }
 
     if (!namingdir)
       router->is_named = rs->status.is_named;
@@ -2558,11 +2554,19 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
     if (router->is_running && ds) {
       ds->n_networkstatus_failures = 0;
     }
-    if (!router->xx_is_recognized) {
-      router->xx_is_recognized = routerdesc_digest_is_recognized(
+    if (assume_recognized) {
+      router->xx_is_recognized = 1;
+    } else {
+      if (!router->xx_is_recognized) {
+        router->xx_is_recognized = routerdesc_digest_is_recognized(
                 router->identity_digest, router->signed_descriptor_digest);
+      }
+      router->xx_is_extra_new = router->published_on > rs->status.published_on;
     }
-    router->xx_is_extra_new = router->published_on > rs->status.published_on;
+    if (reset_failures && router->xx_is_recognized) {
+      rs->n_download_failures = 0;
+      rs->next_attempt_at = 0;
+    }
   });
 }
 
@@ -2854,3 +2858,53 @@ router_reset_descriptor_download_failures(void)
   last_routerdesc_download_attempted = 0;
 }
 
+/** Return true iff the only differences between r1 and r2 are such that
+ * would not cause a recent (post 0.1.1.6) direserver to republish.
+ */
+int
+router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
+{
+  /* post-0.1.1.6 servers know what they're doing. */
+  if (tor_version_as_new_as(r1->platform, "0.1.1.6-alpha") ||
+      tor_version_as_new_as(r1->platform, "0.1.1.6-alpha"))
+    return 0;
+
+  /* If any key fields differ, they're different. */
+  if (strcasecmp(r1->address, r2->address) ||
+      strcasecmp(r1->nickname, r2->nickname) ||
+      r1->or_port != r2->or_port ||
+      r1->dir_port != r2->dir_port ||
+      crypto_pk_cmp_keys(r1->onion_key, r2->onion_key) ||
+      crypto_pk_cmp_keys(r1->identity_pkey, r2->onion_pkey) ||
+      strcasecmp(r1->platform, r2->platform) ||
+      strcasecmp(r1->contact_info, r2->contact_info) ||
+      r1->is_hibernating != r2->is_hibernating ||
+      config_cmp_addr_policies(r1->exit_policy, r2->exit_policy))
+    return 0;
+  if ((r1->declared_family == NULL) != (r2->declared_family == NULL))
+    return 0;
+  if (r1->declared_family && r2->declared_family) {
+    int i, n;
+    if (smartlist_len(r1->declared_family)!=smartlist_len(r2->declared_family))
+      return 0;
+    n = smartlist_len(r1->declared_family);
+    for (i=0; i < n; ++i) {
+      if (strcasecmp(smartlist_get(r1->declared_family, i),
+                     smartlist_get(r2->declared_family, i)))
+        return 0;
+    }
+  }
+
+  /* Did bandwidth change a lot? */
+  if ((r1->bandwidthcapacity < r2->bandwidthcapacity/2) ||
+      (r2->bandwidthcapacity < r1->bandwidthcapacity/2))
+    return 0;
+
+  /* Did more than 6 hours pass? */
+  if (r1->published_on + 6*60*60 < r2->published_on ||
+      r2->published_on + 6*60*60 < r1->published_on)
+    return 0;
+
+  /* Otherwise, the difference is cosmetic. */
+  return 1;
+}
