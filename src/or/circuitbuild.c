@@ -1677,9 +1677,11 @@ void
 helper_nodes_free_all(void)
 {
   /* Don't call clear_helper_nodes(); that will flush our state change to disk */
-  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h, tor_free(h));
-  smartlist_free(helper_nodes);
-  helper_nodes = NULL;
+  if (helper_nodes) {
+    SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h, tor_free(h));
+    smartlist_free(helper_nodes);
+    helper_nodes = NULL;
+  }
 }
 
 /** How long (in seconds) do we allow a helper node to be nonfunctional before
