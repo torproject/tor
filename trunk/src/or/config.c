@@ -2822,7 +2822,7 @@ config_cmp_addr_policies(addr_policy_t *a, addr_policy_t *b)
     return 0;
   if (a)
     return -1;
-  if (b)
+  else
     return 1;
 }
 
