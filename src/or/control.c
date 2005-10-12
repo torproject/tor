@@ -946,6 +946,7 @@ decode_hashed_password(char *buf, const char *hashed)
 static int
 handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
 {
+  int used_quoted_string = 0;
   or_options_t *options = get_options();
   char *password;
   size_t password_len;
@@ -959,7 +960,7 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
         ++i;
       password = tor_malloc(i/2 + 1);
       if (base16_decode(password, i/2+1, body, i)<0) {
-        connection_write_str_to_buf("551 Invalid hexadecimal encoding\r\n", conn);
+        connection_write_str_to_buf("551 Invalid hexadecimal encoding.  Maybe you tried a plain text password?  If so, the standard requires you put it in double quotes.\r\n", conn);
         tor_free(password);
         return 0;
       }
@@ -969,9 +970,10 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
       password_len = 0;
     } else {
       if (!get_escaped_string(body, len, &password, &password_len)) {
-        connection_write_str_to_buf("551 Invalid quoted string\r\n", conn);
+        connection_write_str_to_buf("551 Invalid quoted string.  You need to put the password in double quotes.\r\n", conn);
         return 0;
       }
+      used_quoted_string = 1;
     }
   }
   if (options->CookieAuthentication) {
@@ -983,7 +985,7 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
     char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
     char received[DIGEST_LEN];
     if (decode_hashed_password(expected, options->HashedControlPassword)<0) {
-      log_fn(LOG_WARN,"Couldn't decode HashedControlPassword: invalid base64");
+      log_fn(LOG_WARN,"Couldn't decode HashedControlPassword: invalid base16");
       goto err;
     }
     secret_to_key(received,DIGEST_LEN,password,password_len,expected);
@@ -1001,7 +1003,10 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
     send_control0_error(conn,ERR_REJECTED_AUTHENTICATION,"Authentication failed");
   else {
     tor_free(password);
-    connection_write_str_to_buf("515 Authentication failed\r\n", conn);
+    if (used_quoted_string)
+      connection_write_str_to_buf("515 Authentication failed\r\n", conn);
+    else
+      connection_write_str_to_buf("515 Authentication failed.  Maybe you tried a plain text password?  If so, the standard requires you put it in double quotes.\r\n", conn);
   }
   return 0;
  ok:
