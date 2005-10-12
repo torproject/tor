@@ -1451,7 +1451,8 @@ router_load_routers_from_string(const char *s, int from_cache,
       smartlist_add(changed, ri);
   });
 
-  control_event_descriptors_changed(changed);
+  if (smartlist_len(changed))
+    control_event_descriptors_changed(changed);
 
   router_rebuild_store(0);
 
