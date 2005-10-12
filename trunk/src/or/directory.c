@@ -1441,7 +1441,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
   if (!authdir_mode(get_options())) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
-    write_http_status_line(conn, 400, "Nonauthoritative directory does not not store server descriptors.");
+    write_http_status_line(conn, 400, "Nonauthoritative directory does not accept posted server descriptors.");
     return 0;
   }
 

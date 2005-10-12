@@ -439,7 +439,7 @@ int
 dirserv_add_descriptor(const char *desc, const char **msg)
 {
   int r;
-  routerinfo_t *ri = NULL;
+  routerinfo_t *ri = NULL, *ri_old = NULL;
   tor_assert(msg);
   *msg = NULL;
 
@@ -449,6 +449,19 @@ dirserv_add_descriptor(const char *desc, const char **msg)
     log(LOG_WARN, "Couldn't parse descriptor");
     *msg = "Rejected: Couldn't parse server descriptor.";
     return -2;
+  }
+  /* Check whether this descriptor is semantically identical to the last one
+   * from this server.  (We do this here and not in router_add_to_routerlist
+   * because we want to be able to accept the newest router descriptor that
+   * another authority has, so we all converge on the same one.) */
+  ri_old = router_get_by_digest(ri->identity_digest);
+  if (ri_old && ri_old->published_on < ri->published_on &&
+      router_differences_are_cosmetic(ri_old, ri)) {
+    log_fn(LOG_INFO,
+           "Not replacing descriptor from '%s'; differences are cosmetic.",
+           ri->nickname);
+    *msg = "Not replacing router descriptor; no information has changed since the last one with this identity.";
+    return 0;
   }
   if ((r = router_add_to_routerlist(ri, msg, 0))<0) {
     return r == -1 ? 0 : -1;
