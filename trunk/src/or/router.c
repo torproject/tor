@@ -909,6 +909,55 @@ check_descriptor_bandwidth_changed(time_t now)
   }
 }
 
+#define MAX_IPADDRESS_CHANGE_FREQ 60*60
+/** Check whether our own address as defined by the Address configuration
+ * has changed.  This is for routers that get their address from a service
+ * like dyndns.  If our address has changed, mark our descriptor dirty.*/
+void
+check_descriptor_ipaddress_changed(time_t now)
+{
+  static time_t last_changed = 0;
+  static time_t last_warned_lastchangetime = 0;
+  uint32_t prev, cur;
+  or_options_t *options = get_options();
+
+  if (!desc_routerinfo)
+    return;
+
+  prev = desc_routerinfo->addr;
+  if (resolve_my_address(options, &cur, NULL) < 0) {
+    log_fn(LOG_WARN,"options->Address didn't resolve into an IP.");
+    return;
+  }
+
+  if (prev != cur) {
+    char addrbuf_prev[INET_NTOA_BUF_LEN];
+    char addrbuf_cur[INET_NTOA_BUF_LEN];
+    struct in_addr in_prev;
+    struct in_addr in_cur;
+
+    in_prev.s_addr = htonl(prev);
+    tor_inet_ntoa(&in_prev, addrbuf_prev, sizeof(addrbuf_prev));
+
+    in_cur.s_addr = htonl(cur);
+    tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
+
+    if (last_changed+MAX_IPADDRESS_CHANGE_FREQ < now) {
+      log_fn(LOG_INFO,"Our IP Address has changed from %s to %s; rebuilding descriptor.", addrbuf_prev, addrbuf_cur);
+      mark_my_descriptor_dirty();
+      last_changed = now;
+      last_warned_lastchangetime = 0;
+    }
+    else
+    {
+      if (last_warned_lastchangetime != last_changed) {
+        log_fn(LOG_WARN,"Our IP Address seems to be flapping.  It has changed twice within one hour (from %s to %s this time).  Ignoring for now.", addrbuf_prev, addrbuf_cur);
+        last_warned_lastchangetime = last_changed;
+      }
+    }
+  }
+}
+
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
  * string describing the version of Tor and the operating system we're
  * currently running on.

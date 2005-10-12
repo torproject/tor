@@ -2058,6 +2058,7 @@ void router_upload_dir_desc_to_dirservers(int force);
 void mark_my_descriptor_dirty_if_older_than(time_t when);
 void mark_my_descriptor_dirty(void);
 void check_descriptor_bandwidth_changed(time_t now);
+void check_descriptor_ipaddress_changed(time_t now);
 int router_compare_to_my_exit_policy(connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);
