@@ -387,7 +387,9 @@ int check_whether_orport_reachable(void) {
 }
 /** Return 1 if we don't have a dirport configured, or if it's reachable. */
 int check_whether_dirport_reachable(void) {
-  return !get_options()->DirPort || can_reach_dir_port;
+  routerinfo_t *ri = router_get_my_routerinfo();
+  return !get_options()->DirPort || (ri && !ri->dir_port)
+    || can_reach_dir_port;
 }
 
 void consider_testing_reachability(void) {
