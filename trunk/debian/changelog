@@ -1,3 +1,10 @@
+tor (0.1.1.8-alpha-cvs-1) experimental; urgency=low
+
+  * CVS snapshot. Wed, 12 Oct 2005 20:28:57 +0200
+  * Remove 08_add_newlines_between_serverdescriptors.dpatch.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 12 Oct 2005 20:35:35 +0200
+
 tor (0.1.1.8-alpha-1) experimental; urgency=low
 
   * New upstream version.
