@@ -34,6 +34,8 @@ static void local_routerstatus_free(local_routerstatus_t *rs);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
 static void update_networkstatus_cache_downloads(time_t now);
 static void update_networkstatus_client_downloads(time_t now);
+static int routerdesc_digest_is_recognized(const char *identity,
+                                           const char *digest);
 
 /****************************************************************************/
 
@@ -1416,6 +1418,7 @@ router_load_routers_from_string(const char *s, int from_cache,
   smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
   char fp[HEX_DIGEST_LEN+1];
   const char *msg;
+  int xx_n_unrecognized = 0;
 
   router_parse_list_from_string(&s, routers);
 
@@ -1424,6 +1427,8 @@ router_load_routers_from_string(const char *s, int from_cache,
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
   {
     base16_encode(fp, sizeof(fp), ri->identity_digest, DIGEST_LEN);
+    if (! ri->xx_is_recognized)
+      ++xx_n_unrecognized;
     if (requested_fingerprints) {
       if (smartlist_string_isin(requested_fingerprints, fp)) {
         smartlist_string_remove(requested_fingerprints, fp);
@@ -1440,6 +1445,12 @@ router_load_routers_from_string(const char *s, int from_cache,
     if (router_add_to_routerlist(ri, &msg, from_cache) >= 0)
       smartlist_add(changed, ri);
   });
+
+  if (xx_n_unrecognized && !from_cache) {
+    log_fn(LOG_WARN, "Under proposed rules I would reject %d of the %d desc(s)"
+           " I just downloaded because no networkstatus can confirm their"
+           " digest(s).", xx_n_unrecognized, smartlist_len(routers));
+  }
 
   control_event_descriptors_changed(changed);
 
@@ -1690,6 +1701,24 @@ router_get_combined_status_by_digest(const char *digest)
     return NULL;
   return smartlist_bsearch(routerstatus_list, digest,
                            _compare_digest_to_routerstatus_entry);
+}
+
+/** DOCDOC */
+static int
+routerdesc_digest_is_recognized(const char *identity, const char *digest)
+{
+  routerstatus_t *rs;
+  if (!networkstatus_list)
+    return 0;
+
+  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+  {
+    if (!(rs = networkstatus_find_entry(ns, identity)))
+      continue;
+    if (!memcmp(rs->descriptor_digest, digest, DIGEST_LEN))
+      return 1;
+  });
+  return 0;
 }
 
 /* XXXX These should be configurable, perhaps? NM */
@@ -2529,6 +2558,11 @@ routers_update_status_from_networkstatus(smartlist_t *routers, int reset_failure
     if (router->is_running && ds) {
       ds->n_networkstatus_failures = 0;
     }
+    if (!router->xx_is_recognized) {
+      router->xx_is_recognized = routerdesc_digest_is_recognized(
+                router->identity_digest, router->signed_descriptor_digest);
+    }
+    router->xx_is_extra_new = router->published_on > rs->status.published_on;
   });
 }
 
@@ -2549,7 +2583,8 @@ router_list_downloadable(void)
   int mirror = server_mode(get_options()) && get_options()->DirPort;
   /* these are just used for logging */
   int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0, n_skip_old = 0,
-    n_obsolete = 0;
+    n_obsolete = 0, xx_n_unrecognized = 0, xx_n_extra_new = 0, xx_n_both = 0,
+    xx_n_unrec_old = 0;
 
   if (!routerstatus_list)
     return superseded;
@@ -2624,6 +2659,14 @@ router_list_downloadable(void)
         // log_fn(LOG_NOTICE, "No status for %s", fp);
         continue;
       }
+      if (!ri->xx_is_recognized) {
+        ++xx_n_unrecognized;
+        if (ri->xx_is_extra_new)
+          ++xx_n_both;
+      }
+      if (ri->xx_is_extra_new)
+        ++xx_n_extra_new;
+
       /* Change this "or" to be an "and" once dirs generate hashes right.
        * Remove the version check once older versions are uncommon.
        * XXXXX. NM */
@@ -2642,6 +2685,8 @@ router_list_downloadable(void)
          * No need to download it. */
         // log_fn(LOG_NOTICE, "Up-to-date status for %s", fp);
         ++n_skip_old;
+        if (!ri->xx_is_recognized)
+          ++xx_n_unrec_old;
         rs->should_download = 0;
         --n_downloadable;
       } /* else {
@@ -2663,9 +2708,14 @@ router_list_downloadable(void)
          "%d are up to date; %d are in progress; "
          "%d are not ready to retry; "
          "%d are not published recently enough to be worthwhile; "
-         "%d are running pre-0.1.1.6 Tors and aren't stale enough to replace.",
+         "%d are running pre-0.1.1.6 Tors and aren't stale enough to replace. "
+         "%d have unrecognized descriptor hashes; %d are newer than the dirs "
+         "have told us about; %d are both unrecognized and newer than any "
+         "publication date in the networkstatus; %d are both "
+         "unrecognized and running a pre-0.1.1.6 version.",
          n_downloadable, n_uptodate, n_in_progress, n_not_ready,
-         n_obsolete, n_skip_old);
+         n_obsolete, n_skip_old, xx_n_unrecognized, xx_n_extra_new, xx_n_both,
+         xx_n_unrec_old);
 
   if (!n_downloadable)
     return superseded;
