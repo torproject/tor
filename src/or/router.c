@@ -402,8 +402,10 @@ int
 check_whether_dirport_reachable(void)
 {
   or_options_t *options = get_options();
+  routerinfo_t *ri = router_get_my_routerinfo();
   return !options->DirPort ||
          options->AssumeReachable ||
+         (ri && !ri->dir_port) ||
          can_reach_dir_port;
 }
 
