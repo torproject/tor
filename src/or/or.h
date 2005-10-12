@@ -604,6 +604,9 @@ struct connection_t {
   unsigned has_sent_end:1; /**< For debugging; only used on edge connections.
                          * Set once we've set the stream end,
                          * and check in circuit_about_to_close_connection(). */
+  /** For control connections only. If set, we send extended info with control
+   * events as appropriate. */
+  unsigned int control_events_are_extended:1;
 
   int s; /**< Our socket; -1 if this connection is closed. */
   int poll_index; /* XXXX rename. */
@@ -777,6 +780,12 @@ typedef struct {
                                */
   unsigned int is_named:1; /**< Do we believe the nickname that this OR gives
                             * us? */
+  unsigned int xx_is_recognized:1; /**< Temporary: do we think that this
+                                    * descriptor's digest is recognized?
+                                    */
+  unsigned int xx_is_extra_new:1; /**< Temporary: do we think that this
+                                   * descriptor's digest is recognized?
+                                   */
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
@@ -1065,7 +1074,7 @@ struct circuit_t {
   uint8_t purpose; /**< Why are we creating this circuit? */
 
   /**
-   * The rend_query field holds y portion of y.onion (nul-terminated)
+   * The rend_query field holds the y portion of y.onion (nul-terminated)
    * if purpose is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL
    * for a hidden service, or is S_*.
    */

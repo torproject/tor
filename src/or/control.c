@@ -845,6 +845,7 @@ handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
 {
   uint16_t event_code;
   uint32_t event_mask = 0;
+  unsigned int extended = 0;
 
   if (STATE_IS_V0(conn->state)) {
     if (len % 2) {
@@ -868,7 +869,10 @@ handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     SMARTLIST_FOREACH(events, const char *, ev,
       {
-        if (!strcasecmp(ev, "CIRC"))
+        if (!strcasecmp(ev, "EXTENDED")) {
+          extended = 1;
+          continue;
+        } else if (!strcasecmp(ev, "CIRC"))
           event_code = EVENT_CIRCUIT_STATUS;
         else if (!strcasecmp(ev, "STREAM"))
           event_code = EVENT_STREAM_STATUS;
@@ -903,6 +907,7 @@ handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
     smartlist_free(events);
   }
   conn->event_mask = event_mask;
+  conn->control_events_are_extended = extended;
 
   control_update_global_event_mask();
   send_control_done(conn);
