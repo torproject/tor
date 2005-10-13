@@ -23,7 +23,8 @@ tor_gzip_compress(char **out, size_t *out_len,
 int
 tor_gzip_uncompress(char **out, size_t *out_len,
                     const char *in, size_t in_len,
-                    compress_method_t method);
+                    compress_method_t method,
+                    int complete_only);
 
 int is_gzip_supported(void);
 

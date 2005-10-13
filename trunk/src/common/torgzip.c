@@ -154,7 +154,8 @@ tor_gzip_compress(char **out, size_t *out_len,
 int
 tor_gzip_uncompress(char **out, size_t *out_len,
                     const char *in, size_t in_len,
-                    compress_method_t method)
+                    compress_method_t method,
+                    int complete_only)
 {
   struct z_stream_s *stream = NULL;
   size_t out_size;
@@ -195,11 +196,12 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   stream->avail_out = out_size;
 
   while (1) {
-    switch (inflate(stream, Z_FINISH))
+    switch (inflate(stream, complete_only ? Z_FINISH : Z_SYNC_FLUSH))
       {
       case Z_STREAM_END:
         if (stream->avail_in == 0)
           goto done;
+        /* There may be more compressed data here. */
         if (inflateInit2(stream, method_bits(method)) != Z_OK) {
           log_fn(LOG_WARN, "Error from inflateInit2: %s",
                  stream->msg?stream->msg:"<no message>");
@@ -207,10 +209,16 @@ tor_gzip_uncompress(char **out, size_t *out_len,
         }
         break;
       case Z_OK:
+        if (!complete_only && stream->avail_in == 0)
+          goto done;
         /* In case zlib doesn't work as I think.... */
         if (stream->avail_out >= stream->avail_in+16)
           break;
       case Z_BUF_ERROR:
+        if (stream->avail_out > 0) {
+          log_fn(LOG_WARN, "possible truncated or corrupt zlib data");
+          goto err;
+        }
         offset = stream->next_out - (unsigned char*)*out;
         out_size *= 2;
         *out = tor_realloc(*out, out_size);
