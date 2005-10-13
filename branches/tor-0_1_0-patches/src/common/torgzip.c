@@ -192,6 +192,10 @@ tor_gzip_uncompress(char **out, size_t *out_len,
         if (stream->avail_out >= stream->avail_in+16)
           break;
       case Z_BUF_ERROR:
+        if (stream->avail_out > 0) {
+          log_fn(LOG_WARN, "possible truncated or corrupt zlib data");
+          goto err;
+        }
         offset = stream->next_out - ((unsigned char*)*out);
         out_size *= 2;
         *out = tor_realloc(*out, out_size);

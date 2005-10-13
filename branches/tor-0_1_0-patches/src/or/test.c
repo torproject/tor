@@ -916,8 +916,12 @@ test_gzip(void)
   test_assert(buf3);
   test_streq(buf1,buf3);
 
-  tor_free(buf2);
+  /* Try truncated compressed data. */
   tor_free(buf3);
+  test_assert(tor_gzip_uncompress(&buf3, &len2, buf2, len1/2, ZLIB_METHOD));
+  test_assert(!buf3);
+
+  tor_free(buf2);
   tor_free(buf1);
 }
 
