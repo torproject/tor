@@ -878,11 +878,11 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     /* Try declared compression first if we can. */
     if (compression > 0)
-      tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression);
+      tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression, 1);
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
     if (!new_body && guessed > 0 && compression != guessed)
-      tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed);
+      tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed, 1);
     /* If we're pretty sure that we have a compressed directory, and
      * we didn't manage to uncompress it, then warn and bail. */
     if (!plausible && !new_body) {
