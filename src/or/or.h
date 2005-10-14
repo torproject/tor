@@ -1362,7 +1362,8 @@ int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
-                        char **body_out, size_t *body_used, size_t max_bodylen);
+                        char **body_out, size_t *body_used, size_t max_bodylen,
+                        int force_complete);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 int fetch_from_buf_control0(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
                             char **body_out, int check_for_v1);

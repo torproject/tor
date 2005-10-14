@@ -806,10 +806,12 @@ connection_dir_client_reached_eof(connection_t *conn)
   int compression;
   int plausible;
   int skewed=0;
+  int allow_partial = conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC;
 
   switch (fetch_from_buf_http(conn->inbuf,
                               &headers, MAX_HEADERS_SIZE,
-                              &body, &body_len, MAX_DIR_SIZE)) {
+                              &body, &body_len, MAX_DIR_SIZE,
+                              allow_partial)) {
     case -1: /* overflow */
       log_fn(LOG_WARN,"'fetch' response too large (server '%s:%d'). Closing.", conn->address, conn->port);
       return -1;
@@ -878,11 +880,13 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     /* Try declared compression first if we can. */
     if (compression > 0)
-      tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression, 1);
+      tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression,
+                          allow_partial);
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
     if (!new_body && guessed > 0 && compression != guessed)
-      tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed, 1);
+      tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed,
+                          allow_partial);
     /* If we're pretty sure that we have a compressed directory, and
      * we didn't manage to uncompress it, then warn and bail. */
     if (!plausible && !new_body) {
@@ -1510,7 +1514,7 @@ directory_handle_command(connection_t *conn)
 
   switch (fetch_from_buf_http(conn->inbuf,
                               &headers, MAX_HEADERS_SIZE,
-                              &body, &body_len, MAX_BODY_SIZE)) {
+                              &body, &body_len, MAX_BODY_SIZE, 0)) {
     case -1: /* overflow */
       log_fn(LOG_WARN,"Invalid input from address '%s'. Closing.", conn->address);
       return -1;

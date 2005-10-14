@@ -580,9 +580,9 @@ run_connection_housekeeping(int i, time_t now)
     /* This check is temporary; it's to let us know whether we should consider
      * parsing partial serverdesc responses. */
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
-        buf_datalen(conn->inbuf)>=(24*1024)) {
-      log_fn(LOG_NOTICE, "Expired a wedged directory connection that had already downloaded %d bytes of descriptors.  If this happens often, please file a bug report.",
-             (int)buf_datalen(conn->inbuf));
+        buf_datalen(conn->inbuf)>=1024) {
+      log_fn(LOG_INFO,"Trying to extract information from wedged server desc downoad");
+      connection_dir_reached_eof(conn);
     }
     connection_mark_for_close(conn);
     return;
