@@ -636,13 +636,14 @@ check_directory_signature(const char *digest,
 /** Given a string *<b>s</b> containing a concatenated sequence of router
  * descriptors, parses them and stores the result in <b>dest</b>.  All routers
  * are marked running and verified.  Advances *s to a point immediately
- * following the last router entry.  Returns 0 on success and -1 on failure.
+ * following the last router entry.  Ignore any trailing router entries that
+ * are not complete. Returns 0 on success and -1 on failure.
  */
 int
 router_parse_list_from_string(const char **s, smartlist_t *dest)
 {
   routerinfo_t *router;
-  const char *end;
+  const char *end, *cp;
 
   tor_assert(s);
   tor_assert(*s);
@@ -654,20 +655,36 @@ router_parse_list_from_string(const char **s, smartlist_t *dest)
     if (strcmpstart(*s, "router ")!=0)
       break;
     if ((end = strstr(*s+1, "\nrouter "))) {
+      cp = end;
       end++;
     } else if ((end = strstr(*s+1, "\ndirectory-signature"))) {
+      cp = end;
       end++;
     } else {
-      end = *s+strlen(*s);
+      cp = end = *s+strlen(*s);
+    }
+
+    while (cp > *s && (!*cp || TOR_ISSPACE(*cp)))
+      --cp;
+    /* cp now points to the last non-space character in this descriptor. */
+
+    while (cp > *s  && *cp != '\n')
+      --cp;
+    /* cp now points to the first \n before the last non-bank line in this
+     * descriptor */
+
+    if (strcmpstart(cp, "\n-----END SIGNATURE-----\n")) {
+      log_fn(LOG_INFO, "Ignoring truncated router descriptor.");
+      continue;
     }
 
     router = router_parse_entry_from_string(*s, end);
+
     *s = end;
     if (!router) {
       log_fn(LOG_WARN, "Error reading router; skipping");
       continue;
     }
-
     smartlist_add(dest, router);
   }
 

@@ -788,13 +788,16 @@ fetch_from_buf(char *string, size_t string_len, buf_t *buf)
  *  - If a headers or body doesn't fit in the arg, return -1.
  *  (We ensure that the headers or body don't exceed max len,
  *   _even if_ we're planning to discard them.)
+ *  - If force_complete is true, then succeed even if not all of the
+ *    content has arrived.
  *
  * Else, change nothing and return 0.
  */
 int
 fetch_from_buf_http(buf_t *buf,
                     char **headers_out, size_t max_headerlen,
-                    char **body_out, size_t *body_used, size_t max_bodylen)
+                    char **body_out, size_t *body_used, size_t max_bodylen,
+                    int force_complete)
 {
   char *headers, *body, *p;
   size_t headerlen, bodylen, contentlen;
@@ -840,8 +843,10 @@ fetch_from_buf_http(buf_t *buf,
     /* if content-length is malformed, then our body length is 0. fine. */
     log_fn(LOG_DEBUG,"Got a contentlen of %d.",(int)contentlen);
     if (bodylen < contentlen) {
-      log_fn(LOG_DEBUG,"body not all here yet.");
-      return 0; /* not all there yet */
+      if (!force_complete) {
+        log_fn(LOG_DEBUG,"body not all here yet.");
+        return 0; /* not all there yet */
+      }
     }
     if (bodylen > contentlen) {
       bodylen = contentlen;

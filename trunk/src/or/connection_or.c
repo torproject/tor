@@ -69,7 +69,7 @@ connection_or_read_proxy_response(connection_t *conn)
 
   switch (fetch_from_buf_http(conn->inbuf,
                               &headers, MAX_HEADERS_SIZE,
-                              NULL, NULL, 10000)) {
+                              NULL, NULL, 10000, 0)) {
     case -1: /* overflow */
       log_fn(LOG_WARN,"Your https proxy sent back an oversized response. Closing.");
       return -1;
