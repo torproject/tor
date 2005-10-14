@@ -1361,7 +1361,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
       log_fn(LOG_WARN, "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
     smartlist_t *hexdigests = smartlist_create();
-    dir_split_resource_into_fingerprints(key+3, hexdigests, NULL);
+    dir_split_resource_into_fingerprints(key+3, hexdigests, NULL, 0);
     SMARTLIST_FOREACH(hexdigests, char *, cp,
         {
           cached_dir_t *cached;
@@ -1403,22 +1403,22 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
     routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
       smartlist_add(descs_out, ri);
+  } else if (!strcmpstart(key, "/tor/server/d/")) {
+    smartlist_t *digests = smartlist_create();
+    dir_split_resource_into_fingerprints(key, digests, NULL, 1);
+    key += strlen("/tor/server/d/");
+    SMARTLIST_FOREACH(digests, const char *, d,
+       {
+         routerinfo_t *ri = router_get_by_descriptor_digest(d);
+         if (ri)
+           smartlist_add(descs_out,ri);
+       });
+    SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
+    smartlist_free(digests);
   } else if (!strcmpstart(key, "/tor/server/fp/")) {
-    smartlist_t *hexdigests = smartlist_create();
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/fp/");
-    dir_split_resource_into_fingerprints(key, hexdigests, NULL);
-    SMARTLIST_FOREACH(hexdigests, char *, cp,
-                      {
-                        char *d;
-                        if (strlen(cp) != HEX_DIGEST_LEN)
-                          continue;
-                        d = tor_malloc_zero(DIGEST_LEN);
-                        base16_decode(d, DIGEST_LEN, cp, HEX_DIGEST_LEN);
-                        tor_free(cp);
-                        smartlist_add(digests, d);
-                      });
-    smartlist_free(hexdigests);
+    dir_split_resource_into_fingerprints(key, digests, NULL, 1);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          if (router_digest_is_me(d)) {
