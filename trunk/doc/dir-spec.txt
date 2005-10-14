@@ -175,9 +175,17 @@ $Id$
    fingerprint of <F> should be available at:
       http://<hostname>/tor/server/fp/<F>.z
 
-   The most recent descriptors for servers have fingerprints <F1>,<F2>,<F3>
+   The most recent descriptors for servers with fingerprints <F1>,<F2>,<F3>
    should be available at:
       http://<hostname>/tor/server/fp/<F1>+<F2>+<F3>.z
+
+   The descriptor for a server whose digest (in hex) is <D> should be
+   available at:
+      http://<hostname>/tor/server/d/<D>.z
+
+   The most recent descriptors with digests <D1>,<D2>,<D3> should be
+   available at:
+      http://<hostname>/tor/server/d/<D1>+<D2>+<D3>.z
 
    The most recent descriptor for this server should be at:
       http://<hostname>/tor/server/authority.z
@@ -371,9 +379,11 @@ $Id$
       fetch a new one if it was published in the last 2 hours. (??)
 
     - Describe what we do with old server versions.
-    
+
     - If we have less than 16 to download, do not download unless 10 minutes
       have passed since last download.
+
+    - Which descriptors do directory servers remember?
 
 6. Remaining issues
 

@@ -1005,6 +1005,25 @@ router_get_by_digest(const char *digest)
   return NULL;
 }
 
+
+/** Return the router in our routerlist whose 20-byte descriptor
+ * is <b>digest</b>.  Return NULL if no such router is known. */
+routerinfo_t *
+router_get_by_descriptor_digest(const char *digest)
+{
+  tor_assert(digest);
+
+  if (!routerlist) return NULL;
+
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t*, router,
+  {
+    if (0 == memcmp(router->signed_descriptor_digest, digest, DIGEST_LEN))
+      return router;
+  });
+
+  return NULL;
+}
+
 /** Set *<b>prouterlist</b> to the current list of all known routers. */
 void
 router_get_routerlist(routerlist_t **prouterlist)
@@ -2625,7 +2644,7 @@ router_list_downloadable(void)
       if (!strcmpstart(conn->requested_resource, "all"))
         n_downloadable = 0;
       dir_split_resource_into_fingerprints(conn->requested_resource,
-                                           downloading, NULL);
+                                           downloading, NULL, 1);
     }
   }
 
@@ -2635,11 +2654,9 @@ router_list_downloadable(void)
   smartlist_sort_strings(downloading);
   */
   if (n_downloadable) {
-    SMARTLIST_FOREACH(downloading, const char *, dl,
+    SMARTLIST_FOREACH(downloading, const char *, d,
     {
-      char d[DIGEST_LEN];
       local_routerstatus_t *rs;
-      base16_decode(d, DIGEST_LEN, dl, strlen(dl));
       if ((rs = router_get_combined_status_by_digest(d)) && rs->should_download) {
         rs->should_download = 0;
         --n_downloadable;
@@ -2919,3 +2936,4 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
   /* Otherwise, the difference is cosmetic. */
   return 1;
 }
+

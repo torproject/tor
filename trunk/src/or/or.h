@@ -1754,7 +1754,8 @@ void connection_dir_request_failed(connection_t *conn);
 void parse_dir_policy(void);
 void free_dir_policy(void);
 int dir_split_resource_into_fingerprints(const char *resource,
-                               smartlist_t *fp_out, int *compresseed_out);
+                                    smartlist_t *fp_out, int *compresseed_out,
+                                    int decode_hex);
 
 /********************************* dirserv.c ***************************/
 
@@ -2130,6 +2131,7 @@ routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
+routerinfo_t *router_get_by_descriptor_digest(const char *digest);
 int router_digest_is_trusted_dir(const char *digest);
 void router_get_routerlist(routerlist_t **prouterlist);
 void routerlist_reset_warnings(void);
