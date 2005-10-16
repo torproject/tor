@@ -983,15 +983,13 @@ do_hup(void)
     /* Write out a fresh descriptor, but leave old one on failure. */
     router_rebuild_descriptor(1);
     descriptor = router_get_my_descriptor();
-    if (!descriptor) {
-      log_fn(LOG_WARN,"No descriptor to save.");
-      return 0;
-    }
-    tor_snprintf(keydir,sizeof(keydir),"%s/router.desc",
-                 options->DataDirectory);
-    log_fn(LOG_INFO,"Saving descriptor to \"%s\"...",keydir);
-    if (write_str_to_file(keydir, descriptor, 0)) {
-      return 0;
+    if (descriptor) {
+      tor_snprintf(keydir,sizeof(keydir),"%s/router.desc",
+                   options->DataDirectory);
+      log_fn(LOG_INFO,"Saving descriptor to \"%s\"...",keydir);
+      if (write_str_to_file(keydir, descriptor, 0)) {
+        return 0;
+      }
     }
   }
   return 0;
