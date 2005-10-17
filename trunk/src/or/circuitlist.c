@@ -339,8 +339,7 @@ circuit_get_by_global_id(uint32_t id)
 
 /** Return a circ such that:
  *  - circ-\>n_circ_id or circ-\>p_circ_id is equal to <b>circ_id</b>, and
- *  - circ is attached to <b>conn</b>, either as p_conn, n-conn, or
- *    in p_streams or n_streams.
+ *  - circ is attached to <b>conn</b>, either as p_conn or n_conn.
  * Return NULL if no such circuit exists.
  */
 circuit_t *
@@ -426,7 +425,7 @@ circuit_get_by_edge_conn(connection_t *conn)
 }
 
 /** Return a circ such that circ is attached to <b>conn</b>, either as
- * p_conn, n-conn, or in p_streams or n_streams or resolving_streams.
+ * p_conn, n_conn, or in p_streams or n_streams or resolving_streams.
  *
  * Return NULL if no such circuit exists.
  */
@@ -477,10 +476,10 @@ circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
   return NULL;
 }
 
-/** Return the first circuit in global_circuitlist after <b>start</b> whose
- * rend_pk_digest field is <b>digest</b> and whose purpose is <b>purpose</b>. Returns
- * NULL if no circuit is found.  If <b>start</b> is NULL, begin at the start of
- * the list.
+/** Return the first circuit in global_circuitlist after <b>start</b>
+ * whose rend_pk_digest field is <b>digest</b> and whose purpose is
+ * <b>purpose</b>. Returns NULL if no circuit is found.
+ * If <b>start</b> is NULL, begin at the start of the list.
  */
 circuit_t *
 circuit_get_next_by_pk_and_purpose(circuit_t *start,

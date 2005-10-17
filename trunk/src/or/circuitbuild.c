@@ -76,7 +76,7 @@ get_unique_circ_id_by_conn(connection_t *conn)
     }
     if (++attempts > 1<<15) {
       /* Make sure we don't loop forever if all circ_id's are used. This
-       * matters because it's an external DoS vulnerability.
+       * matters because it's an external DoS opportunity.
        */
       log_fn(LOG_WARN,"No unused circ IDs. Failing.");
       return 0;
