@@ -599,8 +599,9 @@ circuit_note_clock_jumped(int seconds_elapsed)
 }
 
 /** Take the 'extend' cell, pull out addr/port plus the onion skin. Make
- * sure we're connected to the next hop, and pass it the onion skin in
- * a create cell.
+ * sure we're connected to the next hop, and pass it the onion skin using
+ * a create cell. Return -1 if we want to warn and tear down the circuit,
+ * else return 0.
  */
 int
 circuit_extend(cell_t *cell, circuit_t *circ)
@@ -611,14 +612,14 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   char *id_digest=NULL;
 
   if (circ->n_conn) {
-    log_fn(LOG_WARN,"n_conn already set. Bug/attack. Closing.");
+    log_fn(LOG_PROTOCOL_WARN,"n_conn already set. Bug/attack. Closing.");
     return -1;
   }
 
   relay_header_unpack(&rh, cell->payload);
 
   if (rh.length < 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
-    log_fn(LOG_WARN, "Wrong length %d on extend cell. Closing circuit.", rh.length);
+    log_fn(LOG_PROTOCOL_WARN, "Wrong length %d on extend cell. Closing circuit.", rh.length);
     return -1;
   }
 
@@ -654,7 +655,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
       n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
       if (!n_conn) {
         log_fn(LOG_INFO,"Launching n_conn failed. Closing.");
-        return -1;
+        circuit_mark_for_close(circ);
+        return 0;
       }
       log_fn(LOG_DEBUG,"connecting in progress (or finished). Good.");
     }

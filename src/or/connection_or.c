@@ -463,8 +463,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
   crypto_pk_env_t *identity_rcvd=NULL;
   char nickname[MAX_NICKNAME_LEN+1];
   or_options_t *options = get_options();
-  int severity = (authdir_mode(options) || !server_mode(options))
-                 ? LOG_WARN : LOG_INFO;
+  int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
 
   check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) {
@@ -473,7 +472,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
   }
   check_no_tls_errors();
   if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, sizeof(nickname))) {
-    log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
+    log_fn(severity,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
            conn->address, conn->port);
     return -1;
   }
@@ -482,7 +481,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
          conn->address, conn->port, nickname);
 
   if (tor_tls_verify(severity, conn->tls, &identity_rcvd) < 0) {
-    log_fn(LOG_WARN,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
+    log_fn(severity,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
     return -1;
   }
