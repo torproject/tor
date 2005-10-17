@@ -193,7 +193,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
       }
       return 0;
     }
-    log_fn(LOG_WARN,"Didn't recognize cell, but circ stops here! Closing circ.");
+    log_fn(LOG_PROTOCOL_WARN,"Didn't recognize cell, but circ stops here! Closing circ.");
     return -1;
   }
 
@@ -429,7 +429,7 @@ connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   }
 
   if (!circ) {
-    log_fn(LOG_WARN,"no circ. Closing conn.");
+    log_fn(LOG_INFO,"no circ. Closing conn.");
     tor_assert(fromconn);
     if (fromconn->type == CONN_TYPE_AP) {
       connection_mark_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);

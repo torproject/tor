@@ -724,10 +724,10 @@ log_cert_lifetime(X509 *cert, const char *problem)
 /** If the provided tls connection is authenticated and has a
  * certificate that is currently valid and signed, then set
  * *<b>identity_key</b> to the identity certificate's key and return
- * 0.  Else, return -1.
+ * 0.  Else, return -1 and log complaints with log-level <b>severity</b>.
  */
 int
-tor_tls_verify(tor_tls_t *tls, crypto_pk_env_t **identity_key)
+tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
 {
   X509 *cert = NULL, *id_cert = NULL;
   STACK_OF(X509) *chain = NULL;
@@ -748,7 +748,7 @@ tor_tls_verify(tor_tls_t *tls, crypto_pk_env_t **identity_key)
    * cert and the id_cert.
    */
   if (num_in_chain < 1) {
-    log_fn(LOG_WARN,"Unexpected number of certificates in chain (%d)",
+    log_fn(severity,"Unexpected number of certificates in chain (%d)",
            num_in_chain);
     goto done;
   }
@@ -758,14 +758,14 @@ tor_tls_verify(tor_tls_t *tls, crypto_pk_env_t **identity_key)
       break;
   }
   if (!id_cert) {
-    log_fn(LOG_WARN,"No distinct identity certificate found");
+    log_fn(severity,"No distinct identity certificate found");
     goto done;
   }
 
   if (!(id_pkey = X509_get_pubkey(id_cert)) ||
       X509_verify(cert, id_pkey) <= 0) {
-    log_fn(LOG_WARN,"X509_verify on cert and pkey returned <= 0");
-    tls_log_errors(LOG_WARN,"verifying certificate");
+    log_fn(severity,"X509_verify on cert and pkey returned <= 0");
+    tls_log_errors(severity,"verifying certificate");
     goto done;
   }
 

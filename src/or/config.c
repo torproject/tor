@@ -163,6 +163,7 @@ static config_var_t _option_vars[] = {
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
   VAR("PidFile",             STRING,   PidFile,              NULL),
+  VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
   VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
   VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),

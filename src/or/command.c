@@ -144,7 +144,8 @@ command_process_cell(cell_t *cell, connection_t *conn)
 #endif
       break;
     default:
-      log_fn(LOG_WARN,"Cell of unknown type (%d) received. Dropping.", cell->command);
+      log_fn(LOG_PROTOCOL_WARN,
+             "Cell of unknown type (%d) received. Dropping.", cell->command);
       break;
   }
 }
@@ -184,7 +185,9 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (circ) {
-    log_fn(LOG_WARN,"received CREATE cell (circID %d) for known circ. Dropping.", cell->circ_id);
+    log_fn(LOG_PROTOCOL_WARN,
+           "received CREATE cell (circID %d) for known circ. Dropping.",
+           cell->circ_id);
     return;
   }
 
@@ -238,7 +241,7 @@ command_process_created_cell(cell_t *cell, connection_t *conn)
   }
 
   if (circ->n_circ_id != cell->circ_id) {
-    log_fn(LOG_WARN,"got created cell from OPward? Closing.");
+    log_fn(LOG_PROTOCOL_WARN,"got created cell from OPward? Closing.");
     circuit_mark_for_close(circ);
     return;
   }
@@ -281,20 +284,20 @@ command_process_relay_cell(cell_t *cell, connection_t *conn)
   }
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
-    log_fn(LOG_WARN,"circuit in create_wait. Closing.");
+    log_fn(LOG_PROTOCOL_WARN,"circuit in create_wait. Closing.");
     circuit_mark_for_close(circ);
     return;
   }
 
   if (cell->circ_id == circ->p_circ_id) { /* it's an outgoing cell */
     if (circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
-      log_fn(LOG_WARN,"circuit_receive_relay_cell (forward) failed. Closing.");
+      log_fn(LOG_PROTOCOL_WARN,"circuit_receive_relay_cell (forward) failed. Closing.");
       circuit_mark_for_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
     if (circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
-      log_fn(LOG_WARN,"circuit_receive_relay_cell (backward) failed. Closing.");
+      log_fn(LOG_PROTOCOL_WARN,"circuit_receive_relay_cell (backward) failed. Closing.");
       circuit_mark_for_close(circ);
       return;
     }
