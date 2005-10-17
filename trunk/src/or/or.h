@@ -1290,6 +1290,9 @@ typedef struct {
                            * long do we wait before exiting? */
   int SafeLogging; /**< Boolean: are we allowed to log sensitive strings
                     * such as addresses (0), or do we scrub them first (1)? */
+#define LOG_PROTOCOL_WARN (get_options()->ProtocolWarnings ? LOG_WARN : LOG_INFO)
+  int ProtocolWarnings; /**< Boolean: when other parties screw up the Tor
+                         * protocol, is it a warn or an info in our logs? */
   int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
                       * acceleration where available? */
   int UseHelperNodes; /**< Boolean: Do we try to enter from a smallish number

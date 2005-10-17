@@ -463,7 +463,13 @@ conn_close_if_marked(int i)
       return 0;
     }
     if (connection_wants_to_flush(conn)) {
-      log_fn(LOG_NOTICE,"Something wrong with your network connection? Conn (addr %s, fd %d, type %s, state %d) tried to write %d bytes but timed out. (Marked at %s:%d)",
+      int severity;
+      if (conn->type == CONN_TYPE_EXIT ||
+          (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER))
+        severity = LOG_INFO;
+      else
+        severity = LOG_NOTICE;
+      log_fn(severity, "Something wrong with your network connection? Conn (addr %s, fd %d, type %s, state %d) tried to write %d bytes but timed out. (Marked at %s:%d)",
              safe_str(conn->address), conn->s, conn_type_to_string(conn->type),
              conn->state,
              (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,

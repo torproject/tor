@@ -481,7 +481,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
   log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be router '%s'",
          conn->address, conn->port, nickname);
 
-  if (tor_tls_verify(conn->tls, &identity_rcvd) < 0) {
+  if (tor_tls_verify(severity, conn->tls, &identity_rcvd) < 0) {
     log_fn(LOG_WARN,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
     return -1;
