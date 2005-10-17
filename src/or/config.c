@@ -41,11 +41,12 @@ typedef struct config_abbrev_t {
   const char *abbreviated;
   const char *full;
   int commandline_only;
+  int warn;
 } config_abbrev_t;
 
 /* Handy macro for declaring "In the config file or on the command line,
  * you can abbreviate <b>tok</b>s as <b>tok</b>". */
-#define PLURAL(tok) { #tok, #tok "s", 0 }
+#define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
 /* A list of command-line abbreviations. */
 static config_abbrev_t _option_abbrevs[] = {
@@ -62,11 +63,11 @@ static config_abbrev_t _option_abbrevs[] = {
   PLURAL(StrictEntryNode),
   PLURAL(StrictExitNode),
   { "l", "Log", 1},
-  { "BandwidthRateBytes", "BandwidthRate", 0},
-  { "BandwidthBurstBytes", "BandwidthBurst", 0},
-  { "DirFetchPostPeriod", "StatusFetchPeriod", 0},
-  { "MaxConn", "ConnLimit", 0},
-  { NULL, NULL , 0},
+  { "BandwidthRateBytes", "BandwidthRate", 0, 0},
+  { "BandwidthBurstBytes", "BandwidthBurst", 0, 0},
+  { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
+  { "MaxConn", "ConnLimit", 0, 1},
+  { NULL, NULL, 0, 0},
 };
 #undef PLURAL
 
@@ -662,17 +663,25 @@ options_act(or_options_t *old_options)
 /** If <b>option</b> is an official abbreviation for a longer option,
  * return the longer option.  Otherwise return <b>option</b>.
  * If <b>command_line</b> is set, apply all abbreviations.  Otherwise, only
- * apply abbreviations that work for the config file and the command line. */
+ * apply abbreviations that work for the config file and the command line.
+ * If <b>warn_obsolete</b> is set, warn about deprecated names. */
 static const char *
-expand_abbrev(config_format_t *fmt, const char *option, int command_line)
+expand_abbrev(config_format_t *fmt, const char *option, int command_line,
+              int warn_obsolete)
 {
   int i;
   if (! fmt->abbrevs)
     return option;
   for (i=0; fmt->abbrevs[i].abbreviated; ++i) {
-    /* Abbreviations aren't casei. */
+    /* Abbreviations are casei. */
     if (!strcasecmp(option,fmt->abbrevs[i].abbreviated) &&
         (command_line || !fmt->abbrevs[i].commandline_only)) {
+      if (warn_obsolete && fmt->abbrevs[i].warn) {
+        log_fn(LOG_WARN,
+            "The configuration option '%s' is deprecated; use '%s' instead.",
+               fmt->abbrevs[i].abbreviated,
+               fmt->abbrevs[i].full);
+      }
       return fmt->abbrevs[i].full;
     }
   }
@@ -715,7 +724,7 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
     while (*s == '-')
       s++;
 
-    (*new)->key = tor_strdup(expand_abbrev(&options_format, s, 1));
+    (*new)->key = tor_strdup(expand_abbrev(&options_format, s, 1, 1));
     (*new)->value = tor_strdup(argv[i+1]);
     (*new)->next = NULL;
     log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
@@ -1197,7 +1206,7 @@ config_assign(config_format_t *fmt, void *options,
 
   /* pass 1: normalize keys */
   for (p = list; p; p = p->next) {
-    const char *full = expand_abbrev(fmt, p->key, 0);
+    const char *full = expand_abbrev(fmt, p->key, 0, 1);
     if (strcmp(full,p->key)) {
       tor_free(p->key);
       p->key = tor_strdup(full);
