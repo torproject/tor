@@ -1174,11 +1174,11 @@ typedef struct {
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
   config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Addresses to bind for listening for SOCKS connections. */
-  config_line_t *SocksBindAddress;
+  config_line_t *SocksListenAddress;
   /** Addresses to bind for listening for OR connections. */
-  config_line_t *ORBindAddress;
+  config_line_t *ORListenAddress;
   /** Addresses to bind for listening for directory connections. */
-  config_line_t *DirBindAddress;
+  config_line_t *DirListenAddress;
   /** Local address to bind outbound sockets */
   char *OutboundBindAddress;
   /** Directory server only: which versions of
