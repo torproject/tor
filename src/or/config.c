@@ -62,7 +62,7 @@ static config_abbrev_t _option_abbrevs[] = {
   PLURAL(RendExcludeNode),
   PLURAL(StrictEntryNode),
   PLURAL(StrictExitNode),
-  { "l", "Log", 1},
+  { "l", "Log", 1, 0},
   { "BandwidthRateBytes", "BandwidthRate", 0, 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0, 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
