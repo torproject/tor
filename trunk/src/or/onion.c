@@ -245,8 +245,10 @@ onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN b
   }
 
   dh = crypto_dh_new();
-  if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN))
+  if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN)) {
+    log_fn(LOG_INFO, "crypto_dh_get_public failed.");
     goto err;
+  }
 
 #ifdef DEBUG_ONION_SKINS
   printf("Server: server g^y:");
@@ -259,8 +261,10 @@ onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN b
   key_material = tor_malloc(DIGEST_LEN+key_out_len);
   len = crypto_dh_compute_secret(dh, challenge, DH_KEY_LEN,
                                  key_material, DIGEST_LEN+key_out_len);
-  if (len < 0)
+  if (len < 0) {
+    log_fn(LOG_INFO, "crypto_dh_compute_secret failed.");
     goto err;
+  }
 
   /* send back H(K|0) as proof that we learned K. */
   memcpy(handshake_reply_out+DH_KEY_LEN, key_material, DIGEST_LEN);

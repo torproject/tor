@@ -283,7 +283,7 @@ command_process_relay_cell(cell_t *cell, connection_t *conn)
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (!circ) {
-    log_fn(LOG_INFO,"unknown circuit %d on connection from %s:%d. Dropping.",
+    log_fn(LOG_DEBUG,"unknown circuit %d on connection from %s:%d. Dropping.",
            cell->circ_id, conn->address, conn->port);
     return;
   }

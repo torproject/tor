@@ -738,7 +738,7 @@ crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
                           env->key, crypto_get_rsa_padding(padding));
 
   if (r<0) {
-    crypto_log_errors(warnOnFailure?LOG_WARN:LOG_INFO,
+    crypto_log_errors(warnOnFailure?LOG_WARN:LOG_DEBUG,
                       "performing RSA decryption");
     return -1;
   }
@@ -942,7 +942,7 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   }
   outlen = crypto_pk_private_decrypt(env,buf,from,pkeylen,padding,warnOnFailure);
   if (outlen<0) {
-    log_fn(warnOnFailure?LOG_WARN:LOG_INFO, "Error decrypting public-key data");
+    log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, "Error decrypting public-key data");
     return -1;
   }
   if (outlen < CIPHER_KEY_LEN) {
@@ -1425,8 +1425,10 @@ crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
   tor_assert(dh->dh->pub_key);
   bytes = BN_num_bytes(dh->dh->pub_key);
   tor_assert(bytes >= 0);
-  if (pubkey_len < (size_t)bytes)
+  if (pubkey_len < (size_t)bytes) {
+    log_fn(LOG_WARN, "Weird! pubkey_len (%d) was smaller than DH_BYTES (%d)", (int) pubkey_len, bytes);
     return -1;
+  }
 
   memset(pubkey, 0, pubkey_len);
   BN_bn2bin(dh->dh->pub_key, (unsigned char*)(pubkey+(pubkey_len-bytes)));

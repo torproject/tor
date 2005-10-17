@@ -629,7 +629,7 @@ router_retry_connections(int force)
     if (force ||
         !connection_get_by_identity_digest(router->identity_digest,
                                            CONN_TYPE_OR)) {
-      log_fn(LOG_INFO,"%sconnecting to %s at %s:%u.",
+      log_fn(LOG_DEBUG,"%sconnecting to %s at %s:%u.",
              clique_mode(options) ? "(forced) " : "",
              router->nickname, router->address, router->or_port);
       /* Remember when we started trying to determine reachability */

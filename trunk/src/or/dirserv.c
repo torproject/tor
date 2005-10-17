@@ -1039,7 +1039,8 @@ dirserv_regenerate_directory(void)
     return -1;
   }
   set_cached_dir(&the_directory, new_directory, time(NULL));
-  log_fn(LOG_INFO,"New directory (size %d):\n%s",(int)the_directory.dir_len,
+  log_fn(LOG_INFO,"New directory (size %d) has been built.",(int)the_directory.dir_len);
+  log_fn(LOG_DEBUG,"New directory (size %d):\n%s",(int)the_directory.dir_len,
          the_directory.dir);
 
   the_directory_is_dirty = 0;

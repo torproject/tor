@@ -172,7 +172,7 @@ connection_or_finished_connecting(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_OR);
   tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
 
-  log_fn(LOG_INFO,"OR connect() to router at %s:%u finished.",
+  log_fn(LOG_DEBUG,"OR connect() to router at %s:%u finished.",
          conn->address,conn->port);
 
   if (get_options()->HttpsProxy) {
