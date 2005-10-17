@@ -619,7 +619,7 @@ run_connection_housekeeping(int i, time_t now)
     } else if (
          now >= conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
          now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
-      log_fn(LOG_NOTICE,"Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to flush; %d seconds since last write)",
+      log_fn(LOG_PROTOCOL_WARN,"Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to flush; %d seconds since last write)",
              conn->s, conn->address, conn->port,
              (int)buf_datalen(conn->outbuf),
              (int)(now-conn->timestamp_lastwritten));

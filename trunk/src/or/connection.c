@@ -458,7 +458,13 @@ connection_expire_held_open(void)
     if (conn->hold_open_until_flushed) {
       tor_assert(conn->marked_for_close);
       if (now - conn->timestamp_lastwritten >= 15) {
-        log_fn(LOG_NOTICE,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %s).",
+        int severity;
+        if (conn->type == CONN_TYPE_EXIT ||
+            (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER))
+          severity = LOG_INFO;
+        else
+          severity = LOG_NOTICE;
+        log_fn(severity, "Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %s).",
                conn->s, conn_type_to_string(conn->type),
                conn_state_to_string(conn->type, conn->state));
         conn->hold_open_until_flushed = 0;

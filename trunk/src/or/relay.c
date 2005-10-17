@@ -157,7 +157,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending away from origin.");
       if (connection_edge_process_relay_cell(cell, circ, conn, NULL) < 0) {
-        log_fn(LOG_WARN,"connection_edge_process_relay_cell (away from origin) failed.");
+        log_fn(LOG_PROTOCOL_WARN,"connection_edge_process_relay_cell (away from origin) failed.");
         return -1;
       }
     }
@@ -808,7 +808,7 @@ connection_edge_process_relay_cell_not_open(
  * If <b>layer_hint</b> is defined, then we're the origin of the
  * circuit, and it specifies the hop that packaged <b>cell</b>.
  *
- * Return -1 if you want to tear down the circuit, else 0.
+ * Return -1 if you want to warn and tear down the circuit, else 0.
  */
 static int
 connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
@@ -858,8 +858,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       ++stats_n_data_cells_received;
       if (( layer_hint && --layer_hint->deliver_window < 0) ||
           (!layer_hint && --circ->deliver_window < 0)) {
-        log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
-        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
+        log_fn(LOG_PROTOCOL_WARN,
+               "(relay data) circ deliver_window below 0. Killing.");
+        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL,
+                            conn->cpath_layer);
         connection_mark_for_close(conn);
         return -1;
       }
@@ -874,7 +876,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
 
       if (--conn->deliver_window < 0) { /* is it below 0 after decrement? */
-        log_fn(LOG_WARN,"(relay data) conn deliver_window below 0. Killing.");
+        log_fn(LOG_PROTOCOL_WARN,
+               "(relay data) conn deliver_window below 0. Killing.");
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
@@ -962,7 +965,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_CONNECTED:
       if (conn) {
-        log_fn(LOG_WARN,"'connected' unsupported while open. Closing circ.");
+        log_fn(LOG_PROTOCOL_WARN,
+               "'connected' unsupported while open. Closing circ.");
         return -1;
       }
       log_fn(LOG_INFO,"'connected' received, no conn attached anymore. Ignoring.");
