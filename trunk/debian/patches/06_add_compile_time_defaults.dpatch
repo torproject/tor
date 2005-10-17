@@ -24,9 +24,9 @@ exit 0
 
 @DPATCH@
 diff -urNad tor-0.1.1.5/src/or/config.c /tmp/dpep.Xv4cHn/tor-0.1.1.5/src/or/config.c
---- tor-0.1.1.5/src/or/config.c	2005-01-12 16:32:45.000000000 +0100
-+++ /tmp/dpep.Xv4cHn/tor-0.1.1.5/src/or/config.c	2005-01-13 03:50:33.815693540 +0100
-@@ -108,7 +108,7 @@
+--- tor-0.1.1.9/src/or/config.c		2005-10-17 03:54:24.917618642 +0200
++++ /tmp/foo/tor/src/or/config.c	2005-10-17 03:57:52.040022393 +0200
+@@ -111,7 +111,7 @@
    VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
    VAR("ControlPort",         UINT,     ControlPort,          "0"),
    VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
@@ -35,16 +35,16 @@ diff -urNad tor-0.1.1.5/src/or/config.c /tmp/dpep.Xv4cHn/tor-0.1.1.5/src/or/conf
    VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
    VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
    VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
-@@ -159,7 +159,7 @@
+@@ -162,7 +162,7 @@
    VAR("ORPort",              UINT,     ORPort,               "0"),
    VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
    VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
 -  VAR("PidFile",             STRING,   PidFile,              NULL),
 +  VAR("PidFile",             STRING,   PidFile,              "/var/run/tor/tor.pid"),
+   VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
    VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
    VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
-   VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),
-@@ -167,7 +167,7 @@
+@@ -174,7 +174,7 @@
    VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "20 minutes"),
    VAR("RephistTrackTime",    INTERVAL, RephistTrackTime,     "24 hours"),
    OBSOLETE("RouterFile"),
