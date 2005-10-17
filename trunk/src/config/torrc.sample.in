@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 23 September 2005 for Tor 0.1.1.8-alpha.
+## Last updated 16 October 2005 for Tor 0.1.1.9-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 #
 ## See the man page, or http://tor.eff.org/tor-manual.html, for more
@@ -18,12 +18,12 @@
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
 ## server, and not make any local application connections yourself.
 SocksPort 9050 # what port to open for local application connections
-SocksBindAddress 127.0.0.1 # accept connections only from localhost
-#SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port too
+SocksListenAddress 127.0.0.1 # accept connections only from localhost
+#SocksListenAddress 192.168.0.1:9100 # listen on a chosen IP/port too
 
 ## Entry policies to allow/deny SOCKS requests based on IP address.
 ## First entry that matches wins. If no SocksPolicy is set, we accept
-## all (and only) requests from SocksBindAddress.
+## all (and only) requests from SocksListenAddress.
 #SocksPolicy accept 192.168.0.1/16
 #SocksPolicy reject *
 
@@ -104,7 +104,7 @@ AllowUnverifiedNodes middle,rendezvous
 ## in ORPort (e.g. to advertise 443 but bind to 9090), uncomment
 ## the line below. You'll need to do ipchains or other port forwarding
 ## yourself to make this work.
-#ORBindAddress 0.0.0.0:9090
+#ORListenAddress 0.0.0.0:9090
 
 ## Uncomment this to mirror the directory for others (please do)
 #DirPort 9030 # what port to advertise for directory connections
@@ -112,7 +112,7 @@ AllowUnverifiedNodes middle,rendezvous
 ## in DirPort (e.g. to advertise 80 but bind 9091), uncomment the line
 ## below. You'll need to do ipchains or other port forwarding yourself
 ## to make this work.
-#DirBindAddress 0.0.0.0:9091
+#DirListenAddress 0.0.0.0:9091
 
 ## Uncomment this if you run more than one Tor server, and add the
 ## nickname of each Tor server you control, even if they're on different
