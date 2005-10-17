@@ -1360,7 +1360,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
           return -1;
         }
         tor_free(inp);
-        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
+        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\nContent-Encoding: deflate\r\n\r\n",
                      date,
                      (int)compressed_len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
