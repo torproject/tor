@@ -524,7 +524,7 @@ int
 server_mode(or_options_t *options)
 {
   if (options->ClientOnly) return 0;
-  return (options->ORPort != 0 || options->ORBindAddress);
+  return (options->ORPort != 0 || options->ORListenAddress);
 }
 
 /** Remember if we've advertised ourselves to the dirservers. */
@@ -551,7 +551,7 @@ set_server_advertised(int s)
 int
 proxy_mode(or_options_t *options)
 {
-  return (options->SocksPort != 0 || options->SocksBindAddress);
+  return (options->SocksPort != 0 || options->SocksListenAddress);
 }
 
 /** Decide if we're a publishable server. We are a publishable server if:

@@ -13,8 +13,8 @@ const char connection_c_id[] = "$Id$";
 
 #include "or.h"
 
-static connection_t *connection_create_listener(const char *bindaddress,
-                                                uint16_t bindport, int type);
+static connection_t *connection_create_listener(const char *listenaddress,
+                                                uint16_t listenport, int type);
 static int connection_init_accepted_conn(connection_t *conn);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_receiver_bucket_should_increase(connection_t *conn);
@@ -474,17 +474,17 @@ connection_expire_held_open(void)
 }
 
 /** Bind a new non-blocking socket listening to
- * <b>bindaddress</b>:<b>bindport</b>, and add this new connection
+ * <b>listenaddress</b>:<b>listenport</b>, and add this new connection
  * (of type <b>type</b>) to the connection array.
  *
- * If <b>bindaddress</b> includes a port, we bind on that port; otherwise, we
- * use bindport.
+ * If <b>listenaddress</b> includes a port, we bind on that port;
+ * otherwise, we use listenport.
  */
 static connection_t *
-connection_create_listener(const char *bindaddress, uint16_t bindport,
+connection_create_listener(const char *listenaddress, uint16_t listenport,
                            int type)
 {
-  struct sockaddr_in bindaddr; /* where to bind */
+  struct sockaddr_in listenaddr; /* where to bind */
   char *address = NULL;
   connection_t *conn;
   uint16_t usePort;
@@ -494,17 +494,17 @@ connection_create_listener(const char *bindaddress, uint16_t bindport,
   int one=1;
 #endif
 
-  memset(&bindaddr,0,sizeof(struct sockaddr_in));
-  if (parse_addr_port(bindaddress, &address, &addr, &usePort)<0) {
-    log_fn(LOG_WARN, "Error parsing/resolving BindAddress %s",bindaddress);
+  memset(&listenaddr,0,sizeof(struct sockaddr_in));
+  if (parse_addr_port(listenaddress, &address, &addr, &usePort)<0) {
+    log_fn(LOG_WARN, "Error parsing/resolving ListenAddress %s",listenaddress);
     return NULL;
   }
 
   if (usePort==0)
-    usePort = bindport;
-  bindaddr.sin_addr.s_addr = htonl(addr);
-  bindaddr.sin_family = AF_INET;
-  bindaddr.sin_port = htons((uint16_t) usePort);
+    usePort = listenport;
+  listenaddr.sin_addr.s_addr = htonl(addr);
+  listenaddr.sin_family = AF_INET;
+  listenaddr.sin_port = htons((uint16_t) usePort);
 
   log_fn(LOG_NOTICE, "Opening %s on %s:%d",
          conn_type_to_string(type), address, usePort);
@@ -527,7 +527,7 @@ connection_create_listener(const char *bindaddress, uint16_t bindport,
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
 #endif
 
-  if (bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
+  if (bind(s,(struct sockaddr *)&listenaddr,sizeof(listenaddr)) < 0) {
     log_fn(LOG_WARN, "Could not bind to %s:%u: %s", address, usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     goto err;
@@ -803,7 +803,7 @@ connection_connect(connection_t *conn, char *address,
 /**
  * Launch any configured listener connections of type <b>type</b>.  (A
  * listener is configured if <b>port_option</b> is non-zero.  If any
- * BindAddress configuration options are given in <b>cfg</b>, create a
+ * ListenAddress configuration options are given in <b>cfg</b>, create a
  * connection binding to each one.  Otherwise, create a single
  * connection binding to the address <b>default_addr</b>.)
  *
@@ -935,15 +935,15 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
   or_options_t *options = get_options();
 
   if (server_mode(options) &&
-      retry_listeners(CONN_TYPE_OR_LISTENER, options->ORBindAddress,
+      retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
                       options->ORPort, "0.0.0.0", force,
                       replaced_conns, new_conns)<0)
     return -1;
-  if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirBindAddress,
+  if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
                       options->DirPort, "0.0.0.0", force,
                       replaced_conns, new_conns)<0)
     return -1;
-  if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksBindAddress,
+  if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksListenAddress,
                       options->SocksPort, "127.0.0.1", force,
                       replaced_conns, new_conns)<0)
     return -1;

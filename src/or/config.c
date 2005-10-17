@@ -67,6 +67,9 @@ static config_abbrev_t _option_abbrevs[] = {
   { "BandwidthBurstBytes", "BandwidthBurst", 0, 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
   { "MaxConn", "ConnLimit", 0, 1},
+  { "ORBindAddress", "ORListenAddress", 0, 1},
+  { "DirBindAddress", "DirListenAddress", 0, 1},
+  { "SocksBindAddress", "SocksListenAddress", 0, 1},
   { NULL, NULL, 0, 0},
 };
 #undef PLURAL
@@ -115,8 +118,9 @@ static config_var_t _option_vars[] = {
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
-  VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
-  VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "0 seconds"),  /** DOCDOC **/
+  VAR("DirListenAddress",    LINELIST, DirListenAddress,     NULL),
+  /* if DirFetchPeriod is 0, see get_dir_fetch_period() in main.c */
+  VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "0 seconds"),
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
   OBSOLETE("DirPostPeriod"),
@@ -159,7 +163,7 @@ static config_var_t _option_vars[] = {
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
   VAR("NumCpus",             UINT,     NumCpus,              "1"),
   VAR("NumHelperNodes",      UINT,     NumHelperNodes,       "3"),
-  VAR("ORBindAddress",       LINELIST, ORBindAddress,        NULL),
+  VAR("ORListenAddress",     LINELIST, ORListenAddress,     NULL),
   VAR("ORPort",              UINT,     ORPort,               "0"),
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
@@ -179,10 +183,11 @@ static config_var_t _option_vars[] = {
   VAR("RunTesting",          BOOL,     RunTesting,           "0"),
   VAR("SafeLogging",         BOOL,     SafeLogging,          "1"),
   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),
-  VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
+  VAR("SocksListenAddress",  LINELIST, SocksListenAddress,   NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
-  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "0 seconds"),  /** DOCDOC */
+  /* if StatusFetchPeriod is 0, see get_status_fetch_period() in main.c */
+  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "0 seconds"),
   VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes,     "0"),
   VAR("StrictExitNodes",     BOOL,     StrictExitNodes,      "0"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
@@ -1732,16 +1737,16 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
-  if (options->ORPort == 0 && options->ORBindAddress != NULL) {
-    log(LOG_WARN, "ORPort must be defined if ORBindAddress is defined.");
+  if (options->ORPort == 0 && options->ORListenAddress != NULL) {
+    log(LOG_WARN, "ORPort must be defined if ORListenAddress is defined.");
     result = -1;
   }
-  if (options->DirPort == 0 && options->DirBindAddress != NULL) {
-    log(LOG_WARN, "DirPort must be defined if DirBindAddress is defined.");
+  if (options->DirPort == 0 && options->DirListenAddress != NULL) {
+    log(LOG_WARN, "DirPort must be defined if DirListenAddress is defined.");
     result = -1;
   }
-  if (options->SocksPort == 0 && options->SocksBindAddress != NULL) {
-    log(LOG_WARN, "SocksPort must be defined if SocksBindAddress is defined.");
+  if (options->SocksPort == 0 && options->SocksListenAddress != NULL) {
+    log(LOG_WARN, "SocksPort must be defined if SocksListenAddress is defined.");
     result = -1;
   }
 
