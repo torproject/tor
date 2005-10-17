@@ -234,7 +234,7 @@ _connection_free(connection_t *conn)
   tor_free(conn->requested_resource);
 
   if (conn->s >= 0) {
-    log_fn(LOG_INFO,"closing fd %d.",conn->s);
+    log_fn(LOG_DEBUG,"closing fd %d.",conn->s);
     tor_close_socket(conn->s);
   }
 
@@ -631,7 +631,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     connection_mark_for_close(conn);
     return -1;
   }
-  log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
+  log(LOG_DEBUG,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
 
   set_socket_nonblocking(news);
 
@@ -1756,7 +1756,7 @@ connection_send_destroy(uint16_t circ_id, connection_t *conn)
   memset(&cell, 0, sizeof(cell_t));
   cell.circ_id = circ_id;
   cell.command = CELL_DESTROY;
-  log_fn(LOG_INFO,"Sending destroy (circID %d).", circ_id);
+  log_fn(LOG_DEBUG,"Sending destroy (circID %d).", circ_id);
   connection_or_write_cell_to_buf(&cell, conn);
   return 0;
 }
