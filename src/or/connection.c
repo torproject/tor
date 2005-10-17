@@ -1209,7 +1209,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
                conn->nickname ? conn->nickname : "not set", conn->address);
         return -1;
       case TOR_TLS_ERROR:
-        log_fn(LOG_INFO,"tls error. breaking (nickname %s, address %s).",
+        log_fn(LOG_DEBUG,"tls error. breaking (nickname %s, address %s).",
                conn->nickname ? conn->nickname : "not set", conn->address);
         return -1;
       case TOR_TLS_WANTWRITE:

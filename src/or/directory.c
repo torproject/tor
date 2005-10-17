@@ -844,7 +844,7 @@ connection_dir_client_reached_eof(connection_t *conn)
              abs(delta)/60, delta>0 ? "behind" : "ahead");
       skewed = 1; /* don't check the recommended-versions line */
     } else {
-      log_fn(LOG_INFO, "Time on received directory is within tolerance; we are %d seconds skewed.  (That's okay.)", delta);
+      log_fn(LOG_DEBUG, "Time on received directory is within tolerance; we are %d seconds skewed.  (That's okay.)", delta);
     }
   }
 
@@ -1576,7 +1576,7 @@ connection_dir_finished_connecting(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_DIR);
   tor_assert(conn->state == DIR_CONN_STATE_CONNECTING);
 
-  log_fn(LOG_INFO,"Dir connection to router %s:%u established.",
+  log_fn(LOG_DEBUG,"Dir connection to router %s:%u established.",
          conn->address,conn->port);
 
   conn->state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
