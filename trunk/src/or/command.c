@@ -185,9 +185,14 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (circ) {
+    routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     log_fn(LOG_PROTOCOL_WARN,
-           "received CREATE cell (circID %d) for known circ. Dropping.",
-           cell->circ_id);
+           "received CREATE cell (circID %d) for known circ. Dropping (age %d).",
+           cell->circ_id, (int)(time(NULL) - conn->timestamp_created));
+    if (router)
+      log_fn(LOG_PROTOCOL_WARN,
+             "Details: nickname '%s', platform '%s'.",
+             router->nickname, router->platform);
     return;
   }
 
