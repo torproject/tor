@@ -1230,7 +1230,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     write_http_status_line(conn, 400, "Bad request");
     return 0;
   }
-  log_fn(LOG_INFO,"rewritten url as '%s'.", url);
+  log_fn(LOG_DEBUG,"rewritten url as '%s'.", url);
 
   if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* directory fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
@@ -1453,7 +1453,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
     write_http_status_line(conn, 400, "Bad request");
     return 0;
   }
-  log_fn(LOG_INFO,"rewritten url as '%s'.", url);
+  log_fn(LOG_DEBUG,"rewritten url as '%s'.", url);
   origin = http_get_origin(headers, conn);
 
   if (!strcmp(url,"/tor/")) { /* server descriptor post */
@@ -1556,7 +1556,7 @@ connection_dir_finished_flushing(connection_t *conn)
       connection_stop_writing(conn);
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
-      log_fn(LOG_INFO,"Finished writing server response. Closing.");
+      log_fn(LOG_DEBUG,"Finished writing server response. Closing.");
       connection_mark_for_close(conn);
       return 0;
     default:

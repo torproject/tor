@@ -335,7 +335,7 @@ command_process_destroy_cell(cell_t *cell, connection_t *conn)
     return;
   }
 
-  log_fn(LOG_INFO,"Received for circID %d.",cell->circ_id);
+  log_fn(LOG_DEBUG,"Received for circID %d.",cell->circ_id);
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(circ);
   }

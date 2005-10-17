@@ -866,7 +866,7 @@ onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys)
   memcpy(cell.payload, payload,
          cell_type == CELL_CREATED ? ONIONSKIN_REPLY_LEN : DIGEST_LEN*2);
 
-  log_fn(LOG_INFO,"init digest forward 0x%.8x, backward 0x%.8x.",
+  log_fn(LOG_DEBUG,"init digest forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)(keys), (unsigned int)*(uint32_t*)(keys+20));
   if (circuit_init_cpath_crypto(tmp_cpath, keys, 0)<0) {
     log_fn(LOG_WARN,"Circuit initialization failed");

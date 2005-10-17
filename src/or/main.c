@@ -139,7 +139,7 @@ connection_add(connection_t *conn)
 
   nfds++;
 
-  log_fn(LOG_INFO,"new conn type %s, socket %d, nfds %d.",
+  log_fn(LOG_DEBUG,"new conn type %s, socket %d, nfds %d.",
       conn_type_to_string(conn->type), conn->s, nfds);
 
   return 0;
@@ -157,7 +157,7 @@ connection_remove(connection_t *conn)
   tor_assert(conn);
   tor_assert(nfds>0);
 
-  log_fn(LOG_INFO,"removing socket %d (type %s), nfds now %d",
+  log_fn(LOG_DEBUG,"removing socket %d (type %s), nfds now %d",
          conn->s, conn_type_to_string(conn->type), nfds-1);
 
   tor_assert(conn->poll_index >= 0);
@@ -437,7 +437,7 @@ conn_close_if_marked(int i)
   assert_connection_ok(conn, time(NULL));
   assert_all_pending_dns_resolves_ok();
 
-  log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
+  log_fn(LOG_DEBUG,"Cleaning up connection (fd %d).",conn->s);
   if (conn->s >= 0 && connection_wants_to_flush(conn)) {
     /* -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
