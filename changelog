@@ -3,8 +3,9 @@ tor (0.1.1.8-alpha-cvs-1) experimental; urgency=low
   * CVS snapshot. Mon, 17 Oct 2005 03:54:01 +0200
   * Remove 08_add_newlines_between_serverdescriptors.dpatch.
   * Update 06_add_compile_time_defaults.dpatch
+  * Add some info -> debug log downgrades.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 17 Oct 2005 03:58:58 +0200
+ -- Peter Palfrader <weasel@debian.org>  Mon, 17 Oct 2005 04:01:50 +0200
 
 tor (0.1.1.8-alpha-1) experimental; urgency=low
 
