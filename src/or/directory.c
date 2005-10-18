@@ -1326,14 +1326,16 @@ directory_handle_command_get(connection_t *conn, char *headers,
   if (!strcmpstart(url,"/tor/server/")) {
     size_t url_len = strlen(url);
     int deflated = !strcmp(url+url_len-2, ".z");
+    int res;
+    const char *msg;
     smartlist_t *descs = smartlist_create();
     if (deflated)
       url[url_len-2] = '\0';
-    dirserv_get_routerdescs(descs, url);
+    res = dirserv_get_routerdescs(descs, url, &msg);
     tor_free(url);
-    if (!smartlist_len(descs)) {
-      write_http_status_line(conn, 404, "Servers unavailable");
-    } else {
+    if (res < 0)
+      write_http_status_line(conn, 404, msg);
+    else {
       size_t len = 0;
       format_rfc1123_time(date, time(NULL));
       SMARTLIST_FOREACH(descs, routerinfo_t *, ri,

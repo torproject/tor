@@ -1393,13 +1393,23 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
  *     hex identity digests; or
  *   - "/tor/server/d/D" where D is a plus-separated sequence
  *     of server descriptor digests, in hex.
+ *
+ * Return -1 if we do not have any descriptors, no matching descriptors,
+ *  or if we did not recognize the key (URL), 0 otherwise (i.e. we found some
+ *  matching descriptors).  If -1 is returned <b>msg</b> will be set to
+ *  an appropriate error message.
  */
-void
-dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
+int
+dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
+  const char **msg)
 {
   smartlist_t *complete_list = get_descriptor_list();
-  if (!complete_list)
-    return;
+  *msg = NULL;
+
+  if (!complete_list) {
+    *msg = "No server descriptors available";
+    return -1;
+  }
 
   if (!strcmp(key, "/tor/server/all")) {
     smartlist_add_all(descs_out, complete_list);
@@ -1435,7 +1445,16 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
        });
     SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
     smartlist_free(digests);
+  } else {
+    *msg = "Key not recognized";
+    return -1;
   }
+
+  if (!smartlist_len(descs_out)) {
+    *msg = "Servers unavailable";
+    return -1;
+  }
+  return 0;
 }
 
 /** Called when a TLS handshake has completed successfully with a
