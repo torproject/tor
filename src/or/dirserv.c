@@ -1345,7 +1345,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
                                     the_v2_networkstatus_is_dirty,
                                     generate_v2_networkstatus,
                                     "network status list", 0);
-      log_fn(LOG_WARN, "Unable to generate an authoritative network stautus.");
+      log_fn(LOG_WARN, "Unable to generate an authoritative network status.");
       if (d)
         smartlist_add(result, d);
     }
