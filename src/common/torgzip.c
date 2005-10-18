@@ -75,7 +75,7 @@ tor_gzip_compress(char **out, size_t *out_len,
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in deflateInit2 */
-    log_fn(LOG_WARN, "Gzip not supported with zlib %s", ZLIB_VERSION);
+    warn(LD_GENERAL, "Gzip not supported with zlib %s", ZLIB_VERSION);
     return -1;
   }
 
@@ -91,7 +91,7 @@ tor_gzip_compress(char **out, size_t *out_len,
   if (deflateInit2(stream, Z_BEST_COMPRESSION, Z_DEFLATED,
                    method_bits(method),
                    8, Z_DEFAULT_STRATEGY) != Z_OK) {
-    log_fn(LOG_WARN, "Error from deflateInit2: %s",
+    warn(LD_GENERAL, "Error from deflateInit2: %s",
            stream->msg?stream->msg:"<no message>");
     goto err;
   }
@@ -120,7 +120,7 @@ tor_gzip_compress(char **out, size_t *out_len,
         stream->avail_out = out_size - offset;
         break;
       default:
-        log_fn(LOG_WARN, "Gzip compression didn't finish: %s",
+        warn(LD_GENERAL, "Gzip compression didn't finish: %s",
                stream->msg ? stream->msg : "<no message>");
         goto err;
       }
@@ -128,7 +128,7 @@ tor_gzip_compress(char **out, size_t *out_len,
  done:
   *out_len = stream->total_out;
   if (deflateEnd(stream)!=Z_OK) {
-    log_fn(LOG_WARN, "Error freeing gzip structures");
+    warn(LD_GENERAL, "Error freeing gzip structures");
     goto err;
   }
   tor_free(stream);
@@ -168,7 +168,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in inflateInit2 */
-    log_fn(LOG_WARN, "Gzip not supported with zlib %s", ZLIB_VERSION);
+    warn(LD_GENERAL, "Gzip not supported with zlib %s", ZLIB_VERSION);
     return -1;
   }
 
@@ -183,7 +183,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
   if (inflateInit2(stream,
                    method_bits(method)) != Z_OK) {
-    log_fn(LOG_WARN, "Error from inflateInit2: %s",
+    warn(LD_GENERAL, "Error from inflateInit2: %s",
            stream->msg?stream->msg:"<no message>");
     goto err;
   }
@@ -203,7 +203,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
           goto done;
         /* There may be more compressed data here. */
         if (inflateInit2(stream, method_bits(method)) != Z_OK) {
-          log_fn(LOG_WARN, "Error from inflateInit2: %s",
+          warn(LD_GENERAL, "Error from inflateInit2: %s",
                  stream->msg?stream->msg:"<no message>");
           goto err;
         }
@@ -216,7 +216,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
           break;
       case Z_BUF_ERROR:
         if (stream->avail_out > 0) {
-          log_fn(LOG_WARN, "possible truncated or corrupt zlib data");
+          warn(LD_PROTOCOL, "possible truncated or corrupt zlib data");
           goto err;
         }
         offset = stream->next_out - (unsigned char*)*out;
@@ -226,7 +226,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
         stream->avail_out = out_size - offset;
         break;
       default:
-        log_fn(LOG_WARN, "Gzip decompression returned an error: %s",
+        warn(LD_GENERAL, "Gzip decompression returned an error: %s",
                stream->msg ? stream->msg : "<no message>");
         goto err;
       }
@@ -236,7 +236,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   r = inflateEnd(stream);
   tor_free(stream);
   if (r != Z_OK) {
-    log_fn(LOG_WARN, "Error freeing gzip structures");
+    warn(LD_GENERAL, "Error freeing gzip structures");
     goto err;
   }
 

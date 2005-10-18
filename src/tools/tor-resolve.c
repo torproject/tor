@@ -4,6 +4,7 @@
 
 #include "orconfig.h"
 
+#define OLD_LOG_INTERFACE
 #include "../common/compat.h"
 #include "../common/util.h"
 #include "../common/log.h"

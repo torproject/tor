@@ -165,9 +165,9 @@ crypto_log_errors(int severity, const char *doing)
     func = (const char*)ERR_func_error_string(err);
     if (!msg) msg = "(null)";
     if (doing) {
-      log(severity, "crypto error while %s: %s (in %s:%s)", doing, msg, lib, func);
+      log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)", doing, msg, lib, func);
     } else {
-      log(severity, "crypto error: %s (in %s:%s)", msg, lib, func);
+      log(severity, LD_CRYPTO, "crypto error: %s (in %s:%s)", msg, lib, func);
     }
   }
 }
@@ -180,10 +180,10 @@ log_engine(const char *fn, ENGINE *e)
     const char *name, *id;
     name = ENGINE_get_name(e);
     id = ENGINE_get_id(e);
-    log(LOG_NOTICE, "Using OpenSSL engine %s [%s] for %s",
+    log(LOG_NOTICE, LD_CRYPTO, "Using OpenSSL engine %s [%s] for %s",
         name?name:"?", id?id:"?", fn);
   } else {
-    log(LOG_INFO, "Using default implementation for %s", fn);
+    log(LOG_INFO, LD_CRYPTO, "Using default implementation for %s", fn);
   }
 }
 #endif
@@ -201,8 +201,8 @@ crypto_global_init(int useAccel)
 #ifndef NO_ENGINES
     if (useAccel) {
       if (useAccel < 0)
-        log_fn(LOG_WARN, "Initializing OpenSSL via tor_tls_init().");
-      log_fn(LOG_INFO, "Initializing OpenSSL engine support.");
+        warn(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
+      info(LD_CRYPTO, "Initializing OpenSSL engine support.");
       ENGINE_load_builtin_engines();
       if (!ENGINE_register_all_complete())
         return -1;
@@ -342,7 +342,7 @@ crypto_create_init_cipher(const char *key, int encrypt_mode)
   crypto_cipher_env_t *crypto = NULL;
 
   if (! (crypto = crypto_new_cipher_env())) {
-    log_fn(LOG_WARN, "Unable to allocate crypto object");
+    warn(LD_CRYPTO, "Unable to allocate crypto object");
     return NULL;
   }
 
@@ -452,7 +452,7 @@ crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfi
   /* Read the file into a string. */
   contents = read_file_to_str(keyfile, 0);
   if (!contents) {
-    log_fn(LOG_WARN, "Error reading private key from \"%s\"", keyfile);
+    warn(LD_CRYPTO, "Error reading private key from \"%s\"", keyfile);
     return -1;
   }
 
@@ -592,7 +592,7 @@ crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **out)
   }
   *out = tor_malloc(len * 2); /* too long, but safe. */
   if (base64_encode(*out, len*2, buf, len) < 0) {
-    log_fn(LOG_WARN, "Error base64-encoding DER-encoded key");
+    warn(LD_CRYPTO, "Error base64-encoding DER-encoded key");
     tor_free(*out);
     return -1;
   }
@@ -628,7 +628,7 @@ crypto_pk_DER64_decode_public_key(const char *in)
     return NULL;
   len = base64_decode(buf, sizeof(buf), partitioned, strlen(partitioned));
   if (len<0) {
-    log_fn(LOG_WARN,"Error base-64 decoding key");
+    warn(LD_CRYPTO,"Error base-64 decoding key");
     return NULL;
   }
   return crypto_pk_asn1_decode(buf, len);
@@ -785,16 +785,16 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
   tor_assert(sig);
 
   if (crypto_digest(digest,data,datalen)<0) {
-    log_fn(LOG_WARN, "couldn't compute digest");
+    warn(LD_CRYPTO, "couldn't compute digest");
     return -1;
   }
   r = crypto_pk_public_checksig(env,buf,sig,siglen);
   if (r != DIGEST_LEN) {
-    log_fn(LOG_WARN, "Invalid signature");
+    warn(LD_CRYPTO, "Invalid signature");
     return -1;
   }
   if (memcmp(buf, digest, DIGEST_LEN)) {
-    log_fn(LOG_WARN, "Signature mismatched with digest.");
+    warn(LD_CRYPTO, "Signature mismatched with digest.");
     return -1;
   }
 
@@ -942,11 +942,13 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   }
   outlen = crypto_pk_private_decrypt(env,buf,from,pkeylen,padding,warnOnFailure);
   if (outlen<0) {
-    log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, "Error decrypting public-key data");
+    log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, LD_CRYPTO,
+           "Error decrypting public-key data");
     return -1;
   }
   if (outlen < CIPHER_KEY_LEN) {
-    log_fn(warnOnFailure?LOG_WARN:LOG_INFO, "No room for a symmetric key");
+    log_fn(warnOnFailure?LOG_WARN:LOG_INFO, LD_CRYPTO,
+           "No room for a symmetric key");
     return -1;
   }
   cipher = crypto_create_init_cipher(buf, 0);
@@ -1398,7 +1400,7 @@ crypto_dh_generate_public(crypto_dh_env_t *dh)
     return -1;
   }
   if (tor_check_dh_key(dh->dh->pub_key)<0) {
-    log_fn(LOG_WARN, "Weird! Our own DH key was invalid.  I guess once-in-the-universe chances really do happen.  Trying again.");
+    warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-the-universe chances really do happen.  Trying again.");
     /* Free and clear the keys, so openssl will actually try again. */
     BN_free(dh->dh->pub_key);
     BN_free(dh->dh->priv_key);
@@ -1426,7 +1428,7 @@ crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
   bytes = BN_num_bytes(dh->dh->pub_key);
   tor_assert(bytes >= 0);
   if (pubkey_len < (size_t)bytes) {
-    log_fn(LOG_WARN, "Weird! pubkey_len (%d) was smaller than DH_BYTES (%d)", (int) pubkey_len, bytes);
+    warn(LD_CRYPTO, "Weird! pubkey_len (%d) was smaller than DH_BYTES (%d)", (int) pubkey_len, bytes);
     return -1;
   }
 
@@ -1457,11 +1459,11 @@ tor_check_dh_key(BIGNUM *bn)
   if (!dh_param_p)
     init_dh_param();
   if (bn->neg) {
-    log_fn(LOG_WARN, "Rejecting DH key < 0");
+    warn(LD_CRYPTO, "Rejecting DH key < 0");
     return -1;
   }
   if (BN_cmp(bn, dh_param_p)>=0) {
-    log_fn(LOG_WARN, "Rejecting DH key >= p");
+    warn(LD_CRYPTO, "Rejecting DH key >= p");
     return -1;
   }
   n_bits = BN_num_bits(bn);
@@ -1471,18 +1473,18 @@ tor_check_dh_key(BIGNUM *bn)
       ++n_set;
   }
   if (n_set < MIN_DIFFERING_BITS || n_set >= n_bits-MIN_DIFFERING_BITS) {
-    log_fn(LOG_WARN, "Too few/many bits in DH key (%d)", n_set);
+    warn(LD_CRYPTO, "Too few/many bits in DH key (%d)", n_set);
     goto err;
   }
   BN_set_word(x, MIN_DIST_FROM_EDGE);
   if (BN_cmp(bn,x)<=0) {
-    log_fn(LOG_WARN, "DH key is too close to 0");
+    warn(LD_CRYPTO, "DH key is too close to 0");
     goto err;
   }
   BN_copy(x,dh_param_p);
   BN_sub_word(x, MIN_DIST_FROM_EDGE);
   if (BN_cmp(bn,x)>=0) {
-    log_fn(LOG_WARN, "DH key is too close to p");
+    warn(LD_CRYPTO, "DH key is too close to p");
     goto err;
   }
   BN_free(x);
@@ -1490,7 +1492,7 @@ tor_check_dh_key(BIGNUM *bn)
  err:
   BN_free(x);
   s = BN_bn2hex(bn);
-  log_fn(LOG_WARN, "Rejecting invalid DH key [%s]", s);
+  warn(LD_CRYPTO, "Rejecting invalid DH key [%s]", s);
   OPENSSL_free(s);
   return -1;
 }
@@ -1525,13 +1527,13 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
     goto error;
   if (tor_check_dh_key(pubkey_bn)<0) {
     /* Check for invalid public keys. */
-    log_fn(LOG_WARN,"Rejected invalid g^x");
+    warn(LD_CRYPTO,"Rejected invalid g^x");
     goto error;
   }
   secret_tmp = tor_malloc(crypto_dh_get_bytes(dh)+1);
   result = DH_compute_key((unsigned char*)secret_tmp, pubkey_bn, dh->dh);
   if (result < 0) {
-    log_fn(LOG_WARN,"DH_compute_key() failed.");
+    warn(LD_CRYPTO,"DH_compute_key() failed.");
     goto error;
   }
   secret_len = result;
@@ -1612,7 +1614,7 @@ crypto_seed_rng(void)
    * functions.  If one succeeds, we'll accept the RNG as seeded. */
   rand_poll_status = RAND_poll();
   if (rand_poll_status == 0)
-    log_fn(LOG_WARN, "RAND_poll() failed.");
+    warn(LD_CRYPTO, "RAND_poll() failed.");
 #else
   rand_poll_status = 0;
 #endif
@@ -1621,14 +1623,14 @@ crypto_seed_rng(void)
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
       if (GetLastError() != NTE_BAD_KEYSET) {
-        log_fn(LOG_WARN, "Can't get CryptoAPI provider [1]");
+        warn(LD_CRYPTO, "Can't get CryptoAPI provider [1]");
         return rand_poll_status ? 0 : -1;
       }
     }
     provider_set = 1;
   }
   if (!CryptGenRandom(provider, sizeof(buf), buf)) {
-    log_fn(LOG_WARN, "Can't get entropy from CryptoAPI.");
+    warn(LD_CRYPTO, "Can't get entropy from CryptoAPI.");
     return rand_poll_status ? 0 : -1;
   }
   RAND_seed(buf, sizeof(buf));
@@ -1637,18 +1639,18 @@ crypto_seed_rng(void)
   for (i = 0; filenames[i]; ++i) {
     fd = open(filenames[i], O_RDONLY, 0);
     if (fd<0) continue;
-    log_fn(LOG_INFO, "Seeding RNG from \"%s\"", filenames[i]);
+    info(LD_CRYPTO, "Seeding RNG from \"%s\"", filenames[i]);
     n = read_all(fd, buf, sizeof(buf), 0);
     close(fd);
     if (n != sizeof(buf)) {
-      log_fn(LOG_WARN, "Error reading from entropy source");
+      warn(LD_CRYPTO, "Error reading from entropy source");
       return -1;
     }
     RAND_seed(buf, sizeof(buf));
     return 0;
   }
 
-  log_fn(LOG_WARN, "Cannot seed RNG -- no entropy source found.");
+  warn(LD_CRYPTO, "Cannot seed RNG -- no entropy source found.");
   return rand_poll_status ? 0 : -1;
 #endif
 }

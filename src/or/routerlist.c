@@ -1506,6 +1506,7 @@ router_load_routers_from_string(const char *s, int from_cache,
   if (smartlist_len(changed))
     control_event_descriptors_changed(changed);
 
+  routerlist_assert_ok(routerlist);
   router_rebuild_store(0);
 
   smartlist_free(routers);

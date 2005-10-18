@@ -127,7 +127,7 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
   result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
 
   if (!result) {
-    log_fn(LOG_ERR, "Out of memory. Dying.");
+    err("Out of memory. Dying.");
     /* XXX if these functions die within a worker process, they won't
      * call spawn_exit */
     exit(1);
@@ -159,7 +159,7 @@ _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
 
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
   if (!result) {
-    log_fn(LOG_ERR, "Out of memory. Dying.");
+    err("Out of memory. Dying.");
     exit(1);
   }
   return result;
@@ -177,7 +177,7 @@ _tor_strdup(const char *s DMALLOC_PARAMS)
 
   dup = dmalloc_strdup(file, line, s, 0);
   if (!dup) {
-    log_fn(LOG_ERR,"Out of memory. Dying.");
+    err("Out of memory. Dying.");
     exit(1);
   }
   return dup;
@@ -565,7 +565,7 @@ tv_udiff(struct timeval *start, struct timeval *end)
   long secdiff = end->tv_sec - start->tv_sec;
 
   if (labs(secdiff+1) > LONG_MAX/1000000) {
-    log_fn(LOG_WARN, "comparing times too far apart.");
+    warn(LD_GENERAL, "comparing times too far apart.");
     return LONG_MAX;
   }
 
@@ -687,7 +687,7 @@ parse_rfc1123_time(const char *buf, time_t *t)
   if (sscanf(buf, "%3s, %d %3s %d %d:%d:%d GMT", weekday,
              &tm.tm_mday, month, &tm.tm_year, &tm.tm_hour,
              &tm.tm_min, &tm.tm_sec) < 7) {
-    log_fn(LOG_WARN, "Got invalid RFC1123 time \"%s\"", buf);
+    warn(LD_GENERAL, "Got invalid RFC1123 time \"%s\"", buf);
     return -1;
   }
 
@@ -699,7 +699,7 @@ parse_rfc1123_time(const char *buf, time_t *t)
     }
   }
   if (m<0) {
-    log_fn(LOG_WARN, "Got invalid RFC1123 time \"%s\"", buf);
+    warn(LD_GENERAL, "Got invalid RFC1123 time \"%s\"", buf);
     return -1;
   }
 
@@ -729,17 +729,17 @@ parse_iso_time(const char *cp, time_t *t)
   struct tm st_tm;
 #ifdef HAVE_STRPTIME
   if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
-    log_fn(LOG_WARN, "Published time was unparseable"); return -1;
+    warn(LD_GENERAL, "Published time was unparseable"); return -1;
   }
 #else
   unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
   if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month,
                 &day, &hour, &minute, &second) < 6) {
-        log_fn(LOG_WARN, "Published time was unparseable"); return -1;
+    warn(LD_GENERAL, "Published time was unparseable"); return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
           hour > 23 || minute > 59 || second > 61) {
-        log_fn(LOG_WARN, "Published time was nonsensical"); return -1;
+    warn(LD_GENERAL, "Published time was nonsensical"); return -1;
   }
   st_tm.tm_year = year-1900;
   st_tm.tm_mon = month-1;
@@ -873,22 +873,22 @@ check_private_dir(const char *dirname, cpd_check_t check)
   tor_free(f);
   if (r) {
     if (errno != ENOENT) {
-      log(LOG_WARN, "Directory %s cannot be read: %s", dirname,
+      log(LOG_WARN, LD_FS, "Directory %s cannot be read: %s", dirname,
           strerror(errno));
       return -1;
     }
     if (check == CPD_NONE) {
-      log(LOG_WARN, "Directory %s does not exist.", dirname);
+      log(LOG_WARN, LD_FS, "Directory %s does not exist.", dirname);
       return -1;
     } else if (check == CPD_CREATE) {
-      log(LOG_INFO, "Creating directory %s", dirname);
+      info(LD_GENERAL, "Creating directory %s", dirname);
 #ifdef MS_WINDOWS
       r = mkdir(dirname);
 #else
       r = mkdir(dirname, 0700);
 #endif
       if (r) {
-        log(LOG_WARN, "Error creating directory %s: %s", dirname,
+        log(LOG_WARN, LD_FS, "Error creating directory %s: %s", dirname,
             strerror(errno));
         return -1;
       }
@@ -898,18 +898,18 @@ check_private_dir(const char *dirname, cpd_check_t check)
     return 0;
   }
   if (!(st.st_mode & S_IFDIR)) {
-    log(LOG_WARN, "%s is not a directory", dirname);
+    log(LOG_WARN, LD_FS, "%s is not a directory", dirname);
     return -1;
   }
 #ifndef MS_WINDOWS
   if (st.st_uid != getuid()) {
-    log(LOG_WARN, "%s is not owned by this UID (%d). You must fix this to proceed.", dirname, (int)getuid());
+    log(LOG_WARN, LD_FS, "%s is not owned by this UID (%d). You must fix this to proceed.", dirname, (int)getuid());
     return -1;
   }
   if (st.st_mode & 0077) {
-    log(LOG_WARN, "Fixing permissions on directory %s", dirname);
+    log(LOG_WARN, LD_FS, "Fixing permissions on directory %s", dirname);
     if (chmod(dirname, 0700)) {
-      log(LOG_WARN, "Could not chmod directory %s: %s", dirname,
+      log(LOG_WARN, LD_GENERAL, "Could not chmod directory %s: %s", dirname,
           strerror(errno));
       return -1;
     } else {
@@ -930,7 +930,7 @@ write_str_to_file(const char *fname, const char *str, int bin)
 {
 #ifdef MS_WINDOWS
   if (!bin && strchr(str, '\r')) {
-    log_fn(LOG_WARN,
+    warn(LD_GENERAL,
            "How odd. Writing a string that does contain CR already.");
   }
 #endif
@@ -953,13 +953,13 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
     strlcpy(tempname, fname, tempname_len);
   } else {
     if (tor_snprintf(tempname, tempname_len, "%s.tmp", fname)<0) {
-      log(LOG_WARN, "Failed to generate filename");
+      log(LOG_WARN, LD_GENERAL, "Failed to generate filename");
       goto err;
     }
   }
   if ((fd = open(tempname, open_flags, 0600))
       < 0) {
-    log(LOG_WARN, "Couldn't open \"%s\" for writing: %s", tempname,
+    log(LOG_WARN, LD_FS, "Couldn't open \"%s\" for writing: %s", tempname,
         strerror(errno));
     goto err;
   }
@@ -967,18 +967,18 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
   {
     result = write_all(fd, chunk->bytes, chunk->len, 0);
     if (result < 0 || (size_t)result != chunk->len) {
-      log(LOG_WARN, "Error writing to \"%s\": %s", tempname, strerror(errno));
+      log(LOG_WARN, LD_FS, "Error writing to \"%s\": %s", tempname, strerror(errno));
       close(fd);
       goto err;
     }
   });
   if (close(fd)) {
-    log(LOG_WARN,"Error flushing to \"%s\": %s", tempname, strerror(errno));
+    log(LOG_WARN, LD_FS, "Error flushing to \"%s\": %s", tempname, strerror(errno));
     goto err;
   }
   if (!(open_flags & O_APPEND)) {
     if (replace_file(tempname, fname)) {
-      log(LOG_WARN, "Error replacing \"%s\": %s", fname, strerror(errno));
+      log(LOG_WARN, LD_FS, "Error replacing \"%s\": %s", fname, strerror(errno));
       goto err;
     }
   }
@@ -1053,13 +1053,13 @@ read_file_to_str(const char *filename, int bin)
   r = stat(f, &statbuf);
   tor_free(f);
   if (r < 0) {
-    log_fn(LOG_INFO,"Could not stat \"%s\".",filename);
+    info(LD_FS,"Could not stat \"%s\".",filename);
     return NULL;
   }
 
   fd = open(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
   if (fd<0) {
-    log_fn(LOG_WARN,"Could not open \"%s\".",filename);
+    warn(LD_FS,"Could not open \"%s\".",filename);
     return NULL;
   }
 
@@ -1067,8 +1067,8 @@ read_file_to_str(const char *filename, int bin)
 
   r = read_all(fd,string,statbuf.st_size,0);
   if (r<0) {
-    log_fn(LOG_WARN,"Error reading from file \"%s\": %s", filename,
-           strerror(errno));
+    warn(LD_FS,"Error reading from file \"%s\": %s", filename,
+         strerror(errno));
     tor_free(string);
     close(fd);
     return NULL;
@@ -1078,7 +1078,7 @@ read_file_to_str(const char *filename, int bin)
   if (bin && r != statbuf.st_size) {
     /* If we're in binary mode, then we'd better have an exact match for
      * size.  Otherwise, win32 encoding may throw us off, and that's okay. */
-    log_fn(LOG_WARN,"Could read only %d of %ld bytes of file \"%s\".",
+    warn(LD_FS,"Could read only %d of %ld bytes of file \"%s\".",
            r, (long)statbuf.st_size,filename);
     tor_free(string);
     close(fd);
@@ -1086,7 +1086,7 @@ read_file_to_str(const char *filename, int bin)
   }
 #ifdef MS_WINDOWS
   if (!bin && strchr(string, '\r')) {
-    log_fn(LOG_DEBUG, "We didn't convert CRLF to LF as well as we hoped when reading %s. Coping.",
+    debug(LD_FS, "We didn't convert CRLF to LF as well as we hoped when reading %s. Coping.",
            filename);
     tor_strstrip(string, "\r");
   }
@@ -1181,7 +1181,7 @@ expand_filename(const char *filename)
     if (filename[1] == '/' || filename[1] == '\0') {
       home = getenv("HOME");
       if (!home) {
-        log_fn(LOG_WARN, "Couldn't find $HOME environment variable while expanding %s", filename);
+        warn(LD_CONFIG, "Couldn't find $HOME environment variable while expanding %s", filename);
         return NULL;
       }
       home = tor_strdup(home);
@@ -1195,14 +1195,14 @@ expand_filename(const char *filename)
       else
         username = tor_strdup(filename+1);
       if (!(home = get_user_homedir(username))) {
-        log_fn(LOG_WARN,"Couldn't get homedir for \"%s\"",username);
+        warn(LD_CONFIG,"Couldn't get homedir for \"%s\"",username);
         tor_free(username);
         return NULL;
       }
       tor_free(username);
       rest = slash ? (slash+1) : NULL;
 #else
-      log_fn(LOG_WARN, "Couldn't expend homedir on system without pwd.h");
+      warn(LD_CONFIG, "Couldn't expend homedir on system without pwd.h");
       return tor_strdup(filename);
 #endif
     }
@@ -1328,11 +1328,11 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
     _address = tor_strndup(addrport, colon-addrport);
     _port = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);
     if (!_port) {
-      log_fn(LOG_WARN, "Port '%s' out of range", colon+1);
+      warn(LD_GENERAL, "Port '%s' out of range", colon+1);
       ok = 0;
     }
     if (!port_out) {
-      log_fn(LOG_WARN, "Port '%s' given on '%s' when not required", colon+1,
+      warn(LD_GENERAL, "Port '%s' given on '%s' when not required", colon+1,
              addrport);
       ok = 0;
     }
@@ -1344,7 +1344,7 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
   if (addr) {
     /* There's an addr pointer, so we need to resolve the hostname. */
     if (tor_lookup_hostname(_address,addr)) {
-      log_fn(LOG_WARN, "Couldn't look up '%s'", _address);
+      warn(LD_NET, "Couldn't look up '%s'", _address);
       ok = 0;
       *addr = 0;
     }
@@ -1403,7 +1403,7 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
   } else if (tor_inet_aton(address, &in) != 0) {
     *addr_out = ntohl(in.s_addr);
   } else {
-    log_fn(LOG_WARN, "Malformed IP \"%s\" in address pattern; rejecting.",address);
+    warn(LD_GENERAL, "Malformed IP \"%s\" in address pattern; rejecting.",address);
     goto err;
   }
 
@@ -1418,14 +1418,14 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
     if (!*endptr) {
       /* strtol handled the whole mask. */
       if (bits < 0 || bits > 32) {
-        log_fn(LOG_WARN, "Bad number of mask bits on address range; rejecting.");
+        warn(LD_GENERAL, "Bad number of mask bits on address range; rejecting.");
         goto err;
       }
       *mask_out = ~((1<<(32-bits))-1);
     } else if (tor_inet_aton(mask, &in) != 0) {
       *mask_out = ntohl(in.s_addr);
     } else {
-      log_fn(LOG_WARN, "Malformed mask \"%s\" on address range; rejecting.",
+      warn(LD_GENERAL, "Malformed mask \"%s\" on address range; rejecting.",
              mask);
       goto err;
     }
@@ -1444,18 +1444,18 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
       *port_max_out = (uint16_t) tor_parse_long(port, 10, 1, 65535, NULL,
                                                 &endptr);
       if (*endptr || !*port_max_out) {
-      log_fn(LOG_WARN, "Malformed port \"%s\" on address range rejecting.",
+        warn(LD_GENERAL, "Malformed port \"%s\" on address range rejecting.",
              port);
       }
     } else if (*endptr || !*port_min_out) {
-      log_fn(LOG_WARN, "Malformed port \"%s\" on address range; rejecting.",
+      warn(LD_GENERAL, "Malformed port \"%s\" on address range; rejecting.",
              port);
       goto err;
     } else {
       *port_max_out = *port_min_out;
     }
     if (*port_min_out > *port_max_out) {
-      log_fn(LOG_WARN,"Insane port range on address policy; rejecting.");
+      warn(LD_GENERAL, "Insane port range on address policy; rejecting.");
       goto err;
     }
   }
@@ -1531,7 +1531,7 @@ get_interface_address(uint32_t *addr)
   sock = socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
   if (sock < 0) {
     int e = tor_socket_errno(-1);
-    log_fn(LOG_WARN, "unable to create socket: %s", tor_socket_strerror(e));
+    warn(LD_NET, "unable to create socket: %s", tor_socket_strerror(e));
     goto err;
   }
 
@@ -1545,14 +1545,14 @@ get_interface_address(uint32_t *addr)
 
   if (connect(sock,(struct sockaddr *)&target_addr,sizeof(target_addr))<0) {
     int e = tor_socket_errno(sock);
-    log_fn(LOG_WARN, "connnect() failed: %s", tor_socket_strerror(e));
+    warn(LD_NET, "connnect() failed: %s", tor_socket_strerror(e));
     goto err;
   }
 
   /* XXXX Can this be right on IPv6 clients? */
   if (getsockname(sock, (struct sockaddr*)&my_addr, &my_addr_len)) {
     int e = tor_socket_errno(sock);
-    log_fn(LOG_WARN, "getsockname() failed: %s", tor_socket_strerror(e));
+    warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
     goto err;
   }
 
@@ -1591,7 +1591,7 @@ start_daemon(void)
   pipe(daemon_filedes);
   pid = fork();
   if (pid < 0) {
-    log_fn(LOG_ERR,"fork failed. Exiting.");
+    err("fork failed. Exiting.");
     exit(1);
   }
   if (pid) {  /* Parent */
@@ -1646,14 +1646,14 @@ finish_daemon(const char *desired_cwd)
     desired_cwd = "/";
    /* Don't hold the wrong FS mounted */
   if (chdir(desired_cwd) < 0) {
-    log_fn(LOG_ERR,"chdir to \"%s\" failed. Exiting.",desired_cwd);
+    err("chdir to \"%s\" failed. Exiting.",desired_cwd);
     exit(1);
   }
 
   nullfd = open("/dev/null",
                 O_CREAT | O_RDWR | O_APPEND);
   if (nullfd < 0) {
-    log_fn(LOG_ERR,"/dev/null can't be opened. Exiting.");
+    err("/dev/null can't be opened. Exiting.");
     exit(1);
   }
   /* close fds linking to invoking terminal, but
@@ -1663,7 +1663,7 @@ finish_daemon(const char *desired_cwd)
   if (dup2(nullfd,0) < 0 ||
       dup2(nullfd,1) < 0 ||
       dup2(nullfd,2) < 0) {
-    log_fn(LOG_ERR,"dup2 failed. Exiting.");
+    err("dup2 failed. Exiting.");
     exit(1);
   }
   if (nullfd > 2)
@@ -1692,7 +1692,7 @@ write_pidfile(char *filename)
   FILE *pidfile;
 
   if ((pidfile = fopen(filename, "w")) == NULL) {
-    log_fn(LOG_WARN, "Unable to open \"%s\" for writing: %s", filename,
+    warn(LD_FS, "Unable to open \"%s\" for writing: %s", filename,
            strerror(errno));
   } else {
     fprintf(pidfile, "%d\n", (int)getpid());

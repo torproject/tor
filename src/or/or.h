@@ -133,6 +133,7 @@
 
 #include "../common/crypto.h"
 #include "../common/tortls.h"
+#define OLD_LOG_INTERFACE
 #include "../common/log.h"
 #include "../common/compat.h"
 #include "../common/container.h"
