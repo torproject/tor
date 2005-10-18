@@ -2917,7 +2917,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
 
   /* post-0.1.1.6 servers know what they're doing. */
   if (tor_version_as_new_as(r1->platform, "0.1.1.6-alpha") ||
-      tor_version_as_new_as(r1->platform, "0.1.1.6-alpha"))
+      tor_version_as_new_as(r2->platform, "0.1.1.6-alpha"))
     return 0;
 
   if (r1->published_on > r2->published_on) {
