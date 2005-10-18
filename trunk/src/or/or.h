@@ -871,6 +871,7 @@ typedef struct networkstatus_t {
 typedef struct {
   /** List of routerinfo_t. */
   smartlist_t *routers;
+  digestmap_t *identity_map;
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
@@ -1778,7 +1779,8 @@ size_t dirserv_get_directory(const char **cp, int compress);
 size_t dirserv_get_runningrouters(const char **rr, int compress);
 void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
-void dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
+void dirserv_set_cached_networkstatus_v2(const char *directory,
+                                         const char *identity,
                                          time_t published);
 int dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
 int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,

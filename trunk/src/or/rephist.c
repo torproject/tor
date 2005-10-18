@@ -52,11 +52,11 @@ typedef struct or_history_t {
   time_t down_since;
   /** Map from hex OR2 identity digest to a link_history_t for the link
    * from this OR to OR2. */
-  strmap_t *link_history_map;
+  digestmap_t *link_history_map;
 } or_history_t;
 
 /** Map from hex OR identity digest to or_history_t. */
-static strmap_t *history_map = NULL;
+static digestmap_t *history_map = NULL;
 
 /** Return the or_history_t for the named OR, creating it if necessary.
  */
@@ -64,20 +64,18 @@ static or_history_t *
 get_or_history(const char* id)
 {
   or_history_t *hist;
-  char hexid[HEX_DIGEST_LEN+1];
-  base16_encode(hexid, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
 
-  if (!strcmp(hexid, "0000000000000000000000000000000000000000"))
+  if (!memcmp(id, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DIGEST_LEN))
     return NULL;
 
-  hist = (or_history_t*) strmap_get(history_map, hexid);
+  hist = digestmap_get(history_map, id);
   if (!hist) {
     hist = tor_malloc_zero(sizeof(or_history_t));
     rephist_total_alloc += sizeof(or_history_t);
     rephist_total_num++;
-    hist->link_history_map = strmap_new();
+    hist->link_history_map = digestmap_new();
     hist->since = hist->changed = time(NULL);
-    strmap_set(history_map, hexid, hist);
+    digestmap_set(history_map, id, hist);
   }
   return hist;
 }
@@ -91,19 +89,17 @@ get_link_history(const char *from_id, const char *to_id)
 {
   or_history_t *orhist;
   link_history_t *lhist;
-  char to_hexid[HEX_DIGEST_LEN+1];
   orhist = get_or_history(from_id);
   if (!orhist)
     return NULL;
-  base16_encode(to_hexid, HEX_DIGEST_LEN+1, to_id, DIGEST_LEN);
-  if (!strcmp(to_hexid, "0000000000000000000000000000000000000000"))
+  if (!memcmp(to_id, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DIGEST_LEN))
     return NULL;
-  lhist = (link_history_t*) strmap_get(orhist->link_history_map, to_hexid);
+  lhist = (link_history_t*) digestmap_get(orhist->link_history_map, to_id);
   if (!lhist) {
     lhist = tor_malloc_zero(sizeof(link_history_t));
     rephist_total_alloc += sizeof(link_history_t);
     lhist->since = lhist->changed = time(NULL);
-    strmap_set(orhist->link_history_map, to_hexid, lhist);
+    digestmap_set(orhist->link_history_map, to_id, lhist);
   }
   return lhist;
 }
@@ -121,7 +117,7 @@ static void
 free_or_history(void *_hist)
 {
   or_history_t *hist = _hist;
-  strmap_free(hist->link_history_map, _free_link_history);
+  digestmap_free(hist->link_history_map, _free_link_history);
   rephist_total_alloc -= sizeof(or_history_t);
   rephist_total_num--;
   tor_free(hist);
@@ -149,7 +145,7 @@ update_or_history(or_history_t *hist, time_t when)
 void
 rep_hist_init(void)
 {
-  history_map = strmap_new();
+  history_map = digestmap_new();
   bw_arrays_init();
   predicted_ports_init();
 }
@@ -277,9 +273,10 @@ rep_hist_note_extend_failed(const char *from_id, const char *to_id)
 void
 rep_hist_dump_stats(time_t now, int severity)
 {
-  strmap_iter_t *lhist_it;
-  strmap_iter_t *orhist_it;
-  const char *name1, *name2, *hexdigest1, *hexdigest2;
+  digestmap_iter_t *lhist_it;
+  digestmap_iter_t *orhist_it;
+  const char *name1, *name2, *digest1, *digest2;
+  char hexdigest1[HEX_DIGEST_LEN+1];
   or_history_t *or_history;
   link_history_t *link_history;
   void *or_history_p, *link_history_p;
@@ -294,16 +291,16 @@ rep_hist_dump_stats(time_t now, int severity)
 
   log(severity, "--------------- Dumping history information:");
 
-  for (orhist_it = strmap_iter_init(history_map); !strmap_iter_done(orhist_it);
-       orhist_it = strmap_iter_next(history_map,orhist_it)) {
-    strmap_iter_get(orhist_it, &hexdigest1, &or_history_p);
+  for (orhist_it = digestmap_iter_init(history_map); !digestmap_iter_done(orhist_it);
+       orhist_it = digestmap_iter_next(history_map,orhist_it)) {
+    digestmap_iter_get(orhist_it, &digest1, &or_history_p);
     or_history = (or_history_t*) or_history_p;
 
-    if ((r = router_get_by_hexdigest(hexdigest1)))
+    if ((r = router_get_by_digest(digest1)))
       name1 = r->nickname;
     else
       name1 = "(unknown)";
-
+    base16_encode(hexdigest1, sizeof(hexdigest1), digest1, DIGEST_LEN);
     update_or_history(or_history, now);
     upt = or_history->uptime;
     downt = or_history->downtime;
@@ -318,14 +315,14 @@ rep_hist_dump_stats(time_t now, int severity)
         or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
         upt, upt+downt, uptime*100.0);
 
-    if (!strmap_isempty(or_history->link_history_map)) {
+    if (!digestmap_isempty(or_history->link_history_map)) {
       strlcpy(buffer, "    Extend attempts: ", sizeof(buffer));
       len = strlen(buffer);
-      for (lhist_it = strmap_iter_init(or_history->link_history_map);
-           !strmap_iter_done(lhist_it);
-           lhist_it = strmap_iter_next(or_history->link_history_map, lhist_it)) {
-        strmap_iter_get(lhist_it, &hexdigest2, &link_history_p);
-        if ((r = router_get_by_hexdigest(hexdigest2)))
+      for (lhist_it = digestmap_iter_init(or_history->link_history_map);
+           !digestmap_iter_done(lhist_it);
+           lhist_it = digestmap_iter_next(or_history->link_history_map, lhist_it)) {
+        digestmap_iter_get(lhist_it, &digest2, &link_history_p);
+        if ((r = router_get_by_digest(digest2)))
           name2 = r->nickname;
         else
           name2 = "(unknown)";
@@ -353,31 +350,31 @@ rep_history_clean(time_t before)
   or_history_t *or_history;
   link_history_t *link_history;
   void *or_history_p, *link_history_p;
-  strmap_iter_t *orhist_it, *lhist_it;
-  const char *hd1, *hd2;
+  digestmap_iter_t *orhist_it, *lhist_it;
+  const char *d1, *d2;
 
-  orhist_it = strmap_iter_init(history_map);
-  while (!strmap_iter_done(orhist_it)) {
-    strmap_iter_get(orhist_it, &hd1, &or_history_p);
+  orhist_it = digestmap_iter_init(history_map);
+  while (!digestmap_iter_done(orhist_it)) {
+    digestmap_iter_get(orhist_it, &d1, &or_history_p);
     or_history = or_history_p;
     if (or_history->changed < before) {
       free_or_history(or_history);
-      orhist_it = strmap_iter_next_rmv(history_map, orhist_it);
+      orhist_it = digestmap_iter_next_rmv(history_map, orhist_it);
       continue;
     }
-    for (lhist_it = strmap_iter_init(or_history->link_history_map);
-         !strmap_iter_done(lhist_it); ) {
-      strmap_iter_get(lhist_it, &hd2, &link_history_p);
+    for (lhist_it = digestmap_iter_init(or_history->link_history_map);
+         !digestmap_iter_done(lhist_it); ) {
+      digestmap_iter_get(lhist_it, &d2, &link_history_p);
       link_history = link_history_p;
       if (link_history->changed < before) {
         rephist_total_alloc -= sizeof(link_history_t);
         tor_free(link_history);
-        lhist_it = strmap_iter_next_rmv(or_history->link_history_map,lhist_it);
+        lhist_it = digestmap_iter_next_rmv(or_history->link_history_map,lhist_it);
         continue;
       }
-      lhist_it = strmap_iter_next(or_history->link_history_map,lhist_it);
+      lhist_it = digestmap_iter_next(or_history->link_history_map,lhist_it);
     }
-    orhist_it = strmap_iter_next(history_map, orhist_it);
+    orhist_it = digestmap_iter_next(history_map, orhist_it);
   }
 }
 
@@ -782,7 +779,7 @@ rep_hist_get_predicted_resolve(time_t now)
 void
 rep_hist_free_all(void)
 {
-  strmap_free(history_map, free_or_history);
+  digestmap_free(history_map, free_or_history);
   tor_free(read_array);
   tor_free(write_array);
   predicted_ports_free();
