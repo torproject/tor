@@ -670,7 +670,7 @@ router_parse_list_from_string(const char **s, smartlist_t *dest)
 
     while (cp > *s  && *cp != '\n')
       --cp;
-    /* cp now points to the first \n before the last non-bank line in this
+    /* cp now points to the first \n before the last non-blank line in this
      * descriptor */
 
     if (strcmpstart(cp, "\n-----END SIGNATURE-----\n")) {
