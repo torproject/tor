@@ -1332,7 +1332,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     dirserv_get_routerdescs(descs, url);
     tor_free(url);
     if (!smartlist_len(descs)) {
-      write_http_status_line(conn, 404, "Servers unavailable.");
+      write_http_status_line(conn, 404, "Servers unavailable");
     } else {
       size_t len = 0;
       format_rfc1123_time(date, time(NULL));
@@ -1395,7 +1395,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
        * if we're gone to the site recently, and 404 if we haven't.
        *
        * Reject. */
-      write_http_status_line(conn, 400, "Nonauthoritative directory does not not store rendezvous descriptors.");
+      write_http_status_line(conn, 400, "Nonauthoritative directory does not not store rendezvous descriptors");
       tor_free(url);
       return 0;
     }
@@ -1445,7 +1445,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
   if (!authdir_mode(get_options())) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
-    write_http_status_line(conn, 400, "Nonauthoritative directory does not accept posted server descriptors.");
+    write_http_status_line(conn, 400, "Nonauthoritative directory does not accept posted server descriptors");
     return 0;
   }
 
