@@ -11,6 +11,7 @@ const char onion_c_id[] = "$Id$";
  * parsing and creation.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Type for a linked list of circuits that are waiting for a free CPU worker
@@ -56,7 +57,7 @@ onion_pending_add(circuit_t *circ)
   tor_assert(!ol_tail->next);
 
   if (ol_length >= get_options()->MaxOnionsPending) {
-    log_fn(LOG_NOTICE,"Already have %d onions queued. Closing.", ol_length);
+    notice(LD_GENERAL,"Already have %d onions queued. Closing.", ol_length);
     tor_free(tmp);
     return -1;
   }
@@ -68,7 +69,7 @@ onion_pending_add(circuit_t *circ)
     /* cull elderly requests. */
     circ = ol_list->circ;
     onion_pending_remove(ol_list->circ);
-    log_fn(LOG_INFO,"Circuit create request is too old; cancelling due to overload.");
+    info(LD_CIRC,"Circuit create request is too old; cancelling due to overload.");
     circuit_mark_for_close(circ);
   }
   return 0;
@@ -116,7 +117,8 @@ onion_pending_remove(circuit_t *circ)
   } else { /* we need to hunt through the rest of the list */
     for ( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
     if (!tmpo->next) {
-      log_fn(LOG_DEBUG,"circ (p_circ_id %d) not in list, probably at cpuworker.",circ->p_circ_id);
+      /* XX is there a better category here? */
+      debug(LD_GENERAL,"circ (p_circ_id %d) not in list, probably at cpuworker.",circ->p_circ_id);
       return;
     }
     /* now we know tmpo->next->circ == circ */
@@ -236,17 +238,17 @@ onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN b
       break;
   }
   if (len<0) {
-    log_fn(LOG_INFO, "Couldn't decrypt onionskin: client may be using old onion key");
+    info(LD_PROTOCOL, "Couldn't decrypt onionskin: client may be using old onion key");
     goto err;
   } else if (len != DH_KEY_LEN) {
-    log_fn(LOG_WARN, "Unexpected onionskin length after decryption: %d",
+    warn(LD_PROTOCOL, "Unexpected onionskin length after decryption: %d",
            len);
     goto err;
   }
 
   dh = crypto_dh_new();
   if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN)) {
-    log_fn(LOG_INFO, "crypto_dh_get_public failed.");
+    info(LD_GENERAL, "crypto_dh_get_public failed.");
     goto err;
   }
 
@@ -262,7 +264,7 @@ onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN b
   len = crypto_dh_compute_secret(dh, challenge, DH_KEY_LEN,
                                  key_material, DIGEST_LEN+key_out_len);
   if (len < 0) {
-    log_fn(LOG_INFO, "crypto_dh_compute_secret failed.");
+    info(LD_GENERAL, "crypto_dh_compute_secret failed.");
     goto err;
   }
 
@@ -327,7 +329,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   if (memcmp(key_material, handshake_reply+DH_KEY_LEN, 20)) {
     /* H(K) does *not* match. Something fishy. */
     tor_free(key_material);
-    log_fn(LOG_WARN,"Digest DOES NOT MATCH on onion handshake. Bug or attack.");
+    warn(LD_PROTOCOL,"Digest DOES NOT MATCH on onion handshake. Bug or attack.");
     return -1;
   }
 
@@ -393,7 +395,7 @@ fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
 
   if (memcmp(digest, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
-    log_fn(LOG_WARN,"Digest DOES NOT MATCH on fast handshake. Bug or attack.");
+    warn(LD_PROTOCOL,"Digest DOES NOT MATCH on fast handshake. Bug or attack.");
     return -1;
   }
 

@@ -10,6 +10,7 @@ const char circuitlist_c_id[] = "$Id$";
  * \brief Manage the global circuit list.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /* Define RB_AUGMENT to avoid warnings about if statements with emtpy bodies.
@@ -187,7 +188,7 @@ circuit_state_to_string(int state)
     case CIRCUIT_STATE_OR_WAIT: return "connecting to firsthop";
     case CIRCUIT_STATE_OPEN: return "open";
     default:
-      log_fn(LOG_WARN, "Bug: unknown circuit state %d", state);
+      warn(LD_GENERAL, "Bug: unknown circuit state %d", state);
       tor_snprintf(buf, sizeof(buf), "unknown state [%d]", state);
       return buf;
   }
@@ -374,11 +375,11 @@ circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
         continue;
 
       if (circ->p_conn == conn && circ->p_circ_id == circ_id) {
-        log_fn(LOG_WARN, "circuit matches p_conn, but not in tree (Bug!)");
+        warn(LD_GENERAL, "circuit matches p_conn, but not in tree (Bug!)");
         return circ;
       }
       if (circ->n_conn == conn && circ->n_circ_id == circ_id) {
-        log_fn(LOG_WARN, "circuit matches n_conn, but not in tree (Bug!)");
+        warn(LD_GENERAL, "circuit matches n_conn, but not in tree (Bug!)");
         return circ;
       }
     }
@@ -401,7 +402,7 @@ circuit_get_by_edge_conn(connection_t *conn)
     /* return NULL; */
     circ = circuit_get_by_conn(conn);
     if (circ) {
-      log_fn(LOG_WARN, "BUG: conn->on_circuit==NULL, but there was in fact a circuit there.");
+      warn(LD_GENERAL, "BUG: conn->on_circuit==NULL, but there was in fact a circuit there.");
     }
     return circ;
   }
@@ -534,7 +535,7 @@ circuit_get_clean_open(uint8_t purpose, int need_uptime,
   circuit_t *circ;
   circuit_t *best=NULL;
 
-  log_fn(LOG_DEBUG,"Hunting for a circ to cannibalize: purpose %d, uptime %d, capacity %d, internal %d", purpose, need_uptime, need_capacity, internal);
+  debug(LD_CIRC,"Hunting for a circ to cannibalize: purpose %d, uptime %d, capacity %d, internal %d", purpose, need_uptime, need_capacity, internal);
 
   for (circ=global_circuitlist; circ; circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
@@ -613,7 +614,8 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
   tor_assert(file);
 
   if (circ->marked_for_close) {
-    log(LOG_WARN,"Duplicate call to circuit_mark_for_close at %s:%d"
+    log(LOG_WARN,LD_GENERAL,
+        "Duplicate call to circuit_mark_for_close at %s:%d"
         " (first at %s:%d)", file, line,
         circ->marked_for_close_file, circ->marked_for_close);
     return;
@@ -640,7 +642,7 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     tor_assert(circ->build_state->chosen_exit);
     /* treat this like getting a nack from it */
-    log_fn(LOG_INFO,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
+    info(LD_REND,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
            safe_str(circ->rend_query),
            safe_str(build_state_get_exit_nickname(circ->build_state)));
     rend_client_remove_intro_point(circ->build_state->chosen_exit,
@@ -701,7 +703,7 @@ assert_cpath_layer_ok(const crypt_path_t *cp)
       /* tor_assert(cp->dh_handshake_state); */
       break;
     default:
-      log_fn(LOG_ERR,"Unexpected state %d",cp->state);
+      err("Unexpected state %d",cp->state);
       tor_assert(0);
     }
   tor_assert(cp->package_window >= 0);
