@@ -108,27 +108,30 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
       cmd;                                                      \
     } } while (0)
 
+#define DECLARE_MAP_FNS(maptype, keytype, prefix)                       \
+  typedef struct maptype maptype;                                       \
+  typedef struct prefix##entry_t prefix##iter_t;                        \
+  maptype* prefix##new(void);                                           \
+  void* prefix##set(maptype *map, keytype key, void *val);              \
+  void* prefix##get(maptype *map, keytype key);                         \
+  void* prefix##remove(maptype *map, keytype key);                      \
+  typedef void* (*prefix##foreach_fn)(keytype key, void *val, void *data); \
+  void prefix##foreach(maptype *map, prefix##foreach_fn fn, void *data); \
+  void prefix##free(maptype *map, void (*free_val)(void*));             \
+  int prefix##isempty(maptype *map);                                    \
+  prefix##iter_t *prefix##iter_init(maptype *map);                      \
+  prefix##iter_t *prefix##iter_next(maptype *map, prefix##iter_t *iter); \
+  prefix##iter_t *prefix##iter_next_rmv(maptype *map, prefix##iter_t *iter); \
+  void prefix##iter_get(prefix##iter_t *iter, keytype *keyp, void **valp); \
+  int prefix##iter_done(prefix##iter_t *iter);
+
 /* Map from const char * to void*. Implemented with a splay tree. */
-typedef struct strmap_t strmap_t;
-typedef struct strmap_entry_t strmap_iter_t;
-strmap_t* strmap_new(void);
-void* strmap_set(strmap_t *map, const char *key, void *val);
-void* strmap_get(strmap_t *map, const char *key);
-void* strmap_remove(strmap_t *map, const char *key);
+DECLARE_MAP_FNS(strmap_t, const char *, strmap_);
+DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
+
 void* strmap_set_lc(strmap_t *map, const char *key, void *val);
 void* strmap_get_lc(strmap_t *map, const char *key);
 void* strmap_remove_lc(strmap_t *map, const char *key);
-typedef void* (*strmap_foreach_fn)(const char *key, void *val, void *data);
-void strmap_foreach(strmap_t *map, strmap_foreach_fn fn, void *data);
-void strmap_free(strmap_t *map, void (*free_val)(void*));
-int strmap_isempty(strmap_t *map);
-
-strmap_iter_t *strmap_iter_init(strmap_t *map);
-strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter);
-strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter);
-void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp);
-
-int strmap_iter_done(strmap_iter_t *iter);
 
 #endif
 
