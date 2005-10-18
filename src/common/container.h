@@ -37,32 +37,33 @@ int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
 /* smartlist_choose() is defined in crypto.[ch] */
+#ifdef DEBUG_SMARTLIST
 /** Return the number of items in sl.
  */
 extern INLINE int smartlist_len(const smartlist_t *sl) {
-#ifdef DEBUG_SMARTLIST
   tor_assert(sl);
-#endif
   return (sl)->num_used;
 }
 /** Return the <b>idx</b>th element of sl.
  */
 extern INLINE void *smartlist_get(const smartlist_t *sl, int idx) {
-#ifdef DEBUG_SMARTLIST
   tor_assert(sl);
   tor_assert(idx>=0);
   tor_assert(sl->num_used < idx);
-#endif
   return sl->list[idx];
 }
 extern INLINE void smartlist_set(smartlist_t *sl, int idx, void *val) {
-#ifdef DEBUG_SMARTLIST
   tor_assert(sl);
   tor_assert(idx>=0);
   tor_assert(sl->num_used < idx);
-#endif
   sl->list[idx] = val;
 }
+#else
+#define smartlist_len(sl) ((sl)->num_used)
+#define smartlist_get(sl, idx) ((sl)->list[idx])
+#define smartlist_set(sl, idx, val) ((sl)->list[idx] = (val))
+#endif
+
 void smartlist_del(smartlist_t *sl, int idx);
 void smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
