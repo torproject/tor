@@ -133,7 +133,9 @@
 
 #include "../common/crypto.h"
 #include "../common/tortls.h"
+#ifndef NEW_LOG_INTERFACE
 #define OLD_LOG_INTERFACE
+#endif
 #include "../common/log.h"
 #include "../common/compat.h"
 #include "../common/container.h"
@@ -1718,7 +1720,7 @@ int control_event_circuit_status(circuit_t *circ, circuit_status_event_t e);
 int control_event_stream_status(connection_t *conn, stream_status_event_t e);
 int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
-void control_event_logmsg(int severity, const char *msg);
+void control_event_logmsg(int severity, int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,time_t expires);
 
