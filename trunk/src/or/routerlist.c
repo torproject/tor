@@ -2934,7 +2934,9 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
       crypto_pk_cmp_keys(r1->onion_pkey, r2->onion_pkey) ||
       crypto_pk_cmp_keys(r1->identity_pkey, r2->identity_pkey) ||
       strcasecmp(r1->platform, r2->platform) ||
-      strcasecmp(r1->contact_info, r2->contact_info) ||
+      (r1->contact_info && !r2->contact_info) || /* contact_info is optional */
+      (!r1->contact_info && r2->contact_info) ||
+      (r1->contact_info && r2->contact_info && strcasecmp(r1->contact_info, r2->contact_info)) ||
       r1->is_hibernating != r2->is_hibernating ||
       config_cmp_addr_policies(r1->exit_policy, r2->exit_policy))
     return 0;
