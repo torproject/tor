@@ -1261,8 +1261,7 @@ handle_getinfo_helper(const char *question, char **answer)
     *answer = dirserver_getinfo_unregistered(question +
                                              strlen("unregistered-servers-"));
   } else if (!strcmp(question, "network-status")) {
-    routerlist_t *routerlist;
-    router_get_routerlist(&routerlist);
+    routerlist_t *routerlist = router_get_routerlist();
     if (!routerlist || !routerlist->routers ||
         list_server_status(routerlist->routers, answer) < 0) {
       return -1;
