@@ -1781,7 +1781,8 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
 void dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
                                          time_t published);
 int dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
-void dirserv_get_routerdescs(smartlist_t *descs_out, const char *key);
+int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
+                            const char **msg);
 void dirserv_orconn_tls_done(const char *address,
                              uint16_t or_port,
                              const char *digest_rcvd,
