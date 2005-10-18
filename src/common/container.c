@@ -28,19 +28,6 @@ const char container_c_id[] = "$Id$";
  */
 #define SMARTLIST_DEFAULT_CAPACITY 32
 
-#ifndef FAST_SMARTLIST
-/** A resizeable list of pointers, with associated helpful functionality. */
-struct smartlist_t {
-  /* <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
-   * before it needs to be resized.  Only the first <b>num_used</b> (\<=
-   * capacity) elements point to valid data.
-   */
-  void **list;
-  int num_used;
-  int capacity;
-};
-#endif
-
 /** Allocate and return an empty smartlist.
  */
 smartlist_t *
@@ -235,36 +222,6 @@ smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2)
   for (i=0; i < sl2->num_used; i++)
     smartlist_remove(sl1, sl2->list[i]);
 }
-
-#ifndef FAST_SMARTLIST
-/** Return the <b>idx</b>th element of sl.
- */
-void *
-smartlist_get(const smartlist_t *sl, int idx)
-{
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  return sl->list[idx];
-}
-/** Change the value of the <b>idx</b>th element of sl to <b>val</b>.
- */
-void
-smartlist_set(smartlist_t *sl, int idx, void *val)
-{
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  sl->list[idx] = val;
-}
-/** Return the number of items in sl.
- */
-int
-smartlist_len(const smartlist_t *sl)
-{
-  return sl->num_used;
-}
-#endif
 
 /** Remove the <b>idx</b>th element of sl; if idx is not the last
  * element, swap the last element of sl into the <b>idx</b>th space.
