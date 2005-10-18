@@ -827,7 +827,7 @@ static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0 };
 
 /* Used for other dirservers' v2 network statuses.  Map from hexdigest to
  * cached_dir_t. */
-static strmap_t *cached_v2_networkstatus = NULL;
+static digestmap_t *cached_v2_networkstatus = NULL;
 
 /** Possibly replace the contents of <b>d</b> with the value of
  * <b>directory</b> published on <b>when</b>, unless <b>when</b> is older than
@@ -891,26 +891,25 @@ dirserv_set_cached_directory(const char *directory, time_t published,
 }
 
 /** We've just received a v2 network-status for an authoritative directory
- * with fingerprint <b>fp</b> (hex digest, no spaces), published at
+ * with identity digest <b>identity</b> published at
  * <b>published</b>.  Store it so we can serve it to others.  If
  * <b>directory</b> is NULL, remove the entry with the given fingerprint from
  * the cache.
  */
 void
-dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
+dirserv_set_cached_networkstatus_v2(const char *directory,
+                                    const char *identity,
                                     time_t published)
 {
   cached_dir_t *d;
   if (!cached_v2_networkstatus)
-    cached_v2_networkstatus = strmap_new();
+    cached_v2_networkstatus = digestmap_new();
 
-  tor_assert(strlen(fp) == HEX_DIGEST_LEN);
-
-  if (!(d = strmap_get(cached_v2_networkstatus, fp))) {
+  if (!(d = digestmap_get(cached_v2_networkstatus, identity))) {
     if (!directory)
       return;
     d = tor_malloc_zero(sizeof(cached_dir_t));
-    strmap_set(cached_v2_networkstatus, fp, d);
+    digestmap_set(cached_v2_networkstatus, identity, d);
   }
 
   tor_assert(d);
@@ -918,7 +917,7 @@ dirserv_set_cached_networkstatus_v2(const char *directory, const char *fp,
     set_cached_dir(d, tor_strdup(directory), published);
   } else {
     free_cached_dir(d);
-    strmap_remove(cached_v2_networkstatus, fp);
+    digestmap_remove(cached_v2_networkstatus, identity);
   }
 }
 
@@ -1308,7 +1307,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
   tor_assert(result);
 
   if (!cached_v2_networkstatus)
-    cached_v2_networkstatus = strmap_new();
+    cached_v2_networkstatus = digestmap_new();
 
   if (!(strcmp(key,"authority"))) {
     if (get_options()->AuthoritativeDir) {
@@ -1324,20 +1323,20 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
         log_fn(LOG_WARN,"Unable to generate an authoritative network status.");
     }
   } else if (!strcmp(key, "all")) {
-    strmap_iter_t *iter = strmap_iter_init(cached_v2_networkstatus);
-    while (!strmap_iter_done(iter)) {
-      const char *fp;
+    digestmap_iter_t *iter = digestmap_iter_init(cached_v2_networkstatus);
+    while (!digestmap_iter_done(iter)) {
+      const char *ident;
       void *val;
-      strmap_iter_get(iter, &fp, &val);
+      digestmap_iter_get(iter, &ident, &val);
       smartlist_add(result, val);
-      iter = strmap_iter_next(cached_v2_networkstatus, iter);
+      iter = digestmap_iter_next(cached_v2_networkstatus, iter);
     }
     if (smartlist_len(result) == 0)
       log_fn(LOG_WARN, "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
-    smartlist_t *hexdigests = smartlist_create();
-    dir_split_resource_into_fingerprints(key+3, hexdigests, NULL, 0);
-    SMARTLIST_FOREACH(hexdigests, char *, cp,
+    smartlist_t *digests = smartlist_create();
+    dir_split_resource_into_fingerprints(key+3, digests, NULL, 1);
+    SMARTLIST_FOREACH(digests, char *, cp,
         {
           cached_dir_t *cached;
           tor_strupper(cp);
@@ -1346,7 +1345,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
               the_v2_networkstatus_is_dirty &&
               the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL))
             generate_v2_networkstatus();
-          cached = strmap_get(cached_v2_networkstatus, cp);
+          cached = digestmap_get(cached_v2_networkstatus, cp);
           if (cached) {
             smartlist_add(result, cached);
           } else {
@@ -1354,7 +1353,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
           }
           tor_free(cp);
         });
-    smartlist_free(hexdigests);
+    smartlist_free(digests);
   }
   return 0;
 }
@@ -1501,7 +1500,7 @@ dirserv_free_all(void)
   clear_cached_dir(&cached_directory);
   clear_cached_dir(&cached_runningrouters);
   if (cached_v2_networkstatus) {
-    strmap_free(cached_v2_networkstatus, free_cached_dir);
+    digestmap_free(cached_v2_networkstatus, free_cached_dir);
     cached_v2_networkstatus = NULL;
   }
 }
