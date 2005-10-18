@@ -587,7 +587,7 @@ run_connection_housekeeping(int i, time_t now)
      * parsing partial serverdesc responses. */
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         buf_datalen(conn->inbuf)>=1024) {
-      log_fn(LOG_INFO,"Trying to extract information from wedged server desc downoad");
+      log_fn(LOG_INFO,"Trying to extract information from wedged server desc download.");
       connection_dir_reached_eof(conn);
     }
     connection_mark_for_close(conn);
