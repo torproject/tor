@@ -1391,7 +1391,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
  *   - "/tor/server/all" for all the routerinfos we have, concatenated;
  *   - "/tor/server/fp/FP" where FP is a plus-separated sequence of
  *     hex identity digests; or
- *   - "/tor/server/d/D where D is a plus-separated sequence
+ *   - "/tor/server/d/D" where D is a plus-separated sequence
  *     of server descriptor digests, in hex.
  */
 void
