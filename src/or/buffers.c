@@ -12,6 +12,7 @@ const char buffers_c_id[] = "$Id$";
  * memory, file descriptors, or TLS connections.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 #define SENTINELS
@@ -86,7 +87,7 @@ buf_normalize(buf_t *buf)
   } else {
     char *newmem, *oldmem;
     size_t sz = (buf->mem+buf->len)-buf->cur;
-    log_fn(LOG_WARN, "Unexpected non-normalized buffer.");
+    warn(LD_GENERAL, "Unexpected non-normalized buffer.");
     newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(buf->len)));
     SET_GUARDS(newmem, buf->len);
     memcpy(newmem, buf->cur, sz);
@@ -259,8 +260,8 @@ buf_ensure_capacity(buf_t *buf, size_t capacity)
   while (new_len < capacity)
     new_len *= 2;
   /* Resize the buffer. */
-  log_fn(LOG_DEBUG,"Growing buffer from %d to %d bytes.",
-         (int)buf->len, (int)new_len);
+  debug(LD_MM,"Growing buffer from %d to %d bytes.",
+        (int)buf->len, (int)new_len);
   buf_resize(buf,new_len);
   return 0;
 }
@@ -284,7 +285,7 @@ buf_shrink(buf_t *buf)
   if (new_len == buf->len)
     return;
 
-  log_fn(LOG_DEBUG,"Shrinking buffer from %d to %d bytes.",
+  debug(LD_MM,"Shrinking buffer from %d to %d bytes.",
          (int)buf->len, (int)new_len);
   buf_resize(buf, new_len);
 }
@@ -404,7 +405,7 @@ read_to_buf_impl(int s, size_t at_most, buf_t *buf,
     }
     return 0; /* would block. */
   } else if (read_result == 0) {
-    log_fn(LOG_DEBUG,"Encountered eof");
+    debug(LD_NET,"Encountered eof");
     *reached_eof = 1;
     return 0;
   } else { /* we read some bytes */
@@ -412,7 +413,7 @@ read_to_buf_impl(int s, size_t at_most, buf_t *buf,
     buf_total_used += read_result;
     if (buf->datalen > buf->highwater)
       buf->highwater = buf->datalen;
-    log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",read_result,
+    debug(LD_NET,"Read %d bytes. %d on inbuf.",read_result,
            (int)buf->datalen);
     return read_result;
   }
@@ -478,7 +479,7 @@ read_to_buf_tls_impl(tor_tls_t *tls, size_t at_most, buf_t *buf, char *next)
 {
   int r;
 
-  log_fn(LOG_DEBUG,"before: %d on buf, %d pending, at_most %d.",
+  debug(LD_NET,"before: %d on buf, %d pending, at_most %d.",
          (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
          (int)at_most);
   r = tor_tls_read(tls, next, at_most);
@@ -488,7 +489,7 @@ read_to_buf_tls_impl(tor_tls_t *tls, size_t at_most, buf_t *buf, char *next)
   buf_total_used += r;
   if (buf->datalen > buf->highwater)
     buf->highwater = buf->datalen;
-  log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf; %d pending",r,
+  debug(LD_NET,"Read %d bytes. %d on inbuf; %d pending",r,
          (int)buf->datalen,(int)tor_tls_get_pending_bytes(tls));
   return r;
 }
@@ -522,7 +523,7 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
   tor_assert(tls);
   assert_buf_ok(buf);
 
-  log_fn(LOG_DEBUG,"start: %d on buf, %d pending, at_most %d.",
+  debug(LD_NET,"start: %d on buf, %d pending, at_most %d.",
          (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
          (int)at_most);
 
@@ -572,7 +573,7 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
       return -1;
     }
-    log_fn(LOG_DEBUG,"write() would block, returning.");
+    debug(LD_NET,"write() would block, returning.");
     return 0;
   } else {
     *buf_flushlen -= write_result;
@@ -610,7 +611,7 @@ flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   r = flush_buf_impl(s, buf, flushlen0, buf_flushlen);
   check();
 
-  log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
+  debug(LD_NET,"%d: flushed %d bytes, %d ready to flush, %d remain.",
            s,r,(int)*buf_flushlen,(int)buf->datalen);
   if (r < 0 || (size_t)r < flushlen0)
     return r; /* Error, or can't flush any more now. */
@@ -620,7 +621,7 @@ flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
     tor_assert(buf->cur == buf->mem);
     r = flush_buf_impl(s, buf, flushlen1, buf_flushlen);
     check();
-    log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
+    debug(LD_NET,"%d: flushed %d bytes, %d ready to flush, %d remain.",
            s,r,(int)*buf_flushlen,(int)buf->datalen);
     if (r<0)
       return r;
@@ -645,7 +646,7 @@ flush_buf_tls_impl(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
   }
   *buf_flushlen -= r;
   buf_remove_from_front(buf, r);
-  log_fn(LOG_DEBUG,"flushed %d bytes, %d ready to flush, %d remain.",
+  debug(LD_NET,"flushed %d bytes, %d ready to flush, %d remain.",
          r,(int)*buf_flushlen,(int)buf->datalen);
   return r;
 }
@@ -705,7 +706,7 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
   assert_buf_ok(buf);
 
   if (buf_ensure_capacity(buf, buf->datalen+string_len)) {
-    log_fn(LOG_WARN, "buflen too small, can't hold %d bytes.", (int)(buf->datalen+string_len));
+    warn(LD_MM, "buflen too small, can't hold %d bytes.", (int)(buf->datalen+string_len));
     return -1;
   }
 
@@ -724,7 +725,7 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
   }
   if (buf->datalen > buf->highwater)
     buf->highwater = buf->datalen;
-  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",
+  debug(LD_NET,"added %d bytes to buf (now %d total).",
          (int)string_len, (int)buf->datalen);
   check();
   return buf->datalen;
@@ -806,27 +807,27 @@ fetch_from_buf_http(buf_t *buf,
   buf_normalize(buf);
 
   if (buf_nul_terminate(buf)<0) {
-    log_fn(LOG_WARN,"Couldn't nul-terminate buffer");
+    warn(LD_GENERAL,"Couldn't nul-terminate buffer");
     return -1;
   }
   headers = buf->cur;
   body = strstr(headers,"\r\n\r\n");
   if (!body) {
-    log_fn(LOG_DEBUG,"headers not all here yet.");
+    debug(LD_HTTP,"headers not all here yet.");
     return 0;
   }
   body += 4; /* Skip the the CRLFCRLF */
   headerlen = body-headers; /* includes the CRLFCRLF */
   bodylen = buf->datalen - headerlen;
-  log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
+  debug(LD_HTTP,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
 
   if (max_headerlen <= headerlen) {
-    log_fn(LOG_WARN,"headerlen %d larger than %d. Failing.", (int)headerlen,
+    warn(LD_HTTP,"headerlen %d larger than %d. Failing.", (int)headerlen,
            (int)max_headerlen-1);
     return -1;
   }
   if (max_bodylen <= bodylen) {
-    log_fn(LOG_WARN,"bodylen %d larger than %d. Failing.", (int)bodylen, (int)max_bodylen-1);
+    warn(LD_HTTP,"bodylen %d larger than %d. Failing.", (int)bodylen, (int)max_bodylen-1);
     return -1;
   }
 
@@ -836,21 +837,21 @@ fetch_from_buf_http(buf_t *buf,
     int i;
     i = atoi(p+strlen(CONTENT_LENGTH));
     if (i < 0) {
-      log_fn(LOG_WARN, "Content-Length is less than zero; it looks like someone is trying to crash us.");
+      warn(LD_PROTOCOL, "Content-Length is less than zero; it looks like someone is trying to crash us.");
       return -1;
     }
     contentlen = i;
     /* if content-length is malformed, then our body length is 0. fine. */
-    log_fn(LOG_DEBUG,"Got a contentlen of %d.",(int)contentlen);
+    debug(LD_HTTP,"Got a contentlen of %d.",(int)contentlen);
     if (bodylen < contentlen) {
       if (!force_complete) {
-        log_fn(LOG_DEBUG,"body not all here yet.");
+        debug(LD_HTTP,"body not all here yet.");
         return 0; /* not all there yet */
       }
     }
     if (bodylen > contentlen) {
       bodylen = contentlen;
-      log_fn(LOG_DEBUG,"bodylen reduced to %d.",(int)bodylen);
+      debug(LD_HTTP,"bodylen reduced to %d.",(int)bodylen);
     }
   }
   /* all happy. copy into the appropriate places, and return 1 */
@@ -917,7 +918,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
         if (buf->datalen < 2u+nummethods)
           return 0;
         if (!nummethods || !memchr(buf->cur+2, 0, nummethods)) {
-          log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
+          warn(LD_APP,"socks5: offered methods don't include 'no auth'. Rejecting.");
           req->replylen = 2; /* 2 bytes of response */
           req->reply[0] = 5;
           req->reply[1] = '\xFF'; /* reject all methods */
@@ -929,24 +930,24 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
         req->reply[0] = 5; /* socks5 reply */
         req->reply[1] = SOCKS5_SUCCEEDED;
         req->socks_version = 5; /* remember that we've already negotiated auth */
-        log_fn(LOG_DEBUG,"socks5: accepted method 0");
+        debug(LD_APP,"socks5: accepted method 0");
         return 0;
       }
       /* we know the method; read in the request */
-      log_fn(LOG_DEBUG,"socks5: checking request");
+      debug(LD_APP,"socks5: checking request");
       if (buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
         return 0; /* not yet */
       req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
-        log_fn(LOG_WARN,"socks5: command %d not recognized. Rejecting.",
+        warn(LD_APP,"socks5: command %d not recognized. Rejecting.",
                req->command);
         return -1;
       }
       switch (*(buf->cur+3)) { /* address type */
         case 1: /* IPv4 address */
-          log_fn(LOG_DEBUG,"socks5: ipv4 address type");
+          debug(LD_APP,"socks5: ipv4 address type");
           if (buf->datalen < 10) /* ip/port there? */
             return 0; /* not yet */
 
@@ -954,7 +955,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
           in.s_addr = htonl(destip);
           tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
           if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
-            log_fn(LOG_WARN,"socks5 IP takes %d bytes, which doesn't fit in %d. Rejecting.",
+            warn(LD_APP,"socks5 IP takes %d bytes, which doesn't fit in %d. Rejecting.",
                    (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
             return -1;
           }
@@ -963,17 +964,17 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
           buf_remove_from_front(buf, 10);
           if (!address_is_in_virtual_range(req->address) &&
               !have_warned_about_unsafe_socks) {
-            log_fn(LOG_WARN,"Your application (using socks5 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.  For more information, please see http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS", req->port);
+            warn(LD_APP,"Your application (using socks5 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.  For more information, please see http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS", req->port);
 //            have_warned_about_unsafe_socks = 1; // (for now, warn every time)
           }
           return 1;
         case 3: /* fqdn */
-          log_fn(LOG_DEBUG,"socks5: fqdn address type");
+          debug(LD_APP,"socks5: fqdn address type");
           len = (unsigned char)*(buf->cur+4);
           if (buf->datalen < 7u+len) /* addr/port there? */
             return 0; /* not yet */
           if (len+1 > MAX_SOCKS_ADDR_LEN) {
-            log_fn(LOG_WARN,"socks5 hostname is %d bytes, which doesn't fit in %d. Rejecting.",
+            warn(LD_APP,"socks5 hostname is %d bytes, which doesn't fit in %d. Rejecting.",
                    len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
@@ -983,7 +984,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
           buf_remove_from_front(buf, 5+len+2);
           return 1;
         default: /* unsupported */
-          log_fn(LOG_WARN,"socks5: unsupported address type %d. Rejecting.",*(buf->cur+3));
+          warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",*(buf->cur+3));
           return -1;
       }
       tor_assert(0);
@@ -999,7 +1000,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
-        log_fn(LOG_WARN,"socks4: command %d not recognized. Rejecting.",
+        warn(LD_APP,"socks4: command %d not recognized. Rejecting.",
                req->command);
         return -1;
       }
@@ -1007,26 +1008,26 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
       req->port = ntohs(*(uint16_t*)(buf->cur+2));
       destip = ntohl(*(uint32_t*)(buf->mem+4));
       if ((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
-        log_fn(LOG_WARN,"socks4: Port or DestIP is zero. Rejecting.");
+        warn(LD_APP,"socks4: Port or DestIP is zero. Rejecting.");
         return -1;
       }
       if (destip >> 8) {
-        log_fn(LOG_DEBUG,"socks4: destip not in form 0.0.0.x.");
+        debug(LD_APP,"socks4: destip not in form 0.0.0.x.");
         in.s_addr = htonl(destip);
         tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
         if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
-          log_fn(LOG_WARN,"socks4 addr (%d bytes) too long. Rejecting.",
+          debug(LD_APP,"socks4 addr (%d bytes) too long. Rejecting.",
                  (int)strlen(tmpbuf));
           return -1;
         }
-        log_fn(LOG_DEBUG,"socks4: successfully read destip (%s)", safe_str(tmpbuf));
+        debug(LD_APP,"socks4: successfully read destip (%s)", safe_str(tmpbuf));
         socks4_prot = socks4;
       }
 
       next = memchr(buf->cur+SOCKS4_NETWORK_LEN, 0,
                     buf->datalen-SOCKS4_NETWORK_LEN);
       if (!next) {
-        log_fn(LOG_DEBUG,"socks4: Username not here yet.");
+        debug(LD_APP,"socks4: Username not here yet.");
         return 0;
       }
       tor_assert(next < buf->cur+buf->datalen);
@@ -1035,27 +1036,27 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
       if (socks4_prot != socks4a &&
           !address_is_in_virtual_range(tmpbuf) &&
           !have_warned_about_unsafe_socks) {
-        log_fn(LOG_WARN,"Your application (using socks4 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
+        warn(LD_APP,"Your application (using socks4 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
       }
       if (socks4_prot == socks4a) {
         if (next+1 == buf->cur+buf->datalen) {
-          log_fn(LOG_DEBUG,"socks4: No part of destaddr here yet.");
+          debug(LD_APP,"socks4: No part of destaddr here yet.");
           return 0;
         }
         startaddr = next+1;
         next = memchr(startaddr, 0, buf->cur+buf->datalen-startaddr);
         if (!next) {
-          log_fn(LOG_DEBUG,"socks4: Destaddr not all here yet.");
+          debug(LD_APP,"socks4: Destaddr not all here yet.");
           return 0;
         }
         if (MAX_SOCKS_ADDR_LEN <= next-startaddr) {
-          log_fn(LOG_WARN,"socks4: Destaddr too long. Rejecting.");
+          warn(LD_APP,"socks4: Destaddr too long. Rejecting.");
           return -1;
         }
         tor_assert(next < buf->cur+buf->datalen);
       }
-      log_fn(LOG_DEBUG,"socks4: Everything is here. Success.");
+      debug(LD_APP,"socks4: Everything is here. Success.");
       strlcpy(req->address, startaddr ? startaddr : tmpbuf,
               sizeof(req->address));
       buf_remove_from_front(buf, next-buf->cur+1); /* next points to the final \0 on inbuf */
@@ -1089,7 +1090,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
       req->replylen = strlen(req->reply)+1;
       /* fall through */
     default: /* version is not socks4 or socks5 */
-      log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an http proxy.)",
+      warn(LD_APP,"Socks version %d not recognized. (Tor is not an http proxy.)",
              *(buf->cur));
       return -1;
   }

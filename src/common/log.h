@@ -51,12 +51,16 @@
 #endif
 
 /* Logging domains */
-#define LD_GENERAL 0
-#define LD_CRYPTO  1
-#define LD_NET     2
-#define LD_CONFIG  3
-#define LD_FS      4
+#define LD_GENERAL  0
+#define LD_CRYPTO   1
+#define LD_NET      2
+#define LD_CONFIG   3
+#define LD_FS       4
 #define LD_PROTOCOL 5
+#define LD_MM       6
+#define LD_HTTP     7
+#define LD_APP      8
+#define LD_CONTROL  9
 
 typedef void (*log_callback)(int severity, int domain, const char *msg);
 

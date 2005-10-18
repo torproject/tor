@@ -4,7 +4,6 @@
 
 #include "orconfig.h"
 
-#define OLD_LOG_INTERFACE
 #include "../common/compat.h"
 #include "../common/util.h"
 #include "../common/log.h"
@@ -41,8 +40,8 @@
 #endif
 
 #define RESPONSE_LEN 8
-#define log_sock_error(act, _s)                             \
-  do { log_fn(LOG_ERR, "Error while %s: %s", act,           \
+#define log_sock_error(act, _s)                                         \
+  do { log_fn(LOG_ERR, LD_NET, "Error while %s: %s", act,              \
               tor_socket_strerror(tor_socket_errno(_s))); } while (0)
 
 /** Set *<b>out</b> to a newly allocated SOCKS4a resolve request with
@@ -83,20 +82,20 @@ parse_socks4a_resolve_response(const char *response, size_t len,
   tor_assert(addr_out);
 
   if (len < RESPONSE_LEN) {
-    log_fn(LOG_WARN,"Truncated socks response.");
+    warn(LD_PROTOCOL,"Truncated socks response.");
     return -1;
   }
   if (((uint8_t)response[0])!=0) { /* version: 0 */
-    log_fn(LOG_WARN,"Nonzero version in socks response: bad format.");
+    warn(LD_PROTOCOL,"Nonzero version in socks response: bad format.");
     return -1;
   }
   status = (uint8_t)response[1];
   if (get_uint16(response+2)!=0) { /* port: 0 */
-    log_fn(LOG_WARN,"Nonzero port in socks response: bad format.");
+    warn(LD_PROTOCOL,"Nonzero port in socks response: bad format.");
     return -1;
   }
   if (status != 90) {
-    log_fn(LOG_WARN,"Got status response '%d': socks request failed.", status);
+    warn(LD_NET,"Got status response '%d': socks request failed.", status);
     return -1;
   }
 
@@ -137,7 +136,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   }
 
   if ((len = build_socks4a_resolve_request(&req, "", hostname))<0) {
-    log_fn(LOG_ERR, "Error generating SOCKS request");
+    err("Error generating SOCKS request");
     return -1;
   }
 
@@ -158,7 +157,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   while (len < RESPONSE_LEN) {
     r = recv(s, response_buf+len, RESPONSE_LEN-len, 0);
     if (r==0) {
-      log_fn(LOG_WARN,"EOF while reading SOCKS response");
+      warn(LD_NET,"EOF while reading SOCKS response");
       return -1;
     }
     if (r<0) {
@@ -213,7 +212,7 @@ main(int argc, char **argv)
     add_stream_log(LOG_WARN, LOG_ERR, "<stderr>", stderr);
   }
   if (n_args == 1) {
-    log_fn(LOG_DEBUG, "defaulting to localhost:9050");
+    debug(LD_CONFIG, "defaulting to localhost:9050");
     sockshost = 0x7f000001u; /* localhost */
     socksport = 9050; /* 9050 */
   } else if (n_args == 2) {
@@ -222,7 +221,7 @@ main(int argc, char **argv)
       return 1;
     }
     if (socksport == 0) {
-      log_fn(LOG_DEBUG, "defaulting to port 9050");
+      debug(LD_CONFIG, "defaulting to port 9050");
       socksport = 9050;
     }
   } else {
@@ -237,7 +236,7 @@ main(int argc, char **argv)
   }
 
   if (network_init()<0) {
-    log_fn(LOG_ERR,"Error initializing network; exiting.");
+    err("Error initializing network; exiting.");
     return 1;
   }
 
