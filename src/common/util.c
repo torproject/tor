@@ -409,7 +409,7 @@ eat_whitespace_no_nl(const char *s)
 const char *
 find_whitespace(const char *s)
 {
-  tor_assert(s);
+  /* tor_assert(s); */
 
   while (*s && !TOR_ISSPACE(*s) && *s != '#')
     s++;
