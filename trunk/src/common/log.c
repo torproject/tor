@@ -38,7 +38,7 @@ typedef struct logfile_t {
   char *filename; /**< Filename to open. */
   FILE *file; /**< Stream to receive log messages. */
   int needs_close; /**< Boolean: true if the stream gets closed on shutdown. */
-  int loglevel; /**< Lowest severity level to send to this stream. */
+  int min_loglevel; /**< Lowest severity level to send to this stream. */
   int max_loglevel; /**< Highest severity level to send to this stream. */
   int is_temporary; /**< Boolean: close after initializing logging subsystem.*/
   int is_syslog; /**< Boolean: send messages to syslog. */
@@ -184,7 +184,8 @@ format_msg(char *buf, size_t buf_len,
  * message.  The actual message is derived as from tor_snprintf(format,ap).
  */
 static void
-logv(int severity, const char *funcname, const char *format, va_list ap)
+logv(int severity, int domain, const char *funcname, const char *format,
+     va_list ap)
 {
   char buf[10024];
   int formatted = 0;
@@ -194,7 +195,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
   assert(format);
   lf = logfiles;
   while (lf) {
-    if (severity > lf->loglevel || severity < lf->max_loglevel) {
+    if (severity > lf->min_loglevel || severity < lf->max_loglevel) {
       lf = lf->next;
       continue;
     }
@@ -215,7 +216,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
       lf = lf->next;
       continue;
     } else if (lf->callback) {
-      lf->callback(severity, end_of_prefix);
+      lf->callback(severity, domain, end_of_prefix);
       lf = lf->next;
       continue;
     }
@@ -233,32 +234,77 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
 
 /** Output a message to the log. */
 void
-_log(int severity, const char *format, ...)
+_log(int severity, int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(severity, NULL, format, ap);
+  logv(severity, domain, NULL, format, ap);
   va_end(ap);
 }
 
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
 #ifdef __GNUC__
 void
-_log_fn(int severity, const char *fn, const char *format, ...)
+_log_fn(int severity, int domain, const char *fn, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(severity, fn, format, ap);
+  logv(severity, domain, fn, format, ap);
   va_end(ap);
 }
 #else
 const char *_log_fn_function_name=NULL;
 void
-_log_fn(int severity, const char *format, ...)
+_log_fn(int severity, int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(severity, _log_fn_function_name, format, ap);
+  logv(severity, domain, _log_fn_function_name, format, ap);
+  va_end(ap);
+  _log_fn_function_name = NULL;
+}
+void
+_debug(int domain, const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  logv(LOG_DEBUG, domain, _log_fn_function_name, format, ap);
+  va_end(ap);
+  _log_fn_function_name = NULL;
+}
+void
+_info(int domain, const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  logv(LOG_INFO, domain, _log_fn_function_name, format, ap);
+  va_end(ap);
+  _log_fn_function_name = NULL;
+}
+void
+_notice(int domain, const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  logv(LOG_NOTICE, domain, _log_fn_function_name, format, ap);
+  va_end(ap);
+  _log_fn_function_name = NULL;
+}
+void
+_warn(int domain, const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  logv(LOG_ERR, domain, _log_fn_function_name, format, ap);
+  va_end(ap);
+  _log_fn_function_name = NULL;
+}
+void
+_err(const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  logv(LOG_ERR, LD_GENERAL, _log_fn_function_name, format, ap);
   va_end(ap);
   _log_fn_function_name = NULL;
 }
@@ -359,7 +405,7 @@ add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *stream)
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
   lf->filename = tor_strdup(name);
-  lf->loglevel = loglevelMin;
+  lf->min_loglevel = loglevelMin;
   lf->max_loglevel = loglevelMax;
   lf->file = stream;
   lf->next = logfiles;
@@ -386,7 +432,7 @@ add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
-  lf->loglevel = loglevelMin;
+  lf->min_loglevel = loglevelMin;
   lf->max_loglevel = loglevelMax;
   lf->filename = tor_strdup("<callback>");
   lf->callback = cb;
@@ -402,7 +448,7 @@ change_callback_log_severity(int loglevelMin, int loglevelMax,
   logfile_t *lf;
   for (lf = logfiles; lf; lf = lf->next) {
     if (lf->callback == cb) {
-      lf->loglevel = loglevelMin;
+      lf->min_loglevel = loglevelMin;
       lf->max_loglevel = loglevelMax;
     }
   }
@@ -468,7 +514,7 @@ add_syslog_log(int loglevelMin, int loglevelMax)
     openlog("Tor", LOG_NDELAY, LOG_DAEMON);
 
   lf = tor_malloc_zero(sizeof(logfile_t));
-  lf->loglevel = loglevelMin;
+  lf->min_loglevel = loglevelMin;
   lf->filename = tor_strdup("<syslog>");
   lf->max_loglevel = loglevelMax;
   lf->is_syslog = 1;
@@ -510,8 +556,8 @@ get_min_log_level(void)
   logfile_t *lf;
   int min = LOG_ERR;
   for (lf = logfiles; lf; lf = lf->next) {
-    if (lf->loglevel > min)
-      min = lf->loglevel;
+    if (lf->min_loglevel > min)
+      min = lf->min_loglevel;
   }
   return min;
 }
@@ -522,7 +568,7 @@ switch_logs_debug(void)
 {
   logfile_t *lf;
   for (lf = logfiles; lf; lf=lf->next) {
-    lf->loglevel = LOG_DEBUG;
+    lf->min_loglevel = LOG_DEBUG;
   }
 }
 
@@ -541,19 +587,20 @@ libevent_logging_callback(int severity, const char *msg)
   }
   switch (severity) {
     case _EVENT_LOG_DEBUG:
-      log(LOG_DEBUG, "Message from libevent: %s", buf);
+      log(LOG_DEBUG, LD_NET, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_MSG:
-      log(LOG_INFO, "Message from libevent: %s", buf);
+      log(LOG_INFO, LD_NET, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_WARN:
-      log(LOG_WARN, "Warning from libevent: %s", buf);
+      log(LOG_WARN, LD_GENERAL, "Warning from libevent: %s", buf);
       break;
     case _EVENT_LOG_ERR:
-      log(LOG_ERR, "Error from libevent: %s", buf);
+      log(LOG_ERR, LD_GENERAL, "Error from libevent: %s", buf);
       break;
     default:
-      log(LOG_WARN, "Message [%d] from libevent: %s", severity, buf);
+      log(LOG_WARN, LD_GENERAL, "Message [%d] from libevent: %s",
+          severity, buf);
       break;
   }
 }

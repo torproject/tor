@@ -91,9 +91,9 @@ tls_log_errors(int severity, const char *doing)
     func = (const char*)ERR_func_error_string(err);
     if (!msg) msg = "(null)";
     if (doing) {
-      log(severity, "TLS error while %s: %s (in %s:%s)", doing, msg, lib,func);
+      log(severity, LD_NET, "TLS error while %s: %s (in %s:%s)", doing, msg, lib,func);
     } else {
-      log(severity, "TLS error: %s (in %s:%s)", msg, lib, func);
+      log(severity, LD_NET, "TLS error: %s (in %s:%s)", msg, lib, func);
     }
   }
 }
@@ -127,10 +127,10 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
       if (extra&CATCH_SYSCALL)
         return _TOR_TLS_SYSCALL;
       if (r == 0)
-        log(severity, "TLS error: unexpected close while %s", doing);
+        log(severity, LD_NET, "TLS error: unexpected close while %s", doing);
       else {
         int e = tor_socket_errno(tls->socket);
-        log(severity, "TLS error: <syscall error while %s> (errno=%d: %s)",
+        log(severity, LD_NET, "TLS error: <syscall error while %s> (errno=%d: %s)",
             doing, e, tor_socket_strerror(e));
       }
       tls_log_errors(severity, doing);
@@ -138,7 +138,7 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
     case SSL_ERROR_ZERO_RETURN:
       if (extra&CATCH_ZERO)
         return _TOR_TLS_ZERORETURN;
-      log(severity, "TLS error: Zero return");
+      log(severity, LD_NET, "TLS error: Zero return");
       tls_log_errors(severity, doing);
       return TOR_TLS_ERROR;
     default:
@@ -333,7 +333,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
                                         IDENTITY_CERT_LIFETIME);
     if (!cert || !idcert) {
-      log(LOG_WARN, "Error creating certificate");
+      log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
       goto error;
     }
   }
@@ -481,12 +481,12 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
     return r;
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG);
   if (err == _TOR_TLS_ZERORETURN) {
-    log_fn(LOG_DEBUG,"read returned r=%d; TLS is closed",r);
+    debug(LD_NET,"read returned r=%d; TLS is closed",r);
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
   } else {
     tor_assert(err != TOR_TLS_DONE);
-    log_fn(LOG_DEBUG,"read returned r=%d, err=%d",r,err);
+    debug(LD_NET,"read returned r=%d, err=%d",r,err);
     return err;
   }
 }
@@ -508,7 +508,7 @@ tor_tls_write(tor_tls_t *tls, char *cp, size_t n)
   if (tls->wantwrite_n) {
     /* if WANTWRITE last time, we must use the _same_ n as before */
     tor_assert(n >= tls->wantwrite_n);
-    log_fn(LOG_DEBUG,"resuming pending-write, (%d to flush, reusing %d)",
+    debug(LD_NET,"resuming pending-write, (%d to flush, reusing %d)",
            (int)n, (int)tls->wantwrite_n);
     n = tls->wantwrite_n;
     tls->wantwrite_n = 0;
@@ -602,7 +602,7 @@ tor_tls_shutdown(tor_tls_t *tls)
        */
       if (tls->state == TOR_TLS_ST_GOTCLOSE ||
          tls->state == TOR_TLS_ST_SENTCLOSE) {
-        log(LOG_WARN,
+        log(LOG_WARN, LD_NET,
             "TLS returned \"half-closed\" value while already half-closed");
         return TOR_TLS_ERROR;
       }
@@ -643,11 +643,11 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
   int r = -1;
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl))) {
-    log_fn(LOG_WARN, "Peer has no certificate");
+    warn(LD_PROTOCOL, "Peer has no certificate");
     goto error;
   }
   if (!(name = X509_get_subject_name(cert))) {
-    log_fn(LOG_WARN, "Peer certificate has no subject name");
+    warn(LD_PROTOCOL, "Peer certificate has no subject name");
     goto error;
   }
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef)
@@ -657,10 +657,10 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
   if (lenout == -1)
     goto error;
   if (((int)strspn(buf, LEGAL_NICKNAME_CHARACTERS)) < lenout) {
-    log_fn(LOG_WARN, "Peer certificate nickname \"%s\" has illegal characters.",
+    warn(LD_PROTOCOL, "Peer certificate nickname \"%s\" has illegal characters.",
            buf);
     if (strchr(buf, '.'))
-      log_fn(LOG_WARN, "  (Maybe it is not really running Tor at its advertised OR port.)");
+      warn(LD_PROTOCOL, "  (Maybe it is not really running Tor at its advertised OR port.)");
     goto error;
   }
 
@@ -685,11 +685,11 @@ log_cert_lifetime(X509 *cert, const char *problem)
   struct tm tm;
 
   if (problem)
-    log_fn(LOG_WARN,"Certificate %s: is your system clock set incorrectly?",
+    warn(LD_GENERAL,"Certificate %s: is your system clock set incorrectly?",
            problem);
 
   if (!(bio = BIO_new(BIO_s_mem()))) {
-    log_fn(LOG_WARN, "Couldn't allocate BIO!"); goto end;
+    log_fn(LOG_WARN, LD_GENERAL, "Couldn't allocate BIO!"); goto end;
   }
   if (!(ASN1_TIME_print(bio, X509_get_notBefore(cert)))) {
     tls_log_errors(LOG_WARN, "printing certificate lifetime");
@@ -708,7 +708,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
 
   strftime(mytime, 32, "%b %d %H:%M:%S %Y GMT", tor_gmtime_r(&now, &tm));
 
-  log_fn(LOG_WARN, "(certificate lifetime runs from %s through %s. Your time is %s.)",s1,s2,mytime);
+  warn(LD_GENERAL, "(certificate lifetime runs from %s through %s. Your time is %s.)",s1,s2,mytime);
 
  end:
   /* Not expected to get invoked */
@@ -748,7 +748,7 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
    * cert and the id_cert.
    */
   if (num_in_chain < 1) {
-    log_fn(severity,"Unexpected number of certificates in chain (%d)",
+    log_fn(severity,LD_PROTOCOL,"Unexpected number of certificates in chain (%d)",
            num_in_chain);
     goto done;
   }
@@ -758,13 +758,13 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
       break;
   }
   if (!id_cert) {
-    log_fn(severity,"No distinct identity certificate found");
+    log_fn(severity,LD_PROTOCOL,"No distinct identity certificate found");
     goto done;
   }
 
   if (!(id_pkey = X509_get_pubkey(id_cert)) ||
       X509_verify(cert, id_pkey) <= 0) {
-    log_fn(severity,"X509_verify on cert and pkey returned <= 0");
+    log_fn(severity,LD_PROTOCOL,"X509_verify on cert and pkey returned <= 0");
     tls_log_errors(severity,"verifying certificate");
     goto done;
   }
@@ -866,7 +866,7 @@ _check_no_tls_errors(const char *fname, int line)
 {
   if (ERR_peek_error() == 0)
     return;
-  log_fn(LOG_WARN, "Unhandled OpenSSL errors found at %s:%d: ",
+  log_fn(LOG_WARN, LD_CRYPTO, "Unhandled OpenSSL errors found at %s:%d: ",
          fname, line);
   tls_log_errors(LOG_WARN, NULL);
 }

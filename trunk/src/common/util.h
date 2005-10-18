@@ -38,14 +38,25 @@
  */
 #error "Sorry; we don't support building with NDEBUG."
 #else
-#define tor_assert(expr) do {                                 \
- if (!(expr)) {                                               \
-   log(LOG_ERR, "%s:%d: %s: Assertion %s failed; aborting.",  \
-       _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);          \
-   fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n", \
-       _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);          \
-   abort();  /* unreached */                                  \
+#ifdef OLD_LOG_INTERFACE
+#define tor_assert(expr) do {                                            \
+ if (!(expr)) {                                                          \
+   log(LOG_ERR, "%s:%d: %s: Assertion %s failed; aborting.",            \
+       _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);                     \
+   fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",          \
+       _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);                     \
+   abort();  /* unreached */                                             \
  } } while (0)
+#else
+#define tor_assert(expr) do {                                            \
+ if (!(expr)) {                                                          \
+   log(LOG_ERR, LD_GENERAL, "%s:%d: %s: Assertion %s failed; aborting.", \
+       _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);                     \
+   fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",          \
+       _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);                     \
+   abort();  /* unreached */                                             \
+ } } while (0)
+#endif
 #endif
 
 #ifdef USE_DMALLOC
