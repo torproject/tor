@@ -36,6 +36,7 @@ static void update_networkstatus_cache_downloads(time_t now);
 static void update_networkstatus_client_downloads(time_t now);
 static int routerdesc_digest_is_recognized(const char *identity,
                                            const char *digest);
+static void routerlist_assert_ok(routerlist_t *rl);
 
 /****************************************************************************/
 
@@ -254,9 +255,8 @@ router_reload_router_list(void)
   struct stat st;
   int j;
 
-  if (!routerlist) {
+  if (!routerlist)
     router_get_routerlist();
-  }
 
   router_journal_len = router_store_len = 0;
 
@@ -995,15 +995,10 @@ router_get_by_digest(const char *digest)
 
   if (!routerlist) return NULL;
 
-  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t*, router,
-  {
-    if (0 == memcmp(router->identity_digest, digest, DIGEST_LEN))
-      return router;
-  });
+  // routerlist_assert_ok(routerlist);
 
-  return NULL;
+  return digestmap_get(routerlist->identity_map, digest);
 }
-
 
 /** Return the router in our routerlist whose 20-byte descriptor
  * is <b>digest</b>.  Return NULL if no such router is known. */
@@ -1030,6 +1025,7 @@ router_get_routerlist(void)
   if (!routerlist) {
     routerlist = tor_malloc_zero(sizeof(routerlist_t));
     routerlist->routers = smartlist_create();
+    routerlist->identity_map = digestmap_new();
   }
   return routerlist;
 }
@@ -1098,6 +1094,7 @@ void
 routerlist_free(routerlist_t *rl)
 {
   tor_assert(rl);
+  digestmap_free(rl->identity_map, NULL);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   smartlist_free(rl->routers);
@@ -1109,7 +1106,9 @@ routerlist_free(routerlist_t *rl)
 static void
 routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
+  digestmap_set(rl->identity_map, ri->identity_digest, ri);
   smartlist_add(rl->routers, ri);
+  // routerlist_assert_ok(rl);
 }
 
 /** Remove an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
@@ -1120,6 +1119,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 void
 routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx)
 {
+  routerinfo_t *ri_tmp;
   if (idx < 0 || smartlist_get(rl->routers, idx) != ri) {
     idx = -1;
     SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
@@ -1131,6 +1131,9 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx)
       return;
   }
   smartlist_del(rl->routers, idx);
+  ri_tmp = digestmap_remove(rl->identity_map, ri->identity_digest);
+  tor_assert(ri_tmp == ri);
+  // routerlist_assert_ok(rl);
 }
 
 /** Free all memory held by the rouerlist module */
@@ -1277,10 +1280,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
   tor_assert(msg);
 
-  if (!routerlist) {
-    routerlist = tor_malloc_zero(sizeof(routerlist_t));
-    routerlist->routers = smartlist_create();
-  }
+  if (!routerlist)
+    router_get_routerlist();
 
   crypto_pk_get_digest(router->identity_pkey, id_digest);
 
@@ -1686,7 +1687,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   networkstatus_list_update_recent(now);
 
   if (get_options()->DirPort && !skewed)
-    dirserv_set_cached_networkstatus_v2(s, fp, ns->published_on);
+    dirserv_set_cached_networkstatus_v2(s,
+                                        ns->identity_digest,
+                                        ns->published_on);
 
   return 0;
 }
@@ -1717,9 +1720,7 @@ networkstatus_list_clean(time_t now)
     }
     tor_free(fname);
     if (get_options()->DirPort) {
-      char fp[HEX_DIGEST_LEN+1];
-      base16_encode(fp, sizeof(fp), ns->identity_digest, DIGEST_LEN);
-      dirserv_set_cached_networkstatus_v2(NULL, fp, 0);
+      dirserv_set_cached_networkstatus_v2(NULL, ns->identity_digest, 0);
     }
     networkstatus_free(ns);
   }
@@ -2967,5 +2968,29 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
 
   /* Otherwise, the difference is cosmetic. */
   return 1;
+}
+
+static void
+routerlist_assert_ok(routerlist_t *rl)
+{
+  digestmap_iter_t *iter;
+  if (!routerlist)
+    return;
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
+  {
+    routerinfo_t *r2 = digestmap_get(rl->identity_map,
+                                     r->identity_digest);
+    tor_assert(r == r2);
+  });
+  iter = digestmap_iter_init(rl->identity_map);
+  while (!digestmap_iter_done(iter)) {
+    const char *d;
+    void *_r;
+    routerinfo_t *r;
+    digestmap_iter_get(iter, &d, &_r);
+    r = _r;
+    tor_assert(!memcmp(r->identity_digest, d, DIGEST_LEN));
+    iter = digestmap_iter_next(rl->identity_map, iter);
+  }
 }
 
