@@ -431,12 +431,15 @@ get_escaped_string(const char *start, size_t in_len_max,
 /** Acts like sprintf, but writes its formatted string to the end of
  * <b>conn</b>-\>outbuf.  The message may be truncated if it is too long,
  * but it will always end with a CRLF sequence.
- */
+ *
+ * Currently the length of the message is limited to 1024 (including the
+ * ending \n\r\0. */
 static void
 connection_printf_to_buf(connection_t *conn, const char *format, ...)
 {
+#define CONNECTION_PRINTF_TO_BUF_BUFFERSIZE 1024
   va_list ap;
-  char buf[1024];
+  char buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE];
   int r;
   size_t len;
   va_start(ap,format);
@@ -444,9 +447,9 @@ connection_printf_to_buf(connection_t *conn, const char *format, ...)
   va_end(ap);
   len = strlen(buf);
   if (memcmp("\r\n\0", buf+len-2, 3)) {
-    buf[1023] = '\0';
-    buf[1022] = '\n';
-    buf[1021] = '\r';
+    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-1] = '\0';
+    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-2] = '\n';
+    buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-3] = '\r';
   }
   connection_write_to_buf(buf, len, conn);
 }
@@ -559,27 +562,12 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
 }
 
 /* Send an event to all v1 controllers that are listening for code
- * <b>event</b>.  The event's body is created by the printf-style format in
- * <b>format</b>, and other arguments as provided. */
+ * <b>event</b>.  The event's body is given by <b>msg</b>. */
 static void
-send_control1_event(uint16_t event, const char *format, ...)
+send_control1_event_string(uint16_t event, const char *msg)
 {
   connection_t **conns;
-  int n_conns, i, r;
-  char buf[1024]; /* XXXX Length */
-  va_list ap;
-  size_t len;
-
-  va_start(ap, format);
-  r = tor_vsnprintf(buf, sizeof(buf), format, ap);
-  va_end(ap);
-
-  len = strlen(buf);
-  if (memcmp("\r\n\0", buf+len-2, 3)) {
-    buf[1023] = '\0';
-    buf[1022] = '\n';
-    buf[1021] = '\r';
-  }
+  int n_conns, i;
 
   tor_assert(event >= _EVENT_MIN && event <= _EVENT_MAX);
 
@@ -589,11 +577,41 @@ send_control1_event(uint16_t event, const char *format, ...)
         !conns[i]->marked_for_close &&
         conns[i]->state == CONTROL_CONN_STATE_OPEN_V1 &&
         conns[i]->event_mask & (1<<event)) {
-      connection_write_to_buf(buf, len, conns[i]);
+      connection_write_to_buf(msg, strlen(msg), conns[i]);
       if (event == EVENT_ERR_MSG)
         _connection_controller_force_write(conns[i]);
     }
   }
+}
+
+/* Send an event to all v1 controllers that are listening for code
+ * <b>event</b>.  The event's body is created by the printf-style format in
+ * <b>format</b>, and other arguments as provided.
+ *
+ * Currently the length of the message is limited to 1024 (including the
+ * ending \n\r\0. */
+static void
+send_control1_event(uint16_t event, const char *format, ...)
+{
+#define SEND_CONTROL1_EVENT_BUFFERSIZE 1024
+  int r;
+  char buf[SEND_CONTROL1_EVENT_BUFFERSIZE]; /* XXXX Length */
+  va_list ap;
+  size_t len;
+
+  va_start(ap, format);
+  r = tor_vsnprintf(buf, sizeof(buf), format, ap);
+  va_end(ap);
+
+  len = strlen(buf);
+  if (memcmp("\r\n\0", buf+len-2, 3)) {
+    /* if it is not properly terminated, do it now */
+    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-1] = '\0';
+    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-2] = '\n';
+    buf[SEND_CONTROL1_EVENT_BUFFERSIZE-3] = '\r';
+  }
+
+  send_control1_event_string(event, buf);
 }
 
 /** Given a text circuit <b>id</b>, return the corresponding circuit. */
