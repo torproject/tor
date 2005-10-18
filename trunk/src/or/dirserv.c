@@ -1386,10 +1386,13 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
 }
 
 /** Add a routerinfo_t to <b>descs_out</b> for each router matching
- * <b>key</b>.  The key should be either "/tor/server/authority" for our own
- * routerinfo; "/tor/server/all" for all the routerinfos we have,
- * concatenated; or "/tor/server/FP" where FP is a plus-separated sequence of
- * hex identity digests.
+ * <b>key</b>.  The key should be either
+ *   - "/tor/server/authority" for our own routerinfo;
+ *   - "/tor/server/all" for all the routerinfos we have, concatenated;
+ *   - "/tor/server/fp/FP" where FP is a plus-separated sequence of
+ *     hex identity digests; or
+ *   - "/tor/server/d/D where D is a plus-separated sequence
+ *     of server descriptor digests, in hex.
  */
 void
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
