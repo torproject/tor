@@ -8,6 +8,7 @@ const char rendmid_c_id[] = "$Id$";
  * \brief Implement introductions points and rendezvous points.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Respond to an ESTABLISH_INTRO cell by checking the signed data and
@@ -24,11 +25,11 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   circuit_t *c;
   char serviceid[REND_SERVICE_ID_LEN+1];
 
-  log_fn(LOG_INFO,
-         "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
+  info(LD_REND,
+       "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    log_fn(LOG_WARN, "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
+    warn(LD_PROTOCOL, "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
     goto err;
   }
   if (request_len < 2+DIGEST_LEN)
@@ -41,7 +42,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
     goto truncated;
   pk = crypto_pk_asn1_decode(request+2, asn1len);
   if (!pk) {
-    log_fn(LOG_WARN, "Couldn't decode public key.");
+    warn(LD_PROTOCOL, "Couldn't decode public key.");
     goto err;
   }
 
@@ -49,24 +50,24 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   memcpy(buf, circ->handshake_digest, DIGEST_LEN);
   memcpy(buf+DIGEST_LEN, "INTRODUCE", 9);
   if (crypto_digest(expected_digest, buf, DIGEST_LEN+9) < 0) {
-    log_fn(LOG_WARN, "Internal error computing digest.");
+    warn(LD_GENERAL, "Internal error computing digest.");
     goto err;
   }
   if (memcmp(expected_digest, request+2+asn1len, DIGEST_LEN)) {
-    log_fn(LOG_WARN, "Hash of session info was not as expected.");
+    warn(LD_PROTOCOL, "Hash of session info was not as expected.");
     goto err;
   }
   /* Rest of body: signature of previous data */
   if (crypto_pk_public_checksig_digest(pk, request, 2+asn1len+DIGEST_LEN,
                                        request+2+DIGEST_LEN+asn1len,
                                        request_len-(2+DIGEST_LEN+asn1len))<0) {
-    log_fn(LOG_WARN, "Incorrect signature on ESTABLISH_INTRO cell; rejecting.");
+    warn(LD_PROTOCOL, "Incorrect signature on ESTABLISH_INTRO cell; rejecting.");
     goto err;
   }
 
   /* The request is valid.  First, compute the hash of Bob's PK.*/
   if (crypto_pk_get_digest(pk, pk_digest)<0) {
-    log_fn(LOG_WARN, "Internal error: couldn't hash public key.");
+    warn(LD_GENERAL, "Internal error: couldn't hash public key.");
     goto err;
   }
 
@@ -79,7 +80,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   c = NULL;
   while ((c = circuit_get_next_by_pk_and_purpose(
                                 c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
-    log_fn(LOG_INFO, "Replacing old circuit %d for service %s",
+    info(LD_REND, "Replacing old circuit %d for service %s",
            c->p_circ_id, safe_str(serviceid));
     circuit_mark_for_close(c);
   }
@@ -88,7 +89,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   if (connection_edge_send_command(NULL,circ,
                                    RELAY_COMMAND_INTRO_ESTABLISHED,
                                    "", 0, NULL)<0) {
-    log_fn(LOG_INFO, "Couldn't send INTRO_ESTABLISHED cell.");
+    info(LD_GENERAL, "Couldn't send INTRO_ESTABLISHED cell.");
     goto err;
   }
 
@@ -96,13 +97,13 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   circ->purpose = CIRCUIT_PURPOSE_INTRO_POINT;
   memcpy(circ->rend_pk_digest, pk_digest, DIGEST_LEN);
 
-  log_fn(LOG_INFO,
-         "Established introduction point on circuit %d for service %s",
-         circ->p_circ_id, safe_str(serviceid));
+  info(LD_REND,
+       "Established introduction point on circuit %d for service %s",
+       circ->p_circ_id, safe_str(serviceid));
 
   return 0;
  truncated:
-  log_fn(LOG_WARN, "Rejecting truncated ESTABLISH_INTRO cell.");
+  warn(LD_PROTOCOL, "Rejecting truncated ESTABLISH_INTRO cell.");
  err:
   if (pk) crypto_free_pk_env(pk);
   circuit_mark_for_close(circ);
@@ -121,7 +122,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   char nak_body[1];
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    log_fn(LOG_WARN, "Rejecting INTRODUCE1 on non-OR or non-edge circuit %d.",
+    warn(LD_PROTOCOL, "Rejecting INTRODUCE1 on non-OR or non-edge circuit %d.",
            circ->p_circ_id);
     goto err;
   }
@@ -129,9 +130,9 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   /* change to MAX_HEX_NICKNAME_LEN once 0.0.9.x is obsolete */
   if (request_len < (DIGEST_LEN+(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+
                      DH_KEY_LEN+CIPHER_KEY_LEN+PKCS1_OAEP_PADDING_OVERHEAD)) {
-    log_fn(LOG_WARN,
-           "Impossibly short INTRODUCE1 cell on circuit %d; responding with nack.",
-           circ->p_circ_id);
+    warn(LD_PROTOCOL,
+         "Impossibly short INTRODUCE1 cell on circuit %d; responding with nack.",
+         circ->p_circ_id);
     goto err;
   }
 
@@ -141,27 +142,28 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   intro_circ = circuit_get_next_by_pk_and_purpose(
                              NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
   if (!intro_circ) {
-    log_fn(LOG_INFO,
-           "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; responding with nack.",
-           safe_str(serviceid), circ->p_circ_id);
+    info(LD_REND,
+         "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; responding with nack.",
+         safe_str(serviceid), circ->p_circ_id);
     goto err;
   }
 
-  log_fn(LOG_INFO,
-         "Sending introduction request for service %s from circ %d to circ %d",
-         safe_str(serviceid), circ->p_circ_id, intro_circ->p_circ_id);
+  info(LD_REND,
+       "Sending introduction request for service %s from circ %d to circ %d",
+       safe_str(serviceid), circ->p_circ_id, intro_circ->p_circ_id);
 
   /* Great.  Now we just relay the cell down the circuit. */
   if (connection_edge_send_command(NULL, intro_circ,
                                    RELAY_COMMAND_INTRODUCE2,
                                    request, request_len, NULL)) {
-    log_fn(LOG_WARN, "Unable to send INTRODUCE2 cell to Tor client.");
+    warn(LD_GENERAL,
+         "Unable to send INTRODUCE2 cell to Tor client.");
     goto err;
   }
   /* And sent an ack down Alice's circuit.  Empty body means succeeded. */
   if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
                                    NULL,0,NULL)) {
-    log_fn(LOG_WARN, "Unable to send INTRODUCE_ACK cell to Tor client.");
+    warn(LD_GENERAL, "Unable to send INTRODUCE_ACK cell to Tor client.");
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -172,7 +174,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   nak_body[0] = 1;
   if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
                                    nak_body, 1, NULL)) {
-    log_fn(LOG_WARN, "Unable to send NAK to Tor client.");
+    warn(LD_GENERAL, "Unable to send NAK to Tor client.");
     circuit_mark_for_close(circ); /* Is this right? */
   }
   return -1;
@@ -187,17 +189,17 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t reque
   char hexid[9];
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    log_fn(LOG_WARN, "Tried to establish rendezvous on non-OR or non-edge circuit.");
+    warn(LD_PROTOCOL, "Tried to establish rendezvous on non-OR or non-edge circuit.");
     goto err;
   }
 
   if (request_len != REND_COOKIE_LEN) {
-    log_fn(LOG_WARN, "Invalid length on ESTABLISH_RENDEZVOUS.");
+    warn(LD_PROTOCOL, "Invalid length on ESTABLISH_RENDEZVOUS.");
     goto err;
   }
 
   if (circuit_get_rendezvous(request)) {
-    log_fn(LOG_WARN, "Duplicate rendezvous cookie in ESTABLISH_RENDEZVOUS.");
+    warn(LD_PROTOCOL, "Duplicate rendezvous cookie in ESTABLISH_RENDEZVOUS.");
     goto err;
   }
 
@@ -205,7 +207,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t reque
   if (connection_edge_send_command(NULL,circ,
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
                                    "", 0, NULL)<0) {
-    log_fn(LOG_WARN, "Couldn't send RENDEZVOUS_ESTABLISHED cell.");
+    warn(LD_PROTOCOL, "Couldn't send RENDEZVOUS_ESTABLISHED cell.");
     goto err;
   }
 
@@ -214,7 +216,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t reque
 
   base16_encode(hexid,9,request,4);
 
-  log_fn(LOG_INFO, "Established rendezvous point on circuit %d for cookie %s",
+  info(LD_REND, "Established rendezvous point on circuit %d for cookie %s",
          circ->p_circ_id, hexid);
 
   return 0;
@@ -236,29 +238,29 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
   base16_encode(hexid,9,request,request_len<4?request_len:4);
 
   if (request_len>=4) {
-    log_fn(LOG_INFO, "Got request for rendezvous from circuit %d to cookie %s.",
+    info(LD_REND, "Got request for rendezvous from circuit %d to cookie %s.",
            circ->p_circ_id, hexid);
   }
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    log_fn(LOG_WARN,
-           "Tried to complete rendezvous on non-OR or non-edge circuit %d.",
-           circ->p_circ_id);
+    info(LD_REND,
+         "Tried to complete rendezvous on non-OR or non-edge circuit %d.",
+         circ->p_circ_id);
     goto err;
   }
 
   if (request_len != REND_COOKIE_LEN+DH_KEY_LEN+DIGEST_LEN) {
-    log_fn(LOG_WARN,
-           "Rejecting RENDEZVOUS1 cell with bad length (%d) on circuit %d.",
-           (int)request_len, circ->p_circ_id);
+    warn(LD_PROTOCOL,
+         "Rejecting RENDEZVOUS1 cell with bad length (%d) on circuit %d.",
+         (int)request_len, circ->p_circ_id);
     goto err;
   }
 
   rend_circ = circuit_get_rendezvous(request);
   if (!rend_circ) {
-    log_fn(LOG_INFO,
-           "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
-           hexid);
+    warn(LD_PROTOCOL,
+         "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
+         hexid);
     goto err;
   }
 
@@ -267,15 +269,16 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
                                    RELAY_COMMAND_RENDEZVOUS2,
                                    request+REND_COOKIE_LEN,
                                    request_len-REND_COOKIE_LEN, NULL)) {
-    log_fn(LOG_WARN, "Unable to send RENDEZVOUS2 cell to OP on circuit %d.",
-           rend_circ->p_circ_id);
+    warn(LD_GENERAL,
+         "Unable to send RENDEZVOUS2 cell to OP on circuit %d.",
+         rend_circ->p_circ_id);
     goto err;
   }
 
   /* Join the circuits. */
-  log_fn(LOG_INFO,
-         "Completing rendezvous: circuit %d joins circuit %d (cookie %s)",
-         circ->p_circ_id, rend_circ->p_circ_id, hexid);
+  info(LD_REND,
+       "Completing rendezvous: circuit %d joins circuit %d (cookie %s)",
+       circ->p_circ_id, rend_circ->p_circ_id, hexid);
 
   circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
   rend_circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;

@@ -51,16 +51,32 @@
 #endif
 
 /* Logging domains */
+
+/** Catch-all for miscellaneous events and internal errors and fatal
+ * errors. */
 #define LD_GENERAL  0
+/** The cryptography subsytem */
 #define LD_CRYPTO   1
+/** Networking */
 #define LD_NET      2
+/** Parsing and acting on our configuration */
 #define LD_CONFIG   3
+/** Reading and writing from the filesystem */
 #define LD_FS       4
+/** Other servers' (non)compliance with the Tor protocol */
 #define LD_PROTOCOL 5
+/** Memory management */
 #define LD_MM       6
+/** HTTP implementation */
 #define LD_HTTP     7
+/** Application (socks) requests */
 #define LD_APP      8
+/** Communication via the controller protocol */
 #define LD_CONTROL  9
+/** Building, using, and managing circuits */
+#define LD_CIRC     10
+/** Hidden services */
+#define LD_REND     11
 
 typedef void (*log_callback)(int severity, int domain, const char *msg);
 

@@ -10,6 +10,7 @@ const char rephist_c_id[] = "$Id$";
  *    been using, which ports we tend to want, and so on.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 static void bw_arrays_init(void);
@@ -289,7 +290,7 @@ rep_hist_dump_stats(time_t now, int severity)
 
   rep_history_clean(now - get_options()->RephistTrackTime);
 
-  log(severity, "--------------- Dumping history information:");
+  log(severity, LD_GENERAL, "--------------- Dumping history information:");
 
   for (orhist_it = digestmap_iter_init(history_map); !digestmap_iter_done(orhist_it);
        orhist_it = digestmap_iter_next(history_map,orhist_it)) {
@@ -309,7 +310,7 @@ rep_hist_dump_stats(time_t now, int severity)
     } else {
       uptime=1.0;
     }
-    log(severity,
+    log(severity, LD_GENERAL,
         "OR %s [%s]: %ld/%ld good connections; uptime %ld/%ld sec (%.2f%%)",
         name1, hexdigest1,
         or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
@@ -337,7 +338,7 @@ rep_hist_dump_stats(time_t now, int severity)
         else
           len += ret;
       }
-      log(severity, "%s", buffer);
+      log(severity, LD_GENERAL, "%s", buffer);
     }
   }
 }
@@ -715,7 +716,7 @@ rep_hist_get_predicted_ports(time_t now)
     tmp_time = smartlist_get(predicted_ports_times, i);
     if (*tmp_time + PREDICTED_CIRCS_RELEVANCE_TIME < now) {
       tmp_port = smartlist_get(predicted_ports_list, i);
-      log_fn(LOG_DEBUG, "Expiring predicted port %d", *tmp_port);
+      debug(LD_CIRC, "Expiring predicted port %d", *tmp_port);
       smartlist_del(predicted_ports_list, i);
       smartlist_del(predicted_ports_times, i);
       rephist_total_alloc -= sizeof(uint16_t)+sizeof(time_t);

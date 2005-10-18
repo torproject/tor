@@ -9,6 +9,7 @@ const char rendcommon_c_id[] = "$Id$";
  * introducers, services, clients, and rendezvous points.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */
@@ -178,7 +179,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
       cp += 8+DIGEST_LEN;
       if (end-cp < klen) goto truncated;
       if (!(info->onion_key = crypto_pk_asn1_decode(cp,klen))) {
-        log_fn(LOG_WARN, "Internal error decoding onion key for intro point.");
+        warn(LD_PROTOCOL, "Internal error decoding onion key for intro point.");
         goto error;
       }
       cp += klen;
@@ -188,7 +189,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
   tor_assert(end-cp >= 0);
   if ((size_t)(end-cp) < keylen) goto truncated;
   if ((size_t)(end-cp) > keylen) {
-    log_fn(LOG_WARN, "Signature is %d bytes too long on service descriptor.",
+    warn(LD_PROTOCOL, "Signature is %d bytes too long on service descriptor.",
            (int)((size_t)(end-cp) - keylen));
     goto error;
   }
@@ -196,13 +197,13 @@ rend_parse_service_descriptor(const char *str, size_t len)
                                        (char*)str,cp-str, /* data */
                                        (char*)cp,end-cp  /* signature*/
                                        )<0) {
-    log_fn(LOG_WARN, "Bad signature on service descriptor.");
+    warn(LD_PROTOCOL, "Bad signature on service descriptor.");
     goto error;
   }
 
   return result;
  truncated:
-  log_fn(LOG_WARN, "Truncated service descriptor.");
+  warn(LD_PROTOCOL, "Truncated service descriptor.");
  error:
   rend_service_descriptor_free(result);
   return NULL;
@@ -361,35 +362,35 @@ rend_cache_store(const char *desc, size_t desc_len)
   tor_assert(rend_cache);
   parsed = rend_parse_service_descriptor(desc,desc_len);
   if (!parsed) {
-    log_fn(LOG_WARN,"Couldn't parse service descriptor.");
+    warn(LD_PROTOCOL,"Couldn't parse service descriptor.");
     return -1;
   }
   if (rend_get_service_id(parsed->pk, query)<0) {
-    log_fn(LOG_WARN,"Couldn't compute service ID.");
+    warn(LD_GENERAL,"Couldn't compute service ID.");
     rend_service_descriptor_free(parsed);
     return -1;
   }
   tor_snprintf(key, sizeof(key), "%c%s", parsed->version?'1':'0', query);
   now = time(NULL);
   if (parsed->timestamp < now-REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
-    log_fn(LOG_WARN,"Service descriptor %s is too old.", safe_str(query));
+    warn(LD_REND,"Service descriptor %s is too old.", safe_str(query));
     rend_service_descriptor_free(parsed);
     return -1;
   }
   if (parsed->timestamp > now+REND_CACHE_MAX_SKEW) {
-    log_fn(LOG_WARN,"Service descriptor %s is too far in the future.",
+    warn(LD_REND,"Service descriptor %s is too far in the future.",
            safe_str(query));
     rend_service_descriptor_free(parsed);
     return -1;
   }
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
   if (e && e->parsed->timestamp > parsed->timestamp) {
-    log_fn(LOG_INFO,"We already have a newer service descriptor %s with the same ID and version.", safe_str(query));
+    info(LD_REND,"We already have a newer service descriptor %s with the same ID and version.", safe_str(query));
     rend_service_descriptor_free(parsed);
     return 0;
   }
   if (e && e->len == desc_len && !memcmp(desc,e->desc,desc_len)) {
-    log_fn(LOG_INFO,"We already have this service descriptor %s.", safe_str(query));
+    info(LD_REND,"We already have this service descriptor %s.", safe_str(query));
     e->received = time(NULL);
     rend_service_descriptor_free(parsed);
     return 0;
@@ -407,7 +408,7 @@ rend_cache_store(const char *desc, size_t desc_len)
   e->desc = tor_malloc(desc_len);
   memcpy(e->desc, desc, desc_len);
 
-  log_fn(LOG_DEBUG,"Successfully stored rend desc '%s', len %d.",
+  debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
          safe_str(query), (int)desc_len);
   return 1;
 }
