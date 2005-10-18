@@ -1409,8 +1409,8 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key)
       smartlist_add(descs_out, ri);
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     smartlist_t *digests = smartlist_create();
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1);
     key += strlen("/tor/server/d/");
+    dir_split_resource_into_fingerprints(key, digests, NULL, 1);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          routerinfo_t *ri = router_get_by_descriptor_digest(d);
