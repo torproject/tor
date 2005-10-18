@@ -1254,14 +1254,9 @@ static int
 onion_pick_cpath_exit(circuit_t *circ, extend_info_t *exit)
 {
   cpath_build_state_t *state = circ->build_state;
-  routerlist_t *rl;
+  routerlist_t *rl = router_get_routerlist();
   int r;
 
-  router_get_routerlist(&rl);
-  if (!rl) {
-    log_fn(LOG_WARN,"router_get_routerlist returned empty list; closing circ.");
-    return -1;
-  }
   r = new_route_len(get_options()->PathlenCoinWeight, circ->purpose,
                     exit, rl->routers);
   if (r < 1) /* must be at least 1 */
@@ -1439,12 +1434,8 @@ choose_good_entry_server(cpath_build_state_t *state)
   }
   if (firewall_is_fascist()) {
     /* exclude all ORs that listen on the wrong port */
-    routerlist_t *rl;
+    routerlist_t *rl = router_get_routerlist();
     int i;
-
-    router_get_routerlist(&rl);
-    if (!rl)
-      return NULL;
 
     for (i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
@@ -1745,9 +1736,7 @@ helper_nodes_set_status_from_directory(void)
   if (! helper_nodes)
     return;
 
-  router_get_routerlist(&routers);
-  if (! routers)
-    return;
+  routers = router_get_routerlist();
 
   now = time(NULL);
 

@@ -255,8 +255,7 @@ router_reload_router_list(void)
   int j;
 
   if (!routerlist) {
-    routerlist = tor_malloc_zero(sizeof(routerlist_t));
-    routerlist->routers = smartlist_create();
+    router_get_routerlist();
   }
 
   router_journal_len = router_store_len = 0;
@@ -1024,11 +1023,15 @@ router_get_by_descriptor_digest(const char *digest)
   return NULL;
 }
 
-/** Set *<b>prouterlist</b> to the current list of all known routers. */
-void
-router_get_routerlist(routerlist_t **prouterlist)
+/** Return the current list of all known routers. */
+routerlist_t *
+router_get_routerlist(void)
 {
-  *prouterlist = routerlist;
+  if (!routerlist) {
+    routerlist = tor_malloc_zero(sizeof(routerlist_t));
+    routerlist->routers = smartlist_create();
+  }
+  return routerlist;
 }
 
 /** Free all storage held by <b>router</b>. */
@@ -1099,6 +1102,35 @@ routerlist_free(routerlist_t *rl)
                     routerinfo_free(r));
   smartlist_free(rl->routers);
   tor_free(rl);
+}
+
+/** Insert an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
+ * as needed. */
+static void
+routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
+{
+  smartlist_add(rl->routers, ri);
+}
+
+/** Remove an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
+ * as needed. If <b>idx</b> is nonnegative and smartlist_get(rl-&gt;routers,
+ * idx) == ri, we don't need to do a linear search over the list to decide
+ * which to remove.  We fill the gap rl-&gt;routers with a later element in
+ * the list, if any exists. */
+void
+routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx)
+{
+  if (idx < 0 || smartlist_get(rl->routers, idx) != ri) {
+    idx = -1;
+    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
+                      if (r == ri) {
+                        idx = r_sl_idx;
+                        break;
+                      });
+    if (idx < 0)
+      return;
+  }
+  smartlist_del(rl->routers, idx);
 }
 
 /** Free all memory held by the rouerlist module */
@@ -1333,8 +1365,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                  old_router->nickname);
           connection_mark_for_close(conn);
         }
+        routerlist_remove(routerlist, old_router, i--);
         routerinfo_free(old_router);
-        smartlist_del_keeporder(routerlist->routers, i--);
       } else if (old_router->is_named) {
         /* Can't replace a verified router with an unverified one. */
         log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
@@ -1347,7 +1379,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   }
   /* We haven't seen a router with this name before.  Add it to the end of
    * the list. */
-  smartlist_add(routerlist->routers, router);
+  routerlist_insert(routerlist, router);
   if (!from_cache)
     router_append_to_journal(router->signed_descriptor,
                              router->signed_descriptor_len);
@@ -1373,8 +1405,8 @@ routerlist_remove_old_routers(int age)
     if (router->published_on <= cutoff) {
       /* Too old.  Remove it. */
       log_fn(LOG_INFO,"Forgetting obsolete routerinfo for router '%s'", router->nickname);
+      routerlist_remove(routerlist, router, i--);
       routerinfo_free(router);
-      smartlist_del(routerlist->routers, i--);
     }
   }
 }

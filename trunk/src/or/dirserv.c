@@ -333,16 +333,6 @@ dirserv_free_fingerprint_list(void)
  *    Descriptor list
  */
 
-static smartlist_t *
-get_descriptor_list(void)
-{
-  routerlist_t *routerlist;
-  router_get_routerlist(&routerlist);
-  if (!routerlist)
-    return NULL;
-  return routerlist->routers;
-}
-
 /** Return -1 if <b>ri</b> has a private or otherwise bad address,
  * unless we're configured to not care. Return 0 if all ok. */
 static int
@@ -487,21 +477,18 @@ directory_remove_invalid(void)
 {
   int i;
   int changed = 0;
-  smartlist_t *descriptor_list = get_descriptor_list();
+  routerlist_t *rl = router_get_routerlist();
 
-  if (!descriptor_list)
-    return;
-
-  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
+  for (i = 0; i < smartlist_len(rl->routers); ++i) {
     const char *msg;
-    routerinfo_t *ent = smartlist_get(descriptor_list, i);
+    routerinfo_t *ent = smartlist_get(rl->routers, i);
     router_status_t r = dirserv_router_get_status(ent, &msg);
     switch (r) {
       case FP_REJECT:
         log(LOG_INFO, "Router '%s' is now rejected: %s",
             ent->nickname, msg?msg:"");
+        routerlist_remove(rl, ent, i--);
         routerinfo_free(ent);
-        smartlist_del(descriptor_list, i--);
         changed = 1;
         break;
       case FP_NAMED:
@@ -539,21 +526,15 @@ directory_remove_invalid(void)
 char *
 dirserver_getinfo_unregistered(const char *question)
 {
-  int i;
   router_status_t r;
   smartlist_t *answerlist;
   char buf[1024];
   char *answer;
-  routerinfo_t *ent;
   int min_bw = atoi(question);
-  smartlist_t *descriptor_list = get_descriptor_list();
-
-  if (!descriptor_list)
-    return tor_strdup("");
+  routerlist_t *rl = router_get_routerlist();
 
   answerlist = smartlist_create();
-  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
-    ent = smartlist_get(descriptor_list, i);
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ent, {
     r = dirserv_router_get_status(ent, NULL);
     if (ent->bandwidthcapacity >= (size_t)min_bw &&
         ent->bandwidthrate >= (size_t)min_bw &&
@@ -565,7 +546,7 @@ dirserver_getinfo_unregistered(const char *question)
                    ent->platform ? ent->platform : "");
       smartlist_add(answerlist, tor_strdup(buf));
     }
-  }
+  });
   answer = smartlist_join_strings(answerlist, "\r\n", 0, NULL);
   SMARTLIST_FOREACH(answerlist, char *, cp, tor_free(cp));
   smartlist_free(answerlist);
@@ -754,15 +735,12 @@ dirserv_dump_directory_to_string(char **dir_out,
   char *buf = NULL;
   size_t buf_len;
   size_t identity_pkey_len;
-  smartlist_t *descriptor_list = get_descriptor_list();
+  routerlist_t *rl = router_get_routerlist();
 
   tor_assert(dir_out);
   *dir_out = NULL;
 
-  if (!descriptor_list)
-    return -1;
-
-  if (list_server_status(descriptor_list, &router_status))
+  if (list_server_status(rl->routers, &router_status))
     return -1;
 
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
@@ -778,7 +756,7 @@ dirserv_dump_directory_to_string(char **dir_out,
 
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
-  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
                     buf_len += ri->signed_descriptor_len+1);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
@@ -800,7 +778,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   tor_free(identity_pkey);
 
   cp = buf + strlen(buf);
-  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
     {
       if (cp+ri->signed_descriptor_len+1 >= buf+buf_len)
         goto truncated;
@@ -1067,9 +1045,9 @@ generate_runningrouters(void)
   crypto_pk_env_t *private_key = get_identity_key();
   char *identity_pkey; /* Identity key, DER64-encoded. */
   size_t identity_pkey_len;
-  smartlist_t *descriptor_list = get_descriptor_list();
+  routerlist_t *rl = router_get_routerlist();
 
-  if (list_server_status(descriptor_list, &router_status)) {
+  if (list_server_status(rl->routers, &router_status)) {
     goto err;
   }
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
@@ -1178,16 +1156,11 @@ generate_v2_networkstatus(void)
   struct in_addr in;
   uint32_t addr;
   crypto_pk_env_t *private_key = get_identity_key();
-  smartlist_t *descriptor_list = get_descriptor_list();
+  routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
   int naming = options->NamingAuthoritativeDir;
   int versioning = options->VersioningAuthoritativeDir;
   const char *contact;
-
-  if (!descriptor_list) {
-    log_fn(LOG_WARN, "Couldn't get router list.");
-    goto done;
-  }
 
   if (resolve_my_address(options, &addr, &hostname)<0) {
     log_fn(LOG_WARN, "Couldn't resolve my hostname");
@@ -1217,7 +1190,7 @@ generate_v2_networkstatus(void)
     contact = "(none)";
 
   len = 2048+strlen(client_versions)+strlen(server_versions)+identity_pkey_len*2;
-  len += (RS_ENTRY_LEN)*smartlist_len(descriptor_list) ;
+  len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
 
   status = tor_malloc(len);
   tor_snprintf(status, len,
@@ -1242,7 +1215,7 @@ generate_v2_networkstatus(void)
   outp = status + strlen(status);
   endp = status + len;
 
-  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri, {
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
       int f_exit = router_is_general_exit(ri);
       int f_stable = !router_is_unreliable(ri, 1, 0);
       int f_fast = !router_is_unreliable(ri, 0, 1);
@@ -1345,9 +1318,10 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
                                     the_v2_networkstatus_is_dirty,
                                     generate_v2_networkstatus,
                                     "network status list", 0);
-      log_fn(LOG_WARN, "Unable to generate an authoritative network status.");
       if (d)
         smartlist_add(result, d);
+      else
+        log_fn(LOG_WARN,"Unable to generate an authoritative network status.");
     }
   } else if (!strcmp(key, "all")) {
     strmap_iter_t *iter = strmap_iter_init(cached_v2_networkstatus);
@@ -1403,16 +1377,11 @@ int
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
   const char **msg)
 {
-  smartlist_t *complete_list = get_descriptor_list();
   *msg = NULL;
 
-  if (!complete_list) {
-    *msg = "No server descriptors available";
-    return -1;
-  }
-
   if (!strcmp(key, "/tor/server/all")) {
-    smartlist_add_all(descs_out, complete_list);
+    routerlist_t *rl = router_get_routerlist();
+    smartlist_add_all(descs_out, rl->routers);
   } else if (!strcmp(key, "/tor/server/authority")) {
     routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
@@ -1475,18 +1444,15 @@ dirserv_orconn_tls_done(const char *address,
                         int as_advertised)
 {
   int i;
-  smartlist_t *descriptor_list = get_descriptor_list();
+  routerlist_t *rl = router_get_routerlist();
   tor_assert(address);
   tor_assert(digest_rcvd);
   tor_assert(nickname_rcvd);
 
-  if (!descriptor_list)
-    return;
-
   // XXXXNM We should really have a better solution here than dropping
   // XXXXNM whole routers; otherwise, they come back way too easily.
-  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
-    routerinfo_t *ri = smartlist_get(descriptor_list, i);
+  for (i = 0; i < smartlist_len(rl->routers); ++i) {
+    routerinfo_t *ri = smartlist_get(rl->routers, i);
     int drop = 0;
     if (strcasecmp(address, ri->address) || or_port != ri->or_port)
       continue;
@@ -1503,8 +1469,8 @@ dirserv_orconn_tls_done(const char *address,
       }
     }
     if (drop) {
+      routerlist_remove(rl, ri, i--);
       routerinfo_free(ri);
-      smartlist_del(descriptor_list, i--);
       directory_set_dirty();
     } else { /* correct nickname and digest. mark this router reachable! */
       log_fn(LOG_INFO,"Found router %s to be reachable. Yay.", ri->nickname);

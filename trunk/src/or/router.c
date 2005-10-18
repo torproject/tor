@@ -610,18 +610,13 @@ consider_publishable_server(time_t now, int force)
 void
 router_retry_connections(int force)
 {
-  int i;
   time_t now = time(NULL);
-  routerinfo_t *router;
-  routerlist_t *rl;
+  routerlist_t *rl = router_get_routerlist();
   or_options_t *options = get_options();
 
   tor_assert(server_mode(options));
 
-  router_get_routerlist(&rl);
-  if (!rl) return;
-  for (i=0;i < smartlist_len(rl->routers);i++) {
-    router = smartlist_get(rl->routers, i);
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
     if (router_is_me(router))
       continue;
     if (!clique_mode(options) && !router_is_clique_mode(router))
@@ -637,7 +632,7 @@ router_retry_connections(int force)
         router->testing_since = now;
       connection_or_connect(router->addr, router->or_port, router->identity_digest);
     }
-  }
+  });
 }
 
 /** Return true iff this OR should try to keep connections open to all
