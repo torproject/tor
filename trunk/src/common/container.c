@@ -16,6 +16,7 @@ const char container_c_id[] = "$Id$";
 #include "log.h"
 #include "../or/tree.h"
 #include "container.h"
+#include "crypto.h"
 
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
@@ -442,19 +443,20 @@ smartlist_sort_strings(smartlist_t *sl)
   smartlist_sort(sl, _compare_string_ptrs);
 }
 
-/** A node in a strmap_t string-to-void* map. */
-typedef struct strmap_entry_t {
-  SPLAY_ENTRY(strmap_entry_t) node;
-  char *key;
-  void *val;
-} strmap_entry_t;
+#define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
+  typedef struct prefix ## entry_t {                      \
+    SPLAY_ENTRY(prefix ## entry_t) node;                  \
+    keydecl;                                              \
+    void *val;                                            \
+  } prefix ## entry_t;                                    \
+  struct maptype {                                        \
+    SPLAY_HEAD(prefix ## tree, prefix ## entry_t) head;   \
+  };
 
-/** Splay-tree implementation of string-to-void* map */
-struct strmap_t {
-  SPLAY_HEAD(strmap_tree, strmap_entry_t) head;
-};
+DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_);
+DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
 
-/** Helper: compare strmap_entry_t objects by key value. */
+/** Helper: compare strmap_t_entry objects by key value. */
 static int
 compare_strmap_entries(strmap_entry_t *a,
                        strmap_entry_t *b)
@@ -462,10 +464,23 @@ compare_strmap_entries(strmap_entry_t *a,
   return strcmp(a->key, b->key);
 }
 
+/** Helper: compare digestmap_entry_t objects by key value. */
+static int
+compare_digestmap_entries(digestmap_entry_t *a,
+                          digestmap_entry_t *b)
+{
+  return memcmp(a->key, b->key, DIGEST_LEN);
+}
+
 SPLAY_PROTOTYPE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
 SPLAY_GENERATE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
 
-/** Create a new empty map from strings to void*'s.
+SPLAY_PROTOTYPE(digestmap_tree, digestmap_entry_t, node,
+                compare_digestmap_entries);
+SPLAY_GENERATE(digestmap_tree, digestmap_entry_t, node,
+               compare_digestmap_entries);
+
+/** Define function reate a new empty map from strings to void*'s.
  */
 strmap_t *
 strmap_new(void)
@@ -476,10 +491,22 @@ strmap_new(void)
   return result;
 }
 
+/** Define function reate a new empty map from digests to void*'s.
+ */
+digestmap_t *
+digestmap_new(void)
+{
+  digestmap_t *result;
+  result = tor_malloc(sizeof(digestmap_t));
+  SPLAY_INIT(&result->head);
+  return result;
+}
+
 /** Set the current value for <b>key</b> to <b>val</b>.  Returns the previous
  * value for <b>key</b> if one was set, or NULL if one was not.
  *
- * This function makes a copy of <b>key</b> if necessary, but not of <b>val</b>.
+ * This function makes a copy of <b>key</b> if necessary, but not of
+ * <b>val</b>.
  */
 void *
 strmap_set(strmap_t *map, const char *key, void *val)
@@ -505,6 +532,30 @@ strmap_set(strmap_t *map, const char *key, void *val)
   }
 }
 
+void *
+digestmap_set(digestmap_t *map, const char *key, void *val)
+{
+  digestmap_entry_t *resolve;
+  digestmap_entry_t search;
+  void *oldval;
+  tor_assert(map);
+  tor_assert(key);
+  tor_assert(val);
+  memcpy(&search.key, key, DIGEST_LEN);
+  resolve = SPLAY_FIND(digestmap_tree, &map->head, &search);
+  if (resolve) {
+    oldval = resolve->val;
+    resolve->val = val;
+    return oldval;
+  } else {
+    resolve = tor_malloc_zero(sizeof(digestmap_entry_t));
+    memcpy(resolve->key, key, DIGEST_LEN);
+    resolve->val = val;
+    SPLAY_INSERT(digestmap_tree, &map->head, resolve);
+    return NULL;
+  }
+}
+
 /** Return the current value associated with <b>key</b>, or NULL if no
  * value is set.
  */
@@ -517,6 +568,22 @@ strmap_get(strmap_t *map, const char *key)
   tor_assert(key);
   search.key = (char*)key;
   resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
+  if (resolve) {
+    return resolve->val;
+  } else {
+    return NULL;
+  }
+}
+
+void *
+digestmap_get(digestmap_t *map, const char *key)
+{
+  digestmap_entry_t *resolve;
+  digestmap_entry_t search;
+  tor_assert(map);
+  tor_assert(key);
+  memcpy(&search.key, key, DIGEST_LEN);
+  resolve = SPLAY_FIND(digestmap_tree, &map->head, &search);
   if (resolve) {
     return resolve->val;
   } else {
@@ -544,6 +611,26 @@ strmap_remove(strmap_t *map, const char *key)
     oldval = resolve->val;
     SPLAY_REMOVE(strmap_tree, &map->head, resolve);
     tor_free(resolve->key);
+    tor_free(resolve);
+    return oldval;
+  } else {
+    return NULL;
+  }
+}
+
+void *
+digestmap_remove(digestmap_t *map, const char *key)
+{
+  digestmap_entry_t *resolve;
+  digestmap_entry_t search;
+  void *oldval;
+  tor_assert(map);
+  tor_assert(key);
+  memcpy(&search.key, key, DIGEST_LEN);
+  resolve = SPLAY_FIND(digestmap_tree, &map->head, &search);
+  if (resolve) {
+    oldval = resolve->val;
+    SPLAY_REMOVE(digestmap_tree, &map->head, resolve);
     tor_free(resolve);
     return oldval;
   } else {
@@ -666,6 +753,14 @@ strmap_iter_init(strmap_t *map)
   tor_assert(map);
   return SPLAY_MIN(strmap_tree, &map->head);
 }
+
+digestmap_iter_t *
+digestmap_iter_init(digestmap_t *map)
+{
+  tor_assert(map);
+  return SPLAY_MIN(digestmap_tree, &map->head);
+}
+
 /** Advance the iterator <b>iter</b> for map a single step to the next entry.
  */
 strmap_iter_t *
@@ -675,6 +770,15 @@ strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
   tor_assert(iter);
   return SPLAY_NEXT(strmap_tree, &map->head, iter);
 }
+
+digestmap_iter_t *
+digestmap_iter_next(digestmap_t *map, digestmap_iter_t *iter)
+{
+  tor_assert(map);
+  tor_assert(iter);
+  return SPLAY_NEXT(digestmap_tree, &map->head, iter);
+}
+
 /** Advance the iterator <b>iter</b> a single step to the next entry, removing
  * the current entry.
  */
@@ -690,6 +794,19 @@ strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
   tor_free(iter);
   return next;
 }
+
+digestmap_iter_t *
+digestmap_iter_next_rmv(digestmap_t *map, digestmap_iter_t *iter)
+{
+  digestmap_iter_t *next;
+  tor_assert(map);
+  tor_assert(iter);
+  next = SPLAY_NEXT(digestmap_tree, &map->head, iter);
+  SPLAY_REMOVE(digestmap_tree, &map->head, iter);
+  tor_free(iter);
+  return next;
+}
+
 /** Set *keyp and *valp to the current entry pointed to by iter.
  */
 void
@@ -701,6 +818,17 @@ strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
   *keyp = iter->key;
   *valp = iter->val;
 }
+
+void
+digestmap_iter_get(digestmap_iter_t *iter, const char **keyp, void **valp)
+{
+  tor_assert(iter);
+  tor_assert(keyp);
+  tor_assert(valp);
+  *keyp = iter->key;
+  *valp = iter->val;
+}
+
 /** Return true iff iter has advanced past the last entry of map.
  */
 int
@@ -708,6 +836,13 @@ strmap_iter_done(strmap_iter_t *iter)
 {
   return iter == NULL;
 }
+
+int
+digestmap_iter_done(digestmap_iter_t *iter)
+{
+  return iter == NULL;
+}
+
 /** Remove all entries from <b>map</b>, and deallocate storage for those entries.
  * If free_val is provided, it is invoked on every value in <b>map</b>.
  */
@@ -727,10 +862,31 @@ strmap_free(strmap_t *map, void (*free_val)(void*))
   tor_free(map);
 }
 
+void
+digestmap_free(digestmap_t *map, void (*free_val)(void*))
+{
+  digestmap_entry_t *ent, *next;
+  for (ent = SPLAY_MIN(digestmap_tree, &map->head); ent != NULL; ent = next) {
+    next = SPLAY_NEXT(digestmap_tree, &map->head, ent);
+    SPLAY_REMOVE(digestmap_tree, &map->head, ent);
+    if (free_val)
+      free_val(ent->val);
+    tor_free(ent);
+  }
+  tor_assert(SPLAY_EMPTY(&map->head));
+  tor_free(map);
+}
+
 /* Return true iff <b>map</b> has no entries.
  */
 int
 strmap_isempty(strmap_t *map)
+{
+  return SPLAY_EMPTY(&map->head);
+}
+
+int
+digestmap_isempty(digestmap_t *map)
 {
   return SPLAY_EMPTY(&map->head);
 }
