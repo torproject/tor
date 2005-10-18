@@ -7,8 +7,8 @@
 #define __CONTAINER_H
 #define CONTAINER_H_ID "$Id$"
 
-#import "compat.h"
-#import "util.h"
+#include "compat.h"
+#include "util.h"
 
 /** A resizeable list of pointers, with associated helpful functionality. */
 typedef struct smartlist_t {
