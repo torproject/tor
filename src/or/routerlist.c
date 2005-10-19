@@ -1136,6 +1136,30 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx)
   // routerlist_assert_ok(rl);
 }
 
+static void
+routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
+                   routerinfo_t *ri_new, int idx)
+{
+  if (idx < 0 || smartlist_get(rl->routers, idx) != ri_old) {
+    idx = -1;
+    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
+                      if (r == ri_old) {
+                        idx = r_sl_idx;
+                        break;
+                      });
+  }
+  if (idx >= 0) {
+    smartlist_set(rl->routers, idx, ri_new);
+  } else {
+    smartlist_add(rl->routers, ri_new);
+  }
+  if (memcmp(ri_old->identity_digest, ri->new_identity_digest)) {
+    /* digests don't match; digestmap_set won't replace */
+    digestmap_remove(rl->identity_map, ri_old->identity_digest);
+  }
+  digestmap_set(rl->identity_map, ri_new->identity_digest, ri_new);
+}
+
 /** Free all memory held by the rouerlist module */
 void
 routerlist_free_all(void)
@@ -1338,8 +1362,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
             router->num_unreachable_notifications++;
           }
         }
+        routerlist_replace(routerlist, old_router, router, i);
         routerinfo_free(old_router);
-        smartlist_set(routerlist->routers, i, router);
         if (!from_cache)
           router_append_to_journal(router->signed_descriptor,
                                    router->signed_descriptor_len);
