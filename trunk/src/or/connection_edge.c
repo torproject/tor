@@ -925,6 +925,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
   socks_request_t *socks;
   int sockshere;
   hostname_type_t addresstype;
+  int tor_should_handle_stream = !get_options()->LeaveStreamsUnattached;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -963,7 +964,8 @@ connection_ap_handshake_process_socks(connection_t *conn)
   /* For address map controls, remap the address */
   addressmap_rewrite(socks->address, sizeof(socks->address));
 
-  if (address_is_in_virtual_range(socks->address)) {
+  if (tor_should_handle_stream &&
+      address_is_in_virtual_range(socks->address)) {
     /* This address was probably handed out by client_dns_get_unmapped_address,
      * but the mapping was discarded for some reason.  We *don't* want to send
      * the address through tor; that's likely to fail, and may leak
@@ -980,7 +982,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
    */
   addresstype = parse_extended_hostname(socks->address);
 
-  if (addresstype == BAD_HOSTNAME) {
+  if (tor_should_handle_stream && addresstype == BAD_HOSTNAME) {
     log_fn(LOG_WARN, "Invalid hostname %s; rejecting", socks->address);
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
     return -1;
@@ -1008,7 +1010,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
         /* XXXX Should this use server->address instead? */
         in.s_addr = htonl(r->addr);
         strlcpy(socks->address, inet_ntoa(in), sizeof(socks->address));
-      } else {
+      } else if (tor_should_handle_stream) {
         log_fn(LOG_WARN,
                "Unrecognized server in exit address '%s.exit'. Refusing.",
                safe_str(socks->address));
@@ -1021,7 +1023,8 @@ connection_ap_handshake_process_socks(connection_t *conn)
   if (addresstype != ONION_HOSTNAME) {
     /* not a hidden-service request (i.e. normal or .exit) */
 
-    if (address_is_invalid_destination(socks->address)) {
+    if (tor_should_handle_stream &&
+        address_is_invalid_destination(socks->address)) {
       log_fn(LOG_WARN,"Destination '%s' seems to be an invalid hostname. Failing.",
              safe_str(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
