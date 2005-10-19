@@ -1115,7 +1115,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
  * as needed. If <b>idx</b> is nonnegative and smartlist_get(rl-&gt;routers,
  * idx) == ri, we don't need to do a linear search over the list to decide
  * which to remove.  We fill the gap rl-&gt;routers with a later element in
- * the list, if any exists. */
+ * the list, if any exists. ri_old is not freed.*/
 void
 routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx)
 {
@@ -1136,6 +1136,11 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx)
   // routerlist_assert_ok(rl);
 }
 
+/** Remove <b>ri_old</b> from the routerlist <b>rl</b>, and replace it with
+ * <b>ri_new</b>, updating all index info.  If <b>idx</b> is nonnegative and
+ * smartlist_get(rl-&gt;routers, idx) == ri, we don't need to do a linear
+ * search over the list to decide which to remove.  We put ri_new in the same
+ * index as ri_old, if possible.  ri_old is not freed.*/
 static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx)
@@ -1153,7 +1158,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   } else {
     smartlist_add(rl->routers, ri_new);
   }
-  if (memcmp(ri_old->identity_digest, ri->new_identity_digest)) {
+  if (memcmp(ri_old->identity_digest, ri_new->identity_digest, DIGEST_LEN)) {
     /* digests don't match; digestmap_set won't replace */
     digestmap_remove(rl->identity_map, ri_old->identity_digest);
   }
