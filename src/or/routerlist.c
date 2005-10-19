@@ -2950,6 +2950,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
       tor_version_as_new_as(r2->platform, "0.1.1.6-alpha"))
     return 0;
 
+  /* r1 should be the one that was published first. */
   if (r1->published_on > r2->published_on) {
     routerinfo_t *ri_tmp = r2;
     r2 = r1;
@@ -2989,8 +2990,8 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
       (r2->bandwidthcapacity < r1->bandwidthcapacity/2))
     return 0;
 
-  /* Did more than 6 hours pass? */
-  if (r1->published_on + 6*60*60 < r2->published_on)
+  /* Did more than 12 hours pass? */
+  if (r1->published_on + 12*60*60 < r2->published_on)
     return 0;
 
   /* Did uptime fail to increase by approximately the amount we would think,
