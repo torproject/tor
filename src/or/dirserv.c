@@ -1349,7 +1349,9 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
           if (cached) {
             smartlist_add(result, cached);
           } else {
-            log_fn(LOG_INFO, "Don't know about any network status with fingerprint '%s'", cp);
+            char hexbuf[HEX_DIGEST_LEN+1];
+            base16_encode(hexbuf, sizeof(hexbuf), cp, DIGEST_LEN);
+            log_fn(LOG_INFO, "Don't know about any network status with fingerprint '%s'", hexbuf);
           }
           tor_free(cp);
         });
