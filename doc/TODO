@@ -36,6 +36,8 @@ NR- write a spec appendix for 'being nice with tor'
 
 
 for 0.1.1.x:
+N - if they're trying to be a tor server and they're running
+    win 98 or win me, don't let them be a server.
 R - are dirservers auto-verifying duplicate nicknames?
   o tor should auto-sort the recommended-versions strings 
     (with the new smartlist sort stuff maybe)
