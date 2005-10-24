@@ -80,6 +80,10 @@
 #define LD_BUG      12
 /** Learning and using information about Tor servers. */
 #define LD_DIR      13
+/** Learning and using information about Tor servers. */
+#define LD_DIRSERV  14
+/** Onion routing protocol. */
+#define LD_OR       15
 
 typedef void (*log_callback)(int severity, int domain, const char *msg);
 
