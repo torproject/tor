@@ -5,6 +5,7 @@
 /* $Id$ */
 const char router_c_id[] = "$Id$";
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /**
@@ -135,11 +136,11 @@ rotate_onion_key(void)
   tor_snprintf(fname_prev,sizeof(fname_prev),
            "%s/keys/secret_onion_key.old",get_options()->DataDirectory);
   if (!(prkey = crypto_new_pk_env())) {
-    log(LOG_ERR, "Error creating crypto environment.");
+    err("Error creating crypto environment.");
     goto error;
   }
   if (crypto_pk_generate_key(prkey)) {
-    log(LOG_ERR, "Error generating onion key");
+    err("Error generating onion key");
     goto error;
   }
   if (file_status(fname) == FN_FILE) {
@@ -147,10 +148,10 @@ rotate_onion_key(void)
       goto error;
   }
   if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-    log(LOG_ERR, "Couldn't write generated key to \"%s\".", fname);
+    err("Couldn't write generated key to \"%s\".", fname);
     goto error;
   }
-  log_fn(LOG_INFO, "Rotating onion key");
+  info(LD_GENERAL, "Rotating onion key");
   tor_mutex_acquire(key_lock);
   if (lastonionkey)
     crypto_free_pk_env(lastonionkey);
@@ -161,7 +162,7 @@ rotate_onion_key(void)
   mark_my_descriptor_dirty();
   return;
  error:
-  log_fn(LOG_WARN, "Couldn't rotate onion key.");
+  warn(LD_GENERAL, "Couldn't rotate onion key.");
 }
 
 /* Read an RSA secret key key from a file that was once named fname_old,
@@ -177,8 +178,8 @@ init_key_from_file_name_changed(const char *fname_old,
 
   /* The old filename exists, and the new one doesn't.  Rename and load. */
   if (rename(fname_old, fname_new) < 0) {
-    log_fn(LOG_ERR, "Couldn't rename \"%s\" to \"%s\": %s", fname_old, fname_new,
-           strerror(errno));
+    log_fn(LOG_ERR, LD_FS, "Couldn't rename \"%s\" to \"%s\": %s",
+        fname_old, fname_new, strerror(errno));
     return NULL;
   }
   return init_key_from_file(fname_new);
@@ -195,34 +196,34 @@ init_key_from_file(const char *fname)
   FILE *file = NULL;
 
   if (!(prkey = crypto_new_pk_env())) {
-    log(LOG_ERR, "Error creating crypto environment.");
+    err("Error creating crypto environment.");
     goto error;
   }
 
   switch (file_status(fname)) {
     case FN_DIR:
     case FN_ERROR:
-      log(LOG_ERR, "Can't read key from \"%s\"", fname);
+      err("Can't read key from \"%s\"", fname);
       goto error;
     case FN_NOENT:
-      log(LOG_INFO, "No key found in \"%s\"; generating fresh key.", fname);
+      info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.", fname);
       if (crypto_pk_generate_key(prkey)) {
-        log(LOG_ERR, "Error generating onion key");
+        err("Error generating onion key");
         goto error;
       }
       if (crypto_pk_check_key(prkey) <= 0) {
-        log(LOG_ERR, "Generated key seems invalid");
+        err("Generated key seems invalid");
         goto error;
       }
-      log(LOG_INFO, "Generated key seems valid");
+      info(LD_GENERAL, "Generated key seems valid");
       if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-        log(LOG_ERR, "Couldn't write generated key to \"%s\".", fname);
+        err("Couldn't write generated key to \"%s\".", fname);
         goto error;
       }
       return prkey;
     case FN_FILE:
       if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
-        log(LOG_ERR, "Error loading private key.");
+        err("Error loading private key.");
         goto error;
       }
       return prkey;
@@ -273,7 +274,7 @@ init_keys(void)
     if (tor_tls_context_new(get_identity_key(), 1,
                             options->Nickname ? options->Nickname : "client",
                             MAX_SSL_KEY_LIFETIME) < 0) {
-      log_fn(LOG_ERR, "Error creating TLS context for OP.");
+      err("Error creating TLS context for OP.");
       return -1;
     }
     return 0;
@@ -293,14 +294,14 @@ init_keys(void)
   /* 1. Read identity key. Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/identity.key",datadir);
   tor_snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_id_key",datadir);
-  log_fn(LOG_INFO,"Reading/making identity key \"%s\"...",keydir2);
+  info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir2);
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_identity_key(prkey);
   /* 2. Read onion key.  Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/onion.key",datadir);
   tor_snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_onion_key",datadir);
-  log_fn(LOG_INFO,"Reading/making onion key \"%s\"...",keydir2);
+  info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir2);
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_onion_key(prkey);
@@ -314,46 +315,46 @@ init_keys(void)
   /* 3. Initialize link key and TLS context. */
   if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
                           MAX_SSL_KEY_LIFETIME) < 0) {
-    log_fn(LOG_ERR, "Error initializing TLS context");
+    err("Error initializing TLS context");
     return -1;
   }
   /* 4. Dump router descriptor to 'router.desc' */
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
   if (!mydesc) {
-    log_fn(LOG_ERR, "Error initializing descriptor.");
+    err("Error initializing descriptor.");
     return -1;
   }
   if (authdir_mode(options)) {
     const char *m;
     /* We need to add our own fingerprint so it gets recognized. */
     if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
-      log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
+      err("Error adding own fingerprint to approved set");
       return -1;
     }
     if (dirserv_add_descriptor(mydesc, &m) < 0) {
-      log(LOG_ERR, "Unable to add own descriptor to directory: %s",
+      err("Unable to add own descriptor to directory: %s",
           m?m:"<unknown error>");
       return -1;
     }
   }
 
   tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", datadir);
-  log_fn(LOG_INFO,"Dumping descriptor to \"%s\"...",keydir);
+  info(LD_GENERAL,"Dumping descriptor to \"%s\"...",keydir);
   if (write_str_to_file(keydir, mydesc,0)) {
     return -1;
   }
   /* 5. Dump fingerprint to 'fingerprint' */
   tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
-  log_fn(LOG_INFO,"Dumping fingerprint to \"%s\"...",keydir);
+  info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
   if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 1)<0) {
-    log_fn(LOG_ERR, "Error computing fingerprint");
+    err("Error computing fingerprint");
     return -1;
   }
   tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
   if (tor_snprintf(fingerprint_line, sizeof(fingerprint_line),
                    "%s %s\n",options->Nickname, fingerprint) < 0) {
-    log_fn(LOG_ERR, "Error writing fingerprint line");
+    err("Error writing fingerprint line");
     return -1;
   }
   if (write_str_to_file(keydir, fingerprint_line, 0))
@@ -362,9 +363,9 @@ init_keys(void)
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
   tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
-  log_fn(LOG_INFO,"Loading approved fingerprints from \"%s\"...",keydir);
+  info(LD_DIRSERV,"Loading approved fingerprints from \"%s\"...",keydir);
   if (dirserv_parse_fingerprint_file(keydir) < 0) {
-    log_fn(LOG_ERR, "Error loading fingerprints");
+    err("Error loading fingerprints");
     return -1;
   }
   /* 6b. [authdirserver only] add own key to approved directories. */
@@ -452,7 +453,7 @@ consider_testing_reachability(void)
 {
   routerinfo_t *me = router_get_my_routerinfo();
   if (!me) {
-    log_fn(LOG_WARN,"Bug: router_get_my_routerinfo() did not find my routerinfo?");
+    warn(LD_BUG,"Bug: router_get_my_routerinfo() did not find my routerinfo?");
     return;
   }
 
@@ -473,7 +474,7 @@ router_orport_found_reachable(void)
 {
   if (!can_reach_or_port) {
     if (!clique_mode(get_options()))
-      log(LOG_NOTICE,"Self-testing indicates your ORPort is reachable from the outside. Excellent.%s",
+      notice(LD_OR,"Self-testing indicates your ORPort is reachable from the outside. Excellent.%s",
           get_options()->NoPublish ? "" : " Publishing server descriptor.");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
@@ -486,7 +487,7 @@ void
 router_dirport_found_reachable(void)
 {
   if (!can_reach_dir_port) {
-    log(LOG_NOTICE,"Self-testing indicates your DirPort is reachable from the outside. Excellent.");
+    notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable from the outside. Excellent.");
     can_reach_dir_port = 1;
   }
 }
@@ -623,7 +624,7 @@ router_retry_connections(int force)
     if (force ||
         !connection_get_by_identity_digest(router->identity_digest,
                                            CONN_TYPE_OR)) {
-      log_fn(LOG_DEBUG,"%sconnecting to %s at %s:%u.",
+      debug(LD_OR,"%sconnecting to %s at %s:%u.",
              clique_mode(options) ? "(forced) " : "",
              router->nickname, router->address, router->or_port);
       /* Remember when we started trying to determine reachability */
@@ -667,7 +668,7 @@ router_upload_dir_desc_to_dirservers(int force)
 
   s = router_get_my_descriptor();
   if (!s) {
-    log_fn(LOG_WARN, "No descriptor; skipping upload");
+    warn(LD_GENERAL, "No descriptor; skipping upload");
     return;
   }
   if (!force && !desc_needs_upload)
@@ -748,7 +749,7 @@ router_get_my_descriptor(void)
     if (router_rebuild_descriptor(1))
       return NULL;
   }
-  log_fn(LOG_DEBUG,"my desc is '%s'",desc_routerinfo->signed_descriptor);
+  debug(LD_GENERAL,"my desc is '%s'",desc_routerinfo->signed_descriptor);
   return desc_routerinfo->signed_descriptor;
 }
 
@@ -772,7 +773,7 @@ router_rebuild_descriptor(int force)
     return 0;
 
   if (resolve_my_address(options, &addr, NULL) < 0) {
-    log_fn(LOG_WARN,"options->Address didn't resolve into an IP.");
+    warn(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return -1;
   }
 
@@ -825,7 +826,7 @@ router_rebuild_descriptor(int force)
          member = router_get_by_nickname(name, 1);
        if (!member) {
          if (!smartlist_string_isin(warned_nonexistent_family, name)) {
-           log_fn(LOG_WARN, "I have no descriptor for the router named \"%s\" "
+           warn(LD_CONFIG, "I have no descriptor for the router named \"%s\" "
                   "in my declared family; I'll use the nickname as is, but "
                   "this may confuse clients.", name);
            smartlist_add(warned_nonexistent_family, tor_strdup(name));
@@ -848,7 +849,7 @@ router_rebuild_descriptor(int force)
   ri->signed_descriptor = tor_malloc(8192);
   if (router_dump_router_to_string(ri->signed_descriptor, 8192,
                                    ri, get_identity_key())<0) {
-    log_fn(LOG_WARN, "Couldn't allocate string for descriptor.");
+    warn(LD_BUG, "Couldn't allocate string for descriptor.");
     return -1;
   }
   ri->signed_descriptor_len = strlen(ri->signed_descriptor);
@@ -896,7 +897,7 @@ check_descriptor_bandwidth_changed(time_t now)
       cur > prev*2 ||
       cur < prev/2) {
     if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now) {
-      log_fn(LOG_INFO,"Measured bandwidth has changed; rebuilding descriptor.");
+      info(LD_GENERAL,"Measured bandwidth has changed; rebuilding descriptor.");
       mark_my_descriptor_dirty();
       last_changed = now;
     }
@@ -920,7 +921,7 @@ check_descriptor_ipaddress_changed(time_t now)
 
   prev = desc_routerinfo->addr;
   if (resolve_my_address(options, &cur, NULL) < 0) {
-    log_fn(LOG_WARN,"options->Address didn't resolve into an IP.");
+    warn(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }
 
@@ -937,7 +938,7 @@ check_descriptor_ipaddress_changed(time_t now)
     tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
 
     if (last_changed+MAX_IPADDRESS_CHANGE_FREQ < now) {
-      log_fn(LOG_INFO,"Our IP Address has changed from %s to %s; rebuilding descriptor.", addrbuf_prev, addrbuf_cur);
+      info(LD_GENERAL,"Our IP Address has changed from %s to %s; rebuilding descriptor.", addrbuf_prev, addrbuf_cur);
       mark_my_descriptor_dirty();
       last_changed = now;
       last_warned_lastchangetime = 0;
@@ -945,7 +946,7 @@ check_descriptor_ipaddress_changed(time_t now)
     else
     {
       if (last_warned_lastchangetime != last_changed) {
-        log_fn(LOG_WARN,"Our IP Address seems to be flapping.  It has changed twice within one hour (from %s to %s this time).  Ignoring for now.", addrbuf_prev, addrbuf_cur);
+        warn(LD_GENERAL,"Our IP Address seems to be flapping.  It has changed twice within one hour (from %s to %s this time).  Ignoring for now.", addrbuf_prev, addrbuf_cur);
         last_warned_lastchangetime = last_changed;
       }
     }
@@ -1001,27 +1002,27 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
-    log_fn(LOG_WARN,"Tried to sign a router with a private key that didn't match router's public key!");
+    warn(LD_BUG,"Tried to sign a router with a private key that didn't match router's public key!");
     return -1;
   }
 
   /* record our fingerprint, so we can include it in the descriptor */
   if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint, 1)<0) {
-    log_fn(LOG_ERR, "Error computing fingerprint");
+    err("Error computing fingerprint");
     return -1;
   }
 
   /* PEM-encode the onion key */
   if (crypto_pk_write_public_key_to_string(router->onion_pkey,
                                            &onion_pkey,&onion_pkeylen)<0) {
-    log_fn(LOG_WARN,"write onion_pkey to string failed!");
+    warn(LD_BUG,"write onion_pkey to string failed!");
     return -1;
   }
 
   /* PEM-encode the identity key key */
   if (crypto_pk_write_public_key_to_string(router->identity_pkey,
                                            &identity_pkey,&identity_pkeylen)<0) {
-    log_fn(LOG_WARN,"write identity_pkey to string failed!");
+    warn(LD_BUG,"write identity_pkey to string failed!");
     tor_free(onion_pkey);
     return -1;
   }
@@ -1141,7 +1142,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   if (router_append_dirobj_signature(s+written,maxlen-written,
                                      digest,ident_key)<0) {
-    log_fn(LOG_WARN, "Couldn't sign router descriptor");
+    warn(LD_BUG, "Couldn't sign router descriptor");
     return -1;
   }
   written += strlen(s+written);
@@ -1156,8 +1157,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   cp = s_tmp = s_dup = tor_strdup(s);
   ri_tmp = router_parse_entry_from_string(cp, NULL);
   if (!ri_tmp) {
-    log_fn(LOG_ERR, "We just generated a router descriptor we can't parse: <<%s>>",
-           s);
+    err("We just generated a router descriptor we can't parse: <<%s>>", s);
     return -1;
   }
   tor_free(s_dup);
@@ -1175,8 +1175,9 @@ is_legal_nickname(const char *s)
   tor_assert(s);
   len = strlen(s);
   return len > 0 && len <= MAX_NICKNAME_LEN &&
-    strspn(s,LEGAL_NICKNAME_CHARACTERS)==len;
+    strspn(s,LEGAL_NICKNAME_CHARACTERS) == len;
 }
+
 /** Return true iff <b>s</b> is a legally valid server nickname or
  * hex-encoded identity-key digest. */
 int

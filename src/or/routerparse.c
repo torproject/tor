@@ -10,6 +10,7 @@ const char routerparse_c_id[] = "$Id$";
  * \brief Code to parse and validate router descriptors and directories.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /****************************************************************************/
@@ -223,7 +224,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
 
   if (crypto_pk_private_sign(private_key, signature, digest, DIGEST_LEN) < 0) {
 
-    log_fn(LOG_WARN,"Couldn't sign digest.");
+    warn(LD_BUG,"Couldn't sign digest.");
     return -1;
   }
   if (strlcat(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
@@ -231,7 +232,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
 
   i = strlen(buf);
   if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
-    log_fn(LOG_WARN,"couldn't base64-encode signature");
+    warn(LD_BUG,"couldn't base64-encode signature");
     tor_free(buf);
     return -1;
   }
@@ -241,7 +242,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
 
   return 0;
  truncated:
-  log_fn(LOG_WARN,"tried to exceed string length.");
+  warn(LD_BUG,"tried to exceed string length.");
   return -1;
 }
 
@@ -270,11 +271,11 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
 
   vl = versionlist;
 
-  log_fn(LOG_DEBUG,"Checking whether version '%s' is in '%s'",
+  debug(LD_CONFIG,"Checking whether version '%s' is in '%s'",
          myversion, versionlist);
 
   if (tor_version_parse(myversion, &mine)) {
-    log_fn(LOG_ERR, "I couldn't parse my own version (%s)", myversion);
+    err("I couldn't parse my own version (%s)", myversion);
     tor_assert(0);
   }
   version_sl = smartlist_create();
@@ -370,29 +371,29 @@ router_parse_directory(const char *str)
    * tuoch it. */
 
   if (router_get_dir_hash(str, digest)) {
-    log_fn(LOG_WARN, "Unable to compute digest of directory");
+    warn(LD_DIR, "Unable to compute digest of directory");
     goto err;
   }
-  log_fn(LOG_DEBUG,"Received directory hashes to %s",hex_str(digest,4));
+  debug(LD_DIR,"Received directory hashes to %s",hex_str(digest,4));
 
   /* Check signature first, before we try to tokenize. */
   cp = str;
   while (cp && (end = strstr(cp+1, "\ndirectory-signature")))
     cp = end;
   if (cp == str || !cp) {
-    log_fn(LOG_WARN, "No signature found on directory."); goto err;
+    warn(LD_DIR, "No signature found on directory."); goto err;
   }
   ++cp;
   tokens = smartlist_create();
   if (tokenize_string(cp,strchr(cp,'\0'),tokens,DIR)) {
-    log_fn(LOG_WARN, "Error tokenizing directory signature"); goto err;
+    warn(LD_DIR, "Error tokenizing directory signature"); goto err;
   }
   if (smartlist_len(tokens) != 1) {
-    log_fn(LOG_WARN, "Unexpected number of tokens in signature"); goto err;
+    warn(LD_DIR, "Unexpected number of tokens in signature"); goto err;
   }
   tok=smartlist_get(tokens,0);
   if (tok->tp != K_DIRECTORY_SIGNATURE) {
-    log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
+    warn(LD_DIR,"Expected a single directory signature"); goto err;
   }
   declared_key = find_dir_signing_key(str);
   if (check_directory_signature(digest, tok, NULL, declared_key, 1)<0)
@@ -413,11 +414,11 @@ router_parse_directory(const char *str)
 
   tokens = smartlist_create();
   if (tokenize_string(str,end,tokens,DIR)) {
-    log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
+    warn(LD_DIR, "Error tokenizing directory"); goto err;
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_fn(LOG_WARN, "Missing published time on directory.");
+    warn(LD_DIR, "Missing published time on directory.");
     goto err;
   }
   tor_assert(tok->n_args == 1);
@@ -458,26 +459,26 @@ router_parse_runningrouters(const char *str)
   smartlist_t *tokens = NULL;
 
   if (router_get_runningrouters_hash(str, digest)) {
-    log_fn(LOG_WARN, "Unable to compute digest of directory");
+    warn(LD_DIR, "Unable to compute digest of directory");
     goto err;
   }
   tokens = smartlist_create();
   if (tokenize_string(str,str+strlen(str),tokens,DIR)) {
-    log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
+    warn(LD_DIR, "Error tokenizing directory"); goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword '%s'; can't parse running-routers",
+    warn(LD_DIR, "Unrecognized keyword '%s'; can't parse running-routers",
            tok->args[0]);
     goto err;
   }
   tok = smartlist_get(tokens,0);
   if (tok->tp != K_NETWORK_STATUS) {
-    log_fn(LOG_WARN, "Network-status starts with wrong token");
+    warn(LD_DIR, "Network-status starts with wrong token");
     goto err;
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_fn(LOG_WARN, "Missing published time on directory.");
+    warn(LD_DIR, "Missing published time on directory.");
     goto err;
   }
   tor_assert(tok->n_args == 1);
@@ -485,7 +486,7 @@ router_parse_runningrouters(const char *str)
      goto err;
   }
   if (!(tok = find_first_by_keyword(tokens, K_DIRECTORY_SIGNATURE))) {
-    log_fn(LOG_WARN, "Missing signature on running-routers");
+    warn(LD_DIR, "Missing signature on running-routers");
     goto err;
   }
   declared_key = find_dir_signing_key(str);
@@ -527,11 +528,11 @@ find_dir_signing_key(const char *str)
 
   tok = get_next_token(&cp, DIR);
   if (!tok) {
-    log_fn(LOG_WARN, "Unparseable dir-signing-key token");
+    warn(LD_DIR, "Unparseable dir-signing-key token");
     return NULL;
   }
   if (tok->tp != K_DIR_SIGNING_KEY) {
-    log_fn(LOG_WARN, "Dir-signing-key token did not parse as expected");
+    warn(LD_DIR, "Dir-signing-key token did not parse as expected");
     return NULL;
   }
 
@@ -543,11 +544,11 @@ find_dir_signing_key(const char *str)
      * can remove this logic. */
     key = crypto_pk_DER64_decode_public_key(tok->args[0]);
     if (!key) {
-      log_fn(LOG_WARN, "Unparseable dir-signing-key argument");
+      warn(LD_DIR, "Unparseable dir-signing-key argument");
       return NULL;
     }
   } else {
-    log_fn(LOG_WARN, "Dir-signing-key token contained no key");
+    warn(LD_DIR, "Dir-signing-key token contained no key");
     return NULL;
   }
 
@@ -563,11 +564,11 @@ dir_signing_key_is_trusted(crypto_pk_env_t *key)
   char digest[DIGEST_LEN];
   if (!key) return 0;
   if (crypto_pk_get_digest(key, digest) < 0) {
-    log_fn(LOG_WARN, "Error computing dir-signing-key digest");
+    warn(LD_DIR, "Error computing dir-signing-key digest");
     return 0;
   }
   if (!router_digest_is_trusted_dir(digest)) {
-    log_fn(LOG_WARN, "Listed dir-signing-key is not trusted");
+    warn(LD_DIR, "Listed dir-signing-key is not trusted");
     return 0;
   }
   return 1;
@@ -596,7 +597,7 @@ check_directory_signature(const char *digest,
   crypto_pk_env_t *_pkey = NULL;
 
   if (tok->n_args != 1) {
-    log_fn(LOG_WARN, "Too many or too few arguments to directory-signature");
+    warn(LD_DIR, "Too many or too few arguments to directory-signature");
     return -1;
   }
 
@@ -609,12 +610,12 @@ check_directory_signature(const char *digest,
     _pkey = pkey;
   }
   if (!_pkey) {
-    log_fn(LOG_WARN, "Obsolete directory format (dir signing key not present) or signing key not trusted--rejecting.");
+    warn(LD_DIR, "Obsolete directory format (dir signing key not present) or signing key not trusted--rejecting.");
     return -1;
   }
 
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
-    log_fn(LOG_WARN, "Bad object type or length on directory signature");
+    warn(LD_DIR, "Bad object type or length on directory signature");
     return -1;
   }
 
@@ -622,12 +623,12 @@ check_directory_signature(const char *digest,
 
   if (crypto_pk_public_checksig(_pkey, signed_digest, tok->object_body, 128)
       != 20) {
-    log_fn(LOG_WARN, "Error reading directory: invalid signature.");
+    warn(LD_DIR, "Error reading directory: invalid signature.");
     return -1;
   }
-  log_fn(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
+  debug(LD_DIR,"Signed directory hash starts %s", hex_str(signed_digest,4));
   if (memcmp(digest, signed_digest, DIGEST_LEN)) {
-    log_fn(LOG_WARN, "Error reading directory: signature does not match.");
+    warn(LD_DIR, "Error reading directory: signature does not match.");
     return -1;
   }
   return 0;
@@ -674,7 +675,7 @@ router_parse_list_from_string(const char **s, smartlist_t *dest)
      * descriptor */
 
     if (strcmpstart(cp, "\n-----END SIGNATURE-----\n")) {
-      log_fn(LOG_INFO, "Ignoring truncated router descriptor.");
+      info(LD_DIR, "Ignoring truncated router descriptor.");
       continue;
     }
 
@@ -682,7 +683,7 @@ router_parse_list_from_string(const char **s, smartlist_t *dest)
 
     *s = end;
     if (!router) {
-      log_fn(LOG_WARN, "Error reading router; skipping");
+      warn(LD_DIR, "Error reading router; skipping");
       continue;
     }
     smartlist_add(dest, router);
@@ -716,28 +717,28 @@ router_parse_entry_from_string(const char *s, const char *end)
     --end;
 
   if (router_get_router_hash(s, digest) < 0) {
-    log_fn(LOG_WARN, "Couldn't compute router hash.");
+    warn(LD_DIR, "Couldn't compute router hash.");
     return NULL;
   }
   tokens = smartlist_create();
   if (tokenize_string(s,end,tokens,RTR)) {
-    log_fn(LOG_WARN, "Error tokeninzing router descriptor.");
+    warn(LD_DIR, "Error tokeninzing router descriptor.");
     goto err;
   }
 
   if (smartlist_len(tokens) < 2) {
-    log_fn(LOG_WARN, "Impossibly short router descriptor.");
+    warn(LD_DIR, "Impossibly short router descriptor.");
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_INFO, "Unrecognized critical keyword '%s'; skipping descriptor. (It may be from another version of Tor.)",
+    warn(LD_DIR, "Unrecognized critical keyword '%s'; skipping descriptor. (It may be from another version of Tor.)",
            tok->args[0]);
     goto err;
   }
 
   tok = smartlist_get(tokens,0);
   if (tok->tp != K_ROUTER) {
-    log_fn(LOG_WARN,"Entry does not start with \"router\"");
+    warn(LD_DIR,"Entry does not start with \"router\"");
     goto err;
   }
 
@@ -750,12 +751,12 @@ router_parse_entry_from_string(const char *s, const char *end)
   if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {
     router->nickname = tor_strdup(tok->args[0]);
     if (!is_legal_nickname(router->nickname)) {
-      log_fn(LOG_WARN,"Router nickname is invalid");
+      warn(LD_DIR,"Router nickname is invalid");
       goto err;
     }
     router->address = tor_strdup(tok->args[1]);
     if (!tor_inet_aton(router->address, &in)) {
-      log_fn(LOG_WARN,"Router address is not an IP.");
+      warn(LD_DIR,"Router address is not an IP.");
       goto err;
     }
     router->addr = ntohl(in.s_addr);
@@ -766,17 +767,17 @@ router_parse_entry_from_string(const char *s, const char *end)
       ports_set = 1;
     }
   } else {
-    log_fn(LOG_WARN,"Wrong # of arguments to \"router\" (%d)",tok->n_args);
+    warn(LD_DIR,"Wrong # of arguments to \"router\" (%d)",tok->n_args);
     goto err;
   }
 
   tok = find_first_by_keyword(tokens, K_PORTS);
   if (tok && ports_set) {
-    log_fn(LOG_WARN,"Redundant ports line");
+    warn(LD_DIR,"Redundant ports line");
     goto err;
   } else if (tok) {
     if (tok->n_args != 3) {
-      log_fn(LOG_WARN,"Wrong # of arguments to \"ports\"");
+      warn(LD_DIR,"Wrong # of arguments to \"ports\"");
       goto err;
     }
     router->or_port = (uint16_t) tor_parse_long(tok->args[0],10,0,65535,NULL,NULL);
@@ -786,12 +787,12 @@ router_parse_entry_from_string(const char *s, const char *end)
 
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
   if (tok && bw_set) {
-    log_fn(LOG_WARN,"Redundant bandwidth line");
+    warn(LD_DIR,"Redundant bandwidth line");
     goto err;
   } else if (tok) {
     if (tok->n_args < 3) {
       /* XXXX Once 0.0.7 is *really* dead, restore this warning to its old form*/
-      log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\": must be an obsolete server. Rejecting one server (nickname '%s').", router->nickname);
+      warn(LD_DIR,"Not enough arguments to \"bandwidth\": must be an obsolete server. Rejecting one server (nickname '%s').", router->nickname);
       goto err;
     }
     router->bandwidthrate = tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
@@ -802,7 +803,7 @@ router_parse_entry_from_string(const char *s, const char *end)
 
   if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
     if (tok->n_args != 1) {
-      log_fn(LOG_WARN, "Unrecognized number of args on K_UPTIME; skipping.");
+      warn(LD_DIR, "Unrecognized number of args on K_UPTIME; skipping.");
     } else {
       router->uptime = tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL);
     }
@@ -810,7 +811,7 @@ router_parse_entry_from_string(const char *s, const char *end)
 
   if ((tok = find_first_by_keyword(tokens, K_HIBERNATING))) {
     if (tok->n_args < 1) {
-      log_fn(LOG_WARN, "Too few args on 'hibernating' keyword. Skipping.");
+      warn(LD_DIR, "Too few args on 'hibernating' keyword. Skipping.");
     } else {
       router->is_hibernating
         = (tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL) != 0);
@@ -818,17 +819,17 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_fn(LOG_WARN, "Missing published time"); goto err;
+    warn(LD_DIR, "Missing published time"); goto err;
   }
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &router->published_on) < 0)
     goto err;
 
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
-    log_fn(LOG_WARN, "Missing onion key"); goto err;
+    warn(LD_DIR, "Missing onion key"); goto err;
   }
   if (crypto_pk_keysize(tok->key) != PK_BYTES) {
-    log_fn(LOG_WARN, "Wrong size on onion key: %d bits!",
+    warn(LD_DIR, "Wrong size on onion key: %d bits!",
            (int)crypto_pk_keysize(tok->key)*8);
     goto err;
   }
@@ -836,17 +837,17 @@ router_parse_entry_from_string(const char *s, const char *end)
   tok->key = NULL; /* Prevent free */
 
   if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
-    log_fn(LOG_WARN, "Missing identity key"); goto err;
+    warn(LD_DIR, "Missing identity key"); goto err;
   }
   if (crypto_pk_keysize(tok->key) != PK_BYTES) {
-    log_fn(LOG_WARN, "Wrong size on identity key: %d bits!",
+    warn(LD_DIR, "Wrong size on identity key: %d bits!",
            (int)crypto_pk_keysize(tok->key)*8);
     goto err;
   }
   router->identity_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
   if (crypto_pk_get_digest(router->identity_pkey,router->identity_digest)) {
-    log_fn(LOG_WARN, "Couldn't calculate key digest"); goto err;
+    warn(LD_DIR, "Couldn't calculate key digest"); goto err;
   }
 
   if ((tok = find_first_by_keyword(tokens, K_PLATFORM))) {
@@ -860,7 +861,7 @@ router_parse_entry_from_string(const char *s, const char *end)
   exit_policy_tokens = find_all_exitpolicy(tokens);
   SMARTLIST_FOREACH(exit_policy_tokens, directory_token_t *, t,
                     if (router_add_exit_policy(router,t)<0) {
-                      log_fn(LOG_WARN,"Error in exit policy");
+                      warn(LD_DIR,"Error in exit policy");
                       goto err;
                     });
 
@@ -869,7 +870,7 @@ router_parse_entry_from_string(const char *s, const char *end)
     router->declared_family = smartlist_create();
     for (i=0;i<tok->n_args;++i) {
       if (!is_legal_nickname_or_hexdigest(tok->args[i])) {
-        log_fn(LOG_WARN, "Illegal nickname '%s' in family line", tok->args[i]);
+        warn(LD_DIR, "Illegal nickname '%s' in family line", tok->args[i]);
         goto err;
       }
       smartlist_add(router->declared_family, tor_strdup(tok->args[i]));
@@ -877,37 +878,37 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
-    log_fn(LOG_WARN, "Missing router signature");
+    warn(LD_DIR, "Missing router signature");
     goto err;
   }
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
-    log_fn(LOG_WARN, "Bad object type or length on router signature");
+    warn(LD_DIR, "Bad object type or length on router signature");
     goto err;
   }
   if ((t=crypto_pk_public_checksig(router->identity_pkey, signed_digest,
                                    tok->object_body, 128)) != 20) {
-    log_fn(LOG_WARN, "Invalid signature %d",t);
+    warn(LD_DIR, "Invalid signature %d",t);
     goto err;
   }
   if (memcmp(digest, signed_digest, DIGEST_LEN)) {
-    log_fn(LOG_WARN, "Mismatched signature");
+    warn(LD_DIR, "Mismatched signature");
     goto err;
   }
 
   if (!ports_set) {
-    log_fn(LOG_WARN,"No ports declared; failing.");
+    warn(LD_DIR,"No ports declared; failing.");
     goto err;
   }
   if (!bw_set) {
-    log_fn(LOG_WARN,"No bandwidth declared; failing.");
+    warn(LD_DIR,"No bandwidth declared; failing.");
     goto err;
   }
   if (!router->or_port) {
-    log_fn(LOG_WARN,"or_port unreadable or 0. Failing.");
+    warn(LD_DIR,"or_port unreadable or 0. Failing.");
     goto err;
   }
   if (!router->bandwidthrate) {
-    log_fn(LOG_WARN,"bandwidthrate unreadable or 0. Failing.");
+    warn(LD_DIR,"bandwidthrate unreadable or 0. Failing.");
     goto err;
   }
   if (!router->platform) {
@@ -964,54 +965,54 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   eos = find_start_of_next_routerstatus(*s);
 
   if (tokenize_string(*s, eos, tokens, RTRSTATUS)) {
-    log_fn(LOG_WARN, "Error tokenizing router status");
+    warn(LD_DIR, "Error tokenizing router status");
     goto err;
   }
   if (smartlist_len(tokens) < 1) {
-    log_fn(LOG_WARN, "Impossibly short router status");
+    warn(LD_DIR, "Impossibly short router status");
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword \"%s\" in router status; skipping.",
+    warn(LD_DIR, "Unrecognized keyword \"%s\" in router status; skipping.",
            tok->args[0]);
     goto err;
   }
   if (!(tok = find_first_by_keyword(tokens, K_R))) {
-    log_fn(LOG_WARN, "Missing 'r' keywork in router status; skipping.");
+    warn(LD_DIR, "Missing 'r' keywork in router status; skipping.");
     goto err;
   }
   if (tok->n_args < 8) {
-    log_fn(LOG_WARN,
+    warn(LD_DIR,
            "Too few arguments to 'r' keywork in router status; skipping.");
   }
   rs = tor_malloc_zero(sizeof(routerstatus_t));
 
   if (!is_legal_nickname(tok->args[0])) {
-    log_fn(LOG_WARN,
+    warn(LD_DIR,
            "Invalid nickname '%s' in router status; skipping.", tok->args[0]);
     goto err;
   }
   strlcpy(rs->nickname, tok->args[0], sizeof(rs->nickname));
 
   if (digest_from_base64(rs->identity_digest, tok->args[1])) {
-    log_fn(LOG_WARN, "Error decoding digest '%s'", tok->args[1]);
+    warn(LD_DIR, "Error decoding digest '%s'", tok->args[1]);
     goto err;
   }
 
   if (digest_from_base64(rs->descriptor_digest, tok->args[2])) {
-    log_fn(LOG_WARN, "Error decoding digest '%s'", tok->args[2]);
+    warn(LD_DIR, "Error decoding digest '%s'", tok->args[2]);
     goto err;
   }
 
   if (tor_snprintf(timebuf, sizeof(timebuf), "%s %s",
                    tok->args[3], tok->args[4]) < 0 ||
       parse_iso_time(timebuf, &rs->published_on)<0) {
-    log_fn(LOG_WARN, "Error parsing time '%s %s'", tok->args[3], tok->args[4]);
+    warn(LD_DIR, "Error parsing time '%s %s'", tok->args[3], tok->args[4]);
     goto err;
   }
 
   if (tor_inet_aton(tok->args[5], &in) == 0) {
-    log_fn(LOG_WARN, "Error parsing address '%s'", tok->args[5]);
+    warn(LD_DIR, "Error parsing address '%s'", tok->args[5]);
     goto err;
   }
   rs->addr = ntohl(in.s_addr);
@@ -1082,17 +1083,17 @@ networkstatus_parse_from_string(const char *s)
   int i;
 
   if (router_get_networkstatus_v2_hash(s, ns_digest)) {
-    log_fn(LOG_WARN, "Unable to compute digest of network-status");
+    warn(LD_DIR, "Unable to compute digest of network-status");
     goto err;
   }
 
   eos = find_start_of_next_routerstatus(s);
   if (tokenize_string(s, eos, tokens, NETSTATUS)) {
-    log_fn(LOG_WARN, "Error tokenizing network-status header.");
+    warn(LD_DIR, "Error tokenizing network-status header.");
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword '%s'; can't parse network-status",
+    warn(LD_DIR, "Unrecognized keyword '%s'; can't parse network-status",
            tok->args[0]);
     goto err;
   }
@@ -1100,42 +1101,42 @@ networkstatus_parse_from_string(const char *s)
   memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
   if (!(tok = find_first_by_keyword(tokens, K_NETWORK_STATUS_VERSION))) {
-    log_fn(LOG_WARN, "Couldn't find network-status-version keyword");
+    warn(LD_DIR, "Couldn't find network-status-version keyword");
     goto err;
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_DIR_SOURCE))) {
-    log_fn(LOG_WARN, "Couldn't find dir-source keyword");
+    warn(LD_DIR, "Couldn't find dir-source keyword");
     goto err;
   }
   if (tok->n_args < 3) {
-    log_fn(LOG_WARN, "Too few arguments to dir-source keyword");
+    warn(LD_DIR, "Too few arguments to dir-source keyword");
     goto err;
   }
   ns->source_address = tok->args[0]; tok->args[0] = NULL;
   if (tor_inet_aton(tok->args[1], &in) == 0) {
-    log_fn(LOG_WARN, "Error parsing address '%s'", tok->args[1]);
+    warn(LD_DIR, "Error parsing address '%s'", tok->args[1]);
     goto err;
   }
   ns->source_addr = ntohl(in.s_addr);
   ns->source_dirport =
     (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
   if (ns->source_dirport == 0) {
-    log_fn(LOG_WARN, "Directory source without dirport; skipping.");
+    warn(LD_DIR, "Directory source without dirport; skipping.");
     goto err;
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_FINGERPRINT))) {
-    log_fn(LOG_WARN, "Couldn't find fingerprint keyword");
+    warn(LD_DIR, "Couldn't find fingerprint keyword");
     goto err;
   }
   if (tok->n_args < 1) {
-    log_fn(LOG_WARN, "Too few arguments to fingerprint");
+    warn(LD_DIR, "Too few arguments to fingerprint");
     goto err;
   }
   if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
-    log_fn(LOG_WARN, "Couldn't decode fingerprint '%s'", tok->args[0]);
+    warn(LD_DIR, "Couldn't decode fingerprint '%s'", tok->args[0]);
     goto err;
   }
 
@@ -1145,18 +1146,18 @@ networkstatus_parse_from_string(const char *s)
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY)) || !tok->key) {
-    log_fn(LOG_WARN, "Missing dir-signing-key");
+    warn(LD_DIR, "Missing dir-signing-key");
     goto err;
   }
   ns->signing_key = tok->key;
   tok->key = NULL;
 
   if (crypto_pk_get_digest(ns->signing_key, tmp_digest)<0) {
-    log_fn(LOG_WARN, "Couldn't compute signing key digest");
+    warn(LD_DIR, "Couldn't compute signing key digest");
     goto err;
   }
   if (memcmp(tmp_digest, ns->identity_digest, DIGEST_LEN)) {
-    log_fn(LOG_WARN, "network-status fingerprint did not match dir-signing-key");
+    warn(LD_DIR, "network-status fingerprint did not match dir-signing-key");
     goto err;
   }
 
@@ -1172,14 +1173,14 @@ networkstatus_parse_from_string(const char *s)
   if (ns->recommends_versions) {
     if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) ||
         tok->n_args<1) {
-      log_fn(LOG_WARN, "Missing client-versions");
+      warn(LD_DIR, "Missing client-versions");
     }
     ns->client_versions = tok->args[0];
     tok->args[0] = NULL;
 
     if (!(tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS)) ||
         tok->n_args<1) {
-      log_fn(LOG_WARN, "Missing server-versions on versioning directory");
+      warn(LD_DIR, "Missing server-versions on versioning directory");
       goto err;
     }
     ns->server_versions = tok->args[0];
@@ -1187,7 +1188,7 @@ networkstatus_parse_from_string(const char *s)
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_fn(LOG_WARN, "Missing published time on directory.");
+    warn(LD_DIR, "Missing published time on directory.");
     goto err;
   }
   tor_assert(tok->n_args == 1);
@@ -1212,23 +1213,23 @@ networkstatus_parse_from_string(const char *s)
     routerstatus_t *rs2 = smartlist_get(ns->entries, i+1);
     if (!memcmp(rs1->identity_digest,
                 rs2->identity_digest, DIGEST_LEN)) {
-      log_fn(LOG_WARN, "Network-status has two entries for the same router. Dropping one.");
+      warn(LD_DIR, "Network-status has two entries for the same router. Dropping one.");
       smartlist_del_keeporder(ns->entries, i--);
       routerstatus_free(rs1);
     }
   }
 
   if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
-    log_fn(LOG_WARN, "Error tokenizing network-status footer.");
+    warn(LD_DIR, "Error tokenizing network-status footer.");
     goto err;
   }
   if (smartlist_len(tokens) < 1) {
-    log_fn(LOG_WARN, "Too few items in network-status footer.");
+    warn(LD_DIR, "Too few items in network-status footer.");
     goto err;
   }
   tok = smartlist_get(tokens, smartlist_len(tokens)-1);
   if (tok->tp != K_DIRECTORY_SIGNATURE) {
-    log_fn(LOG_WARN, "Expected network-status footer to end with a signature.");
+    warn(LD_DIR, "Expected network-status footer to end with a signature.");
     goto err;
   }
 
@@ -1279,11 +1280,11 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
   }
   tok = get_next_token(&cp, RTR);
   if (tok->tp == _ERR) {
-    log_fn(LOG_WARN, "Error reading exit policy: %s", tok->error);
+    warn(LD_DIR, "Error reading exit policy: %s", tok->error);
     goto err;
   }
   if (tok->tp != K_ACCEPT && tok->tp != K_REJECT) {
-    log_fn(LOG_WARN, "Expected 'accept' or 'reject'.");
+    warn(LD_DIR, "Expected 'accept' or 'reject'.");
     goto err;
   }
 
@@ -1374,7 +1375,7 @@ router_parse_addr_policy(directory_token_t *tok)
 
 policy_read_failed:
   tor_assert(newe->string);
-  log_fn(LOG_WARN,"Couldn't parse line '%s'. Dropping", newe->string);
+  warn(LD_DIR,"Couldn't parse line '%s'. Dropping", newe->string);
   tor_free(newe->string);
   tor_free(newe);
   return NULL;
@@ -1635,7 +1636,7 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
   while (*s < end && (!tok || tok->tp != _EOF)) {
     tok = get_next_token(s, where);
     if (tok->tp == _ERR) {
-      log_fn(LOG_WARN, "parse error: %s", tok->error);
+      warn(LD_DIR, "parse error: %s", tok->error);
       return -1;
     }
     smartlist_add(out, tok);
@@ -1683,28 +1684,28 @@ router_get_hash_impl(const char *s, char *digest,
   char *start, *end;
   start = strstr(s, start_str);
   if (!start) {
-    log_fn(LOG_WARN,"couldn't find \"%s\"",start_str);
+    warn(LD_DIR,"couldn't find \"%s\"",start_str);
     return -1;
   }
   if (start != s && *(start-1) != '\n') {
-    log_fn(LOG_WARN, "first occurrence of \"%s\" is not at the start of a line",
+    warn(LD_DIR, "first occurrence of \"%s\" is not at the start of a line",
            start_str);
     return -1;
   }
   end = strstr(start+strlen(start_str), end_str);
   if (!end) {
-    log_fn(LOG_WARN,"couldn't find \"%s\"",end_str);
+    warn(LD_DIR,"couldn't find \"%s\"",end_str);
     return -1;
   }
   end = strchr(end+strlen(end_str), '\n');
   if (!end) {
-    log_fn(LOG_WARN,"couldn't find EOL");
+    warn(LD_DIR,"couldn't find EOL");
     return -1;
   }
   ++end;
 
   if (crypto_digest(digest, start, end-start)) {
-    log_fn(LOG_WARN,"couldn't compute digest");
+    warn(LD_DIR,"couldn't compute digest");
     return -1;
   }
 
@@ -1723,7 +1724,7 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
   char tmp[128];
 
   if (tor_version_parse(cutoff, &cutoff_version)<0) {
-    log_fn(LOG_WARN,"Bug: cutoff version '%s' unparseable.",cutoff);
+    warn(LD_DIR,"Bug: cutoff version '%s' unparseable.",cutoff);
     return 0;
   }
   if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */
@@ -1737,7 +1738,7 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
   strlcpy(tmp, start, s-start+1);
 
   if (tor_version_parse(tmp, &router_version)<0) {
-    log_fn(LOG_INFO,"Router version '%s' unparseable.",tmp);
+    info(LD_DIR,"Router version '%s' unparseable.",tmp);
     return 1; /* be safe and say yes */
   }
 

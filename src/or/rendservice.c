@@ -343,11 +343,11 @@ rend_service_load_keys(void)
 
     /* Create service file */
     if (rend_get_service_id(s->private_key, s->service_id)<0) {
-      warn(LD_GENERAL, "Internal error: couldn't encode service ID.");
+      warn(LD_BUG, "Internal error: couldn't encode service ID.");
       return -1;
     }
     if (crypto_pk_get_digest(s->private_key, s->pk_digest)<0) {
-      warn(LD_GENERAL, "Bug: Couldn't compute hash of public key.");
+      warn(LD_BUG, "Bug: Couldn't compute hash of public key.");
       return -1;
     }
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
@@ -534,12 +534,12 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   /* Try DH handshake... */
   dh = crypto_dh_new();
   if (!dh || crypto_dh_generate_public(dh)<0) {
-    warn(LD_GENERAL,"Internal error: couldn't build DH state or generate public key.");
+    warn(LD_BUG,"Internal error: couldn't build DH state or generate public key.");
     goto err;
   }
   if (crypto_dh_compute_secret(dh, ptr+REND_COOKIE_LEN, DH_KEY_LEN, keys,
                                DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
-    warn(LD_GENERAL, "Internal error: couldn't complete DH handshake");
+    warn(LD_BUG, "Internal error: couldn't complete DH handshake");
     goto err;
   }
 
@@ -714,7 +714,7 @@ rend_service_intro_has_opened(circuit_t *circuit)
   len += 20;
   r = crypto_pk_private_sign_digest(service->private_key, buf+len, buf, len);
   if (r<0) {
-    warn(LD_GENERAL, "Internal error: couldn't sign introduction request.");
+    warn(LD_BUG, "Internal error: couldn't sign introduction request.");
     goto err;
   }
   len += r;
@@ -881,7 +881,7 @@ upload_service_descriptor(rend_service_t *service, int version)
                                      version,
                                      service->private_key,
                                      &desc, &desc_len)<0) {
-    warn(LD_GENERAL, "Internal error: couldn't encode service descriptor; not uploading.");
+    warn(LD_BUG, "Internal error: couldn't encode service descriptor; not uploading.");
     return;
   }
 
