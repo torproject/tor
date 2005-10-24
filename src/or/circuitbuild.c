@@ -10,6 +10,7 @@ const char circuitbuild_c_id[] = "$Id$";
  * \brief The actual details of building circuits.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /********* START VARIABLES **********/
@@ -78,11 +79,11 @@ get_unique_circ_id_by_conn(connection_t *conn)
       /* Make sure we don't loop forever if all circ_id's are used. This
        * matters because it's an external DoS opportunity.
        */
-      log_fn(LOG_WARN,"No unused circ IDs. Failing.");
+      warn(LD_CIRC,"No unused circ IDs. Failing.");
       return 0;
     }
     test_circ_id |= high_bit;
-  } while (circuit_get_by_circid_orconn(test_circ_id, conn));
+  } while (circuit_id_used_on_conn(test_circ_id, conn));
   return test_circ_id;
 }
 
@@ -149,10 +150,10 @@ circuit_list_path(circuit_t *circ, int verbose)
  * exit point.
  */
 void
-circuit_log_path(int severity, circuit_t *circ)
+circuit_log_path(int severity, int domain, circuit_t *circ)
 {
   char *s = circuit_list_path(circ,1);
-  log_fn(severity,"%s",s);
+  log(severity,domain,"%s",s);
   tor_free(s);
 }
 
@@ -207,11 +208,11 @@ static void
 circuit_dump_details(int severity, circuit_t *circ, int poll_index,
                      const char *type, int this_circid, int other_circid)
 {
-  log(severity,"Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d:",
+  log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d:",
       poll_index, type, this_circid, other_circid, circ->state,
       circuit_state_to_string(circ->state), (int)circ->timestamp_created);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
-    circuit_log_path(severity, circ);
+    circuit_log_path(severity, LD_CIRC, circ);
   }
 }
 
@@ -265,7 +266,7 @@ again:
   r = onion_extend_cpath(circ->purpose, &circ->cpath, circ->build_state);
 //    || !CIRCUIT_IS_ORIGIN(circ)) { // wtf? -rd
   if (r < 0) {
-    log_fn(LOG_INFO,"Generating cpath hop failed.");
+    info(LD_CIRC,"Generating cpath hop failed.");
     return -1;
   }
   if (r == 0)
@@ -337,7 +338,7 @@ circuit_handle_first_hop(circuit_t *circ)
   /* now see if we're already connected to the first OR in 'route' */
   in.s_addr = htonl(firsthop->extend_info->addr);
   tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
-  log_fn(LOG_DEBUG,"Looking for firsthop '%s:%u'",tmpbuf,
+  debug(LD_CIRC,"Looking for firsthop '%s:%u'",tmpbuf,
          firsthop->extend_info->port);
   /* imprint the circuit with its future n_conn->id */
   memcpy(circ->n_conn_id_digest, firsthop->extend_info->identity_digest,
@@ -353,12 +354,12 @@ circuit_handle_first_hop(circuit_t *circ)
                                      firsthop->extend_info->port,
                                      firsthop->extend_info->identity_digest);
       if (!n_conn) { /* connect failed, forget the whole thing */
-        log_fn(LOG_INFO,"connect to firsthop failed. Closing.");
+        info(LD_CIRC,"connect to firsthop failed. Closing.");
         return -1;
       }
     }
 
-    log_fn(LOG_DEBUG,"connecting in progress (or finished). Good.");
+    debug(LD_CIRC,"connecting in progress (or finished). Good.");
     /* return success. The onion/circuit/etc will be taken care of automatically
      * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
      */
@@ -367,9 +368,9 @@ circuit_handle_first_hop(circuit_t *circ)
     circ->n_addr = n_conn->addr;
     circ->n_port = n_conn->port;
     circ->n_conn = n_conn;
-    log_fn(LOG_DEBUG,"Conn open. Delivering first onion skin.");
+    debug(LD_CIRC,"Conn open. Delivering first onion skin.");
     if (circuit_send_next_onion_skin(circ) < 0) {
-      log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
+      info(LD_CIRC,"circuit_send_next_onion_skin failed.");
       return -1;
     }
   }
@@ -386,7 +387,7 @@ circuit_n_conn_done(connection_t *or_conn, int status)
 {
   circuit_t *circ;
 
-  log_fn(LOG_DEBUG,"or_conn to %s, status=%d",
+  debug(LD_CIRC,"or_conn to %s, status=%d",
          or_conn->nickname ? or_conn->nickname : "NULL", status);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
@@ -398,16 +399,16 @@ circuit_n_conn_done(connection_t *or_conn, int status)
         circ->n_port == or_conn->port &&
         !memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
       if (!status) { /* or_conn failed; close circ */
-        log_fn(LOG_INFO,"or_conn failed. Closing circ.");
+        info(LD_CIRC,"or_conn failed. Closing circ.");
         circuit_mark_for_close(circ);
         continue;
       }
-      log_fn(LOG_DEBUG,"Found circ %d, sending create cell.", circ->n_circ_id);
+      debug(LD_CIRC,"Found circ %d, sending create cell.", circ->n_circ_id);
       circ->n_conn = or_conn;
       memcpy(circ->n_conn_id_digest, or_conn->identity_digest, DIGEST_LEN);
       if (CIRCUIT_IS_ORIGIN(circ)) {
         if (circuit_send_next_onion_skin(circ) < 0) {
-          log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
+          info(LD_CIRC,"send_next_onion_skin failed; circuit marked for closing.");
           circuit_mark_for_close(circ);
           continue;
           /* XXX could this be bad, eg if next_onion_skin failed because conn died? */
@@ -443,10 +444,10 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type, char *payload)
 
   id = get_unique_circ_id_by_conn(circ->n_conn);
   if (!id) {
-    log_fn(LOG_WARN,"failed to get unique circID.");
+    warn(LD_CIRC,"failed to get unique circID.");
     return -1;
   }
-  log_fn(LOG_DEBUG,"Chosen circID %u.", id);
+  debug(LD_CIRC,"Chosen circID %u.", id);
   circuit_set_circid_orconn(circ, id, circ->n_conn, N_CONN_CHANGED);
 
   memset(&cell, 0, sizeof(cell_t));
@@ -471,7 +472,7 @@ inform_testing_reachability(void)
   if (me->dir_port)
     tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
                  me->address, me->dir_port);
-  log(LOG_NOTICE,"Now checking whether ORPort %s:%d%s %s reachable... (this may take several minutes)",
+  log(LOG_NOTICE, LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... (this may take several minutes)",
       me->address, me->or_port,
       me->dir_port ? dirbuf : "",
       me->dir_port ? "are" : "is");
@@ -504,7 +505,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
 
   if (circ->cpath->state == CPATH_STATE_CLOSED) {
     uint8_t cell_type;
-    log_fn(LOG_DEBUG,"First skin; sending create cell.");
+    debug(LD_CIRC,"First skin; sending create cell.");
 
     router = router_get_by_digest(circ->n_conn->identity_digest);
 
@@ -518,7 +519,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
       if (onion_skin_create(circ->cpath->extend_info->onion_key,
                             &(circ->cpath->dh_handshake_state),
                             payload) < 0) {
-        log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
+        warn(LD_CIRC,"onion_skin_create (first hop) failed.");
         return -1;
       }
     } else {
@@ -537,22 +538,23 @@ circuit_send_next_onion_skin(circuit_t *circ)
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
     circ->state = CIRCUIT_STATE_BUILDING;
-    log_fn(LOG_DEBUG,"first skin; finished sending create cell.");
+    debug(LD_CIRC,"first skin; finished sending create cell.");
   } else {
     tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
     tor_assert(circ->state == CIRCUIT_STATE_BUILDING);
-    log_fn(LOG_DEBUG,"starting to send subsequent skin.");
+    debug(LD_CIRC,"starting to send subsequent skin.");
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) {
       /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
-      log_fn(LOG_INFO,"circuit built!");
+      info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
       if (!has_completed_circuit) {
         or_options_t *options = get_options();
         has_completed_circuit=1;
         /* FFFF Log a count of known routers here */
-        log(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
+        log(LOG_NOTICE, LD_GENERAL,
+            "Tor has successfully opened a circuit. Looks like it's working.");
         if (server_mode(options) && !check_whether_orport_reachable()) {
           inform_testing_reachability();
         }
@@ -571,11 +573,11 @@ circuit_send_next_onion_skin(circuit_t *circ)
 
     if (onion_skin_create(hop->extend_info->onion_key,
                           &(hop->dh_handshake_state), onionskin) < 0) {
-      log_fn(LOG_WARN,"onion_skin_create failed.");
+      warn(LD_CIRC,"onion_skin_create failed.");
       return -1;
     }
 
-    log_fn(LOG_DEBUG,"Sending extend relay cell.");
+    debug(LD_CIRC,"Sending extend relay cell.");
     /* send it to hop->prev, because it will transfer
      * it to a create cell and then send to hop */
     if (connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTEND,
@@ -593,7 +595,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
 void
 circuit_note_clock_jumped(int seconds_elapsed)
 {
-  log(LOG_NOTICE,"Your clock just jumped %d seconds forward; assuming established circuits no longer work.", seconds_elapsed);
+  log(LOG_NOTICE, LD_GENERAL,"Your clock just jumped %d seconds forward; assuming established circuits no longer work.", seconds_elapsed);
   has_completed_circuit=0; /* so it'll log when it works again */
   circuit_mark_all_unused_circs();
 }
@@ -612,14 +614,15 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   char *id_digest=NULL;
 
   if (circ->n_conn) {
-    log_fn(LOG_PROTOCOL_WARN,"n_conn already set. Bug/attack. Closing.");
+    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
+           "n_conn already set. Bug/attack. Closing.");
     return -1;
   }
 
   relay_header_unpack(&rh, cell->payload);
 
   if (rh.length < 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
-    log_fn(LOG_PROTOCOL_WARN, "Wrong length %d on extend cell. Closing circuit.", rh.length);
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,"Wrong length %d on extend cell. Closing circuit.", rh.length);
     return -1;
   }
 
@@ -638,7 +641,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     char tmpbuf[INET_NTOA_BUF_LEN];
     in.s_addr = htonl(circ->n_addr);
     tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-    log_fn(LOG_INFO,"Next router (%s:%d) not connected. Connecting.",
+    /* XXXX LD_OR? NM */
+    info(LD_CIRC,"Next router (%s:%d) not connected. Connecting.",
            tmpbuf, circ->n_port);
 
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
@@ -654,11 +658,11 @@ circuit_extend(cell_t *cell, circuit_t *circ)
      /* we should try to open a connection */
       n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
       if (!n_conn) {
-        log_fn(LOG_INFO,"Launching n_conn failed. Closing.");
+        info(LD_CIRC,"Launching n_conn failed. Closing circuit.");
         circuit_mark_for_close(circ);
         return 0;
       }
-      log_fn(LOG_DEBUG,"connecting in progress (or finished). Good.");
+      debug(LD_CIRC,"connecting in progress (or finished). Good.");
     }
     /* return success. The onion/circuit/etc will be taken care of automatically
      * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
@@ -672,7 +676,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   circ->n_conn = n_conn;
   memcpy(circ->n_conn_id_digest, n_conn->identity_digest, DIGEST_LEN);
-  log_fn(LOG_DEBUG,"n_conn is %s:%u",n_conn->address,n_conn->port);
+  debug(LD_CIRC,"n_conn is %s:%u",n_conn->address,n_conn->port);
 
   if (circuit_deliver_create_cell(circ, CELL_CREATE, onionskin) < 0)
     return -1;
@@ -711,12 +715,12 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
 //         (unsigned int)*(uint32_t*)(key_data+40), (unsigned int)*(uint32_t*)(key_data+40+16));
   if (!(cpath->f_crypto =
         crypto_create_init_cipher(key_data+(2*DIGEST_LEN),1))) {
-    log(LOG_WARN,"Bug: forward cipher initialization failed.");
+    warn(LD_BUG,"Bug: forward cipher initialization failed.");
     return -1;
   }
   if (!(cpath->b_crypto =
         crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,0))) {
-    log(LOG_WARN,"Bug: backward cipher initialization failed.");
+    warn(LD_BUG,"Bug: backward cipher initialization failed.");
     return -1;
   }
 
@@ -753,7 +757,7 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
   else {
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) { /* got an extended when we're all done? */
-      log_fn(LOG_WARN,"got extended when circ already built? Closing.");
+      warn(LD_PROTOCOL,"got extended when circ already built? Closing.");
       return -1;
     }
   }
@@ -762,7 +766,7 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
   if (reply_type == CELL_CREATED && hop->dh_handshake_state) {
     if (onion_skin_client_handshake(hop->dh_handshake_state, reply, keys,
                                     DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
-      log_fn(LOG_WARN,"onion_skin_client_handshake failed.");
+      warn(LD_CIRC,"onion_skin_client_handshake failed.");
       return -1;
     }
     /* Remember hash of g^xy */
@@ -770,12 +774,12 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
   } else if (reply_type == CELL_CREATED_FAST && !hop->dh_handshake_state) {
     if (fast_client_handshake(hop->fast_handshake_state, reply, keys,
                               DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
-      log_fn(LOG_WARN,"fast_client_handshake failed.");
+      warn(LD_CIRC,"fast_client_handshake failed.");
       return -1;
     }
     memcpy(hop->handshake_digest, reply+DIGEST_LEN, DIGEST_LEN);
   } else {
-    log_fn(LOG_WARN,"CREATED cell type did not match CREATE cell type.");
+    warn(LD_PROTOCOL,"CREATED cell type did not match CREATE cell type.");
     return -1;
   }
 
@@ -790,8 +794,8 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
   }
 
   hop->state = CPATH_STATE_OPEN;
-  log_fn(LOG_INFO,"Finished building circuit hop:");
-  circuit_log_path(LOG_INFO,circ);
+  info(LD_CIRC,"Finished building circuit hop:");
+  circuit_log_path(LOG_INFO,LD_CIRC,circ);
   control_event_circuit_status(circ, CIRC_EVENT_EXTENDED);
 
   return 0;
@@ -824,11 +828,12 @@ circuit_truncated(circuit_t *circ, crypt_path_t *layer)
   while (layer->next != circ->cpath) {
     /* we need to clear out layer->next */
     victim = layer->next;
-    log_fn(LOG_DEBUG, "Killing a layer of the cpath.");
+    debug(LD_CIRC, "Killing a layer of the cpath.");
 
     for (stream = circ->p_streams; stream; stream=stream->next_stream) {
       if (stream->cpath_layer == victim) {
-        log_fn(LOG_INFO, "Marking stream %d for close.", stream->stream_id);
+        /* XXXX NM LD_CIRC? */
+        info(LD_APP, "Marking stream %d for close.", stream->stream_id);
         /* no need to send 'end' relay cells,
          * because the other side's already dead
          */
@@ -840,7 +845,7 @@ circuit_truncated(circuit_t *circ, crypt_path_t *layer)
     circuit_free_cpath_node(victim);
   }
 
-  log_fn(LOG_INFO, "finished");
+  info(LD_CIRC, "finished");
   return 0;
 #endif
 }
@@ -866,10 +871,10 @@ onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys)
   memcpy(cell.payload, payload,
          cell_type == CELL_CREATED ? ONIONSKIN_REPLY_LEN : DIGEST_LEN*2);
 
-  log_fn(LOG_DEBUG,"init digest forward 0x%.8x, backward 0x%.8x.",
+  debug(LD_CIRC,"init digest forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)(keys), (unsigned int)*(uint32_t*)(keys+20));
   if (circuit_init_cpath_crypto(tmp_cpath, keys, 0)<0) {
-    log_fn(LOG_WARN,"Circuit initialization failed");
+    warn(LD_BUG,"Circuit initialization failed");
     tor_free(tmp_cpath);
     return -1;
   }
@@ -886,7 +891,7 @@ onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys)
     memcpy(circ->handshake_digest, cell.payload+DIGEST_LEN, DIGEST_LEN);
 
   connection_or_write_cell_to_buf(&cell, circ->p_conn);
-  log_fn(LOG_DEBUG,"Finished sending 'created' cell.");
+  debug(LD_CIRC,"Finished sending 'created' cell.");
 
   if (!is_local_IP(circ->p_conn->addr) &&
       tor_tls_is_server(circ->p_conn->tls)) {
@@ -925,19 +930,19 @@ new_route_len(double cw, uint8_t purpose, extend_info_t *exit,
       purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
     routelen++;
 #endif
-  log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",routelen,
+  debug(LD_CIRC,"Chosen route length %d (%d routers available).",routelen,
          smartlist_len(routers));
 
   num_acceptable_routers = count_acceptable_routers(routers);
 
   if (num_acceptable_routers < 2) {
-    log_fn(LOG_INFO,"Not enough acceptable routers (%d). Discarding this circuit.",
+    info(LD_CIRC,"Not enough acceptable routers (%d). Discarding this circuit.",
            num_acceptable_routers);
     return -1;
   }
 
   if (num_acceptable_routers < routelen) {
-    log_fn(LOG_INFO,"Not enough routers: cutting routelen from %d to %d.",
+    info(LD_CIRC,"Not enough routers: cutting routelen from %d to %d.",
            routelen, num_acceptable_routers);
     routelen = num_acceptable_routers;
   }
@@ -1140,7 +1145,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       ++n_best_support;
     }
   }
-  log_fn(LOG_INFO, "Found %d servers that might support %d/%d pending connections.",
+  info(LD_CIRC, "Found %d servers that might support %d/%d pending connections.",
          n_best_support, best_support, n_pending_connections);
 
   preferredexits = smartlist_create();
@@ -1172,12 +1177,12 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 
     if (best_support == -1) {
       if (need_uptime || need_capacity) {
-        log_fn(LOG_INFO, "We couldn't find any live%s%s routers; falling back to list of all routers.",
+        info(LD_CIRC, "We couldn't find any live%s%s routers; falling back to list of all routers.",
                need_capacity?", fast":"",
                need_uptime?", stable":"");
         return choose_good_exit_server_general(dir, 0, 0);
       }
-      log(LOG_NOTICE, "All routers are down or middleman -- choosing a doomed exit at random.");
+      notice(LD_CIRC, "All routers are down or middleman -- choosing a doomed exit at random.");
     }
     for (try = 0; try < 2; try++) {
       /* try once to pick only from routers that satisfy a needed port,
@@ -1208,12 +1213,13 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   smartlist_free(sl);
   tor_free(n_supported);
   if (router) {
-    log_fn(LOG_INFO, "Chose exit server '%s'", router->nickname);
+    info(LD_CIRC, "Chose exit server '%s'", router->nickname);
     return router;
   }
-  if (options->StrictExitNodes)
-    log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
-
+  if (options->StrictExitNodes) {
+    /* XXXX NM LD_DIR? */
+    warn(LD_CIRC, "No exit routers seem to be running; can't choose an exit.");
+  }
   return NULL;
 }
 
@@ -1242,7 +1248,7 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
           options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
       return r;
   }
-  log_fn(LOG_WARN,"Bug: unhandled purpose %d", purpose);
+  warn(LD_BUG,"Bug: unhandled purpose %d", purpose);
   tor_fragile_assert();
   return NULL;
 }
@@ -1264,14 +1270,14 @@ onion_pick_cpath_exit(circuit_t *circ, extend_info_t *exit)
   state->desired_path_len = r;
 
   if (exit) { /* the circuit-builder pre-requested one */
-    log_fn(LOG_INFO,"Using requested exit node '%s'", exit->nickname);
+    info(LD_CIRC,"Using requested exit node '%s'", exit->nickname);
     exit = extend_info_dup(exit);
   } else { /* we have to decide one */
     routerinfo_t *router =
            choose_good_exit_server(circ->purpose, rl,
                                    state->need_uptime, state->need_capacity);
     if (!router) {
-      log_fn(LOG_WARN,"failed to choose an exit server");
+      warn(LD_CIRC,"failed to choose an exit server");
       return -1;
     }
     exit = extend_info_from_router(router);
@@ -1309,7 +1315,7 @@ circuit_extend_to_new_exit(circuit_t *circ, extend_info_t *info)
   circuit_append_new_exit(circ, info);
   circ->state = CIRCUIT_STATE_BUILDING;
   if (circuit_send_next_onion_skin(circ)<0) {
-    log_fn(LOG_WARN, "Couldn't extend circuit to new point '%s'.",
+    warn(LD_CIRC, "Couldn't extend circuit to new point '%s'.",
            info->nickname);
     circuit_mark_for_close(circ);
     return -1;
@@ -1382,7 +1388,7 @@ choose_good_middle_server(uint8_t purpose,
   tor_assert(_CIRCUIT_PURPOSE_MIN <= purpose &&
              purpose <= _CIRCUIT_PURPOSE_MAX);
 
-  log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
+  debug(LD_CIRC, "Contemplating intermediate hop: random choice.");
   excluded = smartlist_create();
   if ((r = build_state_get_exit_router(state))) {
     smartlist_add(excluded, r);
@@ -1490,12 +1496,12 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
   }
 
   if (cur_len >= state->desired_path_len) {
-    log_fn(LOG_DEBUG, "Path is complete: %d steps long",
+    debug(LD_CIRC, "Path is complete: %d steps long",
            state->desired_path_len);
     return 1;
   }
 
-  log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len,
+  debug(LD_CIRC, "Path is %d long; we want %d", cur_len,
          state->desired_path_len);
 
   excludednodes = smartlist_create();
@@ -1516,11 +1522,11 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
 
   smartlist_free(excludednodes);
   if (!info) {
-    log_fn(LOG_WARN,"Failed to find node for hop %d of our path. Discarding this circuit.", cur_len);
+    warn(LD_CIRC,"Failed to find node for hop %d of our path. Discarding this circuit.", cur_len);
     return -1;
   }
 
-  log_fn(LOG_DEBUG,"Chose router %s for hop %d (exit is %s)",
+  debug(LD_CIRC,"Chose router %s for hop %d (exit is %s)",
          info->nickname, cur_len+1, build_state_get_exit_nickname(state));
 
   onion_append_hop(head_ptr, info);
@@ -1643,10 +1649,10 @@ pick_helper_nodes(void)
 
   while (smartlist_len(helper_nodes) < options->NumHelperNodes) {
     routerinfo_t *entry = choose_good_entry_server(NULL);
-    /* XXXX deal with duplicate entries. */
+    /* XXXX deal with duplicate entries. NM */
     helper_node_t *helper = tor_malloc_zero(sizeof(helper_node_t));
-    /* XXXX Downgrade this to info before release. */
-    log_fn(LOG_NOTICE, "Chose '%s' as helper node.", entry->nickname);
+    /* XXXX Downgrade this to info before release. NM */
+    notice(LD_CIRC, "Chose '%s' as helper node.", entry->nickname);
     strlcpy(helper->nickname, entry->nickname, sizeof(helper->nickname));
     memcpy(helper->identity, entry->identity_digest, DIGEST_LEN);
     smartlist_add(helper_nodes, helper);
@@ -1708,7 +1714,7 @@ remove_dead_helpers(void)
     if (why) {
       base16_encode(dbuf, sizeof(dbuf), helper->identity, DIGEST_LEN);
       format_local_iso_time(tbuf, since);
-      log_fn(LOG_WARN, "Helper node '%s' (%s) has been %s since %s; removing.",
+      warn(LD_CIRC, "Helper node '%s' (%s) has been %s since %s; removing.",
              helper->nickname, dbuf, why, tbuf);
       tor_free(helper);
       smartlist_del(helper_nodes, i);
@@ -1733,6 +1739,7 @@ helper_nodes_set_status_from_directory(void)
   routerlist_t *routers;
   time_t now;
   int changed = 0;
+  int severity = LOG_NOTICE;
   if (! helper_nodes)
     return;
 
@@ -1749,25 +1756,28 @@ helper_nodes_set_status_from_directory(void)
         if (! helper->unlisted_since) {
           helper->unlisted_since = time(NULL);
           ++changed;
-          log_fn(LOG_WARN,"Helper node '%s' is not listed by directories",
+          warn(LD_CIRC,"Helper node '%s' is not listed by directories",
                  helper->nickname);
+          severity = LOG_WARN;
         }
       } else {
         if (helper->unlisted_since) {
-          log_fn(LOG_WARN,"Helper node '%s' is listed again by directories",
+          warn(LD_CIRC,"Helper node '%s' is listed again by directories",
                  helper->nickname);
           ++changed;
+          severity = LOG_WARN;
         }
         helper->unlisted_since = 0;
         if (! r->is_running) {
           if (! helper->down_since) {
             helper->down_since = now;
-            log_fn(LOG_WARN, "Helper node '%s' is now down.", helper->nickname);
+            warn(LD_CIRC, "Helper node '%s' is now down.", helper->nickname);
             ++changed;
+            severity = LOG_WARN;
           }
         } else {
           if (helper->down_since) {
-            log_fn(LOG_WARN,"Helper node '%s' is up in latest directories",
+            notice(LD_CIRC,"Helper node '%s' is up in latest directories",
                    helper->nickname);
             ++changed;
           }
@@ -1777,7 +1787,7 @@ helper_nodes_set_status_from_directory(void)
     });
 
   if (changed) {
-    log_fn(LOG_WARN, "    (%d/%d helpers are usable)",
+    log_fn(severity, LD_CIRC, "    (%d/%d helpers are usable)",
            num_live_helpers(), smartlist_len(helper_nodes));
     helper_nodes_changed();
   }
@@ -1801,8 +1811,8 @@ helper_node_set_status(const char *digest, int succeeded)
       if (!memcmp(helper->identity, digest, DIGEST_LEN)) {
         if (succeeded) {
           if (helper->down_since) {
-            /*XXXX shouldn't warn. */
-            log_fn(LOG_WARN,
+            /*XXXX shouldn't warn. NM */
+            warn(LD_CIRC,
                    "Connection to formerly down helper node '%s' succeeded. "
                    "%d/%d helpers usable.", helper->nickname,
                    num_live_helpers(), smartlist_len(helper_nodes));
@@ -1811,7 +1821,7 @@ helper_node_set_status(const char *digest, int succeeded)
           helper->down_since = 0;
         } else if (!helper->down_since) {
           helper->down_since = time(NULL);
-          log_fn(LOG_WARN,
+          warn(LD_CIRC,
                  "Connection to helper node '%s' failed. %d/%d helpers usable.",
                  helper->nickname, num_live_helpers(), smartlist_len(helper_nodes));
           helper_nodes_changed();
@@ -1841,7 +1851,7 @@ choose_random_helper(void)
 
   if (! smartlist_len(live_helpers)) {
     /* XXXX Is this right?  What if network is down? */
-    log_fn(LOG_WARN, "No functional helper nodes found; picking a new set.");
+    warn(LD_CIRC, "No functional helper nodes found; picking a new set.");
     clear_helper_nodes();
     pick_helper_nodes();
     goto retry;
