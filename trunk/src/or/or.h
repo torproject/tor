@@ -1379,7 +1379,7 @@ void assert_buf_ok(buf_t *buf);
 /********************************* circuitbuild.c **********************/
 
 char *circuit_list_path(circuit_t *circ, int verbose);
-void circuit_log_path(int severity, circuit_t *circ);
+void circuit_log_path(int severity, int domain, circuit_t *circ);
 void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 circuit_t *circuit_init(uint8_t purpose, int need_uptime,
@@ -1425,6 +1425,7 @@ void circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
 void circuit_close_all_marked(void);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn);
+int circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_by_global_id(uint32_t id);

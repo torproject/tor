@@ -188,7 +188,7 @@ circuit_state_to_string(int state)
     case CIRCUIT_STATE_OR_WAIT: return "connecting to firsthop";
     case CIRCUIT_STATE_OPEN: return "open";
     default:
-      warn(LD_GENERAL, "Bug: unknown circuit state %d", state);
+      warn(LD_BUG, "Bug: unknown circuit state %d", state);
       tor_snprintf(buf, sizeof(buf), "unknown state [%d]", state);
       return buf;
   }
@@ -344,8 +344,8 @@ circuit_get_by_global_id(uint32_t id)
  *  - circ is attached to <b>conn</b>, either as p_conn or n_conn.
  * Return NULL if no such circuit exists.
  */
-circuit_t *
-circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
+static INLINE circuit_t *
+circuit_get_by_circid_orconn_impl(uint16_t circ_id, connection_t *conn)
 {
   orconn_circid_circuit_map_t search;
   orconn_circid_circuit_map_t *found;
@@ -362,7 +362,7 @@ circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
     found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
     _last_circid_orconn_ent = found;
   }
-  if (found && found->circuit && !found->circuit->marked_for_close)
+  if (found && found->circuit)
     return found->circuit;
 
   /* The rest of this can be replaced with
@@ -371,21 +371,49 @@ circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
   {
     circuit_t *circ;
     for (circ=global_circuitlist;circ;circ = circ->next) {
-      if (circ->marked_for_close)
-        continue;
-
       if (circ->p_conn == conn && circ->p_circ_id == circ_id) {
-        warn(LD_GENERAL, "circuit matches p_conn, but not in tree (Bug!)");
+        warn(LD_BUG, "circuit matches p_conn, but not in tree (Bug!)");
         return circ;
       }
       if (circ->n_conn == conn && circ->n_circ_id == circ_id) {
-        warn(LD_GENERAL, "circuit matches n_conn, but not in tree (Bug!)");
+        warn(LD_BUG, "circuit matches n_conn, but not in tree (Bug!)");
         return circ;
       }
     }
     return NULL;
   }
+}
 
+/** Return a circ such that:
+ *  - circ-\>n_circ_id or circ-\>p_circ_id is equal to <b>circ_id</b>, and
+ *  - circ is attached to <b>conn</b>, either as p_conn or n_conn.
+ *  - circ is not marked for close.
+ * Return NULL if no such circuit exists.
+ */
+circuit_t *
+circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
+{
+  circuit_t *circ = circuit_get_by_circid_orconn_impl(circ_id, conn);
+  if (circ->marked_for_close)
+    return NULL;
+  else
+    return circ;
+}
+
+/** Return true iff there is a circ such that
+ *  - circ-\>n_circ_id or circ-\>p_circ_id is equal to <b>circ_id</b>, and
+ *  - circ is attached to <b>conn</b>, either as p_conn or n_conn.
+ * Return NULL if no such circuit exists.
+ */
+int
+circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn)
+{
+  circuit_t *circ = circuit_get_by_circid_orconn_impl(circ_id, conn);
+  if (circ && circ->marked_for_close)
+    log_fn(LOG_NOTICE, LD_CIRC,
+           "I was about to re-use a circuit ID that had been marked."
+           " Good thing we fixed that bug!");
+  return circ != NULL;
 }
 
 /** Return the circuit that a given edge connection is using. */
@@ -402,7 +430,7 @@ circuit_get_by_edge_conn(connection_t *conn)
     /* return NULL; */
     circ = circuit_get_by_conn(conn);
     if (circ) {
-      warn(LD_GENERAL, "BUG: conn->on_circuit==NULL, but there was in fact a circuit there.");
+      warn(LD_BUG, "BUG: conn->on_circuit==NULL, but there was in fact a circuit there.");
     }
     return circ;
   }
@@ -614,7 +642,7 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
   tor_assert(file);
 
   if (circ->marked_for_close) {
-    log(LOG_WARN,LD_GENERAL,
+    log(LOG_WARN,LD_BUG,
         "Duplicate call to circuit_mark_for_close at %s:%d"
         " (first at %s:%d)", file, line,
         circ->marked_for_close_file, circ->marked_for_close);
