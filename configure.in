@@ -426,7 +426,7 @@ fi], [ dmalloc=0; AC_MSG_RESULT(no) ]
 
 if [[ $dmalloc -eq 1 ]]; then
   AC_CHECK_HEADERS(dmalloc.h, , AC_MSG_ERROR(dmalloc header file not found. Do you have the development files for dmalloc installed?))
-  AC_SEARCH_LIBS(dmalloc_malloc, [dmalloc], , AC_MSG_ERROR(Libdmalloc library not found. If you enable it you better have it installed.))
+  AC_SEARCH_LIBS(dmalloc_malloc, [dmallocth dmalloc], , AC_MSG_ERROR(Libdmalloc library not found. If you enable it you better have it installed.))
   AC_DEFINE(USE_DMALLOC, 1, [Debug memory allocation library])
   AC_DEFINE(DMALLOC_FUNC_CHECK, 1, [Enable dmalloc's malloc function check])
 fi
