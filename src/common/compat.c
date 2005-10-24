@@ -695,6 +695,7 @@ get_uname(void)
 #ifdef MS_WINDOWS
         OSVERSIONINFOEX info;
         int i;
+        unsigned int leftover_mask;
         const char *plat = NULL;
         static struct {
           int major; int minor; const char *version;
@@ -709,6 +710,21 @@ get_uname(void)
           /* { 4, 0, "Windows 95" } */
           { 3, 51, "Windows NT 3.51" },
           { -1, -1, NULL }
+        };
+        static struct {
+          unsigned int mask; const char *str;
+        } win_mask_table[] = {
+          { VER_SUITE_BACKOFFICE,         " {backoffice}" },
+          { VER_SUITE_BLADE,              " {\"blade\" (2003, web edition)}" },
+          { VER_SUITE_DATACENTER,         " {datacenter}" },
+          { VER_SUITE_ENTERPRISE,         " {enterprise}" },
+          { VER_SUITE_EMBEDDEDNT,         " {embedded}" },
+          { VER_SUITE_PERSONAL,           " {personal}" },
+          { VER_SUITE_SINGLEUSERTS,       " {terminal services, single user}" },
+          { VER_SUITE_SMALLBUSINESS,      " {small business}" },
+          { VER_SUITE_SMALLBUSINESS_RESTRICTED, " {small business, restricted}" },
+          { VER_SUITE_TERMINAL,           " {terminal services}" },
+          { 0, NULL },
         };
         info.dwOSVersionInfoSize = sizeof(info);
         GetVersionEx((LPOSVERSIONINFO)&info);
@@ -733,12 +749,14 @@ get_uname(void)
           if (info.dwMajorVersion > 6 ||
               (info.dwMajorVersion==6 && info.dwMinorVersion>0))
             tor_snprintf(uname_result, sizeof(uname_result),
-                         "Very recent version of Windows [major=%d,minor=%d]",
-                         (int)info.dwMajorVersion,(int)info.dwMinorVersion);
+                         "Very recent version of Windows [major=%d,minor=%d] %s",
+                         (int)info.dwMajorVersion,(int)info.dwMinorVersion,
+                         info.szCSDVersion);
           else
             tor_snprintf(uname_result, sizeof(uname_result),
-                         "Unrecognized version of Windows [major=%d,minor=%d]",
-                         (int)info.dwMajorVersion,(int)info.dwMinorVersion);
+                         "Unrecognized version of Windows [major=%d,minor=%d] %s",
+                         (int)info.dwMajorVersion,(int)info.dwMinorVersion,
+                         infor.szCSDVersion);
         }
         if (info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
           strlcat(uname_result, " [domain controller]", sizeof(uname_result));
@@ -747,20 +765,17 @@ get_uname(void)
         } else if (info.wProductType == VER_NT_WORKSTATION) {
           strlcat(uname_result, " [workstation]", sizeof(uname_result));
         }
-        if (info.wSuiteMask & VER_SUITE_DATACENTER) {
-          strlcat(uname_result, " {datacenter}", sizeof(uname_result));
+        leftover_mask = info.wSuiteMask;
+        for (i = 0; win_mask_table[i].mask; ++i) {
+          if (info.wSuiteMask & win_mask_table[i]) {
+            strlcat(uname_result, win_mask_table[i].str, sizeof(uname_result));
+            leftover_mask &= ~win_mask_table[i].mask;
+          }
         }
-        if (info.wSuiteMask & VER_SUITE_ENTERPRISE) {
-          strlcat(uname_result, " {enterprise}", sizeof(uname_result));
-        }
-        if (info.wSuiteMask & VER_SUITE_PERSONAL) {
-          strlcat(uname_result, " {personal}", sizeof(uname_result));
-        }
-        if (info.wSuiteMask & VER_SUITE_EMBEDDEDNT) {
-          strlcat(uname_result, " {personal}", sizeof(uname_result));
-        }
-        if (info.wSuiteMask & VER_SUITE_PERSONAL) {
-          strlcat(uname_result, " {personal}", sizeof(uname_result));
+        if (leftover_mask) {
+          size_t len = strlen(uname_result);
+          tor_snprintf(uname_result+len, sizeof(uname_result)-len,
+                       " {0x%x}", info.wSuiteMask);
         }
 #else
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));

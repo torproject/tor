@@ -689,7 +689,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
            problem);
 
   if (!(bio = BIO_new(BIO_s_mem()))) {
-    log_fn(LOG_WARN, LD_GENERAL, "Couldn't allocate BIO!"); goto end;
+    warn(LD_GENERAL, "Couldn't allocate BIO!"); goto end;
   }
   if (!(ASN1_TIME_print(bio, X509_get_notBefore(cert)))) {
     tls_log_errors(LOG_WARN, "printing certificate lifetime");
