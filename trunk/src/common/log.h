@@ -52,8 +52,7 @@
 
 /* Logging domains */
 
-/** Catch-all for miscellaneous events and internal errors and fatal
- * errors. */
+/** Catch-all for miscellaneous events and fatal errors */
 #define LD_GENERAL  0
 /** The cryptography subsytem */
 #define LD_CRYPTO   1
@@ -77,6 +76,10 @@
 #define LD_CIRC     10
 /** Hidden services */
 #define LD_REND     11
+/** Internal errors in this Tor process. */
+#define LD_BUG      12
+/** Learning and using information about Tor servers. */
+#define LD_DIR      13
 
 typedef void (*log_callback)(int severity, int domain, const char *msg);
 

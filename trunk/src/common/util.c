@@ -909,7 +909,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
   if (st.st_mode & 0077) {
     log(LOG_WARN, LD_FS, "Fixing permissions on directory %s", dirname);
     if (chmod(dirname, 0700)) {
-      log(LOG_WARN, LD_GENERAL, "Could not chmod directory %s: %s", dirname,
+      log(LOG_WARN, LD_FS, "Could not chmod directory %s: %s", dirname,
           strerror(errno));
       return -1;
     } else {
@@ -930,8 +930,8 @@ write_str_to_file(const char *fname, const char *str, int bin)
 {
 #ifdef MS_WINDOWS
   if (!bin && strchr(str, '\r')) {
-    warn(LD_GENERAL,
-           "How odd. Writing a string that does contain CR already.");
+    warn(LD_BUG,
+           "Bug: we're writing a text string that already contains a CR.");
   }
 #endif
   return write_bytes_to_file(fname, str, strlen(str), bin);
@@ -1243,6 +1243,9 @@ tor_listdir(const char *dirname)
   }
   result = smartlist_create();
   while (1) {
+    if (!strcmp(findData.cFileName, ".") ||
+        !strcmp(findData.cFileName, ".."))
+      continue;
     smartlist_add(result, tor_strdup(findData.cFileName));
     if (!FindNextFile(handle, &findData)) {
       if (GetLastError() != ERROR_NO_MORE_FILES) {
