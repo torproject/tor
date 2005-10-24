@@ -359,7 +359,7 @@ connection_ap_expire_beginning(void)
     log_fn(LOG_NOTICE,"Stream is %d seconds late on address '%s'. Retrying.",
            (int)(now - conn->timestamp_lastread),
            safe_str(conn->socks_request->address));
-    circuit_log_path(LOG_NOTICE, circ);
+    circuit_log_path(LOG_NOTICE, LD_APP, circ);
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* un-mark it as ending, since we're going to reuse it */

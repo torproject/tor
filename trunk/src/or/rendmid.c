@@ -50,7 +50,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   memcpy(buf, circ->handshake_digest, DIGEST_LEN);
   memcpy(buf+DIGEST_LEN, "INTRODUCE", 9);
   if (crypto_digest(expected_digest, buf, DIGEST_LEN+9) < 0) {
-    warn(LD_GENERAL, "Internal error computing digest.");
+    warn(LD_BUG, "Internal error computing digest.");
     goto err;
   }
   if (memcmp(expected_digest, request+2+asn1len, DIGEST_LEN)) {
@@ -67,7 +67,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
 
   /* The request is valid.  First, compute the hash of Bob's PK.*/
   if (crypto_pk_get_digest(pk, pk_digest)<0) {
-    warn(LD_GENERAL, "Internal error: couldn't hash public key.");
+    warn(LD_BUG, "Internal error: couldn't hash public key.");
     goto err;
   }
 

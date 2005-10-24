@@ -676,7 +676,7 @@ connection_edge_process_end_not_open(
         if (client_dns_incr_failures(conn->socks_request->address)
             < MAX_RESOLVE_FAILURES) {
           /* We haven't retried too many times; reattach the connection. */
-          circuit_log_path(LOG_INFO,circ);
+          circuit_log_path(LOG_INFO,LD_APP,circ);
           tor_assert(circ->timestamp_dirty);
           circ->timestamp_dirty -= get_options()->MaxCircuitDirtiness;
 
@@ -708,7 +708,7 @@ connection_edge_process_end_not_open(
   log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
          connection_edge_end_reason_str(rh->length > 0 ? reason : -1));
   if (conn->type == CONN_TYPE_AP) {
-    circuit_log_path(LOG_INFO,circ);
+    circuit_log_path(LOG_INFO,LD_APP,circ);
     connection_mark_unattached_ap(conn, reason);
   } else {
     conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
@@ -757,7 +757,7 @@ connection_edge_process_relay_cell_not_open(
       client_dns_set_addressmap(conn->socks_request->address, addr,
                                 conn->chosen_exit_name, ttl);
     }
-    circuit_log_path(LOG_INFO,circ);
+    circuit_log_path(LOG_INFO,LD_APP,circ);
     connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_SUCCEEDED);
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1) < 0) {

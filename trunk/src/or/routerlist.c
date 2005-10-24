@@ -12,6 +12,7 @@ const char routerlist_c_id[] = "$Id$";
  * servers.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /****************************************************************************/
@@ -105,7 +106,7 @@ router_reload_networkstatus(void)
         continue;
       if (strlen(fn) != HEX_DIGEST_LEN ||
           base16_decode(buf, sizeof(buf), fn, strlen(fn))) {
-        log_fn(LOG_INFO,
+        info(LD_DIR,
                "Skipping cached-status file with unexpected name \"%s\"",fn);
         continue;
       }
@@ -115,7 +116,7 @@ router_reload_networkstatus(void)
       if (s) {
         stat(filename, &st);
         if (router_set_networkstatus(s, st.st_mtime, NS_FROM_CACHE, NULL)<0) {
-          log_fn(LOG_WARN, "Couldn't load networkstatus from \"%s\"",filename);
+          warn(LD_FS, "Couldn't load networkstatus from \"%s\"",filename);
         }
         tor_free(s);
       }
@@ -171,7 +172,7 @@ router_append_to_journal(const char *s, size_t len)
     len = strlen(s);
 
   if (append_bytes_to_file(fname, s, len, 0)) {
-    log_fn(LOG_WARN, "Unable to store router descriptor");
+    warn(LD_FS, "Unable to store router descriptor");
     tor_free(fname);
     return -1;
   }
@@ -213,8 +214,8 @@ router_rebuild_store(int force)
   {
     sized_chunk_t *c;
     if (!ri->signed_descriptor) {
-      log_fn(LOG_WARN, "Bug! No descriptor stored for router '%s'.",
-             ri->nickname);
+      warn(LD_BUG, "Bug! No descriptor stored for router '%s'.",
+           ri->nickname);
       goto done;
     }
     c = tor_malloc(sizeof(sized_chunk_t));
@@ -224,7 +225,7 @@ router_rebuild_store(int force)
   });
 
   if (write_chunks_to_file(fname, chunk_list, 0)<0) {
-    log_fn(LOG_WARN, "Error writing router store to disk.");
+    warn(LD_FS, "Error writing router store to disk.");
     goto done;
   }
 
@@ -328,7 +329,7 @@ router_pick_directory_server(int requireother,
   if (choice || !retry_if_no_servers)
     return choice;
 
-  log_fn(LOG_INFO,"No reachable router entries for dirservers. Trying them all again.");
+  info(LD_DIR,"No reachable router entries for dirservers. Trying them all again.");
   /* mark all authdirservers as up again */
   mark_all_trusteddirservers_up();
   /* try again */
@@ -337,7 +338,7 @@ router_pick_directory_server(int requireother,
   if (choice)
     return choice;
 
-  log_fn(LOG_INFO,"Still no %s router entries. Reloading and trying again.",
+  info(LD_DIR,"Still no %s router entries. Reloading and trying again.",
          firewall_is_fascist() ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
   if (router_reload_router_list()) {
@@ -382,7 +383,7 @@ router_pick_trusteddirserver(int need_v1_support,
   if (choice || !retry_if_no_servers)
     return choice;
 
-  log_fn(LOG_INFO,"No trusted dirservers are reachable. Trying them all again.");
+  info(LD_DIR,"No trusted dirservers are reachable. Trying them all again.");
   mark_all_trusteddirservers_up();
   return router_pick_trusteddirserver_impl(need_v1_support,
                                            requireother, fascistfirewall);
@@ -580,7 +581,7 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
   SMARTLIST_FOREACH(nickname_list, const char *, nick, {
     int warned;
     if (!is_legal_nickname_or_hexdigest(nick)) {
-      log_fn(LOG_WARN,"Nickname %s is misformed; skipping", nick);
+      warn(LD_CONFIG, "Nickname %s is misformed; skipping", nick);
       continue;
     }
     router = router_get_by_nickname(nick, warn_if_unnamed);
@@ -592,14 +593,14 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
           smartlist_string_remove(warned_nicknames, nick);
       } else {
         if (!warned) {
-          log_fn(warn_if_down ? LOG_WARN : LOG_DEBUG,
+          log_fn(warn_if_down ? LOG_WARN : LOG_DEBUG, LD_CONFIG,
                  "Nickname list includes '%s' which is known but down.",nick);
           smartlist_add(warned_nicknames, tor_strdup(nick));
         }
       }
     } else {
       if (!warned) {
-        log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
+        log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO, LD_CONFIG,
                "Nickname list includes '%s' which isn't a known router.",nick);
         smartlist_add(warned_nicknames, tor_strdup(nick));
       }
@@ -831,7 +832,7 @@ router_choose_random_node(const char *preferred,
   }
   smartlist_free(excludednodes);
   if (!choice)
-    log_fn(LOG_WARN,"No available nodes when trying to choose node. Failing.");
+    warn(LD_CIRC,"No available nodes when trying to choose node. Failing.");
   return choice;
 }
 
@@ -930,7 +931,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
         });
       if (any_unwarned) {
         char *alternatives = smartlist_join_strings(fps, "; ",0,NULL);
-        log_fn(LOG_WARN, "There are multiple matches for the nickname \"%s\","
+        warn(LD_CONFIG, "There are multiple matches for the nickname \"%s\","
                " but none is listed as named by the directory authories. "
                "Choosing one arbitrarily.  If you meant one in particular, "
                "you should say %s.", nickname, alternatives);
@@ -944,7 +945,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       if (rs && !rs->name_lookup_warned) {
         char fp[HEX_DIGEST_LEN+1];
         base16_encode(fp, sizeof(fp), best_match->identity_digest, DIGEST_LEN);
-        log_fn(LOG_WARN, "You specified a server \"%s\" by name, but the "
+        warn(LD_CONFIG, "You specified a server \"%s\" by name, but the "
                "directory authorities do not have a listing for this name. "
                "To make sure you get the same server in the future, refer to "
                "it by key, as \"$%s\".", nickname, fp);
@@ -1272,9 +1273,9 @@ router_mark_as_down(const char *digest)
   router = router_get_by_digest(digest);
   if (!router) /* we don't seem to know about him in the first place */
     return;
-  log_fn(LOG_DEBUG,"Marking router '%s' as down.",router->nickname);
+  debug(LD_DIR,"Marking router '%s' as down.",router->nickname);
   if (router_is_me(router) && !we_are_hibernating())
-    log_fn(LOG_WARN, "We just marked ourself as down. Are your external addresses reachable?");
+    warn(LD_NET, "We just marked ourself as down. Are your external addresses reachable?");
   router->is_running = 0;
 }
 
@@ -1338,7 +1339,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     if (!crypto_pk_cmp_keys(router->identity_pkey,old_router->identity_pkey)) {
       if (router->published_on <= old_router->published_on) {
         /* Same key, but old */
-        log_fn(LOG_DEBUG, "Skipping not-new descriptor for router '%s'",
+        debug(LD_DIR, "Skipping not-new descriptor for router '%s'",
                router->nickname);
         routerinfo_free(router);
         *msg = "Router descriptor was not new.";
@@ -1346,7 +1347,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       } else {
         /* Same key, new. */
         int unreachable = 0;
-        log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
+        debug(LD_DIR, "Replacing entry for router '%s/%s' [%s]",
                router->nickname, old_router->nickname,
                hex_str(id_digest,DIGEST_LEN));
         if (router->addr == old_router->addr &&
@@ -1361,11 +1362,11 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
             dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL))) {
           if (router->num_unreachable_notifications >= 3) {
             unreachable = 1;
-            log_fn(LOG_NOTICE, "Notifying server '%s' that it's unreachable. (ContactInfo '%s', platform '%s').",
+            notice(LD_DIR, "Notifying server '%s' that it's unreachable. (ContactInfo '%s', platform '%s').",
               router->nickname, router->contact_info ? router->contact_info : "",
               router->platform ? router->platform : "");
           } else {
-            log_fn(LOG_INFO,"'%s' may be unreachable -- the %d previous descriptors were thought to be unreachable.", router->nickname, router->num_unreachable_notifications);
+            info(LD_DIR,"'%s' may be unreachable -- the %d previous descriptors were thought to be unreachable.", router->nickname, router->num_unreachable_notifications);
             router->num_unreachable_notifications++;
           }
         }
@@ -1393,7 +1394,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         connection_t *conn;
         while ((conn = connection_get_by_identity_digest(
                                 old_router->identity_digest, CONN_TYPE_OR))) {
-          log_fn(LOG_INFO,"Closing conn to obsolete router '%s'",
+          // And LD_OR? XXXXNM
+          info(LD_DIR,"Closing conn to router '%s'; there is now a named router with that name.",
                  old_router->nickname);
           connection_mark_for_close(conn);
         }
@@ -1401,7 +1403,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         routerinfo_free(old_router);
       } else if (old_router->is_named) {
         /* Can't replace a verified router with an unverified one. */
-        log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
+        debug(LD_DIR, "Skipping unverified entry for verified router '%s'",
                router->nickname);
         routerinfo_free(router);
         *msg = "Already have named router with same nickname and different key.";
@@ -1436,7 +1438,7 @@ routerlist_remove_old_routers(int age)
     router = smartlist_get(routerlist->routers, i);
     if (router->published_on <= cutoff) {
       /* Too old.  Remove it. */
-      log_fn(LOG_INFO,"Forgetting obsolete routerinfo for router '%s'", router->nickname);
+      info(LD_DIR,"Forgetting obsolete (too old) routerinfo for router '%s'", router->nickname);
       routerlist_remove(routerlist, router, i--);
       routerinfo_free(router);
     }
@@ -1464,12 +1466,12 @@ router_load_single_router(const char *s, const char **msg)
   *msg = NULL;
 
   if (!(ri = router_parse_entry_from_string(s, NULL))) {
-    log_fn(LOG_WARN, "Error parsing router descriptor; dropping.");
+    warn(LD_DIR, "Error parsing router descriptor; dropping.");
     *msg = "Couldn't parse router descriptor.";
     return -1;
   }
   if (router_is_me(ri)) {
-    log_fn(LOG_WARN, "Router's identity key matches mine; dropping.");
+    warn(LD_DIR, "Router's identity key matches mine; dropping.");
     *msg = "Router's identity key matches mine.";
     routerinfo_free(ri);
     return 0;
@@ -1480,7 +1482,7 @@ router_load_single_router(const char *s, const char **msg)
   routers_update_status_from_networkstatus(lst, 0, 1);
 
   if (router_add_to_routerlist(ri, msg, 0)<0) {
-    log_fn(LOG_WARN, "Couldn't add router to list: %s Dropping.",
+    warn(LD_DIR, "Couldn't add router to list: %s Dropping.",
            *msg?*msg:"(No message).");
     /* we've already assigned to *msg now, and ri is already freed */
     smartlist_free(lst);
@@ -1488,7 +1490,7 @@ router_load_single_router(const char *s, const char **msg)
   } else {
     control_event_descriptors_changed(lst);
     smartlist_free(lst);
-    log_fn(LOG_DEBUG, "Added router to list");
+    debug(LD_DIR, "Added router to list");
     return 1;
   }
 }
@@ -1523,7 +1525,7 @@ router_load_routers_from_string(const char *s, int from_cache,
       } else {
         char *requested =
           smartlist_join_strings(requested_fingerprints," ",0,NULL);
-        log_fn(LOG_WARN, "We received a router descriptor with a fingerprint (%s) that we never requested. (We asked for: %s.) Dropping.", fp, requested);
+        warn(LD_DIR, "We received a router descriptor with a fingerprint (%s) that we never requested. (We asked for: %s.) Dropping.", fp, requested);
         tor_free(requested);
         routerinfo_free(ri);
         continue;
@@ -1609,11 +1611,11 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   ns = networkstatus_parse_from_string(s);
   if (!ns) {
-    log_fn(LOG_WARN, "Couldn't parse network status.");
+    warn(LD_DIR, "Couldn't parse network status.");
     return -1;
   }
   if (!(trusted_dir=router_get_trusteddirserver_by_digest(ns->identity_digest))) {
-    log_fn(LOG_INFO, "Network status was signed, but not by an authoritative directory we recognize.");
+    info(LD_DIR, "Network status was signed, but not by an authoritative directory we recognize.");
     networkstatus_free(ns);
     return -1;
   }
@@ -1626,7 +1628,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   format_iso_time(published, ns->published_on);
 
   if (ns->published_on > now + NETWORKSTATUS_ALLOW_SKEW) {
-    log_fn(LOG_WARN, "Network status from %s was published in the future (%s GMT). Somebody is skewed here: check your clock. Not caching.", trusted_dir->description, published);
+    warn(LD_GENERAL, "Network status from %s was published in the future (%s GMT). Somebody is skewed here: check your clock. Not caching.", trusted_dir->description, published);
     skewed = 1;
   }
 
@@ -1646,7 +1648,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
       smartlist_string_remove(requested_fingerprints, fp);
     } else {
       char *requested = smartlist_join_strings(requested_fingerprints," ",0,NULL);
-      log_fn(LOG_WARN, "We received a network status with a fingerprint (%s) that we never requested. (We asked for: %s.) Dropping.", fp, requested);
+      warn(LD_DIR, "We received a network status with a fingerprint (%s) that we never requested. (We asked for: %s.) Dropping.", fp, requested);
       tor_free(requested);
       return 0;
     }
@@ -1664,7 +1666,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
                   ns->networkstatus_digest, DIGEST_LEN)) {
         /* Same one we had before. */
         networkstatus_free(ns);
-        log_fn(LOG_INFO,
+        info(LD_DIR,
                "Not replacing network-status from %s (published %s); "
                "we already have it.",
                trusted_dir->description, published);
@@ -1681,7 +1683,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
       } else if (old_ns->published_on >= ns->published_on) {
         char old_published[ISO_TIME_LEN+1];
         format_iso_time(old_published, old_ns->published_on);
-        log_fn(LOG_INFO,
+        info(LD_DIR,
                "Not replacing network-status from %s (published %s);"
                " we have a newer one (published %s) for this authority.",
                trusted_dir->description, published,
@@ -1700,7 +1702,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   if (!found)
     smartlist_add(networkstatus_list, ns);
 
-  log_fn(LOG_INFO, "Setting networkstatus %s %s (published %s)",
+  info(LD_DIR, "Setting networkstatus %s %s (published %s)",
          source == NS_FROM_CACHE?"cached from":
          (source==NS_FROM_DIR?"downloaded from":"generated for"),
          trusted_dir->description, published);
@@ -1711,7 +1713,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   if (source != NS_FROM_CACHE && !skewed) {
     char *fn = networkstatus_get_cache_filename(ns);
     if (write_str_to_file(fn, s, 0)<0) {
-      log_fn(LOG_NOTICE, "Couldn't write cached network status to \"%s\"", fn);
+      notice(LD_FS, "Couldn't write cached network status to \"%s\"", fn);
     }
     tor_free(fn);
   }
@@ -1747,7 +1749,7 @@ networkstatus_list_clean(time_t now)
     smartlist_del(networkstatus_list, i--);
     fname = networkstatus_get_cache_filename(ns);
     if (file_status(fname) == FN_FILE) {
-      log_fn(LOG_INFO, "Removing too-old networkstatus in %s", fname);
+      info(LD_DIR, "Removing too-old networkstatus in %s", fname);
       unlink(fname);
     }
     tor_free(fname);
@@ -1917,14 +1919,14 @@ update_networkstatus_client_downloads(time_t now)
     needed = n_running_dirservers;
 
   if (needed)
-    log_fn(LOG_INFO, "For %d/%d running directory servers, we have %d live"
+    info(LD_DIR, "For %d/%d running directory servers, we have %d live"
            " network-status documents. Downloading %d.",
            n_running_dirservers, n_dirservers, n_live, needed);
 
   /* Also, download at least 1 every NETWORKSTATUS_CLIENT_DL_INTERVAL. */
   if (n_running_dirservers &&
       most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL && needed < 1) {
-    log_fn(LOG_INFO, "Our most recent network-status document (from %s) "
+    info(LD_DIR, "Our most recent network-status document (from %s) "
            "is %d seconds old; downloading another.",
            most_recent?most_recent->description:"nobody",
            (int)(now-most_recent_received));
@@ -2144,7 +2146,7 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
     if (policy_includes_addr_mask_implicitly(
               policy, private_networks[i].addr, private_networks[i].mask, &p)) {
       if (warn)
-        log_fn(LOG_WARN, "Exit policy %s implicitly accepts %s",
+        warn(LD_CONFIG, "Exit policy %s implicitly accepts %s",
                p?p->string:"(default)",
                private_networks[i].network);
       r = 1;
@@ -2179,13 +2181,13 @@ add_trusted_dir_server(const char *nickname, const char *address,
 
   if (!address) { /* The address is us; we should guess. */
     if (resolve_my_address(get_options(), &a, &hostname) < 0) {
-      log_fn(LOG_WARN, "Couldn't find a suitable address. Returning.");
+      warn(LD_CONFIG, "Couldn't find a suitable address when adding ourself as a trusted directory server.");
       return;
     }
   } else {
     if (tor_lookup_hostname(address, &a)) {
-      log_fn(LOG_WARN, "Unable to lookup address for directory server at %s",
-             address);
+      warn(LD_CONFIG, "Unable to lookup address for directory server at %s",
+           address);
       return;
     }
     hostname = tor_strdup(address);
@@ -2287,11 +2289,11 @@ routers_update_all_from_networkstatus(void)
 
     if (n_recent >= 2 && n_listing >= 2) {
       if (n_valid <= n_recent/2)  {
-        log_fn(LOG_WARN, "%d/%d recent directory servers list us as invalid. Please consider sending your identity fingerprint to the tor-ops.",
+        warn(LD_GENERAL, "%d/%d recent directory servers list us as invalid. Please consider sending your identity fingerprint to the tor-ops.",
                n_recent-n_valid, n_recent);
         have_warned_about_unverified_status = 1;
       } else if (n_named <= n_recent/2)  {
-        log_fn(LOG_WARN, "%d/%d recent directory servers list us as unnamed. Please consider sending your identity fingerprint to the tor-ops.",
+        warn(LD_GENERAL, "%d/%d recent directory servers list us as unnamed. Please consider sending your identity fingerprint to the tor-ops.",
                n_recent-n_valid, n_recent);
         have_warned_about_unverified_status = 1;
       }
@@ -2324,19 +2326,19 @@ routers_update_all_from_networkstatus(void)
     if (n_recent > 2 && n_recommended < n_recent/2) {
       if (consensus == VS_NEW || consensus == VS_NEW_IN_SERIES) {
         if (!have_warned_about_new_version) {
-          log_fn(LOG_NOTICE, "This version of Tor (%s) is newer than any recommended version%s, according to %d/%d recent network statuses.",
+          notice(LD_GENERAL, "This version of Tor (%s) is newer than any recommended version%s, according to %d/%d recent network statuses.",
                  VERSION, consensus == VS_NEW_IN_SERIES ? " in its series" : "",
                  n_recent-n_recommended, n_recent);
           have_warned_about_new_version = 1;
         }
       } else {
-        log_fn(LOG_NOTICE, "This version of Tor (%s) is %s, according to %d/%d recent network statuses.",
+        notice(LD_GENERAL, "This version of Tor (%s) is %s, according to %d/%d recent network statuses.",
                VERSION, consensus == VS_OLD ? "obsolete" : "not recommended",
                n_recent-n_recommended, n_recent);
         have_warned_about_old_version = 1;
       }
     } else {
-      log_fn(LOG_INFO, "%d/%d recent directories think my version is ok.",
+      info(LD_GENERAL, "%d/%d recent directories think my version is ok.",
              n_recommended, n_recent);
     }
   }
@@ -2377,7 +2379,7 @@ networkstatus_list_update_recent(time_t now)
         ns->published_on + DEFAULT_RUNNING_INTERVAL > now) {
       if (!ns->is_recent) {
         format_iso_time(published, ns->published_on);
-        log_fn(LOG_INFO,
+        info(LD_DIR,
                "Networkstatus from %s (published %s) is now \"recent\"",
                src, published);
         changed = 1;
@@ -2387,7 +2389,7 @@ networkstatus_list_update_recent(time_t now)
     } else {
       if (ns->is_recent) {
         format_iso_time(published, ns->published_on);
-        log_fn(LOG_INFO,
+        info(LD_DIR,
                "Networkstatus from %s (published %s) is no longer \"recent\"",
                src, published);
         changed = 1;
@@ -2435,12 +2437,12 @@ routerstatus_list_update_from_networkstatus(time_t now)
 
   if (n_statuses < (n_trusted/2)+1) {
     /* Not enough statuses to adjust status. */
-    log_fn(LOG_NOTICE,"Not enough statuses to update router status list. (%d/%d)",
+    notice(LD_DIR,"Not enough statuses to update router status list. (%d/%d)",
            n_statuses, n_trusted);
     return;
   }
 
-  log_fn(LOG_INFO, "Rebuilding router status list.");
+  info(LD_DIR, "Rebuilding router status list.");
 
   index = tor_malloc(sizeof(int)*n_statuses);
   size = tor_malloc(sizeof(int)*n_statuses);
@@ -2479,7 +2481,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
           char fp2[HEX_DIGEST_LEN+1];
           base16_encode(fp1, sizeof(fp1), other_digest, DIGEST_LEN);
           base16_encode(fp2, sizeof(fp2), rs->identity_digest, DIGEST_LEN);
-          log_fn(should_warn ? LOG_WARN : LOG_INFO,
+          log_fn(should_warn ? LOG_WARN : LOG_INFO, LD_DIR,
                  "Naming authorities disagree about which key goes with %s. ($%s vs $%s)",
                  rs->nickname, fp1, fp2);
           strmap_set_lc(name_map, rs->nickname, conflict);
@@ -2549,7 +2551,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
           char hd[HEX_DIGEST_LEN+1];
           base16_encode(hd, HEX_DIGEST_LEN+1, rs->identity_digest, DIGEST_LEN);
           if (! smartlist_string_isin(warned_conflicts, hd)) {
-            log_fn(LOG_WARN, "Naming authorities disagree about nicknames for $%s (\"%s\" vs \"%s\")",
+            warn(LD_DIR, "Naming authorities disagree about nicknames for $%s (\"%s\" vs \"%s\")",
                    hd, the_name, rs->nickname);
             smartlist_add(warned_conflicts, tor_strdup(hd));
           }
@@ -2569,7 +2571,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
       rs_out->name_lookup_warned = rs_old->name_lookup_warned;
     }
     smartlist_add(result, rs_out);
-    log_fn(LOG_DEBUG, "Router '%s' is listed by %d/%d directories, "
+    debug(LD_DIR, "Router '%s' is listed by %d/%d directories, "
            "named by %d/%d, validated by %d/%d, and %d/%d recent directories "
            "think it's running.",
            rs_out->status.nickname,
@@ -2789,7 +2791,7 @@ router_list_downloadable(void)
     });
   }
 
-  log_fn(LOG_INFO, "%d router descriptors are downloadable; "
+  info(LD_DIR, "%d router descriptors are downloadable; "
          "%d are up to date; %d are in progress; "
          "%d are not ready to retry; "
          "%d are not published recently enough to be worthwhile; "
@@ -2842,7 +2844,7 @@ update_router_descriptor_downloads(time_t now)
     get_all = 1;
 
   if (get_all) {
-    log_fn(LOG_NOTICE, "Launching request for all routers");
+    notice(LD_DIR, "Launching request for all routers");
     last_routerdesc_download_attempted = now;
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,"all.z",1);
     return;
@@ -2851,11 +2853,11 @@ update_router_descriptor_downloads(time_t now)
   downloadable = router_list_downloadable();
   n_downloadable = smartlist_len(downloadable);
   if (n_downloadable >= MAX_DL_TO_DELAY) {
-    log_fn(LOG_DEBUG,
+    debug(LD_DIR,
            "There are enough downloadable routerdescs to launch requests.");
     should_delay = 0;
   } else if (n_downloadable == 0) {
-    log_fn(LOG_DEBUG, "No routerdescs need to be downloaded.");
+    debug(LD_DIR, "No routerdescs need to be downloaded.");
     should_delay = 1;
   } else {
     if (dirserv) {
@@ -2866,9 +2868,9 @@ update_router_descriptor_downloads(time_t now)
                       MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
     }
     if (should_delay)
-      log_fn(LOG_DEBUG, "There are not many downloadable routerdescs; waiting till we have some more.");
+      debug(LD_DIR, "There are not many downloadable routerdescs; waiting till we have some more.");
     else
-      log_fn(LOG_INFO, "There are not many downloadable routerdescs, but we've been waiting long enough (%d seconds). Downloading.",
+      info(LD_DIR, "There are not many downloadable routerdescs, but we've been waiting long enough (%d seconds). Downloading.",
              (int)(now-last_routerdesc_download_attempted));
   }
 
@@ -2884,7 +2886,7 @@ update_router_descriptor_downloads(time_t now)
       if (n_per_request < MIN_DL_PER_REQUEST)
         n_per_request = MIN_DL_PER_REQUEST;
     }
-    log_fn(LOG_INFO, "Launching %d request%s for %d router%s, %d at a time",
+    info(LD_DIR, "Launching %d request%s for %d router%s, %d at a time",
            (n_downloadable+n_per_request-1)/n_per_request,
            n_downloadable>n_per_request?"s":"",
            n_downloadable, n_downloadable>1?"s":"", n_per_request);

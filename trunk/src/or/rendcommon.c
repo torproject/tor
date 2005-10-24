@@ -366,7 +366,7 @@ rend_cache_store(const char *desc, size_t desc_len)
     return -1;
   }
   if (rend_get_service_id(parsed->pk, query)<0) {
-    warn(LD_GENERAL,"Couldn't compute service ID.");
+    warn(LD_BUG,"Couldn't compute service ID.");
     rend_service_descriptor_free(parsed);
     return -1;
   }

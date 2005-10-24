@@ -1327,7 +1327,7 @@ handle_getinfo_helper(const char *question, char **answer)
         case AP_CONN_STATE_OPEN:
           state = "SUCCEEDED"; break;
         default:
-          warn(LD_GENERAL, "Asked for stream in unknown state %d",
+          warn(LD_BUG, "Asked for stream in unknown state %d",
                  conns[i]->state);
           continue;
         }
@@ -2318,7 +2318,7 @@ control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
       case CIRC_EVENT_FAILED: status = "FAILED"; break;
       case CIRC_EVENT_CLOSED: status = "CLOSED"; break;
       default:
-        warn(LD_GENERAL, "Unrecognized status code %d", (int)tp);
+        warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
     send_control1_event(EVENT_CIRCUIT_STATUS,
@@ -2389,7 +2389,7 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
       case STREAM_EVENT_NEW_RESOLVE: status = "NEWRESOLVE"; break;
       case STREAM_EVENT_FAILED_RETRIABLE: status = "DETACHED"; break;
       default:
-        warn(LD_GENERAL, "Unrecognized status code %d", (int)tp);
+        warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
     circ = circuit_get_by_edge_conn(conn);
@@ -2431,7 +2431,7 @@ control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
       case OR_CONN_EVENT_FAILED: status = "FAILED"; break;
       case OR_CONN_EVENT_CLOSED: status = "CLOSED"; break;
       default:
-        warn(LD_GENERAL, "Unrecognized status code %d", (int)tp);
+        warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
     send_control1_event(EVENT_OR_CONN_STATUS,

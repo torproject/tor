@@ -34,7 +34,7 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
   info(LD_REND, "Sending an ESTABLISH_RENDEZVOUS cell");
 
   if (crypto_rand(circ->rend_cookie, REND_COOKIE_LEN) < 0) {
-    warn(LD_GENERAL, "Internal error: Couldn't produce random cookie.");
+    warn(LD_BUG, "Internal error: Couldn't produce random cookie.");
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -76,7 +76,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   /* first 20 bytes of payload are the hash of bob's pk */
   if (crypto_pk_get_digest(entry->parsed->pk, payload)<0) {
-    warn(LD_GENERAL, "Internal error: couldn't hash public key.");
+    warn(LD_BUG, "Internal error: couldn't hash public key.");
     goto err;
   }
 
@@ -87,11 +87,11 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
       tor_malloc_zero(sizeof(crypt_path_t));
     cpath->magic = CRYPT_PATH_MAGIC;
     if (!(cpath->dh_handshake_state = crypto_dh_new())) {
-      warn(LD_GENERAL, "Internal error: couldn't allocate DH.");
+      warn(LD_BUG, "Internal error: couldn't allocate DH.");
       goto err;
     }
     if (crypto_dh_generate_public(cpath->dh_handshake_state)<0) {
-      warn(LD_GENERAL, "Internal error: couldn't generate g^x.");
+      warn(LD_BUG, "Internal error: couldn't generate g^x.");
       goto err;
     }
   }
@@ -120,7 +120,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   if (crypto_dh_get_public(cpath->dh_handshake_state, tmp+dh_offset,
                            DH_KEY_LEN)<0) {
-    warn(LD_GENERAL, "Internal error: couldn't extract g^x.");
+    warn(LD_BUG, "Internal error: couldn't extract g^x.");
     goto err;
   }
 
@@ -130,7 +130,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
                                       dh_offset+DH_KEY_LEN,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
-    warn(LD_GENERAL,"Internal error: hybrid pk encrypt failed.");
+    warn(LD_BUG,"Internal error: hybrid pk encrypt failed.");
     goto err;
   }
 
@@ -142,7 +142,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
                                    payload, payload_len,
                                    introcirc->cpath->prev)<0) {
     /* introcirc is already marked for close. leave rendcirc alone. */
-    warn(LD_GENERAL, "Couldn't send INTRODUCE1 cell");
+    warn(LD_BUG, "Couldn't send INTRODUCE1 cell");
     return -1;
   }
 
@@ -269,7 +269,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 
   r = rend_cache_lookup_entry(query, -1, &ent);
   if (r<0) {
-    warn(LD_GENERAL, "Bug: malformed service ID '%s'.", safe_str(query));
+    warn(LD_BUG, "Bug: malformed service ID '%s'.", safe_str(query));
     return -1;
   }
   if (r==0) {

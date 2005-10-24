@@ -117,7 +117,6 @@ onion_pending_remove(circuit_t *circ)
   } else { /* we need to hunt through the rest of the list */
     for ( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
     if (!tmpo->next) {
-      /* XX is there a better category here? */
       debug(LD_GENERAL,"circ (p_circ_id %d) not in list, probably at cpuworker.",circ->p_circ_id);
       return;
     }

@@ -87,7 +87,7 @@ buf_normalize(buf_t *buf)
   } else {
     char *newmem, *oldmem;
     size_t sz = (buf->mem+buf->len)-buf->cur;
-    warn(LD_GENERAL, "Unexpected non-normalized buffer.");
+    warn(LD_BUG, "Unexpected non-normalized buffer.");
     newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(buf->len)));
     SET_GUARDS(newmem, buf->len);
     memcpy(newmem, buf->cur, sz);
@@ -807,7 +807,7 @@ fetch_from_buf_http(buf_t *buf,
   buf_normalize(buf);
 
   if (buf_nul_terminate(buf)<0) {
-    warn(LD_GENERAL,"Couldn't nul-terminate buffer");
+    warn(LD_BUG,"Couldn't nul-terminate buffer");
     return -1;
   }
   headers = buf->cur;

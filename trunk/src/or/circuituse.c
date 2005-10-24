@@ -248,7 +248,7 @@ circuit_expire_building(time_t now)
       else
         log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s, purpose %d)", victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state), victim->purpose);
-      circuit_log_path(LOG_INFO,victim);
+      circuit_log_path(LOG_INFO,LD_CIRC,victim);
       circuit_mark_for_close(victim);
     }
   }
@@ -1123,7 +1123,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     log_fn(LOG_DEBUG,"Attaching apconn to circ %d (stream %d sec old).",
            circ->n_circ_id, conn_age);
     /* here, print the circ's path. so people can figure out which circs are sucking. */
-    circuit_log_path(LOG_INFO,circ);
+    circuit_log_path(LOG_INFO,LD_APP,circ);
 
     /* We have found a suitable circuit for our conn. Hurray. */
     return connection_ap_handshake_attach_chosen_circuit(conn, circ);
