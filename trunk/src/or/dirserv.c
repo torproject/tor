@@ -4,6 +4,7 @@
 /* $Id$ */
 const char dirserv_c_id[] = "$Id$";
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /**
@@ -135,7 +136,7 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
 {
   char fp[FINGERPRINT_LEN+1];
   if (crypto_pk_get_fingerprint(pk, fp, 0)<0) {
-    log_fn(LOG_ERR, "Error computing fingerprint");
+    err(LD_BUG, "Error computing fingerprint");
     return -1;
   }
   if (!fingerprint_list)
@@ -161,13 +162,13 @@ dirserv_parse_fingerprint_file(const char *fname)
 
   cf = read_file_to_str(fname, 0);
   if (!cf) {
-    log_fn(LOG_WARN, "Cannot open fingerprint file %s", fname);
+    warn(LD_FS, "Cannot open fingerprint file %s", fname);
     return -1;
   }
   result = config_get_lines(cf, &front);
   tor_free(cf);
   if (result < 0) {
-    log_fn(LOG_WARN, "Error reading from fingerprint file");
+    warn(LD_CONFIG, "Error reading from fingerprint file");
     return -1;
   }
 
@@ -176,31 +177,34 @@ dirserv_parse_fingerprint_file(const char *fname)
   for (list=front; list; list=list->next) {
     nickname = list->key; fingerprint = list->value;
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
-      log(LOG_NOTICE, "Nickname '%s' too long in fingerprint file. Skipping.", nickname);
+      notice(LD_CONFIG,
+            "Nickname '%s' too long in fingerprint file. Skipping.", nickname);
       continue;
     }
     if (!is_legal_nickname(nickname) &&
         strcasecmp(nickname, "!reject") &&
         strcasecmp(nickname, "!invalid")) {
-      log(LOG_NOTICE, "Invalid nickname '%s' in fingerprint file. Skipping.", nickname);
+      notice(LD_CONFIG,
+             "Invalid nickname '%s' in fingerprint file. Skipping.", nickname);
       continue;
     }
     if (strlen(fingerprint) != FINGERPRINT_LEN ||
         !crypto_pk_check_fingerprint_syntax(fingerprint)) {
-      log_fn(LOG_NOTICE, "Invalid fingerprint (nickname '%s', fingerprint %s). Skipping.",
+      notice(LD_CONFIG,
+             "Invalid fingerprint (nickname '%s', fingerprint %s). Skipping.",
              nickname, fingerprint);
       continue;
     }
     if (0==strcasecmp(nickname, DEFAULT_CLIENT_NICKNAME)) {
       /* If you approved an OR called "client", then clients who use
        * the default nickname could all be rejected.  That's no good. */
-      log(LOG_NOTICE,
+      notice(LD_CONFIG,
           "Authorizing a nickname '%s' would break many clients; skipping.",
           DEFAULT_CLIENT_NICKNAME);
       continue;
     }
     if (add_fingerprint_to_dir(nickname, fingerprint, fingerprint_list_new) != 0)
-      log(LOG_NOTICE, "Duplicate nickname '%s'.", nickname);
+      notice(LD_CONFIG, "Duplicate nickname '%s'.", nickname);
   }
 
   config_free_lines(front);
@@ -228,11 +232,11 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
     fingerprint_list = smartlist_create();
 
   if (crypto_pk_get_fingerprint(router->identity_pkey, fp, 0)) {
-    log_fn(LOG_WARN,"Error computing fingerprint");
+    warn(LD_BUG,"Error computing fingerprint");
     return -1;
   }
 
-  log_fn(LOG_DEBUG, "%d fingerprints known.", smartlist_len(fingerprint_list));
+  debug(LD_DIRSERV, "%d fingerprints known.", smartlist_len(fingerprint_list));
   SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t *, ent,
   {
     if (!strcasecmp(fp,ent->fingerprint))
@@ -260,32 +264,32 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
                        router->addr, router->or_port, authdir_invalid_policy);
 
     if (rej == ADDR_POLICY_PROBABLY_REJECTED || rej == ADDR_POLICY_REJECTED) {
-      log_fn(LOG_INFO, "Rejecting '%s' because of address %s",
-             router->nickname, router->address);
+      info(LD_DIRSERV, "Rejecting '%s' because of address %s",
+           router->nickname, router->address);
       if (msg)
         *msg = "Authdir is rejecting routers in this range.";
       return FP_REJECT;
     }
     if (inv == ADDR_POLICY_PROBABLY_REJECTED || inv == ADDR_POLICY_REJECTED) {
-      log_fn(LOG_INFO, "Not marking '%s' valid because of address %s",
-             router->nickname, router->address);
+      info(LD_DIRSERV, "Not marking '%s' valid because of address %s",
+           router->nickname, router->address);
       return FP_INVALID;
     }
     if (tor_version_as_new_as(router->platform,"0.1.0.2-rc"))
       return FP_VALID;
     else
       return FP_INVALID;
-    log_fn(LOG_INFO,"No fingerprint found for '%s'",router->nickname);
+    info(LD_DIRSERV,"No fingerprint found for '%s'",router->nickname);
     return 0;
   }
   if (0==strcasecmp(nn_ent->fingerprint, fp)) {
-    log_fn(LOG_DEBUG,"Good fingerprint for '%s'",router->nickname);
+    debug(LD_DIRSERV,"Good fingerprint for '%s'",router->nickname);
     return FP_NAMED; /* Right fingerprint. */
   } else {
-    log_fn(LOG_WARN,"Mismatched fingerprint for '%s': expected '%s' got '%s'. ContactInfo '%s', platform '%s'.)",
-           router->nickname, nn_ent->fingerprint, fp,
-           router->contact_info ? router->contact_info : "",
-           router->platform ? router->platform : "");
+    warn(LD_DIRSERV,"Mismatched fingerprint for '%s': expected '%s' got '%s'. ContactInfo '%s', platform '%s'.)",
+         router->nickname, nn_ent->fingerprint, fp,
+         router->contact_info ? router->contact_info : "",
+         router->platform ? router->platform : "");
     if (msg)
       *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
     return FP_REJECT; /* Wrong fingerprint. */
@@ -342,13 +346,14 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
   if (get_options()->DirAllowPrivateAddresses)
     return 0; /* whatever it is, we're fine with it */
   if (!tor_inet_aton(ri->address, &iaddr)) {
-    log_fn(LOG_INFO,"Router '%s' published non-IP address '%s'. Refusing.",
-           ri->nickname, ri->address);
+    info(LD_DIRSERV,"Router '%s' published non-IP address '%s'. Refusing.",
+         ri->nickname, ri->address);
     return -1;
   }
   if (is_internal_IP(ntohl(iaddr.s_addr))) {
-    log_fn(LOG_INFO,"Router '%s' published internal IP address '%s'. Refusing.",
-           ri->nickname, ri->address);
+    info(LD_DIRSERV,
+         "Router '%s' published internal IP address '%s'. Refusing.",
+         ri->nickname, ri->address);
     return -1; /* it's a private IP, we should reject it */
   }
   return 0;
@@ -373,7 +378,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding (ContactInfo '%s', platform '%s').",
+    notice(LD_DIRSERV, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding (ContactInfo '%s', platform '%s').",
            ri->nickname, (int)((ri->published_on-now)/60),
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
@@ -381,7 +386,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
     return -1;
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
-    log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
+    notice(LD_DIRSERV, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
            ri->nickname, (int)((now-ri->published_on)/60),
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
@@ -389,7 +394,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
     return -1;
   }
   if (dirserv_router_has_valid_address(ri) < 0) {
-    log_fn(LOG_NOTICE, "Router with nickname '%s' has invalid address '%s'. Not adding (ContactInfo '%s', platform '%s').",
+    notice(LD_DIRSERV, "Router with nickname '%s' has invalid address '%s'. Not adding (ContactInfo '%s', platform '%s').",
            ri->nickname, ri->address,
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
@@ -436,7 +441,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   /* Check: is the descriptor syntactically valid? */
   ri = router_parse_entry_from_string(desc, NULL);
   if (!ri) {
-    log(LOG_WARN, "Couldn't parse descriptor");
+    warn(LD_DIRSERV, "Couldn't parse uploaded server descriptor");
     *msg = "Rejected: Couldn't parse server descriptor.";
     return -2;
   }
@@ -447,9 +452,9 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   ri_old = router_get_by_digest(ri->identity_digest);
   if (ri_old && ri_old->published_on < ri->published_on &&
       router_differences_are_cosmetic(ri_old, ri)) {
-    log_fn(LOG_INFO,
-           "Not replacing descriptor from '%s'; differences are cosmetic.",
-           ri->nickname);
+    info(LD_DIRSERV,
+         "Not replacing descriptor from '%s'; differences are cosmetic.",
+         ri->nickname);
     *msg = "Not replacing router descriptor; no information has changed since the last one with this identity.";
     return 0;
   }
@@ -485,7 +490,7 @@ directory_remove_invalid(void)
     router_status_t r = dirserv_router_get_status(ent, &msg);
     switch (r) {
       case FP_REJECT:
-        log(LOG_INFO, "Router '%s' is now rejected: %s",
+        info(LD_DIRSERV, "Router '%s' is now rejected: %s",
             ent->nickname, msg?msg:"");
         routerlist_remove(rl, ent, i--);
         routerinfo_free(ent);
@@ -493,14 +498,15 @@ directory_remove_invalid(void)
         break;
       case FP_NAMED:
         if (!ent->is_verified || !ent->is_named) {
-          log(LOG_INFO, "Router '%s' is now verified and named.", ent->nickname);
+          info(LD_DIRSERV,
+               "Router '%s' is now verified and named.", ent->nickname);
           ent->is_verified = ent->is_named = 1;
           changed = 1;
         }
         break;
       case FP_VALID:
         if (!ent->is_verified || ent->is_named) {
-          log(LOG_INFO, "Router '%s' is now verified.", ent->nickname);
+          info(LD_DIRSERV, "Router '%s' is now verified.", ent->nickname);
           ent->is_verified = 1;
           ent->is_named = 0;
           changed = 1;
@@ -508,7 +514,8 @@ directory_remove_invalid(void)
         break;
       case FP_INVALID:
         if (ent->is_verified || ent->is_named) {
-          log(LOG_INFO, "Router '%s' is no longer verified.", ent->nickname);
+          info(LD_DIRSERV,
+               "Router '%s' is no longer verified.", ent->nickname);
           ent->is_verified = ent->is_named = 0;
           changed = 1;
         }
@@ -745,7 +752,7 @@ dirserv_dump_directory_to_string(char **dir_out,
 
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
                                            &identity_pkey_len)<0) {
-    log_fn(LOG_WARN,"write identity_pkey to string failed!");
+    warn(LD_BUG,"write identity_pkey to string failed!");
     return -1;
   }
 
@@ -800,7 +807,7 @@ dirserv_dump_directory_to_string(char **dir_out,
     goto truncated;
 
   if (router_get_dir_hash(buf,digest)) {
-    log_fn(LOG_WARN,"couldn't compute digest");
+    warn(LD_BUG,"couldn't compute digest");
     tor_free(buf);
     return -1;
   }
@@ -812,7 +819,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   *dir_out = buf;
   return 0;
  truncated:
-  log_fn(LOG_WARN,"tried to exceed string length.");
+  warn(LD_BUG,"tried to exceed string length.");
   tor_free(buf);
   return -1;
 }
@@ -840,21 +847,21 @@ set_cached_dir(cached_dir_t *d, char *directory, time_t when)
 {
   time_t now = time(NULL);
   if (when<=d->published) {
-    log_fn(LOG_INFO, "Ignoring old directory; not caching.");
+    info(LD_DIRSERV, "Ignoring old directory; not caching.");
     tor_free(directory);
   } else if (when>=now+ROUTER_MAX_AGE) {
-    log_fn(LOG_INFO, "Ignoring future directory; not caching.");
+    info(LD_DIRSERV, "Ignoring future directory; not caching.");
     tor_free(directory);
   } else {
     /* if (when>d->published && when<now+ROUTER_MAX_AGE) */
-    log_fn(LOG_DEBUG, "Caching directory.");
+    debug(LD_DIRSERV, "Caching directory.");
     tor_free(d->dir);
     d->dir = directory;
     d->dir_len = strlen(directory);
     tor_free(d->dir_z);
     if (tor_gzip_compress(&(d->dir_z), &(d->dir_z_len), d->dir, d->dir_len,
                           ZLIB_METHOD)) {
-      log_fn(LOG_WARN,"Error compressing cached directory");
+      warn(LD_BUG,"Error compressing cached directory");
     }
     d->published = when;
   }
@@ -943,11 +950,11 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
     if (regenerate != NULL) {
       if (dirty && dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
         if (regenerate()) {
-          log_fn(LOG_ERR, "Couldn't generate %s?", name);
+          err(LD_BUG, "Couldn't generate %s?", name);
           exit(1);
         }
       } else {
-        log_fn(LOG_INFO, "The %s is still clean; reusing.", name);
+        info(LD_DIRSERV, "The %s is still clean; reusing.", name);
       }
     }
     return auth_src ? auth_src : cache_src;
@@ -1011,13 +1018,13 @@ dirserv_regenerate_directory(void)
 
   if (dirserv_dump_directory_to_string(&new_directory,
                                        get_identity_key())) {
-    log(LOG_WARN, "Error creating directory.");
+    warn(LD_BUG, "Error creating directory.");
     tor_free(new_directory);
     return -1;
   }
   set_cached_dir(&the_directory, new_directory, time(NULL));
-  log_fn(LOG_INFO,"New directory (size %d) has been built.",(int)the_directory.dir_len);
-  log_fn(LOG_DEBUG,"New directory (size %d):\n%s",(int)the_directory.dir_len,
+  info(LD_DIRSERV,"New directory (size %d) has been built.",(int)the_directory.dir_len);
+  debug(LD_DIRSERV,"New directory (size %d):\n%s",(int)the_directory.dir_len,
          the_directory.dir);
 
   the_directory_is_dirty = 0;
@@ -1051,7 +1058,7 @@ generate_runningrouters(void)
   }
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
                                            &identity_pkey_len)<0) {
-    log_fn(LOG_WARN,"write identity_pkey to string failed!");
+    warn(LD_BUG,"write identity_pkey to string failed!");
     goto err;
   }
   format_iso_time(published, time(NULL));
@@ -1068,7 +1075,7 @@ generate_runningrouters(void)
   tor_free(router_status);
   tor_free(identity_pkey);
   if (router_get_runningrouters_hash(s,digest)) {
-    log_fn(LOG_WARN,"couldn't compute digest");
+    warn(LD_BUG,"couldn't compute digest");
     goto err;
   }
   if (router_append_dirobj_signature(s, len, digest, private_key)<0)
@@ -1162,7 +1169,7 @@ generate_v2_networkstatus(void)
   const char *contact;
 
   if (resolve_my_address(options, &addr, &hostname)<0) {
-    log_fn(LOG_WARN, "Couldn't resolve my hostname");
+    warn(LD_NET, "Couldn't resolve my hostname");
     goto done;
   }
   in.s_addr = htonl(addr);
@@ -1175,12 +1182,12 @@ generate_v2_networkstatus(void)
 
   if (crypto_pk_write_public_key_to_string(private_key, &identity_pkey,
                                            &identity_pkey_len)<0) {
-    log_fn(LOG_WARN,"Writing public key to string failed.");
+    warn(LD_BUG,"Writing public key to string failed.");
     goto done;
   }
 
   if (crypto_pk_get_fingerprint(private_key, fingerprint, 0)<0) {
-    log_fn(LOG_ERR, "Error computing fingerprint");
+    err(LD_BUG, "Error computing fingerprint");
     goto done;
   }
 
@@ -1254,25 +1261,25 @@ generate_v2_networkstatus(void)
                        f_stable?" Stable":"",
                        f_running?" Running":"",
                        f_valid?" Valid":"")<0) {
-        log_fn(LOG_WARN, "Unable to print router status.");
+        warn(LD_BUG, "Unable to print router status.");
         goto done;
-        }
+      }
       outp += strlen(outp);
     });
 
   if (tor_snprintf(outp, endp-outp, "directory-signature %s\n",
                    get_options()->Nickname)<0) {
-    log_fn(LOG_WARN, "Unable to write signature line.");
+    warn(LD_BUG, "Unable to write signature line.");
     goto done;
   }
 
   if (router_get_networkstatus_v2_hash(status, digest)<0) {
-    log_fn(LOG_WARN, "Unable to hash network status");
+    warn(LD_BUG, "Unable to hash network status");
     goto done;
   }
 
   if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
-    log_fn(LOG_WARN, "Unable to sign router status.");
+    warn(LD_BUG, "Unable to sign router status.");
     goto done;
   }
 
@@ -1320,7 +1327,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
       if (d)
         smartlist_add(result, d);
       else
-        log_fn(LOG_WARN,"Unable to generate an authoritative network status.");
+        warn(LD_BUG,"Unable to generate an authoritative network status.");
     }
   } else if (!strcmp(key, "all")) {
     digestmap_iter_t *iter = digestmap_iter_init(cached_v2_networkstatus);
@@ -1332,7 +1339,8 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
       iter = digestmap_iter_next(cached_v2_networkstatus, iter);
     }
     if (smartlist_len(result) == 0)
-      log_fn(LOG_WARN, "Client requested 'all' network status objects; we have none.");
+      warn(LD_DIRSERV,
+           "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
     smartlist_t *digests = smartlist_create();
     dir_split_resource_into_fingerprints(key+3, digests, NULL, 1);
@@ -1351,7 +1359,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
           } else {
             char hexbuf[HEX_DIGEST_LEN+1];
             base16_encode(hexbuf, sizeof(hexbuf), cp, DIGEST_LEN);
-            log_fn(LOG_INFO, "Don't know about any network status with fingerprint '%s'", hexbuf);
+            info(LD_DIRSERV, "Don't know about any network status with fingerprint '%s'", hexbuf);
           }
           tor_free(cp);
         });
@@ -1460,11 +1468,11 @@ dirserv_orconn_tls_done(const char *address,
     if (!ri->is_verified) {
       /* We have a router at the same address! */
       if (strcasecmp(ri->nickname, nickname_rcvd)) {
-        log_fn(LOG_NOTICE, "Dropping descriptor: nickname '%s' does not match nickname '%s' in cert from %s:%d",
+        notice(LD_DIRSERV, "Dropping descriptor: nickname '%s' does not match nickname '%s' in cert from %s:%d",
                ri->nickname, nickname_rcvd, address, or_port);
         drop = 1;
       } else if (memcmp(ri->identity_digest, digest_rcvd, DIGEST_LEN)) {
-        log_fn(LOG_NOTICE, "Dropping descriptor: identity key does not match key in cert from %s:%d",
+        notice(LD_DIRSERV, "Dropping descriptor: identity key does not match key in cert from %s:%d",
                address, or_port);
         drop = 1;
       }
@@ -1474,7 +1482,7 @@ dirserv_orconn_tls_done(const char *address,
       routerinfo_free(ri);
       directory_set_dirty();
     } else { /* correct nickname and digest. mark this router reachable! */
-      log_fn(LOG_INFO,"Found router %s to be reachable. Yay.", ri->nickname);
+      info(LD_DIRSERV,"Found router %s to be reachable. Yay.", ri->nickname);
       ri->last_reachable = time(NULL);
       ri->num_unreachable_notifications = 0;
     }
