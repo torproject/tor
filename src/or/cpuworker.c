@@ -290,6 +290,7 @@ cpuworker_main(void *data)
   if (last_onion_key)
     crypto_free_pk_env(last_onion_key);
   tor_close_socket(fd);
+  crypto_thread_cleanup();
   spawn_exit();
   return 0; /* windows wants this function to return an int */
 }

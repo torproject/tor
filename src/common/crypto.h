@@ -53,6 +53,7 @@ typedef struct crypto_dh_env_t crypto_dh_env_t;
 
 /* global state */
 int crypto_global_init(int hardwareAccel);
+void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
 
 /* environment setup */

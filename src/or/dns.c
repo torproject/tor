@@ -793,12 +793,14 @@ dnsworker_main(void *data)
         info(LD_EXIT,"(Error on %d was %s)", fd, tor_socket_strerror(tor_socket_errno(fd)));
       }
       tor_close_socket(fd);
+      crypto_thread_cleanup();
       spawn_exit();
     }
 
     if (address_len && read_all(fd, address, address_len, 1) != address_len) {
       err(LD_BUG,"read hostname failed. Child exiting.");
       tor_close_socket(fd);
+      crypto_thread_cleanup();
       spawn_exit();
     }
     address[address_len] = 0; /* null terminate it */
@@ -826,6 +828,7 @@ dnsworker_main(void *data)
     if (write_all(fd, answer, 5, 1) != 5) {
       err(LD_NET,"writing answer failed. Child exiting.");
       tor_close_socket(fd);
+      crypto_thread_cleanup();
       spawn_exit();
     }
   }
