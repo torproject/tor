@@ -4,7 +4,6 @@
 /* $Id$ */
 const char dirserv_c_id[] = "$Id$";
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /**

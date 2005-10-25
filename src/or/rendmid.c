@@ -8,7 +8,6 @@ const char rendmid_c_id[] = "$Id$";
  * \brief Implement introductions points and rendezvous points.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Respond to an ESTABLISH_INTRO cell by checking the signed data and

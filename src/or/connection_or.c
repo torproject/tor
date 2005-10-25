@@ -11,7 +11,6 @@ const char connection_or_c_id[] = "$Id$";
  * cells on the network.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** How much clock skew do we tolerate when checking certificates for

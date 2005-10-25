@@ -11,7 +11,6 @@ const char connection_c_id[] = "$Id$";
  * on connections.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 static connection_t *connection_create_listener(const char *listenaddress,

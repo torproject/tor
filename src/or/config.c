@@ -10,7 +10,6 @@ const char config_c_id[] = "$Id$";
  * \brief Code to parse and interpret configuration files.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>

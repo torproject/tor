@@ -8,7 +8,6 @@ const char rendclient_c_id[] = "$Id$";
  * \brief Client code to access location-hidden services.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Called when we've established a circuit to an introduction point:

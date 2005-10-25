@@ -114,6 +114,7 @@ void change_callback_log_severity(int loglevelMin, int loglevelMax,
 
 /* Outputs a message to stdout */
 void _log(int severity, unsigned int domain, const char *format, ...) CHECK_PRINTF(3,4);
+#define log _log /* hack it so we don't conflict with log() as much */
 
 #ifdef __GNUC__
 void _log_fn(int severity, unsigned int domain,
@@ -121,16 +122,8 @@ void _log_fn(int severity, unsigned int domain,
   CHECK_PRINTF(4,5);
 /** Log a message at level <b>severity</b>, using a pretty-printed version
  * of the current function name. */
-#ifdef OLD_LOG_INTERFACE
-#define log_fn(severity, args...)                               \
-  _log_fn(severity, LD_GENERAL, __PRETTY_FUNCTION__, args)
-#define log(severity, args...)                                  \
-  _log(severity, LD_GENERAL, args)
-#else
 #define log_fn(severity, domain, args...)               \
   _log_fn(severity, domain, __PRETTY_FUNCTION__, args)
-#define log _log
-#endif
 #define debug(domain, args...)                          \
   _log_fn(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args)
 #define info(domain, args...)                           \
@@ -141,7 +134,8 @@ void _log_fn(int severity, unsigned int domain,
   _log_fn(LOG_WARN, domain, __PRETTY_FUNCTION__, args)
 #define err(domain, args...)                            \
   _log_fn(LOG_ERR, domain, __PRETTY_FUNCTION__, args)
-#else
+
+#else /* ! defined(__GNUC__) */
 
 void _log_fn(int severity, unsigned int domain, const char *format, ...);
 void _debug(unsigned int domain, const char *format, ...);
@@ -149,8 +143,6 @@ void _info(unsigned int domain, const char *format, ...);
 void _notice(unsigned int domain, const char *format, ...);
 void _warn(unsigned int domain, const char *format, ...);
 void _err(unsigned int domain, const char *format, ...);
-
-#define log _log /* hack it so we don't conflict with log() as much */
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
 /* MSVC 6 and earlier don't have __FUNCTION__, or even __LINE__. */

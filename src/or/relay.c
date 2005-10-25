@@ -11,7 +11,6 @@ const char relay_c_id[] = "$Id$";
  * receiving from circuits.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,

@@ -11,7 +11,6 @@ const char main_c_id[] = "$Id$";
  * connections, implements main loop, and drives scheduled events.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>

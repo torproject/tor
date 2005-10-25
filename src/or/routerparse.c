@@ -10,7 +10,6 @@ const char routerparse_c_id[] = "$Id$";
  * \brief Code to parse and validate router descriptors and directories.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /****************************************************************************/

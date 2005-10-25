@@ -22,7 +22,6 @@ hibernating, phase 2:
   - close all OR/AP/exit conns)
 */
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 #define HIBERNATE_STATE_LIVE 1

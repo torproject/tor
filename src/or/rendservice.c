@@ -8,7 +8,6 @@ const char rendservice_c_id[] = "$Id$";
  * \brief The hidden-service side of rendezvous functionality.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 static circuit_t *find_intro_circuit(routerinfo_t *router, const char *pk_digest);

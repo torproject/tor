@@ -10,7 +10,6 @@ const char rephist_c_id[] = "$Id$";
  *    been using, which ports we tend to want, and so on.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 static void bw_arrays_init(void);

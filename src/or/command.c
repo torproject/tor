@@ -16,7 +16,6 @@ const char command_c_id[] = "$Id$";
  *   connection_or_process_cells_from_inbuf() in connection_or.c
  */
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Keep statistics about how many of each type of cell we've received. */
