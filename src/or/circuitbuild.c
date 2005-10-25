@@ -150,7 +150,7 @@ circuit_list_path(circuit_t *circ, int verbose)
  * exit point.
  */
 void
-circuit_log_path(int severity, int domain, circuit_t *circ)
+circuit_log_path(int severity, unsigned int domain, circuit_t *circ)
 {
   char *s = circuit_list_path(circ,1);
   log(severity,domain,"%s",s);
@@ -641,8 +641,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     char tmpbuf[INET_NTOA_BUF_LEN];
     in.s_addr = htonl(circ->n_addr);
     tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-    /* XXXX LD_OR? NM */
-    info(LD_CIRC,"Next router (%s:%d) not connected. Connecting.",
+    info(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
            tmpbuf, circ->n_port);
 
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
@@ -1217,7 +1216,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     return router;
   }
   if (options->StrictExitNodes) {
-    /* XXXX NM LD_DIR? */
     warn(LD_CIRC, "No exit routers seem to be running; can't choose an exit.");
   }
   return NULL;
@@ -1880,18 +1878,19 @@ helper_nodes_parse_state(or_state_t *state, int set, const char **err)
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
       if (smartlist_len(args)<2) {
         *err = "Too few arguments to HelperNode";
-        break;
-      }
-      if (!is_legal_nickname(smartlist_get(args,0))) {
+      } else if (!is_legal_nickname(smartlist_get(args,0))) {
         *err = "Bad nickname for HelperNode";
-        break;
+      } else {
+        strlcpy(node->nickname, smartlist_get(args,0), MAX_NICKNAME_LEN+1);
+        if (base16_decode(node->identity, DIGEST_LEN, smartlist_get(args,1),
+                          strlen(smartlist_get(args,1)))<0) {
+          *err = "Bad hex digest for HelperNode";
+        }
       }
-      strlcpy(node->nickname, smartlist_get(args,0), MAX_NICKNAME_LEN+1);
-      if (base16_decode(node->identity, DIGEST_LEN, smartlist_get(args,1),
-                        strlen(smartlist_get(args,1)))<0) {
-        *err = "Bad hex digest for HelperNode";
+      SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+      smartlist_free(args);
+      if (*err)
         break;
-      }
     } else {
       time_t when;
       if (!node) {
