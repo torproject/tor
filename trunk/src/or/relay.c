@@ -1222,7 +1222,7 @@ static int
 circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
 {
   connection_t *conn = NULL;
-  unsigned domain = conn->cpath_layer ? LD_APP : LD_EXIT;
+  unsigned domain = layer_hint ? LD_APP : LD_EXIT;
 
   if (!layer_hint) {
     debug(domain,"considering circ->package_window %d", circ->package_window);
