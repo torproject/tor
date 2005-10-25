@@ -87,6 +87,8 @@
 /** Generic edge-connection functionality. */
 #define LD_EDGE     (1u<<16)
 #define LD_EXIT     LD_EDGE
+/** Bandwidth accounting. */
+#define LD_ACCT     (1u<<17)
 
 typedef void (*log_callback)(int severity, unsigned int domain, const char *msg);
 
