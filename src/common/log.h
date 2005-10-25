@@ -52,29 +52,29 @@
 
 /* Logging domains */
 
-/** Catch-all for miscellaneous events and fatal errors */
+/** Catch-all for miscellaneous events and fatal errors. */
 #define LD_GENERAL  (1u<<0)
-/** The cryptography subsytem */
+/** The cryptography subsytem. */
 #define LD_CRYPTO   (1u<<1)
-/** Networking */
+/** Networking. */
 #define LD_NET      (1u<<2)
-/** Parsing and acting on our configuration */
+/** Parsing and acting on our configuration. */
 #define LD_CONFIG   (1u<<3)
-/** Reading and writing from the filesystem */
+/** Reading and writing from the filesystem. */
 #define LD_FS       (1u<<4)
-/** Other servers' (non)compliance with the Tor protocol */
+/** Other servers' (non)compliance with the Tor protocol. */
 #define LD_PROTOCOL (1u<<5)
-/** Memory management */
+/** Memory management. */
 #define LD_MM       (1u<<6)
-/** HTTP implementation */
+/** HTTP implementation. */
 #define LD_HTTP     (1u<<7)
-/** Application (socks) requests */
+/** Application (socks) requests. */
 #define LD_APP      (1u<<8)
-/** Communication via the controller protocol */
+/** Communication via the controller protocol. */
 #define LD_CONTROL  (1u<<9)
-/** Building, using, and managing circuits */
+/** Building, using, and managing circuits. */
 #define LD_CIRC     (1u<<10)
-/** Hidden services */
+/** Hidden services. */
 #define LD_REND     (1u<<11)
 /** Internal errors in this Tor process. */
 #define LD_BUG      (1u<<12)
