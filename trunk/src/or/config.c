@@ -2880,7 +2880,7 @@ parse_dir_server_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r, idx;
-  char *addrport, *address=NULL, *nickname=NULL, *fingerprint=NULL;
+  char *addrport=NULL, *address=NULL, *nickname=NULL, *fingerprint=NULL;
   uint16_t port;
   char digest[DIGEST_LEN];
   int supports_v1 = 1; /*XXXX011 change default when clients support v2. */
@@ -2946,6 +2946,7 @@ parse_dir_server_line(const char *line, int validate_only)
   done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
+  tor_free(addrport);
   tor_free(address);
   tor_free(nickname);
   tor_free(fingerprint);
