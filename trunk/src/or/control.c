@@ -847,10 +847,14 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
   }
 
  done:
-  if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-  if (questions) SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-  smartlist_free(answers);
-  smartlist_free(questions);
+  if (answers) {
+    SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
+    smartlist_free(answers);
+  }
+  if (questions) {
+    SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
+    smartlist_free(questions);
+  }
   smartlist_free(unrecognized);
   tor_free(msg);
 
@@ -1472,10 +1476,14 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   }
 
  done:
-  if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-  if (questions) SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-  smartlist_free(answers);
-  smartlist_free(questions);
+  if (answers) {
+    SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
+    smartlist_free(answers);
+  }
+  if (questions) {
+    SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
+    smartlist_free(questions);
+  }
   smartlist_free(unrecognized);
   tor_free(msg);
 
@@ -2483,7 +2491,7 @@ enable_control_logging(void)
 
 /** We got a log message: tell any interested control connections. */
 void
-control_event_logmsg(int severity, int domain, const char *msg)
+control_event_logmsg(int severity, unsigned int domain, const char *msg)
 {
   int oldlog, event;
 
