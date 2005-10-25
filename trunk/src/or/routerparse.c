@@ -275,7 +275,7 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
          myversion, versionlist);
 
   if (tor_version_parse(myversion, &mine)) {
-    err("I couldn't parse my own version (%s)", myversion);
+    err(LD_BUG,"I couldn't parse my own version (%s)", myversion);
     tor_assert(0);
   }
   version_sl = smartlist_create();

@@ -866,8 +866,8 @@ _check_no_tls_errors(const char *fname, int line)
 {
   if (ERR_peek_error() == 0)
     return;
-  log_fn(LOG_WARN, LD_CRYPTO, "Unhandled OpenSSL errors found at %s:%d: ",
-         fname, line);
+  log(LOG_WARN, LD_CRYPTO, "Unhandled OpenSSL errors found at %s:%d: ",
+      tor_fix_source_file(fname), line);
   tls_log_errors(LOG_WARN, NULL);
 }
 

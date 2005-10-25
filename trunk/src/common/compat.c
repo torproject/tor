@@ -177,6 +177,7 @@ tor_memmem(const void *_haystack, size_t hlen, const void *_needle, size_t nlen)
 #endif
 }
 
+#ifdef MS_WINDOWS
 /** Take a filename and return a pointer to its final element.  This
  * function is called on __FILE__ to fix a MSVC nit where __FILE__
  * contains the full path to the file.  This is bad, because it
@@ -184,7 +185,7 @@ tor_memmem(const void *_haystack, size_t hlen, const void *_needle, size_t nlen)
  * compiled the binary in their warrning messages.
  */
 const char *
-_tor_fix_source_file(const char *fname)
+tor_fix_source_file(const char *fname)
 {
   const char *cp1, *cp2, *r;
   cp1 = strrchr(fname, '/');
@@ -200,6 +201,7 @@ _tor_fix_source_file(const char *fname)
   }
   return r;
 }
+#endif
 
 #ifndef UNALIGNED_INT_ACCESS_OK
 /**
@@ -499,7 +501,7 @@ switch_id(char *user, char *group)
   if (user) {
     pw = getpwnam(user);
     if (pw == NULL) {
-      err("User '%s' not found.", user);
+      err(LD_CONFIG,"User '%s' not found.", user);
       return -1;
     }
   }
@@ -508,17 +510,17 @@ switch_id(char *user, char *group)
   if (group) {
     gr = getgrnam(group);
     if (gr == NULL) {
-      err("Group '%s' not found.", group);
+      err(LD_CONFIG,"Group '%s' not found.", group);
       return -1;
     }
 
     if (setgid(gr->gr_gid) != 0) {
-      err("Error setting GID: %s", strerror(errno));
+      err(LD_GENERAL,"Error setting GID: %s", strerror(errno));
       return -1;
     }
   } else if (user) {
     if (setgid(pw->pw_gid) != 0) {
-      err("Error setting GID: %s", strerror(errno));
+      err(LD_GENERAL,"Error setting GID: %s", strerror(errno));
       return -1;
     }
   }
@@ -527,7 +529,7 @@ switch_id(char *user, char *group)
      privileges */
   if (user) {
     if (setuid(pw->pw_uid) != 0) {
-      err("Error setting UID: %s", strerror(errno));
+      err(LD_GENERAL,"Error setting UID: %s", strerror(errno));
       return -1;
     }
   }
@@ -535,8 +537,7 @@ switch_id(char *user, char *group)
   return 0;
 #endif
 
-  err("User or group specified, but switching users is not supported.");
-
+  err(LD_CONFIG,"User or group specified, but switching users is not supported.");
   return -1;
 }
 
@@ -550,7 +551,7 @@ get_user_homedir(const char *username)
   tor_assert(username);
 
   if (!(pw = getpwnam(username))) {
-    err("User \"%s\" not found.", username);
+    err(LD_CONFIG,"User \"%s\" not found.", username);
     return NULL;
   }
   return tor_strdup(pw->pw_dir);
@@ -894,7 +895,7 @@ tor_gettimeofday(struct timeval *timeval)
   /* number of 100-nsec units since Jan 1, 1601 */
   GetSystemTimeAsFileTime(&ft.ft_ft);
   if (ft.ft_64 < EPOCH_BIAS) {
-    err("System time is before 1970; failing.");
+    err(LD_GENERAL,"System time is before 1970; failing.");
     exit(1);
   }
   ft.ft_64 -= EPOCH_BIAS;
@@ -902,7 +903,7 @@ tor_gettimeofday(struct timeval *timeval)
   timeval->tv_usec = (unsigned) ((ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC);
 #elif defined(HAVE_GETTIMEOFDAY)
   if (gettimeofday(timeval, NULL)) {
-    err("gettimeofday failed.");
+    err(LD_GENERAL,"gettimeofday failed.");
     /* If gettimeofday dies, we have either given a bad timezone (we didn't),
        or segfaulted.*/
     exit(1);

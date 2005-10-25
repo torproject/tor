@@ -136,7 +136,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   }
 
   if ((len = build_socks4a_resolve_request(&req, "", hostname))<0) {
-    err("Error generating SOCKS request");
+    err(LD_BUG,"Error generating SOCKS request");
     return -1;
   }
 
@@ -236,7 +236,7 @@ main(int argc, char **argv)
   }
 
   if (network_init()<0) {
-    err("Error initializing network; exiting.");
+    err(LD_NET,"Error initializing network; exiting.");
     return 1;
   }
 

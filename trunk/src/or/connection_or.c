@@ -11,6 +11,7 @@ const char connection_or_c_id[] = "$Id$";
  * cells on the network.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** How much clock skew do we tolerate when checking certificates for
@@ -48,7 +49,7 @@ cell_unpack(cell_t *dest, const char *src)
 int
 connection_or_reached_eof(connection_t *conn)
 {
-  log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
+  info(LD_OR,"OR connection reached EOF. Closing.");
   connection_mark_for_close(conn);
   return 0;
 }
@@ -71,27 +72,27 @@ connection_or_read_proxy_response(connection_t *conn)
                               &headers, MAX_HEADERS_SIZE,
                               NULL, NULL, 10000, 0)) {
     case -1: /* overflow */
-      log_fn(LOG_WARN,"Your https proxy sent back an oversized response. Closing.");
+      warn(LD_PROTOCOL,"Your https proxy sent back an oversized response. Closing.");
       return -1;
     case 0:
-      log_fn(LOG_INFO,"https proxy response not all here yet. Waiting.");
+      info(LD_OR,"https proxy response not all here yet. Waiting.");
       return 0;
     /* case 1, fall through */
   }
 
   if (parse_http_response(headers, &status_code, &date_header,
                           &compression, &reason) < 0) {
-    log_fn(LOG_WARN,"Unparseable headers (connecting to '%s'). Closing.",
-           conn->address);
+    warn(LD_OR,"Unparseable headers from proxy (connecting to '%s'). Closing.",
+         conn->address);
     tor_free(headers);
     return -1;
   }
   if (!reason) reason = tor_strdup("[no reason given]");
 
   if (status_code == 200) {
-    log_fn(LOG_INFO,
-           "HTTPS connect to '%s' successful! (200 \"%s\") Starting TLS.",
-           conn->address, reason);
+    info(LD_OR,
+         "HTTPS connect to '%s' successful! (200 \"%s\") Starting TLS.",
+         conn->address, reason);
     tor_free(reason);
     if (connection_tls_start_handshake(conn, 0) < 0) {
       /* TLS handshaking error of some kind. */
@@ -102,8 +103,9 @@ connection_or_read_proxy_response(connection_t *conn)
     return 0;
   }
   /* else, bad news on the status code */
-  log_fn(LOG_WARN,"The https proxy sent back an unexpected status code %d (\"%s\"). Closing.",
-         status_code, reason);
+  warn(LD_OR,
+      "The https proxy sent back an unexpected status code %d (\"%s\"). Closing.",
+      status_code, reason);
   tor_free(reason);
   connection_mark_for_close(conn);
   return -1;
@@ -148,7 +150,7 @@ connection_or_finished_flushing(connection_t *conn)
 
   switch (conn->state) {
     case OR_CONN_STATE_PROXY_FLUSHING:
-      log_fn(LOG_DEBUG,"finished sending CONNECT to proxy.");
+      debug(LD_OR,"finished sending CONNECT to proxy.");
       conn->state = OR_CONN_STATE_PROXY_READING;
       connection_stop_writing(conn);
       break;
@@ -156,7 +158,7 @@ connection_or_finished_flushing(connection_t *conn)
       connection_stop_writing(conn);
       break;
     default:
-      log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
+      err(LD_BUG,"BUG: called in unexpected state %d.", conn->state);
       tor_fragile_assert();
       return -1;
   }
@@ -172,7 +174,7 @@ connection_or_finished_connecting(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_OR);
   tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
 
-  log_fn(LOG_DEBUG,"OR connect() to router at %s:%u finished.",
+  debug(LD_OR,"OR connect() to router at %s:%u finished.",
          conn->address,conn->port);
 
   if (get_options()->HttpsProxy) {
@@ -188,7 +190,7 @@ connection_or_finished_connecting(connection_t *conn)
     if (authenticator) {
       base64_authenticator = alloc_http_authenticator(authenticator);
       if (!base64_authenticator)
-        log_fn(LOG_WARN, "Encoding https authenticator failed");
+        warn(LD_OR, "Encoding https authenticator failed");
     }
     if (base64_authenticator) {
       tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.1\r\n"
@@ -326,7 +328,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 
   if (server_mode(options) && (me=router_get_my_routerinfo()) &&
       !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
-    log_fn(LOG_INFO,"Client asked me to connect to myself. Refusing.");
+    info(LD_PROTOCOL,"Client asked me to connect to myself. Refusing.");
     return NULL;
   }
 
@@ -380,11 +382,11 @@ connection_tls_start_handshake(connection_t *conn, int receiving)
   conn->state = OR_CONN_STATE_HANDSHAKING;
   conn->tls = tor_tls_new(conn->s, receiving, 0);
   if (!conn->tls) {
-    log_fn(LOG_WARN,"tor_tls_new failed. Closing.");
+    warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
   }
   connection_start_reading(conn);
-  log_fn(LOG_DEBUG,"starting the handshake");
+  debug(LD_OR,"starting TLS handshake on fd %d", conn->s);
   if (connection_tls_continue_handshake(conn) < 0) {
     return -1;
   }
@@ -403,16 +405,16 @@ connection_tls_continue_handshake(connection_t *conn)
   switch (tor_tls_handshake(conn->tls)) {
     case TOR_TLS_ERROR:
     case TOR_TLS_CLOSE:
-      log_fn(LOG_INFO,"tls error. breaking.");
+      info(LD_OR,"tls error. breaking connection.");
       return -1;
     case TOR_TLS_DONE:
      return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
       connection_start_writing(conn);
-      log_fn(LOG_DEBUG,"wanted write");
+      debug(LD_OR,"wanted write");
       return 0;
     case TOR_TLS_WANTREAD: /* handshaking conns are *always* reading */
-      log_fn(LOG_DEBUG,"wanted read");
+      debug(LD_OR,"wanted read");
       return 0;
   }
   return 0;
@@ -467,26 +469,26 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
 
   check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) {
-    log_fn(LOG_INFO,"Peer didn't send a cert! Closing.");
+    info(LD_PROTOCOL,"Peer didn't send a cert! Closing.");
     return -1;
   }
   check_no_tls_errors();
   if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, sizeof(nickname))) {
-    log_fn(severity,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
+    log_fn(severity,LD_PROTOCOL,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
            conn->address, conn->port);
     return -1;
   }
   check_no_tls_errors();
-  log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be router '%s'",
+  debug(LD_OR, "Other side (%s:%d) claims to be router '%s'",
          conn->address, conn->port, nickname);
 
   if (tor_tls_verify(severity, conn->tls, &identity_rcvd) < 0) {
-    log_fn(severity,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
+    log_fn(severity,LD_OR,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
     return -1;
   }
   check_no_tls_errors();
-  log_fn(LOG_DEBUG,"The router's cert is valid.");
+  debug(LD_OR,"The router's cert is valid.");
   crypto_pk_get_digest(identity_rcvd, digest_rcvd);
 
   if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
@@ -500,7 +502,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
   if (router && /* we know this nickname */
       router->is_named && /* make sure it's the right guy */
       memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
-    log_fn(severity,
+    log_fn(severity, LD_OR,
            "Identity key not as expected for router claiming to be '%s' (%s:%d)",
            nickname, conn->address, conn->port);
     return -1;
@@ -514,7 +516,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
       char expected[HEX_DIGEST_LEN+1];
       base16_encode(seen, sizeof(seen), digest_rcvd, DIGEST_LEN);
       base16_encode(expected, sizeof(expected), conn->identity_digest, DIGEST_LEN);
-      log_fn(severity,
+      log_fn(severity, LD_OR,
              "Identity key not as expected for router at %s:%d: wanted %s but got %s",
              conn->address, conn->port, expected, seen);
       helper_node_set_status(conn->identity_digest, 0);
@@ -552,14 +554,14 @@ connection_tls_finish_handshake(connection_t *conn)
 {
   char digest_rcvd[DIGEST_LEN];
 
-  log_fn(LOG_DEBUG,"tls handshake done. verifying.");
+  debug(LD_OR,"tls handshake done. verifying.");
   if (connection_or_check_valid_handshake(conn, digest_rcvd) < 0)
     return -1;
 
   if (!connection_or_nonopen_was_started_here(conn)) {
     connection_t *c;
     if ((c=connection_get_by_identity_digest(digest_rcvd, CONN_TYPE_OR))) {
-      log_fn(LOG_INFO,"Router '%s' is already connected on fd %d. Dropping fd %d.",
+      debug(LD_OR,"Router '%s' is already connected on fd %d. Dropping fd %d.",
              c->nickname, c->s, conn->s);
       return -1;
     }
@@ -613,7 +615,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn)
     if (connection_handle_write(conn) < 0) {
       if (!conn->marked_for_close) {
         /* this connection is broken. remove it. */
-        log_fn(LOG_WARN,"Bug: unhandled error on write for OR conn (fd %d); removing",
+        warn(LD_BUG,"Bug: unhandled error on write for OR conn (fd %d); removing",
                conn->s);
         tor_fragile_assert();
         conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
@@ -643,7 +645,7 @@ connection_or_process_cells_from_inbuf(connection_t *conn)
   cell_t cell;
 
 loop:
-  log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d (%d pending in tls object).",
+  debug(LD_OR,"%d: starting, inbuf_datalen %d (%d pending in tls object).",
          conn->s,(int)buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls));
   if (buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */

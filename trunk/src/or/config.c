@@ -10,6 +10,7 @@ const char config_c_id[] = "$Id$";
  * \brief Code to parse and interpret configuration files.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>
@@ -389,7 +390,8 @@ set_options(or_options_t *new_val)
     return -1;
   }
   if (options_act(old_options) < 0) { /* acting on the options failed. die. */
-    log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
+    err(LD_CONFIG,
+        "Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
   if (old_options)
@@ -467,7 +469,7 @@ options_act_reversible(or_options_t *old_options)
 
   /* Ensure data directory is private; create if possible. */
   if (check_private_dir(options->DataDirectory, CPD_CREATE)<0) {
-    log_fn(LOG_ERR, "Couldn't access/create private data directory \"%s\"",
+    err(LD_FS, "Couldn't access/create private data directory \"%s\"",
            options->DataDirectory);
     /* No need to roll back, since you can't change the value. */
     goto done;
@@ -485,7 +487,7 @@ options_act_reversible(or_options_t *old_options)
   set_conn_limit = 1;
 
   if (retry_all_listeners(0, replaced_listeners, new_listeners) < 0) {
-    log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
+    err(LD_CONFIG, "Failed to bind one of the listener ports.");
     goto rollback;
   }
 
@@ -493,7 +495,7 @@ options_act_reversible(or_options_t *old_options)
   r = 0;
   SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
   {
-    log_fn(LOG_NOTICE, "Closing old %s on %s:%d",
+    notice(LD_NET, "Closing old %s on %s:%d",
            conn_type_to_string(conn->type), conn->address, conn->port);
     connection_close_immediate(conn);
     connection_mark_for_close(conn);
@@ -508,7 +510,7 @@ options_act_reversible(or_options_t *old_options)
 
   SMARTLIST_FOREACH(new_listeners, connection_t *, conn,
   {
-    log_fn(LOG_NOTICE, "Closing %s on %s:%d",
+    notice(LD_NET, "Closing %s on %s:%d",
            conn_type_to_string(conn->type), conn->address, conn->port);
     connection_close_immediate(conn);
     connection_mark_for_close(conn);
@@ -541,15 +543,15 @@ options_act(or_options_t *old_options)
   clear_trusted_dir_servers();
   for (cl = options->DirServers; cl; cl = cl->next) {
     if (parse_dir_server_line(cl->value, 0)<0) {
-      log_fn(LOG_ERR,
-             "Bug: Previously validated DirServer line could not be added!");
+      err(LD_BUG,
+          "Bug: Previously validated DirServer line could not be added!");
       return -1;
     }
   }
 
   if (running_tor && rend_config_services(options, 0)<0) {
-    log_fn(LOG_ERR,
-           "Bug: Previously validated hidden services line could not be added!");
+    err(LD_BUG,
+        "Bug: Previously validated hidden services line could not be added!");
     return -1;
   }
 
@@ -561,8 +563,8 @@ options_act(or_options_t *old_options)
     fn = tor_malloc(len);
     tor_snprintf(fn, len, "%s/cached-status", options->DataDirectory);
     if (check_private_dir(fn, CPD_CREATE) != 0) {
-      log_fn(LOG_ERR, "Couldn't access/create private data directory \"%s\"",
-             fn);
+      err(LD_CONFIG,
+          "Couldn't access/create private data directory \"%s\"", fn);
       tor_free(fn);
       return -1;
     }
@@ -622,13 +624,13 @@ options_act(or_options_t *old_options)
 
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_keys()<0) {
-    log_fn(LOG_ERR,"Error loading rendezvous service keys");
+    err(LD_GENERAL,"Error loading rendezvous service keys");
     return -1;
   }
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
-    log_fn(LOG_ERR,"Error in accounting options");
+    err(LD_CONFIG,"Error in accounting options");
     return -1;
   }
   if (accounting_is_enabled(options))
@@ -640,13 +642,13 @@ options_act(or_options_t *old_options)
   /* Check for transitions that need action. */
   if (old_options) {
     if (options->UseHelperNodes && !old_options->UseHelperNodes) {
-      log_fn(LOG_INFO, "Switching to helper nodes; abandoning previous circuits");
+      info(LD_CIRC,"Switching to helper nodes; abandoning previous circuits");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
     }
 
     if (options_transition_affects_workers(old_options, options)) {
-      log_fn(LOG_INFO,"Worker-related options changed. Rotating workers.");
+      info(LD_GENERAL,"Worker-related options changed. Rotating workers.");
       cpuworkers_rotate();
       dnsworkers_rotate();
     }
@@ -682,7 +684,7 @@ expand_abbrev(config_format_t *fmt, const char *option, int command_line,
     if (!strcasecmp(option,fmt->abbrevs[i].abbreviated) &&
         (command_line || !fmt->abbrevs[i].commandline_only)) {
       if (warn_obsolete && fmt->abbrevs[i].warn) {
-        log_fn(LOG_WARN,
+        warn(LD_CONFIG,
             "The configuration option '%s' is deprecated; use '%s' instead.",
                fmt->abbrevs[i].abbreviated,
                fmt->abbrevs[i].full);
@@ -717,7 +719,7 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
       continue;
     }
     if (i == argc-1) {
-      log_fn(LOG_WARN,"Command-line option '%s' with no value. Failing.",
+      warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
              argv[i]);
       config_free_lines(front);
       return -1;
@@ -732,7 +734,7 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
     (*new)->key = tor_strdup(expand_abbrev(&options_format, s, 1, 1));
     (*new)->value = tor_strdup(argv[i+1]);
     (*new)->next = NULL;
-    log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
+    log(LOG_DEBUG, LD_CONFIG, "Commandline: parsed keyword '%s', value '%s'",
         (*new)->key, (*new)->value);
 
     new = &((*new)->next);
@@ -844,7 +846,7 @@ config_find_option(config_format_t *fmt, const char *key)
   /* If none, check for an abbreviated match */
   for (i=0; fmt->vars[i].name; ++i) {
     if (!strncasecmp(key, fmt->vars[i].name, keylen)) {
-      log_fn(LOG_WARN, "The abbreviation '%s' is deprecated. "
+      warn(LD_CONFIG, "The abbreviation '%s' is deprecated. "
           "Please use '%s' instead",
              key, fmt->vars[i].name);
       return &fmt->vars[i];
@@ -883,8 +885,8 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_UINT:
     i = tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
     if (!ok) {
-      log(LOG_WARN, "Int keyword '%s %s' is malformed or out of bounds.",
-          c->key,c->value);
+      log(LOG_WARN, LD_CONFIG,
+          "Int keyword '%s %s' is malformed or out of bounds.", c->key, c->value);
       return -1;
     }
     *(int *)lvalue = i;
@@ -911,7 +913,7 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_BOOL:
     i = tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
-      log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1.", c->key);
+      log(LOG_WARN, LD_CONFIG, "Boolean keyword '%s' expects 0 or 1.", c->key);
       return -1;
     }
     *(int *)lvalue = i;
@@ -928,7 +930,8 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
 
   case CONFIG_TYPE_ISOTIME:
     if (parse_iso_time(c->value, (time_t *)lvalue)) {
-      log(LOG_WARN, "Invalid time '%s' for keyword '%s'", c->value, c->key);
+      log(LOG_WARN, LD_CONFIG,
+          "Invalid time '%s' for keyword '%s'", c->value, c->key);
       return -1;
     }
     break;
@@ -951,10 +954,10 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     break;
 
   case CONFIG_TYPE_OBSOLETE:
-    log_fn(LOG_WARN, "Skipping obsolete configuration option '%s'", c->key);
+    warn(LD_CONFIG, "Skipping obsolete configuration option '%s'", c->key);
     break;
   case CONFIG_TYPE_LINELIST_V:
-    log_fn(LOG_WARN, "Can't provide value for virtual option '%s'", c->key);
+    warn(LD_CONFIG, "Can't provide value for virtual option '%s'", c->key);
     return -1;
   default:
     tor_assert(0);
@@ -982,7 +985,7 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
 
   var = config_find_option(fmt, c->key);
   if (!var) {
-    log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", c->key);
+    warn(LD_CONFIG, "Unknown option '%s'.  Failing.", c->key);
     return -1;
   }
   /* Put keyword into canonical case. */
@@ -1072,10 +1075,11 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
 
   var = config_find_option(fmt, key);
   if (!var) {
-    log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", key);
+    warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
     return NULL;
   } else if (var->type == CONFIG_TYPE_LINELIST_S) {
-    log_fn(LOG_WARN, "Can't return context-sensitive '%s' on its own", key);
+    warn(LD_CONFIG,
+           "Can't return context-sensitive '%s' on its own", key);
     return NULL;
   }
   value = ((char*)options) + var->var_offset;
@@ -1134,14 +1138,15 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
         result->value = tor_strdup("");
       break;
     case CONFIG_TYPE_OBSOLETE:
-      log_fn(LOG_WARN,"You asked me for the value of an obsolete config option '%s'.", key);
+      warn(LD_CONFIG,
+           "You asked me for the value of an obsolete config option '%s'.", key);
       tor_free(result->key);
       tor_free(result);
       return NULL;
     default:
       tor_free(result->key);
       tor_free(result);
-      log_fn(LOG_WARN,"Bug: unknown type %d for known key '%s'", var->type, key);
+      warn(LD_BUG,"Bug: unknown type %d for known key '%s'", var->type, key);
       return NULL;
     }
 
@@ -1388,10 +1393,10 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
     explicit_ip = 0; /* it's implicit */
 
     if (gethostname(hostname, sizeof(hostname)) < 0) {
-      log_fn(LOG_WARN,"Error obtaining local hostname");
+      warn(LD_NET,"Error obtaining local hostname");
       return -1;
     }
-    log_fn(LOG_DEBUG,"Guessed local host name as '%s'",hostname);
+    debug(LD_CONFIG,"Guessed local host name as '%s'",hostname);
   }
 
   /* now we know hostname. resolve it and keep only the IP */
@@ -1401,7 +1406,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
     explicit_ip = 0;
     rent = (struct hostent *)gethostbyname(hostname);
     if (!rent) {
-      log_fn(LOG_WARN,"Could not resolve local Address '%s'. Failing.", hostname);
+      warn(LD_CONFIG,"Could not resolve local Address '%s'. Failing.",hostname);
       return -1;
     }
     tor_assert(rent->h_length == 4);
@@ -1413,25 +1418,25 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers) {
       /* if they are using the default dirservers, disallow internal IPs always. */
-      log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
-             "Tor servers that use the default DirServers must have public IP addresses.",
-             hostname, tmpbuf);
+      warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. "
+           "Tor servers that use the default DirServers must have public IP addresses.",
+           hostname, tmpbuf);
       return -1;
     }
     if (!explicit_ip) {
       /* even if they've set their own dirservers, require an explicit IP if
        * they're using an internal address. */
-      log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
-             "Please set the Address config option to be the IP you want to use.",
-             hostname, tmpbuf);
+      warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. "
+           "Please set the Address config option to be the IP you want to use.",
+           hostname, tmpbuf);
       return -1;
     }
   }
 
-  log_fn(LOG_DEBUG, "Resolved Address to '%s'.", tmpbuf);
+  debug(LD_CONFIG, "Resolved Address to '%s'.", tmpbuf);
   *addr_out = ntohl(in.s_addr);
   if (old_addr && old_addr != *addr_out) {
-    log_fn(LOG_NOTICE,"Your IP seems to have changed. Updating.");
+    notice(LD_NET, "Your IP seems to have changed. Updating.");
     server_has_changed_ip();
   }
   old_addr = *addr_out;
@@ -1449,7 +1454,7 @@ get_default_nickname(void)
   char *cp, *out, *outp;
 
   if (gethostname(localhostname, sizeof(localhostname)) < 0) {
-    log_fn(LOG_WARN,"Error obtaining local hostname");
+    warn(LD_NET,"Error obtaining local hostname");
     return NULL;
   }
 
@@ -1546,8 +1551,8 @@ options_dup(config_format_t *fmt, or_options_t *old)
     line = get_assigned_option(fmt, old, fmt->vars[i].name);
     if (line) {
       if (config_assign(fmt, newopts, line, 0, 0) < 0) {
-        log_fn(LOG_WARN,"Bug: config_get_assigned_option() generated "
-               "something we couldn't config_assign().");
+        warn(LD_BUG, "Bug: config_get_assigned_option() generated "
+             "something we couldn't config_assign().");
         tor_assert(0);
       }
     }
@@ -1627,7 +1632,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
       char *tmp;
       tmp = tor_malloc(len);
       if (tor_snprintf(tmp, len, "%s %s\n", line->key, line->value)<0) {
-        log_fn(LOG_ERR, "Internal error writing log option");
+        err(LD_BUG,"Internal error writing log option");
         tor_assert(0);
       }
       smartlist_add(elements, tmp);
@@ -1668,7 +1673,7 @@ validate_ports_csv(smartlist_t *sl, const char *name)
   {
     i = atoi(cp);
     if (i < 1 || i > 65535) {
-      log(LOG_WARN, "Port '%s' out of range in %s", cp, name);
+      log(LOG_WARN, LD_CONFIG, "Port '%s' out of range in %s", cp, name);
       result=-1;
     }
   });
@@ -1687,7 +1692,7 @@ parse_reachable_addresses(void)
   if (config_parse_addr_policy(options->ReachableAddresses,
                                &reachable_addr_policy,
                                ADDR_POLICY_ACCEPT)) {
-    log_fn(LOG_WARN, "Error in ReachableAddresses entry; ignoring.");
+    warn(LD_CONFIG, "Error in ReachableAddresses entry; ignoring.");
     return;
   }
 }
@@ -1717,7 +1722,7 @@ fascist_firewall_allows_address(uint32_t addr, uint16_t port)
     case ADDR_POLICY_REJECTED:
       return 0;
     default:
-      log_fn(LOG_WARN, "Unexpected result: %d", (int)p);
+      warn(LD_BUG, "Unexpected result: %d", (int)p);
       return 0;
   }
 }
@@ -1731,45 +1736,39 @@ options_validate(or_options_t *options)
   int result = 0;
   config_line_t *cl;
   addr_policy_t *addr_policy=NULL;
+#define REJECT(arg) do { log(LOG_WARN, LD_CONFIG, arg); result = -1; } while (0)
+#define COMPLAIN(arg) do { log(LOG_WARN, LD_CONFIG, arg); } while (0)
 
-  if (options->ORPort < 0 || options->ORPort > 65535) {
-    log(LOG_WARN, "ORPort option out of bounds.");
-    result = -1;
-  }
+  if (options->ORPort < 0 || options->ORPort > 65535)
+    REJECT("ORPort option out of bounds.");
 
-  if (options->ORPort == 0 && options->ORListenAddress != NULL) {
-    log(LOG_WARN, "ORPort must be defined if ORListenAddress is defined.");
-    result = -1;
-  }
-  if (options->DirPort == 0 && options->DirListenAddress != NULL) {
-    log(LOG_WARN, "DirPort must be defined if DirListenAddress is defined.");
-    result = -1;
-  }
-  if (options->SocksPort == 0 && options->SocksListenAddress != NULL) {
-    log(LOG_WARN, "SocksPort must be defined if SocksListenAddress is defined.");
-    result = -1;
-  }
+  if (options->ORPort == 0 && options->ORListenAddress != NULL)
+    REJECT("ORPort must be defined if ORListenAddress is defined.");
 
-  if (validate_data_directory(options)<0) {
-    log(LOG_WARN, "Invalid DataDirectory");
-    result = -1;
-  }
+  if (options->DirPort == 0 && options->DirListenAddress != NULL)
+    REJECT("DirPort must be defined if DirListenAddress is defined.");
+
+  if (options->SocksPort == 0 && options->SocksListenAddress != NULL)
+    REJECT("SocksPort must be defined if SocksListenAddress is defined.");
+
+  if (validate_data_directory(options)<0)
+    REJECT("Invalid DataDirectory");
 
   if (options->Nickname == NULL) {
     if (server_mode(options)) {
       if (!(options->Nickname = get_default_nickname()))
         return -1;
-      log_fn(LOG_NOTICE, "Choosing default nickname '%s'", options->Nickname);
+      notice(LD_CONFIG, "Choosing default nickname '%s'", options->Nickname);
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {
-      log_fn(LOG_WARN, "Nickname '%s' is wrong length or contains illegal characters.", options->Nickname);
+      log(LOG_WARN, LD_CONFIG, "Nickname '%s' is wrong length or contains illegal characters.", options->Nickname);
       result = -1;
     }
   }
 
   if (server_mode(options) && !options->ContactInfo)
-    log_fn(LOG_NOTICE,"Your ContactInfo config option is not set. Please consider setting it, so we can contact you if your server is misconfigured or something else goes wrong.");
+    log(LOG_NOTICE, LD_CONFIG, "Your ContactInfo config option is not set. Please consider setting it, so we can contact you if your server is misconfigured or something else goes wrong.");
 
   if (normalize_log_options(options))
     return -1;
@@ -1789,45 +1788,31 @@ options_validate(or_options_t *options)
       result = -1;
   }
 
-  if (options->SocksPort < 0 || options->SocksPort > 65535) {
-    log(LOG_WARN, "SocksPort option out of bounds.");
-    result = -1;
-  }
+  if (options->SocksPort < 0 || options->SocksPort > 65535)
+    REJECT("SocksPort option out of bounds.");
 
-  if (options->SocksPort == 0 && options->ORPort == 0) {
-    log(LOG_WARN, "SocksPort and ORPort are both undefined? Quitting.");
-    result = -1;
-  }
+  if (options->SocksPort == 0 && options->ORPort == 0)
+    REJECT("SocksPort and ORPort are both undefined? Quitting.");
 
-  if (options->ControlPort < 0 || options->ControlPort > 65535) {
-    log(LOG_WARN, "ControlPort option out of bounds.");
-    result = -1;
-  }
+  if (options->ControlPort < 0 || options->ControlPort > 65535)
+    REJECT("ControlPort option out of bounds.");
 
-  if (options->DirPort < 0 || options->DirPort > 65535) {
-    log(LOG_WARN, "DirPort option out of bounds.");
-    result = -1;
-  }
+  if (options->DirPort < 0 || options->DirPort > 65535)
+    REJECT("DirPort option out of bounds.");
 
   if (options->StrictExitNodes &&
-      (!options->ExitNodes || !strlen(options->ExitNodes))) {
-    log(LOG_WARN, "StrictExitNodes set, but no ExitNodes listed.");
-  }
+      (!options->ExitNodes || !strlen(options->ExitNodes)))
+    COMPLAIN("StrictExitNodes set, but no ExitNodes listed.");
 
   if (options->StrictEntryNodes &&
-      (!options->EntryNodes || !strlen(options->EntryNodes))) {
-    log(LOG_WARN, "StrictEntryNodes set, but no EntryNodes listed.");
-  }
+      (!options->EntryNodes || !strlen(options->EntryNodes)))
+    COMPLAIN("StrictEntryNodes set, but no EntryNodes listed.");
 
   if (options->AuthoritativeDir) {
-    if (!options->ContactInfo) {
-      log(LOG_WARN, "Authoritative directory servers must set ContactInfo");
-      result = -1;
-    }
-    if (!options->RecommendedVersions) {
-      log(LOG_WARN, "Authoritative directory servers must configure RecommendedVersions.");
-      result = -1;
-    }
+    if (!options->ContactInfo)
+      REJECT("Authoritative directory servers must set ContactInfo");
+    if (!options->RecommendedVersions)
+      REJECT("Authoritative directory servers must configure RecommendedVersions.");
     if (!options->RecommendedClientVersions)
       options->RecommendedClientVersions =
         config_lines_dup(options->RecommendedVersions);
@@ -1836,34 +1821,27 @@ options_validate(or_options_t *options)
         config_lines_dup(options->RecommendedVersions);
   }
 
-  if (options->AuthoritativeDir && !options->DirPort) {
-    log(LOG_WARN, "Running as authoritative directory, but no DirPort set.");
-    result = -1;
-  }
+  if (options->AuthoritativeDir && !options->DirPort)
+    REJECT("Running as authoritative directory, but no DirPort set.");
 
-  if (options->AuthoritativeDir && !options->ORPort) {
-    log(LOG_WARN, "Running as authoritative directory, but no ORPort set.");
-    result = -1;
-  }
+  if (options->AuthoritativeDir && !options->ORPort)
+    REJECT("Running as authoritative directory, but no ORPort set.");
 
   if (options->AuthoritativeDir && options->ClientOnly) {
-    log(LOG_WARN, "Running as authoritative directory, but ClientOnly also set.");
-    result = -1;
+    REJECT("Running as authoritative directory, but ClientOnly also set.");
   }
 
-  if (options->AuthoritativeDir && options->NoPublish) {
-    log(LOG_WARN, "You cannot set both AuthoritativeDir and NoPublish.");
-    result = -1;
-  }
+  if (options->AuthoritativeDir && options->NoPublish)
+    REJECT("You cannot set both AuthoritativeDir and NoPublish.");
 
   if (options->ConnLimit <= 0) {
-    log(LOG_WARN, "ConnLimit must be greater than 0, but was set to %d",
+    log(LOG_WARN, LD_CONFIG,"ConnLimit must be greater than 0, but was set to %d",
         options->ConnLimit);
     result = -1;
   }
 
   if (options->_AccountingMaxKB) {
-    log(LOG_WARN, "AccountingMaxKB is deprecated.  Say 'AccountingMax %d KB' instead.", options->_AccountingMaxKB);
+    log(LOG_WARN, LD_CONFIG, "AccountingMaxKB is deprecated.  Say 'AccountingMax %d KB' instead.", options->_AccountingMaxKB);
     options->AccountingMax = U64_LITERAL(1024)*options->_AccountingMaxKB;
     options->_AccountingMaxKB = 0;
   }
@@ -1897,7 +1875,7 @@ options_validate(or_options_t *options)
       });
     new_line->value = smartlist_join_strings(instead,",",0,NULL);
     /* These have been deprecated since 0.1.1.5-alpha-cvs */
-    log_fn(LOG_WARN, "FascistFirewall and FirewallPorts are deprecated.  Instead, use \"ReachableAddresses %s\"", new_line->value);
+    log(LOG_WARN, LD_CONFIG, "FascistFirewall and FirewallPorts are deprecated.  Instead, use \"ReachableAddresses %s\"", new_line->value);
     new_line->next = options->ReachableAddresses;
     options->ReachableAddresses = new_line;
     SMARTLIST_FOREACH(instead, char *, cp, tor_free(cp));
@@ -1929,18 +1907,16 @@ options_validate(or_options_t *options)
         else if (!strcasecmp(cp, "rendezvous"))
           options->_AllowUnverified |= ALLOW_UNVERIFIED_RENDEZVOUS;
         else {
-          log(LOG_WARN, "Unrecognized value '%s' in AllowUnverifiedNodes",
-              cp);
+          log(LOG_WARN, LD_CONFIG,
+              "Unrecognized value '%s' in AllowUnverifiedNodes", cp);
           result = -1;
         }
       });
   }
 
   if (options->SocksPort >= 1 &&
-      (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {
-    log(LOG_WARN, "PathlenCoinWeight option must be >=0.0 and <1.0.");
-    result = -1;
-  }
+      (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0))
+    REJECT("PathlenCoinWeight option must be >=0.0 and <1.0.");
 
 #define MIN_DIR_FETCH_PERIOD 600
 #define MIN_REND_POST_PERIOD 300
@@ -1952,66 +1928,62 @@ options_validate(or_options_t *options)
 
   if (options->DirFetchPeriod &&
       options->DirFetchPeriod < MIN_DIR_FETCH_PERIOD) {
-    log(LOG_WARN, "DirFetchPeriod option must be at least %d seconds. Clipping.", MIN_DIR_FETCH_PERIOD);
+    log(LOG_WARN, LD_CONFIG, "DirFetchPeriod option must be at least %d seconds. Clipping.", MIN_DIR_FETCH_PERIOD);
     options->DirFetchPeriod = MIN_DIR_FETCH_PERIOD;
   }
   if (options->StatusFetchPeriod &&
       options->StatusFetchPeriod < MIN_STATUS_FETCH_PERIOD) {
-    log(LOG_WARN, "StatusFetchPeriod option must be at least %d seconds. Clipping.", MIN_STATUS_FETCH_PERIOD);
+    log(LOG_WARN, LD_CONFIG, "StatusFetchPeriod option must be at least %d seconds. Clipping.", MIN_STATUS_FETCH_PERIOD);
     options->StatusFetchPeriod = MIN_STATUS_FETCH_PERIOD;
   }
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
-    log(LOG_WARN,"RendPostPeriod option must be at least %d seconds. Clipping.",
+    log(LOG_WARN,LD_CONFIG,"RendPostPeriod option must be at least %d seconds. Clipping.",
         MIN_REND_POST_PERIOD);
     options->RendPostPeriod = MIN_REND_POST_PERIOD;
   }
 
   if (options->DirPort && ! options->AuthoritativeDir) {
     if (options->DirFetchPeriod > MAX_CACHE_DIR_FETCH_PERIOD) {
-      log(LOG_WARN, "Caching directory servers must have DirFetchPeriod less than %d seconds. Clipping.", MAX_CACHE_DIR_FETCH_PERIOD);
+      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have DirFetchPeriod less than %d seconds. Clipping.", MAX_CACHE_DIR_FETCH_PERIOD);
       options->DirFetchPeriod = MAX_CACHE_DIR_FETCH_PERIOD;
     }
     if (options->StatusFetchPeriod > MAX_CACHE_STATUS_FETCH_PERIOD) {
-      log(LOG_WARN, "Caching directory servers must have StatusFetchPeriod less than %d seconds. Clipping.", MAX_CACHE_STATUS_FETCH_PERIOD);
+      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have StatusFetchPeriod less than %d seconds. Clipping.", MAX_CACHE_STATUS_FETCH_PERIOD);
       options->StatusFetchPeriod = MAX_CACHE_STATUS_FETCH_PERIOD;
     }
   }
 
   if (options->DirFetchPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, "DirFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
+    log(LOG_WARN, LD_CONFIG, "DirFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
     options->DirFetchPeriod = MAX_DIR_PERIOD;
   }
   if (options->StatusFetchPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, "StatusFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
+    log(LOG_WARN, LD_CONFIG, "StatusFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
     options->StatusFetchPeriod = MAX_DIR_PERIOD;
   }
   if (options->RendPostPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, "RendPostPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
+    log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
   }
 
-  if (options->KeepalivePeriod < 1) {
-    log(LOG_WARN,"KeepalivePeriod option must be positive.");
-    result = -1;
-  }
+  if (options->KeepalivePeriod < 1)
+    REJECT("KeepalivePeriod option must be positive.");
 
   if (options->BandwidthRate > INT_MAX) {
-    log(LOG_WARN,"BandwidthRate must be less than %d",INT_MAX);
+    log(LOG_WARN,LD_CONFIG,"BandwidthRate must be less than %d",INT_MAX);
     result = -1;
   }
   if (options->BandwidthBurst > INT_MAX) {
-    log(LOG_WARN,"BandwidthBurst must be less than %d",INT_MAX);
+    log(LOG_WARN,LD_CONFIG,"BandwidthBurst must be less than %d",INT_MAX);
     result = -1;
   }
   if (server_mode(options) &&
       options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH*2) {
-    log(LOG_WARN,"BandwidthRate is set to %d bytes/second. For servers, it must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH*2);
+    log(LOG_WARN,LD_CONFIG,"BandwidthRate is set to %d bytes/second. For servers, it must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH*2);
     result = -1;
   }
-  if (options->BandwidthRate > options->BandwidthBurst) {
-    log(LOG_WARN,"BandwidthBurst must be at least equal to BandwidthRate.");
-    result = -1;
-  }
+  if (options->BandwidthRate > options->BandwidthBurst)
+    REJECT("BandwidthBurst must be at least equal to BandwidthRate.");
 
   if (accounting_parse_options(options, 1)<0) {
     result = -1;
@@ -2019,55 +1991,41 @@ options_validate(or_options_t *options)
 
   if (options->HttpProxy) { /* parse it now */
     if (parse_addr_port(options->HttpProxy, NULL,
-                        &options->HttpProxyAddr, &options->HttpProxyPort) < 0) {
-      log(LOG_WARN,"HttpProxy failed to parse or resolve. Please fix.");
-      result = -1;
-    }
+                        &options->HttpProxyAddr, &options->HttpProxyPort) < 0)
+      REJECT("HttpProxy failed to parse or resolve. Please fix.");
     if (options->HttpProxyPort == 0) { /* give it a default */
       options->HttpProxyPort = 80;
     }
   }
 
   if (options->HttpProxyAuthenticator) {
-    if (strlen(options->HttpProxyAuthenticator) >= 48) {
-      log(LOG_WARN, "HttpProxyAuthenticator is too long (>= 48 chars).");
-      result = -1;
-    }
+    if (strlen(options->HttpProxyAuthenticator) >= 48)
+      REJECT("HttpProxyAuthenticator is too long (>= 48 chars).");
   }
 
   if (options->HttpsProxy) { /* parse it now */
     if (parse_addr_port(options->HttpsProxy, NULL,
-                        &options->HttpsProxyAddr, &options->HttpsProxyPort) < 0) {
-      log(LOG_WARN,"HttpsProxy failed to parse or resolve. Please fix.");
-      result = -1;
-    }
+                        &options->HttpsProxyAddr, &options->HttpsProxyPort) < 0)
+      REJECT("HttpsProxy failed to parse or resolve. Please fix.");
     if (options->HttpsProxyPort == 0) { /* give it a default */
       options->HttpsProxyPort = 443;
     }
   }
 
   if (options->HttpsProxyAuthenticator) {
-    if (strlen(options->HttpsProxyAuthenticator) >= 48) {
-      log(LOG_WARN, "HttpsProxyAuthenticator is too long (>= 48 chars).");
-      result = -1;
-    }
+    if (strlen(options->HttpsProxyAuthenticator) >= 48)
+      REJECT("HttpsProxyAuthenticator is too long (>= 48 chars).");
   }
 
   if (options->HashedControlPassword) {
-    if (decode_hashed_password(NULL, options->HashedControlPassword)<0) {
-      log_fn(LOG_WARN,"Bad HashedControlPassword: wrong length or bad encoding");
-      result = -1;
-    }
+    if (decode_hashed_password(NULL, options->HashedControlPassword)<0)
+      REJECT("Bad HashedControlPassword: wrong length or bad encoding");
   }
-  if (options->HashedControlPassword && options->CookieAuthentication) {
-    log_fn(LOG_WARN,"Cannot enable both HashedControlPassword and CookieAuthentication");
-    result = -1;
-  }
+  if (options->HashedControlPassword && options->CookieAuthentication)
+    REJECT("Cannot enable both HashedControlPassword and CookieAuthentication");
 
-  if (options->UseHelperNodes && ! options->NumHelperNodes) {
-    log_fn(LOG_WARN, "Cannot enable UseHelperNodes with NumHelperNodes set to 0");
-    result = -1;
-  }
+  if (options->UseHelperNodes && ! options->NumHelperNodes)
+    REJECT("Cannot enable UseHelperNodes with NumHelperNodes set to 0");
 
   if (check_nickname_list(options->ExitNodes, "ExitNodes"))
     result = -1;
@@ -2086,39 +2044,29 @@ options_validate(or_options_t *options)
       result = -1;
   }
 
-  if (config_parse_addr_policy(options->ExitPolicy, &addr_policy, -1)) {
-    log_fn(LOG_WARN, "Error in Exit Policy entry.");
-    result = -1;
-  }
+  if (config_parse_addr_policy(options->ExitPolicy, &addr_policy, -1))
+    REJECT("Error in Exit Policy entry.");
+
   options_append_default_exit_policy(&addr_policy);
   if (server_mode(options)) {
     exit_policy_implicitly_allows_local_networks(addr_policy, 1);
   }
   /* The rest of these calls *append* to addr_policy. So don't actually
    * use the results for anything other than checking if they parse! */
-  if (config_parse_addr_policy(options->DirPolicy, &addr_policy, -1)) {
-    log_fn(LOG_WARN, "Error in DirPolicy entry.");
-    result = -1;
-  }
-  if (config_parse_addr_policy(options->SocksPolicy, &addr_policy, -1)) {
-    log_fn(LOG_WARN, "Error in SocksPolicy entry.");
-    result = -1;
-  }
+  if (config_parse_addr_policy(options->DirPolicy, &addr_policy, -1))
+    REJECT("Error in DirPolicy entry.");
+  if (config_parse_addr_policy(options->SocksPolicy, &addr_policy, -1))
+    REJECT("Error in SocksPolicy entry.");
   if (config_parse_addr_policy(options->ReachableAddresses, &addr_policy,
-                               ADDR_POLICY_ACCEPT)) {
-    log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
-    result = -1;
-  }
+                               ADDR_POLICY_ACCEPT))
+    REJECT("Error in ReachableAddresses entry.");
   if (config_parse_addr_policy(options->AuthDirReject, &addr_policy,
-                               ADDR_POLICY_REJECT)) {
-    log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
-    result = -1;
-  }
+                               ADDR_POLICY_REJECT))
+    REJECT("Error in ReachableAddresses entry.");
   if (config_parse_addr_policy(options->AuthDirInvalid, &addr_policy,
-                               ADDR_POLICY_REJECT)) {
-    log_fn(LOG_WARN, "Error in ReachableAddresses entry.");
-    result = -1;
-  }
+                               ADDR_POLICY_REJECT))
+    REJECT("Error in ReachableAddresses entry.");
+
   addr_policy_free(addr_policy);
 
   for (cl = options->RedirectExit; cl; cl = cl->next) {
@@ -2129,7 +2077,7 @@ options_validate(or_options_t *options)
   if (!options->DirServers) {
     add_default_trusted_dirservers(options);
   } else {
-    log_fn(LOG_WARN, "You have used DirServer to specify directory authorities in your configuration.  This is potentially dangerous: it can make you look different from all other Tor users, and hurt your anonymity.  Even if you've specified the same authorities as Tor uses by default, the defaults could change in the future.  Be sure you know what you're doing.");
+    COMPLAIN("You have used DirServer to specify directory authorities in your configuration.  This is potentially dangerous: it can make you look different from all other Tor users, and hurt your anonymity.  Even if you've specified the same authorities as Tor uses by default, the defaults could change in the future.  Be sure you know what you're doing.");
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 1)<0)
         result = -1;
@@ -2140,6 +2088,8 @@ options_validate(or_options_t *options)
     result = -1;
 
   return result;
+#undef REJECT
+#undef COMPLAIN
 }
 
 /** Helper: return true iff s1 and s2 are both NULL, or both non-NULL
@@ -2163,32 +2113,32 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
     return 0;
 
   if (!opt_streq(old->PidFile, new_val->PidFile)) {
-    log_fn(LOG_WARN,"PidFile is not allowed to change. Failing.");
+    warn(LD_CONFIG,"PidFile is not allowed to change. Failing.");
     return -1;
   }
 
   if (old->RunAsDaemon != new_val->RunAsDaemon) {
-    log_fn(LOG_WARN,"While Tor is running, changing RunAsDaemon is not allowed. Failing.");
+    warn(LD_CONFIG,"While Tor is running, changing RunAsDaemon is not allowed. Failing.");
     return -1;
   }
 
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    log_fn(LOG_WARN,"While Tor is running, changing DataDirectory (\"%s\"->\"%s\") is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
+    warn(LD_CONFIG,"While Tor is running, changing DataDirectory (\"%s\"->\"%s\") is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
     return -1;
   }
 
   if (!opt_streq(old->User, new_val->User)) {
-    log_fn(LOG_WARN,"While Tor is running, changing User is not allowed. Failing.");
+    warn(LD_CONFIG,"While Tor is running, changing User is not allowed. Failing.");
     return -1;
   }
 
   if (!opt_streq(old->Group, new_val->Group)) {
-    log_fn(LOG_WARN,"While Tor is running, changing Group is not allowed. Failing.");
+    warn(LD_CONFIG,"While Tor is running, changing Group is not allowed. Failing.");
     return -1;
   }
 
   if (old->HardwareAccel != new_val->HardwareAccel) {
-    log_fn(LOG_WARN,"While Tor is running, changing HardwareAccel is not allowed. Failing.");
+    warn(LD_CONFIG,"While Tor is running, changing HardwareAccel is not allowed. Failing.");
     return -1;
   }
 
@@ -2262,7 +2212,7 @@ get_windows_conf_root(void)
                                             &idl))) {
     GetCurrentDirectory(MAX_PATH, path);
     is_set = 1;
-    log_fn(LOG_WARN, "I couldn't find your application data folder: are you running an ancient version of Windows 95? Defaulting to \"%s\"", path);
+    warn(LD_CONFIG, "I couldn't find your application data folder: are you running an ancient version of Windows 95? Defaulting to \"%s\"", path);
     return path;
   }
   /* Convert the path from an "ID List" (whatever that is!) to a path. */
@@ -2312,7 +2262,7 @@ check_nickname_list(const char *lst, const char *name)
   SMARTLIST_FOREACH(sl, const char *, s,
     {
       if (!is_legal_nickname_or_hexdigest(s)) {
-        log_fn(LOG_WARN, "Invalid nickname '%s' in %s line", s, name);
+        warn(LD_CONFIG, "Invalid nickname '%s' in %s line", s, name);
         r = -1;
       }
     });
@@ -2369,7 +2319,7 @@ options_init_from_torrc(int argc, char **argv)
   for (i = 1; i < argc; ++i) {
     if (i < argc-1 && !strcmp(argv[i],"-f")) {
       if (fname) {
-        log(LOG_WARN, "Duplicate -f options on command line.");
+        log(LOG_WARN, LD_CONFIG, "Duplicate -f options on command line.");
         tor_free(fname);
       }
       fname = tor_strdup(argv[i+1]);
@@ -2406,17 +2356,18 @@ options_init_from_torrc(int argc, char **argv)
     }
   }
   tor_assert(fname);
-  log(LOG_DEBUG, "Opening config file \"%s\"", fname);
+  log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
 
   /* get config lines, assign them */
   if (file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0))) {
     if (using_default_torrc == 1) {
-      log(LOG_NOTICE, "Configuration file \"%s\" not present, "
+      log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
           "using reasonable defaults.", fname);
       tor_free(fname); /* sets fname to NULL */
     } else {
-      log(LOG_WARN, "Unable to open configuration file \"%s\".", fname);
+      log(LOG_WARN, LD_CONFIG,
+          "Unable to open configuration file \"%s\".", fname);
       tor_free(fname);
       goto err;
     }
@@ -2487,17 +2438,17 @@ config_register_addressmaps(or_options_t *options)
       from = smartlist_get(elts,0);
       to = smartlist_get(elts,1);
       if (!is_plausible_address(from)) {
-        log_fn(LOG_WARN,"Skipping invalid argument '%s' to MapAddress",from);
+        warn(LD_CONFIG,"Skipping invalid argument '%s' to MapAddress",from);
       } else if (!is_plausible_address(to)) {
-        log_fn(LOG_WARN,"Skipping invalid argument '%s' to MapAddress",to);
+        warn(LD_CONFIG,"Skipping invalid argument '%s' to MapAddress",to);
       } else {
         addressmap_register(from, tor_strdup(to), 0);
         if (smartlist_len(elts)>2) {
-          log_fn(LOG_WARN,"Ignoring extra arguments to MapAddress.");
+          warn(LD_CONFIG,"Ignoring extra arguments to MapAddress.");
         }
       }
     } else {
-      log_fn(LOG_WARN,"MapAddress '%s' has too few arguments. Ignoring.", opt->value);
+      warn(LD_CONFIG,"MapAddress '%s' has too few arguments. Ignoring.", opt->value);
     }
     SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
     smartlist_clear(elts);
@@ -2524,7 +2475,7 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
       char *tmp_sev = tor_strndup(range, cp - range);
       levelMin = parse_log_level(tmp_sev);
       if (levelMin < 0) {
-        log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of "
+        warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
                "err|warn|notice|info|debug", tmp_sev);
         tor_free(tmp_sev);
         return -1;
@@ -2536,7 +2487,7 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
     } else {
       levelMax = parse_log_level(cp+1);
       if (levelMax < 0) {
-        log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of "
+        warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
                "err|warn|notice|info|debug", cp+1);
         return -1;
       }
@@ -2544,7 +2495,7 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
   } else {
     levelMin = parse_log_level(range);
     if (levelMin < 0) {
-      log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of "
+      warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
              "err|warn|notice|info|debug", range);
       return -1;
     }
@@ -2581,7 +2532,7 @@ convert_log_option(or_options_t *options, config_line_t *level_opt,
 
   if (file_opt && !strcasecmp(file_opt->key, "LogFile")) {
     if (add_single_log_option(options, levelMin, levelMax, "file", file_opt->value) < 0) {
-      log_fn(LOG_WARN, "Cannot write to LogFile \"%s\": %s.", file_opt->value,
+      warn(LD_FS, "Cannot write to LogFile \"%s\": %s.", file_opt->value,
              strerror(errno));
       return -1;
     }
@@ -2611,7 +2562,7 @@ options_init_logs(or_options_t *options, int validate_only)
     smartlist_split_string(elts, opt->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
     if (smartlist_len(elts) == 0) {
-      log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
+      warn(LD_CONFIG, "Bad syntax on Log option 'Log %s'", opt->value);
       ok = 0; goto cleanup;
     }
     if (parse_log_severity_range(smartlist_get(elts,0), &levelMin, &levelMax)) {
@@ -2624,7 +2575,7 @@ options_init_logs(or_options_t *options, int validate_only)
     }
     if (!strcasecmp(smartlist_get(elts,1), "file")) {
       if (smartlist_len(elts) != 3) {
-        log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
+        warn(LD_CONFIG, "Bad syntax on Log option 'Log %s'", opt->value);
         ok = 0; goto cleanup;
       }
       if (!validate_only)
@@ -2632,7 +2583,7 @@ options_init_logs(or_options_t *options, int validate_only)
       goto cleanup;
     }
     if (smartlist_len(elts) != 2) {
-      log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
+      warn(LD_CONFIG, "Bad syntax on Log option 'Log %s'", opt->value);
       ok = 0; goto cleanup;
     }
     if (!strcasecmp(smartlist_get(elts,1), "stdout")) {
@@ -2650,13 +2601,14 @@ options_init_logs(or_options_t *options, int validate_only)
       if (!validate_only)
         add_syslog_log(levelMin, levelMax);
 #else
-      log_fn(LOG_WARN, "Syslog is not supported in this compilation.");
+      warn(LD_CONFIG, "Syslog is not supported in this compilation.");
 #endif
     } else {
-      log_fn(LOG_WARN, "Unrecognized log type %s",
+      warn(LD_CONFIG, "Unrecognized log type %s",
              (const char*)smartlist_get(elts,1));
-      if (strchr(smartlist_get(elts,1), '/')) {
-        log_fn(LOG_WARN, "Did you mean to say 'Log file %s' ?",
+      if (strchr(smartlist_get(elts,1), '/') ||
+          strchr(smartlist_get(elts,1), '\\')) {
+        warn(LD_CONFIG, "Did you mean to say 'Log file %s' ?",
                (const char *)smartlist_get(elts,1));
       }
       ok = 0; goto cleanup;
@@ -2677,21 +2629,25 @@ static int
 add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
                       const char *type, const char *fname)
 {
-  char buf[512];
-  int n;
+  char *buf;
+  size_t len;
 
-  n = tor_snprintf(buf, sizeof(buf), "%s%s%s %s%s%s",
+  len = 256 + fname?strlen(fname):0;
+  buf = tor_malloc(len);
+
+  if (tor_snprintf(buf, len, "%s%s%s %s%s%s",
                    log_level_to_string(minSeverity),
                    maxSeverity == LOG_ERR ? "" : "-",
                    maxSeverity == LOG_ERR ? "" : log_level_to_string(maxSeverity),
-                   type, fname?" ":"", fname?fname:"");
-  if (n<0) {
-    log_fn(LOG_WARN, "Normalized log option too long.");
+                   type, fname?" ":"", fname?fname:"")<0) {
+    warn(LD_BUG, "Normalized log option too long.");
+    tor_free(buf);
     return -1;
   }
 
-  log(LOG_WARN, "The old LogLevel/LogFile/DebugLogFile/SysLog options are deprecated, and will go away soon.  Your new torrc line should be: 'Log %s'", buf);
+  log(LOG_WARN, LD_CONFIG, "The old LogLevel/LogFile/DebugLogFile/SysLog options are deprecated, and will go away soon.  Your new torrc line should be: 'Log %s'", buf);
   config_line_append(&options->Logs, "Log", buf);
+  tor_free(buf);
   return 0;
 }
 
@@ -2722,7 +2678,7 @@ normalize_log_options(or_options_t *options)
 
   while (opt) {
     if (!strcasecmp(opt->key, "LogLevel")) {
-      log_fn(LOG_WARN, "Two LogLevel options in a row without intervening LogFile or SysLog");
+      warn(LD_CONFIG, "Two LogLevel options in a row without intervening LogFile or SysLog");
       opt = opt->next;
     } else {
       tor_assert(!strcasecmp(opt->key, "LogFile") ||
@@ -2807,12 +2763,12 @@ config_parse_addr_policy(config_line_t *cfg,
     smartlist_split_string(entries, cfg->value, ",", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     SMARTLIST_FOREACH(entries, const char *, ent,
     {
-      log_fn(LOG_DEBUG,"Adding new entry '%s'",ent);
+      debug(LD_CONFIG,"Adding new entry '%s'",ent);
       *nextp = router_parse_addr_policy_from_string(ent, assume_action);
       if (*nextp) {
         nextp = &((*nextp)->next);
       } else {
-        log_fn(LOG_WARN,"Malformed policy '%s'.", ent);
+        warn(LD_CONFIG,"Malformed policy '%s'.", ent);
         r = -1;
       }
     });
@@ -2880,12 +2836,12 @@ parse_redirect_line(smartlist_t *result, config_line_t *line)
   smartlist_split_string(elements, line->value, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(elements) != 2) {
-    log_fn(LOG_WARN, "Wrong number of elements in RedirectExit line");
+    warn(LD_CONFIG, "Wrong number of elements in RedirectExit line");
     goto err;
   }
   if (parse_addr_and_port_range(smartlist_get(elements,0),&r->addr,&r->mask,
                                 &r->port_min,&r->port_max)) {
-    log_fn(LOG_WARN, "Error parsing source address in RedirectExit line");
+    warn(LD_CONFIG, "Error parsing source address in RedirectExit line");
     goto err;
   }
   if (0==strcasecmp(smartlist_get(elements,1), "pass")) {
@@ -2893,7 +2849,7 @@ parse_redirect_line(smartlist_t *result, config_line_t *line)
   } else {
     if (parse_addr_port(smartlist_get(elements,1),NULL,&r->addr_dest,
                              &r->port_dest)) {
-      log_fn(LOG_WARN, "Error parsing dest address in RedirectExit line");
+      warn(LD_CONFIG, "Error parsing dest address in RedirectExit line");
       goto err;
     }
     r->is_redirect = 1;
@@ -2934,6 +2890,8 @@ parse_dir_server_line(const char *line, int validate_only)
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
   if (smartlist_len(items) < 2) {
+    warn(LD_CONFIG, "Too few arguments to DirServer line.");
+    goto err;
   }
 
   idx = 0;
@@ -2950,32 +2908,32 @@ parse_dir_server_line(const char *line, int validate_only)
   }
 
   if (smartlist_len(items) < 2) {
-    log_fn(LOG_WARN, "Too few arguments to DirServer line.");
+    warn(LD_CONFIG, "Too few arguments to DirServer line.");
     goto err;
   }
   addrport = smartlist_get(items, 0);
   if (parse_addr_port(addrport, &address, NULL, &port)<0) {
-    log_fn(LOG_WARN, "Error parsing DirServer address '%s'", addrport);
+    warn(LD_CONFIG, "Error parsing DirServer address '%s'", addrport);
     goto err;
   }
   if (!port) {
-    log_fn(LOG_WARN, "Missing port in DirServer address '%s'",addrport);
+    warn(LD_CONFIG, "Missing port in DirServer address '%s'",addrport);
     goto err;
   }
   smartlist_del_keeporder(items, 0);
 
   fingerprint = smartlist_join_strings(items, "", 0, NULL);
   if (strlen(fingerprint) != HEX_DIGEST_LEN) {
-    log_fn(LOG_WARN, "Key digest for DirServer is wrong length.");
+    warn(LD_CONFIG, "Key digest for DirServer is wrong length.");
     goto err;
   }
   if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
-    log_fn(LOG_WARN, "Unable to decode DirServer key digest.");
+    warn(LD_CONFIG, "Unable to decode DirServer key digest.");
     goto err;
   }
 
   if (!validate_only) {
-    log_fn(LOG_DEBUG, "Trusted dirserver at %s:%d (%s)", address, (int)port,
+    debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address, (int)port,
            (char*)smartlist_get(items,1));
     add_trusted_dir_server(nickname, address, port, digest, supports_v1);
   }
@@ -3016,13 +2974,13 @@ normalize_data_directory(or_options_t *options)
  if (strncmp(d,"~/",2) == 0) {
    char *fn = expand_filename(d);
    if (!fn) {
-     log_fn(LOG_ERR,"Failed to expand filename \"%s\".", d);
+     err(LD_CONFIG,"Failed to expand filename \"%s\".", d);
      return -1;
    }
    if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
      /* If our homedir is /, we probably don't want to use it. */
      /* XXXX Default to /var/lib/tor? */
-     log_fn(LOG_WARN, "Default DataDirectory is \"~/.tor\".  This expands to \"%s\", which is probably not what you want.  Using \"%s/tor\" instead", fn, LOCALSTATEDIR);
+     warn(LD_CONFIG, "Default DataDirectory is \"~/.tor\".  This expands to \"%s\", which is probably not what you want.  Using \"%s/tor\" instead", fn, LOCALSTATEDIR);
      tor_free(fn);
      fn = tor_strdup(LOCALSTATEDIR"/tor");
 
@@ -3043,7 +3001,7 @@ validate_data_directory(or_options_t *options)
     return -1;
   tor_assert(options->DataDirectory);
   if (strlen(options->DataDirectory) > (512-128)) {
-    log_fn(LOG_ERR, "DataDirectory is too long.");
+    err(LD_CONFIG, "DataDirectory is too long.");
     return -1;
   }
   return 0;
@@ -3074,13 +3032,13 @@ write_configuration_file(const char *fname, or_options_t *options)
       case FN_NOENT:
         break;
       default:
-        log_fn(LOG_WARN,"Config file \"%s\" is not a file? Failing.", fname);
+        warn(LD_CONFIG,"Config file \"%s\" is not a file? Failing.", fname);
         return -1;
     }
   }
 
   if (!(new_conf = options_dump(options, 1))) {
-    log_fn(LOG_WARN, "Couldn't get configuration string");
+    warn(LD_BUG, "Couldn't get configuration string");
     goto err;
   }
 
@@ -3096,7 +3054,7 @@ write_configuration_file(const char *fname, or_options_t *options)
     fn_tmp = tor_malloc(fn_tmp_len);
     while (1) {
       if (tor_snprintf(fn_tmp, fn_tmp_len, "%s.orig.%d", fname, i)<0) {
-        log_fn(LOG_WARN, "tor_snprintf failed inexplicably");
+        warn(LD_BUG, "tor_snprintf failed inexplicably");
         tor_free(fn_tmp);
         goto err;
       }
@@ -3104,7 +3062,7 @@ write_configuration_file(const char *fname, or_options_t *options)
         break;
       ++i;
     }
-    log_fn(LOG_NOTICE, "Renaming old configuration file to \"%s\"", fn_tmp);
+    notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
     rename(fname, fn_tmp);
     tor_free(fn_tmp);
   }
@@ -3210,7 +3168,7 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
       return v;
     }
   }
-  log_fn(LOG_WARN, "Unknown unit '%s'.", cp);
+  warn(LD_CONFIG, "Unknown unit '%s'.", cp);
   *ok = 0;
   return 0;
 }
@@ -3237,7 +3195,7 @@ config_parse_interval(const char *s, int *ok)
   if (!ok)
     return -1;
   if (r > INT_MAX) {
-    log_fn(LOG_WARN, "Interval '%s' is too long", s);
+    warn(LD_CONFIG, "Interval '%s' is too long", s);
     *ok = 0;
     return -1;
   }
@@ -3263,13 +3221,13 @@ init_libevent(void)
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
   /* Making this a NOTICE for now so we can link bugs to a libevent versions
    * or methods better. */
-  log(LOG_NOTICE, "Initialized libevent version %s using method %s. Good.",
+  log(LOG_NOTICE, LD_GENERAL, "Initialized libevent version %s using method %s. Good.",
       event_get_version(), event_get_method());
   check_libevent_version(event_get_method(), event_get_version(),
                          get_options()->ORPort != 0);
 #else
-  log(LOG_NOTICE, "Initialized old libevent (version 1.0b or earlier).");
-  log(LOG_WARN, "You have a very old version of libevent.  It is likely to be buggy; please consider building Tor with a more recent version.");
+  log(LOG_NOTICE, LD_GENERAL, "Initialized old libevent (version 1.0b or earlier).");
+  log(LOG_WARN, LD_GENERAL, "You have a very old version of libevent.  It is likely to be buggy; please consider building Tor with a more recent version.");
 #endif
 
   return 0;
@@ -3307,15 +3265,15 @@ check_libevent_version(const char *m, const char *v, int server)
   }
 
   if (buggy) {
-    log(LOG_WARN,
+    log(LOG_WARN, LD_GENERAL,
         "There are known bugs in using %s with libevent %s. "
         "Please use the latest version of libevent.", m, v);
   } else if (iffy) {
-    log(LOG_WARN,
+    log(LOG_WARN, LD_GENERAL,
         "There are minor bugs in using %s with libevent %s. "
         "You may want to use the latest version of libevent.", m, v);
   } else if (slow && server) {
-    log(LOG_WARN,
+    log(LOG_WARN, LD_GENERAL,
         "libevent %s can be very slow with %s. "
       "When running a server, please use the latest version of libevent.",v,m);
   }
@@ -3360,7 +3318,7 @@ or_state_validate(or_state_t *state)
 {
   const char *err;
   if (helper_nodes_parse_state(state, 0, &err)<0) {
-    log_fn(LOG_WARN, "Unable to parse helper nodes: %s", err);
+    warn(LD_GENERAL, "Unable to parse helper nodes: %s", err);
     return -1;
   }
   return 0;
@@ -3376,7 +3334,7 @@ or_state_set(or_state_t *new_state)
     config_free(&state_format, global_state);
   global_state = new_state;
   if (helper_nodes_parse_state(global_state, 1, &err)<0)
-    log_fn(LOG_WARN,"Unparseable helper nodes state: %s",err);
+    warn(LD_GENERAL,"Unparseable helper nodes state: %s",err);
 
 }
 
@@ -3392,14 +3350,14 @@ or_state_load(void)
   switch (file_status(fname)) {
     case FN_FILE:
       if (!(contents = read_file_to_str(fname, 0))) {
-        log_fn(LOG_WARN, "Unable to read state file \"%s\"", fname);
+        warn(LD_FS, "Unable to read state file \"%s\"", fname);
         goto done;
       }
       break;
     case FN_NOENT:
       break;
     default:
-      log_fn(LOG_WARN,"State file \"%s\" is not a file? Failing.", fname);
+      warn(LD_GENERAL,"State file \"%s\" is not a file? Failing.", fname);
       goto done;
   }
   new_state = tor_malloc_zero(sizeof(or_state_t));
@@ -3420,9 +3378,9 @@ or_state_load(void)
     goto done;
 
   if (contents)
-    log_fn(LOG_INFO, "Loaded state from \"%s\"", fname);
+    info(LD_GENERAL, "Loaded state from \"%s\"", fname);
   else
-    log_fn(LOG_INFO, "Initialized state");
+    info(LD_GENERAL, "Initialized state");
   or_state_set(new_state);
   new_state = NULL;
   if (!contents) {
@@ -3466,12 +3424,12 @@ or_state_save(void)
   tor_free(state);
   fname = get_or_state_fname();
   if (write_str_to_file(fname, contents, 0)<0) {
-    log_fn(LOG_WARN, "Unable to write state to file \"%s\"", fname);
+    warn(LD_FS, "Unable to write state to file \"%s\"", fname);
     tor_free(fname);
     tor_free(contents);
     return -1;
   }
-  log_fn(LOG_INFO, "Saved state to \"%s\"", fname);
+  info(LD_GENERAL, "Saved state to \"%s\"", fname);
   tor_free(fname);
   tor_free(contents);
 

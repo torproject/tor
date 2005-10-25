@@ -731,7 +731,7 @@ assert_cpath_layer_ok(const crypt_path_t *cp)
       /* tor_assert(cp->dh_handshake_state); */
       break;
     default:
-      err("Unexpected state %d",cp->state);
+      log_fn(LOG_ERR, LD_BUG, "Unexpected state %d", cp->state);
       tor_assert(0);
     }
   tor_assert(cp->package_window >= 0);

@@ -127,7 +127,7 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
   result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
 
   if (!result) {
-    err("Out of memory. Dying.");
+    err(LD_MM,"Out of memory. Dying.");
     /* XXX if these functions die within a worker process, they won't
      * call spawn_exit */
     exit(1);
@@ -159,7 +159,7 @@ _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
 
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
   if (!result) {
-    err("Out of memory. Dying.");
+    err(LD_MM,"Out of memory. Dying.");
     exit(1);
   }
   return result;
@@ -177,7 +177,7 @@ _tor_strdup(const char *s DMALLOC_PARAMS)
 
   dup = dmalloc_strdup(file, line, s, 0);
   if (!dup) {
-    err("Out of memory. Dying.");
+    err(LD_MM,"Out of memory. Dying.");
     exit(1);
   }
   return dup;
@@ -1594,7 +1594,7 @@ start_daemon(void)
   pipe(daemon_filedes);
   pid = fork();
   if (pid < 0) {
-    err("fork failed. Exiting.");
+    err(LD_GENERAL,"fork failed. Exiting.");
     exit(1);
   }
   if (pid) {  /* Parent */
@@ -1649,14 +1649,14 @@ finish_daemon(const char *desired_cwd)
     desired_cwd = "/";
    /* Don't hold the wrong FS mounted */
   if (chdir(desired_cwd) < 0) {
-    err("chdir to \"%s\" failed. Exiting.",desired_cwd);
+    err(LD_GENERAL,"chdir to \"%s\" failed. Exiting.",desired_cwd);
     exit(1);
   }
 
   nullfd = open("/dev/null",
                 O_CREAT | O_RDWR | O_APPEND);
   if (nullfd < 0) {
-    err("/dev/null can't be opened. Exiting.");
+    err(LD_GENERAL,"/dev/null can't be opened. Exiting.");
     exit(1);
   }
   /* close fds linking to invoking terminal, but
@@ -1666,7 +1666,7 @@ finish_daemon(const char *desired_cwd)
   if (dup2(nullfd,0) < 0 ||
       dup2(nullfd,1) < 0 ||
       dup2(nullfd,2) < 0) {
-    err("dup2 failed. Exiting.");
+    err(LD_GENERAL,"dup2 failed. Exiting.");
     exit(1);
   }
   if (nullfd > 2)
