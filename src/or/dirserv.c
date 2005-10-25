@@ -1346,8 +1346,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
     SMARTLIST_FOREACH(digests, char *, cp,
         {
           cached_dir_t *cached;
-          tor_strupper(cp);
-          if (router_fingerprint_is_me(cp) &&
+          if (router_digest_is_me(cp) &&
               get_options()->AuthoritativeDir &&
               the_v2_networkstatus_is_dirty &&
               the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL))
