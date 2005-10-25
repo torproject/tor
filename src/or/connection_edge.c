@@ -10,6 +10,7 @@ const char connection_edge_c_id[] = "$Id$";
  * \brief Handle edge streams.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 #include "tree.h"
 
@@ -41,8 +42,8 @@ _connection_mark_unattached_ap(connection_t *conn, int endreason,
       connection_edge_end_reason_socks5_response(endreason);
 
     if (endreason == END_STREAM_REASON_ALREADY_SOCKS_REPLIED)
-      log_fn(LOG_WARN,"Bug: stream (marked at %s:%d) sending two socks replies?",
-             file, line);
+      warn(LD_BUG,"Bug: stream (marked at %s:%d) sending two socks replies?",
+           file, line);
 
     if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
       connection_ap_handshake_socks_reply(conn, NULL, 0, socksreason);
@@ -77,7 +78,7 @@ connection_edge_reached_eof(connection_t *conn)
     /* it still has stuff to process. don't let it die yet. */
     return 0;
   }
-  log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
+  info(LD_EDGE,"conn (fd %d) reached eof. Closing.", conn->s);
   if (!conn->marked_for_close) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */
@@ -126,11 +127,11 @@ connection_edge_process_inbuf(connection_t *conn, int package_partial)
     case AP_CONN_STATE_CONNECT_WAIT:
     case AP_CONN_STATE_RESOLVE_WAIT:
     case AP_CONN_STATE_CONTROLLER_WAIT:
-      log_fn(LOG_INFO,"data from edge while in '%s' state. Leaving it on buffer.",
+      info(LD_EDGE,"data from edge while in '%s' state. Leaving it on buffer.",
              conn_state_to_string(conn->type, conn->state));
       return 0;
   }
-  log_fn(LOG_WARN,"Bug: Got unexpected state %d. Closing.",conn->state);
+  warn(LD_BUG,"Bug: Got unexpected state %d. Closing.",conn->state);
   tor_fragile_assert();
   connection_edge_end(conn, END_STREAM_REASON_INTERNAL, conn->cpath_layer);
   connection_mark_for_close(conn);
@@ -146,8 +147,8 @@ connection_edge_destroy(uint16_t circ_id, connection_t *conn)
   tor_assert(CONN_IS_EDGE(conn));
 
   if (!conn->marked_for_close) {
-    log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
-           circ_id);
+    info(LD_EDGE,
+         "CircID %d: At an edge. Marking connection for close.", circ_id);
     if (conn->type == CONN_TYPE_AP) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_DESTROY);
     } else {
@@ -177,13 +178,13 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   circuit_t *circ;
 
   if (conn->has_sent_end) {
-    log_fn(LOG_WARN,"Harmless bug: Calling connection_edge_end (reason %d) on an already ended stream?", reason);
+    warn(LD_BUG,"Harmless bug: Calling connection_edge_end (reason %d) on an already ended stream?", reason);
     tor_fragile_assert();
     return -1;
   }
 
   if (conn->marked_for_close) {
-    log_fn(LOG_WARN,"Bug: called on conn that's already marked for close at %s:%d.",
+    warn(LD_BUG,"Bug: called on conn that's already marked for close at %s:%d.",
            conn->marked_for_close_file, conn->marked_for_close);
     return 0;
   }
@@ -198,11 +199,11 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
 
   circ = circuit_get_by_edge_conn(conn);
   if (circ && !circ->marked_for_close) {
-    log_fn(LOG_DEBUG,"Marking conn (fd %d) and sending end.",conn->s);
+    debug(LD_EDGE,"Marking conn (fd %d) and sending end.",conn->s);
     connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
                                  payload, payload_len, cpath_layer);
   } else {
-    log_fn(LOG_DEBUG,"Marking conn (fd %d); no circ to send end.",conn->s);
+    debug(LD_EDGE,"Marking conn (fd %d); no circ to send end.",conn->s);
   }
 
   conn->has_sent_end = 1;
@@ -252,7 +253,7 @@ connection_edge_finished_flushing(connection_t *conn)
       connection_stop_writing(conn);
       return 0;
     default:
-      log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
+      warn(LD_BUG,"BUG: called in unexpected state %d.", conn->state);
       tor_fragile_assert();
       return -1;
   }
@@ -274,7 +275,7 @@ connection_edge_finished_connecting(connection_t *conn)
 
   in.s_addr = htonl(conn->addr);
   tor_inet_ntoa(&in,valbuf,sizeof(valbuf));
-  log_fn(LOG_INFO,"Exit connection to %s:%u (%s) established.",
+  info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
          safe_str(conn->address),conn->port,safe_str(valbuf));
 
   conn->state = EXIT_CONN_STATE_OPEN;
@@ -327,7 +328,7 @@ connection_ap_expire_beginning(void)
       continue;
     if (conn->state == AP_CONN_STATE_CONTROLLER_WAIT) {
       if (now - conn->timestamp_lastread >= 120) {
-        log_fn(LOG_NOTICE, "Closing unattached stream.");
+        notice(LD_APP, "Closing unattached stream.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
       continue;
@@ -340,14 +341,14 @@ connection_ap_expire_beginning(void)
       continue;
     circ = circuit_get_by_edge_conn(conn);
     if (!circ) { /* it's vanished? */
-      log_fn(LOG_INFO,"Conn is waiting (address %s), but lost its circ.",
+      info(LD_APP,"Conn is waiting (address %s), but lost its circ.",
              safe_str(conn->socks_request->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       continue;
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (now - conn->timestamp_lastread > 45) {
-        log_fn(LOG_NOTICE,"Rend stream is %d seconds late. Giving up on address '%s'.",
+        notice(LD_REND,"Rend stream is %d seconds late. Giving up on address '%s'.",
                (int)(now - conn->timestamp_lastread),
                safe_str(conn->socks_request->address));
         connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
@@ -356,7 +357,7 @@ connection_ap_expire_beginning(void)
       continue;
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
-    log_fn(LOG_NOTICE,"Stream is %d seconds late on address '%s'. Retrying.",
+    notice(LD_APP,"Stream is %d seconds late on address '%s'. Retrying.",
            (int)(now - conn->timestamp_lastread),
            safe_str(conn->socks_request->address));
     circuit_log_path(LOG_NOTICE, LD_APP, circ);
@@ -582,11 +583,11 @@ addressmap_rewrite(char *address, size_t maxlen)
     if (!ent || !ent->new_address)
       return; /* done, no rewrite needed */
 
-    log_fn(LOG_INFO, "Addressmap: rewriting '%s' to '%s'",
-           safe_str(address), safe_str(ent->new_address));
+    info(LD_APP, "Addressmap: rewriting '%s' to '%s'",
+         safe_str(address), safe_str(ent->new_address));
     strlcpy(address, ent->new_address, maxlen);
   }
-  log_fn(LOG_WARN,"Loop detected: we've rewritten '%s' 16 times! Using it as-is.",
+  warn(LD_CONFIG,"Loop detected: we've rewritten '%s' 16 times! Using it as-is.",
          safe_str(address));
   /* it's fine to rewrite a rewrite, but don't loop forever */
 }
@@ -629,7 +630,7 @@ addressmap_register(const char *address, char *new_address, time_t expires)
     strmap_set(addressmap, address, ent);
   } else if (ent->new_address) { /* we need to clean up the old mapping. */
     if (expires > 1) {
-      log_fn(LOG_INFO,"Temporary addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'",
+      info(LD_APP,"Temporary addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'",
       safe_str(address), safe_str(new_address), safe_str(ent->new_address));
       tor_free(new_address);
       return;
@@ -647,8 +648,8 @@ addressmap_register(const char *address, char *new_address, time_t expires)
   ent->expires = expires==2 ? 1 : expires;
   ent->num_resolve_failures = 0;
 
-  log_fn(LOG_INFO, "Addressmap: (re)mapped '%s' to '%s'",
-         safe_str(address), safe_str(ent->new_address));
+  info(LD_CONFIG, "Addressmap: (re)mapped '%s' to '%s'",
+       safe_str(address), safe_str(ent->new_address));
   control_event_address_mapped(address, ent->new_address, expires);
 }
 
@@ -666,7 +667,7 @@ client_dns_incr_failures(const char *address)
     strmap_set(addressmap,address,ent);
   }
   ++ent->num_resolve_failures;
-  log_fn(LOG_INFO,"Address %s now has %d resolve failures.",
+  info(LD_APP, "Address %s now has %d resolve failures.",
          safe_str(address), ent->num_resolve_failures);
   return ent->num_resolve_failures;
 }
@@ -791,8 +792,7 @@ addressmap_get_virtual_address(int type)
     }
     return tor_strdup(buf);
   } else {
-    log_fn(LOG_WARN, "Called with unsupported address type (%d)",
-           type);
+    warn(LD_BUG, "Called with unsupported address type (%d)", type);
     return NULL;
   }
 }
@@ -830,9 +830,9 @@ addressmap_register_virtual_address(int type, char *new_address)
       tor_free(new_address);
       return tor_strdup(*addrp);
     } else
-      log_fn(LOG_WARN, "Internal confusion: I thought that '%s' was mapped to by '%s', but '%s' really maps to '%s'. This is a harmless bug.",
-             safe_str(new_address), safe_str(*addrp), safe_str(*addrp),
-             ent?safe_str(ent->new_address):"(nothing)");
+      warn(LD_BUG, "Internal confusion: I thought that '%s' was mapped to by '%s', but '%s' really maps to '%s'. This is a harmless bug.",
+           safe_str(new_address), safe_str(*addrp), safe_str(*addrp),
+           ent?safe_str(ent->new_address):"(nothing)");
   }
 
   tor_free(*addrp);
@@ -933,7 +933,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
   tor_assert(conn->socks_request);
   socks = conn->socks_request;
 
-  log_fn(LOG_DEBUG,"entered.");
+  debug(LD_APP,"entered.");
 
   sockshere = fetch_from_buf_socks(conn->inbuf, socks);
   if (sockshere == 0) {
@@ -941,16 +941,16 @@ connection_ap_handshake_process_socks(connection_t *conn)
       connection_write_to_buf(socks->reply, socks->replylen, conn);
       socks->replylen = 0; /* zero it out so we can do another round of negotiation */
     } else {
-      log_fn(LOG_DEBUG,"socks handshake not all here yet.");
+      debug(LD_APP,"socks handshake not all here yet.");
     }
     return 0;
   } else if (sockshere == -1) {
     if (socks->replylen) { /* we should send reply back */
-      log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
+      debug(LD_APP,"reply is already set for us. Using it.");
       connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen,
                                           SOCKS5_GENERAL_ERROR);
     } else {
-      log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
+      warn(LD_APP,"Fetching socks handshake failed. Closing.");
       connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_GENERAL_ERROR);
     }
     connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
@@ -958,7 +958,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
   } /* else socks handshake is done, continue processing */
 
   tor_strlower(socks->address); /* normalize it */
-  log_fn(LOG_DEBUG,"Client asked for %s:%d", safe_str(socks->address),
+  debug(LD_APP,"Client asked for %s:%d", safe_str(socks->address),
          socks->port);
 
   /* For address map controls, remap the address */
@@ -971,7 +971,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
      * the address through tor; that's likely to fail, and may leak
      * information.
      */
-    log_fn(LOG_WARN,"Missing mapping for virtual address '%s'. Refusing.",
+    warn(LD_APP,"Missing mapping for virtual address '%s'. Refusing.",
            socks->address); /* don't safe_str() this yet. */
     connection_mark_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
     return -1;
@@ -983,7 +983,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
   addresstype = parse_extended_hostname(socks->address);
 
   if (tor_should_handle_stream && addresstype == BAD_HOSTNAME) {
-    log_fn(LOG_WARN, "Invalid hostname %s; rejecting", socks->address);
+    warn(LD_APP, "Invalid hostname %s; rejecting", socks->address);
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
     return -1;
   }
@@ -997,8 +997,8 @@ connection_ap_handshake_process_socks(connection_t *conn)
         conn->chosen_exit_name = tor_strdup(s+1);
         *s = 0;
       } else {
-        log_fn(LOG_WARN,"Malformed exit address '%s.exit'. Refusing.",
-               safe_str(socks->address));
+        warn(LD_APP,"Malformed exit address '%s.exit'. Refusing.",
+             safe_str(socks->address));
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
@@ -1011,9 +1011,9 @@ connection_ap_handshake_process_socks(connection_t *conn)
         in.s_addr = htonl(r->addr);
         strlcpy(socks->address, inet_ntoa(in), sizeof(socks->address));
       } else if (tor_should_handle_stream) {
-        log_fn(LOG_WARN,
-               "Unrecognized server in exit address '%s.exit'. Refusing.",
-               safe_str(socks->address));
+        warn(LD_APP,
+             "Unrecognized server in exit address '%s.exit'. Refusing.",
+             safe_str(socks->address));
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
@@ -1025,7 +1025,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
 
     if (tor_should_handle_stream &&
         address_is_invalid_destination(socks->address)) {
-      log_fn(LOG_WARN,"Destination '%s' seems to be an invalid hostname. Failing.",
+      warn(LD_APP,"Destination '%s' seems to be an invalid hostname. Failing.",
              safe_str(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
@@ -1036,7 +1036,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
       struct in_addr in;
       /* Reply to resolves immediately if we can. */
       if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
-        log_fn(LOG_WARN,"Address to be resolved is too large. Failing.");
+        warn(LD_APP,"Address to be resolved is too large. Failing.");
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL,-1);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
         return -1;
@@ -1052,7 +1052,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
       control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE);
     } else { /* socks->command == SOCKS_COMMAND_CONNECT */
       if (socks->port == 0) {
-        log_fn(LOG_NOTICE,"Application asked to connect to port 0. Refusing.");
+        notice(LD_APP,"Application asked to connect to port 0. Refusing.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
@@ -1062,7 +1062,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
         routerinfo_t *r =
           router_find_exact_exit_enclave(socks->address, socks->port);
         if (r) {
-          log_fn(LOG_INFO,"Redirecting address %s to exit at enclave router %s",
+          info(LD_APP,"Redirecting address %s to exit at enclave router %s",
                  safe_str(socks->address), r->nickname);
           /* use the hex digest, not nickname, in case there are two
              routers with this nickname */
@@ -1092,26 +1092,26 @@ connection_ap_handshake_process_socks(connection_t *conn)
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
       /* if it's a resolve request, fail it right now, rather than
        * building all the circuits and then realizing it won't work. */
-      log_fn(LOG_WARN,"Resolve requests to hidden services not allowed. Failing.");
+      warn(LD_APP,"Resolve requests to hidden services not allowed. Failing.");
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL,-1);
       connection_mark_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
       return -1;
     }
 
     strlcpy(conn->rend_query, socks->address, sizeof(conn->rend_query));
-    log_fn(LOG_INFO,"Got a hidden service request for ID '%s'",
+    info(LD_REND,"Got a hidden service request for ID '%s'",
            safe_str(conn->rend_query));
     /* see if we already have it cached */
     r = rend_cache_lookup_entry(conn->rend_query, -1, &entry);
     if (r<0) {
-      log_fn(LOG_WARN,"Invalid service descriptor %s",
+      warn(LD_REND,"Invalid service descriptor %s",
              safe_str(conn->rend_query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
     if (r==0) {
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
-      log_fn(LOG_INFO, "Unknown descriptor %s. Fetching.",
+      info(LD_REND, "Unknown descriptor %s. Fetching.",
              safe_str(conn->rend_query));
       rend_client_refetch_renddesc(conn->rend_query);
       return 0;
@@ -1120,7 +1120,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
 #define NUM_SECONDS_BEFORE_REFETCH (60*15)
       if (time(NULL) - entry->received < NUM_SECONDS_BEFORE_REFETCH) {
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-        log_fn(LOG_INFO, "Descriptor is here and fresh enough. Great.");
+        info(LD_REND, "Descriptor is here and fresh enough. Great.");
         if (connection_ap_handshake_attach_circuit(conn) < 0) {
           connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
           return -1;
@@ -1128,8 +1128,8 @@ connection_ap_handshake_process_socks(connection_t *conn)
         return 0;
       } else {
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
-        log_fn(LOG_INFO, "Stale descriptor %s. Refetching.",
-               safe_str(conn->rend_query));
+        info(LD_REND, "Stale descriptor %s. Refetching.",
+             safe_str(conn->rend_query));
         rend_client_refetch_renddesc(conn->rend_query);
         return 0;
       }
@@ -1152,7 +1152,7 @@ again:
   test_stream_id = circ->next_stream_id++;
   if (++attempts > 1<<16) {
     /* Make sure we don't loop forever if all stream_id's are used. */
-    log_fn(LOG_WARN,"No unused stream IDs. Failing.");
+    warn(LD_APP,"No unused stream IDs. Failing.");
     return 0;
   }
   if (test_stream_id == 0)
@@ -1191,7 +1191,7 @@ connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
                ap_conn->socks_request->port);
   payload_len = strlen(payload)+1;
 
-  log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
+  debug(LD_APP,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
 
   if (connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
                                    payload, payload_len, ap_conn->cpath_layer) < 0)
@@ -1200,8 +1200,8 @@ connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_CONNECT_WAIT;
-  log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",
-         ap_conn->s, circ->n_circ_id);
+  info(LD_APP,"Address/port sent, ap socket %d, n_circ_id %d",
+       ap_conn->s, circ->n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT);
   return 0;
 }
@@ -1234,14 +1234,14 @@ connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
   payload_len = strlen(string_addr)+1;
   tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
 
-  log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
+  debug(LD_APP,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
 
   if (connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_RESOLVE,
                            string_addr, payload_len, ap_conn->cpath_layer) < 0)
     return -1; /* circuit is closed, don't continue */
 
   ap_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
-  log_fn(LOG_INFO,"Address sent for resolve, ap socket %d, n_circ_id %d",
+  info(LD_APP,"Address sent for resolve, ap socket %d, n_circ_id %d",
          ap_conn->s, circ->n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE);
   return 0;
@@ -1260,10 +1260,10 @@ connection_ap_make_bridge(char *address, uint16_t port)
   connection_t *conn;
   int err;
 
-  log_fn(LOG_INFO,"Making AP bridge to %s:%d ...",safe_str(address),port);
+  info(LD_APP,"Making AP bridge to %s:%d ...",safe_str(address),port);
 
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd)) < 0) {
-    log(LOG_WARN,"Couldn't construct socketpair (%s). Network down? Delaying.",
+    warn(LD_NET,"Couldn't construct socketpair (%s). Network down? Delaying.",
         tor_socket_strerror(-err));
     return -1;
   }
@@ -1304,7 +1304,7 @@ connection_ap_make_bridge(char *address, uint16_t port)
     return -1;
   }
 
-  log_fn(LOG_INFO,"... AP bridge created and connected.");
+  info(LD_APP,"... AP bridge created and connected.");
   return fd[1];
 }
 
@@ -1391,7 +1391,7 @@ connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
      status==SOCKS5_SUCCEEDED ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
 
   if (conn->socks_request->has_finished) {
-    log_fn(LOG_WARN, "Harmless bug: duplicate calls to connection_ap_handshake_socks_reply.");
+    warn(LD_BUG, "Harmless bug: duplicate calls to connection_ap_handshake_socks_reply.");
     return;
   }
   if (replylen) { /* we already have a reply in mind */
@@ -1453,20 +1453,20 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
    */
 
   if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
-    log_fn(LOG_WARN,"relay begin cell has no \\0. Dropping.");
+    warn(LD_PROTOCOL,"relay begin cell has no \\0. Dropping.");
     return 0;
   }
   if (parse_addr_port(cell->payload+RELAY_HEADER_SIZE,&address,NULL,&port)<0) {
-    log_fn(LOG_WARN,"Unable to parse addr:port in relay begin cell. Dropping.");
+    warn(LD_PROTOCOL,"Unable to parse addr:port in relay begin cell. Dropping.");
     return 0;
   }
   if (port==0) {
-    log_fn(LOG_WARN,"Missing port in relay begin cell. Dropping.");
+    warn(LD_PROTOCOL,"Missing port in relay begin cell. Dropping.");
     tor_free(address);
     return 0;
   }
 
-  log_fn(LOG_DEBUG,"Creating new exit connection.");
+  debug(LD_EXIT,"Creating new exit connection.");
   n_stream = connection_new(CONN_TYPE_EXIT);
   n_stream->purpose = EXIT_PURPOSE_CONNECT;
 
@@ -1477,7 +1477,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   n_stream->deliver_window = STREAMWINDOW_START;
 
   if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
-    log_fn(LOG_DEBUG,"begin is for rendezvous. configuring stream.");
+    debug(LD_REND,"begin is for rendezvous. configuring stream.");
     n_stream->address = tor_strdup("(rendezvous)");
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
     strlcpy(n_stream->rend_query, circ->rend_query,
@@ -1485,7 +1485,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);
     if (rend_service_set_connection_addr_port(n_stream, circ) < 0) {
-      log_fn(LOG_INFO,"Didn't find rendezvous service (port %d)",n_stream->port);
+      info(LD_REND,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
       connection_free(n_stream);
       circuit_mark_for_close(circ); /* knock the whole thing down, somebody screwed up */
@@ -1493,7 +1493,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       return 0;
     }
     assert_circuit_ok(circ);
-    log_fn(LOG_DEBUG,"Finished assigning addr/port");
+    debug(LD_REND,"Finished assigning addr/port");
     n_stream->cpath_layer = circ->cpath->prev; /* link it */
 
     /* add it into the linked list of n_streams on this circuit */
@@ -1605,7 +1605,7 @@ connection_exit_connect(connection_t *conn)
 
   if (!connection_edge_is_rendezvous_stream(conn) &&
       router_compare_to_my_exit_policy(conn)) {
-    log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.",
+    info(LD_EXIT,"%s:%d failed exit policy. Closing.",
            safe_str(conn->address), conn->port);
     connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, conn->cpath_layer);
     circuit_detach_stream(circuit_get_by_edge_conn(conn), conn);
@@ -1627,7 +1627,7 @@ connection_exit_connect(connection_t *conn)
           port = r->port_dest;
           in.s_addr = htonl(addr);
           tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
-          log_fn(LOG_DEBUG, "Redirecting connection from %s:%d to %s:%d",
+          debug(LD_EXIT, "Redirecting connection from %s:%d to %s:%d",
                  safe_str(conn->address), conn->port, safe_str(tmpbuf), port);
         }
         break;
@@ -1635,7 +1635,7 @@ connection_exit_connect(connection_t *conn)
     });
   }
 
-  log_fn(LOG_DEBUG,"about to try connecting");
+  debug(LD_EXIT,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
       connection_edge_end_errno(conn, conn->cpath_layer);
@@ -1654,7 +1654,7 @@ connection_exit_connect(connection_t *conn)
 
   conn->state = EXIT_CONN_STATE_OPEN;
   if (connection_wants_to_flush(conn)) { /* in case there are any queued data cells */
-    log_fn(LOG_WARN,"Bug: newly connected conn had data waiting!");
+    warn(LD_BUG,"Bug: newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
   connection_watch_events(conn, EV_READ);
@@ -1714,7 +1714,7 @@ connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   if (conn->chosen_exit_name) {
     if (router_get_by_nickname(conn->chosen_exit_name, 1) != exit) {
       /* doesn't match */
-      log_fn(LOG_DEBUG,"Requested node '%s', considering node '%s'. No.",
+      debug(LD_APP,"Requested node '%s', considering node '%s'. No.",
              conn->chosen_exit_name, exit->nickname);
       return 0;
     }
@@ -1780,7 +1780,7 @@ socks_policy_permits_address(uint32_t addr)
     return 0;
   else if (a==ADDR_POLICY_ACCEPTED)
     return 1;
-  log_fn(LOG_WARN, "Bug: Got unexpected 'maybe' answer from socks policy");
+  warn(LD_BUG, "Bug: Got unexpected 'maybe' answer from socks policy");
   return 0;
 }
 
