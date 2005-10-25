@@ -10,6 +10,7 @@ const char circuituse_c_id[] = "$Id$";
  * \brief Launch the right sort of circuits and attach streams to them.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Longest time to wait for a circuit before closing an AP connection */
@@ -83,7 +84,7 @@ circuit_is_acceptable(circuit_t *circ,
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
     if (!exitrouter) {
-      log_fn(LOG_DEBUG,"Not considering circuit with unknown router.");
+      debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
                  * or is a rendezvous circuit. */
     }
@@ -242,12 +243,14 @@ circuit_expire_building(time_t now)
           victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
          victim->timestamp_dirty + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)) {
       if (victim->n_conn)
-        log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
+        info(LD_CIRC,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
                victim->n_conn->address, victim->n_port, victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state), victim->purpose);
       else
-        log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s, purpose %d)", victim->n_circ_id,
-               victim->state, circuit_state_to_string(victim->state), victim->purpose);
+        info(LD_CIRC,"Abandoning circ %d (state %d:%s, purpose %d)",
+             victim->n_circ_id, victim->state,
+             circuit_state_to_string(victim->state), victim->purpose);
+
       circuit_log_path(LOG_INFO,LD_CIRC,victim);
       circuit_mark_for_close(victim);
     }
@@ -267,11 +270,11 @@ circuit_remove_handled_ports(smartlist_t *needed_ports)
     port = smartlist_get(needed_ports, i);
     tor_assert(*port);
     if (circuit_stream_is_being_handled(NULL, *port, 2)) {
-//      log_fn(LOG_DEBUG,"Port %d is already being handled; removing.", port);
+//      debug(LD_CIRC,"Port %d is already being handled; removing.", port);
       smartlist_del(needed_ports, i--);
       tor_free(port);
     } else {
-      log_fn(LOG_DEBUG,"Port %d is not handled.", *port);
+      debug(LD_CIRC,"Port %d is not handled.", *port);
     }
   }
 }
@@ -359,7 +362,7 @@ circuit_predict_and_launch_new(void)
    * and no circuit is currently available that can handle it. */
   if (!circuit_all_predicted_ports_handled(now, &port_needs_uptime,
                                            &port_needs_capacity)) {
-    log_fn(LOG_INFO,"Have %d clean circs (%d internal), need another exit circ.",
+    info(LD_CIRC,"Have %d clean circs (%d internal), need another exit circ.",
       num, num_internal);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                              port_needs_uptime, port_needs_capacity, 0);
@@ -368,7 +371,7 @@ circuit_predict_and_launch_new(void)
 
   /* Third, see if we need any more hidden service (server) circuits. */
   if (num_rend_services() && num_uptime_internal < 3) {
-    log_fn(LOG_INFO,"Have %d clean circs (%d internal), need another internal circ for my hidden service.",
+    info(LD_CIRC,"Have %d clean circs (%d internal), need another internal circ for my hidden service.",
            num, num_internal);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                              1, 1, 1);
@@ -380,7 +383,7 @@ circuit_predict_and_launch_new(void)
                                      &hidserv_needs_capacity) &&
       ((num_uptime_internal<2 && hidserv_needs_uptime) ||
         num_internal<2)) {
-    log_fn(LOG_INFO,"Have %d clean circs (%d uptime-internal, %d internal),"
+    info(LD_CIRC,"Have %d clean circs (%d uptime-internal, %d internal),"
       " need another hidserv circ.", num, num_uptime_internal, num_internal);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                              hidserv_needs_uptime, hidserv_needs_capacity, 1);
@@ -482,7 +485,7 @@ circuit_detach_stream(circuit_t *circ, connection_t *conn)
     return;
   }
 
-  log_fn(LOG_ERR,"edge conn not in circuit's list?");
+  err(LD_BUG,"edge conn not in circuit's list?");
   tor_assert(0); /* should never get here */
 }
 
@@ -554,8 +557,8 @@ circuit_expire_old_circuits(void)
         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now &&
         CIRCUIT_IS_ORIGIN(circ) &&
         !circ->p_streams /* nothing attached */ ) {
-      log_fn(LOG_DEBUG,"Closing n_circ_id %d (dirty %d secs ago, purp %d)",circ->n_circ_id,
-             (int)(now - circ->timestamp_dirty), circ->purpose);
+      debug(LD_CIRC,"Closing n_circ_id %d (dirty %d secs ago, purp %d)",
+            circ->n_circ_id, (int)(now - circ->timestamp_dirty), circ->purpose);
       /* (only general and purpose_c circs can get dirty) */
       tor_assert(!circ->n_streams);
       tor_assert(circ->purpose <= CIRCUIT_PURPOSE_C_REND_JOINED);
@@ -565,7 +568,7 @@ circuit_expire_old_circuits(void)
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
 #define CIRCUIT_UNUSED_CIRC_TIMEOUT 3600 /* an hour */
       if (circ->timestamp_created + CIRCUIT_UNUSED_CIRC_TIMEOUT < now) {
-        log_fn(LOG_DEBUG,"Closing circuit that has been unused for %d seconds.",
+        debug(LD_CIRC,"Closing circuit that has been unused for %d seconds.",
                (int)(now - circ->timestamp_created));
         circuit_mark_for_close(circ);
       }
@@ -594,7 +597,7 @@ circuit_testing_failed(circuit_t *circ, int at_last_hop)
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   else
 #endif
-  log_fn(LOG_INFO,"Our testing circuit (to see if your ORPort is reachable) has failed. I'll try again later.");
+  info(LD_GENERAL,"Our testing circuit (to see if your ORPort is reachable) has failed. I'll try again later.");
 }
 
 /** The circuit <b>circ</b> has just become open. Take the next
@@ -633,7 +636,7 @@ circuit_has_opened(circuit_t *circ)
       circuit_testing_opened(circ);
       break;
     default:
-      log_fn(LOG_ERR,"unhandled purpose %d",circ->purpose);
+      err(LD_BUG,"unhandled purpose %d",circ->purpose);
       tor_assert(0);
   }
 }
@@ -694,9 +697,10 @@ circuit_build_failed(circuit_t *circ)
       /* at Bob, connecting to rend point */
       /* Don't increment failure count, since Alice may have picked
        * the rendezvous point maliciously */
-      log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s (%s hop failed).",
-             build_state_get_exit_nickname(circ->build_state),
-             failed_at_last_hop?"last":"non-last");
+      info(LD_REND,
+           "Couldn't connect to Alice's chosen rend point %s (%s hop failed).",
+           build_state_get_exit_nickname(circ->build_state),
+           failed_at_last_hop?"last":"non-last");
       rend_service_relaunch_rendezvous(circ);
       break;
     default:
@@ -746,7 +750,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
   circuit_t *circ;
 
   if (!has_fetched_directory) {
-    log_fn(LOG_DEBUG,"Haven't fetched directory yet; canceling circuit launch.");
+    debug(LD_CIRC,"Haven't fetched directory yet; canceling circuit launch.");
     return NULL;
   }
 
@@ -755,7 +759,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
     /* see if there are appropriate circs available to cannibalize. */
     if ((circ = circuit_get_clean_open(CIRCUIT_PURPOSE_C_GENERAL, need_uptime,
                                        need_capacity, internal))) {
-      log_fn(LOG_INFO,"Cannibalizing circ '%s' for purpose %d",
+      info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d",
              build_state_get_exit_nickname(circ->build_state), purpose);
       circ->purpose = purpose;
       /* reset the birth date of this circ, else expire_building
@@ -776,8 +780,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
             return NULL;
           break;
         default:
-          log_fn(LOG_WARN,"Bug: unexpected purpose %d when cannibalizing a general circ.",
-                 purpose);
+          warn(LD_BUG, "Bug: unexpected purpose %d when cannibalizing a general circ.", purpose);
           tor_fragile_assert();
           return NULL;
       }
@@ -808,7 +811,8 @@ circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
   if (exit_nickname) {
     router = router_get_by_nickname(exit_nickname, 1);
     if (!router) {
-      log_fn(LOG_WARN, "No such OR as '%s'", exit_nickname);
+      /*XXXXNM domain? */
+      warn(LD_GENERAL, "No such OR as '%s'", exit_nickname);
       return NULL;
     }
   }
@@ -823,7 +827,7 @@ static void
 circuit_increment_failure_count(void)
 {
   ++n_circuit_failures;
-  log_fn(LOG_DEBUG,"n_circuit_failures now %d.",n_circuit_failures);
+  debug(LD_CIRC,"n_circuit_failures now %d.",n_circuit_failures);
 }
 
 /** Reset the failure count for opening general circuits. This means
@@ -869,7 +873,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 
   if (!has_fetched_directory) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
-      log(LOG_NOTICE,"Application request when we're believed to be offline. Optimistically trying again.");
+      notice(LD_APP|LD_DIR,"Application request when we're believed to be offline. Optimistically trying directory fetches again.");
       router_reset_status_download_failures();
       router_reset_descriptor_download_failures();
       update_networkstatus_downloads(time(NULL));
@@ -895,7 +899,8 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       addr = ntohl(in.s_addr);
     if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
                                               need_uptime)) {
-      log(LOG_NOTICE,"No Tor server exists that allows exit to %s:%d. Rejecting.",
+      /* LD_GENERAL? LD_APP? ???? NM */
+      notice(LD_CIRC,"No Tor server exists that allows exit to %s:%d. Rejecting.",
              safe_str(conn->socks_request->address), conn->socks_request->port);
       return -1;
     }
@@ -912,14 +917,14 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       /* need to pick an intro point */
       extend_info = rend_client_get_random_intro(conn->rend_query);
       if (!extend_info) {
-        log_fn(LOG_INFO,"No intro points for '%s': refetching service descriptor.",
-               safe_str(conn->rend_query));
+        info(LD_REND,"No intro points for '%s': refetching service descriptor.",
+             safe_str(conn->rend_query));
         rend_client_refetch_renddesc(conn->rend_query);
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
-      log_fn(LOG_INFO,"Chose %s as intro point for %s.",
-             extend_info->nickname, safe_str(conn->rend_query));
+      info(LD_REND,"Chose %s as intro point for %s.",
+           extend_info->nickname, safe_str(conn->rend_query));
     }
 
     /* If we have specified a particular exit node for our
@@ -929,7 +934,8 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       if (conn->chosen_exit_name) {
         routerinfo_t *r;
         if (!(r = router_get_by_nickname(conn->chosen_exit_name, 1))) {
-          log_fn(LOG_NOTICE,"Requested exit point '%s' is not known. Closing.",
+          /*XXXX NM domain? */
+          notice(LD_CIRC,"Requested exit point '%s' is not known. Closing.",
                  conn->chosen_exit_name);
           return -1;
         }
@@ -963,8 +969,9 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     }
   }
   if (!circ)
-    log_fn(LOG_INFO,"No safe circuit (purpose %d) ready for edge connection; delaying.",
-           desired_circuit_purpose);
+    info(LD_APP,
+         "No safe circuit (purpose %d) ready for edge connection; delaying.",
+         desired_circuit_purpose);
   *circp = circ;
   return 0;
 }
@@ -977,7 +984,7 @@ static void
 link_apconn_to_circ(connection_t *apconn, circuit_t *circ)
 {
   /* add it into the linked list of streams on this circuit */
-  log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
+  debug(LD_APP|LD_CIRC,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
   apconn->timestamp_lastread = time(NULL); /* reset it, so we can measure circ timeouts */
   apconn->next_stream = circ->p_streams;
   apconn->on_circuit = circ;
@@ -1093,8 +1100,9 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
 
   conn_age = time(NULL) - conn->timestamp_created;
   if (conn_age > CONN_AP_MAX_ATTACH_DELAY) {
-    log(LOG_NOTICE,"Tried for %d seconds to get a connection to %s:%d. Giving up.",
-        conn_age, safe_str(conn->socks_request->address), conn->socks_request->port);
+    notice(LD_APP,"Tried for %d seconds to get a connection to %s:%d. Giving up.",
+           conn_age, safe_str(conn->socks_request->address),
+           conn->socks_request->port);
     return -1;
   }
 
@@ -1104,12 +1112,12 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     if (conn->chosen_exit_name) {
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       if (!router) {
-        log_fn(LOG_WARN,"Requested exit point '%s' is not known. Closing.",
+        warn(LD_APP,"Requested exit point '%s' is not known. Closing.",
                conn->chosen_exit_name);
         return -1;
       }
       if (!connection_ap_can_use_exit(conn, router)) {
-        log_fn(LOG_WARN, "Requested exit point '%s' would refuse request. Closing.",
+        warn(LD_APP, "Requested exit point '%s' would refuse request. Closing.",
                conn->chosen_exit_name);
         return -1;
       }
@@ -1120,10 +1128,10 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     if (retval < 1)
       return retval;
 
-    log_fn(LOG_DEBUG,"Attaching apconn to circ %d (stream %d sec old).",
+    debug(LD_APP|LD_CIRC,"Attaching apconn to circ %d (stream %d sec old).",
            circ->n_circ_id, conn_age);
     /* here, print the circ's path. so people can figure out which circs are sucking. */
-    circuit_log_path(LOG_INFO,LD_APP,circ);
+    circuit_log_path(LOG_INFO,LD_APP|LD_CIRC,circ);
 
     /* We have found a suitable circuit for our conn. Hurray. */
     return connection_ap_handshake_attach_chosen_circuit(conn, circ);
@@ -1141,8 +1149,9 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     if (retval > 0) {
       tor_assert(rendcirc);
       /* one is already established, attach */
-      log_fn(LOG_INFO,"rend joined circ %d already here. attaching. (stream %d sec old)",
-             rendcirc->n_circ_id, conn_age);
+      info(LD_REND,
+           "rend joined circ %d already here. attaching. (stream %d sec old)",
+           rendcirc->n_circ_id, conn_age);
       /* Mark rendezvous circuits as 'newly dirty' every time you use
        * them, since the process of rebuilding a rendezvous circ is so
        * expensive. There is a tradeoffs between linkability and
@@ -1156,7 +1165,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     }
 
     if (rendcirc && rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
-      log_fn(LOG_INFO,"pending-join circ %d already here, with intro ack. Stalling. (stream %d sec old)", rendcirc->n_circ_id, conn_age);
+      info(LD_REND,"pending-join circ %d already here, with intro ack. Stalling. (stream %d sec old)", rendcirc->n_circ_id, conn_age);
       return 0;
     }
 
@@ -1167,20 +1176,21 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     if (retval > 0) {
       /* one has already sent the intro. keep waiting. */
       tor_assert(introcirc);
-      log_fn(LOG_INFO,"Intro circ %d present and awaiting ack (rend %d). Stalling. (stream %d sec old)",
-             introcirc->n_circ_id, rendcirc ? rendcirc->n_circ_id : 0, conn_age);
+      info(LD_REND,
+           "Intro circ %d present and awaiting ack (rend %d). Stalling. (stream %d sec old)",
+           introcirc->n_circ_id, rendcirc ? rendcirc->n_circ_id : 0, conn_age);
       return 0;
     }
 
     /* now rendcirc and introcirc are each either undefined or not finished */
 
     if (rendcirc && introcirc && rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
-      log_fn(LOG_INFO,"ready rend circ %d already here (no intro-ack yet on intro %d). (stream %d sec old)",
+      info(LD_REND,"ready rend circ %d already here (no intro-ack yet on intro %d). (stream %d sec old)",
              rendcirc->n_circ_id, introcirc->n_circ_id, conn_age);
 
       tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
       if (introcirc->state == CIRCUIT_STATE_OPEN) {
-        log_fn(LOG_INFO,"found open intro circ %d (rend %d); sending introduction. (stream %d sec old)",
+        info(LD_REND,"found open intro circ %d (rend %d); sending introduction. (stream %d sec old)",
                introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
         if (rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
@@ -1193,9 +1203,9 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
       }
     }
 
-    log_fn(LOG_INFO,"Intro (%d) and rend (%d) circs are not both ready. Stalling conn. (%d sec old)",
-                     introcirc ? introcirc->n_circ_id : 0,
-                     rendcirc ? rendcirc->n_circ_id : 0, conn_age);
+    info(LD_REND, "Intro (%d) and rend (%d) circs are not both ready. Stalling conn. (%d sec old)",
+         introcirc ? introcirc->n_circ_id : 0,
+         rendcirc ? rendcirc->n_circ_id : 0, conn_age);
     return 0;
   }
 }

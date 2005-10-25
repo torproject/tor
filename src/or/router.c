@@ -136,11 +136,11 @@ rotate_onion_key(void)
   tor_snprintf(fname_prev,sizeof(fname_prev),
            "%s/keys/secret_onion_key.old",get_options()->DataDirectory);
   if (!(prkey = crypto_new_pk_env())) {
-    err("Error creating crypto environment.");
+    err(LD_GENERAL,"Error creating crypto environment.");
     goto error;
   }
   if (crypto_pk_generate_key(prkey)) {
-    err("Error generating onion key");
+    err(LD_BUG,"Error generating onion key");
     goto error;
   }
   if (file_status(fname) == FN_FILE) {
@@ -148,7 +148,7 @@ rotate_onion_key(void)
       goto error;
   }
   if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-    err("Couldn't write generated key to \"%s\".", fname);
+    err(LD_FS,"Couldn't write generated key to \"%s\".", fname);
     goto error;
   }
   info(LD_GENERAL, "Rotating onion key");
@@ -196,34 +196,34 @@ init_key_from_file(const char *fname)
   FILE *file = NULL;
 
   if (!(prkey = crypto_new_pk_env())) {
-    err("Error creating crypto environment.");
+    err(LD_GENERAL,"Error creating crypto environment.");
     goto error;
   }
 
   switch (file_status(fname)) {
     case FN_DIR:
     case FN_ERROR:
-      err("Can't read key from \"%s\"", fname);
+      err(LD_FS,"Can't read key from \"%s\"", fname);
       goto error;
     case FN_NOENT:
       info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.", fname);
       if (crypto_pk_generate_key(prkey)) {
-        err("Error generating onion key");
+        err(LD_GENERAL,"Error generating onion key");
         goto error;
       }
       if (crypto_pk_check_key(prkey) <= 0) {
-        err("Generated key seems invalid");
+        err(LD_GENERAL,"Generated key seems invalid");
         goto error;
       }
       info(LD_GENERAL, "Generated key seems valid");
       if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-        err("Couldn't write generated key to \"%s\".", fname);
+        err(LD_FS,"Couldn't write generated key to \"%s\".", fname);
         goto error;
       }
       return prkey;
     case FN_FILE:
       if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
-        err("Error loading private key.");
+        err(LD_GENERAL,"Error loading private key.");
         goto error;
       }
       return prkey;
@@ -274,7 +274,7 @@ init_keys(void)
     if (tor_tls_context_new(get_identity_key(), 1,
                             options->Nickname ? options->Nickname : "client",
                             MAX_SSL_KEY_LIFETIME) < 0) {
-      err("Error creating TLS context for OP.");
+      err(LD_GENERAL,"Error creating TLS context for OP.");
       return -1;
     }
     return 0;
@@ -315,25 +315,25 @@ init_keys(void)
   /* 3. Initialize link key and TLS context. */
   if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
                           MAX_SSL_KEY_LIFETIME) < 0) {
-    err("Error initializing TLS context");
+    err(LD_GENERAL,"Error initializing TLS context");
     return -1;
   }
   /* 4. Dump router descriptor to 'router.desc' */
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
   if (!mydesc) {
-    err("Error initializing descriptor.");
+    err(LD_GENERAL,"Error initializing descriptor.");
     return -1;
   }
   if (authdir_mode(options)) {
     const char *m;
     /* We need to add our own fingerprint so it gets recognized. */
     if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
-      err("Error adding own fingerprint to approved set");
+      err(LD_GENERAL,"Error adding own fingerprint to approved set");
       return -1;
     }
     if (dirserv_add_descriptor(mydesc, &m) < 0) {
-      err("Unable to add own descriptor to directory: %s",
+      err(LD_GENERAL,"Unable to add own descriptor to directory: %s",
           m?m:"<unknown error>");
       return -1;
     }
@@ -348,24 +348,26 @@ init_keys(void)
   tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
   if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 1)<0) {
-    err("Error computing fingerprint");
+    err(LD_GENERAL,"Error computing fingerprint");
     return -1;
   }
   tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
   if (tor_snprintf(fingerprint_line, sizeof(fingerprint_line),
                    "%s %s\n",options->Nickname, fingerprint) < 0) {
-    err("Error writing fingerprint line");
+    err(LD_GENERAL,"Error writing fingerprint line");
     return -1;
   }
-  if (write_str_to_file(keydir, fingerprint_line, 0))
+  if (write_str_to_file(keydir, fingerprint_line, 0)) {
+    err(LD_FS, "Error writing fingerprint line to file");
     return -1;
+  }
   if (!authdir_mode(options))
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
   tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
   info(LD_DIRSERV,"Loading approved fingerprints from \"%s\"...",keydir);
   if (dirserv_parse_fingerprint_file(keydir) < 0) {
-    err("Error loading fingerprints");
+    err(LD_GENERAL,"Error loading fingerprints");
     return -1;
   }
   /* 6b. [authdirserver only] add own key to approved directories. */
@@ -1008,7 +1010,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   /* record our fingerprint, so we can include it in the descriptor */
   if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint, 1)<0) {
-    err("Error computing fingerprint");
+    err(LD_BUG,"Error computing fingerprint");
     return -1;
   }
 
@@ -1157,7 +1159,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   cp = s_tmp = s_dup = tor_strdup(s);
   ri_tmp = router_parse_entry_from_string(cp, NULL);
   if (!ri_tmp) {
-    err("We just generated a router descriptor we can't parse: <<%s>>", s);
+    err(LD_BUG,"We just generated a router descriptor we can't parse: <<%s>>", s);
     return -1;
   }
   tor_free(s_dup);
