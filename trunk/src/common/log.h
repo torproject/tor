@@ -84,8 +84,9 @@
 #define LD_DIRSERV  (1u<<14)
 /** Onion routing protocol. */
 #define LD_OR       (1u<<15)
-/** Connections leaving Tor, other exit stuff. */
-#define LD_EXIT     (1u<<16)
+/** Generic edge-connection functionality. */
+#define LD_EDGE     (1u<<16)
+#define LD_EXIT     LD_EDGE
 
 typedef void (*log_callback)(int severity, unsigned int domain, const char *msg);
 
