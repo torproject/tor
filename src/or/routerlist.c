@@ -2714,11 +2714,6 @@ router_list_downloadable(void)
     }
   }
 
-  /*
-  log_fn(LOG_NOTICE, "%d downloads already in progress",
-         smartlist_len(downloading));
-  smartlist_sort_strings(downloading);
-  */
   if (n_downloadable) {
     SMARTLIST_FOREACH(downloading, const char *, d,
     {
@@ -2727,7 +2722,6 @@ router_list_downloadable(void)
         rs->should_download = 0;
         --n_downloadable;
         ++n_in_progress;
-        // log_fn(LOG_NOTICE, "%s is in-progress; not fetching", dl);
       }
     });
   }
