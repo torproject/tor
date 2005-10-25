@@ -932,3 +932,31 @@ A.1. Differences between spec and implementation
   addresses in their exit policies.  The current codebase has no IPv6
   support at all.
 
+B. Things that should change in a later version of the Tor protocol
+
+
+B.1. ... but which will require backward-incompatible change
+
+  - Circuit IDs should be longer.
+  - IPv6 everywhere.
+  - Maybe, keys should be longer.
+  - Drop backward compatibility.
+  - We should use a 128-bit subgroup of our DH prime.
+  - Handshake should use HMAC.
+  - Multiple cell lengths
+  - Ability to split circuits across paths (If this is useful.)
+  - SENDME windows should be dynamic.
+
+  - Directory
+     - Stop ever mentioning socks ports
+
+B.1. ... and that will require no changes
+
+   - Mention multiple addr/port combos
+   - Advertised outbound IP?
+   - Migrate streams across circuits.
+
+B.2. ... and that we have no idea how to do.
+
+   - UDP (as transport)
+   - UDP (as content)
