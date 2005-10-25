@@ -46,7 +46,7 @@ unsigned long tor_tls_get_n_bytes_written(tor_tls_t *tls);
 
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */
-#define check_no_tls_errors() _check_no_tls_errors(_SHORT_FILE_,__LINE__)
+#define check_no_tls_errors() _check_no_tls_errors(__FILE__,__LINE__)
 
 void _check_no_tls_errors(const char *fname, int line);
 

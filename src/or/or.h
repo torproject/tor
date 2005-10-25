@@ -1379,7 +1379,7 @@ void assert_buf_ok(buf_t *buf);
 /********************************* circuitbuild.c **********************/
 
 char *circuit_list_path(circuit_t *circ, int verbose);
-void circuit_log_path(int severity, int domain, circuit_t *circ);
+void circuit_log_path(int severity, unsigned int domain, circuit_t *circ);
 void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 circuit_t *circuit_init(uint8_t purpose, int need_uptime,
@@ -1721,7 +1721,7 @@ int control_event_circuit_status(circuit_t *circ, circuit_status_event_t e);
 int control_event_stream_status(connection_t *conn, stream_status_event_t e);
 int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
-void control_event_logmsg(int severity, int domain, const char *msg);
+void control_event_logmsg(int severity, unsigned int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,time_t expires);
 

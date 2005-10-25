@@ -100,8 +100,13 @@ const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
 #define TOR_ISDIGIT(c)   isdigit((int)(unsigned char)(c))
 #define TOR_ISPRINT(c)   isprint((int)(unsigned char)(c))
 
-#define _SHORT_FILE_ (_tor_fix_source_file(__FILE__))
-const char *_tor_fix_source_file(const char *fname);
+#ifdef MS_WINDOWS
+#define _SHORT_FILE_ (tor_fix_source_file(__FILE__))
+const char *tor_fix_source_file(const char *fname);
+#else
+#define _SHORT_FILE_ (__FILE__)
+#define tor_fix_source_file(s) (s)
+#endif
 
 /* ===== Time compatibility */
 #if !defined(HAVE_GETTIMEOFDAY) && !defined(HAVE_STRUCT_TIMEVAL_TV_SEC)

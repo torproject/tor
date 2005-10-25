@@ -53,39 +53,41 @@
 /* Logging domains */
 
 /** Catch-all for miscellaneous events and fatal errors */
-#define LD_GENERAL  0
+#define LD_GENERAL  (1u<<0)
 /** The cryptography subsytem */
-#define LD_CRYPTO   1
+#define LD_CRYPTO   (1u<<1)
 /** Networking */
-#define LD_NET      2
+#define LD_NET      (1u<<2)
 /** Parsing and acting on our configuration */
-#define LD_CONFIG   3
+#define LD_CONFIG   (1u<<3)
 /** Reading and writing from the filesystem */
-#define LD_FS       4
+#define LD_FS       (1u<<4)
 /** Other servers' (non)compliance with the Tor protocol */
-#define LD_PROTOCOL 5
+#define LD_PROTOCOL (1u<<5)
 /** Memory management */
-#define LD_MM       6
+#define LD_MM       (1u<<6)
 /** HTTP implementation */
-#define LD_HTTP     7
+#define LD_HTTP     (1u<<7)
 /** Application (socks) requests */
-#define LD_APP      8
+#define LD_APP      (1u<<8)
 /** Communication via the controller protocol */
-#define LD_CONTROL  9
+#define LD_CONTROL  (1u<<9)
 /** Building, using, and managing circuits */
-#define LD_CIRC     10
+#define LD_CIRC     (1u<<10)
 /** Hidden services */
-#define LD_REND     11
+#define LD_REND     (1u<<11)
 /** Internal errors in this Tor process. */
-#define LD_BUG      12
+#define LD_BUG      (1u<<12)
 /** Learning and using information about Tor servers. */
-#define LD_DIR      13
+#define LD_DIR      (1u<<13)
 /** Learning and using information about Tor servers. */
-#define LD_DIRSERV  14
+#define LD_DIRSERV  (1u<<14)
 /** Onion routing protocol. */
-#define LD_OR       15
+#define LD_OR       (1u<<15)
+/** Connections leaving Tor, other exit stuff. */
+#define LD_EXIT     (1u<<16)
 
-typedef void (*log_callback)(int severity, int domain, const char *msg);
+typedef void (*log_callback)(int severity, unsigned int domain, const char *msg);
 
 int parse_log_level(const char *level);
 const char *log_level_to_string(int level);
@@ -108,10 +110,10 @@ void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
 
 /* Outputs a message to stdout */
-void _log(int severity, int domain, const char *format, ...) CHECK_PRINTF(3,4);
+void _log(int severity, unsigned int domain, const char *format, ...) CHECK_PRINTF(3,4);
 
 #ifdef __GNUC__
-void _log_fn(int severity, int domain,
+void _log_fn(int severity, unsigned int domain,
              const char *funcname, const char *format, ...)
   CHECK_PRINTF(4,5);
 /** Log a message at level <b>severity</b>, using a pretty-printed version
@@ -134,16 +136,16 @@ void _log_fn(int severity, int domain,
   _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
 #define warn(domain, args...)                           \
   _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
-#define err(args...)                                    \
-  _log_fn(LOG_ERR, LD_GENERAL, __PRETTY_FUNCTION__, args)
+#define err(domain, args...)                            \
+  _log_fn(LOG_ERR, domain, __PRETTY_FUNCTION__, args)
 #else
 
-void _log_fn(int severity, int domain, const char *format, ...);
-void _debug(int domain, const char *format, ...);
-void _info(int domain, const char *format, ...);
-void _notice(int domain, const char *format, ...);
-void _warn(int domain, const char *format, ...);
-void _err(const char *format, ...);
+void _log_fn(int severity, unsigned int domain, const char *format, ...);
+void _debug(unsigned int domain, const char *format, ...);
+void _info(unsigned int domain, const char *format, ...);
+void _notice(unsigned int domain, const char *format, ...);
+void _warn(unsigned int domain, const char *format, ...);
+void _err(unsigned int domain, const char *format, ...);
 
 #define log _log /* hack it so we don't conflict with log() as much */
 

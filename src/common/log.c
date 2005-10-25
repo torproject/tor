@@ -184,7 +184,7 @@ format_msg(char *buf, size_t buf_len,
  * message.  The actual message is derived as from tor_snprintf(format,ap).
  */
 static void
-logv(int severity, int domain, const char *funcname, const char *format,
+logv(int severity, unsigned int domain, const char *funcname, const char *format,
      va_list ap)
 {
   char buf[10024];
@@ -234,7 +234,7 @@ logv(int severity, int domain, const char *funcname, const char *format,
 
 /** Output a message to the log. */
 void
-_log(int severity, int domain, const char *format, ...)
+_log(int severity, unsigned int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -245,7 +245,7 @@ _log(int severity, int domain, const char *format, ...)
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
 #ifdef __GNUC__
 void
-_log_fn(int severity, int domain, const char *fn, const char *format, ...)
+_log_fn(int severity, unsigned int domain, const char *fn, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -255,7 +255,7 @@ _log_fn(int severity, int domain, const char *fn, const char *format, ...)
 #else
 const char *_log_fn_function_name=NULL;
 void
-_log_fn(int severity, int domain, const char *format, ...)
+_log_fn(int severity, unsigned int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -264,7 +264,7 @@ _log_fn(int severity, int domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-_debug(int domain, const char *format, ...)
+_debug(unsigned int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -273,7 +273,7 @@ _debug(int domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-_info(int domain, const char *format, ...)
+_info(unsigned int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -282,7 +282,7 @@ _info(int domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-_notice(int domain, const char *format, ...)
+_notice(unsigned int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -291,7 +291,7 @@ _notice(int domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-_warn(int domain, const char *format, ...)
+_warn(unsigned int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -300,11 +300,11 @@ _warn(int domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-_err(const char *format, ...)
+_err(unsigned int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(LOG_ERR, LD_GENERAL, _log_fn_function_name, format, ap);
+  logv(LOG_ERR, domain, _log_fn_function_name, format, ap);
   va_end(ap);
   _log_fn_function_name = NULL;
 }
