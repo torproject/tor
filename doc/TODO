@@ -13,7 +13,9 @@ PHOBOS  - phobos claims
         X Abandoned
 
 Non-Coding, Soon:
-N - contact umass folks
+N - Mark up spec; note unclear points about servers
+N - Clean up dir spec.
+N . contact umass folks
 N - Mention controller libs someplace.
   D FAQ entry: why gnutls is bad/not good for tor
 P - flesh out the rest of the section 6 of the faq
