@@ -32,6 +32,7 @@ const char crypto_c_id[] = "$Id$";
 #include <openssl/dh.h>
 #include <openssl/rsa.h>
 #include <openssl/dh.h>
+#include <openssl/conf.h>
 
 #include <stdlib.h>
 #include <assert.h>
@@ -220,16 +221,26 @@ crypto_global_init(int useAccel)
   return 0;
 }
 
+/** Free crypto resources held by this thread. */
+void
+crypto_thread_cleanup(void)
+{
+  ERR_remove_state(0);
+}
+
 /** Uninitialize the crypto library. Return 0 on success, -1 on failure.
  */
 int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
+  //ERR_remove_state(0);
   ERR_free_strings();
 #ifndef NO_ENGINES
   ENGINE_cleanup();
 #endif
+  CONF_modules_unload(1);
+  CRYPTO_cleanup_all_ex_data();
 #ifdef TOR_IS_MULTITHREADED
   if (_n_openssl_mutexes) {
     int n = _n_openssl_mutexes;
