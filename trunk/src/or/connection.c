@@ -11,6 +11,7 @@ const char connection_c_id[] = "$Id$";
  * on connections.
  **/
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 static connection_t *connection_create_listener(const char *listenaddress,
@@ -51,7 +52,7 @@ conn_type_to_string(int type)
     case CONN_TYPE_CONTROL_LISTENER: return "Control listener";
     case CONN_TYPE_CONTROL: return "Control";
     default:
-      log_fn(LOG_WARN, "Bug: unknown connection type %d", type);
+      warn(LD_BUG, "Bug: unknown connection type %d", type);
       tor_snprintf(buf, sizeof(buf), "unknown [%d]", type);
       return buf;
   }
@@ -134,7 +135,7 @@ conn_state_to_string(int type, int state)
       break;
   }
 
-  log_fn(LOG_WARN, "Bug: unknown connection state %d (type %d)", state, type);
+  warn(LD_BUG, "Bug: unknown connection state %d (type %d)", state, type);
   tor_snprintf(buf, sizeof(buf),
                "unknown state [%d] on unknown [%s] connection",
                state, conn_type_to_string(type));
@@ -191,12 +192,12 @@ connection_unregister(connection_t *conn)
 {
   if (conn->read_event) {
     if (event_del(conn->read_event))
-      log_fn(LOG_WARN, "Error removing read event for %d", conn->s);
+      warn(LD_BUG, "Error removing read event for %d", conn->s);
     tor_free(conn->read_event);
   }
   if (conn->write_event) {
     if (event_del(conn->write_event))
-      log_fn(LOG_WARN, "Error removing write event for %d", conn->s);
+      warn(LD_BUG, "Error removing write event for %d", conn->s);
     tor_free(conn->write_event);
   }
 }
@@ -234,7 +235,7 @@ _connection_free(connection_t *conn)
   tor_free(conn->requested_resource);
 
   if (conn->s >= 0) {
-    log_fn(LOG_DEBUG,"closing fd %d.",conn->s);
+    debug(LD_NET,"closing fd %d.",conn->s);
     tor_close_socket(conn->s);
   }
 
@@ -312,7 +313,7 @@ connection_about_to_close_connection(connection_t *conn)
 
   if (CONN_IS_EDGE(conn)) {
     if (!conn->has_sent_end) {
-      log_fn(LOG_WARN,"Harmless bug: Edge connection (marked at %s:%d) hasn't sent end yet?", conn->marked_for_close_file, conn->marked_for_close);
+      warn(LD_BUG,"Harmless bug: Edge connection (marked at %s:%d) hasn't sent end yet?", conn->marked_for_close_file, conn->marked_for_close);
       tor_fragile_assert();
     }
   }
@@ -356,7 +357,7 @@ connection_about_to_close_connection(connection_t *conn)
       if (conn->socks_request->has_finished == 0) {
         /* since conn gets removed right after this function finishes,
          * there's no point trying to send back a reply at this point. */
-        log_fn(LOG_WARN,"Bug: Closing stream (marked at %s:%d) without sending back a socks reply.",
+        warn(LD_BUG,"Bug: Closing stream (marked at %s:%d) without sending back a socks reply.",
                conn->marked_for_close_file, conn->marked_for_close);
       } else {
         control_event_stream_status(conn, STREAM_EVENT_CLOSED);
@@ -387,12 +388,12 @@ connection_close_immediate(connection_t *conn)
 {
   assert_connection_ok(conn,0);
   if (conn->s < 0) {
-    log_fn(LOG_WARN,"Bug: Attempt to close already-closed connection.");
+    err(LD_BUG,"Bug: Attempt to close already-closed connection.");
     tor_fragile_assert();
     return;
   }
   if (conn->outbuf_flushlen) {
-    log_fn(LOG_INFO,"fd %d, type %s, state %s, %d bytes on outbuf.",
+    info(LD_NET,"fd %d, type %s, state %s, %d bytes on outbuf.",
            conn->s, conn_type_to_string(conn->type),
            conn_state_to_string(conn->type, conn->state),
            (int)conn->outbuf_flushlen);
@@ -418,7 +419,7 @@ _connection_mark_for_close(connection_t *conn, int line, const char *file)
   tor_assert(file);
 
   if (conn->marked_for_close) {
-    log(LOG_WARN, "Duplicate call to connection_mark_for_close at %s:%d"
+    log(LOG_WARN,LD_BUG,"Duplicate call to connection_mark_for_close at %s:%d"
         " (first at %s:%d)", file, line, conn->marked_for_close_file,
         conn->marked_for_close);
     tor_fragile_assert();
@@ -464,7 +465,8 @@ connection_expire_held_open(void)
           severity = LOG_INFO;
         else
           severity = LOG_NOTICE;
-        log_fn(severity, "Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %s).",
+        log_fn(severity, LD_NET,
+               "Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %s).",
                conn->s, conn_type_to_string(conn->type),
                conn_state_to_string(conn->type, conn->state));
         conn->hold_open_until_flushed = 0;
@@ -496,7 +498,7 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
 
   memset(&listenaddr,0,sizeof(struct sockaddr_in));
   if (parse_addr_port(listenaddress, &address, &addr, &usePort)<0) {
-    log_fn(LOG_WARN, "Error parsing/resolving ListenAddress %s",listenaddress);
+    warn(LD_CONFIG, "Error parsing/resolving ListenAddress %s",listenaddress);
     return NULL;
   }
 
@@ -506,15 +508,15 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
   listenaddr.sin_family = AF_INET;
   listenaddr.sin_port = htons((uint16_t) usePort);
 
-  log_fn(LOG_NOTICE, "Opening %s on %s:%d",
+  notice(LD_NET, "Opening %s on %s:%d",
          conn_type_to_string(type), address, usePort);
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
-    log_fn(LOG_WARN,"Socket creation failed.");
+    warn(LD_NET,"Socket creation failed.");
     goto err;
   } else if (!SOCKET_IS_POLLABLE(s)) {
-    log_fn(LOG_WARN,"Too many connections; can't create pollable listener.");
+    warn(LD_NET,"Too many connections; can't create pollable listener.");
     tor_close_socket(s);
     goto err;
   }
@@ -528,13 +530,13 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
 #endif
 
   if (bind(s,(struct sockaddr *)&listenaddr,sizeof(listenaddr)) < 0) {
-    log_fn(LOG_WARN, "Could not bind to %s:%u: %s", address, usePort,
+    warn(LD_NET, "Could not bind to %s:%u: %s", address, usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     goto err;
   }
 
   if (listen(s,SOMAXCONN) < 0) {
-    log_fn(LOG_WARN, "Could not listen on %s:%u: %s", address, usePort,
+    warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     goto err;
   }
@@ -548,12 +550,12 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
   conn->port = usePort;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
-    log_fn(LOG_WARN,"connection_add failed. Giving up.");
+    warn(LD_NET,"connection_add failed. Giving up.");
     connection_free(conn);
     goto err;
   }
 
-  log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string(type), usePort);
+  debug(LD_NET,"%s listening on port %u.",conn_type_to_string(type), usePort);
 
   conn->state = LISTENER_STATE_READY;
   connection_start_reading(conn);
@@ -574,17 +576,17 @@ check_sockaddr_in(struct sockaddr *sa, int len, int level)
   struct sockaddr_in *sin=(struct sockaddr_in*)sa;
 
   if (len != sizeof(struct sockaddr_in)) {
-    log_fn(level, "Length of address not as expected: %d vs %d",
+    log_fn(level, LD_NET, "Length of address not as expected: %d vs %d",
            len,(int)sizeof(struct sockaddr_in));
     ok = 0;
   }
   if (sa->sa_family != AF_INET) {
-    log_fn(level, "Family of address not as expected: %d vs %d",
+    log_fn(level, LD_NET, "Family of address not as expected: %d vs %d",
            sa->sa_family, AF_INET);
     ok = 0;
   }
   if (sin->sin_addr.s_addr == 0 || sin->sin_port == 0) {
-    log_fn(level, "Address for new connection has address/port equal to zero.");
+    log_fn(level, LD_NET, "Address for new connection has address/port equal to zero.");
     ok = 0;
   }
   return ok ? 0 : -1;
@@ -613,7 +615,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     int e;
     if (news>=0) {
       /* Too many conns to poll. */
-      log_fn(LOG_WARN,"Too many connections; couldn't accept connection.");
+      warn(LD_NET,"Too many connections; couldn't accept connection.");
       tor_close_socket(news);
       return 0;
     }
@@ -621,29 +623,29 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
     } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
-      log_fn(LOG_NOTICE,"accept failed: %s. Dropping incoming connection.",
+      notice(LD_NET,"accept failed: %s. Dropping incoming connection.",
              tor_socket_strerror(e));
       return 0;
     }
     /* else there was a real error. */
-    log_fn(LOG_WARN,"accept() failed: %s. Closing listener.",
+    warn(LD_NET,"accept() failed: %s. Closing listener.",
            tor_socket_strerror(e));
     connection_mark_for_close(conn);
     return -1;
   }
-  log(LOG_DEBUG,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
+  debug(LD_NET,"Connection accepted on socket %d (child of fd %d).",news,conn->s);
 
   set_socket_nonblocking(news);
 
   if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_INFO)<0) {
-    log_fn(LOG_INFO, "accept() returned a strange address; trying getsockname().");
+    info(LD_NET, "accept() returned a strange address; trying getsockname().");
     remotelen=256;
     memset(addrbuf, 0, sizeof(addrbuf));
     if (getsockname(news, (struct sockaddr*)addrbuf, &remotelen)<0) {
-      log_fn(LOG_WARN, "getsockname() failed.");
+      warn(LD_NET, "getsockname() failed.");
     } else {
       if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_WARN)<0) {
-        log_fn(LOG_WARN,"Something's wrong with this conn. Closing it.");
+        warn(LD_NET,"Something's wrong with this conn. Closing it.");
         tor_close_socket(news);
         return 0;
       }
@@ -656,7 +658,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     /* check sockspolicy to see if we should accept it */
     if (socks_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
       tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
-      log_fn(LOG_NOTICE,"Denying socks connection from untrusted address %s.",
+      notice(LD_APP,"Denying socks connection from untrusted address %s.",
              tmpbuf);
       tor_close_socket(news);
       return 0;
@@ -666,7 +668,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     /* check dirpolicy to see if we should accept it */
     if (dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
       tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
-      log_fn(LOG_NOTICE,"Denying dir connection from address %s.",
+      notice(LD_DIRSERV,"Denying dir connection from address %s.",
              tmpbuf);
       tor_close_socket(news);
       return 0;
@@ -736,11 +738,11 @@ connection_connect(connection_t *conn, char *address,
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
-    log_fn(LOG_WARN,"Error creating network socket: %s",
+    warn(LD_NET,"Error creating network socket: %s",
            tor_socket_strerror(tor_socket_errno(-1)));
     return -1;
   } else if (!SOCKET_IS_POLLABLE(s)) {
-    log_fn(LOG_WARN,
+    warn(LD_NET,
       "Too many connections; can't create pollable connection to %s",
       safe_str(address));
     tor_close_socket(s);
@@ -754,11 +756,11 @@ connection_connect(connection_t *conn, char *address,
     ext_addr.sin_family = AF_INET;
     ext_addr.sin_port = 0;
     if (!tor_inet_aton(options->OutboundBindAddress, &ext_addr.sin_addr)) {
-      log_fn(LOG_WARN,"Outbound bind address '%s' didn't parse. Ignoring.",
+      warn(LD_CONFIG,"Outbound bind address '%s' didn't parse. Ignoring.",
              options->OutboundBindAddress);
     } else {
       if (bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr)) < 0) {
-        log_fn(LOG_WARN,"Error binding network socket: %s",
+        warn(LD_NET,"Error binding network socket: %s",
                tor_socket_strerror(tor_socket_errno(s)));
         return -1;
       }
@@ -772,13 +774,13 @@ connection_connect(connection_t *conn, char *address,
   dest_addr.sin_port = htons(port);
   dest_addr.sin_addr.s_addr = htonl(addr);
 
-  log_fn(LOG_DEBUG,"Connecting to %s:%u.",safe_str(address),port);
+  debug(LD_NET,"Connecting to %s:%u.",safe_str(address),port);
 
   if (connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
       /* yuck. kill it. */
-      log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",safe_str(address),port,
+      info(LD_NET,"connect() to %s:%u failed: %s",safe_str(address),port,
              tor_socket_strerror(e));
       tor_close_socket(s);
       return -1;
@@ -791,7 +793,7 @@ connection_connect(connection_t *conn, char *address,
     client_check_address_changed(s);
 
   /* it succeeded. we're connected. */
-  log_fn(inprogress?LOG_DEBUG:LOG_INFO,
+  log_fn(inprogress?LOG_DEBUG:LOG_INFO, LD_NET,
          "Connection to %s:%u %s (sock %d).",safe_str(address),port,
          inprogress?"in progress":"established",s);
   conn->s = s;
@@ -854,7 +856,7 @@ retry_listeners(int type, config_line_t *cfg,
     if (force) {
       /* It's a listener, and we're relaunching all listeners of this
        * type. Close this one. */
-      log_fn(LOG_NOTICE, "Closing %s on %s:%d",
+      log_fn(LOG_NOTICE, LD_NET, "Closing %s on %s:%d",
              conn_type_to_string(type), conn->address, conn->port);
       connection_close_immediate(conn);
       connection_mark_for_close(conn);
@@ -879,7 +881,7 @@ retry_listeners(int type, config_line_t *cfg,
       });
     if (! line) {
       /* This one isn't configured. Close it. */
-      log_fn(LOG_NOTICE, "Closing %s on %s:%d",
+      notice(LD_NET, "Closing %s on %s:%d",
              conn_type_to_string(type), conn->address, conn->port);
       if (replaced_conns) {
         smartlist_add(replaced_conns, conn);
@@ -889,7 +891,7 @@ retry_listeners(int type, config_line_t *cfg,
       }
     } else {
       /* It's configured; we don't need to launch it. */
-      log_fn(LOG_DEBUG, "Already have %s on %s:%d",
+      debug(LD_NET, "Already have %s on %s:%d",
              conn_type_to_string(type), conn->address, conn->port);
       smartlist_remove(launch, line);
       if (free_launch_elts)
@@ -997,7 +999,7 @@ static void
 connection_consider_empty_buckets(connection_t *conn)
 {
   if (global_read_bucket <= 0) {
-    LOG_FN_CONN(conn, (LOG_DEBUG,"global bucket exhausted. Pausing."));
+    LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,"global bucket exhausted. Pausing."));
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
     return;
@@ -1005,7 +1007,7 @@ connection_consider_empty_buckets(connection_t *conn)
   if (connection_speaks_cells(conn) &&
       conn->state == OR_CONN_STATE_OPEN &&
       conn->receiver_bucket <= 0) {
-    LOG_FN_CONN(conn, (LOG_DEBUG,"receiver bucket exhausted. Pausing."));
+    LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,"receiver bucket exhausted. Pausing."));
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
   }
@@ -1033,11 +1035,11 @@ connection_bucket_refill(struct timeval *now)
   /* refill the global buckets */
   if (global_read_bucket < (int)options->BandwidthBurst) {
     global_read_bucket += (int)options->BandwidthRate;
-    log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
+    debug(LD_NET,"global_read_bucket now %d.", global_read_bucket);
   }
   if (global_write_bucket < (int)options->BandwidthBurst) {
     global_write_bucket += (int)options->BandwidthRate;
-    log_fn(LOG_DEBUG,"global_write_bucket now %d.", global_write_bucket);
+    debug(LD_NET,"global_write_bucket now %d.", global_write_bucket);
   }
 
   /* refill the per-connection buckets */
@@ -1058,7 +1060,7 @@ connection_bucket_refill(struct timeval *now)
             conn->state != OR_CONN_STATE_OPEN ||
             conn->receiver_bucket > 0)) {
       /* and either a non-cell conn or a cell conn with non-empty bucket */
-      LOG_FN_CONN(conn, (LOG_DEBUG,"waking up conn (fd %d)",conn->s));
+      LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,"waking up conn (fd %d)",conn->s));
       conn->wants_to_read = 0;
       connection_start_reading(conn);
       if (conn->wants_to_write == 1) {
@@ -1197,7 +1199,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
       return connection_tls_continue_handshake(conn);
     }
 
-    log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d (%d pending in tls object). at_most %d.",
+    debug(LD_NET,"%d: starting, inbuf_datalen %d (%d pending in tls object). at_most %d.",
            conn->s,(int)buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls), at_most);
 
     /* else open, or closing */
@@ -1205,11 +1207,11 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
 
     switch (result) {
       case TOR_TLS_CLOSE:
-        log_fn(LOG_INFO,"TLS connection closed on read. Closing. (Nickname %s, address %s",
+        info(LD_NET,"TLS connection closed on read. Closing. (Nickname %s, address %s",
                conn->nickname ? conn->nickname : "not set", conn->address);
         return -1;
       case TOR_TLS_ERROR:
-        log_fn(LOG_DEBUG,"tls error. breaking (nickname %s, address %s).",
+        info(LD_NET,"tls error. breaking (nickname %s, address %s).",
                conn->nickname ? conn->nickname : "not set", conn->address);
         return -1;
       case TOR_TLS_WANTWRITE:
@@ -1229,7 +1231,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
        * believing that SSL bytes are the same as TCP bytes anyway. */
       int r2 = read_to_buf_tls(conn->tls, pending, conn->inbuf);
       if (r2<0) {
-        log_fn(LOG_WARN, "Bug: apparently, reading pending bytes can fail.");
+        warn(LD_BUG, "Bug: apparently, reading pending bytes can fail.");
         return -1;
       } else {
         result += r2;
@@ -1328,7 +1330,7 @@ connection_handle_write(connection_t *conn)
   /* Sometimes, "writable" means "connected". */
   if (connection_state_is_connecting(conn)) {
     if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
-      log_fn(LOG_WARN,"getsockopt() syscall failed?! Please report to tor-ops.");
+      warn(LD_BUG,"getsockopt() syscall failed?! Please report to tor-ops.");
       if (CONN_IS_EDGE(conn))
         connection_edge_end_errno(conn, conn->cpath_layer);
       connection_mark_for_close(conn);
@@ -1337,7 +1339,7 @@ connection_handle_write(connection_t *conn)
     if (e) {
       /* some sort of error, but maybe just inprogress still */
       if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
-        log_fn(LOG_INFO,"in-progress connect failed. Removing.");
+        info(LD_NET,"in-progress connect failed. Removing.");
         if (CONN_IS_EDGE(conn))
           connection_edge_end_errno(conn, conn->cpath_layer);
 
@@ -1374,18 +1376,18 @@ connection_handle_write(connection_t *conn)
     switch (result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
-        log_fn(LOG_INFO,result==TOR_TLS_ERROR?
+        info(LD_NET,result==TOR_TLS_ERROR?
                "tls error. breaking.":"TLS connection closed on flush");
         connection_close_immediate(conn); /* Don't flush; connection is dead. */
         connection_mark_for_close(conn);
         return -1;
       case TOR_TLS_WANTWRITE:
-        log_fn(LOG_DEBUG,"wanted write.");
+        debug(LD_NET,"wanted write.");
         /* we're already writing */
         return 0;
       case TOR_TLS_WANTREAD:
         /* Make sure to avoid a loop if the receive buckets are empty. */
-        log_fn(LOG_DEBUG,"wanted read.");
+        debug(LD_NET,"wanted read.");
         if (!connection_is_reading(conn)) {
           connection_stop_writing(conn);
           conn->wants_to_write = 1;
@@ -1482,10 +1484,10 @@ connection_write_to_buf(const char *string, size_t len, connection_t *conn)
     if (CONN_IS_EDGE(conn)) {
       /* if it failed, it means we have our package/delivery windows set
          wrong compared to our max outbuf size. close the whole circuit. */
-      log_fn(LOG_WARN,"write_to_buf failed. Closing circuit (fd %d).", conn->s);
+      warn(LD_NET,"write_to_buf failed. Closing circuit (fd %d).", conn->s);
       circuit_mark_for_close(circuit_get_by_edge_conn(conn));
     } else {
-      log_fn(LOG_WARN,"write_to_buf failed. Closing connection (fd %d).", conn->s);
+      warn(LD_NET,"write_to_buf failed. Closing connection (fd %d).", conn->s);
       connection_mark_for_close(conn);
     }
     return;
@@ -1745,6 +1747,7 @@ connection_state_is_connecting(connection_t *conn)
  *
  * Return 0.
  */
+/*XXXX Why isn't this in connection_or.c?*/
 int
 connection_send_destroy(uint16_t circ_id, connection_t *conn)
 {
@@ -1756,7 +1759,7 @@ connection_send_destroy(uint16_t circ_id, connection_t *conn)
   memset(&cell, 0, sizeof(cell_t));
   cell.circ_id = circ_id;
   cell.command = CELL_DESTROY;
-  log_fn(LOG_DEBUG,"Sending destroy (circID %d).", circ_id);
+  debug(LD_OR,"Sending destroy (circID %d).", circ_id);
   connection_or_write_cell_to_buf(&cell, conn);
   return 0;
 }
@@ -1802,7 +1805,7 @@ client_check_address_changed(int sock)
 
   if (getsockname(sock, (struct sockaddr*)&out_addr, &out_addr_len)<0) {
     int e = tor_socket_errno(sock);
-    log_fn(LOG_WARN, "getsockname() failed: %s", tor_socket_strerror(e));
+    warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
     return;
   }
 
@@ -1825,7 +1828,7 @@ client_check_address_changed(int sock)
   } else {
     /* The interface changed.  We're a client, so we need to regenerate our
      * keys.  First, reset the state. */
-    log_fn(LOG_NOTICE, "Our IP has changed.  Rotating keys...");
+    notice(LD_NET, "Our IP has changed.  Rotating keys...");
     last_interface_ip = iface_ip;
     SMARTLIST_FOREACH(outgoing_addrs, void*, ip, tor_free(ip));
     smartlist_clear(outgoing_addrs);
@@ -1861,7 +1864,7 @@ connection_process_inbuf(connection_t *conn, int package_partial)
     case CONN_TYPE_CONTROL:
       return connection_control_process_inbuf(conn);
     default:
-      log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
+      err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
   }
@@ -1895,7 +1898,7 @@ connection_finished_flushing(connection_t *conn)
     case CONN_TYPE_CONTROL:
       return connection_control_finished_flushing(conn);
     default:
-      log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
+      err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
   }
@@ -1920,7 +1923,7 @@ connection_finished_connecting(connection_t *conn)
     case CONN_TYPE_DIR:
       return connection_dir_finished_connecting(conn);
     default:
-      log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
+      err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
   }
@@ -1945,7 +1948,7 @@ connection_reached_eof(connection_t *conn)
     case CONN_TYPE_CONTROL:
       return connection_control_reached_eof(conn);
     default:
-      log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
+      err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
   }

@@ -16,6 +16,7 @@ const char command_c_id[] = "$Id$";
  *   connection_or_process_cells_from_inbuf() in connection_or.c
  */
 
+#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Keep statistics about how many of each type of cell we've received. */
@@ -51,10 +52,10 @@ command_time_process_cell(cell_t *cell, connection_t *conn, int *time,
   time_passed = tv_udiff(&start, &end) ;
 
   if (time_passed > 10000) { /* more than 10ms */
-    log_fn(LOG_DEBUG,"That call just took %ld ms.",time_passed/1000);
+    debug(LD_OR,"That call just took %ld ms.",time_passed/1000);
   }
   if (time_passed < 0) {
-    log_fn(LOG_INFO,"That call took us back in time!");
+    info(LD_GENERAL,"That call took us back in time!");
     time_passed = 0;
   }
   *time += time_passed;
@@ -81,7 +82,7 @@ command_process_cell(cell_t *cell, connection_t *conn)
 
   if (now > current_second) { /* the second has rolled over */
     /* print stats */
-    log(LOG_INFO,"At end of second: %d creates (%d ms), %d createds (%d ms), %d relays (%d ms), %d destroys (%d ms)",
+    info(LD_OR,"At end of second: %d creates (%d ms), %d createds (%d ms), %d relays (%d ms), %d destroys (%d ms)",
       num_create, create_time/1000,
       num_created, created_time/1000,
       num_relay, relay_time/1000,
@@ -144,7 +145,7 @@ command_process_cell(cell_t *cell, connection_t *conn)
 #endif
       break;
     default:
-      log_fn(LOG_PROTOCOL_WARN,
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Cell of unknown type (%d) received. Dropping.", cell->command);
       break;
   }
@@ -161,7 +162,7 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
   circuit_t *circ;
 
   if (we_are_hibernating()) {
-    log_fn(LOG_INFO,"Received create cell but we're shutting down. Sending back destroy.");
+    info(LD_OR,"Received create cell but we're shutting down. Sending back destroy.");
     connection_send_destroy(cell->circ_id, conn);
     return;
   }
@@ -173,11 +174,11 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
    * half to use based on nickname, and we now use identity keys.
    */
   if ((cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_HIGHER) {
-    log_fn(LOG_INFO, "Got a high circuit ID from %s (%d); switching to low circuit IDs.",
+    info(LD_OR, "Got a high circuit ID from %s (%d); switching to low circuit IDs.",
            conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_LOWER;
   } else if (!(cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_LOWER) {
-    log_fn(LOG_INFO, "Got a low circuit ID from %s (%d); switching to high circuit IDs.",
+    info(LD_OR, "Got a low circuit ID from %s (%d); switching to high circuit IDs.",
            conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
   }
@@ -186,11 +187,11 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
 
   if (circ) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
-    log_fn(LOG_PROTOCOL_WARN,
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "received CREATE cell (circID %d) for known circ. Dropping (age %d).",
            cell->circ_id, (int)(time(NULL) - conn->timestamp_created));
     if (router)
-      log_fn(LOG_PROTOCOL_WARN,
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Details: nickname '%s', platform '%s'.",
              router->nickname, router->platform);
     return;
@@ -204,22 +205,22 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
 
     /* hand it off to the cpuworkers, and then return */
     if (assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
-      log_fn(LOG_WARN,"Failed to hand off onionskin. Closing.");
+      warn(LD_GENERAL,"Failed to hand off onionskin. Closing.");
       circuit_mark_for_close(circ);
       return;
     }
-    log_fn(LOG_DEBUG,"success: handed off onionskin.");
+    debug(LD_OR,"success: handed off onionskin.");
   } else {
     char keys[CPATH_KEY_MATERIAL_LEN];
     char reply[DIGEST_LEN*2];
     tor_assert(cell->command == CELL_CREATE_FAST);
     if (fast_server_handshake(cell->payload, reply, keys, sizeof(keys))<0) {
-      log_fn(LOG_WARN,"Failed to generate key material. Closing.");
+      warn(LD_OR,"Failed to generate key material. Closing.");
       circuit_mark_for_close(circ);
       return;
     }
     if (onionskin_answer(circ, CELL_CREATED_FAST, reply, keys)<0) {
-      log_fn(LOG_WARN,"Failed to reply to CREATE_FAST cell. Closing.");
+      warn(LD_OR,"Failed to reply to CREATE_FAST cell. Closing.");
       circuit_mark_for_close(circ);
       return;
     }
@@ -241,31 +242,32 @@ command_process_created_cell(cell_t *cell, connection_t *conn)
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (!circ) {
-    log_fn(LOG_INFO,"(circID %d) unknown circ (probably got a destroy earlier). Dropping.", cell->circ_id);
+    info(LD_OR,"(circID %d) unknown circ (probably got a destroy earlier). Dropping.", cell->circ_id);
     return;
   }
 
   if (circ->n_circ_id != cell->circ_id) {
-    log_fn(LOG_PROTOCOL_WARN,"got created cell from OPward? Closing.");
+    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
+           "got created cell from OPward? Closing.");
     circuit_mark_for_close(circ);
     return;
   }
 
   if (CIRCUIT_IS_ORIGIN(circ)) { /* we're the OP. Handshake this. */
-    log_fn(LOG_DEBUG,"at OP. Finishing handshake.");
+    debug(LD_OR,"at OP. Finishing handshake.");
     if (circuit_finish_handshake(circ, cell->command, cell->payload) < 0) {
-      log_fn(LOG_WARN,"circuit_finish_handshake failed.");
+      warn(LD_OR,"circuit_finish_handshake failed.");
       circuit_mark_for_close(circ);
       return;
     }
-    log_fn(LOG_DEBUG,"Moving to next skin.");
+    debug(LD_OR,"Moving to next skin.");
     if (circuit_send_next_onion_skin(circ) < 0) {
-      log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
+      info(LD_OR,"circuit_send_next_onion_skin failed.");
       circuit_mark_for_close(circ); /* XXX push this circuit_close lower */
       return;
     }
   } else { /* pack it into an extended relay cell, and send it. */
-    log_fn(LOG_DEBUG,"Converting created cell to extended relay cell, sending.");
+    debug(LD_OR,"Converting created cell to extended relay cell, sending.");
     connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTENDED,
                                  cell->payload, ONIONSKIN_REPLY_LEN, NULL);
   }
@@ -283,26 +285,26 @@ command_process_relay_cell(cell_t *cell, connection_t *conn)
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (!circ) {
-    log_fn(LOG_DEBUG,"unknown circuit %d on connection from %s:%d. Dropping.",
-           cell->circ_id, conn->address, conn->port);
+    debug(LD_OR,"unknown circuit %d on connection from %s:%d. Dropping.",
+          cell->circ_id, conn->address, conn->port);
     return;
   }
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
-    log_fn(LOG_PROTOCOL_WARN,"circuit in create_wait. Closing.");
+    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit in create_wait. Closing.");
     circuit_mark_for_close(circ);
     return;
   }
 
   if (cell->circ_id == circ->p_circ_id) { /* it's an outgoing cell */
     if (circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
-      log_fn(LOG_PROTOCOL_WARN,"circuit_receive_relay_cell (forward) failed. Closing.");
+      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell (forward) failed. Closing.");
       circuit_mark_for_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
     if (circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
-      log_fn(LOG_PROTOCOL_WARN,"circuit_receive_relay_cell (backward) failed. Closing.");
+      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell (backward) failed. Closing.");
       circuit_mark_for_close(circ);
       return;
     }
@@ -330,12 +332,12 @@ command_process_destroy_cell(cell_t *cell, connection_t *conn)
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (!circ) {
-    log_fn(LOG_INFO,"unknown circuit %d on connection from %s:%d. Dropping.",
+    info(LD_OR,"unknown circuit %d on connection from %s:%d. Dropping.",
            cell->circ_id, conn->address, conn->port);
     return;
   }
 
-  log_fn(LOG_DEBUG,"Received for circID %d.",cell->circ_id);
+  debug(LD_OR,"Received for circID %d.",cell->circ_id);
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(circ);
   }
@@ -349,7 +351,7 @@ command_process_destroy_cell(cell_t *cell, connection_t *conn)
     if (CIRCUIT_IS_ORIGIN(circ)) {
       circuit_mark_for_close(circ);
     } else {
-      log_fn(LOG_DEBUG, "Delivering 'truncated' back.");
+      debug(LD_OR, "Delivering 'truncated' back.");
       connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
                                    NULL, 0, NULL);
     }
