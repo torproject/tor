@@ -1678,21 +1678,23 @@ dir_split_resource_into_fingerprints(const char *resource,
   }
   if (decode_hex) {
     int i;
-    char *cp, *d;
+    char *cp, *d = NULL;
     for (i = 0; i < smartlist_len(fp_out); ++i) {
       cp = smartlist_get(fp_out, i);
       if (strlen(cp) != HEX_DIGEST_LEN) {
         smartlist_del(fp_out, i--);
-        continue;
+        goto again;
       }
       d = tor_malloc_zero(DIGEST_LEN);
       if (base16_decode(d, DIGEST_LEN, cp, HEX_DIGEST_LEN)<0) {
-        tor_free(d);
         smartlist_del(fp_out, i--);
-        continue;
+        goto again;
       }
-      tor_free(cp);
       smartlist_set(fp_out, i, d);
+      d = NULL;
+    again:
+      tor_free(cp);
+      tor_free(d);
     }
   }
   return 0;
