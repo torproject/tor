@@ -394,7 +394,7 @@ circuit_t *
 circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
 {
   circuit_t *circ = circuit_get_by_circid_orconn_impl(circ_id, conn);
-  if (circ->marked_for_close)
+  if (!circ || circ->marked_for_close)
     return NULL;
   else
     return circ;
