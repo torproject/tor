@@ -295,7 +295,7 @@ _warn(unsigned int domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(LOG_ERR, domain, _log_fn_function_name, format, ap);
+  logv(LOG_WARN, domain, _log_fn_function_name, format, ap);
   va_end(ap);
   _log_fn_function_name = NULL;
 }
