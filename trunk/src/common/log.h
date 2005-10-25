@@ -134,9 +134,9 @@ void _log_fn(int severity, unsigned int domain,
 #define info(domain, args...)                           \
   _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
 #define notice(domain, args...)                         \
-  _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
+  _log_fn(LOG_NOTICE, domain, __PRETTY_FUNCTION__, args)
 #define warn(domain, args...)                           \
-  _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
+  _log_fn(LOG_WARN, domain, __PRETTY_FUNCTION__, args)
 #define err(domain, args...)                            \
   _log_fn(LOG_ERR, domain, __PRETTY_FUNCTION__, args)
 #else
