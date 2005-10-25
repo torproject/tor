@@ -9,7 +9,6 @@ const char rendcommon_c_id[] = "$Id$";
  * introducers, services, clients, and rendezvous points.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */

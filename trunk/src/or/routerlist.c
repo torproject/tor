@@ -12,7 +12,6 @@ const char routerlist_c_id[] = "$Id$";
  * servers.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /****************************************************************************/

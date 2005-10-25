@@ -10,7 +10,6 @@ const char connection_edge_c_id[] = "$Id$";
  * \brief Handle edge streams.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 #include "tree.h"
 

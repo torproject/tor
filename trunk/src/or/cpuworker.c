@@ -13,7 +13,6 @@ const char cpuworker_c_id[] = "$Id$";
  * Right now, we only use this for processing onionskins.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** The maximum number of cpuworker processes we will keep around. */

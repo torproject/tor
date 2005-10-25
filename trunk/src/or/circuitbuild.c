@@ -10,7 +10,6 @@ const char circuitbuild_c_id[] = "$Id$";
  * \brief The actual details of building circuits.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /********* START VARIABLES **********/

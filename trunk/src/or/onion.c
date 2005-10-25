@@ -11,7 +11,6 @@ const char onion_c_id[] = "$Id$";
  * parsing and creation.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Type for a linked list of circuits that are waiting for a free CPU worker

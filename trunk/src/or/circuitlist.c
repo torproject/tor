@@ -10,7 +10,6 @@ const char circuitlist_c_id[] = "$Id$";
  * \brief Manage the global circuit list.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /* Define RB_AUGMENT to avoid warnings about if statements with emtpy bodies.

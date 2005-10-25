@@ -5,7 +5,6 @@
 /* $Id$ */
 const char router_c_id[] = "$Id$";
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /**

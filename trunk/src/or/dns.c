@@ -17,7 +17,6 @@ const char dns_c_id[] = "$Id$";
  * them becomes more commonly available.
  */
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 #include "tree.h"
 

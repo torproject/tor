@@ -12,7 +12,6 @@ const char buffers_c_id[] = "$Id$";
  * memory, file descriptors, or TLS connections.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 #define SENTINELS

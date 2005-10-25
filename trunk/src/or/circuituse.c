@@ -10,7 +10,6 @@ const char circuituse_c_id[] = "$Id$";
  * \brief Launch the right sort of circuits and attach streams to them.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 /** Longest time to wait for a circuit before closing an AP connection */

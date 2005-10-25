@@ -22,7 +22,6 @@ const char test_c_id[] = "$Id$";
 #include <dirent.h>
 #endif
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 #include "../common/test.h"
 #include "../common/torgzip.h"

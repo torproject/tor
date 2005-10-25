@@ -8,7 +8,6 @@ const char control_c_id[] = "$Id$";
  * \brief Implementation for Tor's control-socket interface.
  **/
 
-#define NEW_LOG_INTERFACE
 #include "or.h"
 
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN_V0 ||       \
