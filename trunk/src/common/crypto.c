@@ -234,7 +234,7 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
-  //ERR_remove_state(0);
+  ERR_remove_state(0);
   ERR_free_strings();
 #ifndef NO_ENGINES
   ENGINE_cleanup();
