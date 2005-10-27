@@ -1122,7 +1122,7 @@ _routerlist_find_elt(smartlist_t *sl, routerinfo_t *ri, int idx)
                         break;
                       });
   }
-  return -1;
+  return idx;
 }
 
 /** Insert an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
@@ -1142,10 +1142,10 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
   if (get_options()->DirPort) {
     digestmap_set(rl->desc_digest_map, ri->signed_descriptor_digest, ri);
     smartlist_add(rl->old_routers, ri);
-    // routerlist_assert_ok(rl);
   } else {
     routerinfo_free(ri);
   }
+  // routerlist_assert_ok(rl);
 }
 
 /** Remove an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
@@ -1170,8 +1170,8 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
                               ri->signed_descriptor_digest);
     tor_assert(ri_tmp == ri);
     routerinfo_free(ri);
-    // routerlist_assert_ok(rl);
   }
+  // routerlist_assert_ok(rl);
 }
 
 void
@@ -1198,11 +1198,14 @@ static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx, int make_old)
 {
+  tor_assert(ri_old != ri_new);
   idx = _routerlist_find_elt(rl->routers, ri_old, idx);
   if (idx >= 0) {
     smartlist_set(rl->routers, idx, ri_new);
   } else {
-    smartlist_add(rl->routers, ri_new);
+    warn(LD_BUG, "Appending entry from routerlist_replace.");
+    routerlist_insert(rl, ri_new);
+    return;
   }
   if (memcmp(ri_old->identity_digest, ri_new->identity_digest, DIGEST_LEN)) {
     /* digests don't match; digestmap_set won't replace */
@@ -1214,13 +1217,15 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   if (make_old && get_options()->DirPort) {
     smartlist_add(rl->old_routers, ri_old);
   } else {
-    if (memcmp(ri_old->signed_descriptor_digest, ri_new->signed_descriptor_digest,
+    if (memcmp(ri_old->signed_descriptor_digest,
+               ri_new->signed_descriptor_digest,
                DIGEST_LEN)) {
       /* digests don't match; digestmap_set didn't replace */
       digestmap_remove(rl->desc_digest_map, ri_old->signed_descriptor_digest);
     }
     routerinfo_free(ri_old);
   }
+  // routerlist_assert_ok(rl);
 }
 
 /** Free all memory held by the rouerlist module */
