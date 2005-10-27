@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 16 October 2005 for Tor 0.1.1.9-alpha.
+## Last updated 26 October 2005 for Tor 0.1.1.9-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 #
 ## See the man page, or http://tor.eff.org/tor-manual.html, for more
@@ -83,7 +83,7 @@ AllowUnverifiedNodes middle,rendezvous
 ## NOTE: If you enable these, you should consider mailing your identity
 ## key fingerprint to the tor-ops, so we can add you to the list of
 ## servers that clients will trust. See
-## http://tor.eff.org/doc/tor-doc.html#server for details.
+## http://tor.eff.org/cvs/tor/doc/tor-doc-server.html for details.
 
 ## Required: A unique handle for this server
 #Nickname ididnteditheconfig
