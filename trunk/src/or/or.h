@@ -869,9 +869,15 @@ typedef struct networkstatus_t {
 
 /** Contents of a directory of onion routers. */
 typedef struct {
-  /** List of routerinfo_t. */
-  smartlist_t *routers;
+  /** Map from server identity digest to a member of routers. */
   digestmap_t *identity_map;
+  /** Map from server descriptor digest to a member of routers or of
+   * old_routers. */
+  digestmap_t *desc_digest_map;
+  /** List of routerinfo_t for all currently live routers we know. */
+  smartlist_t *routers;
+  /** List of routerinfo_t for older router descriptors we're caching. */
+  smartlist_t *old_routers;
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
@@ -2141,7 +2147,8 @@ int router_digest_is_trusted_dir(const char *digest);
 routerlist_t *router_get_routerlist(void);
 void routerlist_reset_warnings(void);
 void routerlist_free(routerlist_t *routerlist);
-void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx);
+void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx,
+                       int make_old);
 void routerinfo_free(routerinfo_t *router);
 void routerstatus_free(routerstatus_t *routerstatus);
 void networkstatus_free(networkstatus_t *networkstatus);

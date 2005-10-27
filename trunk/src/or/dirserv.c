@@ -491,8 +491,7 @@ directory_remove_invalid(void)
       case FP_REJECT:
         info(LD_DIRSERV, "Router '%s' is now rejected: %s",
             ent->nickname, msg?msg:"");
-        routerlist_remove(rl, ent, i--);
-        routerinfo_free(ent);
+        routerlist_remove(rl, ent, i--, 0);
         changed = 1;
         break;
       case FP_NAMED:
@@ -1476,8 +1475,7 @@ dirserv_orconn_tls_done(const char *address,
       }
     }
     if (drop) {
-      routerlist_remove(rl, ri, i--);
-      routerinfo_free(ri);
+      routerlist_remove(rl, ri, i--, 0);
       directory_set_dirty();
     } else { /* correct nickname and digest. mark this router reachable! */
       info(LD_DIRSERV,"Found router %s to be reachable. Yay.", ri->nickname);
