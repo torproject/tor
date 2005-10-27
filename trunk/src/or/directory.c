@@ -1667,10 +1667,13 @@ dir_split_resource_into_fingerprints(const char *resource,
                                      smartlist_t *fp_out, int *compressed_out,
                                      int decode_hex)
 {
+  int old_len;
+  tor_assert(fp_out);
+  old_len = smartlist_len(fp_out);
   smartlist_split_string(fp_out, resource, "+", 0, 0);
   if (compressed_out)
     *compressed_out = 0;
-  if (smartlist_len(fp_out)) {
+  if (smartlist_len(fp_out) > old_len) {
     char *last = smartlist_get(fp_out,smartlist_len(fp_out)-1);
     size_t last_len = strlen(last);
     if (last_len > 2 && !strcmp(last+last_len-2, ".z")) {
@@ -1682,14 +1685,16 @@ dir_split_resource_into_fingerprints(const char *resource,
   if (decode_hex) {
     int i;
     char *cp, *d = NULL;
-    for (i = 0; i < smartlist_len(fp_out); ++i) {
+    for (i = old_len; i < smartlist_len(fp_out); ++i) {
       cp = smartlist_get(fp_out, i);
       if (strlen(cp) != HEX_DIGEST_LEN) {
+        info(LD_DIR, "Skipping digest \"%s\" with non-standard length.", cp);
         smartlist_del(fp_out, i--);
         goto again;
       }
       d = tor_malloc_zero(DIGEST_LEN);
       if (base16_decode(d, DIGEST_LEN, cp, HEX_DIGEST_LEN)<0) {
+        info(LD_DIR, "Skipping non-decodable digest \"%s\"", cp);
         smartlist_del(fp_out, i--);
         goto again;
       }
