@@ -1386,18 +1386,22 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     info(LD_DIR, "Dropping descriptor that we already have for router '%s'",
          router->nickname);
     *msg = "Router descriptor was not new.";
+    routerinfo_free(router);
     return -1;
   }
 
   if (authdir) {
-    if (authdir_wants_to_reject_router(router, msg))
+    if (authdir_wants_to_reject_router(router, msg)) {
+      routerinfo_free(router);
       return -2;
+    }
     authdir_verified = router->is_verified;
     /*
   } else {
     if (! router->xx_is_recognized && !from_cache) {
       log_fn(LOG_WARN, "Dropping unrecognized descriptor for router '%s'",
              router->nickname);
+      rouerinfo_free(router);
       return -1;
     }
     */
