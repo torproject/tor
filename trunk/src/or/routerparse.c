@@ -675,6 +675,7 @@ router_parse_list_from_string(const char **s, smartlist_t *dest)
 
     if (strcmpstart(cp, "\n-----END SIGNATURE-----\n")) {
       info(LD_DIR, "Ignoring truncated router descriptor.");
+      *s = end;
       continue;
     }
 
