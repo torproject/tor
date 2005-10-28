@@ -455,6 +455,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
          "Not replacing descriptor from '%s'; differences are cosmetic.",
          ri->nickname);
     *msg = "Not replacing router descriptor; no information has changed since the last one with this identity.";
+    routerinfo_free(ri);
     return 0;
   }
   if ((r = router_add_to_routerlist(ri, msg, 0))<0) {
