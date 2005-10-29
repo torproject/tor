@@ -23,7 +23,6 @@ static int connection_finished_connecting(connection_t *conn);
 static int connection_reached_eof(connection_t *conn);
 static int connection_read_to_buf(connection_t *conn, int *max_to_read);
 static int connection_process_inbuf(connection_t *conn, int package_partial);
-static int connection_bucket_read_limit(connection_t *conn);
 static void client_check_address_changed(int sock);
 
 static uint32_t last_interface_ip = 0;
@@ -983,6 +982,29 @@ connection_bucket_read_limit(connection_t *conn)
   return at_most;
 }
 
+/** How many bytes at most can we write onto this connection? */
+int
+connection_bucket_write_limit(connection_t *conn)
+{
+  int at_most;
+
+  /* do a rudimentary round-robin so one circuit can't hog a connection */
+  if (connection_speaks_cells(conn)) {
+    at_most = 32*(CELL_NETWORK_SIZE);
+  } else {
+    at_most = 32*(RELAY_PAYLOAD_SIZE);
+  }
+
+  if (at_most > conn->outbuf_flushlen)
+    at_most = conn->outbuf_flushlen;
+
+#if 0 /* don't enable til we actually do write limiting */
+  if (at_most > global_write_bucket)
+    at_most = global_write_bucket;
+#endif
+  return at_most;
+}
+
 /** We just read num_read onto conn. Decrement buckets appropriately. */
 static void
 connection_read_bucket_decrement(connection_t *conn, int num_read)
@@ -1317,6 +1339,7 @@ connection_handle_write(connection_t *conn)
   int e;
   socklen_t len=sizeof(e);
   int result;
+  int max_to_write;
   time_t now = time(NULL);
 
   tor_assert(!connection_is_listener(conn));
@@ -1359,6 +1382,8 @@ connection_handle_write(connection_t *conn)
       return -1;
   }
 
+  max_to_write = connection_bucket_write_limit(conn);
+
   if (connection_speaks_cells(conn) && conn->state > OR_CONN_STATE_PROXY_READING) {
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       connection_stop_writing(conn);
@@ -1371,7 +1396,8 @@ connection_handle_write(connection_t *conn)
     }
 
     /* else open, or closing */
-    result = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
+    result = flush_buf_tls(conn->tls, conn->outbuf,
+                           max_to_write, &conn->outbuf_flushlen);
     switch (result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
@@ -1403,7 +1429,8 @@ connection_handle_write(connection_t *conn)
     }
   } else {
     CONN_LOG_PROTECT(conn,
-             result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen));
+             result = flush_buf(conn->s, conn->outbuf,
+                                max_to_write, &conn->outbuf_flushlen));
     if (result < 0) {
       if (CONN_IS_EDGE(conn))
         connection_edge_end_errno(conn, conn->cpath_layer);
@@ -1429,7 +1456,8 @@ connection_handle_write(connection_t *conn)
   return 0;
 }
 
-/* DOCDOC */
+/* A controller event has just happened with such urgency that we
+ * need to write it onto controller <b>conn</b> immediately. */
 void
 _connection_controller_force_write(connection_t *conn)
 {
@@ -1445,7 +1473,8 @@ _connection_controller_force_write(connection_t *conn)
     return;
 
   CONN_LOG_PROTECT(conn,
-      result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen));
+      result = flush_buf(conn->s, conn->outbuf,
+                         conn->outbuf_flushlen, &conn->outbuf_flushlen));
   if (result < 0) {
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     connection_mark_for_close(conn);

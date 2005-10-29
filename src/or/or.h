@@ -1363,8 +1363,8 @@ const char *_buf_peek_raw_buffer(const buf_t *buf);
 int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof);
 int read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf);
 
-int flush_buf(int s, buf_t *buf, size_t *buf_flushlen);
-int flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t *buf_flushlen);
+int flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen);
+int flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen);
 
 int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
@@ -1541,6 +1541,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 int retry_all_listeners(int force, smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
+int connection_bucket_write_limit(connection_t *conn);
 void connection_bucket_init(void);
 void connection_bucket_refill(struct timeval *now);
 
