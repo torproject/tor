@@ -1356,7 +1356,7 @@ router_mark_as_down(const char *digest)
  * descriptor using the message *<b>msg</b>.
  *
  * This function should be called *after*
- * routers_update_status_from_networkstatus; subsequenctly, you should call
+ * routers_update_status_from_networkstatus; subsequently, you should call
  * router_rebuild_store and control_event_descriptors_changed.
  *
  * XXXX never replace your own descriptor.
