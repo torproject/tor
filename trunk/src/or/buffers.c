@@ -576,21 +576,19 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
     return 0;
   } else {
     *buf_flushlen -= write_result;
-
     buf_remove_from_front(buf, write_result);
-
     return write_result;
   }
 }
 
 /** Write data from <b>buf</b> to the socket <b>s</b>.  Write at most
- * *<b>buf_flushlen</b> bytes, decrement *<b>buf_flushlen</b> by
+ * <b>sz</b> bytes, decrement *<b>buf_flushlen</b> by
  * the number of bytes actually written, and remove the written bytes
  * from the buffer.  Return the number of bytes written on success,
  * -1 on failure.  Return 0 if write() would block.
  */
 int
-flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
+flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   int r;
   size_t flushed = 0;
@@ -600,11 +598,12 @@ flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   tor_assert(buf_flushlen);
   tor_assert(s>=0);
   tor_assert(*buf_flushlen <= buf->datalen);
+  tor_assert(sz <= *buf_flushlen);
 
-  if (*buf_flushlen == 0) /* nothing to flush */
+  if (sz == 0) /* nothing to flush */
     return 0;
 
-  flushlen0 = *buf_flushlen;
+  flushlen0 = sz;
   _split_range(buf, buf->cur, &flushlen0, &flushlen1);
 
   r = flush_buf_impl(s, buf, flushlen0, buf_flushlen);
@@ -653,7 +652,7 @@ flush_buf_tls_impl(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 /** As flush_buf(), but writes data to a TLS connection.
  */
 int
-flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t *buf_flushlen)
+flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   int r;
   size_t flushed=0;
@@ -661,12 +660,14 @@ flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t *buf_flushlen)
   assert_buf_ok(buf);
   tor_assert(tls);
   tor_assert(buf_flushlen);
+  tor_assert(*buf_flushlen <= buf->datalen);
+  tor_assert(sz <= *buf_flushlen);
 
   /* we want to let tls write even if flushlen is zero, because it might
    * have a partial record pending */
   check_no_tls_errors();
 
-  flushlen0 = *buf_flushlen;
+  flushlen0 = sz;
   _split_range(buf, buf->cur, &flushlen0, &flushlen1);
 
   r = flush_buf_tls_impl(tls, buf, flushlen0, buf_flushlen);

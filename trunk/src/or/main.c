@@ -439,8 +439,9 @@ conn_close_if_marked(int i)
 
   debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
   if (conn->s >= 0 && connection_wants_to_flush(conn)) {
-    /* -1 means it's an incomplete edge connection, or that the socket
+    /* s == -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
+    int sz = connection_bucket_write_limit(conn);
     if (!conn->hold_open_until_flushed)
       info(LD_NET,
         "Conn (addr %s, fd %d, type %s, state %d) marked, but wants to flush %d bytes. "
@@ -449,14 +450,15 @@ conn_close_if_marked(int i)
         (int)conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
     if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
-        retval = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
+        retval = flush_buf_tls(conn->tls, conn->outbuf, sz, &conn->outbuf_flushlen);
       } else
         retval = -1; /* never flush non-open broken tls connections */
     } else {
-      retval = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
+      retval = flush_buf(conn->s, conn->outbuf, sz, &conn->outbuf_flushlen);
     }
-    if (retval >= 0 &&
-       conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
+    if (retval >= 0 && /* Technically, we could survive things like
+                          TLS_WANT_WRITE here. But don't bother for now. */
+        conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
       LOG_FN_CONN(conn,
                   (LOG_INFO,LD_NET,"Holding conn (fd %d) open for more flushing.",conn->s));
       /* XXX should we reset timestamp_lastwritten here? */
