@@ -1504,6 +1504,7 @@ dirserv_free_all(void)
     addr_policy_free(authdir_invalid_policy);
   clear_cached_dir(&the_directory);
   clear_cached_dir(&the_runningrouters);
+  clear_cached_dir(&the_v2_networkstatus);
   clear_cached_dir(&cached_directory);
   clear_cached_dir(&cached_runningrouters);
   if (cached_v2_networkstatus) {
