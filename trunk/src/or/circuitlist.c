@@ -250,6 +250,7 @@ circuit_free(circuit_t *circ)
       circuit_free_cpath_node(circ->build_state->pending_final_cpath);
   }
   tor_free(circ->build_state);
+  tor_free(circ->onionskin);
   circuit_free_cpath(circ->cpath);
   if (circ->rend_splice) {
     circ->rend_splice->rend_splice = NULL;
@@ -792,6 +793,7 @@ assert_circuit_ok(const circuit_t *c)
   tor_assert(c->deliver_window >= 0);
   tor_assert(c->package_window >= 0);
   if (c->state == CIRCUIT_STATE_OPEN) {
+    tor_assert(!c->onionskin);
     if (c->cpath) {
       tor_assert(CIRCUIT_IS_ORIGIN(c));
       tor_assert(!c->n_crypto);

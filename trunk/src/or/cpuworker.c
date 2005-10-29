@@ -428,6 +428,7 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
   if (question_type == CPUWORKER_TASK_ONION) {
     circ = task;
+    tor_assert(circ->onionskin);
 
     if (num_cpuworkers_busy == num_cpuworkers) {
       debug(LD_OR,"No idle cpuworkers. Queuing.");
@@ -453,6 +454,7 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
     connection_write_to_buf((char*)&question_type, 1, cpuworker);
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
     connection_write_to_buf(circ->onionskin, ONIONSKIN_CHALLENGE_LEN, cpuworker);
+    tor_free(circ->onionskin);
   }
   return 0;
 }
