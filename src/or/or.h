@@ -1068,8 +1068,11 @@ struct circuit_t {
    */
   crypt_path_t *cpath;
 
-  /** For storage while passing to cpuworker, or while n_conn is pending. */
-  char onionskin[ONIONSKIN_CHALLENGE_LEN];
+  /** For storage while passing to cpuworker (state
+    * CIRCUIT_STATE_ONIONSKIN_PENDING), or while n_conn is pending
+    * (state CIRCUIT_STATE_OR_WAIT). When defined, it is always
+    * length ONIONSKIN_CHALLENGE_LEN. */
+  char *onionskin;
 
   char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops. */
 

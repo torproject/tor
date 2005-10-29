@@ -414,10 +414,12 @@ circuit_n_conn_done(connection_t *or_conn, int status)
         }
       } else {
         /* pull the create cell out of circ->onionskin, and send it */
+        tor_assert(circ->onionskin);
         if (circuit_deliver_create_cell(circ,CELL_CREATE,circ->onionskin) < 0) {
           circuit_mark_for_close(circ);
           continue;
         }
+        tor_free(circ->onionskin);
       }
     }
   }
@@ -522,7 +524,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
         return -1;
       }
     } else {
-      /* We are not an OR, and we building the first hop of a circuit to
+      /* We are not an OR, and we're building the first hop of a circuit to
        * a new OR: we can be speedy. */
       cell_type = CELL_CREATE_FAST;
       memset(payload, 0, sizeof(payload));
@@ -643,6 +645,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     info(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
            tmpbuf, circ->n_port);
 
+    circ->onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
     circ->state = CIRCUIT_STATE_OR_WAIT;
 
@@ -1197,6 +1200,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       smartlist_subtract(sl,excludedexits);
       if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
         smartlist_intersect(sl,preferredexits);
+        /* XXX sometimes the above results in null, when the requested
+         * exit node is down. we should pick it anyway. */
       router = routerlist_sl_choose_by_bandwidth(sl);
       if (router)
         break;
