@@ -883,7 +883,7 @@ mark_my_descriptor_dirty(void)
 
 #define MAX_BANDWIDTH_CHANGE_FREQ 20*60
 /** Check whether bandwidth has changed a lot since the last time we announced
- * bandwidth.  If so, mark our descriptor dirty.*/
+ * bandwidth. If so, mark our descriptor dirty. */
 void
 check_descriptor_bandwidth_changed(time_t now)
 {
@@ -907,8 +907,8 @@ check_descriptor_bandwidth_changed(time_t now)
 
 #define MAX_IPADDRESS_CHANGE_FREQ 60*60
 /** Check whether our own address as defined by the Address configuration
- * has changed.  This is for routers that get their address from a service
- * like dyndns.  If our address has changed, mark our descriptor dirty.*/
+ * has changed. This is for routers that get their address from a service
+ * like dyndns. If our address has changed, mark our descriptor dirty. */
 void
 check_descriptor_ipaddress_changed(time_t now)
 {
