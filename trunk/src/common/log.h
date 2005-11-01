@@ -90,7 +90,7 @@
 /** Bandwidth accounting. */
 #define LD_ACCT     (1u<<17)
 
-typedef void (*log_callback)(int severity, unsigned int domain, const char *msg);
+typedef void (*log_callback)(int severity, uint32_t domain, const char *msg);
 
 int parse_log_level(const char *level);
 const char *log_level_to_string(int level);
@@ -113,11 +113,11 @@ void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
 
 /* Outputs a message to stdout */
-void _log(int severity, unsigned int domain, const char *format, ...) CHECK_PRINTF(3,4);
+void _log(int severity, uint32_t domain, const char *format, ...) CHECK_PRINTF(3,4);
 #define log _log /* hack it so we don't conflict with log() as much */
 
 #ifdef __GNUC__
-void _log_fn(int severity, unsigned int domain,
+void _log_fn(int severity, uint32_t domain,
              const char *funcname, const char *format, ...)
   CHECK_PRINTF(4,5);
 /** Log a message at level <b>severity</b>, using a pretty-printed version
@@ -137,12 +137,12 @@ void _log_fn(int severity, unsigned int domain,
 
 #else /* ! defined(__GNUC__) */
 
-void _log_fn(int severity, unsigned int domain, const char *format, ...);
-void _debug(unsigned int domain, const char *format, ...);
-void _info(unsigned int domain, const char *format, ...);
-void _notice(unsigned int domain, const char *format, ...);
-void _warn(unsigned int domain, const char *format, ...);
-void _err(unsigned int domain, const char *format, ...);
+void _log_fn(int severity, uint32_t domain, const char *format, ...);
+void _debug(uint32_t domain, const char *format, ...);
+void _info(uint32_t domain, const char *format, ...);
+void _notice(uint32_t domain, const char *format, ...);
+void _warn(uint32_t domain, const char *format, ...);
+void _err(uint32_t domain, const char *format, ...);
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
 /* MSVC 6 and earlier don't have __FUNCTION__, or even __LINE__. */
