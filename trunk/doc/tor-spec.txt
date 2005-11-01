@@ -960,3 +960,6 @@ B.2. ... and that we have no idea how to do.
 
    - UDP (as transport)
    - UDP (as content)
+   - Use a better AES mode that has built-in integrity checking,
+     doesn't grow with the number of hops, is not patented, and
+     is implemented and maintained by smart people.
