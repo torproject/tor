@@ -125,7 +125,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   void prefix##iter_get(prefix##iter_t *iter, keytype *keyp, void **valp); \
   int prefix##iter_done(prefix##iter_t *iter);
 
-/* Map from const char * to void*. Implemented with a splay tree. */
+/* Map from const char * to void *. Implemented with a splay tree. */
 DECLARE_MAP_FNS(strmap_t, const char *, strmap_);
 DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
 
