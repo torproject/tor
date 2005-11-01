@@ -101,8 +101,6 @@ router_reload_networkstatus(void)
   entries = tor_listdir(filename);
   SMARTLIST_FOREACH(entries, const char *, fn, {
       char buf[DIGEST_LEN];
-      if (fn[0] == '.') /* skip . and .. */
-        continue;
       if (strlen(fn) != HEX_DIGEST_LEN ||
           base16_decode(buf, sizeof(buf), fn, strlen(fn))) {
         info(LD_DIR,
