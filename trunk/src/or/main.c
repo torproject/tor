@@ -719,7 +719,7 @@ run_scheduled_events(time_t now)
    * (if we've passed our internal checks). */
   if (time_to_fetch_directory < now) {
     /* purge obsolete entries */
-    routerlist_remove_old_routers(ROUTER_MAX_AGE);
+    routerlist_remove_old_routers();
     networkstatus_list_clean(now);
 
     if (authdir_mode(options)) {
