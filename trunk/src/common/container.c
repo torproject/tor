@@ -480,7 +480,7 @@ SPLAY_PROTOTYPE(digestmap_tree, digestmap_entry_t, node,
 SPLAY_GENERATE(digestmap_tree, digestmap_entry_t, node,
                compare_digestmap_entries);
 
-/** Define function reate a new empty map from strings to void*'s.
+/** Constructor to create a new empty map from strings to void*'s.
  */
 strmap_t *
 strmap_new(void)
@@ -491,7 +491,7 @@ strmap_new(void)
   return result;
 }
 
-/** Define function reate a new empty map from digests to void*'s.
+/** Constructor to create a new empty map from digests to void*'s.
  */
 digestmap_t *
 digestmap_new(void)
@@ -532,6 +532,7 @@ strmap_set(strmap_t *map, const char *key, void *val)
   }
 }
 
+/** Like strmap_set() above but for digestmaps. */
 void *
 digestmap_set(digestmap_t *map, const char *key, void *val)
 {
@@ -575,6 +576,7 @@ strmap_get(strmap_t *map, const char *key)
   }
 }
 
+/** Like strmap_get() above but for digestmaps. */
 void *
 digestmap_get(digestmap_t *map, const char *key)
 {
@@ -618,6 +620,7 @@ strmap_remove(strmap_t *map, const char *key)
   }
 }
 
+/** Like strmap_remove() above but for digestmaps. */
 void *
 digestmap_remove(digestmap_t *map, const char *key)
 {
@@ -651,6 +654,7 @@ strmap_set_lc(strmap_t *map, const char *key, void *val)
   tor_free(lc_key);
   return v;
 }
+
 /** Same as strmap_get, but first converts <b>key</b> to lowercase. */
 void *
 strmap_get_lc(strmap_t *map, const char *key)
@@ -662,6 +666,7 @@ strmap_get_lc(strmap_t *map, const char *key)
   tor_free(lc_key);
   return v;
 }
+
 /** Same as strmap_remove, but first converts <b>key</b> to lowercase */
 void *
 strmap_remove_lc(strmap_t *map, const char *key)
@@ -836,7 +841,6 @@ strmap_iter_done(strmap_iter_t *iter)
 {
   return iter == NULL;
 }
-
 int
 digestmap_iter_done(digestmap_iter_t *iter)
 {
@@ -861,7 +865,6 @@ strmap_free(strmap_t *map, void (*free_val)(void*))
   tor_assert(SPLAY_EMPTY(&map->head));
   tor_free(map);
 }
-
 void
 digestmap_free(digestmap_t *map, void (*free_val)(void*))
 {
@@ -877,8 +880,7 @@ digestmap_free(digestmap_t *map, void (*free_val)(void*))
   tor_free(map);
 }
 
-/* Return true iff <b>map</b> has no entries.
- */
+/** Return true iff <b>map</b> has no entries. */
 int
 strmap_isempty(strmap_t *map)
 {
