@@ -986,7 +986,7 @@ connection_bucket_read_limit(connection_t *conn)
 int
 connection_bucket_write_limit(connection_t *conn)
 {
-  int at_most;
+  unsigned int at_most;
 
   /* do a rudimentary round-robin so one circuit can't hog a connection */
   if (connection_speaks_cells(conn)) {
