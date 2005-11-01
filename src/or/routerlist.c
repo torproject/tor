@@ -199,7 +199,7 @@ router_rebuild_store(int force)
     return 0;
 
   /* Don't save deadweight. */
-  routerlist_remove_old_routers(ROUTER_MAX_AGE);
+  routerlist_remove_old_routers();
 
   options = get_options();
   fname_len = strlen(options->DataDirectory)+32;
@@ -281,7 +281,7 @@ router_reload_router_list(void)
   tor_free(fname);
 
   /* Don't cache expired routers. */
-  routerlist_remove_old_routers(ROUTER_MAX_AGE);
+  routerlist_remove_old_routers();
 
   if (router_journal_len) {
     /* Always clear the journal on startup.*/
@@ -1172,7 +1172,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   // routerlist_assert_ok(rl);
 }
 
-void
+static void
 routerlist_remove_old(routerlist_t *rl, routerinfo_t *ri, int idx)
 {
   routerinfo_t *ri_tmp;
@@ -1495,30 +1495,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
 #define MAX_DESCRIPTORS_PER_ROUTER 5
 
-/** Remove any routers from the routerlist that are more than <b>age</b>
- * seconds old.
- */
-void
-routerlist_remove_old_routers(int age)
-{
-  int i;
-  time_t cutoff;
-  routerinfo_t *router;
-  if (!routerlist)
-    return;
-
-  cutoff = time(NULL) - age;
-  for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
-    router = smartlist_get(routerlist->routers, i);
-    if (router->published_on <= cutoff) {
-      /* Too old.  Remove it. */
-      info(LD_DIR, "Forgetting obsolete (too old) routerinfo for router '%s'",
-           router->nickname);
-      routerlist_remove(routerlist, router, i--, 1);
-    }
-  }
-}
-
 static int
 _compare_old_routers_by_identity(const void **_a, const void **_b)
 {
@@ -1622,26 +1598,42 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi)
   tor_free(lifespans);
 }
 
+/** Deactivate any routers from the routerlist that are more than <b>age</b>
+ * seconds old; remove old routers from the list of cached routers if we have
+ * too many.
+ */
 void
-routerlist_remove_old_cached_routers(void)
+routerlist_remove_old_routers(void)
 {
   int i, hi=-1;
   const char *cur_id = NULL;
   time_t cutoff;
+  routerinfo_t *router;
   if (!routerlist)
     return;
 
-  /* First, check whether we have too many router descriptors, total.  We're
-   * okay with having too many for some given router, so long as the total
-   * number doesn't much exceed
+  cutoff = time(NULL) - ROUTER_MAX_AGE;
+  /* Remove old members of routerlist->routers. */
+  for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
+    router = smartlist_get(routerlist->routers, i);
+    if (router->published_on <= cutoff) {
+      /* Too old.  Remove it. */
+      info(LD_DIR, "Forgetting obsolete (too old) routerinfo for router '%s'",
+           router->nickname);
+      routerlist_remove(routerlist, router, i--, 1);
+    }
+  }
+
+  /* Now we're looking at routerlist->old_routers. First, check whether
+   * we have too many router descriptors, total.  We're okay with having too
+   * many for some given router, so long as the total number doesn't approach
+   * MAX_DESCRIPTORS_PER_ROUTER*len(router).
    */
   if (smartlist_len(routerlist->old_routers) <
       smartlist_len(routerlist->routers) * (MAX_DESCRIPTORS_PER_ROUTER - 1))
     return;
 
   smartlist_sort(routerlist->old_routers, _compare_old_routers_by_identity);
-
-  cutoff = time(NULL) - ROUTER_MAX_AGE;
 
   /* Iterate through the list from back to front, so when we remove descriptors
    * we don't mess up groups we haven't gotten to. */
@@ -1656,7 +1648,9 @@ routerlist_remove_old_cached_routers(void)
       hi = i;
     }
   }
-  routerlist_remove_old_cached_routers_with_id(cutoff, 0, hi);
+  if (hi>=0)
+    routerlist_remove_old_cached_routers_with_id(cutoff, 0, hi);
+  routerlist_assert_ok(routerlist);
 }
 
 /**
