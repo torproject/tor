@@ -16,10 +16,6 @@ const char routerlist_c_id[] = "$Id$";
 
 /****************************************************************************/
 
-/** Global list of a trusted_dir_server_t object for each trusted directory
- * server. */
-static smartlist_t *trusted_dir_servers = NULL;
-
 /* static function prototypes */
 static routerinfo_t *router_pick_directory_server_impl(int requireother,
                                                        int fascistfirewall,
@@ -40,31 +36,34 @@ static void routerlist_assert_ok(routerlist_t *rl);
 
 /****************************************************************************/
 
-/****
- * Functions to manage and access our list of known routers. (Note:
- * dirservers maintain a separate, independent list of known router
- * descriptors.)
- ****/
+/** Global list of a trusted_dir_server_t object for each trusted directory
+ * server. */
+static smartlist_t *trusted_dir_servers = NULL;
 
 /** Global list of all of the routers that we know about. */
 static routerlist_t *routerlist = NULL;
 
-extern int has_fetched_directory; /**< from main.c */
+extern int has_fetched_directory; /* from main.c */
 
 /** Global list of all of the current network_status documents that we know
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
+
 /** Global list of local_routerstatus_t for each router, known or unknown. */
 static smartlist_t *routerstatus_list = NULL;
+
 /** True iff any member of networkstatus_list has changed since the last time
  * we called routerstatus_list_update_from_networkstatus(). */
 static int networkstatus_list_has_changed = 0;
+
 /** True iff any element of routerstatus_list has changed since the last
  * time we called routers_update_all_from_networkstatus().*/
 static int routerstatus_list_has_changed = 0;
+
 /** List of strings for nicknames we've already warned about and that are
  * still unknown / unavailable. */
 static smartlist_t *warned_nicknames = NULL;
+
 /** List of strings for nicknames or fingerprints we've already warned about
  * and that are still conflicted. */
 static smartlist_t *warned_conflicts = NULL;
@@ -73,6 +72,7 @@ static smartlist_t *warned_conflicts = NULL;
  * use this to rate-limit download attempts when the number of routerdescs to
  * download is low. */
 static time_t last_routerdesc_download_attempted = 0;
+
 /** The last time we tried to download a networkstatus, or 0 for "never".  We
  * use this to rate-limit download attempts for directory caches (including
  * mirrors).  Clients don't use this now. */
@@ -260,7 +260,7 @@ router_reload_router_list(void)
   int j;
 
   if (!routerlist)
-    router_get_routerlist();
+    router_get_routerlist(); /* mallocs and inits it in place */
 
   router_journal_len = router_store_len = 0;
 
@@ -1151,8 +1151,8 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 /** Remove an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
  * as needed. If <b>idx</b> is nonnegative and smartlist_get(rl-&gt;routers,
  * idx) == ri, we don't need to do a linear search over the list to decide
- * which to remove.  We fill the gap rl-&gt;routers with a later element in
- * the list, if any exists. ri is freed..*/
+ * which to remove.  We fill the gap in rl-&gt;routers with a later element in
+ * the list, if any exists. <b>ri</b> is freed. */
 void
 routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
 {
@@ -1193,7 +1193,7 @@ routerlist_remove_old(routerlist_t *rl, routerinfo_t *ri, int idx)
  * <b>ri_new</b>, updating all index info.  If <b>idx</b> is nonnegative and
  * smartlist_get(rl-&gt;routers, idx) == ri, we don't need to do a linear
  * search over the list to decide which to remove.  We put ri_new in the same
- * index as ri_old, if possible.  ri is freed as appropriate */
+ * index as ri_old, if possible.  ri is freed as appropriate. */
 static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx, int make_old)
@@ -1228,7 +1228,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   // routerlist_assert_ok(rl);
 }
 
-/** Free all memory held by the rouerlist module */
+/** Free all memory held by the routerlist module. */
 void
 routerlist_free_all(void)
 {
@@ -1401,7 +1401,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     if (! router->xx_is_recognized && !from_cache) {
       log_fn(LOG_WARN, "Dropping unrecognized descriptor for router '%s'",
              router->nickname);
-      rouerinfo_free(router);
+      routerinfo_free(router);
       return -1;
     }
     */
@@ -1514,11 +1514,11 @@ routerlist_remove_old_routers(int age)
     router = smartlist_get(routerlist->routers, i);
     if (router->published_on <= cutoff) {
       /* Too old.  Remove it. */
-      info(LD_DIR,"Forgetting obsolete (too old) routerinfo for router '%s'", router->nickname);
+      info(LD_DIR, "Forgetting obsolete (too old) routerinfo for router '%s'",
+           router->nickname);
       routerlist_remove(routerlist, router, i--, 1);
     }
   }
-
 }
 
 static int
@@ -3152,7 +3152,7 @@ router_reset_descriptor_download_failures(void)
 }
 
 /** Return true iff the only differences between r1 and r2 are such that
- * would not cause a recent (post 0.1.1.6) direserver to republish.
+ * would not cause a recent (post 0.1.1.6) dirserver to republish.
  */
 int
 router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)

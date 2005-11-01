@@ -1022,9 +1022,10 @@ dirserv_regenerate_directory(void)
     return -1;
   }
   set_cached_dir(&the_directory, new_directory, time(NULL));
-  info(LD_DIRSERV,"New directory (size %d) has been built.",(int)the_directory.dir_len);
+  info(LD_DIRSERV,"New directory (size %d) has been built.",
+       (int)the_directory.dir_len);
   debug(LD_DIRSERV,"New directory (size %d):\n%s",(int)the_directory.dir_len,
-         the_directory.dir);
+        the_directory.dir);
 
   the_directory_is_dirty = 0;
 
@@ -1375,10 +1376,11 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
  *   - "/tor/server/d/D" where D is a plus-separated sequence
  *     of server descriptor digests, in hex.
  *
- * Return -1 if we do not have any descriptors, no matching descriptors,
- *  or if we did not recognize the key (URL), 0 otherwise (i.e. we found some
- *  matching descriptors).  If -1 is returned <b>msg</b> will be set to
- *  an appropriate error message.
+ * Return 0 if we found some matching descriptors, or -1 if we do not
+ * have any descriptors, no matching descriptors, or if we did not
+ * recognize the key (URL).
+ * If -1 is returned *<b>msg</b> will be set to an appropriate error
+ * message.
  */
 int
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
