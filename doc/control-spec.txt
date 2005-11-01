@@ -595,7 +595,7 @@ $Id$
   form
       "650" ("-"/" ") KEYWORD ["=" ARGUMENTS] CRLF
   Additional arguments will be of the form
-      SP KEYWORD ["=" ( QuoutedString / * NonSpDquote ) ]
+      SP KEYWORD ["=" ( QuotedString / * NonSpDquote ) ]
   Such clients MUST tolerate lines with keywords they do not recognize.
 
 4.1.1. Circuit status changed
