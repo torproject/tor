@@ -44,7 +44,7 @@
           _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);                 \
       fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",      \
               _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);             \
-      abort();  /* unreached */                                         \
+      abort();                                                          \
     } } while (0)
 #endif
 
