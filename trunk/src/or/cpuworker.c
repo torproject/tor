@@ -163,13 +163,17 @@ connection_cpu_process_inbuf(connection_t *conn)
       circ = circuit_get_by_circid_orconn(circ_id, p_conn);
 
     if (success == 0) {
-      debug(LD_OR,"decoding onionskin failed. (Old key or bad sw.) Closing.");
+      debug(LD_OR,"decoding onionskin failed. (Old key or bad software.) Closing.");
       if (circ)
         circuit_mark_for_close(circ);
       goto done_processing;
     }
     if (!circ) {
-      /*XXXX Why does this happen?*/
+      /* This happens because somebody sends us a destroy cell and the
+       * circuit goes away, while the cpuworker is working. This is also
+       * why our tag doesn't include a pointer to the circ, because we'd
+       * never know if it's still valid.
+       */
       debug(LD_OR,"processed onion for a circ that's gone. Dropping.");
       goto done_processing;
     }
@@ -259,7 +263,7 @@ cpuworker_main(void *data)
     }
 
     if (read_all(fd, question, ONIONSKIN_CHALLENGE_LEN, 1) != ONIONSKIN_CHALLENGE_LEN) {
-      info(LD_BUG,"read question failed. Exiting.");
+      err(LD_BUG,"read question failed. Exiting.");
       goto end;
     }
 

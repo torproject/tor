@@ -814,7 +814,7 @@ connection_dir_client_reached_eof(connection_t *conn)
                               &body, &body_len, MAX_DIR_SIZE,
                               allow_partial)) {
     case -1: /* overflow */
-      warn(LD_BUG,"'fetch' response too large (server '%s:%d'). Closing.", conn->address, conn->port);
+      warn(LD_PROTOCOL,"'fetch' response too large (server '%s:%d'). Closing.", conn->address, conn->port);
       return -1;
     case 0:
       info(LD_HTTP,"'fetch' response not all here, but we're at eof. Closing.");
