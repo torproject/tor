@@ -421,12 +421,15 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
                        (uint16_t)msg_len, msg_len?msg:NULL);
 
  done:
-  if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-  if (questions) SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-  smartlist_free(answers);
-  smartlist_free(questions);
+  if (answers) {
+    SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
+    smartlist_free(answers);
+  }
+  if (questions) {
+    SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
+    smartlist_free(questions);
+  }
   tor_free(msg);
-
   return 0;
 }
 
@@ -695,10 +698,14 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
                        msg_len, msg);
 
  done:
-  if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-  if (questions) SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-  smartlist_free(answers);
-  smartlist_free(questions);
+  if (answers) {
+    SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
+    smartlist_free(answers);
+  }
+  if (questions) {
+    SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
+    smartlist_free(questions);
+  }
   tor_free(msg);
 
   return 0;
