@@ -591,8 +591,9 @@ run_connection_housekeeping(int i, time_t now)
         buf_datalen(conn->inbuf)>=1024) {
       info(LD_DIR,"Trying to extract information from wedged server desc download.");
       connection_dir_reached_eof(conn);
+    } else {
+      connection_mark_for_close(conn);
     }
-    connection_mark_for_close(conn);
     return;
   }
 
