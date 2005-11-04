@@ -1184,7 +1184,7 @@ routerlist_remove_old(routerlist_t *rl, routerinfo_t *ri, int idx)
                             ri->signed_descriptor_digest);
   tor_assert(ri_tmp == ri);
   routerinfo_free(ri);
-  // routerlist_assert_ok(rl);
+  routerlist_assert_ok(rl);
 }
 
 /** Remove <b>ri_old</b> from the routerlist <b>rl</b>, and replace it with
@@ -1559,18 +1559,18 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi)
   for (i = lo; i <= hi; ++i) {
     routerinfo_t *r = smartlist_get(lst, i);
     routerinfo_t *r_next;
-    lifespans[i].idx = i;
+    lifespans[i-lo].idx = i;
     if (i < hi) {
       r_next = smartlist_get(lst, i+1);
       tor_assert(r->published_on <= r_next->published_on);
-      lifespans[i].duration = r_next->published_on - r->published_on;
+      lifespans[i-lo].duration = r_next->published_on - r->published_on;
     } else {
       r_next = NULL;
-      lifespans[i].duration = INT_MAX;
+      lifespans[i-lo].duration = INT_MAX;
     }
     if (r->published_on < cutoff && n_rmv < n_extra) {
       ++n_rmv;
-      lifespans[i].old = 1;
+      lifespans[i-lo].old = 1;
       rmv[i-lo] = 1;
     }
   }
@@ -1590,7 +1590,7 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi)
     }
   }
 
-  for (i = hi; i >= lo; ++i) {
+  for (i = hi; i >= lo; --i) {
     if (rmv[i-lo])
       routerlist_remove_old(routerlist, smartlist_get(lst, i), i);
   }
