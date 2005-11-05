@@ -1187,7 +1187,7 @@ test_dir_format(void)
   memset(&r2,0,sizeof(r2));
   r1.address = tor_strdup("18.244.0.1");
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
-  r1.published_on = 0;
+  r1.cache_info.published_on = 0;
   r1.or_port = 9000;
   r1.dir_port = 9003;
   r1.onion_pkey = pk1;
@@ -1213,7 +1213,7 @@ test_dir_format(void)
   r2.address = tor_strdup("1.1.1.1");
   r2.addr = 0x0a030201u; /* 10.3.2.1 */
   r2.platform = tor_strdup(platform);
-  r2.published_on = 5;
+  r2.cache_info.published_on = 5;
   r2.or_port = 9005;
   r2.dir_port = 0;
   r2.onion_pkey = pk2;
@@ -1314,8 +1314,8 @@ test_dir_format(void)
     add_fingerprint_to_dir("Fred", buf, fingerprint_list);
   }
   /* Make sure routers aren't too far in the past any more. */
-  r1.published_on = time(NULL);
-  r2.published_on = time(NULL)-3*60*60;
+  r1.cache_info.published_on = time(NULL);
+  r2.cache_info.published_on = time(NULL)-3*60*60;
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   test_eq(dirserv_add_descriptor(buf,&m), 2);
   test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);

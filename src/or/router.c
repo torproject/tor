@@ -623,7 +623,7 @@ router_retry_connections(int force)
     if (!clique_mode(options) && !router_is_clique_mode(router))
       continue;
     if (force ||
-        !connection_get_by_identity_digest(router->identity_digest,
+        !connection_get_by_identity_digest(router->cache_info.identity_digest,
                                            CONN_TYPE_OR)) {
       debug(LD_OR,"%sconnecting to %s at %s:%u.",
              clique_mode(options) ? "(forced) " : "",
@@ -631,7 +631,8 @@ router_retry_connections(int force)
       /* Remember when we started trying to determine reachability */
       if (!router->testing_since)
         router->testing_since = now;
-      connection_or_connect(router->addr, router->or_port, router->identity_digest);
+      connection_or_connect(router->addr, router->or_port,
+                            router->cache_info.identity_digest);
     }
   });
 }
@@ -641,7 +642,7 @@ router_retry_connections(int force)
 int
 router_is_clique_mode(routerinfo_t *router)
 {
-  if (router_digest_is_trusted_dir(router->identity_digest))
+  if (router_digest_is_trusted_dir(router->cache_info.identity_digest))
     return 1;
   return 0;
 }
@@ -701,7 +702,7 @@ int
 router_digest_is_me(const char *digest)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  if (!me || memcmp(me->identity_digest, digest, DIGEST_LEN))
+  if (!me || memcmp(me->cache_info.identity_digest, digest, DIGEST_LEN))
     return 0;
   return 1;
 }
@@ -710,7 +711,7 @@ router_digest_is_me(const char *digest)
 int
 router_is_me(routerinfo_t *router)
 {
-  return router_digest_is_me(router->identity_digest);
+  return router_digest_is_me(router->cache_info.identity_digest);
 }
 
 /** Return true iff <b>fp</b> is a hex fingerprint of my identity digest. */
@@ -750,8 +751,9 @@ router_get_my_descriptor(void)
     if (router_rebuild_descriptor(1))
       return NULL;
   }
-  debug(LD_GENERAL,"my desc is '%s'",desc_routerinfo->signed_descriptor);
-  return desc_routerinfo->signed_descriptor;
+  debug(LD_GENERAL,"my desc is '%s'",
+        desc_routerinfo->cache_info.signed_descriptor);
+  return desc_routerinfo->cache_info.signed_descriptor;
 }
 
 /*DOCDOC*/
@@ -784,10 +786,11 @@ router_rebuild_descriptor(int force)
   ri->addr = addr;
   ri->or_port = options->ORPort;
   ri->dir_port = options->DirPort;
-  ri->published_on = time(NULL);
+  ri->cache_info.published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
-  if (crypto_pk_get_digest(ri->identity_pkey, ri->identity_digest)<0) {
+  if (crypto_pk_get_digest(ri->identity_pkey,
+                           ri->cache_info.identity_digest)<0) {
     routerinfo_free(ri);
     return -1;
   }
@@ -838,7 +841,7 @@ router_rebuild_descriptor(int force)
          char *fp = tor_malloc(HEX_DIGEST_LEN+2);
          fp[0] = '$';
          base16_encode(fp+1,HEX_DIGEST_LEN+1,
-                       member->identity_digest, DIGEST_LEN);
+                       member->cache_info.identity_digest, DIGEST_LEN);
          smartlist_add(ri->declared_family, fp);
          if (smartlist_string_isin(warned_nonexistent_family, name))
            smartlist_string_remove(warned_nonexistent_family, name);
@@ -847,15 +850,17 @@ router_rebuild_descriptor(int force)
      });
     smartlist_free(family);
   }
-  ri->signed_descriptor = tor_malloc(8192);
-  if (router_dump_router_to_string(ri->signed_descriptor, 8192,
+  ri->cache_info.signed_descriptor = tor_malloc(8192);
+  if (router_dump_router_to_string(ri->cache_info.signed_descriptor, 8192,
                                    ri, get_identity_key())<0) {
     warn(LD_BUG, "Couldn't allocate string for descriptor.");
     return -1;
   }
-  ri->signed_descriptor_len = strlen(ri->signed_descriptor);
-  crypto_digest(ri->signed_descriptor_digest,
-                ri->signed_descriptor, ri->signed_descriptor_len);
+  ri->cache_info.signed_descriptor_len =
+    strlen(ri->cache_info.signed_descriptor);
+  crypto_digest(ri->cache_info.signed_descriptor_digest,
+                ri->cache_info.signed_descriptor,
+                ri->cache_info.signed_descriptor_len);
 
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
@@ -1029,7 +1034,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   /* Encode the publication time. */
-  format_iso_time(published, router->published_on);
+  format_iso_time(published, router->cache_info.published_on);
 
   /* How busy have we been? */
   bandwidth_usage = rep_hist_get_bandwidth_lines();

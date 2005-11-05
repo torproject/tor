@@ -743,9 +743,9 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->signed_descriptor = tor_strndup(s, end-s);
-  router->signed_descriptor_len = end-s;
-  memcpy(router->signed_descriptor_digest, digest, DIGEST_LEN);
+  router->cache_info.signed_descriptor = tor_strndup(s, end-s);
+  router->cache_info.signed_descriptor_len = end-s;
+  memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
   ports_set = bw_set = 0;
 
   if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {
@@ -822,7 +822,7 @@ router_parse_entry_from_string(const char *s, const char *end)
     warn(LD_DIR, "Missing published time"); goto err;
   }
   tor_assert(tok->n_args == 1);
-  if (parse_iso_time(tok->args[0], &router->published_on) < 0)
+  if (parse_iso_time(tok->args[0], &router->cache_info.published_on) < 0)
     goto err;
 
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
@@ -846,7 +846,8 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
   router->identity_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
-  if (crypto_pk_get_digest(router->identity_pkey,router->identity_digest)) {
+  if (crypto_pk_get_digest(router->identity_pkey,
+                           router->cache_info.identity_digest)) {
     warn(LD_DIR, "Couldn't calculate key digest"); goto err;
   }
 

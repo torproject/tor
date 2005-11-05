@@ -250,9 +250,9 @@ directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
                                   const char *payload, size_t payload_len)
 {
   directory_initiate_command(router->address, router->addr, router->dir_port,
-                             router->platform, router->identity_digest,
-                             purpose, private_connection, resource,
-                             payload, payload_len);
+                         router->platform, router->cache_info.identity_digest,
+                         purpose, private_connection, resource,
+                         payload, payload_len);
 }
 
 /** As directory_initiate_command_router, but send the command to a trusted
@@ -1043,7 +1043,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       /* this might have been a dirport reachability test. see if it is. */
       routerinfo_t *me = router_get_my_routerinfo();
       if (me &&
-          !memcmp(me->identity_digest, conn->identity_digest, DIGEST_LEN) &&
+          router_digest_is_me(conn->identity_digest) &&
           me->addr == conn->addr &&
           me->dir_port == conn->port)
         router_dirport_found_reachable();
@@ -1340,14 +1340,14 @@ directory_handle_command_get(connection_t *conn, char *headers,
     else {
       size_t len = 0;
       format_rfc1123_time(date, time(NULL));
-      SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
+      SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
                         len += ri->signed_descriptor_len);
       if (deflated) {
         size_t compressed_len;
         char *compressed;
         char *inp = tor_malloc(len+smartlist_len(descs)+1);
         char *cp = inp;
-        SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
+        SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
            {
              memcpy(cp, ri->signed_descriptor,
                     ri->signed_descriptor_len);
@@ -1375,7 +1375,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
                      date,
                      (int)len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
-        SMARTLIST_FOREACH(descs, routerinfo_t *, ri,
+        SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
                           connection_write_to_buf(ri->signed_descriptor,
                                                   ri->signed_descriptor_len,
                                                   conn));

@@ -376,17 +376,17 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
 
   /* Is there too much clock skew? */
   now = time(NULL);
-  if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
+  if (ri->cache_info.published_on > now+ROUTER_ALLOW_SKEW) {
     notice(LD_DIRSERV, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding (ContactInfo '%s', platform '%s').",
-           ri->nickname, (int)((ri->published_on-now)/60),
+           ri->nickname, (int)((ri->cache_info.published_on-now)/60),
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
     *msg = "Rejected: Your clock is set too far in the future, or your timezone is not correct.";
     return -1;
   }
-  if (ri->published_on < now-ROUTER_MAX_AGE) {
+  if (ri->cache_info.published_on < now-ROUTER_MAX_AGE) {
     notice(LD_DIRSERV, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
-           ri->nickname, (int)((now-ri->published_on)/60),
+           ri->nickname, (int)((now-ri->cache_info.published_on)/60),
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
     *msg = "Rejected: Server is expired, or your clock is too far in the past, or your timezone is not correct.";
@@ -448,9 +448,9 @@ dirserv_add_descriptor(const char *desc, const char **msg)
    * from this server.  (We do this here and not in router_add_to_routerlist
    * because we want to be able to accept the newest router descriptor that
    * another authority has, so we all converge on the same one.) */
-  ri_old = router_get_by_digest(ri->identity_digest);
-  if (ri_old && ri_old->published_on < ri->published_on &&
-      router_differences_are_cosmetic(ri_old, ri)) {
+  ri_old = router_get_by_digest(ri->cache_info.identity_digest);
+  if (ri_old && ri_old->cache_info.published_on < ri->cache_info.published_on
+      && router_differences_are_cosmetic(ri_old, ri)) {
     info(LD_DIRSERV,
          "Not replacing descriptor from '%s'; differences are cosmetic.",
          ri->nickname);
@@ -599,7 +599,7 @@ list_single_server_status(routerinfo_t *desc, int is_live)
     *cp++ = '=';
   }
   *cp++ = '$';
-  base16_encode(cp, HEX_DIGEST_LEN+1, desc->identity_digest,
+  base16_encode(cp, HEX_DIGEST_LEN+1, desc->cache_info.identity_digest,
                 DIGEST_LEN);
   return tor_strdup(buf);
 }
@@ -616,7 +616,7 @@ dirserv_thinks_router_is_reachable(routerinfo_t *router, time_t now)
   connection_t *conn;
   if (router_is_me(router) && !we_are_hibernating())
     return 1;
-  conn = connection_get_by_identity_digest(router->identity_digest,
+  conn = connection_get_by_identity_digest(router->cache_info.identity_digest,
                                            CONN_TYPE_OR);
   if (conn && conn->state == OR_CONN_STATE_OPEN)
     return get_options()->AssumeReachable ||
@@ -633,7 +633,7 @@ dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router, time_t now)
   connection_t *conn;
   if (router->is_hibernating)
     return 0;
-  conn = connection_get_by_identity_digest(router->identity_digest,
+  conn = connection_get_by_identity_digest(router->cache_info.identity_digest,
                                            CONN_TYPE_OR);
   if (conn && conn->state == OR_CONN_STATE_OPEN &&
       now >= router->last_reachable + 2*REACHABLE_TIMEOUT &&
@@ -763,7 +763,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-                    buf_len += ri->signed_descriptor_len+1);
+                    buf_len += ri->cache_info.signed_descriptor_len+1);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
      function, though strictly speaking we shouldn't be able to exceed
@@ -786,10 +786,11 @@ dirserv_dump_directory_to_string(char **dir_out,
   cp = buf + strlen(buf);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
     {
-      if (cp+ri->signed_descriptor_len+1 >= buf+buf_len)
+      size_t len = ri->cache_info.signed_descriptor_len;
+      if (cp+len+1 >= buf+buf_len)
         goto truncated;
-      memcpy(cp, ri->signed_descriptor, ri->signed_descriptor_len);
-      cp += ri->signed_descriptor_len;
+      memcpy(cp, ri->cache_info.signed_descriptor, len);
+      cp += len;
       *cp++ = '\n'; /* add an extra newline in case somebody was depending on
                      * it. */
     });
@@ -1226,7 +1227,8 @@ generate_v2_networkstatus(void)
       int f_stable = !router_is_unreliable(ri, 1, 0);
       int f_fast = !router_is_unreliable(ri, 0, 1);
       int f_running;
-      int f_authority = router_digest_is_trusted_dir(ri->identity_digest);
+      int f_authority = router_digest_is_trusted_dir(
+                                      ri->cache_info.identity_digest);
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_verified;
       char identity64[BASE64_DIGEST_LEN+1];
@@ -1236,10 +1238,10 @@ generate_v2_networkstatus(void)
       }
       f_running = ri->is_running;
 
-      format_iso_time(published, ri->published_on);
+      format_iso_time(published, ri->cache_info.published_on);
 
-      digest_to_base64(identity64, ri->identity_digest);
-      digest_to_base64(digest64, ri->signed_descriptor_digest);
+      digest_to_base64(identity64, ri->cache_info.identity_digest);
+      digest_to_base64(digest64, ri->cache_info.signed_descriptor_digest);
 
       in.s_addr = htonl(ri->addr);
       tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
@@ -1367,7 +1369,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
   return 0;
 }
 
-/** Add a routerinfo_t to <b>descs_out</b> for each router matching
+/** Add a signed_descriptor_t to <b>descs_out</b> for each router matching
  * <b>key</b>.  The key should be either
  *   - "/tor/server/authority" for our own routerinfo;
  *   - "/tor/server/all" for all the routerinfos we have, concatenated;
@@ -1390,20 +1392,21 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
 
   if (!strcmp(key, "/tor/server/all")) {
     routerlist_t *rl = router_get_routerlist();
-    smartlist_add_all(descs_out, rl->routers);
+    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
+                      smartlist_add(descs_out, &(r->cache_info)));
   } else if (!strcmp(key, "/tor/server/authority")) {
     routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
-      smartlist_add(descs_out, ri);
+      smartlist_add(descs_out, &(ri->cache_info));
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/d/");
     dir_split_resource_into_fingerprints(key, digests, NULL, 1);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
-         routerinfo_t *ri = router_get_by_descriptor_digest(d);
-         if (ri)
-           smartlist_add(descs_out,ri);
+         signed_descriptor_t *sd = router_get_by_descriptor_digest(d);
+         if (sd)
+           smartlist_add(descs_out,sd);
        });
     SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
     smartlist_free(digests);
@@ -1414,11 +1417,11 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          if (router_digest_is_me(d)) {
-           smartlist_add(descs_out, router_get_my_routerinfo());
+           smartlist_add(descs_out, &(router_get_my_routerinfo()->cache_info));
          } else {
            routerinfo_t *ri = router_get_by_digest(d);
            if (ri)
-             smartlist_add(descs_out,ri);
+             smartlist_add(descs_out, &(ri->cache_info));
          }
        });
     SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
@@ -1471,7 +1474,8 @@ dirserv_orconn_tls_done(const char *address,
         notice(LD_DIRSERV, "Dropping descriptor: nickname '%s' does not match nickname '%s' in cert from %s:%d",
                ri->nickname, nickname_rcvd, address, or_port);
         drop = 1;
-      } else if (memcmp(ri->identity_digest, digest_rcvd, DIGEST_LEN)) {
+      } else if (memcmp(ri->cache_info.identity_digest, digest_rcvd,
+                        DIGEST_LEN)) {
         notice(LD_DIRSERV, "Dropping descriptor: identity key does not match key in cert from %s:%d",
                address, or_port);
         drop = 1;

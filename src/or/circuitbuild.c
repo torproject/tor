@@ -179,20 +179,20 @@ circuit_rep_hist_note_result(circuit_t *circ)
   if (server_mode(get_options())) {
     routerinfo_t *me = router_get_my_routerinfo();
     tor_assert(me);
-    prev_digest = me->identity_digest;
+    prev_digest = me->cache_info.identity_digest;
   }
   do {
     router = router_get_by_digest(hop->extend_info->identity_digest);
     if (router) {
       if (prev_digest) {
         if (hop->state == CPATH_STATE_OPEN)
-          rep_hist_note_extend_succeeded(prev_digest, router->identity_digest);
+          rep_hist_note_extend_succeeded(prev_digest, router->cache_info.identity_digest);
         else {
-          rep_hist_note_extend_failed(prev_digest, router->identity_digest);
+          rep_hist_note_extend_failed(prev_digest, router->cache_info.identity_digest);
           break;
         }
       }
-      prev_digest = router->identity_digest;
+      prev_digest = router->cache_info.identity_digest;
     } else {
       prev_digest = NULL;
     }
@@ -1567,7 +1567,7 @@ extend_info_from_router(routerinfo_t *r)
   tor_assert(r);
   info = tor_malloc_zero(sizeof(extend_info_t));
   strlcpy(info->nickname, r->nickname, sizeof(info->nickname));
-  memcpy(info->identity_digest, r->identity_digest, DIGEST_LEN);
+  memcpy(info->identity_digest, r->cache_info.identity_digest, DIGEST_LEN);
   info->onion_key = crypto_pk_dup_key(r->onion_pkey);
   info->addr = r->addr;
   info->port = r->or_port;
@@ -1656,7 +1656,7 @@ pick_helper_nodes(void)
     /* XXXX Downgrade this to info before release. NM */
     notice(LD_CIRC, "Chose '%s' as helper node.", entry->nickname);
     strlcpy(helper->nickname, entry->nickname, sizeof(helper->nickname));
-    memcpy(helper->identity, entry->identity_digest, DIGEST_LEN);
+    memcpy(helper->identity, entry->cache_info.identity_digest, DIGEST_LEN);
     smartlist_add(helper_nodes, helper);
     changed = 1;
   }

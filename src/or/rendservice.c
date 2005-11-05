@@ -975,7 +975,8 @@ rend_services_introduce(void)
       changed = 1;
       hex_digest = tor_malloc_zero(HEX_DIGEST_LEN+2);
       hex_digest[0] = '$';
-      base16_encode(hex_digest+1, HEX_DIGEST_LEN+1, router->identity_digest,
+      base16_encode(hex_digest+1, HEX_DIGEST_LEN+1,
+                    router->cache_info.identity_digest,
                     DIGEST_LEN);
       smartlist_add(intro_routers, router);
       smartlist_add(exclude_routers, router);

@@ -1255,12 +1255,12 @@ handle_getinfo_helper(const char *question, char **answer)
     *answer = list_getinfo_options();
   } else if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
-    if (ri && ri->signed_descriptor)
-      *answer = tor_strdup(ri->signed_descriptor);
+    if (ri && ri->cache_info.signed_descriptor)
+      *answer = tor_strdup(ri->cache_info.signed_descriptor);
   } else if (!strcmpstart(question, "desc/name/")) {
     routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"),1);
-    if (ri && ri->signed_descriptor)
-      *answer = tor_strdup(ri->signed_descriptor);
+    if (ri && ri->cache_info.signed_descriptor)
+      *answer = tor_strdup(ri->cache_info.signed_descriptor);
   } else if (!strcmpstart(question, "unregistered-servers-")) {
     *answer = dirserver_getinfo_unregistered(question +
                                              strlen("unregistered-servers-"));
@@ -2557,7 +2557,7 @@ control_event_descriptors_changed(smartlist_t *routers)
   identities = smartlist_create();
   SMARTLIST_FOREACH(routers, routerinfo_t *, r,
   {
-    base16_encode(buf,sizeof(buf),r->identity_digest,DIGEST_LEN);
+    base16_encode(buf,sizeof(buf),r->cache_info.identity_digest,DIGEST_LEN);
     smartlist_add(identities, tor_strdup(buf));
   });
   if (EVENT_IS_INTERESTING0(EVENT_NEW_DESC)) {

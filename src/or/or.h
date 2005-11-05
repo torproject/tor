@@ -735,11 +735,18 @@ typedef struct cached_dir_t {
   time_t published; /**< When was this object published */
 } cached_dir_t;
 
+/** Information need to cache an onion router's descriptor. */
+typedef struct signed_descriptor_t {
+  char *signed_descriptor;
+  size_t signed_descriptor_len;
+  char signed_descriptor_digest[DIGEST_LEN];
+  char identity_digest[DIGEST_LEN];
+  time_t published_on;
+} signed_descriptor_t;
+
 /** Information about another onion router in the network. */
 typedef struct {
-  char *signed_descriptor; /**< The original signed descriptor for this router*/
-  size_t signed_descriptor_len; /**< The length of signed_descriptor */
-  char signed_descriptor_digest[DIGEST_LEN]; /**< The digest of the signed descriptor. */
+  signed_descriptor_t cache_info;
 
   char *address; /**< Location of OR: either a hostname or an IP address. */
   char *nickname; /**< Human-readable OR name. */
@@ -748,12 +755,8 @@ typedef struct {
   uint16_t or_port; /**< Port for OR-to-OR and OP-to-OR connections. */
   uint16_t dir_port; /**< Port for HTTP directory connections. */
 
-  time_t published_on; /**< When was the information in this routerinfo_t
-                        * published? */
-
   crypto_pk_env_t *onion_pkey; /**< Public RSA key for onions. */
   crypto_pk_env_t *identity_pkey;  /**< Public RSA key for signing. */
-  char identity_digest[DIGEST_LEN]; /**< Digest of identity key */
 
   char *platform; /**< What software/operating system is this OR using? */
 
@@ -871,12 +874,13 @@ typedef struct networkstatus_t {
 typedef struct {
   /** Map from server identity digest to a member of routers. */
   digestmap_t *identity_map;
-  /** Map from server descriptor digest to a member of routers or of
-   * old_routers. */
+  /** Map from server descriptor digest to a signed_descritptor_t from
+   * routers or old_routers. */
   digestmap_t *desc_digest_map;
   /** List of routerinfo_t for all currently live routers we know. */
   smartlist_t *routers;
-  /** List of routerinfo_t for older router descriptors we're caching. */
+  /** List of signed_descriptor_t for older router descriptors we're
+   * caching. */
   smartlist_t *old_routers;
 } routerlist_t;
 
@@ -2146,7 +2150,7 @@ routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
-routerinfo_t *router_get_by_descriptor_digest(const char *digest);
+signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
 int router_digest_is_trusted_dir(const char *digest);
 routerlist_t *router_get_routerlist(void);
 void routerlist_reset_warnings(void);
