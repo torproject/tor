@@ -326,7 +326,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
   tor_assert(id_digest);
 
   if (server_mode(options) && (me=router_get_my_routerinfo()) &&
-      !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
+      router_digest_is_me(id_digest)) {
     info(LD_PROTOCOL,"Client asked me to connect to myself. Refusing.");
     return NULL;
   }
@@ -500,7 +500,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
   router = router_get_by_nickname(nickname, 0);
   if (router && /* we know this nickname */
       router->is_named && /* make sure it's the right guy */
-      memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
+      memcmp(digest_rcvd, router->cache_info.identity_digest,DIGEST_LEN) !=0) {
     log_fn(severity, LD_OR,
            "Identity key not as expected for router claiming to be '%s' (%s:%d)",
            nickname, conn->address, conn->port);

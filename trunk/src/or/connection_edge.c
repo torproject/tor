@@ -1066,7 +1066,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
           /* use the hex digest, not nickname, in case there are two
              routers with this nickname */
           conn->chosen_exit_name =
-            tor_strdup(hex_str(r->identity_digest, DIGEST_LEN));
+            tor_strdup(hex_str(r->cache_info.identity_digest, DIGEST_LEN));
         }
       }
 
