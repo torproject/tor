@@ -1352,7 +1352,7 @@ add_default_trusted_dirservers(or_options_t *options)
   config_line_append(&options->DirServers, "DirServer",
      "moria2 v1 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
   config_line_append(&options->DirServers, "DirServer",
-     "tor26 v1 86.59.5.130:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
+     "tor26 v1 86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 //  "tor.noreply.org:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 }
 
