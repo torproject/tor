@@ -1601,7 +1601,8 @@ dir_networkstatus_download_failed(smartlist_t *failed)
     base16_decode(digest, DIGEST_LEN, fp, strlen(fp));
     dir = router_get_trusteddirserver_by_digest(digest);
 
-    ++dir->n_networkstatus_failures;
+    if (dir)
+      ++dir->n_networkstatus_failures;
   });
 }
 
