@@ -366,9 +366,9 @@ circuit_get_by_circid_orconn_impl(uint16_t circ_id, connection_t *conn)
   if (found && found->circuit)
     return found->circuit;
 
-  /* The rest of this can be replaced with
-     "return NULL;" once we believe the code works. */
+  return NULL;
 
+  /* The rest of this checks for bugs. Disabled by default. */
   {
     circuit_t *circ;
     for (circ=global_circuitlist;circ;circ = circ->next) {
@@ -590,7 +590,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
       }
       if (!best || (best->build_state->need_uptime && !need_uptime))
         best = circ;
-      next:
+      next: ;
     }
   }
   return best;
