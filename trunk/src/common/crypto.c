@@ -1480,11 +1480,12 @@ tor_check_dh_key(BIGNUM *bn)
   /* This covers another 2^25 keys, which is still negligible. */
 #define MIN_DIST_FROM_EDGE (1<<24)
   /* XXXX Note that this is basically voodoo.  Really, we only care about 0,
-   * 1, 2, and -1.  The "number of bits set" business is inherited from some
+   * 1, and p-1.  The "number of bits set" business is inherited from some
    * dire warnings in the OpenSSH comments.  Real Cryptographers assure us
    * that these dire warnings are misplaced.
    *
-   * Still, it can't hurt.
+   * Still, it can't hurt. -NM We will likely remove all the crud from this
+   * function in a future version, though. -RD
    */
   int i, n_bits, n_set;
   BIGNUM *x = NULL;
