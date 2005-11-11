@@ -1747,8 +1747,10 @@ options_validate(or_options_t *options)
   if (options->DirPort == 0 && options->DirListenAddress != NULL)
     REJECT("DirPort must be defined if DirListenAddress is defined.");
 
+#if 0 /* don't complain, since a standard configuration does this! */
   if (options->SocksPort == 0 && options->SocksListenAddress != NULL)
     REJECT("SocksPort must be defined if SocksListenAddress is defined.");
+#endif
 
   if (validate_data_directory(options)<0)
     REJECT("Invalid DataDirectory");
