@@ -1390,6 +1390,8 @@ crypto_dh_new(void)
   return NULL;
 }
 
+#define DH_PRIVATE_KEY_BITS 320
+
 /** Return the length of the DH key in <b>dh</b>, in bytes.
  */
 int
@@ -1405,7 +1407,22 @@ crypto_dh_get_bytes(crypto_dh_env_t *dh)
 int
 crypto_dh_generate_public(crypto_dh_env_t *dh)
 {
+  int pk_bits = BN_num_bits(dh->dh->p);
+  if (pk_bits > DH_PRIVATE_KEY_BITS)
+    pk_bits = DH_PRIVATE_KEY_BITS;
  again:
+  if (!dh->dh->priv_key) {
+    dh->dh->priv_key = BN_new();
+    if (!dh->dh->priv_key) {
+      err(LD_MM, "Unable to allocate BN.");
+      return -1;
+    }
+  }
+  /* We generate the key ourselves so that we can get a 2-3x speedup by using
+   * a 320-bit x instead of a 1024-bit x. */
+  if (!BN_rand(dh->dh->priv_key, pk_bits, 0, 0)) {
+    crypto_log_errors(LOG_WARN, "Generating DH private key");
+  }
   if (!DH_generate_key(dh->dh)) {
     crypto_log_errors(LOG_WARN, "generating DH key");
     return -1;
@@ -1462,6 +1479,13 @@ tor_check_dh_key(BIGNUM *bn)
 #define MIN_DIFFERING_BITS 16
   /* This covers another 2^25 keys, which is still negligible. */
 #define MIN_DIST_FROM_EDGE (1<<24)
+  /* XXXX Note that this is basically voodoo.  Really, we only care about 0,
+   * 1, 2, and -1.  The "number of bits set" business is inherited from some
+   * dire warnings in the OpenSSH comments.  Real Cryptographers assure us
+   * that these dire warnings are misplaced.
+   *
+   * Still, it can't hurt.
+   */
   int i, n_bits, n_set;
   BIGNUM *x = NULL;
   char *s;
