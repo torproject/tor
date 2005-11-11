@@ -1856,7 +1856,7 @@ client_check_address_changed(int sock)
   } else {
     /* The interface changed.  We're a client, so we need to regenerate our
      * keys.  First, reset the state. */
-    notice(LD_NET, "Our IP has changed.  Rotating keys...");
+    log(LOG_NOTICE, LD_NET, "Our IP has changed.  Rotating keys...");
     last_interface_ip = iface_ip;
     SMARTLIST_FOREACH(outgoing_addrs, void*, ip, tor_free(ip));
     smartlist_clear(outgoing_addrs);
