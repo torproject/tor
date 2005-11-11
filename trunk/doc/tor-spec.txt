@@ -15,6 +15,7 @@ more information on why Tor acts as it does, see tor-design.pdf.
 TODO: (very soon)
       - REASON_CONNECTFAILED should include an IP.
       - Copy prose from tor-design to make everything more readable.
+when do we rotate which keys (tls, link, etc)?
 
 0. Notation:
 
@@ -189,6 +190,9 @@ TODO: (very soon)
    The port and address field denote the IPV4 address and port of the next
    onion router in the circuit; the public key hash is the SHA1 hash of the
    PKCS#1 ASN1 encoding of the next onion router's identity (signing) key.
+[XXX please describe why we have this hash. my first guess is that this
+way we can notice that we're already connected to this guy even if he's
+connected at a different place. anything else? -RD]
 
    The payload for a CREATED cell, or the relay payload for an
    EXTENDED cell, contains:
@@ -314,10 +318,6 @@ TODO: (very soon)
    used on the connection between the two onion routers.  (But see
    section 4.1. above, concerning choosing circIDs based on
    lexicographic order of nicknames.)
-
-   As an extension (called router twins), if the desired next onion
-   router R in the circuit is down, and some other onion router R'
-   has the same public keys as R, then it's ok to extend to R' rather than R.
 
    When an onion router receives a CREATE cell, if it already has a
    circuit on the given connection with the given circID, it drops the
