@@ -756,8 +756,9 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
   if ((info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
       purpose != CIRCUIT_PURPOSE_TESTING) {
     /* see if there are appropriate circs available to cannibalize. */
-    if ((circ = circuit_get_clean_open(CIRCUIT_PURPOSE_C_GENERAL, need_uptime,
-                                       need_capacity, internal))) {
+    circ = circuit_find_to_cannibalize(CIRCUIT_PURPOSE_C_GENERAL, info,
+                                       need_uptime, need_capacity, internal);
+    if (circ) {
       info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d",
              build_state_get_exit_nickname(circ->build_state), purpose);
       circ->purpose = purpose;
@@ -779,7 +780,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
             return NULL;
           break;
         default:
-          warn(LD_BUG, "Bug: unexpected purpose %d when cannibalizing a general circ.", purpose);
+          warn(LD_BUG, "Bug: unexpected purpose %d when cannibalizing a circ.", purpose);
           tor_fragile_assert();
           return NULL;
       }

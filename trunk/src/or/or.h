@@ -1443,8 +1443,9 @@ circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
                                          const char *digest, uint8_t purpose);
 circuit_t *circuit_get_rendezvous(const char *cookie);
-circuit_t *circuit_get_clean_open(uint8_t purpose, int need_uptime,
-                                  int need_capacity, int internal);
+circuit_t *circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
+                                       int need_uptime,
+                                       int need_capacity, int internal);
 void circuit_mark_all_unused_circs(void);
 void circuit_expire_all_dirty_circs(void);
 void _circuit_mark_for_close(circuit_t *circ, int line, const char *file);
