@@ -99,7 +99,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     _last_circid_orconn_ent = NULL;
   }
 
-  if (old_conn) {
+  if (old_conn) { /* we may need to remove it from the conn-circid map */
     search.circ_id = old_id;
     search.or_conn = old_conn;
     found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
@@ -112,6 +112,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
   if (conn == NULL)
     return;
 
+  /* now add the new one to the conn-circid map */
   search.circ_id = id;
   search.or_conn = conn;
   found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
@@ -549,16 +550,19 @@ circuit_get_rendezvous(const char *cookie)
 }
 
 /** Return a circuit that is open, has specified <b>purpose</b>,
- * has a timestamp_dirty value of 0, and is uptime/capacity/internal
- * if required; or NULL if no circuit fits this description.
+ * has a timestamp_dirty value of 0, is uptime/capacity/internal
+ * if required, and if info is defined, does not already use info
+ * as any of its hops; or NULL if no circuit fits this description.
  *
  * Avoid returning need_uptime circuits if not necessary.
+ *
  * FFFF As a more important goal, not yet implemented, avoid returning
  * internal circuits if not necessary.
  */
 circuit_t *
-circuit_get_clean_open(uint8_t purpose, int need_uptime,
-                       int need_capacity, int internal)
+circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
+                            int need_uptime,
+                            int need_capacity, int internal)
 {
   circuit_t *circ;
   circuit_t *best=NULL;
@@ -574,8 +578,19 @@ circuit_get_clean_open(uint8_t purpose, int need_uptime,
         (!need_uptime || circ->build_state->need_uptime) &&
         (!need_capacity || circ->build_state->need_capacity) &&
         (!internal || circ->build_state->is_internal)) {
+      if (info) {
+        /* need to make sure we don't duplicate hops */
+        crypt_path_t *hop = circ->cpath;
+        do {
+          if (!memcmp(hop->extend_info->identity_digest,
+                      info->identity_digest, DIGEST_LEN))
+            goto next;
+          hop=hop->next;
+        } while (hop!=circ->cpath);
+      }
       if (!best || (best->build_state->need_uptime && !need_uptime))
         best = circ;
+      next:
     }
   }
   return best;
