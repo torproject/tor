@@ -2515,13 +2515,17 @@ routers_update_all_from_networkstatus(void)
     });
 
     if (n_recent >= 2 && n_listing >= 2) {
+      /* XXX When we have more than 3 dirservers, these warnings
+       * might become spurious depending on which combination of
+       * network-statuses we have. Perhaps we should wait until we
+       * have tried all of them? -RD */
       if (n_valid <= n_recent/2)  {
         warn(LD_GENERAL, "%d/%d recent directory servers list us as invalid. Please consider sending your identity fingerprint to the tor-ops.",
                n_recent-n_valid, n_recent);
         have_warned_about_unverified_status = 1;
-      } else if (n_named <= n_recent/2)  {
+      } else if (!n_named) { // (n_named <= n_recent/2) {
         warn(LD_GENERAL, "%d/%d recent directory servers list us as unnamed. Please consider sending your identity fingerprint to the tor-ops.",
-               n_recent-n_valid, n_recent);
+               n_recent-n_named, n_recent);
         have_warned_about_unverified_status = 1;
       }
     }
@@ -3133,6 +3137,8 @@ update_router_descriptor_downloads(time_t now)
 /** Return true iff we have enough networkstatus and router information to
  * start building circuits.  Right now, this means "at least 2 networkstatus
  * documents, and at least 1/4 of expected routers." */
+//XXX should consider whether we have enough exiting nodes here.
+//and also consider if they're too "old"?
 int
 router_have_minimum_dir_info(void)
 {
