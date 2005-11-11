@@ -1617,9 +1617,9 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi)
   tor_free(lifespans);
 }
 
-/** Deactivate any routers from the routerlist that are more than <b>age</b>
- * seconds old; remove old routers from the list of cached routers if we have
- * too many.
+/** Deactivate any routers from the routerlist that are more than
+ * ROUTER_MAX_AGE seconds old; remove old routers from the list of
+ * cached routers if we have too many.
  */
 void
 routerlist_remove_old_routers(void)
