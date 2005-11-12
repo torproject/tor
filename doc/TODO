@@ -76,10 +76,9 @@ N       - Specify and implement it.
 R   - If you think an OR conn is open but you can never establish a circuit
       to it, reconsider whether it's actually open.
 
-  - Miscellaneous cleanups
-    - switch accountingmax to count total in+out, not either in or
-      out. it's easy to move in this direction (not risky), but hard to
-      back out if we decide we prefer it the way it already is. hm.
+  - switch accountingmax to count total in+out, not either in or
+    out. it's easy to move in this direction (not risky), but hard to
+    back out if we decide we prefer it the way it already is. hm.
 
   - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
@@ -199,20 +198,6 @@ N     . Routerdesc download changes
     - Make authorities rate-limit logging their complaints about given
       servers?
 
-    o Naming and validation:
-      o Separate naming from validation in authdirs.
-      o Authdirs need to be able to decline to validate based on
-        IP range and key
-      o Authdirs need to be able to decline to include baased on
-        IP range and key.
-      o Not all authdirs name.
-      o Change naming rule: N->K iff any naming authdir says N->K,
-        and none says N->K' or N'->K.
-      o Clients choose names based on network-status options.
-      o Names are remembered in client state (?)
-      o Okay to have two valid servers with same nickname, but not
-        two named servers with same nickname.  Update logic.
-
   - packaging and ui stuff:
     . multiple sample torrc files
     - uninstallers
@@ -229,9 +214,6 @@ N   - Vet all pending installer patches
     - recommend gaim.
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
-
-  o openssl patch to check for degenerate keys in DH handshake
-    o accepted and put into openssl
 
 Reach (deferrable) items for 0.1.1.x:
   - Start using create-fast cells as clients
