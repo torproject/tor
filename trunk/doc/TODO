@@ -22,7 +22,7 @@ P - flesh out the rest of the section 6 of the faq
 P - gather pointers to livecd distros that include tor
   - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
-  - more pictures from ren. he wants to describe the tor handshake, i want to
+R . more pictures from ren. he wants to describe the tor handshake, i want to
     talk about hidden services.
   * clean up the places where our docs are redundant (or worse, obsolete in
     one file and correct elsewhere). agl has a start on a global
@@ -35,17 +35,13 @@ NR- write a spec appendix for 'being nice with tor'
     tor-0.1.0.7.rc
   - Remove need for HACKING file.
 
+for 0.1.1.9-alpha:
+N - if they're trying to be a tor server and they're running
+    win 98 or win me, don't let them be a server.
+R - ReachableAddresses doesn't do what we want wrt dir fetches.
 
 
 for 0.1.1.x:
-N - if they're trying to be a tor server and they're running
-    win 98 or win me, don't let them be a server.
-R - are dirservers auto-verifying duplicate nicknames?
-  o tor should auto-sort the recommended-versions strings 
-    (with the new smartlist sort stuff maybe)
-  o setconf SocksBindAddress kills tor if it fails to bind
-
-  o controller libs should support resetconf command.
 N . Additional controller features
       o Find a way to make event info more extensible
       - change circuit status events to give more details, like purpose,
@@ -83,25 +79,7 @@ R   - If you think an OR conn is open but you can never establish a circuit
   - Miscellaneous cleanups
     - switch accountingmax to count total in+out, not either in or
       out. it's easy to move in this direction (not risky), but hard to
-      back, out if we decide we prefer it the way it already is. hm.
-    . Come up with a coherent strategy for bandwidth buckets and TLS. (The
-      logic for reading from TLS sockets is likely to overrun the bandwidth
-      buckets under heavy load.  (Really, the logic was never right in the
-      first place.)  Also, we should audit all users of get_pending_bytes().)
-        - Make it harder to circumvent bandwidth caps: look at number of bytes
-          sent across sockets, not number sent inside TLS stream.
-R   o remove the warnings from rendezvous stuff that shouldn't be warnings.
-
-  . Update the hidden service stuff for the new dir approach.
-    - switch to an ascii format.
-    - authdirservers publish blobs of them.
-    - other authdirservers fetch these blobs.
-    - hidserv people have the option of not uploading their blobs.
-    - you can insert a blob via the controller.
-    - and there's some amount of backwards compatibility.
-    - teach clients, intro points, and hidservs about auth mechanisms.
-    - come up with a few more auth mechanisms.
-
+      back out if we decide we prefer it the way it already is. hm.
 
   - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
@@ -109,6 +87,11 @@ R   o remove the warnings from rendezvous stuff that shouldn't be warnings.
     extend-data cells can be extend requests.
     - Specify, including thought about
     - Implement
+
+  - Bind to random port when making outgoing connections to Tor servers,
+    to reduce remote sniping attacks.
+  - When we connect to a Tor server, it sends back a signed cell listing
+    the IP it believes it is using. Use this to block dvorak's attack.
 
 N - Destroy and truncated cells should have reasons.
 N - Add private:* alias in exit policies to make it easier to ban all the
@@ -133,7 +116,6 @@ R   - kill dns workers more slowly
       - a way of rolling back approvals to before a timestamp
       - have new people be in limbo and need to demonstrate usefulness
         before we approve them
-      - other?
 
 R   . Dirservers verify reachability claims
       o basic reachability testing, influencing network-status list.
@@ -217,7 +199,7 @@ N     . Routerdesc download changes
     - Make authorities rate-limit logging their complaints about given
       servers?
 
-N   . Naming and validation:
+    o Naming and validation:
       o Separate naming from validation in authdirs.
       o Authdirs need to be able to decline to validate based on
         IP range and key
@@ -228,20 +210,25 @@ N   . Naming and validation:
         and none says N->K' or N'->K.
       o Clients choose names based on network-status options.
       o Names are remembered in client state (?)
-      - Okay to have two valid servers with same nickname, but not
+      o Okay to have two valid servers with same nickname, but not
         two named servers with same nickname.  Update logic.
 
   - packaging and ui stuff:
     . multiple sample torrc files
     - uninstallers
       . for os x
-    . something, anything, for sys tray on Windows.
     . figure out how to make nt service stuff work?
       . Document it.
     . Add version number to directory.
 N   - Vet all pending installer patches
       - Win32 installer plus privoxy, sockscap/freecap, etc.
       - Vet win32 systray helper code
+
+  - document:
+    - torcp needs more attention in the tor-doc-win32.
+    - recommend gaim.
+    - unrecommend IE because of ftp:// bug.
+    - torrc.complete.in needs attention?
 
   o openssl patch to check for degenerate keys in DH handshake
     o accepted and put into openssl
@@ -252,6 +239,23 @@ Reach (deferrable) items for 0.1.1.x:
   - start handling server descriptors without a socksport?
   o Add TTLs to DNS-related replies, and use them (when present) to adjust
     addressmap values.
+
+  . Update the hidden service stuff for the new dir approach.
+    - switch to an ascii format.
+    - authdirservers publish blobs of them.
+    - other authdirservers fetch these blobs.
+    - hidserv people have the option of not uploading their blobs.
+    - you can insert a blob via the controller.
+    - and there's some amount of backwards compatibility.
+    - teach clients, intro points, and hidservs about auth mechanisms.
+    - come up with a few more auth mechanisms.
+
+  . Come up with a coherent strategy for bandwidth buckets and TLS. (The
+    logic for reading from TLS sockets is likely to overrun the bandwidth
+    buckets under heavy load.  (Really, the logic was never right in the
+    first place.)  Also, we should audit all users of get_pending_bytes().)
+      - Make it harder to circumvent bandwidth caps: look at number of bytes
+        sent across sockets, not number sent inside TLS stream.
 
   . Research memory use on Linux: what's happening?
     - Is it threading?  (Maybe, maybe not)
@@ -310,3 +314,4 @@ Blue-sky:
     streams, at least according to the protocol. But we handle all that
     we've seen in the wild.
     (Pending a user who needs this)
+
