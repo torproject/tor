@@ -1,8 +1,8 @@
 Changes in version 0.1.1.9-alpha - 2005-11-01
   o Usability improvements:
     - Start calling it FooListenAddress rather than FooBindAddress,
-      since none of our users know what it means to bind an address or
-      port. Warn if you use the old name in your config.
+      since none of our users know what it means to bind an address
+      or port.
     - Reduce clutter in server logs. We're going to try to make
       them actually usable now. New config option ProtocolWarnings that
       lets you hear about how _other Tors_ are breaking the protocol. Off
@@ -13,15 +13,12 @@ Changes in version 0.1.1.9-alpha - 2005-11-01
     - Make directory servers return better http 404 error messages
       instead of a generic "Servers unavailable".
     - Check for even more Windows version flags when writing the platform
-      string for servers, and note any we do not recognize.
-    - Clean up all the OpenSSL memory when exiting, so we can detect
+      string in server descriptors, and note any we don't recognize.
+    - Clean up more of the OpenSSL memory when exiting, so we can detect
       memory leaks better.
     - Make directory authorities be non-versioning, non-naming by
       default. Now we can add new directory servers without requiring
       their operators to pay close attention.
-    - Start making directory caches retain old routerinfos, so soon
-      clients can start asking by digest of descriptor rather than by
-      fingerprint of server.
 
   o Performance improvements:
     - Directory servers now silently throw away new descriptors that
@@ -39,8 +36,13 @@ Changes in version 0.1.1.9-alpha - 2005-11-01
     - Make circ->onionskin a pointer, not a static array. moria2 was using
       125000 circuit_t's after it had been up for a few weeks, which
       translates to 20+ megs of wasted space.
+    - The private half of our EDH handshake keys are now chosen out
+      of 320 bits, not 1024 bits. (Suggested by Ian Goldberg.)
 
   o Security improvements:
+    - Start making directory caches retain old routerinfos, so soon
+      clients can start asking by digest of descriptor rather than by
+      fingerprint of server.
     - Add half our entropy from RAND_poll in OpenSSL.  This knows how
       to use egd (if present), openbsd weirdness (if present), vms/os2
       weirdness (if we ever port there), and more in the future.
@@ -49,13 +51,16 @@ Changes in version 0.1.1.9-alpha - 2005-11-01
     - Do round-robin writes of at most 16 kB per write. This might be
       more fair on loaded Tor servers, and it might resolve our Windows
       crash bug. It might also slow things down.
+    - When we were cannibalizing a circuit with a particular exit
+      node in mind, we weren't checking to see if that exit node was
+      already present earlier in the circuit. Oops.
     - When a Tor server's IP changes (e.g. from a dyndns address),
       upload a new descriptor so clients will learn too.
     - Really busy servers were keeping enough circuits open on stable
       connections that they were wrapping around the circuit_id
       space. (It's only two bytes.) This exposed a bug where we would
       feel free to reuse a circuit_id even if it still exists but has
-      been marked for close. Try to fix this bug.
+      been marked for close. Try to fix this bug. Some bug remains.
     - If we would close a stream early (e.g. it asks for a .exit that
       we know would refuse it) but the LeaveStreamsUnattached config
       option is set by the controller, then don't close it.
@@ -69,8 +74,8 @@ Changes in version 0.1.1.9-alpha - 2005-11-01
       we do.
     - When providing content-type application/octet-stream for
       server descriptors using .z, we were leaving out the
-      content-encoding header. Oops. (Everything tolerated this just fine,
-      but that doesn't mean we need to be part of the problem.)
+      content-encoding header. Oops. (Everything tolerated this just
+      fine, but that doesn't mean we need to be part of the problem.)
     - Fix a potential seg fault in getconf and getinfo using version 1
       of the controller protocol.
     - Avoid crash: do not check whether DirPort is reachable when we
