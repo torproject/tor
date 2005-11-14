@@ -1361,6 +1361,8 @@ init_dh_param(void)
   dh_param_g = g;
 }
 
+#define DH_PRIVATE_KEY_BITS 320
+
 /** Allocate and return a new DH object for a key exchange.
  */
 crypto_dh_env_t *
@@ -1382,6 +1384,8 @@ crypto_dh_new(void)
   if (!(res->dh->g = BN_dup(dh_param_g)))
     goto err;
 
+  res->dh->length = DH_PRIVATE_KEY_BITS;
+
   return res;
  err:
   crypto_log_errors(LOG_WARN, "creating DH object");
@@ -1389,8 +1393,6 @@ crypto_dh_new(void)
   if (res) tor_free(res);
   return NULL;
 }
-
-#define DH_PRIVATE_KEY_BITS 320
 
 /** Return the length of the DH key in <b>dh</b>, in bytes.
  */
@@ -1407,22 +1409,7 @@ crypto_dh_get_bytes(crypto_dh_env_t *dh)
 int
 crypto_dh_generate_public(crypto_dh_env_t *dh)
 {
-  int pk_bits = BN_num_bits(dh->dh->p);
-  if (pk_bits > DH_PRIVATE_KEY_BITS)
-    pk_bits = DH_PRIVATE_KEY_BITS;
  again:
-  if (!dh->dh->priv_key) {
-    dh->dh->priv_key = BN_new();
-    if (!dh->dh->priv_key) {
-      err(LD_MM, "Unable to allocate BN.");
-      return -1;
-    }
-  }
-  /* We generate the key ourselves so that we can get a 2-3x speedup by using
-   * a 320-bit x instead of a 1024-bit x. */
-  if (!BN_rand(dh->dh->priv_key, pk_bits, 0, 0)) {
-    crypto_log_errors(LOG_WARN, "Generating DH private key");
-  }
   if (!DH_generate_key(dh->dh)) {
     crypto_log_errors(LOG_WARN, "generating DH key");
     return -1;
