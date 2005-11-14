@@ -167,8 +167,8 @@ accounting_parse_options(or_options_t *options, int validate_only)
 
   idx = unit==UNIT_DAY?1:2;
   if (smartlist_len(items) != (idx+1)) {
-    warn(LD_CONFIG,"Accounting unit '%s' requires %d arguments",
-           s, idx+1);
+    warn(LD_CONFIG,"Accounting unit '%s' requires %d argument%s.",
+         s, idx, (idx>1)?"s":"");
     goto err;
   }
   s = smartlist_get(items, idx);
