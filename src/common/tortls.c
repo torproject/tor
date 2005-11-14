@@ -290,6 +290,21 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 #define CIPHER_LIST SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA
 #endif
 
+static DH *
+dh_callback(SSL *ssl, int is_export, int keylength)
+{
+  DH *dh;
+  crypto_dh_env_t *env = crypto_dh_new();
+  crypto_dh_generate_public(env);
+  dh = _crypto_dh_env_get_dh(env);
+  notice(LD_CRYPTO, "%d references to the DH key?", dh->references);
+  ++dh->references;
+  crypto_dh_free(env);
+  --dh->references;
+  notice(LD_CRYPTO, "%d references to the DH key!", dh->references);
+  return dh;
+}
+
 /** Create a new TLS context.  If we are going to be using it as a
  * server, it must have isServer set to true, <b>identity</b> set to the
  * identity key used to sign that certificate, and <b>nickname</b> set to
@@ -352,6 +367,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
       goto error;
     SSL_CTX_set_options(*ctx, SSL_OP_NO_SSLv2);
 #endif
+    SSL_CTX_set_options(*ctx, SSL_OP_SINGLE_DH_USE);
     if (!SSL_CTX_set_cipher_list(*ctx, CIPHER_LIST))
       goto error;
     if (!client_only) {
@@ -375,9 +391,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
       if (!SSL_CTX_check_private_key(*ctx))
         goto error;
     }
-    dh = crypto_dh_new();
-    SSL_CTX_set_tmp_dh(*ctx, _crypto_dh_env_get_dh(dh));
-    crypto_dh_free(dh);
+    SSL_CTX_set_tmp_dh_callback(*ctx, dh_callback);
     SSL_CTX_set_verify(*ctx, SSL_VERIFY_PEER,
                        always_accept_verify_cb);
     /* let us realloc bufs that we're writing from */
@@ -438,6 +452,7 @@ tor_tls_new(int sock, int isServer, int use_no_cert)
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;
+  SSL_set_tmp_dh_callback(result->ssl,dh_callback);
   /* Not expected to get called. */
   tls_log_errors(LOG_WARN, "generating TLS context");
   return result;
