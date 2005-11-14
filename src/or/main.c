@@ -547,12 +547,12 @@ directory_info_has_arrived(time_t now, int from_cache)
   or_options_t *options = get_options();
 
   if (!router_have_minimum_dir_info()) {
-    notice(LD_DIR, "I learned some more directory information, but not enough to build a circuit.");
+    log(LOG_NOTICE, LD_DIR, "I learned some more directory information, but not enough to build a circuit.");
     return;
   }
 
   if (!has_fetched_directory) {
-    notice(LD_DIR, "We have enough directory information to build circuits.");
+    log(LOG_NOTICE, LD_DIR, "We have enough directory information to build circuits.");
   }
 
   has_fetched_directory=1;
