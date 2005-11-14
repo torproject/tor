@@ -356,10 +356,9 @@ connection_ap_expire_beginning(void)
       continue;
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
-    notice(LD_APP,"Stream is %d seconds late on address '%s'. Retrying.",
+    notice(LD_APP,"We tried for %d seconds to connect to '%s'. Retrying on a new circuit.",
            (int)(now - conn->timestamp_lastread),
            safe_str(conn->socks_request->address));
-    circuit_log_path(LOG_NOTICE, LD_APP, circ);
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* un-mark it as ending, since we're going to reuse it */
