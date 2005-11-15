@@ -4,8 +4,10 @@ tor (0.1.1.9-alpha-0) experimental; urgency=low
   * Remove 08_add_newlines_between_serverdescriptors.dpatch.
   * Update 06_add_compile_time_defaults.dpatch
   * Also ship doc/{socks-extensions.txt,tor-doc-server.html,tor-doc-unix.html}
+  * Use bin/bash for the init script instead of bin/sh.  We are using
+    ulimit -n which is not POSIX  (closes: #338797).
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 15 Nov 2005 11:25:31 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 15 Nov 2005 11:27:01 +0100
 
 tor (0.1.1.8-alpha-1) experimental; urgency=low
 
