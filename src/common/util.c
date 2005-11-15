@@ -1243,10 +1243,10 @@ tor_listdir(const char *dirname)
   }
   result = smartlist_create();
   while (1) {
-    if (!strcmp(findData.cFileName, ".") ||
-        !strcmp(findData.cFileName, ".."))
-      continue;
-    smartlist_add(result, tor_strdup(findData.cFileName));
+    if (strcmp(findData.cFileName, ".") &&
+        strcmp(findData.cFileName, "..")) {
+      smartlist_add(result, tor_strdup(findData.cFileName));
+    }
     if (!FindNextFile(handle, &findData)) {
       if (GetLastError() != ERROR_NO_MORE_FILES) {
         warn(LD_FS, "Error reading directory.");
