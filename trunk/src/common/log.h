@@ -138,20 +138,22 @@ void _log_fn(int severity, uint32_t domain,
 #else /* ! defined(__GNUC__) */
 
 void _log_fn(int severity, uint32_t domain, const char *format, ...);
-void _debug(uint32_t domain, const char *format, ...);
-void _info(uint32_t domain, const char *format, ...);
-void _notice(uint32_t domain, const char *format, ...);
-void _warn(uint32_t domain, const char *format, ...);
-void _err(uint32_t domain, const char *format, ...);
+void debug(uint32_t domain, const char *format, ...);
+void info(uint32_t domain, const char *format, ...);
+void notice(uint32_t domain, const char *format, ...);
+void warn(uint32_t domain, const char *format, ...);
+void err(uint32_t domain, const char *format, ...);
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
 /* MSVC 6 and earlier don't have __FUNCTION__, or even __LINE__. */
 #define log_fn _log_fn
+/*
 #define debug _debug
 #define info _info
 #define notice _notice
 #define warn _warn
 #define err _err
+*/
 #else
 /* We don't have GCC's varargs macros, so use a global variable to pass the
  * function name to log_fn */
@@ -160,11 +162,13 @@ extern const char *_log_fn_function_name;
  * do {...} while (0) trick to wrap this macro, since the macro can't take
  * arguments. */
 #define log_fn (_log_fn_function_name=__FUNCTION__),_log_fn
+/*
 #define debug (_log_fn_function_name=__FUNCTION__),_debug
 #define info (_log_fn_function_name=__FUNCTION__),_info
 #define notice (_log_fn_function_name=__FUNCTION__),_notice
 #define warn (_log_fn_function_name=__FUNCTION__),_warn
 #define err (_log_fn_function_name=__FUNCTION__),_err
+*/
 #endif
 
 #endif /* !GNUC */

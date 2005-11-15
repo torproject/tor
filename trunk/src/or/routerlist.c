@@ -2348,12 +2348,12 @@ policy_includes_addr_mask_implicitly(addr_policy_t *policy,
 }
 
 /** If <b>policy</b> implicitly allows connections to any port on
- * 127.*, 192.168.*, etc, then warn (if <b>warn</b> is set) and return
+ * 127.*, 192.168.*, etc, then warn (if <b>should_warn</b> is set) and return
  * true.  Else return false.
  **/
 int
 exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
-                                             int warn)
+                                             int should_warn)
 {
   addr_policy_t *p;
   int r=0,i;
@@ -2372,7 +2372,7 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
     /* log_fn(LOG_INFO,"Checking network %s", private_networks[i].network); */
     if (policy_includes_addr_mask_implicitly(
               policy, private_networks[i].addr, private_networks[i].mask, &p)) {
-      if (warn)
+      if (should_warn)
         warn(LD_CONFIG, "Exit policy %s implicitly accepts %s",
                p?p->string:"(default)",
                private_networks[i].network);

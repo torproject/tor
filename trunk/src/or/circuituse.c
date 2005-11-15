@@ -743,7 +743,7 @@ circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
  * last hop need not be an exit node. Return the newly allocated circuit on
  * success, or NULL on failure. */
 circuit_t *
-circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
+circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *extend_info,
                int need_uptime, int need_capacity, int internal)
 {
   circuit_t *circ;
@@ -753,10 +753,10 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
     return NULL;
   }
 
-  if ((info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
+  if ((extend_info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
       purpose != CIRCUIT_PURPOSE_TESTING) {
     /* see if there are appropriate circs available to cannibalize. */
-    circ = circuit_find_to_cannibalize(CIRCUIT_PURPOSE_C_GENERAL, info,
+    circ = circuit_find_to_cannibalize(CIRCUIT_PURPOSE_C_GENERAL, extend_info,
                                        need_uptime, need_capacity, internal);
     if (circ) {
       info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d",
@@ -775,8 +775,8 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
         case CIRCUIT_PURPOSE_S_CONNECT_REND:
         case CIRCUIT_PURPOSE_C_GENERAL:
           /* need to add a new hop */
-          tor_assert(info);
-          if (circuit_extend_to_new_exit(circ, info) < 0)
+          tor_assert(extend_info);
+          if (circuit_extend_to_new_exit(circ, extend_info) < 0)
             return NULL;
           break;
         default:
@@ -796,7 +796,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *info,
   }
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
-  return circuit_establish_circuit(purpose, info,
+  return circuit_establish_circuit(purpose, extend_info,
                                    need_uptime, need_capacity, internal);
 }
 

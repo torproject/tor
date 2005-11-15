@@ -433,7 +433,7 @@ find_whitespace(const char *s)
  err:                                                   \
   if (ok) *ok = 0;                                      \
   if (next) *next = endptr;                             \
-  return 0;
+  return 0
 
 /** Extract a long from the start of s, in the given numeric base.  If
  * there is unconverted data and next is provided, set *next to the
@@ -1249,7 +1249,7 @@ tor_listdir(const char *dirname)
     smartlist_add(result, tor_strdup(findData.cFileName));
     if (!FindNextFile(handle, &findData)) {
       if (GetLastError() != ERROR_NO_MORE_FILES) {
-        log_fn(LOG_WARN, "Error reading directory.");
+        warn(LD_FS, "Error reading directory.");
       }
       break;
     }

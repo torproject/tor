@@ -1567,7 +1567,7 @@ nt_service_control(DWORD request)
 void
 nt_service_body(int argc, char **argv)
 {
-  int err;
+  int r;
   service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   service_status.dwCurrentState = SERVICE_START_PENDING;
   service_status.dwControlsAccepted =
@@ -1585,21 +1585,21 @@ nt_service_body(int argc, char **argv)
 
   // check for torrc
   if (nt_torrc_is_present()) {
-    err = tor_init(backup_argc, backup_argv); // refactor this part out of tor_main and do_main_loop
-    if (err) {
-      err = NT_SERVICE_ERROR_TORINIT_FAILED;
+    r = tor_init(backup_argc, backup_argv); // refactor this part out of tor_main and do_main_loop
+    if (r) {
+      r = NT_SERVICE_ERROR_TORINIT_FAILED;
     }
   }
   else {
     err(LD_CONFIG, "torrc is not in the current working directory. The Tor service will not start.");
-    err = NT_SERVICE_ERROR_NO_TORRC;
+    r = NT_SERVICE_ERROR_NO_TORRC;
   }
 
-  if (err) {
+  if (r) {
     // failed.
     service_status.dwCurrentState = SERVICE_STOPPED;
-    service_status.dwWin32ExitCode = err;
-    service_status.dwServiceSpecificExitCode = err;
+    service_status.dwWin32ExitCode = r;
+    service_status.dwServiceSpecificExitCode = r;
     SetServiceStatus(hStatus, &service_status);
     return;
   }
