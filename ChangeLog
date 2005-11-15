@@ -19,6 +19,8 @@ Changes in version 0.1.1.9-alpha - 2005-11-01
     - Make directory authorities be non-versioning, non-naming by
       default. Now we can add new directory servers without requiring
       their operators to pay close attention.
+    - When logging via syslog, include the pid whenever we provide
+      a log entry. Suggested by Todd Fries.
 
   o Performance improvements:
     - Directory servers now silently throw away new descriptors that
@@ -51,6 +53,10 @@ Changes in version 0.1.1.9-alpha - 2005-11-01
     - Do round-robin writes of at most 16 kB per write. This might be
       more fair on loaded Tor servers, and it might resolve our Windows
       crash bug. It might also slow things down.
+    - Our TLS handshakes were generating a single public/private
+      keypair for the TLS context, rather than making a new one for
+      each new connections. Oops. (But we were still rotating them
+      periodically, so it's not so bad.)
     - When we were cannibalizing a circuit with a particular exit
       node in mind, we weren't checking to see if that exit node was
       already present earlier in the circuit. Oops.
