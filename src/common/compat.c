@@ -757,7 +757,7 @@ get_uname(void)
             tor_snprintf(uname_result, sizeof(uname_result),
                          "Unrecognized version of Windows [major=%d,minor=%d] %s",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion,
-                         infor.szCSDVersion);
+                         info.szCSDVersion);
         }
         if (info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
           strlcat(uname_result, " [domain controller]", sizeof(uname_result));
@@ -768,7 +768,7 @@ get_uname(void)
         }
         leftover_mask = info.wSuiteMask;
         for (i = 0; win_mask_table[i].mask; ++i) {
-          if (info.wSuiteMask & win_mask_table[i]) {
+          if (info.wSuiteMask & win_mask_table[i].mask) {
             strlcat(uname_result, win_mask_table[i].str, sizeof(uname_result));
             leftover_mask &= ~win_mask_table[i].mask;
           }

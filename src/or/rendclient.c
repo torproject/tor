@@ -216,10 +216,10 @@ rend_client_introduction_acked(circuit_t *circ,
                                        circ->rend_query) > 0) {
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
-      extend_info_t *info;
+      extend_info_t *extend_info;
       int result;
-      info = rend_client_get_random_intro(circ->rend_query);
-      if (!info) {
+      extend_info = rend_client_get_random_intro(circ->rend_query);
+      if (!extend_info) {
         warn(LD_REND, "No introduction points left for %s. Closing.",
                safe_str(circ->rend_query));
         circuit_mark_for_close(circ);
@@ -229,9 +229,9 @@ rend_client_introduction_acked(circuit_t *circ,
            "Got nack for %s from %s. Re-extending circ %d, this time to %s.",
            safe_str(circ->rend_query),
            circ->build_state->chosen_exit->nickname, circ->n_circ_id,
-           info->nickname);
-      result = circuit_extend_to_new_exit(circ, info);
-      extend_info_free(info);
+           extend_info->nickname);
+      result = circuit_extend_to_new_exit(circ, extend_info);
+      extend_info_free(extend_info);
       return result;
     }
   }
