@@ -1,6 +1,6 @@
-tor (0.1.1.9-alpha-0) experimental; urgency=low
+tor (0.1.1.9-alpha-1) experimental; urgency=low
 
-  * CVS snapshot.
+  * New upstream version.
   * Remove 08_add_newlines_between_serverdescriptors.dpatch.
   * Update 06_add_compile_time_defaults.dpatch
   * Also ship doc/{socks-extensions.txt,tor-doc-server.html,tor-doc-unix.html}
@@ -9,7 +9,7 @@ tor (0.1.1.9-alpha-0) experimental; urgency=low
   * Remove the EVENT_NOEPOLL block from etc/default/tor.
   * Add an ARGS block to etc/default/tor as suggested in #338425.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 15 Nov 2005 11:28:40 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 15 Nov 2005 23:29:54 +0100
 
 tor (0.1.1.8-alpha-1) experimental; urgency=low
 
