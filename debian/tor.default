@@ -24,20 +24,9 @@ MAX_FILEDESCRIPTORS=4096
 #
 # NICE="--nicelevel 5"
 
+# Additional arguments to pass on tor's command line.
 #
-# Sometimes epoll is broken.  This happens to be the case on
-# at least the maintainer's desktop box running Linux 2.6.11-rc1
-# on amd64.
-#
-# If tor does not work at all for you, i.e. connection attempts
-# through tor just hang forever and never finish, then consider
-# setting EVENT_NOEPOLL, so libevent does not use epoll.  If that
-# happens to fix it for you, please let the mainainer (weasel@debian.org)
-# know, mentioning your kernel version, libevent version, and architecture.
-# Thanks!
-#
-# EVENT_NOEPOLL=yes
-# export EVENT_NOEPOLL
+# ARGS=""
 
 #
 # Uncomment this if you want to get coredumps

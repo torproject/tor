@@ -6,8 +6,10 @@ tor (0.1.1.9-alpha-0) experimental; urgency=low
   * Also ship doc/{socks-extensions.txt,tor-doc-server.html,tor-doc-unix.html}
   * Use bin/bash for the init script instead of bin/sh.  We are using
     ulimit -n which is not POSIX  (closes: #338797).
+  * Remove the EVENT_NOEPOLL block from etc/default/tor.
+  * Add an ARGS block to etc/default/tor as suggested in #338425.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 15 Nov 2005 11:27:01 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 15 Nov 2005 11:28:40 +0100
 
 tor (0.1.1.8-alpha-1) experimental; urgency=low
 
