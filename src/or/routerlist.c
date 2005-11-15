@@ -2524,7 +2524,7 @@ routers_update_all_from_networkstatus(void)
                n_recent-n_valid, n_recent);
         have_warned_about_unverified_status = 1;
       } else if (!n_named) { // (n_named <= n_recent/2) {
-        warn(LD_GENERAL, "%d/%d recent directory servers list us as unnamed. Please consider sending your identity fingerprint to the tor-ops.",
+        warn(LD_GENERAL, "%d/%d recent directory servers recognize this server. Please consider sending your identity fingerprint to the tor-ops.",
                n_recent-n_named, n_recent);
         have_warned_about_unverified_status = 1;
       }
