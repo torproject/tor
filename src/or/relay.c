@@ -797,7 +797,7 @@ connection_edge_process_relay_cell_not_open(
     return 0;
   }
 
-  warn(LD_PROTOCOL,
+  log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
        "Got an unexpected relay command %d, in state %d (%s). Closing.",
        rh->command, conn->state, conn_state_to_string(conn->type, conn->state));
   connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
