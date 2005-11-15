@@ -1,11 +1,11 @@
-tor (0.1.1.8-alpha-cvs-1) experimental; urgency=low
+tor (0.1.1.9-alpha-0) experimental; urgency=low
 
-  * CVS snapshot. Mon, 17 Oct 2005 03:54:01 +0200
+  * CVS snapshot.
   * Remove 08_add_newlines_between_serverdescriptors.dpatch.
   * Update 06_add_compile_time_defaults.dpatch
-  * Add some info -> debug log downgrades.
+  * Also ship doc/{socks-extensions.txt,tor-doc-server.html,tor-doc-unix.html}
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 17 Oct 2005 04:01:50 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 15 Nov 2005 11:25:31 +0100
 
 tor (0.1.1.8-alpha-1) experimental; urgency=low
 
