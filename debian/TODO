@@ -6,5 +6,7 @@ Legend:
         D Deferred
         X Abandoned
 
-o strip debugging symbols when tor is more mature
+- make debian specific changes only apply when run as debian-tor
+- setuid/gid to debian-tor if run as root
 - don't enable coredumps by default
+- fix shipped html docs to refer to local stylesheet
