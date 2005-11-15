@@ -1,0 +1,10 @@
+Legend:
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+o strip debugging symbols when tor is more mature
+- don't enable coredumps by default
