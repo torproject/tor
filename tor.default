@@ -3,7 +3,7 @@
 # installed at /etc/default/tor by the maintainer scripts
 
 #
-# This is a POSIX shell fragment
+# This is a bash shell fragment
 #
 RUN_DAEMON="yes"
 
