@@ -8,9 +8,6 @@ doc/HACKING
 doc/TODO
 doc/control-spec.txt
 doc/dir-spec.txt
-doc/socks-extensions.txt
-doc/tor-doc-server.html
-doc/tor-doc-unix.html
 doc/rend-spec.txt
 doc/tor-doc.css
 doc/tor-doc.html
