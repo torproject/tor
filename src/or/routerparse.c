@@ -135,7 +135,7 @@ static struct {
   { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK,
                                                                 DIR|NETSTATUS},
   { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR },
-  { "fingerprint",         K_FINGERPRINT,         ARGS,    NO_OBJ, ANYSIGNED },
+  { "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ, ANYSIGNED },
   { "hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ,  RTR },
   { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR },
   { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR },
@@ -849,6 +849,25 @@ router_parse_entry_from_string(const char *s, const char *end)
   if (crypto_pk_get_digest(router->identity_pkey,
                            router->cache_info.identity_digest)) {
     warn(LD_DIR, "Couldn't calculate key digest"); goto err;
+  }
+
+  if ((tok = find_first_by_keyword(tokens, K_FINGERPRINT))) {
+    /* If there's a fingerprint line, it must match the identity digest. */
+    char d[DIGEST_LEN];
+    if (tok->n_args < 1) {
+      warn(LD_DIR, "Too few arguments to fingerprint");
+      goto err;
+    }
+    tor_strstrip(tok->args[0], " ");
+    if (base16_decode(d, DIGEST_LEN, tok->args[0], strlen(tok->args[0]))) {
+      warn(LD_DIR, "Couldn't decode fingerprint '%s'", tok->args[0]);
+      goto err;
+    }
+    if (memcmp(d,router->cache_info.identity_digest, DIGEST_LEN)!=0) {
+      warn(LD_DIR, "Fingerprint '%s' does not match identity digest.",
+           tok->args[0]);
+      goto err;
+    }
   }
 
   if ((tok = find_first_by_keyword(tokens, K_PLATFORM))) {
