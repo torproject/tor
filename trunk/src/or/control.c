@@ -2349,9 +2349,11 @@ write_stream_target_to_buf(connection_t *conn, char *buf, size_t len)
   if (conn->chosen_exit_name)
     if (tor_snprintf(buf2, sizeof(buf2), ".%s.exit", conn->chosen_exit_name)<0)
       return -1;
-  if (tor_snprintf(buf, len, "%s%s:%d",
+  if (tor_snprintf(buf, len, "%s%s%s:%d",
                    conn->socks_request->address,
                    conn->chosen_exit_name ? buf2 : "",
+                   !conn->chosen_exit_name &&
+                     connection_edge_is_rendezvous_stream(conn) ? ".onion" : "",
                    conn->socks_request->port)<0)
     return -1;
   return 0;
