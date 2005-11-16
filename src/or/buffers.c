@@ -888,10 +888,13 @@ fetch_from_buf_http(buf_t *buf,
  * If you want to specify the socks reply, write it into <b>req->reply</b>
  *   and set <b>req->replylen</b>, else leave <b>req->replylen</b> alone.
  *
+ * If <b>log_sockstype</b> is non-zero, then do a notice-level log of whether
+ * the connection is possibly leaking DNS requests locally or not.
+ *
  * If returning 0 or -1, <b>req->address</b> and <b>req->port</b> are undefined.
  */
 int
-fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
+fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
 {
   unsigned char len;
   char tmpbuf[INET_NTOA_BUF_LEN];
@@ -924,7 +927,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
           req->reply[1] = '\xFF'; /* reject all methods */
           return -1;
         }
-        buf_remove_from_front(buf,2+nummethods);/* remove packet from buf */
+        buf_remove_from_front(buf,2+nummethods); /* remove packet from buf */
 
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
@@ -982,6 +985,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
           req->address[len] = 0;
           req->port = ntohs(get_uint16(buf->cur+5+len));
           buf_remove_from_front(buf, 5+len+2);
+          if (log_sockstype)
+            notice(LD_APP, "Your application (using socks5 on port %d) gave Tor a hostname, which means Tor will do the DNS resolve for you. This is good.", req->port);
           return 1;
         default: /* unsupported */
           warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",*(buf->cur+3));
@@ -1055,6 +1060,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req)
           return -1;
         }
         tor_assert(next < buf->cur+buf->datalen);
+        if (log_sockstype)
+          notice(LD_APP, "Your application (using socks4a on port %d) gave Tor a hostname, which means Tor will do the DNS resolve for you. This is good.", req->port);
       }
       debug(LD_APP,"socks4: Everything is here. Success.");
       strlcpy(req->address, startaddr ? startaddr : tmpbuf,

@@ -191,6 +191,7 @@ static config_var_t _option_vars[] = {
   VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes,     "0"),
   VAR("StrictExitNodes",     BOOL,     StrictExitNodes,      "0"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
+  VAR("TestSocks",           BOOL,     TestSocks,            "0"),
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
   VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
   OBSOLETE("TrafficShaping"),
