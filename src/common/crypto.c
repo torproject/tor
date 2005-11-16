@@ -66,6 +66,7 @@ const char crypto_c_id[] = "$Id$";
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000l
+#define OPENSSL_PRE_097
 #define NO_ENGINES
 #else
 #include <openssl/engine.h>
@@ -238,9 +239,9 @@ crypto_global_cleanup(void)
   ERR_free_strings();
 #ifndef NO_ENGINES
   ENGINE_cleanup();
-#endif
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
+#endif
 #ifdef TOR_IS_MULTITHREADED
   if (_n_openssl_mutexes) {
     int n = _n_openssl_mutexes;
