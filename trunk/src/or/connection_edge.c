@@ -923,7 +923,8 @@ connection_ap_handshake_process_socks(connection_t *conn)
   socks_request_t *socks;
   int sockshere;
   hostname_type_t addresstype;
-  int tor_should_handle_stream = !get_options()->LeaveStreamsUnattached;
+  or_options_t *options = get_options();
+  int tor_should_handle_stream = !options->LeaveStreamsUnattached;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -933,7 +934,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
 
   debug(LD_APP,"entered.");
 
-  sockshere = fetch_from_buf_socks(conn->inbuf, socks);
+  sockshere = fetch_from_buf_socks(conn->inbuf, socks, options->TestSocks);
   if (sockshere == 0) {
     if (socks->replylen) {
       connection_write_to_buf(socks->reply, socks->replylen, conn);
@@ -1072,7 +1073,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
       rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
       control_event_stream_status(conn, STREAM_EVENT_NEW);
     }
-    if (get_options()->LeaveStreamsUnattached) {
+    if (!tor_should_handle_stream) {
       conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
     } else {
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;

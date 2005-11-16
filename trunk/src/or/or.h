@@ -1307,6 +1307,8 @@ typedef struct {
 #define LOG_PROTOCOL_WARN (get_options()->ProtocolWarnings ? LOG_WARN : LOG_INFO)
   int ProtocolWarnings; /**< Boolean: when other parties screw up the Tor
                          * protocol, is it a warn or an info in our logs? */
+  int TestSocks; /**< Boolean: when we get a socks connection, do we loudly
+                  * log whether it was DNS-leaking or not? */
   int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
                       * acceleration where available? */
   int UseHelperNodes; /**< Boolean: Do we try to enter from a smallish number
@@ -1379,7 +1381,7 @@ int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
                         char **body_out, size_t *body_used, size_t max_bodylen,
                         int force_complete);
-int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
+int fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype);
 int fetch_from_buf_control0(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
                             char **body_out, int check_for_v1);
 int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
