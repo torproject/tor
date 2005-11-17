@@ -712,26 +712,26 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
     switch (r) {
       case -1:
         v0_err = ERR_UNRECOGNIZED_CONFIG_KEY;
-        msg = "Unrecognized option";
+        msg = "552 Unrecognized option";
         break;
       case -2:
         v0_err = ERR_INVALID_CONFIG_VALUE;
-        msg = "Unrecognized option value";
+        msg = "513 Unrecognized option value";
         break;
       case -3:
         v0_err = ERR_INVALID_CONFIG_VALUE;
-        msg = "Transition not allowed";
+        msg = "553 Transition not allowed";
         break;
       case -4:
       default:
         v0_err = ERR_INVALID_CONFIG_VALUE;
-        msg = "Unable to set option";
+        msg = "553 Unable to set option";
         break;
     }
     if (v0) {
       send_control0_error(conn, v0_err, msg);
     } else {
-      connection_printf_to_buf(conn, "552 %s\r\n", msg);
+      connection_printf_to_buf(conn, "%s\r\n", msg);
     }
     config_free_lines(lines);
     return 0;
