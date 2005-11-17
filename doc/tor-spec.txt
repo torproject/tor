@@ -185,7 +185,7 @@ when do we rotate which keys (tls, link, etc)?
          Address                       [4 bytes]
          Port                          [2 bytes]
          Onion skin                    [186 bytes]
-         Public key hash               [20 bytes]
+         Identity fingerprint          [20 bytes]
 
    The port and address field denote the IPV4 address and port of the next
    onion router in the circuit; the public key hash is the SHA1 hash of the
@@ -211,7 +211,7 @@ connected at a different place. anything else? -RD]
    (Older versions of Tor compared OR nicknames, and did it in a broken and
    unreliable way.  To support versions of Tor earlier than 0.0.9pre6,
    implementations should notice when the other side of a connection is
-   sending CREATE cells with the "wrong" MSG, and switch accordingly.)
+   sending CREATE cells with the "wrong" MSB, and switch accordingly.)
 
 4.1.1. CREATE_FAST/CREATED_FAST cells
 
@@ -378,6 +378,7 @@ connected at a different place. anything else? -RD]
             Use Kf as key; decrypt.
         'Back' relay cell (opposite direction from CREATE):
             Use Kb as key; encrypt.
+   Note that in counter mode, decrypt and encrypt are the same operation.
 
    The OR then decides whether it recognizes the relay cell, by
    inspecting the payload as described in section 5.1 below.  If the OR
@@ -414,29 +415,39 @@ connected at a different place. anything else? -RD]
          Data                    [498 bytes]
 
    The relay commands are:
-         1 -- RELAY_BEGIN
-         2 -- RELAY_DATA
-         3 -- RELAY_END
-         4 -- RELAY_CONNECTED
-         5 -- RELAY_SENDME
-         6 -- RELAY_EXTEND
-         7 -- RELAY_EXTENDED
-         8 -- RELAY_TRUNCATE
-         9 -- RELAY_TRUNCATED
-        10 -- RELAY_DROP
-        11 -- RELAY_RESOLVE
-        12 -- RELAY_RESOLVED
+         1 -- RELAY_BEGIN     [forward]
+         2 -- RELAY_DATA      [forward or backward]
+         3 -- RELAY_END       [forward or backward]
+         4 -- RELAY_CONNECTED [backward]
+         5 -- RELAY_SENDME    [forward or backward]
+         6 -- RELAY_EXTEND    [forward]
+         7 -- RELAY_EXTENDED  [backward]
+         8 -- RELAY_TRUNCATE  [forward]
+         9 -- RELAY_TRUNCATED [backward]
+        10 -- RELAY_DROP      [forward or backward]
+        11 -- RELAY_RESOLVE   [forward]
+        12 -- RELAY_RESOLVED  [backward]
 
-   The 'Recognized' field in any unencrypted relay payload is always
-   set to zero; the 'digest' field is computed as the first four bytes
-   of the running SHA-1 digest of all the bytes that have travelled
-   over this circuit, seeded from Df or Db respectively (obtained in
-   section 4.2 above), and including this RELAY cell's entire payload
-   (taken with the digest field set to zero).
+   Commands labelled as "forward" must only be sent by the originator
+   of the circuit. Commands labelled as "backward" must only be sent by
+   other nodes in the circuit back to the originator. Commands marked
+   as either can be sent either by the originator or other nodes.
+
+   The 'recognized' field in any unencrypted relay payload is always set
+   to zero; the 'digest' field is computed as the first four bytes of
+   the running SHA-1 digest of all the bytes that have been destined for
+   this hop of the circuit or originated from this hop of the circuit,
+   seeded from Df or Db respectively (obtained in section 4.2 above),
+   and including this RELAY cell's entire payload (taken with the digest
+   field set to zero).
 
    When the 'recognized' field of a RELAY cell is zero, and the digest
    is correct, the cell is considered "recognized" for the purposes of
    decryption (see section 4.5 above).
+
+   (The digest does not include any bytes from relay cells that do
+   not start or end at this hop of the circuit. That is, it does not
+   include forwarded data.)
 
    All RELAY cells pertaining to the same tunneled stream have the
    same stream ID.  StreamIDs are chosen randomly by the OP.  RELAY
