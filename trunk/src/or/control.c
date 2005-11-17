@@ -1452,7 +1452,7 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
     tor_assert(msg_len > 0); /* it will at least be terminated */
     send_control0_message(conn, CONTROL0_CMD_INFOVALUE,
                           msg_len, msg);
-  } else if (smartlist_len(answers)) {
+  } else {
     int i;
     for (i = 0; i < smartlist_len(answers); i += 2) {
       char *k = smartlist_get(answers, i);
