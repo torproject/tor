@@ -3016,6 +3016,7 @@ router_list_downloadable(void)
     });
   }
 
+#if 0
   info(LD_DIR, "%d router descriptors are downloadable; "
          "%d are up to date; %d are in progress; "
          "%d are not ready to retry; "
@@ -3028,6 +3029,7 @@ router_list_downloadable(void)
          n_downloadable, n_uptodate, n_in_progress, n_not_ready,
          n_obsolete, n_skip_old, xx_n_unrecognized, xx_n_extra_new, xx_n_both,
          xx_n_unrec_old);
+#endif
 
   if (!n_downloadable)
     return superseded;
@@ -3092,9 +3094,9 @@ update_router_descriptor_downloads(time_t now)
       should_delay = (last_routerdesc_download_attempted +
                       MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
     }
-    if (should_delay)
-      debug(LD_DIR, "There are not many downloadable routerdescs; waiting till we have some more.");
-    else
+    if (should_delay) {
+//      debug(LD_DIR, "There are not many downloadable routerdescs; waiting till we have some more.");
+    } else
       info(LD_DIR, "There are not many downloadable routerdescs, but we've been waiting long enough (%d seconds). Downloading.",
              (int)(now-last_routerdesc_download_attempted));
   }
