@@ -32,8 +32,8 @@ when do we rotate which keys (tls, link, etc)?
 
    Unless otherwise specified, all symmetric ciphers are AES in counter
    mode, with an IV of all 0 bytes.  Asymmetric ciphers are either RSA
-   with 1024-bit keys and exponents of 65537, or DH where the generator
-   is 2 and the modulus is the 1024-bit safe prime from rfc2409,
+   with 1024-bit keys and exponents of 65537, or DH where the generator (g)
+   is 2 and the modulus (p) is the 1024-bit safe prime from rfc2409,
    section 6.2, whose hex representation is:
 
      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
@@ -41,6 +41,10 @@ when do we rotate which keys (tls, link, etc)?
      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
      "49286651ECE65381FFFFFFFFFFFFFFFF"
+
+   As an optimization, implementations SHOULD choose DH private keys (x) of
+   320 bits.  Implementations that do this MUST never use any DH key more
+   than once.
 
    All "hashes" are 20-byte SHA1 cryptographic digests.
 
@@ -239,7 +243,7 @@ connected at a different place. anything else? -RD]
 
    Once the handshake between the OP and an OR is completed, both servers can
    now calculate g^xy with ordinary DH.  Before computing g^xy, both client
-   and server MUST verify that the received g^x/g^y value is not degenerate;
+   and server MUST verify that the received g^x or g^y value is not degenerate;
    that is, it must be strictly greater than 1 and strictly less than p-1
    where p is the DH modulus.  Implementations MUST NOT complete a handshake
    with degenerate keys.  Implementions MAY discard other "weak" g^x values.
@@ -248,12 +252,10 @@ connected at a different place. anything else? -RD]
    discarded, an attacker can substitute the server's CREATED cell's g^y with
    0 or 1, thus creating a known g^xy and impersonating the server.)
 
-   (The mainline Tor implementation discards all g^x values that are less
-   than 2^24, that are greater than p-2^24, or that have more than 1024-16
-   identical bits.  This constitutes a negligible portion of the keyspace;
-   the chances of stumbling on such a key at random are astronomically
-   small.  Nevertheless, implementors may wish to make their implementations
-   discard such keys.)
+   (The mainline Tor implementation, in the 0.1.1.x-alpha series, also
+   discarded all g^x values that are less than 2^24, that are greater than
+   p-2^24, or that have more than 1024-16 identical bits.  This serves no
+   useful purpose, and will probably stop soon.)
 
    From the base key material g^xy, they compute derivative key material as
    follows.  First, the server represents g^xy as a big-endian unsigned
