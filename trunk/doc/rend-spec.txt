@@ -168,7 +168,7 @@ $Id$
          Ipt   A list of NUL-terminated ORs          [variable]
          SIG   Signature of above fields             [variable]
 
-   KL is the length of PK, in octets.  (Currently, KL must be 128.)
+   KL is the length of PK, in octets.
    TS is the number of seconds elapsed since Jan 1, 1970.
 
    AUTHT specifies which authentication/authorization mechanism is
