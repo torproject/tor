@@ -798,11 +798,12 @@ connection_edge_process_relay_cell_not_open(
   }
 
   log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-       "Got an unexpected relay command %d, in state %d (%s). Closing.",
+       "Got an unexpected relay command %d, in state %d (%s). Dropping.",
        rh->command, conn->state, conn_state_to_string(conn->type, conn->state));
-  connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
-  connection_mark_for_close(conn);
-  return -1;
+  return 0; /* for forward compatibility, don't kill the circuit */
+//  connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
+//  connection_mark_for_close(conn);
+//  return -1;
 }
 
 /** An incoming relay cell has arrived on circuit <b>circ</b>. If
@@ -1035,8 +1036,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                               cell->payload+RELAY_HEADER_SIZE);
       return 0;
   }
-  warn(LD_PROTOCOL,"unknown relay command %d.",rh.command);
-  return -1;
+  log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+         "Received unknown relay command %d. Perhaps the other side is using a newer version of Tor? Dropping.",
+         rh.command);
+  return 0; /* for forward compatibility, don't kill the circuit */
 }
 
 uint64_t stats_n_data_cells_packaged = 0;
