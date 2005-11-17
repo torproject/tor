@@ -459,7 +459,9 @@ connected at a different place. anything else? -RD]
    the payload is padded with NUL bytes.
 
    If the RELAY cell is recognized but the relay command is not
-   understood, the cell must be dropped and ignored.
+   understood, the cell must be dropped and ignored. [Up until
+   0.1.1.10, Tor closed circuits when it received an unknown relay
+   command. Perhaps this will be more forward-compatible. -RD]
 
 5.2. Opening streams and transferring data
 
