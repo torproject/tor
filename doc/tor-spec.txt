@@ -33,8 +33,8 @@ when do we rotate which keys (tls, link, etc)?
    Unless otherwise specified, all symmetric ciphers are AES in counter
    mode, with an IV of all 0 bytes.  Asymmetric ciphers are either RSA
    with 1024-bit keys and exponents of 65537, or DH where the generator
-   is 2 and the modulus is the safe prime from rfc2409, section 6.2,
-   whose hex representation is:
+   is 2 and the modulus is the 1024-bit safe prime from rfc2409,
+   section 6.2, whose hex representation is:
 
      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
      "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
@@ -447,7 +447,9 @@ connected at a different place. anything else? -RD]
 
    (The digest does not include any bytes from relay cells that do
    not start or end at this hop of the circuit. That is, it does not
-   include forwarded data.)
+   include forwarded data. Therefore if 'recognized' is zero but the
+   digest does not match, the running digest at that node should
+   not be updated, and the cell should be forwarded on.)
 
    All RELAY cells pertaining to the same tunneled stream have the
    same stream ID.  StreamIDs are chosen arbitrarily by the OP.  RELAY
