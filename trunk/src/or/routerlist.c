@@ -3084,7 +3084,7 @@ update_router_descriptor_downloads(time_t now)
            "There are enough downloadable routerdescs to launch requests.");
     should_delay = 0;
   } else if (n_downloadable == 0) {
-    debug(LD_DIR, "No routerdescs need to be downloaded.");
+//    debug(LD_DIR, "No routerdescs need to be downloaded.");
     should_delay = 1;
   } else {
     if (dirserv) {
