@@ -115,9 +115,10 @@ $Id$
   is an error in any of the configuration settings, Tor sets none of them.
 
   Tor responds with a "250 configuration values set" reply on success.
-  Tor responds with a "513 syntax error in configuration values" reply on
-  syntax error, or a "553 impossible configuration setting" reply on a
-  semantic error.
+  If some of the listed keywords can't be found, Tor replies with a
+  "552 Unrecognized option" message. Otherwise, Tor responds with a
+  "513 syntax error in configuration values" reply on syntax error, or a
+  "553 impossible configuration setting" reply on a semantic error.
 
   When a configuration option takes multiple values, or when multiple
   configuration keys form a context-sensitive group (see GETCONF below), then
@@ -151,7 +152,7 @@ $Id$
       250 keyword
 
   If some of the listed keywords can't be found, Tor replies with a
-   "552 unknown configuration keyword" message.
+  "552 unknown configuration keyword" message.
 
   If an option appears multiple times in the configuration, all of its
   key-value pairs are returned in order.
