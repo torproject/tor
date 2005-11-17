@@ -450,13 +450,17 @@ connected at a different place. anything else? -RD]
    include forwarded data.)
 
    All RELAY cells pertaining to the same tunneled stream have the
-   same stream ID.  StreamIDs are chosen randomly by the OP.  RELAY
+   same stream ID.  StreamIDs are chosen arbitrarily by the OP.  RELAY
    cells that affect the entire circuit rather than a particular
    stream use a StreamID of zero.
 
    The 'Length' field of a relay cell contains the number of bytes in
    the relay payload which contain real payload data. The remainder of
    the payload is padded with NUL bytes.
+
+   [XXX If we receive a relay command we don't recognize, the current Tor
+   implementation closes the circuit. Is that the right approach or the
+   wrong approach? -RD]
 
 5.2. Opening streams and transferring data
 
@@ -974,3 +978,4 @@ B.2. ... and that we have no idea how to do.
    - Use a better AES mode that has built-in integrity checking,
      doesn't grow with the number of hops, is not patented, and
      is implemented and maintained by smart people.
+
