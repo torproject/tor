@@ -458,9 +458,8 @@ connected at a different place. anything else? -RD]
    the relay payload which contain real payload data. The remainder of
    the payload is padded with NUL bytes.
 
-   [XXX If we receive a relay command we don't recognize, the current Tor
-   implementation closes the circuit. Is that the right approach or the
-   wrong approach? -RD]
+   If the RELAY cell is recognized but the relay command is not
+   understood, the cell must be dropped and ignored.
 
 5.2. Opening streams and transferring data
 
