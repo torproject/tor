@@ -345,7 +345,7 @@ typedef enum {
 #define EXIT_PURPOSE_RESOLVE 2
 #define _EXIT_PURPOSE_MAX 2
 
-/** Circuit state: I'm the OP, still haven't done all my handshakes. */
+/** Circuit state: I'm the origin, still haven't done all my handshakes. */
 #define CIRCUIT_STATE_BUILDING 0
 /** Circuit state: Waiting to process the onionskin. */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1
@@ -420,8 +420,8 @@ typedef enum {
 #define CIRCUIT_PURPOSE_TESTING 17
 #define _CIRCUIT_PURPOSE_MAX 17
 
-/** True iff the circuit purpose <b>p</b> is for a circuit at the OP
- * that this OP has originated. */
+/** True iff the circuit purpose <b>p</b> is for a circuit that
+ * originated at this node. */
 #define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
 #define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
 
@@ -543,8 +543,8 @@ typedef enum {
 #define RELAY_HEADER_SIZE (1+2+2+4+2)
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
-/** Parsed onion routing cell.  All communication from OP-to-OR, or from
- * OR-to-OR, is via cells. */
+/** Parsed onion routing cell.  All communication between nodes
+ * is via cells. */
 typedef struct {
   uint16_t circ_id; /**< Circuit which received the cell. */
   uint8_t command; /**< Type of the cell: one of PADDING, CREATE, RELAY,
@@ -570,8 +570,7 @@ typedef struct socks_request_t socks_request_t;
  * data.
  *
  * A connection is named based on what it's connected to -- an "OR
- * connection" has an onion router on the other end, an "OP connection"
- * (nearly obsolete) has an onion proxy on the other end, an "exit
+ * connection" has a Tor node on the other end, an "exit
  * connection" has a website or other server on the other end, and an
  * "AP connection" has an application proxy (and thus a user) on the
  * other end.
@@ -752,7 +751,7 @@ typedef struct {
   char *nickname; /**< Human-readable OR name. */
 
   uint32_t addr; /**< IPv4 address of OR, in host order. */
-  uint16_t or_port; /**< Port for OR-to-OR and OP-to-OR connections. */
+  uint16_t or_port; /**< Port for TLS connections. */
   uint16_t dir_port; /**< Port for HTTP directory connections. */
 
   crypto_pk_env_t *onion_pkey; /**< Public RSA key for onions. */
