@@ -1,7 +1,7 @@
 Changes in version 0.1.1.9-alpha - 2005-11-15
   o Usability improvements:
     - Start calling it FooListenAddress rather than FooBindAddress,
-      since none of our users know what it means to bind an address
+      since few of our users know what it means to bind an address
       or port.
     - Reduce clutter in server logs. We're going to try to make
       them actually usable now. New config option ProtocolWarnings that
