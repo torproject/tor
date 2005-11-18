@@ -1756,7 +1756,7 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
 }
 
 /** Called when we receive a REDIRECTSTERAM command.  Try to change the target
- * adderess of the named AP steream, and report success or failure. */
+ * address of the named AP stream, and report success or failure. */
 static int
 handle_control_redirectstream(connection_t *conn, uint32_t len,
                               const char *body)
@@ -1764,6 +1764,7 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
   connection_t *ap_conn = NULL;
   uint32_t conn_id;
   char *new_addr = NULL;
+  uint16_t new_port = 0;
   if (STATE_IS_V0(conn->state)) {
     if (len < 6) {
       send_control0_error(conn, ERR_SYNTAX, "redirectstream message too short");
@@ -1784,14 +1785,24 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
     args = smartlist_create();
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    if (smartlist_len(args)<2)
+    if (smartlist_len(args) < 2)
       connection_printf_to_buf(conn,"512 Missing argument to REDIRECTSTREAM\r\n");
     else if (!(ap_conn = get_stream(smartlist_get(args, 0)))
              || !ap_conn->socks_request) {
       connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
                                (char*)smartlist_get(args, 0));
     } else {
-      new_addr = tor_strdup(smartlist_get(args, 1));
+      int ok;
+      if (smartlist_len(args) < 3) { /* they included a port too */
+        new_port = (uint16_t) tor_parse_ulong(smartlist_get(args, 2),
+                                     10, 1, 65535, &ok, NULL);
+      }
+      if (!ok) {
+        connection_printf_to_buf(conn, "512 Cannot parse port \"%s\"\r\n",
+                                 (char*)smartlist_get(args, 2));
+      } else {
+        new_addr = tor_strdup(smartlist_get(args, 1));
+      }
     }
 
     SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
@@ -1802,6 +1813,8 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
 
   strlcpy(ap_conn->socks_request->address, new_addr,
           sizeof(ap_conn->socks_request->address));
+  if (new_port)
+    ap_conn->socks_request->port = new_port;
   tor_free(new_addr);
   send_control_done(conn);
   return 0;
