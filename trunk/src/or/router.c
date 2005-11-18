@@ -910,15 +910,12 @@ check_descriptor_bandwidth_changed(time_t now)
   }
 }
 
-#define MAX_IPADDRESS_CHANGE_FREQ 60*60
 /** Check whether our own address as defined by the Address configuration
  * has changed. This is for routers that get their address from a service
  * like dyndns. If our address has changed, mark our descriptor dirty. */
 void
 check_descriptor_ipaddress_changed(time_t now)
 {
-  static time_t last_changed = 0;
-  static time_t last_warned_lastchangetime = 0;
   uint32_t prev, cur;
   or_options_t *options = get_options();
 
@@ -943,19 +940,8 @@ check_descriptor_ipaddress_changed(time_t now)
     in_cur.s_addr = htonl(cur);
     tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
 
-    if (last_changed+MAX_IPADDRESS_CHANGE_FREQ < now) {
-      info(LD_GENERAL,"Our IP Address has changed from %s to %s; rebuilding descriptor.", addrbuf_prev, addrbuf_cur);
-      mark_my_descriptor_dirty();
-      last_changed = now;
-      last_warned_lastchangetime = 0;
-    }
-    else
-    {
-      if (last_warned_lastchangetime != last_changed) {
-        warn(LD_GENERAL,"Our IP Address seems to be flapping.  It has changed twice within one hour (from %s to %s this time).  Ignoring for now.", addrbuf_prev, addrbuf_cur);
-        last_warned_lastchangetime = last_changed;
-      }
-    }
+    info(LD_GENERAL,"Our IP Address has changed from %s to %s; rebuilding descriptor.", addrbuf_prev, addrbuf_cur);
+    mark_my_descriptor_dirty();
   }
 }
 
