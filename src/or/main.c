@@ -94,7 +94,7 @@ static char* nt_strerror(uint32_t errnum);
 
 #define FORCE_REGENERATE_DESCRIPTOR_INTERVAL 18*60*60 /* 18 hours */
 #define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
-#define CHECK_IPADDRESS_INTERVAL (15*60) /* five minutes */
+#define CHECK_IPADDRESS_INTERVAL (15*60) /* 15 minutes */
 #define BUF_SHRINK_INTERVAL 60 /* one minute */
 #define DESCRIPTOR_RETRY_INTERVAL 10
 #define DESCRIPTOR_FAILURE_RESET_INTERVAL 60*60
