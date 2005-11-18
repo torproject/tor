@@ -448,10 +448,11 @@ $Id$
 3.13. REDIRECTSTREAM
 
   Sent from the client to the server. The syntax is:
-    "REDIRECTSTREAM" SP StreamID SP Address CRLF
+    "REDIRECTSTREAM" SP StreamID SP Address (Port) CRLF
 
-  Tells the server to change the exit address on the specified stream.  No
-  remapping is performed on the new provided address.
+  Tells the server to change the exit address on the specified stream.  If
+  Port is specified, changes the destination port as well.  No remapping
+  is performed on the new provided address.
 
   To be sure that the modified address will be used, this event must be sent
   after a new stream event is received, and before attaching this stream to
@@ -470,6 +471,9 @@ $Id$
   not used currently; Tor servers SHOULD ignore unrecognized flags.  Tor may
   hold the stream open for a while to flush any data that is pending.
 
+  Tor replies with "250 OK" on success, or a 512 if there aren't enough
+  arguments, or a 552 if it doesn't recognize the StreamID or reason.
+
 3.15. CLOSECIRCUIT
 
    The syntax is:
@@ -481,6 +485,9 @@ $Id$
 
   Other flags may be defined in the future; Tor SHOULD ignore unrecognized
   flags.
+
+  Tor replies with "250 OK" on success, or a 512 if there aren't enough
+  arguments, or a 552 if it doesn't recognize the CircuitID.
 
 3.16. QUIT
 
