@@ -1142,7 +1142,7 @@ typedef struct config_line_t {
   struct config_line_t *next;
 } config_line_t;
 
-/** Configuration options for a Tor process */
+/** Configuration options for a Tor process. */
 typedef struct {
   uint32_t _magic;
 
@@ -1154,10 +1154,10 @@ typedef struct {
   const char *command_arg; /**< Argument for command-line option. */
 
   config_line_t *OldLogOptions; /**< List of configuration lines
-                                        * for logfiles, old style. */
+                                 * for logfiles, old style. */
 
   config_line_t *Logs; /**< New-style list of configuration lines
-                               * for logs */
+                        * for logs */
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
   char *DataDirectory; /**< OR only: where to store long-term data. */

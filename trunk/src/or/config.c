@@ -430,6 +430,19 @@ safe_str(const char *address)
     return address;
 }
 
+/** Add the default directory servers directly into the trusted dir list. */
+static void
+add_default_trusted_dirservers(void)
+{
+  const char *dirservers[] = {
+"moria1 v1 18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
+"moria2 v1 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF",
+"tor26 v1 86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D" };
+  parse_dir_server_line(dirservers[0], 0);
+  parse_dir_server_line(dirservers[1], 0);
+  parse_dir_server_line(dirservers[2], 0);
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
@@ -541,12 +554,16 @@ options_act(or_options_t *old_options)
   int running_tor = options->command == CMD_RUN_TOR;
 
   clear_trusted_dir_servers();
-  for (cl = options->DirServers; cl; cl = cl->next) {
-    if (parse_dir_server_line(cl->value, 0)<0) {
-      err(LD_BUG,
-          "Bug: Previously validated DirServer line could not be added!");
-      return -1;
+  if (options->DirServers) {
+    for (cl = options->DirServers; cl; cl = cl->next) {
+      if (parse_dir_server_line(cl->value, 0)<0) {
+        err(LD_BUG,
+            "Bug: Previously validated DirServer line could not be added!");
+        return -1;
+      }
     }
+  } else {
+    add_default_trusted_dirservers();
   }
 
   if (running_tor && rend_config_services(options, 0)<0) {
@@ -1343,20 +1360,6 @@ option_reset(config_format_t *fmt, or_options_t *options,
   }
 }
 
-/** Set <b>options</b>-&gt;DirServers to contain the default directory
- * servers. */
-static void
-add_default_trusted_dirservers(or_options_t *options)
-{
-  config_line_append(&options->DirServers, "DirServer",
-     "moria1 v1 18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
-  config_line_append(&options->DirServers, "DirServer",
-     "moria2 v1 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
-  config_line_append(&options->DirServers, "DirServer",
-     "tor26 v1 86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
-//  "tor.noreply.org:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
-}
-
 /** Print a usage message for tor. */
 static void
 print_usage(void)
@@ -2076,9 +2079,7 @@ options_validate(or_options_t *options)
       result = -1;
   }
 
-  if (!options->DirServers) {
-    add_default_trusted_dirservers(options);
-  } else {
+  if (options->DirServers) {
     COMPLAIN("You have used DirServer to specify directory authorities in your configuration.  This is potentially dangerous: it can make you look different from all other Tor users, and hurt your anonymity.  Even if you've specified the same authorities as Tor uses by default, the defaults could change in the future.  Be sure you know what you're doing.");
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 1)<0)

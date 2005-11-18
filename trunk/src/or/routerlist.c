@@ -2413,7 +2413,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
     }
   } else {
     if (tor_lookup_hostname(address, &a)) {
-      warn(LD_CONFIG, "Unable to lookup address for directory server at %s",
+      warn(LD_CONFIG, "Unable to lookup address for directory server at '%s'",
            address);
       return;
     }
