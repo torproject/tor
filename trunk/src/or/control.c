@@ -1793,7 +1793,7 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
                                (char*)smartlist_get(args, 0));
     } else {
       int ok;
-      if (smartlist_len(args) < 3) { /* they included a port too */
+      if (smartlist_len(args) > 2) { /* they included a port too */
         new_port = (uint16_t) tor_parse_ulong(smartlist_get(args, 2),
                                      10, 1, 65535, &ok, NULL);
       }
