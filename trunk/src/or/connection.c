@@ -889,8 +889,8 @@ retry_listeners(int type, config_line_t *cfg,
       }
     } else {
       /* It's configured; we don't need to launch it. */
-      debug(LD_NET, "Already have %s on %s:%d",
-             conn_type_to_string(type), conn->address, conn->port);
+//      debug(LD_NET, "Already have %s on %s:%d",
+//             conn_type_to_string(type), conn->address, conn->port);
       smartlist_remove(launch, line);
       if (free_launch_elts)
         config_free_lines(line);
