@@ -456,11 +456,16 @@ dirserv_add_descriptor(const char *desc, const char **msg)
          ri->nickname);
     *msg = "Not replacing router descriptor; no information has changed since the last one with this identity.";
     routerinfo_free(ri);
+    control_event_or_authdir_new_descriptor("DROPPED", desc, *msg);
     return 0;
   }
   if ((r = router_add_to_routerlist(ri, msg, 0))<0) {
+    if (r < -1) /* unless the routerinfo was fine, just out-of-date */
+      control_event_or_authdir_new_descriptor("REJECTED", desc, *msg);
     return r == -1 ? 0 : -1;
   } else {
+    control_event_or_authdir_new_descriptor("ACCEPTED", desc, *msg);
+
     smartlist_t *changed = smartlist_create();
     smartlist_add(changed, ri);
     control_event_descriptors_changed(changed);
