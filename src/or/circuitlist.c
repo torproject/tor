@@ -185,7 +185,7 @@ circuit_state_to_string(int state)
   switch (state) {
     case CIRCUIT_STATE_BUILDING: return "doing handshakes";
     case CIRCUIT_STATE_ONIONSKIN_PENDING: return "processing the onion";
-    case CIRCUIT_STATE_OR_WAIT: return "connecting to firsthop";
+    case CIRCUIT_STATE_OR_WAIT: return "connecting to server";
     case CIRCUIT_STATE_OPEN: return "open";
     default:
       warn(LD_BUG, "Bug: unknown circuit state %d", state);
