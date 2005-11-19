@@ -38,8 +38,7 @@ NR- write a spec appendix for 'being nice with tor'
 for 0.1.1.10-alpha:
 N - if they're trying to be a tor server and they're running
     win 98 or win me, don't let them be a server.
-R - ReachableAddresses doesn't do what we want wrt dir fetches.
-
+  o ReachableAddresses doesn't do what we want wrt dir fetches.
 
 for 0.1.1.x:
 N . Additional controller features
