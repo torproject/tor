@@ -210,8 +210,6 @@ circuit_new(uint16_t p_circ_id, connection_t *p_conn)
 
   circ->timestamp_created = time(NULL);
 
-  circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
-
   /* CircIDs */
   if (p_conn) {
     circuit_set_circid_orconn(circ, p_circ_id, p_conn, P_CONN_CHANGED);
