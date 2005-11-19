@@ -35,7 +35,7 @@ NR- write a spec appendix for 'being nice with tor'
     tor-0.1.0.7.rc
   - Remove need for HACKING file.
 
-for 0.1.1.9-alpha:
+for 0.1.1.10-alpha:
 N - if they're trying to be a tor server and they're running
     win 98 or win me, don't let them be a server.
 R - ReachableAddresses doesn't do what we want wrt dir fetches.
@@ -73,7 +73,7 @@ N       - Specify and implement it.
     o On sighup, if usehelpernodes changed to 1, use new circuits?
     - If your helper nodes are unavailable, don't abandon them unless
       other nodes *are* reachable.
-R   - If you think an OR conn is open but you can never establish a circuit
+    o If you think an OR conn is open but you can never establish a circuit
       to it, reconsider whether it's actually open.
 
   - switch accountingmax to count total in+out, not either in or
@@ -289,7 +289,8 @@ Blue-sky:
   - Implement Morphmix, so we can compare its behavior, complexity, etc.
   - Other transport. HTTP, udp, rdp, airhook, etc. May have to do our own
     link crypto, unless we can bully openssl into it.
-  - Conn key rotation.
+  . Conn key rotation (we switch to a new one after a week, but
+    old circuits don't get any benefit from this).
   - Need a relay teardown cell, separate from one-way ends.
     (Pending a user who needs this)
   - Handle half-open connections: right now we don't support all TCP
