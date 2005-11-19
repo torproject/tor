@@ -345,7 +345,7 @@ router_pick_directory_server(int requireother,
     return NULL;
   }
   /* give it one last try */
-  choice = router_pick_directory_server_impl(requireother, 0,
+  choice = router_pick_directory_server_impl(requireother, fascistfirewall,
                                              for_v2_directory);
   return choice;
 }
