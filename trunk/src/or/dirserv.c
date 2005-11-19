@@ -616,8 +616,7 @@ dirserv_thinks_router_is_reachable(routerinfo_t *router, time_t now)
   connection_t *conn;
   if (router_is_me(router) && !we_are_hibernating())
     return 1;
-  conn = connection_get_by_identity_digest(router->cache_info.identity_digest,
-                                           CONN_TYPE_OR);
+  conn = connection_get_by_identity_digest(router->cache_info.identity_digest);
   if (conn && conn->state == OR_CONN_STATE_OPEN)
     return get_options()->AssumeReachable ||
            now < router->last_reachable + REACHABLE_TIMEOUT;
@@ -633,8 +632,7 @@ dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router, time_t now)
   connection_t *conn;
   if (router->is_hibernating)
     return 0;
-  conn = connection_get_by_identity_digest(router->cache_info.identity_digest,
-                                           CONN_TYPE_OR);
+  conn = connection_get_by_identity_digest(router->cache_info.identity_digest);
   if (conn && conn->state == OR_CONN_STATE_OPEN &&
       now >= router->last_reachable + 2*REACHABLE_TIMEOUT &&
       router->testing_since &&

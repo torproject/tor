@@ -597,10 +597,30 @@ run_connection_housekeeping(int i, time_t now)
     return;
   }
 
+  if (!connection_speaks_cells(conn))
+    return; /* we're all done here, the rest is just for OR conns */
+
+#define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7) /* a week */
+  if (!conn->is_obsolete &&
+      conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
+    info(LD_OR, "Marking OR conn to %s:%d obsolete (fd %d, %d secs old).",
+         conn->address, conn->port, conn->s,
+         (int)(now - conn->timestamp_created));
+    conn->is_obsolete = 1;
+  }
+
+  if (conn->is_obsolete && !circuit_get_by_conn(conn)) {
+    /* no unmarked circs -- mark it now */
+    info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) [Obsolete].",
+         conn->s,conn->address, conn->port);
+    connection_mark_for_close(conn);
+    conn->hold_open_until_flushed = 1;
+    return;
+  }
+
   /* If we haven't written to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
-  if (connection_speaks_cells(conn) &&
-      now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
+  if (now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     if (!connection_state_is_open(conn)) {
       info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
@@ -614,7 +634,8 @@ run_connection_housekeeping(int i, time_t now)
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (!clique_mode(options) && !circuit_get_by_conn(conn) &&
-               (!router || !server_mode(options) || !router_is_clique_mode(router))) {
+               (!router || !server_mode(options) ||
+                !router_is_clique_mode(router))) {
       info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) [Not in clique mode].",
              conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);

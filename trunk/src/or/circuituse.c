@@ -654,7 +654,17 @@ circuit_build_failed(circuit_t *circ)
   if (circ->cpath &&
       circ->cpath->prev->state != CPATH_STATE_OPEN &&
       circ->cpath->prev->prev->state == CPATH_STATE_OPEN) {
-      failed_at_last_hop = 1;
+    failed_at_last_hop = 1;
+  }
+  if (circ->cpath &&
+      circ->cpath->state != CPATH_STATE_OPEN) {
+    /* We failed at the first hop. If there's an OR connection
+       to blame, blame it. */
+    if (circ->n_conn) {
+      info(LD_OR, "Our circuit failed to get a response from the first hop (%s:%d). I'm going to try to rotate to a better connection.",
+           circ->n_conn->address, circ->n_conn->port);
+      circ->n_conn->is_obsolete = 1;
+    }
   }
 
   switch (circ->purpose) {

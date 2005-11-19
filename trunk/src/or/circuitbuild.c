@@ -343,12 +343,16 @@ circuit_handle_first_hop(circuit_t *circ)
   memcpy(circ->n_conn_id_digest, firsthop->extend_info->identity_digest,
          DIGEST_LEN);
   n_conn = connection_get_by_identity_digest(
-         firsthop->extend_info->identity_digest, CONN_TYPE_OR);
-  if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
+         firsthop->extend_info->identity_digest);
+  if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
+      (n_conn->is_obsolete &&
+       router_digest_version_as_new_as(firsthop->extend_info->identity_digest,
+                                       "0.1.1.9-alpha-cvs"))) {
+    /* not currently connected */
     circ->n_addr = firsthop->extend_info->addr;
     circ->n_port = firsthop->extend_info->port;
 
-    if (!n_conn) { /* launch the connection */
+    if (!n_conn || n_conn->is_obsolete) { /* launch the connection */
       n_conn = connection_or_connect(firsthop->extend_info->addr,
                                      firsthop->extend_info->port,
                                      firsthop->extend_info->identity_digest);
@@ -633,9 +637,11 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
-  n_conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
+  n_conn = connection_get_by_identity_digest(id_digest);
 
-  if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN) {
+  if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
+    (n_conn->is_obsolete &&
+     router_digest_version_as_new_as(id_digest,"0.1.1.9-alpha-cvs"))) {
      /* Note that this will close circuits where the onion has the same
      * router twice in a row in the path. I think that's ok.
      */
@@ -653,7 +659,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     /* imprint the circuit with its future n_conn->id */
     memcpy(circ->n_conn_id_digest, id_digest, DIGEST_LEN);
 
-    if (n_conn) {
+    if (n_conn && !n_conn->is_obsolete) {
       circ->n_addr = n_conn->addr;
       circ->n_port = n_conn->port;
     } else {

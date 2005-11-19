@@ -606,6 +606,8 @@ struct connection_t {
   /** For control connections only. If set, we send extended info with control
    * events as appropriate. */
   unsigned int control_events_are_extended:1;
+  /** Used for OR conns that shouldn't get any new circs attached to them. */
+  unsigned int is_obsolete:1;
 
   int s; /**< Our socket; -1 if this connection is closed. */
   int poll_index; /* XXXX rename. */
@@ -1565,7 +1567,7 @@ void _connection_controller_force_write(connection_t *conn);
 void connection_write_to_buf(const char *string, size_t len, connection_t *conn);
 
 connection_t *connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port);
-connection_t *connection_get_by_identity_digest(const char *digest, int type);
+connection_t *connection_get_by_identity_digest(const char *digest);
 connection_t *connection_get_by_global_id(uint32_t id);
 
 connection_t *connection_get_by_type(int type);
@@ -2153,6 +2155,7 @@ routerinfo_t *router_get_by_nickname(const char *nickname,
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
+int router_digest_version_as_new_as(const char *digest, const char *cutoff);
 int router_digest_is_trusted_dir(const char *digest);
 routerlist_t *router_get_routerlist(void);
 void routerlist_reset_warnings(void);
