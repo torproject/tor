@@ -227,7 +227,8 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
   }
 }
 
-/** Process a 'created' <b>cell</b> that just arrived from <b>conn</b>. Find the circuit
+/** Process a 'created' <b>cell</b> that just arrived from <b>conn</b>.
+ * Find the circuit
  * that it's intended for. If we're not the origin of the circuit, package
  * the 'created' cell in an 'extended' relay cell and pass it back. If we
  * are the origin of the circuit, send it to circuit_finish_handshake() to
