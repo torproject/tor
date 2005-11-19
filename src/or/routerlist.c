@@ -340,7 +340,6 @@ router_pick_directory_server(int requireother,
 
   info(LD_DIR,"Still no %s router entries. Reloading and trying again.",
          fascistfirewall ? "reachable" : "known");
-  has_fetched_directory=0; /* reset it */
   if (router_reload_router_list()) {
     return NULL;
   }
