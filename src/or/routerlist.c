@@ -958,6 +958,18 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
   return NULL;
 }
 
+/** Try to find a routerinfo for <b>digest</b>. If we don't have one,
+ * return 1. If we do, ask tor_version_as_new_as() for the answer.
+ */
+int
+router_digest_version_as_new_as(const char *digest, const char *cutoff)
+{
+  routerinfo_t *router = router_get_by_digest(digest);
+  if (!router)
+    return 1;
+  return tor_version_as_new_as(router->platform, cutoff);
+}
+
 /** Return true iff <b>digest</b> is the digest of the identity key of
  * a trusted directory. */
 int
@@ -1486,7 +1498,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
          */
         connection_t *conn;
         while ((conn = connection_get_by_identity_digest(
-                      old_router->cache_info.identity_digest, CONN_TYPE_OR))) {
+                      old_router->cache_info.identity_digest))) {
           // And LD_OR? XXXXNM
           info(LD_DIR,"Closing conn to router '%s'; there is now a named router with that name.",
                  old_router->nickname);

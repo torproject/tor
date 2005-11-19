@@ -558,12 +558,14 @@ connection_tls_finish_handshake(connection_t *conn)
     return -1;
 
   if (!connection_or_nonopen_was_started_here(conn)) {
+#if 0
     connection_t *c;
-    if ((c=connection_get_by_identity_digest(digest_rcvd, CONN_TYPE_OR))) {
+    if ((c=connection_get_by_identity_digest(digest_rcvd))) {
       debug(LD_OR,"Router '%s' is already connected on fd %d. Dropping fd %d.",
              c->nickname, c->s, conn->s);
       return -1;
     }
+#endif
     connection_or_init_conn_from_address(conn,conn->addr,conn->port,digest_rcvd);
   }
 
