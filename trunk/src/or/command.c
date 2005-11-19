@@ -336,11 +336,7 @@ command_process_destroy_cell(cell_t *cell, connection_t *conn)
            cell->circ_id, conn->address, conn->port);
     return;
   }
-
   debug(LD_OR,"Received for circID %d.",cell->circ_id);
-  if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
-    onion_pending_remove(circ);
-  }
 
   if (cell->circ_id == circ->p_circ_id) {
     /* the destroy came from behind */
