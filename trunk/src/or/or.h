@@ -1739,6 +1739,7 @@ int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, unsigned int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,time_t expires);
+int control_event_or_authdir_new_descriptor(const char *action, const char *descriptor, const char *msg);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);

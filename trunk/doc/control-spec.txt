@@ -171,7 +171,8 @@ $Id$
      "SETEVENTS" [SP "EXTENDED"] *(SP EventCode) CRLF
 
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
-         "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP"
+         "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
+         "AUTHDIR_NEWDESCS"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -675,6 +676,13 @@ $Id$
   Syntax:
      "650" SP "ADDRMAP" SP Address SP Address SP Expiry
      Expiry = DQOUTE ISOTime DQUOTE / "NEVER"
+
+4.1.8. Descriptors uploaded to us in our role as authoritative dirserver
+
+  Syntax:
+     "650" "+" "AUTHDIR_NEWDESCS" CRLF Action CRLF Message CRLF Descriptor CRLF "." CRLF
+     Action = "ACCEPTED" / "DROPPED" / "REJECTED"
+     Message = Text
 
 5. Implementation notes
 

@@ -73,7 +73,8 @@ const char control_c_id[] = "$Id$";
 #define EVENT_ERR_MSG         0x000B
 #define LAST_V0_EVENT         0x000B
 #define EVENT_ADDRMAP         0x000C
-#define _EVENT_MAX            0x000C
+#define EVENT_AUTHDIR_NEWDESCS 0x000D
+#define _EVENT_MAX            0x000D
 
 /** Array mapping from message type codes to human-readable message
  * type names. Used for compatibility with version 0 of the control
@@ -916,6 +917,8 @@ handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
           event_code = EVENT_NEW_DESC;
         else if (!strcasecmp(ev, "ADDRMAP"))
           event_code = EVENT_ADDRMAP;
+        else if (!strcasecmp(ev, "AUTHDIR_NEWDESCS"))
+          event_code = EVENT_AUTHDIR_NEWDESCS;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
@@ -2607,6 +2610,44 @@ control_event_address_mapped(const char *from, const char *to, time_t expires)
     send_control1_event(EVENT_ADDRMAP, "650 ADDRMAP %s %s \"%s\"\r\n",
                         from, to, buf);
   }
+
+  return 0;
+}
+
+/** The authoritative dirserver has received a new descriptor that
+ * has passed basic syntax checks and is properly self-signed.
+ *
+ * Notify any interested party of the new descriptor and what has
+ * been done with it, and also optionally give an explanation/reason. */
+int
+control_event_or_authdir_new_descriptor(const char *action, const char *descriptor, const char *msg)
+
+{
+  char firstline[1024];
+  char *buf;
+  int totallen;
+  char *esc = NULL;
+  size_t esclen;
+
+  if (!EVENT_IS_INTERESTING(EVENT_AUTHDIR_NEWDESCS))
+    return 0;
+
+  tor_snprintf(firstline, sizeof(firstline),
+               "650+AUTHDIR_NEWDESC=\r\n%s\r\n%s\r\n",
+               action,
+               msg ? msg : "");
+
+  /* Escape the server descriptor properly */
+  esclen = write_escaped_data(descriptor, strlen(descriptor), 1, &esc);
+
+  totallen = strlen(firstline) + esclen + 1;
+  buf = tor_malloc(totallen);
+  strlcpy(buf, firstline, totallen);
+  strlcpy(buf+strlen(firstline), esc, totallen);
+  send_control1_event_string(EVENT_AUTHDIR_NEWDESCS, buf);
+
+  tor_free(esc);
+  tor_free(buf);
 
   return 0;
 }
