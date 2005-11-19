@@ -1701,7 +1701,7 @@ parse_reachable_addresses(void)
 }
 
 /** Return true iff the firewall options might block any address:port
- * combination
+ * combination.
  */
 int
 firewall_is_fascist(void)
@@ -1710,7 +1710,7 @@ firewall_is_fascist(void)
 }
 
 /** Return true iff we are configured to think that the local fascist
- * firewall (if any) will allow a connection to <b>addr</b>:<b>port</b> */
+ * firewall (if any) will allow a connection to <b>addr</b>:<b>port</b>. */
 int
 fascist_firewall_allows_address(uint32_t addr, uint16_t port)
 {

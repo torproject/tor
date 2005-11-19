@@ -339,7 +339,7 @@ router_pick_directory_server(int requireother,
     return choice;
 
   info(LD_DIR,"Still no %s router entries. Reloading and trying again.",
-         firewall_is_fascist() ? "reachable" : "known");
+         fascistfirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
   if (router_reload_router_list()) {
     return NULL;
@@ -391,8 +391,8 @@ router_pick_trusteddirserver(int need_v1_support,
 
 /** Pick a random running verified directory server/mirror from our
  * routerlist.
- * If <b>fascistfirewall</b> and we're not using a proxy,
- * make sure the port we pick is allowed by options-\>firewallports.
+ * If <b>fascistfirewall</b>,
+ * make sure the router we pick is allowed by our firewall options.
  * If <b>requireother</b>, it cannot be us.  If <b>for_v2_directory</b>,
  * choose a directory server new enough to support the v2 directory
  * functionality.
@@ -406,9 +406,6 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
 
   if (!routerlist)
     return NULL;
-
-  if (get_options()->HttpProxy)
-    fascistfirewall = 0;
 
   /* Find all the running dirservers we know about. */
   sl = smartlist_create();
@@ -439,8 +436,8 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
 }
 
 /** Choose randomly from among the trusted dirservers that are up.
- * If <b>fascistfirewall</b> and we're not using a proxy,
- * make sure the port we pick is allowed by options-\>firewallports.
+ * If <b>fascistfirewall</b>,
+ * make sure the port we pick is allowed by our firewall options.
  * If <b>requireother</b>, it cannot be us.  If <b>need_v1_support</b>, choose
  * a trusted authority for the v1 directory system.
  */
@@ -456,9 +453,6 @@ router_pick_trusteddirserver_impl(int need_v1_support,
 
   if (!trusted_dir_servers)
     return NULL;
-
-  if (get_options()->HttpProxy)
-    fascistfirewall = 0;
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
     {

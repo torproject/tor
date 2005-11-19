@@ -133,6 +133,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
                              size_t payload_len)
 {
   smartlist_t *dirservers;
+  int post_via_tor;
 
   router_get_trusted_dir_servers(&dirservers);
   tor_assert(dirservers);
@@ -141,23 +142,15 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
    */
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
-      /* Pay attention to fascistfirewall when we're uploading a
-       * router descriptor, but not when uploading a service
-       * descriptor -- those use Tor. */
-      if (purpose == DIR_PURPOSE_UPLOAD_DIR && !get_options()->HttpProxy) {
-        if (!fascist_firewall_allows_address(ds->addr,ds->dir_port))
-          continue;
-      }
-      directory_initiate_command_trusted_dir(ds, purpose,
-                                             purpose_is_private(purpose),
+      post_via_tor = purpose_is_private(purpose) ||
+                     !fascist_firewall_allows_address(ds->addr,ds->dir_port);
+      directory_initiate_command_trusted_dir(ds, purpose, post_via_tor,
                                              NULL, payload, payload_len);
     });
 }
 
 /** Start a connection to a random running directory server, using
- * connection purpose 'purpose' requesting 'resource'.  The purpose
- * should be one of 'DIR_PURPOSE_FETCH_DIR',
- * 'DIR_PURPOSE_FETCH_RENDDESC', 'DIR_PURPOSE_FETCH_RUNNING_LIST.'
+ * connection purpose 'purpose' and requesting 'resource'.
  * If <b>retry_if_no_servers</b>, then if all the possible servers seem
  * down, mark them up and try again.
  */
@@ -167,10 +160,10 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
 {
   routerinfo_t *r = NULL;
   trusted_dir_server_t *ds = NULL;
-  int fascistfirewall = firewall_is_fascist();
   or_options_t *options = get_options();
   int fetch_fresh_first = server_mode(options) && options->DirPort != 0;
   int directconn = !purpose_is_private(purpose);
+  int need_to_use_tor = 0;
 
   int need_v1_support = purpose == DIR_PURPOSE_FETCH_DIR ||
                         purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
@@ -187,12 +180,12 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
     }
     if (!ds && fetch_fresh_first) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_trusteddirserver(need_v1_support, 1, fascistfirewall,
+      ds = router_pick_trusteddirserver(need_v1_support, 1, 1,
                                         retry_if_no_servers);
     }
     if (!ds) {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(1, fascistfirewall, need_v2_support,
+      r = router_pick_directory_server(1, 1, need_v2_support,
                                        retry_if_no_servers);
       if (!r) {
         const char *which;
@@ -205,15 +198,24 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
         else // if (purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
           which = "server descriptors";
         info(LD_DIR,
-             "No router found for %s; falling back to dirserver list",which);
-        ds = router_pick_trusteddirserver(1, 1, fascistfirewall,
+             "No router found for %s; falling back to dirserver list", which);
+        ds = router_pick_trusteddirserver(1, 1, 1,
                                           retry_if_no_servers);
+        if (!ds)
+          need_to_use_tor = 1; /* last resort: try routing it via Tor */
       }
     }
-  } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
-    /* only ask authdirservers, any of them will do */
+  }
+  if (!directconn || need_to_use_tor) {
     /* Never use fascistfirewall; we're going via Tor. */
-    ds = router_pick_trusteddirserver(0, 0, 0, retry_if_no_servers);
+    if (purpose == DIR_PURPOSE_FETCH_RENDDESC) {
+      /* only ask authdirservers, any of them will do */
+      ds = router_pick_trusteddirserver(0, 0, 0, retry_if_no_servers);
+    } else {
+      /* anybody with a non-zero dirport will do. Disregard firewalls. */
+      r = router_pick_directory_server(1, 0, need_v2_support,
+                                       retry_if_no_servers);
+    }
   }
 
   if (r)
