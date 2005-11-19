@@ -314,26 +314,26 @@ typedef enum {
 #define _CONTROL_CONN_STATE_MAX 4
 
 #define _DIR_PURPOSE_MIN 1
-/** Purpose for connection to directory server: download a directory. */
+/** A connection to a directory server: download a directory. */
 #define DIR_PURPOSE_FETCH_DIR 1
-/** Purpose for connection to directory server: download just the list
+/** A connection to a directory server: download just the list
  * of running routers. */
 #define DIR_PURPOSE_FETCH_RUNNING_LIST 2
-/** Purpose for connection to directory server: download a rendezvous
+/** A connection to a directory server: download a rendezvous
  * descriptor. */
 #define DIR_PURPOSE_FETCH_RENDDESC 3
-/** Purpose for connection to directory server: set after a rendezvous
+/** A connection to a directory server: set after a rendezvous
  * descriptor is downloaded. */
 #define DIR_PURPOSE_HAS_FETCHED_RENDDESC 4
 /** A connection to a directory server: download one or more network-status
  * objects */
 #define DIR_PURPOSE_FETCH_NETWORKSTATUS 5
-/**  A connection to a directory server: download one or more server
+/** A connection to a directory server: download one or more server
  * descriptors. */
 #define DIR_PURPOSE_FETCH_SERVERDESC 6
-/** Purpose for connection to directory server: upload a server descriptor. */
+/** A connection to a directory server: upload a server descriptor. */
 #define DIR_PURPOSE_UPLOAD_DIR 7
-/** Purpose for connection to directory server: upload a rendezvous
+/** A connection to a directory server: upload a rendezvous
  * descriptor. */
 #define DIR_PURPOSE_UPLOAD_RENDDESC 8
 /** Purpose for connection at a directory server. */
