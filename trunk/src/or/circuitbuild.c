@@ -420,6 +420,7 @@ circuit_n_conn_done(connection_t *or_conn, int status)
           continue;
         }
         tor_free(circ->onionskin);
+        circ->state = CIRCUIT_STATE_OPEN;
       }
     }
   }
