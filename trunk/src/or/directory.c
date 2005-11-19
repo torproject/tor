@@ -163,7 +163,6 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   or_options_t *options = get_options();
   int fetch_fresh_first = server_mode(options) && options->DirPort != 0;
   int directconn = !purpose_is_private(purpose);
-  int need_to_use_tor = 0;
 
   int need_v1_support = purpose == DIR_PURPOSE_FETCH_DIR ||
                         purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
@@ -202,11 +201,11 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
         ds = router_pick_trusteddirserver(1, 1, 1,
                                           retry_if_no_servers);
         if (!ds)
-          need_to_use_tor = 1; /* last resort: try routing it via Tor */
+          directconn = 0; /* last resort: try routing it via Tor */
       }
     }
   }
-  if (!directconn || need_to_use_tor) {
+  if (!directconn) {
     /* Never use fascistfirewall; we're going via Tor. */
     if (purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask authdirservers, any of them will do */
@@ -228,7 +227,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
     notice(LD_DIR,
            "No running dirservers known. Will try again later. (purpose %d)",
            purpose);
-    if (directconn) {
+    if (!purpose_is_private(purpose)) {
       /* remember we tried them all and failed. */
       directory_all_unreachable(time(NULL));
     }
