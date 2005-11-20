@@ -464,9 +464,10 @@ dirserv_add_descriptor(const char *desc, const char **msg)
       control_event_or_authdir_new_descriptor("REJECTED", desc, *msg);
     return r == -1 ? 0 : -1;
   } else {
+    smartlist_t *changed;
     control_event_or_authdir_new_descriptor("ACCEPTED", desc, *msg);
 
-    smartlist_t *changed = smartlist_create();
+    changed = smartlist_create();
     smartlist_add(changed, ri);
     control_event_descriptors_changed(changed);
     smartlist_free(changed);
