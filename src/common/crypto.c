@@ -1667,7 +1667,7 @@ crypto_seed_rng(void)
     n = read_all(fd, buf, sizeof(buf), 0);
     close(fd);
     if (n != sizeof(buf)) {
-      warn(LD_CRYPTO, "Error reading from entropy source");
+      warn(LD_CRYPTO, "Error reading from entropy source (read only %d bytes).", n);
       return -1;
     }
     RAND_seed(buf, sizeof(buf));
