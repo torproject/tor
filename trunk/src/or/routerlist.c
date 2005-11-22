@@ -2946,8 +2946,9 @@ router_list_downloadable(void)
         !conn->marked_for_close) {
       if (!strcmpstart(conn->requested_resource, "all"))
         n_downloadable = 0;
-      dir_split_resource_into_fingerprints(conn->requested_resource,
-                                           downloading, NULL, 1);
+      if (!strcmpstart(conn->requested_resource, "fp/"))
+        dir_split_resource_into_fingerprints(conn->requested_resource+3,
+                                             downloading, NULL, 1);
     }
   }
 
