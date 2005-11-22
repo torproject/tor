@@ -9,8 +9,10 @@ doc/TODO
 doc/control-spec.txt
 doc/dir-spec.txt
 doc/rend-spec.txt
-doc/tor-doc.css
-doc/tor-doc.html
+doc/socks-extensions.txt
+doc/stylesheet.css
+doc/tor-doc-server.html
+doc/tor-doc-unix.html
 doc/tor-hidden-service.html
 doc/tor-spec.txt
 doc/tor-switchproxy.html
