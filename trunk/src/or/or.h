@@ -875,7 +875,7 @@ typedef struct networkstatus_t {
 typedef struct {
   /** Map from server identity digest to a member of routers. */
   digestmap_t *identity_map;
-  /** Map from server descriptor digest to a signed_descritptor_t from
+  /** Map from server descriptor digest to a signed_descriptor_t from
    * routers or old_routers. */
   digestmap_t *desc_digest_map;
   /** List of routerinfo_t for all currently live routers we know. */
@@ -883,6 +883,8 @@ typedef struct {
   /** List of signed_descriptor_t for older router descriptors we're
    * caching. */
   smartlist_t *old_routers;
+  /** For debugging: tracks RAM usage in signed descriptors. */
+  uint32_t signed_descriptor_bytes;
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a

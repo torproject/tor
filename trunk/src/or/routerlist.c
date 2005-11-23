@@ -1150,6 +1150,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
                 &(ri->cache_info));
   smartlist_add(rl->routers, ri);
+  rl->signed_descriptor_bytes += ri->cache_info.signed_descriptor_len;
   // routerlist_assert_ok(rl);
 }
 
@@ -1160,6 +1161,7 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
     smartlist_add(rl->old_routers, sd);
+    rl->signed_descriptor_bytes += sd->signed_descriptor_len;
   } else {
     routerinfo_free(ri);
   }
@@ -1188,6 +1190,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   } else {
     ri_tmp = digestmap_remove(rl->desc_digest_map,
                               ri->cache_info.signed_descriptor_digest);
+    rl->signed_descriptor_bytes -= ri->cache_info.signed_descriptor_len;
     tor_assert(ri_tmp == ri);
     routerinfo_free(ri);
   }
@@ -1204,6 +1207,7 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   smartlist_del(rl->old_routers, idx);
   sd_tmp = digestmap_remove(rl->desc_digest_map,
                             sd->signed_descriptor_digest);
+  rl->signed_descriptor_bytes -= sd->signed_descriptor_len;
   tor_assert(sd_tmp == sd);
   signed_descriptor_free(sd);
   routerlist_assert_ok(rl);
@@ -1225,6 +1229,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   } else {
     warn(LD_BUG, "Appending entry from routerlist_replace.");
     routerlist_insert(rl, ri_new);
+    rl->signed_descriptor_bytes += ri_new->cache_info.signed_descriptor_len;
     return;
   }
   if (memcmp(ri_old->cache_info.identity_digest, ri_new->cache_info.identity_digest, DIGEST_LEN)) {
@@ -1233,6 +1238,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   }
   digestmap_set(rl->identity_map, ri_new->cache_info.identity_digest, ri_new);
   digestmap_set(rl->desc_digest_map, ri_new->cache_info.signed_descriptor_digest, &(ri_new->cache_info));
+  rl->signed_descriptor_bytes += ri_new->cache_info.signed_descriptor_len;
 
   if (make_old && get_options()->DirPort) {
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri_old);
@@ -1245,6 +1251,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
       /* digests don't match; digestmap_set didn't replace */
       digestmap_remove(rl->desc_digest_map, ri_old->cache_info.signed_descriptor_digest);
     }
+    rl->signed_descriptor_bytes -= ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
   }
   // routerlist_assert_ok(rl);
@@ -3248,6 +3255,7 @@ routerlist_assert_ok(routerlist_t *rl)
   digestmap_iter_t *iter;
   routerinfo_t *r2;
   signed_descriptor_t *sd2;
+  uint32_t bytes = 0;
   if (!routerlist)
     return;
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
@@ -3256,6 +3264,7 @@ routerlist_assert_ok(routerlist_t *rl)
     tor_assert(r == r2);
     sd2 = digestmap_get(rl->desc_digest_map, r->cache_info.signed_descriptor_digest);
     tor_assert(&(r->cache_info) == sd2);
+    bytes += r->cache_info.signed_descriptor_len;
   });
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
   {
@@ -3263,7 +3272,9 @@ routerlist_assert_ok(routerlist_t *rl)
     tor_assert(sd != &(r2->cache_info));
     sd2 = digestmap_get(rl->desc_digest_map, sd->signed_descriptor_digest);
     tor_assert(sd == sd2);
+    bytes += sd->signed_descriptor_len;
   });
+  tor_assert(bytes == rl->signed_descriptor_bytes);
   iter = digestmap_iter_init(rl->identity_map);
   while (!digestmap_iter_done(iter)) {
     const char *d;
