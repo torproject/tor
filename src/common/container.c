@@ -859,3 +859,15 @@ digestmap_isempty(digestmap_t *map)
   return HT_EMPTY(&map->head);
 }
 
+int
+strmap_size(strmap_t *map)
+{
+  return HT_SIZE(&map->head);
+}
+
+int
+digestmap_size(digestmap_t *map)
+{
+  return HT_SIZE(&map->head);
+}
+
