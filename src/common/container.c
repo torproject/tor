@@ -14,7 +14,6 @@ const char container_c_id[] = "$Id$";
 #include "compat.h"
 #include "util.h"
 #include "log.h"
-#include "../or/tree.h"
 #include "container.h"
 #include "crypto.h"
 
@@ -24,6 +23,8 @@ const char container_c_id[] = "$Id$";
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
+#include "ht.h"
 
 /* All newly allocated smartlists have this capacity.
  */
@@ -445,40 +446,53 @@ smartlist_sort_strings(smartlist_t *sl)
 
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
   typedef struct prefix ## entry_t {                      \
-    SPLAY_ENTRY(prefix ## entry_t) node;                  \
+    HT_ENTRY(prefix ## entry_t) node;                     \
     keydecl;                                              \
     void *val;                                            \
   } prefix ## entry_t;                                    \
   struct maptype {                                        \
-    SPLAY_HEAD(prefix ## tree, prefix ## entry_t) head;   \
+    HT_HEAD(prefix ## tree, prefix ## entry_t) head;      \
   };
 
 DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_);
 DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
 
 /** Helper: compare strmap_t_entry objects by key value. */
-static int
-compare_strmap_entries(strmap_entry_t *a,
-                       strmap_entry_t *b)
+static INLINE int
+strmap_entries_eq(strmap_entry_t *a, strmap_entry_t *b)
 {
-  return strcmp(a->key, b->key);
+  return !strcmp(a->key, b->key);
+}
+
+static INLINE unsigned int
+strmap_entry_hash(strmap_entry_t *a)
+{
+  return ht_string_hash(a->key);
 }
 
 /** Helper: compare digestmap_entry_t objects by key value. */
-static int
-compare_digestmap_entries(digestmap_entry_t *a,
-                          digestmap_entry_t *b)
+static INLINE int
+digestmap_entries_eq(digestmap_entry_t *a, digestmap_entry_t *b)
 {
-  return memcmp(a->key, b->key, DIGEST_LEN);
+  return !memcmp(a->key, b->key, DIGEST_LEN);
 }
 
-SPLAY_PROTOTYPE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
-SPLAY_GENERATE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
+static INLINE unsigned int
+digestmap_entry_hash(digestmap_entry_t *a)
+{
+  uint32_t *p = (uint32_t*)a->key;
+  return ht_improve_hash(p[0] ^ p[1] ^ p[2] ^ p[3] ^ p[4]);
+}
 
-SPLAY_PROTOTYPE(digestmap_tree, digestmap_entry_t, node,
-                compare_digestmap_entries);
-SPLAY_GENERATE(digestmap_tree, digestmap_entry_t, node,
-               compare_digestmap_entries);
+HT_PROTOTYPE(strmap_tree, strmap_entry_t, node, strmap_entry_hash,
+             strmap_entries_eq);
+HT_GENERATE(strmap_tree, strmap_entry_t, node, strmap_entry_hash,
+            strmap_entries_eq, 0.6, malloc, realloc, free);
+
+HT_PROTOTYPE(digestmap_tree, digestmap_entry_t, node, digestmap_entry_hash,
+             digestmap_entries_eq);
+HT_GENERATE(digestmap_tree, digestmap_entry_t, node, digestmap_entry_hash,
+            digestmap_entries_eq, 0.6, malloc, realloc, free);
 
 /** Constructor to create a new empty map from strings to void*'s.
  */
@@ -487,7 +501,7 @@ strmap_new(void)
 {
   strmap_t *result;
   result = tor_malloc(sizeof(strmap_t));
-  SPLAY_INIT(&result->head);
+  HT_INIT(&result->head);
   return result;
 }
 
@@ -498,7 +512,7 @@ digestmap_new(void)
 {
   digestmap_t *result;
   result = tor_malloc(sizeof(digestmap_t));
-  SPLAY_INIT(&result->head);
+  HT_INIT(&result->head);
   return result;
 }
 
@@ -518,7 +532,7 @@ strmap_set(strmap_t *map, const char *key, void *val)
   tor_assert(key);
   tor_assert(val);
   search.key = (char*)key;
-  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
+  resolve = HT_FIND(strmap_tree, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
     resolve->val = val;
@@ -527,7 +541,8 @@ strmap_set(strmap_t *map, const char *key, void *val)
     resolve = tor_malloc_zero(sizeof(strmap_entry_t));
     resolve->key = tor_strdup(key);
     resolve->val = val;
-    SPLAY_INSERT(strmap_tree, &map->head, resolve);
+    tor_assert(!HT_FIND(strmap_tree, &map->head, resolve));
+    HT_INSERT(strmap_tree, &map->head, resolve);
     return NULL;
   }
 }
@@ -543,7 +558,7 @@ digestmap_set(digestmap_t *map, const char *key, void *val)
   tor_assert(key);
   tor_assert(val);
   memcpy(&search.key, key, DIGEST_LEN);
-  resolve = SPLAY_FIND(digestmap_tree, &map->head, &search);
+  resolve = HT_FIND(digestmap_tree, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
     resolve->val = val;
@@ -552,7 +567,7 @@ digestmap_set(digestmap_t *map, const char *key, void *val)
     resolve = tor_malloc_zero(sizeof(digestmap_entry_t));
     memcpy(resolve->key, key, DIGEST_LEN);
     resolve->val = val;
-    SPLAY_INSERT(digestmap_tree, &map->head, resolve);
+    HT_INSERT(digestmap_tree, &map->head, resolve);
     return NULL;
   }
 }
@@ -568,7 +583,7 @@ strmap_get(strmap_t *map, const char *key)
   tor_assert(map);
   tor_assert(key);
   search.key = (char*)key;
-  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
+  resolve = HT_FIND(strmap_tree, &map->head, &search);
   if (resolve) {
     return resolve->val;
   } else {
@@ -585,7 +600,7 @@ digestmap_get(digestmap_t *map, const char *key)
   tor_assert(map);
   tor_assert(key);
   memcpy(&search.key, key, DIGEST_LEN);
-  resolve = SPLAY_FIND(digestmap_tree, &map->head, &search);
+  resolve = HT_FIND(digestmap_tree, &map->head, &search);
   if (resolve) {
     return resolve->val;
   } else {
@@ -608,10 +623,9 @@ strmap_remove(strmap_t *map, const char *key)
   tor_assert(map);
   tor_assert(key);
   search.key = (char*)key;
-  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
+  resolve = HT_REMOVE(strmap_tree, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
-    SPLAY_REMOVE(strmap_tree, &map->head, resolve);
     tor_free(resolve->key);
     tor_free(resolve);
     return oldval;
@@ -630,10 +644,9 @@ digestmap_remove(digestmap_t *map, const char *key)
   tor_assert(map);
   tor_assert(key);
   memcpy(&search.key, key, DIGEST_LEN);
-  resolve = SPLAY_FIND(digestmap_tree, &map->head, &search);
+  resolve = HT_REMOVE(digestmap_tree, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
-    SPLAY_REMOVE(digestmap_tree, &map->head, resolve);
     tor_free(resolve);
     return oldval;
   } else {
@@ -679,53 +692,6 @@ strmap_remove_lc(strmap_t *map, const char *key)
   return v;
 }
 
-/** Invoke fn() on every entry of the map, in order.  For every entry,
- * fn() is invoked with that entry's key, that entry's value, and the
- * value of <b>data</b> supplied to strmap_foreach.  fn() must return a new
- * (possibly unmodified) value for each entry: if fn() returns NULL, the
- * entry is removed.
- *
- * Example:
- * \code
- *   static void* upcase_and_remove_empty_vals(const char *key, void *val,
- *                                             void* data) {
- *     char *cp = (char*)val;
- *     if (!*cp) {  // val is an empty string.
- *       free(val);
- *       return NULL;
- *     } else {
- *       for (; *cp; cp++)
- *         *cp = toupper(*cp);
- *       }
- *       return val;
- *     }
- *   }
- *
- *   ...
- *
- *   strmap_foreach(map, upcase_and_remove_empty_vals, NULL);
- * \endcode
- */
-void
-strmap_foreach(strmap_t *map,
-               void* (*fn)(const char *key, void *val, void *data),
-               void *data)
-{
-  strmap_entry_t *ptr, *next;
-  tor_assert(map);
-  tor_assert(fn);
-  for (ptr = SPLAY_MIN(strmap_tree, &map->head); ptr != NULL; ptr = next) {
-    /* This remove-in-place usage is specifically blessed in tree(3). */
-    next = SPLAY_NEXT(strmap_tree, &map->head, ptr);
-    ptr->val = fn(ptr->key, ptr->val, data);
-    if (!ptr->val) {
-      SPLAY_REMOVE(strmap_tree, &map->head, ptr);
-      tor_free(ptr->key);
-      tor_free(ptr);
-    }
-  }
-}
-
 /** return an <b>iterator</b> pointer to the front of a map.
  *
  * Iterator example:
@@ -756,14 +722,14 @@ strmap_iter_t *
 strmap_iter_init(strmap_t *map)
 {
   tor_assert(map);
-  return SPLAY_MIN(strmap_tree, &map->head);
+  return HT_START(strmap_tree, &map->head);
 }
 
 digestmap_iter_t *
 digestmap_iter_init(digestmap_t *map)
 {
   tor_assert(map);
-  return SPLAY_MIN(digestmap_tree, &map->head);
+  return HT_START(digestmap_tree, &map->head);
 }
 
 /** Advance the iterator <b>iter</b> for map a single step to the next entry.
@@ -773,7 +739,7 @@ strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 {
   tor_assert(map);
   tor_assert(iter);
-  return SPLAY_NEXT(strmap_tree, &map->head, iter);
+  return HT_NEXT(strmap_tree, &map->head, iter);
 }
 
 digestmap_iter_t *
@@ -781,7 +747,7 @@ digestmap_iter_next(digestmap_t *map, digestmap_iter_t *iter)
 {
   tor_assert(map);
   tor_assert(iter);
-  return SPLAY_NEXT(digestmap_tree, &map->head, iter);
+  return HT_NEXT(digestmap_tree, &map->head, iter);
 }
 
 /** Advance the iterator <b>iter</b> a single step to the next entry, removing
@@ -793,10 +759,9 @@ strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
   strmap_iter_t *next;
   tor_assert(map);
   tor_assert(iter);
-  next = SPLAY_NEXT(strmap_tree, &map->head, iter);
-  SPLAY_REMOVE(strmap_tree, &map->head, iter);
-  tor_free(iter->key);
-  tor_free(iter);
+  next = HT_NEXT_RMV(strmap_tree, &map->head, iter);
+  tor_free((*iter)->key);
+  tor_free(*iter);
   return next;
 }
 
@@ -806,9 +771,8 @@ digestmap_iter_next_rmv(digestmap_t *map, digestmap_iter_t *iter)
   digestmap_iter_t *next;
   tor_assert(map);
   tor_assert(iter);
-  next = SPLAY_NEXT(digestmap_tree, &map->head, iter);
-  SPLAY_REMOVE(digestmap_tree, &map->head, iter);
-  tor_free(iter);
+  next = HT_NEXT_RMV(digestmap_tree, &map->head, iter);
+  tor_free(*iter);
   return next;
 }
 
@@ -820,8 +784,8 @@ strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
   tor_assert(iter);
   tor_assert(keyp);
   tor_assert(valp);
-  *keyp = iter->key;
-  *valp = iter->val;
+  *keyp = (*iter)->key;
+  *valp = (*iter)->val;
 }
 
 void
@@ -830,8 +794,8 @@ digestmap_iter_get(digestmap_iter_t *iter, const char **keyp, void **valp)
   tor_assert(iter);
   tor_assert(keyp);
   tor_assert(valp);
-  *keyp = iter->key;
-  *valp = iter->val;
+  *keyp = (*iter)->key;
+  *valp = (*iter)->val;
 }
 
 /** Return true iff iter has advanced past the last entry of map.
@@ -853,30 +817,32 @@ digestmap_iter_done(digestmap_iter_t *iter)
 void
 strmap_free(strmap_t *map, void (*free_val)(void*))
 {
-  strmap_entry_t *ent, *next;
-  for (ent = SPLAY_MIN(strmap_tree, &map->head); ent != NULL; ent = next) {
-    next = SPLAY_NEXT(strmap_tree, &map->head, ent);
-    SPLAY_REMOVE(strmap_tree, &map->head, ent);
-    tor_free(ent->key);
+  strmap_entry_t **ent, **next, *this;
+  for (ent = HT_START(strmap_tree, &map->head); ent != NULL; ent = next) {
+    this = *ent;
+    next = HT_NEXT_RMV(strmap_tree, &map->head, ent);
+    tor_free(this->key);
     if (free_val)
-      free_val(ent->val);
-    tor_free(ent);
+      free_val(this->val);
+    tor_free(this);
   }
-  tor_assert(SPLAY_EMPTY(&map->head));
+  tor_assert(HT_EMPTY(&map->head));
+  HT_CLEAR(strmap_tree, &map->head);
   tor_free(map);
 }
 void
 digestmap_free(digestmap_t *map, void (*free_val)(void*))
 {
-  digestmap_entry_t *ent, *next;
-  for (ent = SPLAY_MIN(digestmap_tree, &map->head); ent != NULL; ent = next) {
-    next = SPLAY_NEXT(digestmap_tree, &map->head, ent);
-    SPLAY_REMOVE(digestmap_tree, &map->head, ent);
+  digestmap_entry_t **ent, **next, *this;
+  for (ent = HT_START(digestmap_tree, &map->head); ent != NULL; ent = next) {
+    this = *ent;
+    next = HT_NEXT_RMV(digestmap_tree, &map->head, ent);
     if (free_val)
-      free_val(ent->val);
-    tor_free(ent);
+      free_val(this->val);
+    tor_free(this);
   }
-  tor_assert(SPLAY_EMPTY(&map->head));
+  tor_assert(HT_EMPTY(&map->head));
+  HT_CLEAR(digestmap_tree, &map->head);
   tor_free(map);
 }
 
@@ -884,12 +850,12 @@ digestmap_free(digestmap_t *map, void (*free_val)(void*))
 int
 strmap_isempty(strmap_t *map)
 {
-  return SPLAY_EMPTY(&map->head);
+  return HT_EMPTY(&map->head);
 }
 
 int
 digestmap_isempty(digestmap_t *map)
 {
-  return SPLAY_EMPTY(&map->head);
+  return HT_EMPTY(&map->head);
 }
 

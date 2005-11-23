@@ -12,10 +12,7 @@ const char circuitlist_c_id[] = "$Id$";
 
 #include "or.h"
 
-/* Define RB_AUGMENT to avoid warnings about if statements with emtpy bodies.
- */
-#define RB_AUGMENT(x) do{}while(0)
-#include "tree.h"
+#include "../common/ht.h"
 
 /********* START VARIABLES **********/
 
@@ -31,30 +28,34 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 /** A map from OR connection and circuit ID to circuit.  (Lookup performance is
  * very important here, since we need to do it every time a cell arrives.) */
 typedef struct orconn_circid_circuit_map_t {
-  RB_ENTRY(orconn_circid_circuit_map_t) node;
+  HT_ENTRY(orconn_circid_circuit_map_t) node;
   connection_t *or_conn;
   uint16_t circ_id;
   circuit_t *circuit;
 } orconn_circid_circuit_map_t;
 
-/** Helper for RB tree: compare the OR connection and circuit ID for a and b,
+/** Helper for hash tables: compare the OR connection and circuit ID for a and b,
  * and return less than, equal to, or greater than zero appropriately.
  */
 static INLINE int
-compare_orconn_circid_entries(orconn_circid_circuit_map_t *a,
-                              orconn_circid_circuit_map_t *b)
+_orconn_circid_entries_eq(orconn_circid_circuit_map_t *a,
+                          orconn_circid_circuit_map_t *b)
 {
-  if (a->or_conn < b->or_conn)
-    return -1;
-  else if (a->or_conn > b->or_conn)
-    return 1;
-  else
-    return ((int)b->circ_id) - ((int)a->circ_id);
-};
+  return a->or_conn == b->or_conn && a->circ_id == b->circ_id;
+}
 
-static RB_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = RB_INITIALIZER(orconn_circid_circuit_map);
-RB_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
-RB_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
+static INLINE unsigned int
+_orconn_circid_entry_hash(orconn_circid_circuit_map_t *a)
+{
+  return (((unsigned)a->circ_id)<<16) ^ (unsigned)(uintptr_t)(a->or_conn);
+}
+
+static HT_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = HT_INITIALIZER();
+HT_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node,
+             _orconn_circid_entry_hash, _orconn_circid_entries_eq);
+HT_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node,
+            _orconn_circid_entry_hash, _orconn_circid_entries_eq, 0.6,
+            malloc, realloc, free);
 
 /** The most recently returned entry from circuit_get_by_circid_orconn;
  * used to improve performance when many cells arrive in a row from the
@@ -102,11 +103,10 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
   if (old_conn) { /* we may need to remove it from the conn-circid map */
     search.circ_id = old_id;
     search.or_conn = old_conn;
-    found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+    found = HT_REMOVE(orconn_circid_tree, &orconn_circid_circuit_map, &search);
     if (found) {
-      RB_REMOVE(orconn_circid_tree, &orconn_circid_circuit_map, found);
+      tor_free(found);
     }
-    tor_free(found);
   }
 
   if (conn == NULL)
@@ -115,7 +115,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
   /* now add the new one to the conn-circid map */
   search.circ_id = id;
   search.or_conn = conn;
-  found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+  found = HT_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
   if (found) {
     found->circuit = circ;
   } else {
@@ -123,7 +123,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     found->circ_id = id;
     found->or_conn = conn;
     found->circuit = circ;
-    RB_INSERT(orconn_circid_tree, &orconn_circid_circuit_map, found);
+    HT_INSERT(orconn_circid_tree, &orconn_circid_circuit_map, found);
   }
 }
 
@@ -358,7 +358,7 @@ circuit_get_by_circid_orconn_impl(uint16_t circ_id, connection_t *conn)
   } else {
     search.circ_id = circ_id;
     search.or_conn = conn;
-    found = RB_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+    found = HT_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
     _last_circid_orconn_ent = found;
   }
   if (found && found->circuit)

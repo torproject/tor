@@ -890,8 +890,8 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires)
      val = _val;
      if (val->expires >= min_expires && val->expires <= max_expires) {
        if (!sl) {
-         addressmap_ent_remove(key, val);
          iter = strmap_iter_next_rmv(addressmap,iter);
+         addressmap_ent_remove(key, val);
          continue;
        } else if (val->new_address) {
          size_t len = strlen(key)+strlen(val->new_address)+2;

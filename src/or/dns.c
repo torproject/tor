@@ -18,7 +18,7 @@ const char dns_c_id[] = "$Id$";
  */
 
 #include "or.h"
-#include "tree.h"
+#include "../common/ht.h"
 
 /** Longest hostname we're willing to resolve. */
 #define MAX_ADDRESSLEN 256
@@ -55,7 +55,7 @@ typedef struct pending_connection_t {
  * list from oldest to newest.
  */
 typedef struct cached_resolve_t {
-  SPLAY_ENTRY(cached_resolve_t) node;
+  HT_ENTRY(cached_resolve_t) node;
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
   uint32_t addr; /**< IPv4 addr for <b>address</b>. */
   char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve failed. */
@@ -77,26 +77,33 @@ static int spawn_enough_dnsworkers(void);
 static void send_resolved_cell(connection_t *conn, uint8_t answer_type);
 
 /** Splay tree of cached_resolve objects. */
-static SPLAY_HEAD(cache_tree, cached_resolve_t) cache_root;
+static HT_HEAD(cache_tree, cached_resolve_t) cache_root;
 
 /** Function to compare hashed resolves on their addresses; used to
  * implement splay trees. */
-static int
-compare_cached_resolves(cached_resolve_t *a,
-                        cached_resolve_t *b)
+static INLINE int
+cached_resolves_eq(cached_resolve_t *a, cached_resolve_t *b)
 {
   /* make this smarter one day? */
-  return strncmp(a->address, b->address, MAX_ADDRESSLEN);
+  return !strncmp(a->address, b->address, MAX_ADDRESSLEN);
 }
 
-SPLAY_PROTOTYPE(cache_tree, cached_resolve_t, node, compare_cached_resolves);
-SPLAY_GENERATE(cache_tree, cached_resolve_t, node, compare_cached_resolves);
+static INLINE unsigned int
+cached_resolve_hash(cached_resolve_t *a)
+{
+  return ht_string_hash(a->address);
+}
+
+HT_PROTOTYPE(cache_tree, cached_resolve_t, node, cached_resolve_hash,
+             cached_resolves_eq);
+HT_GENERATE(cache_tree, cached_resolve_t, node, cached_resolve_hash,
+            cached_resolves_eq, 0.6, malloc, realloc, free);
 
 /** Initialize the DNS cache. */
 static void
 init_cache_tree(void)
 {
-  SPLAY_INIT(&cache_root);
+  HT_INIT(&cache_root);
 }
 
 /** Initialize the DNS subsystem; called by the OR process. */
@@ -123,12 +130,13 @@ _free_cached_resolve(cached_resolve_t *r)
 void
 dns_free_all(void)
 {
-  cached_resolve_t *ptr, *next;
-  for (ptr = SPLAY_MIN(cache_tree, &cache_root); ptr != NULL; ptr = next) {
-    next = SPLAY_NEXT(cache_tree, &cache_root, ptr);
-    SPLAY_REMOVE(cache_tree, &cache_root, ptr);
-    _free_cached_resolve(ptr);
+  cached_resolve_t **ptr, **next, *item;
+  for (ptr = HT_START(cache_tree, &cache_root); ptr != NULL; ptr = next) {
+    item = *ptr;
+    next = HT_NEXT_RMV(cache_tree, &cache_root, ptr);
+    _free_cached_resolve(item);
   }
+  HT_CLEAR(cache_tree, &cache_root);
 }
 
 /** Linked list of resolved addresses, oldest to newest. */
@@ -174,7 +182,7 @@ purge_expired_resolves(uint32_t now)
     oldest_cached_resolve = resolve->next;
     if (!oldest_cached_resolve) /* if there are no more, */
       newest_cached_resolve = NULL; /* then make sure the list's tail knows that too */
-    SPLAY_REMOVE(cache_tree, &cache_root, resolve);
+    HT_REMOVE(cache_tree, &cache_root, resolve);
     tor_free(resolve);
   }
 }
@@ -230,7 +238,7 @@ insert_resolve(cached_resolve_t *r)
   }
   newest_cached_resolve = r;
 
-  SPLAY_INSERT(cache_tree, &cache_root, r);
+  HT_INSERT(cache_tree, &cache_root, r);
 }
 
 /** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
@@ -273,7 +281,7 @@ dns_resolve(connection_t *exitconn)
 
   /* now check the tree to see if 'address' is already there. */
   strlcpy(search.address, exitconn->address, sizeof(search.address));
-  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
+  resolve = HT_FIND(cache_tree, &cache_root, &search);
   if (resolve) { /* already there */
     switch (resolve->state) {
       case CACHE_STATE_PENDING:
@@ -383,7 +391,7 @@ connection_dns_remove(connection_t *conn)
 
   strlcpy(search.address, conn->address, sizeof(search.address));
 
-  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
+  resolve = HT_FIND(cache_tree, &cache_root, &search);
   if (!resolve) {
     /* XXXX RD This *is* a bug, right? -NM */
     notice(LD_BUG,"Address '%s' is not pending. Dropping.", safe_str(conn->address));
@@ -422,10 +430,10 @@ void
 assert_connection_edge_not_dns_pending(connection_t *conn)
 {
   pending_connection_t *pend;
-  cached_resolve_t *resolve;
+  cached_resolve_t **resolve;
 
-  SPLAY_FOREACH(resolve, cache_tree, &cache_root) {
-    for (pend = resolve->pending_connections;
+  HT_FOREACH(resolve, cache_tree, &cache_root) {
+    for (pend = (*resolve)->pending_connections;
          pend;
          pend = pend->next) {
       tor_assert(pend->conn != conn);
@@ -439,10 +447,10 @@ void
 assert_all_pending_dns_resolves_ok(void)
 {
   pending_connection_t *pend;
-  cached_resolve_t *resolve;
+  cached_resolve_t **resolve;
 
-  SPLAY_FOREACH(resolve, cache_tree, &cache_root) {
-    for (pend = resolve->pending_connections;
+  HT_FOREACH(resolve, cache_tree, &cache_root) {
+    for (pend = (*resolve)->pending_connections;
          pend;
          pend = pend->next) {
       assert_connection_ok(pend->conn, 0);
@@ -467,7 +475,7 @@ dns_cancel_pending_resolve(char *address)
 
   strlcpy(search.address, address, sizeof(search.address));
 
-  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
+  resolve = HT_FIND(cache_tree, &cache_root, &search);
   if (!resolve) {
     /* XXXX RD This *is* a bug, right? -NM */
     notice(LD_BUG,"Address '%s' is not pending. Dropping.", safe_str(address));
@@ -529,7 +537,7 @@ dns_purge_resolve(cached_resolve_t *resolve)
   }
 
   /* remove resolve from the tree */
-  SPLAY_REMOVE(cache_tree, &cache_root, resolve);
+  HT_REMOVE(cache_tree, &cache_root, resolve);
 
   tor_free(resolve);
 }
@@ -552,7 +560,7 @@ dns_found_answer(char *address, uint32_t addr, char outcome)
 
   strlcpy(search.address, address, sizeof(search.address));
 
-  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
+  resolve = HT_FIND(cache_tree, &cache_root, &search);
   if (!resolve) {
     info(LD_EXIT,"Resolved unasked address '%s'; caching anyway.",
          safe_str(address));
