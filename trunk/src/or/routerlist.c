@@ -1152,6 +1152,14 @@ dump_routerlist_mem_usage(int severity)
       smartlist_len(routerlist->old_routers), U64_PRINTF_ARG(olddescs));
 }
 
+/** Return non-zero if we have a lot of extra descriptors in our
+ * routerlist, and should get rid of some of them. Else return 0.
+ *
+ * We should be careful to not return true too eagerly, since we
+ * could churn. By using "+1" below, we make sure this function
+ * only returns true at most every smartlist_len(rl-\>routers)
+ * new descriptors.
+ */
 static INLINE int
 routerlist_is_overfull(routerlist_t *rl)
 {
