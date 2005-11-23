@@ -117,6 +117,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   void* prefix##remove(maptype *map, keytype key);                      \
   void prefix##free(maptype *map, void (*free_val)(void*));             \
   int prefix##isempty(maptype *map);                                    \
+  int prefix##size(maptype *map);                                       \
   prefix##iter_t *prefix##iter_init(maptype *map);                      \
   prefix##iter_t *prefix##iter_next(maptype *map, prefix##iter_t *iter); \
   prefix##iter_t *prefix##iter_next_rmv(maptype *map, prefix##iter_t *iter); \
