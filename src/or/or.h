@@ -883,8 +883,6 @@ typedef struct {
   /** List of signed_descriptor_t for older router descriptors we're
    * caching. */
   smartlist_t *old_routers;
-  /** For debugging: tracks RAM usage in signed descriptors. */
-  uint32_t signed_descriptor_bytes;
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
@@ -2163,6 +2161,7 @@ int router_digest_is_trusted_dir(const char *digest);
 routerlist_t *router_get_routerlist(void);
 void routerlist_reset_warnings(void);
 void routerlist_free(routerlist_t *routerlist);
+void dump_routerlist_mem_usage(int severity);
 void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx,
                        int make_old);
 void routerinfo_free(routerinfo_t *router);
