@@ -1221,6 +1221,7 @@ dumpmemusage(int severity)
       nfds);
   log(severity, LD_GENERAL, "In rephist: "U64_FORMAT" used by %d Tors.",
       U64_PRINTF_ARG(rephist_total_alloc), rephist_total_num);
+  dump_routerlist_mem_usage(severity);
 }
 
 /** Write all statistics to the log, with log level 'severity'.  Called
