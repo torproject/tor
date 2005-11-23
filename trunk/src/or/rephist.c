@@ -358,8 +358,8 @@ rep_history_clean(time_t before)
     digestmap_iter_get(orhist_it, &d1, &or_history_p);
     or_history = or_history_p;
     if (or_history->changed < before) {
-      free_or_history(or_history);
       orhist_it = digestmap_iter_next_rmv(history_map, orhist_it);
+      free_or_history(or_history);
       continue;
     }
     for (lhist_it = digestmap_iter_init(or_history->link_history_map);
@@ -367,9 +367,9 @@ rep_history_clean(time_t before)
       digestmap_iter_get(lhist_it, &d2, &link_history_p);
       link_history = link_history_p;
       if (link_history->changed < before) {
+        lhist_it = digestmap_iter_next_rmv(or_history->link_history_map,lhist_it);
         rephist_total_alloc -= sizeof(link_history_t);
         tor_free(link_history);
-        lhist_it = digestmap_iter_next_rmv(or_history->link_history_map,lhist_it);
         continue;
       }
       lhist_it = digestmap_iter_next(or_history->link_history_map,lhist_it);

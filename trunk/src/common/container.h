@@ -110,13 +110,11 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 
 #define DECLARE_MAP_FNS(maptype, keytype, prefix)                       \
   typedef struct maptype maptype;                                       \
-  typedef struct prefix##entry_t prefix##iter_t;                        \
+  typedef struct prefix##entry_t *prefix##iter_t;                       \
   maptype* prefix##new(void);                                           \
   void* prefix##set(maptype *map, keytype key, void *val);              \
   void* prefix##get(maptype *map, keytype key);                         \
   void* prefix##remove(maptype *map, keytype key);                      \
-  typedef void* (*prefix##foreach_fn)(keytype key, void *val, void *data); \
-  void prefix##foreach(maptype *map, prefix##foreach_fn fn, void *data); \
   void prefix##free(maptype *map, void (*free_val)(void*));             \
   int prefix##isempty(maptype *map);                                    \
   prefix##iter_t *prefix##iter_init(maptype *map);                      \
