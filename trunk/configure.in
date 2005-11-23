@@ -67,6 +67,7 @@ AC_ARG_WITH(ssl-dir,
 
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
+AC_SEARCH_LIBS(dlopen, [dl])
 
 if test $enable_threads = "yes"; then
   AC_SEARCH_LIBS(pthread_create, [pthread])
