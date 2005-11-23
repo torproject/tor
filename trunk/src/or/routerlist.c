@@ -1705,6 +1705,7 @@ routerlist_remove_old_routers(void)
     }
     if (memcmp(cur_id, r->identity_digest, DIGEST_LEN)) {
       routerlist_remove_old_cached_routers_with_id(cutoff, i+1, hi);
+      cur_id = r->identity_digest;
       hi = i;
     }
   }
