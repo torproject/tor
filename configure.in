@@ -1,6 +1,6 @@
 dnl $Id$
-dnl Copyright 2001-2004 Roger Dingledine
-dnl Copyright 2004-2005 Roger Dingledine, Nick Mathewson
+dnl Copyright (c) 2001-2005 Roger Dingledine
+dnl Copyright (c) 2004-2005 Nick Mathewson
 dnl See LICENSE for licensing information
 
 AC_INIT
@@ -97,7 +97,7 @@ if test "$ac_cv_libevent_normal" = yes; then
 else
   AC_CACHE_CHECK([for libevent in /usr/local/lib], ac_cv_libevent_local, [
      saved_LIBS="$LIBS"
-     saved_LDFLAGS="$LDFLAGS"  
+     saved_LDFLAGS="$LDFLAGS"
      LIBS="$LIBS -levent"
      LDFLAGS="$LDFLAGS -L/usr/local/lib"
      # Step 2.  Otherwise, check whether adding -L/usr/local/lib allows
@@ -113,7 +113,7 @@ else
 void *event_init(void);
 int main(void)
 {
-	event_init();
+        event_init();
         return 0;
 }], [ ac_cv_libevent_local=yes ], [ ac_cv_libevent_local=unlinked ])
     fi
@@ -128,10 +128,10 @@ int main(void)
 void *event_init(void);
 int main(void)
 {
-	event_init();
+        event_init();
         return 0;
 }], [ ac_cv_libevent_local=unlinked_gcc_elf ])
-    fi 
+    fi
 
     LIBS="$saved_LIBS"
     LDFLAGS="$saved_LDFLAGS" ])
