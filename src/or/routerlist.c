@@ -143,6 +143,8 @@ router_reload_networkstatus(void)
 static size_t router_journal_len = 0;
 /** The size of the router store, in bytes. */
 static size_t router_store_len = 0;
+/** Total bytes dropped since last rebuild. */
+static size_t router_bytes_dropped = 0;
 
 /** Helper: return 1 iff the router log is so big we want to rebuild the
  * store. */
@@ -150,7 +152,8 @@ static int
 router_should_rebuild_store(void)
 {
   if (router_store_len > (1<<16))
-    return router_journal_len > router_store_len / 2;
+    return (router_journal_len > router_store_len / 2 ||
+            router_bytes_dropped > router_store_len / 2);
   else
     return router_journal_len > (1<<15);
 }
@@ -239,6 +242,7 @@ router_rebuild_store(int force)
   r = 0;
   router_store_len = len;
   router_journal_len = 0;
+  router_bytes_dropped = 0;
  done:
   tor_free(fname);
   if (chunk_list) {
@@ -1210,13 +1214,15 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   ri_tmp = digestmap_remove(rl->identity_map, ri->cache_info.identity_digest);
   tor_assert(ri_tmp == ri);
   if (make_old && get_options()->DirPort) {
-    signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri);
+    signed_descriptor_t *sd;
+    sd = signed_descriptor_from_routerinfo(ri);
     smartlist_add(rl->old_routers, sd);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
   } else {
     ri_tmp = digestmap_remove(rl->desc_digest_map,
                               ri->cache_info.signed_descriptor_digest);
     tor_assert(ri_tmp == ri);
+    router_bytes_dropped += ri->cache_info.signed_descriptor_len;
     routerinfo_free(ri);
   }
   // routerlist_assert_ok(rl);
@@ -1233,8 +1239,9 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   sd_tmp = digestmap_remove(rl->desc_digest_map,
                             sd->signed_descriptor_digest);
   tor_assert(sd_tmp == sd);
+  router_bytes_dropped += sd->signed_descriptor_len;
   signed_descriptor_free(sd);
-  routerlist_assert_ok(rl);
+  // routerlist_assert_ok(rl);
 }
 
 /** Remove <b>ri_old</b> from the routerlist <b>rl</b>, and replace it with
