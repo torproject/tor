@@ -34,6 +34,8 @@ static int routerdesc_digest_is_recognized(const char *identity,
                                            const char *digest);
 static void routerlist_assert_ok(routerlist_t *rl);
 
+#define MAX_DESCRIPTORS_PER_ROUTER 5
+
 /****************************************************************************/
 
 /** Global list of a trusted_dir_server_t object for each trusted directory
@@ -1137,13 +1139,20 @@ dump_routerlist_mem_usage(int severity)
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
                     livedescs += r->cache_info.signed_descriptor_len);
   SMARTLIST_FOREACH(routerlist->old_routers, signed_descriptor_t *, sd,
-                    livedescs += sd->signed_descriptor_len);
+                    olddescs += sd->signed_descriptor_len);
 
   log(severity, LD_GENERAL,
       "In %d live descriptors: "U64_FORMAT" bytes.  "
       "In %d old descriptors: "U64_FORMAT" bytes.",
       smartlist_len(routerlist->routers), U64_PRINTF_ARG(livedescs),
       smartlist_len(routerlist->old_routers), U64_PRINTF_ARG(olddescs));
+}
+
+static INLINE int
+routerlist_is_overfull(routerlist_t *rl)
+{
+  return smartlist_len(rl->old_routers) >
+    smartlist_len(rl->routers)*(MAX_DESCRIPTORS_PER_ROUTER+1);
 }
 
 static INLINE int
@@ -1431,6 +1440,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     return -1;
   }
 
+  if (routerlist_is_overfull(routerlist))
+    routerlist_remove_old_routers();
+
   if (authdir) {
     if (authdir_wants_to_reject_router(router, msg)) {
       routerinfo_free(router);
@@ -1536,8 +1548,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   directory_set_dirty();
   return 0;
 }
-
-#define MAX_DESCRIPTORS_PER_ROUTER 5
 
 static int
 _compare_old_routers_by_identity(const void **_a, const void **_b)
@@ -3267,7 +3277,6 @@ routerlist_assert_ok(routerlist_t *rl)
   digestmap_iter_t *iter;
   routerinfo_t *r2;
   signed_descriptor_t *sd2;
-  uint32_t bytes = 0;
   if (!routerlist)
     return;
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
