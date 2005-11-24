@@ -1246,7 +1246,6 @@ static routerinfo_t *
 choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
                         int need_uptime, int need_capacity, int is_internal)
 {
-  routerinfo_t *r;
   or_options_t *options = get_options();
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
@@ -1257,10 +1256,9 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
       else
         return choose_good_exit_server_general(dir, need_uptime, need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      r = router_choose_random_node(options->RendNodes, options->RendExcludeNodes,
-          NULL, need_uptime, need_capacity,
-          options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
-      return r;
+      return router_choose_random_node(options->RendNodes, options->RendExcludeNodes,
+             NULL, need_uptime, need_capacity,
+             options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
   }
   warn(LD_BUG,"Bug: unhandled purpose %d", purpose);
   tor_fragile_assert();
