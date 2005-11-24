@@ -1491,7 +1491,6 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
   int cur_len;
   crypt_path_t *cpath;
   extend_info_t *info = NULL;
-  smartlist_t *excludednodes;
 
   tor_assert(head_ptr);
 
@@ -1513,9 +1512,6 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
   debug(LD_CIRC, "Path is %d long; we want %d", cur_len,
          state->desired_path_len);
 
-  excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,get_options()->ExcludeNodes,0,1);
-
   if (cur_len == state->desired_path_len - 1) { /* Picking last node */
     info = extend_info_dup(state->chosen_exit);
   } else if (cur_len == 0) { /* picking first node */
@@ -1529,7 +1525,6 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
       info = extend_info_from_router(r);
   }
 
-  smartlist_free(excludednodes);
   if (!info) {
     warn(LD_CIRC,"Failed to find node for hop %d of our path. Discarding this circuit.", cur_len);
     return -1;
