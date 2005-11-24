@@ -1244,13 +1244,18 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
  */
 static routerinfo_t *
 choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
-                        int need_uptime, int need_capacity)
+                        int need_uptime, int need_capacity, int is_internal)
 {
   routerinfo_t *r;
   or_options_t *options = get_options();
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
-      return choose_good_exit_server_general(dir, need_uptime, need_capacity);
+      if (is_internal) /* pick it like a middle hop */
+        return router_choose_random_node(NULL, get_options()->ExcludeNodes,
+               NULL, need_uptime, need_capacity,
+               get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
+      else
+        return choose_good_exit_server_general(dir, need_uptime, need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       r = router_choose_random_node(options->RendNodes, options->RendExcludeNodes,
           NULL, need_uptime, need_capacity,
@@ -1283,8 +1288,8 @@ onion_pick_cpath_exit(circuit_t *circ, extend_info_t *exit)
     exit = extend_info_dup(exit);
   } else { /* we have to decide one */
     routerinfo_t *router =
-           choose_good_exit_server(circ->purpose, rl,
-                                   state->need_uptime, state->need_capacity);
+           choose_good_exit_server(circ->purpose, rl, state->need_uptime,
+                                   state->need_capacity, state->is_internal);
     if (!router) {
       warn(LD_CIRC,"failed to choose an exit server");
       return -1;
