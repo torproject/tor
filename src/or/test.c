@@ -976,10 +976,9 @@ static void
 test_strmap(void)
 {
   strmap_t *map;
-  strmap_iter_t *iter;
-  const char *k;
+//  strmap_iter_t *iter;
+//  const char *k;
   void *v;
-  int count;
 
   map = strmap_new();
   v = strmap_set(map, "K1", (void*)99);
