@@ -1590,6 +1590,7 @@ connection_get_by_identity_digest(const char *digest)
   for (i=0;i<n;i++) {
     conn = carray[i];
     if (conn->marked_for_close ||
+        conn->type != CONN_TYPE_OR ||
         memcmp(conn->identity_digest, digest, DIGEST_LEN))
       continue;
     if (!best) {
