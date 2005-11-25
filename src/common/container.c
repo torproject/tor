@@ -760,8 +760,10 @@ strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
   tor_assert(map);
   tor_assert(iter);
   next = HT_NEXT_RMV(strmap_tree, &map->head, iter);
-  tor_free((*iter)->key);
-  tor_free(*iter);
+  if (*iter) {
+    tor_free((*iter)->key);
+    tor_free(*iter);
+  }
   return next;
 }
 
