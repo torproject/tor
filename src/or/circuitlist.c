@@ -552,10 +552,10 @@ circuit_get_rendezvous(const char *cookie)
  * if required, and if info is defined, does not already use info
  * as any of its hops; or NULL if no circuit fits this description.
  *
- * Avoid returning need_uptime circuits if not necessary.
+ * Return need_uptime circuits if that is requested; and if it's not
+ * requested, return non-uptime circuits if possible, else either.
  *
- * FFFF As a more important goal, not yet implemented, avoid returning
- * internal circuits if not necessary.
+ * Only return internal circuits if that is requested.
  */
 circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
@@ -575,7 +575,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
         !circ->timestamp_dirty &&
         (!need_uptime || circ->build_state->need_uptime) &&
         (!need_capacity || circ->build_state->need_capacity) &&
-        (!internal || circ->build_state->is_internal)) {
+        (internal == circ->build_state->is_internal)) {
       if (info) {
         /* need to make sure we don't duplicate hops */
         crypt_path_t *hop = circ->cpath;

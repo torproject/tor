@@ -29,10 +29,9 @@ static void circuit_increment_failure_count(void);
  * Else return 0.
  */
 static int
-circuit_is_acceptable(circuit_t *circ,
-                      connection_t *conn,
-                      int must_be_open,
-                      uint8_t purpose,
+circuit_is_acceptable(circuit_t *circ, connection_t *conn,
+                      int must_be_open, uint8_t purpose,
+                      int need_uptime, int need_internal,
                       time_t now)
 {
   routerinfo_t *exitrouter;
@@ -76,9 +75,9 @@ circuit_is_acceptable(circuit_t *circ,
    */
   exitrouter = build_state_get_exit_router(circ->build_state);
 
-  if (!circ->build_state->need_uptime &&
-      smartlist_string_num_isin(get_options()->LongLivedPorts,
-                                conn->socks_request->port))
+  if (need_uptime && !circ->build_state->need_uptime)
+    return 0;
+  if (need_internal != circ->build_state->is_internal)
     return 0;
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
@@ -153,7 +152,8 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
  * closest introduce-purposed circuit that you can find.
  */
 static circuit_t *
-circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose)
+circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose,
+                 int need_uptime, int need_internal)
 {
   circuit_t *circ, *best=NULL;
   time_t now = time(NULL);
@@ -165,7 +165,8 @@ circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose)
              purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,now))
+    if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,
+                               need_uptime,need_internal,now))
       continue;
 
     /* now this is an acceptable circ to hand back. but that doesn't
@@ -278,8 +279,9 @@ circuit_remove_handled_ports(smartlist_t *needed_ports)
   }
 }
 
-/** Return 1 if at least <b>min</b> general-purpose circuits will have
- * an acceptable exit node for conn if conn is defined, else for "*:port".
+/** Return 1 if at least <b>min</b> general-purpose non-internal circuits
+ * will have an acceptable exit node for exit stream <b>conn</b> if it
+ * is defined, else for "*:port".
  * Else return 0.
  */
 int
@@ -296,6 +298,7 @@ circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+        !circ->build_state->is_internal &&
         (!circ->timestamp_dirty ||
          circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now)) {
       exitrouter = build_state_get_exit_router(circ->build_state);
@@ -320,7 +323,7 @@ circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
 }
 
 /** Don't keep more than 10 unused open circuits around. */
-#define MAX_UNUSED_OPEN_CIRCUITS 10
+#define MAX_UNUSED_OPEN_CIRCUITS 12
 
 /** Figure out how many circuits we have open that are clean. Make
  * sure it's enough for all the upcoming behaviors we predict we'll have.
@@ -378,8 +381,8 @@ circuit_predict_and_launch_new(void)
   }
 
   /* Fourth, see if we need any more hidden service (client) circuits. */
-  if (rep_hist_get_predicted_hidserv(now, &hidserv_needs_uptime,
-                                     &hidserv_needs_capacity) &&
+  if (rep_hist_get_predicted_internal(now, &hidserv_needs_uptime,
+                                      &hidserv_needs_capacity) &&
       ((num_uptime_internal<2 && hidserv_needs_uptime) ||
         num_internal<2)) {
     info(LD_CIRC,"Have %d clean circs (%d uptime-internal, %d internal),"
@@ -867,14 +870,19 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 {
   circuit_t *circ;
   int is_resolve;
-  int need_uptime;
+  int need_uptime, need_internal;
 
   tor_assert(conn);
   tor_assert(circp);
   tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   is_resolve = conn->socks_request->command == SOCKS_COMMAND_RESOLVE;
 
-  circ = circuit_get_best(conn, 1, desired_circuit_purpose);
+  need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
+                                          conn->socks_request->port);
+  need_internal = desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL;
+
+  circ = circuit_get_best(conn, 1, desired_circuit_purpose,
+                          need_uptime, need_internal);
 
   if (circ) {
     *circp = circ;
@@ -898,9 +906,6 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     return 0;
   }
 
-  need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
-                                          conn->socks_request->port);
-
   /* Do we need to check exit policy? */
   if (!is_resolve && !connection_edge_is_rendezvous_stream(conn)) {
     struct in_addr in;
@@ -909,19 +914,18 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       addr = ntohl(in.s_addr);
     if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
                                               need_uptime)) {
-      /* LD_GENERAL? LD_APP? ???? NM */
-      notice(LD_CIRC,"No Tor server exists that allows exit to %s:%d. Rejecting.",
+      notice(LD_APP,"No Tor server exists that allows exit to %s:%d. Rejecting.",
              safe_str(conn->socks_request->address), conn->socks_request->port);
       return -1;
     }
   }
 
   /* is one already on the way? */
-  circ = circuit_get_best(conn, 0, desired_circuit_purpose);
+  circ = circuit_get_best(conn, 0, desired_circuit_purpose,
+                          need_uptime, need_internal);
   if (!circ) {
     extend_info_t *extend_info=NULL;
     uint8_t new_circ_purpose;
-    int is_internal;
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */
@@ -933,7 +937,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
-      info(LD_REND,"Chose %s as intro point for %s.",
+      info(LD_REND,"Chose '%s' as intro point for '%s'.",
            extend_info->nickname, safe_str(conn->rend_query));
     }
 
@@ -960,15 +964,14 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     else
       new_circ_purpose = desired_circuit_purpose;
 
-    is_internal = (new_circ_purpose != CIRCUIT_PURPOSE_C_GENERAL || is_resolve);
     circ = circuit_launch_by_extend_info(
-              new_circ_purpose, extend_info, need_uptime, 1, is_internal);
+              new_circ_purpose, extend_info, need_uptime, 1, need_internal);
     if (extend_info)
       extend_info_free(extend_info);
 
     if (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL) {
       /* help predict this next time */
-      rep_hist_note_used_hidserv(time(NULL), need_uptime, 1);
+      rep_hist_note_used_internal(time(NULL), need_uptime, 1);
       if (circ) {
         /* write the service_id into circ */
         strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));

@@ -666,7 +666,7 @@ predicted_ports_free(void)
 
 /** Remember that <b>port</b> has been asked for as of time <b>now</b>.
  * This is used for predicting what sorts of streams we'll make in the
- * future and making circuits to anticipate that.
+ * future and making exit circuits to anticipate that.
  */
 void
 rep_hist_note_used_port(uint16_t port, time_t now)
@@ -727,51 +727,59 @@ rep_hist_get_predicted_ports(time_t now)
   return predicted_ports_list;
 }
 
-/** The last time at which we needed an internal circ. */
-static time_t predicted_hidserv_time = 0;
-/** The last time we needed an internal circ with good uptime. */
-static time_t predicted_hidserv_uptime_time = 0;
-/** The last time we needed an internal circ with good capacity. */
-static time_t predicted_hidserv_capacity_time = 0;
-
-/** Remember that we used an internal circ at time <b>now</b>. */
-void
-rep_hist_note_used_hidserv(time_t now, int need_uptime, int need_capacity)
-{
-  predicted_hidserv_time = now;
-  if (need_uptime)
-    predicted_hidserv_uptime_time = now;
-  if (need_capacity)
-    predicted_hidserv_capacity_time = now;
-}
-
-/** Return 1 if we've used an internal circ recently; else return 0. */
-int
-rep_hist_get_predicted_hidserv(time_t now, int *need_uptime, int *need_capacity)
-{
-  if (!predicted_hidserv_time) { /* initialize it */
-    predicted_hidserv_time = now;
-    predicted_hidserv_uptime_time = now;
-    predicted_hidserv_capacity_time = now;
-  }
-  if (predicted_hidserv_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
-    return 0; /* too long ago */
-  if (predicted_hidserv_uptime_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
-    *need_uptime = 1;
-  if (predicted_hidserv_capacity_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
-    *need_capacity = 1;
-  return 1;
-}
-
-/* not used yet */
+/** The user asked us to do a resolve. Rather than keeping track of
+ * timings and such of resolves, we fake it for now by making treating
+ * it the same way as a connection to port 80. This way we will continue
+ * to have circuits lying around if the user only uses Tor for resolves.
+ */
 void
 rep_hist_note_used_resolve(time_t now)
 {
+  rep_hist_note_used_port(80, now);
 }
+
+#if 0
 int
 rep_hist_get_predicted_resolve(time_t now)
 {
   return 0;
+}
+#endif
+
+/** The last time at which we needed an internal circ. */
+static time_t predicted_internal_time = 0;
+/** The last time we needed an internal circ with good uptime. */
+static time_t predicted_internal_uptime_time = 0;
+/** The last time we needed an internal circ with good capacity. */
+static time_t predicted_internal_capacity_time = 0;
+
+/** Remember that we used an internal circ at time <b>now</b>. */
+void
+rep_hist_note_used_internal(time_t now, int need_uptime, int need_capacity)
+{
+  predicted_internal_time = now;
+  if (need_uptime)
+    predicted_internal_uptime_time = now;
+  if (need_capacity)
+    predicted_internal_capacity_time = now;
+}
+
+/** Return 1 if we've used an internal circ recently; else return 0. */
+int
+rep_hist_get_predicted_internal(time_t now, int *need_uptime, int *need_capacity)
+{
+  if (!predicted_internal_time) { /* initialize it */
+    predicted_internal_time = now;
+    predicted_internal_uptime_time = now;
+    predicted_internal_capacity_time = now;
+  }
+  if (predicted_internal_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+    return 0; /* too long ago */
+  if (predicted_internal_uptime_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+    *need_uptime = 1;
+  if (predicted_internal_capacity_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+    *need_capacity = 1;
+  return 1;
 }
 
 /** Free all storage held by the OR/link history caches, by the
