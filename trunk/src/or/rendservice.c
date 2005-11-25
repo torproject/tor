@@ -545,7 +545,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   circ_needs_uptime = rend_service_requires_uptime(service);
 
   /* help predict this next time */
-  rep_hist_note_used_hidserv(time(NULL), circ_needs_uptime, 1);
+  rep_hist_note_used_internal(time(NULL), circ_needs_uptime, 1);
 
   /* Launch a circuit to alice's chosen rendezvous point.
    */
@@ -652,7 +652,7 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
   info(LD_REND, "Launching circuit to introduction point %s for service %s",
          nickname, service->service_id);
 
-  rep_hist_note_used_hidserv(time(NULL), 1, 0);
+  rep_hist_note_used_internal(time(NULL), 1, 0);
 
   ++service->n_intro_circuits_launched;
   launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname, 1, 0, 1);

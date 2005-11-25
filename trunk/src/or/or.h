@@ -1947,10 +1947,9 @@ void rep_history_clean(time_t before);
 
 void rep_hist_note_used_port(uint16_t port, time_t now);
 smartlist_t *rep_hist_get_predicted_ports(time_t now);
-void rep_hist_note_used_hidserv(time_t now, int need_uptime, int need_capacity);
-int rep_hist_get_predicted_hidserv(time_t now, int *need_uptime, int *need_capacity);
 void rep_hist_note_used_resolve(time_t now);
-int rep_hist_get_predicted_resolve(time_t now);
+void rep_hist_note_used_internal(time_t now, int need_uptime, int need_capacity);
+int rep_hist_get_predicted_internal(time_t now, int *need_uptime, int *need_capacity);
 
 void rep_hist_free_all(void);
 
