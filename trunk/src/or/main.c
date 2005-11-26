@@ -261,8 +261,9 @@ connection_watch_events(connection_t *conn, short events)
 
   if (r<0)
     warn(LD_NET,
-         "Error from libevent setting read event state for %d to %swatched.",
-         conn->s, (events & EV_READ)?"":"un");
+         "Error from libevent setting read event state for %d to %swatched: %s",
+         conn->s, (events & EV_READ)?"":"un",
+         tor_socket_strerror(tor_socket_errno(conn->s)));
 
   if (events & EV_WRITE) {
     r = event_add(conn->write_event, NULL);
@@ -272,8 +273,9 @@ connection_watch_events(connection_t *conn, short events)
 
   if (r<0)
     warn(LD_NET,
-         "Error from libevent setting read event state for %d to %swatched.",
-         conn->s, (events & EV_WRITE)?"":"un");
+         "Error from libevent setting read event state for %d to %swatched: %s",
+         conn->s, (events & EV_WRITE)?"":"un",
+         tor_socket_strerror(tor_socket_errno(conn->s)));
 }
 
 /** Return true iff <b>conn</b> is listening for read events. */
