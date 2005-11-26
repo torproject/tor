@@ -215,7 +215,7 @@ ht_string_hash(const char *s)
   static __inline struct type **                                        \
   name##_HT_START(struct name *head)                                    \
   {                                                                     \
-    unsigned b = 0;                                                 \
+    unsigned b = 0;                                                     \
     while (b < head->hth_table_length) {                                \
       if (head->hth_table[b])                                           \
         return &head->hth_table[b];                                     \
@@ -261,7 +261,6 @@ ht_string_hash(const char *s)
       return NULL;                                                      \
     }                                                                   \
   }
-
 
 #if 0
 /* Helpers for an iterator type that saves some mod operations at the expense
