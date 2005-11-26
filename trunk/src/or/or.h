@@ -188,8 +188,8 @@
 /** How often do we rotate TLS contexts? */
 #define MAX_SSL_KEY_LIFETIME (120*60)
 
-/** How old do we allow a router to get before removing it, either
- * from the router list (for others)? In seconds. */
+/** How old do we allow a router to get before removing it
+ * from the router list? In seconds. */
 #define ROUTER_MAX_AGE (60*60*24)
 /** How old do we let a saved descriptor get before removing it it? */
 #define OLD_ROUTER_DESC_MAX_AGE (60*60*48)
