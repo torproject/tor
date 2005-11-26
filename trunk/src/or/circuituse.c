@@ -506,14 +506,14 @@ circuit_about_to_close_connection(connection_t *conn)
   /* currently, we assume it's too late to flush conn's buf here.
    * down the road, maybe we'll consider that eof doesn't mean can't-write
    */
-  circuit_t *circ;
-
   switch (conn->type) {
-    case CONN_TYPE_OR:
+    case CONN_TYPE_OR: {
+      smartlist_t *circs;
       /* Inform any pending (not attached) circs that they should give up. */
       circuit_n_conn_done(conn, 0);
+      circs = circuit_get_all_on_orconn(conn);
       /* Now close all the attached circuits on it. */
-      while ((circ = circuit_get_by_conn(conn))) {
+      SMARTLIST_FOREACH(circs, circuit_t *, circ, {
         if (circ->n_conn == conn)
           /* it's closing in front of us */
           circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
@@ -521,11 +521,13 @@ circuit_about_to_close_connection(connection_t *conn)
           /* it's closing behind us */
           circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
         circuit_mark_for_close(circ);
-      }
+      });
+      smartlist_free(circs);
       return;
+    }
     case CONN_TYPE_AP:
-    case CONN_TYPE_EXIT:
-
+    case CONN_TYPE_EXIT: {
+      circuit_t *circ;
       /* It's an edge conn. Need to remove it from the linked list of
        * conn's for this circuit. Confirm that 'end' relay command has
        * been sent. But don't kill the circuit.
@@ -536,7 +538,7 @@ circuit_about_to_close_connection(connection_t *conn)
         return;
 
       circuit_detach_stream(circ, conn);
-
+    }
   } /* end switch */
 }
 

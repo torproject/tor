@@ -91,6 +91,8 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     circ->n_circ_id = id;
     circ->n_conn = conn;
   }
+  if (conn == old_conn && old_id == id)
+    return;
 
   if (_last_circid_orconn_ent &&
       ((old_id == _last_circid_orconn_ent->circ_id &&
@@ -107,6 +109,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     if (found) {
       tor_free(found);
     }
+    --old_conn->n_circuits;
   }
 
   if (conn == NULL)
@@ -125,6 +128,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     found->circuit = circ;
     HT_INSERT(orconn_circid_tree, &orconn_circid_circuit_map, found);
   }
+  ++conn->n_circuits;
 }
 
 /** Add <b>circ</b> to the global list of circuits. This is called only from
@@ -420,69 +424,28 @@ circuit_t *
 circuit_get_by_edge_conn(connection_t *conn)
 {
   circuit_t *circ;
-#if 0
-  connection_t *tmpconn;
-#endif
   tor_assert(CONN_IS_EDGE(conn));
 
-  if (! conn->on_circuit) {
-    /* return NULL; */
-    circ = circuit_get_by_conn(conn);
-    if (circ) {
-      warn(LD_BUG, "BUG: conn->on_circuit==NULL, but there was in fact a circuit there.");
-    }
-    return circ;
-  }
-
   circ = conn->on_circuit;
-  tor_assert(circ->magic == CIRCUIT_MAGIC);
-#if 0
-  /* All this stuff here is sanity-checking. */
-  for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
-    if (tmpconn == conn)
-      return circ;
-  for (tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream)
-    if (tmpconn == conn)
-      return circ;
-  for (tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream)
-    if (tmpconn == conn)
-      return circ;
+  tor_assert(!circ || circ->magic == CIRCUIT_MAGIC);
 
-  tor_assert(0);
-#endif
   return circ;
 }
 
-/** Return a circ such that circ is attached to <b>conn</b>, either as
- * p_conn, n_conn, or in p_streams or n_streams or resolving_streams.
- *
- * Return NULL if no such circuit exists.
+/** Return a new list of all circuits that have <b>conn</b> as n_conn or p_conn.
  */
-circuit_t *
-circuit_get_by_conn(connection_t *conn)
+smartlist_t *
+circuit_get_all_on_orconn(connection_t *conn)
 {
+  smartlist_t *res = smartlist_create();
   circuit_t *circ;
-  connection_t *tmpconn;
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (circ->marked_for_close)
-      continue;
-
-    if (circ->p_conn == conn)
-      return circ;
-    if (circ->n_conn == conn)
-      return circ;
-    for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
-      if (tmpconn == conn)
-        return circ;
-    for (tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream)
-      if (tmpconn == conn)
-        return circ;
-    for (tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream)
-      if (tmpconn == conn)
-        return circ;
+    if (!circ->marked_for_close &&
+        (circ->p_conn == conn || circ->n_conn == conn))
+      smartlist_add(res, conn);
   }
-  return NULL;
+  return res;
 }
 
 /** Return a circ such that:
