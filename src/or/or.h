@@ -189,9 +189,10 @@
 #define MAX_SSL_KEY_LIFETIME (120*60)
 
 /** How old do we allow a router to get before removing it, either
- * from the descriptor list (for dirservers) or the router list (for others)?
- * In seconds. */
+ * from the router list (for others)? In seconds. */
 #define ROUTER_MAX_AGE (60*60*24)
+/** How old do we let a saved descriptor get before removing it it? */
+#define OLD_ROUTER_DESC_MAX_AGE (60*60*48)
 
 typedef enum {
   CIRC_ID_TYPE_LOWER=0,
@@ -662,6 +663,8 @@ struct connection_t {
   circ_id_type_t circ_id_type; /**< When we send CREATE cells along this
                                 * connection, which half of the space should
                                 * we use? */
+  int n_circuits; /**< How many circuits use this connection as p_conn or
+                   * n_conn ? */
 
 /* Used only by DIR and AP connections: */
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
@@ -1440,7 +1443,7 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn);
 int circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(connection_t *conn);
-circuit_t *circuit_get_by_conn(connection_t *conn);
+smartlist_t *circuit_get_all_on_orconn(connection_t *conn);
 circuit_t *circuit_get_by_global_id(uint32_t id);
 circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose);
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
