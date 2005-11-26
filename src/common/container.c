@@ -756,26 +756,28 @@ digestmap_iter_next(digestmap_t *map, digestmap_iter_t *iter)
 strmap_iter_t *
 strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
 {
-  strmap_iter_t *next;
+  strmap_entry_t *rmv;
   tor_assert(map);
   tor_assert(iter);
-  next = HT_NEXT_RMV(strmap_tree, &map->head, iter);
-  if (*iter) {
-    tor_free((*iter)->key);
-    tor_free(*iter);
-  }
-  return next;
+  tor_assert(*iter);
+  rmv = *iter;
+  iter = HT_NEXT_RMV(strmap_tree, &map->head, iter);
+  tor_free(rmv->key);
+  tor_free(rmv);
+  return iter;
 }
 
 digestmap_iter_t *
 digestmap_iter_next_rmv(digestmap_t *map, digestmap_iter_t *iter)
 {
-  digestmap_iter_t *next;
+  digestmap_entry_t *rmv;
   tor_assert(map);
   tor_assert(iter);
-  next = HT_NEXT_RMV(digestmap_tree, &map->head, iter);
-  tor_free(*iter);
-  return next;
+  tor_assert(*iter);
+  rmv = *iter;
+  iter = HT_NEXT_RMV(digestmap_tree, &map->head, iter);
+  tor_free(rmv);
+  return iter;
 }
 
 /** Set *keyp and *valp to the current entry pointed to by iter.
@@ -784,6 +786,7 @@ void
 strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
 {
   tor_assert(iter);
+  tor_assert(*iter);
   tor_assert(keyp);
   tor_assert(valp);
   *keyp = (*iter)->key;
@@ -794,6 +797,7 @@ void
 digestmap_iter_get(digestmap_iter_t *iter, const char **keyp, void **valp)
 {
   tor_assert(iter);
+  tor_assert(*iter);
   tor_assert(keyp);
   tor_assert(valp);
   *keyp = (*iter)->key;
