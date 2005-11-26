@@ -1582,7 +1582,7 @@ connection_get_by_type_addr_port_purpose(int type, uint32_t addr, uint16_t port,
 connection_t *
 connection_get_by_identity_digest(const char *digest)
 {
-  int i, n, newer;
+  int i, n, newer, best_has_circ=0, conn_has_circ;
   connection_t *conn, *best=NULL;
   connection_t **carray;
 
@@ -1595,6 +1595,7 @@ connection_get_by_identity_digest(const char *digest)
       continue;
     if (!best) {
       best = conn; /* whatever it is, it's better than nothing. */
+      best_has_circ = (circuit_get_by_conn(best) != NULL);
       continue;
     }
     if (best->state == OR_CONN_STATE_OPEN &&
@@ -1603,10 +1604,13 @@ connection_get_by_identity_digest(const char *digest)
     newer = best->timestamp_created < conn->timestamp_created;
     if (conn->is_obsolete && (!best->is_obsolete || !newer))
       continue; /* we have something, and it's better than this. */
-    if (circuit_get_by_conn(best) && !circuit_get_by_conn(conn))
+    conn_has_circ = (circuit_get_by_conn(conn) != NULL);
+    if (best_has_circ && !conn_has_circ)
       continue; /* prefer conns with circuits on them */
-    if (newer)
+    if (newer) {
       best = conn; /* lastly, prefer newer conns */
+      best_has_circ = conn_has_circ;
+    }
   }
   return best;
 }
