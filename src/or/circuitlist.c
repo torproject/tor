@@ -443,7 +443,7 @@ circuit_get_all_on_orconn(connection_t *conn)
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (!circ->marked_for_close &&
         (circ->p_conn == conn || circ->n_conn == conn))
-      smartlist_add(res, conn);
+      smartlist_add(res, circ);
   }
   return res;
 }
