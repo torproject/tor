@@ -1376,6 +1376,8 @@ routerlist_reset_warnings(void)
   SMARTLIST_FOREACH(warned_conflicts, char *, cp, tor_free(cp));
   smartlist_clear(warned_conflicts); /* now the list is empty. */
 
+  if (!routerstatus_list)
+    routerstatus_list = smartlist_create();
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
                     rs->name_lookup_warned = 0);
 
