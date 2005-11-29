@@ -1139,6 +1139,14 @@ router_is_general_exit(routerinfo_t *ri)
 /** For authoritative directories: the current (v2) network status */
 static cached_dir_t the_v2_networkstatus = { NULL, NULL, 0, 0, 0 };
 
+static int
+should_generate_v2_networkstatus(void)
+{
+  return get_options()->AuthoritativeDir &&
+    the_v2_networkstatus_is_dirty &&
+    the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
+}
+
 /** For authoritative directories only: replace the contents of
  * <b>the_v2_networkstatus</b> with a newly generated network status
  * object. */
@@ -1336,7 +1344,10 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
         warn(LD_BUG,"Unable to generate an authoritative network status.");
     }
   } else if (!strcmp(key, "all")) {
-    digestmap_iter_t *iter = digestmap_iter_init(cached_v2_networkstatus);
+    digestmap_iter_t *iter;
+    if (should_generate_v2_networkstatus(void))
+      generate_v2_networkstatus();
+    iter = digestmap_iter_init(cached_v2_networkstatus);
     while (!digestmap_iter_done(iter)) {
       const char *ident;
       void *val;
@@ -1353,10 +1364,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
     SMARTLIST_FOREACH(digests, char *, cp,
         {
           cached_dir_t *cached;
-          if (router_digest_is_me(cp) &&
-              get_options()->AuthoritativeDir &&
-              the_v2_networkstatus_is_dirty &&
-              the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL))
+          if (router_digest_is_me(cp) && should_generate_v2_networkstatus(void))
             generate_v2_networkstatus();
           cached = digestmap_get(cached_v2_networkstatus, cp);
           if (cached) {
