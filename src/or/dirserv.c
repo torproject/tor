@@ -1345,7 +1345,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
     }
   } else if (!strcmp(key, "all")) {
     digestmap_iter_t *iter;
-    if (should_generate_v2_networkstatus(void))
+    if (should_generate_v2_networkstatus())
       generate_v2_networkstatus();
     iter = digestmap_iter_init(cached_v2_networkstatus);
     while (!digestmap_iter_done(iter)) {
@@ -1364,7 +1364,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
     SMARTLIST_FOREACH(digests, char *, cp,
         {
           cached_dir_t *cached;
-          if (router_digest_is_me(cp) && should_generate_v2_networkstatus(void))
+          if (router_digest_is_me(cp) && should_generate_v2_networkstatus())
             generate_v2_networkstatus();
           cached = digestmap_get(cached_v2_networkstatus, cp);
           if (cached) {
