@@ -431,7 +431,7 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
   char *next;
   size_t at_start;
 
-  assert_buf_ok(buf);
+  /* assert_buf_ok(buf); */
   tor_assert(reached_eof);
   tor_assert(s>=0);
 
@@ -594,7 +594,7 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
   size_t flushed = 0;
   size_t flushlen0, flushlen1;
 
-  assert_buf_ok(buf);
+  /* assert_buf_ok(buf); */
   tor_assert(buf_flushlen);
   tor_assert(s>=0);
   tor_assert(*buf_flushlen <= buf->datalen);
@@ -657,7 +657,7 @@ flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
   int r;
   size_t flushed=0;
   size_t flushlen0, flushlen1;
-  assert_buf_ok(buf);
+  /* assert_buf_ok(buf); */
   tor_assert(tls);
   tor_assert(buf_flushlen);
   tor_assert(*buf_flushlen <= buf->datalen);
@@ -703,7 +703,7 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
    */
 
   tor_assert(string);
-  assert_buf_ok(buf);
+  /* assert_buf_ok(buf); */
 
   if (buf_ensure_capacity(buf, buf->datalen+string_len)) {
     warn(LD_MM, "buflen too small, can't hold %d bytes.", (int)(buf->datalen+string_len));
@@ -746,7 +746,7 @@ peek_from_buf(char *string, size_t string_len, buf_t *buf)
 
   tor_assert(string);
   tor_assert(string_len <= buf->datalen); /* make sure we don't ask for too much */
-  assert_buf_ok(buf);
+  /* assert_buf_ok(buf); */
 
   _split_range(buf, buf->cur, &string_len, &len2);
 
@@ -803,7 +803,7 @@ fetch_from_buf_http(buf_t *buf,
   char *headers, *body, *p;
   size_t headerlen, bodylen, contentlen;
 
-  assert_buf_ok(buf);
+  /* assert_buf_ok(buf); */
   buf_normalize(buf);
 
   if (buf_nul_terminate(buf)<0) {
