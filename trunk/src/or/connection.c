@@ -238,6 +238,7 @@ _connection_free(connection_t *conn)
   }
 
   if (conn->type == CONN_TYPE_OR && !tor_digest_is_zero(conn->identity_digest)) {
+    warn(LD_BUG, "called on OR conn with non-zeroed idenity_digest");
     connection_or_remove_from_identity_map(conn);
   }
 

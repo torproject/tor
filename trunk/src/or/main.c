@@ -198,6 +198,9 @@ connection_unlink(connection_t *conn, int remove)
   if (conn->type == CONN_TYPE_EXIT) {
     assert_connection_edge_not_dns_pending(conn);
   }
+  if (conn->type == CONN_TYPE_OR && !tor_digest_is_zero(conn->identity_digest)) {
+    connection_or_remove_from_identity_map(conn);
+  }
   connection_free(conn);
 }
 
