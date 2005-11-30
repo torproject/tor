@@ -67,9 +67,6 @@ static int syslog_count = 0;
 
 static void delete_log(logfile_t *victim);
 static void close_log(logfile_t *victim);
-#if 0
-static int reset_log(logfile_t *lf);
-#endif
 
 /** Helper: Write the standard prefix for log lines to a
  * <b>buf_len</b> character buffer in <b>buf</b>.
@@ -326,26 +323,6 @@ close_logs(void)
   }
 }
 
-#if 0
-/** Close and re-open all log files; used to rotate logs on SIGHUP. */
-/* Nobody uses this. Remove it? XXXX */
-void
-reset_logs(void)
-{
-  logfile_t *lf = logfiles;
-  while (lf) {
-    if (reset_log(lf)) {
-      /* error. don't log it. delete the log entry and continue. */
-      logfile_t *victim = lf;
-      lf = victim->next;
-      delete_log(victim);
-      continue;
-    }
-    lf = lf->next;
-  }
-}
-#endif
-
 /** Remove and free the log entry <b>victim</b> from the linked-list
  * logfiles (it must be present in the list when this function is
  * called). After this function is called, the caller shouldn't refer
@@ -383,26 +360,6 @@ close_log(logfile_t *victim)
 #endif
   }
 }
-
-#if 0
-/** Helper: reset a single logfile_t.  For a file log, this involves
- * closing and reopening the log, and maybe writing the version.  For
- * other log types, do nothing. */
-static int
-reset_log(logfile_t *lf)
-{
-  if (lf->needs_close) {
-    if (fclose(lf->file)==EOF ||
-       !(lf->file = fopen(lf->filename, "a"))) {
-      return -1;
-    } else {
-      if (log_tor_version(lf, 1) < 0)
-        return -1;
-    }
-  }
-  return 0;
-}
-#endif
 
 /** Add a log handler to send all messages of severity <b>loglevel</b>
  * or higher to <b>stream</b>. */
