@@ -1205,16 +1205,6 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
   return 0;
 }
 
-/** Move the position of the cipher stream forwards by <b>delta</b> bytes.
- * Return 0 on success, -1 on failure.
- */
-int
-crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
-{
-  aes_adjust_counter(env->cipher, delta);
-  return 0;
-}
-
 /* SHA-1 */
 
 /** Compute the SHA1 digest of <b>len</b> bytes in data stored in
