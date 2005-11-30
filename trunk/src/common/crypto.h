@@ -119,9 +119,6 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, char *to,
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
                           const char *from, size_t fromlen);
 
-/* only implemented for CRYPTO_CIPHER_AES_CTR */
-int crypto_cipher_advance(crypto_cipher_env_t *env, long delta);
-
 /* SHA-1 */
 int crypto_digest(char *digest, const char *m, size_t len);
 crypto_digest_env_t *crypto_new_digest_env(void);
