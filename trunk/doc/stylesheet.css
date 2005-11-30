@@ -70,7 +70,7 @@ div.banner {
 
 table.table-banner {
     margin: 0 auto 0 auto;
-    background-image: url("images/tor_mast.gif");
+    background-image: url("/images/tor_mast.gif");
     background-repeat: no-repeat;
 }
 
@@ -176,13 +176,13 @@ table.banner {
 }
 
 td.banner-left {
-    background-image: url("images/top-left.png");
+    background-image: url("/images/top-left.png");
     background-repeat: no-repeat;
     width: 193px;
 }
 
 td.banner-middle {
-    background-image: url("images/top-middle.png");
+    background-image: url("/images/top-middle.png");
     background-repeat: repeat-x;
     vertical-align: bottom;
     padding-bottom: 10px;
@@ -204,7 +204,7 @@ td.banner-middle a:hover {
 }
 
 td.banner-right {
-    background-image: url("images/top-right.png");
+    background-image: url("/images/top-right.png");
     background-repeat: no-repeat;
     width: 40px;
     background-position: right;
@@ -212,7 +212,7 @@ td.banner-right {
 }
 
 .banner-middle a.current {
-    text-decoration: none;	       
+    text-decoration: none;
     color: #FF7F00;
     font-weight: bold;
     font-size: 1em;
