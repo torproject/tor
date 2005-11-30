@@ -25,7 +25,6 @@ smartlist_t *smartlist_create(void);
 void smartlist_free(smartlist_t *sl);
 void smartlist_set_capacity(smartlist_t *sl, int n);
 void smartlist_clear(smartlist_t *sl);
-void smartlist_truncate(smartlist_t *sl, int n);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
 void smartlist_remove(smartlist_t *sl, void *element);

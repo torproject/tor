@@ -1676,7 +1676,6 @@ int connection_tls_start_handshake(connection_t *conn, int receiving);
 int connection_tls_continue_handshake(connection_t *conn);
 
 void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn);
-void connection_or_update_nickname(connection_t *conn);
 
 /********************************* control.c ***************************/
 
@@ -1708,8 +1707,6 @@ typedef enum or_conn_status_event_t {
 
 void control_update_global_event_mask(void);
 void control_adjust_event_log_severity(void);
-void disable_control_logging(void);
-void enable_control_logging(void);
 
 /** Execute the statement <b>stmt</b>, which may log events concerning the
  * connection <b>conn</b>.  To prevent infinite loops, disable log messages
@@ -2060,7 +2057,6 @@ typedef enum {
 
 void set_onion_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_onion_key(void);
-crypto_pk_env_t *get_previous_onion_key(void);
 time_t get_onion_key_set_at(void);
 void set_identity_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_identity_key(void);
@@ -2260,7 +2256,6 @@ int router_parse_routerlist_from_directory(const char *s,
 int router_parse_runningrouters(const char *str);
 int router_parse_directory(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
-int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
                                                     int assume_action);
 version_status_t tor_version_is_obsolete(const char *myversion,
@@ -2270,7 +2265,6 @@ int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
 void assert_addr_policy_ok(addr_policy_t *t);
-void sort_routerstatus_entries(smartlist_t *sl);
 
 networkstatus_t *networkstatus_parse_from_string(const char *s);
 

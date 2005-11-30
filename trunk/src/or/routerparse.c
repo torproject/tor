@@ -1079,12 +1079,6 @@ _compare_routerstatus_entries(const void **_a, const void **_b)
   return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
 }
 
-void
-sort_routerstatus_entries(smartlist_t *sl)
-{
-  smartlist_sort(sl, _compare_routerstatus_entries);
-}
-
 /** Given a versioned (v2 or later) network-status object in <b>s</b>, try to
  * parse it and return the result.  Return NULL on failure.  Check the
  * signature of the network status, but do not (yet) check the signing key for
@@ -1317,23 +1311,6 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
   tor_free(tmp);
   token_free(tok);
   return r;
-}
-
-/** Given an exit policicy stored in <b>s</b>, parse it and add it to the end
- * of the exit policy of <b>router</b>.  Return 0 on success, -1 on failure.
- */
-int
-router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
-{
-  addr_policy_t *newe, *tmpe;
-  newe = router_parse_addr_policy_from_string(s, -1);
-  if (!newe)
-    return -1;
-  for (tmpe = router->exit_policy; tmpe; tmpe=tmpe->next)
-    ;
-  tmpe->next = newe;
-
-  return 0;
 }
 
 /** Add an exit policy stored in the token <b>tok</b> to the router info in

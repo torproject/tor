@@ -507,9 +507,11 @@ router_reset_status_download_failures(void)
   mark_all_trusteddirservers_up();
 }
 
+#if 0
 /** Return 0 if \\exists an authoritative dirserver that's currently
  * thought to be running, else return 1.
  */
+/* XXXX Nobody calls this function. Should it go away? */
 int
 all_trusted_directory_servers_down(void)
 {
@@ -519,6 +521,7 @@ all_trusted_directory_servers_down(void)
                     if (dir->is_running) return 0);
   return 1;
 }
+#endif
 
 /** Add all the family of <b>router</b> to the smartlist <b>sl</b>.
  * This is used to make sure we don't pick siblings in a single path.
@@ -1082,7 +1085,9 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
   return sd;
 }
 
+#if 0
 /** Allocate a fresh copy of <b>router</b> */
+/* XXX Nobody uses this. Remove it? */
 routerinfo_t *
 routerinfo_copy(const routerinfo_t *router)
 {
@@ -1116,6 +1121,7 @@ routerinfo_copy(const routerinfo_t *router)
   }
   return r;
 }
+#endif
 
 /** Free all storage held by a routerlist <b>rl</b> */
 void

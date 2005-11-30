@@ -77,17 +77,6 @@ smartlist_clear(smartlist_t *sl)
   sl->num_used = 0;
 }
 
-/** Set the list's new length to <b>len</b> (which must be \<= the list's
- * current size). Remove the last smartlist_len(sl)-len elements from the
- * list.
- */
-void
-smartlist_truncate(smartlist_t *sl, int len)
-{
-  tor_assert(len <= sl->num_used);
-  sl->num_used = len;
-}
-
 /** Append element to the end of the list. */
 void
 smartlist_add(smartlist_t *sl, void *element)

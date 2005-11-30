@@ -1205,15 +1205,6 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
   return 0;
 }
 
-/** Move the position of the cipher stream backwards by <b>delta</b> bytes.
- * Return 0 on success, -1 on failure.
- */
-int
-crypto_cipher_rewind(crypto_cipher_env_t *env, long delta)
-{
-  return crypto_cipher_advance(env, -delta);
-}
-
 /** Move the position of the cipher stream forwards by <b>delta</b> bytes.
  * Return 0 on success, -1 on failure.
  */

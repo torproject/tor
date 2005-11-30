@@ -120,7 +120,6 @@ int crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
                           const char *from, size_t fromlen);
 
 /* only implemented for CRYPTO_CIPHER_AES_CTR */
-int crypto_cipher_rewind(crypto_cipher_env_t *env, long delta);
 int crypto_cipher_advance(crypto_cipher_env_t *env, long delta);
 
 /* SHA-1 */
