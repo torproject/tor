@@ -377,40 +377,6 @@ connection_or_get_by_identity_digest(const char *digest)
   return best;
 }
 
-/** "update an OR connection nickname on the fly"
- * Actually, nobody calls this. Should we remove it? */
-void
-connection_or_update_nickname(connection_t *conn)
-{
-  routerinfo_t *r;
-  const char *n;
-
-  tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_OR);
-  n = dirserv_get_nickname_by_digest(conn->identity_digest);
-  if (n) {
-    if (!conn->nickname || strcmp(conn->nickname, n)) {
-      tor_free(conn->nickname);
-      conn->nickname = tor_strdup(n);
-    }
-    return;
-  }
-  r = router_get_by_digest(conn->identity_digest);
-  if (r && r->is_verified) {
-    if (!conn->nickname || strcmp(conn->nickname, r->nickname)) {
-      tor_free(conn->nickname);
-      conn->nickname = tor_strdup(r->nickname);
-    }
-    return;
-  }
-  if (conn->nickname[0] != '$') {
-    tor_free(conn->nickname);
-    conn->nickname = tor_malloc(HEX_DIGEST_LEN+1);
-    base16_encode(conn->nickname, HEX_DIGEST_LEN+1,
-                  conn->identity_digest, DIGEST_LEN);
-  }
-}
-
 /** Launch a new OR connection to <b>addr</b>:<b>port</b> and expect to
  * handshake with an OR with identity digest <b>id_digest</b>.
  *

@@ -324,7 +324,9 @@ close_logs(void)
   }
 }
 
+#if 0
 /** Close and re-open all log files; used to rotate logs on SIGHUP. */
+/* Nobody uses this. Remove it? XXXX */
 void
 reset_logs(void)
 {
@@ -340,6 +342,7 @@ reset_logs(void)
     lf = lf->next;
   }
 }
+#endif
 
 /** Remove and free the log entry <b>victim</b> from the linked-list
  * logfiles (it must be present in the list when this function is

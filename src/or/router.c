@@ -53,16 +53,6 @@ get_onion_key(void)
   return onionkey;
 }
 
-/** Return the onion key that was current before the most recent onion
- * key rotation.  If no rotation has been performed since this process
- * started, return NULL.
- */
-crypto_pk_env_t *
-get_previous_onion_key(void)
-{
-  return lastonionkey;
-}
-
 /** Store a copy of the current onion key into *<b>key</b>, and a copy
  * of the most recent onion key into *<b>last</b>.
  */
