@@ -417,6 +417,15 @@ find_whitespace(const char *s)
   return s;
 }
 
+/** Return true iff the DIGEST_LEN bytes in digest are all zero. */
+int
+tor_digest_is_zero(const char *digest)
+{
+  static char ZERO_DIGEST[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+
+  return !memcmp(digest, ZERO_DIGEST, DIGEST_LEN);
+}
+
 #define CHECK_STRTOX_RESULT()                           \
   /* Was at least one character converted? */           \
   if (endptr == s)                                      \
