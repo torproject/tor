@@ -1747,6 +1747,8 @@ int control_event_or_authdir_new_descriptor(const char *action, const char *desc
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);
+void disable_control_logging(void);
+void enable_control_logging(void);
 
 /********************************* cpuworker.c *****************************/
 

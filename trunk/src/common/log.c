@@ -67,7 +67,9 @@ static int syslog_count = 0;
 
 static void delete_log(logfile_t *victim);
 static void close_log(logfile_t *victim);
+#if 0
 static int reset_log(logfile_t *lf);
+#endif
 
 /** Helper: Write the standard prefix for log lines to a
  * <b>buf_len</b> character buffer in <b>buf</b>.
@@ -382,6 +384,7 @@ close_log(logfile_t *victim)
   }
 }
 
+#if 0
 /** Helper: reset a single logfile_t.  For a file log, this involves
  * closing and reopening the log, and maybe writing the version.  For
  * other log types, do nothing. */
@@ -399,6 +402,7 @@ reset_log(logfile_t *lf)
   }
   return 0;
 }
+#endif
 
 /** Add a log handler to send all messages of severity <b>loglevel</b>
  * or higher to <b>stream</b>. */
