@@ -111,6 +111,7 @@ const char *hex_str(const char *from, size_t fromlen);
 const char *eat_whitespace(const char *s);
 const char *eat_whitespace_no_nl(const char *s);
 const char *find_whitespace(const char *s);
+int tor_digest_is_zero(const char *digest);
 
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
