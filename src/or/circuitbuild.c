@@ -342,7 +342,7 @@ circuit_handle_first_hop(circuit_t *circ)
   /* imprint the circuit with its future n_conn->id */
   memcpy(circ->n_conn_id_digest, firsthop->extend_info->identity_digest,
          DIGEST_LEN);
-  n_conn = connection_get_by_identity_digest(
+  n_conn = connection_or_get_by_identity_digest(
          firsthop->extend_info->identity_digest);
   if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
       (n_conn->is_obsolete &&
@@ -637,7 +637,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
-  n_conn = connection_get_by_identity_digest(id_digest);
+  n_conn = connection_or_get_by_identity_digest(id_digest);
 
   if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
     (n_conn->is_obsolete &&

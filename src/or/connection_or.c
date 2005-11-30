@@ -22,6 +22,71 @@ static int connection_or_process_cells_from_inbuf(connection_t *conn);
 
 /**************************************************************/
 
+/** Map from identity digest of connected OR or desired OR to a connection_t
+ * with that identity digest.  If there is more than one such connection_t,
+ * they form a linked list, with next_with_same_id as the next pointer.*/
+static digestmap_t *orconn_identity_map = NULL;
+
+/** If conn is listed in orconn_identity_map, remove it, and clear
+ * conn->identity_digest. */
+void
+connection_or_remove_from_identity_map(connection_t *conn)
+{
+  connection_t *tmp;
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_OR);
+  if (!orconn_identity_map)
+    return;
+  tmp = digestmap_get(orconn_identity_map, conn->identity_digest);
+  if (!tmp)
+    return;
+  if (conn == tmp) {
+    if (conn->next_with_same_id)
+      digestmap_set(orconn_identity_map, conn->identity_digest,
+                    conn->next_with_same_id);
+    else
+      digestmap_remove(orconn_identity_map, conn->identity_digest);
+  } else {
+    while (tmp->next_with_same_id) {
+      if (tmp->next_with_same_id == conn) {
+        tmp->next_with_same_id = conn->next_with_same_id;
+        break;
+      }
+      tmp = tmp->next_with_same_id;
+    }
+  }
+  memset(conn->identity_digest, 0, DIGEST_LEN);
+  conn->next_with_same_id = NULL;
+}
+
+/** Change conn->identity_digest to digest, and add conn into
+ * orconn_digest_map. */
+static void
+connection_or_set_identity_digest(connection_t *conn, const char *digest)
+{
+  connection_t *tmp;
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_OR);
+  tor_assert(digest);
+
+  if (!orconn_identity_map)
+    orconn_identity_map = digestmap_new();
+  if (!memcmp(conn->identity_digest, digest, DIGEST_LEN))
+    return;
+  if (tor_digest_is_zero(conn->identity_digest))
+    connection_or_remove_from_identity_map(conn);
+
+  memcpy(conn->identity_digest, digest, DIGEST_LEN);
+  tmp = digestmap_set(orconn_identity_map, digest, conn);
+  conn->next_with_same_id = tmp;
+
+  /* Checking code; remove once I'm sure this works. XXXX*/
+  for (; tmp; tmp = tmp->next_with_same_id) {
+    tor_assert(!memcmp(tmp->identity_digest, digest, DIGEST_LEN));
+    tor_assert(tmp != conn);
+  }
+}
+
 /** Pack the cell_t host-order structure <b>src</b> into network-order
  * in the buffer <b>dest</b>. See tor-spec.txt for details about the
  * wire format.
@@ -227,7 +292,7 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
   conn->port = router->or_port;
   conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
-  crypto_pk_get_digest(conn->identity_pkey, conn->identity_digest);
+  connection_or_set_identity_digest(conn, router->cache_info.identity_digest);
   conn->nickname = tor_strdup(router->nickname);
   tor_free(conn->address);
   conn->address = tor_strdup(router->address);
@@ -252,7 +317,7 @@ connection_or_init_conn_from_address(connection_t *conn,
   conn->port = port;
   /* This next part isn't really right, but it's good enough for now. */
   conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
-  memcpy(conn->identity_digest, id_digest, DIGEST_LEN);
+  connection_or_set_identity_digest(conn, id_digest);
   /* If we're an authoritative directory server, we may know a
    * nickname for this router. */
   n = dirserv_get_nickname_by_digest(id_digest);
@@ -266,6 +331,50 @@ connection_or_init_conn_from_address(connection_t *conn,
   }
   tor_free(conn->address);
   conn->address = tor_dup_addr(addr);
+}
+
+/** Return the best connection of type OR with the
+ * digest <b>digest</b> that we have, or NULL if we have none.
+ *
+ * 1) Don't return it if it's marked for close.
+ * 2) If there are any open conns, ignore non-open conns.
+ * 3) If there are any non-obsolete conns, ignore obsolete conns.
+ * 4) Then if there are any non-empty conns, ignore empty conns.
+ * 5) Of the remaining conns, prefer newer conns.
+ */
+connection_t *
+connection_or_get_by_identity_digest(const char *digest)
+{
+  int newer;
+  connection_t *conn, *best=NULL;
+
+  if (!orconn_identity_map)
+    return NULL;
+
+  conn = digestmap_get(orconn_identity_map, digest);
+
+  for (; conn; conn = conn->next_with_same_id) {
+    tor_assert(conn->magic == CONNECTION_MAGIC);
+    tor_assert(conn->type == CONN_TYPE_OR);
+    tor_assert(!memcmp(conn->identity_digest, digest, DIGEST_LEN));
+    if (conn->marked_for_close)
+      continue;
+    if (!best) {
+      best = conn; /* whatever it is, it's better than nothing. */
+      continue;
+    }
+    if (best->state == OR_CONN_STATE_OPEN &&
+        conn->state != OR_CONN_STATE_OPEN)
+      continue; /* avoid non-open conns if we can */
+    newer = best->timestamp_created < conn->timestamp_created;
+    if (conn->is_obsolete && (!best->is_obsolete || !newer))
+      continue; /* we have something, and it's better than this. */
+    if (best->n_circuits && !conn->n_circuits)
+      continue; /* prefer conns with circuits on them */
+    if (newer)
+      best = conn; /* lastly, prefer newer conns */
+  }
+  return best;
 }
 
 /** "update an OR connection nickname on the fly"
@@ -419,8 +528,6 @@ connection_tls_continue_handshake(connection_t *conn)
   return 0;
 }
 
-static char ZERO_DIGEST[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-
 /** Return 1 if we initiated this connection, or 0 if it started
  * out as an incoming connection.
  *
@@ -431,10 +538,9 @@ static char ZERO_DIGEST[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 int
 connection_or_nonopen_was_started_here(connection_t *conn)
 {
-  tor_assert(sizeof(ZERO_DIGEST) == DIGEST_LEN);
   tor_assert(conn->type == CONN_TYPE_OR);
 
-  if (!memcmp(ZERO_DIGEST, conn->identity_digest, DIGEST_LEN))
+  if (tor_digest_is_zero(conn->identity_digest))
     return 0;
   else
     return 1;
@@ -560,7 +666,7 @@ connection_tls_finish_handshake(connection_t *conn)
   if (!connection_or_nonopen_was_started_here(conn)) {
 #if 0
     connection_t *c;
-    if ((c=connection_get_by_identity_digest(digest_rcvd))) {
+    if ((c=connection_or_get_by_identity_digest(digest_rcvd))) {
       debug(LD_OR,"Router '%s' is already connected on fd %d. Dropping fd %d.",
              c->nickname, c->s, conn->s);
       return -1;

@@ -1538,7 +1538,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
          * make new ones with the new key.
          */
         connection_t *conn;
-        while ((conn = connection_get_by_identity_digest(
+        while ((conn = connection_or_get_by_identity_digest(
                       old_router->cache_info.identity_digest))) {
           // And LD_OR? XXXXNM
           info(LD_DIR,"Closing conn to router '%s'; there is now a named router with that name.",

@@ -325,6 +325,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     if (!conn) {
       /* XXXX RD This is a bug, right? */
       warn(LD_BUG,"incoming relay cell has p_conn==NULL. Dropping.");
+      assert_circuit_ok(circ);
       return 0; /* just drop it */
     }
     relay_set_digest(circ->p_digest, cell);

@@ -237,6 +237,10 @@ _connection_free(connection_t *conn)
     tor_close_socket(conn->s);
   }
 
+  if (conn->type == CONN_TYPE_OR && !tor_digest_is_zero(conn->identity_digest)) {
+    connection_or_remove_from_identity_map(conn);
+  }
+
   memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
   tor_free(conn);
 }
@@ -1568,47 +1572,6 @@ connection_get_by_type_addr_port_purpose(int type, uint32_t addr, uint16_t port,
       return conn;
   }
   return NULL;
-}
-
-/** Return the best connection of type OR with the
- * digest <b>digest</b> that we have, or NULL if we have none.
- *
- * 1) Don't return it if it's marked for close.
- * 2) If there are any open conns, ignore non-open conns.
- * 3) If there are any non-obsolete conns, ignore obsolete conns.
- * 4) Then if there are any non-empty conns, ignore empty conns.
- * 5) Of the remaining conns, prefer newer conns.
- */
-connection_t *
-connection_get_by_identity_digest(const char *digest)
-{
-  int i, n, newer;
-  connection_t *conn, *best=NULL;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
-    if (conn->marked_for_close ||
-        conn->type != CONN_TYPE_OR ||
-        memcmp(conn->identity_digest, digest, DIGEST_LEN))
-      continue;
-    if (!best) {
-      best = conn; /* whatever it is, it's better than nothing. */
-      continue;
-    }
-    if (best->state == OR_CONN_STATE_OPEN &&
-        conn->state != OR_CONN_STATE_OPEN)
-      continue; /* avoid non-open conns if we can */
-    newer = best->timestamp_created < conn->timestamp_created;
-    if (conn->is_obsolete && (!best->is_obsolete || !newer))
-      continue; /* we have something, and it's better than this. */
-    if (best->n_circuits && !conn->n_circuits)
-      continue; /* prefer conns with circuits on them */
-    if (newer)
-      best = conn; /* lastly, prefer newer conns */
-  }
-  return best;
 }
 
 /** Return the connection with id <b>id</b> if it is not already

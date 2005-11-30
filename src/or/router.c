@@ -623,7 +623,7 @@ router_retry_connections(int force)
     if (!clique_mode(options) && !router_is_clique_mode(router))
       continue;
     if (force ||
-        !connection_get_by_identity_digest(router->cache_info.identity_digest)) {
+      !connection_or_get_by_identity_digest(router->cache_info.identity_digest)) {
       debug(LD_OR,"%sconnecting to %s at %s:%u.",
              clique_mode(options) ? "(forced) " : "",
              router->nickname, router->address, router->or_port);

@@ -665,6 +665,8 @@ struct connection_t {
                                 * we use? */
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
+  struct connection_t *next_with_same_id; /**< Next connection with same
+                                           * identity digest as this one. */
 
 /* Used only by DIR and AP connections: */
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
@@ -1570,7 +1572,6 @@ void _connection_controller_force_write(connection_t *conn);
 void connection_write_to_buf(const char *string, size_t len, connection_t *conn);
 
 connection_t *connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port);
-connection_t *connection_get_by_identity_digest(const char *digest);
 connection_t *connection_get_by_global_id(uint32_t id);
 
 connection_t *connection_get_by_type(int type);
@@ -1659,6 +1660,9 @@ typedef enum hostname_type_t {
 hostname_type_t parse_extended_hostname(char *address);
 
 /********************************* connection_or.c ***************************/
+
+void connection_or_remove_from_identity_map(connection_t *conn);
+connection_t *connection_or_get_by_identity_digest(const char *digest);
 
 int connection_or_reached_eof(connection_t *conn);
 int connection_or_process_inbuf(connection_t *conn);
