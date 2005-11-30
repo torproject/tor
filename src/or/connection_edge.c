@@ -11,7 +11,6 @@ const char connection_edge_c_id[] = "$Id$";
  **/
 
 #include "or.h"
-#include "tree.h"
 
 static addr_policy_t *socks_policy = NULL;
 /* List of exit_redirect_t */
