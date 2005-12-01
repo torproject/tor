@@ -1,3 +1,21 @@
+Changes in version 0.1.0.16 - 2005-12-01
+  o Crash bugfixes on 0.1.0.x:
+    - It turns out sparc64 platforms crash on unaligned memory
+      access too -- so detect and avoid this.
+    - Handle truncated compressed data correctly (by detecting it and giving
+      an error).
+    - Fix possible-but-unlikely free(NULL) in control.c.
+    - Backport a memory-munging bug fix in closing connections that
+      didn't seem to be harming us but might be causing rare seg faults
+      and asserts.
+
+  o Other bugfixes on 0.1.0.x:
+    - Do not check whether DirPort is reachable when we are suppressing
+      advertising it because of hibernation.
+    - When building with -static or on Solaris, we sometimes needed -ldl.
+    - One of the dirservers (tor26) changed its IP address.
+
+
 Changes in version 0.1.0.15 - 2005-09-23
   o Bugfixes on 0.1.0.x:
     - Reject ports 465 and 587 (spam targets) in default exit policy.
