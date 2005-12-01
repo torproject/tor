@@ -30,14 +30,14 @@ const char aes_c_id[] = "$Id$";
 #include <openssl/evp.h>
 #endif
 
-/* For now, if OpenSSL supports AES, we always use the EVP_CIPHER_CTX version
- * of it, so OpenSSL can use an engine instead if available.  If the overhead
- * turns out to suck, we should maybe switch to use OpenSSL's AES directly
- * when no engine exists.
+/* Benchmarking suggests that using the built-in rijndael below is
+ * significantly faster than using OpenSSL's EVP code (by about 27%)
+ * and faster than using OpenSSL's AES functions (by about 19%).
+ * The counter-mode optimization saves around 5%.
  */
-#ifdef USE_OPENSSL_AES
-#define USE_OPENSSL_EVP
-#endif
+#undef USE_OPENSSL_AES
+#undef USE_OPENSSL_EVP
+#define USE_RIJNDAEL_COUNTER_OPTIMIZATION
 
 /*======================================================================*/
 /* From rijndael-alg-fst.h */
@@ -52,7 +52,11 @@ typedef uint8_t u8;
 #define MAXNR   14
 
 static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits);
+#ifdef USE_RIJNDAEL_COUNTER_OPTIMIZATION
+static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, u32 ctr1, u32 ctr0, u8 ct[16]);
+#else
 static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]);
+#endif
 #endif
 
 /*======================================================================*/
@@ -77,7 +81,7 @@ struct aes_cnt_cipher {
  * Helper function: set <b>cipher</b>'s internal buffer to the encrypted
  * value of the current counter.
  */
-static void
+static INLINE void
 _aes_fill_buf(aes_cnt_cipher_t *cipher)
 {
   /* We don't currently use OpenSSL's counter mode implementation because:
@@ -86,6 +90,9 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
    *  3) changing the counter position was not trivial, last time I looked.
    * None of these issues are insurmountable in principle.
    */
+#if !defined(USE_OPENSSL_EVP) && !defined(USE_OPENSSL_AES) && defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION)
+  rijndaelEncrypt(cipher->rk, cipher->nr, cipher->counter1, cipher->counter0, cipher->buf);
+#else
   u32 counter0 = cipher->counter0;
   u32 counter1 = cipher->counter1;
   u8 buf[16];
@@ -108,6 +115,7 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
   AES_encrypt(buf, cipher->buf, &cipher->key);
 #else
   rijndaelEncrypt(cipher->rk, cipher->nr, buf, cipher->buf);
+#endif
 #endif
 }
 
@@ -694,8 +702,13 @@ rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits)
         return 0;
 }
 
+#ifdef USE_RIJNDAEL_COUNTER_OPTIMIZATION
+void
+rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, u32 ctr1, u32 ctr0, u8 ct[16])
+#else
 void
 rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16])
+#endif
 {
         u32 s0, s1, s2, s3, t0, t1, t2, t3;
 #ifndef FULL_UNROLL
@@ -706,10 +719,18 @@ rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]
          * map byte array block to cipher state
          * and add initial round key:
          */
+#ifdef USE_RIJNDAEL_COUNTER_OPTIMIZATION
+        s0 = rk[0];
+        s1 = rk[1];
+        s2 = ctr1 ^ rk[2];
+        s3 = ctr0 ^ rk[3];
+#else
         s0 = GETU32(pt     ) ^ rk[0];
         s1 = GETU32(pt +  4) ^ rk[1];
         s2 = GETU32(pt +  8) ^ rk[2];
         s3 = GETU32(pt + 12) ^ rk[3];
+#endif
+
 #ifdef FULL_UNROLL
     /* round 1: */
         t0 = Te0[s0 >> 24] ^ Te1[(s1 >> 16) & 0xff] ^ Te2[(s2 >>  8) & 0xff] ^ Te3[s3 & 0xff] ^ rk[ 4];
