@@ -1548,6 +1548,37 @@ test_rend_fns(void)
   crypto_free_pk_env(pk2);
 }
 
+static void
+bench_aes(void)
+{
+  int len, i;
+  char *b1, *b2;
+  crypto_cipher_env_t *c;
+  struct timeval start, end;
+  const int iters = 100000;
+  uint64_t nsec;
+  c = crypto_new_cipher_env();
+  crypto_cipher_generate_key(c);
+  crypto_cipher_encrypt_init_cipher(c);
+  for (len = 1; len <= 8192; len *= 2) {
+    b1 = tor_malloc_zero(len);
+    b2 = tor_malloc_zero(len);
+    tor_gettimeofday(&start);
+    for (i = 0; i < iters; ++i) {
+      crypto_cipher_encrypt(c, b1, b2, len);
+    }
+    tor_gettimeofday(&end);
+    tor_free(b1);
+    tor_free(b2);
+    nsec = (uint64_t) tv_udiff(&start,&end);
+    nsec *= 1000;
+    nsec /= (iters*len);
+    printf("%d bytes: "U64_FORMAT" nsec per byte\n", len,
+           U64_PRINTF_ARG(nsec));
+  }
+  crypto_free_cipher_env(c);
+}
+
 int
 main(int c, char**v)
 {
@@ -1560,6 +1591,11 @@ main(int c, char**v)
   set_options(options);
 
   crypto_seed_rng();
+
+  if (0) {
+    bench_aes();
+    return 0;
+  }
 
   rep_hist_init();
   atexit(remove_directory);
