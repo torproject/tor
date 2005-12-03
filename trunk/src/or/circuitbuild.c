@@ -279,7 +279,7 @@ circuit_t *
 circuit_init(uint8_t purpose, int need_uptime, int need_capacity, int internal)
 {
   circuit_t *circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
-  circ->state = CIRCUIT_STATE_OR_WAIT;
+  circuit_set_state(circ, CIRCUIT_STATE_OR_WAIT);
   circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
   circ->build_state->need_uptime = need_uptime;
   circ->build_state->need_capacity = need_capacity;
@@ -388,16 +388,20 @@ circuit_handle_first_hop(circuit_t *circ)
 void
 circuit_n_conn_done(connection_t *or_conn, int status)
 {
-  circuit_t *circ;
+  extern smartlist_t *circuits_pending_or_conns;
 
   debug(LD_CIRC,"or_conn to %s, status=%d",
          or_conn->nickname ? or_conn->nickname : "NULL", status);
 
-  for (circ=global_circuitlist;circ;circ = circ->next) {
+  if (!circuits_pending_or_conns)
+    return;
+
+  SMARTLIST_FOREACH(circuits_pending_or_conns, circuit_t *, circ,
+  {
     if (circ->marked_for_close)
       continue;
-    if (circ->state == CIRCUIT_STATE_OR_WAIT &&
-        !circ->n_conn &&
+    tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
+    if (!circ->n_conn &&
         circ->n_addr == or_conn->addr &&
         circ->n_port == or_conn->port &&
         !memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
@@ -407,6 +411,8 @@ circuit_n_conn_done(connection_t *or_conn, int status)
         continue;
       }
       debug(LD_CIRC,"Found circ %d, sending create cell.", circ->n_circ_id);
+      /* circuit_deliver_create_cell will set n_circ_id and add us to the
+       * index. */
       circ->n_conn = or_conn;
       memcpy(circ->n_conn_id_digest, or_conn->identity_digest, DIGEST_LEN);
       if (CIRCUIT_IS_ORIGIN(circ)) {
@@ -424,10 +430,10 @@ circuit_n_conn_done(connection_t *or_conn, int status)
           continue;
         }
         tor_free(circ->onionskin);
-        circ->state = CIRCUIT_STATE_OPEN;
+        circuit_set_state(circ, CIRCUIT_STATE_OPEN);
       }
     }
-  }
+  });
 }
 
 /** Find a new circid that isn't currently in use by the outgoing
@@ -543,7 +549,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
       return -1;
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
-    circ->state = CIRCUIT_STATE_BUILDING;
+    circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
     debug(LD_CIRC,"first skin; finished sending create cell.");
   } else {
     tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
@@ -552,7 +558,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) {
       /* done building the circuit. whew. */
-      circ->state = CIRCUIT_STATE_OPEN;
+      circuit_set_state(circ, CIRCUIT_STATE_OPEN);
       info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
       if (!has_completed_circuit) {
@@ -654,7 +660,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
     circ->onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
-    circ->state = CIRCUIT_STATE_OR_WAIT;
+    circuit_set_state(circ, CIRCUIT_STATE_OR_WAIT);
 
     /* imprint the circuit with its future n_conn->id */
     memcpy(circ->n_conn_id_digest, id_digest, DIGEST_LEN);
@@ -874,7 +880,7 @@ onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys)
   cell.command = cell_type;
   cell.circ_id = circ->p_circ_id;
 
-  circ->state = CIRCUIT_STATE_OPEN;
+  circuit_set_state(circ, CIRCUIT_STATE_OPEN);
 
   memcpy(cell.payload, payload,
          cell_type == CELL_CREATED ? ONIONSKIN_REPLY_LEN : DIGEST_LEN*2);
@@ -1325,7 +1331,7 @@ int
 circuit_extend_to_new_exit(circuit_t *circ, extend_info_t *info)
 {
   circuit_append_new_exit(circ, info);
-  circ->state = CIRCUIT_STATE_BUILDING;
+  circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
   if (circuit_send_next_onion_skin(circ)<0) {
     warn(LD_CIRC, "Couldn't extend circuit to new point '%s'.",
            info->nickname);

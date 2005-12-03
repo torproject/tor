@@ -1440,6 +1440,7 @@ enum which_conn_changed_t { P_CONN_CHANGED=1, N_CONN_CHANGED=0 };
 void circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
                                connection_t *conn,
                                enum which_conn_changed_t which);
+void circuit_set_state(circuit_t *circ, int state);
 void circuit_close_all_marked(void);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn);

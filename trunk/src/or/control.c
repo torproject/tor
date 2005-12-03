@@ -1594,7 +1594,7 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     }
   } else {
     if (circ->state == CIRCUIT_STATE_OPEN) {
-      circ->state = CIRCUIT_STATE_BUILDING;
+      circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
       if (circuit_send_next_onion_skin(circ) < 0) {
         info(LD_CONTROL,"send_next_onion_skin failed; circuit marked for closing.");
         circuit_mark_for_close(circ);

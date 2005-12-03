@@ -19,6 +19,9 @@ const char circuitlist_c_id[] = "$Id$";
 /** A global list of all circuits at this hop. */
 circuit_t *global_circuitlist=NULL;
 
+/** A list of all the circuits in CIRCUIT_STATE_OR_WAIT. */
+smartlist_t *circuits_pending_or_conns=NULL;
+
 static void circuit_free(circuit_t *circ);
 static void circuit_free_cpath(crypt_path_t *cpath);
 static void circuit_free_cpath_node(crypt_path_t *victim);
@@ -129,6 +132,36 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     HT_INSERT(orconn_circid_tree, &orconn_circid_circuit_map, found);
   }
   ++conn->n_circuits;
+}
+
+/** Add <b>circ</b> to the list of circuits waiting for us to connect to
+ * an OR. */
+void
+circuit_set_state(circuit_t *circ, int state)
+{
+  tor_assert(circ);
+  if (state == circ->state)
+    return;
+  if (circ->state == CIRCUIT_STATE_OR_WAIT) {
+    /* remove from waiting-circuit list. */
+    if (!circuits_pending_or_conns)
+      circuits_pending_or_conns = smartlist_create();
+    smartlist_remove(circuits_pending_or_conns, circ);
+  }
+  if (state == CIRCUIT_STATE_OR_WAIT) {
+    /* add to waiting-circuit list. */
+    if (!circuits_pending_or_conns)
+      circuits_pending_or_conns = smartlist_create();
+    smartlist_add(circuits_pending_or_conns, circ);
+  }
+  circ->state = state;
+}
+
+/** Remove <b>circ</b> from the list of circuits waiting for us to connect to
+ * an OR. */
+void
+circuit_clear_state_orwait(circuit_t *circ)
+{
 }
 
 /** Add <b>circ</b> to the global list of circuits. This is called only from
@@ -302,6 +335,8 @@ circuit_free_all(void)
     circuit_free(global_circuitlist);
     global_circuitlist = next;
   }
+  smartlist_free(circuits_pending_or_conns);
+  circuits_pending_or_conns = NULL;
 }
 
 /** Deallocate space associated with the cpath node <b>victim</b>. */
@@ -638,6 +673,10 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     }
     circuit_rep_hist_note_result(circ);
   }
+  if (circ->state == CIRCUIT_STATE_OR_WAIT) {
+    if (circuits_pending_or_conns)
+      smartlist_remove(circuits_pending_or_conns, circ);
+  }
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_status(circ,
      (circ->state == CIRCUIT_STATE_OPEN)?CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED);
@@ -783,6 +822,13 @@ assert_circuit_ok(const circuit_t *c)
       tor_assert(c->n_digest);
       tor_assert(c->p_digest);
     }
+  }
+  if (c->state == CIRCUIT_STATE_OR_WAIT && !c->marked_for_close) {
+    tor_assert(circuits_pending_or_conns &&
+               smartlist_isin(circuits_pending_or_conns, c));
+  } else {
+    tor_assert(!circuits_pending_or_conns || !
+               !smartlist_isin(circuits_pending_or_conns, c));
   }
   if (c->cpath) {
     assert_cpath_ok(c->cpath);
