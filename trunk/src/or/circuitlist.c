@@ -53,10 +53,10 @@ _orconn_circid_entry_hash(orconn_circid_circuit_map_t *a)
   return (((unsigned)a->circ_id)<<16) ^ (unsigned)(uintptr_t)(a->or_conn);
 }
 
-static HT_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = HT_INITIALIZER();
-HT_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node,
+static HT_HEAD(orconn_circid_map, orconn_circid_circuit_map_t) orconn_circid_circuit_map = HT_INITIALIZER();
+HT_PROTOTYPE(orconn_circid_map, orconn_circid_circuit_map_t, node,
              _orconn_circid_entry_hash, _orconn_circid_entries_eq);
-HT_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node,
+HT_GENERATE(orconn_circid_map, orconn_circid_circuit_map_t, node,
             _orconn_circid_entry_hash, _orconn_circid_entries_eq, 0.6,
             malloc, realloc, free);
 
@@ -64,8 +64,6 @@ HT_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node,
  * used to improve performance when many cells arrive in a row from the
  * same circuit.
  */
-/* (We tried using splay trees, but round-robin turned out to make them
- * suck.) */
 orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
 /** Set the p_conn or n_conn field of a circuit <b>circ</b>, along
@@ -108,7 +106,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
   if (old_conn) { /* we may need to remove it from the conn-circid map */
     search.circ_id = old_id;
     search.or_conn = old_conn;
-    found = HT_REMOVE(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+    found = HT_REMOVE(orconn_circid_map, &orconn_circid_circuit_map, &search);
     if (found) {
       tor_free(found);
     }
@@ -121,7 +119,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
   /* now add the new one to the conn-circid map */
   search.circ_id = id;
   search.or_conn = conn;
-  found = HT_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+  found = HT_FIND(orconn_circid_map, &orconn_circid_circuit_map, &search);
   if (found) {
     found->circuit = circ;
   } else {
@@ -129,7 +127,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     found->circ_id = id;
     found->or_conn = conn;
     found->circuit = circ;
-    HT_INSERT(orconn_circid_tree, &orconn_circid_circuit_map, found);
+    HT_INSERT(orconn_circid_map, &orconn_circid_circuit_map, found);
   }
   ++conn->n_circuits;
 }
@@ -397,7 +395,7 @@ circuit_get_by_circid_orconn_impl(uint16_t circ_id, connection_t *conn)
   } else {
     search.circ_id = circ_id;
     search.or_conn = conn;
-    found = HT_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+    found = HT_FIND(orconn_circid_map, &orconn_circid_circuit_map, &search);
     _last_circid_orconn_ent = found;
   }
   if (found && found->circuit)
@@ -410,11 +408,11 @@ circuit_get_by_circid_orconn_impl(uint16_t circ_id, connection_t *conn)
     circuit_t *circ;
     for (circ=global_circuitlist;circ;circ = circ->next) {
       if (circ->p_conn == conn && circ->p_circ_id == circ_id) {
-        warn(LD_BUG, "circuit matches p_conn, but not in tree (Bug!)");
+        warn(LD_BUG, "circuit matches p_conn, but not in hash table (Bug!)");
         return circ;
       }
       if (circ->n_conn == conn && circ->n_circ_id == circ_id) {
-        warn(LD_BUG, "circuit matches n_conn, but not in tree (Bug!)");
+        warn(LD_BUG, "circuit matches n_conn, but not in hash table (Bug!)");
         return circ;
       }
     }
