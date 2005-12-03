@@ -411,8 +411,9 @@ circuit_n_conn_done(connection_t *or_conn, int status)
         continue;
       }
       debug(LD_CIRC,"Found circ %d, sending create cell.", circ->n_circ_id);
-      /* circuit_deliver_create_cell will set n_circ_id and add us to the
-       * index. */
+      /* circuit_deliver_create_cell will set n_circ_id and add us to
+       * orconn_circuid_circuit_map, so we don't need to call
+       * set_circid_orconn here. */
       circ->n_conn = or_conn;
       memcpy(circ->n_conn_id_digest, or_conn->identity_digest, DIGEST_LEN);
       if (CIRCUIT_IS_ORIGIN(circ)) {

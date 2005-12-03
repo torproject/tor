@@ -424,7 +424,7 @@ connection_ap_detach_retriable(connection_t *conn, circuit_t *circ)
 }
 
 /** A client-side struct to remember requests to rewrite addresses
- * to new addresses. These structs are stored the hash table
+ * to new addresses. These structs are stored in the hash table
  * "addressmap" below.
  *
  * There are 5 ways to set an address mapping:

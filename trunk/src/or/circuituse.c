@@ -230,7 +230,8 @@ circuit_expire_building(time_t now)
         case CIRCUIT_PURPOSE_REND_ESTABLISHED:
           /* OR-side. We can't actually reach this point because of the
            * IS_ORIGIN test above. */
-          continue;
+          continue; /* yes, continue inside a switch refers to the nearest
+                     * enclosing loop. C is smart. */
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:

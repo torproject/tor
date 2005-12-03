@@ -132,8 +132,8 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
   ++conn->n_circuits;
 }
 
-/** Add <b>circ</b> to the list of circuits waiting for us to connect to
- * an OR. */
+/** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing
+ * it from lists as appropriate. */
 void
 circuit_set_state(circuit_t *circ, int state)
 {
@@ -142,9 +142,8 @@ circuit_set_state(circuit_t *circ, int state)
     return;
   if (circ->state == CIRCUIT_STATE_OR_WAIT) {
     /* remove from waiting-circuit list. */
-    if (!circuits_pending_or_conns)
-      circuits_pending_or_conns = smartlist_create();
-    smartlist_remove(circuits_pending_or_conns, circ);
+    if (circuits_pending_or_conns)
+      smartlist_remove(circuits_pending_or_conns, circ);
   }
   if (state == CIRCUIT_STATE_OR_WAIT) {
     /* add to waiting-circuit list. */
@@ -153,13 +152,6 @@ circuit_set_state(circuit_t *circ, int state)
     smartlist_add(circuits_pending_or_conns, circ);
   }
   circ->state = state;
-}
-
-/** Remove <b>circ</b> from the list of circuits waiting for us to connect to
- * an OR. */
-void
-circuit_clear_state_orwait(circuit_t *circ)
-{
 }
 
 /** Add <b>circ</b> to the global list of circuits. This is called only from
