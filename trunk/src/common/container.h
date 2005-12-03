@@ -27,9 +27,9 @@ void smartlist_set_capacity(smartlist_t *sl, int n);
 void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
-void smartlist_remove(smartlist_t *sl, void *element);
+void smartlist_remove(smartlist_t *sl, const void *element);
 void smartlist_string_remove(smartlist_t *sl, const char *element);
-int smartlist_isin(const smartlist_t *sl, void *element);
+int smartlist_isin(const smartlist_t *sl, const void *element);
 int smartlist_string_isin(const smartlist_t *sl, const char *element);
 int smartlist_string_num_isin(const smartlist_t *sl, int num);
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
@@ -123,7 +123,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   void prefix##iter_get(prefix##iter_t *iter, keytype *keyp, void **valp); \
   int prefix##iter_done(prefix##iter_t *iter);
 
-/* Map from const char * to void *. Implemented with a splay tree. */
+/* Map from const char * to void *. Implemented with a hash table. */
 DECLARE_MAP_FNS(strmap_t, const char *, strmap_);
 DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
 

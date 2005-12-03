@@ -7,8 +7,9 @@ const char container_c_id[] = "$Id$";
 /**
  * \file container.c
  * \brief Implements a smartlist (a resizable array) along
- * with helper functions to use smartlists.  Also includes a
- * splay-tree implementation of the string-to-void* map.
+ * with helper functions to use smartlists.  Also includes
+ * hash table implementations of a string-to-void* map, and of
+ * a digest-to-void* map.
  **/
 
 #include "compat.h"
@@ -111,7 +112,7 @@ smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
  * rearranged.
  */
 void
-smartlist_remove(smartlist_t *sl, void *element)
+smartlist_remove(smartlist_t *sl, const void *element)
 {
   int i;
   if (element == NULL)
@@ -143,7 +144,7 @@ smartlist_string_remove(smartlist_t *sl, const char *element)
 /** Return true iff some element E of sl has E==element.
  */
 int
-smartlist_isin(const smartlist_t *sl, void *element)
+smartlist_isin(const smartlist_t *sl, const void *element)
 {
   int i;
   for (i=0; i < sl->num_used; i++)
@@ -440,7 +441,7 @@ smartlist_sort_strings(smartlist_t *sl)
     void *val;                                            \
   } prefix ## entry_t;                                    \
   struct maptype {                                        \
-    HT_HEAD(prefix ## tree, prefix ## entry_t) head;      \
+    HT_HEAD(prefix ## impl, prefix ## entry_t) head;      \
   };
 
 DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_);
@@ -473,14 +474,14 @@ digestmap_entry_hash(digestmap_entry_t *a)
   return ht_improve_hash(p[0] ^ p[1] ^ p[2] ^ p[3] ^ p[4]);
 }
 
-HT_PROTOTYPE(strmap_tree, strmap_entry_t, node, strmap_entry_hash,
+HT_PROTOTYPE(strmap_impl, strmap_entry_t, node, strmap_entry_hash,
              strmap_entries_eq);
-HT_GENERATE(strmap_tree, strmap_entry_t, node, strmap_entry_hash,
+HT_GENERATE(strmap_impl, strmap_entry_t, node, strmap_entry_hash,
             strmap_entries_eq, 0.6, malloc, realloc, free);
 
-HT_PROTOTYPE(digestmap_tree, digestmap_entry_t, node, digestmap_entry_hash,
+HT_PROTOTYPE(digestmap_impl, digestmap_entry_t, node, digestmap_entry_hash,
              digestmap_entries_eq);
-HT_GENERATE(digestmap_tree, digestmap_entry_t, node, digestmap_entry_hash,
+HT_GENERATE(digestmap_impl, digestmap_entry_t, node, digestmap_entry_hash,
             digestmap_entries_eq, 0.6, malloc, realloc, free);
 
 /** Constructor to create a new empty map from strings to void*'s.
@@ -521,7 +522,7 @@ strmap_set(strmap_t *map, const char *key, void *val)
   tor_assert(key);
   tor_assert(val);
   search.key = (char*)key;
-  resolve = HT_FIND(strmap_tree, &map->head, &search);
+  resolve = HT_FIND(strmap_impl, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
     resolve->val = val;
@@ -530,8 +531,8 @@ strmap_set(strmap_t *map, const char *key, void *val)
     resolve = tor_malloc_zero(sizeof(strmap_entry_t));
     resolve->key = tor_strdup(key);
     resolve->val = val;
-    tor_assert(!HT_FIND(strmap_tree, &map->head, resolve));
-    HT_INSERT(strmap_tree, &map->head, resolve);
+    tor_assert(!HT_FIND(strmap_impl, &map->head, resolve));
+    HT_INSERT(strmap_impl, &map->head, resolve);
     return NULL;
   }
 }
@@ -547,7 +548,7 @@ digestmap_set(digestmap_t *map, const char *key, void *val)
   tor_assert(key);
   tor_assert(val);
   memcpy(&search.key, key, DIGEST_LEN);
-  resolve = HT_FIND(digestmap_tree, &map->head, &search);
+  resolve = HT_FIND(digestmap_impl, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
     resolve->val = val;
@@ -556,7 +557,7 @@ digestmap_set(digestmap_t *map, const char *key, void *val)
     resolve = tor_malloc_zero(sizeof(digestmap_entry_t));
     memcpy(resolve->key, key, DIGEST_LEN);
     resolve->val = val;
-    HT_INSERT(digestmap_tree, &map->head, resolve);
+    HT_INSERT(digestmap_impl, &map->head, resolve);
     return NULL;
   }
 }
@@ -572,7 +573,7 @@ strmap_get(strmap_t *map, const char *key)
   tor_assert(map);
   tor_assert(key);
   search.key = (char*)key;
-  resolve = HT_FIND(strmap_tree, &map->head, &search);
+  resolve = HT_FIND(strmap_impl, &map->head, &search);
   if (resolve) {
     return resolve->val;
   } else {
@@ -589,7 +590,7 @@ digestmap_get(digestmap_t *map, const char *key)
   tor_assert(map);
   tor_assert(key);
   memcpy(&search.key, key, DIGEST_LEN);
-  resolve = HT_FIND(digestmap_tree, &map->head, &search);
+  resolve = HT_FIND(digestmap_impl, &map->head, &search);
   if (resolve) {
     return resolve->val;
   } else {
@@ -612,7 +613,7 @@ strmap_remove(strmap_t *map, const char *key)
   tor_assert(map);
   tor_assert(key);
   search.key = (char*)key;
-  resolve = HT_REMOVE(strmap_tree, &map->head, &search);
+  resolve = HT_REMOVE(strmap_impl, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
     tor_free(resolve->key);
@@ -633,7 +634,7 @@ digestmap_remove(digestmap_t *map, const char *key)
   tor_assert(map);
   tor_assert(key);
   memcpy(&search.key, key, DIGEST_LEN);
-  resolve = HT_REMOVE(digestmap_tree, &map->head, &search);
+  resolve = HT_REMOVE(digestmap_impl, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
     tor_free(resolve);
@@ -711,14 +712,14 @@ strmap_iter_t *
 strmap_iter_init(strmap_t *map)
 {
   tor_assert(map);
-  return HT_START(strmap_tree, &map->head);
+  return HT_START(strmap_impl, &map->head);
 }
 
 digestmap_iter_t *
 digestmap_iter_init(digestmap_t *map)
 {
   tor_assert(map);
-  return HT_START(digestmap_tree, &map->head);
+  return HT_START(digestmap_impl, &map->head);
 }
 
 /** Advance the iterator <b>iter</b> for map a single step to the next entry.
@@ -728,7 +729,7 @@ strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 {
   tor_assert(map);
   tor_assert(iter);
-  return HT_NEXT(strmap_tree, &map->head, iter);
+  return HT_NEXT(strmap_impl, &map->head, iter);
 }
 
 digestmap_iter_t *
@@ -736,7 +737,7 @@ digestmap_iter_next(digestmap_t *map, digestmap_iter_t *iter)
 {
   tor_assert(map);
   tor_assert(iter);
-  return HT_NEXT(digestmap_tree, &map->head, iter);
+  return HT_NEXT(digestmap_impl, &map->head, iter);
 }
 
 /** Advance the iterator <b>iter</b> a single step to the next entry, removing
@@ -750,7 +751,7 @@ strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
   tor_assert(iter);
   tor_assert(*iter);
   rmv = *iter;
-  iter = HT_NEXT_RMV(strmap_tree, &map->head, iter);
+  iter = HT_NEXT_RMV(strmap_impl, &map->head, iter);
   tor_free(rmv->key);
   tor_free(rmv);
   return iter;
@@ -764,7 +765,7 @@ digestmap_iter_next_rmv(digestmap_t *map, digestmap_iter_t *iter)
   tor_assert(iter);
   tor_assert(*iter);
   rmv = *iter;
-  iter = HT_NEXT_RMV(digestmap_tree, &map->head, iter);
+  iter = HT_NEXT_RMV(digestmap_impl, &map->head, iter);
   tor_free(rmv);
   return iter;
 }
@@ -813,31 +814,31 @@ void
 strmap_free(strmap_t *map, void (*free_val)(void*))
 {
   strmap_entry_t **ent, **next, *this;
-  for (ent = HT_START(strmap_tree, &map->head); ent != NULL; ent = next) {
+  for (ent = HT_START(strmap_impl, &map->head); ent != NULL; ent = next) {
     this = *ent;
-    next = HT_NEXT_RMV(strmap_tree, &map->head, ent);
+    next = HT_NEXT_RMV(strmap_impl, &map->head, ent);
     tor_free(this->key);
     if (free_val)
       free_val(this->val);
     tor_free(this);
   }
   tor_assert(HT_EMPTY(&map->head));
-  HT_CLEAR(strmap_tree, &map->head);
+  HT_CLEAR(strmap_impl, &map->head);
   tor_free(map);
 }
 void
 digestmap_free(digestmap_t *map, void (*free_val)(void*))
 {
   digestmap_entry_t **ent, **next, *this;
-  for (ent = HT_START(digestmap_tree, &map->head); ent != NULL; ent = next) {
+  for (ent = HT_START(digestmap_impl, &map->head); ent != NULL; ent = next) {
     this = *ent;
-    next = HT_NEXT_RMV(digestmap_tree, &map->head, ent);
+    next = HT_NEXT_RMV(digestmap_impl, &map->head, ent);
     if (free_val)
       free_val(this->val);
     tor_free(this);
   }
   tor_assert(HT_EMPTY(&map->head));
-  HT_CLEAR(digestmap_tree, &map->head);
+  HT_CLEAR(digestmap_impl, &map->head);
   tor_free(map);
 }
 
