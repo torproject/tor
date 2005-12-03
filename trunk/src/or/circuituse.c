@@ -191,16 +191,15 @@ void
 circuit_expire_building(time_t now)
 {
   circuit_t *victim, *circ = global_circuitlist;
+  time_t cutoff = now - MIN_SECONDS_BEFORE_EXPIRING_CIRC;
 
   while (circ) {
     victim = circ;
     circ = circ->next;
-    if (!CIRCUIT_IS_ORIGIN(victim))
-      continue; /* didn't originate here */
-    if (victim->marked_for_close)
-      continue; /* don't mess with marked circs */
-    if (victim->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)
-      continue; /* it's young still, don't mess with it */
+    if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
+        victim->timestamp_created > cutoff || /* Not old enough to expire */
+        victim->marked_for_close) /* don't mess with marked circs */
+      continue;
 
 #if 0
     /* some debug logs, to help track bugs */
@@ -220,40 +219,53 @@ circuit_expire_building(time_t now)
     }
 #endif
 
+
     /* if circ is !open, or if it's open but purpose is a non-finished
      * intro or rend, then mark it for close */
-    if (victim->state != CIRCUIT_STATE_OPEN ||
-        victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
-        victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
-        victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-
-        /* it's a rend_ready circ, but it's already picked a query */
-        (victim->purpose == CIRCUIT_PURPOSE_C_REND_READY &&
-         victim->rend_query[0]) ||
-
-        /* c_rend_ready circs measure age since timestamp_dirty,
-         * because that's set when they switch purposes
-         */
-        /* rend and intro circs become dirty each time they
-         * make an introduction attempt. so timestamp_dirty
-         * will reflect the time since the last attempt.
-         */
-        ((victim->purpose == CIRCUIT_PURPOSE_C_REND_READY ||
-          victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED ||
-          victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
-         victim->timestamp_dirty + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)) {
-      if (victim->n_conn)
-        info(LD_CIRC,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
-               victim->n_conn->address, victim->n_port, victim->n_circ_id,
-               victim->state, circuit_state_to_string(victim->state), victim->purpose);
-      else
-        info(LD_CIRC,"Abandoning circ %d (state %d:%s, purpose %d)",
-             victim->n_circ_id, victim->state,
-             circuit_state_to_string(victim->state), victim->purpose);
-
-      circuit_log_path(LOG_INFO,LD_CIRC,victim);
-      circuit_mark_for_close(victim);
+    if (victim->state == CIRCUIT_STATE_OPEN) {
+      switch (victim->purpose) {
+        case CIRCUIT_PURPOSE_OR:
+        case CIRCUIT_PURPOSE_INTRO_POINT:
+        case CIRCUIT_PURPOSE_REND_POINT_WAITING:
+        case CIRCUIT_PURPOSE_REND_ESTABLISHED:
+          /* OR-side. We can't actually reach this point because of the
+           * IS_ORIGIN test above. */
+          continue;
+        case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+        case CIRCUIT_PURPOSE_C_INTRODUCING:
+        case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+          break;
+        case CIRCUIT_PURPOSE_C_REND_READY:
+          /* it's a rend_ready circ -- has it already picked a query? */
+          if (!victim->rend_query[0] && victim->timestamp_dirty > cutoff)
+            continue;
+          break;
+        case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
+        case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+          /* c_rend_ready circs measure age since timestamp_dirty,
+           * because that's set when they switch purposes
+           */
+          /* rend and intro circs become dirty each time they
+           * make an introduction attempt. so timestamp_dirty
+           * will reflect the time since the last attempt.
+           */
+          if (victim->timestamp_dirty > cutoff)
+            continue;
+          break;
+      }
     }
+
+    if (victim->n_conn)
+      info(LD_CIRC,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
+           victim->n_conn->address, victim->n_port, victim->n_circ_id,
+           victim->state, circuit_state_to_string(victim->state), victim->purpose);
+    else
+      info(LD_CIRC,"Abandoning circ %d (state %d:%s, purpose %d)",
+           victim->n_circ_id, victim->state,
+           circuit_state_to_string(victim->state), victim->purpose);
+
+    circuit_log_path(LOG_INFO,LD_CIRC,victim);
+    circuit_mark_for_close(victim);
   }
 }
 
