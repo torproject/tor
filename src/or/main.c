@@ -1036,7 +1036,7 @@ do_main_loop(void)
 {
   int loop_result;
 
-  dns_init(); /* initialize dns resolve tree, spawn workers if needed */
+  dns_init(); /* initialize dns resolve map, spawn workers if needed */
 
   handle_signals(1);
 

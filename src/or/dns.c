@@ -80,7 +80,7 @@ static void send_resolved_cell(connection_t *conn, uint8_t answer_type);
 static HT_HEAD(cache_map, cached_resolve_t) cache_root;
 
 /** Function to compare hashed resolves on their addresses; used to
- * implement splay trees. */
+ * implement hash tables. */
 static INLINE int
 cached_resolves_eq(cached_resolve_t *a, cached_resolve_t *b)
 {
@@ -279,7 +279,7 @@ dns_resolve(connection_t *exitconn)
   /* lower-case exitconn->address, so it's in canonical form */
   tor_strlower(exitconn->address);
 
-  /* now check the tree to see if 'address' is already there. */
+  /* now check the hash table to see if 'address' is already there. */
   strlcpy(search.address, exitconn->address, sizeof(search.address));
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (resolve) { /* already there */
@@ -536,7 +536,7 @@ dns_purge_resolve(cached_resolve_t *resolve)
       newest_cached_resolve = tmp;
   }
 
-  /* remove resolve from the tree */
+  /* remove resolve from the map */
   HT_REMOVE(cache_map, &cache_root, resolve);
 
   tor_free(resolve);

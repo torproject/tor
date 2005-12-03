@@ -424,8 +424,8 @@ connection_ap_detach_retriable(connection_t *conn, circuit_t *circ)
 }
 
 /** A client-side struct to remember requests to rewrite addresses
- * to new addresses. These structs make up a tree, with addressmap
- * below as its root.
+ * to new addresses. These structs are stored the hash table
+ * "addressmap" below.
  *
  * There are 5 ways to set an address mapping:
  * - A MapAddress command from the controller [permanent]
@@ -455,10 +455,10 @@ typedef struct {
   char *hostname_address;
 } virtaddress_entry_t;
 
-/** The tree of client-side address rewrite instructions. */
+/** A hash table to store client-side address rewrite instructions. */
 static strmap_t *addressmap=NULL;
 /**
- * Tree mapping addresses to which virtual address, if any, we
+ * Table mapping addresses to which virtual address, if any, we
  * assigned them to.
  *
  * We maintain the following invariant: if [A,B] is in
