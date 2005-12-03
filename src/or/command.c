@@ -198,7 +198,7 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
 
   circ = circuit_new(cell->circ_id, conn);
   circ->purpose = CIRCUIT_PURPOSE_OR;
-  circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
+  circuit_set_state(circ, CIRCUIT_STATE_ONIONSKIN_PENDING);
   if (cell->command == CELL_CREATE) {
     circ->onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
