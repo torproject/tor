@@ -825,7 +825,7 @@ assert_circuit_ok(const circuit_t *c)
     tor_assert(circuits_pending_or_conns &&
                smartlist_isin(circuits_pending_or_conns, c));
   } else {
-    tor_assert(!circuits_pending_or_conns || !
+    tor_assert(!circuits_pending_or_conns ||
                !smartlist_isin(circuits_pending_or_conns, c));
   }
   if (c->cpath) {
