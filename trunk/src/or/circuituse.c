@@ -241,7 +241,7 @@ circuit_expire_building(time_t now)
           /* c_rend_ready circs measure age since timestamp_dirty,
            * because that's set when they switch purposes
            */
-          if (!victim->rend_query[0] || victim->timestamp_dirty <= cutoff)
+          if (!victim->rend_query[0] || victim->timestamp_dirty > cutoff)
             continue;
           break;
         case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
