@@ -219,7 +219,6 @@ circuit_expire_building(time_t now)
     }
 #endif
 
-
     /* if circ is !open, or if it's open but purpose is a non-finished
      * intro or rend, then mark it for close */
     if (victim->state == CIRCUIT_STATE_OPEN) {
@@ -232,20 +231,21 @@ circuit_expire_building(time_t now)
            * IS_ORIGIN test above. */
           continue; /* yes, continue inside a switch refers to the nearest
                      * enclosing loop. C is smart. */
+
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
           break;
         case CIRCUIT_PURPOSE_C_REND_READY:
           /* it's a rend_ready circ -- has it already picked a query? */
-          if (!victim->rend_query[0] && victim->timestamp_dirty > cutoff)
+          /* c_rend_ready circs measure age since timestamp_dirty,
+           * because that's set when they switch purposes
+           */
+          if (!victim->rend_query[0] || victim->timestamp_dirty <= cutoff)
             continue;
           break;
         case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
-          /* c_rend_ready circs measure age since timestamp_dirty,
-           * because that's set when they switch purposes
-           */
           /* rend and intro circs become dirty each time they
            * make an introduction attempt. so timestamp_dirty
            * will reflect the time since the last attempt.
@@ -1027,7 +1027,7 @@ link_apconn_to_circ(connection_t *apconn, circuit_t *circ)
 }
 
 /** If an exit wasn't specifically chosen, save the history for future
- * use */
+ * use. */
 static void
 consider_recording_trackhost(connection_t *conn, circuit_t *circ)
 {
@@ -1066,6 +1066,7 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ)
         strlen("exit") + 1 /* '\0' */;
   new_address = tor_malloc(len);
 
+  //XXX need to use $key not nickname
   tor_snprintf(new_address, len, "%s.%s.exit",
                conn->socks_request->address,
                circ->build_state->chosen_exit->nickname);
