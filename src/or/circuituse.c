@@ -223,19 +223,13 @@ circuit_expire_building(time_t now)
      * intro or rend, then mark it for close */
     if (victim->state == CIRCUIT_STATE_OPEN) {
       switch (victim->purpose) {
-        case CIRCUIT_PURPOSE_OR:
-        case CIRCUIT_PURPOSE_INTRO_POINT:
-        case CIRCUIT_PURPOSE_REND_POINT_WAITING:
-        case CIRCUIT_PURPOSE_REND_ESTABLISHED:
-          /* OR-side. We can't actually reach this point because of the
-           * IS_ORIGIN test above. */
+        default: /* most open circuits can be left alone. */
           continue; /* yes, continue inside a switch refers to the nearest
                      * enclosing loop. C is smart. */
-
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
-          break;
+          break; /* too old, need to die */
         case CIRCUIT_PURPOSE_C_REND_READY:
           /* it's a rend_ready circ -- has it already picked a query? */
           /* c_rend_ready circs measure age since timestamp_dirty,
