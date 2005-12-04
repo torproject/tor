@@ -307,7 +307,7 @@ circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         !circ->build_state->is_internal &&
         (!circ->timestamp_dirty ||
-         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now)) {
+         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness > now)) {
       exitrouter = build_state_get_exit_router(circ->build_state);
       if (exitrouter &&
           (!need_uptime || circ->build_state->need_uptime)) {
