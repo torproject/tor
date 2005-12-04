@@ -346,7 +346,7 @@ connection_ap_expire_beginning(void)
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (now - conn->timestamp_lastread > 45) {
-        notice(LD_REND,"Rend stream is %d seconds late. Giving up on address '%s'.",
+        notice(LD_REND,"Rend stream is %d seconds late. Giving up on address '%s.onion'.",
                (int)(now - conn->timestamp_lastread),
                safe_str(conn->socks_request->address));
         connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
