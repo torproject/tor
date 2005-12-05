@@ -307,7 +307,7 @@ dnl These headers are not essential
 
 AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h stddef.h inttypes.h utime.h sys/utime.h)
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam getpwuid ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem)
 
 if test $enable_threads = "yes"; then
   AC_CHECK_HEADERS(pthread.h)

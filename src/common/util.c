@@ -26,6 +26,7 @@ const char util_c_id[] = "$Id$";
 #include <direct.h>
 #else
 #include <dirent.h>
+#include <pwd.h>
 #endif
 
 #ifdef HAVE_CTYPE_H
@@ -912,7 +913,19 @@ check_private_dir(const char *dirname, cpd_check_t check)
   }
 #ifndef MS_WINDOWS
   if (st.st_uid != getuid()) {
-    log(LOG_WARN, LD_FS, "%s is not owned by this UID (%d). Perhaps you are running Tor as the wrong user?", dirname, (int)getuid());
+    struct passwd *pw = NULL;
+    char *process_ownername = NULL;
+
+    pw = getpwuid(getuid());
+    process_ownername = pw ? tor_strdup(pw->pw_name) : "<unknown>";
+
+    pw = getpwuid(st.st_uid);
+
+    log(LOG_WARN, LD_FS, "%s is not owned by this user (%s, %d) but by %s (%d). Perhaps you are running Tor as the wrong user?",
+                         dirname, process_ownername, (int)getuid(),
+                         pw ? tor_strdup(pw->pw_name) : "<unknown>", (int)st.st_uid);
+
+    tor_free(process_ownername);
     return -1;
   }
   if (st.st_mode & 0077) {
