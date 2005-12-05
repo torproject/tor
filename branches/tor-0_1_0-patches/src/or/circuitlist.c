@@ -407,6 +407,27 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
+/** For each circuits that have <b>conn</b> as n_conn or p_conn, unlink the
+ * circuit from the orconn,circid map, and mark it for close if it hasn't
+ * been marked already.
+ */
+void
+circuit_unlink_all_from_or_conn(connection_t *conn)
+{
+  circuit_t *circ;
+
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (circ->n_conn == conn || circ->p_conn == conn) {
+      if (circ->n_conn == conn)
+        circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
+      if (circ->p_conn == conn)
+        circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
+      if (!circ->marked_for_close)
+        circuit_mark_for_close(circ);
+    }
+  }
+}
+
 /** Return a circ such that:
  *  - circ-\>rend_query is equal to <b>rend_query</b>, and
  *  - circ-\>purpose is equal to <b>purpose</b>.
