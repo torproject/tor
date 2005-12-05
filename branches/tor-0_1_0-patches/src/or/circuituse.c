@@ -236,7 +236,7 @@ void circuit_expire_building(time_t now) {
         ((victim->purpose == CIRCUIT_PURPOSE_C_REND_READY ||
           victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED ||
           victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
-         victim->timestamp_dirty + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)) {
+         victim->timestamp_dirty + MIN_SECONDS_BEFORE_EXPIRING_CIRC < now)) {
       if (victim->n_conn)
         log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
                victim->n_conn->address, victim->n_port, victim->n_circ_id,
