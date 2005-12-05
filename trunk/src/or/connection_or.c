@@ -59,6 +59,27 @@ connection_or_remove_from_identity_map(connection_t *conn)
   conn->next_with_same_id = NULL;
 }
 
+/** Remove all entries from the identity-to-orconn map, and clear
+ * all identities in OR conns.*/
+void
+connection_or_clear_identity_map(void)
+{
+  int i, n;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for (i = 0; i < n; ++i) {
+    connection_t* conn = carray[i];
+    if (conn->type == CONN_TYPE_OR) {
+      memset(conn->identity_digest, 0, DIGEST_LEN);
+      conn->next_with_same_id = NULL;
+    }
+  }
+
+  digestmap_free(orconn_identity_map, NULL);
+  orconn_identity_map = NULL;
+}
+
 /** Change conn->identity_digest to digest, and add conn into
  * orconn_digest_map. */
 static void

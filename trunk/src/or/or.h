@@ -1663,6 +1663,7 @@ hostname_type_t parse_extended_hostname(char *address);
 /********************************* connection_or.c ***************************/
 
 void connection_or_remove_from_identity_map(connection_t *conn);
+void connection_or_clear_identity_map(void);
 connection_t *connection_or_get_by_identity_digest(const char *digest);
 
 int connection_or_reached_eof(connection_t *conn);

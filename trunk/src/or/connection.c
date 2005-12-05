@@ -257,6 +257,9 @@ connection_free(connection_t *conn)
   if (connection_speaks_cells(conn)) {
     if (conn->state == OR_CONN_STATE_OPEN)
       directory_set_dirty();
+    if (!tor_digest_is_zero(conn->identity_digest)) {
+      connection_or_remove_from_identity_map(conn);
+    }
   }
   if (conn->type == CONN_TYPE_CONTROL) {
     conn->event_mask = 0;
@@ -287,6 +290,9 @@ connection_free_all(void)
     if (carray[i]->type == CONN_TYPE_CONTROL)
       carray[i]->event_mask = 0;
   control_update_global_event_mask();
+
+  /* Unlink everything from the identity map. */
+  connection_or_clear_identity_map();
 
   for (i=0;i<n;i++)
     _connection_free(carray[i]);
