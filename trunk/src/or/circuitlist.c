@@ -104,6 +104,7 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
   }
 
   if (old_conn) { /* we may need to remove it from the conn-circid map */
+    tor_assert(old_conn->magic == CONNECTION_MAGIC);
     search.circ_id = old_id;
     search.or_conn = old_conn;
     found = HT_REMOVE(orconn_circid_map, &orconn_circid_circuit_map, &search);
