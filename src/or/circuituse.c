@@ -1030,6 +1030,7 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ)
   or_options_t *options = get_options();
   size_t len;
   char *new_address;
+  char fp[HEX_DIGEST_LEN+1];
 
   /* Search the addressmap for this conn's destination. */
   /* If he's not in the address map.. */
@@ -1054,16 +1055,19 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ)
   if (!found_needle || !circ->build_state->chosen_exit)
     return;
 
+  /* write down the fingerprint of the chosen exit, not the nickname,
+   * because the chosen exit might not be verified. */
+  base16_encode(fp, sizeof(fp),
+                circ->build_state->chosen_exit->identity_digest, DIGEST_LEN);
+
   /* Add this exit/hostname pair to the addressmap. */
   len = strlen(conn->socks_request->address) + 1 /* '.' */ +
-        strlen(circ->build_state->chosen_exit->nickname) + 1 /* '.' */ +
+        strlen(fp) + 1 /* '.' */ +
         strlen("exit") + 1 /* '\0' */;
   new_address = tor_malloc(len);
 
-  //XXX need to use $key not nickname
   tor_snprintf(new_address, len, "%s.%s.exit",
-               conn->socks_request->address,
-               circ->build_state->chosen_exit->nickname);
+               conn->socks_request->address, fp);
 
   addressmap_register(conn->socks_request->address, new_address,
                       time(NULL) + options->TrackHostExitsExpire);
