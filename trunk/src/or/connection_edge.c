@@ -1002,7 +1002,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
       }
     } else {
       struct in_addr in;
-      conn->chosen_exit_name = socks->address;
+      conn->chosen_exit_name = tor_strdup(socks->address);
       *socks->address = 0;
       routerinfo_t *r = router_get_by_nickname(conn->chosen_exit_name, 1);
       if (r) {
