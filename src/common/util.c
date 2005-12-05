@@ -912,7 +912,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
   }
 #ifndef MS_WINDOWS
   if (st.st_uid != getuid()) {
-    log(LOG_WARN, LD_FS, "%s is not owned by this UID (%d). You must fix this to proceed.", dirname, (int)getuid());
+    log(LOG_WARN, LD_FS, "%s is not owned by this UID (%d). Perhaps you are running Tor as the wrong user?", dirname, (int)getuid());
     return -1;
   }
   if (st.st_mode & 0077) {
