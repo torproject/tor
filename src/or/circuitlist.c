@@ -458,7 +458,8 @@ circuit_get_by_edge_conn(connection_t *conn)
   return circ;
 }
 
-/** Return a new list of all circuits that have <b>conn</b> as n_conn or p_conn.
+/** Return a new list of all circuits that have <b>conn</b> as n_conn or
+ * p_conn, including those marked for close.
  */
 smartlist_t *
 circuit_get_all_on_orconn(connection_t *conn)
@@ -467,8 +468,7 @@ circuit_get_all_on_orconn(connection_t *conn)
   circuit_t *circ;
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (!circ->marked_for_close &&
-        (circ->p_conn == conn || circ->n_conn == conn))
+    if (circ->p_conn == conn || circ->n_conn == conn)
       smartlist_add(res, circ);
   }
   return res;
