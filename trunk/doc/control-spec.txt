@@ -424,6 +424,10 @@ $Id$
   or stream didn't exist, or 551 if the stream couldn't be attached for
   another reason.
 
+  {Implementation note: Tor will close unattached streams by itself,
+  roughly two minutes after they are born. Let the developers know if
+  that turns out to be a problem.}
+
   {Implementation note: By default, Tor automatically attaches streams to
   circuits itself, unless the configuration variable
   "__LeaveStreamsUnattached" is set to "1".  Attempting to attach streams
