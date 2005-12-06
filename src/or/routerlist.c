@@ -2953,12 +2953,13 @@ static smartlist_t *
 router_list_downloadable(void)
 {
 #define MAX_OLD_SERVER_DOWNLOAD_RATE 2*60*60
+  or_options_t *options = get_options();
   int n_conns, i, n_downloadable = 0;
   connection_t **carray;
   smartlist_t *superseded = smartlist_create();
   smartlist_t *downloading;
   time_t now = time(NULL);
-  int mirror = server_mode(get_options()) && get_options()->DirPort;
+  int mirror = server_mode(options) && options->DirPort;
   /* these are just used for logging */
   int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0, n_skip_old = 0,
     n_obsolete = 0, xx_n_unrecognized = 0, xx_n_extra_new = 0, xx_n_both = 0,
@@ -2977,8 +2978,13 @@ router_list_downloadable(void)
       rs->should_download = 0;
       ++n_obsolete;
     } if (rs->next_attempt_at < now) {
-      rs->should_download = 1;
-      ++n_downloadable;
+      if (options->AuthoritativeDir &&
+          dirserv_would_reject_router(&rs->status)) {
+        rs->should_download = 0;
+      } else {
+        rs->should_download = 1;
+        ++n_downloadable;
+      }
     } else {
       /*
       char fp[HEX_DIGEST_LEN+1];
