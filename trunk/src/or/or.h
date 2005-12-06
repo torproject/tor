@@ -1820,6 +1820,7 @@ void dirserv_orconn_tls_done(const char *address,
                              int as_advertised);
 int authdir_wants_to_reject_router(routerinfo_t *ri,
                                    const char **msg);
+int dirserv_would_reject_router(routerstatus_t *rs);
 void dirserv_free_all(void);
 
 /********************************* dns.c ***************************/

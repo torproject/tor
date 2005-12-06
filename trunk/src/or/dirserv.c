@@ -39,6 +39,12 @@ int add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *li
 static int router_is_general_exit(routerinfo_t *ri);
 static router_status_t dirserv_router_get_status(const routerinfo_t *router,
                                                  const char **msg);
+static router_status_t
+dirserv_get_status_impl(const char *fp, const char *nickname,
+                        const char *address,
+                        uint32_t addr, uint16_t or_port,
+                        const char *platform, const char *contact,
+                        const char **msg, int should_log);
 static int dirserv_thinks_router_is_reachable(routerinfo_t *router,
                                               time_t now);
 
@@ -219,28 +225,67 @@ dirserv_parse_fingerprint_file(const char *fname)
  * according to our configuration.  Return the appropriate router status.
  *
  * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
- * *<b>msg</b> to an explanation of why.
- */
+ * *<b>msg</b> to an explanation of why. */
 static router_status_t
 dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 {
-  fingerprint_entry_t *nn_ent = NULL, *fp_ent = NULL;
-  char fp[FINGERPRINT_LEN+1];
+  char fingerprint[FINGERPRINT_LEN+1];
 
-  if (!fingerprint_list)
-    fingerprint_list = smartlist_create();
-
-  if (crypto_pk_get_fingerprint(router->identity_pkey, fp, 0)) {
+  if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint, 0)) {
     warn(LD_BUG,"Error computing fingerprint");
     return -1;
   }
 
-  debug(LD_DIRSERV, "%d fingerprints known.", smartlist_len(fingerprint_list));
+  return dirserv_get_status_impl(fingerprint, router->nickname,
+                                 router->address,
+                                 router->addr, router->or_port,
+                                 router->platform, router->contact_info,
+                                 msg, 1);
+}
+
+/** Return true if there is no point in downloading the router described by
+ * <b>rs</b> because this directory would reject it. */
+int
+dirserv_would_reject_router(routerstatus_t *rs)
+{
+  char fp[FINGERPRINT_LEN+1];
+  router_status_t res;
+  base16_encode(fp, sizeof(fp), rs->identity_digest, DIGEST_LEN);
+
+  res = dirserv_get_status_impl(fp, rs->nickname,
+                                "", /* address is only used in logs */
+                                rs->addr, rs->or_port,
+                                NULL, NULL,
+                                NULL, 0);
+
+  return (res == FP_REJECT);
+}
+
+/** Helper: As dirserv_get_router_status, but takes the router fingerprint
+ * (hex, no spaces), nickname, address (used for logging only), IP address, OR
+ * port, platform (logging only) and contact info (logging only) as arguments.
+ *
+ * If should_log is false, do not log messages.  (There's not much point in
+ * logging that we're rejecting servers we'll not download.)
+ */
+static router_status_t
+dirserv_get_status_impl(const char *fp, const char *nickname,
+                        const char *address,
+                        uint32_t addr, uint16_t or_port,
+                        const char *platform, const char *contact,
+                        const char **msg, int should_log)
+{
+  fingerprint_entry_t *nn_ent = NULL, *fp_ent = NULL;
+  if (!fingerprint_list)
+    fingerprint_list = smartlist_create();
+
+  if (should_log)
+    debug(LD_DIRSERV, "%d fingerprints known.", smartlist_len(fingerprint_list));
   SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t *, ent,
   {
     if (!strcasecmp(fp,ent->fingerprint))
       fp_ent = ent;
-    if (!strcasecmp(router->nickname,ent->nickname))
+    if (!strcasecmp(nickname,ent->nickname))
       nn_ent = ent;
   });
 
@@ -258,37 +303,42 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 
   if (!nn_ent) { /* No such server known with that nickname */
     addr_policy_result_t rej = router_compare_addr_to_addr_policy(
-                       router->addr, router->or_port, authdir_reject_policy);
+                       addr, or_port, authdir_reject_policy);
     addr_policy_result_t inv = router_compare_addr_to_addr_policy(
-                       router->addr, router->or_port, authdir_invalid_policy);
+                       addr, or_port, authdir_invalid_policy);
 
     if (rej == ADDR_POLICY_PROBABLY_REJECTED || rej == ADDR_POLICY_REJECTED) {
-      info(LD_DIRSERV, "Rejecting '%s' because of address %s",
-           router->nickname, router->address);
+      if (should_log)
+        info(LD_DIRSERV, "Rejecting '%s' because of address %s",
+             nickname, address);
       if (msg)
         *msg = "Authdir is rejecting routers in this range.";
       return FP_REJECT;
     }
     if (inv == ADDR_POLICY_PROBABLY_REJECTED || inv == ADDR_POLICY_REJECTED) {
-      info(LD_DIRSERV, "Not marking '%s' valid because of address %s",
-           router->nickname, router->address);
+      if (should_log)
+        info(LD_DIRSERV, "Not marking '%s' valid because of address %s",
+             nickname, address);
       return FP_INVALID;
     }
-    if (tor_version_as_new_as(router->platform,"0.1.0.2-rc"))
+    if (!platform || tor_version_as_new_as(platform,"0.1.0.2-rc"))
       return FP_VALID;
     else
       return FP_INVALID;
-    info(LD_DIRSERV,"No fingerprint found for '%s'",router->nickname);
+    if (should_log)
+      info(LD_DIRSERV,"No fingerprint found for '%s'",nickname);
     return 0;
   }
   if (0==strcasecmp(nn_ent->fingerprint, fp)) {
-    debug(LD_DIRSERV,"Good fingerprint for '%s'",router->nickname);
+    if (should_log)
+      debug(LD_DIRSERV,"Good fingerprint for '%s'",nickname);
     return FP_NAMED; /* Right fingerprint. */
   } else {
-    warn(LD_DIRSERV,"Mismatched fingerprint for '%s': expected '%s' got '%s'. ContactInfo '%s', platform '%s'.)",
-         router->nickname, nn_ent->fingerprint, fp,
-         router->contact_info ? router->contact_info : "",
-         router->platform ? router->platform : "");
+    if (should_log)
+      warn(LD_DIRSERV,"Mismatched fingerprint for '%s': expected '%s' got '%s'. ContactInfo '%s', platform '%s'.)",
+           nickname, nn_ent->fingerprint, fp,
+           contact ? contact : "",
+           platform ? platform : "");
     if (msg)
       *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
     return FP_REJECT; /* Wrong fingerprint. */
