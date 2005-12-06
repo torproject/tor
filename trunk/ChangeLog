@@ -1,3 +1,95 @@
+Changes in version 0.1.1.10-alpha - 2005-12-xx
+  o Correctness bugfixes on 0.1.0.x:
+    - Stop doing the complex voodoo overkill checking for insecure
+      Diffie-Hellman keys. Just check if it's in [2,p-2] and be happy.
+    - When we were closing connections, there was a rare case that
+      stomped on memory, triggering seg faults and asserts.
+    - We were neglecting to unlink marked circuits from soon-to-close OR
+      connections, which caused some rare scribbling on freed memory.
+    - When we're deciding whether a stream has enough circuits around
+      that can handle it, count the freshly dirty ones and not the ones
+      that are so dirty they won't be able to handle it.
+    - Recover better from TCP connections to Tor servers that are
+      broken but don't tell you (it happens!); and rotate TLS
+      connections once a week.
+    - When we're expiring old circuits, we had a logic error that caused
+      us to close new rendezvous circuits rather than old ones.
+    - Fix a scary-looking but apparently harmless bug where circuits
+      would sometimes start out in state CIRCUIT_STATE_OR_WAIT at
+      servers, and never switch to state CIRCUIT_STATE_OPEN.
+    - When building with -static or on Solaris, we sometimes needed to
+      build with -ldl.
+    - Give a useful message when people run Tor as the wrong user,
+      rather than telling them to start chowning random directories.
+
+  o Security bugfixes on 0.1.0.x:
+    - Refuse server descriptors if the fingerprint line doesn't match
+      the included identity key. Tor doesn't care, but other apps (and
+      humans) might actually be trusting the fingerprint line.
+    - We used to kill the circuit when we receive a relay command we
+      don't recognize. Now we just drop it.
+    - Start obeying our firewall options more rigorously:
+      . If we can't get to a dirserver directly, try going via Tor.
+      . Don't ever try to connect (as a client) to a place our
+        firewall options forbid.
+      . If we specify a proxy and also firewall options, obey the
+        firewall options even when we're using the proxy: some proxies
+        can only proxy to certain destinations.
+    - Fix a bug found by Lasse Overlier: when we were making internal
+      circuits (intended to be cannibalized later for rendezvous and
+      introduction circuits), we were picking them so that they had
+      useful exit nodes. There was no need for this, and it actually
+      aids some statistical attacks.
+    - Start treating internal circuits and exit circuits separately.
+      It's important to keep them separate because internal circuits
+      have their last hops picked like middle hops, rather than like
+      exit hops. So exiting on them will break the user's expectations.
+
+  o Bugfixes on 0.1.1.x:
+    - Take out the mis-feature where we tried to detect IP address
+      flapping for people with DynDNS, and chose not to upload a new
+      server descriptor sometimes.
+    - Try to be compatible with OpenSSL 0.9.6 again.
+    - Log fix: when the controller is logging about .onion addresses,
+      sometimes it didn't include the ".onion" part of the address.
+    - Don't try to modify options->DirServers internally -- if the
+      user didn't specify any, just add the default ones directly to
+      the trusted dirserver list. This fixes a bug where people running
+      controllers would use SETCONF on some totally unrelated config
+      option, and Tor would start yelling at them about changing their
+      DirServer lines.
+    - Let the controller's redirectstream command specify a port, in
+      case the controller wants to change that too.
+    - When we requested a pile of server descriptors, we sometimes
+      accidentally launched a duplicate request for the first one.
+    - Bugfix for trackhostexits: write down the fingerprint of the
+      chosen exit, not its nickname, because the chosen exit might not
+      be verified.
+    - When parsing foo.exit, if foo is unknown, and we are leaving
+      circuits unattached, set the chosen_exit field and leave the
+      address empty. This matters because controllers got confused
+      otherwise.
+    - Directory authorities no longer try to download server
+      descriptors that they know they will reject.
+
+  o Features and updates:
+    - Replace balanced trees with hash tables: this should make stuff
+      significantly faster.
+    - Resume using the AES counter-mode implementation that we ship,
+      rather than OpenSSL's. Ours is significantly faster.
+    - Many other CPU and memory improvements.
+    - Add a new config option TestSocks so people can see if their
+      applications are using socks4, socks4a, socks5-with-ip, or
+      socks5-with-hostname. This way they don't have to keep mucking
+      with tcpdump and wondering if something got cached somewhere.
+    - Add a new controller event type that allows controllers to get
+      all server descriptors that were uploaded to a router in its role
+      as authoritative dirserver.
+    - Start shipping socks-extensions.txt, tor-doc-unix.html,
+      tor-doc-server.html, and stylesheet.css in the tarball.
+    - Stop shipping tor-doc.html in the tarball.
+
+
 Changes in version 0.1.1.9-alpha - 2005-11-15
   o Usability improvements:
     - Start calling it FooListenAddress rather than FooBindAddress,
