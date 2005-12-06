@@ -1,19 +1,27 @@
 Changes in version 0.1.0.16 - 2005-12-01
   o Crash bugfixes on 0.1.0.x:
-    - It turns out sparc64 platforms crash on unaligned memory
-      access too -- so detect and avoid this.
-    - Handle truncated compressed data correctly (by detecting it and giving
-      an error).
+    - It turns out sparc64 platforms crash on unaligned memory access
+      too -- so detect and avoid this.
+    - Handle truncated compressed data correctly (by detecting it and
+      giving an error).
     - Fix possible-but-unlikely free(NULL) in control.c.
-    - Backport a memory-munging bug fix in closing connections that
-      didn't seem to be harming us but might be causing rare seg faults
-      and asserts.
+    - When we were closing connections, there was a rare case that
+      stomped on memory, triggering seg faults and asserts.
+    - Avoid potential infinite recursion when building a descriptor. (We
+      don't know that it ever happened, but better to fix it anyway.)
+    - We were neglecting to unlink marked circuits from soon-to-close OR
+      connections, which caused some rare scribbling on freed memory.
 
   o Other bugfixes on 0.1.0.x:
     - Do not check whether DirPort is reachable when we are suppressing
       advertising it because of hibernation.
     - When building with -static or on Solaris, we sometimes needed -ldl.
     - One of the dirservers (tor26) changed its IP address.
+    - When we're deciding whether a stream has enough circuits around
+      that can handle it, count the freshly dirty ones and not the ones
+      that are so dirty they won't be able to handle it.
+    - When we're expiring old circuits, we had a logic error that caused
+      us to close new rendezvous circuits rather than old ones.
 
 
 Changes in version 0.1.0.15 - 2005-09-23
