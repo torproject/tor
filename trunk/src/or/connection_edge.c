@@ -314,6 +314,7 @@ connection_ap_expire_beginning(void)
   connection_t **carray;
   connection_t *conn;
   circuit_t *circ;
+  const char *nickname;
   int n, i;
   time_t now = time(NULL);
   or_options_t *options = get_options();
@@ -355,9 +356,11 @@ connection_ap_expire_beginning(void)
       continue;
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
-    notice(LD_APP,"We tried for %d seconds to connect to '%s'. Retrying on a new circuit.",
+    nickname = build_state_get_exit_nickname(circ->build_state);
+    notice(LD_APP,"We tried for %d seconds to connect to '%s' using exit '%s'. Retrying on a new circuit.",
            (int)(now - conn->timestamp_lastread),
-           safe_str(conn->socks_request->address));
+           safe_str(conn->socks_request->address),
+           nickname ? nickname : "*unnamed*");
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* un-mark it as ending, since we're going to reuse it */
