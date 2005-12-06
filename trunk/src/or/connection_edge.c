@@ -1116,9 +1116,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
       info(LD_REND, "Unknown descriptor %s. Fetching.",
              safe_str(conn->rend_query));
       rend_client_refetch_renddesc(conn->rend_query);
-      return 0;
-    }
-    if (r>0) {
+    } else { /* r > 0 */
 #define NUM_SECONDS_BEFORE_REFETCH (60*15)
       if (time(NULL) - entry->received < NUM_SECONDS_BEFORE_REFETCH) {
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
@@ -1127,15 +1125,15 @@ connection_ap_handshake_process_socks(connection_t *conn)
           connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
           return -1;
         }
-        return 0;
       } else {
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
         info(LD_REND, "Stale descriptor %s. Refetching.",
              safe_str(conn->rend_query));
         rend_client_refetch_renddesc(conn->rend_query);
-        return 0;
       }
     }
+    control_event_stream_status(conn, STREAM_EVENT_NEW);
+    return 0;
   }
   return 0; /* unreached but keeps the compiler happy */
 }
