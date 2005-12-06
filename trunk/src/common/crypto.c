@@ -1436,60 +1436,28 @@ crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
 }
 
 /** Check for bad diffie-hellman public keys (g^x).  Return 0 if the key is
- * okay, or -1 if it's bad.
+ * okay (in the subgroup [2,p-2]), or -1 if it's bad.
  * See http://www.cl.cam.ac.uk/ftp/users/rja14/psandqs.ps.gz for some tips.
  */
 static int
 tor_check_dh_key(BIGNUM *bn)
 {
-  /* There are about 2^116 ways to have a 1024-bit key with <= 16 bits set,
-   * and similarly for <= 16 bits unset.  This is negligible compared to the
-   * 2^1024 entry keyspace. */
-#define MIN_DIFFERING_BITS 16
-  /* This covers another 2^25 keys, which is still negligible. */
-#define MIN_DIST_FROM_EDGE (1<<24)
-  /* XXXX Note that this is basically voodoo.  Really, we only care about 0,
-   * 1, and p-1.  The "number of bits set" business is inherited from some
-   * dire warnings in the OpenSSH comments.  Real Cryptographers assure us
-   * that these dire warnings are misplaced.
-   *
-   * Still, it can't hurt. -NM We will likely remove all the crud from this
-   * function in a future version, though. -RD
-   */
-  int i, n_bits, n_set;
-  BIGNUM *x = NULL;
+  BIGNUM *x;
   char *s;
   tor_assert(bn);
   x = BN_new();
+  tor_assert(x);
   if (!dh_param_p)
     init_dh_param();
-  if (bn->neg) {
-    warn(LD_CRYPTO, "Rejecting DH key < 0");
-    return -1;
-  }
-  if (BN_cmp(bn, dh_param_p)>=0) {
-    warn(LD_CRYPTO, "Rejecting DH key >= p");
-    return -1;
-  }
-  n_bits = BN_num_bits(bn);
-  n_set = 0;
-  for (i=0; i <= n_bits; ++i) {
-    if (BN_is_bit_set(bn, i))
-      ++n_set;
-  }
-  if (n_set < MIN_DIFFERING_BITS || n_set >= n_bits-MIN_DIFFERING_BITS) {
-    warn(LD_CRYPTO, "Too few/many bits in DH key (%d)", n_set);
-    goto err;
-  }
-  BN_set_word(x, MIN_DIST_FROM_EDGE);
+  BN_set_word(x, 1);
   if (BN_cmp(bn,x)<=0) {
-    warn(LD_CRYPTO, "DH key is too close to 0");
+    warn(LD_CRYPTO, "DH key must be at least 2.");
     goto err;
   }
   BN_copy(x,dh_param_p);
-  BN_sub_word(x, MIN_DIST_FROM_EDGE);
+  BN_sub_word(x, 1);
   if (BN_cmp(bn,x)>=0) {
-    warn(LD_CRYPTO, "DH key is too close to p");
+    warn(LD_CRYPTO, "DH key must be at most p-2.");
     goto err;
   }
   BN_free(x);
@@ -1497,7 +1465,7 @@ tor_check_dh_key(BIGNUM *bn)
  err:
   BN_free(x);
   s = BN_bn2hex(bn);
-  warn(LD_CRYPTO, "Rejecting invalid DH key [%s]", s);
+  warn(LD_CRYPTO, "Rejecting insecure DH key [%s]", s);
   OPENSSL_free(s);
   return -1;
 }
