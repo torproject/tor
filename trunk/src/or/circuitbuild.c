@@ -1431,9 +1431,9 @@ choose_good_middle_server(uint8_t purpose,
 }
 
 /** Pick a good entry server for the circuit to be built according to
- * <b>state</b>.  Don't reuse a chosen exit (if any), don't use this router
- * (if we're an OR), and respect firewall settings; if we're using helper nodes,
- * return one.
+ * <b>state</b>.  Don't reuse a chosen exit (if any), don't use this
+ * router (if we're an OR), and respect firewall settings; if we're
+ * using helper nodes, return one.
  *
  * If <b>state</b> is NULL, we're choosing entries to serve as helper nodes,
  * not for any particular circuit.
@@ -1468,6 +1468,8 @@ choose_good_entry_server(cpath_build_state_t *state)
         smartlist_add(excluded, r);
     }
   }
+  // XXX we should exclude busy exit nodes here, too,
+  // but only if there are enough other nodes available.
   choice = router_choose_random_node(options->EntryNodes, options->ExcludeNodes,
            excluded, state ? state->need_uptime : 1,
            state ? state->need_capacity : 0,

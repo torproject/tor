@@ -1005,8 +1005,9 @@ connection_ap_handshake_process_socks(connection_t *conn)
       }
     } else {
       struct in_addr in;
-      routerinfo_t *r = router_get_by_nickname(conn->chosen_exit_name, 1);
+      routerinfo_t *r;
       conn->chosen_exit_name = tor_strdup(socks->address);
+      r = router_get_by_nickname(conn->chosen_exit_name, 1);
       *socks->address = 0;
       if (r) {
         /* XXXX Should this use server->address instead? */
