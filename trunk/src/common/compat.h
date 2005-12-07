@@ -93,7 +93,7 @@ int tor_vsnprintf(char *str, size_t size, const char *format, va_list args);
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen);
 
-#define TOR_ISAPLHA(c)   isalpha((int)(unsigned char)(c))
+#define TOR_ISALPHA(c)   isalpha((int)(unsigned char)(c))
 #define TOR_ISALNUM(c)   isalnum((int)(unsigned char)(c))
 #define TOR_ISSPACE(c)   isspace((int)(unsigned char)(c))
 #define TOR_ISXDIGIT(c) isxdigit((int)(unsigned char)(c))
