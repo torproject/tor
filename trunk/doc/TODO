@@ -2,9 +2,9 @@ $Id$
 Legend:
 SPEC!!  - Not specified
 SPEC    - Spec not finalized
-NICK    - nick claims
-ARMA    - arma claims
-PHOBOS  - phobos claims
+N       - nick claims
+R       - arma claims
+P       - phobos claims
         - Not done
         * Top priority
         . Partially done
@@ -15,7 +15,6 @@ PHOBOS  - phobos claims
 Non-Coding, Soon:
 N - Mark up spec; note unclear points about servers
 N - Clean up dir spec.
-N . contact umass folks
 N - Mention controller libs someplace.
   D FAQ entry: why gnutls is bad/not good for tor
 P - flesh out the rest of the section 6 of the faq
@@ -66,6 +65,7 @@ N       - Specify and implement it.
         download directories/network-status, and a way to force a download.
       - It would be nice to request address lookups from the controller
         without using SOCKS.
+      - Make everything work with hidden services
 
   . Helper nodes
     . More testing and debugging
@@ -75,7 +75,7 @@ N       - Specify and implement it.
     o If you think an OR conn is open but you can never establish a circuit
       to it, reconsider whether it's actually open.
 
-  - switch accountingmax to count total in+out, not either in or
+  X switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back out if we decide we prefer it the way it already is. hm.
 
@@ -86,13 +86,15 @@ N       - Specify and implement it.
     - Specify, including thought about
     - Implement
 
-  - Bind to random port when making outgoing connections to Tor servers,
-    to reduce remote sniping attacks.
   - When we connect to a Tor server, it sends back a signed cell listing
     the IP it believes it is using. Use this to block dvorak's attack.
+    Also, this is a fine time to say what time you think it is.
+    - Verify that a new cell type is okay with deployed codebase
+    - Specify
+    - Implement
 
 N - Destroy and truncated cells should have reasons.
-N - Add private:* alias in exit policies to make it easier to ban all the
+N*- Add private:* alias in exit policies to make it easier to ban all the
     fiddly little 192.168.foo addresses.
     (AGL had a patch; consider applying it.)
 
@@ -112,8 +114,8 @@ R   - kill dns workers more slowly
     . Some back-out mechanism for auto-approval
       o dirservers have blacklist of IPs and keys they hate
       - a way of rolling back approvals to before a timestamp
-      - have new people be in limbo and need to demonstrate usefulness
-        before we approve them
+        - Consider minion-like fingerprint file/log combination.
+      - Add a panic-button config option to buy us time if we get sybiled.
 
 R   . Dirservers verify reachability claims
       o basic reachability testing, influencing network-status list.
@@ -121,9 +123,8 @@ R   . Dirservers verify reachability claims
 R     - check reachability as soon as you hear about a new server
 
     - Decentralization
-      - Figure out what to do about hidden service descriptors.
       - find 10 dirservers.
-        - (what are criteria to be a dirserver?)
+        - What are criteria to be a dirserver?  Write a policy.
       o Dirservers publish compressed network-status objects.
         o Support retrieving several-at-once
       o Everyone downloads network-status objects
@@ -131,7 +132,7 @@ R     - check reachability as soon as you hear about a new server
           o Basic implementation: disable until 0.1.1.x is out.
           o On failure, mark trusted_dir_server as having failed
           o Retry, up to a point.
-          - Launch retry immediately on failure.
+N         - Launch retry immediately on failure.
         o Parse them
         o Cache them, reload on restart
         o Serve cached directories
@@ -178,24 +179,26 @@ N     . Routerdesc download changes
         o If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
           fetch a new one if it was published in the last 2 hours.
           - How does this interact with the 'recognized hash' rule?
-      . Downgrade new directory events from notice to info
-      - Clients should estimate their skew as median of skew from directory
-        connections over last N seconds.
+      o Downgrade new directory events from notice to info
       o Call dirport_is_reachable from somewhere else.
       o Networkstatus should list who's an authority.
       o Add nickname element to dirserver line.  Log this along with IP:Port.
       o Warn when using non-default directory servers.
       o When giving up on a non-finished dir request, log how many bytes
         dropped, to see whether it's worthwhile to use partial info.
-    - Security
-      - Alices avoid duplicate class C nodes.
-      - Analyze how bad the partitioning is or isn't.
     - Flags
-      - Clients use Stable and Fast instead of uptime and bandwidth to
+N     - Clients use Stable and Fast instead of uptime and bandwidth to
         pick which servers are stable/fast.
+    - config option to publish what ports you listen on, beyond
+      ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
+      - Parse this.
+      - Relay this in networkstatus.
 
     - Make authorities rate-limit logging their complaints about given
       servers?
+      - Is this still necessary?
+    - All versions of Tor should get cosmetic changes rate-limited.
+    - Pick directories from networkstatus objects, not from routerlist.
 
   - packaging and ui stuff:
     . multiple sample torrc files
@@ -214,15 +217,28 @@ N   - Vet all pending installer patches
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
 
-Reach (deferrable) items for 0.1.1.x:
   - Start using create-fast cells as clients
+    - Make this easy to disable via configuration options.
+    - At the very least, implement this, and maybe leave it off.
+
+  - Can/should we really dump "ports" from routerparse?
+
+Deferred from 0.1.1.x:
   o Let more config options (e.g. ORPort) change dynamically.
-  - start handling server descriptors without a socksport?
   o Add TTLs to DNS-related replies, and use them (when present) to adjust
     addressmap values.
+  - Bind to random port when making outgoing connections to Tor servers,
+    to reduce remote sniping attacks.
+  - Have new people be in limbo and need to demonstrate usefulness
+    before we approve them.
+  - Clients should estimate their skew as median of skew from servers
+    over last N seconds.
+  - Security
+    - Alices avoid duplicate class C nodes.
+    - Analyze how bad the partitioning is or isn't.
 
   . Update the hidden service stuff for the new dir approach.
-    - switch to an ascii format.
+    - switch to an ascii format, maybe sexpr?
     - authdirservers publish blobs of them.
     - other authdirservers fetch these blobs.
     - hidserv people have the option of not uploading their blobs.
@@ -238,15 +254,16 @@ Reach (deferrable) items for 0.1.1.x:
       - Make it harder to circumvent bandwidth caps: look at number of bytes
         sent across sockets, not number sent inside TLS stream.
 
-  . Research memory use on Linux: what's happening?
-    - Is it threading?  (Maybe, maybe not)
-    - Is it the buf_shrink bug? (Quite possibly)
-    - Instrument the 0.1.1 code to figure out where our memory is going;
+  o Research memory use on Linux: what's happening?
+    X Is it threading?  (Maybe, maybe not)
+    X Is it the buf_shrink bug? (Quite possibly)
+    o Instrument the 0.1.1 code to figure out where our memory is going;
       apply the results. (all platforms?)
 
   - Make router_is_general_exit() a bit smarter once we're sure what it's for.
 
-For 0.1.1.x, if we can figure out how:
+  - Directory "helper".
+
   - rewrite how libevent does select() on win32 so it's not so very slow.
   o enclaves (at least preliminary)
   - Write limiting; separate token bucket for write
@@ -267,12 +284,13 @@ Future version:
   - tor-resolve script should use socks5 to get better error messages.
   - make min uptime a function of the available choices (say, choose 60th
     percentile, not 1 day.)
-  - config option to publish what ports you listen on, beyond ORPort/DirPort
+  - Track uptime as %-of-time-up, as well as time-since-last-down.
   - hidserv offerers shouldn't need to define a SocksPort
     * figure out what breaks for this, and do it.
   - auth mechanisms to let hidden service midpoint and responder filter
     connection requests.
   - Relax clique assumptions.
+  - start handling server descriptors without a socksport?
   - tor should be able to have a pool of outgoing IP addresses
     that it is able to rotate through. (maybe)
 
