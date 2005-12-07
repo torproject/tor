@@ -117,10 +117,10 @@ R   - kill dns workers more slowly
         - Consider minion-like fingerprint file/log combination.
       - Add a panic-button config option to buy us time if we get sybiled.
 
-R   . Dirservers verify reachability claims
+    o Dirservers verify reachability claims
       o basic reachability testing, influencing network-status list.
       X rate-limiting the reporting of trouble servers
-R     - check reachability as soon as you hear about a new server
+      X check reachability as soon as you hear about a new server
 
     - Decentralization
       - find 10 dirservers.
