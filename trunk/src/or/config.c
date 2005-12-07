@@ -131,6 +131,7 @@ static config_var_t _option_vars[] = {
   VAR("ExitPolicy",          LINELIST, ExitPolicy,           NULL),
   VAR("FascistFirewall",     BOOL,     FascistFirewall,      "0"),
   VAR("FirewallPorts",       CSV,      FirewallPorts,        ""),
+  VAR("FastFirstHopPK",      BOOL,     FastFirstHopPK,       "1"),
   VAR("Group",               STRING,   Group,                NULL),
   VAR("HardwareAccel",       BOOL,     HardwareAccel,        "1"),
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
