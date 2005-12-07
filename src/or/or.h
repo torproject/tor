@@ -1321,6 +1321,8 @@ typedef struct {
                        * of fixed nodes? */
   int NumHelperNodes; /**< How many helper nodes do we try to establish? */
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
+  int FastFirstHopPK; /**< If Tor believes it is safe, should we save a third
+                       * of our PK time by sending CREATE_FAST cells? */
 
   addr_policy_t *reachable_addr_policy; /**< Parsed from ReachableAddresses */
 } or_options_t;

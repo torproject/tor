@@ -217,9 +217,11 @@ N   - Vet all pending installer patches
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
 
-  - Start using create-fast cells as clients
-    - Make this easy to disable via configuration options.
-    - At the very least, implement this, and maybe leave it off.
+N . Start using create-fast cells as clients
+    o Make this easy to disable via configuration options.
+    o At the very least, implement this, and maybe leave it off.
+    - Document option. Document that clients do this.
+    - Audit code to verify that keys are generated right.
 
   - Can/should we really dump "ports" from routerparse?
 

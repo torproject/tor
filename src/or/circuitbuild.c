@@ -437,7 +437,8 @@ circuit_n_conn_done(connection_t *or_conn, int status)
   });
 }
 
-/** Find a new circid that isn't currently in use by the outgoing
+/** Find a new circid that isn't currently in use on the circ->n_conn
+ * for the outgoing
  * circuit <b>circ</b>, and deliver a cell of type <b>cell_type</b>
  * (either CELL_CREATE or CELL_CREATE_FAST) with payload <b>payload</b>
  * to this circuit.
@@ -492,6 +493,23 @@ inform_testing_reachability(void)
   return 1;
 }
 
+/** Return true iff we should send a create_fast cell to build a circuit
+ * starting at <b>router</b>.  (If <b>router</b> is NULL, we don't have
+ * information on the router. */
+static INLINE int
+should_use_create_fast_for_router(routerinfo_t *router)
+{
+  or_options_t *options = get_options();
+
+  if (!options->FastFirstHopPK || options->ORPort)
+    return 0;
+  else if (!router || !router->platform ||
+           !tor_version_as_new_as(router->platform, "0.1.0.6-rc"))
+    return 0;
+  else
+    return 1;
+}
+
 extern int has_completed_circuit;
 
 /** This is the backbone function for building circuits.
@@ -517,14 +535,13 @@ circuit_send_next_onion_skin(circuit_t *circ)
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   if (circ->cpath->state == CPATH_STATE_CLOSED) {
+    int fast;
     uint8_t cell_type;
     debug(LD_CIRC,"First skin; sending create cell.");
 
     router = router_get_by_digest(circ->n_conn->identity_digest);
-
-    if (1 || /* Disable this '1' once we believe CREATE_FAST works. XXXX */
-        (get_options()->ORPort || !router || !router->platform ||
-         !tor_version_as_new_as(router->platform, "0.1.0.6-rc"))) {
+    fast = should_use_create_fast_for_router(router);
+    if (! fast) {
       /* We are an OR, or we are connecting to an old Tor: we should
        * send an old slow create cell.
        */
@@ -551,7 +568,8 @@ circuit_send_next_onion_skin(circuit_t *circ)
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
     circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
-    debug(LD_CIRC,"first skin; finished sending create cell.");
+    info(LD_CIRC,"First hop: finished sending %s cell to '%s'",
+         fast ? "CREATE_FAST" : "CREATE", router->nickname);
   } else {
     tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
     tor_assert(circ->state == CIRCUIT_STATE_BUILDING);
@@ -809,7 +827,8 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
   }
 
   hop->state = CPATH_STATE_OPEN;
-  info(LD_CIRC,"Finished building circuit hop:");
+  info(LD_CIRC,"Finished building %scircuit hop:",
+       (reply_type == CELL_CREATED_FAST) ? "fast " : "");
   circuit_log_path(LOG_INFO,LD_CIRC,circ);
   control_event_circuit_status(circ, CIRC_EVENT_EXTENDED);
 
