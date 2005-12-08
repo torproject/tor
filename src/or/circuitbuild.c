@@ -415,7 +415,6 @@ circuit_n_conn_done(connection_t *or_conn, int status)
        * orconn_circuid_circuit_map, so we don't need to call
        * set_circid_orconn here. */
       circ->n_conn = or_conn;
-      memcpy(circ->n_conn_id_digest, or_conn->identity_digest, DIGEST_LEN);
       if (CIRCUIT_IS_ORIGIN(circ)) {
         if (circuit_send_next_onion_skin(circ) < 0) {
           info(LD_CIRC,"send_next_onion_skin failed; circuit marked for closing.");
