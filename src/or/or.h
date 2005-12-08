@@ -504,6 +504,9 @@ typedef enum {
 #define CELL_CREATE_FAST 5
 #define CELL_CREATED_FAST 6
 
+/** How long to test reachability before complaining to the user. */
+#define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
+
 /* people behind fascist firewalls use only these ports */
 #define REQUIRED_FIREWALL_DIRPORT 80
 #define REQUIRED_FIREWALL_ORPORT 443
