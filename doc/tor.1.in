@@ -387,11 +387,12 @@ For example, "reject 127.0.0.1:*,reject 192.168.1.0/24:*,accept *:*" would
 reject any traffic destined for localhost and any 192.168.1.* address, but
 accept anything else.
 
-To specify all internal networks (including 169.254.0.0/16,
-127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8, and 172.16.0.0/12), you can use
-the "private" alias instead of an address.  For example, to allow HTTP
-to 127.0.0.1 and block all other connections to internal networks, you
-can say "accept 127.0.0.1:80,reject private:*".  See RFC 3330 for more
+To specify all internal and link-local networks (including 0.0.0.0/8,
+169.254.0.0/16, 127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8, and
+172.16.0.0/12), you can use the "private" alias instead of an address.
+For example, to allow HTTP to 127.0.0.1 and block all other
+connections to internal networks, you can say "accept
+127.0.0.1:80,reject private:*".  See RFC 1918 and RFC 3330 for more
 details about internal and reserved IP address space.
 
 This directive can be specified multiple times so you don't have to put
