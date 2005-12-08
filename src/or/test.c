@@ -1027,7 +1027,6 @@ test_strmap(void)
   test_eq_ptr(strmap_get(map, "K5"), (void*)10816);
 #endif
 
-
   /* Clean up after ourselves. */
   strmap_free(map, NULL);
 
