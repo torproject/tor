@@ -1487,11 +1487,9 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
                          const char *pubkey, size_t pubkey_len,
                          char *secret_out, size_t secret_bytes_out)
 {
-  char hash[DIGEST_LEN];
   char *secret_tmp = NULL;
   BIGNUM *pubkey_bn = NULL;
   size_t secret_len=0;
-  unsigned int i;
   int result=0;
   tor_assert(dh);
   tor_assert(secret_bytes_out/DIGEST_LEN <= 255);
@@ -1503,7 +1501,7 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
     warn(LD_CRYPTO,"Rejected invalid g^x");
     goto error;
   }
-  secret_tmp = tor_malloc(crypto_dh_get_bytes(dh)+1);
+  secret_tmp = tor_malloc(crypto_dh_get_bytes(dh));
   result = DH_compute_key((unsigned char*)secret_tmp, pubkey_bn, dh->dh);
   if (result < 0) {
     warn(LD_CRYPTO,"DH_compute_key() failed.");
@@ -1517,12 +1515,9 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
    *   bytes long.
    * What are the security implications here?
    */
-  for (i = 0; i < secret_bytes_out; i += DIGEST_LEN) {
-    secret_tmp[secret_len] = (unsigned char) i/DIGEST_LEN;
-    if (crypto_digest(hash, secret_tmp, secret_len+1))
-      goto error;
-    memcpy(secret_out+i, hash, MIN(DIGEST_LEN, secret_bytes_out-i));
-  }
+  if (crypto_expand_key_material(secret_tmp, secret_len,
+                                 secret_out, secret_bytes_out)<0)
+    goto error;
   secret_len = secret_bytes_out;
 
   goto done;
@@ -1537,6 +1532,44 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
     return result;
   else
     return secret_len;
+}
+
+/** Given <b>key_in_len</b> bytes of negotiated randomness in <b>key_in</b>
+ * ("K"), expand it into <b>key_out_len</b> bytes of negotiated key material in
+ * <b>key_out</b> by taking the first key_out_len bytes of
+ *    H(K | [00]) | H(K | [01]) | ....
+ *
+ * Return 0 on success, -1 on failure.
+ */
+int
+crypto_expand_key_material(const char *key_in, size_t key_in_len,
+                           char *key_out, size_t key_out_len)
+{
+  int i;
+  char *cp, *tmp = tor_malloc(key_in_len+1);
+  char digest[DIGEST_LEN];
+
+  /* If we try to get more than this amount of key data, we'll repeat blocks.*/
+  tor_assert(key_out_len <= DIGEST_LEN*256);
+
+  memcpy(tmp, key_in, key_in_len);
+  for (cp = key_out, i=0; key_out_len; ++i, cp += DIGEST_LEN) {
+    tmp[key_in_len] = i;
+    if (crypto_digest(digest, tmp, key_in_len+1))
+      goto err;
+    memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len));
+    if (key_out_len < DIGEST_LEN)
+      break;
+    key_out_len -= DIGEST_LEN;
+  }
+  memset(tmp, 0, key_in_len+1);
+  tor_free(tmp);
+  return 0;
+
+ err:
+  memset(tmp, 0, key_in_len+1);
+  tor_free(tmp);
+  return -1;
 }
 
 /** Free a DH key exchange object.

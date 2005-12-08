@@ -141,6 +141,8 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
                              const char *pubkey, size_t pubkey_len,
                              char *secret_out, size_t secret_out_len);
 void crypto_dh_free(crypto_dh_env_t *dh);
+int crypto_expand_key_material(const char *key_in, size_t in_len,
+                               char *key_out, size_t key_out_len);
 
 /* random numbers */
 int crypto_seed_rng(void);
