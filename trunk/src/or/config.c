@@ -2777,6 +2777,7 @@ static int
 config_expand_exit_policy_aliases(smartlist_t *entries)
 {
   static const char *prefixes[] = {
+    "0.0.0.0/8", "169.254.0.0/16",
     "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",NULL };
   int i;
   char *pre=NULL, *post=NULL;
