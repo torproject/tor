@@ -98,7 +98,7 @@ N*- Add private:* alias in exit policies to make it easier to ban all the
     fiddly little 192.168.foo addresses.
     (AGL had a patch; consider applying it.)
 
-N - warn if listening for SOCKS on public IP.
+  o warn if listening for SOCKS on public IP.
 
   - cpu fixes:
     - see if we should make use of truncate to retry
