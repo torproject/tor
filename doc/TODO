@@ -194,6 +194,9 @@ N     - Clients use Stable and Fast instead of uptime and bandwidth to
       - Is this still necessary?
     - All versions of Tor should get cosmetic changes rate-limited.
     - Pick directories from networkstatus objects, not from routerlist.
+      - But! We can't do this easily, since we want to know about platform,
+        and networkstatus doesn't tell us Tor version.  Can we solve this?
+        Should we do it by adding flags to networkstatus or what?
 
   - packaging and ui stuff:
     . multiple sample torrc files
@@ -212,11 +215,11 @@ N   - Vet all pending installer patches
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
 
-N . Start using create-fast cells as clients
+  o Start using create-fast cells as clients
     o Make this easy to disable via configuration options.
     o At the very least, implement this, and maybe leave it off.
-    - Document option. Document that clients do this.
-    - Audit code to verify that keys are generated right.
+    o Document option. Document that clients do this.
+    o Audit code to verify that keys are generated right.
 
   - Can/should we really dump "ports" from routerparse?
 
