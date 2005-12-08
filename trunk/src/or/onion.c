@@ -344,68 +344,81 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   return 0;
 }
 
-/** DOCDOC */
+/** Implement the server side of the CREATE_FAST abbreviated handshake.  The
+ * client has provided DIGEST_LEN key bytes in <b>key_in</b> ("x").  We
+ * generate a reply of DIGEST_LEN*2 bytes in <b>key_out/b>, consisting of a
+ * new random "y", followed by H(x|y) to check for correctness.  We set
+ * <b>key_out_len</b> bytes of key material in <b>key_out</b>.
+ * Return 0 on success, <0 on failure.
+ **/
 int
 fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
                       char *handshake_reply_out, /* DIGEST_LEN*2 bytes */
                       char *key_out,
                       size_t key_out_len)
 {
-  char tmp[DIGEST_LEN+DIGEST_LEN+1];
-  char digest[DIGEST_LEN];
-  int i;
+  char tmp[DIGEST_LEN+DIGEST_LEN];
+  char *out;
+  size_t out_len;
 
   if (crypto_rand(handshake_reply_out, DIGEST_LEN)<0)
     return -1;
 
   memcpy(tmp, key_in, DIGEST_LEN);
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
-  tmp[DIGEST_LEN+DIGEST_LEN] = 0;
-  crypto_digest(handshake_reply_out+DIGEST_LEN, tmp, sizeof(tmp));
-
-  for (i = 0; i*DIGEST_LEN < (int)key_out_len; ++i) {
-    size_t len;
-    tmp[DIGEST_LEN+DIGEST_LEN] = i+1;
-    crypto_digest(digest, tmp, sizeof(tmp));
-    len = key_out_len - i*DIGEST_LEN;
-    if (len > DIGEST_LEN) len = DIGEST_LEN;
-    memcpy(key_out+i*DIGEST_LEN, digest, len);
+  out_len = key_out_len+DIGEST_LEN;
+  out = tor_malloc(out_len);
+  if (crypto_expand_key_material(tmp, sizeof(tmp), out, out_len)) {
+    tor_free(out);
+    return -1;
   }
-
+  memcpy(handshake_reply_out+DIGEST_LEN, out, DIGEST_LEN);
+  memcpy(key_out, out+DIGEST_LEN, key_out_len);
+  memset(tmp, 0, sizeof(tmp));
+  memset(out, 0, out_len);
+  tor_free(out);
   return 0;
 }
 
-/** DOCDOC */
+/** Implement the second half of the client side of the CREATE_FAST handshake.
+ * We sent the server <b>handshake_state</b> ("x") already, and the server
+ * told us <b>handshake_reply_out</b> (y|H(x|y)).  Make sure that the hash is
+ * correct, and generate key material in <b>key_out</b>.  Return 0 on success,
+ * true on failure.
+ *
+ * NOTE: The "CREATE_FAST" handshake path is distinguishable from regular
+ * "onionskin" handshakes, and is not secure if an adversary can see or modify
+ * the messages.  Therefore, it should only be used by clients, and only as
+ * the first hop of a circuit (since the first hop is already authenticated
+ * and protected by TLS).
+ */
 int
 fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
                       const char *handshake_reply_out, /* DIGEST_LEN*2 bytes */
                       char *key_out,
                       size_t key_out_len)
 {
-  char tmp[DIGEST_LEN+DIGEST_LEN+1];
-  char digest[DIGEST_LEN];
-  int i;
+  char tmp[DIGEST_LEN+DIGEST_LEN];
+  char *out;
+  size_t out_len;
 
   memcpy(tmp, handshake_state, DIGEST_LEN);
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
-  tmp[DIGEST_LEN+DIGEST_LEN] = 0;
-  crypto_digest(digest, tmp, sizeof(tmp));
-
-  if (memcmp(digest, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
+  out_len = key_out_len+DIGEST_LEN;
+  out = tor_malloc(out_len);
+  if (crypto_expand_key_material(tmp, sizeof(tmp), out, out_len)) {
+    tor_free(out);
+    return -1;
+  }
+  if (memcmp(out, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
     warn(LD_PROTOCOL,"Digest DOES NOT MATCH on fast handshake. Bug or attack.");
     return -1;
   }
-
-  for (i = 0; i*DIGEST_LEN < (int)key_out_len; ++i) {
-    size_t len;
-    tmp[DIGEST_LEN+DIGEST_LEN] = i+1;
-    crypto_digest(digest, tmp, sizeof(tmp));
-    len = key_out_len - i*DIGEST_LEN;
-    if (len > DIGEST_LEN) len = DIGEST_LEN;
-    memcpy(key_out+i*DIGEST_LEN, digest, len);
-  }
-
+  memcpy(key_out, out+DIGEST_LEN, key_out_len);
+  memset(tmp, 0, sizeof(tmp));
+  memset(out, 0, out_len);
+  tor_free(out);
   return 0;
 }
 

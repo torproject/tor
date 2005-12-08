@@ -553,8 +553,9 @@ circuit_send_next_onion_skin(circuit_t *circ)
         return -1;
       }
     } else {
-      /* We are not an OR, and we're building the first hop of a circuit to
-       * a new OR: we can be speedy. */
+      /* We are not an OR, and we're building the first hop of a circuit to a
+       * new OR: we can be speedy and use CREATE_FAST to save an RSA operation
+       * and a DH operation. */
       cell_type = CELL_CREATE_FAST;
       memset(payload, 0, sizeof(payload));
       crypto_rand(circ->cpath->fast_handshake_state,
@@ -769,9 +770,10 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
   return 0;
 }
 
-/** A created or extended cell came back to us on the circuit,
- * and it included <b>reply</b> (the second DH key, plus KH).
- * DOCDOC reply_type.
+/** A created or extended cell came back to us on the circuit, and it included
+ * <b>reply</b> as its body.  (If <b>reply_type</b> is CELL_CREATED, the body
+ * contains (the second DH key, plus KH).  If <b>reply_type</b> is
+ * CELL_CREATED_FAST, the body contains a secret y and a hash H(x|y).)
  *
  * Calculate the appropriate keys and digests, make sure KH is
  * correct, and initialize this hop of the cpath.

@@ -211,6 +211,8 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
     }
     debug(LD_OR,"success: handed off onionskin.");
   } else {
+    /* This is a CREATE_FAST cell; we can handle it immediately without using
+     * a CPU worker.*/
     char keys[CPATH_KEY_MATERIAL_LEN];
     char reply[DIGEST_LEN*2];
     tor_assert(cell->command == CELL_CREATE_FAST);

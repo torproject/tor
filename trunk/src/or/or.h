@@ -924,6 +924,11 @@ typedef struct crypt_path_t {
   /** Current state of Diffie-Hellman key negotiation with the OR at this
    * step. */
   crypto_dh_env_t *dh_handshake_state;
+  /** Current state of 'fast' (non-PK) key negotiation with the OR at this
+   * step. Used to save CPU when TLS is already providing all the
+   * authentication, secrecy, and integrity we need, and we're already
+   * distinguishable from an OR.
+   */
   char fast_handshake_state[DIGEST_LEN];
   /** Negotiated key material shared with the OR at this step. */
   char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
