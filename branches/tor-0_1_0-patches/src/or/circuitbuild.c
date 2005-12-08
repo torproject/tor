@@ -492,9 +492,10 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
         log(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
         /* XXX009 Log a count of known routers here */
         if (server_mode(options) && !check_whether_orport_reachable())
-          log(LOG_NOTICE,"Now checking whether ORPort %s%s reachable... (this may take several minutes)",
+          log(LOG_NOTICE,"Now checking whether ORPort %s%s reachable... (this may take up to %d minutes -- look for log messages indicating success)",
                  options->DirPort ? "and DirPort " : "",
-                 options->DirPort ? "are" : "is");
+                 options->DirPort ? "are" : "is",
+                 TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
       }
       circuit_rep_hist_note_result(circ);
       circuit_has_opened(circ); /* do other actions as necessary */

@@ -103,7 +103,6 @@ static int nt_service_is_stopped(void);
 
 #define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
 #define BUF_SHRINK_INTERVAL 60 /* one minute */
-#define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
 
 /********* END VARIABLES ************/
 
