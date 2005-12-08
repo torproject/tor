@@ -2745,7 +2745,8 @@ normalize_log_options(or_options_t *options)
   return 0;
 }
 
-#define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:465,reject *:587,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
+
+#define DEFAULT_EXIT_POLICY "reject private:*,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:465,reject *:587,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
 /** Add the default exit policy entries to <b>policy</b>
  */
@@ -2770,6 +2771,58 @@ options_append_default_exit_policy(addr_policy_t **policy)
       return;
     }
   }
+}
+
+static int
+config_expand_exit_policy_aliases(smartlist_t *entries)
+{
+  static const char *prefixes[] = {
+    "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",NULL };
+  int i;
+  char *pre=NULL, *post=NULL;
+  int expanded_any = 0;
+  pre = smartlist_join_strings(entries,",",0,NULL);
+  for (i = 0; i < smartlist_len(entries); ++i) {
+    char *v = smartlist_get(entries, i);
+    const char *cp, *ports;
+    int accept;
+    int prefix_idx;
+    accept = !strcasecmpstart(v, "accept");
+    if (!accept && strcasecmpstart(v, "reject")) {
+      warn(LD_CONFIG,"Policy '%s' didn't start with accept or reject.", v);
+      tor_free(pre);
+      return -1;
+    }
+    cp = v+strlen("accept"); /* Yes, they're the same length. */
+    cp = eat_whitespace(cp);
+    if (strcmpstart(cp, "private"))
+      continue; /* No need to expand. */
+    cp += strlen("private");
+    cp = eat_whitespace(cp);
+    if (*cp && *cp != ':')
+      continue; /* It wasn't "private" after all. */
+    ports = cp;
+    /* Okay. We're going to replace entries[i] with a bunch of new entries,
+     * in order. */
+    smartlist_del_keeporder(entries, i);
+    for (prefix_idx = 0; prefixes[prefix_idx]; ++prefix_idx) {
+      size_t replacement_len = 16+strlen(prefixes[prefix_idx])+strlen(ports);
+      char *replacement = tor_malloc(replacement_len);
+      tor_snprintf(replacement, replacement_len, "%s %s%s",
+                   accept?"accept":"reject", prefixes[prefix_idx],
+                   ports);
+      smartlist_insert(entries, i++, replacement);
+    }
+    tor_free(v);
+    expanded_any = 1;
+    --i;
+  }
+  post = smartlist_join_strings(entries,",",0,NULL);
+  if (expanded_any)
+    info(LD_CONFIG, "Expanded '%s' to '%s'", pre, post);
+  tor_free(pre);
+  tor_free(post);
+  return expanded_any;
 }
 
 /**
@@ -2797,6 +2850,10 @@ config_parse_addr_policy(config_line_t *cfg,
   entries = smartlist_create();
   for (; cfg; cfg = cfg->next) {
     smartlist_split_string(entries, cfg->value, ",", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    if (config_expand_exit_policy_aliases(entries)<0) {
+      r = -1;
+      continue;
+    }
     SMARTLIST_FOREACH(entries, const char *, ent,
     {
       debug(LD_CONFIG,"Adding new entry '%s'",ent);

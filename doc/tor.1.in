@@ -387,22 +387,23 @@ For example, "reject 127.0.0.1:*,reject 192.168.1.0/24:*,accept *:*" would
 reject any traffic destined for localhost and any 192.168.1.* address, but
 accept anything else.
 
+To specify all internal networks (including 169.254.0.0/16,
+127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8, and 172.16.0.0/12), you can use
+the "private" alias instead of an address.  For example, to allow HTTP
+to 127.0.0.1 and block all other connections to internal networks, you
+can say "accept 127.0.0.1:80,reject private:*".  See RFC 3330 for more
+details about internal and reserved IP address space.
+
 This directive can be specified multiple times so you don't have to put
 it all on one line.
 
-See RFC 3330 for more details about internal and reserved IP address
-space. Policies are considered first to last, and the first match wins. If
+Policies are considered first to last, and the first match wins. If
 you want to _replace_ the default exit policy, end your exit policy with
 either a reject *:* or an accept *:*. Otherwise, you're _augmenting_
 (prepending to) the default exit policy. The default exit policy is:
 .PD 0
 .RS 12
-.IP "reject 0.0.0.0/8" 0
-.IP "reject 169.254.0.0/16" 4
-.IP "reject 127.0.0.0/8"
-.IP "reject 192.168.0.0/16"
-.IP "reject 10.0.0.0/8"
-.IP "reject 172.16.0.0/12"
+.IP "reject private:*" 0
 .IP "reject *:25"
 .IP "reject *:119"
 .IP "reject *:135-139"
