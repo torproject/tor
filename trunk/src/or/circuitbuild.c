@@ -485,10 +485,11 @@ inform_testing_reachability(void)
   if (me->dir_port)
     tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
                  me->address, me->dir_port);
-  log(LOG_NOTICE, LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... (this may take several minutes)",
+  log(LOG_NOTICE, LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... (this may take up to %d minutes -- look for log messages indicating success)",
       me->address, me->or_port,
       me->dir_port ? dirbuf : "",
-      me->dir_port ? "are" : "is");
+      me->dir_port ? "are" : "is",
+      TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
   return 1;
 }
 

@@ -98,7 +98,6 @@ static char* nt_strerror(uint32_t errnum);
 #define BUF_SHRINK_INTERVAL 60 /* one minute */
 #define DESCRIPTOR_RETRY_INTERVAL 10
 #define DESCRIPTOR_FAILURE_RESET_INTERVAL 60*60
-#define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
 #define ENTROPY_INTERVAL 60*60
 
 /********* END VARIABLES ************/
