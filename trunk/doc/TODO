@@ -94,9 +94,10 @@ N       - Specify and implement it.
     - Implement
 
 N - Destroy and truncated cells should have reasons.
-N*- Add private:* alias in exit policies to make it easier to ban all the
+  o Add private:* alias in exit policies to make it easier to ban all the
     fiddly little 192.168.foo addresses.
-    (AGL had a patch; consider applying it.)
+    o Implement
+    o Document
 
   o warn if listening for SOCKS on public IP.
 
