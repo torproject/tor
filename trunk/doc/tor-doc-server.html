@@ -165,8 +165,11 @@ where new development releases are announced.
 
 <p>As soon as your server manages to connect to the network, it will
 try to determine whether the ports you configured are reachable from
-the outside. This may take several minutes. The log entries will keep
-you informed of its progress.</p>
+the outside. This may take up to 20 minutes. Look for a log entry like
+<tt>Self-testing indicates your ORPort is reachable from the outside. Excellent.</tt>. If you don't see this message, it means that your server is not reachable
+from the outside -- you should re-check your firewalls, check that it's
+testing the IP and port you think it should be testing, etc.
+</p>
 
 <p>When it decides that it's reachable, it will upload a "server
 descriptor" to the directories. This will let clients know
