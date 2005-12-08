@@ -917,7 +917,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
     char *process_ownername = NULL;
 
     pw = getpwuid(getuid());
-    process_ownername = pw ? tor_strdup(pw->pw_name) : "<unknown>";
+    process_ownername = pw ? tor_strdup(pw->pw_name) : tor_strdup("<unknown>");
 
     pw = getpwuid(st.st_uid);
 
