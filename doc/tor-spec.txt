@@ -194,9 +194,9 @@ when do we rotate which keys (tls, link, etc)?
    The port and address field denote the IPV4 address and port of the next
    onion router in the circuit; the public key hash is the SHA1 hash of the
    PKCS#1 ASN1 encoding of the next onion router's identity (signing) key.
-[XXX please describe why we have this hash. my first guess is that this
-way we can notice that we're already connected to this guy even if he's
-connected at a different place. anything else? -RD]
+   (Including this hash allows the extending OR verify that it is indeed
+   connected to the correct target OR, and prevents certain man-in-the-middle
+   attacks.)
 
    The payload for a CREATED cell, or the relay payload for an
    EXTENDED cell, contains:
@@ -212,6 +212,8 @@ connected at a different place. anything else? -RD]
 
    Public keys are compared numerically by modulus.
 
+   As usual with DH, x and y MUST be generated randomly.
+
    (Older versions of Tor compared OR nicknames, and did it in a broken and
    unreliable way.  To support versions of Tor earlier than 0.0.9pre6,
    implementations should notice when the other side of a connection is
@@ -223,7 +225,7 @@ connected at a different place. anything else? -RD]
    established the OR's identity and negotiated a secret key using TLS.
    Because of this, it is not always necessary for the OP to perform the
    public key operations to create a circuit.  In this case, the
-   OP SHOULD send a CREATE_FAST cell instead of a CREATE cell for the first
+   OP MAY send a CREATE_FAST cell instead of a CREATE cell for the first
    hop only.  The OR responds with a CREATED_FAST cell, and the circuit is
    created.
 
@@ -234,14 +236,16 @@ connected at a different place. anything else? -RD]
    A CREATED_FAST cell contains:
 
        Key material (Y)    [20 bytes]
-       Derivative key data [20 bytes]
+       Derivative key data [20 bytes] (See 4.2 below)
+
+   The values of X and Y must be generated randomly.
 
    [Versions of Tor before 0.1.0.6-rc did not support these cell types;
     clients should not send CREATE_FAST cells to older Tor servers.]
 
 4.2. Setting circuit keys
 
-   Once the handshake between the OP and an OR is completed, both servers can
+   Once the handshake between the OP and an OR is completed, both can
    now calculate g^xy with ordinary DH.  Before computing g^xy, both client
    and server MUST verify that the received g^x or g^y value is not degenerate;
    that is, it must be strictly greater than 1 and strictly less than p-1
@@ -252,15 +256,20 @@ connected at a different place. anything else? -RD]
    discarded, an attacker can substitute the server's CREATED cell's g^y with
    0 or 1, thus creating a known g^xy and impersonating the server.)
 
-   (The mainline Tor implementation, in the 0.1.1.x-alpha series, also
-   discarded all g^x values that are less than 2^24, that are greater than
-   p-2^24, or that have more than 1024-16 identical bits.  This serves no
-   useful purpose, and will probably stop soon.)
+   (The mainline Tor implementation, in the 0.1.1.x-alpha series, discarded
+   all g^x values less than 2^24, greater than p-2^24, or having more than
+   1024-16 identical bits.  This served no useful purpose, and we stopped.)
+
+   If CREATE or EXTEND is used to extend a circuit, the client and server
+   base their key material on K0=g^xy, represented as a big-endian unsigned
+   integer.
+
+   If CREATE_FAST is used, the client and server base their key material on
+   K0=X|Y.
 
    From the base key material g^xy, they compute derivative key material as
-   follows.  First, the server represents g^xy as a big-endian unsigned
-   integer.  Next, the server computes 100 bytes of key data as K = SHA1(g^xy
-   | [00]) | SHA1(g^xy | [01]) | ... SHA1(g^xy | [04]) where "00" is a single
+   follows.  Next, the server computes 100 bytes of key data as K = SHA1(K0
+   | [00]) | SHA1(K0 | [01]) | ... SHA1(K0 | [04]) where "00" is a single
    octet whose value is zero, [01] is a single octet whose value is one, etc.
    The first 20 bytes of K form KH, bytes 21-40 form the forward digest Df,
    41-60 form the backward digest Db, 61-76 form Kf, and 77-92 form Kb.
