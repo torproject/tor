@@ -2774,7 +2774,7 @@ options_append_default_exit_policy(addr_policy_t **policy)
 }
 
 static int
-config_expand_exit_policy_aliases(smartlist_t *entries)
+config_expand_exit_policy_aliases(smartlist_t *entries, int assume_action)
 {
   static const char *prefixes[] = {
     "0.0.0.0/8", "169.254.0.0/16",
@@ -2786,15 +2786,22 @@ config_expand_exit_policy_aliases(smartlist_t *entries)
   for (i = 0; i < smartlist_len(entries); ++i) {
     char *v = smartlist_get(entries, i);
     const char *cp, *ports;
-    int accept;
+    const char *action;
     int prefix_idx;
-    accept = !strcasecmpstart(v, "accept");
-    if (!accept && strcasecmpstart(v, "reject")) {
+    if (!strcasecmpstart(v, "accept")) {
+      action = "accept ";
+      cp = v+strlen("accept");
+    } else if (!strcasecmpstart(v, "reject")) {
+      action = "reject ";
+      cp = v+strlen("reject");
+    } else if (assume_action >= 0) {
+      action = "";
+      cp = v;
+    } else {
       warn(LD_CONFIG,"Policy '%s' didn't start with accept or reject.", v);
       tor_free(pre);
       return -1;
     }
-    cp = v+strlen("accept"); /* Yes, they're the same length. */
     cp = eat_whitespace(cp);
     if (strcmpstart(cp, "private"))
       continue; /* No need to expand. */
@@ -2809,9 +2816,8 @@ config_expand_exit_policy_aliases(smartlist_t *entries)
     for (prefix_idx = 0; prefixes[prefix_idx]; ++prefix_idx) {
       size_t replacement_len = 16+strlen(prefixes[prefix_idx])+strlen(ports);
       char *replacement = tor_malloc(replacement_len);
-      tor_snprintf(replacement, replacement_len, "%s %s%s",
-                   accept?"accept":"reject", prefixes[prefix_idx],
-                   ports);
+      tor_snprintf(replacement, replacement_len, "%s%s%s",
+                   action, prefixes[prefix_idx], ports);
       smartlist_insert(entries, i++, replacement);
     }
     tor_free(v);
@@ -2851,7 +2857,7 @@ config_parse_addr_policy(config_line_t *cfg,
   entries = smartlist_create();
   for (; cfg; cfg = cfg->next) {
     smartlist_split_string(entries, cfg->value, ",", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    if (config_expand_exit_policy_aliases(entries)<0) {
+    if (config_expand_exit_policy_aliases(entries,assume_action)<0) {
       r = -1;
       continue;
     }
