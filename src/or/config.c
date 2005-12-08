@@ -247,7 +247,7 @@ static config_var_description_t state_description[] = {
   { NULL, NULL },
 };
 
-typedef int (*validate_fn_t)(void*);
+typedef int (*validate_fn_t)(void*,void*);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
@@ -280,7 +280,8 @@ static void config_free(config_format_t *fmt, void *options);
 static int option_is_same(config_format_t *fmt,
                           or_options_t *o1, or_options_t *o2, const char *name);
 static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
-static int options_validate(or_options_t *options);
+static int options_validate(or_options_t *old_options,
+                            or_options_t *options);
 static int options_act_reversible(or_options_t *old_options);
 static int options_act(or_options_t *old_options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
@@ -308,13 +309,14 @@ static int write_configuration_file(const char *fname, or_options_t *options);
 static config_line_t *get_assigned_option(config_format_t *fmt,
                                      or_options_t *options, const char *key);
 static void config_init(config_format_t *fmt, void *options);
-static int or_state_validate(or_state_t *options);
+static int or_state_validate(or_state_t *old_options, or_state_t *options);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void print_cvs_version(void);
 static void parse_reachable_addresses(void);
 static int init_libevent(void);
+static int opt_streq(const char *s1, const char *s2);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 static void check_libevent_version(const char *m, const char *v, int server);
 #endif
@@ -1276,7 +1278,7 @@ options_trial_assign(config_line_t *list, int use_defaults, int clear_first)
     return r;
   }
 
-  if (options_validate(trial_options) < 0) {
+  if (options_validate(get_options(), trial_options) < 0) {
     config_free(&options_format, trial_options);
     return -2;
   }
@@ -1609,7 +1611,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
 
   defaults = config_alloc(fmt);
   config_init(fmt, defaults);
-  fmt->validate_fn(defaults);
+  fmt->validate_fn(NULL,defaults);
 
   elements = smartlist_create();
   for (i=0; fmt->vars[i].name; ++i) {
@@ -1733,9 +1735,11 @@ fascist_firewall_allows_address(uint32_t addr, uint16_t port)
 
 /** Return 0 if every setting in <b>options</b> is reasonable.  Else
  * warn and return -1.  Should have no side effects, except for
- * normalizing the contents of <b>options</b>. */
+ * normalizing the contents of <b>options</b>.
+ * DOCDOC old_options.
+ */
 static int
-options_validate(or_options_t *options)
+options_validate(or_options_t *old_options, or_options_t *options)
 {
   int result = 0;
   config_line_t *cl;
@@ -1756,6 +1760,26 @@ options_validate(or_options_t *options)
   if (options->SocksPort == 0 && options->SocksListenAddress != NULL)
     REJECT("SocksPort must be defined if SocksListenAddress is defined.");
 #endif
+
+
+  if (options->SocksListenAddress) {
+    config_line_t *line = NULL;
+    int binding_on_public_addr = 0;
+    for (line = options->SocksListenAddress; line; line = line->next) {
+      uint16_t port;
+      uint32_t addr;
+      if (parse_addr_port(line->value, NULL, &addr, &port)<0)
+        continue; /* We'll warn about this later. */
+      if ((addr & 0xff000000u) != 0x7f000000u)
+        binding_on_public_addr = 1;
+    }
+    if (binding_on_public_addr &&
+        (!old_options || !config_lines_eq(old_options->SocksListenAddress,
+                                          options->SocksListenAddress))) {
+      /* XXXX This should be a better warning. */
+      COMPLAIN("Binding to a public address for SOCKS listener.");
+    }
+  }
 
   if (validate_data_directory(options)<0)
     REJECT("Invalid DataDirectory");
@@ -1807,11 +1831,17 @@ options_validate(or_options_t *options)
     REJECT("DirPort option out of bounds.");
 
   if (options->StrictExitNodes &&
-      (!options->ExitNodes || !strlen(options->ExitNodes)))
+      (!options->ExitNodes || !strlen(options->ExitNodes)) &&
+      (!old_options ||
+       (old_options->StrictExitNodes != options->StrictExitNodes) ||
+       (!opt_streq(old_options->ExitNodes, options->ExitNodes))))
     COMPLAIN("StrictExitNodes set, but no ExitNodes listed.");
 
   if (options->StrictEntryNodes &&
-      (!options->EntryNodes || !strlen(options->EntryNodes)))
+      (!options->EntryNodes || !strlen(options->EntryNodes)) &&
+      (!old_options ||
+       (old_options->StrictEntryNodes != options->StrictEntryNodes) ||
+       (!opt_streq(old_options->EntryNodes, options->EntryNodes))))
     COMPLAIN("StrictEntryNodes set, but no EntryNodes listed.");
 
   if (options->AuthoritativeDir) {
@@ -2081,7 +2111,9 @@ options_validate(or_options_t *options)
   }
 
   if (options->DirServers) {
-    COMPLAIN("You have used DirServer to specify directory authorities in your configuration.  This is potentially dangerous: it can make you look different from all other Tor users, and hurt your anonymity.  Even if you've specified the same authorities as Tor uses by default, the defaults could change in the future.  Be sure you know what you're doing.");
+    if (!old_options ||
+        !config_lines_eq(options->DirServers, old_options->DirServers))
+        COMPLAIN("You have used DirServer to specify directory authorities in your configuration.  This is potentially dangerous: it can make you look different from all other Tor users, and hurt your anonymity.  Even if you've specified the same authorities as Tor uses by default, the defaults could change in the future.  Be sure you know what you're doing.");
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 1)<0)
         result = -1;
@@ -2395,7 +2427,7 @@ options_init_from_torrc(int argc, char **argv)
     goto err;
 
   /* Validate newoptions */
-  if (options_validate(newoptions) < 0)
+  if (options_validate(oldoptions, newoptions) < 0)
     goto err;
 
   if (options_transition_allowed(oldoptions, newoptions) < 0)
@@ -3319,7 +3351,7 @@ get_or_state_fname(void)
 
 /** DOCDOC */
 static int
-or_state_validate(or_state_t *state)
+or_state_validate(or_state_t *old_state, or_state_t *state)
 {
   const char *err;
   if (helper_nodes_parse_state(state, 0, &err)<0) {
@@ -3379,7 +3411,7 @@ or_state_load(void)
       goto done;
   }
 
-  if (or_state_validate(new_state) < 0)
+  if (or_state_validate(NULL, new_state) < 0)
     goto done;
 
   if (contents)
