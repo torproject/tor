@@ -328,6 +328,7 @@ circuit_free_all(void)
   }
   smartlist_free(circuits_pending_or_conns);
   circuits_pending_or_conns = NULL;
+  HT_CLEAR(orconn_circid_map, &orconn_circid_circuit_map);
 }
 
 /** Deallocate space associated with the cpath node <b>victim</b>. */
