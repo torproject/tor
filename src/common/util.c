@@ -1304,8 +1304,10 @@ tor_listdir(const char *dirname)
  * or reserved for local networks by RFC 1918.
  */
 int
-is_internal_IP(uint32_t ip)
+is_internal_IP(uint32_t ip, int for_listening)
 {
+  if (for_listening && !ip) /* special case for binding to 0.0.0.0 */
+    return 0;
   if (((ip & 0xff000000) == 0x0a000000) || /*       10/8 */
       ((ip & 0xff000000) == 0x00000000) || /*        0/8 */
       ((ip & 0xff000000) == 0x7f000000) || /*      127/8 */
@@ -1324,7 +1326,7 @@ is_internal_IP(uint32_t ip)
 int
 is_local_IP(uint32_t ip)
 {
-  return is_internal_IP(ip);
+  return is_internal_IP(ip, 0);
 }
 
 /** Parse a string of the form "host[:port]" from <b>addrport</b>.  If
