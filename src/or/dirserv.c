@@ -399,7 +399,7 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
          ri->nickname, ri->address);
     return -1;
   }
-  if (is_internal_IP(ntohl(iaddr.s_addr))) {
+  if (is_internal_IP(ntohl(iaddr.s_addr), 0)) {
     info(LD_DIRSERV,
          "Router '%s' published internal IP address '%s'. Refusing.",
          ri->nickname, ri->address);
