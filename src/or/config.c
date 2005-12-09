@@ -1744,8 +1744,8 @@ options_validate(or_options_t *old_options, or_options_t *options)
   int result = 0;
   config_line_t *cl;
   addr_policy_t *addr_policy=NULL;
-#define REJECT(arg...) do { log(LOG_WARN, LD_CONFIG, arg); result = -1; } while (0)
-#define COMPLAIN(arg...) do { log(LOG_WARN, LD_CONFIG, arg); } while (0)
+#define REJECT(arg) do { log(LOG_WARN, LD_CONFIG, arg); result = -1; } while (0)
+#define COMPLAIN(arg) do { log(LOG_WARN, LD_CONFIG, arg); } while (0)
 
   if (options->ORPort < 0 || options->ORPort > 65535)
     REJECT("ORPort option out of bounds.");
@@ -1773,7 +1773,11 @@ options_validate(or_options_t *old_options, or_options_t *options)
       if (!is_internal_IP(addr, 1) &&
           (!old_options || !config_lines_eq(old_options->SocksListenAddress,
                                             options->SocksListenAddress))) {
-        COMPLAIN("You specified a public address '%s' for a SOCKS listener. Other people on the Internet might find your computer and use it as an open SOCKS proxy. Please don't allow this unless you have a good reason.", address);
+        warn(LD_CONFIG, 
+             "You specified a public address '%s' for a SOCKS listener. Other "
+             "people on the Internet might find your computer and use it as "
+             "an open SOCKS proxy. Please don't allow this unless you have "
+             "a good reason.", address);
       }
       tor_free(address);
     }
