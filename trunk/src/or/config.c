@@ -1761,7 +1761,6 @@ options_validate(or_options_t *old_options, or_options_t *options)
     REJECT("SocksPort must be defined if SocksListenAddress is defined.");
 #endif
 
-
   if (options->SocksListenAddress) {
     config_line_t *line = NULL;
     char *address = NULL;
@@ -1773,7 +1772,7 @@ options_validate(or_options_t *old_options, or_options_t *options)
       if (!is_internal_IP(addr, 1) &&
           (!old_options || !config_lines_eq(old_options->SocksListenAddress,
                                             options->SocksListenAddress))) {
-        warn(LD_CONFIG, 
+        warn(LD_CONFIG,
              "You specified a public address '%s' for a SOCKS listener. Other "
              "people on the Internet might find your computer and use it as "
              "an open SOCKS proxy. Please don't allow this unless you have "
@@ -2746,7 +2745,6 @@ normalize_log_options(or_options_t *options)
 
   return 0;
 }
-
 
 #define DEFAULT_EXIT_POLICY "reject private:*,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:465,reject *:587,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
