@@ -1420,7 +1420,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
   }
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-  if (is_internal_IP(htonl(in.s_addr)) && !options->NoPublish) {
+  if (is_internal_IP(htonl(in.s_addr), 0) && !options->NoPublish) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers) {
       /* if they are using the default dirservers, disallow internal IPs always. */
@@ -1744,8 +1744,8 @@ options_validate(or_options_t *old_options, or_options_t *options)
   int result = 0;
   config_line_t *cl;
   addr_policy_t *addr_policy=NULL;
-#define REJECT(arg) do { log(LOG_WARN, LD_CONFIG, arg); result = -1; } while (0)
-#define COMPLAIN(arg) do { log(LOG_WARN, LD_CONFIG, arg); } while (0)
+#define REJECT(arg...) do { log(LOG_WARN, LD_CONFIG, arg); result = -1; } while (0)
+#define COMPLAIN(arg...) do { log(LOG_WARN, LD_CONFIG, arg); } while (0)
 
   if (options->ORPort < 0 || options->ORPort > 65535)
     REJECT("ORPort option out of bounds.");
@@ -1764,20 +1764,18 @@ options_validate(or_options_t *old_options, or_options_t *options)
 
   if (options->SocksListenAddress) {
     config_line_t *line = NULL;
-    int binding_on_public_addr = 0;
+    char *address = NULL;
     for (line = options->SocksListenAddress; line; line = line->next) {
       uint16_t port;
       uint32_t addr;
-      if (parse_addr_port(line->value, NULL, &addr, &port)<0)
+      if (parse_addr_port(line->value, &address, &addr, &port)<0)
         continue; /* We'll warn about this later. */
-      if ((addr & 0xff000000u) != 0x7f000000u)
-        binding_on_public_addr = 1;
-    }
-    if (binding_on_public_addr &&
-        (!old_options || !config_lines_eq(old_options->SocksListenAddress,
-                                          options->SocksListenAddress))) {
-      /* XXXX This should be a better warning. */
-      COMPLAIN("Binding to a public address for SOCKS listener.");
+      if (!is_internal_IP(addr, 1) &&
+          (!old_options || !config_lines_eq(old_options->SocksListenAddress,
+                                            options->SocksListenAddress))) {
+        COMPLAIN("You specified a public address '%s' for a SOCKS listener. Other people on the Internet might find your computer and use it as an open SOCKS proxy. Please don't allow this unless you have a good reason.", address);
+      }
+      tor_free(address);
     }
   }
 
