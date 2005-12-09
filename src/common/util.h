@@ -160,7 +160,7 @@ char *expand_filename(const char *filename);
 struct smartlist_t *tor_listdir(const char *dirname);
 
 /* Net helpers */
-int is_internal_IP(uint32_t ip);
+int is_internal_IP(uint32_t ip, int for_listening);
 int is_local_IP(uint32_t ip);
 int parse_addr_port(const char *addrport, char **address, uint32_t *addr,
                     uint16_t *port);
