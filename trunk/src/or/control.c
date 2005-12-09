@@ -985,7 +985,10 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
         ++i;
       password = tor_malloc(i/2 + 1);
       if (base16_decode(password, i/2+1, body, i)<0) {
-        connection_write_str_to_buf("551 Invalid hexadecimal encoding.  Maybe you tried a plain text password?  If so, the standard requires you put it in double quotes.\r\n", conn);
+        connection_write_str_to_buf(
+            "551 Invalid hexadecimal encoding.  Maybe you tried a plain text "
+            "password?  If so, the standard requires you put it in double "
+            "quotes.\r\n", conn);
         tor_free(password);
         return 0;
       }
@@ -1031,7 +1034,9 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
     if (used_quoted_string)
       connection_write_str_to_buf("515 Authentication failed\r\n", conn);
     else
-      connection_write_str_to_buf("515 Authentication failed.  Maybe you tried a plain text password?  If so, the standard requires you put it in double quotes.\r\n", conn);
+      connection_write_str_to_buf(
+         "515 Authentication failed.  Maybe you tried a plain text password?  "
+         "If so, the standard requires you put it in double quotes.\r\n",conn);
   }
   return 0;
  ok:

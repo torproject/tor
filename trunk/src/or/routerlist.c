@@ -1519,7 +1519,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
               router->nickname, router->contact_info ? router->contact_info : "",
               router->platform ? router->platform : "");
           } else {
-            info(LD_DIR,"'%s' may be unreachable -- the %d previous descriptors were thought to be unreachable.", router->nickname, router->num_unreachable_notifications);
+            info(LD_DIR,"'%s' may be unreachable -- the %d previous "
+                 "descriptors were thought to be unreachable.",
+                 router->nickname, router->num_unreachable_notifications);
             router->num_unreachable_notifications++;
           }
         }
@@ -1913,7 +1915,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   format_iso_time(published, ns->published_on);
 
   if (ns->published_on > now + NETWORKSTATUS_ALLOW_SKEW) {
-    warn(LD_GENERAL, "Network status from %s was published in the future (%s GMT). Somebody is skewed here: check your clock. Not caching.", trusted_dir->description, published);
+    warn(LD_GENERAL, "Network status from %s was published in the future "
+         "(%s GMT). Somebody is skewed here: check your clock. Not caching.",
+         trusted_dir->description, published);
     skewed = 1;
   }
 
