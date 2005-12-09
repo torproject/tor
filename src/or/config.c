@@ -1799,7 +1799,9 @@ options_validate(or_options_t *old_options, or_options_t *options)
   }
 
   if (server_mode(options) && !options->ContactInfo)
-    log(LOG_NOTICE, LD_CONFIG, "Your ContactInfo config option is not set. Please consider setting it, so we can contact you if your server is misconfigured or something else goes wrong.");
+    log(LOG_NOTICE, LD_CONFIG, "Your ContactInfo config option is not set. "
+        "Please consider setting it, so we can contact you if your server is "
+        "misconfigured or something else goes wrong.");
 
   if (normalize_log_options(options))
     return -1;
@@ -2016,7 +2018,9 @@ options_validate(or_options_t *old_options, or_options_t *options)
   }
   if (server_mode(options) &&
       options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH*2) {
-    log(LOG_WARN,LD_CONFIG,"BandwidthRate is set to %d bytes/second. For servers, it must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH*2);
+    log(LOG_WARN,LD_CONFIG,"BandwidthRate is set to %d bytes/second. "
+        "For servers, it must be at least %d.",
+        (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH*2);
     result = -1;
   }
   if (options->BandwidthRate > options->BandwidthBurst)
@@ -2114,7 +2118,12 @@ options_validate(or_options_t *old_options, or_options_t *options)
   if (options->DirServers) {
     if (!old_options ||
         !config_lines_eq(options->DirServers, old_options->DirServers))
-        COMPLAIN("You have used DirServer to specify directory authorities in your configuration.  This is potentially dangerous: it can make you look different from all other Tor users, and hurt your anonymity.  Even if you've specified the same authorities as Tor uses by default, the defaults could change in the future.  Be sure you know what you're doing.");
+        COMPLAIN("You have used DirServer to specify directory authorities in "
+                 "your configuration.  This is potentially dangerous: it can "
+                 "make you look different from all other Tor users, and hurt "
+                 "your anonymity.  Even if you've specified the same "
+                 "authorities as Tor uses by default, the defaults could "
+                 "change in the future.  Be sure you know what you're doing.");
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 1)<0)
         result = -1;
@@ -2682,7 +2691,9 @@ add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
     return -1;
   }
 
-  log(LOG_WARN, LD_CONFIG, "The old LogLevel/LogFile/DebugLogFile/SysLog options are deprecated, and will go away soon.  Your new torrc line should be: 'Log %s'", buf);
+  log(LOG_WARN, LD_CONFIG, "The old LogLevel/LogFile/DebugLogFile/SysLog "
+      "options are deprecated, and will go away soon.  Your new torrc line "
+      "should be: 'Log %s'", buf);
   config_line_append(&options->Logs, "Log", buf);
   tor_free(buf);
   return 0;
@@ -2735,7 +2746,8 @@ normalize_log_options(or_options_t *options)
   }
 
   if (options->DebugLogFile) {
-    if (add_single_log_option(options, LOG_DEBUG, LOG_ERR, "file", options->DebugLogFile) < 0)
+    if (add_single_log_option(options, LOG_DEBUG, LOG_ERR, "file",
+                              options->DebugLogFile) < 0)
       return -1;
   }
 
@@ -2746,7 +2758,10 @@ normalize_log_options(or_options_t *options)
   return 0;
 }
 
-#define DEFAULT_EXIT_POLICY "reject private:*,reject *:25,reject *:119,reject *:135-139,reject *:445,reject *:465,reject *:587,reject *:1214,reject *:4661-4666,reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
+#define DEFAULT_EXIT_POLICY                                                  \
+  "reject private:*,reject *:25,reject *:119,reject *:135-139,reject *:445," \
+  "reject *:465,reject *:587,reject *:1214,reject *:4661-4666,"              \
+  "reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
 /** Add the default exit policy entries to <b>policy</b>
  */
@@ -3081,7 +3096,9 @@ normalize_data_directory(or_options_t *options)
    if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
      /* If our homedir is /, we probably don't want to use it. */
      /* XXXX Default to /var/lib/tor? */
-     warn(LD_CONFIG, "Default DataDirectory is \"~/.tor\".  This expands to \"%s\", which is probably not what you want.  Using \"%s/tor\" instead", fn, LOCALSTATEDIR);
+     warn(LD_CONFIG, "Default DataDirectory is \"~/.tor\".  This expands to "
+          "\"%s\", which is probably not what you want.  Using \"%s/tor\" "
+          "instead", fn, LOCALSTATEDIR);
      tor_free(fn);
      fn = tor_strdup(LOCALSTATEDIR"/tor");
 

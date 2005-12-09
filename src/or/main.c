@@ -475,7 +475,9 @@ conn_close_if_marked(int i)
         severity = LOG_INFO;
       else
         severity = LOG_NOTICE;
-      log_fn(severity, LD_NET, "Something wrong with your network connection? Conn (addr %s, fd %d, type %s, state %d) tried to write %d bytes but timed out. (Marked at %s:%d)",
+      log_fn(severity, LD_NET, "Something wrong with your network connection? "
+             "Conn (addr %s, fd %d, type %s, state %d) tried to write %d "
+             "bytes but timed out. (Marked at %s:%d)",
              safe_str(conn->address), conn->s, conn_type_to_string(conn->type),
              conn->state,
              (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,
@@ -921,10 +923,14 @@ second_elapsed_callback(int fd, short event, void *args)
     /* every 20 minutes, check and complain if necessary */
     routerinfo_t *me = router_get_my_routerinfo();
     if (me && !check_whether_orport_reachable())
-      warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that its ORPort is reachable. Please check your firewalls, ports, address, /etc/hosts file, etc.",
+      warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
+           "its ORPort is reachable. Please check your firewalls, ports, "
+           "address, /etc/hosts file, etc.",
           me->address, me->or_port);
     if (me && !check_whether_dirport_reachable())
-      warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that its DirPort is reachable. Please check your firewalls, ports, address, /etc/hosts file, etc.",
+      warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that its "
+           "DirPort is reachable. Please check your firewalls, ports, "
+           "address, /etc/hosts file, etc.",
           me->address, me->dir_port);
   }
 

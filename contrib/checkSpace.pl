@@ -35,6 +35,12 @@ for $fn (@ARGV) {
         } else {
             $lastnil = 0;
         }
+	## Terminals are still 80 columns wide in my world.  I refuse to
+	## accept double-line lines.
+	if (/^.{160}/) {
+	    print "     Wide:$fn:$.\n";
+	}
+
 	### Juju to skip over comments and strings, since the tests
 	### we're about to do are okay there.
 	if ($C) {

@@ -427,7 +427,9 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->cache_info.published_on > now+ROUTER_ALLOW_SKEW) {
-    notice(LD_DIRSERV, "Publication time for nickname '%s' is too far (%d minutes) in the future; possible clock skew. Not adding (ContactInfo '%s', platform '%s').",
+    notice(LD_DIRSERV, "Publication time for nickname '%s' is too far "
+           "(%d minutes) in the future; possible clock skew. Not adding "
+           "(ContactInfo '%s', platform '%s').",
            ri->nickname, (int)((ri->cache_info.published_on-now)/60),
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");

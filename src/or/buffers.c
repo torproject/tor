@@ -967,7 +967,12 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
           buf_remove_from_front(buf, 10);
           if (!address_is_in_virtual_range(req->address) &&
               !have_warned_about_unsafe_socks) {
-            warn(LD_APP,"Your application (using socks5 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.  For more information, please see http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS", req->port);
+            warn(LD_APP,"Your application (using socks5 on port %d) is giving "
+                 "Tor only an IP address. Applications that do DNS resolves "
+                 "themselves may leak information. Consider using Socks4A "
+                 "(e.g. via privoxy or socat) instead.  For more information, "
+                 "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
+                 "TorFAQ#SOCKSAndDNS", req->port);
 //            have_warned_about_unsafe_socks = 1; // (for now, warn every time)
           }
           return 1;
@@ -986,7 +991,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
           req->port = ntohs(get_uint16(buf->cur+5+len));
           buf_remove_from_front(buf, 5+len+2);
           if (log_sockstype)
-            notice(LD_APP, "Your application (using socks5 on port %d) gave Tor a hostname, which means Tor will do the DNS resolve for you. This is good.", req->port);
+            notice(LD_APP, "Your application (using socks5 on port %d) gave "
+                   "Tor a hostname, which means Tor will do the DNS resolve "
+                   "for you. This is good.", req->port);
           return 1;
         default: /* unsupported */
           warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",*(buf->cur+3));
@@ -1041,7 +1048,10 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
       if (socks4_prot != socks4a &&
           !address_is_in_virtual_range(tmpbuf) &&
           !have_warned_about_unsafe_socks) {
-        warn(LD_APP,"Your application (using socks4 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
+        warn(LD_APP,"Your application (using socks4 on port %d) is giving Tor "
+             "only an IP address. Applications that do DNS resolves "
+             "themselves may leak information. Consider using Socks4A (e.g. "
+             "via privoxy or socat) instead.", req->port);
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
       }
       if (socks4_prot == socks4a) {
@@ -1061,7 +1071,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
         }
         tor_assert(next < buf->cur+buf->datalen);
         if (log_sockstype)
-          notice(LD_APP, "Your application (using socks4a on port %d) gave Tor a hostname, which means Tor will do the DNS resolve for you. This is good.", req->port);
+          notice(LD_APP, "Your application (using socks4a on port %d) gave "
+                 "Tor a hostname, which means Tor will do the DNS resolve "
+                 "for you. This is good.", req->port);
       }
       debug(LD_APP,"socks4: Everything is here. Success.");
       strlcpy(req->address, startaddr ? startaddr : tmpbuf,
@@ -1089,7 +1101,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
 "</p>\n"
 "<p>\n"
 "See <a href=\"http://tor.eff.org/documentation.html\">http://tor.eff.org/documentation.html</a> for more information.\n"
-"<!-- Plus this comment, to make the body response more than 512 bytes, so IE will be willing to display it. Comment comment comment comment comment comment comment comment comment comment comment comment.-->\n"
+"<!-- Plus this comment, to make the body response more than 512 bytes, so "
+"     IE will be willing to display it. Comment comment comment comment "
+"     comment comment comment comment comment comment comment comment.-->\n"
 "</p>\n"
 "</body>\n"
 "</html>\n"

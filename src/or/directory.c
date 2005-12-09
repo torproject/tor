@@ -1060,7 +1060,11 @@ connection_dir_client_reached_eof(connection_t *conn)
         warn(LD_GENERAL,"http status 400 (\"%s\") response from dirserver '%s:%d'. Please correct.", reason, conn->address, conn->port);
         break;
       case 403:
-        warn(LD_GENERAL,"http status 403 (\"%s\") response from dirserver '%s:%d'. Is your clock skewed? Have you mailed us your key fingerprint? Are you using the right key? Are you using a private IP address? See http://tor.eff.org/doc/tor-doc-server.html", reason, conn->address, conn->port);
+        warn(LD_GENERAL,"http status 403 (\"%s\") response from dirserver "
+             "'%s:%d'. Is your clock skewed? Have you mailed us your key "
+             "fingerprint? Are you using the right key? Are you using a "
+             "private IP address? See http://tor.eff.org/doc/"
+             "tor-doc-server.html", reason, conn->address, conn->port);
         break;
       default:
         warn(LD_GENERAL,"http status %d (\"%s\") reason unexpected (server '%s:%d').", status_code, reason, conn->address, conn->port);
@@ -1365,14 +1369,19 @@ directory_handle_command_get(connection_t *conn, char *headers,
           return -1;
         }
         tor_free(inp);
-        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\nContent-Encoding: deflate\r\n\r\n",
+        tor_snprintf(tmp, sizeof(tmp),
+           "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+           "Content-Type: application/octet-stream\r\n"
+           "Content-Encoding: deflate\r\n\r\n",
                      date,
                      (int)compressed_len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
         connection_write_to_buf(compressed, compressed_len, conn);
         tor_free(compressed);
       } else {
-        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+        tor_snprintf(tmp, sizeof(tmp),
+           "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+           "Content-Type: text/plain\r\n\r\n",
                      date,
                      (int)len);
         connection_write_to_buf(tmp, strlen(tmp), conn);

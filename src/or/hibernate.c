@@ -614,7 +614,11 @@ read_bandwidth_usage(void)
   interval_start_time = t1;
   expected_bandwidth_usage = expected_bw;
 
-  info(LD_ACCT, "Successfully read bandwidth accounting file written at %s for interval starting at %s.  We have been active for %lu seconds in this interval.  At the start of the interval, we expected to use about %lu KB per second. ("U64_FORMAT" bytes read so far, "U64_FORMAT" bytes written so far)",
+  info(LD_ACCT, "Successfully read bandwidth accounting file written at %s "
+       "for interval starting at %s.  We have been active for %lu seconds in "
+       "this interval.  At the start of the interval, we expected to use "
+       "about %lu KB per second. ("U64_FORMAT" bytes read so far, "
+       U64_FORMAT" bytes written so far)",
          (char*)smartlist_get(elts,2),
          (char*)smartlist_get(elts,1),
          (unsigned long)n_seconds_active_in_interval,
