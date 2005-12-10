@@ -1812,7 +1812,10 @@ router_load_routers_from_string(const char *s, int from_cache,
       } else {
         char *requested =
           smartlist_join_strings(requested_fingerprints," ",0,NULL);
-        warn(LD_DIR, "We received a router descriptor with a fingerprint (%s) that we never requested. (We asked for: %s.) Dropping.", fp, requested);
+        warn(LD_DIR,
+             "We received a router descriptor with a fingerprint (%s) "
+             "that we never requested. (We asked for: %s.) Dropping.",
+             fp, requested);
         tor_free(requested);
         routerinfo_free(ri);
         continue;

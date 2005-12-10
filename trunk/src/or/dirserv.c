@@ -437,7 +437,9 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
     return -1;
   }
   if (ri->cache_info.published_on < now-ROUTER_MAX_AGE) {
-    notice(LD_DIRSERV, "Publication time for router with nickname '%s' is too far (%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
+    notice(LD_DIRSERV,
+           "Publication time for router with nickname '%s' is too far "
+           "(%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
            ri->nickname, (int)((now-ri->cache_info.published_on)/60),
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
