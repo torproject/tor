@@ -344,6 +344,9 @@ circuit_handle_first_hop(circuit_t *circ)
          DIGEST_LEN);
   n_conn = connection_or_get_by_identity_digest(
          firsthop->extend_info->identity_digest);
+  /* If we don't have an open conn, or the conn we have is obsolete
+   * (i.e. old or broken) and the other side will let us make a second
+   * connection without dropping it immediately... */
   if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
       (n_conn->is_obsolete &&
        router_digest_version_as_new_as(firsthop->extend_info->identity_digest,
@@ -669,6 +672,9 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
   n_conn = connection_or_get_by_identity_digest(id_digest);
 
+  /* If we don't have an open conn, or the conn we have is obsolete
+   * (i.e. old or broken) and the other side will let us make a second
+   * connection without dropping it immediately... */
   if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
     (n_conn->is_obsolete &&
      router_digest_version_as_new_as(id_digest,"0.1.1.9-alpha-cvs"))) {
