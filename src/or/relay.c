@@ -663,7 +663,10 @@ connection_edge_process_end_not_open(
             (rh->length < 5 ||
              (tor_inet_aton(conn->socks_request->address, &in) &&
               !conn->chosen_exit_name))) {
-          notice(LD_APP,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
+          notice(LD_APP,
+                 "Exitrouter '%s' seems to be more restrictive than its exit "
+                 "policy. Not using this router as exit for now.",
+                 exitrouter->nickname);
           addr_policy_free(exitrouter->exit_policy);
           exitrouter->exit_policy =
             router_parse_addr_policy_from_string("reject *:*", -1);

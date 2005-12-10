@@ -463,7 +463,8 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
     return -1;
   }
   if (rlim.rlim_max < limit) {
-    warn(LD_CONFIG,"We need %lu file descriptors available, and we're limited to %lu. Please change your ulimit -n.", limit, (unsigned long)rlim.rlim_max);
+    warn(LD_CONFIG,"We need %lu file descriptors available, and we're limited to %lu. Please change your ulimit -n.",
+         limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
   most = (rlim.rlim_max > cap) ? cap : (unsigned) rlim.rlim_max;

@@ -1108,10 +1108,12 @@ connection_dir_client_reached_eof(connection_t *conn)
         info(LD_REND,"Uploading rendezvous descriptor: finished with status 200 (\"%s\")", reason);
         break;
       case 400:
-        warn(LD_REND,"http status 400 (\"%s\") response from dirserver '%s:%d'. Malformed rendezvous descriptor?", reason, conn->address, conn->port);
+        warn(LD_REND,"http status 400 (\"%s\") response from dirserver '%s:%d'. Malformed rendezvous descriptor?",
+             reason, conn->address, conn->port);
         break;
       default:
-        warn(LD_REND,"http status %d (\"%s\") response unexpected (server '%s:%d').", status_code, reason, conn->address, conn->port);
+        warn(LD_REND,"http status %d (\"%s\") response unexpected (server '%s:%d').",
+             status_code, reason, conn->address, conn->port);
         break;
     }
   }
@@ -1130,7 +1132,9 @@ connection_dir_reached_eof(connection_t *conn)
      * parsing partial serverdesc responses. */
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         buf_datalen(conn->inbuf)>=(24*1024)) {
-      notice(LD_DIR, "Directory connection closed early after downloading %d bytes of descriptors.  If this happens often, please file a bug report.",
+      notice(LD_DIR,
+             "Directory connection closed early after downloading %d bytes "
+             "of descriptors. If this happens often, please file a bug report.",
              (int)buf_datalen(conn->inbuf));
     }
     connection_close_immediate(conn); /* it was an error; give up on flushing */

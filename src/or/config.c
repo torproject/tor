@@ -1987,7 +1987,8 @@ options_validate(or_options_t *old_options, or_options_t *options)
       options->DirFetchPeriod = MAX_CACHE_DIR_FETCH_PERIOD;
     }
     if (options->StatusFetchPeriod > MAX_CACHE_STATUS_FETCH_PERIOD) {
-      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have StatusFetchPeriod less than %d seconds. Clipping.", MAX_CACHE_STATUS_FETCH_PERIOD);
+      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have StatusFetchPeriod less than %d seconds. Clipping.",
+          MAX_CACHE_STATUS_FETCH_PERIOD);
       options->StatusFetchPeriod = MAX_CACHE_STATUS_FETCH_PERIOD;
     }
   }
@@ -2169,7 +2170,8 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
   }
 
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    warn(LD_CONFIG,"While Tor is running, changing DataDirectory (\"%s\"->\"%s\") is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
+    warn(LD_CONFIG,"While Tor is running, changing DataDirectory (\"%s\"->\"%s\") is not allowed. Failing.",
+         old->DataDirectory, new_val->DataDirectory);
     return -1;
   }
 
@@ -3345,7 +3347,9 @@ init_libevent(void)
                          get_options()->ORPort != 0);
 #else
   log(LOG_NOTICE, LD_GENERAL, "Initialized old libevent (version 1.0b or earlier).");
-  log(LOG_WARN, LD_GENERAL, "You have a very old version of libevent.  It is likely to be buggy; please consider building Tor with a more recent version.");
+  log(LOG_WARN, LD_GENERAL,
+      "You have a very old version of libevent.  It is likely to be buggy; "
+      "please consider building Tor with a more recent version.");
 #endif
 
   return 0;
