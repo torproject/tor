@@ -21,6 +21,7 @@ Changes in version 0.1.1.10-alpha - 2005-12-xx
       build with -ldl.
     - Give a useful message when people run Tor as the wrong user,
       rather than telling them to start chowning random directories.
+    - We were failing to inform the controller about new .onion streams.
 
   o Security bugfixes on 0.1.0.x:
     - Refuse server descriptors if the fingerprint line doesn't match
