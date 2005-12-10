@@ -271,7 +271,7 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
   vl = versionlist;
 
   debug(LD_CONFIG,"Checking whether version '%s' is in '%s'",
-         myversion, versionlist);
+        myversion, versionlist);
 
   if (tor_version_parse(myversion, &mine)) {
     err(LD_BUG,"I couldn't parse my own version (%s)", myversion);
@@ -467,7 +467,7 @@ router_parse_runningrouters(const char *str)
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
     warn(LD_DIR, "Unrecognized keyword '%s'; can't parse running-routers",
-           tok->args[0]);
+         tok->args[0]);
     goto err;
   }
   tok = smartlist_get(tokens,0);
@@ -731,8 +731,10 @@ router_parse_entry_from_string(const char *s, const char *end)
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    warn(LD_DIR, "Unrecognized critical keyword '%s'; skipping descriptor. (It may be from another version of Tor.)",
-           tok->args[0]);
+    warn(LD_DIR,
+         "Unrecognized critical keyword '%s'; skipping descriptor. "
+         "(It may be from another version of Tor.)",
+         tok->args[0]);
     goto err;
   }
 
@@ -830,7 +832,7 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
   if (crypto_pk_keysize(tok->key) != PK_BYTES) {
     warn(LD_DIR, "Wrong size on onion key: %d bits!",
-           (int)crypto_pk_keysize(tok->key)*8);
+         (int)crypto_pk_keysize(tok->key)*8);
     goto err;
   }
   router->onion_pkey = tok->key;
@@ -994,7 +996,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
     warn(LD_DIR, "Unrecognized keyword \"%s\" in router status; skipping.",
-           tok->args[0]);
+         tok->args[0]);
     goto err;
   }
   if (!(tok = find_first_by_keyword(tokens, K_R))) {
@@ -1003,13 +1005,13 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   }
   if (tok->n_args < 8) {
     warn(LD_DIR,
-           "Too few arguments to 'r' keywork in router status; skipping.");
+         "Too few arguments to 'r' keywork in router status; skipping.");
   }
   rs = tor_malloc_zero(sizeof(routerstatus_t));
 
   if (!is_legal_nickname(tok->args[0])) {
     warn(LD_DIR,
-           "Invalid nickname '%s' in router status; skipping.", tok->args[0]);
+         "Invalid nickname '%s' in router status; skipping.", tok->args[0]);
     goto err;
   }
   strlcpy(rs->nickname, tok->args[0], sizeof(rs->nickname));
@@ -1108,7 +1110,7 @@ networkstatus_parse_from_string(const char *s)
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
     warn(LD_DIR, "Unrecognized keyword '%s'; can't parse network-status",
-           tok->args[0]);
+         tok->args[0]);
     goto err;
   }
   ns = tor_malloc_zero(sizeof(networkstatus_t));
@@ -1686,7 +1688,7 @@ router_get_hash_impl(const char *s, char *digest,
   }
   if (start != s && *(start-1) != '\n') {
     warn(LD_DIR, "first occurrence of \"%s\" is not at the start of a line",
-           start_str);
+         start_str);
     return -1;
   }
   end = strstr(start+strlen(start_str), end_str);

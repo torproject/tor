@@ -204,8 +204,8 @@ dirserv_parse_fingerprint_file(const char *fname)
       /* If you approved an OR called "client", then clients who use
        * the default nickname could all be rejected.  That's no good. */
       notice(LD_CONFIG,
-          "Authorizing a nickname '%s' would break many clients; skipping.",
-          DEFAULT_CLIENT_NICKNAME);
+             "Authorizing a nickname '%s' would break many clients; skipping.",
+             DEFAULT_CLIENT_NICKNAME);
       continue;
     }
     if (add_fingerprint_to_dir(nickname, fingerprint, fingerprint_list_new) != 0)
@@ -335,7 +335,9 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
     return FP_NAMED; /* Right fingerprint. */
   } else {
     if (should_log)
-      warn(LD_DIRSERV,"Mismatched fingerprint for '%s': expected '%s' got '%s'. ContactInfo '%s', platform '%s'.)",
+      warn(LD_DIRSERV,
+           "Mismatched fingerprint for '%s': expected '%s' got '%s'. "
+           "ContactInfo '%s', platform '%s'.)",
            nickname, nn_ent->fingerprint, fp,
            contact ? contact : "",
            platform ? platform : "");
@@ -551,7 +553,7 @@ directory_remove_invalid(void)
     switch (r) {
       case FP_REJECT:
         info(LD_DIRSERV, "Router '%s' is now rejected: %s",
-            ent->nickname, msg?msg:"");
+             ent->nickname, msg?msg:"");
         routerlist_remove(rl, ent, i--, 0);
         changed = 1;
         break;
@@ -829,13 +831,13 @@ dirserv_dump_directory_to_string(char **dir_out,
      overruns.*/
 
   tor_snprintf(buf, buf_len,
-           "signed-directory\n"
-           "published %s\n"
-           "recommended-software %s\n"
-           "router-status %s\n"
-           "dir-signing-key\n%s\n",
-           published, recommended_versions, router_status,
-           identity_pkey);
+               "signed-directory\n"
+               "published %s\n"
+               "recommended-software %s\n"
+               "router-status %s\n"
+               "dir-signing-key\n%s\n",
+               published, recommended_versions, router_status,
+               identity_pkey);
 
   tor_free(recommended_versions);
   tor_free(router_status);

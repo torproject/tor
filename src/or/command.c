@@ -82,10 +82,10 @@ command_process_cell(cell_t *cell, connection_t *conn)
   if (now > current_second) { /* the second has rolled over */
     /* print stats */
     info(LD_OR,"At end of second: %d creates (%d ms), %d createds (%d ms), %d relays (%d ms), %d destroys (%d ms)",
-      num_create, create_time/1000,
-      num_created, created_time/1000,
-      num_relay, relay_time/1000,
-      num_destroy, destroy_time/1000);
+         num_create, create_time/1000,
+         num_created, created_time/1000,
+         num_relay, relay_time/1000,
+         num_destroy, destroy_time/1000);
 
     /* zero out stats */
     num_create = num_created = num_relay = num_destroy = 0;
@@ -174,11 +174,11 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
    */
   if ((cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_HIGHER) {
     info(LD_OR, "Got a high circuit ID from %s (%d); switching to low circuit IDs.",
-           conn->nickname ? conn->nickname : "client", conn->s);
+         conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_LOWER;
   } else if (!(cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_LOWER) {
     info(LD_OR, "Got a low circuit ID from %s (%d); switching to high circuit IDs.",
-           conn->nickname ? conn->nickname : "client", conn->s);
+         conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
   }
 
@@ -336,7 +336,7 @@ command_process_destroy_cell(cell_t *cell, connection_t *conn)
 
   if (!circ) {
     info(LD_OR,"unknown circuit %d on connection from %s:%d. Dropping.",
-           cell->circ_id, conn->address, conn->port);
+         cell->circ_id, conn->address, conn->port);
     return;
   }
   debug(LD_OR,"Received for circID %d.",cell->circ_id);

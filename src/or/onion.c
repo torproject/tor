@@ -240,7 +240,7 @@ onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN b
     goto err;
   } else if (len != DH_KEY_LEN) {
     warn(LD_PROTOCOL, "Unexpected onionskin length after decryption: %d",
-           len);
+         len);
     goto err;
   }
 

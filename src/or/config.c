@@ -486,7 +486,7 @@ options_act_reversible(or_options_t *old_options)
   /* Ensure data directory is private; create if possible. */
   if (check_private_dir(options->DataDirectory, CPD_CREATE)<0) {
     err(LD_FS, "Couldn't access/create private data directory \"%s\"",
-           options->DataDirectory);
+        options->DataDirectory);
     /* No need to roll back, since you can't change the value. */
     goto done;
   }
@@ -705,9 +705,9 @@ expand_abbrev(config_format_t *fmt, const char *option, int command_line,
         (command_line || !fmt->abbrevs[i].commandline_only)) {
       if (warn_obsolete && fmt->abbrevs[i].warn) {
         warn(LD_CONFIG,
-            "The configuration option '%s' is deprecated; use '%s' instead.",
-               fmt->abbrevs[i].abbreviated,
-               fmt->abbrevs[i].full);
+             "The configuration option '%s' is deprecated; use '%s' instead.",
+             fmt->abbrevs[i].abbreviated,
+             fmt->abbrevs[i].full);
       }
       return fmt->abbrevs[i].full;
     }
@@ -740,7 +740,7 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
     }
     if (i == argc-1) {
       warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
-             argv[i]);
+           argv[i]);
       config_free_lines(front);
       return -1;
     }
@@ -867,8 +867,8 @@ config_find_option(config_format_t *fmt, const char *key)
   for (i=0; fmt->vars[i].name; ++i) {
     if (!strncasecmp(key, fmt->vars[i].name, keylen)) {
       warn(LD_CONFIG, "The abbreviation '%s' is deprecated. "
-          "Please use '%s' instead",
-             key, fmt->vars[i].name);
+           "Please use '%s' instead",
+           key, fmt->vars[i].name);
       return &fmt->vars[i];
     }
   }
@@ -1099,7 +1099,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
     return NULL;
   } else if (var->type == CONFIG_TYPE_LINELIST_S) {
     warn(LD_CONFIG,
-           "Can't return context-sensitive '%s' on its own", key);
+         "Can't return context-sensitive '%s' on its own", key);
     return NULL;
   }
   value = ((char*)options) + var->var_offset;
@@ -2524,7 +2524,7 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
       levelMin = parse_log_level(tmp_sev);
       if (levelMin < 0) {
         warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
-               "err|warn|notice|info|debug", tmp_sev);
+             "err|warn|notice|info|debug", tmp_sev);
         tor_free(tmp_sev);
         return -1;
       }
@@ -2536,7 +2536,7 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
       levelMax = parse_log_level(cp+1);
       if (levelMax < 0) {
         warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
-               "err|warn|notice|info|debug", cp+1);
+             "err|warn|notice|info|debug", cp+1);
         return -1;
       }
     }
@@ -2544,7 +2544,7 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
     levelMin = parse_log_level(range);
     if (levelMin < 0) {
       warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
-             "err|warn|notice|info|debug", range);
+           "err|warn|notice|info|debug", range);
       return -1;
     }
     levelMax = LOG_ERR;
@@ -2581,7 +2581,7 @@ convert_log_option(or_options_t *options, config_line_t *level_opt,
   if (file_opt && !strcasecmp(file_opt->key, "LogFile")) {
     if (add_single_log_option(options, levelMin, levelMax, "file", file_opt->value) < 0) {
       warn(LD_FS, "Cannot write to LogFile \"%s\": %s.", file_opt->value,
-             strerror(errno));
+           strerror(errno));
       return -1;
     }
   } else if (file_opt && !strcasecmp(file_opt->key, "SysLog")) {
@@ -2653,11 +2653,11 @@ options_init_logs(or_options_t *options, int validate_only)
 #endif
     } else {
       warn(LD_CONFIG, "Unrecognized log type %s",
-             (const char*)smartlist_get(elts,1));
+           (const char*)smartlist_get(elts,1));
       if (strchr(smartlist_get(elts,1), '/') ||
           strchr(smartlist_get(elts,1), '\\')) {
         warn(LD_CONFIG, "Did you mean to say 'Log file %s' ?",
-               (const char *)smartlist_get(elts,1));
+             (const char *)smartlist_get(elts,1));
       }
       ok = 0; goto cleanup;
     }
@@ -3397,7 +3397,7 @@ check_libevent_version(const char *m, const char *v, int server)
   } else if (slow && server) {
     log(LOG_WARN, LD_GENERAL,
         "libevent %s can be very slow with %s. "
-      "When running a server, please use the latest version of libevent.",v,m);
+        "When running a server, please use the latest version of libevent.",v,m);
   }
 
 }

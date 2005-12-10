@@ -282,16 +282,16 @@ connection_dir_request_failed(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR ||
       conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     info(LD_DIR, "Giving up on directory server at '%s:%d'; retrying",
-           conn->address, conn->port);
+         conn->address, conn->port);
     directory_get_from_dirserver(conn->purpose, NULL,
                                  0 /* don't retry_if_no_servers */);
   } else if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     info(LD_DIR, "Giving up on directory server at '%s'; retrying",
-           conn->address);
+         conn->address);
     connection_dir_download_networkstatus_failed(conn);
   } else if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
     info(LD_DIR, "Giving up on directory server at '%s'; retrying",
-           conn->address);
+         conn->address);
     connection_dir_download_routerdesc_failed(conn);
   }
 }
@@ -501,7 +501,7 @@ directory_send_command(connection_t *conn, const char *platform,
       tor_assert(!resource);
       tor_assert(!payload);
       debug(LD_DIR, "Asking for compressed directory from server running %s",
-             platform?platform:"<unknown version>");
+            platform?platform:"<unknown version>");
       httpcommand = "GET";
       url = tor_strdup("/tor/dir.z");
       break;
@@ -815,7 +815,8 @@ connection_dir_client_reached_eof(connection_t *conn)
                               &body, &body_len, MAX_DIR_SIZE,
                               allow_partial)) {
     case -1: /* overflow */
-      warn(LD_PROTOCOL,"'fetch' response too large (server '%s:%d'). Closing.", conn->address, conn->port);
+      warn(LD_PROTOCOL,"'fetch' response too large (server '%s:%d'). Closing.",
+           conn->address, conn->port);
       return -1;
     case 0:
       info(LD_HTTP,"'fetch' response not all here, but we're at eof. Closing.");
@@ -825,7 +826,8 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (parse_http_response(headers, &status_code, &date_header,
                           &compression, &reason) < 0) {
-    warn(LD_HTTP,"Unparseable headers (server '%s:%d'). Closing.", conn->address, conn->port);
+    warn(LD_HTTP,"Unparseable headers (server '%s:%d'). Closing.",
+         conn->address, conn->port);
     tor_free(body); tor_free(headers);
     return -1;
   }
@@ -877,9 +879,9 @@ connection_dir_client_reached_eof(connection_t *conn)
         description2 = "uncompressed";
 
       info(LD_HTTP, "HTTP body from server '%s:%d' was labeled %s, "
-             "but it seems to be %s.%s",
-             conn->address, conn->port, description1, description2,
-             (compression>0 && guessed>0)?"  Trying both.":"");
+           "but it seems to be %s.%s",
+           conn->address, conn->port, description1, description2,
+           (compression>0 && guessed>0)?"  Trying both.":"");
     }
     /* Try declared compression first if we can. */
     if (compression > 0)
@@ -908,16 +910,16 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR) {
     /* fetch/process the directory to learn about new routers. */
     info(LD_DIR,"Received directory (size %d) from server '%s:%d'",
-           (int)body_len, conn->address, conn->port);
+         (int)body_len, conn->address, conn->port);
     if (status_code == 503 || body_len == 0) {
       info(LD_DIR,"Empty directory; status %d (\"%s\") Ignoring.",
-             status_code, reason);
+           status_code, reason);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (status_code != 200) {
       warn(LD_DIR,"Received http status code %d (\"%s\") from server '%s:%d'. I'll try again soon.",
-             status_code, reason, conn->address, conn->port);
+           status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -931,13 +933,13 @@ connection_dir_client_reached_eof(connection_t *conn)
     info(LD_DIR,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
       warn(LD_DIR,"Received http status code %d (\"%s\") from server '%s:%d'. I'll try again soon.",
-             status_code, reason, conn->address, conn->port);
+           status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (router_parse_runningrouters(body)<0) {
       warn(LD_DIR,"Bad running-routers from server '%s:%d'. I'll try again soon.",
-             conn->address, conn->port);
+           conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -949,8 +951,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     info(LD_DIR,"Received networkstatus objects (size %d) from server '%s:%d'",(int) body_len, conn->address, conn->port);
     if (status_code != 200) {
       warn(LD_DIR,"Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
-             status_code, reason, conn->address, conn->port,
-             conn->requested_resource);
+           status_code, reason, conn->address, conn->port,
+           conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
       connection_dir_download_networkstatus_failed(conn);
       return -1;
@@ -991,7 +993,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     smartlist_t *which = NULL;
     int n_asked_for = 0;
     info(LD_DIR,"Received server info (size %d) from server '%s:%d'",
-           (int)body_len, conn->address, conn->port);
+         (int)body_len, conn->address, conn->port);
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"fp/")) {
       which = smartlist_create();
@@ -1031,8 +1033,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     if (which) { /* mark remaining ones as failed */
       info(LD_DIR, "Received %d/%d routers requested from %s:%d",
-             n_asked_for-smartlist_len(which), n_asked_for,
-             conn->address, (int)conn->port);
+           n_asked_for-smartlist_len(which), n_asked_for,
+           conn->address, (int)conn->port);
       if (smartlist_len(which)) {
         dir_routerdesc_download_failed(which);
       }
@@ -1067,7 +1069,8 @@ connection_dir_client_reached_eof(connection_t *conn)
              "tor-doc-server.html", reason, conn->address, conn->port);
         break;
       default:
-        warn(LD_GENERAL,"http status %d (\"%s\") reason unexpected (server '%s:%d').", status_code, reason, conn->address, conn->port);
+        warn(LD_GENERAL,"http status %d (\"%s\") reason unexpected (server '%s:%d').",
+             status_code, reason, conn->address, conn->port);
         break;
     }
     /* return 0 in all cases, since we don't want to mark any
@@ -1076,7 +1079,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
     info(LD_REND,"Received rendezvous descriptor (size %d, status %d (\"%s\"))",
-           (int)body_len, status_code, reason);
+         (int)body_len, status_code, reason);
     switch (status_code) {
       case 200:
         if (rend_cache_store(body, body_len) < 0) {
@@ -1097,7 +1100,8 @@ connection_dir_client_reached_eof(connection_t *conn)
         warn(LD_REND,"http status 400 (\"%s\"). Dirserver didn't like our rendezvous query?", reason);
         break;
       default:
-        warn(LD_REND,"http status %d (\"%s\") response unexpected (server '%s:%d').", status_code, reason, conn->address, conn->port);
+        warn(LD_REND,"http status %d (\"%s\") response unexpected (server '%s:%d').",
+             status_code, reason, conn->address, conn->port);
         break;
     }
   }
@@ -1261,11 +1265,13 @@ directory_handle_command_get(connection_t *conn, char *headers,
     debug(LD_DIRSERV,"Dumping %sdirectory to client.",
           deflated?"deflated ":"");
     format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
-             date,
-             (int)dlen,
-             deflated?"application/octet-stream":"text/plain",
-             deflated?"deflate":"identity");
+    tor_snprintf(tmp, sizeof(tmp),
+                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                 "Content-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
+                 date,
+                 (int)dlen,
+                 deflated?"application/octet-stream":"text/plain",
+                 deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, dlen, conn);
     return 0;
@@ -1285,7 +1291,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
 
     format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
+    tor_snprintf(tmp, sizeof(tmp),
+                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                 "Content-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
                  date,
                  (int)dlen,
                  deflated?"application/octet-stream":"text/plain",
@@ -1317,7 +1325,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
     SMARTLIST_FOREACH(dir_objs, cached_dir_t *, d,
                       dlen += deflated?d->dir_z_len:d->dir_len);
     format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
+    tor_snprintf(tmp, sizeof(tmp),
+                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                 "Content-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
                  date,
                  (int)dlen,
                  deflated?"application/octet-stream":"text/plain",
@@ -1374,9 +1384,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
         }
         tor_free(inp);
         tor_snprintf(tmp, sizeof(tmp),
-           "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-           "Content-Type: application/octet-stream\r\n"
-           "Content-Encoding: deflate\r\n\r\n",
+                     "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                     "Content-Type: application/octet-stream\r\n"
+                     "Content-Encoding: deflate\r\n\r\n",
                      date,
                      (int)compressed_len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
@@ -1384,8 +1394,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
         tor_free(compressed);
       } else {
         tor_snprintf(tmp, sizeof(tmp),
-           "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-           "Content-Type: text/plain\r\n\r\n",
+                     "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                     "Content-Type: text/plain\r\n\r\n",
                      date,
                      (int)len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
@@ -1420,10 +1430,13 @@ directory_handle_command_get(connection_t *conn, char *headers,
     switch (rend_cache_lookup_desc(query, versioned?-1:0, &descp, &desc_len)) {
       case 1: /* valid */
         format_rfc1123_time(date, time(NULL));
-        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
-                 date,
-                 (int)desc_len); /* can't include descp here, because it's got nuls */
+        tor_snprintf(tmp, sizeof(tmp),
+                     "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                     "Content-Type: application/octet-stream\r\n\r\n",
+                     date,
+                     (int)desc_len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
+        /* need to send descp separately, because it may include nuls */
         connection_write_to_buf(descp, desc_len, conn);
         break;
       case 0: /* well-formed but not present */
@@ -1658,13 +1671,13 @@ dir_routerdesc_download_failed(smartlist_t *failed)
     }
     if (rs->next_attempt_at == 0)
       debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
-             cp, (int)rs->n_download_failures);
+            cp, (int)rs->n_download_failures);
     else if (rs->next_attempt_at < TIME_MAX)
       debug(LD_DIR, "%s failed %d time(s); I'll try again in %d seconds.",
-             cp, (int)rs->n_download_failures, (int)(rs->next_attempt_at-now));
+            cp, (int)rs->n_download_failures, (int)(rs->next_attempt_at-now));
     else
       debug(LD_DIR, "%s failed %d time(s); Giving up for a while.",
-             cp, (int)rs->n_download_failures);
+            cp, (int)rs->n_download_failures);
   });
 
   /* update_router_descriptor_downloads(time(NULL)); */

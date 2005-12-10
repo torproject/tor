@@ -459,9 +459,9 @@ accounting_set_wakeup_time(void)
     interval_wakeup_time = interval_start_time;
 
     notice(LD_ACCT, "Configured hibernation.  This interval begins at %s "
-        "and ends at %s.  We have no prior estimate for bandwidth, so "
-        "we will start out awake and hibernate when we exhaust our quota.",
-        buf1, buf2);
+           "and ends at %s.  We have no prior estimate for bandwidth, so "
+           "we will start out awake and hibernate when we exhaust our quota.",
+           buf1, buf2);
     return;
   }
 
@@ -567,12 +567,12 @@ read_bandwidth_usage(void)
   if (smartlist_len(elts)<1 ||
       atoi(smartlist_get(elts,0)) != BW_ACCOUNTING_VERSION) {
     warn(LD_ACCT, "Unrecognized bw_accounting file version: %s",
-           (const char*)smartlist_get(elts,0));
+         (const char*)smartlist_get(elts,0));
     goto err;
   }
   if (smartlist_len(elts) < 7) {
     warn(LD_ACCT, "Corrupted bw_accounting file: %d lines",
-           smartlist_len(elts));
+         smartlist_len(elts));
     goto err;
   }
   if (parse_iso_time(smartlist_get(elts,1), &t1)) {
@@ -619,12 +619,12 @@ read_bandwidth_usage(void)
        "this interval.  At the start of the interval, we expected to use "
        "about %lu KB per second. ("U64_FORMAT" bytes read so far, "
        U64_FORMAT" bytes written so far)",
-         (char*)smartlist_get(elts,2),
-         (char*)smartlist_get(elts,1),
-         (unsigned long)n_seconds_active_in_interval,
-         (unsigned long)((uint64_t)expected_bandwidth_usage*1024/60),
-         U64_PRINTF_ARG(n_bytes_read_in_interval),
-         U64_PRINTF_ARG(n_bytes_written_in_interval));
+       (char*)smartlist_get(elts,2),
+       (char*)smartlist_get(elts,1),
+       (unsigned long)n_seconds_active_in_interval,
+       (unsigned long)((uint64_t)expected_bandwidth_usage*1024/60),
+       U64_PRINTF_ARG(n_bytes_read_in_interval),
+       U64_PRINTF_ARG(n_bytes_written_in_interval));
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
   smartlist_free(elts);
 
@@ -671,8 +671,8 @@ hibernate_begin(int new_state, time_t now)
   if (new_state == HIBERNATE_STATE_EXITING &&
       hibernate_state != HIBERNATE_STATE_LIVE) {
     notice(LD_GENERAL,"Sigint received %s; exiting now.",
-        hibernate_state == HIBERNATE_STATE_EXITING ?
-          "a second time" : "while hibernating");
+           hibernate_state == HIBERNATE_STATE_EXITING ?
+           "a second time" : "while hibernating");
     tor_cleanup();
     exit(0);
   }

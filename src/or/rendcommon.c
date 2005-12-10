@@ -189,7 +189,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
   if ((size_t)(end-cp) < keylen) goto truncated;
   if ((size_t)(end-cp) > keylen) {
     warn(LD_PROTOCOL, "Signature is %d bytes too long on service descriptor.",
-           (int)((size_t)(end-cp) - keylen));
+         (int)((size_t)(end-cp) - keylen));
     goto error;
   }
   if (crypto_pk_public_checksig_digest(result->pk,
@@ -378,7 +378,7 @@ rend_cache_store(const char *desc, size_t desc_len)
   }
   if (parsed->timestamp > now+REND_CACHE_MAX_SKEW) {
     warn(LD_REND,"Service descriptor %s is too far in the future.",
-           safe_str(query));
+         safe_str(query));
     rend_service_descriptor_free(parsed);
     return -1;
   }
@@ -408,7 +408,7 @@ rend_cache_store(const char *desc, size_t desc_len)
   memcpy(e->desc, desc, desc_len);
 
   debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
-         safe_str(query), (int)desc_len);
+        safe_str(query), (int)desc_len);
   return 1;
 }
 

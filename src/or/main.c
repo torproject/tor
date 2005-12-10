@@ -139,7 +139,7 @@ connection_add(connection_t *conn)
   nfds++;
 
   debug(LD_NET,"new conn type %s, socket %d, nfds %d.",
-      conn_type_to_string(conn->type), conn->s, nfds);
+        conn_type_to_string(conn->type), conn->s, nfds);
 
   return 0;
 }
@@ -332,7 +332,7 @@ connection_stop_writing(connection_t *conn)
 
   if (event_del(conn->write_event))
     warn(LD_NET, "Error from libevent setting write event state for %d to unwatched.",
-           conn->s);
+         conn->s);
 
 }
 
@@ -345,7 +345,7 @@ connection_start_writing(connection_t *conn)
 
   if (event_add(conn->write_event, NULL))
     warn(LD_NET, "Error from libevent setting write event state for %d to watched.",
-           conn->s);
+         conn->s);
 }
 
 /** Close all connections that have been scheduled to get closed */
@@ -379,7 +379,7 @@ conn_read_callback(int fd, short event, void *_conn)
     if (!conn->marked_for_close) {
 #ifndef MS_WINDOWS
       warn(LD_BUG,"Bug: unhandled error on read for %s connection (fd %d); removing",
-             conn_type_to_string(conn->type), conn->s);
+           conn_type_to_string(conn->type), conn->s);
       tor_fragile_assert();
 #endif
       if (CONN_IS_EDGE(conn))
@@ -448,10 +448,11 @@ conn_close_if_marked(int i)
     int sz = connection_bucket_write_limit(conn);
     if (!conn->hold_open_until_flushed)
       info(LD_NET,
-        "Conn (addr %s, fd %d, type %s, state %d) marked, but wants to flush %d bytes. "
-        "(Marked at %s:%d)",
-        conn->address, conn->s, conn_type_to_string(conn->type), conn->state,
-        (int)conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
+           "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "
+           "to flush %d bytes. (Marked at %s:%d)",
+           conn->address, conn->s, conn_type_to_string(conn->type), conn->state,
+           (int)conn->outbuf_flushlen,
+            conn->marked_for_close_file, conn->marked_for_close);
     if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
         retval = flush_buf_tls(conn->tls, conn->outbuf, sz, &conn->outbuf_flushlen);
@@ -590,7 +591,7 @@ run_connection_housekeeping(int i, time_t now)
       !conn->marked_for_close &&
       conn->timestamp_lastwritten + 5*60 < now) {
     info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
-           conn->s, conn->purpose);
+         conn->s, conn->purpose);
     /* This check is temporary; it's to let us know whether we should consider
      * parsing partial serverdesc responses. */
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
@@ -643,7 +644,7 @@ run_connection_housekeeping(int i, time_t now)
                (!router || !server_mode(options) ||
                 !router_is_clique_mode(router))) {
       info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) [Not in clique mode].",
-             conn->s,conn->address, conn->port);
+           conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (
@@ -926,12 +927,12 @@ second_elapsed_callback(int fd, short event, void *args)
       warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
            "its ORPort is reachable. Please check your firewalls, ports, "
            "address, /etc/hosts file, etc.",
-          me->address, me->or_port);
+           me->address, me->or_port);
     if (me && !check_whether_dirport_reachable())
       warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that its "
            "DirPort is reachable. Please check your firewalls, ports, "
            "address, /etc/hosts file, etc.",
-          me->address, me->dir_port);
+           me->address, me->dir_port);
   }
 
   /* if more than 100s have elapsed, probably the clock jumped: doesn't count. */
@@ -1102,10 +1103,10 @@ do_main_loop(void)
       if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
 #ifdef HAVE_EVENT_GET_METHOD
         err(LD_NET,"libevent poll with %s failed: %s [%d]",
-               event_get_method(), tor_socket_strerror(e), e);
+            event_get_method(), tor_socket_strerror(e), e);
 #else
         err(LD_NET,"libevent poll failed: %s [%d]",
-               tor_socket_strerror(e), e);
+            tor_socket_strerror(e), e);
 #endif
         return -1;
 #ifndef MS_WINDOWS
@@ -1249,44 +1250,44 @@ dumpstats(int severity)
   for (i=0;i<nfds;i++) {
     conn = connection_array[i];
     log(severity, LD_GENERAL, "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
-      i, conn->s, conn->type, conn_type_to_string(conn->type),
+        i, conn->s, conn->type, conn_type_to_string(conn->type),
         conn->state, conn_state_to_string(conn->type, conn->state), (int)(now - conn->timestamp_created));
     if (!connection_is_listener(conn)) {
       log(severity,LD_GENERAL,"Conn %d is to '%s:%d'.",i,safe_str(conn->address), conn->port);
       log(severity,LD_GENERAL, "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",i,
-             (int)buf_datalen(conn->inbuf),
-             (int)buf_capacity(conn->inbuf),
-             (int)(now - conn->timestamp_lastread));
+          (int)buf_datalen(conn->inbuf),
+          (int)buf_capacity(conn->inbuf),
+          (int)(now - conn->timestamp_lastread));
       log(severity,LD_GENERAL, "Conn %d: %d bytes waiting on outbuf (len %d, last written %d secs ago)",i,
-             (int)buf_datalen(conn->outbuf),
-             (int)buf_capacity(conn->outbuf),
-             (int)(now - conn->timestamp_lastwritten));
+          (int)buf_datalen(conn->outbuf),
+          (int)buf_capacity(conn->outbuf),
+          (int)(now - conn->timestamp_lastwritten));
     }
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits using this conn */
   }
   log(severity, LD_NET,
-         "Cells processed: %10lu padding\n"
-         "                 %10lu create\n"
-         "                 %10lu created\n"
-         "                 %10lu relay\n"
-         "                        (%10lu relayed)\n"
-         "                        (%10lu delivered)\n"
-         "                 %10lu destroy",
-         stats_n_padding_cells_processed,
-         stats_n_create_cells_processed,
-         stats_n_created_cells_processed,
-         stats_n_relay_cells_processed,
-         stats_n_relay_cells_relayed,
-         stats_n_relay_cells_delivered,
-         stats_n_destroy_cells_processed);
+      "Cells processed: %10lu padding\n"
+      "                 %10lu create\n"
+      "                 %10lu created\n"
+      "                 %10lu relay\n"
+      "                        (%10lu relayed)\n"
+      "                        (%10lu delivered)\n"
+      "                 %10lu destroy",
+      stats_n_padding_cells_processed,
+      stats_n_create_cells_processed,
+      stats_n_created_cells_processed,
+      stats_n_relay_cells_processed,
+      stats_n_relay_cells_relayed,
+      stats_n_relay_cells_delivered,
+      stats_n_destroy_cells_processed);
   if (stats_n_data_cells_packaged)
     log(severity,LD_NET,"Average packaged cell fullness: %2.3f%%",
-           100*(((double)stats_n_data_bytes_packaged) /
-                (stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
+        100*(((double)stats_n_data_bytes_packaged) /
+             (stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
   if (stats_n_data_cells_received)
     log(severity,LD_NET,"Average delivered cell fullness: %2.3f%%",
-           100*(((double)stats_n_data_bytes_received) /
-                (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
+        100*(((double)stats_n_data_bytes_received) /
+             (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
   if (now - time_of_process_start >= 0)
     elapsed = now - time_of_process_start;
@@ -1350,7 +1351,7 @@ handle_signals(int is_parent)
                  (void*)(uintptr_t)signals[i]);
       if (signal_add(&signal_events[i], NULL))
         warn(LD_BUG, "Error from libevent when adding event for signal %d",
-               signals[i]);
+             signals[i]);
     }
   } else {
     struct sigaction action;

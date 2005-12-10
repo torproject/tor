@@ -80,7 +80,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   while ((c = circuit_get_next_by_pk_and_purpose(
                                 c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
     info(LD_REND, "Replacing old circuit %d for service %s",
-           c->p_circ_id, safe_str(serviceid));
+         c->p_circ_id, safe_str(serviceid));
     circuit_mark_for_close(c);
   }
 
@@ -122,7 +122,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
     warn(LD_PROTOCOL, "Rejecting INTRODUCE1 on non-OR or non-edge circuit %d.",
-           circ->p_circ_id);
+         circ->p_circ_id);
     goto err;
   }
 
@@ -216,7 +216,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t reque
   base16_encode(hexid,9,request,4);
 
   info(LD_REND, "Established rendezvous point on circuit %d for cookie %s",
-         circ->p_circ_id, hexid);
+       circ->p_circ_id, hexid);
 
   return 0;
  err:
@@ -238,7 +238,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
 
   if (request_len>=4) {
     info(LD_REND, "Got request for rendezvous from circuit %d to cookie %s.",
-           circ->p_circ_id, hexid);
+         circ->p_circ_id, hexid);
   }
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {

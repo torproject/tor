@@ -372,7 +372,7 @@ circuit_predict_and_launch_new(void)
   if (!circuit_all_predicted_ports_handled(now, &port_needs_uptime,
                                            &port_needs_capacity)) {
     info(LD_CIRC,"Have %d clean circs (%d internal), need another exit circ.",
-      num, num_internal);
+         num, num_internal);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                              port_needs_uptime, port_needs_capacity, 0);
     return;
@@ -381,7 +381,7 @@ circuit_predict_and_launch_new(void)
   /* Third, see if we need any more hidden service (server) circuits. */
   if (num_rend_services() && num_uptime_internal < 3) {
     info(LD_CIRC,"Have %d clean circs (%d internal), need another internal circ for my hidden service.",
-           num, num_internal);
+         num, num_internal);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                              1, 1, 1);
     return;
@@ -393,7 +393,7 @@ circuit_predict_and_launch_new(void)
       ((num_uptime_internal<2 && hidserv_needs_uptime) ||
         num_internal<2)) {
     info(LD_CIRC,"Have %d clean circs (%d uptime-internal, %d internal),"
-      " need another hidserv circ.", num, num_uptime_internal, num_internal);
+         " need another hidserv circ.", num, num_uptime_internal, num_internal);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                              hidserv_needs_uptime, hidserv_needs_capacity, 1);
     return;
@@ -569,7 +569,7 @@ circuit_expire_old_circuits(void)
 #define CIRCUIT_UNUSED_CIRC_TIMEOUT 3600 /* an hour */
       if (circ->timestamp_created + CIRCUIT_UNUSED_CIRC_TIMEOUT < now) {
         debug(LD_CIRC,"Closing circuit that has been unused for %d seconds.",
-               (int)(now - circ->timestamp_created));
+              (int)(now - circ->timestamp_created));
         circuit_mark_for_close(circ);
       }
     }
@@ -771,7 +771,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *extend_info,
                                        need_uptime, need_capacity, internal);
     if (circ) {
       info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d",
-             build_state_get_exit_nickname(circ->build_state), purpose);
+           build_state_get_exit_nickname(circ->build_state), purpose);
       circ->purpose = purpose;
       /* reset the birth date of this circ, else expire_building
        * will see it and think it's been trying to build since it
@@ -1129,12 +1129,12 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       if (!router) {
         warn(LD_APP,"Requested exit point '%s' is not known. Closing.",
-               conn->chosen_exit_name);
+             conn->chosen_exit_name);
         return -1;
       }
       if (!connection_ap_can_use_exit(conn, router)) {
         warn(LD_APP, "Requested exit point '%s' would refuse request. Closing.",
-               conn->chosen_exit_name);
+             conn->chosen_exit_name);
         return -1;
       }
     }
@@ -1145,7 +1145,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
       return retval;
 
     debug(LD_APP|LD_CIRC,"Attaching apconn to circ %d (stream %d sec old).",
-           circ->n_circ_id, conn_age);
+          circ->n_circ_id, conn_age);
     /* here, print the circ's path. so people can figure out which circs are sucking. */
     circuit_log_path(LOG_INFO,LD_APP|LD_CIRC,circ);
 
@@ -1181,7 +1181,10 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     }
 
     if (rendcirc && rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
-      info(LD_REND,"pending-join circ %d already here, with intro ack. Stalling. (stream %d sec old)", rendcirc->n_circ_id, conn_age);
+      info(LD_REND,
+           "pending-join circ %d already here, with intro ack. "
+           "Stalling. (stream %d sec old)",
+            rendcirc->n_circ_id, conn_age);
       return 0;
     }
 
@@ -1202,12 +1205,12 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
 
     if (rendcirc && introcirc && rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
       info(LD_REND,"ready rend circ %d already here (no intro-ack yet on intro %d). (stream %d sec old)",
-             rendcirc->n_circ_id, introcirc->n_circ_id, conn_age);
+           rendcirc->n_circ_id, introcirc->n_circ_id, conn_age);
 
       tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
       if (introcirc->state == CIRCUIT_STATE_OPEN) {
         info(LD_REND,"found open intro circ %d (rend %d); sending introduction. (stream %d sec old)",
-               introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
+             introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
         if (rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
         }
