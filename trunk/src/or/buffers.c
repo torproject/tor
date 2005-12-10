@@ -285,7 +285,7 @@ buf_shrink(buf_t *buf)
     return;
 
   debug(LD_MM,"Shrinking buffer from %d to %d bytes.",
-         (int)buf->len, (int)new_len);
+        (int)buf->len, (int)new_len);
   buf_resize(buf, new_len);
 }
 
@@ -413,7 +413,7 @@ read_to_buf_impl(int s, size_t at_most, buf_t *buf,
     if (buf->datalen > buf->highwater)
       buf->highwater = buf->datalen;
     debug(LD_NET,"Read %d bytes. %d on inbuf.",read_result,
-           (int)buf->datalen);
+          (int)buf->datalen);
     return read_result;
   }
 }
@@ -479,8 +479,8 @@ read_to_buf_tls_impl(tor_tls_t *tls, size_t at_most, buf_t *buf, char *next)
   int r;
 
   debug(LD_NET,"before: %d on buf, %d pending, at_most %d.",
-         (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
-         (int)at_most);
+        (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
+        (int)at_most);
   r = tor_tls_read(tls, next, at_most);
   if (r<0)
     return r;
@@ -489,7 +489,7 @@ read_to_buf_tls_impl(tor_tls_t *tls, size_t at_most, buf_t *buf, char *next)
   if (buf->datalen > buf->highwater)
     buf->highwater = buf->datalen;
   debug(LD_NET,"Read %d bytes. %d on inbuf; %d pending",r,
-         (int)buf->datalen,(int)tor_tls_get_pending_bytes(tls));
+        (int)buf->datalen,(int)tor_tls_get_pending_bytes(tls));
   return r;
 }
 
@@ -523,8 +523,8 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
   assert_buf_ok(buf);
 
   debug(LD_NET,"start: %d on buf, %d pending, at_most %d.",
-         (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
-         (int)at_most);
+        (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
+        (int)at_most);
 
   if (buf_ensure_capacity(buf, at_most+buf->datalen))
     return TOR_TLS_ERROR;
@@ -610,7 +610,7 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
   check();
 
   debug(LD_NET,"%d: flushed %d bytes, %d ready to flush, %d remain.",
-           s,r,(int)*buf_flushlen,(int)buf->datalen);
+        s,r,(int)*buf_flushlen,(int)buf->datalen);
   if (r < 0 || (size_t)r < flushlen0)
     return r; /* Error, or can't flush any more now. */
   flushed = r;
@@ -620,7 +620,7 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
     r = flush_buf_impl(s, buf, flushlen1, buf_flushlen);
     check();
     debug(LD_NET,"%d: flushed %d bytes, %d ready to flush, %d remain.",
-           s,r,(int)*buf_flushlen,(int)buf->datalen);
+          s,r,(int)*buf_flushlen,(int)buf->datalen);
     if (r<0)
       return r;
     flushed += r;
@@ -645,7 +645,7 @@ flush_buf_tls_impl(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
   *buf_flushlen -= r;
   buf_remove_from_front(buf, r);
   debug(LD_NET,"flushed %d bytes, %d ready to flush, %d remain.",
-         r,(int)*buf_flushlen,(int)buf->datalen);
+        r,(int)*buf_flushlen,(int)buf->datalen);
   return r;
 }
 
@@ -706,7 +706,8 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
   /* assert_buf_ok(buf); */
 
   if (buf_ensure_capacity(buf, buf->datalen+string_len)) {
-    warn(LD_MM, "buflen too small, can't hold %d bytes.", (int)(buf->datalen+string_len));
+    warn(LD_MM, "buflen too small, can't hold %d bytes.",
+         (int)(buf->datalen+string_len));
     return -1;
   }
 
@@ -726,7 +727,7 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
   if (buf->datalen > buf->highwater)
     buf->highwater = buf->datalen;
   debug(LD_NET,"added %d bytes to buf (now %d total).",
-         (int)string_len, (int)buf->datalen);
+        (int)string_len, (int)buf->datalen);
   check();
   return buf->datalen;
 }
@@ -822,12 +823,13 @@ fetch_from_buf_http(buf_t *buf,
   debug(LD_HTTP,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
 
   if (max_headerlen <= headerlen) {
-    warn(LD_HTTP,"headerlen %d larger than %d. Failing.", (int)headerlen,
-           (int)max_headerlen-1);
+    warn(LD_HTTP,"headerlen %d larger than %d. Failing.",
+         (int)headerlen, (int)max_headerlen-1);
     return -1;
   }
   if (max_bodylen <= bodylen) {
-    warn(LD_HTTP,"bodylen %d larger than %d. Failing.", (int)bodylen, (int)max_bodylen-1);
+    warn(LD_HTTP,"bodylen %d larger than %d. Failing.",
+         (int)bodylen, (int)max_bodylen-1);
     return -1;
   }
 
@@ -945,7 +947,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
           req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
         warn(LD_APP,"socks5: command %d not recognized. Rejecting.",
-               req->command);
+             req->command);
         return -1;
       }
       switch (*(buf->cur+3)) { /* address type */
@@ -959,7 +961,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
           tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
           if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
             warn(LD_APP,"socks5 IP takes %d bytes, which doesn't fit in %d. Rejecting.",
-                   (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
+                 (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
             return -1;
           }
           strlcpy(req->address,tmpbuf,sizeof(req->address));
@@ -983,7 +985,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
             return 0; /* not yet */
           if (len+1 > MAX_SOCKS_ADDR_LEN) {
             warn(LD_APP,"socks5 hostname is %d bytes, which doesn't fit in %d. Rejecting.",
-                   len+1,MAX_SOCKS_ADDR_LEN);
+                 len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
           memcpy(req->address,buf->cur+5,len);
@@ -1013,7 +1015,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
           req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
         warn(LD_APP,"socks4: command %d not recognized. Rejecting.",
-               req->command);
+             req->command);
         return -1;
       }
 
@@ -1029,7 +1031,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
         tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
         if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
           debug(LD_APP,"socks4 addr (%d bytes) too long. Rejecting.",
-                 (int)strlen(tmpbuf));
+                (int)strlen(tmpbuf));
           return -1;
         }
         debug(LD_APP,"socks4: successfully read destip (%s)", safe_str(tmpbuf));
@@ -1112,7 +1114,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
       /* fall through */
     default: /* version is not socks4 or socks5 */
       warn(LD_APP,"Socks version %d not recognized. (Tor is not an http proxy.)",
-             *(buf->cur));
+           *(buf->cur));
       return -1;
   }
 }

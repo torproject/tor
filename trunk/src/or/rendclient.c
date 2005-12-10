@@ -69,7 +69,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
     warn(LD_REND,"query '%s' didn't have valid rend desc in cache. Failing.",
-           safe_str(introcirc->rend_query));
+         safe_str(introcirc->rend_query));
     goto err;
   }
 
@@ -181,7 +181,7 @@ rend_client_introduction_acked(circuit_t *circ,
 
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     warn(LD_PROTOCOL, "Received REND_INTRODUCE_ACK on unexpected circuit %d.",
-           circ->n_circ_id);
+         circ->n_circ_id);
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -221,7 +221,7 @@ rend_client_introduction_acked(circuit_t *circ,
       extend_info = rend_client_get_random_intro(circ->rend_query);
       if (!extend_info) {
         warn(LD_REND, "No introduction points left for %s. Closing.",
-               safe_str(circ->rend_query));
+             safe_str(circ->rend_query));
         circuit_mark_for_close(circ);
         return -1;
       }
@@ -273,7 +273,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
   }
   if (r==0) {
     info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
-           safe_str(query));
+         safe_str(query));
     rend_client_refetch_renddesc(query);
     return 0;
   }
@@ -308,7 +308,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 
   if (!ent->parsed->n_intro_points) {
     info(LD_REND,"No more intro points remain for %s. Re-fetching descriptor.",
-           safe_str(query));
+         safe_str(query));
     rend_client_refetch_renddesc(query);
 
     /* move all pending streams back to renddesc_wait */
@@ -453,7 +453,7 @@ rend_client_get_random_intro(const char *query)
 
   if (rend_cache_lookup_entry(query, -1, &entry) < 1) {
     warn(LD_REND,"Query '%s' didn't have valid rend desc in cache. Failing.",
-           safe_str(query));
+         safe_str(query));
     return NULL;
   }
 

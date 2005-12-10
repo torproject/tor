@@ -338,7 +338,7 @@ circuit_handle_first_hop(circuit_t *circ)
   in.s_addr = htonl(firsthop->extend_info->addr);
   tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
   debug(LD_CIRC,"Looking for firsthop '%s:%u'",tmpbuf,
-         firsthop->extend_info->port);
+        firsthop->extend_info->port);
   /* imprint the circuit with its future n_conn->id */
   memcpy(circ->n_conn_id_digest, firsthop->extend_info->identity_digest,
          DIGEST_LEN);
@@ -391,7 +391,7 @@ circuit_n_conn_done(connection_t *or_conn, int status)
   extern smartlist_t *circuits_pending_or_conns;
 
   debug(LD_CIRC,"or_conn to %s, status=%d",
-         or_conn->nickname ? or_conn->nickname : "NULL", status);
+        or_conn->nickname ? or_conn->nickname : "NULL", status);
 
   if (!circuits_pending_or_conns)
     return;
@@ -656,7 +656,9 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   relay_header_unpack(&rh, cell->payload);
 
   if (rh.length < 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,"Wrong length %d on extend cell. Closing circuit.", rh.length);
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Wrong length %d on extend cell. Closing circuit.",
+           rh.length);
     return -1;
   }
 
@@ -678,7 +680,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     in.s_addr = htonl(circ->n_addr);
     tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
     info(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
-           tmpbuf, circ->n_port);
+         tmpbuf, circ->n_port);
 
     circ->onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
@@ -910,7 +912,7 @@ onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys)
          cell_type == CELL_CREATED ? ONIONSKIN_REPLY_LEN : DIGEST_LEN*2);
 
   debug(LD_CIRC,"init digest forward 0x%.8x, backward 0x%.8x.",
-         (unsigned int)*(uint32_t*)(keys), (unsigned int)*(uint32_t*)(keys+20));
+        (unsigned int)*(uint32_t*)(keys), (unsigned int)*(uint32_t*)(keys+20));
   if (circuit_init_cpath_crypto(tmp_cpath, keys, 0)<0) {
     warn(LD_BUG,"Circuit initialization failed");
     tor_free(tmp_cpath);
@@ -969,19 +971,19 @@ new_route_len(double cw, uint8_t purpose, extend_info_t *exit,
     routelen++;
 #endif
   debug(LD_CIRC,"Chosen route length %d (%d routers available).",routelen,
-         smartlist_len(routers));
+        smartlist_len(routers));
 
   num_acceptable_routers = count_acceptable_routers(routers);
 
   if (num_acceptable_routers < 2) {
     info(LD_CIRC,"Not enough acceptable routers (%d). Discarding this circuit.",
-           num_acceptable_routers);
+         num_acceptable_routers);
     return -1;
   }
 
   if (num_acceptable_routers < routelen) {
     info(LD_CIRC,"Not enough routers: cutting routelen from %d to %d.",
-           routelen, num_acceptable_routers);
+         routelen, num_acceptable_routers);
     routelen = num_acceptable_routers;
   }
 
@@ -1184,7 +1186,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     }
   }
   info(LD_CIRC, "Found %d servers that might support %d/%d pending connections.",
-         n_best_support, best_support, n_pending_connections);
+       n_best_support, best_support, n_pending_connections);
 
   preferredexits = smartlist_create();
   add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1,1);
@@ -1216,8 +1218,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     if (best_support == -1) {
       if (need_uptime || need_capacity) {
         info(LD_CIRC, "We couldn't find any live%s%s routers; falling back to list of all routers.",
-               need_capacity?", fast":"",
-               need_uptime?", stable":"");
+             need_capacity?", fast":"",
+             need_uptime?", stable":"");
         return choose_good_exit_server_general(dir, 0, 0);
       }
       notice(LD_CIRC, "All routers are down or middleman -- choosing a doomed exit at random.");
@@ -1358,7 +1360,7 @@ circuit_extend_to_new_exit(circuit_t *circ, extend_info_t *info)
   circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
   if (circuit_send_next_onion_skin(circ)<0) {
     warn(LD_CIRC, "Couldn't extend circuit to new point '%s'.",
-           info->nickname);
+         info->nickname);
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -1540,12 +1542,12 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
 
   if (cur_len >= state->desired_path_len) {
     debug(LD_CIRC, "Path is complete: %d steps long",
-           state->desired_path_len);
+          state->desired_path_len);
     return 1;
   }
 
   debug(LD_CIRC, "Path is %d long; we want %d", cur_len,
-         state->desired_path_len);
+        state->desired_path_len);
 
   if (cur_len == state->desired_path_len - 1) { /* Picking last node */
     info = extend_info_dup(state->chosen_exit);
@@ -1566,7 +1568,7 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
   }
 
   debug(LD_CIRC,"Chose router %s for hop %d (exit is %s)",
-         info->nickname, cur_len+1, build_state_get_exit_nickname(state));
+        info->nickname, cur_len+1, build_state_get_exit_nickname(state));
 
   onion_append_hop(head_ptr, info);
   extend_info_free(info);
@@ -1754,7 +1756,7 @@ remove_dead_helpers(void)
       base16_encode(dbuf, sizeof(dbuf), helper->identity, DIGEST_LEN);
       format_local_iso_time(tbuf, since);
       warn(LD_CIRC, "Helper node '%s' (%s) has been %s since %s; removing.",
-             helper->nickname, dbuf, why, tbuf);
+           helper->nickname, dbuf, why, tbuf);
       tor_free(helper);
       smartlist_del(helper_nodes, i);
       helper_nodes_changed();
@@ -1796,13 +1798,13 @@ helper_nodes_set_status_from_directory(void)
           helper->unlisted_since = time(NULL);
           ++changed;
           warn(LD_CIRC,"Helper node '%s' is not listed by directories",
-                 helper->nickname);
+               helper->nickname);
           severity = LOG_WARN;
         }
       } else {
         if (helper->unlisted_since) {
           warn(LD_CIRC,"Helper node '%s' is listed again by directories",
-                 helper->nickname);
+               helper->nickname);
           ++changed;
           severity = LOG_WARN;
         }
@@ -1852,17 +1854,17 @@ helper_node_set_status(const char *digest, int succeeded)
           if (helper->down_since) {
             /*XXXX shouldn't warn. NM */
             warn(LD_CIRC,
-                   "Connection to formerly down helper node '%s' succeeded. "
-                   "%d/%d helpers usable.", helper->nickname,
-                   num_live_helpers(), smartlist_len(helper_nodes));
+                 "Connection to formerly down helper node '%s' succeeded. "
+                 "%d/%d helpers usable.", helper->nickname,
+                 num_live_helpers(), smartlist_len(helper_nodes));
             helper_nodes_changed();
           }
           helper->down_since = 0;
         } else if (!helper->down_since) {
           helper->down_since = time(NULL);
           warn(LD_CIRC,
-                 "Connection to helper node '%s' failed. %d/%d helpers usable.",
-                 helper->nickname, num_live_helpers(), smartlist_len(helper_nodes));
+               "Connection to helper node '%s' failed. %d/%d helpers usable.",
+               helper->nickname, num_live_helpers(), smartlist_len(helper_nodes));
           helper_nodes_changed();
         }
       }

@@ -189,8 +189,8 @@ connection_or_read_proxy_response(connection_t *conn)
   }
   /* else, bad news on the status code */
   warn(LD_OR,
-      "The https proxy sent back an unexpected status code %d (\"%s\"). Closing.",
-      status_code, reason);
+       "The https proxy sent back an unexpected status code %d (\"%s\"). Closing.",
+       status_code, reason);
   tor_free(reason);
   connection_mark_for_close(conn);
   return -1;
@@ -260,7 +260,7 @@ connection_or_finished_connecting(connection_t *conn)
   tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
 
   debug(LD_OR,"OR connect() to router at %s:%u finished.",
-         conn->address,conn->port);
+        conn->address,conn->port);
 
   if (get_options()->HttpsProxy) {
     char buf[1024];
@@ -572,7 +572,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
   }
   check_no_tls_errors();
   debug(LD_OR, "Other side (%s:%d) claims to be router '%s'",
-         conn->address, conn->port, nickname);
+        conn->address, conn->port, nickname);
 
   if (tor_tls_verify(severity, conn->tls, &identity_rcvd) < 0) {
     log_fn(severity,LD_OR,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
@@ -655,7 +655,7 @@ connection_tls_finish_handshake(connection_t *conn)
     connection_t *c;
     if ((c=connection_or_get_by_identity_digest(digest_rcvd))) {
       debug(LD_OR,"Router '%s' is already connected on fd %d. Dropping fd %d.",
-             c->nickname, c->s, conn->s);
+            c->nickname, c->s, conn->s);
       return -1;
     }
 #endif
@@ -710,7 +710,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn)
       if (!conn->marked_for_close) {
         /* this connection is broken. remove it. */
         warn(LD_BUG,"Bug: unhandled error on write for OR conn (fd %d); removing",
-               conn->s);
+             conn->s);
         tor_fragile_assert();
         conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
         /* XXX do we need a close-immediate here, so we don't try to flush? */
@@ -740,7 +740,7 @@ connection_or_process_cells_from_inbuf(connection_t *conn)
 
 loop:
   debug(LD_OR,"%d: starting, inbuf_datalen %d (%d pending in tls object).",
-         conn->s,(int)buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls));
+        conn->s,(int)buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls));
   if (buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
 

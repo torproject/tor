@@ -158,7 +158,7 @@ purge_expired_resolves(uint32_t now)
   while (oldest_cached_resolve && (oldest_cached_resolve->expire < now)) {
     resolve = oldest_cached_resolve;
     debug(LD_EXIT,"Forgetting old cached resolve (address %s, expires %lu)",
-        safe_str(resolve->address), (unsigned long)resolve->expire);
+          safe_str(resolve->address), (unsigned long)resolve->expire);
     if (resolve->state == CACHE_STATE_PENDING) {
       debug(LD_EXIT,"Bug: Expiring a dns resolve ('%s') that's still pending. Forgot to cull it?", safe_str(resolve->address));
       tor_fragile_assert();
@@ -292,19 +292,19 @@ dns_resolve(connection_t *exitconn)
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
         debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS resolve of '%s'",
-               exitconn->s, safe_str(exitconn->address));
+              exitconn->s, safe_str(exitconn->address));
         exitconn->state = EXIT_CONN_STATE_RESOLVING;
         return 0;
       case CACHE_STATE_VALID:
         exitconn->addr = resolve->addr;
         debug(LD_EXIT,"Connection (fd %d) found cached answer for '%s'",
-               exitconn->s, safe_str(exitconn->address));
+              exitconn->s, safe_str(exitconn->address));
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         return 1;
       case CACHE_STATE_FAILED:
         debug(LD_EXIT,"Connection (fd %d) found cached error for '%s'",
-               exitconn->s, safe_str(exitconn->address));
+              exitconn->s, safe_str(exitconn->address));
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
@@ -359,7 +359,8 @@ assign_to_dnsworker(connection_t *exitconn)
   }
 
   debug(LD_EXIT,
-    "Connection (fd %d) needs to resolve '%s'; assigning to DNSWorker (fd %d)",
+        "Connection (fd %d) needs to resolve '%s'; assigning "
+        "to DNSWorker (fd %d)",
         exitconn->s, safe_str(exitconn->address), dnsconn->s);
 
   tor_free(dnsconn->address);
@@ -407,7 +408,7 @@ connection_dns_remove(connection_t *conn)
     resolve->pending_connections = pend->next;
     tor_free(pend);
     debug(LD_EXIT, "First connection (fd %d) no longer waiting for resolve of '%s'",
-           conn->s, safe_str(conn->address));
+          conn->s, safe_str(conn->address));
     return;
   } else {
     for ( ; pend->next; pend = pend->next) {
@@ -416,7 +417,7 @@ connection_dns_remove(connection_t *conn)
         pend->next = victim->next;
         tor_free(victim);
         debug(LD_EXIT, "Connection (fd %d) no longer waiting for resolve of '%s'",
-               conn->s, safe_str(conn->address));
+              conn->s, safe_str(conn->address));
         return; /* more are pending */
       }
     }
@@ -485,7 +486,7 @@ dns_cancel_pending_resolve(char *address)
   if (!resolve->pending_connections) {
     /* XXX this should never trigger, but sometimes it does */
     warn(LD_BUG,"Bug: Address '%s' is pending but has no pending connections!",
-           safe_str(address));
+         safe_str(address));
     tor_fragile_assert();
     return;
   }
@@ -704,7 +705,7 @@ connection_dns_process_inbuf(connection_t *conn)
       connection_fetch_from_buf(&success,1,conn);
       connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
       warn(LD_EXIT,"Discarding idle dns answer (success %d, addr %d.)",
-             success, addr); // XXX safe_str
+           success, addr); // XXX safe_str
     }
     return 0;
   }
@@ -942,7 +943,7 @@ spawn_enough_dnsworkers(void)
     /* too many idle? */
     /* cull excess workers */
     info(LD_EXIT,"%d of %d dnsworkers are idle. Killing one.",
-           num_dnsworkers-num_dnsworkers_busy, num_dnsworkers);
+         num_dnsworkers-num_dnsworkers_busy, num_dnsworkers);
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
     tor_assert(dnsconn);
     connection_mark_for_close(dnsconn);

@@ -1339,7 +1339,7 @@ handle_getinfo_helper(const char *question, char **answer)
           state = "SUCCEEDED"; break;
         default:
           warn(LD_BUG, "Asked for stream in unknown state %d",
-                 conns[i]->state);
+               conns[i]->state);
           continue;
         }
       circ = circuit_get_by_edge_conn(conns[i]);
@@ -2281,7 +2281,7 @@ connection_control_process_inbuf_v0(connection_t *conn)
     case CONTROL0_CMD_EVENT:
     case CONTROL0_CMD_INFOVALUE:
       warn(LD_CONTROL, "Received client-only '%s' command; ignoring.",
-             control_cmd_to_string(command_type));
+           control_cmd_to_string(command_type));
       send_control0_error(conn, ERR_UNRECOGNIZED_TYPE,
                          "Command type only valid from server to tor client");
       break;
@@ -2291,7 +2291,7 @@ connection_control_process_inbuf_v0(connection_t *conn)
       send_control0_error(conn, ERR_SYNTAX, "Bad fragmentation on command.");
     default:
       warn(LD_CONTROL, "Received unrecognized command type %d; ignoring.",
-             (int)command_type);
+           (int)command_type);
       send_control0_error(conn, ERR_UNRECOGNIZED_TYPE,
                          "Unrecognized command type");
       break;

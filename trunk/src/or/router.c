@@ -168,7 +168,7 @@ init_key_from_file_name_changed(const char *fname_old,
   /* The old filename exists, and the new one doesn't.  Rename and load. */
   if (rename(fname_old, fname_new) < 0) {
     log_fn(LOG_ERR, LD_FS, "Couldn't rename \"%s\" to \"%s\": %s",
-        fname_old, fname_new, strerror(errno));
+           fname_old, fname_new, strerror(errno));
     return NULL;
   }
   return init_key_from_file(fname_new);
@@ -466,7 +466,7 @@ router_orport_found_reachable(void)
   if (!can_reach_or_port) {
     if (!clique_mode(get_options()))
       notice(LD_OR,"Self-testing indicates your ORPort is reachable from the outside. Excellent.%s",
-          get_options()->NoPublish ? "" : " Publishing server descriptor.");
+            get_options()->NoPublish ? "" : " Publishing server descriptor.");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
     consider_publishable_server(time(NULL), 1);
@@ -615,8 +615,8 @@ router_retry_connections(int force)
     if (force ||
       !connection_or_get_by_identity_digest(router->cache_info.identity_digest)) {
       debug(LD_OR,"%sconnecting to %s at %s:%u.",
-             clique_mode(options) ? "(forced) " : "",
-             router->nickname, router->address, router->or_port);
+            clique_mode(options) ? "(forced) " : "",
+            router->nickname, router->address, router->or_port);
       /* Remember when we started trying to determine reachability */
       if (!router->testing_since)
         router->testing_since = now;
@@ -820,8 +820,8 @@ router_rebuild_descriptor(int force)
        if (!member) {
          if (!smartlist_string_isin(warned_nonexistent_family, name)) {
            warn(LD_CONFIG, "I have no descriptor for the router named \"%s\" "
-                  "in my declared family; I'll use the nickname as is, but "
-                  "this may confuse clients.", name);
+                "in my declared family; I'll use the nickname as is, but "
+                "this may confuse clients.", name);
            smartlist_add(warned_nonexistent_family, tor_strdup(name));
          }
          smartlist_add(ri->declared_family, name);

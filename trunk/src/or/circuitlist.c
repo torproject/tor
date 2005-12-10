@@ -559,7 +559,8 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   circuit_t *circ;
   circuit_t *best=NULL;
 
-  debug(LD_CIRC,"Hunting for a circ to cannibalize: purpose %d, uptime %d, capacity %d, internal %d", purpose, need_uptime, need_capacity, internal);
+  debug(LD_CIRC,"Hunting for a circ to cannibalize: purpose %d, uptime %d, capacity %d, internal %d",
+         purpose, need_uptime, need_capacity, internal);
 
   for (circ=global_circuitlist; circ; circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
@@ -682,8 +683,8 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     tor_assert(circ->build_state->chosen_exit);
     /* treat this like getting a nack from it */
     info(LD_REND,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
-           safe_str(circ->rend_query),
-           safe_str(build_state_get_exit_nickname(circ->build_state)));
+         safe_str(circ->rend_query),
+         safe_str(build_state_get_exit_nickname(circ->build_state)));
     rend_client_remove_intro_point(circ->build_state->chosen_exit,
                                    circ->rend_query);
   }
