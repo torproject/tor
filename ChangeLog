@@ -1,5 +1,8 @@
 Changes in version 0.1.1.10-alpha - 2005-12-11
   o Correctness bugfixes on 0.1.0.x:
+    - On Windows, build with a libevent patch from "I-M Weasel" to avoid
+      corrupting the heap, losing FDs, or crashing when we need to resize
+      the fd_sets. (This affects the Win32 binaries, not Tor's sources.)
     - Stop doing the complex voodoo overkill checking for insecure
       Diffie-Hellman keys. Just check if it's in [2,p-2] and be happy.
     - When we were closing connections, there was a rare case that
