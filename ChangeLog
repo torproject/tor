@@ -1,4 +1,4 @@
-Changes in version 0.1.1.10-alpha - 2005-12-xx
+Changes in version 0.1.1.10-alpha - 2005-12-11
   o Correctness bugfixes on 0.1.0.x:
     - Stop doing the complex voodoo overkill checking for insecure
       Diffie-Hellman keys. Just check if it's in [2,p-2] and be happy.
