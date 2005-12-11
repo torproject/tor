@@ -442,9 +442,12 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
-      if (!options->HttpsProxy)
+      if (!options->HttpsProxy) {
+        /* If the connection failed immediately, our https proxy
+         * is down. Don't blame the Tor server. */
         router_mark_as_down(conn->identity_digest);
-      helper_node_set_status(conn->identity_digest, 0);
+        helper_node_set_status(conn->identity_digest, 0);
+      }
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       connection_free(conn);
       return NULL;
