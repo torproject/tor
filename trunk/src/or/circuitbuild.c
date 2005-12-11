@@ -1746,6 +1746,7 @@ remove_dead_helpers(void)
   char tbuf[ISO_TIME_LEN+1];
   time_t now = time(NULL);
   int i;
+  int changed = 0;
 
   for (i = 0; i < smartlist_len(helper_nodes); ) {
     helper_node_t *helper = smartlist_get(helper_nodes, i);
@@ -1767,10 +1768,11 @@ remove_dead_helpers(void)
            helper->nickname, dbuf, why, tbuf);
       tor_free(helper);
       smartlist_del(helper_nodes, i);
-      helper_nodes_changed();
     } else
       ++i;
   }
+  if (changed)
+    helper_nodes_changed();
 }
 
 /** A new directory or router-status has arrived; update the down/listed status
@@ -1860,11 +1862,11 @@ helper_node_set_status(const char *digest, int succeeded)
       if (!memcmp(helper->identity, digest, DIGEST_LEN)) {
         if (succeeded) {
           if (helper->down_since) {
-            /*XXXX shouldn't warn. NM */
-            warn(LD_CIRC,
-                 "Connection to formerly down helper node '%s' succeeded. "
-                 "%d/%d helpers usable.", helper->nickname,
-                 num_live_helpers(), smartlist_len(helper_nodes));
+            /*XXXX shouldn't be so loud. NM */
+            notice(LD_CIRC,
+                   "Connection to formerly down helper node '%s' succeeded. "
+                   "%d/%d helpers usable.", helper->nickname,
+                   num_live_helpers(), smartlist_len(helper_nodes));
             helper_nodes_changed();
           }
           helper->down_since = 0;
