@@ -665,6 +665,7 @@ circuit_build_failed(circuit_t *circ)
       info(LD_OR, "Our circuit failed to get a response from the first hop (%s:%d). I'm going to try to rotate to a better connection.",
            circ->n_conn->address, circ->n_conn->port);
       circ->n_conn->is_obsolete = 1;
+      helper_node_set_status(circ->n_conn->identity_digest, 0);
     }
   }
 
