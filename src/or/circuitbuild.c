@@ -44,7 +44,7 @@ static int onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
 static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static void pick_helper_nodes(void);
-static routerinfo_t *choose_random_helper(void);
+static routerinfo_t *choose_random_helper(routerinfo_t *chosen_exit);
 static void clear_helper_nodes(void);
 static void remove_dead_helpers(void);
 static void helper_nodes_changed(void);
@@ -1470,14 +1470,15 @@ choose_good_middle_server(uint8_t purpose,
  * not for any particular circuit.
  */
 static routerinfo_t *
-choose_good_entry_server(cpath_build_state_t *state)
+choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
 {
   routerinfo_t *r, *choice;
   smartlist_t *excluded = smartlist_create();
   or_options_t *options = get_options();
 
-  if (state && options->UseHelperNodes) {
-    return choose_random_helper();
+  if (state && options->UseHelperNodes &&
+      purpose != CIRCUIT_PURPOSE_TESTING) {
+    return choose_random_helper(build_state_get_exit_router(state));
   }
 
   if (state && (r = build_state_get_exit_router(state))) {
@@ -1558,7 +1559,7 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
   if (cur_len == state->desired_path_len - 1) { /* Picking last node */
     info = extend_info_dup(state->chosen_exit);
   } else if (cur_len == 0) { /* picking first node */
-    routerinfo_t *r = choose_good_entry_server(state);
+    routerinfo_t *r = choose_good_entry_server(purpose, state);
     if (r)
       info = extend_info_from_router(r);
   } else {
@@ -1695,7 +1696,8 @@ pick_helper_nodes(void)
     helper_nodes = smartlist_create();
 
   while (smartlist_len(helper_nodes) < options->NumHelperNodes) {
-    routerinfo_t *entry = choose_good_entry_server(NULL);
+    routerinfo_t *entry =
+      choose_good_entry_server(CIRCUIT_PURPOSE_C_GENERAL, NULL);
     /* XXXX deal with duplicate entries. NM */
     helper_node_t *helper = tor_malloc_zero(sizeof(helper_node_t));
     /* XXXX Downgrade this to info before release. NM */
@@ -1881,10 +1883,10 @@ helper_node_set_status(const char *digest, int succeeded)
     });
 }
 
-/** Pick a live (up and listed) helper node from the list of helpers.  If
- * no helpers are available, pick a new list. */
+/** Pick a live (up and listed) helper node from the list of helpers, but
+ * don't pick <b>exit</b>. If no helpers are available, pick a new list. */
 static routerinfo_t *
-choose_random_helper(void)
+choose_random_helper(routerinfo_t *chosen_exit)
 {
   smartlist_t *live_helpers = smartlist_create();
   routerinfo_t *r;
@@ -1896,7 +1898,8 @@ choose_random_helper(void)
   SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
                     if (! helper->down_since && ! helper->unlisted_since) {
                       if ((r = router_get_by_digest(helper->identity))) {
-                        smartlist_add(live_helpers, r);
+                        if (r != chosen_exit)
+                          smartlist_add(live_helpers, r);
                       }
                     });
 
