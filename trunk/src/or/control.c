@@ -717,7 +717,7 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
         break;
       case -2:
         v0_err = ERR_INVALID_CONFIG_VALUE;
-        msg = "513 Unrecognized option value";
+        msg = "513 Unacceptable option value";
         break;
       case -3:
         v0_err = ERR_INVALID_CONFIG_VALUE;
