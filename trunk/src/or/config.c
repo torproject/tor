@@ -1914,14 +1914,14 @@ options_validate(or_options_t *old_options, or_options_t *options)
       });
     new_line->value = smartlist_join_strings(instead,",",0,NULL);
     /* These have been deprecated since 0.1.1.5-alpha-cvs */
-    log(LOG_WARN, LD_CONFIG, "FascistFirewall and FirewallPorts are deprecated.  Instead, use \"ReachableAddresses %s\"", new_line->value);
+    log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall and FirewallPorts config options to new format: \"ReachableAddresses %s\"", new_line->value);
     new_line->next = options->ReachableAddresses;
     options->ReachableAddresses = new_line;
     SMARTLIST_FOREACH(instead, char *, cp, tor_free(cp));
     smartlist_free(instead);
   }
 
-  if (options->FascistFirewall || options->ReachableAddresses) {
+  if (options->ReachableAddresses) {
     /* We need to end with a reject *:*, not an implicit accept *:* */
     config_line_t **linep = &options->ReachableAddresses;
     while (*linep) {
