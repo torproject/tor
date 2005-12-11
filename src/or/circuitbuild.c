@@ -1756,7 +1756,7 @@ remove_dead_helpers(void)
       since = helper->unlisted_since;
     } else if (helper->down_since + HELPER_ALLOW_DOWNTIME > now) {
       why = "down";
-      since = helper->unlisted_since;
+      since = helper->down_since;
     }
     if (why) {
       base16_encode(dbuf, sizeof(dbuf), helper->identity, DIGEST_LEN);
