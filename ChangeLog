@@ -79,10 +79,20 @@ Changes in version 0.1.1.10-alpha - 2005-12-xx
     - Resume using the AES counter-mode implementation that we ship,
       rather than OpenSSL's. Ours is significantly faster.
     - Many other CPU and memory improvements.
+    - Add a new config option FastFirstHopPK (on by default) so clients
+      do a trivial crypto handshake for their first hop, since TLS has
+      already taken care of confidentiality and authentication.
     - Add a new config option TestSocks so people can see if their
       applications are using socks4, socks4a, socks5-with-ip, or
       socks5-with-hostname. This way they don't have to keep mucking
       with tcpdump and wondering if something got cached somewhere.
+    - Warn when listening on a public address for socks. I suspect a
+      lot of people are setting themselves up as open socks proxies,
+      and they have no idea that jerks on the Internet are using them,
+      since they simply proxy the traffic into the Tor network.
+    - Add "private:*" as an alias in configuration for policies. Now
+      you can simplify your exit policy rather than needing to list
+      every single internal or nonroutable network space.
     - Add a new controller event type that allows controllers to get
       all server descriptors that were uploaded to a router in its role
       as authoritative dirserver.
