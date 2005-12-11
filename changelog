@@ -1,3 +1,10 @@
+tor (0.1.1.10-alpha-cvs-1) experimental; urgency=low
+
+  * CVS snapshot
+  * forward port patches/07_log_to_file_by_default.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 11 Dec 2005 14:06:03 +0100
+
 tor (0.1.1.10-alpha-1) experimental; urgency=low
 
   * New upstream version.
