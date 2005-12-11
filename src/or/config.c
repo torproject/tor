@@ -1806,8 +1806,8 @@ options_validate(or_options_t *old_options, or_options_t *options)
   if (normalize_log_options(options))
     return -1;
 
-  /* Special case if no options are given. */
-  if (!options->Logs) {
+  /* Special case on first boot if no Log options are given. */
+  if (!old_options && !options->Logs) {
     config_line_append(&options->Logs, "Log", "notice stdout");
   }
 
