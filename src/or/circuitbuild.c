@@ -1503,7 +1503,7 @@ choose_good_entry_server(cpath_build_state_t *state)
   // but only if there are enough other nodes available.
   choice = router_choose_random_node(options->EntryNodes, options->ExcludeNodes,
            excluded, state ? state->need_uptime : 1,
-           state ? state->need_capacity : 0,
+           state ? state->need_capacity : 1,
            options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY,
            options->StrictEntryNodes);
   smartlist_free(excluded);
