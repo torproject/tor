@@ -1751,10 +1751,12 @@ remove_dead_helpers(void)
     helper_node_t *helper = smartlist_get(helper_nodes, i);
     const char *why = NULL;
     time_t since = 0;
-    if (helper->unlisted_since + HELPER_ALLOW_UNLISTED > now) {
+    if (helper->unlisted_since &&
+        helper->unlisted_since + HELPER_ALLOW_UNLISTED < now) {
       why = "unlisted";
       since = helper->unlisted_since;
-    } else if (helper->down_since + HELPER_ALLOW_DOWNTIME > now) {
+    } else if (helper->down_since &&
+               helper->down_since + HELPER_ALLOW_DOWNTIME < now) {
       why = "down";
       since = helper->down_since;
     }
