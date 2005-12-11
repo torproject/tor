@@ -1,12 +1,12 @@
-tor (0.1.1.9-alpha-cvs-1) experimental; urgency=low
+tor (0.1.1.10-alpha-1) experimental; urgency=low
 
-  * cvs snapshot.
+  * New upstream version.
   * doc/tor-doc.css and doc/tor-doc.html are no longer in the upstream
     tarball, remove them from debian/tor.docs.
   * add the following new files to tor.docs: doc/socks-extensions.txt,
     doc/stylesheet.css, doc/tor-doc-server.html, doc/tor-doc-unix.html
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 22 Nov 2005 18:40:09 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun, 11 Dec 2005 14:02:41 +0100
 
 tor (0.1.1.9-alpha-1) experimental; urgency=low
 
