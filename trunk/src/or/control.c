@@ -1536,8 +1536,12 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     args = smartlist_create();
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    if (smartlist_len(args)<2)
+    if (smartlist_len(args)<2) {
       connection_printf_to_buf(conn,"512 Missing argument to EXTENDCIRCUIT\r\n");
+      SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+      smartlist_free(args);
+      goto done;
+    }
 
     zero_circ = !strcmp("0", (char*)smartlist_get(args,0));
     if (!zero_circ && !(circ = get_circ(smartlist_get(args,0)))) {
@@ -1663,8 +1667,12 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
     args = smartlist_create();
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    if (smartlist_len(args)<2)
+    if (smartlist_len(args)<2) {
       connection_printf_to_buf(conn,"512 Missing argument to ATTACHSTREAM\r\n");
+      SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+      smartlist_free(args);
+      return 0;
+    }
 
     zero_circ = !strcmp("0", (char*)smartlist_get(args,1));
 
