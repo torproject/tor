@@ -1299,6 +1299,8 @@ generate_v2_networkstatus(void)
                                       ri->cache_info.identity_digest);
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_verified;
+      int f_v2_dir = ri->dir_port &&
+        tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
       char identity64[BASE64_DIGEST_LEN+1];
       char digest64[BASE64_DIGEST_LEN+1];
       if (options->AuthoritativeDir) {
@@ -1316,7 +1318,7 @@ generate_v2_networkstatus(void)
 
       if (tor_snprintf(outp, endp-outp,
                        "r %s %s %s %s %s %d %d\n"
-                       "s%s%s%s%s%s%s%s\n",
+                       "s%s%s%s%s%s%s%s%s\n",
                        ri->nickname,
                        identity64,
                        digest64,
@@ -1330,7 +1332,8 @@ generate_v2_networkstatus(void)
                        f_named?" Named":"",
                        f_stable?" Stable":"",
                        f_running?" Running":"",
-                       f_valid?" Valid":"")<0) {
+                       f_valid?" Valid":"",
+                       f_v2_dir?" V2Dir":"")<0) {
         warn(LD_BUG, "Unable to print router status.");
         goto done;
       }
