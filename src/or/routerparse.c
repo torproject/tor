@@ -1057,6 +1057,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
         rs->is_named = 1;
       else if (!strcmp(tok->args[i], "Valid"))
         rs->is_valid = 1;
+      else if (!strcmp(tok->args[i], "V2Dir"))
+        rs->is_v2_dir = 1;
     }
   }
 

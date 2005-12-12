@@ -827,6 +827,9 @@ typedef struct routerstatus_t {
   unsigned int is_running:1; /**< True iff this router is up. */
   unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
   unsigned int is_valid:1; /**< True iff this router is validated. */
+  unsigned int is_v2_dir:1; /**< True iff this router can serve router
+                             * information with v2 of the directory
+                             * protocol */
 } routerstatus_t;
 
 /** DOCDOC */
