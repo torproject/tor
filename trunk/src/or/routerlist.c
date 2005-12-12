@@ -3252,11 +3252,6 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
 {
   tor_assert(r1 && r2);
 
-  /* post-0.1.1.6 servers know what they're doing. */
-  if (tor_version_as_new_as(r1->platform, "0.1.1.6-alpha") ||
-      tor_version_as_new_as(r2->platform, "0.1.1.6-alpha"))
-    return 0;
-
   /* r1 should be the one that was published first. */
   if (r1->cache_info.published_on > r2->cache_info.published_on) {
     routerinfo_t *ri_tmp = r2;
