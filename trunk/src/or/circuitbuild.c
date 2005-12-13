@@ -1770,6 +1770,7 @@ remove_dead_helpers(void)
            helper->nickname, dbuf, why, tbuf);
       tor_free(helper);
       smartlist_del(helper_nodes, i);
+      changed = 1;
     } else
       ++i;
   }
