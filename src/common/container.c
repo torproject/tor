@@ -438,8 +438,8 @@ smartlist_sort_strings(smartlist_t *sl)
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
   typedef struct prefix ## entry_t {                      \
     HT_ENTRY(prefix ## entry_t) node;                     \
-    keydecl;                                              \
     void *val;                                            \
+    keydecl;                                              \
   } prefix ## entry_t;                                    \
   struct maptype {                                        \
     HT_HEAD(prefix ## impl, prefix ## entry_t) head;      \
