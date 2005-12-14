@@ -280,6 +280,7 @@ circuit_free(circuit_t *circ)
   tor_free(circ->onionskin);
   circuit_free_cpath(circ->cpath);
   if (circ->rend_splice) {
+    tor_assert(circ->rend_splice->magic == CIRCUIT_MAGIC);
     circ->rend_splice->rend_splice = NULL;
   }
   /* Remove from map. */
@@ -715,9 +716,11 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
   circ->marked_for_close = line;
   circ->marked_for_close_file = file;
 
-  if (circ->rend_splice && !circ->rend_splice->marked_for_close) {
-    /* do this after marking this circuit, to avoid infinite recursion. */
-    circuit_mark_for_close(circ->rend_splice);
+  if (circ->rend_splice) {
+    if (!circ->rend_splice->marked_for_close) {
+      /* do this after marking this circuit, to avoid infinite recursion. */
+      circuit_mark_for_close(circ->rend_splice);
+    }
     circ->rend_splice = NULL;
   }
 }
