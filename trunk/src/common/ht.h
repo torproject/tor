@@ -11,10 +11,10 @@
 
 #define HT_HEAD(name, type)                                             \
   struct name {                                                         \
-    /* How long is the hash table? */                                   \
-    unsigned hth_table_length;                                          \
     /* The hash table itself. */                                        \
     struct type **hth_table;                                            \
+    /* How long is the hash table? */                                   \
+    unsigned hth_table_length;                                          \
     /* How many elements does the table contain? */                     \
     unsigned hth_n_entries;                                             \
     /* How many elements will we allow in the table before resizing it? */ \
