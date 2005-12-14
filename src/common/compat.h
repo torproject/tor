@@ -180,7 +180,8 @@ int network_init(void);
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == WSAEINPROGRESS)
 /** Return true if e is EINPROGRESS or the local equivalent as returned by
  * a call to connect(). */
-#define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e)== WSAEINVAL || (e) == WSAEWOULDBLOCK)
+#define ERRNO_IS_CONN_EINPROGRESS(e) \
+  ((e) == WSAEINPROGRESS || (e)== WSAEINVAL || (e) == WSAEWOULDBLOCK)
 /** Return true if e is EAGAIN or another error indicating that a call to
  * accept() has no pending connections to return. */
 #define ERRNO_IS_ACCEPT_EAGAIN(e)    ERRNO_IS_EAGAIN(e)
@@ -232,7 +233,8 @@ void spawn_exit(void);
 #if defined(ENABLE_THREADS) && defined(MS_WINDOWS)
 #define USE_WIN32_THREADS
 #define TOR_IS_MULTITHREADED 1
-#elif defined(ENABLE_THREADS) && defined(HAVE_PTHREAD_H) && defined(HAVE_PTHREAD_CREATE)
+#elif (defined(ENABLE_THREADS) && defined(HAVE_PTHREAD_H) && \
+       defined(HAVE_PTHREAD_CREATE))
 #define USE_PTHREADS
 #define TOR_IS_MULTITHREADED 1
 #else

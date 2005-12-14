@@ -2,7 +2,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char directory_c_id[] = "$Id$";
+const char directory_c_id[] =
+  "$Id$";
 
 #include "or.h"
 
@@ -469,7 +470,8 @@ directory_send_command(connection_t *conn, const char *platform,
   if (conn->port == 80) {
     strlcpy(hoststring, conn->address, sizeof(hoststring));
   } else {
-    tor_snprintf(hoststring, sizeof(hoststring),"%s:%d",conn->address, conn->port);
+    tor_snprintf(hoststring, sizeof(hoststring),"%s:%d",
+                 conn->address, conn->port);
   }
 
   /* come up with some proxy lines, if we're using one. */
@@ -561,7 +563,8 @@ directory_send_command(connection_t *conn, const char *platform,
   connection_write_to_buf(url, strlen(url), conn);
   tor_free(url);
 
-  tor_snprintf(request, sizeof(request), " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
+  tor_snprintf(request, sizeof(request),
+               " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
            payload ? (unsigned long)payload_len : 0,
            hoststring,
            proxyauthstring);
@@ -749,7 +752,8 @@ parse_http_response(const char *headers, int *code, time_t *date,
     } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
       *compression = GZIP_METHOD;
     } else {
-      info(LD_HTTP, "Unrecognized content encoding: '%s'. Trying to deal.", enc);
+      info(LD_HTTP, "Unrecognized content encoding: '%s'. Trying to deal.",
+           enc);
       *compression = -1;
     }
   }
@@ -819,7 +823,8 @@ connection_dir_client_reached_eof(connection_t *conn)
            conn->address, conn->port);
       return -1;
     case 0:
-      info(LD_HTTP,"'fetch' response not all here, but we're at eof. Closing.");
+      info(LD_HTTP,
+           "'fetch' response not all here, but we're at eof. Closing.");
       return -1;
     /* case 1, fall through */
   }
@@ -841,15 +846,18 @@ connection_dir_client_reached_eof(connection_t *conn)
     now = time(NULL);
     delta = now-date_header;
     if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
-      log_fn(router_digest_is_trusted_dir(conn->identity_digest) ? LOG_WARN : LOG_INFO,
+      log_fn(router_digest_is_trusted_dir(conn->identity_digest) ?
+                                                        LOG_WARN : LOG_INFO,
              LD_HTTP,
-             "Received directory with skewed time (server '%s:%d'): we are %d minutes %s, or the directory is %d minutes %s.",
+             "Received directory with skewed time (server '%s:%d'): "
+             "we are %d minutes %s, or the directory is %d minutes %s.",
              conn->address, conn->port,
              abs(delta)/60, delta>0 ? "ahead" : "behind",
              abs(delta)/60, delta>0 ? "behind" : "ahead");
       skewed = 1; /* don't check the recommended-versions line */
     } else {
-      debug(LD_HTTP, "Time on received directory is within tolerance; we are %d seconds skewed.  (That's okay.)", delta);
+      debug(LD_HTTP, "Time on received directory is within tolerance; "
+            "we are %d seconds skewed.  (That's okay.)", delta);
     }
   }
 
@@ -918,13 +926,15 @@ connection_dir_client_reached_eof(connection_t *conn)
       return -1;
     }
     if (status_code != 200) {
-      warn(LD_DIR,"Received http status code %d (\"%s\") from server '%s:%d'. I'll try again soon.",
+      warn(LD_DIR,"Received http status code %d (\"%s\") from server "
+           "'%s:%d'. I'll try again soon.",
            status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (router_parse_directory(body) < 0) {
-      notice(LD_DIR,"I failed to parse the directory I fetched from '%s:%d'. Ignoring.", conn->address, conn->port);
+      notice(LD_DIR,"I failed to parse the directory I fetched from "
+             "'%s:%d'. Ignoring.", conn->address, conn->port);
     }
   }
 
@@ -932,13 +942,15 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* just update our list of running routers, if this list is new info */
     info(LD_DIR,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
-      warn(LD_DIR,"Received http status code %d (\"%s\") from server '%s:%d'. I'll try again soon.",
+      warn(LD_DIR,"Received http status code %d (\"%s\") from server "
+           "'%s:%d'. I'll try again soon.",
            status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (router_parse_runningrouters(body)<0) {
-      warn(LD_DIR,"Bad running-routers from server '%s:%d'. I'll try again soon.",
+      warn(LD_DIR,"Bad running-routers from server '%s:%d'. I'll try again "
+           "soon.",
            conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
@@ -948,9 +960,11 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     smartlist_t *which = NULL;
     char *cp;
-    info(LD_DIR,"Received networkstatus objects (size %d) from server '%s:%d'",(int) body_len, conn->address, conn->port);
+    info(LD_DIR,"Received networkstatus objects (size %d) from server "
+         "'%s:%d'",(int) body_len, conn->address, conn->port);
     if (status_code != 200) {
-      warn(LD_DIR,"Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
+      warn(LD_DIR,"Received http status code %d (\"%s\") from server "
+           "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
            status_code, reason, conn->address, conn->port,
            conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
@@ -1007,7 +1021,8 @@ connection_dir_client_reached_eof(connection_t *conn)
       /* 404 means that it didn't have them; no big deal.
        * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
       log_fn(no_warn ? LOG_INFO : LOG_WARN, LD_DIR,
-             "Received http status code %d (\"%s\") from server '%s:%d' while fetching \"/tor/server/%s\". I'll try again soon.",
+             "Received http status code %d (\"%s\") from server '%s:%d' "
+             "while fetching \"/tor/server/%s\". I'll try again soon.",
              status_code, reason, conn->address, conn->port,
              conn->requested_resource);
       if (!which) {
@@ -1056,10 +1071,13 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
     switch (status_code) {
       case 200:
-        info(LD_GENERAL,"eof (status 200) after uploading server descriptor: finished.");
+        info(LD_GENERAL,"eof (status 200) after uploading server "
+             "descriptor: finished.");
         break;
       case 400:
-        warn(LD_GENERAL,"http status 400 (\"%s\") response from dirserver '%s:%d'. Please correct.", reason, conn->address, conn->port);
+        warn(LD_GENERAL,"http status 400 (\"%s\") response from "
+             "dirserver '%s:%d'. Please correct.",
+             reason, conn->address, conn->port);
         break;
       case 403:
         warn(LD_GENERAL,"http status 403 (\"%s\") response from dirserver "
@@ -1069,7 +1087,8 @@ connection_dir_client_reached_eof(connection_t *conn)
              "tor-doc-server.html", reason, conn->address, conn->port);
         break;
       default:
-        warn(LD_GENERAL,"http status %d (\"%s\") reason unexpected (server '%s:%d').",
+        warn(LD_GENERAL,"http status %d (\"%s\") reason unexpected (server "
+             "'%s:%d').",
              status_code, reason, conn->address, conn->port);
         break;
     }
@@ -1078,7 +1097,8 @@ connection_dir_client_reached_eof(connection_t *conn)
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
-    info(LD_REND,"Received rendezvous descriptor (size %d, status %d (\"%s\"))",
+    info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
+         "(\"%s\"))",
          (int)body_len, status_code, reason);
     switch (status_code) {
       case 200:
@@ -1097,10 +1117,12 @@ connection_dir_client_reached_eof(connection_t *conn)
          * connection_mark_for_close cleans it up. */
         break;
       case 400:
-        warn(LD_REND,"http status 400 (\"%s\"). Dirserver didn't like our rendezvous query?", reason);
+        warn(LD_REND,"http status 400 (\"%s\"). Dirserver didn't like our "
+             "rendezvous query?", reason);
         break;
       default:
-        warn(LD_REND,"http status %d (\"%s\") response unexpected (server '%s:%d').",
+        warn(LD_REND,"http status %d (\"%s\") response unexpected (server "
+             "'%s:%d').",
              status_code, reason, conn->address, conn->port);
         break;
     }
@@ -1109,14 +1131,17 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
     switch (status_code) {
       case 200:
-        info(LD_REND,"Uploading rendezvous descriptor: finished with status 200 (\"%s\")", reason);
+        info(LD_REND,"Uploading rendezvous descriptor: finished with status "
+             "200 (\"%s\")", reason);
         break;
       case 400:
-        warn(LD_REND,"http status 400 (\"%s\") response from dirserver '%s:%d'. Malformed rendezvous descriptor?",
+        warn(LD_REND,"http status 400 (\"%s\") response from dirserver "
+             "'%s:%d'. Malformed rendezvous descriptor?",
              reason, conn->address, conn->port);
         break;
       default:
-        warn(LD_REND,"http status %d (\"%s\") response unexpected (server '%s:%d').",
+        warn(LD_REND,"http status %d (\"%s\") response unexpected (server "
+             "'%s:%d').",
              status_code, reason, conn->address, conn->port);
         break;
     }
@@ -1137,11 +1162,11 @@ connection_dir_reached_eof(connection_t *conn)
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         buf_datalen(conn->inbuf)>=(24*1024)) {
       notice(LD_DIR,
-             "Directory connection closed early after downloading %d bytes "
-             "of descriptors. If this happens often, please file a bug report.",
+             "Directory connection closed early after downloading %d bytes of "
+             "descriptors. If this happens often, please file a bug report.",
              (int)buf_datalen(conn->inbuf));
     }
-    connection_close_immediate(conn); /* it was an error; give up on flushing */
+    connection_close_immediate(conn); /* error: give up on flushing */
     connection_mark_for_close(conn);
     return -1;
   }
@@ -1247,14 +1272,15 @@ directory_handle_command_get(connection_t *conn, char *headers,
   }
   debug(LD_DIRSERV,"rewritten url as '%s'.", url);
 
-  if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* directory fetch */
+  if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* dir fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
     dlen = dirserv_get_directory(&cp, deflated);
 
     tor_free(url);
 
     if (dlen == 0) {
-      notice(LD_DIRSERV,"Client asked for the mirrored directory, but we don't have a good one yet. Sending 503 Dir not available.");
+      notice(LD_DIRSERV,"Client asked for the mirrored directory, but we "
+             "don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
       if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR))
@@ -1423,7 +1449,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
        * if we're gone to the site recently, and 404 if we haven't.
        *
        * Reject. */
-      write_http_status_line(conn, 400, "Nonauthoritative directory does not not store rendezvous descriptors");
+      write_http_status_line(conn, 400, "Nonauthoritative directory does not "
+                             "store rendezvous descriptors");
       tor_free(url);
       return 0;
     }
@@ -1476,7 +1503,8 @@ directory_handle_command_post(connection_t *conn, char *headers,
   if (!authdir_mode(get_options())) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
-    write_http_status_line(conn, 400, "Nonauthoritative directory does not accept posted server descriptors");
+    write_http_status_line(conn, 400, "Nonauthoritative directory does not "
+                           "accept posted server descriptors");
     return 0;
   }
 
@@ -1563,7 +1591,8 @@ directory_handle_command(connection_t *conn)
   else if (!strncasecmp(headers,"POST",4))
     r = directory_handle_command_post(conn, headers, body, body_len);
   else {
-    warn(LD_PROTOCOL,"Got headers '%s' with unknown command. Closing.", headers);
+    warn(LD_PROTOCOL,"Got headers '%s' with unknown command. Closing.",
+         headers);
     r = -1;
   }
 

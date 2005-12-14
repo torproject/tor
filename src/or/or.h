@@ -226,7 +226,8 @@ typedef enum {
 #define CONN_TYPE_CONTROL 13
 #define _CONN_TYPE_MAX 13
 
-#define CONN_IS_EDGE(x) ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
+#define CONN_IS_EDGE(x) \
+  ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
 
 /** State for any listener connection. */
 #define LISTENER_STATE_READY 0
@@ -234,7 +235,8 @@ typedef enum {
 #define _DNSWORKER_STATE_MIN 1
 /** State for a connection to a dnsworker process that's idle. */
 #define DNSWORKER_STATE_IDLE 1
-/** State for a connection to a dnsworker process that's resolving a hostname. */
+/** State for a connection to a dnsworker process that's resolving a
+ * hostname. */
 #define DNSWORKER_STATE_BUSY 2
 #define _DNSWORKER_STATE_MAX 2
 
@@ -350,7 +352,8 @@ typedef enum {
 #define CIRCUIT_STATE_BUILDING 0
 /** Circuit state: Waiting to process the onionskin. */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1
-/** Circuit state: I'd like to deliver a create, but my n_conn is still connecting. */
+/** Circuit state: I'd like to deliver a create, but my n_conn is still
+ * connecting. */
 #define CIRCUIT_STATE_OR_WAIT 2
 /** Circuit state: onionskin(s) processed, ready to send/receive cells. */
 #define CIRCUIT_STATE_OPEN 3
@@ -394,7 +397,8 @@ typedef enum {
 #define CIRCUIT_PURPOSE_C_GENERAL 5
 /** Client-side circuit purpose: at Alice, connecting to intro point. */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 6
-/** Client-side circuit purpose: at Alice, sent INTRODUCE1 to intro point, waiting for ACK/NAK. */
+/** Client-side circuit purpose: at Alice, sent INTRODUCE1 to intro point,
+ * waiting for ACK/NAK. */
 #define CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT 7
 /** Client-side circuit purpose: at Alice, introduced and acked, closing. */
 #define CIRCUIT_PURPOSE_C_INTRODUCE_ACKED 8
@@ -512,7 +516,8 @@ typedef enum {
 #define REQUIRED_FIREWALL_ORPORT 443
 
 /* legal characters in a nickname */
-#define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+#define LEGAL_NICKNAME_CHARACTERS \
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 /** Name to use in client TLS certificates if no nickname is given.*/
 #define DEFAULT_CLIENT_NICKNAME "client"
@@ -626,12 +631,14 @@ struct connection_t {
 
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
   int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn? */
-  time_t timestamp_lastread; /**< When was the last time poll() said we could read? */
+  time_t timestamp_lastread; /**< When was the last time poll() said we could
+                              * read? */
 
   buf_t *outbuf; /**< Buffer holding data to write over this connection. */
   size_t outbuf_flushlen; /**< How much data should we try to flush from the
                            * outbuf? */
-  time_t timestamp_lastwritten; /**< When was the last time poll() said we could write? */
+  time_t timestamp_lastwritten; /**< When was the last time poll() said we
+                                 * could write? */
 
   time_t timestamp_created; /**< When was this connection_t created? */
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
@@ -694,7 +701,8 @@ struct connection_t {
                                  * connection is using. */
 
 /* Used only by Dir connections */
-  char *requested_resource; /**< Which 'resource' did we ask the directory for?*/
+  char *requested_resource; /**< Which 'resource' did we ask the directory
+                             * for?*/
 
 /* Used only by AP connections */
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
@@ -814,8 +822,10 @@ typedef struct {
  */
 typedef struct routerstatus_t {
   time_t published_on; /**< When was this router published? */
-  char nickname[MAX_NICKNAME_LEN+1]; /**<The nickname this router says it has. */
-  char identity_digest[DIGEST_LEN]; /**< Digest of the router's identity key. */
+  char nickname[MAX_NICKNAME_LEN+1]; /**< The nickname this router says it
+                                      * has. */
+  char identity_digest[DIGEST_LEN]; /**< Digest of the router's identity
+                                     * key. */
   char descriptor_digest[DIGEST_LEN]; /**< Digest of the router's most recent
                                        * descriptor. */
   uint32_t addr; /**< IPv4 address for this router. */
@@ -873,7 +883,8 @@ typedef struct networkstatus_t {
   char *server_versions; /**< comma-separated list of recommended server
                           * versions. */
 
-  unsigned int binds_names:1; /**< True iff this directory server binds names. */
+  unsigned int binds_names:1; /**< True iff this directory server binds
+                               * names. */
   unsigned int recommends_versions:1; /**< True iff this directory server
                                        * recommends client and server software
                                        * versions. */
@@ -900,7 +911,8 @@ typedef struct {
  * full routerinfo_t to extend: we only need addr:port:keyid to build an OR
  * connection, and onion_key to create the onionskin.) */
 typedef struct extend_info_t {
-  char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for display. */
+  char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for
+                                          * display. */
   char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
   uint32_t addr; /**< IP address in host order. */
   uint16_t port; /**< OR port. */
@@ -1233,23 +1245,27 @@ typedef struct {
                            * for version 1 directories? */
   int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that's willing to bind names? */
-  int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative directory
-                                   * that's willing to recommend versions? */
+  int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
+                                   * directory that's willing to recommend
+                                   * versions? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int NoPublish; /**< Boolean: should we never publish a descriptor? */
   int ConnLimit; /**< Requested maximum number of simultaneous connections. */
   int _ConnLimit; /**< Actual maximum number of simultaneous connections. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
-  smartlist_t *FirewallPorts; /**< Which ports our firewall allows (strings). */
+  smartlist_t *FirewallPorts; /**< Which ports our firewall allows
+                               * (strings). */
   config_line_t *ReachableAddresses; /**< Which IP:ports our firewall allows
                                       * (exit policy.) */
 
-  /** Application ports that require all nodes in circ to have sufficient uptime. */
+  /** Application ports that require all nodes in circ to have sufficient
+   * uptime. */
   smartlist_t *LongLivedPorts;
   /** Should we try to reuse the same exit node for a given host */
   smartlist_t *TrackHostExits;
-  int TrackHostExitsExpire; /**< Number of seconds until we expire an addressmap */
+  int TrackHostExitsExpire; /**< Number of seconds until we expire an
+                             * addressmap */
   config_line_t *AddressMap; /**< List of address map directives. */
   int DirFetchPeriod; /**< How often do we fetch new directories? */
   int DirPostPeriod; /**< How often do we post our server descriptor to the
@@ -1266,10 +1282,10 @@ typedef struct {
                          * a new one? */
   int MaxCircuitDirtiness; /**< Never use circs that were first used more than
                                 this interval ago. */
-  uint64_t BandwidthRate; /**< How much bandwidth, on average, are we willing to
-                           * use in a second? */
-  uint64_t BandwidthBurst; /**< How much bandwidth, at maximum, are we willing to
-                            * use in a second? */
+  uint64_t BandwidthRate; /**< How much bandwidth, on average, are we willing
+                           * to use in a second? */
+  uint64_t BandwidthBurst; /**< How much bandwidth, at maximum, are we willing
+                            * to use in a second? */
   uint64_t MaxAdvertisedBandwidth; /**< How much bandwidth are we willing to
                                     * tell people we have? */
   int NumCpus; /**< How many CPUs should we try to use? */
@@ -1321,7 +1337,8 @@ typedef struct {
                            * long do we wait before exiting? */
   int SafeLogging; /**< Boolean: are we allowed to log sensitive strings
                     * such as addresses (0), or do we scrub them first (1)? */
-#define LOG_PROTOCOL_WARN (get_options()->ProtocolWarnings ? LOG_WARN : LOG_INFO)
+#define LOG_PROTOCOL_WARN (get_options()->ProtocolWarnings ? \
+                           LOG_WARN : LOG_INFO)
   int ProtocolWarnings; /**< Boolean: when other parties screw up the Tor
                          * protocol, is it a warn or an info in our logs? */
   int TestSocks; /**< Boolean: when we get a socks connection, do we loudly
@@ -1370,7 +1387,8 @@ struct socks_request_t {
                                     * two-stage socks5 handshake.
                                     */
   int has_finished; /**< Has the SOCKS handshake finished? */
-  char address[MAX_SOCKS_ADDR_LEN]; /**< What address did the client ask to connect to? */
+  char address[MAX_SOCKS_ADDR_LEN]; /**< What address did the client ask to
+                                       connect to? */
   uint16_t port; /**< What port did the client ask to connect to? */
 };
 
@@ -1416,16 +1434,19 @@ void circuit_dump_by_conn(connection_t *conn, int severity);
 circuit_t *circuit_init(uint8_t purpose, int need_uptime,
                         int need_capacity, int internal);
 circuit_t *circuit_establish_circuit(uint8_t purpose, extend_info_t *exit,
-                                     int need_uptime, int need_capacity, int internal);
+                                     int need_uptime, int need_capacity,
+                                     int internal);
 int circuit_handle_first_hop(circuit_t *circ);
 void circuit_n_conn_done(connection_t *or_conn, int status);
 int circuit_send_next_onion_skin(circuit_t *circ);
 void circuit_note_clock_jumped(int seconds_elapsed);
 int circuit_extend(cell_t *cell, circuit_t *circ);
-int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
+int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data,
+                              int reverse);
 int circuit_finish_handshake(circuit_t *circ, uint8_t cell_type, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
-int onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys);
+int onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload,
+                     char *keys);
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
@@ -1461,7 +1482,8 @@ int circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(connection_t *conn);
 void circuit_unlink_all_from_or_conn(connection_t *conn);
 circuit_t *circuit_get_by_global_id(uint32_t id);
-circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose);
+circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
+                                                 uint8_t purpose);
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
                                          const char *digest, uint8_t purpose);
 circuit_t *circuit_get_rendezvous(const char *cookie);
@@ -1483,19 +1505,24 @@ void circuit_free_all(void);
 
 void circuit_expire_building(time_t now);
 void circuit_remove_handled_ports(smartlist_t *needed_ports);
-int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min);
+int circuit_stream_is_being_handled(connection_t *conn, uint16_t port,
+                                    int min);
 void circuit_build_needed_circs(time_t now);
 void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
 void circuit_has_opened(circuit_t *circ);
 void circuit_build_failed(circuit_t *circ);
-circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
-                                      int need_uptime, int need_capacity, int is_internal);
+circuit_t *circuit_launch_by_nickname(uint8_t purpose,
+                                      const char *exit_nickname,
+                                      int need_uptime, int need_capacity,
+                                      int is_internal);
 circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
                                          extend_info_t *info,
-                                         int need_uptime, int need_capacity, int is_internal);
+                                         int need_uptime, int need_capacity,
+                                         int is_internal);
 circuit_t *circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
-                                    int need_uptime, int need_capacity, int is_internal);
+                                    int need_uptime, int need_capacity,
+                                    int is_internal);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
                                                   circuit_t *circ);
@@ -1520,7 +1547,8 @@ const char *safe_str(const char *address);
 
 int config_get_lines(char *string, config_line_t **result);
 void config_free_lines(config_line_t *front);
-int options_trial_assign(config_line_t *list, int use_defaults, int clear_first);
+int options_trial_assign(config_line_t *list, int use_defaults,
+                         int clear_first);
 int resolve_my_address(or_options_t *options, uint32_t *addr,
                        char **hostname_out);
 void options_init(or_options_t *options);
@@ -1567,7 +1595,8 @@ void _connection_mark_for_close(connection_t *conn,int line, const char *file);
 
 void connection_expire_held_open(void);
 
-int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
+int connection_connect(connection_t *conn, char *address, uint32_t addr,
+                       uint16_t port);
 int retry_all_listeners(int force, smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
@@ -1583,18 +1612,21 @@ int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn);
 void _connection_controller_force_write(connection_t *conn);
-void connection_write_to_buf(const char *string, size_t len, connection_t *conn);
+void connection_write_to_buf(const char *string, size_t len,
+                             connection_t *conn);
 
-connection_t *connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port);
+connection_t *connection_or_exact_get_by_addr_port(uint32_t addr,
+                                                   uint16_t port);
 connection_t *connection_get_by_global_id(uint32_t id);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_purpose(int type, int purpose);
 connection_t *connection_get_by_type_addr_port_purpose(int type, uint32_t addr,
-                                                     uint16_t port, int purpose);
+                                                   uint16_t port, int purpose);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
-connection_t *connection_get_by_type_state_rendquery(int type, int state, const char *rendquery);
+connection_t *connection_get_by_type_state_rendquery(int type, int state,
+                                                     const char *rendquery);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 #define connection_has_pending_tls_data(conn) \
@@ -1611,7 +1643,7 @@ char *alloc_http_authenticator(const char *authenticator);
 void assert_connection_ok(connection_t *conn, time_t now);
 int connection_or_nonopen_was_started_here(connection_t *conn);
 
-/********************************* connection_edge.c ***************************/
+/********************************* connection_edge.c *************************/
 
 #define connection_mark_unattached_ap(conn, endreason) \
   _connection_mark_unattached_ap((conn), (endreason), __LINE__, _SHORT_FILE_)
@@ -1621,13 +1653,15 @@ void _connection_mark_unattached_ap(connection_t *conn, int endreason,
 int connection_edge_reached_eof(connection_t *conn);
 int connection_edge_process_inbuf(connection_t *conn, int package_partial);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
-int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
+int connection_edge_end(connection_t *conn, char reason,
+                        crypt_path_t *cpath_layer);
 int connection_edge_end_errno(connection_t *conn, crypt_path_t *cpath_layer);
 int connection_edge_finished_flushing(connection_t *conn);
 int connection_edge_finished_connecting(connection_t *conn);
 
 int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
-int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ);
+int connection_ap_handshake_send_resolve(connection_t *ap_conn,
+                                         circuit_t *circ);
 
 int connection_ap_make_bridge(char *address, uint16_t port);
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
@@ -1655,13 +1689,16 @@ void addressmap_clear_transient(void);
 void addressmap_free_all(void);
 void addressmap_rewrite(char *address, size_t maxlen);
 int addressmap_already_mapped(const char *address);
-void addressmap_register(const char *address, char *new_address, time_t expires);
+void addressmap_register(const char *address, char *new_address,
+                         time_t expires);
 int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
-void client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname, int ttl);
+void client_dns_set_addressmap(const char *address, uint32_t val,
+                               const char *exitname, int ttl);
 int address_is_in_virtual_range(const char *addr);
 const char *addressmap_register_virtual_address(int type, char *new_address);
-void addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires);
+void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
+                             time_t max_expires);
 
 void parse_socks_policy(void);
 void free_socks_policy(void);
@@ -1757,8 +1794,11 @@ int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, unsigned int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
-int control_event_address_mapped(const char *from, const char *to,time_t expires);
-int control_event_or_authdir_new_descriptor(const char *action, const char *descriptor, const char *msg);
+int control_event_address_mapped(const char *from, const char *to,
+                                 time_t expires);
+int control_event_or_authdir_new_descriptor(const char *action,
+                                            const char *descriptor,
+                                            const char *msg);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);
@@ -1783,8 +1823,10 @@ void directory_post_to_dirservers(uint8_t purpose, const char *payload,
 void directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                   int retry_if_no_servers);
 void directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
-                                       int private_connection, const char *resource,
-                                       const char *payload, size_t payload_len);
+                                       int private_connection,
+                                       const char *resource,
+                                       const char *payload,
+                                       size_t payload_len);
 
 int parse_http_response(const char *headers, int *code, time_t *date,
                         int *compression, char **response);
@@ -1939,7 +1981,8 @@ void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
-                                 size_t payload_len, crypt_path_t *cpath_layer);
+                                 size_t payload_len,
+                                 crypt_path_t *cpath_layer);
 int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial);
 void connection_edge_consider_sending_sendme(connection_t *conn);
 socks5_reply_status_t connection_edge_end_reason_socks5_response(int reason);
@@ -1970,8 +2013,10 @@ void rep_history_clean(time_t before);
 void rep_hist_note_used_port(uint16_t port, time_t now);
 smartlist_t *rep_hist_get_predicted_ports(time_t now);
 void rep_hist_note_used_resolve(time_t now);
-void rep_hist_note_used_internal(time_t now, int need_uptime, int need_capacity);
-int rep_hist_get_predicted_internal(time_t now, int *need_uptime, int *need_capacity);
+void rep_hist_note_used_internal(time_t now, int need_uptime,
+                                 int need_capacity);
+int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
+                                    int *need_capacity);
 
 void rep_hist_free_all(void);
 
@@ -1979,11 +2024,15 @@ void rep_hist_free_all(void);
 
 void rend_client_introcirc_has_opened(circuit_t *circ);
 void rend_client_rendcirc_has_opened(circuit_t *circ);
-int rend_client_introduction_acked(circuit_t *circ, const char *request, size_t request_len);
+int rend_client_introduction_acked(circuit_t *circ, const char *request,
+                                   size_t request_len);
 void rend_client_refetch_renddesc(const char *query);
-int rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query);
-int rend_client_rendezvous_acked(circuit_t *circ, const char *request, size_t request_len);
-int rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t request_len);
+int rend_client_remove_intro_point(extend_info_t *failed_intro,
+                                   const char *query);
+int rend_client_rendezvous_acked(circuit_t *circ, const char *request,
+                                 size_t request_len);
+int rend_client_receive_rendezvous(circuit_t *circ, const char *request,
+                                   size_t request_len);
 void rend_client_desc_here(const char *query);
 
 extend_info_t *rend_client_get_random_intro(const char *query);
@@ -2022,7 +2071,8 @@ int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                                    crypto_pk_env_t *key,
                                    char **str_out,
                                    size_t *len_out);
-rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, size_t len);
+rend_service_descriptor_t *rend_parse_service_descriptor(const char *str,
+                                                         size_t len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
 
 /** A cached rendezvous descriptor. */
@@ -2037,8 +2087,10 @@ void rend_cache_init(void);
 void rend_cache_clean(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
-int rend_cache_lookup_desc(const char *query, int version, const char **desc, size_t *desc_len);
-int rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **entry_out);
+int rend_cache_lookup_desc(const char *query, int version, const char **desc,
+                           size_t *desc_len);
+int rend_cache_lookup_entry(const char *query, int version,
+                            rend_cache_entry_t **entry_out);
 int rend_cache_store(const char *desc, size_t desc_len);
 
 /********************************* rendservice.c ***************************/
@@ -2051,19 +2103,25 @@ void rend_services_introduce(void);
 void rend_consider_services_upload(time_t now);
 
 void rend_service_intro_has_opened(circuit_t *circuit);
-int rend_service_intro_established(circuit_t *circuit, const char *request, size_t request_len);
+int rend_service_intro_established(circuit_t *circuit, const char *request,
+                                   size_t request_len);
 void rend_service_rendezvous_has_opened(circuit_t *circuit);
-int rend_service_introduce(circuit_t *circuit, const char *request, size_t request_len);
+int rend_service_introduce(circuit_t *circuit, const char *request,
+                           size_t request_len);
 void rend_service_relaunch_rendezvous(circuit_t *oldcirc);
 int rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ);
 void rend_service_dump_stats(int severity);
 void rend_service_free_all(void);
 
 /********************************* rendmid.c *******************************/
-int rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_len);
-int rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len);
-int rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t request_len);
-int rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len);
+int rend_mid_establish_intro(circuit_t *circ, const char *request,
+                             size_t request_len);
+int rend_mid_introduce(circuit_t *circ, const char *request,
+                       size_t request_len);
+int rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
+                                  size_t request_len);
+int rend_mid_rendezvous(circuit_t *circ, const char *request,
+                        size_t request_len);
 
 /********************************* router.c ***************************/
 typedef enum {
@@ -2152,7 +2210,8 @@ trusted_dir_server_t *router_get_trusteddirserver_by_digest(
      const char *digest);
 int all_trusted_directory_servers_down(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
-void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down, int warn_if_unnamed);
+void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
+                                    int warn_if_down, int warn_if_unnamed);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
                                                  int warn);
@@ -2163,8 +2222,10 @@ int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
 #define ROUTER_REQUIRED_MIN_UPTIME (24*3600) /* a day */
 #define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
 
-routerinfo_t *router_find_exact_exit_enclave(const char *address, uint16_t port);
-int router_is_unreliable(routerinfo_t *router, int need_uptime, int need_capacity);
+routerinfo_t *router_find_exact_exit_enclave(const char *address,
+                                             uint16_t port);
+int router_is_unreliable(routerinfo_t *router, int need_uptime,
+                         int need_capacity);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
@@ -2197,7 +2258,9 @@ int router_add_to_routerlist(routerinfo_t *router, const char **msg,
 int router_load_single_router(const char *s, const char **msg);
 void router_load_routers_from_string(const char *s, int from_cache,
                                      smartlist_t *requested_fingerprints);
-typedef enum { NS_FROM_CACHE, NS_FROM_DIR, NS_GENERATED} networkstatus_source_t;
+typedef enum {
+  NS_FROM_CACHE, NS_FROM_DIR, NS_GENERATED
+} networkstatus_source_t;
 int router_set_networkstatus(const char *s, time_t arrived_at,
                              networkstatus_source_t source,
                              smartlist_t *requested_fingerprints);
@@ -2262,7 +2325,8 @@ int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
 int router_get_networkstatus_v2_hash(const char *s, char *digest);
-int router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
+int router_append_dirobj_signature(char *buf, size_t buf_len,
+                                   const char *digest,
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
                                   smartlist_t *dest);

@@ -193,7 +193,7 @@ N     - Clients use Stable and Fast instead of uptime and bandwidth to
     - Make authorities rate-limit logging their complaints about given
       servers?
       - Is this still necessary?
-    - All versions of Tor should get cosmetic changes rate-limited.
+    o All versions of Tor should get cosmetic changes rate-limited.
     - Pick directories from networkstatus objects, not from routerlist.
       - But! We can't do this easily, since we want to know about platform,
         and networkstatus doesn't tell us Tor version.  Can we solve this?

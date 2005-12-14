@@ -1,7 +1,8 @@
 /* Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char rephist_c_id[] = "$Id$";
+const char rephist_c_id[] =
+  "$Id$";
 
 /**
  * \file rephist.c
@@ -291,7 +292,8 @@ rep_hist_dump_stats(time_t now, int severity)
 
   log(severity, LD_GENERAL, "--------------- Dumping history information:");
 
-  for (orhist_it = digestmap_iter_init(history_map); !digestmap_iter_done(orhist_it);
+  for (orhist_it = digestmap_iter_init(history_map);
+       !digestmap_iter_done(orhist_it);
        orhist_it = digestmap_iter_next(history_map,orhist_it)) {
     digestmap_iter_get(orhist_it, &digest1, &or_history_p);
     or_history = (or_history_t*) or_history_p;
@@ -320,7 +322,8 @@ rep_hist_dump_stats(time_t now, int severity)
       len = strlen(buffer);
       for (lhist_it = digestmap_iter_init(or_history->link_history_map);
            !digestmap_iter_done(lhist_it);
-           lhist_it = digestmap_iter_next(or_history->link_history_map, lhist_it)) {
+           lhist_it = digestmap_iter_next(or_history->link_history_map,
+                                          lhist_it)) {
         digestmap_iter_get(lhist_it, &digest2, &link_history_p);
         if ((r = router_get_by_digest(digest2)))
           name2 = r->nickname;
@@ -367,7 +370,8 @@ rep_history_clean(time_t before)
       digestmap_iter_get(lhist_it, &d2, &link_history_p);
       link_history = link_history_p;
       if (link_history->changed < before) {
-        lhist_it = digestmap_iter_next_rmv(or_history->link_history_map,lhist_it);
+        lhist_it = digestmap_iter_next_rmv(or_history->link_history_map,
+                                           lhist_it);
         rephist_total_alloc -= sizeof(link_history_t);
         tor_free(link_history);
         continue;
@@ -396,7 +400,8 @@ typedef struct bw_array_t {
   int total_obs; /**< Total for all members of obs except obs[cur_obs_idx] */
   int max_total; /**< Largest value that total_obs has taken on in the current
                   * period. */
-  uint64_t total_in_period; /**< Total bytes transferred in the current period. */
+  uint64_t total_in_period; /**< Total bytes transferred in the current
+                             * period. */
 
   /** When does the next period begin? */
   time_t next_period;
@@ -766,7 +771,8 @@ rep_hist_note_used_internal(time_t now, int need_uptime, int need_capacity)
 
 /** Return 1 if we've used an internal circ recently; else return 0. */
 int
-rep_hist_get_predicted_internal(time_t now, int *need_uptime, int *need_capacity)
+rep_hist_get_predicted_internal(time_t now, int *need_uptime,
+                                int *need_capacity)
 {
   if (!predicted_internal_time) { /* initialize it */
     predicted_internal_time = now;

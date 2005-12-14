@@ -1,7 +1,8 @@
 /* Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char hibernate_c_id[] = "$Id$";
+const char hibernate_c_id[] =
+  "$Id$";
 
 /**
  * \file hibernate.c
@@ -139,7 +140,8 @@ accounting_parse_options(or_options_t *options, int validate_only)
   } else if (0==strcasecmp(s, "day")) {
     unit = UNIT_DAY;
   } else {
-    warn(LD_CONFIG, "Unrecognized accounting unit '%s': only 'month', 'week', and 'day' are supported.", s);
+    warn(LD_CONFIG, "Unrecognized accounting unit '%s': only 'month', 'week',"
+         " and 'day' are supported.", s);
     goto err;
   }
 
@@ -147,14 +149,16 @@ accounting_parse_options(or_options_t *options, int validate_only)
   case UNIT_WEEK:
     d = tor_parse_long(smartlist_get(items,1), 10, 1, 7, &ok, NULL);
     if (!ok) {
-      warn(LD_CONFIG, "Weekly accounting must start begin on a day between 1(Monday) and 7 (Sunday)");
+      warn(LD_CONFIG, "Weekly accounting must begin on a day between "
+           "1 (Monday) and 7 (Sunday)");
       goto err;
     }
     break;
   case UNIT_MONTH:
     d = tor_parse_long(smartlist_get(items,1), 10, 1, 28, &ok, NULL);
     if (!ok) {
-      warn(LD_CONFIG, "Monthly accounting must start begin on a day between 1 and 28");
+      warn(LD_CONFIG, "Monthly accounting must begin on a day between "
+           "1 and 28");
       goto err;
     }
     break;
@@ -689,7 +693,8 @@ hibernate_begin(int new_state, time_t now)
   /* XXX upload rendezvous service descriptors with no intro points */
 
   if (new_state == HIBERNATE_STATE_EXITING) {
-    notice(LD_GENERAL,"Interrupt: will shut down in %d seconds. Interrupt again to exit now.", options->ShutdownWaitLength);
+    notice(LD_GENERAL,"Interrupt: will shut down in %d seconds. Interrupt "
+           "again to exit now.", options->ShutdownWaitLength);
     hibernate_end_time = time(NULL) + options->ShutdownWaitLength;
   } else { /* soft limit reached */
     hibernate_end_time = interval_end_time;
@@ -784,10 +789,12 @@ hibernate_end_time_elapsed(time_t now)
     format_iso_time(buf,interval_wakeup_time);
     if (hibernate_state != HIBERNATE_STATE_DORMANT) {
       /* We weren't sleeping before; we should sleep now. */
-      notice(LD_ACCT, "Accounting period ended. Commencing hibernation until %s GMT",buf);
+      notice(LD_ACCT, "Accounting period ended. Commencing hibernation until "
+             "%s GMT",buf);
       hibernate_go_dormant(now);
     } else {
-      notice(LD_ACCT, "Accounting period ended. This period, we will hibernate until %s GMT",buf);
+      notice(LD_ACCT, "Accounting period ended. This period, we will hibernate"
+             " until %s GMT",buf);
     }
   }
 }

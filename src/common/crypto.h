@@ -61,7 +61,8 @@ crypto_pk_env_t *crypto_new_pk_env(void);
 void crypto_free_pk_env(crypto_pk_env_t *env);
 
 /* convenience function: wraps crypto_create_crypto_env, set_key, and init. */
-crypto_cipher_env_t *crypto_create_init_cipher(const char *key, int encrypt_mode);
+crypto_cipher_env_t *crypto_create_init_cipher(const char *key,
+                                               int encrypt_mode);
 
 crypto_cipher_env_t *crypto_new_cipher_env(void);
 void crypto_free_cipher_env(crypto_cipher_env_t *env);
@@ -69,10 +70,14 @@ void crypto_free_cipher_env(crypto_cipher_env_t *env);
 /* public key crypto */
 int crypto_pk_generate_key(crypto_pk_env_t *env);
 
-int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile);
-int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size_t *len);
-int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, size_t len);
-int crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env, const char *fname);
+int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env,
+                                             const char *keyfile);
+int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env,
+                                         char **dest, size_t *len);
+int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env,
+                                          const char *src, size_t len);
+int crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
+                                            const char *fname);
 int crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **dest);
 crypto_pk_env_t *crypto_pk_DER64_decode_public_key(const char *in);
 

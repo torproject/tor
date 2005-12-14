@@ -2,7 +2,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char dns_c_id[] = "$Id$";
+const char dns_c_id[] =
+  "$Id$";
 
 /**
  * \file dns.c
@@ -12,7 +13,8 @@ const char dns_c_id[] = "$Id$";
  * good, ubiquitous asynchronous DNS implementation.]
  **/
 
-/* See http://elvin.dstc.com/ListArchive/elvin-dev/archive/2001/09/msg00027.html
+/* See
+ * http://elvin.dstc.com/ListArchive/elvin-dev/archive/2001/09/msg00027.html
  * for some approaches to asynchronous dns. We will want to switch once one of
  * them becomes more commonly available.
  */
@@ -58,7 +60,8 @@ typedef struct cached_resolve_t {
   HT_ENTRY(cached_resolve_t) node;
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
   uint32_t addr; /**< IPv4 addr for <b>address</b>. */
-  char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve failed. */
+  char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve
+               * failed. */
 #define CACHE_STATE_PENDING 0
 #define CACHE_STATE_VALID 1
 #define CACHE_STATE_FAILED 2
@@ -160,7 +163,8 @@ purge_expired_resolves(uint32_t now)
     debug(LD_EXIT,"Forgetting old cached resolve (address %s, expires %lu)",
           safe_str(resolve->address), (unsigned long)resolve->expire);
     if (resolve->state == CACHE_STATE_PENDING) {
-      debug(LD_EXIT,"Bug: Expiring a dns resolve ('%s') that's still pending. Forgot to cull it?", safe_str(resolve->address));
+      debug(LD_EXIT,"Bug: Expiring a dns resolve ('%s') that's still pending."
+            " Forgot to cull it?", safe_str(resolve->address));
       tor_fragile_assert();
     }
     if (resolve->pending_connections) {
@@ -181,7 +185,8 @@ purge_expired_resolves(uint32_t now)
     }
     oldest_cached_resolve = resolve->next;
     if (!oldest_cached_resolve) /* if there are no more, */
-      newest_cached_resolve = NULL; /* then make sure the list's tail knows that too */
+      newest_cached_resolve = NULL; /* then make sure the list's tail knows
+                                     * that too */
     HT_REMOVE(cache_map, &cache_root, resolve);
     tor_free(resolve);
   }
@@ -291,7 +296,8 @@ dns_resolve(connection_t *exitconn)
         pending_connection->conn = exitconn;
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
-        debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS resolve of '%s'",
+        debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS "
+              "resolve of '%s'",
               exitconn->s, safe_str(exitconn->address));
         exitconn->state = EXIT_CONN_STATE_RESOLVING;
         return 0;
@@ -349,7 +355,8 @@ assign_to_dnsworker(connection_t *exitconn)
     goto err;
   }
 
-  dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
+  dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
+                                         DNSWORKER_STATE_IDLE);
 
   if (!dnsconn) {
     warn(LD_EXIT,"no idle dns workers. Failing.");
@@ -374,7 +381,7 @@ assign_to_dnsworker(connection_t *exitconn)
 
   return 0;
 err:
-  dns_cancel_pending_resolve(exitconn->address); /* also sends end and frees! */
+  dns_cancel_pending_resolve(exitconn->address); /* also sends end and frees */
   return -1;
 }
 
@@ -395,7 +402,8 @@ connection_dns_remove(connection_t *conn)
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (!resolve) {
     /* XXXX RD This *is* a bug, right? -NM */
-    notice(LD_BUG,"Address '%s' is not pending. Dropping.", safe_str(conn->address));
+    notice(LD_BUG, "Address '%s' is not pending. Dropping.",
+           safe_str(conn->address));
     return;
   }
 
@@ -407,7 +415,8 @@ connection_dns_remove(connection_t *conn)
   if (pend->conn == conn) {
     resolve->pending_connections = pend->next;
     tor_free(pend);
-    debug(LD_EXIT, "First connection (fd %d) no longer waiting for resolve of '%s'",
+    debug(LD_EXIT, "First connection (fd %d) no longer waiting for resolve "
+          "of '%s'",
           conn->s, safe_str(conn->address));
     return;
   } else {
@@ -416,7 +425,8 @@ connection_dns_remove(connection_t *conn)
         victim = pend->next;
         pend->next = victim->next;
         tor_free(victim);
-        debug(LD_EXIT, "Connection (fd %d) no longer waiting for resolve of '%s'",
+        debug(LD_EXIT, "Connection (fd %d) no longer waiting for resolve "
+              "of '%s'",
               conn->s, safe_str(conn->address));
         return; /* more are pending */
       }
@@ -529,8 +539,10 @@ dns_purge_resolve(cached_resolve_t *resolve)
       newest_cached_resolve = NULL;
   } else {
     /* FFFF make it a doubly linked list if this becomes too slow */
-    for (tmp=oldest_cached_resolve; tmp && tmp->next != resolve; tmp=tmp->next) ;
-    tor_assert(tmp); /* it's got to be in the list, or we screwed up somewhere else */
+    for (tmp=oldest_cached_resolve; tmp && tmp->next != resolve; tmp=tmp->next)
+      ;
+    tor_assert(tmp); /* it's got to be in the list, or we screwed up somewhere
+                      * else */
     tmp->next = resolve->next; /* unlink it */
 
     if (newest_cached_resolve == resolve)
@@ -605,7 +617,8 @@ dns_found_answer(char *address, uint32_t addr, char outcome)
       /* prevent double-remove. */
       pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
       if (pendconn->purpose == EXIT_PURPOSE_CONNECT) {
-        connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED, pendconn->cpath_layer);
+        connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED,
+                            pendconn->cpath_layer);
         /* This detach must happen after we send the end cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       } else {
@@ -694,7 +707,8 @@ connection_dns_process_inbuf(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_DNSWORKER);
 
   if (conn->state != DNSWORKER_STATE_BUSY && buf_datalen(conn->inbuf)) {
-    warn(LD_BUG,"Bug: read data (%d bytes) from an idle dns worker (fd %d, address '%s'). Please report.",
+    warn(LD_BUG,"Bug: read data (%d bytes) from an idle dns worker (fd %d, "
+         "address '%s'). Please report.",
          (int)buf_datalen(conn->inbuf), conn->s, safe_str(conn->address));
     tor_fragile_assert();
 
@@ -781,11 +795,13 @@ dnsworker_main(void *data)
   int fd;
   int result;
 
-  /* log_fn(LOG_NOTICE,"After spawn: fdarray @%d has %d:%d", (int)fdarray, fdarray[0],fdarray[1]); */
+  /* log_fn(LOG_NOTICE,"After spawn: fdarray @%d has %d:%d", (int)fdarray,
+   * fdarray[0],fdarray[1]); */
 
   fd = fdarray[1]; /* this side is ours */
 #ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
+  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the
+                                 * parent uses */
   tor_free_all(1); /* so the child doesn't hold the parent's fd's open */
   handle_signals(0); /* ignore interrupts from the keyboard, etc */
 #endif
@@ -796,10 +812,13 @@ dnsworker_main(void *data)
 
     if ((r = recv(fd, &address_len, 1, 0)) != 1) {
       if (r == 0) {
-        info(LD_EXIT,"DNS worker exiting because Tor process closed connection (either pruned idle dnsworker or died).");
+        info(LD_EXIT,"DNS worker exiting because Tor process closed "
+             "connection (either pruned idle dnsworker or died).");
       } else {
-        info(LD_EXIT,"DNS worker exiting because of error on connection to Tor process.");
-        info(LD_EXIT,"(Error on %d was %s)", fd, tor_socket_strerror(tor_socket_errno(fd)));
+        info(LD_EXIT,"DNS worker exiting because of error on connection "
+             "to Tor process.");
+        info(LD_EXIT,"(Error on %d was %s)", fd,
+             tor_socket_strerror(tor_socket_errno(fd)));
       }
       tor_close_socket(fd);
       crypto_thread_cleanup();
@@ -821,11 +840,13 @@ dnsworker_main(void *data)
     switch (result) {
       case 1:
         /* XXX result can never be 1, because we set it to -1 above on error */
-        info(LD_NET,"Could not resolve dest addr %s (transient).",safe_str(address));
+        info(LD_NET,"Could not resolve dest addr %s (transient).",
+             safe_str(address));
         answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
         break;
       case -1:
-        info(LD_NET,"Could not resolve dest addr %s (permanent).",safe_str(address));
+        info(LD_NET,"Could not resolve dest addr %s (permanent).",
+             safe_str(address));
         answer[0] = DNS_RESOLVE_FAILED_PERMANENT;
         break;
       case 0:
@@ -856,18 +877,21 @@ spawn_dnsworker(void)
 
   fdarray = tor_malloc(sizeof(int)*2);
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
-    warn(LD_NET, "Couldn't construct socketpair: %s", tor_socket_strerror(-err));
+    warn(LD_NET, "Couldn't construct socketpair: %s",
+         tor_socket_strerror(-err));
     tor_free(fdarray);
     return -1;
   }
 
-  /* log_fn(LOG_NOTICE,"Before spawn: fdarray @%d has %d:%d", (int)fdarray, fdarray[0],fdarray[1]); */
+  /* log_fn(LOG_NOTICE,"Before spawn: fdarray @%d has %d:%d",
+            (int)fdarray, fdarray[0],fdarray[1]); */
 
-  fd = fdarray[0]; /* We copy this out here, since dnsworker_main may free fdarray */
+  fd = fdarray[0]; /* We copy this out here, since dnsworker_main may free
+                    * fdarray */
   spawn_func(dnsworker_main, (void*)fdarray);
   debug(LD_EXIT,"just spawned a worker.");
 #ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fdarray[1]); /* we don't need the worker's side of the pipe */
+  tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
   tor_free(fdarray);
 #endif
 
@@ -903,12 +927,13 @@ spawn_enough_dnsworkers(void)
   connection_t *dnsconn;
 
   /* XXX This may not be the best strategy. Maybe we should queue pending
-   *     requests until the old ones finish or time out: otherwise, if
-   *     the connection requests come fast enough, we never get any DNS done. -NM
+   *     requests until the old ones finish or time out: otherwise, if the
+   *     connection requests come fast enough, we never get any DNS done. -NM
+   *
    * XXX But if we queue them, then the adversary can pile even more
-   *     queries onto us, blocking legitimate requests for even longer.
-   *     Maybe we should compromise and only kill if it's been at it for
-   *     more than, e.g., 2 seconds. -RD
+   *     queries onto us, blocking legitimate requests for even longer.  Maybe
+   *     we should compromise and only kill if it's been at it for more than,
+   *     e.g., 2 seconds. -RD
    */
   if (num_dnsworkers_busy == MAX_DNSWORKERS) {
     /* We always want at least one worker idle.
@@ -944,7 +969,8 @@ spawn_enough_dnsworkers(void)
     /* cull excess workers */
     info(LD_EXIT,"%d of %d dnsworkers are idle. Killing one.",
          num_dnsworkers-num_dnsworkers_busy, num_dnsworkers);
-    dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
+    dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
+                                           DNSWORKER_STATE_IDLE);
     tor_assert(dnsconn);
     connection_mark_for_close(dnsconn);
     num_dnsworkers--;

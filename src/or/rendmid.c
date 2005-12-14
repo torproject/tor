@@ -1,7 +1,8 @@
 /* Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char rendmid_c_id[] = "$Id$";
+const char rendmid_c_id[] =
+  "$Id$";
 
 /**
  * \file rendmid.c
@@ -14,7 +15,8 @@ const char rendmid_c_id[] = "$Id$";
  * setting the circuit's purpose and service pk digest.
  */
 int
-rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_len)
+rend_mid_establish_intro(circuit_t *circ, const char *request,
+                         size_t request_len)
 {
   crypto_pk_env_t *pk = NULL;
   char buf[DIGEST_LEN+9];
@@ -28,7 +30,8 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
        "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    warn(LD_PROTOCOL, "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
+    warn(LD_PROTOCOL,
+         "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
     goto err;
   }
   if (request_len < 2+DIGEST_LEN)
@@ -60,7 +63,8 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
   if (crypto_pk_public_checksig_digest(pk, request, 2+asn1len+DIGEST_LEN,
                                        request+2+DIGEST_LEN+asn1len,
                                        request_len-(2+DIGEST_LEN+asn1len))<0) {
-    warn(LD_PROTOCOL, "Incorrect signature on ESTABLISH_INTRO cell; rejecting.");
+    warn(LD_PROTOCOL,
+         "Incorrect signature on ESTABLISH_INTRO cell; rejecting.");
     goto err;
   }
 
@@ -129,8 +133,8 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   /* change to MAX_HEX_NICKNAME_LEN once 0.0.9.x is obsolete */
   if (request_len < (DIGEST_LEN+(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+
                      DH_KEY_LEN+CIPHER_KEY_LEN+PKCS1_OAEP_PADDING_OVERHEAD)) {
-    warn(LD_PROTOCOL,
-         "Impossibly short INTRODUCE1 cell on circuit %d; responding with nack.",
+    warn(LD_PROTOCOL, "Impossibly short INTRODUCE1 cell on circuit %d; "
+         "responding with nack.",
          circ->p_circ_id);
     goto err;
   }
@@ -142,7 +146,8 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
                              NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
   if (!intro_circ) {
     info(LD_REND,
-         "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; responding with nack.",
+         "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; "
+         "responding with nack.",
          safe_str(serviceid), circ->p_circ_id);
     goto err;
   }
@@ -183,12 +188,14 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
  * rendezvous cookie.
  */
 int
-rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t request_len)
+rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
+                              size_t request_len)
 {
   char hexid[9];
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    warn(LD_PROTOCOL, "Tried to establish rendezvous on non-OR or non-edge circuit.");
+    warn(LD_PROTOCOL,
+         "Tried to establish rendezvous on non-OR or non-edge circuit.");
     goto err;
   }
 

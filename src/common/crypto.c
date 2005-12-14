@@ -2,7 +2,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char crypto_c_id[] = "$Id$";
+const char crypto_c_id[] =
+  "$Id$";
 
 /**
  * \file crypto.c
@@ -167,7 +168,8 @@ crypto_log_errors(int severity, const char *doing)
     func = (const char*)ERR_func_error_string(err);
     if (!msg) msg = "(null)";
     if (doing) {
-      log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)", doing, msg, lib, func);
+      log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
+          doing, msg, lib, func);
     } else {
       log(severity, LD_CRYPTO, "crypto error: %s (in %s:%s)", msg, lib, func);
     }
@@ -456,7 +458,8 @@ crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
  * <b>keyfile</b> into <b>env</b>.  Return 0 on success, -1 on failure.
  */
 int
-crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile)
+crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env,
+                                         const char *keyfile)
 {
   char *contents;
   int r;
@@ -487,7 +490,8 @@ crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfi
  * failure, return -1.
  */
 int
-crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size_t *len)
+crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
+                                     size_t *len)
 {
   BUF_MEM *buf;
   BIO *b;
@@ -525,7 +529,8 @@ crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size_t *
  * failure.
  */
 int
-crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, size_t len)
+crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src,
+                                      size_t len)
 {
   BIO *b;
 
@@ -770,7 +775,8 @@ crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
   tor_assert(env);
   tor_assert(from);
   tor_assert(to);
-  r = RSA_public_decrypt(fromlen, (unsigned char*)from, (unsigned char*)to, env->key, RSA_PKCS1_PADDING);
+  r = RSA_public_decrypt(fromlen, (unsigned char*)from, (unsigned char*)to,
+                         env->key, RSA_PKCS1_PADDING);
 
   if (r<0) {
     crypto_log_errors(LOG_WARN, "checking RSA signature");
@@ -830,7 +836,8 @@ crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
     /* Not a private key */
     return -1;
 
-  r = RSA_private_encrypt(fromlen, (unsigned char*)from, (unsigned char*)to, env->key, RSA_PKCS1_PADDING);
+  r = RSA_private_encrypt(fromlen, (unsigned char*)from, (unsigned char*)to,
+                          env->key, RSA_PKCS1_PADDING);
   if (r<0) {
     crypto_log_errors(LOG_WARN, "generating RSA signature");
     return -1;
@@ -950,9 +957,11 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   pkeylen = crypto_pk_keysize(env);
 
   if (fromlen <= pkeylen) {
-    return crypto_pk_private_decrypt(env,to,from,fromlen,padding,warnOnFailure);
+    return crypto_pk_private_decrypt(env,to,from,fromlen,padding,
+                                     warnOnFailure);
   }
-  outlen = crypto_pk_private_decrypt(env,buf,from,pkeylen,padding,warnOnFailure);
+  outlen = crypto_pk_private_decrypt(env,buf,from,pkeylen,padding,
+                                     warnOnFailure);
   if (outlen<0) {
     log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, LD_CRYPTO,
            "Error decrypting public-key data");
@@ -1397,7 +1406,8 @@ crypto_dh_generate_public(crypto_dh_env_t *dh)
     return -1;
   }
   if (tor_check_dh_key(dh->dh->pub_key)<0) {
-    warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-the-universe chances really do happen.  Trying again.");
+    warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
+         "the-universe chances really do happen.  Trying again.");
     /* Free and clear the keys, so openssl will actually try again. */
     BN_free(dh->dh->pub_key);
     BN_free(dh->dh->priv_key);
@@ -1425,7 +1435,8 @@ crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
   bytes = BN_num_bytes(dh->dh->pub_key);
   tor_assert(bytes >= 0);
   if (pubkey_len < (size_t)bytes) {
-    warn(LD_CRYPTO, "Weird! pubkey_len (%d) was smaller than DH_BYTES (%d)", (int) pubkey_len, bytes);
+    warn(LD_CRYPTO, "Weird! pubkey_len (%d) was smaller than DH_BYTES (%d)",
+         (int) pubkey_len, bytes);
     return -1;
   }
 
@@ -1627,7 +1638,8 @@ crypto_seed_rng(void)
 
 #ifdef MS_WINDOWS
   if (!provider_set) {
-    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
+                             CRYPT_VERIFYCONTEXT)) {
       if (GetLastError() != NTE_BAD_KEYSET) {
         warn(LD_CRYPTO, "Can't get CryptoAPI provider [1]");
         return rand_poll_status ? 0 : -1;
@@ -1649,7 +1661,8 @@ crypto_seed_rng(void)
     n = read_all(fd, buf, sizeof(buf), 0);
     close(fd);
     if (n != sizeof(buf)) {
-      warn(LD_CRYPTO, "Error reading from entropy source (read only %d bytes).", n);
+      warn(LD_CRYPTO,
+           "Error reading from entropy source (read only %d bytes).", n);
       return -1;
     }
     RAND_seed(buf, sizeof(buf));
@@ -1729,7 +1742,8 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
 
   EVP_EncodeInit(&ctx);
-  EVP_EncodeUpdate(&ctx, (unsigned char*)dest, &len, (unsigned char*)src, srclen);
+  EVP_EncodeUpdate(&ctx, (unsigned char*)dest, &len,
+                   (unsigned char*)src, srclen);
   EVP_EncodeFinal(&ctx, (unsigned char*)(dest+len), &ret);
   ret += len;
   return ret;
@@ -1758,7 +1772,8 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
 
   EVP_DecodeInit(&ctx);
-  EVP_DecodeUpdate(&ctx, (unsigned char*)dest, &len, (unsigned char*)src, srclen);
+  EVP_DecodeUpdate(&ctx, (unsigned char*)dest, &len,
+                   (unsigned char*)src, srclen);
   EVP_DecodeFinal(&ctx, (unsigned char*)dest, &ret);
   ret += len;
   return ret;

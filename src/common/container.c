@@ -2,7 +2,8 @@
    Copyright 2004-2005 Roger Dingledine, Nick Mathewson */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char container_c_id[] = "$Id$";
+const char container_c_id[] =
+  "$Id$";
 
 /**
  * \file container.c
@@ -807,8 +808,9 @@ digestmap_iter_done(digestmap_iter_t *iter)
   return iter == NULL;
 }
 
-/** Remove all entries from <b>map</b>, and deallocate storage for those entries.
- * If free_val is provided, it is invoked on every value in <b>map</b>.
+/** Remove all entries from <b>map</b>, and deallocate storage for those
+ * entries.  If free_val is provided, it is invoked on every value in
+ * <b>map</b>.
  */
 void
 strmap_free(strmap_t *map, void (*free_val)(void*))

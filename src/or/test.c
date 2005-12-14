@@ -2,7 +2,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char test_c_id[] = "$Id$";
+const char test_c_id[] =
+  "$Id$";
 
 /**
  * \file test.c
@@ -47,7 +48,8 @@ setup_directory(void)
 
 #ifdef MS_WINDOWS
   // XXXX
-  tor_snprintf(temp_dir, sizeof(temp_dir), "c:\\windows\\temp\\tor_test_%d", (int)getpid());
+  tor_snprintf(temp_dir, sizeof(temp_dir),
+               "c:\\windows\\temp\\tor_test_%d", (int)getpid());
   r = mkdir(temp_dir);
 #else
   tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d", (int) getpid());
@@ -710,7 +712,8 @@ test_util(void)
   test_streq("a", smartlist_get(sl,0));
   test_streq("bbd", smartlist_get(sl,1));
   test_streq("cdef", smartlist_get(sl,2));
-  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", SPLIT_SKIP_SPACE, 0);
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
+                         SPLIT_SKIP_SPACE, 0);
   test_eq(8, smartlist_len(sl));
   test_streq("z", smartlist_get(sl,3));
   test_streq("zhasd", smartlist_get(sl,4));
@@ -744,22 +747,26 @@ test_util(void)
   test_streq(cp, "XY");
   tor_free(cp);
 
-  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   test_eq(3, smartlist_len(sl));
   test_streq("z", smartlist_get(sl, 0));
   test_streq("zhasd", smartlist_get(sl, 1));
   test_streq("bnud", smartlist_get(sl, 2));
-  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
   test_eq(5, smartlist_len(sl));
   test_streq("z", smartlist_get(sl, 3));
   test_streq("zhasd <>  <> bnud<>", smartlist_get(sl, 4));
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
-  smartlist_split_string(sl, "abcd\n", "\n", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  smartlist_split_string(sl, "abcd\n", "\n",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   test_eq(1, smartlist_len(sl));
   test_streq("abcd", smartlist_get(sl, 0));
-  smartlist_split_string(sl, "efgh", "\n", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  smartlist_split_string(sl, "efgh", "\n",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   test_eq(2, smartlist_len(sl));
   test_streq("efgh", smartlist_get(sl, 1));
 
@@ -774,7 +781,8 @@ test_util(void)
   test_streq(cp,"and,arma,by,nickm,onion,router,the");
   tor_free(cp);
 
-  test_streq("nickm", smartlist_bsearch(sl, "zNicKM", _compare_without_first_ch));
+  test_streq("nickm", smartlist_bsearch(sl, "zNicKM",
+                                        _compare_without_first_ch));
   test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
   test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
 
@@ -919,7 +927,8 @@ test_gzip(void)
     test_assert(!memcmp(buf2, "\037\213", 2)); /* Gzip magic. */
     test_eq(detect_compression_method(buf2, len1), GZIP_METHOD);
 
-    test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1, GZIP_METHOD, 1));
+    test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
+                                     GZIP_METHOD, 1));
     test_assert(buf3);
     test_streq(buf1,buf3);
 
@@ -941,7 +950,8 @@ test_gzip(void)
   tor_free(buf3);
   buf2 = tor_realloc(buf2, len1*2);
   memcpy(buf2+len1, buf2, len1);
-  test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2, ZLIB_METHOD, 1));
+  test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2,
+                                   ZLIB_METHOD, 1));
   test_eq(len2, (strlen(buf1)+1)*2);
   test_memeq(buf3,
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
@@ -953,11 +963,14 @@ test_gzip(void)
   tor_free(buf3);
 
   /* Check whether we can uncompress partial strings. */
-  buf1 = tor_strdup("String with low redundancy that won't be compressed much.");
-  test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,ZLIB_METHOD));
+  buf1 =
+    tor_strdup("String with low redundancy that won't be compressed much.");
+  test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                                 ZLIB_METHOD));
   tor_assert(len1>16);
   /* when we allow an uncomplete string, we should succeed.*/
-  tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16, ZLIB_METHOD, 0));
+  tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
+                                  ZLIB_METHOD, 0));
   buf3[len2]='\0';
   tor_assert(len2 > 5);
   tor_assert(!strcmpstart(buf1, buf3));
@@ -1100,7 +1113,8 @@ test_onion_handshake(void)
   /* server handshake */
   memset(s_buf, 0, ONIONSKIN_REPLY_LEN);
   memset(s_keys, 0, 40);
-  test_assert(! onion_skin_server_handshake(c_buf, pk, NULL, s_buf, s_keys, 40));
+  test_assert(! onion_skin_server_handshake(c_buf, pk, NULL,
+                                            s_buf, s_keys, 40));
 
   /* client handshake 2 */
   memset(c_keys, 0, 40);
@@ -1236,7 +1250,8 @@ test_dir_format(void)
   strcat(buf2, pk2_str);
   strcat(buf2, bw_lines);
   strcat(buf2, "router-signature\n");
-  buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same twice*/
+  buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
+                             * twice */
 
   test_streq(buf, buf2);
   tor_free(bw_lines);
@@ -1369,42 +1384,42 @@ test_dir_format(void)
   test_streq("", ver1.status_tag);
 
 #define test_eq_vs(vs1, vs2) test_eq_type(version_status_t, "%d", (vs1), (vs2))
+#define test_v_i_o(val, ver, lst) \
+  test_eq_vs(val, tor_version_is_obsolete(ver, lst))
 
   /* make sure tor_version_is_obsolete() works */
-  test_eq_vs(VS_OLD, tor_version_is_obsolete("0.0.1", "Tor 0.0.2"));
-  test_eq_vs(VS_OLD, tor_version_is_obsolete("0.0.1", "0.0.2, Tor 0.0.3"));
-  test_eq_vs(VS_OLD, tor_version_is_obsolete("0.0.1", "0.0.2,Tor 0.0.3"));
-  test_eq_vs(VS_OLD, tor_version_is_obsolete("0.0.1", "0.0.3,BetterTor 0.0.1"));
-  test_eq_vs(VS_RECOMMENDED,tor_version_is_obsolete("0.0.2", "Tor 0.0.2,Tor 0.0.3"));
-  test_eq_vs(VS_NEW_IN_SERIES,
-          tor_version_is_obsolete("0.0.2", "Tor 0.0.2pre1,Tor 0.0.3"));
-  test_eq_vs(VS_OLD, tor_version_is_obsolete("0.0.2", "Tor 0.0.2.1,Tor 0.0.3"));
-  test_eq_vs(VS_NEW, tor_version_is_obsolete("0.1.0", "Tor 0.0.2,Tor 0.0.3"));
-  test_eq_vs(VS_RECOMMENDED,
-          tor_version_is_obsolete("0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8"));
-  test_eq_vs(VS_OLD, tor_version_is_obsolete("0.0.5.0", "0.0.5.1-cvs"));
-  test_eq_vs(VS_NEW_IN_SERIES, tor_version_is_obsolete("0.0.5.1-cvs", "0.0.5"));
+  test_v_i_o(VS_OLD, "0.0.1", "Tor 0.0.2");
+  test_v_i_o(VS_OLD, "0.0.1", "0.0.2, Tor 0.0.3");
+  test_v_i_o(VS_OLD, "0.0.1", "0.0.2,Tor 0.0.3");
+  test_v_i_o(VS_OLD, "0.0.1","0.0.3,BetterTor 0.0.1");
+  test_v_i_o(VS_RECOMMENDED, "0.0.2", "Tor 0.0.2,Tor 0.0.3");
+  test_v_i_o(VS_NEW_IN_SERIES, "0.0.2", "Tor 0.0.2pre1,Tor 0.0.3");
+  test_v_i_o(VS_OLD, "0.0.2", "Tor 0.0.2.1,Tor 0.0.3");
+  test_v_i_o(VS_NEW, "0.1.0", "Tor 0.0.2,Tor 0.0.3");
+  test_v_i_o(VS_RECOMMENDED, "0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8");
+  test_v_i_o(VS_OLD, "0.0.5.0", "0.0.5.1-cvs");
+  test_v_i_o(VS_NEW_IN_SERIES, "0.0.5.1-cvs", "0.0.5");
   /* Not on list, but newer than any in same series. */
-  test_eq_vs(VS_NEW_IN_SERIES,
-       tor_version_is_obsolete("0.1.0.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_v_i_o(VS_NEW_IN_SERIES, "0.1.0.3",
+             "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
   /* Series newer than any on list. */
-  test_eq_vs(VS_NEW,
-       tor_version_is_obsolete("0.1.2.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_v_i_o(VS_NEW, "0.1.2.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
   /* Series older than any on list. */
-  test_eq_vs(VS_OLD,
-       tor_version_is_obsolete("0.0.1.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_v_i_o(VS_OLD, "0.0.1.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
   /* Not on list, not newer than any on same series. */
-  test_eq_vs(VS_UNRECOMMENDED,
-       tor_version_is_obsolete("0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  test_v_i_o(VS_UNRECOMMENDED, "0.1.0.1",
+             "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
   /* On list, not newer than any on same series. */
-  test_eq_vs(VS_UNRECOMMENDED,
-       tor_version_is_obsolete("0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
-
+  test_v_i_o(VS_UNRECOMMENDED,
+             "0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0");
   test_eq(0, tor_version_as_new_as("Tor 0.0.5", "0.0.9pre1-cvs"));
   test_eq(1, tor_version_as_new_as(
-          "Tor 0.0.8 on Darwin 64-121-192-100.c3-0.sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh", "0.0.8rc2"));
+          "Tor 0.0.8 on Darwin 64-121-192-100.c3-0."
+          "sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh",
+          "0.0.8rc2"));
   test_eq(0, tor_version_as_new_as(
-          "Tor 0.0.8 on Darwin 64-121-192-100.c3-0.sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh", "0.0.8.2"));
+          "Tor 0.0.8 on Darwin 64-121-192-100.c3-0."
+          "sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh", "0.0.8.2"));
 
 }
 
@@ -1527,7 +1542,8 @@ test_rend_fns(void)
   test_streq(d2->intro_points[1], d2->intro_point_extend_info[1]->nickname);
   test_eq(d2->intro_point_extend_info[0]->addr, 1234);
   test_eq(d2->intro_point_extend_info[0]->port, 4567);
-  test_assert(!crypto_pk_cmp_keys(pk1,d2->intro_point_extend_info[0]->onion_key));
+  test_assert(!crypto_pk_cmp_keys(pk1,
+                                  d2->intro_point_extend_info[0]->onion_key));
   test_memeq(d2->intro_point_extend_info[0]->identity_digest,
              d1->intro_point_extend_info[0]->identity_digest, DIGEST_LEN);
   test_eq(d2->intro_point_extend_info[1]->addr, 6060842);

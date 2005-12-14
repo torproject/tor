@@ -3,7 +3,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char circuitlist_c_id[] = "$Id$";
+const char circuitlist_c_id[] =
+  "$Id$";
 
 /**
  * \file circuitlist.c
@@ -37,8 +38,8 @@ typedef struct orconn_circid_circuit_map_t {
   circuit_t *circuit;
 } orconn_circid_circuit_map_t;
 
-/** Helper for hash tables: compare the OR connection and circuit ID for a and b,
- * and return less than, equal to, or greater than zero appropriately.
+/** Helper for hash tables: compare the OR connection and circuit ID for a and
+ * b, and return less than, equal to, or greater than zero appropriately.
  */
 static INLINE int
 _orconn_circid_entries_eq(orconn_circid_circuit_map_t *a,
@@ -53,7 +54,8 @@ _orconn_circid_entry_hash(orconn_circid_circuit_map_t *a)
   return (((unsigned)a->circ_id)<<16) ^ (unsigned)(uintptr_t)(a->or_conn);
 }
 
-static HT_HEAD(orconn_circid_map, orconn_circid_circuit_map_t) orconn_circid_circuit_map = HT_INITIALIZER();
+static HT_HEAD(orconn_circid_map, orconn_circid_circuit_map_t)
+     orconn_circid_circuit_map = HT_INITIALIZER();
 HT_PROTOTYPE(orconn_circid_map, orconn_circid_circuit_map_t, node,
              _orconn_circid_entry_hash, _orconn_circid_entries_eq);
 HT_GENERATE(orconn_circid_map, orconn_circid_circuit_map_t, node,
@@ -242,7 +244,8 @@ circuit_new(uint16_t p_circ_id, connection_t *p_conn)
   if (p_conn) {
     circuit_set_circid_orconn(circ, p_circ_id, p_conn, P_CONN_CHANGED);
   }
-  /* circ->n_circ_id remains 0 because we haven't identified the next hop yet */
+  /* circ->n_circ_id remains 0 because we haven't identified the next hop
+   * yet */
 
   circ->package_window = CIRCWINDOW_START;
   circ->deliver_window = CIRCWINDOW_START;
@@ -562,8 +565,9 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   circuit_t *circ;
   circuit_t *best=NULL;
 
-  debug(LD_CIRC,"Hunting for a circ to cannibalize: purpose %d, uptime %d, capacity %d, internal %d",
-         purpose, need_uptime, need_capacity, internal);
+  debug(LD_CIRC,"Hunting for a circ to cannibalize: purpose %d, uptime %d, "
+        "capacity %d, internal %d",
+        purpose, need_uptime, need_capacity, internal);
 
   for (circ=global_circuitlist; circ; circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
@@ -685,7 +689,8 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     tor_assert(circ->build_state->chosen_exit);
     /* treat this like getting a nack from it */
-    info(LD_REND,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
+    info(LD_REND, "Failed intro circ %s to %s (awaiting ack). "
+         "Removing from descriptor.",
          safe_str(circ->rend_query),
          safe_str(build_state_get_exit_nickname(circ->build_state)));
     rend_client_remove_intro_point(circ->build_state->chosen_exit,
@@ -702,8 +707,8 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     if (!conn->marked_for_close) {
       /* The other side will see a DESTROY, and infer that the connections
        * are closing because the circuit is getting torn down.  No need
-       * to send an end cell*/
-      conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
+       * to send an end cell. */
+      conn->has_sent_end = 1;
       connection_mark_for_close(conn);
     }
     conn->on_circuit = NULL;
@@ -793,7 +798,8 @@ assert_circuit_ok(const circuit_t *c)
 
   if (c->n_conn) {
     tor_assert(c->n_conn->type == CONN_TYPE_OR);
-    tor_assert(!memcmp(c->n_conn->identity_digest, c->n_conn_id_digest, DIGEST_LEN));
+    tor_assert(!memcmp(c->n_conn->identity_digest, c->n_conn_id_digest,
+                       DIGEST_LEN));
     if (c->n_circ_id)
       tor_assert(c == circuit_get_by_circid_orconn(c->n_circ_id, c->n_conn));
   }

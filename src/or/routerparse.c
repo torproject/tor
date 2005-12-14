@@ -3,7 +3,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char routerparse_c_id[] = "$Id$";
+const char routerparse_c_id[] =
+  "$Id$";
 
 /**
  * \file routerparse.c
@@ -609,7 +610,8 @@ check_directory_signature(const char *digest,
     _pkey = pkey;
   }
   if (!_pkey) {
-    warn(LD_DIR, "Obsolete directory format (dir signing key not present) or signing key not trusted--rejecting.");
+    warn(LD_DIR, "Obsolete directory format (dir signing key not present) or "
+         "signing key not trusted--rejecting.");
     return -1;
   }
 
@@ -764,8 +766,10 @@ router_parse_entry_from_string(const char *s, const char *end)
     router->addr = ntohl(in.s_addr);
 
     if (tok->n_args >= 5) {
-      router->or_port = (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
-      router->dir_port = (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
+      router->or_port =
+        (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
+      router->dir_port =
+        (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
       ports_set = 1;
     }
   } else {
@@ -782,8 +786,10 @@ router_parse_entry_from_string(const char *s, const char *end)
       warn(LD_DIR,"Wrong # of arguments to \"ports\"");
       goto err;
     }
-    router->or_port = (uint16_t) tor_parse_long(tok->args[0],10,0,65535,NULL,NULL);
-    router->dir_port = (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
+    router->or_port =
+      (uint16_t) tor_parse_long(tok->args[0],10,0,65535,NULL,NULL);
+    router->dir_port =
+      (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
     ports_set = 1;
   }
 
@@ -793,13 +799,18 @@ router_parse_entry_from_string(const char *s, const char *end)
     goto err;
   } else if (tok) {
     if (tok->n_args < 3) {
-      /* XXXX Once 0.0.7 is *really* dead, restore this warning to its old form*/
-      warn(LD_DIR,"Not enough arguments to \"bandwidth\": must be an obsolete server. Rejecting one server (nickname '%s').", router->nickname);
+      /* XXXX Once 0.0.7 is *really* dead, restore this warning to its old
+       * form */
+      warn(LD_DIR,"Not enough arguments to \"bandwidth\": must be an obsolete "
+           " server. Rejecting one server (nickname '%s').", router->nickname);
       goto err;
     }
-    router->bandwidthrate = tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
-    router->bandwidthburst = tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
-    router->bandwidthcapacity = tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
+    router->bandwidthrate =
+      tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
+    router->bandwidthburst =
+      tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
+    router->bandwidthcapacity =
+      tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
     bw_set = 1;
   }
 
@@ -1231,7 +1242,8 @@ networkstatus_parse_from_string(const char *s)
     routerstatus_t *rs2 = smartlist_get(ns->entries, i+1);
     if (!memcmp(rs1->identity_digest,
                 rs2->identity_digest, DIGEST_LEN)) {
-      warn(LD_DIR, "Network-status has two entries for the same router. Dropping one.");
+      warn(LD_DIR,
+         "Network-status has two entries for the same router. Dropping one.");
       smartlist_del_keeporder(ns->entries, i--);
       routerstatus_free(rs1);
     }

@@ -3,7 +3,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char buffers_c_id[] = "$Id$";
+const char buffers_c_id[] =
+  "$Id$";
 
 /**
  * \file buffers.c
@@ -51,7 +52,8 @@ const char buffers_c_id[] = "$Id$";
 #define BUFFER_MAGIC 0xB0FFF312u
 /** A resizeable buffer, optimized for reading and writing. */
 struct buf_t {
-  uint32_t magic; /**< Magic cookie for debugging: Must be set to BUFFER_MAGIC */
+  uint32_t magic; /**< Magic cookie for debugging: Must be set to
+                   *   BUFFER_MAGIC */
   char *mem;      /**< Storage for data in the buffer */
   char *cur;      /**< The first byte used for storing data in the buffer. */
   size_t highwater; /**< Largest observed datalen since last buf_shrink */
@@ -145,7 +147,8 @@ _split_range(buf_t *buf, char *at, size_t *len,
   }
 }
 
-/** Change a buffer's capacity. <b>new_capacity</b> must be \>= buf->datalen. */
+/** Change a buffer's capacity. <b>new_capacity</b> must be \>=
+ * buf->datalen. */
 static void
 buf_resize(buf_t *buf, size_t new_capacity)
 {
@@ -746,7 +749,8 @@ peek_from_buf(char *string, size_t string_len, buf_t *buf)
    * Return the number of bytes still on the buffer. */
 
   tor_assert(string);
-  tor_assert(string_len <= buf->datalen); /* make sure we don't ask for too much */
+  /* make sure we don't ask for too much */
+  tor_assert(string_len <= buf->datalen);
   /* assert_buf_ok(buf); */
 
   _split_range(buf, buf->cur, &string_len, &len2);
@@ -757,9 +761,9 @@ peek_from_buf(char *string, size_t string_len, buf_t *buf)
   }
 }
 
-/** Remove <b>string_len</b> bytes from the front of <b>buf</b>, and store them
- * into <b>string</b>.  Return the new buffer size.  <b>string_len</b> must be \<=
- * the number of bytes on the buffer.
+/** Remove <b>string_len</b> bytes from the front of <b>buf</b>, and store
+ * them into <b>string</b>.  Return the new buffer size.  <b>string_len</b>
+ * must be \<= the number of bytes on the buffer.
  */
 int
 fetch_from_buf(char *string, size_t string_len, buf_t *buf)
@@ -839,7 +843,8 @@ fetch_from_buf_http(buf_t *buf,
     int i;
     i = atoi(p+strlen(CONTENT_LENGTH));
     if (i < 0) {
-      warn(LD_PROTOCOL, "Content-Length is less than zero; it looks like someone is trying to crash us.");
+      warn(LD_PROTOCOL, "Content-Length is less than zero; it looks like "
+           "someone is trying to crash us.");
       return -1;
     }
     contentlen = i;
@@ -893,7 +898,8 @@ fetch_from_buf_http(buf_t *buf,
  * If <b>log_sockstype</b> is non-zero, then do a notice-level log of whether
  * the connection is possibly leaking DNS requests locally or not.
  *
- * If returning 0 or -1, <b>req->address</b> and <b>req->port</b> are undefined.
+ * If returning 0 or -1, <b>req->address</b> and <b>req->port</b> are
+ * undefined.
  */
 int
 fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
@@ -923,7 +929,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
         if (buf->datalen < 2u+nummethods)
           return 0;
         if (!nummethods || !memchr(buf->cur+2, 0, nummethods)) {
-          warn(LD_APP,"socks5: offered methods don't include 'no auth'. Rejecting.");
+          warn(LD_APP,
+               "socks5: offered methods don't include 'no auth'. Rejecting.");
           req->replylen = 2; /* 2 bytes of response */
           req->reply[0] = 5;
           req->reply[1] = '\xFF'; /* reject all methods */
@@ -934,7 +941,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
         req->reply[1] = SOCKS5_SUCCEEDED;
-        req->socks_version = 5; /* remember that we've already negotiated auth */
+        req->socks_version = 5; /* remember we've already negotiated auth */
         debug(LD_APP,"socks5: accepted method 0");
         return 0;
       }
@@ -960,8 +967,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
           in.s_addr = htonl(destip);
           tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
           if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
-            warn(LD_APP,"socks5 IP takes %d bytes, which doesn't fit in %d. Rejecting.",
-                 (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
+            warn(LD_APP,
+               "socks5 IP takes %d bytes, which doesn't fit in %d. Rejecting.",
+               (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
             return -1;
           }
           strlcpy(req->address,tmpbuf,sizeof(req->address));
@@ -984,8 +992,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
           if (buf->datalen < 7u+len) /* addr/port there? */
             return 0; /* not yet */
           if (len+1 > MAX_SOCKS_ADDR_LEN) {
-            warn(LD_APP,"socks5 hostname is %d bytes, which doesn't fit in %d. Rejecting.",
-                 len+1,MAX_SOCKS_ADDR_LEN);
+            warn(LD_APP, "socks5 hostname is %d bytes, which doesn't fit in "
+                 "%d. Rejecting.", len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
           memcpy(req->address,buf->cur+5,len);
@@ -998,7 +1006,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
                    "for you. This is good.", req->port);
           return 1;
         default: /* unsupported */
-          warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",*(buf->cur+3));
+          warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",
+               *(buf->cur+3));
           return -1;
       }
       tor_assert(0);
@@ -1034,7 +1043,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
                 (int)strlen(tmpbuf));
           return -1;
         }
-        debug(LD_APP,"socks4: successfully read destip (%s)", safe_str(tmpbuf));
+        debug(LD_APP,"socks4: successfully read destip (%s)",safe_str(tmpbuf));
         socks4_prot = socks4;
       }
 
@@ -1080,7 +1089,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
       debug(LD_APP,"socks4: Everything is here. Success.");
       strlcpy(req->address, startaddr ? startaddr : tmpbuf,
               sizeof(req->address));
-      buf_remove_from_front(buf, next-buf->cur+1); /* next points to the final \0 on inbuf */
+      /* next points to the final \0 on inbuf */
+      buf_remove_from_front(buf, next-buf->cur+1);
       return 1;
 
     case 'G': /* get */
@@ -1097,12 +1107,14 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
 "<body>\n"
 "<h1>Tor is not an HTTP Proxy</h1>\n"
 "<p>\n"
-"It appears you have configured your web browser to use Tor as an HTTP Proxy.\n"
-"This is not correct: Tor provides a SOCKS proxy. Please configure your\n"
-"client accordingly.\n"
+"It appears you have configured your web browser to use Tor as an HTTP proxy."
+"\n"
+"This is not correct: Tor is a SOCKS proxy, not an HTTP proxy.\n"
+"Please configure your client accordingly.\n"
 "</p>\n"
 "<p>\n"
-"See <a href=\"http://tor.eff.org/documentation.html\">http://tor.eff.org/documentation.html</a> for more information.\n"
+"See <a href=\"http://tor.eff.org/documentation.html\">"
+           "http://tor.eff.org/documentation.html</a> for more information.\n"
 "<!-- Plus this comment, to make the body response more than 512 bytes, so "
 "     IE will be willing to display it. Comment comment comment comment "
 "     comment comment comment comment comment comment comment comment.-->\n"
@@ -1113,7 +1125,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
       req->replylen = strlen(req->reply)+1;
       /* fall through */
     default: /* version is not socks4 or socks5 */
-      warn(LD_APP,"Socks version %d not recognized. (Tor is not an http proxy.)",
+      warn(LD_APP,
+           "Socks version %d not recognized. (Tor is not an http proxy.)",
            *(buf->cur));
       return -1;
   }

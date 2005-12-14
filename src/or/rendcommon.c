@@ -1,7 +1,8 @@
 /* Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char rendcommon_c_id[] = "$Id$";
+const char rendcommon_c_id[] =
+  "$Id$";
 
 /**
  * \file rendcommon.c
@@ -151,7 +152,8 @@ rend_parse_service_descriptor(const char *str, size_t len)
   cp += 2;
 
   if (version == 0 && result->n_intro_points != 0) {
-    result->intro_points = tor_malloc_zero(sizeof(char*)*result->n_intro_points);
+    result->intro_points =
+      tor_malloc_zero(sizeof(char*)*result->n_intro_points);
     for (i=0;i<result->n_intro_points;++i) {
       if (end-cp < 2) goto truncated;
       eos = (const char *)memchr(cp,'\0',end-cp);
@@ -162,7 +164,8 @@ rend_parse_service_descriptor(const char *str, size_t len)
   } else if (version != 0 && result->n_intro_points != 0) {
     result->intro_point_extend_info =
       tor_malloc_zero(sizeof(extend_info_t*)*result->n_intro_points);
-    result->intro_points = tor_malloc_zero(sizeof(char*)*result->n_intro_points);
+    result->intro_points =
+      tor_malloc_zero(sizeof(char*)*result->n_intro_points);
     for (i=0;i<result->n_intro_points;++i) {
       extend_info_t *info = result->intro_point_extend_info[i] =
         tor_malloc_zero(sizeof(extend_info_t));
@@ -179,7 +182,8 @@ rend_parse_service_descriptor(const char *str, size_t len)
       cp += 8+DIGEST_LEN;
       if (end-cp < klen) goto truncated;
       if (!(info->onion_key = crypto_pk_asn1_decode(cp,klen))) {
-        warn(LD_PROTOCOL, "Internal error decoding onion key for intro point.");
+        warn(LD_PROTOCOL,
+             "Internal error decoding onion key for intro point.");
         goto error;
       }
       cp += klen;
@@ -332,7 +336,8 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
  * *desc.
  */
 int
-rend_cache_lookup_desc(const char *query, int version, const char **desc, size_t *desc_len)
+rend_cache_lookup_desc(const char *query, int version, const char **desc,
+                       size_t *desc_len)
 {
   rend_cache_entry_t *e;
   int r;
@@ -385,12 +390,14 @@ rend_cache_store(const char *desc, size_t desc_len)
   }
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
   if (e && e->parsed->timestamp > parsed->timestamp) {
-    info(LD_REND,"We already have a newer service descriptor %s with the same ID and version.", safe_str(query));
+    info(LD_REND,"We already have a newer service descriptor %s with the "
+         "same ID and version.", safe_str(query));
     rend_service_descriptor_free(parsed);
     return 0;
   }
   if (e && e->len == desc_len && !memcmp(desc,e->desc,desc_len)) {
-    info(LD_REND,"We already have this service descriptor %s.", safe_str(query));
+    info(LD_REND,"We already have this service descriptor %s.",
+         safe_str(query));
     e->received = time(NULL);
     rend_service_descriptor_free(parsed);
     return 0;
