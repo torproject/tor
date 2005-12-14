@@ -1413,6 +1413,7 @@ void
 router_mark_as_down(const char *digest)
 {
   routerinfo_t *router;
+  local_routerstatus_t *status;
   tor_assert(digest);
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
@@ -1420,13 +1421,17 @@ router_mark_as_down(const char *digest)
                       d->is_running = 0);
 
   router = router_get_by_digest(digest);
-  if (!router) /* we don't seem to know about him in the first place */
-    return;
-  debug(LD_DIR,"Marking router '%s' as down.",router->nickname);
-  if (router_is_me(router) && !we_are_hibernating())
-    warn(LD_NET, "We just marked ourself as down. Are your external "
-         "addresses reachable?");
-  router->is_running = 0;
+  if (router) {
+    debug(LD_DIR,"Marking router '%s' as down.",router->nickname);
+    if (router_is_me(router) && !we_are_hibernating())
+      warn(LD_NET, "We just marked ourself as down. Are your external "
+           "addresses reachable?");
+    router->is_running = 0;
+  }
+  status = router_get_combined_status_by_digest(digest);
+  if (status) {
+    status->status.is_running = 0;
+  }
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
