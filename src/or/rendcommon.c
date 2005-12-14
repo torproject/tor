@@ -56,7 +56,8 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   char *end;
   int i;
   size_t asn1len;
-  cp = *str_out = tor_malloc(PK_BYTES*2*(desc->n_intro_points+2)); /*Too long, but ok*/
+  size_t buflen = PK_BYTES*2*(desc->n_intro_points+2);/*Too long, but ok*/
+  cp = *str_out = tor_malloc(buflen);
   end = cp + PK_BYTES*2*(desc->n_intro_points+1);
   if (version) {
     *(uint8_t*)cp = (uint8_t)0xff;
@@ -77,7 +78,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   if (version == 0) {
     for (i=0; i < desc->n_intro_points; ++i) {
       char *ipoint = (char*)desc->intro_points[i];
-      strlcpy(cp, ipoint, *len_out-(cp-*str_out));
+      strlcpy(cp, ipoint, buflen-(cp-*str_out));
       cp += strlen(ipoint)+1;
     }
   } else {
