@@ -24,7 +24,7 @@
   }
 
 #define HT_INITIALIZER()                        \
-  { 0, NULL, 0, 0, -1 }
+  { NULL, 0, 0, 0, -1 }
 
 #define HT_INIT(root) do {                      \
     (root)->hth_table_length = 0;               \

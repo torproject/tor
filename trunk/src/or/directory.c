@@ -31,11 +31,6 @@ const char directory_c_id[] =
  *   connection_finished_connecting() in connection.c
  */
 static void
-directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
-                                      uint8_t purpose, int private_connection,
-                                      const char *resource,
-                                      const char *payload, size_t payload_len);
-static void
 directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
                            const char *platform,
                            const char *digest, uint8_t purpose,
@@ -143,10 +138,11 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
    */
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
+      routerstatus_t *rs = &(ds->fake_status);
       post_via_tor = purpose_is_private(purpose) ||
                      !fascist_firewall_allows_address(ds->addr,ds->dir_port);
-      directory_initiate_command_trusted_dir(ds, purpose, post_via_tor,
-                                             NULL, payload, payload_len);
+      directory_initiate_command_routerstatus(rs, purpose, post_via_tor,
+                                              NULL, payload, payload_len);
     });
 }
 
@@ -159,8 +155,7 @@ void
 directory_get_from_dirserver(uint8_t purpose, const char *resource,
                              int retry_if_no_servers)
 {
-  routerinfo_t *r = NULL;
-  trusted_dir_server_t *ds = NULL;
+  routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
   int fetch_fresh_first = server_mode(options) && options->DirPort != 0;
   int directconn = !purpose_is_private(purpose);
@@ -175,19 +170,21 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
         !strcmpstart(resource,"fp/") && strlen(resource) == HEX_DIGEST_LEN+3) {
       /* Try to ask the actual dirserver its opinion. */
       char digest[DIGEST_LEN];
+      trusted_dir_server_t *ds;
       base16_decode(digest, DIGEST_LEN, resource+3, HEX_DIGEST_LEN);
       ds = router_get_trusteddirserver_by_digest(digest);
+      rs = &(ds->fake_status);
     }
-    if (!ds && fetch_fresh_first) {
+    if (!rs && fetch_fresh_first) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_trusteddirserver(need_v1_support, 1, 1,
+      rs = router_pick_trusteddirserver(need_v1_support, 1, 1,
                                         retry_if_no_servers);
     }
-    if (!ds) {
+    if (!rs) {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(1, 1, need_v2_support,
-                                       retry_if_no_servers);
-      if (!r) {
+      rs = router_pick_directory_server(1, 1, need_v2_support,
+                                        retry_if_no_servers);
+      if (!rs) {
         const char *which;
         if (purpose == DIR_PURPOSE_FETCH_DIR)
           which = "directory";
@@ -199,9 +196,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
           which = "server descriptors";
         info(LD_DIR,
              "No router found for %s; falling back to dirserver list", which);
-        ds = router_pick_trusteddirserver(1, 1, 1,
+        rs = router_pick_trusteddirserver(1, 1, 1,
                                           retry_if_no_servers);
-        if (!ds)
+        if (!rs)
           directconn = 0; /* last resort: try routing it via Tor */
       }
     }
@@ -210,20 +207,18 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
     /* Never use fascistfirewall; we're going via Tor. */
     if (purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask authdirservers, any of them will do */
-      ds = router_pick_trusteddirserver(0, 0, 0, retry_if_no_servers);
+      rs = router_pick_trusteddirserver(0, 0, 0, retry_if_no_servers);
     } else {
       /* anybody with a non-zero dirport will do. Disregard firewalls. */
-      r = router_pick_directory_server(1, 0, need_v2_support,
-                                       retry_if_no_servers);
+      rs = router_pick_directory_server(1, 0, need_v2_support,
+                                        retry_if_no_servers);
+      /* XXXX If no rs, fall back to trusted dir servers? -NM */
     }
   }
 
-  if (r)
-    directory_initiate_command_router(r, purpose, !directconn,
-                                      resource, NULL, 0);
-  else if (ds)
-    directory_initiate_command_trusted_dir(ds, purpose, !directconn,
-                                           resource, NULL, 0);
+  if (rs)
+    directory_initiate_command_routerstatus(rs, purpose, !directconn,
+                                            resource, NULL, 0);
   else {
     notice(LD_DIR,
            "No running dirservers known. Will try again later. (purpose %d)",
@@ -247,28 +242,56 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
  * want to fetch.
  */
 void
-directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
-                                  int private_connection, const char *resource,
-                                  const char *payload, size_t payload_len)
+directory_initiate_command_router(routerinfo_t *router,
+                                  uint8_t purpose,
+                                  int private_connection,
+                                  const char *resource,
+                                  const char *payload,
+                                  size_t payload_len)
 {
   directory_initiate_command(router->address, router->addr, router->dir_port,
-                         router->platform, router->cache_info.identity_digest,
-                         purpose, private_connection, resource,
-                         payload, payload_len);
+                             router->platform,
+                             router->cache_info.identity_digest,
+                             purpose, private_connection, resource,
+                             payload, payload_len);
 }
 
-/** As directory_initiate_command_router, but send the command to a trusted
- * directory server <b>dirserv</b>. **/
-static void
-directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
-                                       uint8_t purpose, int private_connection,
-                                       const char *resource,
-                                       const char *payload, size_t payload_len)
+/** Launch a new connection to the directory server <b>status</b> to upload or
+ * download a service or rendezvous descriptor. <b>purpose</b> determines what
+ * kind of directory connection we're launching, and must be one of
+ * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}.
+ *
+ * When uploading, <b>payload</b> and <b>payload_len</b> determine the content
+ * of the HTTP post.  Otherwise, <b>payload</b> should be NULL.
+ *
+ * When fetching a rendezvous descriptor, <b>resource</b> is the service ID we
+ * want to fetch.
+ */
+void
+directory_initiate_command_routerstatus(routerstatus_t *status,
+                                        uint8_t purpose,
+                                        int private_connection,
+                                        const char *resource,
+                                        const char *payload,
+                                        size_t payload_len)
 {
-  directory_initiate_command(dirserv->address, dirserv->addr,
-               dirserv->dir_port, NULL, dirserv->digest, purpose,
-               private_connection, resource,
-               payload, payload_len);
+  const char *platform = NULL;
+  routerinfo_t *router;
+  char address_buf[INET_NTOA_BUF_LEN];
+  struct in_addr in;
+  const char *address;
+  if ((router = router_get_by_digest(status->identity_digest))) {
+    platform = router->platform;
+    address = router->address;
+  } else {
+    in.s_addr = htonl(status->addr);
+    tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
+    address = address_buf;
+  }
+  directory_initiate_command(address, status->addr, status->dir_port,
+                             platform, status->identity_digest,
+                             purpose, private_connection, resource,
+                             payload, payload_len);
 }
 
 /** Called when we are unable to complete the client's request to a
