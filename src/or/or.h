@@ -1822,6 +1822,12 @@ void directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
                                        const char *resource,
                                        const char *payload,
                                        size_t payload_len);
+void directory_initiate_command_routerstatus(routerstatus_t *status,
+                                             uint8_t purpose,
+                                             int private_connection,
+                                             const char *resource,
+                                             const char *payload,
+                                             size_t payload_len);
 
 int parse_http_response(const char *headers, int *code, time_t *date,
                         int *compression, char **response);
@@ -2183,24 +2189,26 @@ typedef struct trusted_dir_server_t {
   uint16_t dir_port; /**< Directory port */
   char digest[DIGEST_LEN]; /**< Digest of identity key */
   unsigned int is_running:1; /**< True iff we think this server is running. */
-  unsigned int supports_v1_protocol:1; /**< True iff this server is an
-                                        * authority for the older ("v1")
-                                        * directory protocol.*/
+  unsigned int is_v1_authority:1; /**< True iff this server is an
+                                   * authority for the older ("v1")
+                                   * directory protocol.*/
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
+  routerstatus_t fake_status; /**< Used when we need to pass this trusted
+                               * dir_server_t as a routerstatus_t. */
 } trusted_dir_server_t;
 
 int router_reload_router_list(void);
 int router_reload_networkstatus(void);
 void router_get_trusted_dir_servers(smartlist_t **outp);
-routerinfo_t *router_pick_directory_server(int requireother,
-                                           int fascistfirewall,
-                                           int for_v2_directory,
-                                           int retry_if_no_servers);
-trusted_dir_server_t *router_pick_trusteddirserver(int need_v1_support,
-                                                   int requireother,
-                                                   int fascistfirewall,
-                                                   int retry_if_no_servers);
+routerstatus_t *router_pick_directory_server(int requireother,
+                                             int fascistfirewall,
+                                             int for_v2_directory,
+                                             int retry_if_no_servers);
+routerstatus_t *router_pick_trusteddirserver(int need_v1_authority,
+                                             int requireother,
+                                             int fascistfirewall,
+                                             int retry_if_no_servers);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(
      const char *digest);
 int all_trusted_directory_servers_down(void);

@@ -194,8 +194,8 @@ N     - Clients use Stable and Fast instead of uptime and bandwidth to
       servers?
       - Is this still necessary?
     o All versions of Tor should get cosmetic changes rate-limited.
-    - Pick directories from networkstatus objects, not from routerlist.
-      - But! We can't do this easily, since we want to know about platform,
+    o Pick directories from networkstatus objects, not from routerlist.
+      o But! We can't do this easily, since we want to know about platform,
         and networkstatus doesn't tell us Tor version.  Can we solve this?
         Should we do it by adding flags to networkstatus or what?
 
