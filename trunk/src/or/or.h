@@ -622,13 +622,6 @@ struct connection_t {
   int poll_index; /* XXXX rename. */
   struct event *read_event; /**< libevent event structure. */
   struct event *write_event; /**< libevent event structure. */
-  int marked_for_close; /**< Should we close this conn on the next iteration
-                         * of the main loop? (If true, holds the line number
-                         * where this connection was marked.)
-                         */
-  const char *marked_for_close_file; /**< For debugging: in which file were
-                                      * we marked for close? */
-
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
   int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn? */
   time_t timestamp_lastread; /**< When was the last time poll() said we could
@@ -647,6 +640,13 @@ struct connection_t {
                   * routers, along with port. */
   uint16_t port; /**< If non-zero, port  on the other end
                   * of the connection. */
+  uint16_t marked_for_close; /**< Should we close this conn on the next
+                              * iteration of the main loop? (If true, holds
+                              * the line number where this connection was
+                              * marked.)
+                              */
+  const char *marked_for_close_file; /**< For debugging: in which file were
+                                      * we marked for close? */
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it.
                   */
@@ -660,9 +660,6 @@ struct connection_t {
 
 /* Used only by OR connections: */
   tor_tls_t *tls; /**< TLS connection state (OR only.) */
-  uint16_t next_circ_id; /**< Which circ_id do we try to use next on
-                          * this connection?  This is always in the
-                          * range 0..1<<15-1. (OR only.)*/
 
   /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
   int bandwidth; /**< Connection bandwidth. (OPEN ORs only.) */
@@ -677,10 +674,9 @@ struct connection_t {
                    * n_conn ? */
   struct connection_t *next_with_same_id; /**< Next connection with same
                                            * identity digest as this one. */
-
-/* Used only by DIR and AP connections: */
-  char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
-                                           * querying for? (DIR/AP only) */
+  uint16_t next_circ_id; /**< Which circ_id do we try to use next on
+                          * this connection?  This is always in the
+                          * range 0..1<<15-1. (OR only.)*/
 
 /* Used only by edge connections: */
   uint16_t stream_id;
@@ -692,13 +688,6 @@ struct connection_t {
                        * circuit? (Edge only.) */
   int deliver_window; /**< How many more relay cells can end at me? (Edge
                        * only.) */
-
-#if 0
-  int done_sending; /**< For half-open connections; not used currently. */
-  int done_receiving; /**< For half-open connections; not used currently. */
-#endif
-  struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
-                                 * connection is using. */
 
 /* Used only by Dir connections */
   char *requested_resource; /**< Which 'resource' did we ask the directory
@@ -717,6 +706,12 @@ struct connection_t {
   uint32_t incoming_cmd_len;
   uint32_t incoming_cmd_cur_len;
   char *incoming_cmd;
+
+/* Used only by DIR and AP connections: */
+  struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
+                                 * connection is using. */
+  char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
+                                           * querying for? (DIR/AP only) */
 
   /* Used only by control v0 connections */
   uint16_t incoming_cmd_type;
@@ -1031,16 +1026,6 @@ typedef struct {
 struct circuit_t {
   uint32_t magic; /**< For memory debugging: must equal CIRCUIT_MAGIC. */
 
-  int marked_for_close; /**< Should we close this circuit at the end of the
-                         * main loop? (If true, holds the line number where
-                         * this circuit was marked.) */
-  const char *marked_for_close_file; /**< For debugging: in which file was this
-                                      * circuit marked for close? */
-
-  /** The IPv4 address of the OR that is next in this circuit. */
-  uint32_t n_addr;
-  /** The port for the OR that is next in this circuit. */
-  uint16_t n_port;
   /** The OR connection that is previous in this circuit. */
   connection_t *p_conn;
   /** The OR connection that is next in this circuit. */
@@ -1054,6 +1039,10 @@ struct circuit_t {
   /** Linked list of Exit streams associated with this circuit that are
    * still being resolved. */
   connection_t *resolving_streams;
+  /** The IPv4 address of the OR that is next in this circuit. */
+  uint32_t n_addr;
+  /** The port for the OR that is next in this circuit. */
+  uint16_t n_port;
   /** The next stream_id that will be tried when we're attempting to
    * construct a new AP stream originating at this circuit. */
   uint16_t next_stream_id;
@@ -1115,6 +1104,12 @@ struct circuit_t {
 
   uint8_t state; /**< Current status of this circuit. */
   uint8_t purpose; /**< Why are we creating this circuit? */
+
+  uint16_t marked_for_close; /**< Should we close this circuit at the end of
+                              * the main loop? (If true, holds the line number
+                              * where this circuit was marked.) */
+  const char *marked_for_close_file; /**< For debugging: in which file was this
+                                      * circuit marked for close? */
 
   /**
    * The rend_query field holds the y portion of y.onion (nul-terminated)
