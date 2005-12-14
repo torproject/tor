@@ -3,7 +3,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char onion_c_id[] = "$Id$";
+const char onion_c_id[] =
+  "$Id$";
 
 /**
  * \file onion.c
@@ -68,7 +69,8 @@ onion_pending_add(circuit_t *circ)
     /* cull elderly requests. */
     circ = ol_list->circ;
     onion_pending_remove(ol_list->circ);
-    info(LD_CIRC,"Circuit create request is too old; cancelling due to overload.");
+    info(LD_CIRC,
+         "Circuit create request is too old; cancelling due to overload.");
     circuit_mark_for_close(circ);
   }
   return 0;
@@ -116,7 +118,9 @@ onion_pending_remove(circuit_t *circ)
   } else { /* we need to hunt through the rest of the list */
     for ( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
     if (!tmpo->next) {
-      debug(LD_GENERAL,"circ (p_circ_id %d) not in list, probably at cpuworker.",circ->p_circ_id);
+      debug(LD_GENERAL,
+            "circ (p_circ_id %d) not in list, probably at cpuworker.",
+            circ->p_circ_id);
       return;
     }
     /* now we know tmpo->next->circ == circ */
@@ -149,7 +153,7 @@ onion_pending_remove(circuit_t *circ)
 int
 onion_skin_create(crypto_pk_env_t *dest_router_key,
                   crypto_dh_env_t **handshake_state_out,
-                  char *onion_skin_out) /* Must be ONIONSKIN_CHALLENGE_LEN bytes */
+                  char *onion_skin_out) /* ONIONSKIN_CHALLENGE_LEN bytes */
 {
   char *challenge = NULL;
   crypto_dh_env_t *dh = NULL;
@@ -210,10 +214,10 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
  * next key_out_len bytes of key material in key_out.
  */
 int
-onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes */
+onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
                             crypto_pk_env_t *private_key,
                             crypto_pk_env_t *prev_private_key,
-                            char *handshake_reply_out, /* ONIONSKIN_REPLY_LEN bytes */
+                            char *handshake_reply_out, /*ONIONSKIN_REPLY_LEN*/
                             char *key_out,
                             size_t key_out_len)
 {
@@ -236,7 +240,8 @@ onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN b
       break;
   }
   if (len<0) {
-    info(LD_PROTOCOL, "Couldn't decrypt onionskin: client may be using old onion key");
+    info(LD_PROTOCOL,
+         "Couldn't decrypt onionskin: client may be using old onion key");
     goto err;
   } else if (len != DH_KEY_LEN) {
     warn(LD_PROTOCOL, "Unexpected onionskin length after decryption: %d",
@@ -302,7 +307,7 @@ onion_skin_server_handshake(const char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN b
  */
 int
 onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
-            const char *handshake_reply, /* Must be ONIONSKIN_REPLY_LEN bytes */
+            const char *handshake_reply, /* ONIONSKIN_REPLY_LEN bytes */
             char *key_out,
             size_t key_out_len)
 {
@@ -327,7 +332,8 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   if (memcmp(key_material, handshake_reply+DH_KEY_LEN, 20)) {
     /* H(K) does *not* match. Something fishy. */
     tor_free(key_material);
-    warn(LD_PROTOCOL,"Digest DOES NOT MATCH on onion handshake. Bug or attack.");
+    warn(LD_PROTOCOL,"Digest DOES NOT MATCH on onion handshake. "
+         "Bug or attack.");
     return -1;
   }
 
@@ -412,7 +418,8 @@ fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
   }
   if (memcmp(out, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
-    warn(LD_PROTOCOL,"Digest DOES NOT MATCH on fast handshake. Bug or attack.");
+    warn(LD_PROTOCOL,"Digest DOES NOT MATCH on fast handshake. "
+         "Bug or attack.");
     return -1;
   }
   memcpy(key_out, out+DIGEST_LEN, key_out_len);

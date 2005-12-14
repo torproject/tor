@@ -333,7 +333,8 @@ ht_string_hash(const char *s)
   }
 #endif
 
-#define HT_GENERATE(name, type, field, hashfn, eqfn, load, mallocfn, reallocfn, freefn) \
+#define HT_GENERATE(name, type, field, hashfn, eqfn, load, mallocfn,    \
+                    reallocfn, freefn)                                  \
   static unsigned name##_PRIMES[] = {                                   \
     53, 97, 193, 389,                                                   \
     769, 1543, 3079, 6151,                                              \

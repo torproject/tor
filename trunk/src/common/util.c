@@ -101,10 +101,12 @@ const char util_c_id[] = "$Id$";
 #else
  #define dmalloc_strdup(file, line, string, xalloc_b) strdup(string)
 
- #define dmalloc_malloc(file, line, size, func_id, alignment, xalloc_b) malloc(size)
+ #define dmalloc_malloc(file, line, size, func_id, alignment, xalloc_b) \
+     malloc(size)
  #define DMALLOC_FUNC_MALLOC 0
 
- #define dmalloc_realloc(file, line, old_pnt, new_size, func_id, xalloc_b) realloc((old_pnt), (new_size))
+ #define dmalloc_realloc(file, line, old_pnt, new_size, func_id, xalloc_b) \
+     realloc((old_pnt), (new_size))
  #define DMALLOC_FUNC_REALLOC 0
  #define DMALLOC_FN_ARGS
 #endif
@@ -921,7 +923,8 @@ check_private_dir(const char *dirname, cpd_check_t check)
 
     pw = getpwuid(st.st_uid);
 
-    log(LOG_WARN, LD_FS, "%s is not owned by this user (%s, %d) but by %s (%d). Perhaps you are running Tor as the wrong user?",
+    log(LOG_WARN, LD_FS, "%s is not owned by this user (%s, %d) but by "
+        "%s (%d). Perhaps you are running Tor as the wrong user?",
                          dirname, process_ownername, (int)getuid(),
                          pw ? pw->pw_name : "<unknown>", (int)st.st_uid);
 
@@ -942,8 +945,8 @@ check_private_dir(const char *dirname, cpd_check_t check)
   return 0;
 }
 
-/** Create a file named <b>fname</b> with the contents <b>str</b>.  Overwrite the
- * previous <b>fname</b> if possible.  Return 0 on success, -1 on failure.
+/** Create a file named <b>fname</b> with the contents <b>str</b>.  Overwrite
+ * the previous <b>fname</b> if possible.  Return 0 on success, -1 on failure.
  *
  * This function replaces the old file atomically, if possible.
  */
@@ -989,18 +992,21 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
   {
     result = write_all(fd, chunk->bytes, chunk->len, 0);
     if (result < 0 || (size_t)result != chunk->len) {
-      log(LOG_WARN, LD_FS, "Error writing to \"%s\": %s", tempname, strerror(errno));
+      log(LOG_WARN, LD_FS, "Error writing to \"%s\": %s", tempname,
+          strerror(errno));
       close(fd);
       goto err;
     }
   });
   if (close(fd)) {
-    log(LOG_WARN, LD_FS, "Error flushing to \"%s\": %s", tempname, strerror(errno));
+    log(LOG_WARN, LD_FS, "Error flushing to \"%s\": %s", tempname,
+        strerror(errno));
     goto err;
   }
   if (!(open_flags & O_APPEND)) {
     if (replace_file(tempname, fname)) {
-      log(LOG_WARN, LD_FS, "Error replacing \"%s\": %s", fname, strerror(errno));
+      log(LOG_WARN, LD_FS, "Error replacing \"%s\": %s", fname,
+          strerror(errno));
       goto err;
     }
   }
@@ -1108,8 +1114,9 @@ read_file_to_str(const char *filename, int bin)
   }
 #ifdef MS_WINDOWS
   if (!bin && strchr(string, '\r')) {
-    debug(LD_FS, "We didn't convert CRLF to LF as well as we hoped when reading %s. Coping.",
-           filename);
+    debug(LD_FS, "We didn't convert CRLF to LF as well as we hoped "
+          "when reading %s. Coping.",
+          filename);
     tor_strstrip(string, "\r");
   }
 #endif
@@ -1203,7 +1210,8 @@ expand_filename(const char *filename)
     if (filename[1] == '/' || filename[1] == '\0') {
       home = getenv("HOME");
       if (!home) {
-        warn(LD_CONFIG, "Couldn't find $HOME environment variable while expanding %s", filename);
+        warn(LD_CONFIG, "Couldn't find $HOME environment variable while "
+             "expanding %s", filename);
         return NULL;
       }
       home = tor_strdup(home);
@@ -1430,7 +1438,8 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
   } else if (tor_inet_aton(address, &in) != 0) {
     *addr_out = ntohl(in.s_addr);
   } else {
-    warn(LD_GENERAL, "Malformed IP \"%s\" in address pattern; rejecting.",address);
+    warn(LD_GENERAL, "Malformed IP \"%s\" in address pattern; rejecting.",
+         address);
     goto err;
   }
 
@@ -1445,7 +1454,8 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
     if (!*endptr) {
       /* strtol handled the whole mask. */
       if (bits < 0 || bits > 32) {
-        warn(LD_GENERAL, "Bad number of mask bits on address range; rejecting.");
+        warn(LD_GENERAL,
+             "Bad number of mask bits on address range; rejecting.");
         goto err;
       }
       *mask_out = ~((1<<(32-bits))-1);

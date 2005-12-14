@@ -2,7 +2,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char tortls_c_id[] = "$Id$";
+const char tortls_c_id[] =
+  "$Id$";
 
 /**
  * \file tortls.c
@@ -23,7 +24,8 @@ const char tortls_c_id[] = "$Id$";
 #include <string.h>
 
 /* Copied from or.h */
-#define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+#define LEGAL_NICKNAME_CHARACTERS \
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 #include <assert.h>
 #include <openssl/ssl.h>
@@ -53,7 +55,8 @@ struct tor_tls_t {
   } state; /**< The current SSL state, depending on which operations have
             * completed successfully. */
   int isServer;
-  size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last time. */
+  size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
+                       * time. */
 };
 
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
@@ -91,7 +94,8 @@ tls_log_errors(int severity, const char *doing)
     func = (const char*)ERR_func_error_string(err);
     if (!msg) msg = "(null)";
     if (doing) {
-      log(severity, LD_NET, "TLS error while %s: %s (in %s:%s)", doing, msg, lib,func);
+      log(severity, LD_NET, "TLS error while %s: %s (in %s:%s)",
+          doing, msg, lib,func);
     } else {
       log(severity, LD_NET, "TLS error: %s (in %s:%s)", msg, lib, func);
     }
@@ -130,7 +134,8 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
         log(severity, LD_NET, "TLS error: unexpected close while %s", doing);
       else {
         int e = tor_socket_errno(tls->socket);
-        log(severity, LD_NET, "TLS error: <syscall error while %s> (errno=%d: %s)",
+        log(severity, LD_NET,
+            "TLS error: <syscall error while %s> (errno=%d: %s)",
             doing, e, tor_socket_strerror(e));
       }
       tls_log_errors(severity, doing);
@@ -226,23 +231,29 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
   if (!(name = X509_NAME_new()))
     goto error;
-  if ((nid = OBJ_txt2nid("organizationName")) == NID_undef) goto error;
+  if ((nid = OBJ_txt2nid("organizationName")) == NID_undef)
+    goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   (unsigned char*)"TOR", -1, -1, 0))) goto error;
+                                   (unsigned char*)"TOR", -1, -1, 0)))
+    goto error;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   (unsigned char*)cname, -1, -1, 0))) goto error;
+                                   (unsigned char*)cname, -1, -1, 0)))
+    goto error;
   if (!(X509_set_subject_name(x509, name)))
     goto error;
 
   if (!(name_issuer = X509_NAME_new()))
     goto error;
-  if ((nid = OBJ_txt2nid("organizationName")) == NID_undef) goto error;
+  if ((nid = OBJ_txt2nid("organizationName")) == NID_undef)
+    goto error;
   if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
-                                   (unsigned char*)"TOR", -1, -1, 0))) goto error;
+                                   (unsigned char*)"TOR", -1, -1, 0)))
+    goto error;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
-                              (unsigned char*)cname_sign, -1, -1, 0))) goto error;
+                              (unsigned char*)cname_sign, -1, -1, 0)))
+    goto error;
   if (!(X509_set_issuer_name(x509, name_issuer)))
     goto error;
 
@@ -658,10 +669,11 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
   if (lenout == -1)
     goto error;
   if (((int)strspn(buf, LEGAL_NICKNAME_CHARACTERS)) < lenout) {
-    warn(LD_PROTOCOL, "Peer certificate nickname \"%s\" has illegal characters.",
-           buf);
+    warn(LD_PROTOCOL,
+         "Peer certificate nickname \"%s\" has illegal characters.", buf);
     if (strchr(buf, '.'))
-      warn(LD_PROTOCOL, "  (Maybe it is not really running Tor at its advertised OR port.)");
+      warn(LD_PROTOCOL, "  (Maybe it is not really running Tor at its "
+           "advertised OR port.)");
     goto error;
   }
 
@@ -709,7 +721,9 @@ log_cert_lifetime(X509 *cert, const char *problem)
 
   strftime(mytime, 32, "%b %d %H:%M:%S %Y GMT", tor_gmtime_r(&now, &tm));
 
-  warn(LD_GENERAL, "(certificate lifetime runs from %s through %s. Your time is %s.)",s1,s2,mytime);
+  warn(LD_GENERAL,
+       "(certificate lifetime runs from %s through %s. Your time is %s.)",
+       s1,s2,mytime);
 
  end:
   /* Not expected to get invoked */
@@ -749,7 +763,8 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
    * cert and the id_cert.
    */
   if (num_in_chain < 1) {
-    log_fn(severity,LD_PROTOCOL,"Unexpected number of certificates in chain (%d)",
+    log_fn(severity,LD_PROTOCOL,
+           "Unexpected number of certificates in chain (%d)",
            num_in_chain);
     goto done;
   }

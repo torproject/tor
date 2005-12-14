@@ -1,7 +1,8 @@
 /* Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char rendclient_c_id[] = "$Id$";
+const char rendclient_c_id[] =
+  "$Id$";
 
 /**
  * \file rendclient.c
@@ -65,7 +66,8 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
-  tor_assert(!rend_cmp_service_ids(introcirc->rend_query, rendcirc->rend_query));
+  tor_assert(!rend_cmp_service_ids(introcirc->rend_query,
+                                   rendcirc->rend_query));
 
   if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
     warn(LD_REND,"query '%s' didn't have valid rend desc in cache. Failing.",
@@ -112,7 +114,8 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
     dh_offset = 7+DIGEST_LEN+2+klen+REND_COOKIE_LEN;
   } else {
     /* Version 0. */
-    strncpy(tmp, rendcirc->build_state->chosen_exit->nickname, (MAX_NICKNAME_LEN+1)); /* nul pads */
+    strncpy(tmp, rendcirc->build_state->chosen_exit->nickname,
+            (MAX_NICKNAME_LEN+1)); /* nul pads */
     memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
     dh_offset = MAX_NICKNAME_LEN+1+REND_COOKIE_LEN;
   }
@@ -125,7 +128,8 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
    * to avoid buffer overflows? */
-  r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, payload+DIGEST_LEN, tmp,
+  r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, payload+DIGEST_LEN,
+                                      tmp,
                                       dh_offset+DH_KEY_LEN,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
@@ -246,7 +250,8 @@ void
 rend_client_refetch_renddesc(const char *query)
 {
   if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
-    info(LD_REND,"Would fetch a new renddesc here (for %s), but one is already in progress.", safe_str(query));
+    info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
+         "already in progress.", safe_str(query));
   } else {
     /* not one already; initiate a dir rend desc lookup */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_RENDDESC, query, 1);
@@ -328,22 +333,26 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
  * the circuit to C_REND_READY.
  */
 int
-rend_client_rendezvous_acked(circuit_t *circ, const char *request, size_t request_len)
+rend_client_rendezvous_acked(circuit_t *circ, const char *request,
+                             size_t request_len)
 {
   /* we just got an ack for our establish-rendezvous. switch purposes. */
   if (circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
-    warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. Closing circ.");
+    warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "
+         "Closing circ.");
     circuit_mark_for_close(circ);
     return -1;
   }
-  info(LD_REND,"Got rendezvous ack. This circuit is now ready for rendezvous.");
+  info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
+       "rendezvous.");
   circ->purpose = CIRCUIT_PURPOSE_C_REND_READY;
   return 0;
 }
 
 /** Bob sent us a rendezvous cell; join the circuits. */
 int
-rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t request_len)
+rend_client_receive_rendezvous(circuit_t *circ, const char *request,
+                               size_t request_len)
 {
   crypt_path_t *hop;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
@@ -351,13 +360,15 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
   if ((circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
        circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
       || !circ->build_state->pending_final_cpath) {
-    warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not expecting it. Closing.");
+    warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not "
+         "expecting it. Closing.");
     circuit_mark_for_close(circ);
     return -1;
   }
 
   if (request_len != DH_KEY_LEN+DIGEST_LEN) {
-    warn(LD_PROTOCOL,"Incorrect length (%d) on RENDEZVOUS2 cell.",(int)request_len);
+    warn(LD_PROTOCOL,"Incorrect length (%d) on RENDEZVOUS2 cell.",
+         (int)request_len);
     goto err;
   }
 
@@ -435,7 +446,8 @@ rend_client_desc_here(const char *query)
       }
       tor_assert(conn->state != AP_CONN_STATE_RENDDESC_WAIT); /* avoid loop */
     } else { /* 404, or fetch didn't get that far */
-      notice(LD_REND,"Closing stream for '%s.onion': hidden service is unavailable (try again later).", safe_str(query));
+      notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
+             "unavailable (try again later).", safe_str(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
     }
   }
@@ -470,7 +482,8 @@ rend_client_get_random_intro(const char *query)
     char *choice = entry->parsed->intro_points[i];
     routerinfo_t *router = router_get_by_nickname(choice, 0);
     if (!router) {
-      info(LD_REND, "Unknown router with nickname '%s'; trying another.",choice);
+      info(LD_REND, "Unknown router with nickname '%s'; trying another.",
+           choice);
       tor_free(choice);
       entry->parsed->intro_points[i] =
         entry->parsed->intro_points[--entry->parsed->n_intro_points];

@@ -51,11 +51,14 @@ typedef uint8_t u8;
 #define MAXKB   (256/8)
 #define MAXNR   14
 
-static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits);
+static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/],
+                               const u8 cipherKey[], int keyBits);
 #ifdef USE_RIJNDAEL_COUNTER_OPTIMIZATION
-static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, u32 ctr1, u32 ctr0, u8 ct[16]);
+static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr,
+                            u32 ctr1, u32 ctr0, u8 ct[16]);
 #else
-static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]);
+static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr,
+                            const u8 pt[16], u8 ct[16]);
 #endif
 #endif
 
@@ -90,8 +93,10 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
    *  3) changing the counter position was not trivial, last time I looked.
    * None of these issues are insurmountable in principle.
    */
-#if !defined(USE_OPENSSL_EVP) && !defined(USE_OPENSSL_AES) && defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION)
-  rijndaelEncrypt(cipher->rk, cipher->nr, cipher->counter1, cipher->counter0, cipher->buf);
+#if (!defined(USE_OPENSSL_EVP) && !defined(USE_OPENSSL_AES) && \
+     defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION))
+  rijndaelEncrypt(cipher->rk, cipher->nr,
+                  cipher->counter1, cipher->counter0, cipher->buf);
 #else
   u32 counter0 = cipher->counter0;
   u32 counter1 = cipher->counter1;
@@ -176,7 +181,8 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
  * by <b>len</b> bytes as it encrypts.
  */
 void
-aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len, char *output)
+aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
+          char *output)
 {
   int c = cipher->pos;
   if (!len) return;

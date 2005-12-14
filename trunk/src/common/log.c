@@ -364,7 +364,8 @@ close_log(logfile_t *victim)
 /** Add a log handler to send all messages of severity <b>loglevel</b>
  * or higher to <b>stream</b>. */
 void
-add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *stream)
+add_stream_log(int loglevelMin, int loglevelMax,
+               const char *name, FILE *stream)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));

@@ -18,7 +18,8 @@
 #include <syslog.h>
 #define LOG_WARN LOG_WARNING
 #if LOG_DEBUG < LOG_ERR
-#error "Your syslog.h thinks high numbers are more important.  We aren't prepared to deal with that."
+#error "Your syslog.h thinks high numbers are more important.  " \
+       "We aren't prepared to deal with that."
 #endif
 #else
 /* XXXX Note: The code was originally written to refer to severities,
@@ -94,7 +95,8 @@ typedef void (*log_callback)(int severity, uint32_t domain, const char *msg);
 
 int parse_log_level(const char *level);
 const char *log_level_to_string(int level);
-void add_stream_log(int severityMin, int severityMax, const char *name, FILE *stream);
+void add_stream_log(int severityMin, int severityMax, const char *name,
+                    FILE *stream);
 int add_file_log(int severityMin, int severityMax, const char *filename);
 #ifdef HAVE_SYSLOG_H
 int add_syslog_log(int loglevelMin, int loglevelMax);
@@ -112,7 +114,8 @@ void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
 
 /* Outputs a message to stdout */
-void _log(int severity, uint32_t domain, const char *format, ...) CHECK_PRINTF(3,4);
+void _log(int severity, uint32_t domain, const char *format, ...)
+  CHECK_PRINTF(3,4);
 #define log _log /* hack it so we don't conflict with log() as much */
 
 #ifdef __GNUC__

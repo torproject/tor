@@ -2,7 +2,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char dirserv_c_id[] = "$Id$";
+const char dirserv_c_id[] =
+  "$Id$";
 
 #include "or.h"
 
@@ -35,7 +36,8 @@ static void directory_remove_invalid(void);
 static int dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
 /* Should be static; exposed for testing */
-int add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list);
+int add_fingerprint_to_dir(const char *nickname, const char *fp,
+                           smartlist_t *list);
 static int router_is_general_exit(routerinfo_t *ri);
 static router_status_t dirserv_router_get_status(const routerinfo_t *router,
                                                  const char **msg);
@@ -92,7 +94,8 @@ typedef struct fingerprint_entry_t {
                    * always be rejected); or the string "!invalid" (if this
                    * fingerprint should be accepted but never marked as
                    * valid. */
-  char *fingerprint; /**< Stored as HEX_DIGEST_LEN characters, followed by a NUL */
+  char *fingerprint; /**< Stored as HEX_DIGEST_LEN characters, followed by a
+                      * NUL */
 } fingerprint_entry_t;
 
 /** List of nickname-\>identity fingerprint mappings for all the routers
@@ -208,7 +211,8 @@ dirserv_parse_fingerprint_file(const char *fname)
              DEFAULT_CLIENT_NICKNAME);
       continue;
     }
-    if (add_fingerprint_to_dir(nickname, fingerprint, fingerprint_list_new) != 0)
+    if (add_fingerprint_to_dir(nickname, fingerprint, fingerprint_list_new)
+        != 0)
       notice(LD_CONFIG, "Duplicate nickname '%s'.", nickname);
   }
 
@@ -280,7 +284,8 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
     fingerprint_list = smartlist_create();
 
   if (should_log)
-    debug(LD_DIRSERV, "%d fingerprints known.", smartlist_len(fingerprint_list));
+    debug(LD_DIRSERV, "%d fingerprints known.",
+          smartlist_len(fingerprint_list));
   SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t *, ent,
   {
     if (!strcasecmp(fp,ent->fingerprint))
@@ -342,7 +347,8 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
            contact ? contact : "",
            platform ? platform : "");
     if (msg)
-      *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
+      *msg = "Rejected: There is already a verified server with this nickname "
+        "and a different fingerprint.";
     return FP_REJECT; /* Wrong fingerprint. */
   }
 }
@@ -435,21 +441,25 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
            ri->nickname, (int)((ri->cache_info.published_on-now)/60),
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
-    *msg = "Rejected: Your clock is set too far in the future, or your timezone is not correct.";
+    *msg = "Rejected: Your clock is set too far in the future, or your "
+      "timezone is not correct.";
     return -1;
   }
   if (ri->cache_info.published_on < now-ROUTER_MAX_AGE) {
     notice(LD_DIRSERV,
            "Publication time for router with nickname '%s' is too far "
-           "(%d minutes) in the past. Not adding (ContactInfo '%s', platform '%s').",
+           "(%d minutes) in the past. Not adding (ContactInfo '%s', "
+           "platform '%s').",
            ri->nickname, (int)((now-ri->cache_info.published_on)/60),
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
-    *msg = "Rejected: Server is expired, or your clock is too far in the past, or your timezone is not correct.";
+    *msg = "Rejected: Server is expired, or your clock is too far in the past,"
+      " or your timezone is not correct.";
     return -1;
   }
   if (dirserv_router_has_valid_address(ri) < 0) {
-    notice(LD_DIRSERV, "Router with nickname '%s' has invalid address '%s'. Not adding (ContactInfo '%s', platform '%s').",
+    notice(LD_DIRSERV, "Router with nickname '%s' has invalid address '%s'. "
+           "Not adding (ContactInfo '%s', platform '%s').",
            ri->nickname, ri->address,
            ri->contact_info ? ri->contact_info : "",
            ri->platform ? ri->platform : "");
@@ -510,7 +520,8 @@ dirserv_add_descriptor(const char *desc, const char **msg)
     info(LD_DIRSERV,
          "Not replacing descriptor from '%s'; differences are cosmetic.",
          ri->nickname);
-    *msg = "Not replacing router descriptor; no information has changed since the last one with this identity.";
+    *msg = "Not replacing router descriptor; no information has changed since "
+      "the last one with this identity.";
     routerinfo_free(ri);
     control_event_or_authdir_new_descriptor("DROPPED", desc, *msg);
     return 0;
@@ -678,7 +689,8 @@ dirserv_thinks_router_is_reachable(routerinfo_t *router, time_t now)
   connection_t *conn;
   if (router_is_me(router) && !we_are_hibernating())
     return 1;
-  conn = connection_or_get_by_identity_digest(router->cache_info.identity_digest);
+  conn = connection_or_get_by_identity_digest(
+      router->cache_info.identity_digest);
   if (conn && conn->state == OR_CONN_STATE_OPEN)
     return get_options()->AssumeReachable ||
            now < router->last_reachable + REACHABLE_TIMEOUT;
@@ -689,12 +701,14 @@ dirserv_thinks_router_is_reachable(routerinfo_t *router, time_t now)
  * <b>router</b>'s reachability and its operator should be notified.
  */
 int
-dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router, time_t now)
+dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
+                                               time_t now)
 {
   connection_t *conn;
   if (router->is_hibernating)
     return 0;
-  conn = connection_or_get_by_identity_digest(router->cache_info.identity_digest);
+  conn = connection_or_get_by_identity_digest(
+    router->cache_info.identity_digest);
   if (conn && conn->state == OR_CONN_STATE_OPEN &&
       now >= router->last_reachable + 2*REACHABLE_TIMEOUT &&
       router->testing_since &&
@@ -755,8 +769,8 @@ _compare_tor_version_str_ptr(const void **_a, const void **_b)
     return -1;
   if (ca && !cb)
     return 1;
-  /* If neither parses, compare strings.  Also, the directory server admin needs
-  ** to be smacked upside the head.  But Tor is tolerant and gentle. */
+  /* If neither parses, compare strings.  Also, the directory server admin
+  ** needs to be smacked upside the head.  But Tor is tolerant and gentle. */
   return strcmp(a,b);
 }
 
@@ -815,7 +829,8 @@ dirserv_dump_directory_to_string(char **dir_out,
     return -1;
   }
 
-  recommended_versions = format_versions_list(get_options()->RecommendedVersions);
+  recommended_versions =
+    format_versions_list(get_options()->RecommendedVersions);
 
   published_on = time(NULL);
   format_iso_time(published, published_on);
@@ -1132,7 +1147,8 @@ generate_runningrouters(void)
                "router-status %s\n"
                "dir-signing-key\n%s"
                "directory-signature %s\n",
-               published, router_status, identity_pkey, get_options()->Nickname);
+               published, router_status, identity_pkey,
+               get_options()->Nickname);
   tor_free(router_status);
   tor_free(identity_pkey);
   if (router_get_runningrouters_hash(s,digest)) {
@@ -1264,7 +1280,8 @@ generate_v2_networkstatus(void)
   if (!contact)
     contact = "(none)";
 
-  len = 2048+strlen(client_versions)+strlen(server_versions)+identity_pkey_len*2;
+  len = 2048+strlen(client_versions)+strlen(server_versions);
+  len += identity_pkey_len*2;
   len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
 
   status = tor_malloc(len);
@@ -1431,7 +1448,8 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
           } else {
             char hexbuf[HEX_DIGEST_LEN+1];
             base16_encode(hexbuf, sizeof(hexbuf), cp, DIGEST_LEN);
-            info(LD_DIRSERV, "Don't know about any network status with fingerprint '%s'", hexbuf);
+            info(LD_DIRSERV, "Don't know about any network status with "
+                 "fingerprint '%s'", hexbuf);
           }
           tor_free(cp);
         });
@@ -1542,12 +1560,14 @@ dirserv_orconn_tls_done(const char *address,
     if (!ri->is_verified) {
       /* We have a router at the same address! */
       if (strcasecmp(ri->nickname, nickname_rcvd)) {
-        notice(LD_DIRSERV, "Dropping descriptor: nickname '%s' does not match nickname '%s' in cert from %s:%d",
+        notice(LD_DIRSERV, "Dropping descriptor: nickname '%s' does not match "
+               "nickname '%s' in cert from %s:%d",
                ri->nickname, nickname_rcvd, address, or_port);
         drop = 1;
       } else if (memcmp(ri->cache_info.identity_digest, digest_rcvd,
                         DIGEST_LEN)) {
-        notice(LD_DIRSERV, "Dropping descriptor: identity key does not match key in cert from %s:%d",
+        notice(LD_DIRSERV, "Dropping descriptor: identity key does not match "
+               "key in cert from %s:%d",
                address, or_port);
         drop = 1;
       }

@@ -37,7 +37,7 @@ for $fn (@ARGV) {
         }
 	## Terminals are still 80 columns wide in my world.  I refuse to
 	## accept double-line lines.
-	if (/^.{150}/) {
+	if (/^.{80}/) {
 	    print "     Wide:$fn:$.\n";
 	}
 

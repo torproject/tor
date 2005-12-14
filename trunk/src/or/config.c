@@ -3,7 +3,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char config_c_id[] = "$Id$";
+const char config_c_id[] = \
+  "$Id$";
 
 /**
  * \file config.c
@@ -25,8 +26,8 @@ typedef enum config_type_t {
   CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
   CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
   CONFIG_TYPE_ISOTIME,      /**< An ISO-formated time relative to GMT. */
-  CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and optional
-                              * whitespace. */
+  CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and
+                              * optional whitespace. */
   CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
   CONFIG_TYPE_LINELIST_S,   /**< Uninterpreted, context-sensitive config lines,
                              * mixed with other keywords. */
@@ -77,20 +78,23 @@ static config_abbrev_t _option_abbrevs[] = {
 /** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
   const char *name; /**< The full keyword (case insensitive). */
-  config_type_t type; /**< How to interpret the type and turn it into a value. */
+  config_type_t type; /**< How to interpret the type and turn it into a
+                       * value. */
   off_t var_offset; /**< Offset of the corresponding member of or_options_t. */
   const char *initvalue; /**< String (or null) describing initial value. */
   const char *description;
 } config_var_t;
 
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
-#define STRUCT_OFFSET(tp, member) ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
+#define STRUCT_OFFSET(tp, member) \
+  ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
 /** An entry for config_vars: "The option <b>name</b> has type
  * CONFIG_TYPE_<b>conftype</b>, and corresponds to
  * or_options_t.<b>member</b>"
  */
-#define VAR(name,conftype,member,initvalue)                            \
-  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member), initvalue, NULL }
+#define VAR(name,conftype,member,initvalue)                             \
+  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member), \
+      initvalue, NULL }
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
 
@@ -103,7 +107,8 @@ static config_var_t _option_vars[] = {
   VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("Address",             STRING,   Address,              NULL),
-  VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
+  VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes,
+                                                        "middle,rendezvous"),
   VAR("AssumeReachable",     BOOL,     AssumeReachable,      "0"),
   VAR("AuthDirInvalid",      LINELIST, AuthDirInvalid,       NULL),
   VAR("AuthDirReject",       LINELIST, AuthDirReject,        NULL),
@@ -150,7 +155,8 @@ static config_var_t _option_vars[] = {
   OBSOLETE("LinkPadding"),
   VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
-  VAR("LongLivedPorts",      CSV,      LongLivedPorts,       "21,22,706,1863,5050,5190,5222,5223,6667,8300,8888"),
+  VAR("LongLivedPorts",      CSV,      LongLivedPorts,
+                         "21,22,706,1863,5050,5190,5222,5223,6667,8300,8888"),
   VAR("MapAddress",          LINELIST, AddressMap,           NULL),
   VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"128 TB"),
   VAR("MaxCircuitDirtiness", INTERVAL, MaxCircuitDirtiness,  "10 minutes"),
@@ -205,14 +211,16 @@ static config_var_t _option_vars[] = {
 };
 #undef VAR
 
-#define VAR(name,conftype,member,initvalue) \
-  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member), initvalue, NULL }
+#define VAR(name,conftype,member,initvalue)                             \
+  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member),  \
+      initvalue, NULL }
 static config_var_t _state_vars[] = {
-  VAR("AccountingBytesReadInterval", MEMUNIT, AccountingBytesReadInInterval,NULL),
+  VAR("AccountingBytesReadInterval", MEMUNIT, AccountingBytesReadInInterval,
+                                                                    NULL),
   VAR("AccountingBytesWrittenInInterval", MEMUNIT,
       AccountingBytesWrittenInInterval, NULL),
   VAR("AccountingExpectedUsage", MEMUNIT,     AccountingExpectedUsage, NULL),
-  VAR("AccountingIntervalStart", ISOTIME,  AccountingIntervalStart, NULL),
+  VAR("AccountingIntervalStart", ISOTIME,     AccountingIntervalStart, NULL),
   VAR("AccountingSecondsActive", INTERVAL,    AccountingSecondsActive, NULL),
   VAR("HelperNode",              LINELIST_S,  HelperNodes,          NULL),
   VAR("HelperNodeDownSince",     LINELIST_S,  HelperNodes,          NULL),
@@ -264,7 +272,8 @@ typedef struct {
 
 #define CHECK(fmt, cfg) do {                                            \
     tor_assert(fmt && cfg);                                             \
-    tor_assert((fmt)->magic == *(uint32_t*)(((char*)(cfg))+fmt->magic_offset)); \
+    tor_assert((fmt)->magic ==                                          \
+               *(uint32_t*)(((char*)(cfg))+fmt->magic_offset));         \
   } while (0)
 
 /** Largest allowed config line */
@@ -278,7 +287,8 @@ static void option_reset(config_format_t *fmt, or_options_t *options,
                          config_var_t *var, int use_defaults);
 static void config_free(config_format_t *fmt, void *options);
 static int option_is_same(config_format_t *fmt,
-                          or_options_t *o1, or_options_t *o2, const char *name);
+                          or_options_t *o1, or_options_t *o2,
+                          const char *name);
 static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
 static int options_validate(or_options_t *old_options,
                             or_options_t *options);
@@ -438,9 +448,11 @@ static void
 add_default_trusted_dirservers(void)
 {
   const char *dirservers[] = {
-"moria1 v1 18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
-"moria2 v1 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF",
-"tor26 v1 86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D" };
+"moria1 v1 18.244.0.188:9031 "
+                           "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
+"moria2 v1 18.244.0.114:80  719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF",
+"tor26 v1 86.59.21.38:80    847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D"
+  };
   parse_dir_server_line(dirservers[0], 0);
   parse_dir_server_line(dirservers[1], 0);
   parse_dir_server_line(dirservers[2], 0);
@@ -677,7 +689,8 @@ options_act(or_options_t *old_options)
   /* Since our options changed, we might need to regenerate and upload our
    * server descriptor.
    */
-  if (!old_options || options_transition_affects_descriptor(old_options, options))
+  if (!old_options ||
+      options_transition_affects_descriptor(old_options, options))
     mark_my_descriptor_dirty();
 
   return 0;
@@ -906,7 +919,8 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     i = tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
     if (!ok) {
       log(LOG_WARN, LD_CONFIG,
-          "Int keyword '%s %s' is malformed or out of bounds.", c->key, c->value);
+          "Int keyword '%s %s' is malformed or out of bounds.",
+          c->key, c->value);
       return -1;
     }
     *(int *)lvalue = i;
@@ -987,8 +1001,8 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
 }
 
 /** If <b>c</b> is a syntactically valid configuration line, update
- * <b>options</b> with its value and return 0.  Otherwise return -1 for bad key,
- * -2 for bad value.
+ * <b>options</b> with its value and return 0.  Otherwise return -1 for bad
+ * key, -2 for bad value.
  *
  * If <b>clear_first</b> is set, clear the value first. Then if
  * <b>use_defaults</b> is set, set the value to the default.
@@ -1083,7 +1097,8 @@ config_lines_dup(const config_line_t *inp)
 }
 
 static config_line_t *
-get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key)
+get_assigned_option(config_format_t *fmt, or_options_t *options,
+                    const char *key)
 {
   config_var_t *var;
   const void *value;
@@ -1153,13 +1168,15 @@ get_assigned_option(config_format_t *fmt, or_options_t *options, const char *key
       break;
     case CONFIG_TYPE_CSV:
       if (*(smartlist_t**)value)
-        result->value = smartlist_join_strings(*(smartlist_t**)value,",",0,NULL);
+        result->value =
+          smartlist_join_strings(*(smartlist_t**)value, ",", 0, NULL);
       else
         result->value = tor_strdup("");
       break;
     case CONFIG_TYPE_OBSOLETE:
       warn(LD_CONFIG,
-           "You asked me for the value of an obsolete config option '%s'.", key);
+           "You asked me for the value of an obsolete config option '%s'.",
+           key);
       tor_free(result->key);
       tor_free(result);
       return NULL;
@@ -1375,13 +1392,14 @@ print_usage(void)
 
 /**
  * Based on <b>options-\>Address</b>, guess our public IP address and put it
- * (in host order) into *<b>addr_out</b>. If <b>hostname_out</b> is provided, set
- * *<b>hostname_out</b> to a new string holding the hostname we used to get
- * the address. Return 0 if all is well, or -1 if we can't find a suitable
+ * (in host order) into *<b>addr_out</b>. If <b>hostname_out</b> is provided,
+ * set *<b>hostname_out</b> to a new string holding the hostname we used to
+ * get the address. Return 0 if all is well, or -1 if we can't find a suitable
  * public IP address.
  */
 int
-resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_out)
+resolve_my_address(or_options_t *options, uint32_t *addr_out,
+                   char **hostname_out)
 {
   struct in_addr in;
   struct hostent *rent;
@@ -1412,7 +1430,8 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
     explicit_ip = 0;
     rent = (struct hostent *)gethostbyname(hostname);
     if (!rent) {
-      warn(LD_CONFIG,"Could not resolve local Address '%s'. Failing.",hostname);
+      warn(LD_CONFIG,"Could not resolve local Address '%s'. Failing.",
+           hostname);
       return -1;
     }
     tor_assert(rent->h_length == 4);
@@ -1423,17 +1442,19 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
   if (is_internal_IP(htonl(in.s_addr), 0) && !options->NoPublish) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers) {
-      /* if they are using the default dirservers, disallow internal IPs always. */
+      /* if they are using the default dirservers, disallow internal IPs
+       * always. */
       warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. "
-           "Tor servers that use the default DirServers must have public IP addresses.",
+           "Tor servers that use the default DirServers must have public "
+           "IP addresses.",
            hostname, tmpbuf);
       return -1;
     }
     if (!explicit_ip) {
       /* even if they've set their own dirservers, require an explicit IP if
        * they're using an internal address. */
-      warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. "
-           "Please set the Address config option to be the IP you want to use.",
+      warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. Please "
+           "set the Address config option to be the IP you want to use.",
            hostname, tmpbuf);
       return -1;
     }
@@ -1451,8 +1472,8 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out, char **hostname_ou
   return 0;
 }
 
-/** Called when we don't have a nickname set.  Try to guess a good
- * nickname based on the hostname, and return it in a newly allocated string. */
+/** Called when we don't have a nickname set.  Try to guess a good nickname
+ * based on the hostname, and return it in a newly allocated string. */
 static char *
 get_default_nickname(void)
 {
@@ -1744,7 +1765,8 @@ options_validate(or_options_t *old_options, or_options_t *options)
   int result = 0;
   config_line_t *cl;
   addr_policy_t *addr_policy=NULL;
-#define REJECT(arg) do { log(LOG_WARN, LD_CONFIG, arg); result = -1; } while (0)
+#define REJECT(arg) \
+  do { log(LOG_WARN, LD_CONFIG, arg); result = -1; } while (0)
 #define COMPLAIN(arg) do { log(LOG_WARN, LD_CONFIG, arg); } while (0)
 
   if (options->ORPort < 0 || options->ORPort > 65535)
@@ -1793,7 +1815,9 @@ options_validate(or_options_t *old_options, or_options_t *options)
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {
-      log(LOG_WARN, LD_CONFIG, "Nickname '%s' is wrong length or contains illegal characters.", options->Nickname);
+      log(LOG_WARN, LD_CONFIG,
+          "Nickname '%s' is wrong length or contains illegal characters.",
+          options->Nickname);
       result = -1;
     }
   }
@@ -1851,7 +1875,7 @@ options_validate(or_options_t *old_options, or_options_t *options)
     if (!options->ContactInfo)
       REJECT("Authoritative directory servers must set ContactInfo");
     if (!options->RecommendedVersions)
-      REJECT("Authoritative directory servers must configure RecommendedVersions.");
+      REJECT("Authoritative directory servers must set RecommendedVersions.");
     if (!options->RecommendedClientVersions)
       options->RecommendedClientVersions =
         config_lines_dup(options->RecommendedVersions);
@@ -1874,13 +1898,15 @@ options_validate(or_options_t *old_options, or_options_t *options)
     REJECT("You cannot set both AuthoritativeDir and NoPublish.");
 
   if (options->ConnLimit <= 0) {
-    log(LOG_WARN, LD_CONFIG,"ConnLimit must be greater than 0, but was set to %d",
+    log(LOG_WARN, LD_CONFIG,
+        "ConnLimit must be greater than 0, but was set to %d",
         options->ConnLimit);
     result = -1;
   }
 
   if (options->_AccountingMaxKB) {
-    log(LOG_WARN, LD_CONFIG, "AccountingMaxKB is deprecated.  Say 'AccountingMax %d KB' instead.", options->_AccountingMaxKB);
+    log(LOG_WARN, LD_CONFIG, "AccountingMaxKB is deprecated.  "
+        "Say 'AccountingMax %d KB' instead.", options->_AccountingMaxKB);
     options->AccountingMax = U64_LITERAL(1024)*options->_AccountingMaxKB;
     options->_AccountingMaxKB = 0;
   }
@@ -1914,7 +1940,9 @@ options_validate(or_options_t *old_options, or_options_t *options)
       });
     new_line->value = smartlist_join_strings(instead,",",0,NULL);
     /* These have been deprecated since 0.1.1.5-alpha-cvs */
-    log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall and FirewallPorts config options to new format: \"ReachableAddresses %s\"", new_line->value);
+    log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall and FirewallPorts "
+        "config options to new format: \"ReachableAddresses %s\"",
+        new_line->value);
     options->ReachableAddresses = new_line;
     SMARTLIST_FOREACH(instead, char *, cp, tor_free(cp));
     smartlist_free(instead);
@@ -1923,7 +1951,7 @@ options_validate(or_options_t *old_options, or_options_t *options)
   if (options->ReachableAddresses) {
     /* We need to end with a reject *:*, not an implicit accept *:* */
     config_line_t **linep = &options->ReachableAddresses;
-    for(;;) {
+    for (;;) {
       if (!strcmp((*linep)->value, "reject *:*")) /* already there */
         break;
       linep = &((*linep)->next);
@@ -1971,42 +1999,52 @@ options_validate(or_options_t *old_options, or_options_t *options)
 
   if (options->DirFetchPeriod &&
       options->DirFetchPeriod < MIN_DIR_FETCH_PERIOD) {
-    log(LOG_WARN, LD_CONFIG, "DirFetchPeriod option must be at least %d seconds. Clipping.", MIN_DIR_FETCH_PERIOD);
+    log(LOG_WARN, LD_CONFIG,
+        "DirFetchPeriod option must be at least %d seconds. Clipping.",
+        MIN_DIR_FETCH_PERIOD);
     options->DirFetchPeriod = MIN_DIR_FETCH_PERIOD;
   }
   if (options->StatusFetchPeriod &&
       options->StatusFetchPeriod < MIN_STATUS_FETCH_PERIOD) {
-    log(LOG_WARN, LD_CONFIG, "StatusFetchPeriod option must be at least %d seconds. Clipping.", MIN_STATUS_FETCH_PERIOD);
+    log(LOG_WARN, LD_CONFIG,
+        "StatusFetchPeriod option must be at least %d seconds. Clipping.",
+        MIN_STATUS_FETCH_PERIOD);
     options->StatusFetchPeriod = MIN_STATUS_FETCH_PERIOD;
   }
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
-    log(LOG_WARN,LD_CONFIG,"RendPostPeriod option must be at least %d seconds. Clipping.",
-        MIN_REND_POST_PERIOD);
+    log(LOG_WARN,LD_CONFIG,"RendPostPeriod option must be at least %d seconds."
+        " Clipping.", MIN_REND_POST_PERIOD);
     options->RendPostPeriod = MIN_REND_POST_PERIOD;
   }
 
   if (options->DirPort && ! options->AuthoritativeDir) {
     if (options->DirFetchPeriod > MAX_CACHE_DIR_FETCH_PERIOD) {
-      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have DirFetchPeriod less than %d seconds. Clipping.", MAX_CACHE_DIR_FETCH_PERIOD);
+      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have "
+          "DirFetchPeriod less than %d seconds. Clipping.",
+          MAX_CACHE_DIR_FETCH_PERIOD);
       options->DirFetchPeriod = MAX_CACHE_DIR_FETCH_PERIOD;
     }
     if (options->StatusFetchPeriod > MAX_CACHE_STATUS_FETCH_PERIOD) {
-      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have StatusFetchPeriod less than %d seconds. Clipping.",
+      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have "
+          "StatusFetchPeriod less than %d seconds. Clipping.",
           MAX_CACHE_STATUS_FETCH_PERIOD);
       options->StatusFetchPeriod = MAX_CACHE_STATUS_FETCH_PERIOD;
     }
   }
 
   if (options->DirFetchPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, LD_CONFIG, "DirFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
+    log(LOG_WARN, LD_CONFIG, "DirFetchPeriod is too large; clipping to %ds.",
+        MAX_DIR_PERIOD);
     options->DirFetchPeriod = MAX_DIR_PERIOD;
   }
   if (options->StatusFetchPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, LD_CONFIG, "StatusFetchPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
+    log(LOG_WARN, LD_CONFIG,"StatusFetchPeriod is too large; clipping to %ds.",
+        MAX_DIR_PERIOD);
     options->StatusFetchPeriod = MAX_DIR_PERIOD;
   }
   if (options->RendPostPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.", MAX_DIR_PERIOD);
+    log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
+        MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
   }
 
@@ -2051,7 +2089,7 @@ options_validate(or_options_t *old_options, or_options_t *options)
 
   if (options->HttpsProxy) { /* parse it now */
     if (parse_addr_port(options->HttpsProxy, NULL,
-                        &options->HttpsProxyAddr, &options->HttpsProxyPort) < 0)
+                        &options->HttpsProxyAddr, &options->HttpsProxyPort) <0)
       REJECT("HttpsProxy failed to parse or resolve. Please fix.");
     if (options->HttpsProxyPort == 0) { /* give it a default */
       options->HttpsProxyPort = 443;
@@ -2068,7 +2106,7 @@ options_validate(or_options_t *old_options, or_options_t *options)
       REJECT("Bad HashedControlPassword: wrong length or bad encoding");
   }
   if (options->HashedControlPassword && options->CookieAuthentication)
-    REJECT("Cannot enable both HashedControlPassword and CookieAuthentication");
+    REJECT("Cannot set both HashedControlPassword and CookieAuthentication");
 
   if (options->UseHelperNodes && ! options->NumHelperNodes)
     REJECT("Cannot enable UseHelperNodes with NumHelperNodes set to 0");
@@ -2169,28 +2207,33 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val)
   }
 
   if (old->RunAsDaemon != new_val->RunAsDaemon) {
-    warn(LD_CONFIG,"While Tor is running, changing RunAsDaemon is not allowed. Failing.");
+    warn(LD_CONFIG,"While Tor is running, changing RunAsDaemon is not allowed."
+         " Failing.");
     return -1;
   }
 
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    warn(LD_CONFIG,"While Tor is running, changing DataDirectory (\"%s\"->\"%s\") is not allowed. Failing.",
+    warn(LD_CONFIG,"While Tor is running, changing DataDirectory "
+         "(\"%s\"->\"%s\") is not allowed. Failing.",
          old->DataDirectory, new_val->DataDirectory);
     return -1;
   }
 
   if (!opt_streq(old->User, new_val->User)) {
-    warn(LD_CONFIG,"While Tor is running, changing User is not allowed. Failing.");
+    warn(LD_CONFIG,"While Tor is running, changing User is not allowed. "
+         "Failing.");
     return -1;
   }
 
   if (!opt_streq(old->Group, new_val->Group)) {
-    warn(LD_CONFIG,"While Tor is running, changing Group is not allowed. Failing.");
+    warn(LD_CONFIG,"While Tor is running, changing Group is not allowed. "
+         "Failing.");
     return -1;
   }
 
   if (old->HardwareAccel != new_val->HardwareAccel) {
-    warn(LD_CONFIG,"While Tor is running, changing HardwareAccel is not allowed. Failing.");
+    warn(LD_CONFIG,"While Tor is running, changing HardwareAccel is not "
+         "allowed. Failing.");
     return -1;
   }
 
@@ -2264,7 +2307,9 @@ get_windows_conf_root(void)
                                             &idl))) {
     GetCurrentDirectory(MAX_PATH, path);
     is_set = 1;
-    warn(LD_CONFIG, "I couldn't find your application data folder: are you running an ancient version of Windows 95? Defaulting to \"%s\"", path);
+    warn(LD_CONFIG, "I couldn't find your application data folder: are you "
+         "running an ancient version of Windows 95? Defaulting to \"%s\"",
+         path);
     return path;
   }
   /* Convert the path from an "ID List" (whatever that is!) to a path. */
@@ -2500,7 +2545,8 @@ config_register_addressmaps(or_options_t *options)
         }
       }
     } else {
-      warn(LD_CONFIG,"MapAddress '%s' has too few arguments. Ignoring.", opt->value);
+      warn(LD_CONFIG,"MapAddress '%s' has too few arguments. Ignoring.",
+           opt->value);
     }
     SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
     smartlist_clear(elts);
@@ -2583,7 +2629,8 @@ convert_log_option(or_options_t *options, config_line_t *level_opt,
   }
 
   if (file_opt && !strcasecmp(file_opt->key, "LogFile")) {
-    if (add_single_log_option(options, levelMin, levelMax, "file", file_opt->value) < 0) {
+    if (add_single_log_option(options, levelMin, levelMax, "file",
+                              file_opt->value) < 0) {
       warn(LD_FS, "Cannot write to LogFile \"%s\": %s.", file_opt->value,
            strerror(errno));
       return -1;
@@ -2617,7 +2664,8 @@ options_init_logs(or_options_t *options, int validate_only)
       warn(LD_CONFIG, "Bad syntax on Log option 'Log %s'", opt->value);
       ok = 0; goto cleanup;
     }
-    if (parse_log_severity_range(smartlist_get(elts,0), &levelMin, &levelMax)) {
+    if (parse_log_severity_range(smartlist_get(elts,0), &levelMin,
+                                 &levelMax)) {
       ok = 0; goto cleanup;
     }
     if (smartlist_len(elts) < 2) { /* only loglevels were provided */
@@ -2688,10 +2736,10 @@ add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
   buf = tor_malloc(len);
 
   if (tor_snprintf(buf, len, "%s%s%s %s%s%s",
-                   log_level_to_string(minSeverity),
-                   maxSeverity == LOG_ERR ? "" : "-",
-                   maxSeverity == LOG_ERR ? "" : log_level_to_string(maxSeverity),
-                   type, fname?" ":"", fname?fname:"")<0) {
+                log_level_to_string(minSeverity),
+                maxSeverity == LOG_ERR ? "" : "-",
+                maxSeverity == LOG_ERR ? "" : log_level_to_string(maxSeverity),
+                type, fname?" ":"", fname?fname:"")<0) {
     warn(LD_BUG, "Normalized log option too long.");
     tor_free(buf);
     return -1;
@@ -2718,7 +2766,7 @@ normalize_log_options(or_options_t *options)
   if (opt && !strcasecmp(opt->key, "LogLevel")) {
     if (opt->next && (!strcasecmp(opt->next->key, "LogFile") ||
                       !strcasecmp(opt->next->key, "SysLog"))) {
-      if (convert_log_option(options, opt, opt->next, options->RunAsDaemon) < 0)
+      if (convert_log_option(options, opt, opt->next, options->RunAsDaemon)< 0)
         return -1;
       opt = opt->next->next;
     } else if (!opt->next) {
@@ -2732,14 +2780,15 @@ normalize_log_options(or_options_t *options)
 
   while (opt) {
     if (!strcasecmp(opt->key, "LogLevel")) {
-      warn(LD_CONFIG, "Two LogLevel options in a row without intervening LogFile or SysLog");
+      warn(LD_CONFIG, "Two LogLevel options in a row without "
+           "intervening LogFile or SysLog");
       opt = opt->next;
     } else {
       tor_assert(!strcasecmp(opt->key, "LogFile") ||
                  !strcasecmp(opt->key, "SysLog"));
       if (opt->next && !strcasecmp(opt->next->key, "LogLevel")) {
         /* LogFile/SysLog followed by LogLevel */
-        if (convert_log_option(options,opt->next,opt, options->RunAsDaemon) < 0)
+        if (convert_log_option(options,opt->next,opt, options->RunAsDaemon) <0)
           return -1;
         opt = opt->next->next;
       } else {
@@ -2877,7 +2926,8 @@ config_parse_addr_policy(config_line_t *cfg,
 
   entries = smartlist_create();
   for (; cfg; cfg = cfg->next) {
-    smartlist_split_string(entries, cfg->value, ",", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    smartlist_split_string(entries, cfg->value, ",",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (config_expand_exit_policy_aliases(entries,assume_action)<0) {
       r = -1;
       continue;
@@ -3131,7 +3181,8 @@ validate_data_directory(or_options_t *options)
   return 0;
 }
 
-#define GENERATED_FILE_PREFIX "# This file was generated by Tor; if you edit it, comments will not be preserved"
+#define GENERATED_FILE_PREFIX "# This file was generated by Tor; " \
+  "if you edit it, comments will not be preserved"
 
 /** Save a configuration file for the configuration in <b>options</b>
  * into the file <b>fname</b>.  If the file already exists, and
@@ -3345,12 +3396,14 @@ init_libevent(void)
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
   /* Making this a NOTICE for now so we can link bugs to a libevent versions
    * or methods better. */
-  log(LOG_NOTICE, LD_GENERAL, "Initialized libevent version %s using method %s. Good.",
+  log(LOG_NOTICE, LD_GENERAL,
+      "Initialized libevent version %s using method %s. Good.",
       event_get_version(), event_get_method());
   check_libevent_version(event_get_method(), event_get_version(),
                          get_options()->ORPort != 0);
 #else
-  log(LOG_NOTICE, LD_GENERAL, "Initialized old libevent (version 1.0b or earlier).");
+  log(LOG_NOTICE, LD_GENERAL,
+      "Initialized old libevent (version 1.0b or earlier).");
   log(LOG_WARN, LD_GENERAL,
       "You have a very old version of libevent.  It is likely to be buggy; "
       "please consider building Tor with a more recent version.");
@@ -3401,7 +3454,8 @@ check_libevent_version(const char *m, const char *v, int server)
   } else if (slow && server) {
     log(LOG_WARN, LD_GENERAL,
         "libevent %s can be very slow with %s. "
-        "When running a server, please use the latest version of libevent.",v,m);
+        "When running a server, please use the latest version of libevent.",
+        v,m);
   }
 
 }
@@ -3410,9 +3464,9 @@ check_libevent_version(const char *m, const char *v, int server)
 /* Versioning issues and state: we want to be able to understand old state
  * files, and not choke on new ones.
  *
- * We could preserve all unrecognized variables across invocations, but we could
- * screw up order, if their order is significant with respect to existing
- * options.
+ * We could preserve all unrecognized variables across invocations, but we
+ * could screw up order, if their order is significant with respect to
+ * existing options.
  *
  * We could just dump unrecognized variables if you downgrade.
  *

@@ -3,7 +3,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char command_c_id[] = "$Id$";
+const char command_c_id[] =
+  "$Id$";
 
 /**
  * \file command.c
@@ -81,7 +82,8 @@ command_process_cell(cell_t *cell, connection_t *conn)
 
   if (now > current_second) { /* the second has rolled over */
     /* print stats */
-    info(LD_OR,"At end of second: %d creates (%d ms), %d createds (%d ms), %d relays (%d ms), %d destroys (%d ms)",
+    info(LD_OR,"At end of second: %d creates (%d ms), %d createds (%d ms), "
+         "%d relays (%d ms), %d destroys (%d ms)",
          num_create, create_time/1000,
          num_created, created_time/1000,
          num_relay, relay_time/1000,
@@ -150,18 +152,20 @@ command_process_cell(cell_t *cell, connection_t *conn)
   }
 }
 
-/** Process a 'create' <b>cell</b> that just arrived from <b>conn</b>. Make a new circuit
- * with the p_circ_id specified in cell. Put the circuit in state
- * onionskin_pending, and pass the onionskin to the cpuworker. Circ will
- * get picked up again when the cpuworker finishes decrypting it.
+/** Process a 'create' <b>cell</b> that just arrived from <b>conn</b>. Make a
+ * new circuit with the p_circ_id specified in cell. Put the circuit in state
+ * onionskin_pending, and pass the onionskin to the cpuworker. Circ will get
+ * picked up again when the cpuworker finishes decrypting it.
  */
 static void
 command_process_create_cell(cell_t *cell, connection_t *conn)
 {
   circuit_t *circ;
+  int id_is_high;
 
   if (we_are_hibernating()) {
-    info(LD_OR,"Received create cell but we're shutting down. Sending back destroy.");
+    info(LD_OR,"Received create cell but we're shutting down. Sending back "
+         "destroy.");
     connection_send_destroy(cell->circ_id, conn);
     return;
   }
@@ -172,12 +176,15 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
    * This can happen because Tor 0.0.9pre5 and earlier decide which
    * half to use based on nickname, and we now use identity keys.
    */
-  if ((cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_HIGHER) {
-    info(LD_OR, "Got a high circuit ID from %s (%d); switching to low circuit IDs.",
+  id_is_high = cell->circ_id & (1<<15);
+  if (id_is_high && conn->circ_id_type == CIRC_ID_TYPE_HIGHER) {
+    info(LD_OR, "Got a high circuit ID from %s (%d); switching to "
+         "low circuit IDs.",
          conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_LOWER;
-  } else if (!(cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_LOWER) {
-    info(LD_OR, "Got a low circuit ID from %s (%d); switching to high circuit IDs.",
+  } else if (!id_is_high && conn->circ_id_type == CIRC_ID_TYPE_LOWER) {
+    info(LD_OR, "Got a low circuit ID from %s (%d); switching to "
+         "high circuit IDs.",
          conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
   }
@@ -187,7 +194,8 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
   if (circ) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "received CREATE cell (circID %d) for known circ. Dropping (age %d).",
+           "received CREATE cell (circID %d) for known circ. "
+           "Dropping (age %d).",
            cell->circ_id, (int)(time(NULL) - conn->timestamp_created));
     if (router)
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -245,7 +253,8 @@ command_process_created_cell(cell_t *cell, connection_t *conn)
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (!circ) {
-    info(LD_OR,"(circID %d) unknown circ (probably got a destroy earlier). Dropping.", cell->circ_id);
+    info(LD_OR,"(circID %d) unknown circ (probably got a destroy earlier). "
+         "Dropping.", cell->circ_id);
     return;
   }
 
@@ -301,13 +310,15 @@ command_process_relay_cell(cell_t *cell, connection_t *conn)
 
   if (cell->circ_id == circ->p_circ_id) { /* it's an outgoing cell */
     if (circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
-      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell (forward) failed. Closing.");
+      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
+             "(forward) failed. Closing.");
       circuit_mark_for_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
     if (circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
-      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell (backward) failed. Closing.");
+      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
+             "(backward) failed. Closing.");
       circuit_mark_for_close(circ);
       return;
     }

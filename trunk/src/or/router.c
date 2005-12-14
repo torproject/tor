@@ -3,7 +3,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char router_c_id[] = "$Id$";
+const char router_c_id[] =
+  "$Id$";
 
 #include "or.h"
 
@@ -241,7 +242,8 @@ init_keys(void)
   char keydir[512];
   char keydir2[512];
   char fingerprint[FINGERPRINT_LEN+1];
-  char fingerprint_line[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];/*nickname fp\n\0 */
+  /*nickname fp\n\0 */
+  char fingerprint_line[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];
   char *cp;
   const char *mydesc, *datadir;
   crypto_pk_env_t *prkey;
@@ -465,7 +467,8 @@ router_orport_found_reachable(void)
 {
   if (!can_reach_or_port) {
     if (!clique_mode(get_options()))
-      notice(LD_OR,"Self-testing indicates your ORPort is reachable from the outside. Excellent.%s",
+      notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
+             "the outside. Excellent.%s",
             get_options()->NoPublish ? "" : " Publishing server descriptor.");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
@@ -478,7 +481,8 @@ void
 router_dirport_found_reachable(void)
 {
   if (!can_reach_dir_port) {
-    notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable from the outside. Excellent.");
+    notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
+           "from the outside. Excellent.");
     can_reach_dir_port = 1;
   }
 }
@@ -530,7 +534,8 @@ advertised_server_mode(void)
 }
 
 /**
- * Called with a boolean: set whether we have recently published our descriptor.
+ * Called with a boolean: set whether we have recently published our
+ * descriptor.
  */
 static void
 set_server_advertised(int s)
@@ -608,12 +613,13 @@ router_retry_connections(int force)
   tor_assert(server_mode(options));
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
+    const char *id_digest = router->cache_info.identity_digest;
     if (router_is_me(router))
       continue;
     if (!clique_mode(options) && !router_is_clique_mode(router))
       continue;
     if (force ||
-      !connection_or_get_by_identity_digest(router->cache_info.identity_digest)) {
+        !connection_or_get_by_identity_digest(id_digest)) {
       debug(LD_OR,"%sconnecting to %s at %s:%u.",
             clique_mode(options) ? "(forced) " : "",
             router->nickname, router->address, router->or_port);
@@ -621,7 +627,7 @@ router_retry_connections(int force)
       if (!router->testing_since)
         router->testing_since = now;
       connection_or_connect(router->addr, router->or_port,
-                            router->cache_info.identity_digest);
+                            id_digest);
     }
   });
 }
@@ -776,7 +782,8 @@ router_rebuild_descriptor(int force)
   ri->or_port = options->ORPort;
   ri->dir_port = options->DirPort;
   ri->cache_info.published_on = time(NULL);
-  ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
+  ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
+                                                        * main thread */
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
   if (crypto_pk_get_digest(ri->identity_pkey,
                            ri->cache_info.identity_digest)<0) {
@@ -892,7 +899,8 @@ check_descriptor_bandwidth_changed(time_t now)
       cur > prev*2 ||
       cur < prev/2) {
     if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now) {
-      info(LD_GENERAL,"Measured bandwidth has changed; rebuilding descriptor.");
+      info(LD_GENERAL,
+           "Measured bandwidth has changed; rebuilding descriptor.");
       mark_my_descriptor_dirty();
       last_changed = now;
     }
@@ -929,7 +937,9 @@ check_descriptor_ipaddress_changed(time_t now)
     in_cur.s_addr = htonl(cur);
     tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
 
-    info(LD_GENERAL,"Our IP Address has changed from %s to %s; rebuilding descriptor.", addrbuf_prev, addrbuf_cur);
+    info(LD_GENERAL,
+         "Our IP Address has changed from %s to %s; rebuilding descriptor.",
+         addrbuf_prev, addrbuf_cur);
     mark_my_descriptor_dirty();
   }
 }
@@ -983,7 +993,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
-    warn(LD_BUG,"Tried to sign a router with a private key that didn't match router's public key!");
+    warn(LD_BUG,"Tried to sign a router with a private key that didn't "
+         "match router's public key!");
     return -1;
   }
 
@@ -1002,7 +1013,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   /* PEM-encode the identity key key */
   if (crypto_pk_write_public_key_to_string(router->identity_pkey,
-                                           &identity_pkey,&identity_pkeylen)<0) {
+                                        &identity_pkey,&identity_pkeylen)<0) {
     warn(LD_BUG,"write identity_pkey to string failed!");
     tor_free(onion_pkey);
     return -1;
@@ -1101,8 +1112,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       written += result;
     } else {
       /* There is a range of ports; write ":79-80". */
-      result = tor_snprintf(s+written, maxlen-written, ":%d-%d\n", tmpe->prt_min,
-                        tmpe->prt_max);
+      result = tor_snprintf(s+written, maxlen-written, ":%d-%d\n",
+                            tmpe->prt_min, tmpe->prt_max);
       if (result<0)
         return -1;
       written += result;
@@ -1138,7 +1149,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   cp = s_tmp = s_dup = tor_strdup(s);
   ri_tmp = router_parse_entry_from_string(cp, NULL);
   if (!ri_tmp) {
-    err(LD_BUG,"We just generated a router descriptor we can't parse: <<%s>>", s);
+    err(LD_BUG,"We just generated a router descriptor we can't parse: <<%s>>",
+        s);
     return -1;
   }
   tor_free(s_dup);

@@ -1,7 +1,8 @@
 /* Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char control_c_id[] = "$Id$";
+const char control_c_id[] =
+  "$Id$";
 
 /**
  * \file control.c
@@ -10,13 +11,15 @@ const char control_c_id[] = "$Id$";
 
 #include "or.h"
 
-#define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN_V0 ||       \
+#define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN_V0 ||          \
                           (s) == CONTROL_CONN_STATE_OPEN_V1)
-#define STATE_IS_V0(s) ((s) == CONTROL_CONN_STATE_NEEDAUTH_V0 || \
+#define STATE_IS_V0(s) ((s) == CONTROL_CONN_STATE_NEEDAUTH_V0 ||        \
                         (s) == CONTROL_CONN_STATE_OPEN_V0)
 
 /*
- * See control-spec.txt and control-spec-v0.txt for full details on protocol(s).
+ * See control-spec.txt and control-spec-v0.txt for full details on
+ * protocol(s).
+ *
  */
 
 /* Recognized message type codes. */
@@ -128,7 +131,8 @@ static int disable_log_messages = 0;
 static int authentication_cookie_is_set = 0;
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
-static void connection_printf_to_buf(connection_t *conn, const char *format, ...)
+static void connection_printf_to_buf(connection_t *conn,
+                                     const char *format, ...)
   CHECK_PRINTF(2,3);
 /*static*/ size_t write_escaped_data(const char *data, size_t len,
                                      int translate_newlines, char **out);
@@ -137,10 +141,12 @@ static void connection_printf_to_buf(connection_t *conn, const char *format, ...
 static void send_control0_message(connection_t *conn, uint16_t type,
                                  uint32_t len, const char *body);
 static void send_control_done(connection_t *conn);
-static void send_control_done2(connection_t *conn, const char *msg, size_t len);
+static void send_control_done2(connection_t *conn, const char *msg,
+                               size_t len);
 static void send_control0_error(connection_t *conn, uint16_t error,
                                const char *message);
-static void send_control0_event(uint16_t event, uint32_t len, const char *body);
+static void send_control0_event(uint16_t event, uint32_t len,
+                                const char *body);
 static void send_control1_event(uint16_t event, const char *format, ...)
   CHECK_PRINTF(2,3);
 static int handle_control_setconf(connection_t *conn, uint32_t len,
@@ -173,14 +179,16 @@ static int handle_control_closestream(connection_t *conn, uint32_t len,
                                       const char *body);
 static int handle_control_closecircuit(connection_t *conn, uint32_t len,
                                        const char *body);
-static int write_stream_target_to_buf(connection_t *conn, char *buf, size_t len);
+static int write_stream_target_to_buf(connection_t *conn, char *buf,
+                                      size_t len);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
  * human-readable string equivalent. */
 static INLINE const char *
 control_cmd_to_string(uint16_t cmd)
 {
-  return (cmd<=_CONTROL0_CMD_MAX_RECOGNIZED) ? CONTROL0_COMMANDS[cmd] : "Unknown";
+  return (cmd<=_CONTROL0_CMD_MAX_RECOGNIZED) ?
+                      CONTROL0_COMMANDS[cmd] : "Unknown";
 }
 
 /** Given a control event code for a message event, return the corresponding
@@ -693,7 +701,8 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
 
     if (config_get_lines(config, &lines) < 0) {
       warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
-      connection_write_str_to_buf("551 Couldn't parse configuration\r\n", conn);
+      connection_write_str_to_buf("551 Couldn't parse configuration\r\n",
+                                  conn);
       tor_free(config);
       return 0;
     }
@@ -809,7 +818,8 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
         if (v0)
           tor_snprintf(astr, alen, "%s %s\n", answer->key, answer->value);
         else
-          tor_snprintf(astr, alen, "250-%s=%s\r\n", answer->key, answer->value);
+          tor_snprintf(astr, alen, "250-%s=%s\r\n",
+                       answer->key, answer->value);
         smartlist_add(answers, astr);
 
         next = answer->next;
@@ -830,8 +840,8 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
     if ((len = smartlist_len(unrecognized))) {
       for (i=0; i < len-1; ++i)
         connection_printf_to_buf(conn,
-                                 "552-Unrecognized configuration key \"%s\"\r\n",
-                                 (char*)smartlist_get(unrecognized, i));
+                               "552-Unrecognized configuration key \"%s\"\r\n",
+                               (char*)smartlist_get(unrecognized, i));
       connection_printf_to_buf(conn,
                                "552 Unrecognized configuration key \"%s\"\r\n",
                                (char*)smartlist_get(unrecognized, len-1));
@@ -998,7 +1008,8 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
       password_len = 0;
     } else {
       if (!get_escaped_string(body, len, &password, &password_len)) {
-        connection_write_str_to_buf("551 Invalid quoted string.  You need to put the password in double quotes.\r\n", conn);
+        connection_write_str_to_buf("551 Invalid quoted string.  You need "
+            "to put the password in double quotes.\r\n", conn);
         return 0;
       }
       used_quoted_string = 1;
@@ -1028,7 +1039,8 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
 
  err:
   if (STATE_IS_V0(conn->state))
-    send_control0_error(conn,ERR_REJECTED_AUTHENTICATION,"Authentication failed");
+    send_control0_error(conn,ERR_REJECTED_AUTHENTICATION,
+                        "Authentication failed");
   else {
     tor_free(password);
     if (used_quoted_string)
@@ -1156,7 +1168,8 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
       if (!is_plausible_address(from)) {
-        warn(LD_CONTROL,"Skipping invalid argument '%s' in MapAddress msg",from);
+        warn(LD_CONTROL,"Skipping invalid argument '%s' in MapAddress msg",
+             from);
       } else if (!is_plausible_address(to)) {
         warn(LD_CONTROL,"Skipping invalid argument '%s' in MapAddress msg",to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
@@ -1297,7 +1310,8 @@ handle_getinfo_helper(const char *question, char **answer)
 
       slen = strlen(path)+strlen(state)+20;
       s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s %s", (unsigned long)circ->global_identifier,
+      tor_snprintf(s, slen, "%lu %s %s",
+                   (unsigned long)circ->global_identifier,
                    state, path);
       smartlist_add(status, s);
       tor_free(path);
@@ -1537,7 +1551,8 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args)<2) {
-      connection_printf_to_buf(conn,"512 Missing argument to EXTENDCIRCUIT\r\n");
+      connection_printf_to_buf(conn,
+                               "512 Missing argument to EXTENDCIRCUIT\r\n");
       SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
       smartlist_free(args);
       goto done;
@@ -1605,7 +1620,8 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     if (circ->state == CIRCUIT_STATE_OPEN) {
       circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
       if (circuit_send_next_onion_skin(circ) < 0) {
-        info(LD_CONTROL,"send_next_onion_skin failed; circuit marked for closing.");
+        info(LD_CONTROL,
+             "send_next_onion_skin failed; circuit marked for closing.");
         circuit_mark_for_close(circ);
         if (v0)
           send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
@@ -1668,7 +1684,8 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args)<2) {
-      connection_printf_to_buf(conn,"512 Missing argument to ATTACHSTREAM\r\n");
+      connection_printf_to_buf(conn,
+                               "512 Missing argument to ATTACHSTREAM\r\n");
       SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
       smartlist_free(args);
       return 0;
@@ -1695,8 +1712,8 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
                           "Connection is not managed by controller.");
     } else {
       connection_write_str_to_buf(
-                              "555 Connection is not managed by controller.\r\n",
-                                  conn);
+                          "555 Connection is not managed by controller.\r\n",
+                          conn);
     }
     return 0;
   }
@@ -1710,11 +1727,12 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
   }
   if (circ->state != CIRCUIT_STATE_OPEN) {
     if (STATE_IS_V0(conn->state))
-      send_control0_error(conn, ERR_INTERNAL, "Refuse to attach stream to non-open circ.");
+      send_control0_error(conn, ERR_INTERNAL,
+                          "Refuse to attach stream to non-open circ.");
     else
       connection_write_str_to_buf(
-                              "551 Can't attach stream to non-open circuit\r\n",
-                              conn);
+                          "551 Can't attach stream to non-open circuit\r\n",
+                          conn);
     return 0;
   }
   if (connection_ap_handshake_attach_chosen_circuit(ap_conn, circ) != 1) {
@@ -1783,7 +1801,8 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
   uint16_t new_port = 0;
   if (STATE_IS_V0(conn->state)) {
     if (len < 6) {
-      send_control0_error(conn, ERR_SYNTAX, "redirectstream message too short");
+      send_control0_error(conn, ERR_SYNTAX,
+                          "redirectstream message too short");
       return 0;
     }
     conn_id = ntohl(get_uint32(body));
@@ -1802,7 +1821,8 @@ handle_control_redirectstream(connection_t *conn, uint32_t len,
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args) < 2)
-      connection_printf_to_buf(conn,"512 Missing argument to REDIRECTSTREAM\r\n");
+      connection_printf_to_buf(conn,
+                               "512 Missing argument to REDIRECTSTREAM\r\n");
     else if (!(ap_conn = get_stream(smartlist_get(args, 0)))
              || !ap_conn->socks_request) {
       connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
@@ -1869,7 +1889,8 @@ handle_control_closestream(connection_t *conn, uint32_t len,
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args)<2)
-      connection_printf_to_buf(conn, "512 Missing argument to CLOSESTREAM\r\n");
+      connection_printf_to_buf(conn,
+                               "512 Missing argument to CLOSESTREAM\r\n");
     else if (!(ap_conn = get_stream(smartlist_get(args, 0))))
       connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
                                (char*)smartlist_get(args, 0));
@@ -1922,7 +1943,8 @@ handle_control_closecircuit(connection_t *conn, uint32_t len,
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args)<1)
-      connection_printf_to_buf(conn, "512 Missing argument to CLOSECIRCUIT\r\n");
+      connection_printf_to_buf(conn,
+                               "512 Missing argument to CLOSECIRCUIT\r\n");
     else if (!(circ=get_circ(smartlist_get(args, 0))))
       connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
                                (char*)smartlist_get(args, 0));
@@ -2174,7 +2196,7 @@ connection_control_process_inbuf_v0(connection_t *conn)
  again:
   /* Try to suck a control message from the buffer. */
   switch (fetch_from_buf_control0(conn->inbuf, &body_len, &command_type, &body,
-                                  conn->state == CONTROL_CONN_STATE_NEEDAUTH_V0))
+                                conn->state == CONTROL_CONN_STATE_NEEDAUTH_V0))
     {
     case -2:
       tor_free(body);
@@ -2379,11 +2401,11 @@ write_stream_target_to_buf(connection_t *conn, char *buf, size_t len)
     if (tor_snprintf(buf2, sizeof(buf2), ".%s.exit", conn->chosen_exit_name)<0)
       return -1;
   if (tor_snprintf(buf, len, "%s%s%s:%d",
-                   conn->socks_request->address,
-                   conn->chosen_exit_name ? buf2 : "",
-                   !conn->chosen_exit_name &&
-                     connection_edge_is_rendezvous_stream(conn) ? ".onion" : "",
-                   conn->socks_request->port)<0)
+               conn->socks_request->address,
+               conn->chosen_exit_name ? buf2 : "",
+               !conn->chosen_exit_name &&
+                 connection_edge_is_rendezvous_stream(conn) ? ".onion" : "",
+               conn->socks_request->port)<0)
     return -1;
   return 0;
 }
@@ -2616,7 +2638,8 @@ control_event_address_mapped(const char *from, const char *to, time_t expires)
     return 0;
 
   if (expires < 3)
-    send_control1_event(EVENT_ADDRMAP, "650 ADDRMAP %s %s NEVER\r\n", from, to);
+    send_control1_event(EVENT_ADDRMAP,
+                        "650 ADDRMAP %s %s NEVER\r\n", from, to);
   else {
     char buf[ISO_TIME_LEN+1];
     format_local_iso_time(buf,expires);
@@ -2633,8 +2656,9 @@ control_event_address_mapped(const char *from, const char *to, time_t expires)
  * Notify any interested party of the new descriptor and what has
  * been done with it, and also optionally give an explanation/reason. */
 int
-control_event_or_authdir_new_descriptor(const char *action, const char *descriptor, const char *msg)
-
+control_event_or_authdir_new_descriptor(const char *action,
+                                        const char *descriptor,
+                                        const char *msg)
 {
   char firstline[1024];
   char *buf;

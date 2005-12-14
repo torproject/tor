@@ -5,7 +5,8 @@
 
 #ifndef __CONTAINER_H
 #define __CONTAINER_H
-#define CONTAINER_H_ID "$Id$"
+#define CONTAINER_H_ID \
+  "$Id$"
 
 #include "compat.h"
 #include "util.h"

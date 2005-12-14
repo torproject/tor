@@ -2,7 +2,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char compat_c_id[] = "$Id$";
+const char compat_c_id[] =
+  "$Id$";
 
 /**
  * \file compat.c
@@ -150,13 +151,15 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
  * Requires that nlen be greater than zero.
  */
 const void *
-tor_memmem(const void *_haystack, size_t hlen, const void *_needle, size_t nlen)
+tor_memmem(const void *_haystack, size_t hlen,
+           const void *_needle, size_t nlen)
 {
 #if defined(HAVE_MEMMEM) && (!defined(__GNUC__) || __GNUC__ >= 2)
   tor_assert(nlen);
   return memmem(_haystack, hlen, _needle, nlen);
 #else
-  /* This isn't as fast as the GLIBC implementation, but it doesn't need to be. */
+  /* This isn't as fast as the GLIBC implementation, but it doesn't need to
+   * be. */
   const char *p, *end;
   const char *haystack = (const char*)_haystack;
   const char *needle = (const char*)_needle;
@@ -463,7 +466,8 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
     return -1;
   }
   if (rlim.rlim_max < limit) {
-    warn(LD_CONFIG,"We need %lu file descriptors available, and we're limited to %lu. Please change your ulimit -n.",
+    warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
+         "limited to %lu. Please change your ulimit -n.",
          limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
@@ -538,7 +542,8 @@ switch_id(char *user, char *group)
   return 0;
 #endif
 
-  err(LD_CONFIG,"User or group specified, but switching users is not supported.");
+  err(LD_CONFIG,
+      "User or group specified, but switching users is not supported.");
   return -1;
 }
 
@@ -722,9 +727,11 @@ get_uname(void)
           { VER_SUITE_ENTERPRISE,         " {enterprise}" },
           { VER_SUITE_EMBEDDEDNT,         " {embedded}" },
           { VER_SUITE_PERSONAL,           " {personal}" },
-          { VER_SUITE_SINGLEUSERTS,       " {terminal services, single user}" },
+          { VER_SUITE_SINGLEUSERTS,
+            " {terminal services, single user}" },
           { VER_SUITE_SMALLBUSINESS,      " {small business}" },
-          { VER_SUITE_SMALLBUSINESS_RESTRICTED, " {small business, restricted}" },
+          { VER_SUITE_SMALLBUSINESS_RESTRICTED,
+            " {small business, restricted}" },
           { VER_SUITE_TERMINAL,           " {terminal services}" },
           { 0, NULL },
         };
@@ -751,14 +758,14 @@ get_uname(void)
           if (info.dwMajorVersion > 6 ||
               (info.dwMajorVersion==6 && info.dwMinorVersion>0))
             tor_snprintf(uname_result, sizeof(uname_result),
-                         "Very recent version of Windows [major=%d,minor=%d] %s",
-                         (int)info.dwMajorVersion,(int)info.dwMinorVersion,
-                         info.szCSDVersion);
+                      "Very recent version of Windows [major=%d,minor=%d] %s",
+                      (int)info.dwMajorVersion,(int)info.dwMinorVersion,
+                      info.szCSDVersion);
           else
             tor_snprintf(uname_result, sizeof(uname_result),
-                         "Unrecognized version of Windows [major=%d,minor=%d] %s",
-                         (int)info.dwMajorVersion,(int)info.dwMinorVersion,
-                         info.szCSDVersion);
+                      "Unrecognized version of Windows [major=%d,minor=%d] %s",
+                      (int)info.dwMajorVersion,(int)info.dwMinorVersion,
+                      info.szCSDVersion);
         }
         if (info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
           strlcat(uname_result, " [domain controller]", sizeof(uname_result));

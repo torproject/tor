@@ -2,7 +2,8 @@
  * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
-const char cpuworker_c_id[] = "$Id$";
+const char cpuworker_c_id[] =
+  "$Id$";
 
 /**
  * \file cpuworker.c
@@ -25,7 +26,8 @@ const char cpuworker_c_id[] = "$Id$";
 /** How many bytes are sent from tor to the cpuworker? */
 #define LEN_ONION_QUESTION (1+TAG_LEN+ONIONSKIN_CHALLENGE_LEN)
 /** How many bytes are sent from the cpuworker back to tor? */
-#define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+CPATH_KEY_MATERIAL_LEN)
+#define LEN_ONION_RESPONSE \
+  (1+TAG_LEN+ONIONSKIN_REPLY_LEN+CPATH_KEY_MATERIAL_LEN)
 
 /** How many cpuworkers we have running right now. */
 static int num_cpuworkers=0;
@@ -118,7 +120,8 @@ connection_cpu_reached_eof(connection_t *conn)
     num_cpuworkers_busy--;
   }
   num_cpuworkers--;
-  spawn_enough_cpuworkers(); /* try to regrow. hope we don't end up spinning. */
+  spawn_enough_cpuworkers(); /* try to regrow. hope we don't end up
+                                spinning. */
   connection_mark_for_close(conn);
   return 0;
 }
@@ -145,7 +148,7 @@ connection_cpu_process_inbuf(connection_t *conn)
     return 0;
 
   if (conn->state == CPUWORKER_STATE_BUSY_ONION) {
-    if (buf_datalen(conn->inbuf) < LEN_ONION_RESPONSE) /* entire answer available? */
+    if (buf_datalen(conn->inbuf) < LEN_ONION_RESPONSE) /* answer available? */
       return 0; /* not yet */
     tor_assert(buf_datalen(conn->inbuf) == LEN_ONION_RESPONSE);
 
@@ -163,7 +166,8 @@ connection_cpu_process_inbuf(connection_t *conn)
       circ = circuit_get_by_circid_orconn(circ_id, p_conn);
 
     if (success == 0) {
-      debug(LD_OR,"decoding onionskin failed. (Old key or bad software.) Closing.");
+      debug(LD_OR,
+            "decoding onionskin failed. (Old key or bad software.) Closing.");
       if (circ)
         circuit_mark_for_close(circ);
       goto done_processing;
@@ -178,7 +182,8 @@ connection_cpu_process_inbuf(connection_t *conn)
       goto done_processing;
     }
     tor_assert(circ->p_conn);
-    if (onionskin_answer(circ, CELL_CREATED, buf+TAG_LEN, buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
+    if (onionskin_answer(circ, CELL_CREATED, buf+TAG_LEN,
+                         buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       warn(LD_OR,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ);
       goto done_processing;
@@ -234,7 +239,8 @@ cpuworker_main(void *data)
 
   fd = fdarray[1]; /* this side is ours */
 #ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
+  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the
+                                 * parent uses */
   tor_free_all(1); /* so the child doesn't hold the parent's fd's open */
   handle_signals(0); /* ignore interrupts from the keyboard, etc */
 #endif
@@ -248,10 +254,13 @@ cpuworker_main(void *data)
     if ((r = recv(fd, &question_type, 1, 0)) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");
       if (r == 0) {
-        info(LD_OR,"CPU worker exiting because Tor process closed connection (either rotated keys or died).");
+        info(LD_OR,"CPU worker exiting because Tor process closed connection "
+             "(either rotated keys or died).");
       } else {
-        info(LD_OR,"CPU worker editing because of error on connection to Tor process.");
-        info(LD_OR,"(Error on %d was %s)", fd, tor_socket_strerror(tor_socket_errno(fd)));
+        info(LD_OR,"CPU worker editing because of error on connection to Tor "
+             "process.");
+        info(LD_OR,"(Error on %d was %s)",
+             fd, tor_socket_strerror(tor_socket_errno(fd)));
       }
       goto end;
     }
@@ -262,7 +271,8 @@ cpuworker_main(void *data)
       goto end;
     }
 
-    if (read_all(fd, question, ONIONSKIN_CHALLENGE_LEN, 1) != ONIONSKIN_CHALLENGE_LEN) {
+    if (read_all(fd, question, ONIONSKIN_CHALLENGE_LEN, 1) !=
+        ONIONSKIN_CHALLENGE_LEN) {
       err(LD_BUG,"read question failed. Exiting.");
       goto end;
     }
@@ -311,7 +321,8 @@ spawn_cpuworker(void)
 
   fdarray = tor_malloc(sizeof(int)*2);
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
-    warn(LD_NET, "Couldn't construct socketpair: %s", tor_socket_strerror(-err));
+    warn(LD_NET, "Couldn't construct socketpair: %s",
+         tor_socket_strerror(-err));
     tor_free(fdarray);
     return -1;
   }
@@ -320,7 +331,7 @@ spawn_cpuworker(void)
   spawn_func(cpuworker_main, (void*)fdarray);
   debug(LD_OR,"just spawned a worker.");
 #ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fdarray[1]); /* we don't need the worker's side of the pipe */
+  tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
   tor_free(fdarray);
 #endif
 
@@ -404,7 +415,8 @@ cull_wedged_cpuworkers(void)
         conn->type == CONN_TYPE_CPUWORKER &&
         conn->state == CPUWORKER_STATE_BUSY_ONION &&
         conn->timestamp_lastwritten + CPUWORKER_BUSY_TIMEOUT < now) {
-      notice(LD_BUG,"Bug: closing wedged cpuworker. Can somebody find the bug?");
+      notice(LD_BUG,
+             "Bug: closing wedged cpuworker. Can somebody find the bug?");
       num_cpuworkers_busy--;
       num_cpuworkers--;
       connection_mark_for_close(conn);
@@ -442,7 +454,8 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
     }
 
     if (!cpuworker)
-      cpuworker = connection_get_by_type_state(CONN_TYPE_CPUWORKER, CPUWORKER_STATE_IDLE);
+      cpuworker = connection_get_by_type_state(CONN_TYPE_CPUWORKER,
+                                               CPUWORKER_STATE_IDLE);
 
     tor_assert(cpuworker);
 
@@ -457,7 +470,8 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
     connection_write_to_buf((char*)&question_type, 1, cpuworker);
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
-    connection_write_to_buf(circ->onionskin, ONIONSKIN_CHALLENGE_LEN, cpuworker);
+    connection_write_to_buf(circ->onionskin, ONIONSKIN_CHALLENGE_LEN,
+                            cpuworker);
     tor_free(circ->onionskin);
   }
   return 0;
