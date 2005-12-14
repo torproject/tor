@@ -326,8 +326,10 @@ circuit_free_all(void)
     circuit_free(global_circuitlist);
     global_circuitlist = next;
   }
-  smartlist_free(circuits_pending_or_conns);
-  circuits_pending_or_conns = NULL;
+  if (circuits_pending_or_conns) {
+    smartlist_free(circuits_pending_or_conns);
+    circuits_pending_or_conns = NULL;
+  }
   HT_CLEAR(orconn_circid_map, &orconn_circid_circuit_map);
 }
 
