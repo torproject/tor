@@ -713,21 +713,16 @@ Other than "router" and "router-signature", the items may appear in any
 order.
 
 The items' formats are as follows:
-   "router" nickname address (ORPort SocksPort DirPort)?
+   "router" nickname address ORPort SocksPort DirPort
 
-      Indicates the beginning of a router descriptor.  "address" must be an
-      IPv4 address in dotted-quad format.  The Port values will soon be
-      deprecated; using them here is equivalent to using them in a "ports"
-      item.
-
-   "ports" ORPort SocksPort DirPort
-
-      Indicates the TCP ports at which this OR exposes functionality.
-      ORPort is a port at which this OR accepts TLS connections for the main
-      OR protocol;  SocksPort is the port at which this OR accepts SOCKS
-      connections; and DirPort is the port at which this OR accepts
-      directory-related HTTP connections.  If any port is not supported, the
-      value 0 is given instead of a port number.
+      Indicates the beginning of a router descriptor.  "address"
+      must be an IPv4 address in dotted-quad format. The last
+      three numbers indicate the TCP ports at which this OR exposes
+      functionality. ORPort is a port at which this OR accepts TLS
+      connections for the main OR protocol; SocksPort is deprecated and
+      should always be 0; and DirPort is the port at which this OR accepts
+      directory-related HTTP connections.  If any port is not supported,
+      the value 0 is given instead of a port number.
 
    "bandwidth" bandwidth-avg bandwidth-burst bandwidth-observed
 
