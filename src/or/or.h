@@ -795,6 +795,8 @@ typedef struct {
                                */
   unsigned int is_named:1; /**< Do we believe the nickname that this OR gives
                             * us? */
+  unsigned int is_fast:1; /** Do we think this is a fast OR? */
+  unsigned int is_stable:1; /** Do we think this is a stable OR? */
   unsigned int xx_is_recognized:1; /**< Temporary: do we think that this
                                     * descriptor's digest is recognized?
                                     */
