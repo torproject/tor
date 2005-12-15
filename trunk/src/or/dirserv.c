@@ -1316,6 +1316,8 @@ generate_v2_networkstatus(void)
                                       ri->cache_info.identity_digest);
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_verified;
+      /* 0.1.1.9-alpha is the first version to support fetch by descriptor
+       * hash. */
       int f_v2_dir = ri->dir_port &&
         tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
       char identity64[BASE64_DIGEST_LEN+1];

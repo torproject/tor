@@ -3339,7 +3339,7 @@ router_have_minimum_dir_info(void)
         "We now have enough directory information to build circuits.");
   }
   if (!res && have_enough) {
-    log(LOG_NOTICE, LD_DIR, "Our directory information is no longer up-to-date "
+    log(LOG_NOTICE, LD_DIR,"Our directory information is no longer up-to-date "
         "enough to build circuits.");
   }
   have_enough = res;

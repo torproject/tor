@@ -777,7 +777,8 @@ router_parse_entry_from_string(const char *s, const char *end)
     goto err;
   } else {
     if (tok->n_args < 3) {
-      warn(LD_DIR,"Not enough arguments to \"bandwidth\" in server descriptor.");
+      warn(LD_DIR,
+           "Not enough arguments to \"bandwidth\" in server descriptor.");
       goto err;
     }
     router->bandwidthrate =
