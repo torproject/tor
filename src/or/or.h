@@ -2192,7 +2192,7 @@ typedef struct trusted_dir_server_t {
   unsigned int is_running:1; /**< True iff we think this server is running. */
   /** True iff this server is an authority for the older ("v1") directory
    * protocol.  (All authorities are v2 authorities.) */
-  unsigned int is_v1_authority:1; 
+  unsigned int is_v1_authority:1;
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
