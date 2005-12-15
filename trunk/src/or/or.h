@@ -832,9 +832,10 @@ typedef struct routerstatus_t {
   unsigned int is_running:1; /**< True iff this router is up. */
   unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
   unsigned int is_valid:1; /**< True iff this router is validated. */
-  unsigned int is_v2_dir:1; /**< True iff this router can serve router
+  unsigned int is_v2_dir:1; /**< True iff this router can serve directory
                              * information with v2 of the directory
-                             * protocol */
+                             * protocol. (All directory caches cache v1
+                             * directories.)  */
 } routerstatus_t;
 
 /** DOCDOC */
@@ -2189,9 +2190,9 @@ typedef struct trusted_dir_server_t {
   uint16_t dir_port; /**< Directory port */
   char digest[DIGEST_LEN]; /**< Digest of identity key */
   unsigned int is_running:1; /**< True iff we think this server is running. */
-  unsigned int is_v1_authority:1; /**< True iff this server is an
-                                   * authority for the older ("v1")
-                                   * directory protocol.*/
+  /** True iff this server is an authority for the older ("v1") directory
+   * protocol.  (All authorities are v2 authorities.) */
+  unsigned int is_v1_authority:1; 
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
