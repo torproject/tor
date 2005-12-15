@@ -125,7 +125,6 @@ static struct {
   { "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ,RTR },
   { "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ,  DIR },
   { "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ,  DIR },
-  { "ports",               K_PORTS,               ARGS,    NO_OBJ,  RTR },
   { "bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ,  RTR },
   { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR },
   { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ, ANYSIGNED },
@@ -707,7 +706,6 @@ router_parse_entry_from_string(const char *s, const char *end)
   smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
   directory_token_t *tok;
   int t;
-  int ports_set, bw_set;
   struct in_addr in;
 
   if (!end) {
@@ -750,9 +748,8 @@ router_parse_entry_from_string(const char *s, const char *end)
   router->cache_info.signed_descriptor = tor_strndup(s, end-s);
   router->cache_info.signed_descriptor_len = end-s;
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
-  ports_set = bw_set = 0;
 
-  if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {
+  if (tok->n_args >= 5) {
     router->nickname = tor_strdup(tok->args[0]);
     if (!is_legal_nickname(router->nickname)) {
       warn(LD_DIR,"Router nickname is invalid");
@@ -765,44 +762,22 @@ router_parse_entry_from_string(const char *s, const char *end)
     }
     router->addr = ntohl(in.s_addr);
 
-    if (tok->n_args >= 5) {
-      router->or_port =
-        (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
-      router->dir_port =
-        (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
-      ports_set = 1;
-    }
+    router->or_port =
+      (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
+    router->dir_port =
+      (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
   } else {
     warn(LD_DIR,"Wrong # of arguments to \"router\" (%d)",tok->n_args);
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_PORTS);
-  if (tok && ports_set) {
-    warn(LD_DIR,"Redundant ports line");
-    goto err;
-  } else if (tok) {
-    if (tok->n_args != 3) {
-      warn(LD_DIR,"Wrong # of arguments to \"ports\"");
-      goto err;
-    }
-    router->or_port =
-      (uint16_t) tor_parse_long(tok->args[0],10,0,65535,NULL,NULL);
-    router->dir_port =
-      (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
-    ports_set = 1;
-  }
-
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
-  if (tok && bw_set) {
-    warn(LD_DIR,"Redundant bandwidth line");
+  if (!tok) {
+    warn(LD_DIR,"No bandwidth declared; failing.");
     goto err;
-  } else if (tok) {
+  } else {
     if (tok->n_args < 3) {
-      /* XXXX Once 0.0.7 is *really* dead, restore this warning to its old
-       * form */
-      warn(LD_DIR,"Not enough arguments to \"bandwidth\": must be an obsolete "
-           " server. Rejecting one server (nickname '%s').", router->nickname);
+      warn(LD_DIR,"Not enough arguments to \"bandwidth\" in server descriptor.");
       goto err;
     }
     router->bandwidthrate =
@@ -811,7 +786,6 @@ router_parse_entry_from_string(const char *s, const char *end)
       tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
     router->bandwidthcapacity =
       tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
-    bw_set = 1;
   }
 
   if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
@@ -928,14 +902,6 @@ router_parse_entry_from_string(const char *s, const char *end)
     goto err;
   }
 
-  if (!ports_set) {
-    warn(LD_DIR,"No ports declared; failing.");
-    goto err;
-  }
-  if (!bw_set) {
-    warn(LD_DIR,"No bandwidth declared; failing.");
-    goto err;
-  }
   if (!router->or_port) {
     warn(LD_DIR,"or_port unreadable or 0. Failing.");
     goto err;
