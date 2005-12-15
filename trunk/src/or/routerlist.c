@@ -716,10 +716,9 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
 int
 router_is_unreliable(routerinfo_t *router, int need_uptime, int need_capacity)
 {
-  if (need_uptime && router->uptime < ROUTER_REQUIRED_MIN_UPTIME)
+  if (need_uptime && !router->is_stable)
     return 1;
-  if (need_capacity &&
-      router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
+  if (need_capacity && !router->is_fast)
     return 1;
   return 0;
 }
@@ -3017,6 +3016,8 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       /* If we're an authdir, don't believe others. */
       router->is_verified = rs->status.is_valid;
       router->is_running = rs->status.is_running;
+      router->is_fast = rs->status.is_fast;
+      router->is_stable = rs->is_stable;
     }
     if (router->is_running && ds) {
       ds->n_networkstatus_failures = 0;

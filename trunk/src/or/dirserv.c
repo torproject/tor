@@ -1219,6 +1219,23 @@ should_generate_v2_networkstatus(void)
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }
 
+/** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
+ * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
+ * If <b>need_capacity</b> is non-zero, we require a minimum advertised
+ * bandwidth.
+ */
+static int
+dirserv_thinks_router_is_unreliable(routerinfo_t *router,
+                                    int need_uptime, int need_capacity)
+{
+  if (need_uptime && router->uptime < ROUTER_REQUIRED_MIN_UPTIME)
+    return 1;
+  if (need_capacity &&
+      router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
+    return 1;
+  return 0;
+}
+
 /** For authoritative directories only: replace the contents of
  * <b>the_v2_networkstatus</b> with a newly generated network status
  * object. */
@@ -1309,8 +1326,8 @@ generate_v2_networkstatus(void)
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
       int f_exit = router_is_general_exit(ri);
-      int f_stable = !router_is_unreliable(ri, 1, 0);
-      int f_fast = !router_is_unreliable(ri, 0, 1);
+      int f_stable = !dirserv_thinks_router_is_unreliable(ri, 1, 0);
+      int f_fast = !dirserv_thinks_router_is_unreliable(ri, 0, 1);
       int f_running;
       int f_authority = router_digest_is_trusted_dir(
                                       ri->cache_info.identity_digest);
@@ -1324,6 +1341,8 @@ generate_v2_networkstatus(void)
       char digest64[BASE64_DIGEST_LEN+1];
       if (options->AuthoritativeDir) {
         ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
+        ri->is_fast = f_fast;
+        ri->is_stable = f_stable;
       }
       f_running = ri->is_running;
 
