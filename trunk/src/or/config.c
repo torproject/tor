@@ -112,6 +112,7 @@ static config_var_t _option_vars[] = {
   VAR("AssumeReachable",     BOOL,     AssumeReachable,      "0"),
   VAR("AuthDirInvalid",      LINELIST, AuthDirInvalid,       NULL),
   VAR("AuthDirReject",       LINELIST, AuthDirReject,        NULL),
+  VAR("AuthDirRejectUnlisted",BOOL,    AuthDirRejectUnlisted,"0"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "5 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "2 MB"),

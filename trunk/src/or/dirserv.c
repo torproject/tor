@@ -280,6 +280,7 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
                         const char **msg, int should_log)
 {
   fingerprint_entry_t *nn_ent = NULL, *fp_ent = NULL;
+  int reject_unlisted = get_options()->AuthDirRejectUnlisted;
   if (!fingerprint_list)
     fingerprint_list = smartlist_create();
 
@@ -327,7 +328,7 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
       return FP_INVALID;
     }
     if (!platform || tor_version_as_new_as(platform,"0.1.0.2-rc"))
-      return FP_VALID;
+      return reject_unlisted ? FP_REJECT : FP_VALID;
     else
       return FP_INVALID;
     if (should_log)
