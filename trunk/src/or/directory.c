@@ -818,9 +818,9 @@ body_is_plausible(const char *body, size_t len, int purpose)
 /** We are a client, and we've finished reading the server's
  * response. Parse and it and act appropriately.
  *
- * If we're happy with the result (we get it and it's useful),
- * return 0. Otherwise return -1, and the caller should consider
- * trying the request again.
+ * If we're still happy with using this directory server in the future, return
+ * 0. Otherwise return -1; and the caller should consider trying the request
+ * again.
  *
  * The caller will take care of marking the connection for close.
  */
@@ -1041,11 +1041,11 @@ connection_dir_client_reached_eof(connection_t *conn)
       n_asked_for = smartlist_len(which);
     }
     if (status_code != 200) {
-      int no_warn = status_code == 404 ||
-        (status_code == 400 && !strcmp(reason, "Servers unavailable."));
+      int dir_okay = status_code == 404 ||
+        (status_code == 400 && strcmp(reason, "Servers unavailable."));
       /* 404 means that it didn't have them; no big deal.
        * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
-      log_fn(no_warn ? LOG_INFO : LOG_WARN, LD_DIR,
+      log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
              "Received http status code %d (\"%s\") from server '%s:%d' "
              "while fetching \"/tor/server/%s\". I'll try again soon.",
              status_code, reason, conn->address, conn->port,
@@ -1058,7 +1058,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         smartlist_free(which);
       }
       tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
+      return dir_okay ? 0 : -1;
     }
     /* Learn the routers, assuming we requested by fingerprint or "all".
      * Right now, we only use "authority" to fetch ourself, so we don't want
@@ -1182,15 +1182,6 @@ connection_dir_reached_eof(connection_t *conn)
   int retval;
   if (conn->state != DIR_CONN_STATE_CLIENT_READING) {
     info(LD_HTTP,"conn reached eof, not reading. Closing.");
-    /* This check is temporary; it's to let us know whether we should consider
-     * parsing partial serverdesc responses. */
-    if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
-        buf_datalen(conn->inbuf)>=(24*1024)) {
-      notice(LD_DIR,
-             "Directory connection closed early after downloading %d bytes of "
-             "descriptors. If this happens often, please file a bug report.",
-             (int)buf_datalen(conn->inbuf));
-    }
     connection_close_immediate(conn); /* error: give up on flushing */
     connection_mark_for_close(conn);
     return -1;
