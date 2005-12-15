@@ -3017,7 +3017,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       router->is_verified = rs->status.is_valid;
       router->is_running = rs->status.is_running;
       router->is_fast = rs->status.is_fast;
-      router->is_stable = rs->is_stable;
+      router->is_stable = rs->status.is_stable;
     }
     if (router->is_running && ds) {
       ds->n_networkstatus_failures = 0;
