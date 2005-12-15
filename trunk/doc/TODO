@@ -34,12 +34,55 @@ NR- write a spec appendix for 'being nice with tor'
     tor-0.1.0.7.rc
   - Remove need for HACKING file.
 
-for 0.1.1.10-alpha:
-N - if they're trying to be a tor server and they're running
-    win 98 or win me, don't let them be a server.
-  o ReachableAddresses doesn't do what we want wrt dir fetches.
 
 for 0.1.1.x:
+N - if they're trying to be a tor server and they're running
+    win 98 or win me, give them a message talking about The Bug.
+
+  . Helper nodes
+    . More testing and debugging
+R   - If your helper nodes are unavailable, don't abandon them unless
+      other nodes *are* reachable.
+
+N - Destroy and truncated cells should have reasons.
+
+N - Add a panic-button config option to buy us time if we get sybiled.
+
+N - Clients use Stable and Fast instead of uptime and bandwidth to
+    pick which servers are stable/fast.
+
+N - Only use a routerdesc if you recognize its hash.
+    - (Must defer till dirservers are upgraded to latest code, which
+      actually generates these hashes.)
+    - Of course, authdirservers must not do this.
+    - Should directory mirrors do something else entirely?
+    o If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
+      fetch a new one if it was published in the last 2 hours.
+      - How does this interact with the 'recognized hash' rule?
+
+R - Christian Grothoff's attack of infinite-length circuit.
+    the solution is to have a separate 'extend-data' cell type
+    which is used for the first N data cells, and only
+    extend-data cells can be extend requests.
+    - Specify, including thought about
+    - Implement
+
+R - When we connect to a Tor server, it sends back a signed cell listing
+    the IP it believes it is using. Use this to block dvorak's attack.
+    Also, this is a fine time to say what time you think it is.
+    - Verify that a new cell type is okay with deployed codebase
+    - Specify
+    - Implement
+
+R - clients prefer to avoid exit nodes for non-exit path positions.
+
+  - find 10 dirservers.
+    - What are criteria to be a dirserver?  Write a policy.
+
+
+
+Deferred from 0.1.1.x:
+
 N . Additional controller features
       o Find a way to make event info more extensible
       - change circuit status events to give more details, like purpose,
@@ -67,39 +110,9 @@ N       - Specify and implement it.
         without using SOCKS.
       - Make everything work with hidden services
 
-  . Helper nodes
-    . More testing and debugging
-    o On sighup, if usehelpernodes changed to 1, use new circuits?
-    - If your helper nodes are unavailable, don't abandon them unless
-      other nodes *are* reachable.
-    o If you think an OR conn is open but you can never establish a circuit
-      to it, reconsider whether it's actually open.
-
   X switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
     back out if we decide we prefer it the way it already is. hm.
-
-  - Christian Grothoff's attack of infinite-length circuit.
-    the solution is to have a separate 'extend-data' cell type
-    which is used for the first N data cells, and only
-    extend-data cells can be extend requests.
-    - Specify, including thought about
-    - Implement
-
-  - When we connect to a Tor server, it sends back a signed cell listing
-    the IP it believes it is using. Use this to block dvorak's attack.
-    Also, this is a fine time to say what time you think it is.
-    - Verify that a new cell type is okay with deployed codebase
-    - Specify
-    - Implement
-
-N - Destroy and truncated cells should have reasons.
-  o Add private:* alias in exit policies to make it easier to ban all the
-    fiddly little 192.168.foo addresses.
-    o Implement
-    o Document
-
-  o warn if listening for SOCKS on public IP.
 
   - cpu fixes:
     - see if we should make use of truncate to retry
@@ -116,11 +129,8 @@ R   - kill dns workers more slowly
       o dirservers have blacklist of IPs and keys they hate
       - a way of rolling back approvals to before a timestamp
         - Consider minion-like fingerprint file/log combination.
-      - Add a panic-button config option to buy us time if we get sybiled.
 
     - Decentralization
-      - find 10 dirservers.
-        - What are criteria to be a dirserver?  Write a policy.
       o Dirservers publish compressed network-status objects.
         o Support retrieving several-at-once
       o Everyone downloads network-status objects
@@ -128,7 +138,7 @@ R   - kill dns workers more slowly
           o Basic implementation: disable until 0.1.1.x is out.
           o On failure, mark trusted_dir_server as having failed
           o Retry, up to a point.
-N         - Launch retry immediately on failure.
+          X Launch retry immediately on failure.
         o Parse them
         o Cache them, reload on restart
         o Serve cached directories
@@ -156,7 +166,7 @@ N         - Launch retry immediately on failure.
         o Alice sets descriptor status from network-status
           o Implement
           o Use
-N     . Routerdesc download changes
+      o Routerdesc download changes
         o Refactor combined-status to be its own type.
         o Change rule from "do not launch new connections when one exists" to
           "do not request any fingerprint that we're currently requesting."
@@ -165,16 +175,7 @@ N     . Routerdesc download changes
           o Mirrors retry harder and more often. (0, 0, 1, 1, 2, 5, and 15)
         o Reset failure count every 60 minutes
         o Drop fallback to download-all.  Also, always split download.
-        - Only use a routerdesc if you recognize its hash.
-          - (Must defer till dirservers are upgraded to latest code, which
-            actually generates these hashes.)
-          - Of course, authdirservers must not do this.
-          - Should directory mirrors do something else entirely?
-        - Use has_fetched_directory sanely, whatever that means.
-          - What *does* that mean?
-        o If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
-          fetch a new one if it was published in the last 2 hours.
-          - How does this interact with the 'recognized hash' rule?
+        o Use has_fetched_directory sanely, whatever that means.
       o Downgrade new directory events from notice to info
       o Call dirport_is_reachable from somewhere else.
       o Networkstatus should list who's an authority.
@@ -182,17 +183,14 @@ N     . Routerdesc download changes
       o Warn when using non-default directory servers.
       o When giving up on a non-finished dir request, log how many bytes
         dropped, to see whether it's worthwhile to use partial info.
-    - Flags
-N     - Clients use Stable and Fast instead of uptime and bandwidth to
-        pick which servers are stable/fast.
+
     - config option to publish what ports you listen on, beyond
       ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
       - Parse this.
       - Relay this in networkstatus.
 
-    - Make authorities rate-limit logging their complaints about given
+    X Make authorities rate-limit logging their complaints about given
       servers?
-      - Is this still necessary?
     o All versions of Tor should get cosmetic changes rate-limited.
     o Pick directories from networkstatus objects, not from routerlist.
       o But! We can't do this easily, since we want to know about platform,
@@ -216,15 +214,8 @@ N   - Vet all pending installer patches
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
 
-  o Start using create-fast cells as clients
-    o Make this easy to disable via configuration options.
-    o At the very least, implement this, and maybe leave it off.
-    o Document option. Document that clients do this.
-    o Audit code to verify that keys are generated right.
-
   - Can/should we really dump "ports" from routerparse?
 
-Deferred from 0.1.1.x:
   o Let more config options (e.g. ORPort) change dynamically.
   o Add TTLs to DNS-related replies, and use them (when present) to adjust
     addressmap values.
