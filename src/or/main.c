@@ -513,7 +513,8 @@ directory_all_unreachable(time_t now)
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
-    notice(LD_NET,"Network down? Failing connection to '%s:%d'.",
+    notice(LD_NET,
+           "Is your network connection down? Failing connection to '%s:%d'.",
            safe_str(conn->socks_request->address), conn->socks_request->port);
     connection_mark_unattached_ap(conn, END_STREAM_REASON_NET_UNREACHABLE);
   }
