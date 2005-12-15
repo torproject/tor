@@ -794,8 +794,8 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
  * <b>excludedsmartlist</b>, even if they are the only nodes
  * available.  If <b>strict</b> is true, never pick any node besides
  * those in <b>preferred</b>.
- * If <b>need_uptime</b> is non-zero, don't return a router with less
- * than a minimum uptime.
+ * If <b>need_uptime</b> is non-zero and any router has more than
+ * a minimum uptime, return one of those.
  * If <b>need_capacity</b> is non-zero, weight your choice by the
  * advertised capacity of each router.
  */
@@ -837,6 +837,15 @@ router_choose_random_node(const char *preferred,
     else
       choice = smartlist_choose(sl);
     smartlist_free(sl);
+    if (!choice && (need_uptime || need_capacity)) {
+      /* try once more -- recurse but with fewer restrictions. */
+      info(LD_CIRC, "We couldn't find any live%s%s routers; falling back "
+           "to list of all routers.",
+           need_capacity?", fast":"",
+           need_uptime?", stable":"");
+      choice = router_choose_random_node(
+        NULL, excluded, excludedsmartlist, 0, 0, allow_unverified, 0);
+    }
   }
   smartlist_free(excludednodes);
   if (!choice)
