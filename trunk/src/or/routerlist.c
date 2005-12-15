@@ -46,8 +46,6 @@ static smartlist_t *trusted_dir_servers = NULL;
 /** Global list of all of the routers that we know about. */
 static routerlist_t *routerlist = NULL;
 
-extern int has_fetched_directory; /* from main.c */
-
 /** Global list of all of the current network_status documents that we know
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
@@ -497,8 +495,12 @@ mark_all_trusteddirservers_up(void)
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
     {
+      local_routerstatus_t *rs;
       dir->is_running = 1;
       dir->n_networkstatus_failures = 0;
+      rs = router_get_combined_status_by_digest(dir->digest);
+      if (rs)
+        rs->status.is_running = 1;
     });
   }
   last_networkstatus_download_attempted = 0;
@@ -573,6 +575,7 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
 {
   routerinfo_t *router;
   smartlist_t *nickname_list;
+  int have_dir_info = router_have_minimum_dir_info();
 
   if (!list)
     return; /* nothing to do */
@@ -607,7 +610,7 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
       }
     } else {
       if (!warned) {
-        log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO, LD_CONFIG,
+        log_fn(have_dir_info ? LOG_WARN : LOG_INFO, LD_CONFIG,
                "Nickname list includes '%s' which isn't a known router.",nick);
         smartlist_add(warned_nicknames, tor_strdup(nick));
       }
@@ -2559,10 +2562,6 @@ add_trusted_dir_server(const char *nickname, const char *address,
   strlcpy(ent->fake_status.nickname, nickname,
           sizeof(ent->fake_status.nickname));
   ent->fake_status.dir_port = ent->dir_port;
-  ent->fake_status.is_running = 1;
-  ent->fake_status.is_named = 1;
-  ent->fake_status.is_valid = 1;
-  ent->fake_status.is_v2_dir = 1;
 
   smartlist_add(trusted_dir_servers, ent);
 }
@@ -3308,19 +3307,43 @@ update_router_descriptor_downloads(time_t now)
 /** Return true iff we have enough networkstatus and router information to
  * start building circuits.  Right now, this means "at least 2 networkstatus
  * documents, and at least 1/4 of expected routers." */
-//XXX should consider whether we have enough exiting nodes here.
-//and also consider if they're too "old"?
 int
 router_have_minimum_dir_info(void)
 {
-  int tot = 0, avg;
-  if (!networkstatus_list || smartlist_len(networkstatus_list)<2 ||
-      !routerlist)
-    return 0;
+  int tot = 0, any_running = 0;
+  int n_ns, res, avg;
+  static int have_enough = 0;
+  if (!networkstatus_list || !routerlist) {
+    res = 0;
+    goto done;
+  }
+  n_ns = smartlist_len(networkstatus_list);
+  if (n_ns<2) {
+    res = 0;
+    goto done;
+  }
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
                     tot += smartlist_len(ns->entries));
-  avg = tot / smartlist_len(networkstatus_list);
-  return smartlist_len(routerlist->routers) > (avg/4);
+  avg = tot / n_ns;
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+     {
+       if (rs->status.is_running) {
+         any_running = 1;
+         break;
+       }
+     });
+  res = smartlist_len(routerlist->routers) > (avg/4) && any_running;
+ done:
+  if (res && !have_enough) {
+    log(LOG_NOTICE, LD_DIR,
+        "We now have enough directory information to build circuits.");
+  }
+  if (!res && !have_enough) {
+    log(LOG_NOTICE, LD_DIR, "Our directory information is no longer up-to-date "
+        "enough to build circuits.");
+  }
+  have_enough = res;
+  return res;
 }
 
 /** Reset the descriptor download failure count on all routers, so that we

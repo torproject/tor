@@ -212,7 +212,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
       /* anybody with a non-zero dirport will do. Disregard firewalls. */
       rs = router_pick_directory_server(1, 0, need_v2_support,
                                         retry_if_no_servers);
-      /* XXXX If no rs, fall back to trusted dir servers? -NM */
+      /* If we have any hope of building an indirect conn, we know some router
+       * decriptors.  If (rs==NULL), we can't build circuits anyway, so
+       * there's no point in falling back to the authorities in this case.  */
     }
   }
 

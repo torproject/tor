@@ -19,7 +19,6 @@ const char circuituse_c_id[] =
 /********* START VARIABLES **********/
 
 extern circuit_t *global_circuitlist; /* from circuitlist.c */
-extern int has_fetched_directory; /* from main.c */
 
 /********* END VARIABLES ************/
 
@@ -423,7 +422,7 @@ circuit_build_needed_circs(time_t now)
   connection_ap_attach_pending();
 
   /* make sure any hidden services have enough intro points */
-  if (has_fetched_directory)
+  if (router_have_minimum_dir_info())
     rend_services_introduce();
 
   if (time_to_new_circuit < now) {
@@ -769,8 +768,9 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *extend_info,
 {
   circuit_t *circ;
 
-  if (!has_fetched_directory) {
-    debug(LD_CIRC,"Haven't fetched directory yet; canceling circuit launch.");
+  if (!router_have_minimum_dir_info()) {
+    debug(LD_CIRC,"Haven't fetched enough directory info yet; canceling "
+          "circuit launch.");
     return NULL;
   }
 
@@ -899,7 +899,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     return 1; /* we're happy */
   }
 
-  if (!has_fetched_directory) {
+  if (!router_have_minimum_dir_info()) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
       notice(LD_APP|LD_DIR,"Application request when we're believed to be "
              "offline. Optimistically trying directory fetches again.");
@@ -910,7 +910,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       /* XXXX011 NM This should be a generic "retry all directory fetches". */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
-    /* the stream will be dealt with when has_fetched_directory becomes
+    /* the stream will be dealt with when router_have_minimum_dir_info becomes
      * 1, or when all directory attempts fail and directory_all_unreachable()
      * kills it.
      */

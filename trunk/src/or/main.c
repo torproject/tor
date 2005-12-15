@@ -57,11 +57,6 @@ static smartlist_t *closeable_connection_lst = NULL;
 
 static int nfds=0; /**< Number of connections currently active. */
 
-/** We set this to 1 when we've fetched a dir, to know whether to complain
- * yet about unrecognized nicknames in entrynodes, exitnodes, etc.
- * Also, we don't try building circuits unless this is 1. */
-int has_fetched_directory=0;
-
 /** We set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working. */
 int has_completed_circuit=0;
@@ -513,9 +508,7 @@ void
 directory_all_unreachable(time_t now)
 {
   connection_t *conn;
-  /* XXXX011 NM Update this to reflect new directories? */
 
-  has_fetched_directory=0;
   stats_n_seconds_working=0; /* reset it */
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
@@ -573,13 +566,6 @@ directory_info_has_arrived(time_t now, int from_cache)
         "build a circuit.");
     return;
   }
-
-  if (!has_fetched_directory) {
-    log(LOG_NOTICE, LD_DIR, "We have enough directory information to "
-        "build circuits.");
-  }
-
-  has_fetched_directory=1;
 
   if (server_mode(options) &&
       !we_are_hibernating()) { /* connect to the appropriate routers */
@@ -704,6 +690,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_add_entropy = 0;
   or_options_t *options = get_options();
   int i;
+  int have_dir_info;
 
   /** 0. See if we've been asked to shut down and our timeout has
    * expired; or if our bandwidth limits are exhausted and we
@@ -861,7 +848,8 @@ run_scheduled_events(time_t now)
    *    that became dirty more than MaxCircuitDirtiness seconds ago,
    *    and we make a new circ if there are no clean circuits.
    */
-  if (has_fetched_directory && !we_are_hibernating())
+  have_dir_info = router_have_minimum_dir_info();
+  if (have_dir_info && !we_are_hibernating())
     circuit_build_needed_circs(now);
 
   /** 5. We do housekeeping for each connection... */
@@ -883,7 +871,7 @@ run_scheduled_events(time_t now)
   circuit_close_all_marked();
 
   /** 7. And upload service descriptors if necessary. */
-  if (has_fetched_directory && !we_are_hibernating())
+  if (have_dir_info && !we_are_hibernating())
     rend_consider_services_upload(now);
 
   /** 8. and blow away any connections that need to die. have to do this now,
