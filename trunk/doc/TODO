@@ -49,13 +49,39 @@ N - Destroy and truncated cells should have reasons.
     - Implement
 
 N - Only use a routerdesc if you recognize its hash.
-    - (Must defer till dirservers are upgraded to latest code, which
+    o (Must defer till dirservers are upgraded to latest code, which
       actually generates these hashes.)
     - Of course, authdirservers must not do this.
-    - Should directory mirrors do something else entirely?
     o If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
       fetch a new one if it was published in the last 2 hours.
       - How does this interact with the 'recognized hash' rule?
+    - Do not ask for any routers until we have 2 networkstatuses.
+    - Client side:
+      - Keep a record of which hash is most desirable for each router inside
+        local_routerstatus_t.
+        - If any hash is listed by two or more networkstatuses, the most
+          recent such hash is most desirable.
+        - Otherwise, the most recent is desirable.
+      - Once we've accepted a router, it's okay.
+      - Do not accept a router that no networkstatus lists. (This should maybe
+        get stricter.)
+      - Download by fingerprint.
+      - Reset failure count to zero when hash changes.
+    - Mirrors and authorities:
+      - Every time we hear a new networkstatus, we want every hash it lists.
+      - Make sure that we are always willing to keep at least N routerinfos
+        per router, where N = number of authorities.
+        - Do whatever else is needed to be sure that we don't request
+          hashes that would be immediately discarded, or discard hashes
+          that would be immediately re-requested.
+      - Only fetch routerinfo from an authority that mentions is.
+        - Only ask each authority once.
+        - Retry soon after failure.
+        - We need one bit per routerstatus for "should we download from
+          this guy."
+
+N - Should router info have a pointer to routerstatus?
+    - We should at least do something about the duplicated fields.
 
 R - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
