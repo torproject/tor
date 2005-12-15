@@ -48,12 +48,6 @@ N - Destroy and truncated cells should have reasons.
     - Specify
     - Implement
 
-  o Add a panic-button config option to buy us time if we get sybiled:
-    Limit nodes to those listed in fingerprints file.
-
-  o Clients use Stable and Fast instead of uptime and bandwidth to
-    pick which servers are stable/fast.
-
 N - Only use a routerdesc if you recognize its hash.
     - (Must defer till dirservers are upgraded to latest code, which
       actually generates these hashes.)
