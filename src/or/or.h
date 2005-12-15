@@ -1315,6 +1315,8 @@ typedef struct {
                                  * reject. */
   config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
                                   * never mark as valid. */
+  int AuthDirRejectUnlisted; /**< Boolean: do we reject all routers that
+                              * aren't named in our fingprint file? */
   char *AccountingStart; /**< How long is the accounting interval, and when
                           * does it start? */
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting
