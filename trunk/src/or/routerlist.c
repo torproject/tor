@@ -3345,6 +3345,7 @@ router_have_minimum_dir_info(void)
         "enough to build circuits.%s",
         any_running ? "" : " (All servers seem down -- network down?)");
   }
+  have_enough = res;
   return res;
 }
 
