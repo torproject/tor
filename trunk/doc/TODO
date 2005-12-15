@@ -45,10 +45,13 @@ R   - If your helper nodes are unavailable, don't abandon them unless
       other nodes *are* reachable.
 
 N - Destroy and truncated cells should have reasons.
+    - Specify
+    - Implement
 
-N - Add a panic-button config option to buy us time if we get sybiled.
+  o Add a panic-button config option to buy us time if we get sybiled:
+    Limit nodes to those listed in fingerprints file.
 
-N - Clients use Stable and Fast instead of uptime and bandwidth to
+  o Clients use Stable and Fast instead of uptime and bandwidth to
     pick which servers are stable/fast.
 
 N - Only use a routerdesc if you recognize its hash.
@@ -214,7 +217,7 @@ N   - Vet all pending installer patches
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
 
-  - Can/should we really dump "ports" from routerparse?
+  o Dump "ports" from routerparse?
 
   o Let more config options (e.g. ORPort) change dynamically.
   o Add TTLs to DNS-related replies, and use them (when present) to adjust
