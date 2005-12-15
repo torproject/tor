@@ -2195,7 +2195,10 @@ typedef struct trusted_dir_server_t {
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
-                               * dir_server_t as a routerstatus_t. */
+                               * dir_server_t to directory_initiate_command_*
+                               * as a routerstatus_t.  Not updated by the
+                               * router-status management code!
+                               **/
 } trusted_dir_server_t;
 
 int router_reload_router_list(void);
