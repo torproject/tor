@@ -3307,6 +3307,7 @@ update_router_descriptor_downloads(time_t now)
 /** Return true iff we have enough networkstatus and router information to
  * start building circuits.  Right now, this means "at least 2 networkstatus
  * documents, and at least 1/4 of expected routers." */
+//XXX should consider whether we have enough exiting nodes here.
 int
 router_have_minimum_dir_info(void)
 {
