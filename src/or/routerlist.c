@@ -2558,8 +2558,11 @@ add_trusted_dir_server(const char *nickname, const char *address,
 
   ent->fake_status.addr = ent->addr;
   memcpy(ent->fake_status.identity_digest, digest, DIGEST_LEN);
-  strlcpy(ent->fake_status.nickname, nickname,
-          sizeof(ent->fake_status.nickname));
+  if (nickname)
+    strlcpy(ent->fake_status.nickname, nickname,
+            sizeof(ent->fake_status.nickname));
+  else
+    ent->fake_status.nickname[0] = '\0';
   ent->fake_status.dir_port = ent->dir_port;
 
   smartlist_add(trusted_dir_servers, ent);
