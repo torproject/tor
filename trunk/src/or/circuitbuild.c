@@ -584,7 +584,8 @@ circuit_send_next_onion_skin(circuit_t *circ)
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
     circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
     info(LD_CIRC,"First hop: finished sending %s cell to '%s'",
-         fast ? "CREATE_FAST" : "CREATE", router->nickname);
+         fast ? "CREATE_FAST" : "CREATE",
+         router ?  router->nickname : "<unnamed>");
   } else {
     tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
     tor_assert(circ->state == CIRCUIT_STATE_BUILDING);
