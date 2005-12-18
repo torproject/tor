@@ -1042,7 +1042,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     if (status_code != 200) {
       int dir_okay = status_code == 404 ||
-        (status_code == 400 && strcmp(reason, "Servers unavailable."));
+        (status_code == 400 && !strcmp(reason, "Servers unavailable."));
       /* 404 means that it didn't have them; no big deal.
        * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
       log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
