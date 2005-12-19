@@ -713,8 +713,8 @@ connection_edge_process_end_not_open(
             return 0;
           /* else, conn will get closed below */
         } else {
-          notice(LD_APP,"Have tried resolving address '%s' at %d different "
-                 "places. Giving up.",
+          notice(LD_APP,"Have tried resolving or connecting to address '%s' "
+                 "at %d different places. Giving up.",
                  safe_str(conn->socks_request->address), MAX_RESOLVE_FAILURES);
           /* clear the failures, so it will have a full try next time */
           client_dns_clear_failures(conn->socks_request->address);
