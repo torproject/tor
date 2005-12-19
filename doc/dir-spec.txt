@@ -41,7 +41,7 @@ $Id$
    load on the directory authorities.  They announce this in their
    descriptors.
 
-   Each directory authorities periodically generates and signs a compact
+   Each directory authority periodically generates and signs a compact
    "network status" document that lists that authority's view of the current
    descriptors and status for known routers, but which does not include the
    descriptors themselves.
@@ -113,7 +113,7 @@ $Id$
    entries, and a signature, in that order.
 
    We use the same meta-format as used for directories and router descriptors
-   in "tor-spec.txt".  Impkementations Implementations MAY insert blank lines
+   in "tor-spec.txt".  Implementations MAY insert blank lines
    for clarity between sections; these blank lines are ignored.
    Implementations MUST NOT depend on blank lines in any particular location.
 
@@ -435,7 +435,7 @@ $Id$
 
    For time-sensitive information, Tor implementations focus on "recent"
    network-status documents.  A network status is "recent" if it is live, and
-   if it was published in the last 60 minutes.  If there are fewer than fewer
+   if it was published in the last 60 minutes.  If there are fewer
    than 3 such documents, the most recently published 3 are "recent."  If
    there are fewer than 3 in all, all are "recent.")
 
@@ -447,7 +447,7 @@ $Id$
    network status documents.  Clients SHOULD NOT use unlisted servers.
 
    A server is "valid" if it is listed as valid by more than half of the live
-   network-status documents.  Clients SHOULD NOT non-valid servers unless
+   network-status documents.  Clients SHOULD NOT use non-valid servers unless
    specifically configured to do so.
 
    A server is "running" if it is listed as running by more than half of the
@@ -463,14 +463,14 @@ $Id$
    identities, some directory servers bind names to IDs.  Clients handle
    names in two ways:
 
-   When a client encountering a name it has not mapped before:
+   When a client encounters a name it has not mapped before:
 
-      If all the live "Naming" networks-status documents the client has
-      receive that the name binds to some identity ID, and the client has at
+      If all the live "Naming" network-status documents the client has
+      claim that the name binds to some identity ID, and the client has at
       least three live network-status documents, the client maps the name to
       ID.
 
-   If a client is encountering a name it has mapped before:
+   If a client encounters a name it has mapped before:
 
       It uses the last-mapped identity value, unless all of the "Naming"
       network status documents that list the name bind it to some other
