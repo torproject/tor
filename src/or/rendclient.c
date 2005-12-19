@@ -426,6 +426,7 @@ rend_client_desc_here(const char *query)
 
   while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                                  AP_CONN_STATE_RENDDESC_WAIT, query))) {
+    assert_connection_ok(conn, now);
     if (rend_cache_lookup_entry(conn->rend_query, -1, &entry) == 1 &&
         entry->parsed->n_intro_points > 0) {
       /* either this fetch worked, or it failed but there was a
