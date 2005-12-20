@@ -24,5 +24,5 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 
 test_LDADD = ../common/libor.a ../common/libor-crypto.a -lz -lssl -lcrypto
 
-noinst_HEADERS = or.h tree.h
+noinst_HEADERS = or.h
 
