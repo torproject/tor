@@ -56,120 +56,46 @@ guide.</b>
 <br />
 
 <p>
-The latest stable release of Tor for MS Windows is
-<a href="http://tor.eff.org/dist/win32/tor-0.1.0.15-win32.exe">0.1.0.15</a>.
-Download it by clicking the link. You may be able to find experimental versions
-
-<a href="http://tor.eff.org/dist/win32/">here</a>, if you're looking for
-new features and new bugs.
+The latest stable release of the Tor+Privoxy+TorCP bundle for MS Windows
+includes
+<a href="http://www.freehaven.net/~edmanm/torcp/download/tor-0.1.0.15-torcp-0.0.4-bundle.exe">Tor 0.1.0.15</a>.
+Download it by clicking the link. You may be able to find experimental
+versions of Tor <a href="http://tor.eff.org/dist/win32/">here</a>,
+if you're looking for new features and new bugs.
 </p>
 
-<p>
-If you want to run Tor in the system
-tray and/or as a service have a look at this <a
-href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#Win32SystemTrayService">FAQ
-entry</a>. If you dont mind running in a window (so you can see its logs
-and errors) our Tor installer should make everything pretty simple. Below
-is a screenshot of the setup page (your version will probably be newer
-than the version printed in this screenshot):
-</p>
+The installer bundles Tor,
+<a href="http://www.privoxy.org">Privoxy</a>, and
+<a href="http://www.freehaven.net/~edmanm/torcp/">TorCP</a> into
+one package, with the three applications pre-configured to work
+together. Privoxy is a filtering web proxy that integrates well
+with Tor. TorCP is a Tor controller that allows you to monitor
+and control Tor.
 
 <img alt="tor installer splash page"
 src="http://tor.eff.org/img/screenshot-win32-installer-splash.png" />
 
-<p>
-By default, Tor is not configured to run at startup.
-<!--We highly recommend that you enable that feature, however. -->
-You can enable this by checking the "Run at startup" box as shown below.
-Be sure to leave the other boxes checked.
-</p>
+<p>If you have previously installed Tor, Privoxy, or TorCP
+you can deselect whichever components you do not need to install
+in the dialog shown below.
 
 <img alt="select components to install"
 src="http://tor.eff.org/img/screenshot-win32-installer-components.png" />
 
-<p>Once the installer is finished, it will run Tor in a window so
-you can see its logs and errors. (When you wish to browse anonymously,
-you may minimize this window, but do not close it.)
+<p>After you have completed the installer, the components
+you selected will automatically be started for you.
 </p>
 
-<img alt="tor window screenshot"
-src="http://tor.eff.org/img/screenshot-win32-dos-window.png" />
-
+<!--
 <p>Tor comes configured as a client by default. It uses a built-in
 default configuration file, and most people won't need to change any of
 the settings. Tor is now installed.
 </p>
-
-<hr />
-<a id="privoxy"></a>
-<h2><a class="anchor" href="#privoxy">Step Two: Install Privoxy for Web Browsing</a></h2>
-<br />
-
-<p>After installing Tor, you need to configure your applications to use it.
-</p>
-
-<p>
-The first step is to set up web browsing. Start by installing <a
-href="http://www.privoxy.org/">Privoxy</a> (click on 'recent releases',
-then scroll down to the MS Windows installer packages). Privoxy is a filtering
-web proxy that integrates well with Tor. Once it's installed, it should
-appear in your system tray as a "P" in a circle, as pictured below:
-<!-- Exit from
-Privoxy for now by right clicking on the "P" icon and finding the exit option.-->
-</p>
-
-<img alt="privoxy icon in the system tray"
-src="http://tor.eff.org/img/screenshot-win32-privoxy-icon.jpg" />
-
-<p>You need to configure Privoxy to use Tor.
-Open Privoxy's main config file by selecting it from Start Menu|All
-Programs:
-</p>
-
-<img border="1" alt="editing privoxy config"
-src="http://tor.eff.org/img/screenshot-win32-privoxy-config.png" />
-
-<p>Add the line <br>
-<tt>forward-socks4a / localhost:9050 .</tt><br>
-to Privoxy's config file. Don't forget to add the dot at the end.
-The easiest way is to select the above line and copy/paste it into
-the file. Be sure to save.
-</p>
-
-<img border="1" alt="privoxy points to tor"
-src="http://tor.eff.org/img/screenshot-win32-privoxy-edit.png" />
-
-<p>Privoxy keeps a log file of everything passed through it.  In
-order to stop this you will need to comment out two lines by inserting a
-# before the line. The two lines are:<br>
-<tt>logfile privoxy.log</tt><br>
-and the line <br>
-<tt>jarfile jar.log</tt><br>
-Be sure to save.
-</p>
-
-<img border="1" alt="comment out logfile"
-src="http://tor.eff.org/img/screenshot-win32-privoxy-edit-2.png" />
-
-<br>
-
-<img border="1" alt="comment out jarfile"
-src="http://tor.eff.org/img/screenshot-win32-privoxy-edit-3.png" />
-
-<br>
-
-<p>You'll need to exit and restart Privoxy for the changes to take effect:
-</p>
-<ol>
-<li>Right click on the Privoxy systray icon and choose "Exit Privoxy".</li>
-<li>Left click on Start Menu then Programs then Privoxy.  Select the
-green "P" Privoxy icon.  Privoxy should appear in your system
-tray again.</li>
-</ol>
+-->
 
 <hr />
 <a id="using"></a>
-<h2><a class="anchor" href="#using">Step Three: Configure your applications to use Tor</a></h2>
+<h2><a class="anchor" href="#using">Step Two: Configure your applications to use Tor</a></h2>
 <br />
 
 <p>After installing Tor and Privoxy, you need to configure your
@@ -195,7 +121,7 @@ In IE, this looks something like:</p>
 <img alt="Proxy settings in IE"
 src="http://tor.eff.org/img/screenshot-win32-ie-proxies.jpg" />
 
-<p>Using privoxy is <strong>necessary</strong> because <a
+<p>Using Privoxy is <strong>necessary</strong> because <a
 href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS">browsers
 leak your DNS requests when they use a SOCKS proxy directly</a>, which
 is bad for your anonymity. Privoxy also removes certain dangerous
@@ -220,8 +146,18 @@ HOWTO</a>.
 
 <hr />
 <a id="verify"></a>
-<h2><a class="anchor" href="#verify">Step Four: Make sure it's working</a></h2>
+<h2><a class="anchor" href="#verify">Step Three: Make sure it's working</a></h2>
 <br />
+
+<p>
+Check to see that Privoxy and TorCP are running and that TorCP has
+successfully started Tor. Privoxy's icon is a green circle with a "P"
+in it, and TorCP uses a fat grey onion with a green checkmark in your
+system notification area, as shown below:
+</p>
+
+<img alt="TorCP Tray Icon"
+src="http://tor.eff.org/img/screenshot-win32-torcp.png">
 
 <p>
 <a href="http://ipid.shat.net">ipid.shat.net</a> and
@@ -255,7 +191,7 @@ FAQ entry</a> for hints.</p>
 
 <hr />
 <a id="server"></a>
-<h2><a class="anchor" href="#server">Step Five: Configure it as a server</a></h2>
+<h2><a class="anchor" href="#server">Step Four: Configure it as a server</a></h2>
 <br />
 
 <p>The Tor network relies on volunteers to donate bandwidth. The more
