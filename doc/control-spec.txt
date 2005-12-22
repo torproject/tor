@@ -453,7 +453,7 @@ $Id$
 3.13. REDIRECTSTREAM
 
   Sent from the client to the server. The syntax is:
-    "REDIRECTSTREAM" SP StreamID SP Address (Port) CRLF
+    "REDIRECTSTREAM" SP StreamID SP Address (SP Port) CRLF
 
   Tells the server to change the exit address on the specified stream.  If
   Port is specified, changes the destination port as well.  No remapping
