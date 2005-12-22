@@ -305,9 +305,14 @@ $Id$
    fingerprint of <F> should be available at:
       http://<hostname>/tor/server/fp/<F>.z
 
-   The most recent descriptors for servers with fingerprints <F1>,<F2>,<F3>
-   should be available at:
+   The most recent descriptors for servers with identity fingerprints
+   <F1>,<F2>,<F3> should be available at:
       http://<hostname>/tor/server/fp/<F1>+<F2>+<F3>.z
+
+   (NOTE: Implementations SHOULD NOT download descriptors by identity key
+   fingerprint. This allows a corrupted server (in collusion with a cache) to
+   provide a unique descriptor to a client, and thereby partition that client
+   from the rest of the network.)
 
    The descriptor for a server whose digest (in hex) is <D> should be
    available at:
