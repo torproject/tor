@@ -675,7 +675,7 @@ extensible information format.
 
 The highest level object is a Document, which consists of one or more Items.
 Every Item begins with a KeywordLine, followed by one or more Objects. A
-KeywordLine begins with a Keyword, optionally followed by a space and more
+KeywordLine begins with a Keyword, optionally followed by whitespace and more
 non-newline characters, and ends with a newline.  A Keyword is a sequence of
 one or more characters in the set [A-Za-z0-9-].  An Object is a block of
 encoded data in pseudo-Open-PGP-style armor. (cf. RFC 2440)
@@ -684,10 +684,11 @@ More formally:
 
     Document ::= (Item | NL)+
     Item ::= KeywordLine Object*
-    KeywordLine ::= Keyword NL | Keyword SP ArgumentsChar+ NL
+    KeywordLine ::= Keyword NL | Keyword WS ArgumentsChar+ NL
     Keyword = KeywordChar+
     KeywordChar ::= 'A' ... 'Z' | 'a' ... 'z' | '0' ... '9' | '-'
     ArgumentChar ::= any printing ASCII character except NL.
+    WS = (SP | TAB)+
     Object ::= BeginLine Base-64-encoded-data EndLine
     BeginLine ::= "-----BEGIN " Keyword "-----" NL
     EndLine ::= "-----END " Keyword "-----" NL
@@ -748,7 +749,7 @@ The items' formats are as follows:
    "fingerprint"
 
       A fingerprint (20 byte SHA1 hash of asn1 encoded public key, encoded
-      in hex, with spaces after every 4 characters) for this router's
+      in hex, with a single space after every 4 characters) for this router's
       identity key.
 
       [We didn't start parsing this line until Tor 0.1.0.6-rc; it should
@@ -798,9 +799,9 @@ The items' formats are as follows:
 
    "family" names NL
 
-       'Names' is a space-separated list of server nicknames. If two ORs
-       list one another in their "family" entries, then OPs should treat
-       them as a single OR for the purpose of path selection.
+       'Names' is a whitespace-separated list of server nicknames. If two ORs
+       list one another in their "family" entries, then OPs should treat them
+       as a single OR for the purpose of path selection.
 
        For example, if node A's descriptor contains "family B", and node B's
        descriptor contains "family A", then node A and node B should never
@@ -859,7 +860,7 @@ descriptors, and a single "directory-signature" item.
         A list of which versions of which implementations are currently
         believed to be secure and compatible with the network.
 
-    "running-routers" space-separated-list
+    "running-routers" whitespace-separated-list
 
         A description of which routers are currently believed to be up or
         down.  Every entry consists of an optional "!", followed by either an
@@ -873,7 +874,7 @@ descriptors, and a single "directory-signature" item.
         backward compatibility.  New code should parse 'router-status'
         instead.]
 
-    "router-status" space-separated-list
+    "router-status" whitespace-separated-list
 
         A description of which routers are currently believed to be up or
         down, and which are verified or unverified.  Contains one entry for
