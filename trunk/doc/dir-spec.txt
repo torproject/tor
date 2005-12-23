@@ -117,12 +117,15 @@ $Id$
    for clarity between sections; these blank lines are ignored.
    Implementations MUST NOT depend on blank lines in any particular location.
 
+   As used here, "whitespace" is a sequence of 1 or more tab or space
+   characters.
+
    The preamble contains:
 
       "network-status-version" -- A document format version.  For this
          specification, the version is "2".
       "dir-source" -- The authority's hostname, current IP address, and
-         directory port, all separated by spaces.
+         directory port, all separated by whitespace.
       "fingerprint" -- A base16-encoded hash of the signing key's
          fingerprint, with no additional spaces added.
       "contact" -- An arbitrary string describing how to contact the
@@ -134,7 +137,7 @@ $Id$
       "server-versions" -- A comma-separated list of recommended server
         versions.
       "published" -- The publication time for this network-status object.
-      "dir-options" -- A set of flags separated by spaces:
+      "dir-options" -- A set of flags, in any order, separated by whitespace:
           "Names" if this directory authority performs name bindings.
           "Versions" if this directory authority recommends software versions.
 
@@ -148,7 +151,8 @@ $Id$
    For each router, the router entry contains:  (This format is designed for
    conciseness.)
 
-      "r" -- followed by the following elements, separated by spaces:
+      "r" -- followed by the following elements, in order, separated by
+          whitespace:
           - The OR's nickname,
           - A hash of its identity key, encoded in base64, with trailing =
             signs removed.
@@ -160,7 +164,7 @@ $Id$
           - An IP address
           - An OR port
           - A directory port (or "0" for none")
-      "s" -- A series of space-separated status flags:
+      "s" -- A series of whitespace-separated status flags, in any order:
           "Authority" if the router is a directory authority.
           "Exit" if the router is useful for building general-purpose exit
              circuits.
