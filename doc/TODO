@@ -79,6 +79,9 @@ N - Only use a routerdesc if you recognize its hash.
         - Retry soon after failure.
         - We need one bit per routerstatus for "should we download from
           this guy."
+      - Verify that we are actually storing retained old descriptors to our
+        cache.
+    - Non-directories don't need to keep descriptors in memory.
 
 N - Should router info have a pointer to routerstatus?
     - We should at least do something about the duplicated fields.
