@@ -779,6 +779,9 @@ run_scheduled_events(time_t now)
      * and the rend cache. */
     rep_history_clean(now - options->RephistTrackTime);
     rend_cache_clean();
+    /* And while we are at it, save the state with bandwidth history
+     * and more. */
+    or_state_save();
   }
 
   /* Caches need to fetch running_routers; directory clients don't. */
@@ -1494,6 +1497,7 @@ tor_cleanup(void)
     unlink(options->PidFile);
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
+  or_state_save();
   tor_free_all(0); /* move tor_free_all back into the ifdef below later. XXX*/
   crypto_global_cleanup();
 #ifdef USE_DMALLOC

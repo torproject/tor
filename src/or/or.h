@@ -1369,6 +1369,13 @@ typedef struct {
   uint64_t AccountingExpectedUsage;
 
   config_line_t *HelperNodes;
+
+  time_t      BWHistoryReadEnds;
+  int         BWHistoryReadInterval;
+  smartlist_t *BWHistoryReadValues;
+  time_t      BWHistoryWriteEnds;
+  int         BWHistoryWriteInterval;
+  smartlist_t *BWHistoryWriteValues;
 } or_state_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024
@@ -2023,6 +2030,9 @@ void rep_hist_note_used_internal(time_t now, int need_uptime,
                                  int need_capacity);
 int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
                                     int *need_capacity);
+
+int rep_hist_update_state(or_state_t *state);
+int rep_hist_load_state(or_state_t *state, const char **err);
 
 void rep_hist_free_all(void);
 
