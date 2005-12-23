@@ -580,6 +580,41 @@ rep_hist_bandwidth_assess(void)
 }
 
 /**
+ * Print the bandwidth history of b (either read_array or write_array)
+ * into the buffer pointed to by buf.  The format is simply comma
+ * separated numbers, from oldest to newest.
+ *
+ * It returns the number of bytes written.
+ */
+size_t
+rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
+{
+  char *cp = buf;
+  int i, n;
+
+  if (b->num_maxes_set <= b->next_max_idx) {
+    /* We haven't been through the circular array yet; time starts at i=0.*/
+    i = 0;
+  } else {
+    /* We've been around the array at least once.  The next i to be
+       overwritten is the oldest. */
+    i = b->next_max_idx;
+  }
+
+  for (n=0; n<b->num_maxes_set; ++n,++i) {
+    while (i >= NUM_TOTALS) i -= NUM_TOTALS;
+    if (n==(b->num_maxes_set-1))
+      tor_snprintf(cp, len-(cp-buf), U64_FORMAT,
+                   U64_PRINTF_ARG(b->totals[i]));
+    else
+      tor_snprintf(cp, len-(cp-buf), U64_FORMAT",",
+                   U64_PRINTF_ARG(b->totals[i]));
+    cp += strlen(cp);
+  }
+  return cp-buf;
+}
+
+/**
  * Allocate and return lines for representing this server's bandwidth
  * history in its descriptor.
  */
@@ -588,7 +623,7 @@ rep_hist_get_bandwidth_lines(void)
 {
   char *buf, *cp;
   char t[ISO_TIME_LEN+1];
-  int r, i, n;
+  int r;
   bw_array_t *b;
   size_t len;
 
@@ -604,29 +639,115 @@ rep_hist_get_bandwidth_lines(void)
                  r ? "read-history" : "write-history", t,
                  NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
-
-    if (b->num_maxes_set <= b->next_max_idx)
-      /* We haven't been through the circular array yet; time starts at i=0.*/
-      i = 0;
-    else
-      /* We've been around the array at least once.  The next i to be
-         overwritten is the oldest. */
-      i = b->next_max_idx;
-
-    for (n=0; n<b->num_maxes_set; ++n,++i) {
-      while (i >= NUM_TOTALS) i -= NUM_TOTALS;
-      if (n==(b->num_maxes_set-1))
-        tor_snprintf(cp, len-(cp-buf), U64_FORMAT,
-                     U64_PRINTF_ARG(b->totals[i]));
-      else
-        tor_snprintf(cp, len-(cp-buf), U64_FORMAT",",
-                     U64_PRINTF_ARG(b->totals[i]));
-      cp += strlen(cp);
-    }
+    cp += rep_hist_fill_bandwidth_history(cp, len-(cp-buf), b);
     strlcat(cp, "\n", len-(cp-buf));
     ++cp;
   }
   return buf;
+}
+
+/** Update the state with bandwidth history
+ * A return value of 0 means nothing was updated,
+ * a value of 1 means something has
+ */
+int
+rep_hist_update_state(or_state_t *state)
+{
+  int len, r;
+  char *buf, *cp;
+  smartlist_t **s_values;
+  time_t *s_begins;
+  int *s_interval;
+  bw_array_t *b;
+
+  len = 20*NUM_TOTALS+1;
+  buf = tor_malloc_zero(len);
+
+  for (r=0;r<2;++r) {
+    b = r?read_array:write_array;
+    s_begins  = r?&state->BWHistoryReadEnds    :&state->BWHistoryWriteEnds;
+    s_interval= r?&state->BWHistoryReadInterval:&state->BWHistoryWriteInterval;
+    s_values  = r?&state->BWHistoryReadValues  :&state->BWHistoryWriteValues;
+
+    *s_begins = b->next_period;
+    *s_interval = NUM_SECS_BW_SUM_INTERVAL;
+    if (*s_values) {
+      SMARTLIST_FOREACH(*s_values, char *, cp, tor_free(cp));
+      smartlist_free(*s_values);
+    }
+    cp = buf;
+    cp += rep_hist_fill_bandwidth_history(cp, len, b);
+    tor_snprintf(cp, len-(cp-buf), cp == buf ? U64_FORMAT : ","U64_FORMAT,
+                 U64_PRINTF_ARG(b->total_in_period));
+    *s_values = smartlist_create();
+    smartlist_split_string(*s_values, buf, ",", SPLIT_SKIP_SPACE, 0);
+  }
+  tor_free(buf);
+  state->dirty = 1;
+  return 1;
+}
+
+/** Set bandwidth history from our saved state.
+ */
+int
+rep_hist_load_state(or_state_t *state, const char **err)
+{
+  time_t s_begins, start;
+  time_t now = time(NULL);
+  uint64_t v;
+  int r,i,ok;
+  int all_ok = 1;
+  int s_interval;
+  smartlist_t *s_values;
+  bw_array_t *b;
+
+  /* Assert they already have been malloced */
+  tor_assert(read_array && write_array);
+
+  for (r=0;r<2;++r) {
+    b = r?read_array:write_array;
+    s_begins = r?state->BWHistoryReadEnds:state->BWHistoryWriteEnds;
+    s_interval =  r?state->BWHistoryReadInterval:state->BWHistoryWriteInterval;
+    s_values =  r?state->BWHistoryReadValues:state->BWHistoryWriteValues;
+    if (s_values && s_begins >= now - NUM_SECS_BW_SUM_INTERVAL*NUM_TOTALS) {
+      start = s_begins - s_interval*(smartlist_len(s_values));
+
+      b->cur_obs_time = start;
+      b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
+      SMARTLIST_FOREACH(s_values, char *, cp, {
+        v = tor_parse_uint64(cp, 10, 0, UINT64_MAX, &ok, NULL);
+        if (!ok) {
+          all_ok=0;
+          notice(LD_GENERAL, "Could not parse '%s' into a number.'", cp);
+        }
+        add_obs(b, start, v);
+        start += NUM_SECS_BW_SUM_INTERVAL;
+      });
+    }
+
+    /* Clean up maxima and observed */
+    /* Do we really want to zero this for the purpose of max capacity? */
+    for (i=0; i<NUM_SECS_ROLLING_MEASURE; ++i) {
+      b->obs[i] = 0;
+    }
+    b->total_obs = 0;
+    for (i=0; i<NUM_TOTALS; ++i) {
+      b->maxima[i] = 0;
+    }
+    b->max_total = 0;
+  }
+
+  if (!all_ok) {
+    if (err)
+      *err = "Parsing of bandwidth history values failed";
+    /* and create fresh arrays */
+    tor_free(read_array);
+    tor_free(write_array);
+    read_array = bw_array_new();
+    write_array = bw_array_new();
+    return -1;
+  }
+  return 0;
 }
 
 /** A list of port numbers that have been used recently. */

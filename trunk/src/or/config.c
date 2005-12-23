@@ -229,6 +229,13 @@ static config_var_t _state_vars[] = {
   VAR("HelperNodes",             LINELIST_V,  HelperNodes,          NULL),
   VAR("LastWritten",             ISOTIME,     LastWritten,          NULL),
 
+  VAR("BWHistoryReadEnds",       ISOTIME,     BWHistoryReadEnds,      NULL),
+  VAR("BWHistoryReadInterval",   UINT,        BWHistoryReadInterval,  NULL),
+  VAR("BWHistoryReadValues",     CSV,         BWHistoryReadValues,    NULL),
+  VAR("BWHistoryWriteEnds",      ISOTIME,     BWHistoryWriteEnds,     NULL),
+  VAR("BWHistoryWriteInterval",  UINT,        BWHistoryWriteInterval, NULL),
+  VAR("BWHistoryWriteValues",    CSV,         BWHistoryWriteValues,   NULL),
+
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
 };
 
@@ -3516,7 +3523,8 @@ or_state_set(or_state_t *new_state)
   global_state = new_state;
   if (helper_nodes_parse_state(global_state, 1, &err)<0)
     warn(LD_GENERAL,"Unparseable helper nodes state: %s",err);
-
+  if (rep_hist_load_state(global_state, &err)<0)
+    warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
 }
 
 /* DOCDOC */
@@ -3589,6 +3597,7 @@ or_state_save(void)
   char *fname;
 
   helper_nodes_update_state(global_state);
+  rep_hist_update_state(global_state);
 
   if (!global_state->dirty)
     return 0;
