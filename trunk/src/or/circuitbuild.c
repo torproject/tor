@@ -1833,7 +1833,7 @@ helper_nodes_set_status_from_directory(void)
       if (! r) {
         if (! helper->unlisted_since) {
           helper->unlisted_since = time(NULL);
-          ++changed;
+          changed = 1;
           warn(LD_CIRC,"Helper node '%s' is not listed by directories",
                helper->nickname);
           severity = LOG_WARN;
@@ -1842,7 +1842,7 @@ helper_nodes_set_status_from_directory(void)
         if (helper->unlisted_since) {
           warn(LD_CIRC,"Helper node '%s' is listed again by directories",
                helper->nickname);
-          ++changed;
+          changed = 1;
           severity = LOG_WARN;
         }
         helper->unlisted_since = 0;
@@ -1850,14 +1850,14 @@ helper_nodes_set_status_from_directory(void)
           if (! helper->down_since) {
             helper->down_since = now;
             warn(LD_CIRC, "Helper node '%s' is now down.", helper->nickname);
-            ++changed;
+            changed = 1;
             severity = LOG_WARN;
           }
         } else {
           if (helper->down_since) {
             notice(LD_CIRC,"Helper node '%s' is up in latest directories",
                    helper->nickname);
-            ++changed;
+            changed = 1;
           }
           helper->down_since = 0;
         }
@@ -1892,7 +1892,7 @@ helper_node_set_status(const char *digest, int succeeded)
         if (succeeded) {
           if (!helper->made_contact) {
             helper->made_contact = 1;
-            ++changed;
+            changed = 1;
           }
           if (helper->down_since) {
             /*XXXX shouldn't be so loud. NM */
@@ -1901,20 +1901,20 @@ helper_node_set_status(const char *digest, int succeeded)
                    "%d/%d helpers usable.", helper->nickname,
                    num_live_helpers(), smartlist_len(helper_nodes));
             helper->down_since = 0;
-            ++changed;
+            changed = 1;
           }
         } else {
           if (!helper->made_contact) { /* dump him */
 
 
-            ++changed;
+            changed = 1;
           } else if (!helper->down_since) {
             helper->down_since = time(NULL);
             warn(LD_CIRC,
                  "Connection to helper node '%s' failed. %d/%d helpers usable.",
                  helper->nickname, num_live_helpers(),
                  smartlist_len(helper_nodes));
-            ++changed;
+            changed = 1;
           }
         }
       }
