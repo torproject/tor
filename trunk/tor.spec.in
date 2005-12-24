@@ -10,9 +10,10 @@
 
 ## Things users may want to change
 #
-# User (and group) name under which the Tor daemon runs
+# User (and group) name under which the Tor daemon runs.
 
-%define runuser _tor
+%define toruser @TORUSER@
+%define torgroup @TORGROUP@
 
 ## Version song and dance
 #
@@ -31,8 +32,8 @@
 # have their own ideas about the right ways to do things.
 %define pkgspec tor
 
-# This spec is intended to build and install on multiple distributions.
-# Detect the distribution we're building on.
+# This spec is intended to build and install on multiple distributions
+# (someday). Detect the distribution we're building on.
 
 %define is_rh   %(test -e /etc/redhat-release && echo 1 || echo 0)
 %define is_fc   %(test -e /etc/fedora-release && echo 1 || echo 0)
@@ -102,8 +103,11 @@ Vendor: R. Dingledine <arma@seul.org>
 Packager: Nick Mathewson <nickm@seul.org>
 
 Requires: openssl >= 0.9.6
-BuildRequires: openssl-devel >= 0.9.6, rpm-build >= 4.0
-Requires(pre): shadow-utils, /usr/bin/id, /bin/date, /bin/sh
+BuildRequires: openssl-devel >= 0.9.6
+%if %{is_fc}
+BuildRequires: rpm-build >= 4.0
+%endif
+Requires(pre): /usr/bin/id, /bin/date, /bin/sh
 Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
 
 Source0: http://tor.eff.org/dist/%{name}-%{native_version}.tar.gz
@@ -114,8 +118,9 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Tor is a connection-based low-latency anonymous communication system.
 
 This package provides the "tor" program, which serves as both a client and
-a relay node. Scripts will automatically create a "%{runuser}" user and
-group, and set tor up to run as a daemon when the system is rebooted.
+a relay node. Scripts will automatically create a "%{toruser}" user and
+a "%{torgroup}" group, and set tor up to run as a daemon when the system
+is rebooted.
 
 Applications connect to the local Tor proxy using the SOCKS
 protocol. The local proxy chooses a path through a set of relays, in
@@ -135,49 +140,24 @@ for high-stakes anonymity.
 %prep
 %setup -q -n %{name}-%{native_version}
 
-# Patch the startup script to use the right user and group IDs. Force
-# the use of /bin/sh as the shell for the "tor" account.
-ed -s contrib/tor.sh.in << '/EOF/' > /dev/null
-,s/^TORUSER=$/TORUSER=%{runuser}/
-,s/^TORGROUP=$/TORGROUP=%{runuser}/
-,s:\$SUPROG:$SUPROG -s /bin/sh:
-#
-# Save and exit ed
-w
-q
-/EOF/
-
 %build
-%configure
+%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
 %make
 
 %install
 %makeinstall
 
-# Install init script.
+# Install init script and control script
 %__mkdir_p ${RPM_BUILD_ROOT}%{_initrddir}
 %__install -p -m 755 contrib/tor.sh ${RPM_BUILD_ROOT}%{_initrddir}/%{name}
+%__install -p -m 755 contrib/torctl ${RPM_BUILD_ROOT}%{_bindir}
 
 # Set up config file; "sample" file implements a basic user node.
 %__install -p -m 644 ${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc.sample ${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc
 
-# Create a logrotate file. This should really be a source file,
-# but hey...
+# Install the logrotate control file.
 %__mkdir_p -m 755 ${RPM_BUILD_ROOT}%{_sysconfdir}/logrotate.d
-%__cat > ${RPM_BUILD_ROOT}%{_sysconfdir}/logrotate.d/%{name} << /EOF/
-%{_localstatedir}/log/%{name}/*log {
-	daily
-	rotate 5
-	compress
-	delaycompress
-	missingok
-	notifempty
-	sharedscripts
-	postrotate
-		/etc/rc.d/init.d/tor reload > /dev/null
-	endscript
-}
-/EOF/
+%__install -p -m 644 contrib/tor.logrotate ${RPM_BUILD_ROOT}%{_sysconfdir}/logrotate.d/%{name}
 
 # Directories that don't have any preinstalled files
 %__mkdir_p -m 700 ${RPM_BUILD_ROOT}%{_localstatedir}/lib/%{name}
@@ -187,37 +167,76 @@ q
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
-# These scripts are probably wrong for Mandrake or SuSe. They're certainly
+# These scripts are probably wrong for Mandrake or SuSE. They're certainly
 # wrong for Debian, but what are you doing using RPM on Debian?
+
 %pre
-[ -f %{_initrddir}/%{name}  ] && /sbin/service %{name} stop
-if [ ! -n "`/usr/bin/id -g %{runuser} 2>/dev/null`" ]; then
+
+# If tor is already installed and running (whether installed by RPM
+# or not), then kill it, but remember that it was running.
+%__rm -f /tmp/${name}-was-running-%{version}-%{release}
+if [ -f %{_initrddir}/%{name} ] && /sbin/service %{name} status ; then
+    /sbin/service %{name} stop
+    touch /tmp/${name}-was-running-%{version}-%{release}
+fi
+
+#
+# Create a user and group if need be
+#
+if [ ! -n "`/usr/bin/id -g %{torgroup} 2>/dev/null`" ]; then
     # One would like to default the GID, but doing that properly would
     # require thought.
-    %{_sbindir}/groupadd %{runuser} 2> /dev/null
+    %{_sbindir}/groupadd %{torgroup} 2> /dev/null
 fi
-if [ ! -n "`/usr/bin/id -u %{runuser} 2>/dev/null`" ]; then
+if [ ! -n "`/usr/bin/id -u %{toruser} 2>/dev/null`" ]; then
     # One would also like to default the UID, but doing that properly would
     # also require thought.
-    if [ -x /sbin/nologin ]; then
-        %{_sbindir}/useradd -r -g %{runuser} -d %{_localstatedir}/lib/%{name} -s /sbin/nologin %{runuser} 2> /dev/null
+    if [ -x %{_sbindir}/nologin ]; then
+        %{_sbindir}/useradd -r -g %{torgroup} -d% {_localstatedir}/lib/%{name} -s %{_sbindir}/nologin %{toruser} 2> /dev/null
     else
-        %{_sbindir}/useradd -r -g %{runuser} -d %{_localstatedir}/lib/%{name} -s /bin/false %{runuser} 2> /dev/null
+        %{_sbindir}/useradd -r -g %{torgroup} -d %{_localstatedir}/lib/%{name}  -s /bin/false %{toruser} 2> /dev/null
     fi
 fi
 exit 0
 
 %post
-/sbin/chkconfig --add %{name}
+
+# If this is a new installation, use chkconfig to put tor in the
+# default set of runlevels. If it's an upgrade, leave the existing
+# configuration alone.
+if [ $1 -eq 1 ]; then
+    /sbin/chkconfig --add %{name}
+fi
+
+# Older tor RPMS used a different username for the tor daemon.
+# Make sure the runtime data have the right ownership.
+%__chown -R %{toruser}.%{torgroup} %{_localstatedir}/{lib,log,run}/%{name}
+
+if [ -f /tmp/${name}-was-running-%{version}-%{release} ]; then
+    /sbin/service %{name} start
+    %__rm -f /tmp/${name}-was-running-%{version}-%{release}
+fi
 exit 0
 
 %preun
-/sbin/chkconfig --del %{name}
-%__rm -f ${_localstatedir}/lib/%{name}/cached-directory
-%__rm -f ${_localstatedir}/lib/%{name}/bw_accounting
-%__rm -f ${_localstatedir}/lib/%{name}/control_auth_cookie
-%__rm -f ${_localstatedir}/lib/%{name}/router.desc
-%__rm -f ${_localstatedir}/lib/%{name}/fingerprint
+
+# If no instances of tor will be installed when we're done, make
+# sure that it gets killed. We *don't* want to kill it or delete
+# any of its data on uninstall if it's being upgraded to a new
+# version, because the new version will actually already have
+# been installed and started before the uninstall script for
+# the old version is run, and we'd end up hosing it.
+if [ $1 -le 0 ]; then
+    if [ -f %{_initrddir}/%{name} ] && /sbin/service %{name} status ; then
+        /sbin/service %{name} stop
+    fi
+    %/sbin/chkconfig --del %{name}
+    %__rm -f ${_localstatedir}/lib/%{name}/cached-directory
+    %__rm -f ${_localstatedir}/lib/%{name}/bw_accounting
+    %__rm -f ${_localstatedir}/lib/%{name}/control_auth_cookie
+    %__rm -f ${_localstatedir}/lib/%{name}/router.desc
+    %__rm -f ${_localstatedir}/lib/%{name}/fingerprint
+fi
 exit 0
 
 %files
@@ -225,17 +244,30 @@ exit 0
 %doc AUTHORS INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO doc/FAQ
 %{_mandir}/man*/*
 %{_bindir}/tor
+%{_bindir}/torctl
 %{_bindir}/torify
 %{_bindir}/tor-resolve
 %config %{_initrddir}/%{name}
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/logrotate.d/%{name}
-%dir %attr(0755,root,%{runuser}) %{_sysconfdir}/%{name}/
-%config(noreplace) %attr(0644,root,%{runuser}) %{_sysconfdir}/%{name}/*
-%attr(0700,%{runuser},%{runuser}) %dir %{_localstatedir}/lib/%{name}
-%attr(0750,%{runuser},%{runuser}) %dir %{_localstatedir}/run/%{name}
-%attr(0750,%{runuser},%{runuser}) %dir %{_localstatedir}/log/%{name}
+%dir %attr(0755,root,%{torgroup}) %{_sysconfdir}/%{name}/
+%config(noreplace) %attr(0644,root,%{torgroup}) %{_sysconfdir}/%{name}/*
+%attr(0700,%{toruser},%{torgroup}) %dir %{_localstatedir}/lib/%{name}
+%attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/run/%{name}
+%attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+
+* Mon Jan 17 2005 John Bashinski <jbash@velvet.com>
+- Take runtime user and group names from configure system. Default
+  user/group names are now "_tor"; blame Roger...
+- Make logrotate control file a separate file in the source distribution,
+  rather than creating it from the spec file.
+- Properly handle the order in which RPM executes scriptlets on upgrade.
+  The old code would kill the daemon on upgrade.
+- Start the tor daemon after installation if and only if it was
+  running before installation. Preserve runlevel setup on upgrade.
+- Package the torctl script; the init script is now a wrapper around it.
+
 * Tue Nov  5 2004 John Bashinski <jbash@velvet.com>
 - Add skeletal support for multiple distributions
 - Even more ridiculous level of macro-ization
@@ -258,4 +290,3 @@ exit 0
 
 * Sat Jan 17 2004 John Bashinski <jbash@velvet.com>
 - Basic spec file; tested with Red Hat 9.
-
