@@ -34,6 +34,8 @@ typedef struct {
 
 /** A list of our chosen helper nodes. */
 static smartlist_t *helper_nodes = NULL;
+/** A value of 1 means that the helper_nodes list has changed
+ * and those changes need to be flushed to disk. */
 static int helper_nodes_dirty = 0;
 
 /********* END VARIABLES ************/
@@ -1801,12 +1803,11 @@ remove_dead_helpers(void)
     helper_nodes_changed();
 }
 
-/** A new directory or router-status has arrived; update the down/listed status
- * of the helper nodes.
+/** A new directory or router-status has arrived; update the down/listed
+ * status of the helper nodes.
  *
- * A helper is 'down' if the directory lists it as nonrunning, or if we tried
- * to connect to it and failed.  A helper is 'unlisted' if the directory
- * doesn't include it.
+ * A helper is 'down' if the directory lists it as nonrunning.
+ * A helper is 'unlisted' if the directory doesn't include it.
  */
 void
 helper_nodes_set_status_from_directory(void)
@@ -1880,6 +1881,8 @@ helper_nodes_set_status_from_directory(void)
 void
 helper_node_set_status(const char *digest, int succeeded)
 {
+  int changed = 0;
+
   if (! helper_nodes)
     return;
 
@@ -1887,25 +1890,38 @@ helper_node_set_status(const char *digest, int succeeded)
     {
       if (!memcmp(helper->identity, digest, DIGEST_LEN)) {
         if (succeeded) {
+          if (!helper->made_contact) {
+            helper->made_contact = 1;
+            ++changed;
+          }
           if (helper->down_since) {
             /*XXXX shouldn't be so loud. NM */
             notice(LD_CIRC,
                    "Connection to formerly down helper node '%s' succeeded. "
                    "%d/%d helpers usable.", helper->nickname,
                    num_live_helpers(), smartlist_len(helper_nodes));
-            helper_nodes_changed();
+            helper->down_since = 0;
+            ++changed;
           }
-          helper->down_since = 0;
-        } else if (!helper->down_since) {
-          helper->down_since = time(NULL);
-          warn(LD_CIRC,
-               "Connection to helper node '%s' failed. %d/%d helpers usable.",
-               helper->nickname, num_live_helpers(),
-               smartlist_len(helper_nodes));
-          helper_nodes_changed();
+        } else {
+          if (!helper->made_contact) { /* dump him */
+
+
+            ++changed;
+          } else if (!helper->down_since) {
+            helper->down_since = time(NULL);
+            warn(LD_CIRC,
+                 "Connection to helper node '%s' failed. %d/%d helpers usable.",
+                 helper->nickname, num_live_helpers(),
+                 smartlist_len(helper_nodes));
+            ++changed;
+          }
         }
       }
     });
+
+  if (changed)
+    helper_nodes_changed();
 }
 
 /** Pick a live (up and listed) helper node from the list of helpers, but
@@ -1959,6 +1975,7 @@ helper_nodes_parse_state(or_state_t *state, int set, const char **err)
     if (!strcasecmp(line->key, "HelperNode")) {
       smartlist_t *args = smartlist_create();
       node = tor_malloc_zero(sizeof(helper_node_t));
+      node->made_contact = 1; /* all helpers on disk have been contacted */
       smartlist_add(helpers, node);
       smartlist_split_string(args, line->value, " ",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -2040,6 +2057,8 @@ helper_nodes_update_state(or_state_t *state)
   SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
     {
       char dbuf[HEX_DIGEST_LEN+1];
+      if (!h->made_contact)
+        continue; /* don't write this one to disk */
       *next = line = tor_malloc_zero(sizeof(config_line_t));
       line->key = tor_strdup("HelperNode");
       line->value = tor_malloc(HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2);
@@ -2066,7 +2085,10 @@ helper_nodes_update_state(or_state_t *state)
   helper_nodes_dirty = 0;
 }
 
-/** DOCDOC */
+/** If <b>question</b> is the string "helper-nodes", then dump
+ * to *<b>answer</b> a newly allocated string describing all of
+ * the nodes in the global helper_nodes list. See control-spec.txt
+ * for details. */
 int
 helper_nodes_getinfo_helper(const char *question, char **answer)
 {
@@ -2078,11 +2100,13 @@ helper_nodes_getinfo_helper(const char *question, char **answer)
       helper_nodes = smartlist_create();
     SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
       {
-        size_t len = HEX_DIGEST_LEN+ISO_TIME_LEN+16;
+        size_t len = HEX_DIGEST_LEN+ISO_TIME_LEN+32;
         char *c = tor_malloc(len);
         const char *status = NULL;
         time_t when = 0;
-        if (h->unlisted_since) {
+        if (!h->made_contact) {
+          status = "never-connected";
+        } else if (h->unlisted_since) {
           when = h->unlisted_since;
           status = "unlisted";
         } else if (h->down_since) {
