@@ -24,6 +24,8 @@ extern circuit_t *global_circuitlist;
 typedef struct {
   char nickname[MAX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
+  uint8_t made_contact; /**< 0 if we have never connected to this router,
+                         * 1 if we have. */
   time_t down_since; /**< 0 if this router is currently up, or the time at
                       * which it was observed to go down. */
   time_t unlisted_since; /**< 0 if this router is currently listed, or the
@@ -1939,7 +1941,12 @@ choose_random_helper(routerinfo_t *chosen_exit)
   return r;
 }
 
-/** DOCDOC */
+/** Parse <b>state</b> and learn about the helper nodes it describes.
+ * If <b>set</b> is true, and there are no errors, replace the global
+ * helper list with what we find.
+ * On success, return 0. On failure, set *<b>err</b> to a string
+ * describing the error, and return -1.
+ */
 int
 helper_nodes_parse_state(or_state_t *state, int set, const char **err)
 {
@@ -2003,7 +2010,8 @@ helper_nodes_parse_state(or_state_t *state, int set, const char **err)
   return *err ? -1 : 0;
 }
 
-/** DOCDOC */
+/** Our list of helper nodes has changed, or some element of one
+ * of our helper nodes has changed. Write the changes to disk. */
 static void
 helper_nodes_changed(void)
 {
@@ -2012,7 +2020,11 @@ helper_nodes_changed(void)
   or_state_save();
 }
 
-/** DOCDOC */
+/** If the helper node info has not changed, do nothing and return.
+ * Otherwise, free the HelperNodes piece of <b>state</b> and create
+ * a new one out of the global helper_nodes list, and then mark
+ * <b>state</b> dirty so it will know to get saved to disk.
+ */
 int
 helper_nodes_update_state(or_state_t *state)
 {
