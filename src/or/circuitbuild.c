@@ -2025,12 +2025,12 @@ helper_nodes_changed(void)
  * a new one out of the global helper_nodes list, and then mark
  * <b>state</b> dirty so it will know to get saved to disk.
  */
-int
+void
 helper_nodes_update_state(or_state_t *state)
 {
   config_line_t **next, *line;
   if (! helper_nodes_dirty)
-    return 0;
+    return;
 
   config_free_lines(state->HelperNodes);
   next = &state->HelperNodes;
@@ -2064,8 +2064,6 @@ helper_nodes_update_state(or_state_t *state)
     });
   state->dirty = 1;
   helper_nodes_dirty = 0;
-
-  return 1;
 }
 
 /** DOCDOC */
