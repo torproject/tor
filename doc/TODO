@@ -14,26 +14,24 @@ P       - phobos claims
 
 Non-Coding, Soon:
 N - Mark up spec; note unclear points about servers
-N - Clean up dir spec.
 N - Mention controller libs someplace.
   D FAQ entry: why gnutls is bad/not good for tor
 P - flesh out the rest of the section 6 of the faq
 P - gather pointers to livecd distros that include tor
-  - put the logo on the website, in source form, so people can put it on
-    stickers directly, etc.
 R . more pictures from ren. he wants to describe the tor handshake, i want to
     talk about hidden services.
-  * clean up the places where our docs are redundant (or worse, obsolete in
-    one file and correct elsewhere). agl has a start on a global
-    list-of-tor-docs.
-P - update windows docs to clarify which versions of windows, and why a
-    DOS window, how it's used, for the less technical users
 NR- write a spec appendix for 'being nice with tor'
   - tor-in-the-media page
-  - Ask schanzle@cas.homelinux.org about a patch for rpm spec fixes against
-    tor-0.1.0.7.rc
   - Remove need for HACKING file.
 
+Website:
+  - we need to merge documentation and support
+  - and pare it down
+  - and merge developers into documentation too
+  - or at least, remove developers from the title bar
+  - and remove home and make the "Tor" picture be the link to home.
+  - put the logo on the website, in source form, so people can put it on
+    stickers directly, etc.
 
 for 0.1.1.x:
 N - if they're trying to be a tor server and they're running
