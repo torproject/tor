@@ -352,7 +352,7 @@ $Id$
    Each client maintains an ordered list of directory authorities.
    Insofar as possible, clients SHOULD all use the same ordered list.
 
-   Client check whether they have enough recently published network-status
+   Clients check whether they have enough recently published network-status
    documents (currently, this means that they must have a network-status
    published within the last 48 hours for over half of the authorities).
    If they do not, they download enough network-status documents so that this
