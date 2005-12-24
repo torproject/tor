@@ -65,6 +65,24 @@ AC_ARG_WITH(ssl-dir,
         ]
 )
 
+TORUSER=_tor
+AC_ARG_WITH(tor-user,
+        [  --with-tor-user=NAME    Specify username for tor daemon ],
+        [
+           TORUSER=$withval
+        ]
+)
+AC_SUBST(TORUSER)
+
+TORGROUP=_tor
+AC_ARG_WITH(tor-group,
+        [  --with-tor-group=NAME   Specify group name for tor daemon ],
+        [
+           TORGROUP=$withval
+        ]
+)
+AC_SUBST(TORGROUP)
+
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
@@ -523,7 +541,7 @@ CFLAGS="$CFLAGS -Wall -g -O2"
 
 echo "confdir: $CONFDIR"
 
-AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile)
+AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile)
 
 if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
   ./contrib/updateVersions.pl
