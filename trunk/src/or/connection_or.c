@@ -447,9 +447,10 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
+      /* If the connection failed immediately, and we're using
+       * an https proxy, our https proxy is down. Don't blame the
+       * Tor server. */
       if (!options->HttpsProxy) {
-        /* If the connection failed immediately, our https proxy
-         * is down. Don't blame the Tor server. */
         router_mark_as_down(conn->identity_digest);
         helper_node_set_status(conn->identity_digest, 0);
       }
@@ -474,8 +475,8 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 /** Begin the tls handshake with <b>conn</b>. <b>receiving</b> is 0 if
  * we initiated the connection, else it's 1.
  *
- * Assign a new tls object to conn->tls, begin reading on <b>conn</b>, and pass
- * <b>conn</b> to connection_tls_continue_handshake().
+ * Assign a new tls object to conn->tls, begin reading on <b>conn</b>, and
+ * pass <b>conn</b> to connection_tls_continue_handshake().
  *
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
