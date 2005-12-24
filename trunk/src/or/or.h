@@ -1468,7 +1468,7 @@ const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 void helper_node_set_status(const char *digest, int succeeded);
 void helper_nodes_set_status_from_directory(void);
-int helper_nodes_update_state(or_state_t *state);
+void helper_nodes_update_state(or_state_t *state);
 int helper_nodes_parse_state(or_state_t *state, int set, const char **err);
 int helper_nodes_getinfo_helper(const char *question, char **answer);
 void helper_nodes_free_all(void);
@@ -2031,7 +2031,7 @@ void rep_hist_note_used_internal(time_t now, int need_uptime,
 int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
                                     int *need_capacity);
 
-int rep_hist_update_state(or_state_t *state);
+void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, const char **err);
 
 void rep_hist_free_all(void);

@@ -646,11 +646,8 @@ rep_hist_get_bandwidth_lines(void)
   return buf;
 }
 
-/** Update the state with bandwidth history
- * A return value of 0 means nothing was updated,
- * a value of 1 means something has
- */
-int
+/** Update <b>state</b> with the newest bandwidth history. */
+void
 rep_hist_update_state(or_state_t *state)
 {
   int len, r;
@@ -684,7 +681,6 @@ rep_hist_update_state(or_state_t *state)
   }
   tor_free(buf);
   state->dirty = 1;
-  return 1;
 }
 
 /** Set bandwidth history from our saved state.
