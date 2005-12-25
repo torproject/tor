@@ -65,7 +65,7 @@ static uint16_t
 get_unique_circ_id_by_conn(connection_t *conn)
 {
   uint16_t test_circ_id;
-  int attempts=0;
+  uint16_t attempts=0;
   uint16_t high_bit;
 
   tor_assert(conn);
@@ -651,6 +651,7 @@ circuit_note_clock_jumped(int seconds_elapsed)
       "assuming established circuits no longer work.", seconds_elapsed);
   has_completed_circuit=0; /* so it'll log when it works again */
   circuit_mark_all_unused_circs();
+  circuit_expire_all_dirty_circs();
 }
 
 /** Take the 'extend' cell, pull out addr/port plus the onion skin. Make
