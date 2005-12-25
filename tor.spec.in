@@ -107,6 +107,9 @@ BuildRequires: openssl-devel >= 0.9.6
 %if %{is_fc}
 BuildRequires: rpm-build >= 4.0
 %endif
+%if %{is_suse}
+BuildRequires: rpm >= 4.0, zlib-devel
+%endif
 Requires(pre): /usr/bin/id, /bin/date, /bin/sh
 Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
 
