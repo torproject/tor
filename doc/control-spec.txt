@@ -346,7 +346,10 @@ $Id$
     "helper-nodes"
       A series of lines listing the currently chosen helper nodes, if any.
       Each is of the form:
-         ServerID  SP ((("down" / "unlisted") ISOTime) / "up")  CRLF
+         ServerID  SP (Status-with-time / Status) CRLF
+
+         Status-with-time = ("down" / "unlisted") SP ISOTime
+         Status = ("up" / "never-connected")
 
     "accounting/enabled"
     "accounting/hibernating"
