@@ -329,7 +329,7 @@ spawn_cpuworker(void)
 
   fd = fdarray[0];
   spawn_func(cpuworker_main, (void*)fdarray);
-  debug(LD_OR,"just spawned a worker.");
+  debug(LD_OR,"just spawned a cpu worker.");
 #ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
   tor_free(fdarray);
