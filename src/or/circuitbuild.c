@@ -1380,7 +1380,10 @@ circuit_append_new_exit(circuit_t *circ, extend_info_t *info)
   return 0;
 }
 
-/** DOCDOC */
+/** Take an open <b>circ</b>, and add a new hop at the end, based on
+ * <b>info</b>. Set its state back to CIRCUIT_STATE_BUILDING, and then
+ * send the next extend cell to begin connecting to that hop.
+ */
 int
 circuit_extend_to_new_exit(circuit_t *circ, extend_info_t *info)
 {
@@ -1429,7 +1432,6 @@ count_acceptable_routers(smartlist_t *routers)
 }
 
 /** Add <b>new_hop</b> to the end of the doubly-linked-list <b>head_ptr</b>.
- *
  * This function is used to extend cpath by another hop.
  */
 void
@@ -1446,7 +1448,12 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
   }
 }
 
-/** DOCDOC */
+/** A helper function used by onion_extend_cpath(). Use <b>purpose</b>
+ * and <b>state</b> and the cpath <b>head</b> (currently populated only
+ * to length <b>cur_len</b> to decide a suitable middle hop for a
+ * circuit. In particular, make sure we don't pick the exit node or its
+ * family, and make sure we don't duplicate any previous nodes or their
+ * families. */
 static routerinfo_t *
 choose_good_middle_server(uint8_t purpose,
                           cpath_build_state_t *state,
@@ -1667,10 +1674,9 @@ extend_info_dup(extend_info_t *info)
   return newinfo;
 }
 
-/**
- * Return the routerinfo_t for the chosen exit router in <b>state</b>.  If
- * there is no chosen exit, or if we don't know the routerinfo_t for the
- * chosen exit, return NULL.
+/** Return the routerinfo_t for the chosen exit router in <b>state</b>.
+ * If there is no chosen exit, or if we don't know the routerinfo_t for
+ * the chosen exit, return NULL.
  */
 routerinfo_t *
 build_state_get_exit_router(cpath_build_state_t *state)
@@ -1680,8 +1686,7 @@ build_state_get_exit_router(cpath_build_state_t *state)
   return router_get_by_digest(state->chosen_exit->identity_digest);
 }
 
-/**
- * Return the nickname for the chosen exit router in <b>state</b>.  If
+/** Return the nickname for the chosen exit router in <b>state</b>. If
  * there is no chosen exit, or if we don't know the routerinfo_t for the
  * chosen exit, return NULL.
  */
@@ -1706,8 +1711,8 @@ num_live_helpers(void)
   return n;
 }
 
-/** If the use of helper nodes is configured, choose more helper nodes until
- * we have enough in the list. */
+/** If the use of helper nodes is configured, choose more helper nodes
+ * until we have enough in the list. */
 static void
 pick_helper_nodes(void)
 {
@@ -1758,15 +1763,15 @@ helper_nodes_free_all(void)
   }
 }
 
-/** How long (in seconds) do we allow a helper node to be nonfunctional before
- * we give up on it? */
+/** How long (in seconds) do we allow a helper node to be nonfunctional
+ * before we give up on it? */
 #define HELPER_ALLOW_DOWNTIME 48*60*60
 /** How long (in seconds) do we allow a helper node to be unlisted in the
  * directory before we give up on it? */
 #define HELPER_ALLOW_UNLISTED 48*60*60
 
-/** Remove all helper nodes that have been down or unlisted for so long that
- * we don't think they'll come up again. */
+/** Remove all helper nodes that have been down or unlisted for so
+ * long that we don't think they'll come up again. */
 static void
 remove_dead_helpers(void)
 {
