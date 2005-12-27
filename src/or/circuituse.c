@@ -397,7 +397,7 @@ circuit_predict_and_launch_new(void)
                                       &hidserv_needs_capacity) &&
       ((num_uptime_internal<2 && hidserv_needs_uptime) ||
         num_internal<2)) {
-    info(LD_CIRC,"Have %d clean circs (%d uptime-internal, %d internal), need "
+    info(LD_CIRC,"Have %d clean circs (%d uptime-internal, %d internal), need"
          " another hidserv circ.", num, num_uptime_internal, num_internal);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                              hidserv_needs_uptime, hidserv_needs_capacity, 1);
