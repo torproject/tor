@@ -1034,9 +1034,9 @@ connection_dir_client_reached_eof(connection_t *conn)
     info(LD_DIR,"Received server info (size %d) from server '%s:%d'",
          (int)body_len, conn->address, conn->port);
     if (conn->requested_resource &&
-        !strcmpstart(conn->requested_resource,"fp/")) {
+        !strcmpstart(conn->requested_resource,"d/")) {
       which = smartlist_create();
-      dir_split_resource_into_fingerprints(conn->requested_resource+3,
+      dir_split_resource_into_fingerprints(conn->requested_resource+2,
                                            which, NULL, 0);
       n_asked_for = smartlist_len(which);
     }

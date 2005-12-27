@@ -46,39 +46,42 @@ N - Destroy and truncated cells should have reasons.
     - Specify
     - Implement
 
-N - Only use a routerdesc if you recognize its hash.
+N . Only use a routerdesc if you recognize its hash.
     o (Must defer till dirservers are upgraded to latest code, which
       actually generates these hashes.)
-    - Of course, authdirservers must not do this.
+    . Of course, authdirservers must not do this.
     o If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
       fetch a new one if it was published in the last 2 hours.
-      - How does this interact with the 'recognized hash' rule?
-    - Do not ask for any routers until we have 2 networkstatuses.
-    - Client side:
-      - Keep a record of which hash is most desirable for each router inside
+      X Don't, actually. This is the authorities' job to straighten out.
+    o Do not ask for any routers until we have 2 networkstatuses.
+    . Client side:
+      o Keep a record of which hash is most desirable for each router inside
         local_routerstatus_t.
-        - If any hash is listed by two or more networkstatuses, the most
+        o If any hash is listed by two or more networkstatuses, the most
           recent such hash is most desirable.
-        - Otherwise, the most recent is desirable.
-      - Once we've accepted a router, it's okay.
-      - Do not accept a router that no networkstatus lists. (This should maybe
+        o Otherwise, the most recent is desirable.
+      o Once we've accepted a router, it's okay.
+      o Do not accept a router that no networkstatus lists. (This should maybe
         get stricter.)
-      - Download by fingerprint.
-      - Reset failure count to zero when hash changes.
-    - Mirrors and authorities:
-      - Every time we hear a new networkstatus, we want every hash it lists.
-      - Make sure that we are always willing to keep at least N routerinfos
+      o Download by descriptor digest.
+      o Reset failure count to zero when hash changes.
+      . Test
+      - Do we want to rate-limit downloads of each identity?
+    . Mirrors and authorities:
+      o Every time we hear a new networkstatus, we want every hash it lists.
+      o Make sure that we are always willing to keep at least N routerinfos
         per router, where N = number of authorities.
-        - Do whatever else is needed to be sure that we don't request
+        o Do whatever else is needed to be sure that we don't request
           hashes that would be immediately discarded, or discard hashes
           that would be immediately re-requested.
-      - Only fetch routerinfo from an authority that mentions is.
-        - Only ask each authority once.
-        - Retry soon after failure.
-        - We need one bit per routerstatus for "should we download from
+      o Only fetch routerinfo from an authority that mentions is.
+        o Only ask each authority once.
+        o Retry soon after failure.
+        o We need one bit per routerstatus for "should we download from
           this guy."
       - Verify that we are actually storing retained old descriptors to our
         cache.
+      - Test.
     - Non-directories don't need to keep descriptors in memory.
 
 N - Should router info have a pointer to routerstatus?
