@@ -1657,7 +1657,7 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
   }
 
   if (old->ORPort != new_val->ORPort) {
-    log_fn(LOG_WARN,"During reload, changing ORPort is not allowed. Failing.");
+    log_fn(LOG_WARN,"During reload, changing ORPort is not allowed. Please upgrade to 0.1.1.6-alpha or later. Failing.");
     return -1;
   }
 
