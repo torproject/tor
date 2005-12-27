@@ -759,7 +759,6 @@ typedef struct signed_descriptor_t {
 /** Information about another onion router in the network. */
 typedef struct {
   signed_descriptor_t cache_info;
-
   char *address; /**< Location of OR: either a hostname or an IP address. */
   char *nickname; /**< Human-readable OR name. */
 
@@ -797,12 +796,6 @@ typedef struct {
                             * us? */
   unsigned int is_fast:1; /** Do we think this is a fast OR? */
   unsigned int is_stable:1; /** Do we think this is a stable OR? */
-  unsigned int xx_is_recognized:1; /**< Temporary: do we think that this
-                                    * descriptor's digest is recognized?
-                                    */
-  unsigned int xx_is_extra_new:1; /**< Temporary: do we think that this
-                                   * descriptor's digest is recognized?
-                                   */
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
@@ -838,15 +831,25 @@ typedef struct routerstatus_t {
                              * information with v2 of the directory
                              * protocol. (All directory caches cache v1
                              * directories.)  */
+
+  /** True if we, as a directory mirror, want to download the corresponding
+   * routerinfo from the authority who gave us this routerstatus.  (That is,
+   * if we don't have the routerinfo, and if we haven't already tried to get it
+   * from this authority.)
+   */
+  unsigned int need_to_mirror:1;
 } routerstatus_t;
 
-/** DOCDOC */
+/** Our "local" or combined view of the info from all networkstatus objects
+ * about a single router. */
 typedef struct local_routerstatus_t {
+  /** What do we believe to be the case about this router?  In this field,
+   * descriptor_digest represnets the descriptor we would most like to use for
+   * this router. */
   routerstatus_t status;
   time_t next_attempt_at; /**< When should we try this descriptor again? */
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
-  unsigned int should_download:1; /**< DOCDOC */
   unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
                                       * to this (unnamed) router by nickname?
                                       */
@@ -2302,8 +2305,7 @@ void update_networkstatus_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);
 void routers_update_all_from_networkstatus(void);
 void routers_update_status_from_networkstatus(smartlist_t *routers,
-                                              int reset_failures,
-                                              int assume_recognized);
+                                              int reset_failures);
 smartlist_t *router_list_superseded(void);
 int router_have_minimum_dir_info(void);
 void networkstatus_list_update_recent(time_t now);
