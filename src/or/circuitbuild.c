@@ -1700,7 +1700,8 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
  * right now. (Else return NULL.) In particular, it must be
  * - Listed as either up or never yet contacted;
  * - Present in the routerlist;
- * - Listed as 'fast' by the current dirserver concensus; and
+ * - Listed as 'stable' or 'fast' by the current dirserver concensus,
+ *   if demanded by <b>need_uptime</b> and <b>need_capacity</b>; and
  * - Allowed by our current ReachableAddresses config option.
  */
 static INLINE routerinfo_t *
@@ -1962,7 +1963,7 @@ helper_node_set_status(const char *digest, int succeeded)
                    "Connection to never-contacted helper node '%s' failed. "
                    "Removing from the list. %d/%d helpers usable.",
                    helper->nickname,
-                   num_live_helpers(), smartlist_len(helper_nodes));
+                   num_live_helpers()-1, smartlist_len(helper_nodes)-1);
             tor_free(helper);
             smartlist_del_keeporder(helper_nodes, helper_sl_idx);
             changed = 1;
