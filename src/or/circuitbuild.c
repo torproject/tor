@@ -1916,6 +1916,11 @@ helper_nodes_set_status_from_directory(void)
           helper->down_since = 0;
         }
       }
+      info(LD_CIRC, "Summary: Helper '%s' is %s, %s, and %s.",
+           helper->nickname,
+           helper->down_since ? "down" : "up",
+           helper->unlisted_since ? "unlisted" : "listed",
+           helper_is_live(helper, 0, 1) ? "live" : "not live");
     });
 
   if (remove_dead_helpers())
