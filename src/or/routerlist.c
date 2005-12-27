@@ -1226,7 +1226,9 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 static void
 routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 {
-  if (get_options()->DirPort) {
+  if (get_options()->DirPort &&
+      !digestmap_get(rl->desc_digest_map,
+                     ri->cache_info.signed_descriptor_digest)) {
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
     smartlist_add(rl->old_routers, sd);
