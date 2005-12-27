@@ -3448,6 +3448,8 @@ update_router_descriptor_cache_downloads(time_t now)
       continue;
     }
     smartlist_t *dl = download_from[i];
+    if (! smartlist_len(dl))
+      continue;
     info(LD_DIR, "Requesting %d descriptors from authority \"%s\"",
          smartlist_len(dl), ds->nickname);
     for (j=0; j < smartlist_len(dl); j += MAX_DL_PER_REQUEST) {
