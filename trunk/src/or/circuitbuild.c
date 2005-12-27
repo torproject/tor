@@ -1951,6 +1951,17 @@ helper_node_set_status(const char *digest, int succeeded)
         if (succeeded) {
           if (!helper->made_contact) {
             helper->made_contact = 1;
+            /* We've just added a new long-term helper node.
+             * Perhaps the network just came back? We should
+             * give our earlier helpers another try too. */
+            SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
+              {
+                routerinfo_t *r = router_get_by_digest(h->identity);
+                h->down_since = 0;
+                if (r) r->is_running = 1;
+                if (h == helper)
+                  break;
+              });
             changed = 1;
           }
           if (helper->down_since) {
