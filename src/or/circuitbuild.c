@@ -1911,13 +1911,11 @@ helper_node_set_status(const char *digest, int succeeded)
           }
         } else {
           if (!helper->made_contact) { /* dump him */
-
-
             changed = 1;
           } else if (!helper->down_since) {
             helper->down_since = time(NULL);
-            warn(LD_CIRC,
-                 "Connection to helper node '%s' failed. %d/%d helpers usable.",
+            warn(LD_CIRC, "Connection to helper node '%s' failed."
+                 " %d/%d helpers usable.",
                  helper->nickname, num_live_helpers(),
                  smartlist_len(helper_nodes));
             changed = 1;
