@@ -668,12 +668,19 @@ circuit_build_failed(circuit_t *circ)
       circ->cpath->state != CPATH_STATE_OPEN) {
     /* We failed at the first hop. If there's an OR connection
        to blame, blame it. */
+    connection_t *n_conn = NULL;
     if (circ->n_conn) {
+      n_conn = circ->n_conn;
+    } else if (circ->state == CIRCUIT_STATE_OR_WAIT) {
+      /* we have to hunt for it */
+      n_conn = connection_or_get_by_identity_digest(circ->n_conn_id_digest);
+    }
+    if (n_conn) {
       info(LD_OR, "Our circuit failed to get a response from the first hop "
            "(%s:%d). I'm going to try to rotate to a better connection.",
-           circ->n_conn->address, circ->n_conn->port);
-      circ->n_conn->is_obsolete = 1;
-      helper_node_set_status(circ->n_conn->identity_digest, 0);
+           n_conn->address, n_conn->port);
+      n_conn->is_obsolete = 1;
+      helper_node_set_status(n_conn->identity_digest, 0);
     }
   }
 
