@@ -3234,7 +3234,7 @@ write_configuration_file(const char *fname, or_options_t *options)
   len = strlen(new_conf)+256;
   new_val = tor_malloc(len);
   tor_snprintf(new_val, len, "%s\n%s\n\n%s",
-               GENERATED_FILE_PREFIX, GENERATED_FILE_COMMENTS, new_conf);
+               GENERATED_FILE_PREFIX, GENERATED_FILE_COMMENT, new_conf);
 
   if (rename_old) {
     int i = 1;
