@@ -2695,7 +2695,7 @@ routers_update_all_from_networkstatus(void)
     }
   }
 
-  helper_nodes_set_status_from_directory();
+  entry_nodes_set_status_from_directory();
 
   if (!have_warned_about_old_version) {
     int n_recent = 0;

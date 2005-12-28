@@ -346,7 +346,7 @@ connection_about_to_close_connection(connection_t *conn)
       if (conn->state != OR_CONN_STATE_OPEN) {
         if (connection_or_nonopen_was_started_here(conn)) {
           rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
-          helper_node_set_status(conn->identity_digest, 0);
+          entry_node_set_status(conn->identity_digest, 0);
           control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
         }
       } else if (conn->hold_open_until_flushed) {

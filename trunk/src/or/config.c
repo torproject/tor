@@ -71,6 +71,15 @@ static config_abbrev_t _option_abbrevs[] = {
   { "ORBindAddress", "ORListenAddress", 0, 0},
   { "DirBindAddress", "DirListenAddress", 0, 0},
   { "SocksBindAddress", "SocksListenAddress", 0, 0},
+  { "UseHelperNodes", "UseEntryNodes", 0, 0},
+  { "NumHelperNodes", "NumEntryNodes", 0, 0},
+  { NULL, NULL, 0, 0},
+};
+/* A list of state-file abbreviations, for compatibility. */
+static config_abbrev_t _state_abbrevs[] = {
+  { "HelperNode", "EntryNode", 0, 0},
+  { "HelperNodeDownSince", "EntryNodeDownSince", 0, 0},
+  { "HelperNodeUnlistedSince", "EntryNodeUnlistedSince", 0, 0},
   { NULL, NULL, 0, 0},
 };
 #undef PLURAL
@@ -170,8 +179,8 @@ static config_var_t _option_vars[] = {
   VAR("NoPublish",           BOOL,     NoPublish,            "0"),
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
   VAR("NumCpus",             UINT,     NumCpus,              "1"),
-  VAR("NumHelperNodes",      UINT,     NumHelperNodes,       "3"),
-  VAR("ORListenAddress",     LINELIST, ORListenAddress,     NULL),
+  VAR("NumEntryNodes",       UINT,     NumEntryNodes,        "3"),
+  VAR("ORListenAddress",     LINELIST, ORListenAddress,      NULL),
   VAR("ORPort",              UINT,     ORPort,               "0"),
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
@@ -203,7 +212,7 @@ static config_var_t _option_vars[] = {
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
   VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
   OBSOLETE("TrafficShaping"),
-  VAR("UseHelperNodes",      BOOL,     UseHelperNodes,       "0"),
+  VAR("UseEntryNodes",       BOOL,     UseEntryNodes,        "0"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
@@ -216,18 +225,17 @@ static config_var_t _option_vars[] = {
   { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member),  \
       initvalue, NULL }
 static config_var_t _state_vars[] = {
-  VAR("AccountingBytesReadInterval", MEMUNIT, AccountingBytesReadInInterval,
-                                                                    NULL),
+  VAR("AccountingBytesReadInterval", MEMUNIT,
+      AccountingBytesReadInInterval, NULL),
   VAR("AccountingBytesWrittenInInterval", MEMUNIT,
       AccountingBytesWrittenInInterval, NULL),
   VAR("AccountingExpectedUsage", MEMUNIT,     AccountingExpectedUsage, NULL),
   VAR("AccountingIntervalStart", ISOTIME,     AccountingIntervalStart, NULL),
   VAR("AccountingSecondsActive", INTERVAL,    AccountingSecondsActive, NULL),
-  VAR("HelperNode",              LINELIST_S,  HelperNodes,          NULL),
-  VAR("HelperNodeDownSince",     LINELIST_S,  HelperNodes,          NULL),
-  VAR("HelperNodeUnlistedSince", LINELIST_S,  HelperNodes,          NULL),
-  VAR("HelperNodes",             LINELIST_V,  HelperNodes,          NULL),
-  VAR("LastWritten",             ISOTIME,     LastWritten,          NULL),
+  VAR("EntryNode",               LINELIST_S,  EntryNodes,           NULL),
+  VAR("EntryNodeDownSince",      LINELIST_S,  EntryNodes,           NULL),
+  VAR("EntryNodeUnlistedSince",  LINELIST_S,  EntryNodes,           NULL),
+  VAR("EntryNodes",              LINELIST_V,  EntryNodes,           NULL),
 
   VAR("BWHistoryReadEnds",       ISOTIME,     BWHistoryReadEnds,      NULL),
   VAR("BWHistoryReadInterval",   UINT,        BWHistoryReadInterval,  NULL),
@@ -235,6 +243,8 @@ static config_var_t _state_vars[] = {
   VAR("BWHistoryWriteEnds",      ISOTIME,     BWHistoryWriteEnds,     NULL),
   VAR("BWHistoryWriteInterval",  UINT,        BWHistoryWriteInterval, NULL),
   VAR("BWHistoryWriteValues",    CSV,         BWHistoryWriteValues,   NULL),
+
+  VAR("LastWritten",             ISOTIME,     LastWritten,            NULL),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
 };
@@ -359,7 +369,7 @@ static config_format_t state_format = {
   sizeof(or_state_t),
   OR_STATE_MAGIC,
   STRUCT_OFFSET(or_state_t, _magic),
-  NULL,
+  _state_abbrevs,
   _state_vars,
   (validate_fn_t)or_state_validate,
   state_description
@@ -595,9 +605,6 @@ options_act(or_options_t *old_options)
     return -1;
   }
 
-  if (options->EntryNodes && strlen(options->EntryNodes))
-    options->UseHelperNodes = 0;
-
   if (running_tor) {
     len = strlen(options->DataDirectory)+32;
     fn = tor_malloc(len);
@@ -681,8 +688,8 @@ options_act(or_options_t *old_options)
 
   /* Check for transitions that need action. */
   if (old_options) {
-    if (options->UseHelperNodes && !old_options->UseHelperNodes) {
-      info(LD_CIRC,"Switching to helper nodes; abandoning previous circuits");
+    if (options->UseEntryNodes && !old_options->UseEntryNodes) {
+      info(LD_CIRC,"Switching to entry nodes; abandoning previous circuits");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
     }
@@ -2116,8 +2123,8 @@ options_validate(or_options_t *old_options, or_options_t *options)
   if (options->HashedControlPassword && options->CookieAuthentication)
     REJECT("Cannot set both HashedControlPassword and CookieAuthentication");
 
-  if (options->UseHelperNodes && ! options->NumHelperNodes)
-    REJECT("Cannot enable UseHelperNodes with NumHelperNodes set to 0");
+  if (options->UseEntryNodes && ! options->NumEntryNodes)
+    REJECT("Cannot enable UseEntryNodes with NumEntryNodes set to 0");
 
   if (check_nickname_list(options->ExitNodes, "ExitNodes"))
     result = -1;
@@ -3512,7 +3519,7 @@ static int
 or_state_validate(or_state_t *old_state, or_state_t *state)
 {
   const char *err;
-  if (helper_nodes_parse_state(state, 0, &err)<0) {
+  if (entry_nodes_parse_state(state, 0, &err)<0) {
     warn(LD_GENERAL, "Unable to parse helper nodes: %s", err);
     return -1;
   }
@@ -3528,7 +3535,7 @@ or_state_set(or_state_t *new_state)
   if (global_state)
     config_free(&state_format, global_state);
   global_state = new_state;
-  if (helper_nodes_parse_state(global_state, 1, &err)<0)
+  if (entry_nodes_parse_state(global_state, 1, &err)<0)
     warn(LD_GENERAL,"Unparseable helper nodes state: %s",err);
   if (rep_hist_load_state(global_state, &err)<0)
     warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
@@ -3603,7 +3610,7 @@ or_state_save(void)
   size_t len;
   char *fname;
 
-  helper_nodes_update_state(global_state);
+  entry_nodes_update_state(global_state);
   rep_hist_update_state(global_state);
 
   if (!global_state->dirty)

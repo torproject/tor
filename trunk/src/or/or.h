@@ -1348,9 +1348,9 @@ typedef struct {
                   * log whether it was DNS-leaking or not? */
   int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
                       * acceleration where available? */
-  int UseHelperNodes; /**< Boolean: Do we try to enter from a smallish number
-                       * of fixed nodes? */
-  int NumHelperNodes; /**< How many helper nodes do we try to establish? */
+  int UseEntryNodes; /**< Boolean: Do we try to enter from a smallish number
+                      * of fixed nodes? */
+  int NumEntryNodes; /**< How many helper nodes do we try to establish? */
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
   int FastFirstHopPK; /**< If Tor believes it is safe, should we save a third
                        * of our PK time by sending CREATE_FAST cells? */
@@ -1371,7 +1371,7 @@ typedef struct {
   int AccountingSecondsActive;
   uint64_t AccountingExpectedUsage;
 
-  config_line_t *HelperNodes;
+  config_line_t *EntryNodes;
 
   time_t      BWHistoryReadEnds;
   int         BWHistoryReadInterval;
@@ -1469,12 +1469,12 @@ void extend_info_free(extend_info_t *info);
 routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
-int helper_node_set_status(const char *digest, int succeeded);
-void helper_nodes_set_status_from_directory(void);
-void helper_nodes_update_state(or_state_t *state);
-int helper_nodes_parse_state(or_state_t *state, int set, const char **err);
-int helper_nodes_getinfo_helper(const char *question, char **answer);
-void helper_nodes_free_all(void);
+int entry_node_set_status(const char *digest, int succeeded);
+void entry_nodes_set_status_from_directory(void);
+void entry_nodes_update_state(or_state_t *state);
+int entry_nodes_parse_state(or_state_t *state, int set, const char **err);
+int entry_nodes_getinfo(const char *question, char **answer);
+void entry_nodes_free_all(void);
 
 /********************************* circuitlist.c ***********************/
 

@@ -1247,7 +1247,7 @@ list_getinfo_options(void)
     "config/names List of configuration options, types, and documentation.\n"
     "desc/id/* Server descriptor by hex ID\n"
     "desc/name/* Server descriptor by nickname.\n"
-    "helper-nodes Which nodes will we use as helpers?\n"
+    "entry-nodes Which nodes will we use as entry nodes?\n"
     "info/names List of GETINFO options, types, and documentation.\n"
     "network-status List of hex IDs, nicknames, server statuses.\n"
     "orconn-status Status of each current OR connection.\n"
@@ -1268,8 +1268,10 @@ handle_getinfo_helper(const char *question, char **answer)
     *answer = tor_strdup(get_torrc_fname());
   } else if (!strcmpstart(question, "accounting/")) {
     return accounting_getinfo_helper(question, answer);
-  } else if (!strcmpstart(question, "helper-nodes")) {
-    return helper_nodes_getinfo_helper(question, answer);
+  } else if (!strcmpstart(question, "helper-nodes")) { /* deprecated */
+    return entry_nodes_getinfo(question, answer);
+  } else if (!strcmpstart(question, "entry-nodes")) {
+    return entry_nodes_getinfo(question, answer);
   } else if (!strcmpstart(question, "config/")) {
     return config_getinfo_helper(question, answer);
   } else if (!strcmp(question, "info/names")) {
