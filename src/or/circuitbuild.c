@@ -1959,11 +1959,14 @@ helper_node_set_status(const char *digest, int succeeded)
             helper->made_contact = 1;
             SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
               {
-                routerinfo_t *r = router_get_by_digest(h->identity);
+                routerinfo_t *r;
                 if (h->made_contact) {
                   h->down_since = 0;
-                  refuse_conn = 1;
-                  if (r) r->is_running = 1;
+                  r = helper_is_live(h, 0, 1);
+                  if (r) {
+                    refuse_conn = 1;
+                    r->is_running = 1;
+                  }
                 }
                 if (h == helper)
                   break;
