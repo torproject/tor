@@ -1957,12 +1957,12 @@ helper_node_set_status(const char *digest, int succeeded)
              * helpers another try too, and close this connection so
              * we don't use it before we've given the others a shot. */
             helper->made_contact = 1;
-            refuse_conn = 1;
             SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
               {
                 routerinfo_t *r = router_get_by_digest(h->identity);
                 if (h->made_contact) {
                   h->down_since = 0;
+                  refuse_conn = 1;
                   if (r) r->is_running = 1;
                 }
                 if (h == helper)
