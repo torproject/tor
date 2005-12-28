@@ -18,9 +18,10 @@ const char circuitbuild_c_id[] =
 /** A global list of all circuits at this hop. */
 extern circuit_t *global_circuitlist;
 
-/** A helper_node_t represents our information about a chosen fixed entry, or
- * "helper" node.  We can't just use a routerinfo_t, since we want to remember
- * these even when we don't have a directory. */
+/** An entry_node_t represents our information about a chosen long-term
+ * first hop, known as a "helper" node in the literature. We can't just
+ * use a routerinfo_t, since we want to remember these even when we
+ * don't have a directory. */
 typedef struct {
   char nickname[MAX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
@@ -30,13 +31,13 @@ typedef struct {
                       * which it was observed to go down. */
   time_t unlisted_since; /**< 0 if this router is currently listed, or the
                           * time at which it became unlisted */
-} helper_node_t;
+} entry_node_t;
 
-/** A list of our chosen helper nodes. */
-static smartlist_t *helper_nodes = NULL;
-/** A value of 1 means that the helper_nodes list has changed
+/** A list of our chosen entry nodes. */
+static smartlist_t *entry_nodes = NULL;
+/** A value of 1 means that the entry_nodes list has changed
  * and those changes need to be flushed to disk. */
-static int helper_nodes_dirty = 0;
+static int entry_nodes_dirty = 0;
 
 /********* END VARIABLES ************/
 
@@ -48,8 +49,9 @@ static int onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
                               cpath_build_state_t *state);
 static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
-static routerinfo_t *choose_random_helper(cpath_build_state_t *state);
-static void helper_nodes_changed(void);
+
+static routerinfo_t *choose_random_entry(cpath_build_state_t *state);
+static void entry_nodes_changed(void);
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
  * and with the high bit specified by circ_id_type (see
@@ -1117,6 +1119,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   routerinfo_t *router;
   or_options_t *options = get_options();
 
+//XXX
   preferredentries = smartlist_create();
   add_nickname_list_to_smartlist(preferredentries,options->EntryNodes,1,1);
 
@@ -1491,10 +1494,10 @@ choose_good_middle_server(uint8_t purpose,
 /** Pick a good entry server for the circuit to be built according to
  * <b>state</b>.  Don't reuse a chosen exit (if any), don't use this
  * router (if we're an OR), and respect firewall settings; if we're
- * using helper nodes, return one.
+ * using entry_nodes, return one.
  *
- * If <b>state</b> is NULL, we're choosing entries to serve as helper nodes,
- * not for any particular circuit.
+ * If <b>state</b> is NULL, we're choosing routers to serve as entry
+ * nodes, not for any particular circuit.
  */
 static routerinfo_t *
 choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
@@ -1503,9 +1506,9 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   smartlist_t *excluded = smartlist_create();
   or_options_t *options = get_options();
 
-  if (state && options->UseHelperNodes &&
+  if (state && options->UseEntryNodes &&
       purpose != CIRCUIT_PURPOSE_TESTING) {
-    return choose_random_helper(state);
+    return choose_random_entry(state);
   }
 
   if (state && (r = build_state_get_exit_router(state))) {
@@ -1530,11 +1533,10 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   // XXX we should exclude busy exit nodes here, too,
   // but only if there are enough other nodes available.
   choice = router_choose_random_node(
-           options->EntryNodes, options->ExcludeNodes,
+           NULL, options->ExcludeNodes,
            excluded, state ? state->need_uptime : 1,
            state ? state->need_capacity : 1,
-           options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY,
-           options->StrictEntryNodes);
+           options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY, 0);
   smartlist_free(excluded);
   return choice;
 }
@@ -1695,8 +1697,8 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
   return state->chosen_exit->nickname;
 }
 
-/** Return the router corresponding to <b>h</b>, if <b>h</b> is
- * working well enough that we are willing to use it as a helper
+/** Return the router corresponding to <b>e</b>, if <b>e</b> is
+ * working well enough that we are willing to use it as an entry
  * right now. (Else return NULL.) In particular, it must be
  * - Listed as either up or never yet contacted;
  * - Present in the routerlist;
@@ -1705,12 +1707,12 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
  * - Allowed by our current ReachableAddresses config option.
  */
 static INLINE routerinfo_t *
-helper_is_live(helper_node_t *h, int need_uptime, int need_capacity)
+entry_is_live(entry_node_t *e, int need_uptime, int need_capacity)
 {
   routerinfo_t *r;
-  if (h->down_since && h->made_contact)
+  if (e->down_since && e->made_contact)
     return NULL;
-  r = router_get_by_digest(h->identity);
+  r = router_get_by_digest(e->identity);
   if (!r)
     return NULL;
   if (router_is_unreliable(r, need_uptime, need_capacity))
@@ -1721,108 +1723,118 @@ helper_is_live(helper_node_t *h, int need_uptime, int need_capacity)
   return r;
 }
 
-/** Return the number of helper nodes that we think are usable. */
+/** Return the number of entry nodes that we think are usable. */
 static int
-num_live_helpers(void)
+num_live_entry_nodes(void)
 {
   int n = 0;
-  if (! helper_nodes)
+  if (! entry_nodes)
     return 0;
-  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
+  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
     {
-      if (helper_is_live(helper, 0, 1))
+      if (entry_is_live(entry, 0, 1))
         ++n;
     });
   return n;
 }
 
-/** Return 1 if <b>digest</b> matches the identity of any entry
- * in the helper_nodes list. Else return 0. */
+/** Return 1 if <b>digest</b> matches the identity of any node
+ * in the entry_nodes list. Else return 0. */
 static INLINE int
-is_a_helper(char *digest)
+is_an_entry(char *digest)
 {
-  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
-                    if(!memcmp(digest, helper->identity, DIGEST_LEN))
+  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
+                    if(!memcmp(digest, entry->identity, DIGEST_LEN))
                       return 1;
                    );
   return 0;
 }
 
-#define NUM_HELPER_PICK_TRIES 100
+#define NUM_ENTRY_PICK_TRIES 100
 
-/** Add a new (preferably stable and fast) helper to the end of our
- * helper_nodes list. Return a pointer to the router if we succeed,
- * or NULL if we can't find any more suitable helpers. If
- * <b>tries_left</b> is <= 1, that means you should fail. */
+/** Add a new (preferably stable and fast) entry to our
+ * entry_nodes list. Return a pointer to the router if we succeed,
+ * or NULL if we can't find any more suitable entries. If
+ * <b>tries_left</b> is <= 1, that means you should fail.
+ *
+ * [not implemented yet]
+ * If <b>chosen</b> is defined, use that one, and put it at
+ * the *beginning* of our entry_nodes list. Else, put the one
+ * we pick at the end of the list. */
 static routerinfo_t *
-add_a_helper(int tries_left)
+add_an_entry(routerinfo_t *chosen, int tries_left)
 {
-  routerinfo_t *entry;
-  helper_node_t *helper;
+  routerinfo_t *router;
+  entry_node_t *entry;
   if (--tries_left <= 0) {
-    warn(LD_CIRC, "Tried finding a new helper, but failed. Bad news. XXX.");
+    warn(LD_CIRC, "Tried finding a new entry, but failed. Bad news. XXX.");
     return NULL;
   }
-  entry = choose_good_entry_server(CIRCUIT_PURPOSE_C_GENERAL, NULL);
-  if (!entry)
+  if (chosen)
+    router = chosen;
+  else
+    router = choose_good_entry_server(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+  if (!router)
     return NULL;
-  /* make sure it's not already a helper */
-  if (is_a_helper(entry->cache_info.identity_digest))
-    return add_a_helper(tries_left); /* recurse */
-  helper = tor_malloc_zero(sizeof(helper_node_t));
+  /* make sure it's not already an entry */
+  if (is_an_entry(router->cache_info.identity_digest))
+    return chosen ? NULL : add_an_entry(NULL, tries_left); /* recurse */
+  entry = tor_malloc_zero(sizeof(entry_node_t));
   /* XXXX Downgrade this to info before release. NM */
-  notice(LD_CIRC, "Chose '%s' as new helper node.", entry->nickname);
-  strlcpy(helper->nickname, entry->nickname, sizeof(helper->nickname));
-  memcpy(helper->identity, entry->cache_info.identity_digest, DIGEST_LEN);
-  smartlist_add(helper_nodes, helper);
-  return entry;
+  notice(LD_CIRC, "Chose '%s' as new entry node.", router->nickname);
+  strlcpy(entry->nickname, router->nickname, sizeof(entry->nickname));
+  memcpy(entry->identity, router->cache_info.identity_digest, DIGEST_LEN);
+  smartlist_add(entry_nodes, entry);
+  return router;
 }
 
-/** If the use of helper nodes is configured, choose more helper nodes
+/** If the use of entry nodes is configured, choose more entry nodes
  * until we have enough in the list. */
 static void
-pick_helper_nodes(void)
+pick_entry_nodes(void)
 {
   or_options_t *options = get_options();
   int changed = 0;
 
-  if (!helper_nodes)
-    helper_nodes = smartlist_create();
+  if (!entry_nodes)
+    entry_nodes = smartlist_create();
 
-  while (num_live_helpers() < options->NumHelperNodes) {
-    if (!add_a_helper(NUM_HELPER_PICK_TRIES))
+  /* XXX this is where we prepend options->EntryNodes? */
+
+  while (num_live_entry_nodes() < options->NumEntryNodes) {
+    if (!add_an_entry(NULL, NUM_ENTRY_PICK_TRIES))
       break;
     changed = 1;
   }
   if (changed)
-    helper_nodes_changed();
+    entry_nodes_changed();
 }
 
-/** Release all storage held by the list of helper nodes. */
+/** Release all storage held by the list of entry nodes. */
 void
-helper_nodes_free_all(void)
+entry_nodes_free_all(void)
 {
-  if (helper_nodes) {
-    SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h, tor_free(h));
-    smartlist_free(helper_nodes);
-    helper_nodes = NULL;
+  if (entry_nodes) {
+    SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e, tor_free(e));
+    smartlist_free(entry_nodes);
+    entry_nodes = NULL;
   }
 }
 
 /* XXX These are 12 hours for now, but I'd like to make them 30 days */
 
-/** How long (in seconds) do we allow a helper node to be nonfunctional
+/** How long (in seconds) do we allow an entry node to be nonfunctional
  * before we give up on it? */
-#define HELPER_ALLOW_DOWNTIME (1*12*60*60)
-/** How long (in seconds) do we allow a helper node to be unlisted in the
+#define ENTRY_ALLOW_DOWNTIME (1*12*60*60)
+/** How long (in seconds) do we allow an entry node to be unlisted in the
  * directory before we give up on it? */
-#define HELPER_ALLOW_UNLISTED (1*12*60*60)
+#define ENTRY_ALLOW_UNLISTED (1*12*60*60)
 
-/** Remove all helper nodes that have been down or unlisted for so
+/** Remove all entry nodes that have been down or unlisted for so
  * long that we don't think they'll come up again. Return 1 if we
  * removed any, or 0 if we did nothing. */
 static int
-remove_dead_helpers(void)
+remove_dead_entries(void)
 {
   char dbuf[HEX_DIGEST_LEN+1];
   char tbuf[ISO_TIME_LEN+1];
@@ -1830,26 +1842,26 @@ remove_dead_helpers(void)
   int i;
   int changed = 0;
 
-  for (i = 0; i < smartlist_len(helper_nodes); ) {
-    helper_node_t *helper = smartlist_get(helper_nodes, i);
+  for (i = 0; i < smartlist_len(entry_nodes); ) {
+    entry_node_t *entry = smartlist_get(entry_nodes, i);
     const char *why = NULL;
     time_t since = 0;
-    if (helper->unlisted_since &&
-        helper->unlisted_since + HELPER_ALLOW_UNLISTED < now) {
+    if (entry->unlisted_since &&
+        entry->unlisted_since + ENTRY_ALLOW_UNLISTED < now) {
       why = "unlisted";
-      since = helper->unlisted_since;
-    } else if (helper->down_since &&
-               helper->down_since + HELPER_ALLOW_DOWNTIME < now) {
+      since = entry->unlisted_since;
+    } else if (entry->down_since &&
+               entry->down_since + ENTRY_ALLOW_DOWNTIME < now) {
       why = "down";
-      since = helper->down_since;
+      since = entry->down_since;
     }
     if (why) {
-      base16_encode(dbuf, sizeof(dbuf), helper->identity, DIGEST_LEN);
+      base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
       format_local_iso_time(tbuf, since);
-      warn(LD_CIRC, "Helper node '%s' (%s) has been %s since %s; removing.",
-           helper->nickname, dbuf, why, tbuf);
-      tor_free(helper);
-      smartlist_del_keeporder(helper_nodes, i);
+      warn(LD_CIRC, "Entry node '%s' (%s) has been %s since %s; removing.",
+           entry->nickname, dbuf, why, tbuf);
+      tor_free(entry);
+      smartlist_del_keeporder(entry_nodes, i);
       changed = 1;
     } else
       ++i;
@@ -1858,13 +1870,13 @@ remove_dead_helpers(void)
 }
 
 /** A new directory or router-status has arrived; update the down/listed
- * status of the helper nodes.
+ * status of the entry nodes.
  *
- * A helper is 'down' if the directory lists it as nonrunning.
- * A helper is 'unlisted' if the directory doesn't include it.
+ * An entry is 'down' if the directory lists it as nonrunning.
+ * An entry is 'unlisted' if the directory doesn't include it.
  */
 void
-helper_nodes_set_status_from_directory(void)
+entry_nodes_set_status_from_directory(void)
 {
   /* Don't call this on startup; only on a fresh download.  Otherwise we'll
    * think that things are unlisted. */
@@ -1872,7 +1884,7 @@ helper_nodes_set_status_from_directory(void)
   time_t now;
   int changed = 0;
   int severity = LOG_NOTICE;
-  if (! helper_nodes)
+  if (! entry_nodes)
     return;
 
   routers = router_get_routerlist();
@@ -1881,127 +1893,127 @@ helper_nodes_set_status_from_directory(void)
 
   /*XXXX Most of these warns should be non-warns. */
 
-  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
+  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
     {
-      routerinfo_t *r = router_get_by_digest(helper->identity);
+      routerinfo_t *r = router_get_by_digest(entry->identity);
       if (! r) {
-        if (! helper->unlisted_since) {
-          helper->unlisted_since = time(NULL);
+        if (! entry->unlisted_since) {
+          entry->unlisted_since = time(NULL);
           changed = 1;
-          warn(LD_CIRC,"Helper node '%s' is not listed by directories",
-               helper->nickname);
+          warn(LD_CIRC,"Entry node '%s' is not listed by directories.",
+               entry->nickname);
           severity = LOG_WARN;
         }
       } else {
-        if (helper->unlisted_since) {
-          warn(LD_CIRC,"Helper node '%s' is listed again by directories",
-               helper->nickname);
+        if (entry->unlisted_since) {
+          warn(LD_CIRC,"Entry node '%s' is listed again by directories.",
+               entry->nickname);
           changed = 1;
           severity = LOG_WARN;
         }
-        helper->unlisted_since = 0;
+        entry->unlisted_since = 0;
         if (! r->is_running) {
-          if (! helper->down_since) {
-            helper->down_since = now;
-            warn(LD_CIRC, "Helper node '%s' is now down.", helper->nickname);
+          if (! entry->down_since) {
+            entry->down_since = now;
+            warn(LD_CIRC, "Entry node '%s' is now down.", entry->nickname);
             changed = 1;
             severity = LOG_WARN;
           }
         } else {
-          if (helper->down_since) {
-            notice(LD_CIRC,"Helper node '%s' is up in latest directories",
-                   helper->nickname);
+          if (entry->down_since) {
+            notice(LD_CIRC,"Entry node '%s' is up in latest directories",
+                   entry->nickname);
             changed = 1;
           }
-          helper->down_since = 0;
+          entry->down_since = 0;
         }
       }
-      info(LD_CIRC, "Summary: Helper '%s' is %s, %s, and %s.",
-           helper->nickname,
-           helper->down_since ? "down" : "up",
-           helper->unlisted_since ? "unlisted" : "listed",
-           helper_is_live(helper, 0, 1) ? "live" : "not live");
+      info(LD_CIRC, "Summary: Entry '%s' is %s, %s, and %s.",
+           entry->nickname,
+           entry->down_since ? "down" : "up",
+           entry->unlisted_since ? "unlisted" : "listed",
+           entry_is_live(entry, 0, 1) ? "live" : "not live");
     });
 
-  if (remove_dead_helpers())
+  if (remove_dead_entries())
     changed = 1;
 
   if (changed) {
-    log_fn(severity, LD_CIRC, "    (%d/%d helpers are usable/new)",
-           num_live_helpers(), smartlist_len(helper_nodes));
-    helper_nodes_changed();
+    log_fn(severity, LD_CIRC, "    (%d/%d entries are usable/new)",
+           num_live_entry_nodes(), smartlist_len(entry_nodes));
+    entry_nodes_changed();
   }
 }
 
 /** Called when a connection to an OR with the identity digest <b>digest</b>
  * is established (<b>succeeded</b>==1) or has failed (<b>succeeded</b>==0).
- * If the OR is a helper, change that helper's up/down status.
+ * If the OR is an entry, change that entry's up/down status.
  * Return 0 normally, or -1 if we want to tear down the new connection.
  */
 int
-helper_node_set_status(const char *digest, int succeeded)
+entry_node_set_status(const char *digest, int succeeded)
 {
   int changed = 0;
   int refuse_conn = 0;
 
-  if (! helper_nodes)
+  if (! entry_nodes)
     return 0;
 
-  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
+  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
     {
-      if (!memcmp(helper->identity, digest, DIGEST_LEN)) {
+      if (!memcmp(entry->identity, digest, DIGEST_LEN)) {
         if (succeeded) {
-          if (!helper->made_contact) {
-            /* We've just added a new long-term helper node. Perhaps
+          if (!entry->made_contact) {
+            /* We've just added a new long-term entry node. Perhaps
              * the network just came back? We should give our earlier
-             * helpers another try too, and close this connection so
+             * entries another try too, and close this connection so
              * we don't use it before we've given the others a shot. */
-            helper->made_contact = 1;
-            SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
+            entry->made_contact = 1;
+            SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e,
               {
                 routerinfo_t *r;
-                if (h->made_contact) {
-                  h->down_since = 0;
-                  r = helper_is_live(h, 0, 1);
+                if (e->made_contact) {
+                  e->down_since = 0;
+                  r = entry_is_live(e, 0, 1);
                   if (r) {
                     refuse_conn = 1;
                     r->is_running = 1;
                   }
                 }
-                if (h == helper)
+                if (e == entry)
                   break;
               });
             notice(LD_CIRC,
-                   "Connected to new helper node '%s'. Marking earlier "
-                   "helpers up. %d/%d helpers usable/new.", helper->nickname,
-                   num_live_helpers(), smartlist_len(helper_nodes));
+                   "Connected to new entry node '%s'. Marking earlier "
+                   "entries up. %d/%d entries usable/new.", entry->nickname,
+                   num_live_entry_nodes(), smartlist_len(entry_nodes));
             changed = 1;
           }
-          if (helper->down_since) {
+          if (entry->down_since) {
             /*XXXX shouldn't be so loud. NM */
             notice(LD_CIRC,
-                   "Connection to formerly down helper node '%s' succeeded. "
-                   "%d/%d helpers usable/new.", helper->nickname,
-                   num_live_helpers(), smartlist_len(helper_nodes));
-            helper->down_since = 0;
+                   "Connection to formerly down entry node '%s' succeeded. "
+                   "%d/%d entry nodes usable/new.", entry->nickname,
+                   num_live_entry_nodes(), smartlist_len(entry_nodes));
+            entry->down_since = 0;
             changed = 1;
           }
         } else {
-          if (!helper->made_contact) { /* dump him */
+          if (!entry->made_contact) { /* dump him */
             notice(LD_CIRC,
-                   "Connection to never-contacted helper node '%s' failed. "
-                   "Removing from the list. %d/%d helpers usable/new.",
-                   helper->nickname,
-                   num_live_helpers()-1, smartlist_len(helper_nodes)-1);
-            tor_free(helper);
-            smartlist_del_keeporder(helper_nodes, helper_sl_idx);
+                   "Connection to never-contacted entry node '%s' failed. "
+                   "Removing from the list. %d/%d entry nodes usable/new.",
+                   entry->nickname,
+                   num_live_entry_nodes()-1, smartlist_len(entry_nodes)-1);
+            tor_free(entry);
+            smartlist_del_keeporder(entry_nodes, entry_sl_idx);
             changed = 1;
-          } else if (!helper->down_since) {
-            helper->down_since = time(NULL);
-            warn(LD_CIRC, "Connection to helper node '%s' failed."
-                 " %d/%d helpers usable/new.",
-                 helper->nickname,
-                 num_live_helpers(), smartlist_len(helper_nodes));
+          } else if (!entry->down_since) {
+            entry->down_since = time(NULL);
+            warn(LD_CIRC, "Connection to entry node '%s' failed."
+                 " %d/%d entry nodes usable/new.",
+                 entry->nickname,
+                 num_live_entry_nodes(), smartlist_len(entry_nodes));
             changed = 1;
           }
         }
@@ -2009,97 +2021,97 @@ helper_node_set_status(const char *digest, int succeeded)
     });
 
   if (changed)
-    helper_nodes_changed();
+    entry_nodes_changed();
   return refuse_conn ? -1 : 0;
 }
 
-/** Pick a live (up and listed) helper node from the list of helpers, and
+/** Pick a live (up and listed) entry node from entry_nodes, and
  * make sure not to pick this circuit's exit. */
 static routerinfo_t *
-choose_random_helper(cpath_build_state_t *state)
+choose_random_entry(cpath_build_state_t *state)
 {
-  smartlist_t *live_helpers = smartlist_create();
+  smartlist_t *live_entry_nodes = smartlist_create();
   routerinfo_t *chosen_exit = build_state_get_exit_router(state);
   routerinfo_t *r;
   int need_uptime = state->need_uptime;
   int need_capacity = state->need_capacity;
 
-  if (! helper_nodes ||
-      smartlist_len(helper_nodes) < get_options()->NumHelperNodes)
-    pick_helper_nodes();
+  if (! entry_nodes ||
+      smartlist_len(entry_nodes) < get_options()->NumEntryNodes)
+    pick_entry_nodes();
 
  retry:
-  smartlist_clear(live_helpers);
-  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
+  smartlist_clear(live_entry_nodes);
+  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
     {
-      r = helper_is_live(helper, need_uptime, need_capacity);
+      r = entry_is_live(entry, need_uptime, need_capacity);
       if (r && r != chosen_exit) {
-        smartlist_add(live_helpers, r);
-        if (smartlist_len(live_helpers) >= get_options()->NumHelperNodes)
+        smartlist_add(live_entry_nodes, r);
+        if (smartlist_len(live_entry_nodes) >= get_options()->NumEntryNodes)
           break; /* we have enough */
       }
     });
 
   /* Try to have at least 2 choices available. This way we don't
-   * get stuck with a single live-but-crummy helper and just keep
+   * get stuck with a single live-but-crummy entry and just keep
    * using him.
-   * (We might get 2 live-but-crummy helpers, but so be it.) */
-  if (smartlist_len(live_helpers) < 2) {
+   * (We might get 2 live-but-crummy entry nodes, but so be it.) */
+  if (smartlist_len(live_entry_nodes) < 2) {
     if (need_uptime) {
       need_uptime = 0; /* try without that requirement */
       goto retry;
     }
-    /* still no? try adding a new helper then */
-    r = add_a_helper(NUM_HELPER_PICK_TRIES);
+    /* still no? try adding a new entry then */
+    r = add_an_entry(NULL, NUM_ENTRY_PICK_TRIES);
     if (r) {
-      smartlist_add(live_helpers, r);
-      helper_nodes_changed();
+      smartlist_add(live_entry_nodes, r);
+      entry_nodes_changed();
     } else {
       if (need_capacity) {
         /* still no? last attempt, try without requiring capacity */
         need_capacity = 0;
         goto retry;
       }
-      /* live_helpers will be empty below. Oh well, we tried. */
+      /* live_entry_nodes will be empty below. Oh well, we tried. */
     }
   }
 
-  r = smartlist_choose(live_helpers);
-  smartlist_free(live_helpers);
+  r = smartlist_choose(live_entry_nodes);
+  smartlist_free(live_entry_nodes);
   return r;
 }
 
-/** Parse <b>state</b> and learn about the helper nodes it describes.
+/** Parse <b>state</b> and learn about the entry nodes it describes.
  * If <b>set</b> is true, and there are no errors, replace the global
- * helper list with what we find.
+ * entry_list with what we find.
  * On success, return 0. On failure, set *<b>err</b> to a string
  * describing the error, and return -1.
  */
 int
-helper_nodes_parse_state(or_state_t *state, int set, const char **err)
+entry_nodes_parse_state(or_state_t *state, int set, const char **err)
 {
-  helper_node_t *node = NULL;
-  smartlist_t *new_helpers = smartlist_create();
+  entry_node_t *node = NULL;
+  smartlist_t *new_entry_nodes = smartlist_create();
   config_line_t *line;
 
   *err = NULL;
-  for (line = state->HelperNodes; line; line = line->next) {
-    if (!strcasecmp(line->key, "HelperNode")) {
+  for (line = state->EntryNodes; line; line = line->next) {
+    if (!strcasecmp(line->key, "EntryNode")) {
       smartlist_t *args = smartlist_create();
-      node = tor_malloc_zero(sizeof(helper_node_t));
-      node->made_contact = 1; /* all helpers on disk have been contacted */
-      smartlist_add(new_helpers, node);
+      node = tor_malloc_zero(sizeof(entry_node_t));
+      node->made_contact = 1; /* all entry nodes on disk have been contacted */
+      smartlist_add(new_entry_nodes, node);
       smartlist_split_string(args, line->value, " ",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
       if (smartlist_len(args)<2) {
-        *err = "Too few arguments to HelperNode";
+        *err = "Too few arguments to EntryNode";
       } else if (!is_legal_nickname(smartlist_get(args,0))) {
-        *err = "Bad nickname for HelperNode";
+        *err = "Bad nickname for EntryNode";
       } else {
         strlcpy(node->nickname, smartlist_get(args,0), MAX_NICKNAME_LEN+1);
         if (base16_decode(node->identity, DIGEST_LEN, smartlist_get(args,1),
                           strlen(smartlist_get(args,1)))<0) {
-          *err = "Bad hex digest for HelperNode";
+          *err = "Bad hex digest for EntryNode";
         }
       }
       SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
@@ -2109,14 +2121,14 @@ helper_nodes_parse_state(or_state_t *state, int set, const char **err)
     } else {
       time_t when;
       if (!node) {
-        *err = "HelperNodeDownSince/UnlistedSince without HelperNode";
+        *err = "EntryNodeDownSince/UnlistedSince without EntryNode";
         break;
       }
       if (parse_iso_time(line->value, &when)<0) {
-        *err = "Bad time in HelperNodeDownSince/UnlistedSince";
+        *err = "Bad time in EntryNodeDownSince/UnlistedSince";
         break;
       }
-      if (!strcasecmp(line->key, "HelperNodeDownSince"))
+      if (!strcasecmp(line->key, "EntryNodeDownSince"))
         node->down_since = when;
       else
         node->unlisted_since = when;
@@ -2124,108 +2136,111 @@ helper_nodes_parse_state(or_state_t *state, int set, const char **err)
   }
 
   if (*err || !set) {
-    SMARTLIST_FOREACH(new_helpers, helper_node_t *, h, tor_free(h));
-    smartlist_free(new_helpers);
+    SMARTLIST_FOREACH(new_entry_nodes, entry_node_t *, e, tor_free(e));
+    smartlist_free(new_entry_nodes);
   } else { /* !*err && set */
-    if (helper_nodes) {
-      SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h, tor_free(h));
-      smartlist_free(helper_nodes);
+    if (entry_nodes) {
+      SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e, tor_free(e));
+      smartlist_free(entry_nodes);
     }
-    helper_nodes = new_helpers;
-    helper_nodes_dirty = 0;
+    entry_nodes = new_entry_nodes;
+    entry_nodes_dirty = 0;
   }
   return *err ? -1 : 0;
 }
 
-/** Our list of helper nodes has changed, or some element of one
- * of our helper nodes has changed. Write the changes to disk. */
+/** Our list of entry nodes has changed, or some element of one
+ * of our entry nodes has changed. Write the changes to disk. */
 static void
-helper_nodes_changed(void)
+entry_nodes_changed(void)
 {
-  helper_nodes_dirty = 1;
+  entry_nodes_dirty = 1;
 
   or_state_save();
 }
 
-/** If the helper node info has not changed, do nothing and return.
- * Otherwise, free the HelperNodes piece of <b>state</b> and create
- * a new one out of the global helper_nodes list, and then mark
- * <b>state</b> dirty so it will know to get saved to disk.
+/** If the entry node info has not changed, do nothing and return.
+ * Otherwise, free the EntryNodes piece of <b>state</b> and create
+ * a new one out of the global entry_nodes list, and then mark
+ * <b>state</b> dirty so it will get saved to disk.
  */
 void
-helper_nodes_update_state(or_state_t *state)
+entry_nodes_update_state(or_state_t *state)
 {
   config_line_t **next, *line;
-  if (! helper_nodes_dirty)
+  if (! entry_nodes_dirty)
     return;
 
-  config_free_lines(state->HelperNodes);
-  next = &state->HelperNodes;
+  config_free_lines(state->EntryNodes);
+  next = &state->EntryNodes;
   *next = NULL;
-  if (!helper_nodes)
-    helper_nodes = smartlist_create();
-  SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
+  if (!entry_nodes)
+    entry_nodes = smartlist_create();
+  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e,
     {
       char dbuf[HEX_DIGEST_LEN+1];
-      if (!h->made_contact)
+      if (!e->made_contact)
         continue; /* don't write this one to disk */
       *next = line = tor_malloc_zero(sizeof(config_line_t));
-      line->key = tor_strdup("HelperNode");
+      line->key = tor_strdup("EntryNode");
       line->value = tor_malloc(HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2);
-      base16_encode(dbuf, sizeof(dbuf), h->identity, DIGEST_LEN);
+      base16_encode(dbuf, sizeof(dbuf), e->identity, DIGEST_LEN);
       tor_snprintf(line->value,HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2,
-                   "%s %s", h->nickname, dbuf);
+                   "%s %s", e->nickname, dbuf);
       next = &(line->next);
-      if (h->down_since) {
+      if (e->down_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
-        line->key = tor_strdup("HelperNodeDownSince");
+        line->key = tor_strdup("EntryNodeDownSince");
         line->value = tor_malloc(ISO_TIME_LEN+1);
-        format_iso_time(line->value, h->down_since);
+        format_iso_time(line->value, e->down_since);
         next = &(line->next);
       }
-      if (h->unlisted_since) {
+      if (e->unlisted_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
-        line->key = tor_strdup("HelperNodeUnlistedSince");
+        line->key = tor_strdup("EntryNodeUnlistedSince");
         line->value = tor_malloc(ISO_TIME_LEN+1);
-        format_iso_time(line->value, h->unlisted_since);
+        format_iso_time(line->value, e->unlisted_since);
         next = &(line->next);
       }
     });
   state->dirty = 1;
-  helper_nodes_dirty = 0;
+  entry_nodes_dirty = 0;
 }
 
-/** If <b>question</b> is the string "helper-nodes", then dump
+/** If <b>question</b> is the string "entry-nodes", then dump
  * to *<b>answer</b> a newly allocated string describing all of
- * the nodes in the global helper_nodes list. See control-spec.txt
- * for details. */
+ * the nodes in the global entry_nodes list. See control-spec.txt
+ * for details.
+ * For backward compatibility, we also handle the string "helper-nodes".
+ * */
 int
-helper_nodes_getinfo_helper(const char *question, char **answer)
+entry_nodes_getinfo(const char *question, char **answer)
 {
-  if (!strcmp(question,"helper-nodes")) {
+  if (!strcmp(question,"entry-nodes") ||
+      !strcmp(question,"helper-nodes")) {
     smartlist_t *sl = smartlist_create();
     char tbuf[ISO_TIME_LEN+1];
     char dbuf[HEX_DIGEST_LEN+1];
-    if (!helper_nodes)
-      helper_nodes = smartlist_create();
-    SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
+    if (!entry_nodes)
+      entry_nodes = smartlist_create();
+    SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e,
       {
         size_t len = HEX_DIGEST_LEN+ISO_TIME_LEN+32;
         char *c = tor_malloc(len);
         const char *status = NULL;
         time_t when = 0;
-        if (!h->made_contact) {
+        if (!e->made_contact) {
           status = "never-connected";
-        } else if (h->unlisted_since) {
-          when = h->unlisted_since;
+        } else if (e->unlisted_since) {
+          when = e->unlisted_since;
           status = "unlisted";
-        } else if (h->down_since) {
-          when = h->down_since;
+        } else if (e->down_since) {
+          when = e->down_since;
           status = "down";
         } else {
           status = "up";
         }
-        base16_encode(dbuf, sizeof(dbuf), h->identity, DIGEST_LEN);
+        base16_encode(dbuf, sizeof(dbuf), e->identity, DIGEST_LEN);
         if (when) {
           format_iso_time(tbuf, when);
           tor_snprintf(c, len, "$%s %s %s\n", dbuf, status, tbuf);
