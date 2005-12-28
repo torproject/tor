@@ -659,12 +659,13 @@ static int
 connection_tls_finish_handshake(connection_t *conn)
 {
   char digest_rcvd[DIGEST_LEN];
+  int started_here = connection_or_nonopen_was_started_here(conn);
 
   debug(LD_OR,"tls handshake done. verifying.");
   if (connection_or_check_valid_handshake(conn, digest_rcvd) < 0)
     return -1;
 
-  if (!connection_or_nonopen_was_started_here(conn)) {
+  if (!started_here) {
 #if 0
     connection_t *c;
     if ((c=connection_or_get_by_identity_digest(digest_rcvd))) {
@@ -683,18 +684,23 @@ connection_tls_finish_handshake(connection_t *conn)
 
   directory_set_dirty();
   conn->state = OR_CONN_STATE_OPEN;
+  control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED);
+  if (started_here) {
+    rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
+    if (helper_node_set_status(conn->identity_digest, 1) < 0) {
+      /* pending circs get closed in circuit_about_to_close_connection() */
+      return -1;
+    }
+  }
   connection_watch_events(conn, EV_READ);
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
-  rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
-  helper_node_set_status(conn->identity_digest, 1);
-  control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED);
   return 0;
 }
 
 /** Pack <b>cell</b> into wire-format, and write it onto <b>conn</b>'s
  * outbuf.
  *
- * (Commented out) If it's an OR conn, and an entire TLS record is
+ * If it's an OR conn, and an entire TLS record is
  * ready, then try to flush the record now.
  */
 void
