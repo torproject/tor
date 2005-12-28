@@ -390,8 +390,8 @@ circuit_handle_first_hop(circuit_t *circ)
   return 0;
 }
 
-/** Find circuits that are waiting on <b>or_conn</b> to become open,
- * if any, and get them to send their create cells forward.
+/** Find any circuits that are waiting on <b>or_conn</b> to become
+ * open and get them to send their create cells forward.
  *
  * Status is 1 if connect succeeded, or 0 if connect failed.
  */
@@ -1927,7 +1927,7 @@ helper_nodes_set_status_from_directory(void)
     changed = 1;
 
   if (changed) {
-    log_fn(severity, LD_CIRC, "    (%d/%d helpers are usable)",
+    log_fn(severity, LD_CIRC, "    (%d/%d helpers are usable/new)",
            num_live_helpers(), smartlist_len(helper_nodes));
     helper_nodes_changed();
   }
@@ -1936,39 +1936,49 @@ helper_nodes_set_status_from_directory(void)
 /** Called when a connection to an OR with the identity digest <b>digest</b>
  * is established (<b>succeeded</b>==1) or has failed (<b>succeeded</b>==0).
  * If the OR is a helper, change that helper's up/down status.
+ * Return 0 normally, or -1 if we want to tear down the new connection.
  */
-void
+int
 helper_node_set_status(const char *digest, int succeeded)
 {
   int changed = 0;
+  int refuse_conn = 0;
 
   if (! helper_nodes)
-    return;
+    return 0;
 
   SMARTLIST_FOREACH(helper_nodes, helper_node_t *, helper,
     {
       if (!memcmp(helper->identity, digest, DIGEST_LEN)) {
         if (succeeded) {
           if (!helper->made_contact) {
+            /* We've just added a new long-term helper node. Perhaps
+             * the network just came back? We should give our earlier
+             * helpers another try too, and close this connection so
+             * we don't use it before we've given the others a shot. */
             helper->made_contact = 1;
-            /* We've just added a new long-term helper node.
-             * Perhaps the network just came back? We should
-             * give our earlier helpers another try too. */
+            refuse_conn = 1;
             SMARTLIST_FOREACH(helper_nodes, helper_node_t *, h,
               {
                 routerinfo_t *r = router_get_by_digest(h->identity);
-                h->down_since = 0;
-                if (r) r->is_running = 1;
+                if (h->made_contact) {
+                  h->down_since = 0;
+                  if (r) r->is_running = 1;
+                }
                 if (h == helper)
                   break;
               });
+            notice(LD_CIRC,
+                   "Connected to new helper node '%s'. Marking earlier "
+                   "helpers up. %d/%d helpers usable/new.", helper->nickname,
+                   num_live_helpers(), smartlist_len(helper_nodes));
             changed = 1;
           }
           if (helper->down_since) {
             /*XXXX shouldn't be so loud. NM */
             notice(LD_CIRC,
                    "Connection to formerly down helper node '%s' succeeded. "
-                   "%d/%d helpers usable.", helper->nickname,
+                   "%d/%d helpers usable/new.", helper->nickname,
                    num_live_helpers(), smartlist_len(helper_nodes));
             helper->down_since = 0;
             changed = 1;
@@ -1977,7 +1987,7 @@ helper_node_set_status(const char *digest, int succeeded)
           if (!helper->made_contact) { /* dump him */
             notice(LD_CIRC,
                    "Connection to never-contacted helper node '%s' failed. "
-                   "Removing from the list. %d/%d helpers usable.",
+                   "Removing from the list. %d/%d helpers usable/new.",
                    helper->nickname,
                    num_live_helpers()-1, smartlist_len(helper_nodes)-1);
             tor_free(helper);
@@ -1986,7 +1996,7 @@ helper_node_set_status(const char *digest, int succeeded)
           } else if (!helper->down_since) {
             helper->down_since = time(NULL);
             warn(LD_CIRC, "Connection to helper node '%s' failed."
-                 " %d/%d helpers usable.",
+                 " %d/%d helpers usable/new.",
                  helper->nickname,
                  num_live_helpers(), smartlist_len(helper_nodes));
             changed = 1;
@@ -1997,6 +2007,7 @@ helper_node_set_status(const char *digest, int succeeded)
 
   if (changed)
     helper_nodes_changed();
+  return refuse_conn ? -1 : 0;
 }
 
 /** Pick a live (up and listed) helper node from the list of helpers, and
