@@ -39,8 +39,9 @@ N - if they're trying to be a tor server and they're running
 
   . Helper nodes
     . More testing and debugging
-R   - If your helper nodes are unavailable, don't abandon them unless
+    o If your helper nodes are unavailable, don't abandon them unless
       other nodes *are* reachable.
+    - Make EntryNodes and StrictEntrynodes do what we want.
 
 N - Destroy and truncated cells should have reasons.
     - Specify
