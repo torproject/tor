@@ -3443,11 +3443,11 @@ update_router_descriptor_cache_downloads(time_t now)
     networkstatus_t *ns = smartlist_get(networkstatus_list, i);
     trusted_dir_server_t *ds =
       router_get_trusteddirserver_by_digest(ns->identity_digest);
+    smartlist_t *dl = download_from[i];
     if (!ds) {
       warn(LD_BUG, "Networkstatus with no corresponding authority!");
       continue;
     }
-    smartlist_t *dl = download_from[i];
     if (! smartlist_len(dl))
       continue;
     info(LD_DIR, "Requesting %d descriptors from authority \"%s\"",
