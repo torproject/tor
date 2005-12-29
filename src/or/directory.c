@@ -1556,7 +1556,13 @@ directory_handle_command_post(connection_t *conn, char *headers,
   if (!strcmpstart(url,"/tor/rendezvous/publish")) {
     /* rendezvous descriptor post */
     if (rend_cache_store(body, body_len) < 0) {
-      notice(LD_DIRSERV,"Rejected rend descriptor from %s.", origin);
+      char tmp[1024*2+1];
+      notice(LD_DIRSERV,"Rejected rend descriptor (length %d) from %s.",
+             (int)body_len, origin);
+      if (body_len <= 1024) {
+        base16_encode(tmp, sizeof(tmp), body, body_len);
+        notice(LD_DIRSERV,"Body was: %s", tmp);
+      }
       write_http_status_line(conn, 400, "Invalid service descriptor rejected");
     } else {
       write_http_status_line(conn, 200, "Service descriptor stored");
