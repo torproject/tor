@@ -586,7 +586,7 @@ rep_hist_bandwidth_assess(void)
  *
  * It returns the number of bytes written.
  */
-size_t
+static size_t
 rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
 {
   char *cp = buf;
