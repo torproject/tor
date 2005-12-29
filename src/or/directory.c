@@ -1541,7 +1541,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
       case -2:
       case -1:
       case 1:
-        notice(LD_DIRSERV,"Rejected descriptor from %s.", origin);
+        notice(LD_DIRSERV,"Rejected router descriptor from %s.", origin);
         /* malformed descriptor, or something wrong */
         write_http_status_line(conn, 400, msg);
         break;
@@ -1555,10 +1555,12 @@ directory_handle_command_post(connection_t *conn, char *headers,
 
   if (!strcmpstart(url,"/tor/rendezvous/publish")) {
     /* rendezvous descriptor post */
-    if (rend_cache_store(body, body_len) < 0)
+    if (rend_cache_store(body, body_len) < 0) {
+      notice(LD_DIRSERV,"Rejected rend descriptor from %s.", origin);
       write_http_status_line(conn, 400, "Invalid service descriptor rejected");
-    else
+    } else {
       write_http_status_line(conn, 200, "Service descriptor stored");
+    }
     goto done;
   }
 
@@ -1569,7 +1571,6 @@ directory_handle_command_post(connection_t *conn, char *headers,
   tor_free(url);
   tor_free(origin);
   return 0;
-
 }
 
 /** Called when a dirserver receives data on a directory connection;
