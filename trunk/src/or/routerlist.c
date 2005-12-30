@@ -1511,10 +1511,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     authdir_verified = router->is_verified;
   } else if (!from_cache) {
     /* Only check the descriptor digest against the network statuses when
-     * we are recieving from somewhere other than the cache.*/
+     * we are receiving from somewhere other than the cache. */
     if (!signed_desc_digest_is_recognized(&router->cache_info)) {
       warn(LD_DIR, "Dropping unrecognized descriptor for router '%s'",
-             router->nickname);
+           router->nickname);
       routerinfo_free(router);
       return -1;
     }
