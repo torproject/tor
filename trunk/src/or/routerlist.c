@@ -739,7 +739,7 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
   }
 }
 
-#define MAX_BELIEVABLE_BANDWIDTH 2000000 /* 2 MB/sec */
+#define MAX_BELIEVABLE_BANDWIDTH 1500000 /* 1.5 MB/sec */
 
 /** Choose a random element of router list <b>sl</b>, weighted by
  * the advertised bandwidth of each router.
