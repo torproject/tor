@@ -1298,20 +1298,20 @@ dumpstats(int severity)
                                            * using this conn */
   }
   log(severity, LD_NET,
-      "Cells processed: %10lu padding\n"
-      "                 %10lu create\n"
-      "                 %10lu created\n"
-      "                 %10lu relay\n"
-      "                        (%10lu relayed)\n"
-      "                        (%10lu delivered)\n"
-      "                 %10lu destroy",
-      stats_n_padding_cells_processed,
-      stats_n_create_cells_processed,
-      stats_n_created_cells_processed,
-      stats_n_relay_cells_processed,
-      stats_n_relay_cells_relayed,
-      stats_n_relay_cells_delivered,
-      stats_n_destroy_cells_processed);
+      "Cells processed: "U64_FORMAT" padding\n"
+      "                 "U64_FORMAT" create\n"
+      "                 "U64_FORMAT" created\n"
+      "                 "U64_FORMAT" relay\n"
+      "                        ("U64_FORMAT" relayed)\n"
+      "                        ("U64_FORMAT" delivered)\n"
+      "                 "U64_FORMAT" destroy",
+      U64_PRINTF_ARG(stats_n_padding_cells_processed),
+      U64_PRINTF_ARG(stats_n_create_cells_processed),
+      U64_PRINTF_ARG(stats_n_created_cells_processed),
+      U64_PRINTF_ARG(stats_n_relay_cells_processed),
+      U64_PRINTF_ARG(stats_n_relay_cells_relayed),
+      U64_PRINTF_ARG(stats_n_relay_cells_delivered),
+      U64_PRINTF_ARG(stats_n_destroy_cells_processed));
   if (stats_n_data_cells_packaged)
     log(severity,LD_NET,"Average packaged cell fullness: %2.3f%%",
         100*(((double)stats_n_data_bytes_packaged) /
