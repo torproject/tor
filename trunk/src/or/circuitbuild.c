@@ -109,7 +109,7 @@ circuit_list_path(circuit_t *circ, int verbose)
 
   if (verbose) {
     const char *nickname = build_state_get_exit_nickname(circ->build_state);
-    tor_snprintf(buf, sizeof(buf)-1, "%s%s circ (length %d%s%s):",
+    tor_snprintf(buf, sizeof(buf), "%s%s circ (length %d%s%s):",
                  circ->build_state->is_internal ? "internal" : "exit",
                  circ->build_state->need_uptime ? " (high-uptime)" : "",
                  circ->build_state->desired_path_len,
@@ -1115,13 +1115,9 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   int n_connections;
   int best_support = -1;
   int n_best_support=0;
-  smartlist_t *sl, *preferredexits, *preferredentries, *excludedexits;
+  smartlist_t *sl, *preferredexits, *excludedexits;
   routerinfo_t *router;
   or_options_t *options = get_options();
-
-//XXX
-  preferredentries = smartlist_create();
-  add_nickname_list_to_smartlist(preferredentries,options->EntryNodes,1,1);
 
   get_connection_array(&carray, &n_connections);
 
@@ -1176,13 +1172,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 //             router->nickname, i);
       continue; /* skip routers that reject all */
     }
-    if (smartlist_len(preferredentries)==1 &&
-        router == (routerinfo_t*)smartlist_get(preferredentries, 0)) {
-      n_supported[i] = -1;
-//      log_fn(LOG_DEBUG, "Skipping node %s (index %d) -- it's our only "
-//             "preferred entry node.", router->nickname, i);
-      continue;
-    }
     n_supported[i] = 0;
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
       if (!ap_stream_wants_exit_attention(carray[j]))
@@ -1213,10 +1202,10 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
        n_best_support, best_support, n_pending_connections);
 
   preferredexits = smartlist_create();
-  add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1,1);
+  add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1,1,1);
 
   excludedexits = smartlist_create();
-  add_nickname_list_to_smartlist(excludedexits,options->ExcludeNodes,0,1);
+  add_nickname_list_to_smartlist(excludedexits,options->ExcludeNodes,0,0,1);
 
   sl = smartlist_create();
 
@@ -1277,7 +1266,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   }
 
   smartlist_free(preferredexits);
-  smartlist_free(preferredentries);
   smartlist_free(excludedexits);
   smartlist_free(sl);
   tor_free(n_supported);
@@ -1741,7 +1729,7 @@ num_live_entry_nodes(void)
 /** Return 1 if <b>digest</b> matches the identity of any node
  * in the entry_nodes list. Else return 0. */
 static INLINE int
-is_an_entry(char *digest)
+is_an_entry_node(char *digest)
 {
   SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
                     if(!memcmp(digest, entry->identity, DIGEST_LEN))
@@ -1750,22 +1738,47 @@ is_an_entry(char *digest)
   return 0;
 }
 
+static void
+log_entry_nodes(int severity)
+{
+  smartlist_t *elements = smartlist_create();
+  char buf[1024];
+  char *s;
+
+  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e,
+    {
+      tor_snprintf(buf, sizeof(buf), "%s (%s%s%s)",
+                   e->nickname,
+                   e->down_since ? "down " : "up ",
+                   e->unlisted_since ? "unlisted " : "listed ",
+                   e->made_contact ? "made-contact" : "never-contacted");
+      smartlist_add(elements, tor_strdup(buf));
+    });
+
+  s = smartlist_join_strings(elements, ",", 0, NULL);
+  SMARTLIST_FOREACH(elements, char*, cp, tor_free(cp));
+  smartlist_free(elements);
+  log_fn(severity,LD_CIRC,"%s",s);
+  tor_free(s);
+}
+
 #define NUM_ENTRY_PICK_TRIES 100
 
 /** Add a new (preferably stable and fast) entry to our
  * entry_nodes list. Return a pointer to the router if we succeed,
- * or NULL if we can't find any more suitable entries. If
- * <b>tries_left</b> is <= 1, that means you should fail.
+ * or NULL if we can't find any more suitable entries.
  *
- * [not implemented yet]
- * If <b>chosen</b> is defined, use that one, and put it at
- * the *beginning* of our entry_nodes list. Else, put the one
- * we pick at the end of the list. */
+ * If <b>chosen</b> is defined, use that one, and if it's not
+ * already in our entry_nodes list, put it at the *beginning*.
+ * Else, put the one we pick at the end of the list. */
 static routerinfo_t *
-add_an_entry(routerinfo_t *chosen, int tries_left)
+add_an_entry_node(routerinfo_t *chosen)
 {
   routerinfo_t *router;
   entry_node_t *entry;
+  int tries_left = NUM_ENTRY_PICK_TRIES;
+
+again:
   if (--tries_left <= 0) {
     warn(LD_CIRC, "Tried finding a new entry, but failed. Bad news. XXX.");
     return NULL;
@@ -1777,14 +1790,21 @@ add_an_entry(routerinfo_t *chosen, int tries_left)
   if (!router)
     return NULL;
   /* make sure it's not already an entry */
-  if (is_an_entry(router->cache_info.identity_digest))
-    return chosen ? NULL : add_an_entry(NULL, tries_left); /* recurse */
+  if (is_an_entry_node(router->cache_info.identity_digest)) {
+    if (chosen)
+      return NULL;
+    goto again;
+  }
   entry = tor_malloc_zero(sizeof(entry_node_t));
   /* XXXX Downgrade this to info before release. NM */
   notice(LD_CIRC, "Chose '%s' as new entry node.", router->nickname);
   strlcpy(entry->nickname, router->nickname, sizeof(entry->nickname));
   memcpy(entry->identity, router->cache_info.identity_digest, DIGEST_LEN);
-  smartlist_add(entry_nodes, entry);
+  if (chosen)
+    smartlist_insert(entry_nodes, 0, entry);
+  else
+    smartlist_add(entry_nodes, entry);
+  log_entry_nodes(LOG_NOTICE);
   return router;
 }
 
@@ -1796,13 +1816,10 @@ pick_entry_nodes(void)
   or_options_t *options = get_options();
   int changed = 0;
 
-  if (!entry_nodes)
-    entry_nodes = smartlist_create();
-
-  /* XXX this is where we prepend options->EntryNodes? */
+  tor_assert(entry_nodes);
 
   while (num_live_entry_nodes() < options->NumEntryNodes) {
-    if (!add_an_entry(NULL, NUM_ENTRY_PICK_TRIES))
+    if (!add_an_entry_node(NULL))
       break;
     changed = 1;
   }
@@ -1862,6 +1879,7 @@ remove_dead_entries(void)
            entry->nickname, dbuf, why, tbuf);
       tor_free(entry);
       smartlist_del_keeporder(entry_nodes, i);
+      log_entry_nodes(LOG_NOTICE);
       changed = 1;
     } else
       ++i;
@@ -1941,6 +1959,7 @@ entry_nodes_set_status_from_directory(void)
   if (changed) {
     log_fn(severity, LD_CIRC, "    (%d/%d entries are usable/new)",
            num_live_entry_nodes(), smartlist_len(entry_nodes));
+    log_entry_nodes(severity);
     entry_nodes_changed();
   }
 }
@@ -1987,6 +2006,7 @@ entry_node_set_status(const char *digest, int succeeded)
                    "Connected to new entry node '%s'. Marking earlier "
                    "entries up. %d/%d entries usable/new.", entry->nickname,
                    num_live_entry_nodes(), smartlist_len(entry_nodes));
+            log_entry_nodes(LOG_NOTICE);
             changed = 1;
           }
           if (entry->down_since) {
@@ -1996,6 +2016,7 @@ entry_node_set_status(const char *digest, int succeeded)
                    "%d/%d entry nodes usable/new.", entry->nickname,
                    num_live_entry_nodes(), smartlist_len(entry_nodes));
             entry->down_since = 0;
+            log_entry_nodes(LOG_NOTICE);
             changed = 1;
           }
         } else {
@@ -2007,6 +2028,7 @@ entry_node_set_status(const char *digest, int succeeded)
                    num_live_entry_nodes()-1, smartlist_len(entry_nodes)-1);
             tor_free(entry);
             smartlist_del_keeporder(entry_nodes, entry_sl_idx);
+            log_entry_nodes(LOG_NOTICE);
             changed = 1;
           } else if (!entry->down_since) {
             entry->down_since = time(NULL);
@@ -2014,6 +2036,7 @@ entry_node_set_status(const char *digest, int succeeded)
                  " %d/%d entry nodes usable/new.",
                  entry->nickname,
                  num_live_entry_nodes(), smartlist_len(entry_nodes));
+            log_entry_nodes(LOG_NOTICE);
             changed = 1;
           }
         }
@@ -2025,20 +2048,78 @@ entry_node_set_status(const char *digest, int succeeded)
   return refuse_conn ? -1 : 0;
 }
 
+/** When we try to choose an entry node, should we parse and add
+ * config's EntryNodes first? */
+static int should_add_entry_nodes = 0;
+
+void
+entry_nodes_should_be_added(void)
+{
+  notice(LD_CIRC, "New EntryNodes config option detected. Will use.");
+  should_add_entry_nodes = 1;
+}
+
+void
+entry_nodes_prepend_from_config(void)
+{
+  int missed_some = 0;
+  int idx;
+  or_options_t *options = get_options();
+  smartlist_t *routers = smartlist_create();
+
+  tor_assert(entry_nodes);
+
+  add_nickname_list_to_smartlist(routers, options->EntryNodes,
+                                 0, 1, 1);
+
+  /* take a moment first to notice whether we got them all */
+  if (options->EntryNodes) {
+    notice(LD_CIRC,"Adding configured EntryNodes '%s'.",
+           options->EntryNodes);
+    smartlist_t *tmp = smartlist_create();
+    smartlist_split_string(tmp, options->EntryNodes, ",",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    missed_some = smartlist_len(routers) != smartlist_len(tmp);
+    SMARTLIST_FOREACH(tmp, char *, nick, tor_free(nick));
+    smartlist_free(tmp);
+  }
+
+  for (idx = smartlist_len(routers)-1 ; idx >= 0; idx--) {
+    /* pick off the last one, turn it into a router, prepend it
+     * to our entry_nodes list. If we can't find it, set missed_some
+     * to 1. */
+    routerinfo_t *r = smartlist_get(routers, idx);
+    add_an_entry_node(r);
+  }
+
+  if (!missed_some)
+    should_add_entry_nodes = 0; /* whew, we're done */
+
+  smartlist_free(routers);
+}
+
 /** Pick a live (up and listed) entry node from entry_nodes, and
  * make sure not to pick this circuit's exit. */
 static routerinfo_t *
 choose_random_entry(cpath_build_state_t *state)
 {
+  or_options_t *options = get_options();
   smartlist_t *live_entry_nodes = smartlist_create();
   routerinfo_t *chosen_exit = build_state_get_exit_router(state);
-  routerinfo_t *r;
+  routerinfo_t *r = NULL;
   int need_uptime = state->need_uptime;
   int need_capacity = state->need_capacity;
 
+  if (!entry_nodes)
+    entry_nodes = smartlist_create();
+
+  if (should_add_entry_nodes)
+    entry_nodes_prepend_from_config();
+
   if (! entry_nodes ||
-      smartlist_len(entry_nodes) < get_options()->NumEntryNodes)
-    pick_entry_nodes();
+      smartlist_len(entry_nodes) < options->NumEntryNodes)
+    if (!options->StrictEntryNodes)
+      pick_entry_nodes();
 
  retry:
   smartlist_clear(live_entry_nodes);
@@ -2047,7 +2128,7 @@ choose_random_entry(cpath_build_state_t *state)
       r = entry_is_live(entry, need_uptime, need_capacity);
       if (r && r != chosen_exit) {
         smartlist_add(live_entry_nodes, r);
-        if (smartlist_len(live_entry_nodes) >= get_options()->NumEntryNodes)
+        if (smartlist_len(live_entry_nodes) >= options->NumEntryNodes)
           break; /* we have enough */
       }
     });
@@ -2061,19 +2142,20 @@ choose_random_entry(cpath_build_state_t *state)
       need_uptime = 0; /* try without that requirement */
       goto retry;
     }
-    /* still no? try adding a new entry then */
-    r = add_an_entry(NULL, NUM_ENTRY_PICK_TRIES);
-    if (r) {
-      smartlist_add(live_entry_nodes, r);
-      entry_nodes_changed();
-    } else {
-      if (need_capacity) {
+    if (!options->StrictEntryNodes) {
+      /* still no? try adding a new entry then */
+      r = add_an_entry_node(NULL);
+      if (r) {
+        smartlist_add(live_entry_nodes, r);
+        entry_nodes_changed();
+      }
+    }
+    if (!r && need_capacity) {
         /* still no? last attempt, try without requiring capacity */
         need_capacity = 0;
         goto retry;
-      }
-      /* live_entry_nodes will be empty below. Oh well, we tried. */
     }
+    /* live_entry_nodes will be empty below. Oh well, we tried. */
   }
 
   r = smartlist_choose(live_entry_nodes);

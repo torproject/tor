@@ -559,7 +559,7 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   /* If the user declared any families locally, honor those too. */
   for (cl = get_options()->NodeFamilies; cl; cl = cl->next) {
     if (router_nickname_is_in_list(router, cl->value)) {
-      add_nickname_list_to_smartlist(sl, cl->value, 1, 1);
+      add_nickname_list_to_smartlist(sl, cl->value, 0, 1, 1);
     }
   }
 }
@@ -570,6 +570,7 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
  */
 void
 add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
+                               int must_be_running,
                                int warn_if_down, int warn_if_unnamed)
 {
   routerinfo_t *router;
@@ -590,13 +591,13 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
   SMARTLIST_FOREACH(nickname_list, const char *, nick, {
     int warned;
     if (!is_legal_nickname_or_hexdigest(nick)) {
-      warn(LD_CONFIG, "Nickname %s is misformed; skipping", nick);
+      warn(LD_CONFIG, "Nickname '%s' is misformed; skipping", nick);
       continue;
     }
     router = router_get_by_nickname(nick, warn_if_unnamed);
     warned = smartlist_string_isin(warned_nicknames, nick);
     if (router) {
-      if (router->is_running) {
+      if (!must_be_running || router->is_running) {
         smartlist_add(sl,router);
         if (warned)
           smartlist_string_remove(warned_nicknames, nick);
@@ -811,12 +812,12 @@ router_choose_random_node(const char *preferred,
   routerinfo_t *choice;
 
   excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,excluded,0,1);
+  add_nickname_list_to_smartlist(excludednodes,excluded,0,0,1);
 
   /* Try the preferred nodes first. Ignore need_uptime and need_capacity,
    * since the user explicitly asked for these nodes. */
   sl = smartlist_create();
-  add_nickname_list_to_smartlist(sl,preferred,1,1);
+  add_nickname_list_to_smartlist(sl,preferred,1,1,1);
   smartlist_subtract(sl,excludednodes);
   if (excludedsmartlist)
     smartlist_subtract(sl,excludedsmartlist);

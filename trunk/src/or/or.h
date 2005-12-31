@@ -1469,8 +1469,10 @@ void extend_info_free(extend_info_t *info);
 routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
-int entry_node_set_status(const char *digest, int succeeded);
 void entry_nodes_set_status_from_directory(void);
+int entry_node_set_status(const char *digest, int succeeded);
+void entry_nodes_should_be_added(void);
+void entry_nodes_prepend_from_config(void);
 void entry_nodes_update_state(or_state_t *state);
 int entry_nodes_parse_state(or_state_t *state, int set, const char **err);
 int entry_nodes_getinfo(const char *question, char **answer);
@@ -2235,6 +2237,7 @@ trusted_dir_server_t *router_get_trusteddirserver_by_digest(
 int all_trusted_directory_servers_down(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
+                                    int must_be_running,
                                     int warn_if_down, int warn_if_unnamed);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
