@@ -37,11 +37,11 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
 /** Stats: how many relay cells have originated at this hop, or have
  * been relayed onward (not recognized at this hop)?
  */
-unsigned long stats_n_relay_cells_relayed = 0;
+uint64_t stats_n_relay_cells_relayed = 0;
 /** Stats: how many relay cells have been delivered to streams at this
  * hop?
  */
-unsigned long stats_n_relay_cells_delivered = 0;
+uint64_t stats_n_relay_cells_delivered = 0;
 
 /** Update digest from the payload of cell. Assign integrity part to
  * cell.

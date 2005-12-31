@@ -20,11 +20,11 @@ const char command_c_id[] =
 #include "or.h"
 
 /** Keep statistics about how many of each type of cell we've received. */
-unsigned long stats_n_padding_cells_processed = 0;
-unsigned long stats_n_create_cells_processed = 0;
-unsigned long stats_n_created_cells_processed = 0;
-unsigned long stats_n_relay_cells_processed = 0;
-unsigned long stats_n_destroy_cells_processed = 0;
+uint64_t stats_n_padding_cells_processed = 0;
+uint64_t stats_n_create_cells_processed = 0;
+uint64_t stats_n_created_cells_processed = 0;
+uint64_t stats_n_relay_cells_processed = 0;
+uint64_t stats_n_destroy_cells_processed = 0;
 
 /* These are the main four functions for processing cells */
 static void command_process_create_cell(cell_t *cell, connection_t *conn);
