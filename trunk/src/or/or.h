@@ -1546,11 +1546,11 @@ int connection_ap_handshake_attach_circuit(connection_t *conn);
 
 void command_process_cell(cell_t *cell, connection_t *conn);
 
-extern unsigned long stats_n_padding_cells_processed;
-extern unsigned long stats_n_create_cells_processed;
-extern unsigned long stats_n_created_cells_processed;
-extern unsigned long stats_n_relay_cells_processed;
-extern unsigned long stats_n_destroy_cells_processed;
+extern uint64_t stats_n_padding_cells_processed;
+extern uint64_t stats_n_create_cells_processed;
+extern uint64_t stats_n_created_cells_processed;
+extern uint64_t stats_n_relay_cells_processed;
+extern uint64_t stats_n_destroy_cells_processed;
 
 /********************************* config.c ***************************/
 
@@ -1991,8 +1991,8 @@ void clear_pending_onions(void);
 
 /********************************* relay.c ***************************/
 
-extern unsigned long stats_n_relay_cells_relayed;
-extern unsigned long stats_n_relay_cells_delivered;
+extern uint64_t stats_n_relay_cells_relayed;
+extern uint64_t stats_n_relay_cells_delivered;
 
 int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction);
