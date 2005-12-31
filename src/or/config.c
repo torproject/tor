@@ -244,6 +244,8 @@ static config_var_t _state_vars[] = {
   VAR("BWHistoryWriteInterval",  UINT,        BWHistoryWriteInterval, NULL),
   VAR("BWHistoryWriteValues",    CSV,         BWHistoryWriteValues,   NULL),
 
+  VAR("TorVersion",              STRING,      TorVersion,             NULL),
+
   VAR("LastWritten",             ISOTIME,     LastWritten,            NULL),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
