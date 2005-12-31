@@ -1379,6 +1379,8 @@ typedef struct {
   time_t      BWHistoryWriteEnds;
   int         BWHistoryWriteInterval;
   smartlist_t *BWHistoryWriteValues;
+
+  char *TorVersion;
 } or_state_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024
