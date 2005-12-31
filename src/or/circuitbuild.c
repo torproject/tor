@@ -1494,8 +1494,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   smartlist_t *excluded = smartlist_create();
   or_options_t *options = get_options();
 
-  if (state && options->UseEntryNodes &&
-      purpose != CIRCUIT_PURPOSE_TESTING) {
+  if (state && options->UseEntryNodes) {
     return choose_random_entry(state);
   }
 
