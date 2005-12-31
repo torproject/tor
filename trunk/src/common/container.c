@@ -228,6 +228,7 @@ smartlist_del(smartlist_t *sl, int idx)
   tor_assert(idx < sl->num_used);
   sl->list[idx] = sl->list[--sl->num_used];
 }
+
 /** Remove the <b>idx</b>th element of sl; if idx is not the last element,
  * moving all subsequent elements back one space. Return the old value
  * of the <b>idx</b>th element.
@@ -242,6 +243,7 @@ smartlist_del_keeporder(smartlist_t *sl, int idx)
   if (idx < sl->num_used)
     memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
 }
+
 /** Insert the value <b>val</b> as the new <b>idx</b>th element of
  * <b>sl</b>, moving all items previously at <b>idx</b> or later
  * forward one space.
