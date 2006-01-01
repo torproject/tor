@@ -648,11 +648,8 @@ tor_timegm(struct tm *tm)
   year = tm->tm_year + 1900;
   if (year < 1970 || tm->tm_mon < 0 || tm->tm_mon > 11) {
     warn(LD_BUG, "Out-of-range argument to tor_timegm");
-    return 0;
+    return -1;
   }
-  tor_assert(year >= 1970);
-  tor_assert(tm->tm_mon >= 0);
-  tor_assert(tm->tm_mon <= 11);
   days = 365 * (year-1970) + n_leapdays(1970,year);
   for (i = 0; i < tm->tm_mon; ++i)
     days += days_per_month[i];
