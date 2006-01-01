@@ -646,6 +646,10 @@ tor_timegm(struct tm *tm)
   unsigned long year, days, hours, minutes;
   int i;
   year = tm->tm_year + 1900;
+  if (year < 1970 || tm->tm_mon < 0 || tm->tm_mon > 11) {
+    warn(LD_BUG, "Out-of-range argument to tor_timegm");
+    return 0;
+  }
   tor_assert(year >= 1970);
   tor_assert(tm->tm_mon >= 0);
   tor_assert(tm->tm_mon <= 11);
@@ -714,9 +718,14 @@ parse_rfc1123_time(const char *buf, time_t *t)
     warn(LD_GENERAL, "Got invalid RFC1123 time \"%s\"", buf);
     return -1;
   }
-
   tm.tm_mon = m;
+
+  if (tm.tm_year < 1970) {
+    warn(LD_GENERAL, "Got invalid RFC1123 time \"%s\". (Before 1970)", buf);
+    return -1;
+  }
   tm.tm_year -= 1900;
+
   *t = tor_timegm(&tm);
   return 0;
 }
@@ -760,6 +769,10 @@ parse_iso_time(const char *cp, time_t *t)
   st_tm.tm_min = minute;
   st_tm.tm_sec = second;
 #endif
+  if (st_tm.tm_year < 70) {
+    warn(LD_GENERAL, "Got invalid ISO time \"%s\". (Before 1970)", cp);
+    return -1;
+  }
   *t = tor_timegm(&st_tm);
   return 0;
 }
