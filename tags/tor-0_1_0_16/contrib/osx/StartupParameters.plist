@@ -1,0 +1,13 @@
+{
+  Description     = "Tor";
+  Provides        = ("tor");
+  Requires        = ("Network");
+  Uses		  = ("Network");
+  OrderPreference = "Last";
+  Messages =
+  {
+  start = "Starting Tor";
+  stop = "Stopping Tor";
+  };
+}
+

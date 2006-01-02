@@ -1,0 +1,355 @@
+$Id$
+
+                      Tor network discovery protocol
+
+0. Scope
+
+This document proposes a way of doing more distributed network discovery
+while maintaining some amount of admission control. We don't recommend
+you implement this as-is; it needs more discussion.
+
+Terminology:
+  - Client: The Tor component that chooses paths.
+  - Server: A relay node that passes traffic along.
+
+1. Goals.
+
+We want more decentralized discovery for network topology and status.
+In particular:
+
+1a. We want to let clients learn about new servers from anywhere
+    and build circuits through them if they wish. This means that
+    Tor nodes need to be able to Extend to nodes they don't already
+    know about.
+
+1b. We want to let servers limit the addresses and ports they're
+    willing to extend to. This is necessary e.g. for middleman nodes
+    who have jerks trying to extend from them to badmafia.com:80 all
+    day long and it's drawing attention.
+
+1b'. While we're at it, we also want to handle servers that *can't*
+    extend to some addresses/ports, e.g. because they're behind NAT or
+    otherwise firewalled. (See section 5 below.)
+
+1c. We want to provide a robust (available) and not-too-centralized
+    mechanism for tracking network status (which nodes are up and working)
+    and admission (which nodes are "recommended" for certain uses).
+
+2. Assumptions.
+
+2a. People get the code from us, and they trust us (or our gpg keys, or
+    something down the trust chain that's equivalent).
+
+2b. Even if the software allows humans to change the client configuration,
+    most of them will use the default that's provided. so we should
+    provide one that is the right balance of robust and safe. That is,
+    we need to hard-code enough "first introduction" locations that new
+    clients will always have an available way to get connected.
+
+2c. Assume that the current "ask them to email us and see if it seems
+    suspiciously related to previous emails" approach will not catch
+    the strong Sybil attackers. Therefore, assume the Sybil attackers
+    we do want to defend against can produce only a limited number of
+    not-obviously-on-the-same-subnet nodes.
+
+2d. Roger has only a limited amount of time for approving nodes; shouldn't
+    be the time bottleneck anyway; and is doing a poor job at keeping
+    out some adversaries.
+
+2e. Some people would be willing to offer servers but will be put off
+    by the need to send us mail and identify themselves.
+2e'. Some evil people will avoid doing evil things based on the perception
+    (however true or false) that there are humans monitoring the network
+    and discouraging evil behavior.
+2e''. Some people will trust the network, and the code, more if they
+    have the perception that there are trustworthy humans guiding the
+    deployed network.
+
+2f. We can trust servers to accurately report their characteristics
+    (uptime, capacity, exit policies, etc), as long as we have some
+    mechanism for notifying clients when we notice that they're lying.
+
+2g. There exists a "main" core Internet in which most locations can access
+    most locations. We'll focus on it (first).
+
+3. Some notes on how to achieve.
+
+Piece one: (required)
+
+  We ship with N (e.g. 20) directory server locations and fingerprints.
+
+  Directory servers serve signed network-status pages, listing their
+  opinions of network status and which routers are good (see 4a below).
+
+  Dirservers collect and provide server descriptors as well. These don't
+  need to be signed by the dirservers, since they're self-certifying
+  and timestamped.
+
+  (In theory the dirservers don't need to be the ones serving the
+  descriptors, but in practice the dirservers would need to point people
+  at the place that does, so for simplicity let's assume that they do.)
+
+  Clients then get network-status pages from a threshold of dirservers,
+  fetch enough of the corresponding server descriptors to make them happy,
+  and proceed as now.
+
+Piece two: (optional)
+
+  We ship with S (e.g. 3) seed keys (trust anchors), and ship with
+  signed timestamped certs for each dirserver. Dirservers also serve a
+  list of certs, maybe including a "publish all certs since time foo"
+  functionality. If at least two seeds agree about something, then it
+  is so.
+
+  Now dirservers can be added, and revoked, without requiring users to
+  upgrade to a new version. If we only ship with dirserver locations
+  and not fingerprints, it also means that dirservers can rotate their
+  signing keys transparently.
+
+  But, keeping track of the seed keys becomes a critical security issue.
+  And rotating them in a backward-compatible way adds complexity. Also,
+  dirserver locations must be at least somewhere static, since each lost
+  dirserver degrades reachability for old clients. So as the dirserver
+  list rolls over we have no choice but to put out new versions.
+
+
+Piece three: (optional)
+
+  Notice that this doesn't preclude other approaches to discovering
+  different concurrent Tor networks. For example, a Tor network inside
+  China could ship Tor with a different torrc and poof, they're using
+  a different set of dirservers. Some smarter clients could be made to
+  learn about both networks, and be told which nodes bridge the networks.
+  ...
+
+4. Unresolved issues.
+
+4a. How do the dirservers decide whether to recommend a server? We
+    could have them do it based on contact from the human, but by
+    assumptions 2c and 2d above, that's going to be less effective, and
+    more of a hassle, as we scale up. Thus I propose that they simply
+    do some basic automatic measuring themselves, starting with the
+    current "are they connected to me" measurement, and that's all
+    that is done.
+
+    We could blacklist as we notice evil servers, but then we're in
+    the same boat all the irc networks are in. We could whitelist as we
+    notice new servers, and stop whitelisting (maybe rolling back a bit)
+    once an attack is in progress. If we assume humans aren't particularly
+    good at this anyway, we could just do automated delayed whitelisting,
+    and have a "you're under attack" switch the human can enable for a
+    while to start acting more conservatively.
+
+    Once upon a time we collected contact info for servers, which was
+    mainly used to remind people that their servers are down and could
+    they please restart. Now that we have a critical mass of servers,
+    I've stopped doing that reminding. So contact info is less important.
+
+4b. What do we do about recommended-versions? Do we need a threshold of
+    dirservers to claim that your version is obsolete before you believe
+    them? Or do we make it have less effect -- e.g. print a warning but
+    never actually quit? Coordinating all the humans to upgrade their
+    recommended-version strings at once seems bad. Maybe if we have
+    seeds, the seeds can sign a recommended-version and upload it to
+    the dirservers.
+
+4c. What does it mean to bind a nickname to a key? What if each dirserver
+    does it differently, so one nickname corresponds to several keys?
+    Maybe the solution is that nickname<=>key bindings should be
+    individually configured by clients in their torrc (if they want to
+    refer to nicknames in their torrc), and we stop thinking of nicknames
+    as globally unique.
+
+4d. What new features need to be added to server descriptors so they
+    remain compact yet support new functionality? Section 5 is a start
+    of discussion of one answer to this.
+
+
+
+5. Regarding "Blossom: an unstructured overlay network for end-to-end
+connectivity."
+
+SECTION 5A: Blossom Architecture
+
+Define "transport domain" as a set of nodes who can all mutually name each
+other directly, using transport-layer (e.g. HOST:PORT) naming.
+
+Define "clique" as a set of nodes who can all mutually contact each other directly,
+using transport-layer (e.g. HOST:PORT) naming.
+
+Neither transport domains and cliques form a partition of the set of all nodes.
+Just as cliques may overlap in theoretical graphs, transport domains and
+cliques may overlap in the context of Blossom.
+
+In this section we address possible solutions to the problem of how to allow
+Tor routers in different transport domains to communicate.
+
+First, we presume that for every interface between transport domains A and B,
+one Tor router T_A exists in transport domain A, one Tor router T_B exists in
+transport domain B, and (without loss of generality) T_A can open a persistent
+connection to T_B.  Any Tor traffic between the two routers will occur over
+this connection, which effectively renders the routers equal partners in
+bridging between the two transport domains.  We refer to the established link
+between two transport domains as a "bridge" (we use this term because there is
+no serious possibility of confusion with the notion of a layer 2 bridge).
+
+Next, suppose that the universe consists of transport domains connected by
+persistent connections in this manner.  An individual router can open multiple
+connections to routers within the same foreign transport domain, and it can
+establish separate connections to routers within multiple foreign transport
+domains.
+
+As in regular Tor, each Blossom router pushes its descriptor to directory
+servers.  These directory servers can be within the same transport domain, but
+they need not be.  The trick is that if a directory server is in another
+transport domain, then that directory server must know through which Tor
+routers to send messages destined for the Tor router in question.
+
+Blossom routers can advertise themselves to other transport domains in two
+ways:
+
+(1) Directly push the descriptor to a directory server in the other transport
+domain.  This probably works particularly well if the other transport domain is
+"the Internet", or if there are hard-coded directory servers in "the Internet".
+The router has the responsibility to inform the directory server about which
+routers can be used to reach it.
+
+(2) Push the descriptor to a directory server in the same transport domain.
+This is the easiest solution for the router, but it relies upon the existence
+of a directory server in the same transport domain that is capable of
+communicating with directory servers in the remote transport domain.  In order
+for this to work, some individual Tor routers must have published their
+descriptors in remote transport domains (i.e. followed the first option) in
+order to provide a link by which directory servers can communiate
+bidirectionally.
+
+If all directory servers are within the same transport domain, then approach
+(1) is sufficient: routers can exist within multiple transport domains, and as
+long as the network of transport domains is fully connected by bridges, any
+router will be able to access any other router in a foreign transport domain
+simply by extending along the path specified by the directory server.  However,
+we want the system to be truly decentralized, which means not electing any
+particular transport domain to be the master domain in which entries are
+published.
+
+This is the explanation for (2): in order for a directory server to share
+information with a directory server in a foreign transport domain to which it
+cannot speak directly, it must use Tor, which means referring to the other
+directory server by using a router in the foreign transport domain.  However,
+in order to use Tor, it must be able to reach that router, which means that a
+descriptor for that router must exist in its table, along with a means of
+reaching it.  Therefore, in order for a mutual exchange of information between
+routers in transport domain A and those in transport domain B to be possible,
+when routers in transport domain A cannot establish direct connections with
+routers in transport domain B, then some router in transport domain B must have
+pushed its descriptor to a directory server in transport domain A, so that the
+directory server in transport domain A can use that router to reach the
+directory server in transport domain B.
+
+Descriptors for Blossom routers are read-only, as for regular Tor routers, so
+directory servers cannot modify them.  However, Tor directory servers also
+publish a "network-status" page that provide information about which nodes are
+up and which are not.  Directory servers could provide an additional field for
+Blossom nodes.  For each Blossom node, the directory server specifies a set of
+paths (may be only one) through the overlay (i.e. an ordered list of router
+names/IDs) to a router in a foreign transport domain.  (This field may be a set
+of paths rather than a single path.)
+
+A new router publishing to a directory server in a foreign transport should
+include a list of routers.  This list should be either:
+
+a. ...a list of routers to which the router has persistent connections, or, if
+the new router does not have any persistent connections,
+
+b. ...a (not necessarily exhaustive) list of fellow routers that are in the
+same transport domain.
+
+The directory server will be able to use this information to derive a path to
+the new router, as follows.  If the new router used approach (a), then the
+directory server will define the set of paths to the new router as union of the
+set of paths to the routers on the list with the name of the last hop appended
+to each path.  If the new router used approach (b), then the directory server
+will define the paths to the new router as the union of the set of paths to the
+routers specified in the list.  The directory server will then insert the newly
+defined path into the field in the network-status page from the router.
+
+When confronted with the choice of multiple different paths to reach the same
+router, the Blossom nodes may use a route selection protocol similar in design
+to that used by BGP (may be a simple distance-vector route selection procedure
+that only takes into account path length, or may be more complex to avoid
+loops, cache results, etc.) in order to choose the best one.
+
+If a .exit name is not provided, then a path will be chosen whose nodes are all
+among the set of nodes provided by the directory server that are believed to be
+in the same transport domain (i.e. no explicit path).  Thus, there should be no
+surprises to the client.  All routers should be careful to define their exit
+policies carefully, with the knowledge that clients from potentially any
+transport domain could access that which is not explicitly restricted.
+
+SECTION 5B: Tor+Blossom desiderata
+
+The interests of Blossom would be best served by implementing the following
+modifications to Tor:
+
+I. CLIENTS
+
+Objectives: Ultimately, we want Blossom requests to be indistinguishable in
+format from non-Blossom .exit requests, i.e. hostname.forwarder.exit.
+
+Proposal: Blossom is a process that manipulates Tor, so it should be
+implemented as a Tor Control, extending control-spec.txt.  For each request,
+Tor uses the control protocol to ask the Blossom process whether it (the
+Blossom process) wants to build or assign a particular circuit to service the
+request.  Blossom chooses one of the following responses:
+
+a. (Blossom exit node, circuit cached) "use this circuit" -- provides a circuit
+ID
+
+b. (Blossom exit node, circuit not cached) "I will build one" -- provides a
+list of routers, gets a circuit ID.
+
+c. (Regular (non-Blossom) exit node) "No, do it yourself" -- provides nothing.
+
+II. ROUTERS
+
+Objectives: Blossom routers are like regular Tor routers, except that Blossom
+routers need these features as well:
+
+a. the ability to open peresistent connections,
+
+b. the ability to know whwther they should use a persistent connection to reach
+another router,
+
+c. the ability to define a set of routers to which to establish persistent
+connections, as readable from a configuration file, and
+
+d. the ability to tell a directory server that (1) it is Blossom-enabled, and
+(2) it can be reached by some set of routers to which it explicitly establishes
+persistent connections.
+
+Proposal: Address the aforementioned points as follows.
+
+a. need the ability to open a specified number of persistent connections.  This
+can be accomplished by implementing a generic should_i_close_this_conn() and
+which_conns_should_i_try_to_open_even_when_i_dont_need_them().
+
+b. The Tor design already supports this, but we must be sure to establish the
+persistent connections explicitly, re-establish them when they are lost, and
+not close them unnecessarily.
+
+c. We must modify Tor to add a new configuration option, allowing either (a)
+explicit specification of the set of routers to which to establish persistent
+connections, or (b) a random choice of some nodes to which to establish
+persistent connections, chosen from the set of nodes local to the transport
+domain of the specified directory server (for example).
+
+III. DIRSERVERS
+
+Objective: Blossom directory servers may provide extra
+fields in their network-status pages.  Blossom directory servers may
+communicate with Blossom clients/routers in nonstandard ways in addition to
+standard ways.
+
+Proposal: Geoff should be able to implement a directory server according to the
+Tor specification (dir-spec.txt).
+

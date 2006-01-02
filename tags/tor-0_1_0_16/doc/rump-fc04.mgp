@@ -1,0 +1,175 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%deffont "standard" xfont "comic sans ms-medium-r"
+%%deffont "thick" xfont "arial black-medium-r"
+%%deffont "typewriter" xfont "courier new-bold-r"
+%%deffont "type2writer" xfont "arial narrow-bold-r"
+%%deffont "standard"   tfont "standard.ttf",   tmfont "kochi-mincho.ttf"
+%%deffont "thick"      tfont "thick.ttf",      tmfont "goth.ttf"
+%%deffont "typewriter" tfont "typewriter.ttf", tmfont "goth.ttf"
+%deffont "standard" xfont "helvetica-medium-r", tfont "arial.ttf", tmfont "times.ttf"
+%deffont "thick" xfont "helvetica-bold-r", tfont "arialbd.ttf", tmfont "hoso6.ttf"
+%deffont "italic" xfont "helvetica-italic-r", tfont "ariali.ttf", tmfont "hoso6.ttf"
+%deffont "typewriter" xfont "courier-medium-r", tfont "typewriter.ttf", tmfont "hoso6.ttf"
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Default settings per each line numbers.
+%%
+%default 1 leftfill, size 8, fore "black", back "white", font "thick", hgap 1
+%default 2 size 8, vgap 10, prefix " ", ccolor "black"
+%default 3 size 6, bar "gray70", vgap 0
+%default 4 size 6, fore "black", vgap 0, prefix " ", font "standard"
+%%
+%%default 1 area 90 90, leftfill, size 9, fore "yellow", back "blue", font "thick"
+%%default 2 size 9, vgap 10, prefix " "
+%%default 3 size 7, bar "gray70", vgap 10
+%%default 4 size 7, vgap 30, prefix " ", font "standard"
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Default settings that are applied to TAB-indented lines.
+%%
+%tab 1 size 5, vgap 40, prefix "     ", icon arc "red" 50
+%tab 2 size 4, vgap 35, prefix "            ", icon delta3 "blue" 40
+%tab 3 size 3, vgap 35, prefix "                        ", icon dia "DarkViolet" 40
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+%nodefault
+%center, size 9, font "thick", back "white", fore "black"
+
+
+
+Tor: 
+%size 8
+Next-generation Onion Routing
+
+
+%size 7
+Roger Dingledine
+Nick Mathewson
+Paul Syverson
+
+%%The Free Haven Project
+%%%font "typewriter", fore "blue"
+%%http://freehaven.net/
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Low-latency anonymity system
+
+%leftfill
+Deployed: 19 nodes, hundreds of users (?)
+
+Many improvements on earlier design
+
+Free software -- available source code
+
+Design is not covered by earlier onion routing
+patent
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Perfect forward secrecy
+
+
+Telescoping circuit
+
+	negotiates keys at each hop
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%page
+%%
+%%Separation from "protocol cleaning"
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+No mixing, padding, traffic shaping (yet)
+
+
+Please show us they're worth the usability tradeoff
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%page
+%%
+%%Many TCP streams can share one circuit
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Congestion control
+
+
+Simple rate limiting
+
+Plus have to keep internal nodes from overflowing
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Directory servers
+
+
+Approve new servers
+
+Tell clients who's up right now
+
+	plus their keys, location, etc
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Variable exit policies
+
+
+Each server allows different outgoing connections
+
+E.g. no servers allow outgoing mail currently
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+End-to-end integrity checking
+
+
+In previous onion routing, an insider could change
+the text being transmitted:
+
+"dir" => "rm *"
+
+Even an external adversary could do this!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Rendezvous points
+
+
+allow hidden services
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Differences / limitations
+
+
+We're TCP-only, not all IP (but we're user-space and very portable)
+
+Not peer-to-peer
+
+No protocol normalization
+
+%%Not unobservable
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+We have working code
+
+
+Plus a design document,
+and a byte-level specification
+
+%size 9
+http://freehaven.net/tor/
+
