@@ -212,7 +212,7 @@ static config_var_t _option_vars[] = {
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
   VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
   OBSOLETE("TrafficShaping"),
-  VAR("UseEntryNodes",       BOOL,     UseEntryNodes,        "0"),
+  VAR("UseEntryNodes",       BOOL,     UseEntryNodes,        "1"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
