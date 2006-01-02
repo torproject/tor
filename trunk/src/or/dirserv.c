@@ -1220,6 +1220,8 @@ should_generate_v2_networkstatus(void)
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }
 
+long stable_uptime = 0; /* start at a safe value */
+
 /** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
  * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
  * If <b>need_capacity</b> is non-zero, we require a minimum advertised
@@ -1229,12 +1231,48 @@ static int
 dirserv_thinks_router_is_unreliable(routerinfo_t *router,
                                     int need_uptime, int need_capacity)
 {
-  if (need_uptime && router->uptime < ROUTER_REQUIRED_MIN_UPTIME)
+  if (need_uptime && router->uptime < stable_uptime)
     return 1;
   if (need_capacity &&
       router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
     return 1;
   return 0;
+}
+
+static int
+_compare_longs(const void **a, const void **b)
+{
+  long first = **(long **)a, second = **(long **)b;
+  if (first < second) return -1;
+  if (first > second) return 1;
+  return 0;
+}
+
+/** Look through the routerlist, and assign the median uptime
+ * of running verified servers to stable_uptime. */
+void
+dirserv_compute_stable_uptime(routerlist_t *rl)
+{
+  smartlist_t *uptimes = smartlist_create();
+  long *up;
+
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+    if (ri->is_running && ri->is_verified) {
+      up = tor_malloc(sizeof(long));
+      *up = ri->uptime;
+      smartlist_add(uptimes, up);
+    }
+  });
+
+  smartlist_sort(uptimes, _compare_longs);
+
+  stable_uptime = *(long *)smartlist_get(uptimes,
+                                         smartlist_len(uptimes)/2);
+
+  info(LD_DIRSERV, "Uptime cutoff is %ld seconds.", stable_uptime);
+
+  SMARTLIST_FOREACH(uptimes, long *, up, tor_free(up));
+  smartlist_free(uptimes);
 }
 
 /** For authoritative directories only: replace the contents of
@@ -1325,11 +1363,21 @@ generate_v2_networkstatus(void)
   outp = status + strlen(status);
   endp = status + len;
 
+  /* precompute this part, since we need it to decide what "stable"
+   * means. */
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+    ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
+  });
+
+  dirserv_compute_stable_uptime(rl);
+
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
       int f_exit = router_is_general_exit(ri);
-      int f_stable = !dirserv_thinks_router_is_unreliable(ri, 1, 0);
-      int f_fast = !dirserv_thinks_router_is_unreliable(ri, 0, 1);
-      int f_running;
+      int f_stable = ri->is_stable =
+                     !dirserv_thinks_router_is_unreliable(ri, 1, 0);
+      int f_fast = ri->is_fast =
+                   !dirserv_thinks_router_is_unreliable(ri, 0, 1);
+      int f_running = ri->is_running; /* computed above */
       int f_authority = router_digest_is_trusted_dir(
                                       ri->cache_info.identity_digest);
       int f_named = naming && ri->is_named;
@@ -1340,12 +1388,6 @@ generate_v2_networkstatus(void)
         tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
       char identity64[BASE64_DIGEST_LEN+1];
       char digest64[BASE64_DIGEST_LEN+1];
-      if (options->AuthoritativeDir) {
-        ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
-        ri->is_fast = f_fast;
-        ri->is_stable = f_stable;
-      }
-      f_running = ri->is_running;
 
       format_iso_time(published, ri->cache_info.published_on);
 

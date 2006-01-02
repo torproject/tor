@@ -2244,15 +2244,10 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
                                                  int warn);
-
-/** How many seconds a router must be up before we'll use it for
- * reliability-critical node positions.
- */
-#define ROUTER_REQUIRED_MIN_UPTIME (24*3600) /* a day */
-#define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
-
 routerinfo_t *router_find_exact_exit_enclave(const char *address,
                                              uint16_t port);
+
+#define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
 int router_is_unreliable(routerinfo_t *router, int need_uptime,
                          int need_capacity);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
