@@ -3532,8 +3532,8 @@ or_state_validate(or_state_t *old_state, or_state_t *state)
     return -1;
   }
   if (tor_version_parse(state->TorVersion, &v)) {
-    warn(LD_GENERAL, "Unable to parse Tor version '%s'", state->TorVersion);
-    return -1;
+    warn(LD_GENERAL, "Can't parse Tor version '%s' from your state file. "
+         "Proceeding anyway.", state->TorVersion);
   }
   return 0;
 }
