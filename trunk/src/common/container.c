@@ -79,33 +79,35 @@ smartlist_clear(smartlist_t *sl)
   sl->num_used = 0;
 }
 
-/** Append element to the end of the list. */
-void
-smartlist_add(smartlist_t *sl, void *element)
+/** Make sure that <b>sl</b> can hold at least <b>size</b> entries. */
+static INLINE void
+smartlist_ensure_capacity(smartlist_t *sl, int size)
 {
-  if (sl->num_used >= sl->capacity) {
+  if (size > sl->capacity) {
     int higher = sl->capacity * 2;
+    while (size > higher)
+      higher *= 2;
     tor_assert(higher > sl->capacity); /* detect overflow */
     sl->capacity = higher;
     sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
   }
+}
+
+/** Append element to the end of the list. */
+void
+smartlist_add(smartlist_t *sl, void *element)
+{
+  smartlist_ensure_capacity(sl, sl->num_used+1);
   sl->list[sl->num_used++] = element;
 }
 
 /** Append each element from S2 to the end of S1. */
 void
-smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
+smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
 {
-  int n2 = sl->num_used + s2->num_used;
-  if (n2 > sl->capacity) {
-    int higher = sl->capacity * 2;
-    while (n2 > higher)
-      higher *= 2;
-    sl->capacity = higher;
-    sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
-  }
-  memcpy(sl->list + sl->num_used, s2->list, s2->num_used*sizeof(void*));
-  sl->num_used += s2->num_used;
+  smartlist_ensure_capacity(s1, s1->num_used + s2->num_used);
+  memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
+  s1->num_used += s2->num_used;
 }
 
 /** Remove all elements E from sl such that E==element.  Preserve
@@ -257,11 +259,7 @@ smartlist_insert(smartlist_t *sl, int idx, void *val)
   if (idx == sl->num_used) {
     smartlist_add(sl, val);
   } else {
-    /* Ensure sufficient capacity */
-    if (sl->num_used >= sl->capacity) {
-      sl->capacity *= 2;
-      sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
-    }
+    smartlist_ensure_capacity(sl, sl->num_used+1);
     /* Move other elements away */
     if (idx < sl->num_used)
       memmove(sl->list + idx + 1, sl->list + idx,
