@@ -385,7 +385,7 @@ static config_format_t state_format = {
 static or_options_t *global_options = NULL;
 /** Name of most recently read torrc file. */
 static char *torrc_fname = NULL;
-/** Persistant serialized state. */
+/** Persistent serialized state. */
 static or_state_t *global_state = NULL;
 /** DOCDOC */
 static addr_policy_t *reachable_addr_policy = NULL;
@@ -3526,8 +3526,13 @@ static int
 or_state_validate(or_state_t *old_state, or_state_t *state)
 {
   const char *err;
+  tor_version_t v;
   if (entry_nodes_parse_state(state, 0, &err)<0) {
-    warn(LD_GENERAL, "Unable to parse helper nodes: %s", err);
+    warn(LD_GENERAL, "Unable to parse entry nodes: %s", err);
+    return -1;
+  }
+  if (tor_version_parse(state->TorVersion, &v)) {
+    warn(LD_GENERAL, "Unable to parse Tor version '%s'", state->TorVersion);
     return -1;
   }
   return 0;
@@ -3617,6 +3622,8 @@ or_state_save(void)
   size_t len;
   char *fname;
 
+  tor_assert(global_state);
+
   entry_nodes_update_state(global_state);
   rep_hist_update_state(global_state);
 
@@ -3624,6 +3631,8 @@ or_state_save(void)
     return 0;
 
   global_state->LastWritten = time(NULL);
+  tor_free(global_state->TorVersion);
+  global_state->TorVersion = tor_strdup("Tor " VERSION);
   state = config_dump(&state_format, global_state, 0);
   len = strlen(state)+128;
   contents = tor_malloc(len);
