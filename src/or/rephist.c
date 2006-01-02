@@ -677,7 +677,8 @@ rep_hist_update_state(or_state_t *state)
     tor_snprintf(cp, len-(cp-buf), cp == buf ? U64_FORMAT : ","U64_FORMAT,
                  U64_PRINTF_ARG(b->total_in_period));
     *s_values = smartlist_create();
-    smartlist_split_string(*s_values, buf, ",", SPLIT_SKIP_SPACE, 0);
+    if (server_mode(get_options()))
+      smartlist_split_string(*s_values, buf, ",", SPLIT_SKIP_SPACE, 0);
   }
   tor_free(buf);
   state->dirty = 1;
