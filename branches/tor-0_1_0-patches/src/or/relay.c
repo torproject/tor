@@ -414,7 +414,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   }
 
   if (!circ) {
-    log_fn(LOG_WARN,"no circ. Closing conn.");
+    log_fn(LOG_INFO,"no circ. Closing conn.");
     tor_assert(fromconn);
     if (fromconn->type == CONN_TYPE_AP) {
       connection_mark_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);
@@ -578,7 +578,7 @@ errno_to_end_reason(int e)
 }
 
 /** How many times will I retry a stream that fails due to DNS
- * resolve failure?
+ * resolve failure or misc error?
  */
 #define MAX_RESOLVE_FAILURES 3
 
@@ -589,7 +589,8 @@ edge_reason_is_retriable(int reason) {
   return reason == END_STREAM_REASON_HIBERNATING ||
          reason == END_STREAM_REASON_RESOURCELIMIT ||
          reason == END_STREAM_REASON_EXITPOLICY ||
-         reason == END_STREAM_REASON_RESOLVEFAILED;
+         reason == END_STREAM_REASON_RESOLVEFAILED ||
+         reason == END_STREAM_REASON_MISC;
 }
 
 static int
@@ -629,19 +630,23 @@ connection_edge_process_end_not_open(
         }
         /* check if he *ought* to have allowed it */
         if (rh->length < 5 ||
-            (!tor_inet_aton(conn->socks_request->address, &in) &&
+            (tor_inet_aton(conn->socks_request->address, &in) &&
              !conn->chosen_exit_name)) {
           log_fn(LOG_NOTICE,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
           addr_policy_free(exitrouter->exit_policy);
           exitrouter->exit_policy =
             router_parse_addr_policy_from_string("reject *:*");
         }
+        /* rewrite it to an IP if we learned one. */
+        addressmap_rewrite(conn->socks_request->address,
+                           sizeof(conn->socks_request->address));
 
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
         /* else, conn will get closed below */
         break;
       case END_STREAM_REASON_RESOLVEFAILED:
+      case END_STREAM_REASON_MISC:
         if (client_dns_incr_failures(conn->socks_request->address)
             < MAX_RESOLVE_FAILURES) {
           /* We haven't retried too many times; reattach the connection. */
@@ -653,8 +658,10 @@ connection_edge_process_end_not_open(
             return 0;
           /* else, conn will get closed below */
         } else {
-          log_fn(LOG_NOTICE,"Have tried resolving address '%s' at %d different places. Giving up.",
+          log_fn(LOG_NOTICE,"Have tried resolving or connecting to address '%s' at %d different places. Giving up.",
                  safe_str(conn->socks_request->address), MAX_RESOLVE_FAILURES);
+          /* clear the failures, so it will have a full try next time */
+          client_dns_clear_failures(conn->socks_request->address);
         }
         break;
       case END_STREAM_REASON_HIBERNATING:

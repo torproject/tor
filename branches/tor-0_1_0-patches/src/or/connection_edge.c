@@ -612,6 +612,19 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
          safe_str(address), safe_str(ent->new_address));
 }
 
+/** If <b>address</b> is in the client dns addressmap, reset
+ * the number of resolve failures we have on record for it.
+ * This is used when we fail a stream because it won't resolve:
+ * otherwise future attempts on that address will only try once.
+ */
+void
+client_dns_clear_failures(const char *address)
+{
+  addressmap_entry_t *ent = strmap_get(addressmap, address);
+  if (ent)
+    ent->num_resolve_failures = 0;
+}
+
 /** An attempt to resolve <b>address</b> failed at some OR.
  * Increment the number of resolve failures we have on record
  * for it, and then return that number.
