@@ -65,6 +65,9 @@ static config_abbrev_t config_abbrevs[] = {
   { "BandwidthBurstBytes", "BandwidthBurst", 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0},
   { "MaxConn", "ConnLimit", 0},
+  { "ORListenAddress", "ORBindAddress", 0},
+  { "DirListenAddress", "DirBindAddress", 0},
+  { "SocksListenAddress", "SocksBindAddress", 0},
   { NULL, NULL , 0},
 };
 #undef PLURAL
