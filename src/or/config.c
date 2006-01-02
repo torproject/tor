@@ -704,8 +704,9 @@ options_act(or_options_t *old_options)
   }
 
   /* Check if we need to parse and add the EntryNodes config option. */
-  if (!old_options ||
-      !opt_streq(old_options->EntryNodes, options->EntryNodes))
+  if (options->EntryNodes &&
+      (!old_options ||
+       !opt_streq(old_options->EntryNodes, options->EntryNodes)))
     entry_nodes_should_be_added();
 
   /* Since our options changed, we might need to regenerate and upload our
