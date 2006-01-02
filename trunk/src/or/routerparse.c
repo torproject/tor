@@ -1740,7 +1740,7 @@ tor_version_parse(const char *s, tor_version_t *out)
   memset(out, 0, sizeof(tor_version_t));
 
   if (!strcasecmpstart(s, "Tor "))
-    cp += 4;
+    s += 4;
 
   /* Get major. */
   out->major = strtol(s,&eos,10);
