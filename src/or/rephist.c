@@ -469,7 +469,7 @@ advance_obs(bw_array_t *b)
 /** Add 'n' bytes to the number of bytes in b for second 'when'.
  */
 static INLINE void
-add_obs(bw_array_t *b, time_t when, int n)
+add_obs(bw_array_t *b, time_t when, uint64_t n)
 {
   /* Don't record data in the past. */
   if (when<b->cur_obs_time)
