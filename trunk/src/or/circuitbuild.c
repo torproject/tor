@@ -2065,23 +2065,29 @@ entry_nodes_prepend_from_config(void)
   int idx;
   or_options_t *options = get_options();
   smartlist_t *routers = smartlist_create();
+  smartlist_t *tmp = smartlist_create();
 
   tor_assert(entry_nodes);
+  tor_assert(options->EntryNodes);
+
+  if (options->StrictEntryNodes) {
+    info(LD_CIRC,"Clearing old entry nodes");
+    SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e, tor_free(e));
+    smartlist_clear(entry_nodes);
+    entry_nodes_changed();
+  }
 
   add_nickname_list_to_smartlist(routers, options->EntryNodes,
                                  0, 1, 1);
 
   /* take a moment first to notice whether we got them all */
-  if (options->EntryNodes) {
-    notice(LD_CIRC,"Adding configured EntryNodes '%s'.",
-           options->EntryNodes);
-    smartlist_t *tmp = smartlist_create();
-    smartlist_split_string(tmp, options->EntryNodes, ",",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    missed_some = smartlist_len(routers) != smartlist_len(tmp);
-    SMARTLIST_FOREACH(tmp, char *, nick, tor_free(nick));
-    smartlist_free(tmp);
-  }
+  notice(LD_CIRC,"Adding configured EntryNodes '%s'.",
+         options->EntryNodes);
+  smartlist_split_string(tmp, options->EntryNodes, ",",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  missed_some = smartlist_len(routers) != smartlist_len(tmp);
+  SMARTLIST_FOREACH(tmp, char *, nick, tor_free(nick));
+  smartlist_free(tmp);
 
   for (idx = smartlist_len(routers)-1 ; idx >= 0; idx--) {
     /* pick off the last one, turn it into a router, prepend it
@@ -2115,10 +2121,10 @@ choose_random_entry(cpath_build_state_t *state)
   if (should_add_entry_nodes)
     entry_nodes_prepend_from_config();
 
-  if (! entry_nodes ||
-      smartlist_len(entry_nodes) < options->NumEntryNodes)
-    if (!options->StrictEntryNodes)
-      pick_entry_nodes();
+  if (!options->StrictEntryNodes &&
+      (! entry_nodes ||
+       smartlist_len(entry_nodes) < options->NumEntryNodes))
+    pick_entry_nodes();
 
  retry:
   smartlist_clear(live_entry_nodes);
