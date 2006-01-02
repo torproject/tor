@@ -1905,6 +1905,11 @@ options_validate(or_options_t *old_options, or_options_t *options)
     if (!options->RecommendedServerVersions)
       options->RecommendedServerVersions =
         config_lines_dup(options->RecommendedVersions);
+    if (options->UseEntryNodes) {
+      notice(LD_CONFIG, "Authoritative directory servers can't set "
+             "UseEntryNodes. Disabling.");
+      options->UseEntryNodes = 0;
+    }
   }
 
   if (options->AuthoritativeDir && !options->DirPort)
