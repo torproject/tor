@@ -1,5 +1,8 @@
-Changes in version 0.1.0.16 - 2005-12-01
+Changes in version 0.1.0.16 - 2006-01-xx
   o Crash bugfixes on 0.1.0.x:
+    - On Windows, build with a libevent patch from "I-M Weasel" to avoid
+      corrupting the heap, losing FDs, or crashing when we need to resize
+      the fd_sets. (This affects the Win32 binaries, not Tor's sources.)
     - It turns out sparc64 platforms crash on unaligned memory access
       too -- so detect and avoid this.
     - Handle truncated compressed data correctly (by detecting it and
@@ -11,8 +14,13 @@ Changes in version 0.1.0.16 - 2005-12-01
       don't know that it ever happened, but better to fix it anyway.)
     - We were neglecting to unlink marked circuits from soon-to-close OR
       connections, which caused some rare scribbling on freed memory.
+    - Fix a memory stomping race bug when closing the joining point of two
+      rendezvous circuits.
+    - Fix an assert in time parsing found by Steven Murdoch.
 
   o Other bugfixes on 0.1.0.x:
+    - When we're doing reachability testing, provide more useful log
+      messages so the operator knows what to expect.
     - Do not check whether DirPort is reachable when we are suppressing
       advertising it because of hibernation.
     - When building with -static or on Solaris, we sometimes needed -ldl.
@@ -22,6 +30,14 @@ Changes in version 0.1.0.16 - 2005-12-01
       that are so dirty they won't be able to handle it.
     - When we're expiring old circuits, we had a logic error that caused
       us to close new rendezvous circuits rather than old ones.
+    - Give a more helpful log message when you try to change ORPort via
+      the controller: you should upgrade Tor if you want that to work.
+    - We were failing to parse Tor versions that start with "Tor ".
+    - Tolerate faulty streams better: when a stream fails for reason
+      exitpolicy, stop assuming that the router is lying about his exit
+      policy. When a stream fails for reason misc, allow it to retry just
+      as if it was resolvefailed. When a stream has failed three times,
+      reset its failure count so we can try again and get all three tries.
 
 
 Changes in version 0.1.0.15 - 2005-09-23
