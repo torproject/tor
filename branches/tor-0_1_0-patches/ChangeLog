@@ -1,4 +1,4 @@
-Changes in version 0.1.0.16 - 2006-01-xx
+Changes in version 0.1.0.16 - 2006-01-02
   o Crash bugfixes on 0.1.0.x:
     - On Windows, build with a libevent patch from "I-M Weasel" to avoid
       corrupting the heap, losing FDs, or crashing when we need to resize
