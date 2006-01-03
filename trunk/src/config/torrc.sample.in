@@ -1,18 +1,22 @@
 ## Configuration file for a typical Tor user
-## Last updated 26 October 2005 for Tor 0.1.1.9-alpha.
+## Last updated 2 January 2006 for Tor 0.1.1.11-alpha.
 ## (May or may not work for older or newer versions of Tor.)
-#
+##
+## Lines that begin with "## " try to explain what's going on. Lines
+## that begin with just "#" are disabled commands: you can enable them
+## by removing the "#" symbol.
+##
 ## See the man page, or http://tor.eff.org/tor-manual.html, for more
 ## options you can use in this file.
-#
-# On Unix, Tor will look for this file in someplace like "~/.tor/torrc" or
-# "/etc/torrc"
-#
-# On Windows, Tor will look for the configuration file in someplace like
-# "Application Data\tor\torrc" or "Application Data\<username>\tor\torrc"
-#
-# With the default Mac OS X installer, Tor will look in ~/.tor/torrc or
-# /Library/Tor/torrc
+##
+## On Unix, Tor will look for this file in someplace like "~/.tor/torrc" or
+## "/etc/torrc"
+##
+## On Windows, Tor will look for the configuration file in someplace like
+## "Application Data\tor\torrc" or "Application Data\<username>\tor\torrc"
+##
+## With the default Mac OS X installer, Tor will look in ~/.tor/torrc or
+## /Library/Tor/torrc
 
 
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
