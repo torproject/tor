@@ -5,20 +5,17 @@ It was downloaded from http://tor.eff.org/
 
 Upstream Authors: Roger Dingledine <arma@freehaven.net>
                   Nick Mathewson <nickm@freehaven.net>
-                  Matej Pfajfar <badbytes@freehaven.net>
 
-
-Copyright (c) 2001-2005 Roger Dingledine
-Copyright (c) 2002-2005 Nick Mathewson
-Copyright (c) 2001-2003 Matej Pfajfar
+Copyright (c) 2001-2004, Roger Dingledine
+Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 strlcat, strlcpy: Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
 tree.h: Copyright (c) 2002 Niels Provos <provos@citi.umich.edu>
-Modifications for Debian: Copyright (c) 2004, 2005 Peter Palfrader
+Modifications for Debian: Copyright (c) 2004, 2005, 2006 Peter Palfrader
 
 The tor code is under this license:
 ===============================================================================
 Copyright (c) 2001-2004, Roger Dingledine
-Copyright (c) 2004-2005, Roger Dingledine, Nick Mathewson
+Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
