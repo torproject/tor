@@ -1893,8 +1893,8 @@ void dirserv_orconn_tls_done(const char *address,
                              const char *digest_rcvd,
                              const char *nickname,
                              int as_advertised);
-int authdir_wants_to_reject_router(routerinfo_t *ri,
-                                   const char **msg);
+int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
+                                   int complain);
 int dirserv_would_reject_router(routerstatus_t *rs);
 void dirserv_free_all(void);
 

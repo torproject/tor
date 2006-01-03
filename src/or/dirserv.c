@@ -418,17 +418,21 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 }
 
 /** Check whether we, as a directory server, want to accept <b>ri</b>.  If so,
- * return 0, and set its is_valid,named,running fields.  Otherwise, return -1.
+ * set its is_valid,named,running fields and return 0.  Otherwise, return -1.
  *
  * If the router is rejected, set *<b>msg</b> to an explanation of why.
+ *
+ * If <b>complain</b> then explain at log-level 'notice' why we refused
+ * a descriptor; else explain at log-level 'info'.
  */
 int
-authdir_wants_to_reject_router(routerinfo_t *ri,
-                               const char **msg)
+authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
+                               int complain)
 {
   /* Okay.  Now check whether the fingerprint is recognized. */
   router_status_t status = dirserv_router_get_status(ri, msg);
   time_t now;
+  int severity = complain ? LOG_NOTICE : LOG_INFO;
   tor_assert(msg);
   if (status == FP_REJECT)
     return -1; /* msg is already set. */
@@ -436,8 +440,8 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->cache_info.published_on > now+ROUTER_ALLOW_SKEW) {
-    notice(LD_DIRSERV, "Publication time for nickname '%s' is too far "
-           "(%d minutes) in the future; possible clock skew. Not adding "
+    log_fn(severity, LD_DIRSERV, "Publication time for nickname '%s' is too "
+           "far (%d minutes) in the future; possible clock skew. Not adding "
            "(ContactInfo '%s', platform '%s').",
            ri->nickname, (int)((ri->cache_info.published_on-now)/60),
            ri->contact_info ? ri->contact_info : "",
@@ -447,7 +451,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
     return -1;
   }
   if (ri->cache_info.published_on < now-ROUTER_MAX_AGE) {
-    notice(LD_DIRSERV,
+    log_fn(severity, LD_DIRSERV,
            "Publication time for router with nickname '%s' is too far "
            "(%d minutes) in the past. Not adding (ContactInfo '%s', "
            "platform '%s').",
@@ -459,7 +463,8 @@ authdir_wants_to_reject_router(routerinfo_t *ri,
     return -1;
   }
   if (dirserv_router_has_valid_address(ri) < 0) {
-    notice(LD_DIRSERV, "Router with nickname '%s' has invalid address '%s'. "
+    log_fn(severity, LD_DIRSERV,
+           "Router with nickname '%s' has invalid address '%s'. "
            "Not adding (ContactInfo '%s', platform '%s').",
            ri->nickname, ri->address,
            ri->contact_info ? ri->contact_info : "",

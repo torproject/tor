@@ -1505,7 +1505,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     routerlist_remove_old_routers();
 
   if (authdir) {
-    if (authdir_wants_to_reject_router(router, msg)) {
+    if (authdir_wants_to_reject_router(router, msg, !from_cache)) {
       routerinfo_free(router);
       return -2;
     }
