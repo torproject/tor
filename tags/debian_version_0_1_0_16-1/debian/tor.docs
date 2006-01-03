@@ -1,0 +1,14 @@
+AUTHORS
+README
+INSTALL
+debian/README.privoxy
+debian/README.Debian
+doc/CLIENTS
+doc/FAQ
+doc/HACKING
+doc/TODO
+doc/tor-doc.css
+doc/tor-doc.html
+doc/rend-spec.txt
+doc/tor-spec.txt
+doc/control-spec.txt

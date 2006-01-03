@@ -1,0 +1,45 @@
+#! /bin/sh -e
+## 03_tor_manpage_in_section_8.dpatch by  <weasel@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+if [ $# -lt 1 ]; then
+    echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch} ${2:+-d $2}"
+
+case "$1" in
+    -patch) patch -p1 ${patch_opts} < $0;;
+    -unpatch) patch -R -p1 ${patch_opts} < $0;;
+    *)
+        echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+        exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+diff -urNad tor-0.0.9pre5/contrib/torify.1 /tmp/dpep.fOA3Mm/tor-0.0.9pre5/contrib/torify.1
+--- tor-0.0.9pre5/contrib/torify.1	2004-11-10 03:27:09.608843380 +0100
++++ /tmp/dpep.fOA3Mm/tor-0.0.9pre5/contrib/torify.1	2004-11-10 03:28:29.621248723 +0100
+@@ -18,6 +18,6 @@
+ to suid binaries.
+ 
+ .SH SEE ALSO
+-.BR tor (1),
++.BR tor (8),
+ .BR tsocks (1),
+ .BR tsocks.conf (5).
+diff -urNad tor-0.0.9pre5/doc/tor.1.in /tmp/dpep.fOA3Mm/tor-0.0.9pre5/doc/tor.1.in
+--- tor-0.0.9pre5/doc/tor.1.in	2004-11-10 03:28:29.263327434 +0100
++++ /tmp/dpep.fOA3Mm/tor-0.0.9pre5/doc/tor.1.in	2004-11-10 03:28:29.622248503 +0100
+@@ -1,4 +1,4 @@
+-.TH TOR 1 "September 2005" "TOR"
++.TH TOR 8 "September 2005" "TOR"
+ .SH NAME
+ tor \- The second-generation onion router
+ .SH SYNOPSIS
