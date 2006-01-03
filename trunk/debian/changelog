@@ -2,8 +2,9 @@ tor (0.1.1.10-alpha-cvs-1) experimental; urgency=low
 
   * CVS snapshot
   * forward port patches/07_log_to_file_by_default.
+  * Forward port 0.1.0.16 changelog and change to copyright file.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 11 Dec 2005 14:06:03 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue,  3 Jan 2006 15:06:03 +0100
 
 tor (0.1.1.10-alpha-1) experimental; urgency=low
 
@@ -77,7 +78,21 @@ tor (0.1.1.5-alpha-1) UNRELEASED; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Fri, 12 Aug 2005 17:02:23 +0200
 
-tor (0.1.0.14+XXXX) UNRELEASED; urgency=low
+tor (0.1.0.16-1) unstable; urgency=low
+
+  * New upstream version.
+  * Update copyright file for 2006.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue,  3 Jan 2006 13:59:34 +0100
+
+tor (0.1.0.15-1) unstable; urgency=low
+
+  * New upstream release.
+  * Forward port 03_tor_manpage_in_section_8.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 24 Sep 2005 15:15:34 +0200
+
+tor (0.1.0.14-2) unstable; urgency=low
 
   * Ship debugging information in a separate package now, instead
     of simply not stripping tor.  This is still useful while tor is
@@ -90,7 +105,7 @@ tor (0.1.0.14+XXXX) UNRELEASED; urgency=low
     it to the wrong IP.  We now catch such cases in debian/rules, shout
     at the buildd maintainer, and ignore the result of our test suite.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 13 Sep 2005 19:18:39 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 21 Sep 2005 10:23:25 +0200
 
 tor (0.1.0.14-1) unstable; urgency=high
 
