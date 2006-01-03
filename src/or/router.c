@@ -579,13 +579,18 @@ decide_if_publishable_server(time_t now)
 
 /** Initiate server descriptor upload as reasonable (if server is publishable,
  * etc).  <b>force</b> is as for router_upload_dir_desc_to_dirservers.
+ *
+ * We need to rebuild the descriptor if it's dirty even if we're not
+ * uploading, because our reachability testing *uses* our descriptor to
+ * determine what IP address and ports to test.
  */
 void
 consider_publishable_server(time_t now, int force)
 {
+  int rebuilt = router_rebuild_descriptor(0);
   if (decide_if_publishable_server(now)) {
     set_server_advertised(1);
-    if (router_rebuild_descriptor(0) == 0)
+    if (rebuilt == 0)
       router_upload_dir_desc_to_dirservers(force);
   } else {
     set_server_advertised(0);
