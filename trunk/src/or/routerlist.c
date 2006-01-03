@@ -3487,7 +3487,7 @@ update_router_descriptor_downloads(time_t now)
 int
 router_have_minimum_dir_info(void)
 {
-  int tot = 0, any_running = 0;
+  int tot = 0, num_running = 0;
   int n_ns, res, avg;
   static int have_enough = 0;
   if (!networkstatus_list || !routerlist) {
@@ -3504,12 +3504,10 @@ router_have_minimum_dir_info(void)
   avg = tot / n_ns;
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
      {
-       if (rs->status.is_running) {
-         any_running = 1;
-         break;
-       }
+       if (rs->status.is_running)
+         num_running++;
      });
-  res = smartlist_len(routerlist->routers) > (avg/4) && any_running;
+  res = smartlist_len(routerlist->routers) >= (avg/4) && num_running > 2;
  done:
   if (res && !have_enough) {
     log(LOG_NOTICE, LD_DIR,
