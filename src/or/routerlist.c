@@ -3516,8 +3516,8 @@ router_have_minimum_dir_info(void)
   if (!res && have_enough) {
     log(LOG_NOTICE, LD_DIR,"Our directory information is no longer up-to-date "
         "enough to build circuits.%s",
-        any_running ? "" :
-        " (No servers seem reachable -- is your network connection down?)");
+        num_running > 2 ? "" : " (Not enough servers seem reachable -- "
+        "is your network connection down?)");
   }
   have_enough = res;
   return res;
