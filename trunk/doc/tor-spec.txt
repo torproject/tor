@@ -292,8 +292,8 @@ when do we rotate which keys (tls, link, etc)?
    (OP) performs the following steps:
 
       1. Choose an onion router as an exit node (R_N), such that the onion
-         router's exit policy does not exclude every pending stream
-         that needs a circuit.
+         router's exit policy includes at least one pending stream that
+         needs a circuit (if there are any).
 
       2. Choose a chain of (N-1) onion routers
          (R_1...R_N-1) to constitute the path, such that no router
