@@ -1,3 +1,96 @@
+Changes in version 0.1.1.11-alpha - 2006-01-xx
+
+  o Crashes in 0.1.1.x:
+    - Include all the assert/crash fixes from 0.1.0.16.
+    - If you start Tor and then quit very quickly, there were some
+      races that tried to free things that weren't allocated yet.
+    - Fix a rare memory stomp if you're running hidden services.
+    - Fix segfault when specifying DirServer in config without nickname.
+    - Fix a seg fault when you finish connecting to a server but at
+      that moment you dump his server descriptor.
+    - Extendcircuit and Attachstream controller commands would
+      assert/crash if you don't give them enough arguments.
+
+  o Major features:
+    - Automatically choose a handful of entry nodes and stick with them
+      for all circuits. Only pick new ones when the ones you have are
+      unsuitable, and if the old ones become suitable again, switch back.
+      This will increase security dramatically against certain end-point
+      attacks. The EntryNodes config option now provides some hints
+      about which entry nodes you want to use most; and StrictEntryNodes
+    - New directory logic: download by descriptor digest, not by
+      fingerprint. Caches try to download all listed digests from
+      authorities; clients try to download "best" digests from caches.
+      Now we avoid partitioning and isolating attacks better.
+    - Make the "stable" flag in network-status be the median of the
+      uptimes of running valid servers. That way the cutoff adapts to
+      the stability of the network as a whole. This will make IRC, IM,
+      etc connections more reliable.
+    - Make clients look at the fast and stable flags in networkstatus,
+      not at the bandwidth and uptime declared in the router descriptors.
+
+  o Major fixes:
+    - Tor servers with dynamic IP addresses were needing to wait 18
+      hours before they could start doing reachability testing using
+      the new IP address and ports. This is because they were using
+      the internal descriptor to learn what to test, yet they were only
+      rebuilding the descriptor once they decided they were reachable.
+
+
+  o Minor fixes:
+    - If the network is down, and we try to connect to a conn because
+      we have a circuit in mind, and we timeout (30 seconds) because the
+      network never answers, we were expiring the circuit, but we weren't
+      obsoleting the connection or telling the entry_nodes functions. now
+      do that.
+    - Some tor servers process billions of cells in a matter of days.
+      These statistics need to be uint64_t's.
+    - Check for integer overflows in more places, when adding elements
+      to smartlists. This could possibly prevent a buffer overflow
+      on malicious huge inputs. I don't see any, but I haven't looked
+      carefully.
+    - ReachableAddresses kept growing new "reject *:*" lines on every
+      reload.
+    - When you "setconf log" via the controller, it should remove all
+      logs. We were automatically adding back in a "log notice stdout".
+    - Newly bootstrapped tor networks couldn't establish hidden service
+      circuits until they had nodes with high uptime. Be more tolerant.
+    - We were marking servers down when they could not answer every piece
+      of the directory request we sent them. This was far too harsh.
+    - Fix the torify (tsocks) config file to not use Tor for localhost
+      connections.
+
+
+  o Minor features:
+    - Write the TorVersion into the state file so we have a prayer of
+      keeping forward and backward compatibility.
+    - Revive the FascistFirewall config option rather than eliminating it:
+      now it's a synonym for ReachableAddresses *:80,*:443.
+    - Clients choose directory servers from the network status lists,
+      not from their internal list of router descriptors. Now we can
+      go to caches directly rather than needing to go to authorities
+      to bootstrap.
+    - Directory authorities ignore router descriptors that have only
+      cosmetic differences: do this for 0.1.0.x servers now too.
+    - Add a new flag to network-status indicating whether the server
+      can answer v2 directory requests too.
+    - Authdirs now stop whining so loudly about bad descriptors that
+      they fetch from other dirservers. now when there's a log complaint,
+      it's for sure from a freshly uploaded descriptor.
+    - Reduce memory requirements in our structs by changing the order
+      of fields.
+    - There used to be two ways to specify your listening ports in a
+      server descriptor: on the "router" line and with a separate "ports"
+      line. Remove support for the "ports" line.
+    - New config option "AuthDirRejectUnlisted" for auth dirservers as
+      a panic button: if we get flooded with unusable servers we can
+      revert to only listing servers in the approved-routers file.
+    - Auth dir servers can also mark a fingerprint as "!reject" or
+      "!invalid" in the approved-routers file (as its nickname), to
+      refuse descriptors outright or include them but marked as invalid.
+    - Servers store bandwidth history across restarts/crashes.
+
+
 Changes in version 0.1.1.10-alpha - 2005-12-11
   o Correctness bugfixes on 0.1.0.x:
     - On Windows, build with a libevent patch from "I-M Weasel" to avoid
