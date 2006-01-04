@@ -1465,6 +1465,11 @@ router_mark_as_down(const char *digest)
  * routerinfo was accepted, but we should notify the generator of the
  * descriptor using the message *<b>msg</b>.
  *
+ * If <b>from_cache</b>, this descriptor came from our disk cache. If
+ * <b>from_fetch</b>, we received it in response to a request we made.
+ * (If both are false, that means it was uploaded to us as an auth dir
+ * server or via the controller.)
+ *
  * This function should be called *after*
  * routers_update_status_from_networkstatus; subsequently, you should call
  * router_rebuild_store and control_event_descriptors_changed.
@@ -1473,7 +1478,7 @@ router_mark_as_down(const char *digest)
  */
 int
 router_add_to_routerlist(routerinfo_t *router, const char **msg,
-                         int from_cache)
+                         int from_cache, int from_fetch)
 {
   int i;
   char id_digest[DIGEST_LEN];
@@ -1505,7 +1510,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     routerlist_remove_old_routers();
 
   if (authdir) {
-    if (authdir_wants_to_reject_router(router, msg, !from_cache)) {
+    if (authdir_wants_to_reject_router(router, msg,
+                                       !from_cache && !from_fetch)) {
       routerinfo_free(router);
       return -2;
     }
@@ -1831,7 +1837,7 @@ router_load_single_router(const char *s, const char **msg)
   smartlist_add(lst, ri);
   routers_update_status_from_networkstatus(lst, 0);
 
-  if (router_add_to_routerlist(ri, msg, 0)<0) {
+  if (router_add_to_routerlist(ri, msg, 0, 0)<0) {
     warn(LD_DIR, "Couldn't add router to list: %s Dropping.",
          *msg?*msg:"(No message).");
     /* we've already assigned to *msg now, and ri is already freed */
@@ -1847,7 +1853,7 @@ router_load_single_router(const char *s, const char **msg)
 
 /** Given a string <b>s</b> containing some routerdescs, parse it and put the
  * routers into our directory.  If <b>from_cache</b> is false, the routers
- * have come from the network: cache them.
+ * are in response to a query to the network: cache them.
  *
  * If <b>requested_fingerprints</b> is provided, it must contain a list of
  * uppercased identity fingerprints.  Do not update any router whose
@@ -1888,7 +1894,7 @@ router_load_routers_from_string(const char *s, int from_cache,
       }
     }
 
-    if (router_add_to_routerlist(ri, &msg, from_cache) >= 0)
+    if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0)
       smartlist_add(changed, ri);
   });
 

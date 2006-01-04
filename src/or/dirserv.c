@@ -532,7 +532,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
     control_event_or_authdir_new_descriptor("DROPPED", desc, *msg);
     return 0;
   }
-  if ((r = router_add_to_routerlist(ri, msg, 0))<0) {
+  if ((r = router_add_to_routerlist(ri, msg, 0, 0))<0) {
     if (r < -1) /* unless the routerinfo was fine, just out-of-date */
       control_event_or_authdir_new_descriptor("REJECTED", desc, *msg);
     return r == -1 ? 0 : -1;
