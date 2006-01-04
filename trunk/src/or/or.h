@@ -2278,7 +2278,7 @@ void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(void);
 void networkstatus_list_clean(time_t now);
 int router_add_to_routerlist(routerinfo_t *router, const char **msg,
-                             int from_cache);
+                             int from_cache, int from_fetch);
 int router_load_single_router(const char *s, const char **msg);
 void router_load_routers_from_string(const char *s, int from_cache,
                                      smartlist_t *requested_fingerprints);
