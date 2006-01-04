@@ -302,7 +302,7 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
       return FP_REJECT;
     } else if (!strcasecmp(fp_ent->nickname, "!invalid")) {
       if (msg)
-        *msg = "Fingerprint is marged invalid";
+        *msg = "Fingerprint is marked invalid";
       return FP_INVALID;
     }
   }
@@ -315,7 +315,7 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
 
     if (rej == ADDR_POLICY_PROBABLY_REJECTED || rej == ADDR_POLICY_REJECTED) {
       if (should_log)
-        info(LD_DIRSERV, "Rejecting '%s' because of address %s",
+        info(LD_DIRSERV, "Rejecting '%s' because of address '%s'",
              nickname, address);
       if (msg)
         *msg = "Authdir is rejecting routers in this range.";
@@ -323,17 +323,16 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
     }
     if (inv == ADDR_POLICY_PROBABLY_REJECTED || inv == ADDR_POLICY_REJECTED) {
       if (should_log)
-        info(LD_DIRSERV, "Not marking '%s' valid because of address %s",
+        info(LD_DIRSERV, "Not marking '%s' valid because of address '%s'",
              nickname, address);
       return FP_INVALID;
     }
+    if (should_log)
+      debug(LD_DIRSERV,"No fingerprint found for '%s'",nickname);
     if (!platform || tor_version_as_new_as(platform,"0.1.0.2-rc"))
       return reject_unlisted ? FP_REJECT : FP_VALID;
     else
       return FP_INVALID;
-    if (should_log)
-      info(LD_DIRSERV,"No fingerprint found for '%s'",nickname);
-    return 0;
   }
   if (0==strcasecmp(nn_ent->fingerprint, fp)) {
     if (should_log)

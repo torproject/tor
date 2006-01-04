@@ -3241,18 +3241,12 @@ router_list_client_downloadable(void)
     } else if (digestmap_get(downloading, rs->status.descriptor_digest)) {
       /* We're downloading this one now. */
       ++n_in_progress;
-#if 0
-      /* Authorities don't call this path any longer. */
-    } else if (options->AuthoritativeDir &&
-               dirserv_would_reject_router(&rs->status)) {
-      ++n_would_reject;
-#endif
     } else if (router_get_by_descriptor_digest(rs->status.descriptor_digest)) {
       /* We have the 'best' descriptor for this router. */
       ++n_uptodate;
     } else if ((ri = router_get_by_digest(rs->status.identity_digest)) &&
                ri->cache_info.published_on > rs->status.published_on) {
-      /* Oddly, we have a descriptor more resent than the 'best' one, but it
+      /* Oddly, we have a descriptor more recent than the 'best' one, but it
          was once best. So that's okay. */
       ++n_uptodate;
     } else if (rs->status.published_on + ESTIMATED_PROPAGATION_TIME > now) {
