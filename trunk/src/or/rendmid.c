@@ -25,6 +25,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
   size_t asn1len;
   circuit_t *c;
   char serviceid[REND_SERVICE_ID_LEN+1];
+  int reason = END_CIRC_REASON_INTERNAL;
 
   info(LD_REND,
        "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
@@ -32,6 +33,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
     warn(LD_PROTOCOL,
          "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
+    reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
   if (request_len < 2+DIGEST_LEN)
@@ -44,6 +46,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
     goto truncated;
   pk = crypto_pk_asn1_decode(request+2, asn1len);
   if (!pk) {
+    reason = END_CIRC_REASON_TORPROTOCOL;
     warn(LD_PROTOCOL, "Couldn't decode public key.");
     goto err;
   }
@@ -57,6 +60,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
   }
   if (memcmp(expected_digest, request+2+asn1len, DIGEST_LEN)) {
     warn(LD_PROTOCOL, "Hash of session info was not as expected.");
+    reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
   /* Rest of body: signature of previous data */
@@ -65,6 +69,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
                                        request_len-(2+DIGEST_LEN+asn1len))<0) {
     warn(LD_PROTOCOL,
          "Incorrect signature on ESTABLISH_INTRO cell; rejecting.");
+    reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
 
@@ -85,7 +90,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
                                 c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
     info(LD_REND, "Replacing old circuit %d for service %s",
          c->p_circ_id, safe_str(serviceid));
-    circuit_mark_for_close(c);
+    circuit_mark_for_close(c, END_CIRC_REASON_REQUESTED);
   }
 
   /* Acknowledge the request. */
@@ -107,9 +112,10 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
   return 0;
  truncated:
   warn(LD_PROTOCOL, "Rejecting truncated ESTABLISH_INTRO cell.");
+  reason = END_CIRC_REASON_TORPROTOCOL;
  err:
   if (pk) crypto_free_pk_env(pk);
-  circuit_mark_for_close(circ);
+  circuit_mark_for_close(circ, reason);
   return -1;
 }
 
@@ -168,7 +174,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
                                    NULL,0,NULL)) {
     warn(LD_GENERAL, "Unable to send INTRODUCE_ACK cell to Tor client.");
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
     return -1;
   }
 
@@ -179,7 +185,8 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
                                    nak_body, 1, NULL)) {
     warn(LD_GENERAL, "Unable to send NAK to Tor client.");
-    circuit_mark_for_close(circ); /* Is this right? */
+    /* Is this right? */
+    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
   }
   return -1;
 }
@@ -192,6 +199,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
                               size_t request_len)
 {
   char hexid[9];
+  int reason = END_CIRC_REASON_TORPROTOCOL;
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
     warn(LD_PROTOCOL,
@@ -214,6 +222,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
                                    "", 0, NULL)<0) {
     warn(LD_PROTOCOL, "Couldn't send RENDEZVOUS_ESTABLISHED cell.");
+    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
 
@@ -227,7 +236,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
 
   return 0;
  err:
-  circuit_mark_for_close(circ);
+  circuit_mark_for_close(circ, reason);
   return -1;
 }
 
@@ -240,7 +249,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
 {
   circuit_t *rend_circ;
   char hexid[9];
-
+  int reason = END_CIRC_REASON_INTERNAL;
   base16_encode(hexid,9,request,request_len<4?request_len:4);
 
   if (request_len>=4) {
@@ -252,6 +261,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
     info(LD_REND,
          "Tried to complete rendezvous on non-OR or non-edge circuit %d.",
          circ->p_circ_id);
+    reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
 
@@ -259,6 +269,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
     warn(LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with bad length (%d) on circuit %d.",
          (int)request_len, circ->p_circ_id);
+    reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
 
@@ -267,6 +278,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
     warn(LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
          hexid);
+    reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
   }
 
@@ -295,7 +307,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
 
   return 0;
  err:
-  circuit_mark_for_close(circ);
+  circuit_mark_for_close(circ, reason);
   return -1;
 }
 

@@ -1611,7 +1611,7 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   /* now that we've populated the cpath, start extending */
   if (zero_circ) {
     if (circuit_handle_first_hop(circ) < 0) {
-      circuit_mark_for_close(circ);
+      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
       if (v0)
         send_control0_error(conn, ERR_INTERNAL, "couldn't start circuit");
       else
@@ -1624,7 +1624,7 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
       if (circuit_send_next_onion_skin(circ) < 0) {
         info(LD_CONTROL,
              "send_next_onion_skin failed; circuit marked for closing.");
-        circuit_mark_for_close(circ);
+        circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
         if (v0)
           send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
         else
@@ -1967,7 +1967,7 @@ handle_control_closecircuit(connection_t *conn, uint32_t len,
   }
 
   if (!safe || !circ->p_streams) {
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_REASON_NONE);
   }
 
   send_control_done(conn);

@@ -71,7 +71,7 @@ onion_pending_add(circuit_t *circ)
     onion_pending_remove(ol_list->circ);
     info(LD_CIRC,
          "Circuit create request is too old; cancelling due to overload.");
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
   }
   return 0;
 }

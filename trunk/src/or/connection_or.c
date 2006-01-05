@@ -779,3 +779,26 @@ loop:
   goto loop; /* process the remainder of the buffer */
 }
 
+/** Write a destroy cell with circ ID <b>circ_id</b> and reason <b>reason</b>
+ * onto OR connection <b>conn</b>.  Don't perform range-checking on reason:
+ * we may want to propagate reasons from other cells.
+ *
+ * Return 0.
+ */
+int
+connection_or_send_destroy(uint16_t circ_id, connection_t *conn, int reason)
+{
+  cell_t cell;
+
+  tor_assert(conn);
+  tor_assert(connection_speaks_cells(conn));
+
+  memset(&cell, 0, sizeof(cell_t));
+  cell.circ_id = circ_id;
+  cell.command = CELL_DESTROY;
+  cell.payload[0] = (uint8_t) reason;
+  debug(LD_OR,"Sending destroy (circID %d).", circ_id);
+  connection_or_write_cell_to_buf(&cell, conn);
+  return 0;
+}
+

@@ -481,6 +481,19 @@ typedef enum {
 #define RESOLVED_TYPE_ERROR_TRANSIENT 0xF0
 #define RESOLVED_TYPE_ERROR 0xF1
 
+#define END_CIRC_AT_ORIGIN           -1
+#define _END_CIRC_REASON_MIN            0
+#define END_CIRC_REASON_NONE            0
+#define END_CIRC_REASON_TORPROTOCOL     1
+#define END_CIRC_REASON_INTERNAL        2
+#define END_CIRC_REASON_REQUESTED       3
+#define END_CIRC_REASON_HIBERNATING     4
+#define END_CIRC_REASON_RESOURCELIMIT   5
+#define END_CIRC_REASON_CONNECTFAILED   6
+#define END_CIRC_REASON_OR_IDENTITY     7
+#define END_CIRC_REASON_OR_CONN_CLOSED  8
+#define _END_CIRC_REASON_MAX            8
+
 /** Length of 'y' portion of 'y.onion' URL. */
 #define REND_SERVICE_ID_LEN 16
 
@@ -1494,7 +1507,7 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn);
 int circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(connection_t *conn);
-void circuit_unlink_all_from_or_conn(connection_t *conn);
+void circuit_unlink_all_from_or_conn(connection_t *conn, int reason);
 circuit_t *circuit_get_by_global_id(uint32_t id);
 circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
                                                  uint8_t purpose);
@@ -1506,10 +1519,11 @@ circuit_t *circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
                                        int need_capacity, int internal);
 void circuit_mark_all_unused_circs(void);
 void circuit_expire_all_dirty_circs(void);
-void _circuit_mark_for_close(circuit_t *circ, int line, const char *file);
+void _circuit_mark_for_close(circuit_t *circ, int reason,
+                             int line, const char *file);
 
-#define circuit_mark_for_close(c) \
-  _circuit_mark_for_close((c), __LINE__, _SHORT_FILE_)
+#define circuit_mark_for_close(c, reason)                               \
+  _circuit_mark_for_close((c), (reason), __LINE__, _SHORT_FILE_)
 
 void assert_cpath_layer_ok(const crypt_path_t *cp);
 void assert_circuit_ok(const circuit_t *c);
@@ -1651,7 +1665,6 @@ int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 int connection_state_is_connecting(connection_t *conn);
 
-int connection_send_destroy(uint16_t circ_id, connection_t *conn);
 char *alloc_http_authenticator(const char *authenticator);
 
 void assert_connection_ok(connection_t *conn, time_t now);
@@ -1742,6 +1755,8 @@ int connection_tls_start_handshake(connection_t *conn, int receiving);
 int connection_tls_continue_handshake(connection_t *conn);
 
 void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn);
+int connection_or_send_destroy(uint16_t circ_id, connection_t *conn,
+                               int reason);
 
 /********************************* control.c ***************************/
 

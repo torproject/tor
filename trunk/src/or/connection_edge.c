@@ -1208,7 +1208,7 @@ connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
     return -1;
   }
 
@@ -1254,7 +1254,7 @@ connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
     return -1;
   }
 
@@ -1519,8 +1519,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY,
                           n_stream->cpath_layer);
       connection_free(n_stream);
-      circuit_mark_for_close(circ); /* knock the whole thing down, somebody
-                                     * screwed up */
+      /* knock the whole thing down, somebody screwed up */
+      circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
       tor_free(address);
       return 0;
     }

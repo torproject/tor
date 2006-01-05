@@ -43,9 +43,10 @@ N - if they're trying to be a tor server and they're running
       other nodes *are* reachable.
     o Make EntryNodes and StrictEntrynodes do what we want.
 
-N - Destroy and truncated cells should have reasons.
-    - Specify
-    - Implement
+N . Destroy and truncated cells should have reasons.
+    o Specify
+    o Implement
+    - Display the reasons under some circumstances?
 
 N . Only use a routerdesc if you recognize its hash.
     o (Must defer till dirservers are upgraded to latest code, which
@@ -85,9 +86,6 @@ N . Only use a routerdesc if you recognize its hash.
       - Test.
     - Non-directories don't need to keep descriptors in memory.
 
-N - Should router info have a pointer to routerstatus?
-    - We should at least do something about the duplicated fields.
-
 R - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
@@ -114,6 +112,9 @@ Deferred from 0.1.1.x:
   - Automatically determine what ports are reachable and start using
     those, if circuits aren't working and it's a pattern we recognize
     ("port 443 worked once and port 9001 keeps not working").
+
+N - Should router info have a pointer to routerstatus?
+    - We should at least do something about the duplicated fields.
 
 N . Additional controller features
       o Find a way to make event info more extensible

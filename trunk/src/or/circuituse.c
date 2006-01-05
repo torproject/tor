@@ -264,7 +264,7 @@ circuit_expire_building(time_t now)
            circuit_state_to_string(victim->state), victim->purpose);
 
     circuit_log_path(LOG_INFO,LD_CIRC,victim);
-    circuit_mark_for_close(victim);
+    circuit_mark_for_close(victim, END_CIRC_AT_ORIGIN);
   }
 }
 
@@ -523,7 +523,7 @@ circuit_about_to_close_connection(connection_t *conn)
       /* Inform any pending (not attached) circs that they should give up. */
       circuit_n_conn_done(conn, 0);
       /* Now close all the attached circuits on it. */
-      circuit_unlink_all_from_or_conn(conn);
+      circuit_unlink_all_from_or_conn(conn, END_CIRC_REASON_OR_CONN_CLOSED);
       return;
     }
     case CONN_TYPE_AP:
@@ -568,7 +568,7 @@ circuit_expire_old_circuits(void)
       /* (only general and purpose_c circs can get dirty) */
       tor_assert(!circ->n_streams);
       tor_assert(circ->purpose <= CIRCUIT_PURPOSE_C_REND_JOINED);
-      circuit_mark_for_close(circ);
+      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     } else if (!circ->timestamp_dirty && CIRCUIT_IS_ORIGIN(circ) &&
                circ->state == CIRCUIT_STATE_OPEN &&
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
@@ -576,7 +576,7 @@ circuit_expire_old_circuits(void)
       if (circ->timestamp_created + CIRCUIT_UNUSED_CIRC_TIMEOUT < now) {
         debug(LD_CIRC,"Closing circuit that has been unused for %d seconds.",
               (int)(now - circ->timestamp_created));
-        circuit_mark_for_close(circ);
+        circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
       }
     }
   }
@@ -589,7 +589,7 @@ circuit_testing_opened(circuit_t *circ)
   /* For now, we only use testing circuits to see if our ORPort is
      reachable. But we remember reachability in onionskin_answer(),
      so there's no need to record anything here. Just close the circ. */
-  circuit_mark_for_close(circ);
+  circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
 }
 
 /** A testing circuit has failed to build. Take whatever stats we want. */

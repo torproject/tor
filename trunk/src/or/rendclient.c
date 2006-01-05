@@ -35,7 +35,7 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
 
   if (crypto_rand(circ->rend_cookie, REND_COOKIE_LEN) < 0) {
     warn(LD_BUG, "Internal error: Couldn't produce random cookie.");
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
   if (connection_edge_send_command(NULL,circ,
@@ -154,8 +154,8 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   return 0;
 err:
-  circuit_mark_for_close(introcirc);
-  circuit_mark_for_close(rendcirc);
+  circuit_mark_for_close(introcirc, END_CIRC_AT_ORIGIN);
+  circuit_mark_for_close(rendcirc, END_CIRC_AT_ORIGIN);
   return -1;
 }
 
@@ -186,7 +186,7 @@ rend_client_introduction_acked(circuit_t *circ,
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     warn(LD_PROTOCOL, "Received REND_INTRODUCE_ACK on unexpected circuit %d.",
          circ->n_circ_id);
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
 
@@ -208,7 +208,7 @@ rend_client_introduction_acked(circuit_t *circ,
     }
     /* close the circuit: we won't need it anymore. */
     circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACKED;
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
     circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
@@ -226,7 +226,7 @@ rend_client_introduction_acked(circuit_t *circ,
       if (!extend_info) {
         warn(LD_REND, "No introduction points left for %s. Closing.",
              safe_str(circ->rend_query));
-        circuit_mark_for_close(circ);
+        circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
         return -1;
       }
       info(LD_REND,
@@ -340,7 +340,7 @@ rend_client_rendezvous_acked(circuit_t *circ, const char *request,
   if (circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
     warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "
          "Closing circ.");
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
   info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
@@ -362,7 +362,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request,
       || !circ->build_state->pending_final_cpath) {
     warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not "
          "expecting it. Closing.");
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
 
@@ -408,7 +408,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request,
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
   return 0;
  err:
-  circuit_mark_for_close(circ);
+  circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
   return -1;
 }
 

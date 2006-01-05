@@ -1038,7 +1038,8 @@ connection_read_bucket_decrement(connection_t *conn, int num_read)
   }
 }
 
-/** DOCDOC */
+/** If we have exhaused our global read bucket, or the read bucket for conn,
+ * stop reading. */
 static void
 connection_consider_empty_buckets(connection_t *conn)
 {
@@ -1546,7 +1547,8 @@ connection_write_to_buf(const char *string, size_t len, connection_t *conn)
       /* if it failed, it means we have our package/delivery windows set
          wrong compared to our max outbuf size. close the whole circuit. */
       warn(LD_NET,"write_to_buf failed. Closing circuit (fd %d).", conn->s);
-      circuit_mark_for_close(circuit_get_by_edge_conn(conn));
+      circuit_mark_for_close(circuit_get_by_edge_conn(conn),
+                             END_CIRC_REASON_INTERNAL);
     } else {
       warn(LD_NET,"write_to_buf failed. Closing connection (fd %d).", conn->s);
       connection_mark_for_close(conn);
@@ -1784,28 +1786,6 @@ connection_state_is_connecting(connection_t *conn)
   return 0;
 }
 
-/** Write a destroy cell with circ ID <b>circ_id</b> onto OR connection
- * <b>conn</b>.
- *
- * Return 0.
- */
-/*XXXX Why isn't this in connection_or.c?*/
-int
-connection_send_destroy(uint16_t circ_id, connection_t *conn)
-{
-  cell_t cell;
-
-  tor_assert(conn);
-  tor_assert(connection_speaks_cells(conn));
-
-  memset(&cell, 0, sizeof(cell_t));
-  cell.circ_id = circ_id;
-  cell.command = CELL_DESTROY;
-  debug(LD_OR,"Sending destroy (circID %d).", circ_id);
-  connection_or_write_cell_to_buf(&cell, conn);
-  return 0;
-}
-
 /** Alloocates a base64'ed authenticator for use in http or https
  * auth, based on the input string <b>authenticator</b>. Returns it
  * if success, else returns NULL. */
@@ -1829,9 +1809,12 @@ alloc_http_authenticator(const char *authenticator)
   return base64_authenticator;
 }
 
-/** DOCDOC
- * XXXX ipv6 NM
+/** Given a socket handle, check whether the local address (sockname) of the
+ * socket is one that we've connected from before.  If so, double-check
+ * whether our address has changed and we need to generate keys.  If we do,
+ * call init_keys().
  */
+/* XXXX Handle IPv6, eventually. */
 static void
 client_check_address_changed(int sock)
 {
