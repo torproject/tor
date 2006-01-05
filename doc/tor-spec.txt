@@ -363,9 +363,6 @@ when do we rotate which keys (tls, link, etc)?
    After a DESTROY cell has been processed, an OR ignores all data or
    destroy cells for the corresponding circuit.
 
-   (The rest of this section is not currently used; on errors, circuits
-   are destroyed, not truncated.)
-
    To tear down part of a circuit, the OP may send a RELAY_TRUNCATE cell
    signaling a given OR (Stream ID zero).  That OR sends a DESTROY
    cell to the next node in the circuit, and replies to the OP with a
@@ -496,7 +493,7 @@ when do we rotate which keys (tls, link, etc)?
 
    If the RELAY cell is recognized but the relay command is not
    understood, the cell must be dropped and ignored. Its contents
-   still count with respect to the digests, though. [Up until
+   still count with respect to the digests, though. [Before
    0.1.1.10, Tor closed circuits when it received an unknown relay
    command. Perhaps this will be more forward-compatible. -RD]
 

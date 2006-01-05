@@ -37,6 +37,8 @@ for 0.1.1.x:
 N - if they're trying to be a tor server and they're running
     win 98 or win me, give them a message talking about The Bug.
 
+  - state_description in config.c has gone stale
+
   . Helper nodes
     . More testing and debugging
     o If your helper nodes are unavailable, don't abandon them unless
@@ -105,6 +107,7 @@ R - clients prefer to avoid exit nodes for non-exit path positions.
   - find 10 dirservers.
     - What are criteria to be a dirserver?  Write a policy.
 
+  - the tor client can do the "automatic proxy config url" thing?
 
 
 Deferred from 0.1.1.x:
@@ -315,7 +318,7 @@ Future version:
   - auth mechanisms to let hidden service midpoint and responder filter
     connection requests.
   - Relax clique assumptions.
-  - start handling server descriptors without a socksport?
+  X start handling server descriptors without a socksport?
   - tor should be able to have a pool of outgoing IP addresses
     that it is able to rotate through. (maybe)
 
@@ -331,7 +334,7 @@ Blue-sky:
   - Implement Morphmix, so we can compare its behavior, complexity, etc.
   - Other transport. HTTP, udp, rdp, airhook, etc. May have to do our own
     link crypto, unless we can bully openssl into it.
-  . Conn key rotation (we switch to a new one after a week, but
+  o Conn key rotation (we switch to a new one after a week, but
     old circuits don't get any benefit from this).
   - Need a relay teardown cell, separate from one-way ends.
     (Pending a user who needs this)
