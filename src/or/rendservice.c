@@ -605,7 +605,7 @@ rend_service_introduce(circuit_t *circuit, const char *request,
   return 0;
  err:
   if (dh) crypto_dh_free(dh);
-  if (launched) circuit_mark_for_close(launched);
+  if (launched) circuit_mark_for_close(launched, END_CIRC_AT_ORIGIN);
   if (extend_info) extend_info_free(extend_info);
   return -1;
 }
@@ -751,7 +751,7 @@ rend_service_intro_has_opened(circuit_t *circuit)
 
   return;
  err:
-  circuit_mark_for_close(circuit);
+  circuit_mark_for_close(circuit, END_CIRC_AT_ORIGIN);
 }
 
 /** Called when we get an INTRO_ESTABLISHED cell; mark the circuit as a
@@ -778,7 +778,7 @@ rend_service_intro_established(circuit_t *circuit, const char *request,
 
   return 0;
  err:
-  circuit_mark_for_close(circuit);
+  circuit_mark_for_close(circuit, END_CIRC_AT_ORIGIN);
   return -1;
 }
 
@@ -852,7 +852,7 @@ rend_service_rendezvous_has_opened(circuit_t *circuit)
 
   return;
  err:
-  circuit_mark_for_close(circuit);
+  circuit_mark_for_close(circuit, END_CIRC_AT_ORIGIN);
 }
 
 /*

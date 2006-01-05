@@ -470,7 +470,7 @@ circuit_get_by_edge_conn(connection_t *conn)
  * been marked already.
  */
 void
-circuit_unlink_all_from_or_conn(connection_t *conn)
+circuit_unlink_all_from_or_conn(connection_t *conn, int reason)
 {
   circuit_t *circ;
   for (circ = global_circuitlist; circ; circ = circ->next) {
@@ -480,7 +480,7 @@ circuit_unlink_all_from_or_conn(connection_t *conn)
       if (circ->p_conn == conn)
         circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
       if (!circ->marked_for_close)
-        circuit_mark_for_close(circ);
+        circuit_mark_for_close(circ, reason);
     }
   }
 }
@@ -607,7 +607,7 @@ circuit_mark_all_unused_circs(void)
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         !circ->timestamp_dirty)
-      circuit_mark_for_close(circ);
+      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
   }
 }
 
@@ -648,7 +648,8 @@ circuit_expire_all_dirty_circs(void)
  *     rendezvous stream), then mark the other circuit to close as well.
  */
 void
-_circuit_mark_for_close(circuit_t *circ, int line, const char *file)
+_circuit_mark_for_close(circuit_t *circ, int reason, int line,
+                        const char *file)
 {
   connection_t *conn;
 
@@ -662,6 +663,22 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
         " (first at %s:%d)", file, line,
         circ->marked_for_close_file, circ->marked_for_close);
     return;
+  }
+  if (reason == END_CIRC_AT_ORIGIN) {
+    if (!CIRCUIT_IS_ORIGIN(circ)) {
+      warn(LD_BUG, "Specified 'at-origin' non-reason for ending circuit, "
+           "but circuit was not at origin. (called %s:%d, purpose=%d)",
+           file, line, circ->purpose);
+    }
+    reason = END_CIRC_REASON_NONE;
+  } else if (CIRCUIT_IS_ORIGIN(circ) && reason != END_CIRC_REASON_NONE) {
+    /* Don't warn about this; there are plenty of places where our code
+     * is origin-agnosic. */
+    reason = END_CIRC_REASON_NONE;
+  }
+  if (reason < _END_CIRC_REASON_MIN || reason > _END_CIRC_REASON_MAX) {
+    warn(LD_BUG, "Reason %d out of range at %s:%d", reason, file, line);
+    reason = END_CIRC_REASON_NONE;
   }
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
@@ -698,7 +715,7 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
   }
 
   if (circ->n_conn)
-    connection_send_destroy(circ->n_circ_id, circ->n_conn);
+    connection_or_send_destroy(circ->n_circ_id, circ->n_conn, reason);
   for (conn=circ->n_streams; conn; conn=conn->next_stream)
     connection_edge_destroy(circ->n_circ_id, conn);
   while (circ->resolving_streams) {
@@ -714,7 +731,7 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     conn->on_circuit = NULL;
   }
   if (circ->p_conn)
-    connection_send_destroy(circ->p_circ_id, circ->p_conn);
+    connection_or_send_destroy(circ->p_circ_id, circ->p_conn, reason);
   for (conn=circ->p_streams; conn; conn=conn->next_stream)
     connection_edge_destroy(circ->p_circ_id, conn);
 
@@ -724,7 +741,7 @@ _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
   if (circ->rend_splice) {
     if (!circ->rend_splice->marked_for_close) {
       /* do this after marking this circuit, to avoid infinite recursion. */
-      circuit_mark_for_close(circ->rend_splice);
+      circuit_mark_for_close(circ->rend_splice, reason);
     }
     circ->rend_splice = NULL;
   }

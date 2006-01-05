@@ -138,6 +138,8 @@ relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
  *    connection_edge.
  *  - Else connection_or_write_cell_to_buf to the conn on the other
  *    side of the circuit.
+ *
+ * Return -reason on failure.
  */
 int
 circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
@@ -145,6 +147,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
   connection_t *conn=NULL;
   crypt_path_t *layer_hint=NULL;
   char recognized=0;
+  int reason;
 
   tor_assert(cell);
   tor_assert(circ);
@@ -163,20 +166,21 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
     if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
       debug(LD_OR,"Sending away from origin.");
-      if (connection_edge_process_relay_cell(cell, circ, conn, NULL) < 0) {
+      if ((reason=connection_edge_process_relay_cell(cell, circ, conn, NULL))
+          < 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "connection_edge_process_relay_cell (away from origin) "
                "failed.");
-        return -1;
+        return reason;
       }
     }
     if (cell_direction == CELL_DIRECTION_IN) {
       ++stats_n_relay_cells_delivered;
       debug(LD_OR,"Sending to origin.");
-      if (connection_edge_process_relay_cell(cell, circ, conn,
-                                             layer_hint) < 0) {
+      if ((reason = connection_edge_process_relay_cell(cell, circ, conn,
+                                                       layer_hint)) < 0) {
         warn(LD_OR,"connection_edge_process_relay_cell (at origin) failed.");
-        return -1;
+        return reason;
       }
     }
     return 0;
@@ -197,19 +201,19 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
       tor_assert(circ->rend_splice->purpose ==
                  CIRCUIT_PURPOSE_REND_ESTABLISHED);
       cell->circ_id = circ->rend_splice->p_circ_id;
-      if (circuit_receive_relay_cell(cell, circ->rend_splice,
-                                     CELL_DIRECTION_IN) < 0) {
+      if ((reason = circuit_receive_relay_cell(cell, circ->rend_splice,
+                                               CELL_DIRECTION_IN)) < 0) {
         warn(LD_REND, "Error relaying cell across rendezvous; closing "
              "circuits");
         /* XXXX Do this here, or just return -1? */
-        circuit_mark_for_close(circ);
-        return -1;
+        circuit_mark_for_close(circ, -reason);
+        return reason;
       }
       return 0;
     }
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Didn't recognize cell, but circ stops here! Closing circ.");
-    return -1;
+    return -END_CIRC_REASON_TORPROTOCOL;
   }
 
   debug(LD_OR,"Passing on unrecognized cell.");
@@ -489,7 +493,7 @@ connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer)
       < 0) {
     warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
     return -1;
   }
   return 0;
@@ -655,7 +659,7 @@ connection_edge_process_end_not_open(
       warn(LD_PROTOCOL,
            "Got an end because of %s, but we're not an AP. Closing.",
            connection_edge_end_reason_str(reason));
-      return -1;
+      return - END_CIRC_REASON_TORPROTOCOL;
     }
     info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
          safe_str(conn->socks_request->address),
@@ -848,7 +852,7 @@ connection_edge_process_relay_cell_not_open(
  * If <b>layer_hint</b> is defined, then we're the origin of the
  * circuit, and it specifies the hop that packaged <b>cell</b>.
  *
- * Return -1 if you want to warn and tear down the circuit, else 0.
+ * Return -reason if you want to warn and tear down the circuit, else 0.
  */
 static int
 connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
@@ -858,6 +862,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   static int num_seen=0;
   relay_header_t rh;
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
+  int reason;
 
   tor_assert(cell);
   tor_assert(circ);
@@ -869,7 +874,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
   if (rh.length > RELAY_PAYLOAD_SIZE) {
     warn(LD_PROTOCOL, "Relay cell length field too long. Closing circuit.");
-    return -1;
+    return - END_CIRC_REASON_TORPROTOCOL;
   }
 
   /* either conn is NULL, in which case we've got a control cell, or else
@@ -904,7 +909,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL,
                             conn->cpath_layer);
         connection_mark_for_close(conn);
-        return -1;
+        return -END_CIRC_REASON_TORPROTOCOL;
       }
       debug(domain,"circ deliver_window now %d.", layer_hint ?
             layer_hint->deliver_window : circ->deliver_window);
@@ -919,7 +924,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if (--conn->deliver_window < 0) { /* is it below 0 after decrement? */
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) conn deliver_window below 0. Killing.");
-        return -1; /* somebody's breaking protocol. kill the whole circuit. */
+        return -END_CIRC_REASON_TORPROTOCOL;
       }
 
       stats_n_data_bytes_received += rh.length;
@@ -974,14 +979,14 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
       debug(domain,"Got an extended cell! Yay.");
-      if (circuit_finish_handshake(circ, CELL_CREATED,
-                                   cell->payload+RELAY_HEADER_SIZE) < 0) {
+      if ((reason = circuit_finish_handshake(circ, CELL_CREATED,
+                                       cell->payload+RELAY_HEADER_SIZE)) < 0) {
         warn(domain,"circuit_finish_handshake failed.");
-        return -1;
+        return reason;
       }
-      if (circuit_send_next_onion_skin(circ)<0) {
+      if ((reason=circuit_send_next_onion_skin(circ))<0) {
         info(domain,"circuit_send_next_onion_skin() failed.");
-        return -1;
+        return reason;
       }
       return 0;
     case RELAY_COMMAND_TRUNCATE:
@@ -990,12 +995,17 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
       if (circ->n_conn) {
-        connection_send_destroy(circ->n_circ_id, circ->n_conn);
+        uint8_t reason = *(uint8_t*)(cell->payload + RELAY_HEADER_SIZE);
+        connection_or_send_destroy(circ->n_circ_id, circ->n_conn, reason);
         circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
       }
       debug(LD_EXIT, "Processed 'truncate', replying.");
-      connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
-                                   NULL, 0, NULL);
+      {
+        char payload[1];
+        payload[0] = (char)END_CIRC_REASON_REQUESTED;
+        connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
+                                     payload, sizeof(payload), NULL);
+      }
       return 0;
     case RELAY_COMMAND_TRUNCATED:
       if (!layer_hint) {
@@ -1008,7 +1018,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if (conn) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "'connected' unsupported while open. Closing circ.");
-        return -1;
+        return -END_CIRC_REASON_TORPROTOCOL;
       }
       info(domain,"'connected' received, no conn attached anymore. Ignoring.");
       return 0;
@@ -1055,7 +1065,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_RESOLVED:
       if (conn) {
         warn(domain,"'resolved' unsupported while open. Closing circ.");
-        return -1;
+        return -END_CIRC_REASON_TORPROTOCOL;
       }
       info(domain,"'resolved' received, no conn attached anymore. Ignoring.");
       return 0;

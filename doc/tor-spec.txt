@@ -136,7 +136,8 @@ when do we rotate which keys (tls, link, etc)?
       CREATE:  Payload contains the handshake challenge.
       CREATED: Payload contains the handshake response.
       RELAY:   Payload contains the relay header and relay body.
-      DESTROY: Payload is unused.
+      DESTROY: Payload contains a reason for closing the circuit.
+               (see 4.4)
    Upon receiving any other value for the command field, an OR must
    drop the cell.
 
@@ -375,6 +376,28 @@ when do we rotate which keys (tls, link, etc)?
    are able, act as follows:  the node closer to the OP should send a
    RELAY_TRUNCATED cell towards the OP; the node farther from the OP
    should send a DESTROY cell down the circuit.
+
+   The payload of a RELAY_TRUNCATED or DESTROY cell contains a single octet,
+   describing why the circuit is being closed or truncated.  When sending a
+   TRUNCATED or DESTROY cell because of another TRUNCATED or DESTROY cell,
+   the error code should be propagated.  The origin of a circuit always sets
+   this error code to 0, to avoid leaking its version.
+
+   The error codes are:
+     0 -- NONE            (No reason given.)
+     1 -- PROTOCOL        (Tor protocol violation.)
+     2 -- INTERNAL        (Internal error.)
+     3 -- REQUESTED       (A client sent a TRUNCATE command.)
+     4 -- HIBERNATING     (Not currently operating; trying to save bandwidth.)
+     5 -- RESOURCELIMIT (Out of memory, sockets, or circuit IDs.)
+     6 -- CONNECTFAILED (Unable to reach server.)
+     7 -- OR_IDENTITY     (Connected to server, but its OR identity was not
+                           as expected.)
+     8 -- OR_CONN_CLOSED  (The OR connection that was carrying this circuit
+                           died.)
+
+   [Versions of Tor prior to 0.1.0.11 didn't sent versions; implementations
+   MUST accept empty TRUNCATED and DESTROY cells.]
 
 4.5. Routing relay cells
 

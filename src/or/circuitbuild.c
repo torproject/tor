@@ -313,14 +313,14 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *info,
 
   if (onion_pick_cpath_exit(circ, info) < 0 ||
       onion_populate_cpath(circ) < 0) {
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return NULL;
   }
 
   control_event_circuit_status(circ, CIRC_EVENT_LAUNCHED);
 
   if (circuit_handle_first_hop(circ) < 0) {
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return NULL;
   }
   return circ;
@@ -420,7 +420,7 @@ circuit_n_conn_done(connection_t *or_conn, int status)
                 DIGEST_LEN)) {
       if (!status) { /* or_conn failed; close circ */
         info(LD_CIRC,"or_conn failed. Closing circ.");
-        circuit_mark_for_close(circ);
+        circuit_mark_for_close(circ, END_CIRC_REASON_OR_IDENTITY);
         continue;
       }
       debug(LD_CIRC,"Found circ %d, sending create cell.", circ->n_circ_id);
@@ -432,7 +432,7 @@ circuit_n_conn_done(connection_t *or_conn, int status)
         if (circuit_send_next_onion_skin(circ) < 0) {
           info(LD_CIRC,
                "send_next_onion_skin failed; circuit marked for closing.");
-          circuit_mark_for_close(circ);
+          circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
           continue;
           /* XXX could this be bad, eg if next_onion_skin failed because conn
            *     died? */
@@ -441,7 +441,7 @@ circuit_n_conn_done(connection_t *or_conn, int status)
         /* pull the create cell out of circ->onionskin, and send it */
         tor_assert(circ->onionskin);
         if (circuit_deliver_create_cell(circ,CELL_CREATE,circ->onionskin)<0) {
-          circuit_mark_for_close(circ);
+          circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
           continue;
         }
         tor_free(circ->onionskin);
@@ -537,7 +537,7 @@ extern int has_completed_circuit;
  * Otherwise, we need to build a relay extend cell and send it
  * forward.
  *
- * Return -1 if we want to tear down circ, else return 0.
+ * Return -reason if we want to tear down circ, else return 0.
  */
 int
 circuit_send_next_onion_skin(circuit_t *circ)
@@ -567,7 +567,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
                             &(circ->cpath->dh_handshake_state),
                             payload) < 0) {
         warn(LD_CIRC,"onion_skin_create (first hop) failed.");
-        return -1;
+        return - END_CIRC_REASON_INTERNAL;
       }
     } else {
       /* We are not an OR, and we're building the first hop of a circuit to a
@@ -582,7 +582,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
     }
 
     if (circuit_deliver_create_cell(circ, cell_type, payload) < 0)
-      return -1;
+      return - END_CIRC_REASON_RESOURCELIMIT;
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
     circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
@@ -625,7 +625,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
     if (onion_skin_create(hop->extend_info->onion_key,
                           &(hop->dh_handshake_state), onionskin) < 0) {
       warn(LD_CIRC,"onion_skin_create failed.");
-      return -1;
+      return - END_CIRC_REASON_INTERNAL;
     }
 
     debug(LD_CIRC,"Sending extend relay cell.");
@@ -719,7 +719,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
       n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
       if (!n_conn) {
         info(LD_CIRC,"Launching n_conn failed. Closing circuit.");
-        circuit_mark_for_close(circ);
+        circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
         return 0;
       }
       debug(LD_CIRC,"connecting in progress (or finished). Good.");
@@ -801,7 +801,7 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
  * Calculate the appropriate keys and digests, make sure KH is
  * correct, and initialize this hop of the cpath.
  *
- * Return -1 if we want to mark circ for close, else return 0.
+ * Return - reason if we want to mark circ for close, else return 0.
  */
 int
 circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
@@ -816,7 +816,7 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) { /* got an extended when we're all done? */
       warn(LD_PROTOCOL,"got extended when circ already built? Closing.");
-      return -1;
+      return - END_CIRC_REASON_TORPROTOCOL;
     }
   }
   tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
@@ -825,7 +825,7 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
     if (onion_skin_client_handshake(hop->dh_handshake_state, reply, keys,
                                     DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
       warn(LD_CIRC,"onion_skin_client_handshake failed.");
-      return -1;
+      return -END_CIRC_REASON_TORPROTOCOL;
     }
     /* Remember hash of g^xy */
     memcpy(hop->handshake_digest, reply+DH_KEY_LEN, DIGEST_LEN);
@@ -833,12 +833,12 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
     if (fast_client_handshake(hop->fast_handshake_state, reply, keys,
                               DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
       warn(LD_CIRC,"fast_client_handshake failed.");
-      return -1;
+      return -END_CIRC_REASON_TORPROTOCOL;
     }
     memcpy(hop->handshake_digest, reply+DIGEST_LEN, DIGEST_LEN);
   } else {
     warn(LD_PROTOCOL,"CREATED cell type did not match CREATE cell type.");
-    return -1;
+    return -END_CIRC_REASON_TORPROTOCOL;
   }
 
   if (hop->dh_handshake_state) {
@@ -848,7 +848,7 @@ circuit_finish_handshake(circuit_t *circ, uint8_t reply_type, char *reply)
   memset(hop->fast_handshake_state, 0, sizeof(hop->fast_handshake_state));
 
   if (circuit_init_cpath_crypto(hop, keys, 0)<0) {
-    return -1;
+    return -END_CIRC_REASON_TORPROTOCOL;
   }
 
   hop->state = CPATH_STATE_OPEN;
@@ -880,7 +880,7 @@ circuit_truncated(circuit_t *circ, crypt_path_t *layer)
    *     means that a connection broke or an extend failed. For now,
    *     just give up.
    */
-  circuit_mark_for_close(circ);
+  circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
   return 0;
 
 #if 0
@@ -1375,12 +1375,13 @@ circuit_append_new_exit(circuit_t *circ, extend_info_t *info)
 int
 circuit_extend_to_new_exit(circuit_t *circ, extend_info_t *info)
 {
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
   circuit_append_new_exit(circ, info);
   circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
   if (circuit_send_next_onion_skin(circ)<0) {
     warn(LD_CIRC, "Couldn't extend circuit to new point '%s'.",
          info->nickname);
-    circuit_mark_for_close(circ);
+    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
   return 0;
@@ -1731,7 +1732,7 @@ static INLINE int
 is_an_entry_node(char *digest)
 {
   SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
-                    if(!memcmp(digest, entry->identity, DIGEST_LEN))
+                    if (!memcmp(digest, entry->identity, DIGEST_LEN))
                       return 1;
                    );
   return 0;

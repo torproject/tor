@@ -169,7 +169,7 @@ connection_cpu_process_inbuf(connection_t *conn)
       debug(LD_OR,
             "decoding onionskin failed. (Old key or bad software.) Closing.");
       if (circ)
-        circuit_mark_for_close(circ);
+        circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
       goto done_processing;
     }
     if (!circ) {
@@ -185,7 +185,7 @@ connection_cpu_process_inbuf(connection_t *conn)
     if (onionskin_answer(circ, CELL_CREATED, buf+TAG_LEN,
                          buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       warn(LD_OR,"onionskin_answer failed. Closing.");
-      circuit_mark_for_close(circ);
+      circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
       goto done_processing;
     }
     debug(LD_OR,"onionskin_answer succeeded. Yay.");
