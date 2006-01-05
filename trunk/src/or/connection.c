@@ -78,7 +78,7 @@ conn_state_to_string(int type, int state)
         case OR_CONN_STATE_CONNECTING: return "connect()ing";
         case OR_CONN_STATE_PROXY_FLUSHING: return "proxy flushing";
         case OR_CONN_STATE_PROXY_READING: return "proxy reading";
-        case OR_CONN_STATE_HANDSHAKING: return "proxy reading";
+        case OR_CONN_STATE_HANDSHAKING: return "handshaking";
         case OR_CONN_STATE_OPEN: return "open";
       }
       break;
