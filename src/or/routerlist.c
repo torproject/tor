@@ -809,20 +809,22 @@ router_choose_random_node(const char *preferred,
                           int allow_unverified, int strict)
 {
   smartlist_t *sl, *excludednodes;
-  routerinfo_t *choice;
+  routerinfo_t *choice = NULL;
 
   excludednodes = smartlist_create();
   add_nickname_list_to_smartlist(excludednodes,excluded,0,0,1);
 
   /* Try the preferred nodes first. Ignore need_uptime and need_capacity,
    * since the user explicitly asked for these nodes. */
-  sl = smartlist_create();
-  add_nickname_list_to_smartlist(sl,preferred,1,1,1);
-  smartlist_subtract(sl,excludednodes);
-  if (excludedsmartlist)
-    smartlist_subtract(sl,excludedsmartlist);
-  choice = smartlist_choose(sl);
-  smartlist_free(sl);
+  if (preferred) {
+    sl = smartlist_create();
+    add_nickname_list_to_smartlist(sl,preferred,1,1,1);
+    smartlist_subtract(sl,excludednodes);
+    if (excludedsmartlist)
+      smartlist_subtract(sl,excludedsmartlist);
+    choice = smartlist_choose(sl);
+    smartlist_free(sl);
+  }
   if (!choice && !strict) {
     /* Then give up on our preferred choices: any node
      * will do that has the required attributes. */
