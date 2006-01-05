@@ -139,7 +139,9 @@ seconds of idleness. (Default: 5 minutes)
 Send all messages between \fIminSeverity\fR and \fImaxSeverity\fR to
 the standard output stream, the standard error stream, or to the system
 log. (The "syslog" value is only supported on Unix.)  Recognized
-severity levels are debug, info, notice, warn, and err.  If only one
+severity levels are debug, info, notice, warn, and err.  We advise using
+"notice" in most cases, since anything more verbose may provide sensitive
+information to an attacker who obtains the logs.  If only one
 severity level is given, all messages of that level or higher will be
 sent to the listed destination.
 .LP
