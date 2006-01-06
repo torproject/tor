@@ -587,7 +587,12 @@ decide_if_publishable_server(time_t now)
 void
 consider_publishable_server(time_t now, int force)
 {
-  int rebuilt = router_rebuild_descriptor(0);
+  int rebuilt;
+
+  if (!server_mode(get_options()))
+    return;
+
+  rebuilt = router_rebuild_descriptor(0);
   if (decide_if_publishable_server(now)) {
     set_server_advertised(1);
     if (rebuilt == 0)
