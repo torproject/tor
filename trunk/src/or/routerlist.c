@@ -2225,8 +2225,11 @@ update_networkstatus_cache_downloads(time_t now)
          strlcpy(resource, "fp/", sizeof(resource));
          base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
          strlcat(resource, ".z", sizeof(resource));
-         directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,
-                                      resource,1);
+         directory_initiate_command_routerstatus(
+               &ds->fake_status, DIR_PURPOSE_FETCH_NETWORKSTATUS,
+               0, /* Not private */
+               resource,
+               NULL, 0 /* No payload. */);
        });
   } else {
     /* A non-authority cache launches one connection to a random authority. */

@@ -157,7 +157,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
 {
   routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
-  int fetch_fresh_first = server_mode(options) && options->DirPort != 0;
+  int prefer_authority = server_mode(options) && options->DirPort != 0;
   int directconn = !purpose_is_private(purpose);
 
   int need_v1_support = purpose == DIR_PURPOSE_FETCH_DIR ||
@@ -166,17 +166,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
                         purpose == DIR_PURPOSE_FETCH_SERVERDESC;
 
   if (directconn) {
-    if (fetch_fresh_first && purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS &&
-        !strcmpstart(resource,"fp/") && strlen(resource) >= HEX_DIGEST_LEN+3) {
-      /* Try to ask the actual dirserver its opinion. */
-      char digest[DIGEST_LEN];
-      trusted_dir_server_t *ds;
-      base16_decode(digest, DIGEST_LEN, resource+3, HEX_DIGEST_LEN);
-      ds = router_get_trusteddirserver_by_digest(digest);
-      if (ds)
-        rs = &(ds->fake_status);
-    }
-    if (!rs && fetch_fresh_first) {
+    if (prefer_authority) {
       /* only ask authdirservers, and don't ask myself */
       rs = router_pick_trusteddirserver(need_v1_support, 1, 1,
                                         retry_if_no_servers);
