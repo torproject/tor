@@ -35,10 +35,10 @@ Website:
 
 for 0.1.1.x:
 N - if they're trying to be a tor server and they're running
-    win 98 or win me, give them a message talking about The Bug.
+     win 98 or win me, give them a message talking about The Bug.
 
-N - update 'exitlist' script to handle new dir format.
-  - state_description in config.c has gone stale
+  o update 'exitlist' script to handle new dir format.
+  o state_description in config.c has gone stale
 
   . Helper nodes
     . More testing and debugging

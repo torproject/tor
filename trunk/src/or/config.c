@@ -77,9 +77,10 @@ static config_abbrev_t _option_abbrevs[] = {
 };
 /* A list of state-file abbreviations, for compatibility. */
 static config_abbrev_t _state_abbrevs[] = {
-  { "HelperNode", "EntryNode", 0, 0},
-  { "HelperNodeDownSince", "EntryNodeDownSince", 0, 0},
-  { "HelperNodeUnlistedSince", "EntryNodeUnlistedSince", 0, 0},
+  { "AccountingBytesReadInterval", "AccountingBytesReadInInterval", 0, 0 },
+  { "HelperNode", "EntryNode", 0, 0 },
+  { "HelperNodeDownSince", "EntryNodeDownSince", 0, 0 },
+  { "HelperNodeUnlistedSince", "EntryNodeUnlistedSince", 0, 0 },
   { NULL, NULL, 0, 0},
 };
 #undef PLURAL
@@ -91,7 +92,6 @@ typedef struct config_var_t {
                        * value. */
   off_t var_offset; /**< Offset of the corresponding member of or_options_t. */
   const char *initvalue; /**< String (or null) describing initial value. */
-  const char *description;
 } config_var_t;
 
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
@@ -103,9 +103,9 @@ typedef struct config_var_t {
  */
 #define VAR(name,conftype,member,initvalue)                             \
   { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member), \
-      initvalue, NULL }
+      initvalue }
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
-#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
+#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
 
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
@@ -217,15 +217,15 @@ static config_var_t _option_vars[] = {
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
+  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
 
 #define VAR(name,conftype,member,initvalue)                             \
   { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member),  \
-      initvalue, NULL }
+      initvalue }
 static config_var_t _state_vars[] = {
-  VAR("AccountingBytesReadInterval", MEMUNIT,
+  VAR("AccountingBytesReadInInterval", MEMUNIT,
       AccountingBytesReadInInterval, NULL),
   VAR("AccountingBytesWrittenInInterval", MEMUNIT,
       AccountingBytesWrittenInInterval, NULL),
@@ -248,7 +248,7 @@ static config_var_t _state_vars[] = {
 
   VAR("LastWritten",             ISOTIME,     LastWritten,            NULL),
 
-  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL, NULL }
+  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
 #undef VAR
@@ -267,11 +267,30 @@ static config_var_description_t options_description[] = {
 };
 
 static config_var_description_t state_description[] = {
-  { "HelperNode", "One of the nodes we have chosen as a fixed entry" },
-  { "HelperNodeDownSince",
+  { "AccountingBytesReadInterval",
+    "How many bytes have we read in this accounting period?" },
+  { "AccountingBytesWrittenInInterval",
+    "How many bytes have we written in this accounting period?" },
+  { "AccountingExpectedUsage",
+    "How many bytes did we expect to use per minute? (0 for no estimate.)" },
+  { "AccountingIntervalStart", "When did this accounting period begin?" },
+  { "AccountingSecondsActive", "How long have we been awake in this period?" },
+
+  { "BWHistoryReadEnds", "When does the last-recorded read-interval end?" },
+  { "BWHistoryReadInterval", "How long is each read-interval (in seconds)?" },
+  { "BWHistoryReadValues", "Number of bytes read in each interval." },
+  { "BWHistoryWriteEnds", "When does the last-recorded write-interval end?" },
+  { "BWHistoryWriteInterval", "How long is each write-interval (in seconds)?"},
+  { "BWHistoryWriteValues", "Number of bytes written in each interval." },
+
+  { "EntryNode", "One of the nodes we have chosen as a fixed entry" },
+  { "EntryNodeDownSince",
     "The last helper node has been down since this time." },
-  { "HelperNodeUnlistedSince",
+  { "EntryNodeUnlistedSince",
     "The last helper node has been unlisted since this time." },
+  { "LastWritten", "When was this state file last regenerated?" },
+
+  { "TorVersion", "Which version of Tor generated this state file?" },
   { NULL, NULL },
 };
 
