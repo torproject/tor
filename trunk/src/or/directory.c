@@ -167,13 +167,14 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
 
   if (directconn) {
     if (fetch_fresh_first && purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS &&
-        !strcmpstart(resource,"fp/") && strlen(resource) == HEX_DIGEST_LEN+3) {
+        !strcmpstart(resource,"fp/") && strlen(resource) >= HEX_DIGEST_LEN+3) {
       /* Try to ask the actual dirserver its opinion. */
       char digest[DIGEST_LEN];
       trusted_dir_server_t *ds;
       base16_decode(digest, DIGEST_LEN, resource+3, HEX_DIGEST_LEN);
       ds = router_get_trusteddirserver_by_digest(digest);
-      rs = &(ds->fake_status);
+      if (ds)
+        rs = &(ds->fake_status);
     }
     if (!rs && fetch_fresh_first) {
       /* only ask authdirservers, and don't ask myself */
