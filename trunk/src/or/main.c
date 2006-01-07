@@ -592,9 +592,13 @@ run_connection_housekeeping(int i, time_t now)
   if (conn->outbuf && !buf_datalen(conn->outbuf))
     conn->timestamp_lastempty = now;
 
+  if (conn->marked_for_close) {
+    /* nothing to do here */
+    return;
+  }
+
   /* Expire any directory connections that haven't sent anything for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
-      !conn->marked_for_close &&
       conn->timestamp_lastwritten + 5*60 < now) {
     info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
          conn->s, conn->purpose);
@@ -615,12 +619,20 @@ run_connection_housekeeping(int i, time_t now)
     return; /* we're all done here, the rest is just for OR conns */
 
 #define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7) /* a week */
-  if (!conn->is_obsolete &&
-      conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
-    info(LD_OR, "Marking OR conn to %s:%d obsolete (fd %d, %d secs old).",
-         conn->address, conn->port, conn->s,
-         (int)(now - conn->timestamp_created));
-    conn->is_obsolete = 1;
+  if (!conn->is_obsolete) {
+    if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
+      info(LD_OR, "Marking OR conn to %s:%d obsolete (fd %d, %d secs old).",
+           conn->address, conn->port, conn->s,
+           (int)(now - conn->timestamp_created));
+      conn->is_obsolete = 1;
+    } else if (connection_or_get_by_identity_digest(conn->identity_digest) !=
+               conn) {
+      info(LD_OR,
+           "Marking duplicate conn to %s:%d obsolete (fd %d, %d secs old).",
+           conn->address, conn->port, conn->s,
+           (int)(now - conn->timestamp_created));
+      conn->is_obsolete = 1;
+    }
   }
 
   if (conn->is_obsolete && conn->n_circuits == 0) {
