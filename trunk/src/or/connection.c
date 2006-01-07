@@ -105,7 +105,7 @@ conn_state_to_string(int type, int state)
       switch (state) {
         case DIR_CONN_STATE_CONNECTING: return "connecting";
         case DIR_CONN_STATE_CLIENT_SENDING: return "client sending";
-        case DIR_CONN_STATE_CLIENT_READING: return "cleint reading";
+        case DIR_CONN_STATE_CLIENT_READING: return "client reading";
         case DIR_CONN_STATE_SERVER_COMMAND_WAIT: return "waiting for command";
         case DIR_CONN_STATE_SERVER_WRITING: return "writing";
       }
