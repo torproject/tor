@@ -268,12 +268,12 @@ when do we rotate which keys (tls, link, etc)?
    If CREATE_FAST is used, the client and server base their key material on
    K0=X|Y.
 
-   From the base key material g^xy, they compute derivative key material as
-   follows.  Next, the server computes 100 bytes of key data as K = SHA1(K0
-   | [00]) | SHA1(K0 | [01]) | ... SHA1(K0 | [04]) where "00" is a single
-   octet whose value is zero, [01] is a single octet whose value is one, etc.
-   The first 20 bytes of K form KH, bytes 21-40 form the forward digest Df,
-   41-60 form the backward digest Db, 61-76 form Kf, and 77-92 form Kb.
+   From the base key material K0, they compute 100 bytes of derivative
+   key data as K = SHA1(K0 | [00]) | SHA1(K0 | [01]) | ... SHA1(K0 |
+   [04]) where "00" is a single octet whose value is zero, [01] is a
+   single octet whose value is one, etc.  The first 20 bytes of K form
+   KH, bytes 21-40 form the forward digest Df, 41-60 form the backward
+   digest Db, 61-76 form Kf, and 77-92 form Kb.
 
    KH is used in the handshake response to demonstrate knowledge of the
    computed shared key. Df is used to seed the integrity-checking hash
