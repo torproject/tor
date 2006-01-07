@@ -489,9 +489,10 @@ conn_close_if_marked(int i)
       log_fn(severity, LD_NET, "Something wrong with your network connection? "
              "We tried to write %d bytes to addr %s (fd %d, type %s, state %d) "
              "but timed out. (Marked at %s:%d)",
+             (int)buf_datalen(conn->outbuf),
              safe_str(conn->address), conn->s, conn_type_to_string(conn->type),
              conn->state,
-             (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,
+             conn->marked_for_close_file,
              conn->marked_for_close);
     }
   }
