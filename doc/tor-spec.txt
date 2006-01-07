@@ -282,11 +282,6 @@ when do we rotate which keys (tls, link, etc)?
    is used to encrypt the stream of data going from the OP to the OR, and
    Kb is used to encrypt the stream of data going from the OR to the OP.
 
-   The fast-setup case uses the same formula, except that X|Y is used
-   in place of g^xy in determining K.  That is,
-      K = SHA1(X|Y | [00]) | SHA1(X|Y | [01]) | ... SHA1(X|Y| | [04])
-   The values KH, Kf, Kb, Df, and Db are established and used as before.
-
 4.3. Creating circuits
 
    When creating a circuit through the network, the circuit creator
