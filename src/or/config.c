@@ -285,9 +285,9 @@ static config_var_description_t state_description[] = {
 
   { "EntryNode", "One of the nodes we have chosen as a fixed entry" },
   { "EntryNodeDownSince",
-    "The last helper node has been down since this time." },
+    "The last entry node has been down since this time." },
   { "EntryNodeUnlistedSince",
-    "The last helper node has been unlisted since this time." },
+    "The last entry node has been unlisted since this time." },
   { "LastWritten", "When was this state file last regenerated?" },
 
   { "TorVersion", "Which version of Tor generated this state file?" },
