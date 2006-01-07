@@ -601,12 +601,8 @@ connection_edge_process_end_not_open(
   routerinfo_t *exitrouter;
   int reason = *(cell->payload+RELAY_HEADER_SIZE);
 
-  if (rh->length > 0 && edge_reason_is_retriable(reason)) {
-    if (conn->type != CONN_TYPE_AP) {
-      log_fn(LOG_WARN,"Got an end because of %s, but we're not an AP. Closing.",
-             connection_edge_end_reason_str(reason));
-      return -1;
-    }
+  if (rh->length > 0 && edge_reason_is_retriable(reason) &&
+      conn->type == CONN_TYPE_AP) {
     log_fn(LOG_INFO,"Address '%s' refused due to '%s'. Considering retrying.",
            safe_str(conn->socks_request->address),
            connection_edge_end_reason_str(reason));
