@@ -257,6 +257,7 @@ circuit_dump_by_conn(connection_t *conn, int severity)
         circ->n_port == conn->port &&
         !memcmp(conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
       circuit_dump_details(severity, circ, conn->poll_index, "Pending",
+// XXX actually, this could be a circuit that's open and ends here too
                            circ->n_circ_id, circ->p_circ_id);
     }
   }
