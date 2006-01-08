@@ -1938,6 +1938,30 @@ _compare_networkstatus_published_on(const void **_a, const void **_b)
     return 0;
 }
 
+/** Add the parsed neworkstatus in <b>ns</b> (with original document in
+ * <b>s</b> to the disk cache (and the in-memory directory server cache) as
+ * appropriate. */
+static int
+add_networkstatus_to_cache(const char *s,
+                           networkstatus_source_t source,
+                           networkstatus_t *ns)
+{
+  if (source != NS_FROM_CACHE) {
+    char *fn = networkstatus_get_cache_filename(ns);
+    if (write_str_to_file(fn, s, 0)<0) {
+      notice(LD_FS, "Couldn't write cached network status to \"%s\"", fn);
+    }
+    tor_free(fn);
+  }
+
+  if (get_options()->DirPort)
+    dirserv_set_cached_networkstatus_v2(s,
+                                        ns->identity_digest,
+                                        ns->published_on);
+
+  return 0;
+}
+
 /** How far in the future do we allow a network-status to get before removing
  * it? (seconds) */
 #define NETWORKSTATUS_ALLOW_SKEW (48*60*60)
@@ -1969,7 +1993,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   int i, found;
   time_t now;
   int skewed = 0;
-  trusted_dir_server_t *trusted_dir;
+  trusted_dir_server_t *trusted_dir = NULL;
+  const char *source_desc = NULL;
   char fp[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
 
@@ -1978,12 +2003,18 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     warn(LD_DIR, "Couldn't parse network status.");
     return -1;
   }
+  base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
   if (!(trusted_dir =
         router_get_trusteddirserver_by_digest(ns->identity_digest))) {
     info(LD_DIR, "Network status was signed, but not by an authoritative "
          "directory we recognize.");
-    networkstatus_free(ns);
-    return -1;
+    if (!get_options()->DirPort) {
+      networkstatus_free(ns);
+      return 0;
+    }
+    source_desc = fp;
+  } else {
+    source_desc = trusted_dir->description;
   }
   now = time(NULL);
   if (arrived_at > now)
@@ -1996,7 +2027,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   if (ns->published_on > now + NETWORKSTATUS_ALLOW_SKEW) {
     warn(LD_GENERAL, "Network status from %s was published in the future "
          "(%s GMT). Somebody is skewed here: check your clock. Not caching.",
-         trusted_dir->description, published);
+         source_desc, published);
     skewed = 1;
   }
 
@@ -2008,8 +2039,6 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     networkstatus_free(ns);
     return 0;
   }
-
-  base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
 
   if (requested_fingerprints) {
     if (smartlist_string_isin(requested_fingerprints, fp)) {
@@ -2025,7 +2054,15 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     }
   }
 
-  if (source != NS_FROM_CACHE)
+  if (!trusted_dir) {
+    if (!skewed && get_options()->DirPort) {
+      add_networkstatus_to_cache(s, source, ns);
+      networkstatus_free(ns);
+    }
+    return 0;
+  }
+
+  if (source != NS_FROM_CACHE && trusted_dir)
     trusted_dir->n_networkstatus_failures = 0;
 
   found = 0;
@@ -2075,8 +2112,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
     {
-       if (!router_get_by_descriptor_digest(rs->descriptor_digest))
-         rs->need_to_mirror = 1;
+      if (!router_get_by_descriptor_digest(rs->descriptor_digest))
+        rs->need_to_mirror = 1;
     });
 
   info(LD_DIR, "Setting networkstatus %s %s (published %s)",
@@ -2087,20 +2124,10 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   smartlist_sort(networkstatus_list, _compare_networkstatus_published_on);
 
-  if (source != NS_FROM_CACHE && !skewed) {
-    char *fn = networkstatus_get_cache_filename(ns);
-    if (write_str_to_file(fn, s, 0)<0) {
-      notice(LD_FS, "Couldn't write cached network status to \"%s\"", fn);
-    }
-    tor_free(fn);
-  }
+  if (!skewed)
+    add_networkstatus_to_cache(s, source, ns);
 
   networkstatus_list_update_recent(now);
-
-  if (get_options()->DirPort && !skewed)
-    dirserv_set_cached_networkstatus_v2(s,
-                                        ns->identity_digest,
-                                        ns->published_on);
 
   return 0;
 }
