@@ -17,6 +17,9 @@ const char dirserv_c_id[] =
 #define ROUTER_ALLOW_SKEW (60*60*12) /* 12 hours */
 /** How many seconds do we wait before regenerating the directory? */
 #define DIR_REGEN_SLACK_TIME 30
+/** If we're a cache, keep this many networkstatuses around from non-trusted
+ * directory authorities. */
+#define MAX_UNTRUSTED_NETWORKSTATUSES 16
 
 extern long stats_n_seconds_working;
 
@@ -984,27 +987,59 @@ dirserv_set_cached_directory(const char *directory, time_t published,
  * the cache.
  */
 void
-dirserv_set_cached_networkstatus_v2(const char *directory,
+dirserv_set_cached_networkstatus_v2(const char *networkstatus,
                                     const char *identity,
                                     time_t published)
 {
   cached_dir_t *d;
+  smartlist_t *trusted_dirs;
   if (!cached_v2_networkstatus)
     cached_v2_networkstatus = digestmap_new();
 
   if (!(d = digestmap_get(cached_v2_networkstatus, identity))) {
-    if (!directory)
+    if (!networkstatus)
       return;
     d = tor_malloc_zero(sizeof(cached_dir_t));
     digestmap_set(cached_v2_networkstatus, identity, d);
   }
 
   tor_assert(d);
-  if (directory) {
-    set_cached_dir(d, tor_strdup(directory), published);
+  if (networkstatus) {
+    if (published > d->published) {
+      set_cached_dir(d, tor_strdup(networkstatus), published);
+    } else {
+      networkstatus_free(networkstatus);
+    }
   } else {
     free_cached_dir(d);
     digestmap_remove(cached_v2_networkstatus, identity);
+  }
+
+  router_get_trusted_dir_servers(&trusted_dirs);
+  if (digestmap_size(cached_v2_networkstatus) >
+      smartlist_len(trusted_dirs) + MAX_UNTRUSTED_NETWORKSTATUSES) {
+    /* We need to remove the oldest untrusted networkstatus. */
+    const char *oldest = NULL;
+    time_t oldest_published = TIME_MAX;
+    digestmap_iter_t *iter;
+
+    for (iter = digestmap_iter_init(cached_v2_networkstatus);
+         !digestmap_iter_done(iter);
+         iter = digestmap_iter_next(cached_v2_networkstatus, iter)) {
+      const char *ident;
+      void *val;
+      digestmap_iter_get(iter, &ident, &val);
+      d = val;
+      if (d->published < oldest_published &&
+          !router_get_trusteddirserver_by_digest(ident)) {
+        oldest = ident;
+        oldest_published = d->published;
+      }
+    }
+    tor_assert(oldest);
+    d = digestmap_remove(cached_v2_networkstatus, oldest);
+    if (d)
+      free_cached_dir(d);
   }
 }
 
