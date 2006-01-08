@@ -1254,6 +1254,55 @@ already_fetching_directory(int purpose)
   return 0;
 }
 
+static strmap_t *request_bytes_map = NULL;
+
+static void
+note_request(const char *key, size_t bytes)
+{
+  uint64_t *n;
+  if (!request_bytes_map)
+    request_bytes_map = strmap_new();
+
+  n = strmap_get(request_bytes_map, key);
+  if (!n) {
+    n = tor_malloc_zero(sizeof(uint64_t));
+    strmap_set(request_bytes_map, key, n);
+  }
+  *n += bytes;
+}
+
+static char *
+dump_request_log(void)
+{
+  smartlist_t *lines;
+  char tmp[256];
+  char *result;
+  strmap_iter_t *iter;
+
+  if (!request_bytes_map)
+    request_bytes_map = strmap_new();
+
+  lines = smartlist_create();
+
+  for (iter = strmap_iter_init(request_bytes_map);
+       !strmap_iter_done(iter);
+       iter = strmap_iter_next(request_bytes_map, iter)) {
+    const char *key;
+    void *val;
+    uint64_t *n;
+    strmap_iter_get(iter, &key, &val);
+    n = val;
+    tor_snprintf(tmp, sizeof(tmp), "%s  "U64_FORMAT"\n",
+                 key, U64_PRINTF_ARG(*n));
+    smartlist_add(lines, tor_strdup(tmp));
+  }
+  smartlist_sort_strings(lines);
+  result = smartlist_join_strings(lines, "", 0, NULL);
+  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+  smartlist_free(lines);
+  return result;
+}
+
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
@@ -1282,6 +1331,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
   if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* dir fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
     dlen = dirserv_get_directory(&cp, deflated);
+
+    note_request(url, dlen);
 
     tor_free(url);
 
@@ -1313,8 +1364,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
   if (!strcmp(url,"/tor/running-routers") ||
       !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
     int deflated = !strcmp(url,"/tor/running-routers.z");
-    tor_free(url);
     dlen = dirserv_get_runningrouters(&cp, deflated);
+    note_request(url, dlen);
+    tor_free(url);
     if (!dlen) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
@@ -1341,6 +1393,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     size_t url_len = strlen(url);
     int deflated = !strcmp(url+url_len-2, ".z");
     smartlist_t *dir_objs = smartlist_create();
+    const char *request_type = NULL;
     const char *key = url + strlen("/tor/status/");
     if (deflated)
       url[url_len-2] = '\0';
@@ -1348,6 +1401,15 @@ directory_handle_command_get(connection_t *conn, char *headers,
       smartlist_free(dir_objs);
       return 0;
     }
+    if (!strcmpstart(key, "fp/"))
+      request_type = deflated?"/tor/status/fp.z":"/tor/status/fp";
+    else if (!strcmpstart(key, "authority"))
+      request_type = deflated?"/tor/status/authority.z":
+        "/tor/status/authority";
+    else if (!strcmpstart(key, "all"))
+      request_type = deflated?"/tor/status/all.z":"/tor/status/all";
+    else
+      request_type = "/tor/status/?";
     tor_free(url);
     if (!smartlist_len(dir_objs)) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Network status object unavailable");
@@ -1357,6 +1419,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     dlen = 0;
     SMARTLIST_FOREACH(dir_objs, cached_dir_t *, d,
                       dlen += deflated?d->dir_z_len:d->dir_len);
+    note_request(request_type,dlen);
     format_rfc1123_time(date, time(NULL));
     tor_snprintf(tmp, sizeof(tmp),
                  "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
@@ -1383,9 +1446,22 @@ directory_handle_command_get(connection_t *conn, char *headers,
     int res;
     const char *msg;
     smartlist_t *descs = smartlist_create();
+    const char *request_type = NULL;
     if (deflated)
       url[url_len-2] = '\0';
     res = dirserv_get_routerdescs(descs, url, &msg);
+
+    if (!strcmpstart(url, "/tor/server/fp/"))
+      request_type = deflated?"/tor/server/fp.z":"/tor/server/fp";
+    else if (!strcmpstart(url, "/tor/server/authority"))
+      request_type = deflated?"/tor/server/authority.z":
+        "/tor/server/authority";
+    else if (!strcmpstart(url, "/tor/server/all"))
+      request_type = deflated?"/tor/server/all.z":"/tor/server/all";
+    else if (!strcmpstart(url, "/tor/server/d/"))
+      request_type = deflated?"/tor/server/d.z":"/tor/server/d";
+    else
+      request_type = "/tor/server/?";
     tor_free(url);
     if (res < 0)
       write_http_status_line(conn, 404, msg);
@@ -1422,6 +1498,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
                      "Content-Encoding: deflate\r\n\r\n",
                      date,
                      (int)compressed_len);
+        note_request(request_type, compressed_len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
         connection_write_to_buf(compressed, compressed_len, conn);
         tor_free(compressed);
@@ -1431,6 +1508,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
                      "Content-Type: text/plain\r\n\r\n",
                      date,
                      (int)len);
+        note_request(request_type, len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
         SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
                           connection_write_to_buf(ri->signed_descriptor,
@@ -1469,6 +1547,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
                      "Content-Type: application/octet-stream\r\n\r\n",
                      date,
                      (int)desc_len);
+        note_request("/tor/rendezvous?/", desc_len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
         /* need to send descp separately, because it may include nuls */
         connection_write_to_buf(descp, desc_len, conn);
@@ -1482,6 +1561,20 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
     tor_free(url);
     return 0;
+  }
+
+  if (!strcmpstart(url,"/tor/bytes.txt")) {
+    char *bytes = dump_request_log();
+    size_t len = strlen(bytes);
+    format_rfc1123_time(date, time(NULL));
+    tor_snprintf(tmp, sizeof(tmp),
+                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                 "Content-Type: text/plain\r\n\r\n",
+                 date,
+                 (int)len);
+    connection_write_to_buf(tmp, strlen(tmp), conn);
+    connection_write_to_buf(bytes, len, conn);
+    tor_free(bytes);
   }
 
   /* we didn't recognize the url */
