@@ -254,13 +254,16 @@ $Id$
    for the most recent network-status documents for all the authorities it
    knows about (including the chosen authority itself).
 
+["it" knows about -- you mean all the authorities the authority knows
+about, or all the authorities the mirror knows about? -RD]
+
    [XXXX Should mirrors just do what authorities do?  Should they do it at
    the same interval?]
 
    Directory servers and mirrors remember and serve the most recent
    network-status document they have from each authority.  Other
-   network-status don't need to be stored.  If the most recent network-status
-   document is over 10 days old, it is discarded anyway.
+   network-status documents don't need to be stored.  If the most recent
+   network-status document is over 10 days old, it is discarded anyway.
 
 4.3. Downloading and storing router descriptors
 
@@ -448,7 +451,7 @@ $Id$
    than 3 such documents, the most recently published 3 are "recent."  If
    there are fewer than 3 in all, all are "recent.")
 
-   No circuits must be built until the client has enough directory
+   Circuits SHOULD NOT be built until the client has enough directory
    information: at least two live network-status documents, and descriptors
    for at least 1/4 of the servers believed to be running.
 
