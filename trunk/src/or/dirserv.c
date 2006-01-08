@@ -524,7 +524,8 @@ dirserv_add_descriptor(const char *desc, const char **msg)
    * another authority has, so we all converge on the same one.) */
   ri_old = router_get_by_digest(ri->cache_info.identity_digest);
   if (ri_old && ri_old->cache_info.published_on < ri->cache_info.published_on
-      && router_differences_are_cosmetic(ri_old, ri)) {
+      && router_differences_are_cosmetic(ri_old, ri)
+      && !router_is_me(ri)) {
     info(LD_DIRSERV,
          "Not replacing descriptor from '%s'; differences are cosmetic.",
          ri->nickname);
@@ -1007,8 +1008,6 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
   if (networkstatus) {
     if (published > d->published) {
       set_cached_dir(d, tor_strdup(networkstatus), published);
-    } else {
-      networkstatus_free(networkstatus);
     }
   } else {
     free_cached_dir(d);
