@@ -608,7 +608,7 @@ consider_publishable_server(time_t now, int force)
 
 /** OR only: if in clique mode, try to open connections to all of the
  * other ORs we know about. Otherwise, open connections to those we
- * think are in clique mode.o
+ * think are in clique mode.
  *
  * If <b>force</b> is zero, only open the connection if we don't already
  * have one.
