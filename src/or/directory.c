@@ -1254,8 +1254,13 @@ already_fetching_directory(int purpose)
   return 0;
 }
 
+#define INSTRUMENT_DOWNLOADS_XX 1
+
+#ifdef INSTRUMENT_DOWNLOADS
+/** DOCDOC */
 static strmap_t *request_bytes_map = NULL;
 
+/** DOCDOC */
 static void
 note_request(const char *key, size_t bytes)
 {
@@ -1271,6 +1276,7 @@ note_request(const char *key, size_t bytes)
   *n += bytes;
 }
 
+/** DOCDOC */
 static char *
 dump_request_log(void)
 {
@@ -1302,6 +1308,19 @@ dump_request_log(void)
   smartlist_free(lines);
   return result;
 }
+#else
+static void
+note_request(const char *key, size_t bytes)
+{
+  return;
+}
+
+static char *
+dump_request_log(void)
+{
+  return tor_strdup("Not supported.");
+}
+#endif
 
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
@@ -1575,6 +1594,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(bytes, len, conn);
     tor_free(bytes);
+    tor_free(url);
+    return 0;
   }
 
   /* we didn't recognize the url */
