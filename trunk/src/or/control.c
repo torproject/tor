@@ -1413,6 +1413,8 @@ handle_getinfo_helper(const char *question, char **answer)
     *answer = smartlist_join_strings(mappings, "\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
+  } else if (!strcmp(question, "dir-usage")) {
+    *answer = directory_dump_request_log();
   }
   return 0;
 }

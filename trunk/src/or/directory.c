@@ -50,6 +50,7 @@ static void connection_dir_download_networkstatus_failed(connection_t *conn);
 static void connection_dir_download_routerdesc_failed(connection_t *conn);
 static void dir_networkstatus_download_failed(smartlist_t *failed);
 static void dir_routerdesc_download_failed(smartlist_t *failed);
+static void note_request(const char *key, size_t bytes);
 
 /********* START VARIABLES **********/
 
@@ -821,7 +822,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   char *body;
   char *headers;
   char *reason = NULL;
-  size_t body_len=0;
+  size_t body_len=0, orig_len=0;
   int status_code;
   time_t now, date_header=0;
   int delta;
@@ -829,6 +830,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   int plausible;
   int skewed=0;
   int allow_partial = conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC;
+  int was_compressed=0;
 
   switch (fetch_from_buf_http(conn->inbuf,
                               &headers, MAX_HEADERS_SIZE,
@@ -844,6 +846,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       return -1;
     /* case 1, fall through */
   }
+  orig_len = body_len;
 
   if (parse_http_response(headers, &status_code, &date_header,
                           &compression, &reason) < 0) {
@@ -928,11 +931,12 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body);
       body = new_body;
       body_len = new_len;
+      was_compressed = 1;
     }
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR) {
-    /* fetch/process the directory to learn about new routers. */
+    /* fetch/process the directory to cache it. */
     info(LD_DIR,"Received directory (size %d) from server '%s:%d'",
          (int)body_len, conn->address, conn->port);
     if (status_code == 503 || body_len == 0) {
@@ -952,6 +956,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       notice(LD_DIR,"I failed to parse the directory I fetched from "
              "'%s:%d'. Ignoring.", conn->address, conn->port);
     }
+    note_request(was_compressed?"dl/dir.z":"dl/dir", orig_len);
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
@@ -971,6 +976,8 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
+    note_request(was_compressed?"dl/running-routers.z":
+                 "dl/running-routers", orig_len);
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
@@ -987,6 +994,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       connection_dir_download_networkstatus_failed(conn);
       return -1;
     }
+    note_request(was_compressed?"dl/status.z":"dl/status", orig_len);
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"fp/")) {
       which = smartlist_create();
@@ -1024,6 +1032,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     int n_asked_for = 0;
     info(LD_DIR,"Received server info (size %d) from server '%s:%d'",
          (int)body_len, conn->address, conn->port);
+    note_request(was_compressed?"dl/server.z":"dl/server", orig_len);
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"d/")) {
       which = smartlist_create();
@@ -1277,8 +1286,8 @@ note_request(const char *key, size_t bytes)
 }
 
 /** DOCDOC */
-static char *
-dump_request_log(void)
+char *
+directory_dump_request_log(void)
 {
   smartlist_t *lines;
   char tmp[256];
@@ -1315,8 +1324,8 @@ note_request(const char *key, size_t bytes)
   return;
 }
 
-static char *
-dump_request_log(void)
+char *
+directory_dump_request_log(void)
 {
   return tor_strdup("Not supported.");
 }
@@ -1583,7 +1592,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   }
 
   if (!strcmpstart(url,"/tor/bytes.txt")) {
-    char *bytes = dump_request_log();
+    char *bytes = directory_dump_request_log();
     size_t len = strlen(bytes);
     format_rfc1123_time(date, time(NULL));
     tor_snprintf(tmp, sizeof(tmp),
