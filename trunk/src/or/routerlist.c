@@ -316,6 +316,7 @@ router_get_trusted_dir_servers(smartlist_t **outp)
  * reload the routerlist and try one last time. If for_runningrouters is
  * true, then only pick a dirserver that can answer runningrouters queries
  * (that is, a trusted dirserver, or one running 0.0.9rc5-cvs or later).
+ * Don't pick an authority if any non-authority is viable.
  * Other args are as in router_pick_directory_server_impl().
  */
 routerstatus_t *
@@ -400,7 +401,7 @@ router_pick_trusteddirserver(int need_v1_authority,
 }
 
 /** Pick a random running verified directory server/mirror from our
- * routerlist.
+ * routerlist.  Don't pick an authority if any non-authorities are viable.
  * If <b>fascistfirewall</b>,
  * make sure the router we pick is allowed by our firewall options.
  * If <b>requireother</b>, it cannot be us.  If <b>for_v2_directory</b>,
@@ -413,15 +414,18 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
 {
   routerstatus_t *result;
   smartlist_t *sl;
+  smartlist_t *trusted;
 
   if (!routerstatus_list)
     return NULL;
 
   /* Find all the running dirservers we know about. */
   sl = smartlist_create();
+  trusted = smartlist_create();
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, _local_status,
   {
     routerstatus_t *status = &(_local_status->status);
+    int is_trusted;
     if (!status->is_running || !status->dir_port || !status->is_valid)
       continue;
     if (requireother && router_digest_is_me(status->identity_digest))
@@ -430,15 +434,18 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
       if (!fascist_firewall_allows_address(status->addr, status->dir_port))
         continue;
     }
-    if (for_v2_directory &&
-        !(status->is_v2_dir ||
-          router_digest_is_trusted_dir(status->identity_digest)))
+    is_trusted = router_digest_is_trusted_dir(status->identity_digest);
+    if (for_v2_directory && !(status->is_v2_dir || is_trusted))
       continue;
-    smartlist_add(sl, status);
+    smartlist_add(is_trusted ? trusted : sl, status);
   });
 
-  result = smartlist_choose(sl);
+  if (smartlist_len(sl))
+    result = smartlist_choose(sl);
+  else
+    result = smartlist_choose(trusted);
   smartlist_free(sl);
+  smartlist_free(trusted);
   return result;
 }
 
