@@ -237,8 +237,8 @@ rend_config_services(or_options_t *options, int validate_only)
       continue;
     }
     if (!service) {
-      warn(LD_CONFIG, "HiddenServicePort with no preceding HiddenServiceDir "
-           "directive.");
+      warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
+           line->key);
       rend_service_free(service);
       return -1;
     }
