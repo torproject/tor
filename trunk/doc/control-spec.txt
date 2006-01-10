@@ -346,8 +346,8 @@ $Id$
       form:
          ServerID SP ORStatus CRLF
 
-    "entry-nodes"
-      A series of lines listing the currently chosen entry nodes, if any.
+    "entry-guards"
+      A series of lines listing the currently chosen entry guards, if any.
       Each is of the form:
          ServerID  SP (Status-with-time / Status) CRLF
 
