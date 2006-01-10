@@ -451,8 +451,12 @@ directory_initiate_command(const char *address, uint32_t addr,
       return;
     }
 
+    if (connection_add(conn) < 0) {
+      warn(LD_NET,"Unable to add AP bridge to dirserver.");
+      connection_mark_for_close(conn);
+      return;
+    }
     conn->state = DIR_CONN_STATE_CLIENT_SENDING;
-    connection_add(conn);
     /* queue the command on the outbuf */
     directory_send_command(conn, platform, purpose, resource,
                            payload, payload_len);
@@ -580,11 +584,18 @@ directory_send_command(connection_t *conn, const char *platform,
   connection_write_to_buf(url, strlen(url), conn);
   tor_free(url);
 
-  tor_snprintf(request, sizeof(request),
-               " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
-           payload ? (unsigned long)payload_len : 0,
-           hoststring,
-           proxyauthstring);
+  if (!strcmp(httpcommand, "GET") && !payload) {
+    tor_snprintf(request, sizeof(request),
+                 " HTTP/1.0\r\nHost: %s%s\r\n\r\n",
+                 hoststring,
+                 proxyauthstring);
+  } else {
+    tor_snprintf(request, sizeof(request),
+                 " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
+                 payload ? (unsigned long)payload_len : 0,
+                 hoststring,
+                 proxyauthstring);
+  }
   connection_write_to_buf(request, strlen(request), conn);
 
   if (payload) {
