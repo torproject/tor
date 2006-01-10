@@ -1274,7 +1274,7 @@ already_fetching_directory(int purpose)
   return 0;
 }
 
-#define INSTRUMENT_DOWNLOADS_XX 1
+#undef INSTRUMENT_DOWNLOADS
 
 #ifdef INSTRUMENT_DOWNLOADS
 /** DOCDOC */
