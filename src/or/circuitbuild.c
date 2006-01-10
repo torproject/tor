@@ -2009,7 +2009,7 @@ entry_node_set_status(const char *digest, int succeeded)
                    "Connected to new entry node '%s'. Marking earlier "
                    "entries up. %d/%d entries usable/new.", entry->nickname,
                    num_live_entry_nodes(), smartlist_len(entry_nodes));
-            log_entry_nodes(LOG_NOTICE);
+            log_entry_nodes(LOG_INFO);
             changed = 1;
           }
           if (entry->down_since) {
@@ -2019,7 +2019,7 @@ entry_node_set_status(const char *digest, int succeeded)
                    "%d/%d entry nodes usable/new.", entry->nickname,
                    num_live_entry_nodes(), smartlist_len(entry_nodes));
             entry->down_since = 0;
-            log_entry_nodes(LOG_NOTICE);
+            log_entry_nodes(LOG_INFO);
             changed = 1;
           }
         } else {
@@ -2031,7 +2031,7 @@ entry_node_set_status(const char *digest, int succeeded)
                    num_live_entry_nodes()-1, smartlist_len(entry_nodes)-1);
             tor_free(entry);
             smartlist_del_keeporder(entry_nodes, entry_sl_idx);
-            log_entry_nodes(LOG_NOTICE);
+            log_entry_nodes(LOG_INFO);
             changed = 1;
           } else if (!entry->down_since) {
             entry->down_since = time(NULL);
@@ -2039,7 +2039,7 @@ entry_node_set_status(const char *digest, int succeeded)
                  " %d/%d entry nodes usable/new.",
                  entry->nickname,
                  num_live_entry_nodes(), smartlist_len(entry_nodes));
-            log_entry_nodes(LOG_NOTICE);
+            log_entry_nodes(LOG_INFO);
             changed = 1;
           }
         }
