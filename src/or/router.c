@@ -610,15 +610,20 @@ consider_publishable_server(time_t now, int force)
  * other ORs we know about. Otherwise, open connections to those we
  * think are in clique mode.
  *
- * If <b>force</b> is zero, only open the connection if we don't already
- * have one.
+ * If <b>testing_reachability</b> is 0, try to open the connections
+ * but only if we don't already have one. If it's 1, then we're an
+ * auth dir server, and we should try to connect regardless of
+ * whether we already have a connection open -- but if <b>try_all</b>
+ * is 0, we want to load balance such that we only try a few connections
+ * per call.
  */
 void
-router_retry_connections(int force)
+router_retry_connections(int testing_reachability, int try_all)
 {
   time_t now = time(NULL);
   routerlist_t *rl = router_get_routerlist();
   or_options_t *options = get_options();
+  static char ctr = 0;
 
   tor_assert(server_mode(options));
 
@@ -628,8 +633,10 @@ router_retry_connections(int force)
       continue;
     if (!clique_mode(options) && !router_is_clique_mode(router))
       continue;
-    if (force ||
-        !connection_or_get_by_identity_digest(id_digest)) {
+    if ((testing_reachability &&
+         (try_all || (((uint8_t)id_digest[0]) % 128) == ctr)) ||
+        (!testing_reachability &&
+         !connection_or_get_by_identity_digest(id_digest))) {
       debug(LD_OR,"%sconnecting to %s at %s:%u.",
             clique_mode(options) ? "(forced) " : "",
             router->nickname, router->address, router->or_port);
@@ -640,6 +647,8 @@ router_retry_connections(int force)
                             id_digest);
     }
   });
+  if (testing_reachability && !try_all) /* increment ctr */
+    ctr = (ctr + 1) % 128;
 }
 
 /** Return true iff this OR should try to keep connections open to all
