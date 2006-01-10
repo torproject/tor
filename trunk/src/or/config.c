@@ -294,7 +294,7 @@ static config_var_description_t state_description[] = {
   { NULL, NULL },
 };
 
-typedef int (*validate_fn_t)(void*,void*);
+typedef int (*validate_fn_t)(void*,void*,int);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
@@ -330,7 +330,7 @@ static int option_is_same(config_format_t *fmt,
                           const char *name);
 static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
 static int options_validate(or_options_t *old_options,
-                            or_options_t *options);
+                            or_options_t *options, int from_setconf);
 static int options_act_reversible(or_options_t *old_options);
 static int options_act(or_options_t *old_options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
@@ -1337,7 +1337,7 @@ options_trial_assign(config_line_t *list, int use_defaults, int clear_first)
     return r;
   }
 
-  if (options_validate(get_options(), trial_options) < 0) {
+  if (options_validate(get_options(), trial_options, 1) < 0) {
     config_free(&options_format, trial_options);
     return -2;
   }
@@ -1674,7 +1674,8 @@ config_dump(config_format_t *fmt, void *options, int minimal)
 
   defaults = config_alloc(fmt);
   config_init(fmt, defaults);
-  fmt->validate_fn(NULL,defaults);
+  fmt->validate_fn(NULL,defaults, 1);
+    /* XXX use a 1 here so we don't add a new log line while dumping */
 
   elements = smartlist_create();
   for (i=0; fmt->vars[i].name; ++i) {
@@ -1800,9 +1801,15 @@ fascist_firewall_allows_address(uint32_t addr, uint16_t port)
  * warn and return -1.  Should have no side effects, except for
  * normalizing the contents of <b>options</b>.
  * DOCDOC old_options.
+ *
+ * XXX
+ * If <b>from_setconf</b>, we were called by the controller, and our
+ * Log line should stay empty. If it's 0, then give us a default log
+ * if there are no logs defined.
  */
 static int
-options_validate(or_options_t *old_options, or_options_t *options)
+options_validate(or_options_t *old_options, or_options_t *options,
+                 int from_setconf)
 {
   int result = 0;
   config_line_t *cl;
@@ -1873,7 +1880,7 @@ options_validate(or_options_t *old_options, or_options_t *options)
     return -1;
 
   /* Special case on first boot if no Log options are given. */
-  if (!old_options && !options->Logs) {
+  if (!options->Logs && !from_setconf) {
     config_line_append(&options->Logs, "Log", "notice stdout");
   }
 
@@ -2545,7 +2552,7 @@ options_init_from_torrc(int argc, char **argv)
     goto err;
 
   /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions) < 0)
+  if (options_validate(oldoptions, newoptions, 0) < 0)
     goto err;
 
   if (options_transition_allowed(oldoptions, newoptions) < 0)
