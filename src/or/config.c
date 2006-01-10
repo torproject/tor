@@ -1887,6 +1887,11 @@ options_validate(or_options_t *old_options, or_options_t *options)
       result = -1;
   }
 
+#ifndef MS_WINDOWS
+  if (options->RunAsDaemon && torrc_fname && path_is_relative(torrc_fname))
+    REJECT("Can't use a relative path to torrc when RunAsDaemon is set.");
+#endif
+
   if (options->SocksPort < 0 || options->SocksPort > 65535)
     REJECT("SocksPort option out of bounds.");
 
@@ -2502,6 +2507,9 @@ options_init_from_torrc(int argc, char **argv)
   tor_assert(fname);
   log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
 
+  tor_free(torrc_fname);
+  torrc_fname = fname;
+
   /* get config lines, assign them */
   if (file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0))) {
@@ -2543,8 +2551,6 @@ options_init_from_torrc(int argc, char **argv)
 
   if (set_options(newoptions))
     goto err; /* frees and replaces old options */
-  tor_free(torrc_fname);
-  torrc_fname = fname;
   return 0;
  err:
   tor_free(fname);

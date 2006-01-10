@@ -1314,6 +1314,17 @@ tor_listdir(const char *dirname)
   return result;
 }
 
+/** Return true iff <b>filename</b> is a relative path.  (XXXX doesn't work on
+ * windows.) */
+int
+path_is_relative(const char *filename)
+{
+  if (filename && filename[0] == '/')
+    return 0;
+  else
+    return 1;
+}
+
 /* =====
  * Net helpers
  * ===== */
