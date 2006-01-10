@@ -37,56 +37,17 @@ for 0.1.1.x:
 N - if they're trying to be a tor server and they're running
      win 98 or win me, give them a message talking about The Bug.
 
-  o update 'exitlist' script to handle new dir format.
-  o state_description in config.c has gone stale
+R . Rename 'helper' to 'guard'.
 
-  . Helper nodes
-    . More testing and debugging
-    o If your helper nodes are unavailable, don't abandon them unless
-      other nodes *are* reachable.
-    o Make EntryNodes and StrictEntrynodes do what we want.
+N - Display the reasons in 'destroy' and 'truncated' cells under some
+    circumstances?
 
-N . Destroy and truncated cells should have reasons.
-    o Specify
-    o Implement
-    - Display the reasons under some circumstances?
-
-N . Only use a routerdesc if you recognize its hash.
-    o (Must defer till dirservers are upgraded to latest code, which
-      actually generates these hashes.)
-    . Of course, authdirservers must not do this.
-    o If we have a routerdesc for Bob, and he says, "I'm 0.1.0.x", don't
-      fetch a new one if it was published in the last 2 hours.
-      X Don't, actually. This is the authorities' job to straighten out.
-    o Do not ask for any routers until we have 2 networkstatuses.
+N . Directory changes
     . Client side:
-      o Keep a record of which hash is most desirable for each router inside
-        local_routerstatus_t.
-        o If any hash is listed by two or more networkstatuses, the most
-          recent such hash is most desirable.
-        o Otherwise, the most recent is desirable.
-      o Once we've accepted a router, it's okay.
-      o Do not accept a router that no networkstatus lists. (This should maybe
-        get stricter.)
-      o Download by descriptor digest.
-      o Reset failure count to zero when hash changes.
-      . Test
-      - Do we want to rate-limit downloads of each identity?
-    . Mirrors and authorities:
-      o Every time we hear a new networkstatus, we want every hash it lists.
-      o Make sure that we are always willing to keep at least N routerinfos
-        per router, where N = number of authorities.
-        o Do whatever else is needed to be sure that we don't request
-          hashes that would be immediately discarded, or discard hashes
-          that would be immediately re-requested.
-      o Only fetch routerinfo from an authority that mentions is.
-        o Only ask each authority once.
-        o Retry soon after failure.
-        o We need one bit per routerstatus for "should we download from
-          this guy."
-      - Verify that we are actually storing retained old descriptors to our
-        cache.
-      - Test.
+      - Do we want to rate-limit downloads of each identity, or do something
+        else to download even less?
+      - Do we want to refrain from downloading non-running or non-verified
+        descriptors? This is potentially dangerous.
     - Non-directories don't need to keep descriptors in memory.
 
 R - Christian Grothoff's attack of infinite-length circuit.
@@ -110,7 +71,6 @@ R - clients prefer to avoid exit nodes for non-exit path positions.
 
   - the tor client can do the "automatic proxy config url" thing?
 
-
 Deferred from 0.1.1.x:
 
   - Automatically determine what ports are reachable and start using
@@ -121,7 +81,6 @@ N - Should router info have a pointer to routerstatus?
     - We should at least do something about the duplicated fields.
 
 N . Additional controller features
-      o Find a way to make event info more extensible
       - change circuit status events to give more details, like purpose,
         whether they're internal, when they become dirty, when they become
         too dirty for further circuits, etc.
@@ -153,86 +112,17 @@ N       - Specify and implement it.
 
   - cpu fixes:
     - see if we should make use of truncate to retry
-    o hardware accelerator support (configure engines.)
-    o hardware accelerator support (use instead of aes.c when reasonable)
-      - Benchmark this somehow to see whether using EVP_foo is slower in the
-        non-engine case than AES_foo.  If so, check for AES engine and fall
-        back to AES_foo when it's not found.
 R   - kill dns workers more slowly
 
   . Directory changes
-    o recommended-versions for client / server ?
     . Some back-out mechanism for auto-approval
-      o dirservers have blacklist of IPs and keys they hate
       - a way of rolling back approvals to before a timestamp
         - Consider minion-like fingerprint file/log combination.
-
-    - Decentralization
-      o Dirservers publish compressed network-status objects.
-        o Support retrieving several-at-once
-      o Everyone downloads network-status objects
-        o Clients: from all directories, round-robin
-          o Basic implementation: disable until 0.1.1.x is out.
-          o On failure, mark trusted_dir_server as having failed
-          o Retry, up to a point.
-          X Launch retry immediately on failure.
-        o Parse them
-        o Cache them, reload on restart
-        o Serve cached directories
-      o Directories expose individual descriptors
-        X By 'if-newer-than' (Does the spec require this??)
-        o Support compression.
-      o Alice acts on network-status objects
-        o Alice downloads descriptors as needed.
-          o Figure out what's needed
-          o Store it
-            o Implement store
-            o Implement reload-from-store
-            o Store downloaded descriptors
-          o Download it
-            o As-needed if we have 2 network-status objs.
-            o Download "all" if we have less than 2 network-status objs.
-              (This has vulnerabilities if we're not careful)
-            o Call directory_has_arrived as needed; rename it.
-            o Set has_fetched_directory properly.
-          o Retry descriptors on failure
-          o Give up after a while.
-          - But try again after a long while (???)
-        o Check software versions according to some sane plan.
-          - Warn again after 24 hours.
-        o Alice sets descriptor status from network-status
-          o Implement
-          o Use
-      o Routerdesc download changes
-        o Refactor combined-status to be its own type.
-        o Change rule from "do not launch new connections when one exists" to
-          "do not request any fingerprint that we're currently requesting."
-        o Launch connections every minute, or whenever a download fails
-        o Retry failed routerdescs after 0, 1, 5, 10 minutes.
-          o Mirrors retry harder and more often. (0, 0, 1, 1, 2, 5, and 15)
-        o Reset failure count every 60 minutes
-        o Drop fallback to download-all.  Also, always split download.
-        o Use has_fetched_directory sanely, whatever that means.
-      o Downgrade new directory events from notice to info
-      o Call dirport_is_reachable from somewhere else.
-      o Networkstatus should list who's an authority.
-      o Add nickname element to dirserver line.  Log this along with IP:Port.
-      o Warn when using non-default directory servers.
-      o When giving up on a non-finished dir request, log how many bytes
-        dropped, to see whether it's worthwhile to use partial info.
 
     - config option to publish what ports you listen on, beyond
       ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
       - Parse this.
       - Relay this in networkstatus.
-
-    X Make authorities rate-limit logging their complaints about given
-      servers?
-    o All versions of Tor should get cosmetic changes rate-limited.
-    o Pick directories from networkstatus objects, not from routerlist.
-      o But! We can't do this easily, since we want to know about platform,
-        and networkstatus doesn't tell us Tor version.  Can we solve this?
-        Should we do it by adding flags to networkstatus or what?
 
   - packaging and ui stuff:
     . multiple sample torrc files
@@ -251,11 +141,6 @@ N   - Vet all pending installer patches
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
 
-  o Dump "ports" from routerparse?
-
-  o Let more config options (e.g. ORPort) change dynamically.
-  o Add TTLs to DNS-related replies, and use them (when present) to adjust
-    addressmap values.
   - Bind to random port when making outgoing connections to Tor servers,
     to reduce remote sniping attacks.
   - Have new people be in limbo and need to demonstrate usefulness
@@ -283,18 +168,11 @@ N   - Vet all pending installer patches
       - Make it harder to circumvent bandwidth caps: look at number of bytes
         sent across sockets, not number sent inside TLS stream.
 
-  o Research memory use on Linux: what's happening?
-    X Is it threading?  (Maybe, maybe not)
-    X Is it the buf_shrink bug? (Quite possibly)
-    o Instrument the 0.1.1 code to figure out where our memory is going;
-      apply the results. (all platforms?)
-
   - Make router_is_general_exit() a bit smarter once we're sure what it's for.
 
   - Directory "helper".
 
   - rewrite how libevent does select() on win32 so it's not so very slow.
-  o enclaves (at least preliminary)
   - Write limiting; separate token bucket for write
   - Audit everything to make sure rend and intro points are just as likely to
     be us as not.
@@ -335,8 +213,6 @@ Blue-sky:
   - Implement Morphmix, so we can compare its behavior, complexity, etc.
   - Other transport. HTTP, udp, rdp, airhook, etc. May have to do our own
     link crypto, unless we can bully openssl into it.
-  o Conn key rotation (we switch to a new one after a week, but
-    old circuits don't get any benefit from this).
   - Need a relay teardown cell, separate from one-way ends.
     (Pending a user who needs this)
   - Handle half-open connections: right now we don't support all TCP
