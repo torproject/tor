@@ -18,6 +18,7 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
       This will increase security dramatically against certain end-point
       attacks. The EntryNodes config option now provides some hints
       about which entry nodes you want to use most; and StrictEntryNodes
+      ...
     - New directory logic: download by descriptor digest, not by
       fingerprint. Caches try to download all listed digests from
       authorities; clients try to download "best" digests from caches.
@@ -89,6 +90,9 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
       "!invalid" in the approved-routers file (as its nickname), to
       refuse descriptors outright or include them but marked as invalid.
     - Servers store bandwidth history across restarts/crashes.
+
+
+Add reasons to DESTROY and RELAY_TRUNCATED cells. Not used yet.
 
 
 Changes in version 0.1.1.10-alpha - 2005-12-11
