@@ -1942,9 +1942,8 @@ options_validate(or_options_t *old_options, or_options_t *options)
   if (options->AuthoritativeDir && !options->ORPort)
     REJECT("Running as authoritative directory, but no ORPort set.");
 
-  if (options->AuthoritativeDir && options->ClientOnly) {
+  if (options->AuthoritativeDir && options->ClientOnly)
     REJECT("Running as authoritative directory, but ClientOnly also set.");
-  }
 
   if (options->AuthoritativeDir && options->NoPublish)
     REJECT("You cannot set both AuthoritativeDir and NoPublish.");
@@ -1963,12 +1962,10 @@ options_validate(or_options_t *old_options, or_options_t *options)
     options->_AccountingMaxKB = 0;
   }
 
-  if (validate_ports_csv(options->FirewallPorts,
-                         "FirewallPorts") < 0)
+  if (validate_ports_csv(options->FirewallPorts, "FirewallPorts") < 0)
     result = -1;
 
-  if (validate_ports_csv(options->LongLivedPorts,
-                         "LongLivedPorts") < 0)
+  if (validate_ports_csv(options->LongLivedPorts, "LongLivedPorts") < 0)
     result = -1;
 
   if (options->FascistFirewall && !options->ReachableAddresses) {
@@ -2015,6 +2012,11 @@ options_validate(or_options_t *old_options, or_options_t *options)
       }
     }
   }
+
+  if (options->ReachableAddresses && server_mode(options))
+    REJECT("Servers must be able to freely connect to the rest "
+           "of the Internet, so they must not set ReachableAddresses "
+           "or FascistFirewall.");
 
   options->_AllowUnverified = 0;
   if (options->AllowUnverifiedNodes) {
