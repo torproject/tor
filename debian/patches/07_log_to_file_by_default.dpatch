@@ -29,7 +29,7 @@ diff -urNad tor-0.1.1.5/src/or/config.c /tmp/dpep.YwfNhI/tor-0.1.1.5/src/or/conf
 @@ -1548,7 +1548,7 @@
  
    /* Special case on first boot if no Log options are given. */
-   if (!old_options && !options->Logs) {
+   if (!options->Logs && !from_setconf) {
 -    config_line_append(&options->Logs, "Log", "notice stdout");
 +    config_line_append(&options->Logs, "Log", "notice file /var/log/tor/log");
    }
