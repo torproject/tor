@@ -358,7 +358,8 @@ static int write_configuration_file(const char *fname, or_options_t *options);
 static config_line_t *get_assigned_option(config_format_t *fmt,
                                      or_options_t *options, const char *key);
 static void config_init(config_format_t *fmt, void *options);
-static int or_state_validate(or_state_t *old_options, or_state_t *options);
+static int or_state_validate(or_state_t *old_options, or_state_t *options,
+                             int from_setconf);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
@@ -3562,8 +3563,9 @@ get_or_state_fname(void)
 }
 
 /** DOCDOC */
+/* XXX from_setconf is here because of bug 238 */
 static int
-or_state_validate(or_state_t *old_state, or_state_t *state)
+or_state_validate(or_state_t *old_state, or_state_t *state, int from_setconf)
 {
   const char *err;
   tor_version_t v;
@@ -3629,7 +3631,7 @@ or_state_load(void)
       goto done;
   }
 
-  if (or_state_validate(NULL, new_state) < 0)
+  if (or_state_validate(NULL, new_state, 1) < 0)
     goto done;
 
   if (contents)
