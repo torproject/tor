@@ -251,19 +251,16 @@ $Id$
    network-status documents from every authority.  To do so, every 5 minutes,
    an authority asks every other authority for its most recent network-status
    document.  Every 15 minutes, a mirror picks a random authority and asks it
-   for the most recent network-status documents for all the authorities it
-   knows about (including the chosen authority itself).
-
-["it" knows about -- you mean all the authorities the authority knows
-about, or all the authorities the mirror knows about? -RD]
-
-   [XXXX Should mirrors just do what authorities do?  Should they do it at
-   the same interval?]
+   for the most recent network-status documents for all the authorities the
+   authority knows about (including the chosen authority itself).
 
    Directory servers and mirrors remember and serve the most recent
    network-status document they have from each authority.  Other
    network-status documents don't need to be stored.  If the most recent
    network-status document is over 10 days old, it is discarded anyway.
+   Mirrors SHOULD store and serve network-status documents from authorities
+   they don't recognize, but SHOULD NOT use such documents for any other
+   purpose.
 
 4.3. Downloading and storing router descriptors
 
