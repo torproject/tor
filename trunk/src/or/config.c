@@ -272,7 +272,7 @@ static config_var_description_t options_description[] = {
 };
 
 static config_var_description_t state_description[] = {
-  { "AccountingBytesReadInterval",
+  { "AccountingBytesReadInInterval",
     "How many bytes have we read in this accounting period?" },
   { "AccountingBytesWrittenInInterval",
     "How many bytes have we written in this accounting period?" },
