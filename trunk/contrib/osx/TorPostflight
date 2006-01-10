@@ -46,7 +46,7 @@ if [ -e /usr/bin/tor-resolve -a ! -L /usr/bin/tor-resolve ]; then
   mv tor-resolve tor-resolve_old
 fi
 ln -sf $TARGET/tor .
-ln -sf $TARGET/tor_resolve .
+ln -sf $TARGET/tor-resolve .
 
 cd /usr/share/man/man1
 MAN1=$TARGET/man/man1
