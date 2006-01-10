@@ -523,7 +523,7 @@ directory_all_unreachable(time_t now)
 }
 
 /**
- * Return the interval to wait betweeen directory downloads, in seconds.
+ * Return the interval to wait between directory downloads, in seconds.
  */
 static INLINE int
 get_dir_fetch_period(or_options_t *options)
@@ -573,7 +573,7 @@ directory_info_has_arrived(time_t now, int from_cache)
   if (server_mode(options) &&
       !we_are_hibernating()) { /* connect to the appropriate routers */
     if (!authdir_mode(options))
-      router_retry_connections(0);
+      router_retry_connections(0, 1);
     if (!from_cache)
       consider_testing_reachability();
   }
@@ -768,6 +768,11 @@ run_scheduled_events(time_t now)
   if (accounting_is_enabled(options))
     accounting_run_housekeeping(now);
 
+  if (now % 10 == 0 && authdir_mode(options) && !we_are_hibernating()) {
+    /* try to determine reachability */
+    router_retry_connections(1, 0);
+  }
+
   /** 2. Periodically, we consider getting a new directory, getting a
    * new running-routers list, and/or force-uploading our descriptor
    * (if we've passed our internal checks). */
@@ -775,12 +780,6 @@ run_scheduled_events(time_t now)
     /* purge obsolete entries */
     routerlist_remove_old_routers();
     networkstatus_list_clean(now);
-
-    if (authdir_mode(options)) {
-      if (!we_are_hibernating()) { /* try to determine reachability */
-        router_retry_connections(1);
-      }
-    }
 
     /* Only caches actually need to fetch directories now. */
     if (options->DirPort && !options->V1AuthoritativeDir) {
@@ -1108,7 +1107,7 @@ do_main_loop(void)
 
   if (authdir_mode(get_options())) {
     /* the directory is already here, run startup things */
-    router_retry_connections(1);
+    router_retry_connections(1, 1);
   }
 
   if (server_mode(get_options())) {
