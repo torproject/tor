@@ -228,7 +228,9 @@ crypto_global_init(int useAccel)
 void
 crypto_thread_cleanup(void)
 {
+#ifndef ENABLE_0119_PARANOIA
   ERR_remove_state(0);
+#endif
 }
 
 /** Uninitialize the crypto library. Return 0 on success, -1 on failure.
@@ -237,12 +239,16 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
+#ifndef ENABLE_0119_PARANOIA
   ERR_remove_state(0);
+#endif
   ERR_free_strings();
 #ifndef NO_ENGINES
   ENGINE_cleanup();
+#ifndef ENABLE_0119_PARANOIA
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
+#endif
 #endif
 #ifdef TOR_IS_MULTITHREADED
   if (_n_openssl_mutexes) {
@@ -1375,7 +1381,9 @@ crypto_dh_new(void)
   if (!(res->dh->g = BN_dup(dh_param_g)))
     goto err;
 
+#ifndef ENABLE_0119_PARANOIA
   res->dh->length = DH_PRIVATE_KEY_BITS;
+#endif
 
   return res;
  err:
@@ -1602,7 +1610,11 @@ crypto_dh_free(crypto_dh_env_t *dh)
 
 /* Use RAND_poll if openssl is 0.9.6 release or later.  (The "f" means
    "release".)  */
+#ifndef ENABLE_0119_PARANOIA
 #define USE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
+#else
+#define USE_RAND_POLL 0
+#endif
 
 /** Seed OpenSSL's random number generator with bytes from the
  * operating system.  Return 0 on success, -1 on failure.

@@ -15,6 +15,8 @@
 
 #include <stdio.h>
 
+#undef ENABLE_0119_PARANOIA
+
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
 /** Length of our symmetric cipher's keys. */
