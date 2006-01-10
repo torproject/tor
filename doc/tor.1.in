@@ -341,16 +341,16 @@ between host and exit server after NUM seconds. The default
 is 1800 seconds (30 minutes).
 .LP
 .TP
-\fBUseEntryNodes \fR\fI0|1\fP
+\fBUseEntryGuards \fR\fI0|1\fP
 If this option is set to 1, we pick a few long-term entry servers, and
-try to stick with them..  This is desirable because
+try to stick with them.  This is desirable because
 constantly changing servers increases the odds that an adversary who owns
 some servers will observe a fraction of your paths.
 (Defaults to 0; will eventually default to 1.)
 .LP
 .TP
-\fBNumEntryNodes \fR\fINUM\fP
-If UseEntryNodes is set to 1, we will try to pick a total of NUM routers
+\fBNumEntryGuards \fR\fINUM\fP
+If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
 as long-term entries for our circuits.
 (Defaults to 3.)
 
