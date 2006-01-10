@@ -1603,6 +1603,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     smartlist_free(digests);
   } else if (!strcmpstart(key, "/tor/server/fp/")) {
     smartlist_t *digests = smartlist_create();
+    time_t cutoff = time(NULL) - ROUTER_MAX_AGE;
     key += strlen("/tor/server/fp/");
     dir_split_resource_into_fingerprints(key, digests, NULL, 1);
     SMARTLIST_FOREACH(digests, const char *, d,
@@ -1611,7 +1612,11 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
            smartlist_add(descs_out, &(router_get_my_routerinfo()->cache_info));
          } else {
            routerinfo_t *ri = router_get_by_digest(d);
-           if (ri)
+           /* Don't actually serve a descriptor that everyone will think is
+            * expired.  This is an (ugly) workaround to keep buggy 0.1.1.10
+            * Tors from downloading descriptors that they will throw away.
+            */
+           if (ri && ri->cache_info.published_on > cutoff)
              smartlist_add(descs_out, &(ri->cache_info));
          }
        });

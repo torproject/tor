@@ -286,13 +286,15 @@ router_reload_router_list(void)
   }
   tor_free(fname);
 
-  /* Don't cache expired routers. */
-  routerlist_remove_old_routers();
-
   if (router_journal_len) {
     /* Always clear the journal on startup.*/
     router_rebuild_store(1);
+  } else {
+    /* Don't cache expired routers. (This is in an else because
+     * router_rebuild_store() also calls remove_old_routers().) */
+    routerlist_remove_old_routers();
   }
+
   return 0;
 }
 
@@ -1750,8 +1752,9 @@ routerlist_remove_old_routers(void)
 {
   int i, hi=-1;
   const char *cur_id = NULL;
-  time_t cutoff;
+  time_t now, cutoff;
   routerinfo_t *router;
+  signed_descriptor_t *sd;
   digestmap_t *retain;
   or_options_t *options = get_options();
   if (!routerlist || !networkstatus_list)
@@ -1766,8 +1769,9 @@ routerlist_remove_old_routers(void)
       });
   }
 
-  cutoff = time(NULL) - ROUTER_MAX_AGE;
-  /* Remove old members of routerlist->routers. */
+  now = time(NULL);
+  cutoff = now - ROUTER_MAX_AGE;
+  /* Remove too-old members of routerlist->routers. */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     router = smartlist_get(routerlist->routers, i);
     if (router->cache_info.published_on <= cutoff &&
@@ -1779,10 +1783,22 @@ routerlist_remove_old_routers(void)
     }
   }
 
-  /* Now we're looking at routerlist->old_routers. First, check whether
-   * we have too many router descriptors, total.  We're okay with having too
-   * many for some given router, so long as the total number doesn't approach
-   * MAX_DESCRIPTORS_PER_ROUTER*len(router).
+  /* Remove far-too-old members of routerlist->old_routers. */
+  cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
+  for (i = 0; i < smartlist_len(routerlist->old_routers); ++i) {
+    sd = smartlist_get(routerlist->old_routers, i);
+    if (sd->published_on <= cutoff &&
+        !digestmap_get(retain, sd->signed_descriptor_digest)) {
+      /* Too old.  Remove it. */
+      routerlist_remove_old(routerlist, sd, i--);
+    }
+  }
+
+  /* Now we're looking at routerlist->old_routers for extraneous
+   * members. (We'd keep all the members if we could, but we'd like to save
+   * space.) First, check whether we have too many router descriptors, total.
+   * We're okay with having too many for some given router, so long as the
+   * total number doesn't approach MAX_DESCRIPTORS_PER_ROUTER*len(router).
    */
   if (smartlist_len(routerlist->old_routers) <
       smartlist_len(routerlist->routers) * (MAX_DESCRIPTORS_PER_ROUTER - 1))
