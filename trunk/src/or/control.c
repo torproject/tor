@@ -1247,6 +1247,7 @@ list_getinfo_options(void)
     "config/names List of configuration options, types, and documentation.\n"
     "desc/id/* Server descriptor by hex ID\n"
     "desc/name/* Server descriptor by nickname.\n"
+    "desc/all-recent Latest server descriptor for every router\n"
     "entry-nodes Which nodes will we use as entry nodes?\n"
     "info/names List of GETINFO options, types, and documentation.\n"
     "network-status List of hex IDs, nicknames, server statuses.\n"
@@ -1284,6 +1285,19 @@ handle_getinfo_helper(const char *question, char **answer)
     routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"),1);
     if (ri && ri->cache_info.signed_descriptor)
       *answer = tor_strdup(ri->cache_info.signed_descriptor);
+  } else if (!strcmp(question, "desc/all-recent")) {
+    routerlist_t *routerlist = router_get_routerlist();
+    smartlist_t *sl = smartlist_create();
+    if (routerlist && routerlist->routers) {
+      SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+      {
+      if (ri && ri->cache_info.signed_descriptor)
+        smartlist_add(sl, tor_strdup(ri->cache_info.signed_descriptor));
+      });
+    }
+    *answer = smartlist_join_strings(sl, "", 0, NULL);
+    SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
+    smartlist_free(sl);
   } else if (!strcmpstart(question, "unregistered-servers-")) {
     *answer = dirserver_getinfo_unregistered(question +
                                              strlen("unregistered-servers-"));
