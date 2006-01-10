@@ -316,6 +316,9 @@ $Id$
       descriptor for a given OR, NUL-terminated.  If no such OR is known, the
       corresponding value is an empty string.
 
+    "desc/all-recent" -- the latest server descriptor for every router that
+      Tor knows about.
+
     "network-status" -- a space-separated list of all known OR identities.
       This is in the same format as the router-status line in directories;
       see tor-spec.txt for details.
