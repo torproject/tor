@@ -1807,7 +1807,7 @@ again:
     smartlist_insert(entry_nodes, 0, entry);
   else
     smartlist_add(entry_nodes, entry);
-  log_entry_nodes(LOG_NOTICE);
+  log_entry_nodes(LOG_INFO);
   return router;
 }
 
@@ -1882,7 +1882,7 @@ remove_dead_entries(void)
            entry->nickname, dbuf, why, tbuf);
       tor_free(entry);
       smartlist_del_keeporder(entry_nodes, i);
-      log_entry_nodes(LOG_NOTICE);
+      log_entry_nodes(LOG_INFO);
       changed = 1;
     } else
       ++i;
@@ -1942,7 +1942,7 @@ entry_nodes_set_status_from_directory(void)
           }
         } else {
           if (entry->down_since) {
-            notice(LD_CIRC,"Entry node '%s' is up in latest directories",
+            notice(LD_CIRC,"Entry node '%s' is up in latest directories.",
                    entry->nickname);
             changed = 1;
           }
@@ -1960,9 +1960,9 @@ entry_nodes_set_status_from_directory(void)
     changed = 1;
 
   if (changed) {
-    log_fn(severity, LD_CIRC, "    (%d/%d entries are usable/new)",
+    log_fn(severity, LD_CIRC, "    (%d/%d entry nodes are usable/new)",
            num_live_entry_nodes(), smartlist_len(entry_nodes));
-    log_entry_nodes(severity);
+    log_entry_nodes(LOG_INFO);
     entry_nodes_changed();
   }
 }
@@ -2058,7 +2058,7 @@ static int should_add_entry_nodes = 0;
 void
 entry_nodes_should_be_added(void)
 {
-  notice(LD_CIRC, "New EntryNodes config option detected. Will use.");
+  info(LD_CIRC, "New EntryNodes config option detected. Will use.");
   should_add_entry_nodes = 1;
 }
 
@@ -2085,8 +2085,8 @@ entry_nodes_prepend_from_config(void)
                                  0, 1, 1);
 
   /* take a moment first to notice whether we got them all */
-  notice(LD_CIRC,"Adding configured EntryNodes '%s'.",
-         options->EntryNodes);
+  info(LD_CIRC,"Adding configured EntryNodes '%s'.",
+       options->EntryNodes);
   smartlist_split_string(tmp, options->EntryNodes, ",",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   missed_some = smartlist_len(routers) != smartlist_len(tmp);
