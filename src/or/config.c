@@ -71,16 +71,21 @@ static config_abbrev_t _option_abbrevs[] = {
   { "ORBindAddress", "ORListenAddress", 0, 0},
   { "DirBindAddress", "DirListenAddress", 0, 0},
   { "SocksBindAddress", "SocksListenAddress", 0, 0},
-  { "UseHelperNodes", "UseEntryNodes", 0, 0},
-  { "NumHelperNodes", "NumEntryNodes", 0, 0},
+  { "UseHelperNodes", "UseEntryGuards", 0, 0},
+  { "NumHelperNodes", "NumEntryGuards", 0, 0},
+  { "UseEntryNodes", "UseEntryGuards", 0, 0},
+  { "NumEntryNodes", "NumEntryGuards", 0, 0},
   { NULL, NULL, 0, 0},
 };
 /* A list of state-file abbreviations, for compatibility. */
 static config_abbrev_t _state_abbrevs[] = {
   { "AccountingBytesReadInterval", "AccountingBytesReadInInterval", 0, 0 },
-  { "HelperNode", "EntryNode", 0, 0 },
-  { "HelperNodeDownSince", "EntryNodeDownSince", 0, 0 },
-  { "HelperNodeUnlistedSince", "EntryNodeUnlistedSince", 0, 0 },
+  { "HelperNode", "EntryGuard", 0, 0 },
+  { "HelperNodeDownSince", "EntryGuardDownSince", 0, 0 },
+  { "HelperNodeUnlistedSince", "EntryGuardUnlistedSince", 0, 0 },
+  { "EntryNode", "EntryGuard", 0, 0 },
+  { "EntryNodeDownSince", "EntryGuardDownSince", 0, 0 },
+  { "EntryNodeUnlistedSince", "EntryGuardUnlistedSince", 0, 0 },
   { NULL, NULL, 0, 0},
 };
 #undef PLURAL
@@ -179,7 +184,7 @@ static config_var_t _option_vars[] = {
   VAR("NoPublish",           BOOL,     NoPublish,            "0"),
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
   VAR("NumCpus",             UINT,     NumCpus,              "1"),
-  VAR("NumEntryNodes",       UINT,     NumEntryNodes,        "3"),
+  VAR("NumEntryGuards",      UINT,     NumEntryGuards,       "3"),
   VAR("ORListenAddress",     LINELIST, ORListenAddress,      NULL),
   VAR("ORPort",              UINT,     ORPort,               "0"),
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
@@ -212,7 +217,7 @@ static config_var_t _option_vars[] = {
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
   VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
   OBSOLETE("TrafficShaping"),
-  VAR("UseEntryNodes",       BOOL,     UseEntryNodes,        "1"),
+  VAR("UseEntryGuards",      BOOL,     UseEntryGuards,       "1"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
@@ -232,10 +237,10 @@ static config_var_t _state_vars[] = {
   VAR("AccountingExpectedUsage", MEMUNIT,     AccountingExpectedUsage, NULL),
   VAR("AccountingIntervalStart", ISOTIME,     AccountingIntervalStart, NULL),
   VAR("AccountingSecondsActive", INTERVAL,    AccountingSecondsActive, NULL),
-  VAR("EntryNode",               LINELIST_S,  EntryNodes,           NULL),
-  VAR("EntryNodeDownSince",      LINELIST_S,  EntryNodes,           NULL),
-  VAR("EntryNodeUnlistedSince",  LINELIST_S,  EntryNodes,           NULL),
-  VAR("EntryNodes",              LINELIST_V,  EntryNodes,           NULL),
+  VAR("EntryGuard",              LINELIST_S,  EntryGuards,             NULL),
+  VAR("EntryGuardDownSince",     LINELIST_S,  EntryGuards,             NULL),
+  VAR("EntryGuardUnlistedSince", LINELIST_S,  EntryGuards,             NULL),
+  VAR("EntryGuards",             LINELIST_V,  EntryGuards,             NULL),
 
   VAR("BWHistoryReadEnds",       ISOTIME,     BWHistoryReadEnds,      NULL),
   VAR("BWHistoryReadInterval",   UINT,        BWHistoryReadInterval,  NULL),
@@ -283,11 +288,11 @@ static config_var_description_t state_description[] = {
   { "BWHistoryWriteInterval", "How long is each write-interval (in seconds)?"},
   { "BWHistoryWriteValues", "Number of bytes written in each interval." },
 
-  { "EntryNode", "One of the nodes we have chosen as a fixed entry" },
-  { "EntryNodeDownSince",
-    "The last entry node has been down since this time." },
-  { "EntryNodeUnlistedSince",
-    "The last entry node has been unlisted since this time." },
+  { "EntryGuard", "One of the nodes we have chosen as a fixed entry" },
+  { "EntryGuardDownSince",
+    "The last entry guard has been down since this time." },
+  { "EntryGuardUnlistedSince",
+    "The last entry guard has been unlisted since this time." },
   { "LastWritten", "When was this state file last regenerated?" },
 
   { "TorVersion", "Which version of Tor generated this state file?" },
@@ -710,8 +715,8 @@ options_act(or_options_t *old_options)
 
   /* Check for transitions that need action. */
   if (old_options) {
-    if (options->UseEntryNodes && !old_options->UseEntryNodes) {
-      info(LD_CIRC,"Switching to entry nodes; abandoning previous circuits");
+    if (options->UseEntryGuards && !old_options->UseEntryGuards) {
+      info(LD_CIRC,"Switching to entry guards; abandoning previous circuits");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
     }
@@ -1937,10 +1942,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (!options->RecommendedServerVersions)
       options->RecommendedServerVersions =
         config_lines_dup(options->RecommendedVersions);
-    if (options->UseEntryNodes) {
+    if (options->UseEntryGuards) {
       notice(LD_CONFIG, "Authoritative directory servers can't set "
-             "UseEntryNodes. Disabling.");
-      options->UseEntryNodes = 0;
+             "UseEntryGuards. Disabling.");
+      options->UseEntryGuards = 0;
     }
   }
 
@@ -2170,8 +2175,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->HashedControlPassword && options->CookieAuthentication)
     REJECT("Cannot set both HashedControlPassword and CookieAuthentication");
 
-  if (options->UseEntryNodes && ! options->NumEntryNodes)
-    REJECT("Cannot enable UseEntryNodes with NumEntryNodes set to 0");
+  if (options->UseEntryGuards && ! options->NumEntryGuards)
+    REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
 
   if (check_nickname_list(options->ExitNodes, "ExitNodes"))
     result = -1;
@@ -3569,7 +3574,7 @@ or_state_validate(or_state_t *old_state, or_state_t *state, int from_setconf)
 {
   const char *err;
   tor_version_t v;
-  if (entry_nodes_parse_state(state, 0, &err)<0) {
+  if (entry_guards_parse_state(state, 0, &err)<0) {
     warn(LD_GENERAL, "Unable to parse entry nodes: %s", err);
     return -1;
   }
@@ -3589,7 +3594,7 @@ or_state_set(or_state_t *new_state)
   if (global_state)
     config_free(&state_format, global_state);
   global_state = new_state;
-  if (entry_nodes_parse_state(global_state, 1, &err)<0)
+  if (entry_guards_parse_state(global_state, 1, &err)<0)
     warn(LD_GENERAL,"Unparseable helper nodes state: %s",err);
   if (rep_hist_load_state(global_state, &err)<0)
     warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
@@ -3666,7 +3671,7 @@ or_state_save(void)
 
   tor_assert(global_state);
 
-  entry_nodes_update_state(global_state);
+  entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
 
   if (!global_state->dirty)

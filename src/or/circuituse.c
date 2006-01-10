@@ -680,7 +680,7 @@ circuit_build_failed(circuit_t *circ)
            "(%s:%d). I'm going to try to rotate to a better connection.",
            n_conn->address, n_conn->port);
       n_conn->is_obsolete = 1;
-      entry_node_set_status(n_conn->identity_digest, 0);
+      entry_guard_set_status(n_conn->identity_digest, 0);
     }
   }
 

@@ -18,7 +18,7 @@ const char circuitbuild_c_id[] =
 /** A global list of all circuits at this hop. */
 extern circuit_t *global_circuitlist;
 
-/** An entry_node_t represents our information about a chosen long-term
+/** An entry_guard_t represents our information about a chosen long-term
  * first hop, known as a "helper" node in the literature. We can't just
  * use a routerinfo_t, since we want to remember these even when we
  * don't have a directory. */
@@ -31,13 +31,13 @@ typedef struct {
                       * which it was observed to go down. */
   time_t unlisted_since; /**< 0 if this router is currently listed, or the
                           * time at which it became unlisted */
-} entry_node_t;
+} entry_guard_t;
 
-/** A list of our chosen entry nodes. */
-static smartlist_t *entry_nodes = NULL;
-/** A value of 1 means that the entry_nodes list has changed
+/** A list of our chosen entry guards. */
+static smartlist_t *entry_guards = NULL;
+/** A value of 1 means that the entry_guards list has changed
  * and those changes need to be flushed to disk. */
-static int entry_nodes_dirty = 0;
+static int entry_guards_dirty = 0;
 
 /********* END VARIABLES ************/
 
@@ -51,7 +51,7 @@ static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static routerinfo_t *choose_random_entry(cpath_build_state_t *state);
-static void entry_nodes_changed(void);
+static void entry_guards_changed(void);
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
  * and with the high bit specified by circ_id_type (see
@@ -1486,7 +1486,7 @@ choose_good_middle_server(uint8_t purpose,
 /** Pick a good entry server for the circuit to be built according to
  * <b>state</b>.  Don't reuse a chosen exit (if any), don't use this
  * router (if we're an OR), and respect firewall settings; if we're
- * using entry_nodes, return one.
+ * using entry_guards, return one.
  *
  * If <b>state</b> is NULL, we're choosing routers to serve as entry
  * nodes, not for any particular circuit.
@@ -1498,7 +1498,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   smartlist_t *excluded = smartlist_create();
   or_options_t *options = get_options();
 
-  if (state && options->UseEntryNodes) {
+  if (state && options->UseEntryGuards) {
     return choose_random_entry(state);
   }
 
@@ -1698,7 +1698,7 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
  * - Allowed by our current ReachableAddresses config option.
  */
 static INLINE routerinfo_t *
-entry_is_live(entry_node_t *e, int need_uptime, int need_capacity)
+entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity)
 {
   routerinfo_t *r;
   if (e->down_since && e->made_contact)
@@ -1714,14 +1714,14 @@ entry_is_live(entry_node_t *e, int need_uptime, int need_capacity)
   return r;
 }
 
-/** Return the number of entry nodes that we think are usable. */
+/** Return the number of entry guards that we think are usable. */
 static int
-num_live_entry_nodes(void)
+num_live_entry_guards(void)
 {
   int n = 0;
-  if (! entry_nodes)
+  if (! entry_guards)
     return 0;
-  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       if (entry_is_live(entry, 0, 1))
         ++n;
@@ -1730,11 +1730,11 @@ num_live_entry_nodes(void)
 }
 
 /** Return 1 if <b>digest</b> matches the identity of any node
- * in the entry_nodes list. Else return 0. */
+ * in the entry_guards list. Else return 0. */
 static INLINE int
-is_an_entry_node(char *digest)
+is_an_entry_guard(char *digest)
 {
-  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
                     if (!memcmp(digest, entry->identity, DIGEST_LEN))
                       return 1;
                    );
@@ -1742,13 +1742,13 @@ is_an_entry_node(char *digest)
 }
 
 static void
-log_entry_nodes(int severity)
+log_entry_guards(int severity)
 {
   smartlist_t *elements = smartlist_create();
   char buf[1024];
   char *s;
 
-  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e,
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
       tor_snprintf(buf, sizeof(buf), "%s (%s%s%s)",
                    e->nickname,
@@ -1768,17 +1768,17 @@ log_entry_nodes(int severity)
 #define NUM_ENTRY_PICK_TRIES 100
 
 /** Add a new (preferably stable and fast) entry to our
- * entry_nodes list. Return a pointer to the router if we succeed,
+ * entry_guards list. Return a pointer to the router if we succeed,
  * or NULL if we can't find any more suitable entries.
  *
  * If <b>chosen</b> is defined, use that one, and if it's not
- * already in our entry_nodes list, put it at the *beginning*.
+ * already in our entry_guards list, put it at the *beginning*.
  * Else, put the one we pick at the end of the list. */
 static routerinfo_t *
-add_an_entry_node(routerinfo_t *chosen)
+add_an_entry_guard(routerinfo_t *chosen)
 {
   routerinfo_t *router;
-  entry_node_t *entry;
+  entry_guard_t *entry;
   int tries_left = NUM_ENTRY_PICK_TRIES;
 
 again:
@@ -1793,64 +1793,64 @@ again:
   if (!router)
     return NULL;
   /* make sure it's not already an entry */
-  if (is_an_entry_node(router->cache_info.identity_digest)) {
+  if (is_an_entry_guard(router->cache_info.identity_digest)) {
     if (chosen)
       return NULL;
     goto again;
   }
-  entry = tor_malloc_zero(sizeof(entry_node_t));
+  entry = tor_malloc_zero(sizeof(entry_guard_t));
   /* XXXX Downgrade this to info before release. NM */
-  notice(LD_CIRC, "Chose '%s' as new entry node.", router->nickname);
+  notice(LD_CIRC, "Chose '%s' as new entry guard.", router->nickname);
   strlcpy(entry->nickname, router->nickname, sizeof(entry->nickname));
   memcpy(entry->identity, router->cache_info.identity_digest, DIGEST_LEN);
   if (chosen)
-    smartlist_insert(entry_nodes, 0, entry);
+    smartlist_insert(entry_guards, 0, entry);
   else
-    smartlist_add(entry_nodes, entry);
-  log_entry_nodes(LOG_INFO);
+    smartlist_add(entry_guards, entry);
+  log_entry_guards(LOG_INFO);
   return router;
 }
 
-/** If the use of entry nodes is configured, choose more entry nodes
+/** If the use of entry guards is configured, choose more entry guards
  * until we have enough in the list. */
 static void
-pick_entry_nodes(void)
+pick_entry_guards(void)
 {
   or_options_t *options = get_options();
   int changed = 0;
 
-  tor_assert(entry_nodes);
+  tor_assert(entry_guards);
 
-  while (num_live_entry_nodes() < options->NumEntryNodes) {
-    if (!add_an_entry_node(NULL))
+  while (num_live_entry_guards() < options->NumEntryGuards) {
+    if (!add_an_entry_guard(NULL))
       break;
     changed = 1;
   }
   if (changed)
-    entry_nodes_changed();
+    entry_guards_changed();
 }
 
-/** Release all storage held by the list of entry nodes. */
+/** Release all storage held by the list of entry guards. */
 void
-entry_nodes_free_all(void)
+entry_guards_free_all(void)
 {
-  if (entry_nodes) {
-    SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e, tor_free(e));
-    smartlist_free(entry_nodes);
-    entry_nodes = NULL;
+  if (entry_guards) {
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, tor_free(e));
+    smartlist_free(entry_guards);
+    entry_guards = NULL;
   }
 }
 
 /* XXX These are 12 hours for now, but I'd like to make them 30 days */
 
-/** How long (in seconds) do we allow an entry node to be nonfunctional
+/** How long (in seconds) do we allow an entry guard to be nonfunctional
  * before we give up on it? */
 #define ENTRY_ALLOW_DOWNTIME (1*12*60*60)
-/** How long (in seconds) do we allow an entry node to be unlisted in the
+/** How long (in seconds) do we allow an entry guard to be unlisted in the
  * directory before we give up on it? */
 #define ENTRY_ALLOW_UNLISTED (1*12*60*60)
 
-/** Remove all entry nodes that have been down or unlisted for so
+/** Remove all entry guards that have been down or unlisted for so
  * long that we don't think they'll come up again. Return 1 if we
  * removed any, or 0 if we did nothing. */
 static int
@@ -1862,8 +1862,8 @@ remove_dead_entries(void)
   int i;
   int changed = 0;
 
-  for (i = 0; i < smartlist_len(entry_nodes); ) {
-    entry_node_t *entry = smartlist_get(entry_nodes, i);
+  for (i = 0; i < smartlist_len(entry_guards); ) {
+    entry_guard_t *entry = smartlist_get(entry_guards, i);
     const char *why = NULL;
     time_t since = 0;
     if (entry->unlisted_since &&
@@ -1878,11 +1878,11 @@ remove_dead_entries(void)
     if (why) {
       base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
       format_local_iso_time(tbuf, since);
-      warn(LD_CIRC, "Entry node '%s' (%s) has been %s since %s; removing.",
+      warn(LD_CIRC, "Entry guard '%s' (%s) has been %s since %s; removing.",
            entry->nickname, dbuf, why, tbuf);
       tor_free(entry);
-      smartlist_del_keeporder(entry_nodes, i);
-      log_entry_nodes(LOG_INFO);
+      smartlist_del_keeporder(entry_guards, i);
+      log_entry_guards(LOG_INFO);
       changed = 1;
     } else
       ++i;
@@ -1891,13 +1891,13 @@ remove_dead_entries(void)
 }
 
 /** A new directory or router-status has arrived; update the down/listed
- * status of the entry nodes.
+ * status of the entry guards.
  *
  * An entry is 'down' if the directory lists it as nonrunning.
  * An entry is 'unlisted' if the directory doesn't include it.
  */
 void
-entry_nodes_set_status_from_directory(void)
+entry_guards_set_status_from_directory(void)
 {
   /* Don't call this on startup; only on a fresh download.  Otherwise we'll
    * think that things are unlisted. */
@@ -1905,7 +1905,7 @@ entry_nodes_set_status_from_directory(void)
   time_t now;
   int changed = 0;
   int severity = LOG_NOTICE;
-  if (! entry_nodes)
+  if (! entry_guards)
     return;
 
   routers = router_get_routerlist();
@@ -1914,20 +1914,20 @@ entry_nodes_set_status_from_directory(void)
 
   /*XXXX Most of these warns should be non-warns. */
 
-  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       routerinfo_t *r = router_get_by_digest(entry->identity);
       if (! r) {
         if (! entry->unlisted_since) {
           entry->unlisted_since = time(NULL);
           changed = 1;
-          warn(LD_CIRC,"Entry node '%s' is not listed by directories.",
+          warn(LD_CIRC,"Entry guard '%s' is not listed by directories.",
                entry->nickname);
           severity = LOG_WARN;
         }
       } else {
         if (entry->unlisted_since) {
-          warn(LD_CIRC,"Entry node '%s' is listed again by directories.",
+          warn(LD_CIRC,"Entry guard '%s' is listed again by directories.",
                entry->nickname);
           changed = 1;
           severity = LOG_WARN;
@@ -1936,13 +1936,13 @@ entry_nodes_set_status_from_directory(void)
         if (! r->is_running) {
           if (! entry->down_since) {
             entry->down_since = now;
-            warn(LD_CIRC, "Entry node '%s' is now down.", entry->nickname);
+            warn(LD_CIRC, "Entry guard '%s' is now down.", entry->nickname);
             changed = 1;
             severity = LOG_WARN;
           }
         } else {
           if (entry->down_since) {
-            notice(LD_CIRC,"Entry node '%s' is up in latest directories.",
+            notice(LD_CIRC,"Entry guard '%s' is up in latest directories.",
                    entry->nickname);
             changed = 1;
           }
@@ -1960,10 +1960,10 @@ entry_nodes_set_status_from_directory(void)
     changed = 1;
 
   if (changed) {
-    log_fn(severity, LD_CIRC, "    (%d/%d entry nodes are usable/new)",
-           num_live_entry_nodes(), smartlist_len(entry_nodes));
-    log_entry_nodes(LOG_INFO);
-    entry_nodes_changed();
+    log_fn(severity, LD_CIRC, "    (%d/%d entry guards are usable/new)",
+           num_live_entry_guards(), smartlist_len(entry_guards));
+    log_entry_guards(LOG_INFO);
+    entry_guards_changed();
   }
 }
 
@@ -1973,25 +1973,25 @@ entry_nodes_set_status_from_directory(void)
  * Return 0 normally, or -1 if we want to tear down the new connection.
  */
 int
-entry_node_set_status(const char *digest, int succeeded)
+entry_guard_set_status(const char *digest, int succeeded)
 {
   int changed = 0;
   int refuse_conn = 0;
 
-  if (! entry_nodes)
+  if (! entry_guards)
     return 0;
 
-  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       if (!memcmp(entry->identity, digest, DIGEST_LEN)) {
         if (succeeded) {
           if (!entry->made_contact) {
-            /* We've just added a new long-term entry node. Perhaps
+            /* We've just added a new long-term entry guard. Perhaps
              * the network just came back? We should give our earlier
              * entries another try too, and close this connection so
              * we don't use it before we've given the others a shot. */
             entry->made_contact = 1;
-            SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e,
+            SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
               {
                 routerinfo_t *r;
                 if (e->made_contact) {
@@ -2006,40 +2006,41 @@ entry_node_set_status(const char *digest, int succeeded)
                   break;
               });
             notice(LD_CIRC,
-                   "Connected to new entry node '%s'. Marking earlier "
-                   "entries up. %d/%d entries usable/new.", entry->nickname,
-                   num_live_entry_nodes(), smartlist_len(entry_nodes));
-            log_entry_nodes(LOG_INFO);
+                   "Connected to new entry guard '%s'. Marking earlier "
+                   "entry guards up. %d/%d entry guards usable/new.",
+                   entry->nickname,
+                   num_live_entry_guards(), smartlist_len(entry_guards));
+            log_entry_guards(LOG_INFO);
             changed = 1;
           }
           if (entry->down_since) {
             /*XXXX shouldn't be so loud. NM */
             notice(LD_CIRC,
-                   "Connection to formerly down entry node '%s' succeeded. "
-                   "%d/%d entry nodes usable/new.", entry->nickname,
-                   num_live_entry_nodes(), smartlist_len(entry_nodes));
+                   "Connection to formerly down entry guard '%s' succeeded. "
+                   "%d/%d entry guards usable/new.", entry->nickname,
+                   num_live_entry_guards(), smartlist_len(entry_guards));
             entry->down_since = 0;
-            log_entry_nodes(LOG_INFO);
+            log_entry_guards(LOG_INFO);
             changed = 1;
           }
         } else {
           if (!entry->made_contact) { /* dump him */
             notice(LD_CIRC,
-                   "Connection to never-contacted entry node '%s' failed. "
-                   "Removing from the list. %d/%d entry nodes usable/new.",
+                   "Connection to never-contacted entry guard '%s' failed. "
+                   "Removing from the list. %d/%d entry guards usable/new.",
                    entry->nickname,
-                   num_live_entry_nodes()-1, smartlist_len(entry_nodes)-1);
+                   num_live_entry_guards()-1, smartlist_len(entry_guards)-1);
             tor_free(entry);
-            smartlist_del_keeporder(entry_nodes, entry_sl_idx);
-            log_entry_nodes(LOG_INFO);
+            smartlist_del_keeporder(entry_guards, entry_sl_idx);
+            log_entry_guards(LOG_INFO);
             changed = 1;
           } else if (!entry->down_since) {
             entry->down_since = time(NULL);
-            warn(LD_CIRC, "Connection to entry node '%s' failed."
-                 " %d/%d entry nodes usable/new.",
+            warn(LD_CIRC, "Connection to entry guard '%s' failed."
+                 " %d/%d entry guards usable/new.",
                  entry->nickname,
-                 num_live_entry_nodes(), smartlist_len(entry_nodes));
-            log_entry_nodes(LOG_INFO);
+                 num_live_entry_guards(), smartlist_len(entry_guards));
+            log_entry_guards(LOG_INFO);
             changed = 1;
           }
         }
@@ -2047,11 +2048,11 @@ entry_node_set_status(const char *digest, int succeeded)
     });
 
   if (changed)
-    entry_nodes_changed();
+    entry_guards_changed();
   return refuse_conn ? -1 : 0;
 }
 
-/** When we try to choose an entry node, should we parse and add
+/** When we try to choose an entry guard, should we parse and add
  * config's EntryNodes first? */
 static int should_add_entry_nodes = 0;
 
@@ -2063,7 +2064,7 @@ entry_nodes_should_be_added(void)
 }
 
 void
-entry_nodes_prepend_from_config(void)
+entry_guards_prepend_from_config(void)
 {
   int missed_some = 0;
   int idx;
@@ -2071,14 +2072,14 @@ entry_nodes_prepend_from_config(void)
   smartlist_t *routers = smartlist_create();
   smartlist_t *tmp = smartlist_create();
 
-  tor_assert(entry_nodes);
+  tor_assert(entry_guards);
   tor_assert(options->EntryNodes);
 
   if (options->StrictEntryNodes) {
-    info(LD_CIRC,"Clearing old entry nodes");
-    SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e, tor_free(e));
-    smartlist_clear(entry_nodes);
-    entry_nodes_changed();
+    info(LD_CIRC,"Clearing old entry guards");
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, tor_free(e));
+    smartlist_clear(entry_guards);
+    entry_guards_changed();
   }
 
   add_nickname_list_to_smartlist(routers, options->EntryNodes,
@@ -2095,10 +2096,10 @@ entry_nodes_prepend_from_config(void)
 
   for (idx = smartlist_len(routers)-1 ; idx >= 0; idx--) {
     /* pick off the last one, turn it into a router, prepend it
-     * to our entry_nodes list. If we can't find it, set missed_some
+     * to our entry_guards list. If we can't find it, set missed_some
      * to 1. */
     routerinfo_t *r = smartlist_get(routers, idx);
-    add_an_entry_node(r);
+    add_an_entry_guard(r);
   }
 
   if (!missed_some)
@@ -2107,37 +2108,37 @@ entry_nodes_prepend_from_config(void)
   smartlist_free(routers);
 }
 
-/** Pick a live (up and listed) entry node from entry_nodes, and
+/** Pick a live (up and listed) entry guard from entry_guards, and
  * make sure not to pick this circuit's exit. */
 static routerinfo_t *
 choose_random_entry(cpath_build_state_t *state)
 {
   or_options_t *options = get_options();
-  smartlist_t *live_entry_nodes = smartlist_create();
+  smartlist_t *live_entry_guards = smartlist_create();
   routerinfo_t *chosen_exit = build_state_get_exit_router(state);
   routerinfo_t *r = NULL;
   int need_uptime = state->need_uptime;
   int need_capacity = state->need_capacity;
 
-  if (!entry_nodes)
-    entry_nodes = smartlist_create();
+  if (!entry_guards)
+    entry_guards = smartlist_create();
 
   if (should_add_entry_nodes)
-    entry_nodes_prepend_from_config();
+    entry_guards_prepend_from_config();
 
   if (!options->StrictEntryNodes &&
-      (! entry_nodes ||
-       smartlist_len(entry_nodes) < options->NumEntryNodes))
-    pick_entry_nodes();
+      (! entry_guards ||
+       smartlist_len(entry_guards) < options->NumEntryGuards))
+    pick_entry_guards();
 
  retry:
-  smartlist_clear(live_entry_nodes);
-  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, entry,
+  smartlist_clear(live_entry_guards);
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       r = entry_is_live(entry, need_uptime, need_capacity);
       if (r && r != chosen_exit) {
-        smartlist_add(live_entry_nodes, r);
-        if (smartlist_len(live_entry_nodes) >= options->NumEntryNodes)
+        smartlist_add(live_entry_guards, r);
+        if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
           break; /* we have enough */
       }
     });
@@ -2145,18 +2146,18 @@ choose_random_entry(cpath_build_state_t *state)
   /* Try to have at least 2 choices available. This way we don't
    * get stuck with a single live-but-crummy entry and just keep
    * using him.
-   * (We might get 2 live-but-crummy entry nodes, but so be it.) */
-  if (smartlist_len(live_entry_nodes) < 2) {
+   * (We might get 2 live-but-crummy entry guards, but so be it.) */
+  if (smartlist_len(live_entry_guards) < 2) {
     if (need_uptime) {
       need_uptime = 0; /* try without that requirement */
       goto retry;
     }
     if (!options->StrictEntryNodes) {
       /* still no? try adding a new entry then */
-      r = add_an_entry_node(NULL);
+      r = add_an_entry_guard(NULL);
       if (r) {
-        smartlist_add(live_entry_nodes, r);
-        entry_nodes_changed();
+        smartlist_add(live_entry_guards, r);
+        entry_guards_changed();
       }
     }
     if (!r && need_capacity) {
@@ -2164,45 +2165,45 @@ choose_random_entry(cpath_build_state_t *state)
         need_capacity = 0;
         goto retry;
     }
-    /* live_entry_nodes will be empty below. Oh well, we tried. */
+    /* live_entry_guards will be empty below. Oh well, we tried. */
   }
 
-  r = smartlist_choose(live_entry_nodes);
-  smartlist_free(live_entry_nodes);
+  r = smartlist_choose(live_entry_guards);
+  smartlist_free(live_entry_guards);
   return r;
 }
 
-/** Parse <b>state</b> and learn about the entry nodes it describes.
+/** Parse <b>state</b> and learn about the entry guards it describes.
  * If <b>set</b> is true, and there are no errors, replace the global
  * entry_list with what we find.
  * On success, return 0. On failure, set *<b>err</b> to a string
  * describing the error, and return -1.
  */
 int
-entry_nodes_parse_state(or_state_t *state, int set, const char **err)
+entry_guards_parse_state(or_state_t *state, int set, const char **err)
 {
-  entry_node_t *node = NULL;
-  smartlist_t *new_entry_nodes = smartlist_create();
+  entry_guard_t *node = NULL;
+  smartlist_t *new_entry_guards = smartlist_create();
   config_line_t *line;
 
   *err = NULL;
-  for (line = state->EntryNodes; line; line = line->next) {
-    if (!strcasecmp(line->key, "EntryNode")) {
+  for (line = state->EntryGuards; line; line = line->next) {
+    if (!strcasecmp(line->key, "EntryGuard")) {
       smartlist_t *args = smartlist_create();
-      node = tor_malloc_zero(sizeof(entry_node_t));
-      node->made_contact = 1; /* all entry nodes on disk have been contacted */
-      smartlist_add(new_entry_nodes, node);
+      node = tor_malloc_zero(sizeof(entry_guard_t));
+      node->made_contact = 1; /* all entry guards on disk have been contacted */
+      smartlist_add(new_entry_guards, node);
       smartlist_split_string(args, line->value, " ",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
       if (smartlist_len(args)<2) {
-        *err = "Too few arguments to EntryNode";
+        *err = "Too few arguments to EntryGuard";
       } else if (!is_legal_nickname(smartlist_get(args,0))) {
-        *err = "Bad nickname for EntryNode";
+        *err = "Bad nickname for EntryGuard";
       } else {
         strlcpy(node->nickname, smartlist_get(args,0), MAX_NICKNAME_LEN+1);
         if (base16_decode(node->identity, DIGEST_LEN, smartlist_get(args,1),
                           strlen(smartlist_get(args,1)))<0) {
-          *err = "Bad hex digest for EntryNode";
+          *err = "Bad hex digest for EntryGuard";
         }
       }
       SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
@@ -2212,14 +2213,14 @@ entry_nodes_parse_state(or_state_t *state, int set, const char **err)
     } else {
       time_t when;
       if (!node) {
-        *err = "EntryNodeDownSince/UnlistedSince without EntryNode";
+        *err = "EntryGuardDownSince/UnlistedSince without EntryGuard";
         break;
       }
       if (parse_iso_time(line->value, &when)<0) {
-        *err = "Bad time in EntryNodeDownSince/UnlistedSince";
+        *err = "Bad time in EntryGuardDownSince/UnlistedSince";
         break;
       }
-      if (!strcasecmp(line->key, "EntryNodeDownSince"))
+      if (!strcasecmp(line->key, "EntryGuardDownSince"))
         node->down_since = when;
       else
         node->unlisted_since = when;
@@ -2227,53 +2228,53 @@ entry_nodes_parse_state(or_state_t *state, int set, const char **err)
   }
 
   if (*err || !set) {
-    SMARTLIST_FOREACH(new_entry_nodes, entry_node_t *, e, tor_free(e));
-    smartlist_free(new_entry_nodes);
+    SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e, tor_free(e));
+    smartlist_free(new_entry_guards);
   } else { /* !*err && set */
-    if (entry_nodes) {
-      SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e, tor_free(e));
-      smartlist_free(entry_nodes);
+    if (entry_guards) {
+      SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, tor_free(e));
+      smartlist_free(entry_guards);
     }
-    entry_nodes = new_entry_nodes;
-    entry_nodes_dirty = 0;
+    entry_guards = new_entry_guards;
+    entry_guards_dirty = 0;
   }
   return *err ? -1 : 0;
 }
 
-/** Our list of entry nodes has changed, or some element of one
- * of our entry nodes has changed. Write the changes to disk. */
+/** Our list of entry guards has changed, or some element of one
+ * of our entry guards has changed. Write the changes to disk. */
 static void
-entry_nodes_changed(void)
+entry_guards_changed(void)
 {
-  entry_nodes_dirty = 1;
+  entry_guards_dirty = 1;
 
   or_state_save();
 }
 
-/** If the entry node info has not changed, do nothing and return.
- * Otherwise, free the EntryNodes piece of <b>state</b> and create
- * a new one out of the global entry_nodes list, and then mark
+/** If the entry guard info has not changed, do nothing and return.
+ * Otherwise, free the EntryGuards piece of <b>state</b> and create
+ * a new one out of the global entry_guards list, and then mark
  * <b>state</b> dirty so it will get saved to disk.
  */
 void
-entry_nodes_update_state(or_state_t *state)
+entry_guards_update_state(or_state_t *state)
 {
   config_line_t **next, *line;
-  if (! entry_nodes_dirty)
+  if (! entry_guards_dirty)
     return;
 
-  config_free_lines(state->EntryNodes);
-  next = &state->EntryNodes;
+  config_free_lines(state->EntryGuards);
+  next = &state->EntryGuards;
   *next = NULL;
-  if (!entry_nodes)
-    entry_nodes = smartlist_create();
-  SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e,
+  if (!entry_guards)
+    entry_guards = smartlist_create();
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
       char dbuf[HEX_DIGEST_LEN+1];
       if (!e->made_contact)
         continue; /* don't write this one to disk */
       *next = line = tor_malloc_zero(sizeof(config_line_t));
-      line->key = tor_strdup("EntryNode");
+      line->key = tor_strdup("EntryGuard");
       line->value = tor_malloc(HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2);
       base16_encode(dbuf, sizeof(dbuf), e->identity, DIGEST_LEN);
       tor_snprintf(line->value,HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2,
@@ -2281,40 +2282,40 @@ entry_nodes_update_state(or_state_t *state)
       next = &(line->next);
       if (e->down_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
-        line->key = tor_strdup("EntryNodeDownSince");
+        line->key = tor_strdup("EntryGuardDownSince");
         line->value = tor_malloc(ISO_TIME_LEN+1);
         format_iso_time(line->value, e->down_since);
         next = &(line->next);
       }
       if (e->unlisted_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
-        line->key = tor_strdup("EntryNodeUnlistedSince");
+        line->key = tor_strdup("EntryGuardUnlistedSince");
         line->value = tor_malloc(ISO_TIME_LEN+1);
         format_iso_time(line->value, e->unlisted_since);
         next = &(line->next);
       }
     });
   state->dirty = 1;
-  entry_nodes_dirty = 0;
+  entry_guards_dirty = 0;
 }
 
-/** If <b>question</b> is the string "entry-nodes", then dump
+/** If <b>question</b> is the string "entry-guards", then dump
  * to *<b>answer</b> a newly allocated string describing all of
- * the nodes in the global entry_nodes list. See control-spec.txt
+ * the nodes in the global entry_guards list. See control-spec.txt
  * for details.
  * For backward compatibility, we also handle the string "helper-nodes".
  * */
 int
-entry_nodes_getinfo(const char *question, char **answer)
+entry_guards_getinfo(const char *question, char **answer)
 {
-  if (!strcmp(question,"entry-nodes") ||
+  if (!strcmp(question,"entry-guards") ||
       !strcmp(question,"helper-nodes")) {
     smartlist_t *sl = smartlist_create();
     char tbuf[ISO_TIME_LEN+1];
     char dbuf[HEX_DIGEST_LEN+1];
-    if (!entry_nodes)
-      entry_nodes = smartlist_create();
-    SMARTLIST_FOREACH(entry_nodes, entry_node_t *, e,
+    if (!entry_guards)
+      entry_guards = smartlist_create();
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
       {
         size_t len = HEX_DIGEST_LEN+ISO_TIME_LEN+32;
         char *c = tor_malloc(len);
