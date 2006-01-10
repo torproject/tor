@@ -1361,9 +1361,9 @@ typedef struct {
                   * log whether it was DNS-leaking or not? */
   int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
                       * acceleration where available? */
-  int UseEntryNodes; /**< Boolean: Do we try to enter from a smallish number
-                      * of fixed nodes? */
-  int NumEntryNodes; /**< How many helper nodes do we try to establish? */
+  int UseEntryGuards; /**< Boolean: Do we try to enter from a smallish number
+                       * of fixed nodes? */
+  int NumEntryGuards; /**< How many entry guards do we try to establish? */
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
   int FastFirstHopPK; /**< If Tor believes it is safe, should we save a third
                        * of our PK time by sending CREATE_FAST cells? */
@@ -1384,7 +1384,7 @@ typedef struct {
   int AccountingSecondsActive;
   uint64_t AccountingExpectedUsage;
 
-  config_line_t *EntryNodes;
+  config_line_t *EntryGuards;
 
   time_t      BWHistoryReadEnds;
   int         BWHistoryReadInterval;
@@ -1484,14 +1484,14 @@ void extend_info_free(extend_info_t *info);
 routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
-void entry_nodes_set_status_from_directory(void);
-int entry_node_set_status(const char *digest, int succeeded);
+void entry_guards_set_status_from_directory(void);
+int entry_guard_set_status(const char *digest, int succeeded);
 void entry_nodes_should_be_added(void);
-void entry_nodes_prepend_from_config(void);
-void entry_nodes_update_state(or_state_t *state);
-int entry_nodes_parse_state(or_state_t *state, int set, const char **err);
-int entry_nodes_getinfo(const char *question, char **answer);
-void entry_nodes_free_all(void);
+void entry_guards_prepend_from_config(void);
+void entry_guards_update_state(or_state_t *state);
+int entry_guards_parse_state(or_state_t *state, int set, const char **err);
+int entry_guards_getinfo(const char *question, char **answer);
+void entry_guards_free_all(void);
 
 /********************************* circuitlist.c ***********************/
 

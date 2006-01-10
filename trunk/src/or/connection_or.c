@@ -452,7 +452,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
        * Tor server. */
       if (!options->HttpsProxy) {
         router_mark_as_down(conn->identity_digest);
-        entry_node_set_status(conn->identity_digest, 0);
+        entry_guard_set_status(conn->identity_digest, 0);
       }
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       connection_free(conn);
@@ -625,7 +625,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
              "Identity key not as expected for router at %s:%d: wanted %s "
              "but got %s",
              conn->address, conn->port, expected, seen);
-      entry_node_set_status(conn->identity_digest, 0);
+      entry_guard_set_status(conn->identity_digest, 0);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       as_advertised = 0;
     }
@@ -687,7 +687,7 @@ connection_tls_finish_handshake(connection_t *conn)
   control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED);
   if (started_here) {
     rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
-    if (entry_node_set_status(conn->identity_digest, 1) < 0) {
+    if (entry_guard_set_status(conn->identity_digest, 1) < 0) {
       /* pending circs get closed in circuit_about_to_close_connection() */
       return -1;
     }

@@ -1483,7 +1483,7 @@ tor_free_all(int postfork)
   dns_free_all();
   clear_pending_onions();
   circuit_free_all();
-  entry_nodes_free_all();
+  entry_guards_free_all();
   connection_free_all();
   if (!postfork) {
     config_free_all();
