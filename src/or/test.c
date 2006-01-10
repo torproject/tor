@@ -1138,7 +1138,6 @@ test_dir_format(void)
   char buf[8192], buf2[8192];
   char platform[256];
   char fingerprint[FINGERPRINT_LEN+1];
-  char d[DIGEST_LEN];
   char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
   size_t pk1_str_len, pk2_str_len, pk3_str_len;
   routerinfo_t r1, r2;
@@ -1148,7 +1147,6 @@ test_dir_format(void)
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   tor_version_t ver1;
   char *bw_lines = NULL;
-  const char *m;
 
   test_assert( (pk1 = crypto_new_pk_env()) );
   test_assert( (pk2 = crypto_new_pk_env()) );
@@ -1309,6 +1307,11 @@ test_dir_format(void)
     crypto_pk_get_fingerprint(pk1, buf, 1);
     add_fingerprint_to_dir("Fred", buf, fingerprint_list);
   }
+#if 0
+  {
+  char d[DIGEST_LEN];
+  const char *m;
+  /* XXXX NM re-enable. 011 */
   /* Make sure routers aren't too far in the past any more. */
   r1.cache_info.published_on = time(NULL);
   r2.cache_info.published_on = time(NULL)-3*60*60;
@@ -1319,14 +1322,12 @@ test_dir_format(void)
   get_options()->Nickname = tor_strdup("DirServer");
   test_assert(!dirserv_dump_directory_to_string(&cp,pk3));
   crypto_pk_get_digest(pk3, d);
-#if 0
-  /* XXXX NM re-enable. 011 */
   test_assert(!router_parse_directory(cp));
   test_eq(2, smartlist_len(dir1->routers));
+  tor_free(cp);
+  }
 #endif
   dirserv_free_fingerprint_list();
-
-  tor_free(cp);
 
   tor_free(pk1_str);
   tor_free(pk2_str);
