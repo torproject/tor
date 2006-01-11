@@ -397,9 +397,10 @@ typedef struct bw_array_t {
   uint64_t obs[NUM_SECS_ROLLING_MEASURE];
   int cur_obs_idx; /**< Current position in obs. */
   time_t cur_obs_time; /**< Time represented in obs[cur_obs_idx] */
-  uint64_t total_obs; /**< Total for all members of obs except obs[cur_obs_idx] */
-  uint64_t max_total; /**< Largest value that total_obs has taken on in the current
-                       * period. */
+  uint64_t total_obs; /**< Total for all members of obs except
+                       * obs[cur_obs_idx] */
+  uint64_t max_total; /**< Largest value that total_obs has taken on in the
+                       * current period. */
   uint64_t total_in_period; /**< Total bytes transferred in the current
                              * period. */
 
