@@ -2014,12 +2014,12 @@ entry_guard_set_status(const char *digest, int succeeded)
             changed = 1;
           }
           if (entry->down_since) {
+            entry->down_since = 0;
             /*XXXX shouldn't be so loud. NM */
             notice(LD_CIRC,
                    "Connection to formerly down entry guard '%s' succeeded. "
                    "%d/%d entry guards usable/new.", entry->nickname,
                    num_live_entry_guards(), smartlist_len(entry_guards));
-            entry->down_since = 0;
             log_entry_guards(LOG_INFO);
             changed = 1;
           }
