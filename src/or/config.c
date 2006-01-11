@@ -1701,14 +1701,16 @@ config_dump(config_format_t *fmt, void *options, int minimal)
       continue;
 
     desc = config_find_description(fmt, fmt->vars[i].name);
-    if (desc) {
+    line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name);
+
+    if (line && desc) {
+      /* Only dump the description if there's something to describe. */
       size_t len = strlen(desc)+8;
       char *tmp = tor_malloc(len);
       tor_snprintf(tmp, len, "# %s\n",desc);
       smartlist_add(elements, tmp);
     }
 
-    line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name);
     for (; line; line = line->next) {
       size_t len = strlen(line->key) + strlen(line->value) + 3;
       char *tmp;
