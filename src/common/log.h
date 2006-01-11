@@ -107,6 +107,7 @@ void switch_logs_debug(void);
 void close_logs(void);
 void add_temp_log(void);
 void close_temp_logs(void);
+void rollback_log_changes(void);
 void mark_logs_temp(void);
 void configure_libevent_logging(void);
 void suppress_libevent_log_msg(const char *msg);

@@ -438,6 +438,17 @@ close_temp_logs(void)
   }
 }
 
+/** Make all currently temporary logs (set to be closed by close_temp_logs)
+ * live again, and close all non-temporary logs. */
+void
+rollback_log_changes(void)
+{
+  logfile_t *lf;
+  for (lf = logfiles; lf; lf = lf->next)
+    lf->is_temporary = ! lf->is_temporary;
+  close_temp_logs();
+}
+
 /** Configure all log handles to be closed by close_temp_logs */
 void
 mark_logs_temp(void)
@@ -587,6 +598,41 @@ configure_libevent_logging(void)
 void
 suppress_libevent_log_msg(const char *msg)
 {
+}
+#endif
+
+#if 0
+static void
+dump_log_info(logfile_t *lf)
+{
+  const char *tp;
+
+  if (lf->filename) {
+    printf("=== log into \"%s\" (%s-%s) (%stemporary)\n", lf->filename,
+           sev_to_string(lf->min_loglevel),
+           sev_to_string(lf->max_loglevel),
+           lf->is_temporary?"":"not ");
+  } else if (lf->is_syslog) {
+    printf("=== syslog (%s-%s) (%stemporary)\n",
+           sev_to_string(lf->min_loglevel),
+           sev_to_string(lf->max_loglevel),
+           lf->is_temporary?"":"not ");
+  } else {
+    printf("=== log (%s-%s) (%stemporary)\n",
+           sev_to_string(lf->min_loglevel),
+           sev_to_string(lf->max_loglevel),
+           lf->is_temporary?"":"not ");
+  }
+}
+
+void
+describe_logs(void)
+{
+  logfile_t *lf;
+  printf("==== BEGIN LOGS ====\n");
+  for (lf = logfiles; lf; lf = lf->next)
+    dump_log_info(lf);
+  printf("==== END LOGS ====\n");
 }
 #endif
 

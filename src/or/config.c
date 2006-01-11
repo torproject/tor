@@ -519,6 +519,7 @@ options_act_reversible(or_options_t *old_options)
   int running_tor = options->command == CMD_RUN_TOR;
   int set_conn_limit = 0;
   int r = -1;
+  int logs_marked = 0;
 
   if (running_tor && options->RunAsDaemon) {
     /* No need to roll back, since you can't change the value. */
@@ -564,8 +565,18 @@ options_act_reversible(or_options_t *old_options)
     goto rollback;
   }
 
+  mark_logs_temp(); /* Close current logs once new logs are open. */
+  logs_marked = 1;
+  if (options_init_logs(options, 0)<0) /* Configure the log(s) */
+    goto rollback;
+
  commit:
   r = 0;
+  if (logs_marked) {
+    close_temp_logs();
+    add_callback_log(LOG_ERR, LOG_ERR, control_event_logmsg);
+    control_adjust_event_log_severity();
+  }
   SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
   {
     notice(LD_NET, "Closing old %s on %s:%d",
@@ -577,6 +588,11 @@ options_act_reversible(or_options_t *old_options)
 
  rollback:
   r = -1;
+
+  if (logs_marked) {
+    rollback_log_changes();
+    control_adjust_event_log_severity();
+  }
 
   if (set_conn_limit && old_options)
     set_max_file_descriptors((unsigned)old_options->ConnLimit,MAXCONNECTIONS);
@@ -649,16 +665,6 @@ options_act(or_options_t *old_options)
    * we want to not fork, and to log stuff to stderr. */
   if (options->command != CMD_RUN_TOR)
     return 0;
-
-  mark_logs_temp(); /* Close current logs once new logs are open. */
-  if (options_init_logs(options, 0)<0) /* Configure the log(s) */
-    return -1;
-
-  /* Close the temporary log we used while starting up, if it isn't already
-   * gone. */
-  close_temp_logs();
-  add_callback_log(LOG_ERR, LOG_ERR, control_event_logmsg);
-  control_adjust_event_log_severity();
 
   /* Load state */
   if (! global_state)
@@ -2722,9 +2728,11 @@ options_init_logs(or_options_t *options, int validate_only)
   config_line_t *opt;
   int ok;
   smartlist_t *elts;
+  int daemon = options->RunAsDaemon;
 
   ok = 1;
   elts = smartlist_create();
+
   for (opt = options->Logs; opt; opt = opt->next) {
     int levelMin=LOG_DEBUG, levelMax=LOG_ERR;
     smartlist_split_string(elts, opt->value, NULL,
@@ -2738,8 +2746,13 @@ options_init_logs(or_options_t *options, int validate_only)
       ok = 0; goto cleanup;
     }
     if (smartlist_len(elts) < 2) { /* only loglevels were provided */
-      if (!validate_only)
+      if (!validate_only) {
+        if (daemon) {
+          warn(LD_CONFIG, "Can't log to stdout with RunAsDaemon set.");
+          ok = 0; goto cleanup;
+        }
         add_stream_log(levelMin, levelMax, "<stdout>", stdout);
+      }
       goto cleanup;
     }
     if (!strcasecmp(smartlist_get(elts,1), "file")) {
@@ -2747,8 +2760,10 @@ options_init_logs(or_options_t *options, int validate_only)
         warn(LD_CONFIG, "Bad syntax on Log option 'Log %s'", opt->value);
         ok = 0; goto cleanup;
       }
-      if (!validate_only)
-        add_file_log(levelMin, levelMax, smartlist_get(elts, 2));
+      if (!validate_only) {
+        if (add_file_log(levelMin, levelMax, smartlist_get(elts, 2)) < 0)
+          ok = 0;
+      }
       goto cleanup;
     }
     if (smartlist_len(elts) != 2) {
@@ -2756,14 +2771,20 @@ options_init_logs(or_options_t *options, int validate_only)
       ok = 0; goto cleanup;
     }
     if (!strcasecmp(smartlist_get(elts,1), "stdout")) {
+      if (daemon) {
+        warn(LD_CONFIG, "Can't log to stdout with RunAsDaemon set.");
+        ok = 0; goto cleanup;
+      }
       if (!validate_only) {
         add_stream_log(levelMin, levelMax, "<stdout>", stdout);
-        close_temp_logs();
       }
     } else if (!strcasecmp(smartlist_get(elts,1), "stderr")) {
+      if (daemon) {
+        warn(LD_CONFIG, "Can't log to stdout with RunAsDaemon set.");
+        ok = 0; goto cleanup;
+      }
       if (!validate_only) {
         add_stream_log(levelMin, levelMax, "<stderr>", stderr);
-        close_temp_logs();
       }
     } else if (!strcasecmp(smartlist_get(elts,1), "syslog")) {
 #ifdef HAVE_SYSLOG_H
@@ -2787,8 +2808,6 @@ options_init_logs(or_options_t *options, int validate_only)
     smartlist_clear(elts);
   }
   smartlist_free(elts);
-  if (!validate_only)
-    close_temp_logs();
 
   return ok?0:-1;
 }
