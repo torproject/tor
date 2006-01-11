@@ -544,7 +544,7 @@ The policies have the same form as exit policies above.
 .LP
 .TP
 \fBRecommendedVersions \fR\fISTRING\fP
-STRING is a command-separated list of Tor versions currently believed
+STRING is a comma-separated list of Tor versions currently believed
 to be safe. The list is included in each directory, and nodes which
 pull down the directory learn whether they need to upgrade.  This
 option can appear multiple times: the values from multiple lines are
@@ -552,14 +552,14 @@ spliced together.
 .LP
 .TP
 \fBRecommendedClientVersions \fR\fISTRING\fP
-STRING is a command-separated list of Tor versions currently believed
+STRING is a comma-separated list of Tor versions currently believed
 to be safe for clients to use.  This information is included in version 2
 directories.  If this is not set then the value of \fBRecommendedVersions\fR
 is used.
 .LP
 .TP
 \fBRecommendedServerVersions \fR\fISTRING\fP
-STRING is a command-separated list of Tor versions currently believed
+STRING is a comma-separated list of Tor versions currently believed
 to be safe for servers to use.  This information is included in version 2
 directories.  If this is not set then the value of \fBRecommendedVersions\fR
 is used.
