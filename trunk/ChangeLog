@@ -13,8 +13,9 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
     - Fix an assert error when we're out of space in the connection_list
       and we try to post a hidden service descriptor (reported by weasel).
     - If you specify a relative torrc path and you set RunAsDaemon in
-      your torrc, then it chdir()'s to the new directory. If you hup,
+      your torrc, then it chdir()'s to the new directory. If you HUP,
       it tries to load the new torrc location, fails, and exits.
+      The fix: no longer allow a relative path to torrc using -f.
 
   o Major features:
     - Implement "entry guards": automatically choose a handful of entry
@@ -28,11 +29,11 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
       fingerprint. Caches try to download all listed digests from
       authorities; clients try to download "best" digests from caches.
       This avoids partitioning and isolating attacks better.
-    - Make the "stable" flag in network-status be the median of the
-      uptimes of running valid servers, and make clients pay attention
-      to the network-status flags. This way the cutoff adapts to the
-      stability of the network as a whole. This will make IRC, IM,
-      etc connections more reliable.
+    - Make the "stable" router flag in network-status be the median of
+      the uptimes of running valid servers, and make clients pay
+      attention to the network-status flags. Thus the cutoff adapts
+      to the stability of the network as a whole, making IRC, IM, etc
+      connections more reliable.
 
   o Major fixes:
     - Tor servers with dynamic IP addresses were needing to wait 18
@@ -40,14 +41,14 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
       the new IP address and ports. This is because they were using
       the internal descriptor to learn what to test, yet they were only
       rebuilding the descriptor once they decided they were reachable.
-    - We were leaving duplicate connections to other ORs open for a week,
-      rather than closing them once we detect a duplicate. This only
-      really affected authdirservers, but it affected them a lot.
     - Tor 0.1.1.9 and 0.1.1.10 had a serious bug that caused clients
       to download certain server descriptors, throw them away, and then
       fetch them again after 30 minutes. Now mirrors throw away these
       server descriptors so clients can't get them.
-    - Spread the auth dir servers' reachability testing over the entire
+    - We were leaving duplicate connections to other ORs open for a week,
+      rather than closing them once we detect a duplicate. This only
+      really affected authdirservers, but it affected them a lot.
+    - Spread the authdirservers' reachability testing over the entire
       testing interval, so we don't try to do 500 TLS's at once every
       20 minutes.
 
@@ -55,19 +56,18 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
     - If the network is down, and we try to connect to a conn because
       we have a circuit in mind, and we timeout (30 seconds) because the
       network never answers, we were expiring the circuit, but we weren't
-      obsoleting the connection or telling the entry_nodes functions. now
-      do that.
-    - Some tor servers process billions of cells in a matter of days.
-      These statistics need to be uint64_t's.
+      obsoleting the connection or telling the entry_guards functions.
+    - Some Tor servers process billions of cells per day. These statistics
+      need to be uint64_t's.
     - Check for integer overflows in more places, when adding elements
       to smartlists. This could possibly prevent a buffer overflow
       on malicious huge inputs. I don't see any, but I haven't looked
       carefully.
     - ReachableAddresses kept growing new "reject *:*" lines on every
-      reload.
+      setconf/reload.
     - When you "setconf log" via the controller, it should remove all
       logs. We were automatically adding back in a "log notice stdout".
-    - Newly bootstrapped tor networks couldn't establish hidden service
+    - Newly bootstrapped Tor networks couldn't establish hidden service
       circuits until they had nodes with high uptime. Be more tolerant.
     - We were marking servers down when they could not answer every piece
       of the directory request we sent them. This was far too harsh.
@@ -93,7 +93,7 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
     - Revive the FascistFirewall config option rather than eliminating it:
       now it's a synonym for ReachableAddresses *:80,*:443.
     - Clients choose directory servers from the network status lists,
-      not from their internal list of router descriptors. Now we can
+      not from their internal list of router descriptors. Now they can
       go to caches directly rather than needing to go to authorities
       to bootstrap.
     - Directory authorities ignore router descriptors that have only
@@ -101,7 +101,7 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
     - Add a new flag to network-status indicating whether the server
       can answer v2 directory requests too.
     - Authdirs now stop whining so loudly about bad descriptors that
-      they fetch from other dirservers. now when there's a log complaint,
+      they fetch from other dirservers. So when there's a log complaint,
       it's for sure from a freshly uploaded descriptor.
     - Reduce memory requirements in our structs by changing the order
       of fields.
@@ -111,7 +111,7 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
     - New config option "AuthDirRejectUnlisted" for auth dirservers as
       a panic button: if we get flooded with unusable servers we can
       revert to only listing servers in the approved-routers file.
-    - Auth dir servers can also mark a fingerprint as "!reject" or
+    - Auth dir servers can now mark a fingerprint as "!reject" or
       "!invalid" in the approved-routers file (as its nickname), to
       refuse descriptors outright or include them but marked as invalid.
     - Servers store bandwidth history across restarts/crashes.
