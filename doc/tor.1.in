@@ -209,7 +209,7 @@ is to run as a client unless ORPort is configured.  (Usually,
 you don't need to set this; Tor is pretty smart at figuring out whether
 you are reliable and high-bandwidth enough to be a useful server.)
 
-This option will likely be deprecated in the future; see the NoPublish
+This option will likely be deprecated in the future; see the \fBNoPublish\fP
 option below. (Default: 0)
 .LP
 .TP
@@ -549,6 +549,20 @@ to be safe. The list is included in each directory, and nodes which
 pull down the directory learn whether they need to upgrade.  This
 option can appear multiple times: the values from multiple lines are
 spliced together.
+.LP
+.TP
+\fBRecommendedClientVersions \fR\fISTRING\fP
+STRING is a command-separated list of Tor versions currently believed
+to be safe for clients to use.  This information is included in version 2
+directories.  If this is not set then the value of \fBRecommendedVersions\fR
+is used.
+.LP
+.TP
+\fBRecommendedServerVersions \fR\fISTRING\fP
+STRING is a command-separated list of Tor versions currently believed
+to be safe for servers to use.  This information is included in version 2
+directories.  If this is not set then the value of \fBRecommendedVersions\fR
+is used.
 .LP
 .TP
 \fBDirAllowPrivateAddresses \fR\fB0\fR|\fB1\fR\fP
