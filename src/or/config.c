@@ -1673,7 +1673,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
 {
   smartlist_t *elements;
   or_options_t *defaults;
-  config_line_t *line;
+  config_line_t *line, *assigned;
   char *result;
   int i;
   const char *desc;
@@ -1702,7 +1702,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
       smartlist_add(elements, tmp);
     }
 
-    line = get_assigned_option(fmt, options, fmt->vars[i].name);
+    line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name);
     for (; line; line = line->next) {
       size_t len = strlen(line->key) + strlen(line->value) + 3;
       char *tmp;
@@ -1713,7 +1713,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
       }
       smartlist_add(elements, tmp);
     }
-    config_free_lines(line);
+    config_free_lines(assigned);
   }
 
   result = smartlist_join_strings(elements, "", 0, NULL);
