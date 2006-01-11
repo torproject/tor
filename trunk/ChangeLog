@@ -10,25 +10,29 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
       that moment you dump his server descriptor.
     - Extendcircuit and Attachstream controller commands would
       assert/crash if you don't give them enough arguments.
+    - Fix an assert error when we're out of space in the connection_list
+      and we try to post a hidden service descriptor (reported by weasel).
+    - If you specify a relative torrc path and you set RunAsDaemon in
+      your torrc, then it chdir()'s to the new directory. If you hup,
+      it tries to load the new torrc location, fails, and exits.
 
   o Major features:
-    - Automatically choose a handful of entry nodes and stick with them
-      for all circuits. Only pick new ones when the ones you have are
-      unsuitable, and if the old ones become suitable again, switch back.
-      This will increase security dramatically against certain end-point
-      attacks. The EntryNodes config option now provides some hints
-      about which entry nodes you want to use most; and StrictEntryNodes
-      ...
+    - Implement "entry guards": automatically choose a handful of entry
+      nodes and stick with them for all circuits. Only pick new guards
+      when the ones you have are unsuitable, and if the old guards
+      become suitable again, switch back. This will increase security
+      dramatically against certain end-point attacks. The EntryNodes
+      config option now provides some hints about which entry guards you
+      want to use most; and StrictEntryNodes means to only use those.
     - New directory logic: download by descriptor digest, not by
       fingerprint. Caches try to download all listed digests from
       authorities; clients try to download "best" digests from caches.
-      Now we avoid partitioning and isolating attacks better.
+      This avoids partitioning and isolating attacks better.
     - Make the "stable" flag in network-status be the median of the
-      uptimes of running valid servers. That way the cutoff adapts to
-      the stability of the network as a whole. This will make IRC, IM,
+      uptimes of running valid servers, and make clients pay attention
+      to the network-status flags. This way the cutoff adapts to the
+      stability of the network as a whole. This will make IRC, IM,
       etc connections more reliable.
-    - Make clients look at the fast and stable flags in networkstatus,
-      not at the bandwidth and uptime declared in the router descriptors.
 
   o Major fixes:
     - Tor servers with dynamic IP addresses were needing to wait 18
@@ -36,7 +40,16 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
       the new IP address and ports. This is because they were using
       the internal descriptor to learn what to test, yet they were only
       rebuilding the descriptor once they decided they were reachable.
-
+    - We were leaving duplicate connections to other ORs open for a week,
+      rather than closing them once we detect a duplicate. This only
+      really affected authdirservers, but it affected them a lot.
+    - Tor 0.1.1.9 and 0.1.1.10 had a serious bug that caused clients
+      to download certain server descriptors, throw them away, and then
+      fetch them again after 30 minutes. Now mirrors throw away these
+      server descriptors so clients can't get them.
+    - Spread the auth dir servers' reachability testing over the entire
+      testing interval, so we don't try to do 500 TLS's at once every
+      20 minutes.
 
   o Minor fixes:
     - If the network is down, and we try to connect to a conn because
@@ -60,7 +73,19 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
       of the directory request we sent them. This was far too harsh.
     - Fix the torify (tsocks) config file to not use Tor for localhost
       connections.
-
+    - Directory authorities now go to the proper authority when asking for
+      a networkstatus, even when they want a compressed one.
+    - Fix a harmless bug that was causing Tor servers to log
+      "Got an end because of misc error, but we're not an AP. Closing."
+    - Authorities were treating their own descriptor changes as cosmetic,
+      meaning the descriptor available in the network-status and the
+      descriptor that clients downloaded were different.
+    - The OS X installer was adding a symlink for tor_resolve but
+      the binary was called tor-resolve (reported by Thomas Hardly).
+    - Workaround a problem with some http proxies where they refuse GET
+      requests that specify "Content-Length: 0" (reported by Adrian).
+    - Fix wrong log message when you add a "HiddenServiceNodes" config
+      line without any HiddenServiceDir line (reported by Chris Thomas).
 
   o Minor features:
     - Write the TorVersion into the state file so we have a prayer of
@@ -90,9 +115,14 @@ Changes in version 0.1.1.11-alpha - 2006-01-xx
       "!invalid" in the approved-routers file (as its nickname), to
       refuse descriptors outright or include them but marked as invalid.
     - Servers store bandwidth history across restarts/crashes.
-
-
-Add reasons to DESTROY and RELAY_TRUNCATED cells. Not used yet.
+    - Add reasons to DESTROY and RELAY_TRUNCATED cells, so clients can
+      get a better idea of why their circuits failed. Not used yet.
+    - Directory mirrors now cache up to 16 unrecognized network-status
+      docs. Now we can add new authdirservers and they'll be cached too.
+    - When picking a random directory, prefer non-authorities if any
+      are known.
+    - New controller option "getinfo desc/all-recent" to fetch the
+      latest server descriptor for every router that Tor knows about.
 
 
 Changes in version 0.1.1.10-alpha - 2005-12-11
