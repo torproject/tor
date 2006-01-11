@@ -1288,7 +1288,7 @@ _compare_longs(const void **a, const void **b)
 
 /** Look through the routerlist, and assign the median uptime
  * of running verified servers to stable_uptime. */
-void
+static void
 dirserv_compute_stable_uptime(routerlist_t *rl)
 {
   smartlist_t *uptimes = smartlist_create();
