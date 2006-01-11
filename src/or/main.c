@@ -625,13 +625,16 @@ run_connection_housekeeping(int i, time_t now)
            conn->address, conn->port, conn->s,
            (int)(now - conn->timestamp_created));
       conn->is_obsolete = 1;
-    } else if (connection_or_get_by_identity_digest(conn->identity_digest) !=
-               conn) {
-      info(LD_OR,
-           "Marking duplicate conn to %s:%d obsolete (fd %d, %d secs old).",
-           conn->address, conn->port, conn->s,
-           (int)(now - conn->timestamp_created));
-      conn->is_obsolete = 1;
+    } else {
+      connection_t *best =
+        connection_or_get_by_identity_digest(conn->identity_digest);
+      if (best && best != conn) {
+        info(LD_OR,
+             "Marking duplicate conn to %s:%d obsolete (fd %d, %d secs old).",
+             conn->address, conn->port, conn->s,
+             (int)(now - conn->timestamp_created));
+        conn->is_obsolete = 1;
+      }
     }
   }
 
