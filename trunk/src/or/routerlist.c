@@ -1802,7 +1802,7 @@ routerlist_remove_old_routers(void)
    */
   if (smartlist_len(routerlist->old_routers) <
       smartlist_len(routerlist->routers) * (MAX_DESCRIPTORS_PER_ROUTER - 1))
-    return;
+    goto done;
 
   smartlist_sort(routerlist->old_routers, _compare_old_routers_by_identity);
 
@@ -1823,6 +1823,8 @@ routerlist_remove_old_routers(void)
   if (hi>=0)
     routerlist_remove_old_cached_routers_with_id(cutoff, 0, hi, retain);
   routerlist_assert_ok(routerlist);
+
+ done:
   digestmap_free(retain, NULL);
 }
 
