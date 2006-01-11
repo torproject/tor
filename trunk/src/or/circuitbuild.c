@@ -1495,12 +1495,14 @@ static routerinfo_t *
 choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
 {
   routerinfo_t *r, *choice;
-  smartlist_t *excluded = smartlist_create();
+  smartlist_t *excluded;
   or_options_t *options = get_options();
 
   if (state && options->UseEntryGuards) {
     return choose_random_entry(state);
   }
+
+  excluded = smartlist_create();
 
   if (state && (r = build_state_get_exit_router(state))) {
     smartlist_add(excluded, r);
