@@ -2541,10 +2541,10 @@ options_init_from_torrc(int argc, char **argv)
       log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
           "using reasonable defaults.", fname);
       tor_free(fname); /* sets fname to NULL */
+      torrc_fname = NULL;
     } else {
       log(LOG_WARN, LD_CONFIG,
           "Unable to open configuration file \"%s\".", fname);
-      tor_free(fname);
       goto err;
     }
   } else { /* it opened successfully. use it. */
@@ -2578,6 +2578,7 @@ options_init_from_torrc(int argc, char **argv)
   return 0;
  err:
   tor_free(fname);
+  torrc_fname = NULL;
   config_free(&options_format, newoptions);
   return -1;
 }
