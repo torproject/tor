@@ -1719,6 +1719,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
   result = smartlist_join_strings(elements, "", 0, NULL);
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
+  config_free(fmt, defaults);
   return result;
 }
 
