@@ -1,0 +1,222 @@
+$Id$
+Legend:
+SPEC!!  - Not specified
+SPEC    - Spec not finalized
+N       - nick claims
+R       - arma claims
+P       - phobos claims
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+Non-Coding, Soon:
+N - Mark up spec; note unclear points about servers
+N - Mention controller libs someplace.
+  D FAQ entry: why gnutls is bad/not good for tor
+P - flesh out the rest of the section 6 of the faq
+P - gather pointers to livecd distros that include tor
+R . more pictures from ren. he wants to describe the tor handshake, i want to
+    talk about hidden services.
+NR- write a spec appendix for 'being nice with tor'
+  - tor-in-the-media page
+  - Remove need for HACKING file.
+
+Website:
+  - we need to merge documentation and support
+  - and pare it down
+  - and merge developers into documentation too
+  - or at least, remove developers from the title bar
+  - and remove home and make the "Tor" picture be the link to home.
+  - put the logo on the website, in source form, so people can put it on
+    stickers directly, etc.
+
+for 0.1.1.x:
+N - if they're trying to be a tor server and they're running
+     win 98 or win me, give them a message talking about The Bug.
+
+R . Rename 'helper' to 'guard'.
+
+N - Display the reasons in 'destroy' and 'truncated' cells under some
+    circumstances?
+
+N . Directory changes
+    . Client side:
+      - Do we want to rate-limit downloads of each identity, or do something
+        else to download even less?
+      - Do we want to refrain from downloading non-running or non-verified
+        descriptors? This is potentially dangerous.
+    - Non-directories don't need to keep descriptors in memory.
+
+R - Christian Grothoff's attack of infinite-length circuit.
+    the solution is to have a separate 'extend-data' cell type
+    which is used for the first N data cells, and only
+    extend-data cells can be extend requests.
+    - Specify, including thought about
+    - Implement
+
+R - When we connect to a Tor server, it sends back a signed cell listing
+    the IP it believes it is using. Use this to block dvorak's attack.
+    Also, this is a fine time to say what time you think it is.
+    - Verify that a new cell type is okay with deployed codebase
+    - Specify
+    - Implement
+
+R - clients prefer to avoid exit nodes for non-exit path positions.
+
+  - find 10 dirservers.
+    - What are criteria to be a dirserver?  Write a policy.
+
+  - the tor client can do the "automatic proxy config url" thing?
+
+Deferred from 0.1.1.x:
+
+  - Automatically determine what ports are reachable and start using
+    those, if circuits aren't working and it's a pattern we recognize
+    ("port 443 worked once and port 9001 keeps not working").
+
+N - Should router info have a pointer to routerstatus?
+    - We should at least do something about the duplicated fields.
+
+N . Additional controller features
+      - change circuit status events to give more details, like purpose,
+        whether they're internal, when they become dirty, when they become
+        too dirty for further circuits, etc.
+R       - What do we want here, exactly?
+N       - Specify and implement it.
+      - Change stream status events analogously.
+R       - What do we want here, exactly?
+N       - Specify and implement it.
+      - Make other events "better".
+      - Change stream status events analogously.
+R       - What do we want here, exactly?
+N       - Specify and implement it.
+      - Make other events "better" analogously
+R       - What do we want here, exactly?
+N       - Specify and implement it.
+      . Expose more information via getinfo:
+        - import and export rendezvous descriptors
+        - Review all static fields for additional candidates
+      - Allow EXTENDCIRCUIT to unknown server.
+      - We need some way to adjust server status, and to tell tor not to
+        download directories/network-status, and a way to force a download.
+      - It would be nice to request address lookups from the controller
+        without using SOCKS.
+      - Make everything work with hidden services
+
+  X switch accountingmax to count total in+out, not either in or
+    out. it's easy to move in this direction (not risky), but hard to
+    back out if we decide we prefer it the way it already is. hm.
+
+  - cpu fixes:
+    - see if we should make use of truncate to retry
+R   - kill dns workers more slowly
+
+  . Directory changes
+    . Some back-out mechanism for auto-approval
+      - a way of rolling back approvals to before a timestamp
+        - Consider minion-like fingerprint file/log combination.
+
+    - config option to publish what ports you listen on, beyond
+      ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
+      - Parse this.
+      - Relay this in networkstatus.
+
+  - packaging and ui stuff:
+    . multiple sample torrc files
+    - uninstallers
+      . for os x
+    . figure out how to make nt service stuff work?
+      . Document it.
+    . Add version number to directory.
+N   - Vet all pending installer patches
+      - Win32 installer plus privoxy, sockscap/freecap, etc.
+      - Vet win32 systray helper code
+
+  - document:
+    - torcp needs more attention in the tor-doc-win32.
+    - recommend gaim.
+    - unrecommend IE because of ftp:// bug.
+    - torrc.complete.in needs attention?
+
+  - Bind to random port when making outgoing connections to Tor servers,
+    to reduce remote sniping attacks.
+  - Have new people be in limbo and need to demonstrate usefulness
+    before we approve them.
+  - Clients should estimate their skew as median of skew from servers
+    over last N seconds.
+  - Security
+    - Alices avoid duplicate class C nodes.
+    - Analyze how bad the partitioning is or isn't.
+
+  . Update the hidden service stuff for the new dir approach.
+    - switch to an ascii format, maybe sexpr?
+    - authdirservers publish blobs of them.
+    - other authdirservers fetch these blobs.
+    - hidserv people have the option of not uploading their blobs.
+    - you can insert a blob via the controller.
+    - and there's some amount of backwards compatibility.
+    - teach clients, intro points, and hidservs about auth mechanisms.
+    - come up with a few more auth mechanisms.
+
+  . Come up with a coherent strategy for bandwidth buckets and TLS. (The
+    logic for reading from TLS sockets is likely to overrun the bandwidth
+    buckets under heavy load.  (Really, the logic was never right in the
+    first place.)  Also, we should audit all users of get_pending_bytes().)
+      - Make it harder to circumvent bandwidth caps: look at number of bytes
+        sent across sockets, not number sent inside TLS stream.
+
+  - Make router_is_general_exit() a bit smarter once we're sure what it's for.
+
+  - Directory "helper".
+
+  - rewrite how libevent does select() on win32 so it's not so very slow.
+  - Write limiting; separate token bucket for write
+  - Audit everything to make sure rend and intro points are just as likely to
+    be us as not.
+  - Do something to prevent spurious EXTEND cells from making middleman
+    nodes connect all over.  Rate-limit failed connections, perhaps?
+
+Future version:
+  - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
+  - Handle full buffers without totally borking
+  - Rate-limit OR and directory connections overall and per-IP and
+    maybe per subnet.
+  - Hold-open-until-flushed now works by accident; it should work by
+    design.
+  - DoS protection: TLS puzzles, public key ops, bandwidth exhaustion.
+    - Specify?
+  - tor-resolve script should use socks5 to get better error messages.
+  - make min uptime a function of the available choices (say, choose 60th
+    percentile, not 1 day.)
+  - Track uptime as %-of-time-up, as well as time-since-last-down.
+  - hidserv offerers shouldn't need to define a SocksPort
+    * figure out what breaks for this, and do it.
+  - auth mechanisms to let hidden service midpoint and responder filter
+    connection requests.
+  - Relax clique assumptions.
+  X start handling server descriptors without a socksport?
+  - tor should be able to have a pool of outgoing IP addresses
+    that it is able to rotate through. (maybe)
+
+Blue-sky:
+  - Patch privoxy and socks protocol to pass strings to the browser.
+  - Standby/hotswap/redundant hidden services.
+  - Robust decentralized storage for hidden service descriptors.
+  - The "China problem"
+  - Allow small cells and large cells on the same network?
+  - Cell buffering and resending. This will allow us to handle broken
+    circuits as long as the endpoints don't break, plus will allow
+    connection (tls session key) rotation.
+  - Implement Morphmix, so we can compare its behavior, complexity, etc.
+  - Other transport. HTTP, udp, rdp, airhook, etc. May have to do our own
+    link crypto, unless we can bully openssl into it.
+  - Need a relay teardown cell, separate from one-way ends.
+    (Pending a user who needs this)
+  - Handle half-open connections: right now we don't support all TCP
+    streams, at least according to the protocol. But we handle all that
+    we've seen in the wild.
+    (Pending a user who needs this)
+
