@@ -2764,8 +2764,10 @@ options_init_logs(or_options_t *options, int validate_only)
         ok = 0; goto cleanup;
       }
       if (!validate_only) {
-        if (add_file_log(levelMin, levelMax, smartlist_get(elts, 2)) < 0)
+        if (add_file_log(levelMin, levelMax, smartlist_get(elts, 2)) < 0) {
+          warn(LD_CONFIG, "Couldn't open file for 'Log %s'", opt->value);
           ok = 0;
+        }
       }
       goto cleanup;
     }
