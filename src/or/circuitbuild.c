@@ -2191,7 +2191,8 @@ entry_guards_parse_state(or_state_t *state, int set, const char **err)
     if (!strcasecmp(line->key, "EntryGuard")) {
       smartlist_t *args = smartlist_create();
       node = tor_malloc_zero(sizeof(entry_guard_t));
-      node->made_contact = 1; /* all entry guards on disk have been contacted */
+      /* all entry guards on disk have been contacted */
+      node->made_contact = 1;
       smartlist_add(new_entry_guards, node);
       smartlist_split_string(args, line->value, " ",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
