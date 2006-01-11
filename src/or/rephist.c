@@ -394,12 +394,12 @@ rep_history_clean(time_t before)
 typedef struct bw_array_t {
   /** Observation array: Total number of bytes transferred in each of the last
    * NUM_SECS_ROLLING_MEASURE seconds. This is used as a circular array. */
-  int obs[NUM_SECS_ROLLING_MEASURE];
+  uint64_t obs[NUM_SECS_ROLLING_MEASURE];
   int cur_obs_idx; /**< Current position in obs. */
   time_t cur_obs_time; /**< Time represented in obs[cur_obs_idx] */
-  int total_obs; /**< Total for all members of obs except obs[cur_obs_idx] */
-  int max_total; /**< Largest value that total_obs has taken on in the current
-                  * period. */
+  uint64_t total_obs; /**< Total for all members of obs except obs[cur_obs_idx] */
+  uint64_t max_total; /**< Largest value that total_obs has taken on in the current
+                       * period. */
   uint64_t total_in_period; /**< Total bytes transferred in the current
                              * period. */
 
@@ -413,7 +413,7 @@ typedef struct bw_array_t {
   /** Circular array of the maximum
    * bandwidth-per-NUM_SECS_ROLLING_MEASURE usage for the last
    * NUM_TOTALS periods */
-  int maxima[NUM_TOTALS];
+  uint64_t maxima[NUM_TOTALS];
   /** Circular array of the total bandwidth usage for the last NUM_TOTALS
    * periods */
   uint64_t totals[NUM_TOTALS];
@@ -446,7 +446,7 @@ static INLINE void
 advance_obs(bw_array_t *b)
 {
   int nextidx;
-  int total;
+  uint64_t total;
 
   /* Calculate the total bandwidth for the last NUM_SECS_ROLLING_MEASURE
    * seconds; adjust max_total as needed.*/
@@ -546,10 +546,11 @@ rep_hist_note_bytes_read(int num_bytes, time_t when)
  * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
  * NUM_SECS_BW_SUM_IS_VALID seconds.)
  */
-static int
+static uint64_t
 find_largest_max(bw_array_t *b)
 {
-  int i,max;
+  int i;
+  uint64_t max;
   max=0;
   for (i=0; i<NUM_TOTALS; ++i) {
     if (b->maxima[i]>max)
@@ -568,7 +569,7 @@ find_largest_max(bw_array_t *b)
 int
 rep_hist_bandwidth_assess(void)
 {
-  int w,r;
+  uint64_t w,r;
   r = find_largest_max(read_array);
   w = find_largest_max(write_array);
   if (r>w)
