@@ -221,5 +221,5 @@
 #define HAVE_EVENT_H
 
 /* Version number of package */
-#define VERSION "0.1.1.11-alpha-cvs"
+#define VERSION "0.1.1.12-alpha"
 
