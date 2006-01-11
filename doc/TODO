@@ -34,10 +34,15 @@ Website:
     stickers directly, etc.
 
 for 0.1.1.x:
+  - Mysterious crash for fast servers: Bug 234.
+R - hidden service accesses can crash sometimes: Bug 220.
+  - Make "setconf" and "hup" behavior cleaner for LINELIST config
+    options (e.g. Log). Bug 238.
+R - We should do address rewriting after the controller sends us an
+    "attachstream 0": Bug 225.
+
 N - if they're trying to be a tor server and they're running
      win 98 or win me, give them a message talking about The Bug.
-
-R . Rename 'helper' to 'guard'.
 
 N - Display the reasons in 'destroy' and 'truncated' cells under some
     circumstances?
@@ -64,14 +69,19 @@ R - When we connect to a Tor server, it sends back a signed cell listing
     - Specify
     - Implement
 
-R - clients prefer to avoid exit nodes for non-exit path positions.
-
   - find 10 dirservers.
+    - Make it no longer default for v2 dirservers to support v1.
     - What are criteria to be a dirserver?  Write a policy.
+
+
+
+
+
+Deferred from 0.1.1.x:
 
   - the tor client can do the "automatic proxy config url" thing?
 
-Deferred from 0.1.1.x:
+R - clients prefer to avoid exit nodes for non-exit path positions.
 
   - Automatically determine what ports are reachable and start using
     those, if circuits aren't working and it's a pattern we recognize
