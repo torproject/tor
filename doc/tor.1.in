@@ -346,7 +346,7 @@ If this option is set to 1, we pick a few long-term entry servers, and
 try to stick with them.  This is desirable because
 constantly changing servers increases the odds that an adversary who owns
 some servers will observe a fraction of your paths.
-(Defaults to 0; will eventually default to 1.)
+(Defaults to 1.)
 .LP
 .TP
 \fBNumEntryGuards \fR\fINUM\fP
