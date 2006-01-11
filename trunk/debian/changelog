@@ -1,6 +1,6 @@
 tor (0.1.1.11-alpha-1) experimental; urgency=low
 
-  * CVS snapshot
+  * New upstream version.
   * forward port patches/07_log_to_file_by_default.
   * Forward port 0.1.0.16 changelog and change to copyright file.
 
