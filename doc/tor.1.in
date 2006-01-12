@@ -711,7 +711,7 @@ nickname and a fingerprint seperated by whitespace.  See your
 If the nickname is \fB!reject\fP then descriptors from the given
 identity (fingerprint) are rejected by the authoritative directory
 server. If it is \fB!invalid\fP then descriptors are accepted but marked
-in the directory as not valid, that is not recommended.
+in the directory as not valid, that is, not recommended.
 .SH SEE ALSO
 .BR privoxy (1),
 .BR tsocks (1),
