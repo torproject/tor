@@ -745,7 +745,7 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->cache_info.signed_descriptor = tor_strndup(s, end-s);
+  router->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
   router->cache_info.signed_descriptor_len = end-s;
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 

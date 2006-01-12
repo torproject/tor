@@ -1516,8 +1516,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
         char *cp = inp;
         SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
            {
-             memcpy(cp, ri->signed_descriptor,
-                    ri->signed_descriptor_len);
+             const char *body = signed_descriptor_get_body(ri);
+             memcpy(cp, body, ri->signed_descriptor_len);
              cp += ri->signed_descriptor_len;
              *cp++ = '\n';
            });
@@ -1550,9 +1550,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
         note_request(request_type, len);
         connection_write_to_buf(tmp, strlen(tmp), conn);
         SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
-                          connection_write_to_buf(ri->signed_descriptor,
-                                                  ri->signed_descriptor_len,
-                                                  conn));
+          {
+            const char *body = signed_descriptor_get_body(ri);
+            connection_write_to_buf(body, ri->signed_descriptor_len, conn);
+          });
       }
     }
     smartlist_free(descs);

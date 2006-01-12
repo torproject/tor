@@ -761,13 +761,14 @@ router_get_my_routerinfo(void)
 const char *
 router_get_my_descriptor(void)
 {
+  const char *body;
   if (!desc_routerinfo) {
     if (router_rebuild_descriptor(1))
       return NULL;
   }
-  debug(LD_GENERAL,"my desc is '%s'",
-        desc_routerinfo->cache_info.signed_descriptor);
-  return desc_routerinfo->cache_info.signed_descriptor;
+  body = signed_descriptor_get_body(&desc_routerinfo->cache_info);
+  debug(LD_GENERAL,"my desc is '%s'", body);
+  return body;
 }
 
 /*DOCDOC*/
@@ -865,16 +866,16 @@ router_rebuild_descriptor(int force)
      });
     smartlist_free(family);
   }
-  ri->cache_info.signed_descriptor = tor_malloc(8192);
-  if (router_dump_router_to_string(ri->cache_info.signed_descriptor, 8192,
+  ri->cache_info.signed_descriptor_body = tor_malloc(8192);
+  if (router_dump_router_to_string(ri->cache_info.signed_descriptor_body, 8192,
                                    ri, get_identity_key())<0) {
     warn(LD_BUG, "Couldn't allocate string for descriptor.");
     return -1;
   }
   ri->cache_info.signed_descriptor_len =
-    strlen(ri->cache_info.signed_descriptor);
+    strlen(ri->cache_info.signed_descriptor_body);
   crypto_digest(ri->cache_info.signed_descriptor_digest,
-                ri->cache_info.signed_descriptor,
+                ri->cache_info.signed_descriptor_body,
                 ri->cache_info.signed_descriptor_len);
 
   if (desc_routerinfo)

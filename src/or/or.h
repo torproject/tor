@@ -762,7 +762,7 @@ typedef struct cached_dir_t {
 
 /** Information need to cache an onion router's descriptor. */
 typedef struct signed_descriptor_t {
-  char *signed_descriptor;
+  char *signed_descriptor_body;
   size_t signed_descriptor_len;
   char signed_descriptor_digest[DIGEST_LEN];
   char identity_digest[DIGEST_LEN];
@@ -2277,6 +2277,7 @@ routerinfo_t *router_get_by_nickname(const char *nickname,
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
+const char *signed_descriptor_get_body(signed_descriptor_t *desc);
 int router_digest_version_as_new_as(const char *digest, const char *cutoff);
 int router_digest_is_trusted_dir(const char *digest);
 routerlist_t *router_get_routerlist(void);

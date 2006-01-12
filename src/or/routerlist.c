@@ -159,19 +159,20 @@ router_should_rebuild_store(void)
 /** Add the <b>len</b>-type router descriptor in <b>s</b> to the router
  * journal. */
 static int
-router_append_to_journal(const char *s, size_t len)
+router_append_to_journal(signed_descriptor_t *desc)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
-  char *fname = tor_malloc(len);
+  char *fname = tor_malloc(fname_len);
+  const char *body = signed_descriptor_get_body(desc);
+  size_t len = desc->signed_descriptor_len;
 
   tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
 
-  if (!len)
-    len = strlen(s);
+  tor_assert(len == strlen(body));
 
-  if (append_bytes_to_file(fname, s, len, 0)) {
+  if (append_bytes_to_file(fname, body, len, 0)) {
     warn(LD_FS, "Unable to store router descriptor");
     tor_free(fname);
     return -1;
@@ -218,12 +219,13 @@ router_rebuild_store(int force)
       signed_descriptor_t *sd = (i==0) ?
         ((signed_descriptor_t*)ptr): &((routerinfo_t*)ptr)->cache_info;
       sized_chunk_t *c;
-      if (!sd->signed_descriptor) {
-        warn(LD_BUG, "Bug! No descriptor stored for router.");
+      const char *body = signed_descriptor_get_body(sd);
+      if (!body) {
+        warn(LD_BUG, "Bug! No descriptor available for router.");
         goto done;
       }
       c = tor_malloc(sizeof(sized_chunk_t));
-      c->bytes = sd->signed_descriptor;
+      c->bytes = body;
       c->len = sd->signed_descriptor_len;
       smartlist_add(chunk_list, c);
     });
@@ -1062,6 +1064,12 @@ router_get_by_descriptor_digest(const char *digest)
   return digestmap_get(routerlist->desc_digest_map, digest);
 }
 
+const char *
+signed_descriptor_get_body(signed_descriptor_t *desc)
+{
+  return desc->signed_descriptor_body;
+}
+
 /** Return the current list of all known routers. */
 routerlist_t *
 router_get_routerlist(void)
@@ -1083,7 +1091,7 @@ routerinfo_free(routerinfo_t *router)
   if (!router)
     return;
 
-  tor_free(router->cache_info.signed_descriptor);
+  tor_free(router->cache_info.signed_descriptor_body);
   tor_free(router->address);
   tor_free(router->nickname);
   tor_free(router->platform);
@@ -1104,7 +1112,7 @@ routerinfo_free(routerinfo_t *router)
 static void
 signed_descriptor_free(signed_descriptor_t *sd)
 {
-  tor_free(sd->signed_descriptor);
+  tor_free(sd->signed_descriptor_body);
   tor_free(sd);
 }
 
@@ -1115,49 +1123,10 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
 {
   signed_descriptor_t *sd = tor_malloc_zero(sizeof(signed_descriptor_t));
   memcpy(sd, &(ri->cache_info), sizeof(signed_descriptor_t));
-  ri->cache_info.signed_descriptor = NULL;
+  ri->cache_info.signed_descriptor_body = NULL;
   routerinfo_free(ri);
   return sd;
 }
-
-#if 0
-/** Allocate a fresh copy of <b>router</b> */
-/* XXX Nobody uses this. Remove it? */
-routerinfo_t *
-routerinfo_copy(const routerinfo_t *router)
-{
-  routerinfo_t *r;
-  addr_policy_t **e, *tmp;
-
-  r = tor_malloc(sizeof(routerinfo_t));
-  memcpy(r, router, sizeof(routerinfo_t));
-
-  r->address = tor_strdup(r->address);
-  r->nickname = tor_strdup(r->nickname);
-  r->platform = tor_strdup(r->platform);
-  if (r->cache_info.signed_descriptor)
-    r->cache_info.signed_descriptor =
-      tor_strdup(r->cache_info.signed_descriptor);
-  if (r->onion_pkey)
-    r->onion_pkey = crypto_pk_dup_key(r->onion_pkey);
-  if (r->identity_pkey)
-    r->identity_pkey = crypto_pk_dup_key(r->identity_pkey);
-  e = &r->exit_policy;
-  while (*e) {
-    tmp = tor_malloc(sizeof(addr_policy_t));
-    memcpy(tmp,*e,sizeof(addr_policy_t));
-    *e = tmp;
-    (*e)->string = tor_strdup((*e)->string);
-    e = & ((*e)->next);
-  }
-  if (r->declared_family) {
-    r->declared_family = smartlist_create();
-    SMARTLIST_FOREACH(router->declared_family, const char *, s,
-                      smartlist_add(r->declared_family, tor_strdup(s)));
-  }
-  return r;
-}
-#endif
 
 /** Free all storage held by a routerlist <b>rl</b> */
 void
@@ -1588,9 +1557,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
           }
         }
         routerlist_replace(routerlist, old_router, router, i, 1);
-        if (!from_cache)
-          router_append_to_journal(router->cache_info.signed_descriptor,
-                                   router->cache_info.signed_descriptor_len);
+        if (!from_cache) {
+          router_append_to_journal(&router->cache_info);
+        }
         directory_set_dirty();
         *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
                authdir_verified ? "Verified server updated" :
@@ -1633,8 +1602,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
    * the list. */
   routerlist_insert(routerlist, router);
   if (!from_cache)
-    router_append_to_journal(router->cache_info.signed_descriptor,
-                             router->cache_info.signed_descriptor_len);
+    router_append_to_journal(&router->cache_info);
   directory_set_dirty();
   return 0;
 }
