@@ -1523,23 +1523,27 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   if (authdir) {
     if (authdir_wants_to_reject_router(router, msg,
                                        !from_cache && !from_fetch)) {
+      tor_assert(*msg);
       routerinfo_free(router);
       return -2;
     }
     authdir_verified = router->is_verified;
-  } else if (!from_cache) {
+  } else if (from_fetch) {
     /* Only check the descriptor digest against the network statuses when
-     * we are receiving from somewhere other than the cache. */
+     * we are receiving in response to a fetch. */
     if (!signed_desc_digest_is_recognized(&router->cache_info)) {
       warn(LD_DIR, "Dropping unrecognized descriptor for router '%s'",
            router->nickname);
+      *msg = "Router descriptor is not referenced by any network-status.";
       routerinfo_free(router);
       return -1;
     }
   }
 
   /* If we have a router with this name, and the identity key is the same,
-   * choose the newer one. If the identity key has changed, drop the router.
+   * choose the newer one. If the identity key has changed, and one of the
+   * routers is named, drop the unnamed ones. (If more than one are named,
+   * drop the old ones.)
    */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     routerinfo_t *old_router = smartlist_get(routerlist->routers, i);
