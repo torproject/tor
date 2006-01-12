@@ -1,0 +1,58 @@
+Source: tor
+Section: comm
+Priority: optional
+Maintainer: Peter Palfrader <weasel@debian.org>
+Build-Depends: debhelper (>= 4.1.65), libssl-dev, dpatch, zlib1g-dev, libevent-dev (>= 1.1), tetex-bin, tetex-extra, transfig, gs, binutils (>= 2.14.90.0.7)
+Standards-Version: 3.6.2
+
+Package: tor
+Architecture: any
+Depends: ${shlibs:Depends}, adduser, tsocks
+Recommends: privoxy, socat
+Suggests: mixmaster, mixminion, anon-proxy
+Description: anonymizing overlay network for TCP
+ Tor is a connection-based low-latency anonymous communication system which
+ addresses many flaws in the original onion routing design.
+ .
+ In brief, Onion Routing is a connection-oriented anonymizing communication
+ service. Users choose a source-routed path through a set of nodes, and
+ negotiate a "virtual circuit" through the network, in which each node
+ knows its predecessor and successor, but no others. Traffic flowing down
+ the circuit is unwrapped by a symmetric key at each node, which reveals
+ the downstream node.
+ .
+ Basically Tor provides a distributed network of servers ("onion
+ routers"). Users bounce their tcp streams (web traffic, ftp, ssh, etc)
+ around the routers, and recipients, observers, and even the routers
+ themselves have difficulty tracking the source of the stream.
+ .
+ Note that Tor does no protocol cleaning.  That means there is a danger that
+ application protocols and associated programs can be induced to reveal
+ information about the initiator.  Tor depends on Privoxy and similar protocol
+ cleaners to solve this problem.
+ .
+ Client applications can use the Tor network by connecting to the local
+ onion proxy.  If the application itself does not come with socks support
+ you can use a socks client such as tsocks.  Some web browsers like mozilla
+ and web proxies like privoxy come with socks support, so you don't need an
+ extra socks client if you want to use Tor with them.
+ .
+ This package enables only the onion proxy by default, but it can be configured
+ as a relay (server) node.
+ .
+ Remember that this is development code -- don't rely on the current Tor
+ network if you really need strong anonymity.
+ .
+ The latest information can be found at http://tor.eff.org/, or on the
+ mailing lists, archived at http://archives.seul.org/or/talk/ or
+ http://archives.seul.org/or/announce/.
+
+Package: tor-dbg
+Architecture: any
+Depends: tor (= ${Source-Version})
+Suggests: gdb
+Priority: extra
+Description: debugging symbols for Tor
+ This package provides the debugging symbols for Tor, The Onion Router.
+ Those symbols allow your debugger to assign names to your backtraces, which
+ makes it somewhat easier to interpret core dumps.
