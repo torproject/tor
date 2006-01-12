@@ -707,7 +707,10 @@ This file lists nickname to identity bindings for
 NamingAuthoritativeDirectory. Each line lists a nickname
 and a fingerprint seperated by whitespace.  See your
 \fBfingerprint\fP file in the \fIDataDirectory\fP for an
-example line.
+example line.  If the nickname is \fB!invalid\fP or
+\fB!reject\fP then descriptors from the given identity
+(fingerprint) are rejected by the authoritative
+directory server.
 .SH SEE ALSO
 .BR privoxy (1),
 .BR tsocks (1),
