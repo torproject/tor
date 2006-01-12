@@ -1,3 +1,11 @@
+tor (0.1.1.12-alpha-2XXXXXX) unreleased; urgency=low
+
+  * CVS SNAPSHOT
+  * Forward port patches/02_add_debian_files_in_manpage.
+  * Forward port patches/03_tor_manpage_in_section_8.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 12 Jan 2006 03:18:59 +0100
+
 tor (0.1.1.12-alpha-1) experimental; urgency=low
 
   * New upstream version, that was a quick one. :)
@@ -8,7 +16,7 @@ tor (0.1.1.12-alpha-1) experimental; urgency=low
 tor (0.1.1.11-alpha-1) experimental; urgency=low
 
   * New upstream version.
-  * forward port patches/07_log_to_file_by_default.
+  * Forward port patches/07_log_to_file_by_default.
   * Forward port 0.1.0.16 changelog and change to copyright file.
 
  -- Peter Palfrader <weasel@debian.org>  Wed, 11 Jan 2006 12:08:25 +0100

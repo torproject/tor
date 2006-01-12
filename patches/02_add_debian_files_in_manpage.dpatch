@@ -26,16 +26,20 @@ exit 0
 diff -urNad tor-0.1.1.5/doc/tor.1.in /tmp/dpep.E9VjWB/tor-0.1.1.5/doc/tor.1.in
 --- tor-0.1.1.12/doc/tor.1.in
 +++ /tmp/dpep.E9VjWB/tor-0.1.1.12/doc/tor.1.in
-@@ -710,6 +710,12 @@
- (fingerprint) are rejected by the authoritative directory server. If
- it is \fB!invalid\fP then descriptors are accepted but marked in the
- directory as not valid (not recommended).
+@@ -700,9 +700,15 @@
+ .TP
+ .B @LOCALSTATEDIR@/lib/tor/
+ The tor process stores keys and other data here.
 +.TP
 +.B /var/log/tor/
 +The tor server logs to this directory.
 +.TP
 +.B /var/run/tor/tor.pid
 +The PID of the tor (master) process is stored in this file.
- .SH SEE ALSO
- .BR privoxy (1),
- .BR tsocks (1),
+ .LP
+ .TP
+-.B \fIDataDirectory\fP/approved-routers
++.B /var/lib/tor/approved-routers
+ Only for naming authoritative directory servers
+ (see \fBNamingAuthoritativeDirectory\fP).
+ This file lists nickname to identity bindings.  Each line lists a
