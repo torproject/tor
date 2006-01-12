@@ -24,18 +24,18 @@ exit 0
 
 @DPATCH@
 diff -urNad tor-0.1.1.5/doc/tor.1.in /tmp/dpep.E9VjWB/tor-0.1.1.5/doc/tor.1.in
---- tor-0.1.1.5/doc/tor.1.in
-+++ /tmp/dpep.E9VjWB/tor-0.1.1.5/doc/tor.1.in
-@@ -627,6 +627,12 @@
- .TP
- .I @LOCALSTATEDIR@/lib/tor/
- The tor process stores keys and other data here.
+--- tor-0.1.1.12/doc/tor.1.in
++++ /tmp/dpep.E9VjWB/tor-0.1.1.12/doc/tor.1.in
+@@ -710,6 +710,12 @@
+ (fingerprint) are rejected by the authoritative directory server. If
+ it is \fB!invalid\fP then descriptors are accepted but marked in the
+ directory as not valid (not recommended).
 +.TP
-+.I /var/log/tor/
++.B /var/log/tor/
 +The tor server logs to this directory.
 +.TP
-+.I /var/run/tor/tor.pid
++.B /var/run/tor/tor.pid
 +The PID of the tor (master) process is stored in this file.
- 
  .SH SEE ALSO
  .BR privoxy (1),
+ .BR tsocks (1),

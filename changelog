@@ -1,8 +1,9 @@
 tor (0.1.1.12-alpha-1) experimental; urgency=low
 
   * New upstream version, that was a quick one. :)
+  * Forward port patches/02_add_debian_files_in_manpage.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 11 Jan 2006 23:40:13 +0100
+ -- Peter Palfrader <weasel@debian.org>  Thu, 12 Jan 2006 02:53:27 +0100
 
 tor (0.1.1.11-alpha-1) experimental; urgency=low
 
