@@ -1,4 +1,4 @@
-.TH TOR 1 "September 2005" "TOR"
+.TH TOR 1 "January 2006" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -694,22 +694,24 @@ If this signal exists on your platform, Tor catches and ignores it.
 .SH FILES
 .LP
 .TP
-.I @CONFDIR@/\fBtorrc\fP
+.B @CONFDIR@/torrc
 The configuration file, which contains "option value" pairs.
 .LP
 .TP
-.I @LOCALSTATEDIR@/\fBlib/tor/\fP
+.B @LOCALSTATEDIR@/lib/tor/
 The tor process stores keys and other data here.
 .LP
 .TP
-\fIDataDirectory\fP/\fBapproved-routers\fP This file lists nickname
-to identity bindings for NamingAuthoritativeDirectory. Each line
-lists a nickname and a fingerprint seperated by whitespace.  See your
+.B \fIDataDirectory\fP/approved-routers
+Only for naming authoritative directory servers
+(see \fBNamingAuthoritativeDirectory\fP).
+This file lists nickname to identity bindings.  Each line lists a
+nickname and a fingerprint seperated by whitespace.  See your
 \fBfingerprint\fP file in the \fIDataDirectory\fP for an example line.
-If the nickname is \fB!reject\fP then descriptors from the given identity
-(fingerprint) are rejected by the authoritative directory server. If
-it is \fB!invalid\fP then descriptors are accepted but marked in the
-directory as not valid (not recommended).
+If the nickname is \fB!reject\fP then descriptors from the given
+identity (fingerprint) are rejected by the authoritative directory
+server. If it is \fB!invalid\fP then descriptors are accepted but marked
+in the directory as not valid, that is not recommended.
 .SH SEE ALSO
 .BR privoxy (1),
 .BR tsocks (1),
