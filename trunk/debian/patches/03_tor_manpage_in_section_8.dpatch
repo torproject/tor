@@ -38,8 +38,8 @@ diff -urNad tor-0.1.1.5/doc/tor.1.in /tmp/dpep.fOA3Mm/tor-0.1.1.5/doc/tor.1.in
 --- tor-0.1.1.5/doc/tor.1.in
 +++ /tmp/dpep.fOA3Mm/tor-0.1.1.5/doc/tor.1.in
 @@ -1,4 +1,4 @@
--.TH TOR 1 "September 2005" "TOR"
-+.TH TOR 8 "September 2005" "TOR"
+-.TH TOR 1 "January 2006" "TOR"
++.TH TOR 8 "January 2006" "TOR"
  .SH NAME
  tor \- The second-generation onion router
  .SH SYNOPSIS
