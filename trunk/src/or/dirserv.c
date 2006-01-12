@@ -871,9 +871,11 @@ dirserv_dump_directory_to_string(char **dir_out,
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
     {
       size_t len = ri->cache_info.signed_descriptor_len;
+      const char *body;
       if (cp+len+1 >= buf+buf_len)
         goto truncated;
-      memcpy(cp, ri->cache_info.signed_descriptor, len);
+      body = signed_descriptor_get_body(&ri->cache_info);
+      memcpy(cp, body, len);
       cp += len;
       *cp++ = '\n'; /* add an extra newline in case somebody was depending on
                      * it. */

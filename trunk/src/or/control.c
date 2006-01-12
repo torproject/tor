@@ -1279,20 +1279,27 @@ handle_getinfo_helper(const char *question, char **answer)
     *answer = list_getinfo_options();
   } else if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
-    if (ri && ri->cache_info.signed_descriptor)
-      *answer = tor_strdup(ri->cache_info.signed_descriptor);
+    if (ri) {
+      const char *body = signed_descriptor_get_body(&ri->cache_info);
+      if (body)
+        *answer = tor_strdup(body);
+    }
   } else if (!strcmpstart(question, "desc/name/")) {
     routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"),1);
-    if (ri && ri->cache_info.signed_descriptor)
-      *answer = tor_strdup(ri->cache_info.signed_descriptor);
+    if (ri) {
+      const char *body = signed_descriptor_get_body(&ri->cache_info);
+      if (body)
+        *answer = tor_strdup(body);
+    }
   } else if (!strcmp(question, "desc/all-recent")) {
     routerlist_t *routerlist = router_get_routerlist();
     smartlist_t *sl = smartlist_create();
     if (routerlist && routerlist->routers) {
       SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
       {
-      if (ri && ri->cache_info.signed_descriptor)
-        smartlist_add(sl, tor_strdup(ri->cache_info.signed_descriptor));
+        const char *body = signed_descriptor_get_body(&ri->cache_info);
+        if (body)
+          smartlist_add(sl, tor_strdup(body));
       });
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
