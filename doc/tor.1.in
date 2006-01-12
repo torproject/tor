@@ -529,6 +529,34 @@ probably do not want to set this option.  Please coordinate with the other
 admins at tor-ops@freehaven.net if you think you should be a directory.
 .LP
 .TP
+\fBV1AuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor also
+generates a version 1 directory (for Tor clients up to 0.1.0.x).
+(As of Tor 0.1.1.12 every (v2) authoritative directory still provides most of
+the v1 directory functionality, even without this option set to 1.
+This however is expected to change in the future.)
+.LP
+.TP
+\fBVersioningAuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set to 1, Tor adds information on
+which versions of Tor are still believed safe for use to
+the published directory.  Each version 1 authority is
+automatically a versioning authority; version 2 authorities
+provide this service optionally.  See \fBRecommendedVersions\fP,
+\fBRecommendedClientVersions\fP, and \fBRecommendedServerVersions\fP.
+.LP
+.TP
+\fBNamingAuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set to 1, then the server advertises that it has
+opinions about nickname-to-fingerprint bindings.  It will include these
+opinions in its published network-status pages, by listing servers with
+the flag "Named" if a correct binding between that nickname and
+fingerprint has been registered with the dirserver.  Naming dirservers
+will refuse to accept or publish descriptors that contradict a
+registered binding.  See \fBapproved-routers\fP in the \fBFILES\fP
+section below.
+.LP
+.TP
 \fBDirPort \fR\fIPORT\fP
 Advertise the directory service on this port.
 .LP
@@ -549,6 +577,8 @@ to be safe. The list is included in each directory, and nodes which
 pull down the directory learn whether they need to upgrade.  This
 option can appear multiple times: the values from multiple lines are
 spliced together.
+When this is set then
+\fBVersioningAuthoritativeDirectory\fP should be set too.
 .LP
 .TP
 \fBRecommendedClientVersions \fR\fISTRING\fP
@@ -556,6 +586,8 @@ STRING is a comma-separated list of Tor versions currently believed
 to be safe for clients to use.  This information is included in version 2
 directories.  If this is not set then the value of \fBRecommendedVersions\fR
 is used.
+When this is set then
+\fBVersioningAuthoritativeDirectory\fP should be set too.
 .LP
 .TP
 \fBRecommendedServerVersions \fR\fISTRING\fP
@@ -563,6 +595,8 @@ STRING is a comma-separated list of Tor versions currently believed
 to be safe for servers to use.  This information is included in version 2
 directories.  If this is not set then the value of \fBRecommendedVersions\fR
 is used.
+When this is set then
+\fBVersioningAuthoritativeDirectory\fP should be set too.
 .LP
 .TP
 \fBDirAllowPrivateAddresses \fR\fB0\fR|\fB1\fR\fP
@@ -660,13 +694,20 @@ If this signal exists on your platform, Tor catches and ignores it.
 .SH FILES
 .LP
 .TP
-.I @CONFDIR@/torrc
+.I @CONFDIR@/\fBtorrc\fP
 The configuration file, which contains "option value" pairs.
 .LP
 .TP
-.I @LOCALSTATEDIR@/lib/tor/
+.I @LOCALSTATEDIR@/\fBlib/tor/\fP
 The tor process stores keys and other data here.
-
+.LP
+.TP
+\fIDataDirectory\fP/\fBapproved-routers\fP
+This file lists nickname to identity bindings for
+NamingAuthoritativeDirectory. Each line lists a nickname
+and a fingerprint seperated by whitespace.  See your
+\fBfingerprint\fP file in the \fIDataDirectory\fP for an
+example line.
 .SH SEE ALSO
 .BR privoxy (1),
 .BR tsocks (1),
