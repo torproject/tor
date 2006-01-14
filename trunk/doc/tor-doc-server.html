@@ -128,11 +128,15 @@ while to make sure it's actually working.</p>
 
 <p>
 1. Verify that your clock is set correctly. If possible, synchronize
-your clock with public time servers. Make sure name resolution works
-(that is, your computer can resolve addresses correctly).
+your clock with public time servers. 
 </p>
 
-<p>2. Edit the bottom part of your torrc. (See <a
+<p>
+2. Make sure name resolution works (that is, your computer can resolve addresses correctly).
+</p>
+
+<p>
+3. Edit the bottom part of your torrc. (See <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#torrc">this
 FAQ entry</a> for help.)
 Make sure to define at least Nickname and ORPort. Create the DataDirectory
@@ -143,14 +147,14 @@ MyFamily option</a> in all your servers' configuration files.</em>
 </p>
 
 <p>
-3. If you are using a firewall, open a hole in your firewall so
+4. If you are using a firewall, open a hole in your firewall so
 incoming connections can reach the ports you configured (ORPort, plus
 DirPort if you enabled it). Make sure you allow all outgoing connections,
 so your server can reach the other Tor servers.
 </p>
 
 <p>
-4. Start your server: if you installed from source you can just
+5. Start your server: if you installed from source you can just
 run <tt>tor</tt>, whereas packages typically launch Tor from their
 initscripts or startup scripts. If it logs any warnings, address them. (By
 default Tor logs to stdout, but some packages log to <tt>/var/log/tor/</tt>
@@ -158,7 +162,7 @@ instead. You can edit your torrc to configure log locations.)
 </p>
 
 <p>
-5. Subscribe to the <a
+6. Subscribe to the <a
 href="http://archives.seul.org/or/announce/">or-announce</a>
 mailing list. It is very low volume, and it will keep you informed
 of new stable releases. You might also consider subscribing to <a
@@ -166,6 +170,19 @@ href="http://archives.seul.org/or/talk/">or-talk</a> (higher volume),
 where new development releases are announced.
 </p>
 
+<p>
+7. Have a look at the manual. 
+The <a href="http://tor.eff.org/tor-manual.html.en">manual</a> for the
+latest stable version provides detailed instructions for how to install
+and use Tor, including configuration of client and server options.
+If you are running the CVS version the manual is available 
+<a href="http://tor.eff.org/tor-manual-cvs.html.en">here</a>.
+</p>
+
+<p>
+8. Read 
+<a href="http://wiki.noreply.org/noreply/TheOnionRouter/OperationalSecurity">this document</a>
+to get ideas how you can increase the security of your server.
 <hr />
 <a id="two"></a>
 <h2><a class="anchor" href="#two">Step Two: Make sure it's working</a></h2>
