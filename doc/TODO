@@ -42,18 +42,10 @@ R - We should do address rewriting after the controller sends us an
     "attachstream 0": Bug 225.
 
 N - if they're trying to be a tor server and they're running
-     win 98 or win me, give them a message talking about The Bug.
+     win 98 or win me, tell them that they'll likely crash.
 
 N - Display the reasons in 'destroy' and 'truncated' cells under some
     circumstances?
-
-N . Directory changes
-    . Client side:
-      - Do we want to rate-limit downloads of each identity, or do something
-        else to download even less?
-      - Do we want to refrain from downloading non-running or non-verified
-        descriptors? This is potentially dangerous.
-    - Non-directories don't need to keep descriptors in memory.
 
 R - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
@@ -135,6 +127,11 @@ R   - kill dns workers more slowly
       ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
       - Parse this.
       - Relay this in networkstatus.
+
+    - Non-directories don't need to keep descriptors in memory.
+      o Make descriptor-fetching happen via an indirection function.
+      - Remember file and offset.
+      - Keep a journal FD for appending router descriptors.
 
   - packaging and ui stuff:
     . multiple sample torrc files
