@@ -3252,7 +3252,7 @@ router_list_client_downloadable(void)
   time_t now = time(NULL);
   /* these are just used for logging */
   int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0,
-    n_obsolete = 0, n_too_young = 0;
+    n_obsolete = 0, n_too_young = 0, n_wouldnt_use = 0;
 
   if (!routerstatus_list)
     return downloadable;
@@ -3270,6 +3270,9 @@ router_list_client_downloadable(void)
     } else if (digestmap_get(downloading, rs->status.descriptor_digest)) {
       /* We're downloading this one now. */
       ++n_in_progress;
+    } else if (!rs->status.is_running) {
+      /* If we had this router descriptor, we wouldn't even bother using it. */
+      ++n_wouldnt_use;
     } else if (router_get_by_descriptor_digest(rs->status.descriptor_digest)) {
       /* We have the 'best' descriptor for this router. */
       ++n_uptodate;
@@ -3293,11 +3296,11 @@ router_list_client_downloadable(void)
 
 #if 0
   info(LD_DIR,
-       "%d routers are downloadable. %d are too old to consider. "
+       "%d router descriptors are downloadable. %d are too old to consider. "
        "%d are in progress. %d are up-to-date. %d are too young to consider. "
-       "%d failed too recently to retry.",
+       "%d are non-useful. %d failed too recently to retry.",
        n_downloadable, n_obsolete, n_in_progress, n_uptodate, n_too_young,
-       n_not_ready);
+       n_wouldnt_use, n_not_ready);
 #endif
 
   digestmap_free(downloading, NULL);
