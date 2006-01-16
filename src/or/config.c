@@ -153,7 +153,7 @@ static config_var_t _option_vars[] = {
   VAR("FirewallPorts",       CSV,      FirewallPorts,        ""),
   VAR("FastFirstHopPK",      BOOL,     FastFirstHopPK,       "1"),
   VAR("Group",               STRING,   Group,                NULL),
-  VAR("HardwareAccel",       BOOL,     HardwareAccel,        "1"),
+  VAR("HardwareAccel",       BOOL,     HardwareAccel,        "0"),
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceExcludeNodes", LINELIST_S, RendConfigLines, NULL),
