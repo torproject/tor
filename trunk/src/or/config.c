@@ -729,6 +729,16 @@ options_act(or_options_t *old_options)
 
     if (options_transition_affects_workers(old_options, options)) {
       info(LD_GENERAL,"Worker-related options changed. Rotating workers.");
+      if (server_mode(options) && !server_mode(old_options)) {
+        extern int has_completed_circuit;
+        if (init_keys() < 0) {
+          err(LD_GENERAL,"Error initializing keys; exiting");
+          return -1;
+        }
+        server_has_changed_ip();
+        if (has_completed_circuit)
+          inform_testing_reachability();
+      }
       cpuworkers_rotate();
       dnsworkers_rotate();
     }
