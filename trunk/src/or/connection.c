@@ -337,6 +337,7 @@ connection_about_to_close_connection(connection_t *conn)
         /* It's a directory connection and connecting or fetching
          * failed: forget about this router, and maybe try again. */
         connection_dir_request_failed(conn);
+        // XXX if it's rend desc we may want to retry -RD
       }
       if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
         rend_client_desc_here(conn->rend_query); /* give it a try */

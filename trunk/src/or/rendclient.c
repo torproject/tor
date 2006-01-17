@@ -258,7 +258,7 @@ rend_client_refetch_renddesc(const char *query)
   }
 }
 
-/** remove failed_intro from ent. if ent now has no intro points, or
+/** Remove failed_intro from ent. If ent now has no intro points, or
  * service is unrecognized, then launch a new renddesc fetch.
  *
  * Return -1 if error, 0 if no intro points remain or service
@@ -423,9 +423,18 @@ rend_client_desc_here(const char *query)
   connection_t *conn;
   rend_cache_entry_t *entry;
   time_t now = time(NULL);
+  int i, n_conns;
+  connection_t **carray;
 
-  while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
-                                 AP_CONN_STATE_RENDDESC_WAIT, query))) {
+  get_connection_array(&carray, &n_conns);
+
+  for (i = 0; i < n_conns; ++i) {
+    conn = carray[i];
+    if (conn->type != CONN_TYPE_AP ||
+        conn->state != AP_CONN_STATE_RENDDESC_WAIT ||
+        conn->marked_for_close ||
+        rend_cmp_service_ids(query, conn->rend_query))
+      continue;
     assert_connection_ok(conn, now);
     if (rend_cache_lookup_entry(conn->rend_query, -1, &entry) == 1 &&
         entry->parsed->n_intro_points > 0) {
@@ -445,7 +454,6 @@ rend_client_desc_here(const char *query)
         warn(LD_REND,"Rendezvous attempt failed. Closing.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       }
-      tor_assert(conn->state != AP_CONN_STATE_RENDDESC_WAIT); /* avoid loop */
     } else { /* 404, or fetch didn't get that far */
       notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
              "unavailable (try again later).", safe_str(query));
