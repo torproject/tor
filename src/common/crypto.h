@@ -15,7 +15,9 @@
 
 #include <stdio.h>
 
-#undef ENABLE_0119_PARANOIA
+#undef ENABLE_0119_PARANOIA_A
+#undef ENABLE_0119_PARANOIA_B
+#undef ENABLE_0119_PARANOIA_C
 
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20

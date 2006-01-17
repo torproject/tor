@@ -228,7 +228,7 @@ crypto_global_init(int useAccel)
 void
 crypto_thread_cleanup(void)
 {
-#ifndef ENABLE_0119_PARANOIA
+#ifndef ENABLE_0119_PARANOIA_B
   ERR_remove_state(0);
 #endif
 }
@@ -239,13 +239,13 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
-#ifndef ENABLE_0119_PARANOIA
+#ifndef ENABLE_0119_PARANOIA_C
   ERR_remove_state(0);
 #endif
   ERR_free_strings();
 #ifndef NO_ENGINES
   ENGINE_cleanup();
-#ifndef ENABLE_0119_PARANOIA
+#ifndef ENABLE_0119_PARANOIA_C
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
 #endif
@@ -1381,7 +1381,7 @@ crypto_dh_new(void)
   if (!(res->dh->g = BN_dup(dh_param_g)))
     goto err;
 
-#ifndef ENABLE_0119_PARANOIA
+#ifndef ENABLE_0119_PARANOIA_A
   res->dh->length = DH_PRIVATE_KEY_BITS;
 #endif
 
@@ -1610,7 +1610,7 @@ crypto_dh_free(crypto_dh_env_t *dh)
 
 /* Use RAND_poll if openssl is 0.9.6 release or later.  (The "f" means
    "release".)  */
-#ifndef ENABLE_0119_PARANOIA
+#ifndef ENABLE_0119_PARANOIA_B
 #define USE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
 #else
 #define USE_RAND_POLL 0
