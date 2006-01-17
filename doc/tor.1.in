@@ -199,8 +199,9 @@ The following options are useful only for clients (that is, if \fBSOCKSPort\fP i
 .LP
 .TP
 \fBAllowUnverifiedNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
-Where on our circuits should we allow Tor servers that the directory
-servers haven't authenticated as "verified"?  (Default: middle,rendezvous)
+Allow no-name routers (ones that the dirserver operators don't
+know anything about) in only these positions in your circuits.
+The default is "middle,rendezvous", and other choices are not advised.
 .LP
 .TP
 \fBClientOnly \fR\fB0\fR|\fB1\fR\fP
