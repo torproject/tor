@@ -3568,6 +3568,7 @@ router_reset_descriptor_download_failures(void)
     rs->n_download_failures = 0;
     rs->next_attempt_at = 0;
   });
+  tor_assert(networkstatus_list);
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
      SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
        {
