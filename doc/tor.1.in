@@ -253,7 +253,7 @@ ReachableAddresses instead. (Default: 80, 443)
 .TP
 \fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
 A comma-separated list of IPs that your firewall allows you to connect
-to.  Only used when \fBFascistFirewall\fR is set.  The format is as
+to. The format is as
 for the addresses in ExitPolicy, except that "accept" is understood
 unless "reject" is explicitly provided.  For example, 'ReachableAddresses
 99.0.0.0/8, reject 18.0.0.0/8:80, accept *:80' means that your
