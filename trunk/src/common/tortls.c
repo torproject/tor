@@ -363,7 +363,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
       goto error;
     SSL_CTX_set_options(*ctx, SSL_OP_NO_SSLv2);
 #endif
-#ifndef ENABLE_0119_PARANOIA
+#ifndef ENABLE_0119_PARANOIA_A
     SSL_CTX_set_options(*ctx, SSL_OP_SINGLE_DH_USE);
 #endif
     if (!SSL_CTX_set_cipher_list(*ctx, CIPHER_LIST))
