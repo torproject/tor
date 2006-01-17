@@ -1133,7 +1133,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
     /* see if we already have it cached */
     r = rend_cache_lookup_entry(conn->rend_query, -1, &entry);
     if (r<0) {
-      warn(LD_REND,"Invalid service descriptor %s",
+      warn(LD_BUG,"Bug: Invalid service name '%s'",
            safe_str(conn->rend_query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
