@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 5 January 2006 for Tor 0.1.1.11-alpha.
+## Last updated 16 January 2006 for Tor 0.1.1.13-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -31,11 +31,6 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #SocksPolicy accept 192.168.0.1/16
 #SocksPolicy reject *
 
-## Allow no-name routers (ones that the dirserver operators don't
-## know anything about) in only these positions in your circuits.
-## Other choices (not advised) are entry,exit,introduction.
-AllowUnverifiedNodes middle,rendezvous
-
 ## Logs go to stdout at level "notice" unless redirected by something
 ## else, like one of the below lines. You can have as many Log lines as
 ## you want.
@@ -65,9 +60,8 @@ AllowUnverifiedNodes middle,rendezvous
 ## things in $HOME/.tor on Unix, and in Application Data\tor on Windows.
 #DataDirectory @LOCALSTATEDIR@/lib/tor
 
-## The port on which Tor will listen for local connections from Tor controller
-## applications, as documented in control-spec.txt.  NB: this feature is
-## currently experimental.
+## The port on which Tor will listen for local connections from Tor
+## controller applications, as documented in control-spec.txt.
 #ControlPort 9051
 
 ############### This section is just for location-hidden services ###
