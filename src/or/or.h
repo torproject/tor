@@ -1463,6 +1463,7 @@ circuit_t *circuit_establish_circuit(uint8_t purpose, extend_info_t *exit,
                                      int internal);
 int circuit_handle_first_hop(circuit_t *circ);
 void circuit_n_conn_done(connection_t *or_conn, int status);
+int inform_testing_reachability(void);
 int circuit_send_next_onion_skin(circuit_t *circ);
 void circuit_note_clock_jumped(int seconds_elapsed);
 int circuit_extend(cell_t *cell, circuit_t *circ);
