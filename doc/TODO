@@ -43,10 +43,19 @@ for 0.1.1.x:
   - Mysterious crash for fast servers: Bug 234.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
+  - Were we going to load unrecognized 'state' variables into some
+    list somewhere, and write them out whenever we update the state?
+    To be forwards and backwards compatible.
+R - our round-robin reading is not very fair when we have few tokens
+    left in our bucket. be more fair?
 R - streamline how we define a guard node as 'up'. document it
     somewhere.
+R - reduce log severity for guard nodes.
+R - make guard node timeout higher.
 R - We should do address rewriting after the controller sends us an
     "attachstream 0": Bug 225.
+N - In circuit_get_open_circ_or_launch(),
+    /* XXXX011 NM This should be a generic "retry all directory fetches". */
 
 N - if they're trying to be a tor server and they're running
      win 98 or win me, tell them that they'll likely crash.
