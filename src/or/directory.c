@@ -1231,7 +1231,8 @@ connection_dir_process_inbuf(connection_t *conn)
 
   /* XXX for READ states, might want to make sure inbuf isn't too big */
 
-  debug(LD_HTTP,"Got data, not eof. Leaving on inbuf.");
+  if (!conn->inbuf_reached_eof)
+    debug(LD_HTTP,"Got data, not eof. Leaving on inbuf.");
   return 0;
 }
 
