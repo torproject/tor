@@ -34,10 +34,17 @@ Website:
     stickers directly, etc.
 
 for 0.1.1.x:
+  - add TestSocks config option to man page
+  - when logging unknown http headers, this could include bad escape codes?
+    - more generally, attacker-controller log entries with newlines in them
+      are dangerous for our users.
+  - add os x uninstaller from or-talk.
+  - make log entries include function names in win32 again.
   - Mysterious crash for fast servers: Bug 234.
-R - hidden service accesses can crash sometimes: Bug 220.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
+R - streamline how we define a guard node as 'up'. document it
+    somewhere.
 R - We should do address rewriting after the controller sends us an
     "attachstream 0": Bug 225.
 
