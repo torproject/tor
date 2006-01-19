@@ -54,6 +54,11 @@ R - reduce log severity for guard nodes.
 R - make guard node timeout higher.
 R - We should do address rewriting after the controller sends us an
     "attachstream 0": Bug 225.
+R - failed rend desc fetches sometimes don't get retried.
+R - Add config options to not publish and not fetch rend descs.
+  - Add controller interfaces to hear rend desc events and learn
+    about rend descs. In base16 I guess for now.
+
 N - In circuit_get_open_circ_or_launch(),
     /* XXXX011 NM This should be a generic "retry all directory fetches". */
 
