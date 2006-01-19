@@ -1116,7 +1116,7 @@ handle_control_signal(connection_t *conn, uint32_t len,
       sig = SIGTERM;
     else {
       connection_printf_to_buf(conn, "552 Unrecognized signal code \"%s\"\r\n",
-                               body);
+                               s);
       sig = -1;
     }
     tor_free(s);
