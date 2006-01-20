@@ -524,22 +524,6 @@ router_reset_status_download_failures(void)
   mark_all_trusteddirservers_up();
 }
 
-#if 0
-/** Return 0 if \\exists an authoritative dirserver that's currently
- * thought to be running, else return 1.
- */
-/* XXXX Nobody calls this function. Should it go away? */
-int
-all_trusted_directory_servers_down(void)
-{
-  if (!trusted_dir_servers)
-    return 1;
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
-                    if (dir->is_running) return 0);
-  return 1;
-}
-#endif
-
 /** Add all the family of <b>router</b> to the smartlist <b>sl</b>.
  * This is used to make sure we don't pick siblings in a single path.
  */
