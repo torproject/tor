@@ -367,7 +367,7 @@ router_parse_directory(const char *str)
 
   /* XXXX This could be simplified a lot, but it will all go away
    * once pre-0.1.1.8 is obsolete, and for now it's better not to
-   * tuoch it. */
+   * touch it. */
 
   if (router_get_dir_hash(str, digest)) {
     warn(LD_DIR, "Unable to compute digest of directory");

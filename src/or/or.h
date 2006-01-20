@@ -2253,7 +2253,6 @@ routerstatus_t *router_pick_trusteddirserver(int need_v1_authority,
                                              int retry_if_no_servers);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(
      const char *digest);
-int all_trusted_directory_servers_down(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running,
