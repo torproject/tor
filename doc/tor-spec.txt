@@ -178,7 +178,7 @@ when do we rotate which keys (tls, link, etc)?
    bytes of the data are encrypted with Bob's PK; and the rest of the
    data is encrypted with the symmetric key.
 
-   So in this case, the onion skin on the wire looks like:
+   So in this case, the onion skin can be thought of as:
        RSA-encrypted:
          OAEP padding                  [42 bytes]
          Symmetric key                 [16 bytes]
