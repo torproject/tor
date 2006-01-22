@@ -16,7 +16,8 @@
 #include <stdio.h>
 
 #undef ENABLE_0119_PARANOIA_A
-#undef ENABLE_0119_PARANOIA_B
+#undef ENABLE_0119_PARANOIA_B1
+#undef ENABLE_0119_PARANOIA_B2
 #undef ENABLE_0119_PARANOIA_C
 
 /** Length of the output of our message digest. */

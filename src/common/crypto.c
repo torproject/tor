@@ -228,7 +228,7 @@ crypto_global_init(int useAccel)
 void
 crypto_thread_cleanup(void)
 {
-#ifndef ENABLE_0119_PARANOIA_B
+#ifndef ENABLE_0119_PARANOIA_B1
   ERR_remove_state(0);
 #endif
 }
@@ -1610,7 +1610,7 @@ crypto_dh_free(crypto_dh_env_t *dh)
 
 /* Use RAND_poll if openssl is 0.9.6 release or later.  (The "f" means
    "release".)  */
-#ifndef ENABLE_0119_PARANOIA_B
+#ifndef ENABLE_0119_PARANOIA_B2
 #define USE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
 #else
 #define USE_RAND_POLL 0
