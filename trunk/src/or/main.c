@@ -482,6 +482,7 @@ conn_close_if_marked(int i)
     if (connection_wants_to_flush(conn)) {
       int severity;
       if (conn->type == CONN_TYPE_EXIT ||
+          (conn->type == CONN_TYPE_OR && server_mode(get_options())) ||
           (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER))
         severity = LOG_INFO;
       else
@@ -786,6 +787,8 @@ run_scheduled_events(time_t now)
 
     /* Only caches actually need to fetch directories now. */
     if (options->DirPort && !options->V1AuthoritativeDir) {
+      /* XXX actually, we should only do this if we want to advertise
+       * our dirport. not simply if we configured one. -RD */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
 
