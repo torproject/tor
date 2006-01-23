@@ -367,8 +367,8 @@ int
 set_max_file_descriptors(unsigned long limit, unsigned long cap) {
 #ifndef HAVE_GETRLIMIT
   log_fn(LOG_INFO,"This platform is missing getrlimit(). Proceeding.");
-  if (limit > cap) {
-    log(LOG_INFO, "ConnLimit must be at most %d. Capping it.", cap);
+  if (limit < cap) {
+    log(LOG_INFO, "ConnLimit must be at most %d. Using that.", cap);
     limit = cap;
   }
 #else
