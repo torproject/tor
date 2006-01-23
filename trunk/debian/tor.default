@@ -12,7 +12,7 @@ RUN_DAEMON="yes"
 # if they are very busy and have many clients connected to them.
 #  (ulimit -n)
 #
-MAX_FILEDESCRIPTORS=4096
+MAX_FILEDESCRIPTORS=8192
 
 #
 # If tor is seriously hogging your CPU, taking away too much cycles from
