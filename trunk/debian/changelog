@@ -6,8 +6,9 @@ tor (0.1.1.12-alpha-cvs-0) unreleased; urgency=low
   * Create /var/run/tor on init script start if it does
     not exist already.
   * Set default ulimit -n to 8k instead of 4k in /etc/default/tor.
+  * Print that we're raising the ulimit to stdout in the init script.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 23 Jan 2006 15:00:53 +0100
+ -- Peter Palfrader <weasel@debian.org>  Mon, 23 Jan 2006 15:57:59 +0100
 
 tor (0.1.1.12-alpha-1) experimental; urgency=low
 
