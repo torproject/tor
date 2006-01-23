@@ -1,10 +1,13 @@
-tor (0.1.1.12-alpha-2XXXXXX) unreleased; urgency=low
+tor (0.1.1.12-alpha-cvs-0) unreleased; urgency=low
 
   * CVS SNAPSHOT
   * Forward port patches/02_add_debian_files_in_manpage.
   * Forward port patches/03_tor_manpage_in_section_8.
+  * Create /var/run/tor on init script start if it does
+    not exist already.
+  * Set default ulimit -n to 8k instead of 4k in /etc/default/tor.
 
- -- Peter Palfrader <weasel@debian.org>  Thu, 12 Jan 2006 03:18:59 +0100
+ -- Peter Palfrader <weasel@debian.org>  Mon, 23 Jan 2006 15:00:53 +0100
 
 tor (0.1.1.12-alpha-1) experimental; urgency=low
 

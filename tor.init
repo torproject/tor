@@ -65,8 +65,12 @@ case "$1" in
 	if [ "$RUN_DAEMON" != "yes" ]; then
 		echo "Not starting $DESC (Disabled in $DEFAULTSFILE)."
 	else
-		if   test ! -d $TORPIDDIR; then echo "There is no $TORPIDDIR directory." >&2; exit 1
-		elif test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
+		if test ! -d $TORPIDDIR; then
+			echo "There is no $TORPIDDIR directory.  Creating one for you."
+			mkdir -m 02700 "$TORPIDDIR"
+			chown debian-tor:debian-tor "$TORPIDDIR"
+		fi
+		if test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
 		else
 			echo "Starting $DESC: $NAME..."
 			ulimit -n $MAX_FILEDESCRIPTORS || echo "Warn: Could not set ulimit for number of file descriptors." >&2
