@@ -31,7 +31,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
        "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    warn(LD_PROTOCOL,
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
     reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
@@ -266,7 +266,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
   }
 
   if (request_len != REND_COOKIE_LEN+DH_KEY_LEN+DIGEST_LEN) {
-    warn(LD_PROTOCOL,
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with bad length (%d) on circuit %d.",
          (int)request_len, circ->p_circ_id);
     reason = END_CIRC_REASON_TORPROTOCOL;
@@ -275,7 +275,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
 
   rend_circ = circuit_get_rendezvous(request);
   if (!rend_circ) {
-    warn(LD_PROTOCOL,
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
          hexid);
     reason = END_CIRC_REASON_TORPROTOCOL;
