@@ -2750,10 +2750,12 @@ routers_update_all_from_networkstatus(void)
           have_warned_about_new_version = 1;
         }
       } else {
-        notice(LD_GENERAL, "This version of Tor (%s) is %s, according to "
-               "%d/%d recent network statuses.",
-               VERSION, consensus == VS_OLD ? "obsolete" : "not recommended",
-               n_recent-n_recommended, n_recent);
+        warn(LD_GENERAL, "Please upgrade! "
+             "This version of Tor (%s) is %s, according to "
+             "%d/%d recent network statuses.",
+             VERSION, consensus == VS_OLD ? "obsolete" : "not recommended",
+             n_recent-n_recommended, n_recent);
+        /* XXX011 we need to tell them what versions *are* recommended! */
         have_warned_about_old_version = 1;
       }
     } else {
