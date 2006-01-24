@@ -34,7 +34,14 @@ Website:
     stickers directly, etc.
 
 for 0.1.1.x:
+N - use only the three dirservers for hidden service descriptors
+  - and publish hidden service descriptors less frequently
+N - when we're running an unrecommended version, we should be told
+    what versions *are* recommended. whose list do we use?
+N o add a GUARD flag to the network-status entries.
+R   - Clients use it.
   - add TestSocks config option to man page
+R - MaxConn is still in man page. needs to be ConnLimit and needs change.
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
@@ -93,6 +100,8 @@ R - When we connect to a Tor server, it sends back a signed cell listing
 
 
 Deferred from 0.1.1.x:
+
+  - <weasel> it would be nice to support a unix socket for the control thing.
 
   - the tor client can do the "automatic proxy config url" thing?
 
@@ -200,14 +209,33 @@ N   - Vet all pending installer patches
 
   - Make router_is_general_exit() a bit smarter once we're sure what it's for.
 
-  - Directory "helper".
-
   - rewrite how libevent does select() on win32 so it's not so very slow.
   - Write limiting; separate token bucket for write
   - Audit everything to make sure rend and intro points are just as likely to
     be us as not.
   - Do something to prevent spurious EXTEND cells from making middleman
     nodes connect all over.  Rate-limit failed connections, perhaps?
+
+
+Major items for 0.1.2.x:
+
+  - Directory guards
+R - Server usability
+N - Better hidden service performance
+  - Improve controller
+  - Asynchronous DNS
+  - Better estimates in the directory of whether servers have good uptime
+    (high expected time to failure) or good guard qualities (high
+    fractional uptime).
+  - memory usage on dir servers.
+    copy less!
+N - oprofile including kernel time.
+
+Topics to think about during 0.1.2.x development:
+  - Figure out non-clique.
+  - Figure out partial network knowledge.
+  - Figure out incentives.
+
 
 Future version:
   - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
