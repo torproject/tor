@@ -168,10 +168,12 @@ $Id$
           "Authority" if the router is a directory authority.
           "Exit" if the router is useful for building general-purpose exit
              circuits.
-          "Fast" if the router has high bandwidth.
+          "Fast" if the router is suitable for high-bandwidth circuits.
+          "Gurad" if the router is suitable for use as an entry guard.
+             (Currently, this means 'fast' and 'stable'.)
           "Named" if the router's identity-nickname mapping is canonical,
              and this authority binds names.
-          "Stable" if the router tends to stay up for a long time.
+          "Stable" if the router is suitable for long-lived circuits.
           "Running" if the router is currently usable.
           "Valid" if the router has been 'validated'.
           "V2Dir" if the router implements this protocol.
