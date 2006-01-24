@@ -34,6 +34,17 @@ Website:
     stickers directly, etc.
 
 for 0.1.1.x:
+N - look at the proposed os x uninstaller:
+    http://archives.seul.org/or/talk/Jan-2006/msg00038.html
+  - support dir 503s better
+    - clients don't log as loudly when they receive them
+    - they don't count toward the 3-strikes rule
+      - should there be some threshold of 503's after which we give up?
+    - think about how to split "router is down" from "dirport shouldn't
+      be tried for a while"?
+    - authorities should *never* 503 a cache, but *should* 503 clients
+      when they feel like it.
+    - update dir-spec with what we decided for each of these
 N - use only the three dirservers for hidden service descriptors
   - and publish hidden service descriptors less frequently
 N - when we're running an unrecommended version, we should be told
