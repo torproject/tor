@@ -1440,7 +1440,7 @@ generate_v2_networkstatus(void)
 
       if (tor_snprintf(outp, endp-outp,
                        "r %s %s %s %s %s %d %d\n"
-                       "s%s%s%s%s%s%s%s%s\n",
+                       "s%s%s%s%s%s%s%s%s%s\n",
                        ri->nickname,
                        identity64,
                        digest64,
