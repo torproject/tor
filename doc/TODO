@@ -45,6 +45,7 @@ N - look at the proposed os x uninstaller:
     - authorities should *never* 503 a cache, but *should* 503 clients
       when they feel like it.
     - update dir-spec with what we decided for each of these
+N - commit edmanm's win32 makefile to tor cvs contrib
 N - use only the three dirservers for hidden service descriptors
   - and publish hidden service descriptors less frequently
 N - when we're running an unrecommended version, we should be told
