@@ -169,7 +169,7 @@ $Id$
           "Exit" if the router is useful for building general-purpose exit
              circuits.
           "Fast" if the router is suitable for high-bandwidth circuits.
-          "Gurad" if the router is suitable for use as an entry guard.
+          "Guard" if the router is suitable for use as an entry guard.
              (Currently, this means 'fast' and 'stable'.)
           "Named" if the router's identity-nickname mapping is canonical,
              and this authority binds names.
@@ -251,8 +251,8 @@ $Id$
 
    All directory servers (authorities and mirrors) try to keep a fresh set of
    network-status documents from every authority.  To do so, every 5 minutes,
-   an authority asks every other authority for its most recent network-status
-   document.  Every 15 minutes, a mirror picks a random authority and asks it
+   each authority asks every other authority for its most recent network-status
+   document.  Every 15 minutes, each mirror picks a random authority and asks it
    for the most recent network-status documents for all the authorities the
    authority knows about (including the chosen authority itself).
 
@@ -427,7 +427,7 @@ $Id$
    After choosing mirrors, the client divides the descriptors among them
    randomly.
 
-   After receiving any response client MUST reject any network-status
+   After receiving any response client MUST discard any network-status
    documents and descriptors that it did not request.
 
 6. Using directory information
@@ -495,7 +495,7 @@ $Id$
 
 6.2. Software versions
 
-   Implementations of Tor SHOULD warn when it has live network-statuses from
+   An implementation of Tor SHOULD warn when it has live network-statuses from
    more than half of the authorities, and it is running a software version
    not listed on more than half of the live "Versioning" network-status
    documents.
