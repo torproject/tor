@@ -2941,7 +2941,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
    */
   while (1) {
     int n_running=0, n_named=0, n_valid=0, n_listing=0;
-    int n_v2_dir=0, n_fast=0, n_stable=0, n_exit=0;
+    int n_v2_dir=0, n_fast=0, n_stable=0, n_exit=0, n_guard=0;
     int n_desc_digests=0, highest_count=0;
     const char *the_name = NULL;
     local_routerstatus_t *rs_out, *rs_old;
@@ -3020,6 +3020,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
         ++n_exit;
       if (rs->is_fast)
         ++n_fast;
+      if (rs->is_possible_guard)
+        ++n_guard;
       if (rs->is_stable)
         ++n_stable;
       if (rs->is_v2_dir)
@@ -3069,6 +3071,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     rs_out->status.is_running = n_running > n_recent/2;
     rs_out->status.is_exit = n_exit > n_statuses/2;
     rs_out->status.is_fast = n_fast > n_statuses/2;
+    rs_out->status.is_fast = n_guard > n_statuses/2;
     rs_out->status.is_stable = n_stable > n_statuses/2;
     rs_out->status.is_v2_dir = n_v2_dir > n_statuses/2;
   }

@@ -1422,6 +1422,7 @@ generate_v2_networkstatus(void)
                                       ri->cache_info.identity_digest);
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_verified;
+      int f_guard = f_fast && f_stable;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */
       int f_v2_dir = ri->dir_port &&
@@ -1450,6 +1451,7 @@ generate_v2_networkstatus(void)
                        f_authority?" Authority":"",
                        f_exit?" Exit":"",
                        f_fast?" Fast":"",
+                       f_guard?" Guard":"",
                        f_named?" Named":"",
                        f_stable?" Stable":"",
                        f_running?" Running":"",

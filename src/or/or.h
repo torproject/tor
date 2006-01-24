@@ -844,6 +844,8 @@ typedef struct routerstatus_t {
                              * information with v2 of the directory
                              * protocol. (All directory caches cache v1
                              * directories.)  */
+  unsigned int is_possible_guard:1; /**< True iff this router would be a good
+                                     * choice as an entry guard. */
 
   /** True if we, as a directory mirror, want to download the corresponding
    * routerinfo from the authority who gave us this routerstatus.  (That is,
