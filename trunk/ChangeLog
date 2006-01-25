@@ -35,6 +35,7 @@ Changes in version 0.1.1.11-alpha - 2006-01-10
       dramatically against certain end-point attacks. The EntryNodes
       config option now provides some hints about which entry guards you
       want to use most; and StrictEntryNodes means to only use those.
+      (CVE-2006-0414)
     - New directory logic: download by descriptor digest, not by
       fingerprint. Caches try to download all listed digests from
       authorities; clients try to download "best" digests from caches.
