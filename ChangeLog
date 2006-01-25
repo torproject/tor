@@ -741,6 +741,7 @@ Changes in version 0.1.0.15 - 2005-09-23
 Changes in version 0.1.0.14 - 2005-08-08
   o Bugfixes on 0.1.0.x:
       - Fix the other half of the bug with crypto handshakes.
+        (CVE-2005-2643)
       - Fix an assert trigger if you send a 'signal term' via the
         controller when it's listening for 'event info' messages.
 
