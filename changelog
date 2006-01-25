@@ -20,6 +20,10 @@ tor (0.1.1.12-alpha-1) experimental; urgency=low
 tor (0.1.1.11-alpha-1) experimental; urgency=low
 
   * New upstream version.
+    - Implement "entry guards": automatically choose a handful of entry
+      nodes and stick with them for all circuits.  This will increase
+      security dramatically against certain end-point attacks
+      (closes: #349283).
   * Forward port patches/07_log_to_file_by_default.
   * Forward port 0.1.0.16 changelog and change to copyright file.
 
