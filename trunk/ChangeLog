@@ -740,8 +740,8 @@ Changes in version 0.1.0.15 - 2005-09-23
 
 Changes in version 0.1.0.14 - 2005-08-08
   o Bugfixes on 0.1.0.x:
-      - Fix the other half of the bug with crypto handshakes.
-        (CVE-2005-2643)
+      - Fix the other half of the bug with crypto handshakes
+        (CVE-2005-2643).
       - Fix an assert trigger if you send a 'signal term' via the
         controller when it's listening for 'event info' messages.
 
@@ -802,7 +802,8 @@ Changes in version 0.1.0.10 - 2005-06-14
   o Assert / crash bugs:
     - Refuse relay cells that claim to have a length larger than the
       maximum allowed. This prevents a potential attack that could read
-      arbitrary memory (e.g. keys) from an exit server's process.
+      arbitrary memory (e.g. keys) from an exit server's process
+      (CVE-2005-2050).
     - If unofficial Tor clients connect and send weird TLS certs, our
       Tor server triggers an assert. Stop asserting, and start handling
       TLS errors better in other situations too.
@@ -1128,7 +1129,8 @@ Changes in version 0.0.9.10 - 2005-06-16
   o Bugfixes on 0.0.9.x (backported from 0.1.0.10):
     - Refuse relay cells that claim to have a length larger than the
       maximum allowed. This prevents a potential attack that could read
-      arbitrary memory (e.g. keys) from an exit server's process.
+      arbitrary memory (e.g. keys) from an exit server's process
+      (CVE-2005-2050).
 
 
 Changes in version 0.0.9.9 - 2005-04-23

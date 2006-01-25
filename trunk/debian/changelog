@@ -202,7 +202,8 @@ tor (0.0.9.10-1) unstable; urgency=high
     upload of the 0.0.9.x tree:
     - Refuse relay cells that claim to have a length larger than the
       maximum allowed. This prevents a potential attack that could read
-      arbitrary memory (e.g. keys) from an exit server's process.
+      arbitrary memory (e.g. keys) from an exit server's process
+      (CVE-2005-2050).
 
  -- Peter Palfrader <weasel@debian.org>  Thu, 16 Jun 2005 22:56:11 +0200
 
