@@ -1014,7 +1014,7 @@ do_hup(void)
   char keydir[512];
   or_options_t *options = get_options();
 
-  notice(LD_GENERAL,"Received sighup. Reloading config.");
+  notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
   has_completed_circuit=0;
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
