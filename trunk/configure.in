@@ -56,6 +56,7 @@ AC_PROG_RANLIB
 
 # The big search for OpenSSL
 # copied from openssh's configure.ac
+tryssldir=""
 AC_ARG_WITH(ssl-dir,
         [  --with-ssl-dir=PATH     Specify path to OpenSSL installation ],
         [
@@ -63,6 +64,16 @@ AC_ARG_WITH(ssl-dir,
                         tryssldir=$withval
                 fi
         ]
+)
+
+trylibeventdir=""
+AC_ARG_WITH(libevent-dir,
+       [  --with-libevent-dir=PATH     Specify path to Libevent installation ],
+       [
+                if test "x$withval" != "xno" ; then
+                        trylibeventdir=$withval
+                fi
+       ]
 )
 
 TORUSER=_tor
@@ -95,115 +106,84 @@ fi
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
+saved_LIBS="$LIBS"
+saved_LDFLAGS="$LDFLAGS"
+if test "x$prefix" != "xNONE" ; then
+        trylibeventdir="$trylibeventdir $prefix"
+fi
 
-# Step 1. Try to link and run a program using libevent.  If it works,
-#         great!  Just add -levent.
-AC_CACHE_CHECK([for a normal libevent], ac_cv_libevent_normal, [
-   saved_LIBS="$LIBS"
-   LIBS="$LIBS -levent"
-   AC_TRY_RUN([
-void *event_init(void);
-int main(void)
-{
-	event_init();
-        return 0;
-}], ac_cv_libevent_normal=yes, ac_cv_libevent_normal=no)
-   LIBS="$saved_LIBS"
+AC_CACHE_CHECK([for libevent location], ac_cv_libevent_dir, [
+  for ledir in $trylibeventdir "" /usr/local ; do
+    LDFLAGS="$saved_LDFLAGS"
+    LIBS="$saved_LIBS -levent"
+    
+    # Skip the directory if it isn't there.
+    if test ! -z "$ledir" -a ! -d "$ledir" ; then
+       continue;  
+    fi
+    if test ! -z "$ledir" ; then
+      if test -d "$ledir/lib" ; then
+        LDFLAGS="-L$ledir/lib $LDFLAGS"
+      else
+        LDFLAGS="-L$ledir $LDFLAGS"
+      fi
+    fi
+    # Can I link it?
+    AC_TRY_LINK([], [ void *event_init(void); event_init(); ],
+       [ libevent_linked=yes ], [ libevent_linked=no ])
+    if test $libevent_linked = yes; then
+       if test ! -z "$ledir" ; then
+         ac_cv_libevent_dir=$ledir
+       else
+         ac_cv_libevent_dir="(system)"
+       fi
+       break
+    fi
+  done
+])
+LIBS="$LIBS -levent"
+if test $ac_cv_libevent_dir != "(system)"; then
+  if test -d "$ac_cv_libevent_dir/lib" ; then
+    LDFLAGS="-L$ac_cv_libevent_dir/lib $LDFLAGS"
+    le_libdir="$ac_cv_libevent_dir/lib"
+  else
+    LDFLAGS="-L$ac_cv_libevent_dir $LDFLAGS"
+    le_libdir="$ac_cv_libevent_dir"
+  fi
+  if test -d "$ac_cv_libevent_dir/include" ; then
+    CPPFLAGS="-I$ac_cv_libevent_dir/include $CPPFLAGS"
+  else
+    CPPFLAGS="-I$ac_cv_libevent_dir $CPPFLAGS"
+  fi
+fi
+
+AC_CACHE_CHECK([whether libevent is in LDPATH], ac_cv_libevent_in_ldpath, [
+    saved_LDFLAGS="$LDFLAGS"
+    AC_TRY_RUN([void *event_init(void);
+                int main(int c, char **v) {
+                   event_init(); return 0;
+                }], 
+                libevent_runs=yes, libevent_runs=no)
+    if test $libevent_runs = yes; then
+       ac_cv_libevent_in_ldpath=yes
+    else
+       LDFLAGS="$LDFLAGS -Wl,-R$le_libdir"
+       AC_TRY_RUN([void *event_init(void);
+                int main(int c, char **v) {
+                   event_init(); return 0;
+                }], 
+                libevent_runs_with_r=yes, libevent_runs_with_r=no)
+       if test $libevent_runs_with_r = yes; then
+         ac_cv_libevent_in_ldpath=no
+       else
+         AC_MSG_ERROR([Found linkable libevent in $ac_cv_libevent_dir, but it doesn't run, even with -R.  Maybe specify another using --with-libevent-dir?])
+       fi
+    fi
+    LDFLAGS="$saved_LDFLAGS"
 ])
 
-if test "$ac_cv_libevent_normal" = yes; then
-  LIBS="$LIBS -levent"
-else
-  AC_CACHE_CHECK([for libevent in /usr/local/lib], ac_cv_libevent_local, [
-     saved_LIBS="$LIBS"
-     saved_LDFLAGS="$LDFLAGS"
-     LIBS="$LIBS -levent"
-     LDFLAGS="$LDFLAGS -L/usr/local/lib"
-     # Step 2.  Otherwise, check whether adding -L/usr/local/lib allows
-     #          us to link.  If not, assume we have no libevent at all.
-     AC_TRY_LINK([], [ void *event_init(void); event_init(); ],
-        [ libevent_is_in_local=yes ], [ libevent_is_in_local=no ])
-     if test $libevent_is_in_local = no ; then
-       ac_cv_libevent_local=no   
-     else
-       # Step 3.  Does adding -L/usr/local/lib allow us to run, too?
-       #          If so, all we have to do as adjust LDFLAGS and CFLAGS.
-       AC_TRY_RUN([
-void *event_init(void);
-int main(void)
-{
-        event_init();
-        return 0;
-}], [ ac_cv_libevent_local=yes ], [ ac_cv_libevent_local=unlinked ])
-    fi
-    if test "$GCC" = yes -a $ac_cv_libevent_local = unlinked ; then
-       # Step 4.  Okay, so we can link but not run.  This probably means
-       #          that the dynamic linker doesn't have /usr/local/lib in
-       #          its search path.  If we're lucky enough to be running
-       #          GCC on an ELF system, we might have a workaround for that.
-       #          See whether -Wl,-R/usr/local/lib makes things better.
-       LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
-       AC_TRY_RUN([
-void *event_init(void);
-int main(void)
-{
-        event_init();
-        return 0;
-}], [ ac_cv_libevent_local=unlinked_gcc_elf ])
-    fi
-
-    LIBS="$saved_LIBS"
-    LDFLAGS="$saved_LDFLAGS" ])
-
-  # Now we're done.  ac_vc_libevent_local could be:
-  #    yes -- Add -L/usr/local/lib and we can link fine.
-  #    unlinked_gcc_elf -- We can link, but we need to use the GCC-ELF
-  #        workaround.  Complain a little.
-  #    unlinked -- We can link, but we can't run.  Complain a lot.
-  #    no -- we can't link at all.  Give an error and die.
-
-  if test $ac_cv_libevent_local != no; then
-      LIBS="$LIBS -levent"
-      LDFLAGS="$LDFLAGS -L/usr/local/lib"
-      CPPFLAGS="$CPPFLAGS -I/usr/local/include"
-  fi
-  if test $ac_cv_libevent_local = unlinked_gcc_elf; then
-      LDFLAGS="$LDFLAGS -Wl,-R/usr/local/lib"
-      if test -f /etc/ld.so.conf ; then
-        AC_MSG_NOTICE([
-Apparently, you don't have /usr/local/lib in your /etc/ld.so.conf.
-Tor is smart enought to deal this now, but other applications aren't.
-You might want to add it in.])
-      fi
-  fi
-
-  if test $ac_cv_libevent_local = unlinked ; then
-    if test -f /etc/ld.so.conf ; then
-      AC_MSG_NOTICE([
-=================================================
-Your libevent library is installed in /usr/local/lib,
-but your dynamic linker isn't configured to look for
-it there.
-
-Maybe you need to add /usr/local/lib to /etc/ld.so.conf,
-and then run ldconfig -v ?
-=================================================])
-    else
-      AC_MSG_NOTICE([
-=================================================
-Your libevent library is installed in /usr/local/lib,
-but your dynamic linker isn't configured to look for
-it there.
-=================================================])
-    fi 
-  fi
-
-  if test $ac_cv_libevent_local = no ; then
-      AC_MSG_ERROR([
-Tor requires libevent to build.  You can download the latest
-version of libevent from http://monkey.org/~provos/libevent/])
-  fi
-
+if test $ac_cv_libevent_in_ldpath = no ; then
+   LDFLAGS="$LDFLAGS -Wl,-R$le_libdir"
 fi
 
 dnl ------------------------------------------------------
