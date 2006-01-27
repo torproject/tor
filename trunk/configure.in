@@ -106,10 +106,10 @@ fi
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
-saved_LIBS="$LIBS"
-saved_LDFLAGS="$LDFLAGS"
-
 AC_CACHE_CHECK([for libevent location], ac_cv_libevent_dir, [
+  saved_LIBS="$LIBS"
+  saved_LDFLAGS="$LDFLAGS"
+  le_found=no
   for ledir in $trylibeventdir "" $prefix /usr/local ; do
     LDFLAGS="$saved_LDFLAGS"
     LIBS="$saved_LIBS -levent"
@@ -134,9 +134,15 @@ AC_CACHE_CHECK([for libevent location], ac_cv_libevent_dir, [
        else
          ac_cv_libevent_dir="(system)"
        fi
+       le_found=yes
        break
     fi
   done
+  LIBS="$saved_LIBS"
+  LDFLAGS="$saved_LIBS"
+  if test le_found = no ; then
+    AC_MSG_ERROR([Could not find a linkable libevent. You can specify an explicit path using --with-libevent-dir])
+  fi
 ])
 LIBS="$LIBS -levent"
 if test $ac_cv_libevent_dir != "(system)"; then
@@ -150,37 +156,40 @@ if test $ac_cv_libevent_dir != "(system)"; then
   if test -d "$ac_cv_libevent_dir/include" ; then
     CPPFLAGS="-I$ac_cv_libevent_dir/include $CPPFLAGS"
   else
+
     CPPFLAGS="-I$ac_cv_libevent_dir $CPPFLAGS"
   fi
 fi
 
-AC_CACHE_CHECK([whether libevent is in LDPATH], ac_cv_libevent_in_ldpath, [
+AC_CACHE_CHECK([whether we need extra options to link libevent],
+               ac_cv_libevent_linker_option, [
     saved_LDFLAGS="$LDFLAGS"
-    AC_TRY_RUN([void *event_init(void);
+    le_runs=no
+    for le_extra in "" "-Wl,-R$le_libdir" "-R$le_libdir" ; do
+      LDFLAGS="$saved_LDFLAGS $le_extra"
+      AC_TRY_RUN([void *event_init(void);
                 int main(int c, char **v) {
                    event_init(); return 0;
                 }], 
                 libevent_runs=yes, libevent_runs=no)
-    if test $libevent_runs = yes; then
-       ac_cv_libevent_in_ldpath=yes
-    else
-       LDFLAGS="$LDFLAGS -Wl,-R$le_libdir"
-       AC_TRY_RUN([void *event_init(void);
-                int main(int c, char **v) {
-                   event_init(); return 0;
-                }], 
-                libevent_runs_with_r=yes, libevent_runs_with_r=no)
-       if test $libevent_runs_with_r = yes; then
-         ac_cv_libevent_in_ldpath=no
-       else
-         AC_MSG_ERROR([Found linkable libevent in $ac_cv_libevent_dir, but it doesn't run, even with -R.  Maybe specify another using --with-libevent-dir?])
-       fi
+      if test $libevent_runs = yes ; then
+        if test -z "$le_extra" ; then
+	  ac_cv_libevent_linker_option='(none)'
+        else
+          ac_cv_libevent_linker_option=$le_extra
+        fi
+        le_runs=yes
+        break
+      fi
+    done
+    if test le_runs = no ; then
+      AC_MSG_ERROR([Found linkable libevent in $ac_cv_libevent_dir, but it doesn't run, even with -R.  Maybe specify another using --with-libevent-dir?])
     fi
     LDFLAGS="$saved_LDFLAGS"
 ])
 
-if test $ac_cv_libevent_in_ldpath = no ; then
-   LDFLAGS="$LDFLAGS -Wl,-R$le_libdir"
+if test $ac_cv_libevent_linker_option != '(none)' ; then
+   LDFLAGS="$ac_cv_libevent_linker_option $LDFLAGS"
 fi
 
 dnl ------------------------------------------------------
