@@ -108,18 +108,15 @@ dnl Where do you live, libevent?  And how do we call you?
 
 saved_LIBS="$LIBS"
 saved_LDFLAGS="$LDFLAGS"
-if test "x$prefix" != "xNONE" ; then
-        trylibeventdir="$trylibeventdir $prefix"
-fi
 
 AC_CACHE_CHECK([for libevent location], ac_cv_libevent_dir, [
-  for ledir in $trylibeventdir "" /usr/local ; do
+  for ledir in $trylibeventdir "" $prefix /usr/local ; do
     LDFLAGS="$saved_LDFLAGS"
     LIBS="$saved_LIBS -levent"
-    
+
     # Skip the directory if it isn't there.
     if test ! -z "$ledir" -a ! -d "$ledir" ; then
-       continue;  
+       continue;
     fi
     if test ! -z "$ledir" ; then
       if test -d "$ledir/lib" ; then
