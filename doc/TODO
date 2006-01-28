@@ -62,6 +62,7 @@ R - MaxConn is still in man page. needs to be ConnLimit and needs change.
   - Mysterious crash for fast servers: Bug 234.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
+  - "options_init_logs(): Can't log to stdout with RunAsDaemon set."
   - Were we going to load unrecognized 'state' variables into some
     list somewhere, and write them out whenever we update the state?
     To be forwards and backwards compatible.
@@ -77,6 +78,7 @@ R - failed rend desc fetches sometimes don't get retried.
 R - Add config options to not publish and not fetch rend descs.
   - Add controller interfaces to hear rend desc events and learn
     about rend descs. In base16 I guess for now.
+R - let controlport be configurable on other interfaces
 
 N - In circuit_get_open_circ_or_launch(),
     /* XXXX011 NM This should be a generic "retry all directory fetches". */
@@ -112,6 +114,10 @@ R - When we connect to a Tor server, it sends back a signed cell listing
 
 
 Deferred from 0.1.1.x:
+
+  - We need a getrlimit equivalent on Windows so we can reserve some
+    file descriptors for saving files, etc. Otherwise we'll trigger
+    asserts when we're out of file descriptors and crash.
 
   - <weasel> it would be nice to support a unix socket for the control thing.
 
