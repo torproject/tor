@@ -34,6 +34,10 @@ Website:
     stickers directly, etc.
 
 for 0.1.1.x:
+Jan 27 19:23:36.732 [notice] entry_guard_set_status(): Connection to never-contacted entry guard 'BinaryMIXER' failed. Removing from the list. -1/21 entry guards usable/new.
+
+R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
+    new entry, but failed. Bad news. XXX.
 N - look at the proposed os x uninstaller:
     http://archives.seul.org/or/talk/Jan-2006/msg00038.html
   - support dir 503s better
