@@ -610,6 +610,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
             "Tor has successfully opened a circuit. Looks like it's working.");
         if (server_mode(options) && !check_whether_orport_reachable()) {
           inform_testing_reachability();
+          consider_testing_reachability();
         }
       }
       circuit_rep_hist_note_result(circ);
