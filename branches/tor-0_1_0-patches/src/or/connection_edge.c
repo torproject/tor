@@ -1609,9 +1609,11 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   tor_assert(conn->socks_request);
   tor_assert(exit);
 
+#if 0
   log_fn(LOG_DEBUG,"considering nickname %s, for address %s / port %d:",
          exit->nickname, safe_str(conn->socks_request->address),
          conn->socks_request->port);
+#endif
 
   /* If a particular exit node has been requested for the new connection,
    * make sure the exit node of the existing circuit matches exactly.

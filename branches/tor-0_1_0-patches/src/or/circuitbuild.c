@@ -1118,7 +1118,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
         router = smartlist_get(dir->routers, i);
         if (n_supported[i] != -1 &&
             (try || router_handles_some_port(router, needed_ports))) {
-          log_fn(LOG_DEBUG,"Try %d: '%s' is a possibility.", try, router->nickname);
+//          log_fn(LOG_DEBUG,"Try %d: '%s' is a possibility.", try, router->nickname);
           smartlist_add(sl, router);
         }
       }
