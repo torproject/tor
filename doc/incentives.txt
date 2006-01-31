@@ -1,0 +1,123 @@
+
+                 Tor Incentives Design Brainstorms
+
+1. Goals: what do we want to achieve with an incentive scheme?
+
+1.1. Encourage users to provide good relay service (throughput, latency).
+1.2. Encourage users to allow traffic to exit the Tor network from
+     their node.
+
+2. Approaches to learning who should get priority.
+
+2.1. "Hard" or quantitative reputation tracking.
+
+   In this design, we track the number of bytes and throughput in and
+   out of nodes we interact with. When a node asks to send or receive
+   bytes, we provide service proportional to our current record of the
+   node's value. One approach is to let each circuit be either a normal
+   circuit or a premium circuit, and nodes can "spend" their value by
+   sending and receiving bytes on premium circuits: see section 4.1 for
+   details of this design. Another approach (section 4.2) would treat
+   all traffic from the node with the same priority class, and so nodes
+   that provide resources will get and provide better service on average.
+
+2.2. "Soft" or qualitative reputation tracking.
+
+   Rather than accounting for every byte (if I owe you a byte, I don't
+   owe it anymore once you've spent it), instead I keep a general opinion
+   about each server: my opinion increases when they do good work for me,
+   and it decays with time, but it does not decrease as they send traffic.
+   Therefore we reward servers who provide value to the system without
+   nickle and diming them at each step. We also let them benefit from
+   relaying traffic for others without having to "reserve" some of the
+   payment for their own use. See section 4.3 for a possible design.
+
+2.3. Centralized opinions from the reputation servers.
+
+   The above approaches are complex and we don't have all the answers
+   for them yet. A simpler approach is just to let some central set
+   of trusted servers (say, the Tor directory servers) measure whether
+   people are contributing to the network, and provide a signal about
+   which servers should be rewarded. They can even do the measurements
+   via Tor so servers can't easily perform only when they're being
+   tested. See section 4.4.
+
+2.4. Reputation servers that aggregate opinions.
+
+   The option above has the directory servers doing all of the
+   measurements. This doesn't scale. We can set it up so we have "deputy
+   testers" -- trusted other nodes that do performance testing and report
+   their results. If we want to be really adventurous, we could even
+   accept claims from every Tor user and build a complex weighting /
+   reputation system to decide which claims are "probably" right.
+
+3. Related issues we need to keep in mind.
+
+3.1. The network effect: how many nodes will you interact with?
+
+   One of the concerns with pairwise reputation systems is that as the
+   network gets thousands of servers, the chance that you're going to
+   interact with a given server decreases. So if in 90% of interactions
+   you're acting for the first time, the "local" incentive schemes above
+   are going to degrade. This doesn't mean they're pointless -- it just
+   means we need to be aware that this is a limitation, and plan in the
+   background for what step to take next.
+
+3.2. Guard nodes
+
+   As of Tor 0.1.1.11, Tor users pick from a small set of semi-permanent
+   "guard nodes" for their first hop of each circuit. This seems to have
+   a big impact on pairwise reputation systems since you will only be
+   cashing in on your reputation to a few people, and it is unlikely
+   that a given pair of nodes will both use the other as guard nodes.
+
+   What does this imply? For one, it means that we don't care at all
+   about the opinions of most of the servers out there -- we should
+   focus on keeping our guard nodes happy with us.
+
+   One conclusion from that is that our design needs to judge performance
+   not just through direct interaction (beginning of the circuit) but
+   also through indirect interaction (middle of the circuit). That way
+   you can never be sure when your guards are measuring you.
+
+3.3. Restricted topology: benefits and roadmap.
+
+   As the Tor network continues to grow, we will make design changes
+   to the network topology so that each node does not need to maintain
+   connections to an unbounded number of other nodes.
+
+3.4. Profit-maximizing vs. Altruism.
+
+   There are some interesting game theory questions here.
+
+   First, in a volunteer culture, success is measured in public utility
+   or in public esteem. If we add a reward mechanism, there's a risk that
+   reward-maximizing behavior will surpass utility- or esteem-maximizing
+   behavior.
+
+   Specifically, if most of our servers right now are relaying traffic
+   for the good of the community, we may actually *lose* those volunteers
+   if we turn the act of relaying traffic into a selfish act.
+
+   I am not too worried about this issue for now, since we're aiming
+   for an incentive scheme so effective that it produces thousands of
+   new servers.
+
+3.5. Tor design changes that need to happen.
+
+4. Sample designs.
+
+4.1. Two classes of service for circuits.
+
+4.2. Treat all the traffic from the node with the same service;
+     hard reputation system.
+
+4.3. Treat all the traffic from the node with the same service;
+     soft reputation system.
+
+4.4. Centralized opinions from the reputation servers.
+
+5. Types of attacks.
+
+5.1. Anonymity attacks:
+
