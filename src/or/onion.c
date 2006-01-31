@@ -57,7 +57,11 @@ onion_pending_add(circuit_t *circ)
   tor_assert(!ol_tail->next);
 
   if (ol_length >= get_options()->MaxOnionsPending) {
-    notice(LD_GENERAL,"Already have %d onions queued. Closing.", ol_length);
+    warn(LD_GENERAL,
+         "Your computer is too slow to handle this many circuit "
+         "creation requests! Please consider using the "
+         "MaxAdvertisedBandwidth config option or choosing a more "
+         "restricted exit policy.");
     tor_free(tmp);
     return -1;
   }
