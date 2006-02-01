@@ -149,6 +149,7 @@ static config_var_t _option_vars[] = {
   VAR("ExcludeNodes",        STRING,   ExcludeNodes,         NULL),
   VAR("ExitNodes",           STRING,   ExitNodes,            NULL),
   VAR("ExitPolicy",          LINELIST, ExitPolicy,           NULL),
+  VAR("ExitPolicyRejectPrivate", BOOL, ExitPolicyRejectPrivate, "1"),
   VAR("FascistFirewall",     BOOL,     FascistFirewall,      "0"),
   VAR("FirewallPorts",       CSV,      FirewallPorts,        ""),
   VAR("FastFirstHopPK",      BOOL,     FastFirstHopPK,       "1"),
@@ -2214,13 +2215,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
       result = -1;
   }
 
-  if (config_parse_addr_policy(options->ExitPolicy, &addr_policy, -1))
-    REJECT("Error in Exit Policy entry.");
+  if (config_parse_exit_policy(options->ExitPolicy, &addr_policy,
+                               options->ExitPolicyRejectPrivate))
+    REJECT("Error in ExitPolicy entry.");
 
-  options_append_default_exit_policy(&addr_policy);
-  if (server_mode(options)) {
-    exit_policy_implicitly_allows_local_networks(addr_policy, 1);
-  }
   /* The rest of these calls *append* to addr_policy. So don't actually
    * use the results for anything other than checking if they parse! */
   if (config_parse_addr_policy(options->DirPolicy, &addr_policy, -1))
@@ -2916,34 +2914,17 @@ normalize_log_options(or_options_t *options)
   return 0;
 }
 
-#define DEFAULT_EXIT_POLICY                                                  \
-  "reject private:*,reject *:25,reject *:119,reject *:135-139,reject *:445," \
-  "reject *:465,reject *:587,reject *:1214,reject *:4661-4666,"              \
-  "reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
-
-/** Add the default exit policy entries to <b>policy</b>
+/** Add the exit policy described by <b>more</b> to <b>policy</b>.
  */
-void
-options_append_default_exit_policy(addr_policy_t **policy)
+static void
+options_append_exit_policy_string(addr_policy_t **policy, char *more)
 {
   config_line_t tmp;
-  addr_policy_t *ap;
 
   tmp.key = NULL;
-  tmp.value = (char*)DEFAULT_EXIT_POLICY;
+  tmp.value = more;
   tmp.next = NULL;
   config_parse_addr_policy(&tmp, policy, -1);
-
-  /* Remove redundant parts, if any. */
-  for (ap=*policy; ap; ap=ap->next) {
-    if (ap->msk == 0 && ap->prt_min <= 1 && ap->prt_max >= 65535) {
-      if (ap->next) {
-        addr_policy_free(ap->next);
-        ap->next = NULL;
-      }
-      return;
-    }
-  }
 }
 
 static int
@@ -3003,6 +2984,65 @@ config_expand_exit_policy_aliases(smartlist_t *entries, int assume_action)
   tor_free(pre);
   tor_free(post);
   return expanded_any;
+}
+
+/** Detect and excise "dead code" from the policy *<b>dest</b>. */
+static void
+config_exit_policy_remove_redundancies(addr_policy_t **dest)
+{
+  addr_policy_t *ap, *tmp;
+  int have_seen_accept=0;
+
+  for (ap=*dest; ap; ap=ap->next) {
+    if (ap->policy_type == ADDR_POLICY_ACCEPT)
+      have_seen_accept=1;
+    if (ap->msk == 0 && ap->prt_min <= 1 && ap->prt_max >= 65535) {
+      /* This is a catch-all line -- later lines are unreachable. */
+      if (ap->next) {
+        addr_policy_free(ap->next);
+        ap->next = NULL;
+      }
+      if (ap->policy_type == ADDR_POLICY_REJECT &&
+          ap != *dest && !have_seen_accept) {
+        /* This is a "reject *:*" and all previous entries were
+         * "reject something". Throw out the previous entries. */
+        for (tmp=*dest; tmp; tmp=tmp->next) {
+          if (tmp->next == ap) {
+            tmp->next = NULL;
+            addr_policy_free(*dest);
+            *dest = ap;
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+#define DEFAULT_EXIT_POLICY                                         \
+  "reject *:25,reject *:119,reject *:135-139,reject *:445,"         \
+  "reject *:465,reject *:587,reject *:1214,reject *:4661-4666,"     \
+  "reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
+
+/** Parse the exit policy <b>cfg</b> into the linked list *<b>dest</b>. If
+ * cfg doesn't end in an absolute accept or reject, add the default exit
+ * policy afterwards. If <b>rejectprivate</b> is true, prepend
+ * "reject private:*" to the policy. Return -1 if we can't parse cfg,
+ * else return 0.
+ *
+ */
+int
+config_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
+                         int rejectprivate)
+{
+  if (rejectprivate)
+    options_append_exit_policy_string(dest, "reject private:*");
+  if (config_parse_addr_policy(cfg, dest, -1))
+    return -1;
+  options_append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);
+
+  config_exit_policy_remove_redundancies(dest);
+  return 0;
 }
 
 /**
