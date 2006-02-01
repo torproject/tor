@@ -53,7 +53,20 @@
 
 3. Related issues we need to keep in mind.
 
-3.1. The network effect: how many nodes will you interact with?
+3.1. Relay and exit needs to be easy and usable.
+
+   Implicit in all of the above designs is the need to make it easy to
+   run a Tor server out of the box. We need to make it stable on all
+   common platforms (including XP), it needs to detect its available
+   bandwidth and not overreach that, and it needs to help the operator
+   through opening up ports on his firewall. Then we need a slick GUI
+   that lets people click a button or two rather than editing text files.
+
+   Once we've done all this, we'll need to face the big question: is
+   most of the barrier to growth caused by the unusability of the current
+   software? If so, are the rest of these incentive schemes superfluous?
+
+3.2. The network effect: how many nodes will you interact with?
 
    One of the concerns with pairwise reputation systems is that as the
    network gets thousands of servers, the chance that you're going to
@@ -63,7 +76,7 @@
    means we need to be aware that this is a limitation, and plan in the
    background for what step to take next.
 
-3.2. Guard nodes
+3.3. Guard nodes
 
    As of Tor 0.1.1.11, Tor users pick from a small set of semi-permanent
    "guard nodes" for their first hop of each circuit. This seems to have
@@ -80,13 +93,15 @@
    also through indirect interaction (middle of the circuit). That way
    you can never be sure when your guards are measuring you.
 
-3.3. Restricted topology: benefits and roadmap.
+3.4. Restricted topology: benefits and roadmap.
 
    As the Tor network continues to grow, we will make design changes
    to the network topology so that each node does not need to maintain
    connections to an unbounded number of other nodes.
 
-3.4. Profit-maximizing vs. Altruism.
+   A special case here is the social network.
+
+3.5. Profit-maximizing vs. Altruism.
 
    There are some interesting game theory questions here.
 
@@ -102,8 +117,6 @@
    I am not too worried about this issue for now, since we're aiming
    for an incentive scheme so effective that it produces thousands of
    new servers.
-
-3.5. Tor design changes that need to happen.
 
 4. Sample designs.
 
