@@ -36,6 +36,7 @@ Website:
 for 0.1.1.x:
 Jan 27 19:23:36.732 [notice] entry_guard_set_status(): Connection to never-contacted entry guard 'BinaryMIXER' failed. Removing from the list. -1/21 entry guards usable/new.
 
+  - Split into ReachableDirAddresses and ReachableORAddresses
 R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
     new entry, but failed. Bad news. XXX.
 N - look at the proposed os x uninstaller:
@@ -83,6 +84,10 @@ R - Add config options to not publish and not fetch rend descs.
   - Add controller interfaces to hear rend desc events and learn
     about rend descs. In base16 I guess for now.
 R - let controlport be configurable on other interfaces
+R - look into "uncounting" bytes spent on local connections. so
+    we can bandwidthrate but still have fast downloads.
+N - make clients understand "private:*" in exit policies, even though
+    we don't generate it yet.
 
 N - In circuit_get_open_circ_or_launch(),
     /* XXXX011 NM This should be a generic "retry all directory fetches". */
