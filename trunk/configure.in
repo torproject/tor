@@ -429,6 +429,13 @@ if [[ $dmalloc -eq 1 ]]; then
   AC_DEFINE(DMALLOC_FUNC_CHECK, 1, [Enable dmalloc's malloc function check])
 fi
 
+# Allow user to specify an alternate syslog facility
+AC_ARG_WITH(syslog-facility,
+[  --with-syslog-facility=LOG syslog facility to use (default=LOG_DAEMON)],
+syslog_facility="$withval", syslog_facility="LOG_DAEMON")
+AC_DEFINE_UNQUOTED(LOGFACILITY,$syslog_facility,[name of the syslog facility])
+AC_SUBST(LOGFACILITY)
+
 # Check for gethostbyname_r in all its glorious incompatible versions.
 #   (This logic is based on that in Python's configure.in)
 AH_TEMPLATE(HAVE_GETHOSTBYNAME_R,
