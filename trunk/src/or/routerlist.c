@@ -2494,7 +2494,8 @@ policy_includes_addr_mask_implicitly(addr_policy_t *policy,
     uint32_t p_addr = policy->addr & policy->msk;
     if (p_addr == (addr & policy->msk) &&
         p_addr == (addr2 & policy->msk) &&
-        (policy->prt_min <= 1 && policy->prt_max == 65535)) {
+        (policy->prt_min <= 1 && policy->prt_max == 65535) &&
+        policy->policy_type == ADDR_POLICY_REJECT) {
       return 0;
     }
     /* Does this policy cover some of the address range we're looking at? */
@@ -2538,7 +2539,7 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
   };
   for (i=0; private_networks[i].mask; ++i) {
     p = NULL;
-    /* log_fn(LOG_INFO,"Checking network %s", private_networks[i].network); */
+    /* info(LD_CONFIG,"Checking network %s", private_networks[i].network); */
     if (policy_includes_addr_mask_implicitly(
            policy, private_networks[i].addr, private_networks[i].mask, &p)) {
       if (should_warn)
