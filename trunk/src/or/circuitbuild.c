@@ -1203,7 +1203,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   }
   info(LD_CIRC,
        "Found %d servers that might support %d/%d pending connections.",
-       n_best_support, best_support, n_pending_connections);
+       n_best_support, best_support >= 0 ? best_support : 0,
+       n_pending_connections);
 
   preferredexits = smartlist_create();
   add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1,1,1);
