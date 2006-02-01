@@ -2528,6 +2528,7 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
   static struct {
     uint32_t addr; uint32_t mask; const char *network;
   } private_networks[] = {
+    { 0x00000000, 0xff000000, "\"this\" network (0.0.0.0/8)" },
     { 0x7f000000, 0xff000000, "localhost (127.0.0.0/8)" },
     { 0x0a000000, 0xff000000, "addresses in private network 10.0.0.0/8" },
     { 0xa9fe0000, 0xffff0000, "addresses in private network 169.254.0.0/16" },
@@ -2535,7 +2536,7 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
     { 0xc0a80000, 0xffff0000, "addresses in private network 192.168.0.0/16" },
     { 0,0,NULL},
   };
-  for (i=0; private_networks[i].addr; ++i) {
+  for (i=0; private_networks[i].mask; ++i) {
     p = NULL;
     /* log_fn(LOG_INFO,"Checking network %s", private_networks[i].network); */
     if (policy_includes_addr_mask_implicitly(
