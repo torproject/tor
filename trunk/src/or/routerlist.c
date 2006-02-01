@@ -2465,6 +2465,7 @@ router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
   return 1; /* all will reject. */
 }
 
+#if 0
 /**
  * If <b>policy</b> implicitly allows connections to any port in the
  * IP set <b>addr</b>/<b>mask</b>, then set *<b>policy_out</b> to the
@@ -2553,6 +2554,7 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
   return r;
 }
 
+#endif
 /** Return true iff <b>router</b> does not permit exit streams.
  */
 int

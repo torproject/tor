@@ -1230,6 +1230,7 @@ typedef struct {
   smartlist_t *AllowUnverifiedNodes; /**< List of "entry", "middle", "exit" */
   int _AllowUnverified; /**< Bitmask; derived from AllowUnverifiedNodes; */
   config_line_t *ExitPolicy; /**< Lists of exit policy components. */
+  int ExitPolicyRejectPrivate; /**< Should we not exit to local addresses? */
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
   config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Addresses to bind for listening for SOCKS connections. */
@@ -1585,11 +1586,13 @@ int resolve_my_address(or_options_t *options, uint32_t *addr,
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
 int options_init_logs(or_options_t *options, int validate_only);
+int config_parse_exit_policy(config_line_t *cfg,
+                             addr_policy_t **dest,
+                             int rejectprivate);
 int config_parse_addr_policy(config_line_t *cfg,
                              addr_policy_t **dest,
                              int assume_action);
 int config_cmp_addr_policies(addr_policy_t *a, addr_policy_t *b);
-void options_append_default_exit_policy(addr_policy_t **policy);
 void addr_policy_free(addr_policy_t *p);
 int option_is_recognized(const char *key);
 const char *option_get_canonical_name(const char *key);
@@ -2260,8 +2263,6 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running,
                                     int warn_if_down, int warn_if_unnamed);
 routerinfo_t *routerlist_find_my_routerinfo(void);
-int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
-                                                 int warn);
 routerinfo_t *router_find_exact_exit_enclave(const char *address,
                                              uint16_t port);
 
