@@ -17,7 +17,7 @@
 
 #undef ENABLE_0119_PARANOIA_A
 #undef ENABLE_0119_PARANOIA_B1
-#undef ENABLE_0119_PARANOIA_B2
+#define ENABLE_0119_PARANOIA_B2
 #undef ENABLE_0119_PARANOIA_C
 
 /** Length of the output of our message digest. */
