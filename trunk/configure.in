@@ -139,7 +139,7 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
     fi
   done
   LIBS="$saved_LIBS"
-  LDFLAGS="$saved_LIBS"
+  LDFLAGS="$saved_LDFLAGS"
   if test $le_found = no ; then
     AC_MSG_ERROR([Could not find a linkable libevent. You can specify an explicit path using --with-libevent-dir])
   fi
@@ -229,7 +229,7 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
     fi
   done
   LIBS="$saved_LIBS"
-  LDFLAGS="$saved_LIBS"
+  LDFLAGS="$saved_LDFLAGS"
   if test $ssl_found = no ; then
     AC_MSG_ERROR([Could not find a linkable OpenSSL. You can specify an explicit path using --with-ssl-dir])
   fi
