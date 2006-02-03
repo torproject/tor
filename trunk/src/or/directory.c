@@ -891,6 +891,14 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
   }
 
+  if (status_code == 503) {
+    info(LD_DIR,"Received http status code %d (\"%s\") from server "
+         "'%s:%d'. I'll try again soon.",
+         status_code, reason, conn->address, conn->port);
+    tor_free(body); tor_free(headers); tor_free(reason);
+    return -1;
+  }
+
   plausible = body_is_plausible(body, body_len, conn->purpose);
   if (compression || !plausible) {
     char *new_body = NULL;
@@ -950,12 +958,6 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* fetch/process the directory to cache it. */
     info(LD_DIR,"Received directory (size %d) from server '%s:%d'",
          (int)body_len, conn->address, conn->port);
-    if (status_code == 503 || body_len == 0) {
-      info(LD_DIR,"Empty directory; status %d (\"%s\") Ignoring.",
-           status_code, reason);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
-    }
     if (status_code != 200) {
       warn(LD_DIR,"Received http status code %d (\"%s\") from server "
            "'%s:%d'. I'll try again soon.",
