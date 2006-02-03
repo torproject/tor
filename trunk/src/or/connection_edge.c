@@ -924,59 +924,20 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
    }
 }
 
-/** connection_edge_process_inbuf() found a conn in state
- * socks_wait. See if conn->inbuf has the right bytes to proceed with
- * the socks handshake.
+/* Connection <b>conn</b> just finished its socks handshake, or the
+ * controller asked us to take care of it.
  *
- * If the handshake is complete, and it's for a general circuit, then
- * try to attach it to a circuit (or launch one as needed). If it's for
- * a rendezvous circuit, then fetch a rendezvous descriptor first (or
- * attach/launch a circuit if the rendezvous descriptor is already here
- * and fresh enough).
- *
- * Return -1 if an unexpected error with conn (and it should be marked
- * for close), else return 0.
+ * First, parse whether it's a .exit address, remap it, and so on. Then
+ * it's for a general circuit, try to attach it to a circuit (or launch
+ * one as needed), else if it's for a rendezvous circuit, fetch a
+ * rendezvous descriptor first (or attach/launch a circuit if the
+ * rendezvous descriptor is already here and fresh enough).
  */
-static int
-connection_ap_handshake_process_socks(connection_t *conn)
+int
+connection_ap_handshake_rewrite_and_attach(connection_t *conn)
 {
-  socks_request_t *socks;
-  int sockshere;
+  socks_request_t *socks = conn->socks_request;
   hostname_type_t addresstype;
-  or_options_t *options = get_options();
-  int tor_should_handle_stream = !options->LeaveStreamsUnattached;
-
-  tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_AP);
-  tor_assert(conn->state == AP_CONN_STATE_SOCKS_WAIT);
-  tor_assert(conn->socks_request);
-  socks = conn->socks_request;
-
-  debug(LD_APP,"entered.");
-
-  sockshere = fetch_from_buf_socks(conn->inbuf, socks, options->TestSocks);
-  if (sockshere == 0) {
-    if (socks->replylen) {
-      connection_write_to_buf(socks->reply, socks->replylen, conn);
-      /* zero it out so we can do another round of negotiation */
-      socks->replylen = 0;
-    } else {
-      debug(LD_APP,"socks handshake not all here yet.");
-    }
-    return 0;
-  } else if (sockshere == -1) {
-    if (socks->replylen) { /* we should send reply back */
-      debug(LD_APP,"reply is already set for us. Using it.");
-      connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen,
-                                          SOCKS5_GENERAL_ERROR);
-    } else {
-      warn(LD_APP,"Fetching socks handshake failed. Closing.");
-      connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_GENERAL_ERROR);
-    }
-    connection_mark_unattached_ap(conn,
-                                  END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
-    return -1;
-  } /* else socks handshake is done, continue processing */
 
   tor_strlower(socks->address); /* normalize it */
   debug(LD_APP,"Client asked for %s:%d", safe_str(socks->address),
@@ -985,11 +946,10 @@ connection_ap_handshake_process_socks(connection_t *conn)
   /* For address map controls, remap the address */
   addressmap_rewrite(socks->address, sizeof(socks->address));
 
-  if (tor_should_handle_stream &&
-      address_is_in_virtual_range(socks->address)) {
+  if (address_is_in_virtual_range(socks->address)) {
     /* This address was probably handed out by client_dns_get_unmapped_address,
      * but the mapping was discarded for some reason.  We *don't* want to send
-     * the address through tor; that's likely to fail, and may leak
+     * the address through Tor; that's likely to fail, and may leak
      * information.
      */
     warn(LD_APP,"Missing mapping for virtual address '%s'. Refusing.",
@@ -1003,7 +963,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
    */
   addresstype = parse_extended_hostname(socks->address);
 
-  if (tor_should_handle_stream && addresstype == BAD_HOSTNAME) {
+  if (addresstype == BAD_HOSTNAME) {
     warn(LD_APP, "Invalid hostname %s; rejecting", socks->address);
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
     return -1;
@@ -1033,7 +993,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
         /* XXXX Should this use server->address instead? */
         in.s_addr = htonl(r->addr);
         strlcpy(socks->address, inet_ntoa(in), sizeof(socks->address));
-      } else if (tor_should_handle_stream) {
+      } else {
         warn(LD_APP,
              "Unrecognized server in exit address '%s.exit'. Refusing.",
              safe_str(socks->address));
@@ -1046,8 +1006,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
   if (addresstype != ONION_HOSTNAME) {
     /* not a hidden-service request (i.e. normal or .exit) */
 
-    if (tor_should_handle_stream &&
-        address_is_invalid_destination(socks->address)) {
+    if (address_is_invalid_destination(socks->address)) {
       warn(LD_APP,"Destination '%s' seems to be an invalid hostname. Failing.",
            safe_str(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
@@ -1075,7 +1034,6 @@ connection_ap_handshake_process_socks(connection_t *conn)
         return 0;
       }
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
-      control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE);
     } else { /* socks->command == SOCKS_COMMAND_CONNECT */
       if (socks->port == 0) {
         notice(LD_APP,"Application asked to connect to port 0. Refusing.");
@@ -1099,16 +1057,11 @@ connection_ap_handshake_process_socks(connection_t *conn)
 
       /* help predict this next time */
       rep_hist_note_used_port(socks->port, time(NULL));
-      control_event_stream_status(conn, STREAM_EVENT_NEW);
     }
-    if (!tor_should_handle_stream) {
-      conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
-    } else {
-      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-      if (connection_ap_handshake_attach_circuit(conn) < 0) {
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
-        return -1;
-      }
+    conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+    if (connection_ap_handshake_attach_circuit(conn) < 0) {
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+      return -1;
     }
     return 0;
   } else {
@@ -1159,10 +1112,70 @@ connection_ap_handshake_process_socks(connection_t *conn)
         rend_client_refetch_renddesc(conn->rend_query);
       }
     }
-    control_event_stream_status(conn, STREAM_EVENT_NEW);
     return 0;
   }
   return 0; /* unreached but keeps the compiler happy */
+}
+
+/** connection_edge_process_inbuf() found a conn in state
+ * socks_wait. See if conn->inbuf has the right bytes to proceed with
+ * the socks handshake.
+ *
+ * If the handshake is complete, send it to
+ * connection_ap_handshake_rewrite_and_attach().
+ *
+ * Return -1 if an unexpected error with conn (and it should be marked
+ * for close), else return 0.
+ */
+static int
+connection_ap_handshake_process_socks(connection_t *conn)
+{
+  socks_request_t *socks;
+  int sockshere;
+  or_options_t *options = get_options();
+
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_AP);
+  tor_assert(conn->state == AP_CONN_STATE_SOCKS_WAIT);
+  tor_assert(conn->socks_request);
+  socks = conn->socks_request;
+
+  debug(LD_APP,"entered.");
+
+  sockshere = fetch_from_buf_socks(conn->inbuf, socks, options->TestSocks);
+  if (sockshere == 0) {
+    if (socks->replylen) {
+      connection_write_to_buf(socks->reply, socks->replylen, conn);
+      /* zero it out so we can do another round of negotiation */
+      socks->replylen = 0;
+    } else {
+      debug(LD_APP,"socks handshake not all here yet.");
+    }
+    return 0;
+  } else if (sockshere == -1) {
+    if (socks->replylen) { /* we should send reply back */
+      debug(LD_APP,"reply is already set for us. Using it.");
+      connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen,
+                                          SOCKS5_GENERAL_ERROR);
+    } else {
+      warn(LD_APP,"Fetching socks handshake failed. Closing.");
+      connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_GENERAL_ERROR);
+    }
+    connection_mark_unattached_ap(conn,
+                                  END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+    return -1;
+  } /* else socks handshake is done, continue processing */
+
+  if (socks->command == SOCKS_COMMAND_CONNECT)
+    control_event_stream_status(conn, STREAM_EVENT_NEW);
+  else
+    control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE);
+
+  if (options->LeaveStreamsUnattached) {
+    conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
+    return 0;
+  } else
+    return connection_ap_handshake_rewrite_and_attach(conn);
 }
 
 /** Iterate over the two bytes of stream_id until we get one that is not
