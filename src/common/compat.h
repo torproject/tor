@@ -189,6 +189,8 @@ int network_init(void);
  * accept() has failed because we're out of fds or something. */
 #define ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e) \
   ((e) == WSAEMFILE || (e) == WSAENOBUFS)
+/** Return true if e is EADDRINUSE or the local equivalent. */
+#define ERRNO_IS_EADDRINUSE(e)      ((e) == WSAEADDRINUSE)
 int tor_socket_errno(int sock);
 const char *tor_socket_strerror(int e);
 #else
@@ -198,6 +200,7 @@ const char *tor_socket_strerror(int e);
 #define ERRNO_IS_ACCEPT_EAGAIN(e)    ((e) == EAGAIN || (e) == ECONNABORTED)
 #define ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e) \
   ((e) == EMFILE || (e) == ENFILE || (e) == ENOBUFS || (e) == ENOMEM)
+#define ERRNO_IS_EADDRINUSE(e)       ((e) == EADDRINUSE)
 #define tor_socket_errno(sock)       (errno)
 #define tor_socket_strerror(e)       strerror(e)
 #endif
