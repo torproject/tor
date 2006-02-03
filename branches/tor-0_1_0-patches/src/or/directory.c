@@ -273,8 +273,10 @@ directory_initiate_command(const char *address, uint32_t addr,
 
   tor_assert(address);
   tor_assert(addr);
-  tor_assert(dir_port);
   tor_assert(digest);
+
+  if (!dir_port)
+    return;
 
   switch (purpose) {
     case DIR_PURPOSE_FETCH_DIR:

@@ -820,7 +820,7 @@ static void second_elapsed_callback(int fd, short event, void *args)
     if (me && !check_whether_orport_reachable())
       log(LOG_WARN,"Your server (%s:%d) has not managed to confirm that its ORPort is reachable. Please check your firewalls, ports, address, etc.",
           me->address, me->or_port);
-    if (me && !check_whether_dirport_reachable())
+    if (me && me->dir_port && !check_whether_dirport_reachable())
       log(LOG_WARN,"Your server (%s:%d) has not managed to confirm that its DirPort is reachable. Please check your firewalls, ports, address, etc.",
           me->address, me->dir_port);
   }
