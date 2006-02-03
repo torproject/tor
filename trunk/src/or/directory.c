@@ -581,7 +581,7 @@ directory_send_command(connection_t *conn, const char *platform,
   }
 
   if (strlen(proxystring) + strlen(url) >= 4096) {
-    warn(LD_BUG,"Bug: squid does not like URLs longer than 4095 bytes, this one is %d bytes long: %s%s", strlen(proxystring) + strlen(url), proxystring, url);
+    warn(LD_BUG,"Bug: squid does not like URLs longer than 4095 bytes, this one is %d bytes long: %s%s", (int)(strlen(proxystring) + strlen(url)), proxystring, url);
   }
 
   tor_snprintf(request, sizeof(request), "%s %s", httpcommand, proxystring);
