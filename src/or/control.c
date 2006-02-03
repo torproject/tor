@@ -1744,9 +1744,7 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
   }
 
   if (zero_circ) {
-    ap_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-    if (connection_ap_handshake_attach_circuit(ap_conn)<0)
-      connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_CANT_ATTACH);
+    connection_ap_handshake_rewrite_and_attach(ap_conn);
     send_control_done(conn);
     return 0;
   }
