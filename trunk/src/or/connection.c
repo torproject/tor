@@ -988,13 +988,18 @@ static int
 connection_bucket_read_limit(connection_t *conn)
 {
   int at_most;
+  int base = connection_speaks_cells(conn) ?
+               CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
 
-  /* do a rudimentary round-robin so one circuit can't hog a connection */
-  if (connection_speaks_cells(conn)) {
-    at_most = 32*(CELL_NETWORK_SIZE);
-  } else {
-    at_most = 32*(RELAY_PAYLOAD_SIZE);
-  }
+  /* Do a rudimentary round-robin so one circuit can't hog a connection.
+   * Pick at most 32 cells, at least 4 cells if possible, and if we're in
+   * the middle pick 1/8 of the available bandwidth. */
+  at_most = global_read_bucket / 8;
+  at_most -= (at_most % base); /* round down */
+  if (at_most > 32*base) /* 16 KB */
+    at_most = 32*base;
+  else if (at_most < 4*base) /* 2 KB */
+    at_most = 4*base;
 
   if (at_most > global_read_bucket)
     at_most = global_read_bucket;
