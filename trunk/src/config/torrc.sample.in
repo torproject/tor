@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 16 January 2006 for Tor 0.1.1.13-alpha.
+## Last updated 4 February 2006 for Tor 0.1.1.13-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -42,10 +42,6 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #Log notice file @LOCALSTATEDIR@/log/tor/notices.log
 ## Send every possible message to @LOCALSTATEDIR@/log/tor/debug.log
 #Log debug file @LOCALSTATEDIR@/log/tor/debug.log
-## Send only debug and info messages to @LOCALSTATEDIR@/log/tor/debug.log
-#Log debug-info file @LOCALSTATEDIR@/log/tor/debug.log
-## Send ONLY debug messages to @LOCALSTATEDIR@/log/tor/debug.log
-#Log debug-debug file @LOCALSTATEDIR@/log/tor/debug.log
 ## Use the system log instead of Tor's logfiles
 #Log notice syslog
 ## To send all messages to stderr:
