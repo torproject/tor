@@ -254,9 +254,9 @@ $Id$
          2. Generate a 16-character encoding of H', using base32 as defined
             in RFC 3548.
 
-   (We only use 80 bits instead of the 160 bits from SHA1 because we don't
-   need to worry about man-in-the-middle attacks, and because it will make
-   handling the url's more convenient.)
+   (We only use 80 bits instead of the 160 bits from SHA1 because we
+   don't need to worry about arbitrary collisions, and because it will
+   make handling the url's more convenient.)
 
    The string "x", if present, is the base-32 encoding of the
    authentication/authorization required by the introduction point.
