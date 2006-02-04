@@ -640,7 +640,7 @@ $Id$
 
     The syntax is:
 
-      "650" SP "STREAM" SP StreamID SP StreamStatus SP CircID SP Target SP 
+      "650" SP "STREAM" SP StreamID SP StreamStatus SP CircID SP Target
 
       StreamStatus =
                "NEW"          / ; New request to connect
