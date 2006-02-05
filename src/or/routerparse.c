@@ -1651,7 +1651,7 @@ find_all_exitpolicy(smartlist_t *s)
   return out;
 }
 
-/** Compute the SHA digest of the substring of <b>s</b> taken from the first
+/** Compute the SHA-1 digest of the substring of <b>s</b> taken from the first
  * occurrence of <b>start_str</b> through the first newline after the first
  * subsequent occurrence of <b>end_str</b>; store the 20-byte result in
  * <b>digest</b>; return 0 on success.
