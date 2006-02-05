@@ -3079,7 +3079,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     rs_out->status.is_running = n_running > n_recent/2;
     rs_out->status.is_exit = n_exit > n_statuses/2;
     rs_out->status.is_fast = n_fast > n_statuses/2;
-    rs_out->status.is_fast = n_guard > n_statuses/2;
+    rs_out->status.is_possible_guard = n_guard > n_statuses/2;
     rs_out->status.is_stable = n_stable > n_statuses/2;
     rs_out->status.is_v2_dir = n_v2_dir > n_statuses/2;
   }
