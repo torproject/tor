@@ -2782,8 +2782,8 @@ routers_update_all_from_networkstatus(void)
 
 /** Change the is_recent field of each member of networkstatus_list so that
  * all members more recent than DEFAULT_RUNNING_INTERVAL are recent, and
- * at least the MIN_TO_INFLUENCE_RUNNING most recent members are resent, and no
- * others are recent.  Set networkstatus_list_has_changed if anything happeed.
+ * at least the MIN_TO_INFLUENCE_RUNNING most recent members are recent, and no
+ * others are recent.  Set networkstatus_list_has_changed if anything happened.
  */
 void
 networkstatus_list_update_recent(time_t now)
@@ -2853,6 +2853,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
   char conflict[DIGEST_LEN]; /* Sentinel value */
   desc_digest_count_t *digest_counts = NULL;
 
+  /* compute which network statuses will have a vote now */
   networkstatus_list_update_recent(now);
 
   if (!networkstatus_list_has_changed)
