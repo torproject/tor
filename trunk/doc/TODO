@@ -30,6 +30,12 @@ Website:
     stickers directly, etc.
 
 for 0.1.1.x:
+  - building on freebsd 6.0: (with multiple openssl installations)
+    <nickm> "Let's try to find a way to make it run and make the version
+    match, but if not, let's just make it run."
+    <arma> should we detect if we have a --with-ssl-dir and try the -R
+    by default, if it works?
+
   - Split into ReachableDirAddresses and ReachableORAddresses
 R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
     new entry, but failed. Bad news. XXX.
