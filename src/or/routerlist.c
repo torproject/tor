@@ -1708,7 +1708,8 @@ routerlist_remove_old_routers(void)
 {
   int i, hi=-1;
   const char *cur_id = NULL;
-  time_t now, cutoff;
+  time_t now = time(NULL);
+  time_t cutoff;
   routerinfo_t *router;
   signed_descriptor_t *sd;
   digestmap_t *retain;
@@ -1717,15 +1718,16 @@ routerlist_remove_old_routers(void)
     return;
 
   retain = digestmap_new();
+  cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   if (server_mode(options) && options->DirPort) {
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
       {
         SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-          digestmap_set(retain, rs->descriptor_digest, (void*)1));
+          if (rs->published_on >= cutoff)
+            digestmap_set(retain, rs->descriptor_digest, (void*)1));
       });
   }
 
-  now = time(NULL);
   cutoff = now - ROUTER_MAX_AGE;
   /* Remove too-old members of routerlist->routers. */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
