@@ -568,6 +568,7 @@ directory_info_has_arrived(time_t now, int from_cache)
     log(LOG_NOTICE, LD_DIR,
         "I learned some more directory information, but not enough to "
         "build a circuit.");
+    update_router_descriptor_downloads(now);
     return;
   }
 
