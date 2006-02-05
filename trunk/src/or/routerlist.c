@@ -3187,7 +3187,7 @@ list_pending_descriptor_downloads(digestmap_t *result)
   smartlist_free(tmp);
 }
 
-/** Launch downloads for the all the descriptors whose digests are listed
+/** Launch downloads for all the descriptors whose digests are listed
  * as digests[i] for lo <= i < hi.  (Lo and hi may be out of range.)
  * If <b>source</b> is given, download from <b>source</b>; otherwise,
  * download from an appropriate random directory server.
@@ -3349,15 +3349,11 @@ update_router_descriptor_client_downloads(time_t now)
     should_delay = 1;
   } else {
     should_delay = (last_routerdesc_download_attempted +
-                      MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
-  }
-  if (should_delay) {
-//      debug(LD_DIR, "There are not many downloadable routerdescs; "
-//      "waiting till we have some more.");
-  } else {
-    info(LD_DIR, "There are not many downloadable routerdescs, but we've "
-         "been waiting long enough (%d seconds). Downloading.",
-         (int)(now-last_routerdesc_download_attempted));
+                    MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
+    if (!should_delay)
+      info(LD_DIR, "There are not many downloadable routerdescs, but we've "
+           "been waiting long enough (%d seconds). Downloading.",
+           (int)(now-last_routerdesc_download_attempted));
   }
 
   if (! should_delay) {
