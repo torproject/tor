@@ -25,24 +25,18 @@ NR- write a spec appendix for 'being nice with tor'
   - Remove need for HACKING file.
 
 Website:
-  - we need to merge documentation and support
-  - and pare it down
-  - and merge developers into documentation too
-  - or at least, remove developers from the title bar
   - and remove home and make the "Tor" picture be the link to home.
   - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
 
 for 0.1.1.x:
-Jan 27 19:23:36.732 [notice] entry_guard_set_status(): Connection to never-contacted entry guard 'BinaryMIXER' failed. Removing from the list. -1/21 entry guards usable/new.
-
   - Split into ReachableDirAddresses and ReachableORAddresses
 R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
     new entry, but failed. Bad news. XXX.
 N - look at the proposed os x uninstaller:
     http://archives.seul.org/or/talk/Jan-2006/msg00038.html
   - support dir 503s better
-    - clients don't log as loudly when they receive them
+    o clients don't log as loudly when they receive them
     - they don't count toward the 3-strikes rule
       - should there be some threshold of 503's after which we give up?
     - think about how to split "router is down" from "dirport shouldn't
@@ -62,23 +56,17 @@ R - MaxConn is still in man page. needs to be ConnLimit and needs change.
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
-  - add os x uninstaller from or-talk.
   - make log entries include function names in win32 again.
-  - Mysterious crash for fast servers: Bug 234.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
   - "options_init_logs(): Can't log to stdout with RunAsDaemon set."
   - Were we going to load unrecognized 'state' variables into some
     list somewhere, and write them out whenever we update the state?
     To be forwards and backwards compatible.
-R - our round-robin reading is not very fair when we have few tokens
-    left in our bucket. be more fair?
 R - streamline how we define a guard node as 'up'. document it
     somewhere.
 R - reduce log severity for guard nodes.
 R - make guard node timeout higher.
-R - We should do address rewriting after the controller sends us an
-    "attachstream 0": Bug 225.
 R - failed rend desc fetches sometimes don't get retried.
 R - Add config options to not publish and not fetch rend descs.
   - Add controller interfaces to hear rend desc events and learn
