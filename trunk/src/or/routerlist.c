@@ -3313,12 +3313,12 @@ router_list_client_downloadable(void)
 static void
 update_router_descriptor_client_downloads(time_t now)
 {
-	/* Max amount of hashes to download per request.
-	 * Since squid does not like URLs >= 4096 bytes we limit it to 96.
-	 *   4096 - strlen(http://255.255.255.255/tor/server/d/.z) == 4058
-	 *   4058/41 (40 for the hash and 1 for the + that separates them) => 98
-	 *   So use 96 because it's a nice number.
-	 */
+  /* Max amount of hashes to download per request.
+   * Since squid does not like URLs >= 4096 bytes we limit it to 96.
+   *   4096 - strlen(http://255.255.255.255/tor/server/d/.z) == 4058
+   *   4058/41 (40 for the hash and 1 for the + that separates them) => 98
+   *   So use 96 because it's a nice number.
+   */
 #define MAX_DL_PER_REQUEST 96
 #define MIN_DL_PER_REQUEST 4
 #define MIN_REQUESTS 3
