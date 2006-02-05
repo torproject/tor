@@ -737,6 +737,7 @@ list_server_status(smartlist_t *routers, char **router_status_out)
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
   smartlist_t *rs_entries;
   time_t now = time(NULL);
+  time_t cutoff = now - ROUTER_MAX_AGE;
   int authdir_mode = get_options()->AuthoritativeDir;
   tor_assert(router_status_out);
 
@@ -748,7 +749,8 @@ list_server_status(smartlist_t *routers, char **router_status_out)
       /* Update router status in routerinfo_t. */
       ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
     }
-    smartlist_add(rs_entries, list_single_server_status(ri, ri->is_running));
+    if (ri->cache_info.published_on >= cutoff)
+      smartlist_add(rs_entries, list_single_server_status(ri, ri->is_running));
   });
 
   *router_status_out = smartlist_join_strings(rs_entries, " ", 0, NULL);
@@ -883,8 +885,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   *cp = '\0';
 
   /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
-     signature.
-  */
+     signature. */
   if (strlcat(buf, "directory-signature ", buf_len) >= buf_len)
     goto truncated;
   if (strlcat(buf, get_options()->Nickname, buf_len) >= buf_len)
@@ -1345,6 +1346,7 @@ generate_v2_networkstatus(void)
   crypto_pk_env_t *private_key = get_identity_key();
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
+  time_t cutoff = now - ROUTER_MAX_AGE;
   int naming = options->NamingAuthoritativeDir;
   int versioning = options->VersioningAuthoritativeDir;
   const char *contact;
@@ -1412,6 +1414,7 @@ generate_v2_networkstatus(void)
   dirserv_compute_stable_uptime(rl);
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+    if (ri->cache_info.published_on >= cutoff) {
       int f_exit = router_is_general_exit(ri);
       int f_stable = ri->is_stable =
                      !dirserv_thinks_router_is_unreliable(ri, 1, 0);
@@ -1461,7 +1464,8 @@ generate_v2_networkstatus(void)
         goto done;
       }
       outp += strlen(outp);
-    });
+    }
+  });
 
   if (tor_snprintf(outp, endp-outp, "directory-signature %s\n",
                    get_options()->Nickname)<0) {
