@@ -859,7 +859,7 @@ typedef struct routerstatus_t {
  * about a single router. */
 typedef struct local_routerstatus_t {
   /** What do we believe to be the case about this router?  In this field,
-   * descriptor_digest represnets the descriptor we would most like to use for
+   * descriptor_digest represents the descriptor we would most like to use for
    * this router. */
   routerstatus_t status;
   time_t next_attempt_at; /**< When should we try this descriptor again? */

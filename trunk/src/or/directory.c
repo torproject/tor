@@ -332,7 +332,7 @@ connection_dir_download_networkstatus_failed(connection_t *conn)
     directory_get_from_dirserver(conn->purpose, "all.z",
                                  0 /* don't retry_if_no_servers */);
   } else if (!strcmpstart(conn->requested_resource, "fp/")) {
-    /* We were trying to download by fingerprint; mark them all has having
+    /* We were trying to download by fingerprint; mark them all as having
      * failed, and possibly retry them later.*/
     smartlist_t *failed = smartlist_create();
     dir_split_resource_into_fingerprints(conn->requested_resource+3,
@@ -1804,7 +1804,7 @@ connection_dir_finished_connecting(connection_t *conn)
 }
 
 /** Called when one or more networkstatus fetches have failed (with uppercase
- * fingerprints listed in <b>failed</>).  Mark those fingerprints has having
+ * fingerprints listed in <b>failed</>).  Mark those fingerprints as having
  * failed once. */
 static void
 dir_networkstatus_download_failed(smartlist_t *failed)
