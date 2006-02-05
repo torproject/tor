@@ -537,7 +537,7 @@ get_dir_fetch_period(or_options_t *options)
     return 20*60;
   else
     /* Default for average user. */
-    return 40*60;
+    return 120*60;
 }
 
 /**
