@@ -355,6 +355,13 @@ some servers will observe a fraction of your paths.
 If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
 as long-term entries for our circuits.
 (Defaults to 3.)
+.LP
+.TP
+\fBTestSocks \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled then Tor will make a notice-level log entry
+for each connection to the Socks port indicating whether a hostname or
+an IP address was used in the request.  This helps to determine whether
+an application using Tor is possibly leaking DNS requests.
 
 .SH SERVER OPTIONS
 .PP
