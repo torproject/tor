@@ -1835,3 +1835,34 @@ tor_version_same_series(tor_version_t *a, tor_version_t *b)
           (a->micro == b->micro));
 }
 
+/** Helper: Given pointers to two strings describing tor versions, return -1
+ * if _a precedes _b, 1 if _b preceeds _a, and 0 if they are equivalent.
+ * Used to sort a list of versions. */
+static int
+_compare_tor_version_str_ptr(const void **_a, const void **_b)
+{
+  const char *a = *_a, *b = *_b;
+  int ca, cb;
+  tor_version_t va, vb;
+  ca = tor_version_parse(a, &va);
+  cb = tor_version_parse(b, &vb);
+  /* If they both parse, compare them. */
+  if (!ca && !cb)
+    return tor_version_compare(&va,&vb);
+  /* If one parses, it comes first. */
+  if (!ca && cb)
+    return -1;
+  if (ca && !cb)
+    return 1;
+  /* If neither parses, compare strings.  Also, the directory server admin
+  ** needs to be smacked upside the head.  But Tor is tolerant and gentle. */
+  return strcmp(a,b);
+}
+
+/** Sort a list of string-representations of versions in ascending order. */
+void
+sort_version_list(smartlist_t *versions)
+{
+  smartlist_sort(versions, _compare_tor_version_str_ptr);
+}
+
