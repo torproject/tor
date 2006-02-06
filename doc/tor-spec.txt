@@ -17,7 +17,9 @@ TODO: (very soon)
       - Copy prose from tor-design to make everything more readable.
 when do we rotate which keys (tls, link, etc)?
 
-0. Notation:
+0. Preliminaries
+
+0.1.  Notation and encoding
 
    PK -- a public key.
    SK -- a private key
@@ -30,26 +32,78 @@ when do we rotate which keys (tls, link, etc)?
 
    All numeric values are encoded in network (big-endian) order.
 
-   Unless otherwise specified, all symmetric ciphers are AES in counter
-   mode, with an IV of all 0 bytes.  Asymmetric ciphers are either RSA
-   with 1024-bit keys and exponents of 65537, or DH where the generator (g)
-   is 2 and the modulus (p) is the 1024-bit safe prime from rfc2409,
-   section 6.2, whose hex representation is:
+   H(m) -- a cryptographic hash of m.
+
+0.2. Security parameters
+
+   Tor uses a stream cipher, a public-key cipher, the Diffie-Hellman
+   protocol, and and a hash function.
+
+   KEY_LEN -- the length of the stream cipher's key, in bytes.
+
+   PK_ENC_LEN -- the length of a public-key encrypted message, in bytes.
+   PK_PAD_LEN -- the number of bytes added in padding for public-key
+     encryption, in bytes. (The largest number of bytes that can be encrypted
+     in a single public-key operation is therefore PK_ENC_LEN-PK_PAD_LEN.)
+
+   DH_LEN -- the number of bytes used to represent a member of the
+     Diffie-Hellman group.
+   DH_SEC_LEN -- the number of bytes used in a Diffie-Hellman private key (x).
+
+   HASH_LEN -- the length of the hash function's output, in bytes.
+
+   CELL_LEN -- The length of a Tor cell, in bytes.
+
+0.3. Ciphers
+
+   For a stream cipher, we use 128-bit AES in counter mode, with an IV of all
+   0 bytes.
+
+   For a public-key cipher, we use RSA with 1024-bit keys and a fixed
+   exponent of 65537.  We use OAEP padding, with SHA1 as its digest
+   function.   (For OAEP padding, see
+   ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
+
+   For Diffie-Hellman, we use a generator (g) of 2.  For the modulus (p), the
+   1024-bit safe prime from rfc2409, (section 6.2) whose hex representation
+   is:
 
      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
      "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
      "49286651ECE65381FFFFFFFFFFFFFFFF"
-
    As an optimization, implementations SHOULD choose DH private keys (x) of
    320 bits.  Implementations that do this MUST never use any DH key more
    than once.
 
-   All "hashes" are 20-byte SHA1 cryptographic digests.
+   For a hash function, we use SHA1.
+
+   KEY_LEN=16.
+   DH_LEN=128; DH_GROUP_LEN=40.
+   PK_ENC_LEN=128; PK_PAD_LEN=42.
+   HASH_LEN=20.
 
    When we refer to "the hash of a public key", we mean the SHA1 hash of the
    DER encoding of an ASN.1 RSA public key (as specified in PKCS.1).
+
+   All "random" values should be generated with a cryptographically strong
+   random number generator, unless otherwise noted.
+
+   The "hybrid encryption" of a byte sequence M with a public key PK is
+   computed as follows:
+      1. If M is less than PK_ENC_LEN-PK_PAD_LEN, pad and encrypt M with PK.
+      2. Otherwise, generate a KEY_LEN byte random key K.
+         Let M1 = the first PK_ENC_LEN-PK_PAD_LEN-KEY_LEN bytes of M,
+         and let M2 = the rest of M.
+         Pad and encrypt K|M1 with PK.  Encrypt M2 with our stream cipher,
+         using the key K.  Concatenate these encrypted values.
+   (Note that this "hybrid encryption" approach does not prevent an attacker
+   from adding or removing bytes to the end of M.)
+
+0.4. Other parameter values
+
+   CELL_LEN=512
 
 1. System overview
 
@@ -74,7 +128,7 @@ when do we rotate which keys (tls, link, etc)?
    support "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" if it is available.
    Implementations MAY support other ciphersuites, but MUST NOT
    support any suite without ephemeral keys, symmetric keys of at
-   least 128 bits, and digests of at least 160 bits.
+   least KEY_LEN bits, and digests of at least HASH_LEN bits.
 
    An OP or OR always sends a two-certificate chain, consisting of a
    certificate using a short-term connection key and a second, self-
@@ -95,7 +149,7 @@ when do we rotate which keys (tls, link, etc)?
 
    Once a TLS connection is established, the two sides send cells
    (specified below) to one another.  Cells are sent serially.  All
-   cells are 512 bytes long.  Cells may be sent embedded in TLS
+   cells are CELL_LEN bytes long.  Cells may be sent embedded in TLS
    records of any size or divided across TLS records, but the framing
    of TLS records MUST NOT leak information about the type or contents
    of the cells.
@@ -116,8 +170,8 @@ when do we rotate which keys (tls, link, etc)?
 
         CircID                                [2 bytes]
         Command                               [1 byte]
-        Payload (padded with 0 bytes)         [509 bytes]
-                                         [Total size: 512 bytes]
+        Payload (padded with 0 bytes)         [CELL_LEN-3 bytes]
+                                         [Total size: CELL_LEN bytes]
 
    The CircID field determines which circuit, if any, the cell is
    associated with.
@@ -168,41 +222,33 @@ when do we rotate which keys (tls, link, etc)?
 
    The payload for a CREATE cell is an 'onion skin', which consists
    of the first step of the DH handshake data (also known as g^x).
-
-   The data is encrypted to Bob's PK as follows: Suppose Bob's PK
-   modulus is L octets long. If the data to be encrypted is shorter
-   than L-42, then it is encrypted directly (with OAEP padding: see
-   ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf). If the
-   data is at least as long as L-42, then a randomly generated 16-byte
-   symmetric key is prepended to the data, after which the first L-16-42
-   bytes of the data are encrypted with Bob's PK; and the rest of the
-   data is encrypted with the symmetric key.
-
-   So in this case, the onion skin can be thought of as:
-       RSA-encrypted:
-         OAEP padding                  [42 bytes]
-         Symmetric key                 [16 bytes]
-         First part of g^x             [70 bytes]
+   This value is hybrid-encrypted (see 0.3) to Bob's public key, giving
+   an onion-skin of:
+       PK-encrypted:
+         Padding padding               [PK_PAD_LEN bytes]
+         Symmetric key                 [KEY_LEN bytes]
+         First part of g^x             [PK_ENC_LEN-PK_PAD_LEN-KEY_LEN bytes]
        Symmetrically encrypted:
-         Second part of g^x            [58 bytes]
+         Second part of g^x            [DH_LEN-(PK_ENC_LEN-PK_PAD_LEN-KEY_LEN)
+                                           bytes]
 
    The relay payload for an EXTEND relay cell consists of:
          Address                       [4 bytes]
          Port                          [2 bytes]
-         Onion skin                    [186 bytes]
-         Identity fingerprint          [20 bytes]
+         Onion skin                    [DH_LEN+KEY_LEN+PK_PAD_LEN bytes]
+         Identity fingerprint          [HASH_LEN bytes]
 
    The port and address field denote the IPV4 address and port of the next
-   onion router in the circuit; the public key hash is the SHA1 hash of the
-   PKCS#1 ASN1 encoding of the next onion router's identity (signing) key.
-   (Including this hash allows the extending OR verify that it is indeed
-   connected to the correct target OR, and prevents certain man-in-the-middle
-   attacks.)
+   onion router in the circuit; the public key hash is the hash of the PKCS#1
+   ASN1 encoding of the next onion router's identity (signing) key.  (See 0.3
+   above.)  (Including this hash allows the extending OR verify that it is
+   indeed connected to the correct target OR, and prevents certain
+   man-in-the-middle attacks.)
 
    The payload for a CREATED cell, or the relay payload for an
    EXTENDED cell, contains:
-         DH data (g^y)                 [128 bytes]
-         Derivative key data (KH)      [20 bytes]   <see 4.2 below>
+         DH data (g^y)                 [DH_LEN bytes]
+         Derivative key data (KH)      [HASH_LEN bytes]   <see 4.2 below>
 
    The CircID for a CREATE cell is an arbitrarily chosen 2-byte integer,
    selected by the node (OP or OR) that sends the CREATE cell.  To prevent
@@ -232,12 +278,12 @@ when do we rotate which keys (tls, link, etc)?
 
    A CREATE_FAST cell contains:
 
-       Key material (X)    [20 bytes]
+       Key material (X)    [HASH_LEN bytes]
 
    A CREATED_FAST cell contains:
 
-       Key material (Y)    [20 bytes]
-       Derivative key data [20 bytes] (See 4.2 below)
+       Key material (Y)    [HASH_LEN bytes]
+       Derivative key data [HASH_LEN bytes] (See 4.2 below)
 
    The values of X and Y must be generated randomly.
 
@@ -251,7 +297,7 @@ when do we rotate which keys (tls, link, etc)?
    and server MUST verify that the received g^x or g^y value is not degenerate;
    that is, it must be strictly greater than 1 and strictly less than p-1
    where p is the DH modulus.  Implementations MUST NOT complete a handshake
-   with degenerate keys.  Implementions MAY discard other "weak" g^x values.
+   with degenerate keys.  Implementations MAY discard other "weak" g^x values.
 
    (Discarding degenerate keys is critical for security; if bad keys are not
    discarded, an attacker can substitute the server's CREATED cell's g^y with
@@ -268,12 +314,15 @@ when do we rotate which keys (tls, link, etc)?
    If CREATE_FAST is used, the client and server base their key material on
    K0=X|Y.
 
-   From the base key material K0, they compute 100 bytes of derivative
-   key data as K = SHA1(K0 | [00]) | SHA1(K0 | [01]) | ... SHA1(K0 |
-   [04]) where "00" is a single octet whose value is zero, [01] is a
-   single octet whose value is one, etc.  The first 20 bytes of K form
-   KH, bytes 21-40 form the forward digest Df, 41-60 form the backward
-   digest Db, 61-76 form Kf, and 77-92 form Kb.
+   From the base key material K0, they compute KEY_LEN*2+HASH_LEN*3 bytes of
+   derivative key data as
+       K = H(K0 | [00]) | H(K0 | [01]) | H(K0 | [02]) | ...
+
+
+   The first HASH_LEN bytes of K form KH; the next HASH_LEN form the forward
+   digest Df; the next HASH_LEN 41-60 form the backward digest Db; the next
+   KEY_LEN 61-76 form Kf, and the final KEY_LEN form Kb.  Excess bytes from K
+   are discarded.
 
    KH is used in the handshake response to demonstrate knowledge of the
    computed shared key. Df is used to seed the integrity-checking hash
@@ -399,7 +448,7 @@ when do we rotate which keys (tls, link, etc)?
 
    Otherwise, if the OR is not at the OP edge of the circuit (that is,
    either an 'exit node' or a non-edge node), it de/encrypts the payload
-   with AES/CTR, as follows:
+   with the stream cipher, as follows:
         'Forward' relay cell (same direction as CREATE):
             Use Kf as key; decrypt.
         'Back' relay cell (opposite direction from CREATE):
@@ -415,7 +464,7 @@ when do we rotate which keys (tls, link, etc)?
    sends a DESTROY cell to tear down the circuit.
 
    When a relay cell arrives at an OP, the OP decrypts the payload
-   with AES/CTR as follows:
+   with the stream cipher as follows:
          OP receives data cell:
             For I=N...1,
                 Decrypt with Kb_I.  If the payload is recognized (see
@@ -438,7 +487,7 @@ when do we rotate which keys (tls, link, etc)?
          StreamID                [2 bytes]
          Digest                  [4 bytes]
          Length                  [2 bytes]
-         Data                    [498 bytes]
+         Data                    [CELL_LEN-14 bytes]
 
    The relay commands are:
          1 -- RELAY_BEGIN     [forward]
@@ -461,7 +510,7 @@ when do we rotate which keys (tls, link, etc)?
 
    The 'recognized' field in any unencrypted relay payload is always set
    to zero; the 'digest' field is computed as the first four bytes of
-   the running SHA-1 digest of all the bytes that have been destined for
+   the running digest of all the bytes that have been destined for
    this hop of the circuit or originated from this hop of the circuit,
    seeded from Df or Db respectively (obtained in section 4.2 above),
    and including this RELAY cell's entire payload (taken with the digest
@@ -763,7 +812,7 @@ The items' formats are as follows:
 
    "fingerprint"
 
-      A fingerprint (20 byte SHA1 hash of asn1 encoded public key, encoded
+      A fingerprint (a HASH_LEN-byte of asn1 encoded public key, encoded
       in hex, with a single space after every 4 characters) for this router's
       identity key.
 
@@ -801,7 +850,7 @@ The items' formats are as follows:
 
    "router-signature" NL Signature NL
 
-       The "SIGNATURE" object contains a signature of the PKCS1-padded SHA1
+       The "SIGNATURE" object contains a signature of the PKCS1-padded
        hash of the entire router descriptor, taken from the beginning of the
        "router" line, through the newline after the "router-signature" line.
        The router descriptor is invalid unless the signature is performed
@@ -909,7 +958,7 @@ descriptors, and a single "directory-signature" item.
 
     "directory-signature" nickname-of-dirserver NL Signature
 
-The signature is computed by computing the SHA-1 hash of the
+The signature is computed by computing the digest of the
 directory, from the characters "signed-directory", through the newline
 after "directory-signature".  This digest is then padded with PKCS.1,
 and signed with the directory server's signing key.
@@ -981,6 +1030,8 @@ B.1. ... but which will require backward-incompatible change
   - Circuit IDs should be longer.
   - IPv6 everywhere.
   - Maybe, keys should be longer.
+    - Maybe, key-length should be adjustable.  How to do this without
+      making anonymity suck?
   - Drop backward compatibility.
   - We should use a 128-bit subgroup of our DH prime.
   - Handshake should use HMAC.
