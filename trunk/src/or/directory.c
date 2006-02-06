@@ -131,15 +131,20 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
 {
   smartlist_t *dirservers;
   int post_via_tor;
+  int post_to_v1_only;
 
   router_get_trusted_dir_servers(&dirservers);
   tor_assert(dirservers);
+  /* Only old dirservers handle rendezvous descriptor publishing. */
+  post_to_v1_only = (purpose == DIR_PURPOSE_UPLOAD_RENDDESC);
   /* This tries dirservers which we believe to be down, but ultimately, that's
    * harmless, and we may as well err on the side of getting things uploaded.
    */
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
       routerstatus_t *rs = &(ds->fake_status);
+      if (post_to_v1_only && !ds->is_v1_authority)
+        continue;
       post_via_tor = purpose_is_private(purpose) ||
                      !fascist_firewall_allows_address(ds->addr,ds->dir_port);
       directory_initiate_command_routerstatus(rs, purpose, post_via_tor,
