@@ -60,7 +60,7 @@ when do we rotate which keys (tls, link, etc)?
    0 bytes.
 
    For a public-key cipher, we use RSA with 1024-bit keys and a fixed
-   exponent of 65537.  We use OAEP padding, with SHA1 as its digest
+   exponent of 65537.  We use OAEP padding, with SHA-1 as its digest
    function.   (For OAEP padding, see
    ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
 
@@ -77,14 +77,14 @@ when do we rotate which keys (tls, link, etc)?
    320 bits.  Implementations that do this MUST never use any DH key more
    than once.
 
-   For a hash function, we use SHA1.
+   For a hash function, we use SHA-1.
 
    KEY_LEN=16.
    DH_LEN=128; DH_GROUP_LEN=40.
    PK_ENC_LEN=128; PK_PAD_LEN=42.
    HASH_LEN=20.
 
-   When we refer to "the hash of a public key", we mean the SHA1 hash of the
+   When we refer to "the hash of a public key", we mean the SHA-1 hash of the
    DER encoding of an ASN.1 RSA public key (as specified in PKCS.1).
 
    All "random" values should be generated with a cryptographically strong
