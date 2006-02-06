@@ -761,30 +761,6 @@ list_server_status(smartlist_t *routers, char **router_status_out)
   return 0;
 }
 
-/** Helper: Given pointers to two strings describing tor versions, return -1
- * if _a precedes _b, 1 if _b preceeds _a, and 0 if they are equivalent.
- * Used to sort a list of versions. */
-static int
-_compare_tor_version_str_ptr(const void **_a, const void **_b)
-{
-  const char *a = *_a, *b = *_b;
-  int ca, cb;
-  tor_version_t va, vb;
-  ca = tor_version_parse(a, &va);
-  cb = tor_version_parse(b, &vb);
-  /* If they both parse, compare them. */
-  if (!ca && !cb)
-    return tor_version_compare(&va,&vb);
-  /* If one parses, it comes first. */
-  if (!ca && cb)
-    return -1;
-  if (ca && !cb)
-    return 1;
-  /* If neither parses, compare strings.  Also, the directory server admin
-  ** needs to be smacked upside the head.  But Tor is tolerant and gentle. */
-  return strcmp(a,b);
-}
-
 /* Given a (possibly empty) list of config_line_t, each line of which contains
  * a list of comma-separated version numbers surrounded by optional space,
  * allocate and return a new string containing the version numbers, in order,
@@ -800,7 +776,7 @@ format_versions_list(config_line_t *ln)
     smartlist_split_string(versions, ln->value, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   }
-  smartlist_sort(versions, _compare_tor_version_str_ptr);
+  sort_version_list(versions);
   result = smartlist_join_strings(versions,",",0,NULL);
   SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
   smartlist_free(versions);

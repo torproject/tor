@@ -2662,6 +2662,69 @@ networkstatus_get_by_digest(const char *digest)
   return NULL;
 }
 
+/** We believe networkstatuses more recent than this when they tell us that
+ * our server is broken, invalid, obsolete, etc. */
+#define SELF_OPINION_INTERVAL 90*60
+
+/** Return a string naming the versions of Tor recommended by
+ * at least n_needed versioning networkstatuses */
+static char *
+compute_recommended_versions(time_t now, int client)
+{
+  int n_seen;
+  char *current;
+  smartlist_t *combined, *recommended;
+  int n_recent;
+  char *result;
+
+  if (!networkstatus_list)
+    return tor_strdup("<none>");
+
+  combined = smartlist_create();
+  n_recent = 0;
+  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+    {
+      const char *vers;
+      if (! ns->recommends_versions)
+        continue;
+      if (ns->received_on + SELF_OPINION_INTERVAL < now)
+        continue;
+      n_recent++;
+      vers = client ? ns->client_versions : ns->server_versions;
+      if (!vers)
+        continue;
+      smartlist_split_string(combined, vers, ",",
+                             SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    });
+
+  sort_version_list(combined);
+
+  current = NULL;
+  n_seen = 0;
+  recommended = smartlist_create();
+  SMARTLIST_FOREACH(combined, char *, cp,
+    {
+      if (current && !strcmp(cp, current)) {
+        ++n_seen;
+      } else {
+        if (n_seen >= n_recent/2 && current)
+          smartlist_add(recommended, current);
+        n_seen = 0;
+        current = cp;
+      }
+    });
+  if (n_seen >= n_recent/2 && current)
+    smartlist_add(recommended, current);
+
+  result = smartlist_join_strings(recommended, ", ", 0, NULL);
+
+  SMARTLIST_FOREACH(combined, char *, cp, tor_free(cp));
+  smartlist_free(combined);
+  smartlist_free(recommended);
+
+  return result;
+}
+
 /** If the network-status list has changed since the last time we called this
  * function, update the status of every routerinfo from the network-status
  * list.
@@ -2669,7 +2732,6 @@ networkstatus_get_by_digest(const char *digest)
 void
 routers_update_all_from_networkstatus(void)
 {
-#define SELF_OPINION_INTERVAL 90*60
   routerinfo_t *me;
   time_t now;
   if (!routerlist || !networkstatus_list ||
@@ -2747,22 +2809,27 @@ routers_update_all_from_networkstatus(void)
     if (n_recent > 2 && n_recommended < n_recent/2) {
       if (consensus == VS_NEW || consensus == VS_NEW_IN_SERIES) {
         if (!have_warned_about_new_version) {
+          char *rec = compute_recommended_versions(now, !is_server);
           notice(LD_GENERAL, "This version of Tor (%s) is newer than any "
                  "recommended version%s, according to %d/%d recent network "
-                 "statuses.",
+                 "statuses.  Versions recommended by at least %d recent "
+                 "authorities are: %s",
                  VERSION,
                  consensus == VS_NEW_IN_SERIES ? " in its series" : "",
-                 n_recent-n_recommended, n_recent);
+                 n_recent-n_recommended, n_recent, n_recent/2, rec);
           have_warned_about_new_version = 1;
+          tor_free(rec);
         }
       } else {
+        char *rec = compute_recommended_versions(now, !is_server);
         warn(LD_GENERAL, "Please upgrade! "
              "This version of Tor (%s) is %s, according to "
-             "%d/%d recent network statuses.",
+             "%d/%d recent network statuses.  Versions recommended by "
+             "at least %d recent authorities are: %s",
              VERSION, consensus == VS_OLD ? "obsolete" : "not recommended",
-             n_recent-n_recommended, n_recent);
-        /* XXX011 we need to tell them what versions *are* recommended! */
+             n_recent-n_recommended, n_recent, n_recent/2, rec);
         have_warned_about_old_version = 1;
+        tor_free(rec);
       }
     } else {
       info(LD_GENERAL, "%d/%d recent directories think my version is ok.",
