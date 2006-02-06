@@ -2917,12 +2917,12 @@ normalize_log_options(or_options_t *options)
 /** Add the exit policy described by <b>more</b> to <b>policy</b>.
  */
 static void
-options_append_exit_policy_string(addr_policy_t **policy, char *more)
+options_append_exit_policy_string(addr_policy_t **policy, const char *more)
 {
   config_line_t tmp;
 
   tmp.key = NULL;
-  tmp.value = more;
+  tmp.value = (char*) more;
   tmp.next = NULL;
   config_parse_addr_policy(&tmp, policy, -1);
 }
