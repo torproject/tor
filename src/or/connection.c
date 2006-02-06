@@ -547,7 +547,7 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
 #endif
 
   if (bind(s,(struct sockaddr *)&listenaddr,sizeof(listenaddr)) < 0) {
-    char *helpfulhint = "";
+    const char *helpfulhint = "";
     int e = tor_socket_errno(s);
     if (ERRNO_IS_EADDRINUSE(e))
       helpfulhint = ". Is Tor already running?";
