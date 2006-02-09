@@ -2825,9 +2825,10 @@ routers_update_all_from_networkstatus(void)
         warn(LD_GENERAL, "Please upgrade! "
              "This version of Tor (%s) is %s, according to "
              "%d/%d recent network statuses.  Versions recommended by "
-             "at least %d recent authorities are: %s",
+             "at least %d recent authorit%s are: %s",
              VERSION, consensus == VS_OLD ? "obsolete" : "not recommended",
-             n_recent-n_recommended, n_recent, n_recent/2, rec);
+             n_recent-n_recommended, n_recent, n_recent/2,
+             n_recent/2 > 1 ? "ies" : "y", rec);
         have_warned_about_old_version = 1;
         tor_free(rec);
       }
