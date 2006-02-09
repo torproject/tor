@@ -1,3 +1,85 @@
+Changes in version 0.1.1.13-alpha - 2006-02-09
+  o Crashes in 0.1.1.x:
+    - When you tried to setconf ORPort via the controller, Tor would
+      crash. So people using TorCP to become a server were sad.
+    - Solve (I hope) the stack-smashing bug that we were seeing on fast
+      servers. The problem appears to be something do with OpenSSL's
+      random number generation, or how we call it, or something. Let me
+      know if the crashes continue.
+    - Turn crypto hardware acceleration off by default, until we find
+      somebody smart who can test it for us. (It appears to produce
+      seg faults in at least some cases.)
+    - Fix a rare assert error when we've tried all intro points for
+      a hidden service and we try fetching the service descriptor again:
+      "Assertion conn->state != AP_CONN_STATE_RENDDESC_WAIT failed"
+
+  o Major fixes:
+    - Fix a major load balance bug: we were round-robining in 16 KB
+      chunks, and servers with bandwidthrate of 20 KB, while downloading
+      a 600 KB directory, would starve their other connections. Now we
+      try to be a bit more fair.
+    - Dir authorities and mirrors were never expiring the newest
+      descriptor for each server, causing memory and directory bloat.
+    - Fix memory-bloating and connection-bloating bug on servers: We
+      were never closing any connection that had ever had a circuit on
+      it, because we were checking conn->n_circuits == 0, yet we had a
+      bug that let it go negative.
+    - Make Tor work using squid as your http proxy again -- squid returns
+      an error if you ask for a URL that's too long, and it uses a really
+      generic error message. Plus, many people are behind a transparent
+      squid so they don't even realize it.
+    - On platforms that don't have getrlimit (like Windows), we were
+      artificially constraining ourselves to a max of 1024
+      connections. Now just assume that we can handle as many as 15000
+      connections. Hopefully this won't cause other problems.
+    - Add a new config option ExitPolicyRejectPrivate which defaults to 1.
+      This means all exit policies will begin with rejecting private
+      addresses, unless the server operator explicitly turns it off.
+
+  o Major features:
+    - Clients not longer download descriptors for non-running descriptors.
+    - Before we add new directory authorities, we should make it
+      clear that only v1 authorities should receive/publish hidden
+      service descriptors.
+
+  o Minor features:
+    - As soon as we've fetched some more directory info, immediately
+      try to download more server descriptors. This way we don't have
+      a 10 second pause during initial bootstrapping.
+    - Remove even more loud log messages that the server operator can't
+      do anything about.
+    - When we're running an obsolete or un-recommended version, make
+      the log message more clear about what the problem is and what
+      versions *are* still recommended.
+    - Provide a more useful warn message when our onion queue gets full:
+      the CPU is too slow or the exit policy is too liberal.
+    - Don't warn when we receive a 503 from a dirserver/cache -- this will
+      pave the way for them being able to refuse if they're busy.
+    - When we fail to bind a listener, try to provide a more useful
+      log message: e.g., "Is Tor already running?"
+    - Adjust tor-spec to parameterize cell and key lengths. Now Ian
+      Goldberg can prove things about our handshake protocol more easily.
+    - MaxConn has been obsolete for a while now. Document the ConnLimit
+      config option, which is a *minimum* number of file descriptors
+      that must be available else Tor refuses to start.
+    - Apply Matt Ghali's --with-syslog-facility patch to ./configure
+      if you log to syslog and want something other than LOG_DAEMON.
+    - Make dirservers generate a separate "guard" flag to mean,
+      "would make a good entry guard". Make clients parse it and vote
+      on it. Not used by clients yet.
+    - Implement --with-libevent-dir option to ./configure. Also, improve
+      search techniques to find libevent, and use those for openssl too.
+    - Bump the default bandwidthrate to 3 MB, and burst to 6 MB
+    - Only start testing reachability once we've established a
+      circuit. This will make startup on dirservers less noisy.
+    - Don't try to upload hidden service descriptors until we have
+      established a circuit.
+    - Fix the controller's "attachstream 0" command to treat conn like it
+      just connected, doing address remapping, handling .exit and .onion
+      idioms, and so on. Now we're more uniform in making sure that the
+      controller hears about new and closing connections.
+
+
 Changes in version 0.1.1.12-alpha - 2006-01-11
   o Bugfixes on 0.1.1.x:
     - The fix to close duplicate server connections was closing all
