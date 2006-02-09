@@ -58,7 +58,6 @@ N - when we're running an unrecommended version, we should be told
 N o add a GUARD flag to the network-status entries.
 R   - Clients use it.
   - add TestSocks config option to man page
-R - MaxConn is still in man page. needs to be ConnLimit and needs change.
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
