@@ -1,4 +1,4 @@
-/* Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
+/* Copyright 2004-2006 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 const char rendservice_c_id[] =
