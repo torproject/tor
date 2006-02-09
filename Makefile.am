@@ -1,8 +1,7 @@
 # $Id$
-# Copyright 2002-2004 Roger Dingledine
-# Copyright 2004-2005 Roger Dingledine, Nick Mathewson
+# Copyright (c) 2001-2004, Roger Dingledine
+# Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 # See LICENSE for licensing information
-
 
 AUTOMAKE_OPTIONS = foreign
  # else it keeps trying to put COPYING back in

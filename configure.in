@@ -1,6 +1,6 @@
 dnl $Id$
-dnl Copyright (c) 2001-2005 Roger Dingledine
-dnl Copyright (c) 2004-2005 Nick Mathewson
+dnl Copyright (c) 2001-2004, Roger Dingledine
+dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 dnl See LICENSE for licensing information
 
 AC_INIT
