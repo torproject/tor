@@ -24,7 +24,7 @@ elif [ -f /etc/init.d/functions ]; then
 fi
 
 # Increase open file descriptors a reasonable amount
-ulimit -n 4096
+ulimit -n 8192
 
 TORCTL=@BINDIR@/torctl
 
