@@ -152,6 +152,29 @@
    maybe it's an argument in favor of a more penny-counting reputation
    approach.
 
+3.7. What is the appropriate resource balance for servers vs. clients?
+
+   If we build a good incentive system, we'll still need to tune it
+   to provide the right bandwidth allocation -- if we reserve too much
+   bandwidth for fast servers, then we're wasting some potential, but we
+   if we reserve too little, then fewer people will opt to become servers.
+   How do we find the right balance?
+
+   One answer is that it doesn't have to be perfect: we can err on the
+   side of providing extra resources to servers, then we will achieve our
+   desired goal: when people complain about speed, we can tell them to
+   run a server, and they will in fact get better performance. In fact,
+   finding an optimum balance is especially hard because it's a moving
+   target: the better our incentive mechanism (and the lower the barrier
+   to setup), the more servers there will be.
+
+3.8. Anonymity attack: fast connections probably come from good servers.
+
+
+3.9. How do we allocate bandwidth over the course of a second?
+
+
+
 4. Sample designs.
 
 4.1. Two classes of service for circuits.
@@ -220,7 +243,7 @@
    we know that we can get away with poor performance for people that
    aren't listed in the directory.
 
-5. Types of attacks.
+5. Recommendations and next steps.
 
-5.1. Anonymity attacks:
+
 
