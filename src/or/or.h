@@ -1267,8 +1267,8 @@ typedef struct {
                                    * versions? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int NoPublish; /**< Boolean: should we never publish a descriptor? */
-  int ConnLimit; /**< Requested maximum number of simultaneous connections. */
-  int _ConnLimit; /**< Actual maximum number of simultaneous connections. */
+  int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
+  int _ConnLimit; /**< Maximum allowed number of simultaneous connections. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   smartlist_t *FirewallPorts; /**< Which ports our firewall allows
