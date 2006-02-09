@@ -112,8 +112,8 @@ circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
     found = HT_REMOVE(orconn_circid_map, &orconn_circid_circuit_map, &search);
     if (found) {
       tor_free(found);
+      --old_conn->n_circuits;
     }
-    --old_conn->n_circuits;
   }
 
   if (conn == NULL)
