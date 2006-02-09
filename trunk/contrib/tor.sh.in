@@ -23,6 +23,9 @@ elif [ -f /etc/init.d/functions ]; then
    . /etc/init.d/functions
 fi
 
+# Increase open file descriptors a reasonable amount
+ulimit -n 4096
+
 TORCTL=@BINDIR@/torctl
 
 # torctl will use these environment variables
