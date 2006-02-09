@@ -198,7 +198,7 @@ On startup, setuid to this user.
 .TP
 \fBHardwareAccel \fR\fI0|1\fP
 If non-zero, try to use crypto hardware acceleration when
-available. (Default: 0)
+available. This is untested and probably buggy. (Default: 0)
 
 .SH CLIENT OPTIONS
 .PP
