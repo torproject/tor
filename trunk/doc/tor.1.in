@@ -368,6 +368,7 @@ When this option is enabled, Tor will make a notice-level log entry for
 each connection to the Socks port indicating whether the request used
 a hostname (safe) or an IP address (unsafe). This helps to determine
 whether an application using Tor is possibly leaking DNS requests.
+(Default: 0)
 
 .SH SERVER OPTIONS
 .PP
