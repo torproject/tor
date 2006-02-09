@@ -249,12 +249,13 @@ $Id$
 
 4.2. Downloading network-status documents
 
-   All directory servers (authorities and mirrors) try to keep a fresh set of
-   network-status documents from every authority.  To do so, every 5 minutes,
-   each authority asks every other authority for its most recent network-status
-   document.  Every 15 minutes, each mirror picks a random authority and asks it
-   for the most recent network-status documents for all the authorities the
-   authority knows about (including the chosen authority itself).
+   All directory servers (authorities and mirrors) try to keep a fresh
+   set of network-status documents from every authority.  To do so,
+   every 5 minutes, each authority asks every other authority for its
+   most recent network-status document.  Every 15 minutes, each mirror
+   picks a random authority and asks it for the most recent network-status
+   documents for all the authorities the authority knows about (including
+   the chosen authority itself).
 
    Directory servers and mirrors remember and serve the most recent
    network-status document they have from each authority.  Other
