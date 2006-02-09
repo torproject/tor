@@ -1,12 +1,12 @@
 ## Configuration file for a typical Tor user
-## Last updated 4 February 2006 for Tor 0.1.1.13-alpha.
+## Last updated 9 February 2006 for Tor 0.1.1.13-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
 ## that begin with just "#" are disabled commands: you can enable them
 ## by removing the "#" symbol.
 ##
-## See the man page, or http://tor.eff.org/tor-manual.html, for more
+## See the man page, or http://tor.eff.org/tor-manual-cvs.html, for more
 ## options you can use in this file.
 ##
 ## On Unix, Tor will look for this file in someplace like "~/.tor/torrc" or
@@ -28,7 +28,7 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## Entry policies to allow/deny SOCKS requests based on IP address.
 ## First entry that matches wins. If no SocksPolicy is set, we accept
 ## all (and only) requests from SocksListenAddress.
-#SocksPolicy accept 192.168.0.1/16
+#SocksPolicy accept 192.168.0.0/16
 #SocksPolicy reject *
 
 ## Logs go to stdout at level "notice" unless redirected by something
@@ -118,9 +118,9 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #MyFamily nickname1,nickname2,...
 
 ## A comma-separated list of exit policies. They're considered first
-## to last, and the first match wins. If you want to *replace*
+## to last, and the first match wins. If you want to _replace_
 ## the default exit policy, end this with either a reject *:* or an
-## accept *:*. Otherwise, you're *augmenting* (prepending to) the
+## accept *:*. Otherwise, you're _augmenting_ (prepending to) the
 ## default exit policy. Leave commented to just use the default, which is
 ## available in the man page or at http://tor.eff.org/documentation.html
 ##
