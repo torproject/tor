@@ -364,10 +364,10 @@ as long-term entries for our circuits.
 .LP
 .TP
 \fBTestSocks \fR\fB0\fR|\fB1\fR\fP
-When this option is enabled then Tor will make a notice-level log entry
-for each connection to the Socks port indicating whether a hostname or
-an IP address was used in the request.  This helps to determine whether
-an application using Tor is possibly leaking DNS requests.
+When this option is enabled, Tor will make a notice-level log entry for
+each connection to the Socks port indicating whether the request used
+a hostname (safe) or an IP address (unsafe). This helps to determine
+whether an application using Tor is possibly leaking DNS requests.
 
 .SH SERVER OPTIONS
 .PP
