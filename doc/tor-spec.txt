@@ -318,7 +318,6 @@ when do we rotate which keys (tls, link, etc)?
    derivative key data as
        K = H(K0 | [00]) | H(K0 | [01]) | H(K0 | [02]) | ...
 
-
    The first HASH_LEN bytes of K form KH; the next HASH_LEN form the forward
    digest Df; the next HASH_LEN 41-60 form the backward digest Db; the next
    KEY_LEN 61-76 form Kf, and the final KEY_LEN form Kb.  Excess bytes from K
@@ -1023,7 +1022,6 @@ A.1. Differences between spec and implementation
   support at all.
 
 B. Things that should change in a later version of the Tor protocol
-
 
 B.1. ... but which will require backward-incompatible change
 

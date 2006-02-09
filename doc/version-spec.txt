@@ -21,7 +21,6 @@ say, "0.0.8".  Our first pre-release would be "0.0.8pre1", followed by
 0.0.8.  The stable CVS branch would then be versioned "0.0.8.1-cvs",
 and any eventual bugfix release would be "0.0.8.1".
 
-
 The New Way
 -----------
 
@@ -44,3 +43,4 @@ Eventually, we release 0.1.1.6.  The next patch release is 0.1.1.7.
 
 Between these releases, CVS is versioned with a -cvs tag: after
 0.1.1.1-alpha comes 0.1.1.1-alpha-cvs, and so on.
+

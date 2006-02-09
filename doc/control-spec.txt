@@ -88,7 +88,6 @@ $Id$
 
   Address = ip4-address / ip6-address / hostname   (XXXX Define these)
 
-
   ; A "Data" section is a sequence of octets concluded by the terminating
   ; sequence CRLF "." CRLF.  The terminating sequence may not appear in the
   ; body of the data.  Leading periods on lines in the data are escaped with
@@ -250,9 +249,10 @@ $Id$
     250-OldAddress1=NewAddress1
     250 OldAddress2=NewAddress2
 
-  containing the source and destination addresses.  If request is malformed,
-  the server replies with "512 syntax error in command argument".  If the server
-  can't fulfill the request, it replies with "451 resource exhausted."
+  containing the source and destination addresses.  If request is
+  malformed, the server replies with "512 syntax error in command
+  argument".  If the server can't fulfill the request, it replies with
+  "451 resource exhausted."
 
   The client may decline to provide a body for the original address, and
   instead send a special null address ("0.0.0.0" for IPv4, "::0" for IPv6, or
@@ -326,15 +326,17 @@ $Id$
     "addr-mappings/all"
     "addr-mappings/config"
     "addr-mappings/cache"
-    "addr-mappings/control" -- a space-separated list of address mappings, each
-      in the form of "from-address=to-address".  The 'config' key
-      returns those address mappings set in the configuration; the 'cache'
-      key returns the mappings in the client-side DNS cache; the 'control'
-      key returns the mappings set via the control interface; the 'all'
-      target returns the mappings set through any mechanism.
+    "addr-mappings/control" -- a space-separated list of address
+      mappings, each in the form of "from-address=to-address".
+      The 'config' key returns those address mappings set in the
+      configuration; the 'cache' key returns the mappings in the
+      client-side DNS cache; the 'control' key returns the mappings set
+      via the control interface; the 'all' target returns the mappings
+      set through any mechanism.
 
     "circuit-status"
-      A series of lines as for a circuit status event. Each line is of the form:
+      A series of lines as for a circuit status event. Each line is of
+      the form:
          CircuitID SP CircStatus SP Path CRLF
 
     "stream-status"
@@ -694,7 +696,8 @@ $Id$
 4.1.8. Descriptors uploaded to us in our role as authoritative dirserver
 
   Syntax:
-     "650" "+" "AUTHDIR_NEWDESCS" CRLF Action CRLF Message CRLF Descriptor CRLF "." CRLF
+     "650" "+" "AUTHDIR_NEWDESCS" CRLF Action CRLF Message CRLF
+       Descriptor CRLF "." CRLF
      Action = "ACCEPTED" / "DROPPED" / "REJECTED"
      Message = Text
 
@@ -739,3 +742,4 @@ $Id$
   should send the sequence [00 00 0D 0A].  This is a valid and unrecognized
   command in both protocol versions, and implementations can detect which
   error they have received.
+

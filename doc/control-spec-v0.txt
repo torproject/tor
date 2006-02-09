@@ -235,7 +235,6 @@ the message.
 
                 Message [NUL-terminated]
 
-
 3.8. AUTHENTICATE (Type 0x0007)
 
   Sent from the client to the server.  Contains a 'magic cookie' to prove
