@@ -1143,10 +1143,10 @@ do_main_loop(void)
       /* let the program survive things like ^z */
       if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
 #ifdef HAVE_EVENT_GET_METHOD
-        err(LD_NET,"libevent poll with %s failed: %s [%d]",
+        err(LD_NET,"libevent call with %s failed: %s [%d]",
             event_get_method(), tor_socket_strerror(e), e);
 #else
-        err(LD_NET,"libevent poll failed: %s [%d]",
+        err(LD_NET,"libevent call failed: %s [%d]",
             tor_socket_strerror(e), e);
 #endif
         return -1;
@@ -1158,8 +1158,8 @@ do_main_loop(void)
 #endif
       } else {
         if (ERRNO_IS_EINPROGRESS(e))
-          warn(LD_BUG,"libevent poll returned EINPROGRESS? Please report.");
-        debug(LD_NET,"event poll interrupted.");
+          warn(LD_BUG,"libevent call returned EINPROGRESS? Please report.");
+        debug(LD_NET,"libevent call interrupted.");
         /* You can't trust the results of this poll(). Go back to the
          * top of the big for loop. */
         continue;
