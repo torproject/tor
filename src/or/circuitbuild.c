@@ -1698,7 +1698,7 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
  * - Listed as either up or never yet contacted;
  * - Present in the routerlist;
  * - Listed as 'stable' or 'fast' by the current dirserver concensus,
- *   if demanded by <b>need_uptime</b> and <b>need_capacity</b>; and
+ *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>; and
  * - Allowed by our current ReachableAddresses config option.
  */
 static INLINE routerinfo_t *
