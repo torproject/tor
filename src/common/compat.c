@@ -441,9 +441,15 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 
 #define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond _ConnLimit */
 
-/** Get the maximum allowed number of file descriptors. (Some systems
- * have a low soft limit.) Make sure we set it to at least
- * <b>limit</b>. Return a new limit if we can, or -1 if we fail. */
+/** Learn the maximum allowed number of file descriptors. (Some systems
+ * have a low soft limit.
+ *
+ * We compute this by finding the largest number between <b>limit</b>
+ * and <b>cap</b> that we can use. If we can't find a number greater
+ * than or equal to <b>limit</b>, then we fail: return -1.
+ *
+ * Otherwise, return the number minus some buffer to allow for other
+ * file descriptors we'll want available for ordinary use. */
 int
 set_max_file_descriptors(unsigned long limit, unsigned long cap)
 {
