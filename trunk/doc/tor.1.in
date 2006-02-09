@@ -49,6 +49,17 @@ advertised bandwidth rate) can thus reduce the CPU demands on their
 server without impacting network performance.
 .LP
 .TP
+\fBConnLimit \fR\fINUM\fP
+The minimum number of file descriptors that must be available to
+the Tor process before it will start. Tor will ask the OS for as
+many file descriptors as the OS will allow (you can find this
+by "ulimit -H -n"). If this number is less than ConnLimit, then
+Tor will refuse to start.
+
+You probably don't need to adjust this. It has no effect on
+Windows since that platform lacks getrlimit(). (Default: 1024)
+.LP
+.TP
 \fBControlPort \fR\fIPort\fP
 If set, Tor will accept connections from the same machine (localhost only) on
 this port, and allow those connections to control the Tor process using the
@@ -151,11 +162,6 @@ sent to the listed destination.
 As above, but send log messages to the listed filename.  The "Log"
 option may appear more than once in a configuration file.  Messages
 are sent to all the logs that match their severity level.
-.LP
-.TP
-\fBMaxConn \fR\fINUM\fP
-Maximum number of simultaneous sockets allowed.  You probably don't need
-to adjust this. (Default: 1024)
 .LP
 .TP
 \fBOutboundBindAddress \fR\fIIP\fP
