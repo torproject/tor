@@ -459,7 +459,9 @@ other servers in its family; it doesn't need to list itself, but it won't hurt.)
 .LP
 .TP
 \fBNickname \fR\fIname\fP
-Set the server's nickname to 'name'.
+Set the server's nickname to 'name'. Nicknames must be between 1
+and 19 characters inclusive, and must contain only the characters
+[a-zA-Z0-9].
 .LP
 .TP
 \fBNoPublish \fR\fB0\fR|\fB1\fR\fP
