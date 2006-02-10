@@ -1,14 +1,15 @@
-tor (0.1.1.12-alpha-cvs-0) unreleased; urgency=low
+tor (0.1.1.13-alpha-1) experimental; urgency=low
 
-  * CVS SNAPSHOT
+  * New upstream version.
   * Forward port patches/02_add_debian_files_in_manpage.
   * Forward port patches/03_tor_manpage_in_section_8.
   * Create /var/run/tor on init script start if it does
     not exist already.
   * Set default ulimit -n to 8k instead of 4k in /etc/default/tor.
   * Print that we're raising the ulimit to stdout in the init script.
+  * Add CVE numbers to past issues in the changelog where applicable.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 23 Jan 2006 15:57:59 +0100
+ -- Peter Palfrader <weasel@debian.org>  Fri, 10 Feb 2006 14:38:11 +0100
 
 tor (0.1.1.12-alpha-1) experimental; urgency=low
 
