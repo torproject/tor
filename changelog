@@ -1,8 +1,8 @@
-tor (0.1.1.13-alpha-cvs-0) experimental; urgency=low
+tor (0.1.1.13-alpha-cvs-0) unreleased; urgency=low
 
   * CVS SNAPSHOT.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 10 Feb 2006 16:21:08 +0100
+ -- Peter Palfrader <weasel@debian.org>  Fri, 10 Feb 2006 16:21:49 +0100
 
 tor (0.1.1.13-alpha-1) experimental; urgency=low
 
