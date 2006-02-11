@@ -30,11 +30,11 @@ Website:
     stickers directly, etc.
 
 for 0.1.1.x:
-  - building on freebsd 6.0: (with multiple openssl installations)
-    <nickm> "Let's try to find a way to make it run and make the version
-    match, but if not, let's just make it run."
-    <arma> should we detect if we have a --with-ssl-dir and try the -R
-    by default, if it works?
+N - building on freebsd 6.0: (with multiple openssl installations)
+    . <nickm> "Let's try to find a way to make it run and make the version
+       match, but if not, let's just make it run."
+    - <arma> should we detect if we have a --with-ssl-dir and try the -R
+      by default, if it works?
 
   - Split into ReachableDirAddresses and ReachableORAddresses
 R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
@@ -51,12 +51,12 @@ N - look at the proposed os x uninstaller:
       when they feel like it.
     - update dir-spec with what we decided for each of these
 N - commit edmanm's win32 makefile to tor cvs contrib
-N - use only the three dirservers for hidden service descriptors
+  o use only the three dirservers for hidden service descriptors
   - and publish hidden service descriptors less frequently
-N - when we're running an unrecommended version, we should be told
+  o when we're running an unrecommended version, we should be told
     what versions *are* recommended. whose list do we use?
-N o add a GUARD flag to the network-status entries.
-R   - Clients use it.
+  o add a GUARD flag to the network-status entries.
+R   - Clients use it. (But not till the directories have upgraded!)
   - add TestSocks config option to man page
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
@@ -110,9 +110,6 @@ R - When we connect to a Tor server, it sends back a signed cell listing
     - non-versioning dirservers don't need to set recommended*versions.
     - non-naming dirservers don't need to have an approved-routers file.
     - What are criteria to be a dirserver?  Write a policy.
-
-
-
 
 
 Deferred from 0.1.1.x:
