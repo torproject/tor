@@ -24,16 +24,16 @@ Changes in version 0.1.1.13-alpha - 2006-02-09
       were never closing any connection that had ever had a circuit on
       it, because we were checking conn->n_circuits == 0, yet we had a
       bug that let it go negative.
-    - Make Tor work using squid as your http proxy again -- squid returns
-      an error if you ask for a URL that's too long, and it uses a really
-      generic error message. Plus, many people are behind a transparent
-      squid so they don't even realize it.
+    - Make Tor work using squid as your http proxy again -- squid
+      returns an error if you ask for a URL that's too long, and it uses
+      a really generic error message. Plus, many people are behind a
+      transparent squid so they don't even realize it.
     - On platforms that don't have getrlimit (like Windows), we were
       artificially constraining ourselves to a max of 1024
       connections. Now just assume that we can handle as many as 15000
       connections. Hopefully this won't cause other problems.
-    - Add a new config option ExitPolicyRejectPrivate which defaults to 1.
-      This means all exit policies will begin with rejecting private
+    - Add a new config option ExitPolicyRejectPrivate which defaults to
+      1. This means all exit policies will begin with rejecting private
       addresses, unless the server operator explicitly turns it off.
 
   o Major features:
@@ -53,12 +53,13 @@ Changes in version 0.1.1.13-alpha - 2006-02-09
       versions *are* still recommended.
     - Provide a more useful warn message when our onion queue gets full:
       the CPU is too slow or the exit policy is too liberal.
-    - Don't warn when we receive a 503 from a dirserver/cache -- this will
-      pave the way for them being able to refuse if they're busy.
+    - Don't warn when we receive a 503 from a dirserver/cache -- this
+      will pave the way for them being able to refuse if they're busy.
     - When we fail to bind a listener, try to provide a more useful
       log message: e.g., "Is Tor already running?"
     - Adjust tor-spec to parameterize cell and key lengths. Now Ian
-      Goldberg can prove things about our handshake protocol more easily.
+      Goldberg can prove things about our handshake protocol more
+      easily.
     - MaxConn has been obsolete for a while now. Document the ConnLimit
       config option, which is a *minimum* number of file descriptors
       that must be available else Tor refuses to start.
@@ -74,10 +75,10 @@ Changes in version 0.1.1.13-alpha - 2006-02-09
       circuit. This will make startup on dirservers less noisy.
     - Don't try to upload hidden service descriptors until we have
       established a circuit.
-    - Fix the controller's "attachstream 0" command to treat conn like it
-      just connected, doing address remapping, handling .exit and .onion
-      idioms, and so on. Now we're more uniform in making sure that the
-      controller hears about new and closing connections.
+    - Fix the controller's "attachstream 0" command to treat conn like
+      it just connected, doing address remapping, handling .exit and
+      .onion idioms, and so on. Now we're more uniform in making sure
+      that the controller hears about new and closing connections.
 
 
 Changes in version 0.1.1.12-alpha - 2006-01-11
