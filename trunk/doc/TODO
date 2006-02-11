@@ -57,7 +57,7 @@ N - commit edmanm's win32 makefile to tor cvs contrib
     what versions *are* recommended. whose list do we use?
   o add a GUARD flag to the network-status entries.
 R   - Clients use it. (But not till the directories have upgraded!)
-  - add TestSocks config option to man page
+  o add TestSocks config option to man page
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
@@ -81,6 +81,7 @@ R - look into "uncounting" bytes spent on local connections. so
     we can bandwidthrate but still have fast downloads.
 N - make clients understand "private:*" in exit policies, even though
     we don't generate it yet.
+R - remove duplicate entries in exitpolicy
 
   o In circuit_get_open_circ_or_launch(),
     /* XXXX011 NM This should be a generic "retry all directory fetches". */
