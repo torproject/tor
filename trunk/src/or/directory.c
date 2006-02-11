@@ -1387,10 +1387,6 @@ directory_handle_command_get(connection_t *conn, char *headers,
     int deflated = !strcmp(url,"/tor/dir.z");
     dlen = dirserv_get_directory(&cp, deflated);
 
-    note_request(url, dlen);
-
-    tor_free(url);
-
     if (dlen == 0) {
       notice(LD_DIRSERV,"Client asked for the mirrored directory, but we "
              "don't have a good one yet. Sending 503 Dir not available.");
@@ -1398,8 +1394,20 @@ directory_handle_command_get(connection_t *conn, char *headers,
       /* try to get a new one now */
       if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
+      tor_free(url);
       return 0;
     }
+
+    if (global_write_bucket_empty()) {
+      info(LD_DIRSERV,
+           "Client asked for the mirrored directory, but we've been "
+           "writing too many bytes lately. Sending 503 Dir busy.");
+      write_http_status_line(conn, 503, "Directory busy, try again later");
+      tor_free(url);
+      return 0;
+    }
+
+    note_request(url, dlen);
 
     debug(LD_DIRSERV,"Dumping %sdirectory to client.",
           deflated?"deflated ":"");
