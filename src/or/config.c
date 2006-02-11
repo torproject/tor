@@ -2769,10 +2769,11 @@ options_init_logs(or_options_t *options, int validate_only)
     if (smartlist_len(elts) < 2) { /* only loglevels were provided */
       if (!validate_only) {
         if (daemon) {
-          warn(LD_CONFIG, "Can't log to stdout with RunAsDaemon set.");
-          ok = 0; goto cleanup;
+          warn(LD_CONFIG,
+               "Can't log to stdout with RunAsDaemon set; skipping stdout");
+        } else {
+          add_stream_log(levelMin, levelMax, "<stdout>", stdout);
         }
-        add_stream_log(levelMin, levelMax, "<stdout>", stdout);
       }
       goto cleanup;
     }
