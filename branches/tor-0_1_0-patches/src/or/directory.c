@@ -743,6 +743,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       log_fn(LOG_INFO,"Empty directory; status %d (\"%s\") Ignoring.",
              status_code, reason);
       tor_free(body); tor_free(headers); tor_free(reason);
+      connection_dir_connect_failed(conn); /* retry */
       return 0;
     }
     if (status_code != 200) {
