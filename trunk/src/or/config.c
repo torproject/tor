@@ -3111,6 +3111,8 @@ config_cmp_addr_policies(addr_policy_t *a, addr_policy_t *b)
 {
   int r;
   while (a && b) {
+    if ((r=((int)a->policy_type - (int)b->policy_type)))
+      return r;
     if ((r=((int)a->addr - (int)b->addr)))
       return r;
     if ((r=((int)a->msk - (int)b->msk)))
