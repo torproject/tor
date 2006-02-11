@@ -1408,6 +1408,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
 
     note_request(url, dlen);
+    tor_free(url);
 
     debug(LD_DIRSERV,"Dumping %sdirectory to client.",
           deflated?"deflated ":"");
