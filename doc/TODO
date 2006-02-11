@@ -82,10 +82,10 @@ R - look into "uncounting" bytes spent on local connections. so
 N - make clients understand "private:*" in exit policies, even though
     we don't generate it yet.
 
-N - In circuit_get_open_circ_or_launch(),
+  o In circuit_get_open_circ_or_launch(),
     /* XXXX011 NM This should be a generic "retry all directory fetches". */
 
-N - if they're trying to be a tor server and they're running
+  o if they're trying to be a tor server and they're running
      win 98 or win me, tell them that they'll likely crash.
 
 N - Display the reasons in 'destroy' and 'truncated' cells under some
