@@ -1157,13 +1157,13 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 //           router->nickname, i);
       continue; /* skip routers that are known to be down */
     }
-    if (router_is_unreliable(router, need_uptime, need_capacity)) {
+    if (router_is_unreliable(router, need_uptime, need_capacity, 0)) {
       n_supported[i] = -1;
       continue; /* skip routers that are not suitable */
     }
     if (!router->is_verified &&
         (!(options->_AllowUnverified & ALLOW_UNVERIFIED_EXIT) ||
-         router_is_unreliable(router, 1, 1))) {
+         router_is_unreliable(router, 1, 1, 0))) {
       /* if it's unverified, and either we don't want it or it's unsuitable */
       n_supported[i] = -1;
 //      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- unverified router.",
@@ -1303,14 +1303,14 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, get_options()->ExcludeNodes,
-               NULL, need_uptime, need_capacity,
+               NULL, need_uptime, need_capacity, 0,
                get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
       else
         return choose_good_exit_server_general(dir,need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       return router_choose_random_node(
                options->RendNodes, options->RendExcludeNodes,
-               NULL, need_uptime, need_capacity,
+               NULL, need_uptime, need_capacity, 0,
                options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
   }
   warn(LD_BUG,"Bug: unhandled purpose %d", purpose);
@@ -1479,7 +1479,7 @@ choose_good_middle_server(uint8_t purpose,
   }
   choice = router_choose_random_node(
            NULL, get_options()->ExcludeNodes, excluded,
-           state->need_uptime, state->need_capacity,
+           state->need_uptime, state->need_capacity, 0,
            get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
   smartlist_free(excluded);
   return choice;
@@ -1529,8 +1529,9 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   // but only if there are enough other nodes available.
   choice = router_choose_random_node(
            NULL, options->ExcludeNodes,
-           excluded, state ? state->need_uptime : 1,
-           state ? state->need_capacity : 1,
+           excluded, state ? state->need_uptime : 0,
+           state ? state->need_capacity : 0,
+           state ? 0 : 1,
            options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY, 0);
   smartlist_free(excluded);
   return choice;
@@ -1710,7 +1711,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity)
   r = router_get_by_digest(e->identity);
   if (!r)
     return NULL;
-  if (router_is_unreliable(r, need_uptime, need_capacity))
+  if (router_is_unreliable(r, need_uptime, need_capacity, 0))
     return NULL;
   if (firewall_is_fascist() &&
       !fascist_firewall_allows_address(r->addr,r->or_port))

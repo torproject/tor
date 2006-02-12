@@ -992,7 +992,7 @@ rend_services_introduce(void)
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
       char *hex_digest;
       router = router_choose_random_node(service->intro_prefer_nodes,
-               service->intro_exclude_nodes, exclude_routers, 1, 0,
+               service->intro_exclude_nodes, exclude_routers, 1, 0, 0,
                get_options()->_AllowUnverified & ALLOW_UNVERIFIED_INTRODUCTION,
                0);
       if (!router) {
