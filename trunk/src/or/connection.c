@@ -1038,7 +1038,8 @@ connection_bucket_write_limit(connection_t *conn)
 
 /** Return 1 if the global write bucket has no bytes in it,
  * or return 0 if it does. */
-int global_write_bucket_empty(void)
+int
+global_write_bucket_empty(void)
 {
   return global_write_bucket <= 0;
 }
