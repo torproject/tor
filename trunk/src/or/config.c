@@ -3150,6 +3150,10 @@ config_parse_addr_policy(config_line_t *cfg,
       debug(LD_CONFIG,"Adding new entry '%s'",ent);
       *nextp = router_parse_addr_policy_from_string(ent, assume_action);
       if (*nextp) {
+        if (addr_mask_get_bits((*nextp)->msk)<0) {
+          warn(LD_CONFIG, "Address policy element '%s' can't be expressed "
+               "as a bit prefix.", ent);
+        }
         nextp = &((*nextp)->next);
       } else {
         warn(LD_CONFIG,"Malformed policy '%s'.", ent);
