@@ -954,7 +954,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* If we're pretty sure that we have a compressed directory, and
      * we didn't manage to uncompress it, then warn and bail. */
     if (!plausible && !new_body) {
-      warn(LD_HTTP, "Unable to decompress HTTP body (server '%s:%d').",
+      log(LOG_PROTOCOL_WARN, LD_HTTP,
+          "Unable to decompress HTTP body (server '%s:%d').",
            conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
