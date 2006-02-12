@@ -355,6 +355,7 @@ static void config_register_addressmaps(or_options_t *options);
 
 static int parse_dir_server_line(const char *line, int validate_only);
 static int config_cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b);
+static int config_addr_policy_covers(addr_policy_t *a, addr_policy_t *b);
 static int parse_redirect_line(smartlist_t *result,
                                config_line_t *line);
 static int parse_log_severity_range(const char *range, int *min_out,
@@ -3071,12 +3072,12 @@ config_exit_policy_remove_redundancies(addr_policy_t **dest)
     }
   }
 
-  /* Step two: for every entry, see if there's an exact duplicate
+  /* Step two: for every entry, see if there's a redundant entry
    * later on, and remove it. */
   for (ap=*dest; ap; ap=ap->next) {
     tmp=ap;
     while (tmp) {
-      if (tmp->next && !config_cmp_single_addr_policy(ap, tmp->next)) {
+      if (tmp->next && config_addr_policy_covers(ap, tmp->next)) {
         victim = tmp->next;
         tmp->next = victim->next;
         victim->next = NULL;
@@ -3179,6 +3180,21 @@ config_cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
   if ((r=((int)a->prt_max - (int)b->prt_max)))
     return r;
   return 0;
+}
+
+/** Return true iff the address policy <b>a</b> covers every case that would be
+ * covered by <b>b</b>, so that a,b is redundant. */
+static int
+config_addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
+{
+
+  /* We can ignore accept/reject, since "accept *:80, reject *:80" reduces to
+   * "accept *:80". */
+  if (a->msk & ~b->msk)
+    return 0; /* There's a wildcard bit in b->msk that's not a wildcard in a. */
+  if ((a->addr & a->msk) != (b->addr & a->msk))
+    return 0; /* There's a fixed bit in a that's set differently in b. */
+  return (a->prt_min <= b->prt_min && a->prt_max >= b->prt_max);
 }
 
 /** Like config_cmp_single_addr_policy() above, but looks at the
