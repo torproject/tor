@@ -348,6 +348,7 @@ static int check_nickname_list(const char *lst, const char *name);
 static void config_register_addressmaps(or_options_t *options);
 
 static int parse_dir_server_line(const char *line, int validate_only);
+static int config_cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b);
 static int parse_redirect_line(smartlist_t *result,
                                config_line_t *line);
 static int parse_log_severity_range(const char *range, int *min_out,
@@ -3001,9 +3002,10 @@ config_expand_exit_policy_aliases(smartlist_t *entries, int assume_action)
 static void
 config_exit_policy_remove_redundancies(addr_policy_t **dest)
 {
-  addr_policy_t *ap, *tmp;
+  addr_policy_t *ap, *tmp, *victim;
   int have_seen_accept=0;
 
+  /* Step one: find a *:* entry and cut off everything after it. */
   for (ap=*dest; ap; ap=ap->next) {
     if (ap->policy_type == ADDR_POLICY_ACCEPT)
       have_seen_accept=1;
@@ -3025,6 +3027,22 @@ config_exit_policy_remove_redundancies(addr_policy_t **dest)
             break;
           }
         }
+      }
+    }
+  }
+
+  /* Step two: for every entry, see if there's an exact duplicate
+   * later on, and remove it. */
+  for (ap=*dest; ap; ap=ap->next) {
+    tmp=ap;
+    while (tmp) {
+      if (tmp->next && !config_cmp_single_addr_policy(ap, tmp->next)) {
+        victim = tmp->next;
+        tmp->next = victim->next;
+        victim->next = NULL;
+        addr_policy_free(victim);
+      } else {
+        tmp=tmp->next;
       }
     }
   }
@@ -3104,22 +3122,33 @@ config_parse_addr_policy(config_line_t *cfg,
   return r;
 }
 
-/** Compare two provided address policies, and return -1, 0, or 1 if the first
- * is less than, equal to, or greater than the second. */
+/** Compare two provided address policy items, and return -1, 0, or 1
+ * if the first is less than, equal to, or greater than the second. */
+static int
+config_cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
+{
+  int r;
+  if ((r=((int)a->policy_type - (int)b->policy_type)))
+    return r;
+  if ((r=((int)a->addr - (int)b->addr)))
+    return r;
+  if ((r=((int)a->msk - (int)b->msk)))
+    return r;
+  if ((r=((int)a->prt_min - (int)b->prt_min)))
+    return r;
+  if ((r=((int)a->prt_max - (int)b->prt_max)))
+    return r;
+  return 0;
+}
+
+/** Like config_cmp_single_addr_policy() above, but looks at the
+ * whole set of policies in each case. */
 int
 config_cmp_addr_policies(addr_policy_t *a, addr_policy_t *b)
 {
   int r;
   while (a && b) {
-    if ((r=((int)a->policy_type - (int)b->policy_type)))
-      return r;
-    if ((r=((int)a->addr - (int)b->addr)))
-      return r;
-    if ((r=((int)a->msk - (int)b->msk)))
-      return r;
-    if ((r=((int)a->prt_min - (int)b->prt_min)))
-      return r;
-    if ((r=((int)a->prt_max - (int)b->prt_max)))
+    if ((r=config_cmp_single_addr_policy(a,b)))
       return r;
     a = a->next;
     b = b->next;
