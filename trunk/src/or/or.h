@@ -809,6 +809,7 @@ typedef struct {
                             * us? */
   unsigned int is_fast:1; /** Do we think this is a fast OR? */
   unsigned int is_stable:1; /** Do we think this is a stable OR? */
+  unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
@@ -2271,12 +2272,13 @@ routerinfo_t *router_find_exact_exit_enclave(const char *address,
 
 #define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
 int router_is_unreliable(routerinfo_t *router, int need_uptime,
-                         int need_capacity);
+                         int need_capacity, int need_guard);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
                                         smartlist_t *excludedsmartlist,
                                         int need_uptime, int need_bandwidth,
+                                        int need_guard,
                                         int allow_unverified, int strict);
 routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
