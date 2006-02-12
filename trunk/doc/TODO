@@ -51,20 +51,14 @@ N - look at the proposed os x uninstaller:
       when they feel like it.
     - update dir-spec with what we decided for each of these
 N - commit edmanm's win32 makefile to tor cvs contrib
-  o use only the three dirservers for hidden service descriptors
-  o and publish hidden service descriptors less frequently
-  o when we're running an unrecommended version, we should be told
-    what versions *are* recommended. whose list do we use?
   o add a GUARD flag to the network-status entries.
 R   - Clients use it. (But not till the directories have upgraded!)
-  o add TestSocks config option to man page
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
   - make log entries include function names in win32 again.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
-  o "options_init_logs(): Can't log to stdout with RunAsDaemon set."
   - Were we going to load unrecognized 'state' variables into some
     list somewhere, and write them out whenever we update the state?
     To be forwards and backwards compatible.
@@ -81,13 +75,6 @@ R - look into "uncounting" bytes spent on local connections. so
     we can bandwidthrate but still have fast downloads.
 N - make clients understand "private:*" in exit policies, even though
     we don't generate it yet.
-  o remove duplicate entries in exitpolicy
-
-  o In circuit_get_open_circ_or_launch(),
-    /* XXXX011 NM This should be a generic "retry all directory fetches". */
-
-  o if they're trying to be a tor server and they're running
-     win 98 or win me, tell them that they'll likely crash.
 
 N - Display the reasons in 'destroy' and 'truncated' cells under some
     circumstances?
