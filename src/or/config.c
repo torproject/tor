@@ -1855,7 +1855,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
        !strcmpstart(uname, "Windows 98") ||
        !strcmpstart(uname, "Windows Me"))) {
     log(LOG_WARN, LD_CONFIG, "Tor is running as a server, but you are "
-        "running %s; this probably won't work.", get_uname());
+        "running %s; this probably won't work. See http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerOS for details.", get_uname());
   }
 
   if (options->ORPort == 0 && options->ORListenAddress != NULL)
