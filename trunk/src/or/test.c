@@ -928,7 +928,7 @@ test_gzip(void)
     test_eq(detect_compression_method(buf2, len1), GZIP_METHOD);
 
     test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
-                                     GZIP_METHOD, 1));
+                                     GZIP_METHOD, 1, LOG_INFO));
     test_assert(buf3);
     test_streq(buf1,buf3);
 
@@ -942,7 +942,8 @@ test_gzip(void)
   test_assert(!memcmp(buf2, "\x78\xDA", 2)); /* deflate magic. */
   test_eq(detect_compression_method(buf2, len1), ZLIB_METHOD);
 
-  test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1, ZLIB_METHOD, 1));
+  test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
+                                   ZLIB_METHOD, 1, LOG_INFO));
   test_assert(buf3);
   test_streq(buf1,buf3);
 
@@ -951,7 +952,7 @@ test_gzip(void)
   buf2 = tor_realloc(buf2, len1*2);
   memcpy(buf2+len1, buf2, len1);
   test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2,
-                                   ZLIB_METHOD, 1));
+                                   ZLIB_METHOD, 1, LOG_INFO));
   test_eq(len2, (strlen(buf1)+1)*2);
   test_memeq(buf3,
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
@@ -970,14 +971,15 @@ test_gzip(void)
   tor_assert(len1>16);
   /* when we allow an uncomplete string, we should succeed.*/
   tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
-                                  ZLIB_METHOD, 0));
+                                  ZLIB_METHOD, 0, LOG_INFO));
   buf3[len2]='\0';
   tor_assert(len2 > 5);
   tor_assert(!strcmpstart(buf1, buf3));
 
   /* when we demand a complete string, this must fail. */
   tor_free(buf3);
-  tor_assert(tor_gzip_uncompress(&buf3, &len2, buf2, len1-16, ZLIB_METHOD, 1));
+  tor_assert(tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
+                                 ZLIB_METHOD, 1, LOG_INFO));
   tor_assert(!buf3);
 
   tor_free(buf2);
