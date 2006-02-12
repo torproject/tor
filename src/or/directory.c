@@ -945,18 +945,18 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* Try declared compression first if we can. */
     if (compression > 0)
       tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression,
-                          allow_partial);
+                          allow_partial, LOG_PROTOCOL_WARN);
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
     if (!new_body && guessed > 0 && compression != guessed)
       tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed,
-                          allow_partial);
+                          allow_partial, LOG_PROTOCOL_WARN);
     /* If we're pretty sure that we have a compressed directory, and
      * we didn't manage to uncompress it, then warn and bail. */
     if (!plausible && !new_body) {
-      log(LOG_PROTOCOL_WARN, LD_HTTP,
-          "Unable to decompress HTTP body (server '%s:%d').",
-           conn->address, conn->port);
+      log_fn(LOG_PROTOCOL_WARN, LD_HTTP,
+             "Unable to decompress HTTP body (server '%s:%d').",
+             conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }

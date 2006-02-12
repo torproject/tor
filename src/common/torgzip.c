@@ -157,7 +157,8 @@ int
 tor_gzip_uncompress(char **out, size_t *out_len,
                     const char *in, size_t in_len,
                     compress_method_t method,
-                    int complete_only)
+                    int complete_only,
+                    int protocol_warn_level)
 {
   struct z_stream_s *stream = NULL;
   size_t out_size;
@@ -218,7 +219,8 @@ tor_gzip_uncompress(char **out, size_t *out_len,
           break;
       case Z_BUF_ERROR:
         if (stream->avail_out > 0) {
-          warn(LD_PROTOCOL, "possible truncated or corrupt zlib data");
+          log_fn(protocol_warn_level, LD_PROTOCOL,
+                 "possible truncated or corrupt zlib data");
           goto err;
         }
         offset = stream->next_out - (unsigned char*)*out;
