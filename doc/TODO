@@ -52,7 +52,7 @@ N - look at the proposed os x uninstaller:
     - update dir-spec with what we decided for each of these
 N - commit edmanm's win32 makefile to tor cvs contrib
   o use only the three dirservers for hidden service descriptors
-  - and publish hidden service descriptors less frequently
+  o and publish hidden service descriptors less frequently
   o when we're running an unrecommended version, we should be told
     what versions *are* recommended. whose list do we use?
   o add a GUARD flag to the network-status entries.
@@ -81,7 +81,7 @@ R - look into "uncounting" bytes spent on local connections. so
     we can bandwidthrate but still have fast downloads.
 N - make clients understand "private:*" in exit policies, even though
     we don't generate it yet.
-R - remove duplicate entries in exitpolicy
+  o remove duplicate entries in exitpolicy
 
   o In circuit_get_open_circ_or_launch(),
     /* XXXX011 NM This should be a generic "retry all directory fetches". */
@@ -114,6 +114,10 @@ R - When we connect to a Tor server, it sends back a signed cell listing
 
 
 Deferred from 0.1.1.x:
+
+  - If the server is spewing complaints about raising your ulimit -n,
+    we should add a note about this to the server descriptor so other
+    people can notice too.
 
   - We need a getrlimit equivalent on Windows so we can reserve some
     file descriptors for saving files, etc. Otherwise we'll trigger
