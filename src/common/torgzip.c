@@ -146,7 +146,8 @@ tor_gzip_compress(char **out, size_t *out_len,
   return -1;
 }
 
-/** Given or more zlib-compressed or gzip-compressed strings of total length
+/** Given zero or more zlib-compressed or gzip-compressed strings of
+ * total length
  * <b>in_len</b> bytes at <b>in</b>, uncompress them into a newly allocated
  * buffer, using the method described in <b>method</b>.  Store the uncompressed
  * string in *<b>out</b>, and its length in *<b>out_len</b>.  Return 0 on
