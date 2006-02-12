@@ -168,6 +168,7 @@ int parse_addr_port(const char *addrport, char **address, uint32_t *addr,
 int parse_addr_and_port_range(const char *s, uint32_t *addr_out,
                               uint32_t *mask_out, uint16_t *port_min_out,
                               uint16_t *port_max_out);
+int addr_mask_get_bits(uint32_t mask);
 #define INET_NTOA_BUF_LEN 16
 int tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len);
 char *tor_dup_addr(uint32_t addr);

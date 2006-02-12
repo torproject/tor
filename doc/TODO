@@ -73,8 +73,12 @@ R - Add config options to not publish and not fetch rend descs.
 R - let controlport be configurable on other interfaces
 R - look into "uncounting" bytes spent on local connections. so
     we can bandwidthrate but still have fast downloads.
-N - make clients understand "private:*" in exit policies, even though
-    we don't generate it yet.
+N . Clean and future-proof exit policy formats a bit.
+    o Likewise accept, but don't generate /bits formats (unless they're
+      accepted in 0.0.9 and later).
+    o Warn when we see a netmask that isn't a prefix.
+    - Make clients understand "private:*" in exit policies, even though
+      we don't generate it yet.
 
 N - Display the reasons in 'destroy' and 'truncated' cells under some
     circumstances?

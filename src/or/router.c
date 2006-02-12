@@ -1111,13 +1111,18 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       return -1;
     written += result;
     if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
-      /* Write "/255.255.0.0" */
-      in.s_addr = htonl(tmpe->msk);
-      tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
-      result = tor_snprintf(s+written, maxlen-written, "/%s", addrbuf);
-      if (result<0)
-        return -1;
-      written += result;
+      int n_bits = addr_mask_get_bits(tmpe->msk);
+      if (n_bits >= 0) {
+        if (tor_snprintf(s+written, maxlen-written, "/%d", n_bits)<0)
+          return -1;
+      } else {
+        /* Write "/255.255.0.0" */
+        in.s_addr = htonl(tmpe->msk);
+        tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
+        if (tor_snprintf(s+written, maxlen-written, "/%s", addrbuf)<0)
+          return -1;
+      }
+      written += strlen(s+written);
     }
     if (tmpe->prt_min <= 1 && tmpe->prt_max == 65535) {
       /* There is no port set; write ":*" */

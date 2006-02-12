@@ -1420,6 +1420,20 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
   return ok ? 0 : -1;
 }
 
+/** If <b>mask</b> is an address mask for a bit-prefix, return the number of
+ * bits.  Otherwise, return -1. */
+int
+addr_mask_get_bits(uint32_t mask)
+{
+  int i;
+  for (i=0; i<=32; ++i) {
+    if (mask == ~((1<<(32-i))-1)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 /** Parse a string <b>s</b> in the format of
  * (IP(/mask|/mask-bits)?|*):(*|port(-maxport)?), setting the various
  * *out pointers as appropriate.  Return 0 on success, -1 on failure.
