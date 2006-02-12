@@ -199,7 +199,7 @@ static config_var_t _option_vars[] = {
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
-  VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "20 minutes"),
+  VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "1 hour"),
   VAR("RephistTrackTime",    INTERVAL, RephistTrackTime,     "24 hours"),
   OBSOLETE("RouterFile"),
   VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "0"),
