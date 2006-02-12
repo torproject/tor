@@ -37,7 +37,7 @@ Changes in version 0.1.1.13-alpha - 2006-02-09
       addresses, unless the server operator explicitly turns it off.
 
   o Major features:
-    - Clients not longer download descriptors for non-running descriptors.
+    - Clients no longer download descriptors for non-running descriptors.
     - Before we add new directory authorities, we should make it
       clear that only v1 authorities should receive/publish hidden
       service descriptors.
