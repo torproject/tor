@@ -103,7 +103,9 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## yourself to make this work.
 #ORListenAddress 0.0.0.0:9090
 
-## Uncomment this to mirror the directory for others (please do)
+## Uncomment this to mirror the directory for others. Please do
+## if you have enough bandwidth: see the bottom of
+## http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#LimitBandwidth
 #DirPort 9030 # what port to advertise for directory connections
 ## If you want to listen on a port other than the one advertised
 ## in DirPort (e.g. to advertise 80 but bind 9091), uncomment the line
