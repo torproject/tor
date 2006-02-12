@@ -115,7 +115,7 @@ static config_var_t config_vars[] = {
   /** DOCDOC **/
   VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "0 seconds"),
   VAR("DirPostPeriod",       INTERVAL, DirPostPeriod,        "20 minutes"),
-  VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "20 minutes"),
+  VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "1 hour"),
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
   VAR("DirServer",           LINELIST, DirServers,           NULL),
   VAR("ExitNodes",           STRING,   ExitNodes,            NULL),
