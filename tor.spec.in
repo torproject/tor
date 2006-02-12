@@ -13,12 +13,12 @@
 # page for further options:
 # http://gcc.gnu.org/onlinedocs/gcc-4.0.2/gcc/i386-and-x86_002d64-Options.html#i386-and-x86_002d64-Options
 #
-# i386 with zero tuning (most compatible, in theory will run an a true i386 cpu):
+# i386 with zero tuning (most compatible, should run on a true i386 cpu):
 # 1) download tor source tarball
 # 2) at shell prompt, export CFLAGS="-march=i386 -mtune=i386"
 # 3) in the extracted tor source dir, configure as follows:
 #   ./configure --build=i386-pc-linux-gnu --host=i386-pc-linux-gnu --target=i386-pc-linux-gnu
-# 4) Edit tor.spec.in, change the following to line:
+# 4) Edit tor.spec.in, change the following line:
 #   %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
 #   add to it:
 #   --build=i386-pc-linux-gnu --host=i386-pc-linux-gnu --target=i386-pc-linux-gnu
@@ -31,7 +31,7 @@
 # 2) at shell prompt, export CFLAGS="-march=i686 -mtune=i686"
 # 3) in the extracted tor source dir, configure as follows:
 #   ./configure --build=i686-pc-linux-gnu --host=i686-pc-linux-gnu --target=i686-pc-linux-gnu
-# 4) Edit tor.spec.in, change the following to line:
+# 4) Edit tor.spec.in, change the following line:
 #   %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
 #   add to it:
 #   --build=i686-pc-linux-gnu --host=i686-pc-linux-gnu --target=i686-pc-linux-gnu
@@ -43,7 +43,7 @@
 # 2) at shell prompt, export CFLAGS="-march=athlon64 -mtune=athlon64"
 # 3) in the extracted tor source dir, configure as follows:
 #   ./configure --build=athlon64-pc-linux-gnu --host=athlon64-pc-linux-gnu --target=athlon64-pc-linux-gnu
-# 4) Edit tor.spec.in, change the following to line:
+# 4) Edit tor.spec.in, change the following line:
 #   %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
 #   add to it:
 #   --build=athlon64-pc-linux-gnu --host=athlon64-pc-linux-gnu --target=athlon64-pc-linux-gnu
