@@ -102,6 +102,10 @@ typedef struct config_var_t {
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
 #define STRUCT_OFFSET(tp, member) \
   ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
+
+#define STRUCT_VAR_P(st, off) \
+  ((void*) ( ((char*)st) + off ) )
+
 /** An entry for config_vars: "The option <b>name</b> has type
  * CONFIG_TYPE_<b>conftype</b>, and corresponds to
  * or_options_t.<b>member</b>"
@@ -313,12 +317,14 @@ typedef struct {
   config_var_t *vars;
   validate_fn_t validate_fn;
   config_var_description_t *descriptions;
+  config_var_t *extra; /**< If present, a LINELIST variable for unrecognized
+                        * lines.  Otherwise, unrecognized lines are an error. */
 } config_format_t;
 
 #define CHECK(fmt, cfg) do {                                            \
     tor_assert(fmt && cfg);                                             \
     tor_assert((fmt)->magic ==                                          \
-               *(uint32_t*)(((char*)(cfg))+fmt->magic_offset));         \
+               *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
   } while (0)
 
 /** Largest allowed config line */
@@ -389,10 +395,15 @@ static config_format_t options_format = {
   _option_abbrevs,
   _option_vars,
   (validate_fn_t)options_validate,
-  options_description
+  options_description,
+  NULL
 };
 
 #define OR_STATE_MAGIC 0x57A73f57
+
+static config_var_t state_extra_var = {
+  "__extra", CONFIG_TYPE_LINELIST, STRUCT_OFFSET(or_state_t, ExtraLines), NULL
+};
 
 static config_format_t state_format = {
   sizeof(or_state_t),
@@ -401,7 +412,8 @@ static config_format_t state_format = {
   _state_abbrevs,
   _state_vars,
   (validate_fn_t)or_state_validate,
-  state_description
+  state_description,
+  &state_extra_var,
 };
 
 /*
@@ -421,7 +433,7 @@ static void *
 config_alloc(config_format_t *fmt)
 {
   void *opts = opts = tor_malloc_zero(fmt->size);
-  *(uint32_t*)(((char*)opts)+fmt->magic_offset) = fmt->magic;
+  *(uint32_t*)STRUCT_VAR_P(opts, fmt->magic_offset) = fmt->magic;
   CHECK(fmt, opts);
   return opts;
 }
@@ -977,7 +989,7 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   var = config_find_option(fmt, c->key);
   tor_assert(var);
 
-  lvalue = ((char*)options) + var->var_offset;
+  lvalue = STRUCT_VAR_P(options, var->var_offset);
 
   switch (var->type) {
 
@@ -1085,8 +1097,15 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
 
   var = config_find_option(fmt, c->key);
   if (!var) {
-    warn(LD_CONFIG, "Unknown option '%s'.  Failing.", c->key);
-    return -1;
+    if (fmt->extra) {
+      void *lvalue = STRUCT_VAR_P(options, fmt->extra->var_offset);
+      info(LD_CONFIG, "Found unrecognized option '%s'; saving it.", c->key);
+      config_line_append((config_line_t**)lvalue, c->key, c->value);
+      return 0;
+    } else {
+      warn(LD_CONFIG, "Unknown option '%s'.  Failing.", c->key);
+      return -1;
+    }
   }
   /* Put keyword into canonical case. */
   if (strcmp(var->name, c->key)) {
@@ -1183,7 +1202,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
          "Can't return context-sensitive '%s' on its own", key);
     return NULL;
   }
-  value = ((char*)options) + var->var_offset;
+  value = STRUCT_VAR_P(options, var->var_offset);
 
   if (var->type == CONFIG_TYPE_LINELIST ||
       var->type == CONFIG_TYPE_LINELIST_V) {
@@ -1385,7 +1404,7 @@ options_trial_assign(config_line_t *list, int use_defaults, int clear_first)
 static void
 option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
 {
-  void *lvalue = ((char*)options) + var->var_offset;
+  void *lvalue = STRUCT_VAR_P(options, var->var_offset);
   switch (var->type) {
     case CONFIG_TYPE_STRING:
       tor_free(*(char**)lvalue);
@@ -1436,7 +1455,7 @@ option_reset(config_format_t *fmt, or_options_t *options,
   option_clear(fmt, options, var); /* clear it first */
   if (!use_defaults)
     return; /* all done */
-  lvalue = ((char*)options) + var->var_offset;
+  lvalue = STRUCT_VAR_P(options, var->var_offset);
   if (var->initvalue) {
     c = tor_malloc_zero(sizeof(config_line_t));
     c->key = tor_strdup(var->name);
@@ -1588,6 +1607,11 @@ config_free(config_format_t *fmt, void *options)
 
   for (i=0; fmt->vars[i].name; ++i)
     option_clear(fmt, options, &(fmt->vars[i]));
+  if (fmt->extra) {
+    config_line_t **linep = STRUCT_VAR_P(options, fmt->extra->var_offset);
+    config_free_lines(*linep);
+    *linep = NULL;
+  }
   tor_free(options);
 }
 
@@ -1728,12 +1752,26 @@ config_dump(config_format_t *fmt, void *options, int minimal)
       char *tmp;
       tmp = tor_malloc(len);
       if (tor_snprintf(tmp, len, "%s %s\n", line->key, line->value)<0) {
-        err(LD_BUG,"Internal error writing log option");
+        err(LD_BUG,"Internal error writing option value");
         tor_assert(0);
       }
       smartlist_add(elements, tmp);
     }
     config_free_lines(assigned);
+  }
+
+  if (fmt->extra) {
+    line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->var_offset);
+    for (; line; line = line->next) {
+      size_t len = strlen(line->key) + strlen(line->value) + 3;
+      char *tmp;
+      tmp = tor_malloc(len);
+      if (tor_snprintf(tmp, len, "%s %s\n", line->key, line->value)<0) {
+        err(LD_BUG,"Internal error writing option value");
+        tor_assert(0);
+      }
+      smartlist_add(elements, tmp);
+    }
   }
 
   result = smartlist_join_strings(elements, "", 0, NULL);
@@ -1855,7 +1893,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
        !strcmpstart(uname, "Windows 98") ||
        !strcmpstart(uname, "Windows Me"))) {
     log(LOG_WARN, LD_CONFIG, "Tor is running as a server, but you are "
-        "running %s; this probably won't work. See http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerOS for details.", get_uname());
+        "running %s; this probably won't work. See "
+        "http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerOS "
+        "for details.", get_uname());
   }
 
   if (options->ORPort == 0 && options->ORListenAddress != NULL)

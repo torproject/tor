@@ -59,7 +59,7 @@ R   - Clients use it. (But not till the directories have upgraded!)
   - make log entries include function names in win32 again.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
-  - Were we going to load unrecognized 'state' variables into some
+  o Were we going to load unrecognized 'state' variables into some
     list somewhere, and write them out whenever we update the state?
     To be forwards and backwards compatible.
 R - streamline how we define a guard node as 'up'. document it
