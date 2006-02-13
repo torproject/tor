@@ -102,7 +102,7 @@ dir_policy_permits_address(uint32_t addr)
     return 0;
   else if (a==ADDR_POLICY_ACCEPTED)
     return 1;
-  warn(LD_BUG, "Bug: got unexpected 'maybe' answer from dir policy");
+  log_warn(LD_BUG, "Bug: got unexpected 'maybe' answer from dir policy");
   return 0;
 }
 
@@ -191,8 +191,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
           which = "network status";
         else // if (purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
           which = "server descriptors";
-        info(LD_DIR,
-             "No router found for %s; falling back to dirserver list", which);
+        log_info(LD_DIR,
+                 "No router found for %s; falling back to dirserver list",
+                 which);
         rs = router_pick_trusteddirserver(1, 1, 1,
                                           retry_if_no_servers);
         if (!rs)
@@ -219,9 +220,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
     directory_initiate_command_routerstatus(rs, purpose, !directconn,
                                             resource, NULL, 0);
   else {
-    notice(LD_DIR,
-           "No running dirservers known. Will try again later. (purpose %d)",
-           purpose);
+    log_notice(LD_DIR,
+               "No running dirservers known. Will try again later. "
+               "(purpose %d)", purpose);
     if (!purpose_is_private(purpose)) {
       /* remember we tried them all and failed. */
       directory_all_unreachable(time(NULL));
@@ -304,17 +305,17 @@ connection_dir_request_failed(connection_t *conn)
   router_mark_as_down(conn->identity_digest); /* don't try him again */
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR ||
       conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-    info(LD_DIR, "Giving up on directory server at '%s:%d'; retrying",
-         conn->address, conn->port);
+    log_info(LD_DIR, "Giving up on directory server at '%s:%d'; retrying",
+             conn->address, conn->port);
     directory_get_from_dirserver(conn->purpose, NULL,
                                  0 /* don't retry_if_no_servers */);
   } else if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
-    info(LD_DIR, "Giving up on directory server at '%s'; retrying",
-         conn->address);
+    log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
+             conn->address);
     connection_dir_download_networkstatus_failed(conn);
   } else if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
-    info(LD_DIR, "Giving up on directory server at '%s'; retrying",
-         conn->address);
+    log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
+             conn->address);
     connection_dir_download_routerdesc_failed(conn);
   }
 }
@@ -382,28 +383,28 @@ directory_initiate_command(const char *address, uint32_t addr,
 
   switch (purpose) {
     case DIR_PURPOSE_FETCH_DIR:
-      debug(LD_DIR,"initiating directory fetch");
+      log_debug(LD_DIR,"initiating directory fetch");
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
-      debug(LD_DIR,"initiating hidden-service descriptor fetch");
+      log_debug(LD_DIR,"initiating hidden-service descriptor fetch");
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
-      debug(LD_OR,"initiating server descriptor upload");
+      log_debug(LD_OR,"initiating server descriptor upload");
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
-      debug(LD_REND,"initiating hidden-service descriptor upload");
+      log_debug(LD_REND,"initiating hidden-service descriptor upload");
       break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
-      debug(LD_DIR,"initiating running-routers fetch");
+      log_debug(LD_DIR,"initiating running-routers fetch");
       break;
     case DIR_PURPOSE_FETCH_NETWORKSTATUS:
-      debug(LD_DIR,"initiating network-status fetch");
+      log_debug(LD_DIR,"initiating network-status fetch");
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
-      debug(LD_DIR,"initiating server descriptor fetch");
+      log_debug(LD_DIR,"initiating server descriptor fetch");
       break;
     default:
-      err(LD_BUG, "Unrecognized directory connection purpose.");
+      log_err(LD_BUG, "Unrecognized directory connection purpose.");
       tor_assert(0);
   }
 
@@ -451,13 +452,13 @@ directory_initiate_command(const char *address, uint32_t addr,
      */
     conn->s = connection_ap_make_bridge(conn->address, conn->port);
     if (conn->s < 0) {
-      warn(LD_NET,"Making AP bridge to dirserver failed.");
+      log_warn(LD_NET,"Making AP bridge to dirserver failed.");
       connection_mark_for_close(conn);
       return;
     }
 
     if (connection_add(conn) < 0) {
-      warn(LD_NET,"Unable to add AP bridge to dirserver.");
+      log_warn(LD_NET,"Unable to add AP bridge to dirserver.");
       connection_mark_for_close(conn);
       return;
     }
@@ -509,7 +510,7 @@ directory_send_command(connection_t *conn, const char *platform,
     if (authenticator) {
       base64_authenticator = alloc_http_authenticator(authenticator);
       if (!base64_authenticator)
-        warn(LD_BUG, "Encoding http authenticator failed");
+        log_warn(LD_BUG, "Encoding http authenticator failed");
     }
     if (base64_authenticator) {
       tor_snprintf(proxyauthstring, sizeof(proxyauthstring),
@@ -528,8 +529,9 @@ directory_send_command(connection_t *conn, const char *platform,
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(!resource);
       tor_assert(!payload);
-      debug(LD_DIR, "Asking for compressed directory from server running %s",
-            platform?platform:"<unknown version>");
+      log_debug(LD_DIR,
+                "Asking for compressed directory from server running %s",
+                platform?platform:"<unknown version>");
       httpcommand = "GET";
       url = tor_strdup("/tor/dir.z");
       break;
@@ -586,10 +588,10 @@ directory_send_command(connection_t *conn, const char *platform,
   }
 
   if (strlen(proxystring) + strlen(url) >= 4096) {
-    warn(LD_BUG,
-         "Bug: squid does not like URLs longer than 4095 bytes, this "
-         "one is %d bytes long: %s%s",
-         (int)(strlen(proxystring) + strlen(url)), proxystring, url);
+    log_warn(LD_BUG,
+             "Bug: squid does not like URLs longer than 4095 bytes, this "
+             "one is %d bytes long: %s%s",
+             (int)(strlen(proxystring) + strlen(url)), proxystring, url);
   }
 
   tor_snprintf(request, sizeof(request), "%s %s", httpcommand, proxystring);
@@ -649,7 +651,7 @@ parse_http_url(char *headers, char **url)
     if (s-tmp >= 3 && !strcmpstart(tmp,"://")) {
       tmp = strchr(tmp+3, '/');
       if (tmp && tmp < s) {
-        debug(LD_DIR,"Skipping over 'http[s]://hostname' string");
+        log_debug(LD_DIR,"Skipping over 'http[s]://hostname' string");
         start = tmp;
       }
     }
@@ -746,7 +748,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
   if (sscanf(headers, "HTTP/1.%d %d", &n1, &n2) < 2 ||
       (n1 != 0 && n1 != 1) ||
       (n2 < 100 || n2 >= 600)) {
-    warn(LD_HTTP,"Failed to parse header '%s'",headers);
+    log_warn(LD_HTTP,"Failed to parse header '%s'",headers);
     return -1;
   }
   *code = n2;
@@ -793,8 +795,8 @@ parse_http_response(const char *headers, int *code, time_t *date,
     } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
       *compression = GZIP_METHOD;
     } else {
-      info(LD_HTTP, "Unrecognized content encoding: '%s'. Trying to deal.",
-           enc);
+      log_info(LD_HTTP, "Unrecognized content encoding: '%s'. Trying to deal.",
+               enc);
       *compression = -1;
     }
   }
@@ -861,12 +863,13 @@ connection_dir_client_reached_eof(connection_t *conn)
                               &body, &body_len, MAX_DIR_SIZE,
                               allow_partial)) {
     case -1: /* overflow */
-      warn(LD_PROTOCOL,"'fetch' response too large (server '%s:%d'). Closing.",
-           conn->address, conn->port);
+      log_warn(LD_PROTOCOL,
+               "'fetch' response too large (server '%s:%d'). Closing.",
+               conn->address, conn->port);
       return -1;
     case 0:
-      info(LD_HTTP,
-           "'fetch' response not all here, but we're at eof. Closing.");
+      log_info(LD_HTTP,
+               "'fetch' response not all here, but we're at eof. Closing.");
       return -1;
     /* case 1, fall through */
   }
@@ -874,16 +877,16 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (parse_http_response(headers, &status_code, &date_header,
                           &compression, &reason) < 0) {
-    warn(LD_HTTP,"Unparseable headers (server '%s:%d'). Closing.",
-         conn->address, conn->port);
+    log_warn(LD_HTTP,"Unparseable headers (server '%s:%d'). Closing.",
+             conn->address, conn->port);
     tor_free(body); tor_free(headers);
     return -1;
   }
   if (!reason) reason = tor_strdup("[no reason given]");
 
-  debug(LD_DIR,
-        "Received response from directory server '%s:%d': %d \"%s\"",
-        conn->address, conn->port, status_code, reason);
+  log_debug(LD_DIR,
+            "Received response from directory server '%s:%d': %d \"%s\"",
+            conn->address, conn->port, status_code, reason);
 
   if (date_header > 0) {
     now = time(NULL);
@@ -899,15 +902,15 @@ connection_dir_client_reached_eof(connection_t *conn)
              abs(delta)/60, delta>0 ? "behind" : "ahead");
       skewed = 1; /* don't check the recommended-versions line */
     } else {
-      debug(LD_HTTP, "Time on received directory is within tolerance; "
-            "we are %d seconds skewed.  (That's okay.)", delta);
+      log_debug(LD_HTTP, "Time on received directory is within tolerance; "
+                "we are %d seconds skewed.  (That's okay.)", delta);
     }
   }
 
   if (status_code == 503) {
-    info(LD_DIR,"Received http status code %d (\"%s\") from server "
-         "'%s:%d'. I'll try again soon.",
-         status_code, reason, conn->address, conn->port);
+    log_info(LD_DIR,"Received http status code %d (\"%s\") from server "
+             "'%s:%d'. I'll try again soon.",
+             status_code, reason, conn->address, conn->port);
     tor_free(body); tor_free(headers); tor_free(reason);
     return -1;
   }
@@ -937,10 +940,10 @@ connection_dir_client_reached_eof(connection_t *conn)
       else
         description2 = "uncompressed";
 
-      info(LD_HTTP, "HTTP body from server '%s:%d' was labeled %s, "
-           "but it seems to be %s.%s",
-           conn->address, conn->port, description1, description2,
-           (compression>0 && guessed>0)?"  Trying both.":"");
+      log_info(LD_HTTP, "HTTP body from server '%s:%d' was labeled %s, "
+               "but it seems to be %s.%s",
+               conn->address, conn->port, description1, description2,
+               (compression>0 && guessed>0)?"  Trying both.":"");
     }
     /* Try declared compression first if we can. */
     if (compression > 0)
@@ -970,36 +973,36 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR) {
     /* fetch/process the directory to cache it. */
-    info(LD_DIR,"Received directory (size %d) from server '%s:%d'",
-         (int)body_len, conn->address, conn->port);
+    log_info(LD_DIR,"Received directory (size %d) from server '%s:%d'",
+             (int)body_len, conn->address, conn->port);
     if (status_code != 200) {
-      warn(LD_DIR,"Received http status code %d (\"%s\") from server "
-           "'%s:%d'. I'll try again soon.",
-           status_code, reason, conn->address, conn->port);
+      log_warn(LD_DIR,"Received http status code %d (\"%s\") from server "
+               "'%s:%d'. I'll try again soon.",
+               status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (router_parse_directory(body) < 0) {
-      notice(LD_DIR,"I failed to parse the directory I fetched from "
-             "'%s:%d'. Ignoring.", conn->address, conn->port);
+      log_notice(LD_DIR,"I failed to parse the directory I fetched from "
+                 "'%s:%d'. Ignoring.", conn->address, conn->port);
     }
     note_request(was_compressed?"dl/dir.z":"dl/dir", orig_len);
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     /* just update our list of running routers, if this list is new info */
-    info(LD_DIR,"Received running-routers list (size %d)", (int)body_len);
+    log_info(LD_DIR,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
-      warn(LD_DIR,"Received http status code %d (\"%s\") from server "
-           "'%s:%d'. I'll try again soon.",
-           status_code, reason, conn->address, conn->port);
+      log_warn(LD_DIR,"Received http status code %d (\"%s\") from server "
+               "'%s:%d'. I'll try again soon.",
+               status_code, reason, conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
     if (router_parse_runningrouters(body)<0) {
-      warn(LD_DIR,"Bad running-routers from server '%s:%d'. I'll try again "
-           "soon.",
-           conn->address, conn->port);
+      log_warn(LD_DIR,
+               "Bad running-routers from server '%s:%d'. I'll try again soon.",
+               conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -1010,10 +1013,11 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     smartlist_t *which = NULL;
     char *cp;
-    info(LD_DIR,"Received networkstatus objects (size %d) from server "
-         "'%s:%d'",(int) body_len, conn->address, conn->port);
+    log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
+             "'%s:%d'",(int) body_len, conn->address, conn->port);
     if (status_code != 200) {
-      warn(LD_DIR,"Received http status code %d (\"%s\") from server "
+      log_warn(LD_DIR,
+           "Received http status code %d (\"%s\") from server "
            "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
            status_code, reason, conn->address, conn->port,
            conn->requested_resource);
@@ -1057,8 +1061,8 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
     smartlist_t *which = NULL;
     int n_asked_for = 0;
-    info(LD_DIR,"Received server info (size %d) from server '%s:%d'",
-         (int)body_len, conn->address, conn->port);
+    log_info(LD_DIR,"Received server info (size %d) from server '%s:%d'",
+             (int)body_len, conn->address, conn->port);
     note_request(was_compressed?"dl/server.z":"dl/server", orig_len);
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"d/")) {
@@ -1099,9 +1103,9 @@ connection_dir_client_reached_eof(connection_t *conn)
       directory_info_has_arrived(time(NULL), 0);
     }
     if (which) { /* mark remaining ones as failed */
-      info(LD_DIR, "Received %d/%d routers requested from %s:%d",
-           n_asked_for-smartlist_len(which), n_asked_for,
-           conn->address, (int)conn->port);
+      log_info(LD_DIR, "Received %d/%d routers requested from %s:%d",
+               n_asked_for-smartlist_len(which), n_asked_for,
+               conn->address, (int)conn->port);
       if (smartlist_len(which)) {
         dir_routerdesc_download_failed(which);
       }
@@ -1123,24 +1127,25 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
     switch (status_code) {
       case 200:
-        info(LD_GENERAL,"eof (status 200) after uploading server "
-             "descriptor: finished.");
+        log_info(LD_GENERAL,"eof (status 200) after uploading server "
+                 "descriptor: finished.");
         break;
       case 400:
-        warn(LD_GENERAL,"http status 400 (\"%s\") response from "
-             "dirserver '%s:%d'. Please correct.",
-             reason, conn->address, conn->port);
+        log_warn(LD_GENERAL,"http status 400 (\"%s\") response from "
+                 "dirserver '%s:%d'. Please correct.",
+                 reason, conn->address, conn->port);
         break;
       case 403:
-        warn(LD_GENERAL,"http status 403 (\"%s\") response from dirserver "
+        log_warn(LD_GENERAL,
+             "http status 403 (\"%s\") response from dirserver "
              "'%s:%d'. Is your clock skewed? Have you mailed us your key "
              "fingerprint? Are you using the right key? Are you using a "
              "private IP address? See http://tor.eff.org/doc/"
              "tor-doc-server.html", reason, conn->address, conn->port);
         break;
       default:
-        warn(LD_GENERAL,"http status %d (\"%s\") reason unexpected (server "
-             "'%s:%d').",
+        log_warn(LD_GENERAL,
+             "http status %d (\"%s\") reason unexpected (server '%s:%d').",
              status_code, reason, conn->address, conn->port);
         break;
     }
@@ -1149,13 +1154,13 @@ connection_dir_client_reached_eof(connection_t *conn)
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
-    info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
-         "(\"%s\"))",
-         (int)body_len, status_code, reason);
+    log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
+             "(\"%s\"))",
+             (int)body_len, status_code, reason);
     switch (status_code) {
       case 200:
         if (rend_cache_store(body, body_len) < 0) {
-          warn(LD_REND,"Failed to store rendezvous descriptor.");
+          log_warn(LD_REND,"Failed to store rendezvous descriptor.");
           /* alice's ap_stream will notice when connection_mark_for_close
            * cleans it up */
         } else {
@@ -1169,11 +1174,12 @@ connection_dir_client_reached_eof(connection_t *conn)
          * connection_mark_for_close cleans it up. */
         break;
       case 400:
-        warn(LD_REND,"http status 400 (\"%s\"). Dirserver didn't like our "
-             "rendezvous query?", reason);
+        log_warn(LD_REND,
+                 "http status 400 (\"%s\"). Dirserver didn't like our "
+                 "rendezvous query?", reason);
         break;
       default:
-        warn(LD_REND,"http status %d (\"%s\") response unexpected (server "
+        log_warn(LD_REND,"http status %d (\"%s\") response unexpected (server "
              "'%s:%d').",
              status_code, reason, conn->address, conn->port);
         break;
@@ -1183,18 +1189,19 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (conn->purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
     switch (status_code) {
       case 200:
-        info(LD_REND,"Uploading rendezvous descriptor: finished with status "
-             "200 (\"%s\")", reason);
+        log_info(LD_REND,
+                 "Uploading rendezvous descriptor: finished with status "
+                 "200 (\"%s\")", reason);
         break;
       case 400:
-        warn(LD_REND,"http status 400 (\"%s\") response from dirserver "
-             "'%s:%d'. Malformed rendezvous descriptor?",
-             reason, conn->address, conn->port);
+        log_warn(LD_REND,"http status 400 (\"%s\") response from dirserver "
+                 "'%s:%d'. Malformed rendezvous descriptor?",
+                 reason, conn->address, conn->port);
         break;
       default:
-        warn(LD_REND,"http status %d (\"%s\") response unexpected (server "
-             "'%s:%d').",
-             status_code, reason, conn->address, conn->port);
+        log_warn(LD_REND,"http status %d (\"%s\") response unexpected (server "
+                 "'%s:%d').",
+                 status_code, reason, conn->address, conn->port);
         break;
     }
   }
@@ -1208,7 +1215,7 @@ connection_dir_reached_eof(connection_t *conn)
 {
   int retval;
   if (conn->state != DIR_CONN_STATE_CLIENT_READING) {
-    info(LD_HTTP,"conn reached eof, not reading. Closing.");
+    log_info(LD_HTTP,"conn reached eof, not reading. Closing.");
     connection_close_immediate(conn); /* error: give up on flushing */
     connection_mark_for_close(conn);
     return -1;
@@ -1248,7 +1255,7 @@ connection_dir_process_inbuf(connection_t *conn)
   /* XXX for READ states, might want to make sure inbuf isn't too big */
 
   if (!conn->inbuf_reached_eof)
-    debug(LD_HTTP,"Got data, not eof. Leaving on inbuf.");
+    log_debug(LD_HTTP,"Got data, not eof. Leaving on inbuf.");
   return 0;
 }
 
@@ -1262,7 +1269,7 @@ write_http_status_line(connection_t *conn, int status,
   char buf[256];
   if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n\r\n",
       status, reason_phrase) < 0) {
-    warn(LD_BUG,"Bug: status line too long.");
+    log_warn(LD_BUG,"Bug: status line too long.");
     return;
   }
   connection_write_to_buf(buf, strlen(buf), conn);
@@ -1374,7 +1381,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   char tmp[8192];
   char date[RFC1123_TIME_LEN+1];
 
-  debug(LD_DIRSERV,"Received GET command.");
+  log_debug(LD_DIRSERV,"Received GET command.");
 
   conn->state = DIR_CONN_STATE_SERVER_WRITING;
 
@@ -1382,15 +1389,15 @@ directory_handle_command_get(connection_t *conn, char *headers,
     write_http_status_line(conn, 400, "Bad request");
     return 0;
   }
-  debug(LD_DIRSERV,"rewritten url as '%s'.", url);
+  log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
 
   if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* dir fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
     dlen = dirserv_get_directory(&cp, deflated);
 
     if (dlen == 0) {
-      notice(LD_DIRSERV,"Client asked for the mirrored directory, but we "
-             "don't have a good one yet. Sending 503 Dir not available.");
+      log_notice(LD_DIRSERV,"Client asked for the mirrored directory, but we "
+                 "don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
       if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR))
@@ -1400,9 +1407,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
 
     if (global_write_bucket_empty()) {
-      info(LD_DIRSERV,
-           "Client asked for the mirrored directory, but we've been "
-           "writing too many bytes lately. Sending 503 Dir busy.");
+      log_info(LD_DIRSERV,
+               "Client asked for the mirrored directory, but we've been "
+               "writing too many bytes lately. Sending 503 Dir busy.");
       write_http_status_line(conn, 503, "Directory busy, try again later");
       tor_free(url);
       return 0;
@@ -1411,8 +1418,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
     note_request(url, dlen);
     tor_free(url);
 
-    debug(LD_DIRSERV,"Dumping %sdirectory to client.",
-          deflated?"deflated ":"");
+    log_debug(LD_DIRSERV,"Dumping %sdirectory to client.",
+              deflated?"deflated ":"");
     format_rfc1123_time(date, time(NULL));
     tor_snprintf(tmp, sizeof(tmp),
                  "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
@@ -1664,7 +1671,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
   char *origin = NULL;
   char *url = NULL;
 
-  debug(LD_DIRSERV,"Received POST command.");
+  log_debug(LD_DIRSERV,"Received POST command.");
 
   conn->state = DIR_CONN_STATE_SERVER_WRITING;
 
@@ -1680,7 +1687,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
     write_http_status_line(conn, 400, "Bad request");
     return 0;
   }
-  debug(LD_DIRSERV,"rewritten url as '%s'.", url);
+  log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
   origin = http_get_origin(headers, conn);
 
   if (!strcmp(url,"/tor/")) { /* server descriptor post */
@@ -1693,7 +1700,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
       case -2:
       case -1:
       case 1:
-        notice(LD_DIRSERV,"Rejected router descriptor from %s.", origin);
+        log_notice(LD_DIRSERV,"Rejected router descriptor from %s.", origin);
         /* malformed descriptor, or something wrong */
         write_http_status_line(conn, 400, msg);
         break;
@@ -1709,12 +1716,12 @@ directory_handle_command_post(connection_t *conn, char *headers,
     /* rendezvous descriptor post */
     if (rend_cache_store(body, body_len) < 0) {
 //      char tmp[1024*2+1];
-      notice(LD_DIRSERV,"Rejected rend descriptor (length %d) from %s.",
-             (int)body_len, origin);
+      log_notice(LD_DIRSERV,"Rejected rend descriptor (length %d) from %s.",
+                 (int)body_len, origin);
 #if 0
       if (body_len <= 1024) {
         base16_encode(tmp, sizeof(tmp), body, body_len);
-        notice(LD_DIRSERV,"Body was: %s", tmp);
+        log_notice(LD_DIRSERV,"Body was: %s", tmp);
       }
 #endif
       write_http_status_line(conn, 400, "Invalid service descriptor rejected");
@@ -1752,24 +1759,24 @@ directory_handle_command(connection_t *conn)
                               &headers, MAX_HEADERS_SIZE,
                               &body, &body_len, MAX_BODY_SIZE, 0)) {
     case -1: /* overflow */
-      warn(LD_DIRSERV,
-           "Invalid input from address '%s'. Closing.", conn->address);
+      log_warn(LD_DIRSERV,
+               "Invalid input from address '%s'. Closing.", conn->address);
       return -1;
     case 0:
-      debug(LD_DIRSERV,"command not all here yet.");
+      log_debug(LD_DIRSERV,"command not all here yet.");
       return 0;
     /* case 1, fall through */
   }
 
-  debug(LD_DIRSERV,"headers '%s', body '%s'.", headers, body);
+  log_debug(LD_DIRSERV,"headers '%s', body '%s'.", headers, body);
 
   if (!strncasecmp(headers,"GET",3))
     r = directory_handle_command_get(conn, headers, body, body_len);
   else if (!strncasecmp(headers,"POST",4))
     r = directory_handle_command_post(conn, headers, body, body_len);
   else {
-    warn(LD_PROTOCOL,"Got headers '%s' with unknown command. Closing.",
-         headers);
+    log_warn(LD_PROTOCOL,"Got headers '%s' with unknown command. Closing.",
+             headers);
     r = -1;
   }
 
@@ -1789,16 +1796,16 @@ connection_dir_finished_flushing(connection_t *conn)
 
   switch (conn->state) {
     case DIR_CONN_STATE_CLIENT_SENDING:
-      debug(LD_DIR,"client finished sending command.");
+      log_debug(LD_DIR,"client finished sending command.");
       conn->state = DIR_CONN_STATE_CLIENT_READING;
       connection_stop_writing(conn);
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
-      debug(LD_DIRSERV,"Finished writing server response. Closing.");
+      log_debug(LD_DIRSERV,"Finished writing server response. Closing.");
       connection_mark_for_close(conn);
       return 0;
     default:
-      warn(LD_BUG,"Bug: called in unexpected state %d.", conn->state);
+      log_warn(LD_BUG,"Bug: called in unexpected state %d.", conn->state);
       tor_fragile_assert();
       return -1;
   }
@@ -1814,8 +1821,8 @@ connection_dir_finished_connecting(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_DIR);
   tor_assert(conn->state == DIR_CONN_STATE_CONNECTING);
 
-  debug(LD_HTTP,"Dir connection to router %s:%u established.",
-        conn->address,conn->port);
+  log_debug(LD_HTTP,"Dir connection to router %s:%u established.",
+            conn->address,conn->port);
 
   conn->state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
   return 0;
@@ -1876,14 +1883,15 @@ dir_routerdesc_download_failed(smartlist_t *failed)
       }
     }
     if (rs->next_attempt_at == 0)
-      debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
-            cp, (int)rs->n_download_failures);
+      log_debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
+                cp, (int)rs->n_download_failures);
     else if (rs->next_attempt_at < TIME_MAX)
-      debug(LD_DIR, "%s failed %d time(s); I'll try again in %d seconds.",
-            cp, (int)rs->n_download_failures, (int)(rs->next_attempt_at-now));
+      log_debug(LD_DIR, "%s failed %d time(s); I'll try again in %d seconds.",
+                cp, (int)rs->n_download_failures,
+                (int)(rs->next_attempt_at-now));
     else
-      debug(LD_DIR, "%s failed %d time(s); Giving up for a while.",
-            cp, (int)rs->n_download_failures);
+      log_debug(LD_DIR, "%s failed %d time(s); Giving up for a while.",
+                cp, (int)rs->n_download_failures);
   });
 
   /* update_router_descriptor_downloads(time(NULL)); */
@@ -1922,13 +1930,14 @@ dir_split_resource_into_fingerprints(const char *resource,
     for (i = old_len; i < smartlist_len(fp_out); ++i) {
       cp = smartlist_get(fp_out, i);
       if (strlen(cp) != HEX_DIGEST_LEN) {
-        info(LD_DIR, "Skipping digest \"%s\" with non-standard length.", cp);
+        log_info(LD_DIR,
+                 "Skipping digest \"%s\" with non-standard length.", cp);
         smartlist_del(fp_out, i--);
         goto again;
       }
       d = tor_malloc_zero(DIGEST_LEN);
       if (base16_decode(d, DIGEST_LEN, cp, HEX_DIGEST_LEN)<0) {
-        info(LD_DIR, "Skipping non-decodable digest \"%s\"", cp);
+        log_info(LD_DIR, "Skipping non-decodable digest \"%s\"", cp);
         smartlist_del(fp_out, i--);
         goto again;
       }

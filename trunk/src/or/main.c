@@ -118,8 +118,8 @@ connection_add(connection_t *conn)
   tor_assert(conn->s >= 0);
 
   if (nfds >= get_options()->_ConnLimit-1) {
-    warn(LD_NET,"Failing because we have %d connections already. Please "
-         "raise your ulimit -n.", nfds);
+    log_warn(LD_NET,"Failing because we have %d connections already. Please "
+             "raise your ulimit -n.", nfds);
     return -1;
   }
 
@@ -136,8 +136,8 @@ connection_add(connection_t *conn)
 
   nfds++;
 
-  debug(LD_NET,"new conn type %s, socket %d, nfds %d.",
-        conn_type_to_string(conn->type), conn->s, nfds);
+  log_debug(LD_NET,"new conn type %s, socket %d, nfds %d.",
+            conn_type_to_string(conn->type), conn->s, nfds);
 
   return 0;
 }
@@ -154,8 +154,8 @@ connection_remove(connection_t *conn)
   tor_assert(conn);
   tor_assert(nfds>0);
 
-  debug(LD_NET,"removing socket %d (type %s), nfds now %d",
-        conn->s, conn_type_to_string(conn->type), nfds-1);
+  log_debug(LD_NET,"removing socket %d (type %s), nfds now %d",
+            conn->s, conn_type_to_string(conn->type), nfds-1);
 
   tor_assert(conn->poll_index >= 0);
   current_index = conn->poll_index;
@@ -261,11 +261,11 @@ connection_watch_events(connection_t *conn, short events)
   }
 
   if (r<0)
-    warn(LD_NET,
-         "Error from libevent setting read event state for %d to "
-         "%swatched: %s",
-         conn->s, (events & EV_READ)?"":"un",
-         tor_socket_strerror(tor_socket_errno(conn->s)));
+    log_warn(LD_NET,
+             "Error from libevent setting read event state for %d to "
+             "%swatched: %s",
+             conn->s, (events & EV_READ)?"":"un",
+             tor_socket_strerror(tor_socket_errno(conn->s)));
 
   if (events & EV_WRITE) {
     r = event_add(conn->write_event, NULL);
@@ -274,11 +274,11 @@ connection_watch_events(connection_t *conn, short events)
   }
 
   if (r<0)
-    warn(LD_NET,
-         "Error from libevent setting read event state for %d to "
-         "%swatched: %s",
-         conn->s, (events & EV_WRITE)?"":"un",
-         tor_socket_strerror(tor_socket_errno(conn->s)));
+    log_warn(LD_NET,
+             "Error from libevent setting read event state for %d to "
+             "%swatched: %s",
+             conn->s, (events & EV_WRITE)?"":"un",
+             tor_socket_strerror(tor_socket_errno(conn->s)));
 }
 
 /** Return true iff <b>conn</b> is listening for read events. */
@@ -297,11 +297,11 @@ connection_stop_reading(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->read_event);
 
-  debug(LD_NET,"connection_stop_reading() called.");
+  log_debug(LD_NET,"connection_stop_reading() called.");
   if (event_del(conn->read_event))
-    warn(LD_NET, "Error from libevent setting read event state for %d "
-         "to unwatched.",
-         conn->s);
+    log_warn(LD_NET, "Error from libevent setting read event state for %d "
+             "to unwatched.",
+             conn->s);
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
@@ -312,9 +312,9 @@ connection_start_reading(connection_t *conn)
   tor_assert(conn->read_event);
 
   if (event_add(conn->read_event, NULL))
-    warn(LD_NET, "Error from libevent setting read event state for %d "
-         "to watched.",
-         conn->s);
+    log_warn(LD_NET, "Error from libevent setting read event state for %d "
+             "to watched.",
+             conn->s);
 }
 
 /** Return true iff <b>conn</b> is listening for write events. */
@@ -334,9 +334,9 @@ connection_stop_writing(connection_t *conn)
   tor_assert(conn->write_event);
 
   if (event_del(conn->write_event))
-    warn(LD_NET, "Error from libevent setting write event state for %d "
-         "to unwatched.",
-         conn->s);
+    log_warn(LD_NET, "Error from libevent setting write event state for %d "
+             "to unwatched.",
+             conn->s);
 
 }
 
@@ -348,9 +348,9 @@ connection_start_writing(connection_t *conn)
   tor_assert(conn->write_event);
 
   if (event_add(conn->write_event, NULL))
-    warn(LD_NET, "Error from libevent setting write event state for %d "
-         "to watched.",
-         conn->s);
+    log_warn(LD_NET, "Error from libevent setting write event state for %d "
+             "to watched.",
+             conn->s);
 }
 
 /** Close all connections that have been scheduled to get closed */
@@ -376,16 +376,16 @@ conn_read_callback(int fd, short event, void *_conn)
 {
   connection_t *conn = _conn;
 
-  debug(LD_NET,"socket %d wants to read.",conn->s);
+  log_debug(LD_NET,"socket %d wants to read.",conn->s);
 
   assert_connection_ok(conn, time(NULL));
 
   if (connection_handle_read(conn) < 0) {
     if (!conn->marked_for_close) {
 #ifndef MS_WINDOWS
-      warn(LD_BUG,"Bug: unhandled error on read for %s connection "
-           "(fd %d); removing",
-           conn_type_to_string(conn->type), conn->s);
+      log_warn(LD_BUG,"Bug: unhandled error on read for %s connection "
+               "(fd %d); removing",
+               conn_type_to_string(conn->type), conn->s);
       tor_fragile_assert();
 #endif
       if (CONN_IS_EDGE(conn))
@@ -448,19 +448,19 @@ conn_close_if_marked(int i)
   assert_connection_ok(conn, time(NULL));
   assert_all_pending_dns_resolves_ok();
 
-  debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
+  log_debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
   if (conn->s >= 0 && connection_wants_to_flush(conn)) {
     /* s == -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
     int sz = connection_bucket_write_limit(conn);
     if (!conn->hold_open_until_flushed)
-      info(LD_NET,
-           "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "
-           "to flush %d bytes. (Marked at %s:%d)",
-           conn->address, conn->s, conn_type_to_string(conn->type),
-           conn->state,
-           (int)conn->outbuf_flushlen,
-            conn->marked_for_close_file, conn->marked_for_close);
+      log_info(LD_NET,
+               "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "
+               "to flush %d bytes. (Marked at %s:%d)",
+               conn->address, conn->s, conn_type_to_string(conn->type),
+               conn->state,
+               (int)conn->outbuf_flushlen,
+                conn->marked_for_close_file, conn->marked_for_close);
     if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
         retval = flush_buf_tls(conn->tls, conn->outbuf, sz,
@@ -516,9 +516,11 @@ directory_all_unreachable(time_t now)
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
-    notice(LD_NET,
-           "Is your network connection down? Failing connection to '%s:%d'.",
-           safe_str(conn->socks_request->address), conn->socks_request->port);
+    log_notice(LD_NET,
+               "Is your network connection down? "
+               "Failing connection to '%s:%d'.",
+               safe_str(conn->socks_request->address),
+               conn->socks_request->port);
     connection_mark_unattached_ap(conn, END_STREAM_REASON_NET_UNREACHABLE);
   }
 }
@@ -602,14 +604,14 @@ run_connection_housekeeping(int i, time_t now)
   /* Expire any directory connections that haven't sent anything for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
       conn->timestamp_lastwritten + 5*60 < now) {
-    info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
-         conn->s, conn->purpose);
+    log_info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
+             conn->s, conn->purpose);
     /* This check is temporary; it's to let us know whether we should consider
      * parsing partial serverdesc responses. */
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         buf_datalen(conn->inbuf)>=1024) {
-      info(LD_DIR,"Trying to extract information from wedged server desc "
-           "download.");
+      log_info(LD_DIR,"Trying to extract information from wedged server desc "
+               "download.");
       connection_dir_reached_eof(conn);
     } else {
       connection_mark_for_close(conn);
@@ -623,18 +625,20 @@ run_connection_housekeeping(int i, time_t now)
 #define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7) /* a week */
   if (!conn->is_obsolete) {
     if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
-      info(LD_OR, "Marking OR conn to %s:%d obsolete (fd %d, %d secs old).",
-           conn->address, conn->port, conn->s,
-           (int)(now - conn->timestamp_created));
+      log_info(LD_OR,
+               "Marking OR conn to %s:%d obsolete (fd %d, %d secs old).",
+               conn->address, conn->port, conn->s,
+               (int)(now - conn->timestamp_created));
       conn->is_obsolete = 1;
     } else {
       connection_t *best =
         connection_or_get_by_identity_digest(conn->identity_digest);
       if (best && best != conn) {
-        info(LD_OR,
-             "Marking duplicate conn to %s:%d obsolete (fd %d, %d secs old).",
-             conn->address, conn->port, conn->s,
-             (int)(now - conn->timestamp_created));
+        log_info(LD_OR,
+                 "Marking duplicate conn to %s:%d obsolete "
+                 "(fd %d, %d secs old).",
+                 conn->address, conn->port, conn->s,
+                 (int)(now - conn->timestamp_created));
         conn->is_obsolete = 1;
       }
     }
@@ -642,8 +646,9 @@ run_connection_housekeeping(int i, time_t now)
 
   if (conn->is_obsolete && conn->n_circuits == 0) {
     /* no unmarked circs -- mark it now */
-    info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) [Obsolete].",
-         conn->s,conn->address, conn->port);
+    log_info(LD_OR,
+             "Expiring non-used OR connection to fd %d (%s:%d) [Obsolete].",
+             conn->s,conn->address, conn->port);
     connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1;
     return;
@@ -654,23 +659,23 @@ run_connection_housekeeping(int i, time_t now)
   if (now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     if (!connection_state_is_open(conn)) {
-      info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
-           conn->s,conn->address, conn->port);
+      log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
+               conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (we_are_hibernating() && conn->n_circuits == 0 &&
                !buf_datalen(conn->outbuf)) {
-      info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
-           "[Hibernating or exiting].",
-             conn->s,conn->address, conn->port);
+      log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
+               "[Hibernating or exiting].",
+               conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (!clique_mode(options) && conn->n_circuits &&
                (!router || !server_mode(options) ||
                 !router_is_clique_mode(router))) {
-      info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
-           "[Not in clique mode].",
-           conn->s,conn->address, conn->port);
+      log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
+               "[Not in clique mode].",
+               conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (
@@ -724,11 +729,11 @@ run_scheduled_events(time_t now)
    */
   if (server_mode(options) &&
       get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
-    info(LD_GENERAL,"Rotating onion key.");
+    log_info(LD_GENERAL,"Rotating onion key.");
     rotate_onion_key();
     cpuworkers_rotate();
     if (router_rebuild_descriptor(1)<0) {
-      warn(LD_BUG, "Couldn't rebuild router descriptor");
+      log_warn(LD_BUG, "Couldn't rebuild router descriptor");
     }
     if (advertised_server_mode())
       router_upload_dir_desc_to_dirservers(0);
@@ -749,10 +754,10 @@ run_scheduled_events(time_t now)
   if (!last_rotated_certificate)
     last_rotated_certificate = now;
   if (last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
-    info(LD_GENERAL,"Rotating tls context.");
+    log_info(LD_GENERAL,"Rotating tls context.");
     if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
-      warn(LD_BUG, "Error reinitializing TLS context");
+      log_warn(LD_BUG, "Error reinitializing TLS context");
       /* XXX is it a bug here, that we just keep going? */
     }
     last_rotated_certificate = now;
@@ -960,15 +965,16 @@ second_elapsed_callback(int fd, short event, void *args)
     /* every 20 minutes, check and complain if necessary */
     routerinfo_t *me = router_get_my_routerinfo();
     if (me && !check_whether_orport_reachable())
-      warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
-           "its ORPort is reachable. Please check your firewalls, ports, "
-           "address, /etc/hosts file, etc.",
-           me->address, me->or_port);
+      log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
+               "its ORPort is reachable. Please check your firewalls, ports, "
+               "address, /etc/hosts file, etc.",
+               me->address, me->or_port);
     if (me && !check_whether_dirport_reachable())
-      warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that its "
-           "DirPort is reachable. Please check your firewalls, ports, "
-           "address, /etc/hosts file, etc.",
-           me->address, me->dir_port);
+      log_warn(LD_CONFIG,
+               "Your server (%s:%d) has not managed to confirm that its "
+               "DirPort is reachable. Please check your firewalls, ports, "
+               "address, /etc/hosts file, etc.",
+               me->address, me->dir_port);
   }
 
   /* if more than 100s have elapsed, probably the clock jumped: doesn't
@@ -991,8 +997,8 @@ second_elapsed_callback(int fd, short event, void *args)
 #endif
 
   if (evtimer_add(timeout_event, &one_second))
-    err(LD_NET,
-        "Error from libevent when setting one-second timeout event");
+    log_err(LD_NET,
+            "Error from libevent when setting one-second timeout event");
 }
 
 /** Called when a possibly ignorable libevent error occurs; ensures that we
@@ -1002,7 +1008,7 @@ static int
 got_libevent_error(void)
 {
   if (++n_libevent_errors > 8) {
-    err(LD_NET, "Too many libevent errors in one second; dying");
+    log_err(LD_NET, "Too many libevent errors in one second; dying");
     return -1;
   }
   return 0;
@@ -1016,7 +1022,7 @@ do_hup(void)
   char keydir[512];
   or_options_t *options = get_options();
 
-  notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
+  log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
   has_completed_circuit=0;
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
@@ -1027,8 +1033,8 @@ do_hup(void)
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
   if (options_init_from_torrc(0, NULL) < 0) {
-    err(LD_CONFIG,"Reading config failed--see warnings above. "
-        "For usage, try -h.");
+    log_err(LD_CONFIG,"Reading config failed--see warnings above. "
+            "For usage, try -h.");
     return -1;
   }
   options = get_options(); /* they have changed now */
@@ -1036,10 +1042,11 @@ do_hup(void)
     /* reload the approved-routers file */
     tor_snprintf(keydir, sizeof(keydir),
                  "%s/approved-routers", options->DataDirectory);
-    info(LD_GENERAL,"Reloading approved fingerprints from \"%s\"...",keydir);
+    log_info(LD_GENERAL,
+             "Reloading approved fingerprints from \"%s\"...", keydir);
     if (dirserv_parse_fingerprint_file(keydir) < 0) {
-      info(LD_GENERAL, "Error reloading fingerprints. "
-           "Continuing with old list.");
+      log_info(LD_GENERAL, "Error reloading fingerprints. "
+               "Continuing with old list.");
     }
   }
 
@@ -1068,7 +1075,7 @@ do_hup(void)
     if (descriptor) {
       tor_snprintf(keydir,sizeof(keydir),"%s/router.desc",
                    options->DataDirectory);
-      info(LD_OR,"Saving descriptor to \"%s\"...",keydir);
+      log_info(LD_OR,"Saving descriptor to \"%s\"...",keydir);
       if (write_str_to_file(keydir, descriptor, 0)) {
         return 0;
       }
@@ -1091,7 +1098,7 @@ do_main_loop(void)
    * TLS context. */
   if (! identity_key_is_set()) {
     if (init_keys() < 0) {
-      err(LD_GENERAL,"Error initializing keys; exiting");
+      log_err(LD_GENERAL,"Error initializing keys; exiting");
       return -1;
     }
   }
@@ -1143,23 +1150,24 @@ do_main_loop(void)
       /* let the program survive things like ^z */
       if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
 #ifdef HAVE_EVENT_GET_METHOD
-        err(LD_NET,"libevent call with %s failed: %s [%d]",
-            event_get_method(), tor_socket_strerror(e), e);
+        log_err(LD_NET,"libevent call with %s failed: %s [%d]",
+                event_get_method(), tor_socket_strerror(e), e);
 #else
-        err(LD_NET,"libevent call failed: %s [%d]",
-            tor_socket_strerror(e), e);
+        log_err(LD_NET,"libevent call failed: %s [%d]",
+                tor_socket_strerror(e), e);
 #endif
         return -1;
 #ifndef MS_WINDOWS
       } else if (e == EINVAL) {
-        warn(LD_NET, "EINVAL from libevent: should you upgrade libevent?");
+        log_warn(LD_NET, "EINVAL from libevent: should you upgrade libevent?");
         if (got_libevent_error())
           return -1;
 #endif
       } else {
         if (ERRNO_IS_EINPROGRESS(e))
-          warn(LD_BUG,"libevent call returned EINPROGRESS? Please report.");
-        debug(LD_NET,"libevent call interrupted.");
+          log_warn(LD_BUG,
+                   "libevent call returned EINPROGRESS? Please report.");
+        log_debug(LD_NET,"libevent call interrupted.");
         /* You can't trust the results of this poll(). Go back to the
          * top of the big for loop. */
         continue;
@@ -1217,13 +1225,13 @@ signal_callback(int fd, short events, void *arg)
   switch (sig)
     {
     case SIGTERM:
-      err(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
+      log_err(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
       tor_cleanup();
       exit(0);
       break;
     case SIGINT:
       if (!server_mode(get_options())) { /* do it now */
-        notice(LD_GENERAL,"Interrupt: exiting cleanly.");
+        log_notice(LD_GENERAL,"Interrupt: exiting cleanly.");
         tor_cleanup();
         exit(0);
       }
@@ -1231,7 +1239,7 @@ signal_callback(int fd, short events, void *arg)
       break;
 #ifdef SIGPIPE
     case SIGPIPE:
-      debug(LD_GENERAL,"Caught sigpipe. Ignoring.");
+      log_debug(LD_GENERAL,"Caught sigpipe. Ignoring.");
       break;
 #endif
     case SIGUSR1:
@@ -1240,12 +1248,12 @@ signal_callback(int fd, short events, void *arg)
       break;
     case SIGUSR2:
       switch_logs_debug();
-      debug(LD_GENERAL,"Caught USR2, going to loglevel debug. "
-            "Send HUP to change back.");
+      log_debug(LD_GENERAL,"Caught USR2, going to loglevel debug. "
+                "Send HUP to change back.");
       break;
     case SIGHUP:
       if (do_hup() < 0) {
-        warn(LD_CONFIG,"Restart failed (config error?). Exiting.");
+        log_warn(LD_CONFIG,"Restart failed (config error?). Exiting.");
         tor_cleanup();
         exit(1);
       }
@@ -1402,8 +1410,8 @@ handle_signals(int is_parent)
       signal_set(&signal_events[i], signals[i], signal_callback,
                  (void*)(uintptr_t)signals[i]);
       if (signal_add(&signal_events[i], NULL))
-        warn(LD_BUG, "Error from libevent when adding event for signal %d",
-             signals[i]);
+        log_warn(LD_BUG, "Error from libevent when adding event for signal %d",
+                 signals[i]);
     }
   } else {
     struct sigaction action;
@@ -1445,26 +1453,26 @@ tor_init(int argc, char *argv[])
       "Do not rely on it for strong anonymity.",VERSION);
 
   if (network_init()<0) {
-    err(LD_NET,"Error initializing network; exiting.");
+    log_err(LD_NET,"Error initializing network; exiting.");
     return -1;
   }
   atexit(exit_function);
 
   if (options_init_from_torrc(argc,argv) < 0) {
-    err(LD_CONFIG,"Reading config failed--see warnings above. "
-        "For usage, try -h.");
+    log_err(LD_CONFIG,"Reading config failed--see warnings above. "
+            "For usage, try -h.");
     return -1;
   }
 
 #ifndef MS_WINDOWS
   if (geteuid()==0)
-    warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
-         "and you probably shouldn't.");
+    log_warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
+             "and you probably shouldn't.");
 #endif
 
   crypto_global_init(get_options()->HardwareAccel);
   if (crypto_seed_rng()) {
-    err(LD_BUG, "Unable to seed random number generator. Exiting.");
+    log_err(LD_BUG, "Unable to seed random number generator. Exiting.");
     return -1;
   }
 
@@ -1540,15 +1548,15 @@ do_list_fingerprint(void)
   }
   tor_assert(nickname);
   if (init_keys() < 0) {
-    err(LD_BUG,"Error initializing keys; exiting");
+    log_err(LD_BUG,"Error initializing keys; exiting");
     return;
   }
   if (!(k = get_identity_key())) {
-    err(LD_GENERAL,"Error: missing identity key.");
+    log_err(LD_GENERAL,"Error: missing identity key.");
     return;
   }
   if (crypto_pk_get_fingerprint(k, buf, 1)<0) {
-    warn(LD_BUG, "Error computing fingerprint");
+    log_warn(LD_BUG, "Error computing fingerprint");
     return;
   }
   printf("%s %s\n", nickname, buf);
@@ -1645,7 +1653,8 @@ nt_service_control(DWORD request)
   switch (request) {
     case SERVICE_CONTROL_STOP:
         case SERVICE_CONTROL_SHUTDOWN:
-          err(LD_GENERAL, "Got stop/shutdown request; shutting down cleanly.");
+          log_err(LD_GENERAL,
+                  "Got stop/shutdown request; shutting down cleanly.");
           service_status.dwCurrentState = SERVICE_STOP_PENDING;
           event_loopexit(&exit_now);
           return;
@@ -1683,8 +1692,8 @@ nt_service_body(int argc, char **argv)
     }
   }
   else {
-    err(LD_CONFIG, "torrc is not in the current working directory. "
-        "The Tor service will not start.");
+    log_err(LD_CONFIG, "torrc is not in the current working directory. "
+            "The Tor service will not start.");
     r = NT_SERVICE_ERROR_NO_TORRC;
   }
 
@@ -1737,8 +1746,8 @@ nt_service_main(void)
         printf("Configuration was valid\n");
         break;
       default:
-        err(LD_CONFIG, "Illegal command number %d: internal error.",
-            get_options()->command);
+        log_err(LD_CONFIG, "Illegal command number %d: internal error.",
+                get_options()->command);
       }
       tor_cleanup();
     }
@@ -2062,7 +2071,7 @@ tor_main(int argc, char *argv[])
 #ifdef USE_DMALLOC
     int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,
                                         _tor_dmalloc_free);
-    notice(LD_CONFIG, "Set up damalloc; returned %d", r);
+    log_notice(LD_CONFIG, "Set up damalloc; returned %d", r);
 #endif
 #ifdef MS_WINDOWS_SERVICE
   backup_argv = argv;
@@ -2111,8 +2120,8 @@ tor_main(int argc, char *argv[])
     printf("Configuration was valid\n");
     break;
   default:
-    warn(LD_BUG,"Illegal command number %d: internal error.",
-         get_options()->command);
+    log_warn(LD_BUG,"Illegal command number %d: internal error.",
+             get_options()->command);
   }
   tor_cleanup();
   return -1;
