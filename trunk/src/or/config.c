@@ -3237,19 +3237,17 @@ config_addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
 /** Return true iff the address policies <b>a</b> and <b>b</b> intersect, that
  * is, there exists an address/port that is covered by <b>a</b> that is also
  * covered by <b>b</b>.
- *
- * XXX: somebody needs to doublecheck the IP logic. -- PP
- * */
+ */
 static int
 config_addr_policy_intersects(addr_policy_t *a, addr_policy_t *b)
 {
   /* All the bits we care about are those that are set in both
    * netmasks.  If they are equal in a and b's networkaddresses
    * then the networks intersect.  If there is a difference,
-   * then they do not' */
-  if (!( ((a->addr ^ b->addr) & a->msk & b->msk) == 0 ))
+   * then they do not. */
+  if (((a->addr ^ b->addr) & a->msk & b->msk) != 0)
     return 0;
-  if (a->prt_max < b->prt_min  ||  b->prt_max < a->prt_min)
+  if (a->prt_max < b->prt_min || b->prt_max < a->prt_min)
     return 0;
   return 1;
 }
