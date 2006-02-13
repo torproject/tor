@@ -85,7 +85,8 @@ tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id)
 
   in.s_addr = htonl(*addr);
   tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
-  debug(LD_OR,"onion was from %s:%d, circ_id %d.", addrbuf, *port, *circ_id);
+  log_debug(LD_OR,
+            "onion was from %s:%d, circ_id %d.", addrbuf, *port, *circ_id);
 }
 
 /** Called when the onion key has changed and we need to spawn new
@@ -111,12 +112,12 @@ cpuworkers_rotate(void)
 int
 connection_cpu_reached_eof(connection_t *conn)
 {
-  warn(LD_GENERAL,"Read eof. Worker died unexpectedly.");
+  log_warn(LD_GENERAL,"Read eof. Worker died unexpectedly.");
   if (conn->state != CPUWORKER_STATE_IDLE) {
     /* the circ associated with this cpuworker will have to wait until
      * it gets culled in run_connection_housekeeping(), since we have
      * no way to find out which circ it was. */
-    warn(LD_GENERAL,"...and it left a circuit queued; abandoning circ.");
+    log_warn(LD_GENERAL,"...and it left a circuit queued; abandoning circ.");
     num_cpuworkers_busy--;
   }
   num_cpuworkers--;
@@ -166,8 +167,9 @@ connection_cpu_process_inbuf(connection_t *conn)
       circ = circuit_get_by_circid_orconn(circ_id, p_conn);
 
     if (success == 0) {
-      debug(LD_OR,
-            "decoding onionskin failed. (Old key or bad software.) Closing.");
+      log_debug(LD_OR,
+                "decoding onionskin failed. "
+                "(Old key or bad software.) Closing.");
       if (circ)
         circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
       goto done_processing;
@@ -178,17 +180,17 @@ connection_cpu_process_inbuf(connection_t *conn)
        * why our tag doesn't include a pointer to the circ, because we'd
        * never know if it's still valid.
        */
-      debug(LD_OR,"processed onion for a circ that's gone. Dropping.");
+      log_debug(LD_OR,"processed onion for a circ that's gone. Dropping.");
       goto done_processing;
     }
     tor_assert(circ->p_conn);
     if (onionskin_answer(circ, CELL_CREATED, buf+TAG_LEN,
                          buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
-      warn(LD_OR,"onionskin_answer failed. Closing.");
+      log_warn(LD_OR,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
       goto done_processing;
     }
-    debug(LD_OR,"onionskin_answer succeeded. Yay.");
+    log_debug(LD_OR,"onionskin_answer succeeded. Yay.");
   } else {
     tor_assert(0); /* don't ask me to do handshakes yet */
   }
@@ -254,26 +256,28 @@ cpuworker_main(void *data)
     if ((r = recv(fd, &question_type, 1, 0)) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");
       if (r == 0) {
-        info(LD_OR,"CPU worker exiting because Tor process closed connection "
-             "(either rotated keys or died).");
+        log_info(LD_OR,
+                 "CPU worker exiting because Tor process closed connection "
+                 "(either rotated keys or died).");
       } else {
-        info(LD_OR,"CPU worker editing because of error on connection to Tor "
-             "process.");
-        info(LD_OR,"(Error on %d was %s)",
-             fd, tor_socket_strerror(tor_socket_errno(fd)));
+        log_info(LD_OR,
+                 "CPU worker editing because of error on connection to Tor "
+                 "process.");
+        log_info(LD_OR,"(Error on %d was %s)",
+                 fd, tor_socket_strerror(tor_socket_errno(fd)));
       }
       goto end;
     }
     tor_assert(question_type == CPUWORKER_TASK_ONION);
 
     if (read_all(fd, tag, TAG_LEN, 1) != TAG_LEN) {
-      err(LD_BUG,"read tag failed. Exiting.");
+      log_err(LD_BUG,"read tag failed. Exiting.");
       goto end;
     }
 
     if (read_all(fd, question, ONIONSKIN_CHALLENGE_LEN, 1) !=
         ONIONSKIN_CHALLENGE_LEN) {
-      err(LD_BUG,"read question failed. Exiting.");
+      log_err(LD_BUG,"read question failed. Exiting.");
       goto end;
     }
 
@@ -281,21 +285,21 @@ cpuworker_main(void *data)
       if (onion_skin_server_handshake(question, onion_key, last_onion_key,
           reply_to_proxy, keys, CPATH_KEY_MATERIAL_LEN) < 0) {
         /* failure */
-        debug(LD_OR,"onion_skin_server_handshake failed.");
+        log_debug(LD_OR,"onion_skin_server_handshake failed.");
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
       } else {
         /* success */
-        debug(LD_OR,"onion_skin_server_handshake succeeded.");
+        log_debug(LD_OR,"onion_skin_server_handshake succeeded.");
         buf[0] = 1; /* 1 means success */
         memcpy(buf+1,tag,TAG_LEN);
         memcpy(buf+1+TAG_LEN,reply_to_proxy,ONIONSKIN_REPLY_LEN);
         memcpy(buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN,keys,CPATH_KEY_MATERIAL_LEN);
       }
       if (write_all(fd, buf, LEN_ONION_RESPONSE, 1) != LEN_ONION_RESPONSE) {
-        err(LD_BUG,"writing response buf failed. Exiting.");
+        log_err(LD_BUG,"writing response buf failed. Exiting.");
         goto end;
       }
-      debug(LD_OR,"finished writing response.");
+      log_debug(LD_OR,"finished writing response.");
     }
   }
  end:
@@ -321,15 +325,15 @@ spawn_cpuworker(void)
 
   fdarray = tor_malloc(sizeof(int)*2);
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
-    warn(LD_NET, "Couldn't construct socketpair: %s",
-         tor_socket_strerror(-err));
+    log_warn(LD_NET, "Couldn't construct socketpair: %s",
+             tor_socket_strerror(-err));
     tor_free(fdarray);
     return -1;
   }
 
   fd = fdarray[0];
   spawn_func(cpuworker_main, (void*)fdarray);
-  debug(LD_OR,"just spawned a cpu worker.");
+  log_debug(LD_OR,"just spawned a cpu worker.");
 #ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
   tor_free(fdarray);
@@ -344,7 +348,7 @@ spawn_cpuworker(void)
   conn->address = tor_strdup("localhost");
 
   if (connection_add(conn) < 0) { /* no space, forget it */
-    warn(LD_NET,"connection_add failed. Giving up.");
+    log_warn(LD_NET,"connection_add failed. Giving up.");
     connection_free(conn); /* this closes fd */
     return -1;
   }
@@ -370,7 +374,7 @@ spawn_enough_cpuworkers(void)
 
   while (num_cpuworkers < num_cpuworkers_needed) {
     if (spawn_cpuworker() < 0) {
-      warn(LD_GENERAL,"Spawn failed. Will try again later.");
+      log_warn(LD_GENERAL,"Spawn failed. Will try again later.");
       return;
     }
     num_cpuworkers++;
@@ -391,7 +395,7 @@ process_pending_task(connection_t *cpuworker)
   if (!circ)
     return;
   if (assign_to_cpuworker(cpuworker, CPUWORKER_TASK_ONION, circ) < 0)
-    warn(LD_OR,"assign_to_cpuworker failed. Ignoring.");
+    log_warn(LD_OR,"assign_to_cpuworker failed. Ignoring.");
 }
 
 #define CPUWORKER_BUSY_TIMEOUT 3600 /* seconds */
@@ -415,8 +419,8 @@ cull_wedged_cpuworkers(void)
         conn->type == CONN_TYPE_CPUWORKER &&
         conn->state == CPUWORKER_STATE_BUSY_ONION &&
         conn->timestamp_lastwritten + CPUWORKER_BUSY_TIMEOUT < now) {
-      notice(LD_BUG,
-             "Bug: closing wedged cpuworker. Can somebody find the bug?");
+      log_notice(LD_BUG,
+                 "Bug: closing wedged cpuworker. Can somebody find the bug?");
       num_cpuworkers_busy--;
       num_cpuworkers--;
       connection_mark_for_close(conn);
@@ -447,7 +451,7 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
     tor_assert(circ->onionskin);
 
     if (num_cpuworkers_busy == num_cpuworkers) {
-      debug(LD_OR,"No idle cpuworkers. Queuing.");
+      log_debug(LD_OR,"No idle cpuworkers. Queuing.");
       if (onion_pending_add(circ) < 0)
         return -1;
       return 0;
@@ -460,7 +464,7 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
     tor_assert(cpuworker);
 
     if (!circ->p_conn) {
-      info(LD_OR,"circ->p_conn gone. Failing circ.");
+      log_info(LD_OR,"circ->p_conn gone. Failing circ.");
       return -1;
     }
     tag_pack(tag, circ->p_conn->addr, circ->p_conn->port, circ->p_circ_id);
