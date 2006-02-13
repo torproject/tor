@@ -54,18 +54,13 @@ N - commit edmanm's win32 makefile to tor cvs contrib
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
-  - make log entries include function names in win32 again.
+R - make log entries include function names in win32 again.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
 R - streamline how we define a guard node as 'up'. document it
     somewhere.
 R - reduce log severity for guard nodes.
 R - make guard node timeout higher.
-R - failed rend desc fetches sometimes don't get retried.
-R - Add config options to not publish and not fetch rend descs.
-  - Add controller interfaces to hear rend desc events and learn
-    about rend descs. In base16 I guess for now.
-  o let controlport be configurable on other interfaces
 R - look into "uncounting" bytes spent on local connections. so
     we can bandwidthrate but still have fast downloads.
 N . Clean and future-proof exit policy formats a bit.
@@ -74,9 +69,6 @@ N . Clean and future-proof exit policy formats a bit.
     o Warn when we see a netmask that isn't a prefix.
     - Make clients understand "private:*" in exit policies, even though
       we don't generate it yet.
-
-N - Display the reasons in 'destroy' and 'truncated' cells under some
-    circumstances?
 
 R - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
@@ -100,6 +92,14 @@ R - When we connect to a Tor server, it sends back a signed cell listing
 
 
 Deferred from 0.1.1.x:
+
+R - failed rend desc fetches sometimes don't get retried.
+  - Add config options to not publish and not fetch rend descs.
+  - Add controller interfaces to hear rend desc events and learn
+    about rend descs. In base16 I guess for now.
+
+N - Display the reasons in 'destroy' and 'truncated' cells under some
+    circumstances?
 
   - If the server is spewing complaints about raising your ulimit -n,
     we should add a note about this to the server descriptor so other
