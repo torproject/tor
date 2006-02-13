@@ -160,15 +160,18 @@ purge_expired_resolves(uint32_t now)
    */
   while (oldest_cached_resolve && (oldest_cached_resolve->expire < now)) {
     resolve = oldest_cached_resolve;
-    debug(LD_EXIT,"Forgetting old cached resolve (address %s, expires %lu)",
-          safe_str(resolve->address), (unsigned long)resolve->expire);
+    log_debug(LD_EXIT,
+              "Forgetting old cached resolve (address %s, expires %lu)",
+              safe_str(resolve->address), (unsigned long)resolve->expire);
     if (resolve->state == CACHE_STATE_PENDING) {
-      debug(LD_EXIT,"Bug: Expiring a dns resolve ('%s') that's still pending."
-            " Forgot to cull it?", safe_str(resolve->address));
+      log_debug(LD_EXIT,
+                "Bug: Expiring a dns resolve ('%s') that's still pending."
+                " Forgot to cull it?", safe_str(resolve->address));
       tor_fragile_assert();
     }
     if (resolve->pending_connections) {
-      debug(LD_EXIT, "Closing pending connections on expiring DNS resolve!");
+      log_debug(LD_EXIT,
+                "Closing pending connections on expiring DNS resolve!");
       tor_fragile_assert();
       while (resolve->pending_connections) {
         pend = resolve->pending_connections;
@@ -296,21 +299,21 @@ dns_resolve(connection_t *exitconn)
         pending_connection->conn = exitconn;
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
-        debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS "
-              "resolve of '%s'",
-              exitconn->s, safe_str(exitconn->address));
+        log_debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS "
+                  "resolve of '%s'",
+                  exitconn->s, safe_str(exitconn->address));
         exitconn->state = EXIT_CONN_STATE_RESOLVING;
         return 0;
       case CACHE_STATE_VALID:
         exitconn->addr = resolve->addr;
-        debug(LD_EXIT,"Connection (fd %d) found cached answer for '%s'",
-              exitconn->s, safe_str(exitconn->address));
+        log_debug(LD_EXIT,"Connection (fd %d) found cached answer for '%s'",
+                  exitconn->s, safe_str(exitconn->address));
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         return 1;
       case CACHE_STATE_FAILED:
-        debug(LD_EXIT,"Connection (fd %d) found cached error for '%s'",
-              exitconn->s, safe_str(exitconn->address));
+        log_debug(LD_EXIT,"Connection (fd %d) found cached error for '%s'",
+                  exitconn->s, safe_str(exitconn->address));
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
@@ -359,16 +362,16 @@ assign_to_dnsworker(connection_t *exitconn)
                                          DNSWORKER_STATE_IDLE);
 
   if (!dnsconn) {
-    warn(LD_EXIT,"no idle dns workers. Failing.");
+    log_warn(LD_EXIT,"no idle dns workers. Failing.");
     if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
       send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
     goto err;
   }
 
-  debug(LD_EXIT,
-        "Connection (fd %d) needs to resolve '%s'; assigning "
-        "to DNSWorker (fd %d)",
-        exitconn->s, safe_str(exitconn->address), dnsconn->s);
+  log_debug(LD_EXIT,
+            "Connection (fd %d) needs to resolve '%s'; assigning "
+            "to DNSWorker (fd %d)",
+            exitconn->s, safe_str(exitconn->address), dnsconn->s);
 
   tor_free(dnsconn->address);
   dnsconn->address = tor_strdup(exitconn->address);
@@ -402,8 +405,8 @@ connection_dns_remove(connection_t *conn)
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (!resolve) {
     /* XXXX RD This *is* a bug, right? -NM */
-    notice(LD_BUG, "Address '%s' is not pending. Dropping.",
-           safe_str(conn->address));
+    log_notice(LD_BUG, "Address '%s' is not pending. Dropping.",
+               safe_str(conn->address));
     return;
   }
 
@@ -415,9 +418,9 @@ connection_dns_remove(connection_t *conn)
   if (pend->conn == conn) {
     resolve->pending_connections = pend->next;
     tor_free(pend);
-    debug(LD_EXIT, "First connection (fd %d) no longer waiting for resolve "
-          "of '%s'",
-          conn->s, safe_str(conn->address));
+    log_debug(LD_EXIT, "First connection (fd %d) no longer waiting "
+              "for resolve of '%s'",
+              conn->s, safe_str(conn->address));
     return;
   } else {
     for ( ; pend->next; pend = pend->next) {
@@ -425,9 +428,9 @@ connection_dns_remove(connection_t *conn)
         victim = pend->next;
         pend->next = victim->next;
         tor_free(victim);
-        debug(LD_EXIT, "Connection (fd %d) no longer waiting for resolve "
-              "of '%s'",
-              conn->s, safe_str(conn->address));
+        log_debug(LD_EXIT,
+                  "Connection (fd %d) no longer waiting for resolve of '%s'",
+                  conn->s, safe_str(conn->address));
         return; /* more are pending */
       }
     }
@@ -489,22 +492,25 @@ dns_cancel_pending_resolve(char *address)
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (!resolve) {
     /* XXXX RD This *is* a bug, right? -NM */
-    notice(LD_BUG,"Address '%s' is not pending. Dropping.", safe_str(address));
+    log_notice(LD_BUG,"Address '%s' is not pending. Dropping.",
+               safe_str(address));
     return;
   }
 
   if (!resolve->pending_connections) {
     /* XXX this should never trigger, but sometimes it does */
-    warn(LD_BUG,"Bug: Address '%s' is pending but has no pending connections!",
-         safe_str(address));
+    log_warn(LD_BUG,
+             "Bug: Address '%s' is pending but has no pending connections!",
+             safe_str(address));
     tor_fragile_assert();
     return;
   }
   tor_assert(resolve->pending_connections);
 
   /* mark all pending connections to fail */
-  debug(LD_EXIT, "Failing all connections waiting on DNS resolve of '%s'",
-        safe_str(address));
+  log_debug(LD_EXIT,
+             "Failing all connections waiting on DNS resolve of '%s'",
+             safe_str(address));
   while (resolve->pending_connections) {
     pend = resolve->pending_connections;
     pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
@@ -575,8 +581,8 @@ dns_found_answer(char *address, uint32_t addr, char outcome)
 
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (!resolve) {
-    info(LD_EXIT,"Resolved unasked address '%s'; caching anyway.",
-         safe_str(address));
+    log_info(LD_EXIT,"Resolved unasked address '%s'; caching anyway.",
+             safe_str(address));
     resolve = tor_malloc_zero(sizeof(cached_resolve_t));
     resolve->state = (outcome == DNS_RESOLVE_SUCCEEDED) ?
       CACHE_STATE_VALID : CACHE_STATE_FAILED;
@@ -589,8 +595,8 @@ dns_found_answer(char *address, uint32_t addr, char outcome)
   if (resolve->state != CACHE_STATE_PENDING) {
     /* XXXX Maybe update addr? or check addr for consistency? Or let
      * VALID replace FAILED? */
-    notice(LD_EXIT, "Resolved '%s' which was already resolved; ignoring",
-           safe_str(address));
+    log_notice(LD_EXIT, "Resolved '%s' which was already resolved; ignoring",
+               safe_str(address));
     tor_assert(resolve->pending_connections == NULL);
     return;
   }
@@ -681,7 +687,7 @@ connection_dns_finished_flushing(connection_t *conn)
 int
 connection_dns_reached_eof(connection_t *conn)
 {
-  warn(LD_EXIT,"Read eof. Worker died unexpectedly.");
+  log_warn(LD_EXIT,"Read eof. Worker died unexpectedly.");
   if (conn->state == DNSWORKER_STATE_BUSY) {
     /* don't cancel the resolve here -- it would be cancelled in
      * connection_about_to_close_connection(), since conn is still
@@ -707,9 +713,10 @@ connection_dns_process_inbuf(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_DNSWORKER);
 
   if (conn->state != DNSWORKER_STATE_BUSY && buf_datalen(conn->inbuf)) {
-    warn(LD_BUG,"Bug: read data (%d bytes) from an idle dns worker (fd %d, "
-         "address '%s'). Please report.",
-         (int)buf_datalen(conn->inbuf), conn->s, safe_str(conn->address));
+    log_warn(LD_BUG,
+             "Bug: read data (%d bytes) from an idle dns worker (fd %d, "
+             "address '%s'). Please report.",
+             (int)buf_datalen(conn->inbuf), conn->s, safe_str(conn->address));
     tor_fragile_assert();
 
     /* Pull it off the buffer anyway, or it will just stay there.
@@ -718,8 +725,8 @@ connection_dns_process_inbuf(connection_t *conn)
     while (buf_datalen(conn->inbuf)) {
       connection_fetch_from_buf(&success,1,conn);
       connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
-      warn(LD_EXIT,"Discarding idle dns answer (success %d, addr %d.)",
-           success, addr); // XXX safe_str
+      log_warn(LD_EXIT,"Discarding idle dns answer (success %d, addr %d.)",
+               success, addr); // XXX safe_str
     }
     return 0;
   }
@@ -731,8 +738,8 @@ connection_dns_process_inbuf(connection_t *conn)
   connection_fetch_from_buf(&success,1,conn);
   connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
 
-  debug(LD_EXIT, "DNSWorker (fd %d) returned answer for '%s'",
-        conn->s, safe_str(conn->address));
+  log_debug(LD_EXIT, "DNSWorker (fd %d) returned answer for '%s'",
+            conn->s, safe_str(conn->address));
 
   tor_assert(success >= DNS_RESOLVE_FAILED_TRANSIENT);
   tor_assert(success <= DNS_RESOLVE_SUCCEEDED);
@@ -812,13 +819,13 @@ dnsworker_main(void *data)
 
     if ((r = recv(fd, &address_len, 1, 0)) != 1) {
       if (r == 0) {
-        info(LD_EXIT,"DNS worker exiting because Tor process closed "
-             "connection (either pruned idle dnsworker or died).");
+        log_info(LD_EXIT,"DNS worker exiting because Tor process closed "
+                 "connection (either pruned idle dnsworker or died).");
       } else {
-        info(LD_EXIT,"DNS worker exiting because of error on connection "
-             "to Tor process.");
-        info(LD_EXIT,"(Error on %d was %s)", fd,
-             tor_socket_strerror(tor_socket_errno(fd)));
+        log_info(LD_EXIT,"DNS worker exiting because of error on connection "
+                 "to Tor process.");
+        log_info(LD_EXIT,"(Error on %d was %s)", fd,
+                 tor_socket_strerror(tor_socket_errno(fd)));
       }
       tor_close_socket(fd);
       crypto_thread_cleanup();
@@ -826,7 +833,7 @@ dnsworker_main(void *data)
     }
 
     if (address_len && read_all(fd, address, address_len, 1) != address_len) {
-      err(LD_BUG,"read hostname failed. Child exiting.");
+      log_err(LD_BUG,"read hostname failed. Child exiting.");
       tor_close_socket(fd);
       crypto_thread_cleanup();
       spawn_exit();
@@ -840,23 +847,23 @@ dnsworker_main(void *data)
     switch (result) {
       case 1:
         /* XXX result can never be 1, because we set it to -1 above on error */
-        info(LD_NET,"Could not resolve dest addr %s (transient).",
-             safe_str(address));
+        log_info(LD_NET,"Could not resolve dest addr %s (transient).",
+                 safe_str(address));
         answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
         break;
       case -1:
-        info(LD_NET,"Could not resolve dest addr %s (permanent).",
-             safe_str(address));
+        log_info(LD_NET,"Could not resolve dest addr %s (permanent).",
+                 safe_str(address));
         answer[0] = DNS_RESOLVE_FAILED_PERMANENT;
         break;
       case 0:
-        info(LD_NET,"Resolved address '%s'.",safe_str(address));
+        log_info(LD_NET,"Resolved address '%s'.",safe_str(address));
         answer[0] = DNS_RESOLVE_SUCCEEDED;
         break;
     }
     set_uint32(answer+1, ip);
     if (write_all(fd, answer, 5, 1) != 5) {
-      err(LD_NET,"writing answer failed. Child exiting.");
+      log_err(LD_NET,"writing answer failed. Child exiting.");
       tor_close_socket(fd);
       crypto_thread_cleanup();
       spawn_exit();
@@ -877,8 +884,8 @@ spawn_dnsworker(void)
 
   fdarray = tor_malloc(sizeof(int)*2);
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
-    warn(LD_NET, "Couldn't construct socketpair: %s",
-         tor_socket_strerror(-err));
+    log_warn(LD_NET, "Couldn't construct socketpair: %s",
+             tor_socket_strerror(-err));
     tor_free(fdarray);
     return -1;
   }
@@ -889,7 +896,7 @@ spawn_dnsworker(void)
   fd = fdarray[0]; /* We copy this out here, since dnsworker_main may free
                     * fdarray */
   spawn_func(dnsworker_main, (void*)fdarray);
-  debug(LD_EXIT,"just spawned a dns worker.");
+  log_debug(LD_EXIT,"just spawned a dns worker.");
 #ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
   tor_free(fdarray);
@@ -904,7 +911,7 @@ spawn_dnsworker(void)
   conn->address = tor_strdup("<unused>");
 
   if (connection_add(conn) < 0) { /* no space, forget it */
-    warn(LD_NET,"connection_add failed. Giving up.");
+    log_warn(LD_NET,"connection_add failed. Giving up.");
     connection_free(conn); /* this closes fd */
     return -1;
   }
@@ -943,8 +950,8 @@ spawn_enough_dnsworkers(void)
                                                        DNSWORKER_STATE_BUSY);
     tor_assert(dnsconn);
 
-    warn(LD_EXIT, "%d DNS workers are spawned; all are busy. Killing one.",
-         MAX_DNSWORKERS);
+    log_warn(LD_EXIT, "%d DNS workers are spawned; all are busy. Killing one.",
+             MAX_DNSWORKERS);
 
     connection_mark_for_close(dnsconn);
     num_dnsworkers_busy--;
@@ -958,7 +965,7 @@ spawn_enough_dnsworkers(void)
 
   while (num_dnsworkers < num_dnsworkers_needed) {
     if (spawn_dnsworker() < 0) {
-      warn(LD_EXIT,"Spawn failed. Will try again later.");
+      log_warn(LD_EXIT,"Spawn failed. Will try again later.");
       return -1;
     }
     num_dnsworkers++;
@@ -967,8 +974,8 @@ spawn_enough_dnsworkers(void)
   while (num_dnsworkers > num_dnsworkers_busy+MAX_IDLE_DNSWORKERS) {
     /* too many idle? */
     /* cull excess workers */
-    info(LD_EXIT,"%d of %d dnsworkers are idle. Killing one.",
-         num_dnsworkers-num_dnsworkers_busy, num_dnsworkers);
+    log_info(LD_EXIT,"%d of %d dnsworkers are idle. Killing one.",
+             num_dnsworkers-num_dnsworkers_busy, num_dnsworkers);
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
                                            DNSWORKER_STATE_IDLE);
     tor_assert(dnsconn);

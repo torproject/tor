@@ -129,7 +129,7 @@ accounting_parse_options(or_options_t *options, int validate_only)
   smartlist_split_string(items, v, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
   if (smartlist_len(items)<2) {
-    warn(LD_CONFIG, "Too few arguments to AccountingStart");
+    log_warn(LD_CONFIG, "Too few arguments to AccountingStart");
     goto err;
   }
   s = smartlist_get(items,0);
@@ -140,8 +140,9 @@ accounting_parse_options(or_options_t *options, int validate_only)
   } else if (0==strcasecmp(s, "day")) {
     unit = UNIT_DAY;
   } else {
-    warn(LD_CONFIG, "Unrecognized accounting unit '%s': only 'month', 'week',"
-         " and 'day' are supported.", s);
+    log_warn(LD_CONFIG,
+             "Unrecognized accounting unit '%s': only 'month', 'week',"
+             " and 'day' are supported.", s);
     goto err;
   }
 
@@ -149,16 +150,16 @@ accounting_parse_options(or_options_t *options, int validate_only)
   case UNIT_WEEK:
     d = tor_parse_long(smartlist_get(items,1), 10, 1, 7, &ok, NULL);
     if (!ok) {
-      warn(LD_CONFIG, "Weekly accounting must begin on a day between "
-           "1 (Monday) and 7 (Sunday)");
+      log_warn(LD_CONFIG, "Weekly accounting must begin on a day between "
+               "1 (Monday) and 7 (Sunday)");
       goto err;
     }
     break;
   case UNIT_MONTH:
     d = tor_parse_long(smartlist_get(items,1), 10, 1, 28, &ok, NULL);
     if (!ok) {
-      warn(LD_CONFIG, "Monthly accounting must begin on a day between "
-           "1 and 28");
+      log_warn(LD_CONFIG, "Monthly accounting must begin on a day between "
+               "1 and 28");
       goto err;
     }
     break;
@@ -171,27 +172,29 @@ accounting_parse_options(or_options_t *options, int validate_only)
 
   idx = unit==UNIT_DAY?1:2;
   if (smartlist_len(items) != (idx+1)) {
-    warn(LD_CONFIG,"Accounting unit '%s' requires %d argument%s.",
-         s, idx, (idx>1)?"s":"");
+    log_warn(LD_CONFIG,"Accounting unit '%s' requires %d argument%s.",
+             s, idx, (idx>1)?"s":"");
     goto err;
   }
   s = smartlist_get(items, idx);
   h = tor_parse_long(s, 10, 0, 23, &ok, &cp);
   if (!ok) {
-    warn(LD_CONFIG,"Accounting start time not parseable: bad hour.");
+    log_warn(LD_CONFIG,"Accounting start time not parseable: bad hour.");
     goto err;
   }
   if (!cp || *cp!=':') {
-    warn(LD_CONFIG,"Accounting start time not parseable: not in HH:MM format");
+    log_warn(LD_CONFIG,
+             "Accounting start time not parseable: not in HH:MM format");
     goto err;
   }
   m = tor_parse_long(cp+1, 10, 0, 59, &ok, &cp);
   if (!ok) {
-    warn(LD_CONFIG, "Accounting start time not parseable: bad minute");
+    log_warn(LD_CONFIG, "Accounting start time not parseable: bad minute");
     goto err;
   }
   if (!cp || *cp!='\0') {
-    warn(LD_CONFIG,"Accounting start time not parseable: not in HH:MM format");
+    log_warn(LD_CONFIG,
+             "Accounting start time not parseable: not in HH:MM format");
     goto err;
   }
 
@@ -325,15 +328,16 @@ configure_accounting(time_t now)
       start_of_accounting_period_after(interval_start_time) <= now) {
     /* We didn't have recorded usage, or we don't have recorded usage
      * for this interval. Start a new interval. */
-    info(LD_ACCT, "Starting new accounting interval.");
+    log_info(LD_ACCT, "Starting new accounting interval.");
     reset_accounting(now);
   } else if (interval_start_time ==
         start_of_accounting_period_containing(interval_start_time)) {
-    info(LD_ACCT, "Continuing accounting interval.");
+    log_info(LD_ACCT, "Continuing accounting interval.");
     /* We are in the interval we thought we were in. Do nothing.*/
     interval_end_time = start_of_accounting_period_after(interval_start_time);
   } else {
-    warn(LD_ACCT, "Mismatched accounting interval; starting a fresh one.");
+    log_warn(LD_ACCT,
+             "Mismatched accounting interval; starting a fresh one.");
     reset_accounting(now);
   }
   accounting_set_wakeup_time();
@@ -374,7 +378,7 @@ update_expected_bandwidth(void)
 static void
 reset_accounting(time_t now)
 {
-  info(LD_ACCT, "Starting new accounting interval.");
+  log_info(LD_ACCT, "Starting new accounting interval.");
   update_expected_bandwidth();
   interval_start_time = start_of_accounting_period_containing(now);
   interval_end_time = start_of_accounting_period_after(interval_start_time);
@@ -417,7 +421,7 @@ accounting_run_housekeeping(time_t now)
   }
   if (time_to_record_bandwidth_usage(now)) {
     if (accounting_record_bandwidth_usage(now)) {
-      err(LD_FS, "Couldn't record bandwidth usage to disk; exiting.");
+      log_err(LD_FS, "Couldn't record bandwidth usage to disk; exiting.");
       /* This can fail when we're out of fd's, causing a crash.
        * The current answer is to reserve 32 more than we need, in
        * set_max_file_descriptors(). */
@@ -440,7 +444,7 @@ accounting_set_wakeup_time(void)
 
   if (! identity_key_is_set()) {
     if (init_keys() < 0) {
-      err(LD_BUG, "Error initializing keys");
+      log_err(LD_BUG, "Error initializing keys");
       tor_assert(0);
     }
   }
@@ -462,7 +466,8 @@ accounting_set_wakeup_time(void)
     time_to_exhaust_bw = 24*60*60;
     interval_wakeup_time = interval_start_time;
 
-    notice(LD_ACCT, "Configured hibernation.  This interval begins at %s "
+    log_notice(LD_ACCT,
+           "Configured hibernation.  This interval begins at %s "
            "and ends at %s.  We have no prior estimate for bandwidth, so "
            "we will start out awake and hibernate when we exhaust our quota.",
            buf1, buf2);
@@ -504,7 +509,8 @@ accounting_set_wakeup_time(void)
                    down_time<interval_end_time?down_time:interval_end_time);
     format_local_iso_time(buf4, interval_end_time);
 
-    notice(LD_ACCT, "Configured hibernation.  This interval began at %s; "
+    log_notice(LD_ACCT,
+           "Configured hibernation.  This interval began at %s; "
            "the scheduled wake-up time %s %s; "
            "we expect%s to exhaust our quota for this interval around %s; "
            "the next interval begins at %s (all times local)",
@@ -570,45 +576,45 @@ read_bandwidth_usage(void)
 
   if (smartlist_len(elts)<1 ||
       atoi(smartlist_get(elts,0)) != BW_ACCOUNTING_VERSION) {
-    warn(LD_ACCT, "Unrecognized bw_accounting file version: %s",
-         (const char*)smartlist_get(elts,0));
+    log_warn(LD_ACCT, "Unrecognized bw_accounting file version: %s",
+             (const char*)smartlist_get(elts,0));
     goto err;
   }
   if (smartlist_len(elts) < 7) {
-    warn(LD_ACCT, "Corrupted bw_accounting file: %d lines",
-         smartlist_len(elts));
+    log_warn(LD_ACCT, "Corrupted bw_accounting file: %d lines",
+             smartlist_len(elts));
     goto err;
   }
   if (parse_iso_time(smartlist_get(elts,1), &t1)) {
-    warn(LD_ACCT, "Error parsing bandwidth usage start time.");
+    log_warn(LD_ACCT, "Error parsing bandwidth usage start time.");
     goto err;
   }
   if (parse_iso_time(smartlist_get(elts,2), &t2)) {
-    warn(LD_ACCT, "Error parsing bandwidth usage last-written time");
+    log_warn(LD_ACCT, "Error parsing bandwidth usage last-written time");
     goto err;
   }
   n_read = tor_parse_uint64(smartlist_get(elts,3), 10, 0, UINT64_MAX,
                             &ok, NULL);
   if (!ok) {
-    warn(LD_ACCT, "Error parsing number of bytes read");
+    log_warn(LD_ACCT, "Error parsing number of bytes read");
     goto err;
   }
   n_written = tor_parse_uint64(smartlist_get(elts,4), 10, 0, UINT64_MAX,
                                &ok, NULL);
   if (!ok) {
-    warn(LD_ACCT, "Error parsing number of bytes read");
+    log_warn(LD_ACCT, "Error parsing number of bytes read");
     goto err;
   }
   n_seconds = (uint32_t)tor_parse_ulong(smartlist_get(elts,5), 10,0,ULONG_MAX,
                                         &ok, NULL);
   if (!ok) {
-    warn(LD_ACCT, "Error parsing number of seconds live");
+    log_warn(LD_ACCT, "Error parsing number of seconds live");
     goto err;
   }
   expected_bw =(uint32_t)tor_parse_ulong(smartlist_get(elts,6), 10,0,ULONG_MAX,
                                         &ok, NULL);
   if (!ok) {
-    warn(LD_ACCT, "Error parsing expected bandwidth");
+    log_warn(LD_ACCT, "Error parsing expected bandwidth");
     goto err;
   }
 
@@ -618,7 +624,8 @@ read_bandwidth_usage(void)
   interval_start_time = t1;
   expected_bandwidth_usage = expected_bw;
 
-  info(LD_ACCT, "Successfully read bandwidth accounting file written at %s "
+  log_info(LD_ACCT,
+       "Successfully read bandwidth accounting file written at %s "
        "for interval starting at %s.  We have been active for %lu seconds in "
        "this interval.  At the start of the interval, we expected to use "
        "about %lu KB per second. ("U64_FORMAT" bytes read so far, "
@@ -674,9 +681,9 @@ hibernate_begin(int new_state, time_t now)
 
   if (new_state == HIBERNATE_STATE_EXITING &&
       hibernate_state != HIBERNATE_STATE_LIVE) {
-    notice(LD_GENERAL,"Sigint received %s; exiting now.",
-           hibernate_state == HIBERNATE_STATE_EXITING ?
-           "a second time" : "while hibernating");
+    log_notice(LD_GENERAL,"Sigint received %s; exiting now.",
+               hibernate_state == HIBERNATE_STATE_EXITING ?
+               "a second time" : "while hibernating");
     tor_cleanup();
     exit(0);
   }
@@ -685,7 +692,7 @@ hibernate_begin(int new_state, time_t now)
   while ((conn = connection_get_by_type(CONN_TYPE_OR_LISTENER)) ||
          (conn = connection_get_by_type(CONN_TYPE_AP_LISTENER)) ||
          (conn = connection_get_by_type(CONN_TYPE_DIR_LISTENER))) {
-    info(LD_NET,"Closing listener type %d", conn->type);
+    log_info(LD_NET,"Closing listener type %d", conn->type);
     connection_mark_for_close(conn);
   }
 
@@ -693,8 +700,8 @@ hibernate_begin(int new_state, time_t now)
   /* XXX upload rendezvous service descriptors with no intro points */
 
   if (new_state == HIBERNATE_STATE_EXITING) {
-    notice(LD_GENERAL,"Interrupt: will shut down in %d seconds. Interrupt "
-           "again to exit now.", options->ShutdownWaitLength);
+    log_notice(LD_GENERAL,"Interrupt: will shut down in %d seconds. Interrupt "
+               "again to exit now.", options->ShutdownWaitLength);
     hibernate_end_time = time(NULL) + options->ShutdownWaitLength;
   } else { /* soft limit reached */
     hibernate_end_time = interval_end_time;
@@ -712,7 +719,7 @@ hibernate_end(int new_state)
              hibernate_state == HIBERNATE_STATE_DORMANT);
 
   /* listeners will be relaunched in run_scheduled_events() in main.c */
-  notice(LD_ACCT,"Hibernation period ended. Resuming normal activity.");
+  log_notice(LD_ACCT,"Hibernation period ended. Resuming normal activity.");
 
   hibernate_state = new_state;
   hibernate_end_time = 0; /* no longer hibernating */
@@ -747,7 +754,7 @@ hibernate_go_dormant(time_t now)
   else
     hibernate_begin(HIBERNATE_STATE_DORMANT, now);
 
-  notice(LD_ACCT,"Going dormant. Blowing away remaining connections.");
+  log_notice(LD_ACCT,"Going dormant. Blowing away remaining connections.");
 
   /* Close all OR/AP/exit conns. Leave dir conns because we still want
    * to be able to upload server descriptors so people know we're still
@@ -760,7 +767,7 @@ hibernate_go_dormant(time_t now)
     if (CONN_IS_EDGE(conn))
       connection_edge_end(conn, END_STREAM_REASON_HIBERNATING,
                           conn->cpath_layer);
-    info(LD_NET,"Closing conn type %d", conn->type);
+    log_info(LD_NET,"Closing conn type %d", conn->type);
     if (conn->type == CONN_TYPE_AP) /* send socks failure if needed */
       connection_mark_unattached_ap(conn, END_STREAM_REASON_HIBERNATING);
     else
@@ -789,11 +796,13 @@ hibernate_end_time_elapsed(time_t now)
     format_iso_time(buf,interval_wakeup_time);
     if (hibernate_state != HIBERNATE_STATE_DORMANT) {
       /* We weren't sleeping before; we should sleep now. */
-      notice(LD_ACCT, "Accounting period ended. Commencing hibernation until "
-             "%s GMT",buf);
+      log_notice(LD_ACCT,
+                 "Accounting period ended. Commencing hibernation until "
+                 "%s GMT", buf);
       hibernate_go_dormant(now);
     } else {
-      notice(LD_ACCT, "Accounting period ended. This period, we will hibernate"
+      log_notice(LD_ACCT,
+             "Accounting period ended. This period, we will hibernate"
              " until %s GMT",buf);
     }
   }
@@ -813,7 +822,7 @@ consider_hibernation(time_t now)
   if (hibernate_state == HIBERNATE_STATE_EXITING) {
     tor_assert(hibernate_end_time);
     if (hibernate_end_time <= now) {
-      notice(LD_GENERAL, "Clean shutdown finished. Exiting.");
+      log_notice(LD_GENERAL, "Clean shutdown finished. Exiting.");
       tor_cleanup();
       exit(0);
     }
@@ -836,11 +845,13 @@ consider_hibernation(time_t now)
    * go dormant. */
   if (hibernate_state == HIBERNATE_STATE_LIVE) {
     if (hibernate_soft_limit_reached()) {
-      notice(LD_ACCT,"Bandwidth soft limit reached; commencing hibernation.");
+      log_notice(LD_ACCT,
+                 "Bandwidth soft limit reached; commencing hibernation.");
       hibernate_begin(HIBERNATE_STATE_LOWBANDWIDTH, now);
     } else if (accounting_enabled && now < interval_wakeup_time) {
       format_iso_time(buf,interval_wakeup_time);
-      notice(LD_ACCT,"Commencing hibernation. We will wake up at %s GMT",buf);
+      log_notice(LD_ACCT,
+                 "Commencing hibernation. We will wake up at %s GMT", buf);
       hibernate_go_dormant(now);
     }
   }
