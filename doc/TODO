@@ -54,7 +54,8 @@ N - commit edmanm's win32 makefile to tor cvs contrib
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
-R - make log entries include function names in win32 again.
+  o make log entries include function names in win32 again.
+  - ...and make it compile and work right on Windows again.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
 R - streamline how we define a guard node as 'up'. document it
