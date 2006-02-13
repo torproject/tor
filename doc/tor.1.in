@@ -318,7 +318,7 @@ applications.  Set this to 0 if you don't want to allow application
 connections. (Default: 9050)
 .LP
 .TP
-\fBSOCKSBindAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+\fBSOCKSListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
 Bind to this address to listen for connections from SOCKS-speaking
 applications. (Default: 127.0.0.1) You can also specify a port
 (e.g. 192.168.0.1:9100). This directive can be specified multiple times
@@ -480,7 +480,7 @@ How many processes to use at once for decrypting onionskins. (Default: 1)
 Advertise this port to listen for connections from Tor clients and servers.
 .LP
 .TP
-\fBORBindAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+\fBORListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
 Bind to this IP address to listen for connections from Tor clients and
 servers. If you specify a port, bind to this port rather than the one
 specified in ORPort. (Default: 0.0.0.0)
@@ -586,7 +586,7 @@ section below.
 Advertise the directory service on this port.
 .LP
 .TP
-\fBDirBindAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+\fBDirListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
 Bind the directory service to this address. If you specify a port, bind
 to this port rather than the one specified in DirPort. (Default: 0.0.0.0)
 .LP
