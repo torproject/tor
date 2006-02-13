@@ -318,8 +318,9 @@ typedef struct {
   config_var_t *vars;
   validate_fn_t validate_fn;
   config_var_description_t *descriptions;
-  config_var_t *extra; /**< If present, a LINELIST variable for unrecognized
-                        * lines.  Otherwise, unrecognized lines are an error. */
+  /** If present, extra is a LINELIST variable for unrecognized
+   * lines.  Otherwise, unrecognized lines are an error. */
+  config_var_t *extra;
 } config_format_t;
 
 #define CHECK(fmt, cfg) do {                                            \
@@ -3227,10 +3228,14 @@ config_addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
 
   /* We can ignore accept/reject, since "accept *:80, reject *:80" reduces to
    * "accept *:80". */
-  if (a->msk & ~b->msk)
-    return 0; /* There's a wildcard bit in b->msk that's not a wildcard in a. */
-  if ((a->addr & a->msk) != (b->addr & a->msk))
-    return 0; /* There's a fixed bit in a that's set differently in b. */
+  if (a->msk & ~b->msk) {
+    /* There's a wildcard bit in b->msk that's not a wildcard in a. */
+    return 0;
+  }
+  if ((a->addr & a->msk) != (b->addr & a->msk)) {
+    /* There's a fixed bit in a that's set differently in b. */
+    return 0;
+  }
   return (a->prt_min <= b->prt_min && a->prt_max >= b->prt_max);
 }
 
