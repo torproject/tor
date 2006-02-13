@@ -726,15 +726,16 @@ router_is_unreliable(routerinfo_t *router, int need_uptime,
 /** Remove from routerlist <b>sl</b> all routers that are not
  * sufficiently stable. */
 static void
-routerlist_sl_remove_unreliable_routers(smartlist_t *sl,
-                                        int need_uptime, int need_guard)
+routerlist_sl_remove_unreliable_routers(smartlist_t *sl, int need_uptime,
+                                        int need_capacity, int need_guard)
 {
   int i;
   routerinfo_t *router;
 
   for (i = 0; i < smartlist_len(sl); ++i) {
     router = smartlist_get(sl, i);
-    if (router_is_unreliable(router, need_uptime, 0, need_guard)) {
+    if (router_is_unreliable(router, need_uptime,
+                             need_capacity, need_guard)) {
 //      log(LOG_DEBUG, "Router '%s' has insufficient uptime; deleting.",
  //         router->nickname);
       smartlist_del(sl, i--);
@@ -838,8 +839,8 @@ router_choose_random_node(const char *preferred,
     smartlist_subtract(sl,excludednodes);
     if (excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
-    if (need_uptime || need_guard)
-      routerlist_sl_remove_unreliable_routers(sl, need_uptime, need_guard);
+    routerlist_sl_remove_unreliable_routers(sl, need_uptime,
+                                            need_capacity, need_guard);
     if (need_capacity)
       choice = routerlist_sl_choose_by_bandwidth(sl);
     else
