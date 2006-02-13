@@ -37,7 +37,7 @@ N - building on freebsd 6.0: (with multiple openssl installations)
       by default, if it works?
 
   o Split into ReachableDirAddresses and ReachableORAddresses
-    - document
+    o document
 R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
     new entry, but failed. Bad news. XXX.
 N - look at the proposed os x uninstaller:
