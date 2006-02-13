@@ -356,6 +356,7 @@ static void config_register_addressmaps(or_options_t *options);
 static int parse_dir_server_line(const char *line, int validate_only);
 static int config_cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b);
 static int config_addr_policy_covers(addr_policy_t *a, addr_policy_t *b);
+static int config_addr_policy_intersects(addr_policy_t *a, addr_policy_t *b);
 static int parse_redirect_line(smartlist_t *result,
                                config_line_t *line);
 static int parse_log_severity_range(const char *range, int *min_out,
@@ -3043,31 +3044,15 @@ config_expand_exit_policy_aliases(smartlist_t *entries, int assume_action)
 static void
 config_exit_policy_remove_redundancies(addr_policy_t **dest)
 {
-  addr_policy_t *ap, *tmp, *victim;
-  int have_seen_accept=0;
+  addr_policy_t *ap, *tmp, *victim, *previous;
 
   /* Step one: find a *:* entry and cut off everything after it. */
   for (ap=*dest; ap; ap=ap->next) {
-    if (ap->policy_type == ADDR_POLICY_ACCEPT)
-      have_seen_accept=1;
     if (ap->msk == 0 && ap->prt_min <= 1 && ap->prt_max >= 65535) {
       /* This is a catch-all line -- later lines are unreachable. */
       if (ap->next) {
         addr_policy_free(ap->next);
         ap->next = NULL;
-      }
-      if (ap->policy_type == ADDR_POLICY_REJECT &&
-          ap != *dest && !have_seen_accept) {
-        /* This is a "reject *:*" and all previous entries were
-         * "reject something". Throw out the previous entries. */
-        for (tmp=*dest; tmp; tmp=tmp->next) {
-          if (tmp->next == ap) {
-            tmp->next = NULL;
-            addr_policy_free(*dest);
-            *dest = ap;
-            break;
-          }
-        }
       }
     }
   }
@@ -3078,6 +3063,8 @@ config_exit_policy_remove_redundancies(addr_policy_t **dest)
     tmp=ap;
     while (tmp) {
       if (tmp->next && config_addr_policy_covers(ap, tmp->next)) {
+        log(LOG_INFO, LD_CONFIG, "Removing exit policy %s.  It is made "
+            "redundant by %s.", tmp->next->string, ap->string);
         victim = tmp->next;
         tmp->next = victim->next;
         victim->next = NULL;
@@ -3085,6 +3072,48 @@ config_exit_policy_remove_redundancies(addr_policy_t **dest)
       } else {
         tmp=tmp->next;
       }
+    }
+  }
+
+  /* Step three: for every entry A, see if there's an entry B making this one
+   * redundant later on.  This is the case if A and B are of the same type
+   * (accept/reject), A is a subset of B, and there is no other entry of
+   * different type in between those two that intersects with A.
+   *
+   * Anybody want to doublecheck the logic here? XXX
+   */
+  ap = *dest;
+  previous = NULL;
+  while (ap) {
+    for (tmp=ap->next; tmp; tmp=tmp->next) {
+      if (ap->policy_type != tmp->policy_type &&
+          config_addr_policy_intersects(ap, tmp)) {
+        tmp = NULL; /* so that we advance previous and ap */
+        break;
+      }
+      if (ap->policy_type == tmp->policy_type &&
+          config_addr_policy_covers(tmp, ap)) {
+        log(LOG_INFO, LD_CONFIG, "Removing exit policy %s.  It is made "
+            "redundant by %s.", ap->string, tmp->string);
+        victim = ap;
+        ap = ap->next;
+
+        if (previous) {
+          assert(previous->next == victim);
+          previous->next = victim->next;
+        } else {
+          assert(*dest == victim);
+          *dest = victim->next;
+        }
+
+        victim->next = NULL;
+        addr_policy_free(victim);
+        break;
+      }
+    }
+    if (!tmp) {
+      previous = ap;
+      ap = ap->next;
     }
   }
 }
@@ -3199,6 +3228,26 @@ config_addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
   if ((a->addr & a->msk) != (b->addr & a->msk))
     return 0; /* There's a fixed bit in a that's set differently in b. */
   return (a->prt_min <= b->prt_min && a->prt_max >= b->prt_max);
+}
+
+/** Return true iff the address policies <b>a</b> and <b>b</b> intersect, that
+ * is, there exists an address/port that is covered by <b>a</b> that is also
+ * covered by <b>b</b>.
+ *
+ * XXX: somebody needs to doublecheck the IP logic. -- PP
+ * */
+static int
+config_addr_policy_intersects(addr_policy_t *a, addr_policy_t *b)
+{
+  /* All the bits we care about are those that are set in both
+   * netmasks.  If they are equal in a and b's networkaddresses
+   * then the networks intersect.  If there is a difference,
+   * then they do not' */
+  if (!( ((a->addr ^ b->addr) & a->msk & b->msk) == 0 ))
+    return 0;
+  if (a->prt_max < b->prt_min  ||  b->prt_max < a->prt_min)
+    return 0;
+  return 1;
 }
 
 /** Like config_cmp_single_addr_policy() above, but looks at the
