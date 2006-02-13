@@ -267,14 +267,36 @@ ReachableAddresses instead. (Default: 80, 443)
 .LP
 .TP
 \fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
-A comma-separated list of IPs that your firewall allows you to connect
-to. The format is as
+A comma-separated list of IP addressess and ports that your firewall allows you
+to connect to. The format is as
 for the addresses in ExitPolicy, except that "accept" is understood
 unless "reject" is explicitly provided.  For example, 'ReachableAddresses
 99.0.0.0/8, reject 18.0.0.0/8:80, accept *:80' means that your
 firewall allows connections to everything inside net 99, rejects port
 80 connections to net 18, and accepts connections to port 80 otherwise.
 (Default: 'accept *:*'.)
+.LP
+.TP
+\fBReachableDirAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
+Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
+these restrictions when fetching directory information, using standard HTTP
+GET requests. If not set explicitly then the value of \fBfBReachableAddresses\fP
+is used.  If \fBHttpProxy\fR is set then these connections will go through that
+proxy.
+.LP
+.TP
+\fBReachableORAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
+Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
+these restrictions when connecting to Onion Routers, using TLS/SSL.  If not set
+explicitly then the value of \fBfBReachableAddresses\fP is used. If
+\fBHttpsProxy\fR is set then these connections will go through that proxy.
+
+The separation between \fBReachableORAddresses\fP and
+\fBReachableDirAddresses\fP is only interesting when you are connecting through
+proxies (see \fBHttpProxy\fR and \fBHttpsProxy\fR).  Most proxies limit TLS
+connections (which Tor uses to connect to Onion Routers) to port 443, and some
+limit HTTP GET requests (which Tor uses for fetching directory information) to
+port 80.
 .LP
 .TP
 \fBLongLivedPorts \fR\fIPORTS\fP
