@@ -973,7 +973,8 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
                       options->SocksPort, "127.0.0.1", force,
                       replaced_conns, new_conns)<0)
     return -1;
-  if (retry_listeners(CONN_TYPE_CONTROL_LISTENER, NULL,
+  if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
+                      options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1", force,
                       replaced_conns, new_conns)<0)
     return -1;
