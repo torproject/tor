@@ -700,7 +700,7 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
     *outp = '\0';
 
     if (config_get_lines(config, &lines) < 0) {
-      warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
+      log_warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
       connection_write_str_to_buf("551 Couldn't parse configuration\r\n",
                                   conn);
       tor_free(config);
@@ -709,7 +709,7 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
     tor_free(config);
   } else {
     if (config_get_lines(body, &lines) < 0) {
-      warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
+      log_warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
       send_control0_error(conn, ERR_SYNTAX, "Couldn't parse configuration");
       return 0;
     }
@@ -718,7 +718,8 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
   if ((r=options_trial_assign(lines, use_defaults, clear_first)) < 0) {
     int v0_err;
     const char *msg;
-    warn(LD_CONTROL,"Controller gave us config lines that didn't validate.");
+    log_warn(LD_CONTROL,
+             "Controller gave us config lines that didn't validate.");
     switch (r) {
       case -1:
         v0_err = ERR_UNRECOGNIZED_CONFIG_KEY;
@@ -1024,7 +1025,8 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
     char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
     char received[DIGEST_LEN];
     if (decode_hashed_password(expected, options->HashedControlPassword)<0) {
-      warn(LD_CONTROL,"Couldn't decode HashedControlPassword: invalid base16");
+      log_warn(LD_CONTROL,
+               "Couldn't decode HashedControlPassword: invalid base16");
       goto err;
     }
     secret_to_key(received,DIGEST_LEN,password,password_len,expected);
@@ -1052,7 +1054,7 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
   }
   return 0;
  ok:
-  info(LD_CONTROL, "Authenticated control connection (%d)", conn->s);
+  log_info(LD_CONTROL, "Authenticated control connection (%d)", conn->s);
   send_control_done(conn);
   if (STATE_IS_V0(conn->state))
     conn->state = CONTROL_CONN_STATE_OPEN_V0;
@@ -1168,18 +1170,20 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
       if (!is_plausible_address(from)) {
-        warn(LD_CONTROL,"Skipping invalid argument '%s' in MapAddress msg",
+        log_warn(LD_CONTROL,
+                 "Skipping invalid argument '%s' in MapAddress msg",
              from);
       } else if (!is_plausible_address(to)) {
-        warn(LD_CONTROL,"Skipping invalid argument '%s' in MapAddress msg",to);
+        log_warn(LD_CONTROL,
+                 "Skipping invalid argument '%s' in MapAddress msg", to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
         const char *address = addressmap_register_virtual_address(
               !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!address) {
-          warn(LD_CONTROL,
-               "Unable to allocate address for '%s' in MapAddress msg",
-               safe_str(line));
+          log_warn(LD_CONTROL,
+                   "Unable to allocate address for '%s' in MapAddress msg",
+                   safe_str(line));
         } else {
           size_t anslen = strlen(address)+strlen(to)+8;
           char *ans = tor_malloc(anslen);
@@ -1201,7 +1205,8 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
         }
       }
     } else {
-      warn(LD_CONTROL, "Skipping MapAddress line with wrong number of items.");
+      log_warn(LD_CONTROL,
+               "Skipping MapAddress line with wrong number of items.");
     }
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_clear(elts);
@@ -1375,8 +1380,8 @@ handle_getinfo_helper(const char *question, char **answer)
         case AP_CONN_STATE_OPEN:
           state = "SUCCEEDED"; break;
         default:
-          warn(LD_BUG, "Asked for stream in unknown state %d",
-               conns[i]->state);
+          log_warn(LD_BUG, "Asked for stream in unknown state %d",
+                   conns[i]->state);
           continue;
         }
       circ = circuit_get_by_edge_conn(conns[i]);
@@ -1645,8 +1650,8 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     if (circ->state == CIRCUIT_STATE_OPEN) {
       circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
       if (circuit_send_next_onion_skin(circ) < 0) {
-        info(LD_CONTROL,
-             "send_next_onion_skin failed; circuit marked for closing.");
+        log_info(LD_CONTROL,
+                 "send_next_onion_skin failed; circuit marked for closing.");
         circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
         if (v0)
           send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
@@ -1977,8 +1982,8 @@ handle_control_closecircuit(connection_t *conn, uint32_t len,
         if (!strcasecmp(smartlist_get(args, i), "IfUnused"))
           safe = 1;
         else
-          info(LD_CONTROL, "Skipping unknown option %s",
-               (char*)smartlist_get(args,i));
+          log_info(LD_CONTROL, "Skipping unknown option %s",
+                   (char*)smartlist_get(args,i));
       }
     }
     SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
@@ -2006,7 +2011,7 @@ handle_control_fragments(connection_t *conn, uint16_t command_type,
 {
   if (command_type == CONTROL0_CMD_FRAGMENTHEADER) {
     if (conn->incoming_cmd) {
-      warn(LD_CONTROL, "Dropping incomplete fragmented command");
+      log_warn(LD_CONTROL, "Dropping incomplete fragmented command");
       tor_free(conn->incoming_cmd);
     }
     if (body_len < 6) {
@@ -2058,7 +2063,7 @@ connection_control_reached_eof(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CONTROL);
 
-  info(LD_CONTROL,"Control connection reached EOF. Closing.");
+  log_info(LD_CONTROL,"Control connection reached EOF. Closing.");
   connection_mark_for_close(conn);
   return 0;
 }
@@ -2223,13 +2228,14 @@ connection_control_process_inbuf_v0(connection_t *conn)
     {
     case -2:
       tor_free(body);
-      info(LD_CONTROL, "Detected v1 control protocol on connection (fd %d)",
-           conn->s);
+      log_info(LD_CONTROL,
+               "Detected v1 control protocol on connection (fd %d)",
+               conn->s);
       conn->state = CONTROL_CONN_STATE_NEEDAUTH_V1;
       return connection_control_process_inbuf_v1(conn);
     case -1:
       tor_free(body);
-      warn(LD_CONTROL, "Error in control command. Failing.");
+      log_warn(LD_CONTROL, "Error in control command. Failing.");
       return -1;
     case 0:
       /* Control command not all here yet. Wait. */
@@ -2245,8 +2251,8 @@ connection_control_process_inbuf_v0(connection_t *conn)
    * commands will be considered. */
   if (conn->state == CONTROL_CONN_STATE_NEEDAUTH_V0 &&
       command_type != CONTROL0_CMD_AUTHENTICATE) {
-    info(LD_CONTROL, "Rejecting '%s' command; authentication needed.",
-         control_cmd_to_string(command_type));
+    log_info(LD_CONTROL, "Rejecting '%s' command; authentication needed.",
+             control_cmd_to_string(command_type));
     send_control0_error(conn, ERR_UNAUTHORIZED, "Authentication required");
     tor_free(body);
     goto again;
@@ -2265,7 +2271,7 @@ connection_control_process_inbuf_v0(connection_t *conn)
     body = conn->incoming_cmd;
     conn->incoming_cmd = NULL;
   } else if (conn->incoming_cmd) {
-    warn(LD_CONTROL, "Dropping incomplete fragmented command");
+    log_warn(LD_CONTROL, "Dropping incomplete fragmented command");
     tor_free(conn->incoming_cmd);
   }
 
@@ -2333,18 +2339,19 @@ connection_control_process_inbuf_v0(connection_t *conn)
     case CONTROL0_CMD_CONFVALUE:
     case CONTROL0_CMD_EVENT:
     case CONTROL0_CMD_INFOVALUE:
-      warn(LD_CONTROL, "Received client-only '%s' command; ignoring.",
-           control_cmd_to_string(command_type));
+      log_warn(LD_CONTROL, "Received client-only '%s' command; ignoring.",
+               control_cmd_to_string(command_type));
       send_control0_error(conn, ERR_UNRECOGNIZED_TYPE,
                          "Command type only valid from server to tor client");
       break;
     case CONTROL0_CMD_FRAGMENTHEADER:
     case CONTROL0_CMD_FRAGMENT:
-      warn(LD_CONTROL, "Recieved command fragment out of order; ignoring.");
+      log_warn(LD_CONTROL,
+               "Recieved command fragment out of order; ignoring.");
       send_control0_error(conn, ERR_SYNTAX, "Bad fragmentation on command.");
     default:
-      warn(LD_CONTROL, "Received unrecognized command type %d; ignoring.",
-           (int)command_type);
+      log_warn(LD_CONTROL, "Received unrecognized command type %d; ignoring.",
+               (int)command_type);
       send_control0_error(conn, ERR_UNRECOGNIZED_TYPE,
                          "Unrecognized command type");
       break;
@@ -2399,7 +2406,7 @@ control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
       case CIRC_EVENT_FAILED: status = "FAILED"; break;
       case CIRC_EVENT_CLOSED: status = "CLOSED"; break;
       default:
-        warn(LD_BUG, "Unrecognized status code %d", (int)tp);
+        log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
     send_control1_event(EVENT_CIRCUIT_STATUS,
@@ -2472,7 +2479,7 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
       case STREAM_EVENT_NEW_RESOLVE: status = "NEWRESOLVE"; break;
       case STREAM_EVENT_FAILED_RETRIABLE: status = "DETACHED"; break;
       default:
-        warn(LD_BUG, "Unrecognized status code %d", (int)tp);
+        log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
     circ = circuit_get_by_edge_conn(conn);
@@ -2514,7 +2521,7 @@ control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
       case OR_CONN_EVENT_FAILED: status = "FAILED"; break;
       case OR_CONN_EVENT_CLOSED: status = "CLOSED"; break;
       default:
-        warn(LD_BUG, "Unrecognized status code %d", (int)tp);
+        log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
     send_control1_event(EVENT_OR_CONN_STATUS,
@@ -2731,7 +2738,7 @@ init_cookie_authentication(int enabled)
   authentication_cookie_is_set = 1;
   if (write_bytes_to_file(fname, authentication_cookie,
                           AUTHENTICATION_COOKIE_LEN, 1)) {
-    warn(LD_FS,"Error writing authentication cookie.");
+    log_warn(LD_FS,"Error writing authentication cookie.");
     return -1;
   }
 
