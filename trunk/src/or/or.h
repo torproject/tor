@@ -1240,6 +1240,8 @@ typedef struct {
   config_line_t *ORListenAddress;
   /** Addresses to bind for listening for directory connections. */
   config_line_t *DirListenAddress;
+  /** Addresses to bind for listening for control connections. */
+  config_line_t *ControlListenAddress;
   /** Local address to bind outbound sockets */
   char *OutboundBindAddress;
   /** Directory server only: which versions of

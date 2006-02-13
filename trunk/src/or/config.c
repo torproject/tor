@@ -137,6 +137,7 @@ static config_var_t _option_vars[] = {
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ConnLimit",           UINT,     ConnLimit,            "1024"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
+  VAR("ControlListenAddress",LINELIST, ControlListenAddress, NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
   VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
@@ -1905,6 +1906,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->DirPort == 0 && options->DirListenAddress != NULL)
     REJECT("DirPort must be defined if DirListenAddress is defined.");
+
+  if (options->ControlPort == 0 && options->ControlListenAddress != NULL)
+    REJECT("ControlPort must be defined if ControlListenAddress is defined.");
 
 #if 0 /* don't complain, since a standard configuration does this! */
   if (options->SocksPort == 0 && options->SocksListenAddress != NULL)

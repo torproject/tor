@@ -61,12 +61,20 @@ Windows since that platform lacks getrlimit(). (Default: 1024)
 .LP
 .TP
 \fBControlPort \fR\fIPort\fP
-If set, Tor will accept connections from the same machine (localhost only) on
+If set, Tor will accept connections on
 this port, and allow those connections to control the Tor process using the
 Tor Control Protocol (described in control-spec.txt).  Note: unless you also
 specify one of \fBHashedControlPassword\fP or \fBCookieAuthentication\fP,
 setting this option will cause Tor to allow any process on the local host to
 control it.
+.LP
+.TP
+\fBControlListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind the controller listener to this address. If you specify a port,
+bind to this port rather than the one specified in ControlPort. We
+strongly recommend that you leave this alone unless you know what you're
+doing, since giving attackers access to your control listener is really
+dangerous. (Default: 127.0.0.1)
 .LP
 .TP
 \fBHashedControlPassword \fR\fIhashed_password\fP

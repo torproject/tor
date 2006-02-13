@@ -51,17 +51,12 @@ N - look at the proposed os x uninstaller:
       when they feel like it.
     - update dir-spec with what we decided for each of these
 N - commit edmanm's win32 makefile to tor cvs contrib
-  o add a GUARD flag to the network-status entries.
-    o Clients use it. (But not till the directories have upgraded!)
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
   - make log entries include function names in win32 again.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
-  o Were we going to load unrecognized 'state' variables into some
-    list somewhere, and write them out whenever we update the state?
-    To be forwards and backwards compatible.
 R - streamline how we define a guard node as 'up'. document it
     somewhere.
 R - reduce log severity for guard nodes.
@@ -70,7 +65,7 @@ R - failed rend desc fetches sometimes don't get retried.
 R - Add config options to not publish and not fetch rend descs.
   - Add controller interfaces to hear rend desc events and learn
     about rend descs. In base16 I guess for now.
-R - let controlport be configurable on other interfaces
+  o let controlport be configurable on other interfaces
 R - look into "uncounting" bytes spent on local connections. so
     we can bandwidthrate but still have fast downloads.
 N . Clean and future-proof exit policy formats a bit.
