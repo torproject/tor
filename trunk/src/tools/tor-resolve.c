@@ -167,7 +167,8 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
     len += r;
   }
 
-  if (parse_socks4a_resolve_response(response_buf, RESPONSE_LEN,result_addr)<0){
+  if (parse_socks4a_resolve_response(response_buf, RESPONSE_LEN,
+                                     result_addr)<0){
     return -1;
   }
 
@@ -229,9 +230,10 @@ main(int argc, char **argv)
   }
 
   if (!strcasecmpend(arg[0], ".onion")) {
-    fprintf(stderr, "%s is a hidden service; those don't have IP addresses.\n\n"
-       "To connect to a hidden service, you need to send the hostname to Tor;\n"
-       "we suggest SOCKS 4a.\n", arg[0]);
+    fprintf(stderr,
+       "%s is a hidden service; those don't have IP addresses.\n\n"
+       "To connect to a hidden service, you need to send the hostname\n"
+       "to Tor; we suggest an application that uses SOCKS 4a.\n", arg[0]);
     return 1;
   }
 
