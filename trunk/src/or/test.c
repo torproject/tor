@@ -835,6 +835,11 @@ test_util(void)
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 0);
   tor_free(cp);
+  test_eq(0, addr_mask_get_bits(0x0u));
+  test_eq(32, addr_mask_get_bits(0xFFFFFFFFu));
+  test_eq(16, addr_mask_get_bits(0xFFFF0000u));
+  test_eq(31, addr_mask_get_bits(0xFFFFFFFEu));
+  test_eq(1, addr_mask_get_bits(0x80000000u));
 
   /* Test tor_parse_long. */
   test_eq(10L, tor_parse_long("10",10,0,100,NULL,NULL));
