@@ -198,6 +198,8 @@ static config_var_t _option_vars[] = {
   VAR("PidFile",             STRING,   PidFile,              NULL),
   VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
   VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
+  VAR("ReachableORAddresses",LINELIST, ReachableORAddresses,   NULL),
+  VAR("ReachableDirAddresses",LINELIST, ReachableDirAddresses,   NULL),
   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
   VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),
   VAR("RecommendedServerVersions", LINELIST, RecommendedServerVersions,  NULL),
@@ -431,7 +433,8 @@ static char *torrc_fname = NULL;
 /** Persistent serialized state. */
 static or_state_t *global_state = NULL;
 /** DOCDOC */
-static addr_policy_t *reachable_addr_policy = NULL;
+static addr_policy_t *reachable_or_addr_policy = NULL;
+static addr_policy_t *reachable_dir_addr_policy = NULL;
 
 static void *
 config_alloc(config_format_t *fmt)
@@ -488,9 +491,13 @@ config_free_all(void)
     global_state = NULL;
   }
   tor_free(torrc_fname);
-  if (reachable_addr_policy) {
-    addr_policy_free(reachable_addr_policy);
-    reachable_addr_policy = NULL;
+  if (reachable_or_addr_policy) {
+    addr_policy_free(reachable_or_addr_policy);
+    reachable_or_addr_policy = NULL;
+  }
+  if (reachable_dir_addr_policy) {
+    addr_policy_free(reachable_dir_addr_policy);
+    reachable_dir_addr_policy = NULL;
   }
 }
 
@@ -1830,14 +1837,30 @@ parse_reachable_addresses(void)
 {
   or_options_t *options = get_options();
 
-  addr_policy_free(reachable_addr_policy);
-  reachable_addr_policy = NULL;
-
-  if (config_parse_addr_policy(options->ReachableAddresses,
-                               &reachable_addr_policy,
+  addr_policy_free(reachable_or_addr_policy);
+  reachable_or_addr_policy = NULL;
+  if (!options->ReachableORAddresses && options->ReachableAddresses)
+    log_notice(LD_CONFIG, "Using ReachableAddresses for "
+                               "ReachableORAddresses");
+  if (config_parse_addr_policy(options->ReachableORAddresses ?
+                               options->ReachableORAddresses :
+                               options->ReachableAddresses,
+                               &reachable_or_addr_policy,
                                ADDR_POLICY_ACCEPT)) {
-    log_warn(LD_CONFIG, "Error in ReachableAddresses entry; ignoring.");
-    return;
+    log_warn(LD_CONFIG, "Error in ReachableORAddresses entry; ignoring.");
+  }
+
+  addr_policy_free(reachable_dir_addr_policy);
+  reachable_dir_addr_policy = NULL;
+  if (!options->ReachableDirAddresses && options->ReachableAddresses)
+    log_notice(LD_CONFIG, "Using ReachableAddresses for "
+                               "ReachableDirAddresses");
+  if (config_parse_addr_policy(options->ReachableDirAddresses ?
+                               options->ReachableDirAddresses :
+                               options->ReachableAddresses,
+                               &reachable_dir_addr_policy,
+                               ADDR_POLICY_ACCEPT)) {
+    log_warn(LD_CONFIG, "Error in ReachableDirAddresses entry; ignoring.");
   }
 }
 
@@ -1845,18 +1868,25 @@ parse_reachable_addresses(void)
  * combination.
  */
 int
-firewall_is_fascist(void)
+firewall_is_fascist_or(void)
 {
-  return reachable_addr_policy ? 1 : 0;
+  return !!reachable_or_addr_policy;
 }
 
 /** Return true iff we are configured to think that the local fascist
- * firewall (if any) will allow a connection to <b>addr</b>:<b>port</b>. */
+ * firewall (if any) will allow a connection to <b>addr</b>:<b>port</b>.
+ *
+ * If dir_or_or is 1 then it consults ReachableDirAddresses,
+ * if it is 2, then ReachableORAddresses are consulted.
+ * */
 int
-fascist_firewall_allows_address(uint32_t addr, uint16_t port)
+_fascist_firewall_allows_address(uint32_t addr, uint16_t port, int dir_or_or)
 {
+  assert(dir_or_or == 1 || dir_or_or == 2);
   addr_policy_result_t p = router_compare_addr_to_addr_policy(
-               addr, port, reachable_addr_policy);
+               addr, port, dir_or_or == 1 ?
+                           reachable_dir_addr_policy :
+                           reachable_or_addr_policy);
 
   switch (p) {
     case ADDR_POLICY_PROBABLY_ACCEPTED:
@@ -1869,6 +1899,18 @@ fascist_firewall_allows_address(uint32_t addr, uint16_t port)
       log_warn(LD_BUG, "Unexpected result: %d", (int)p);
       return 0;
   }
+}
+
+int
+fascist_firewall_allows_address_or(uint32_t addr, uint16_t port)
+{
+  return _fascist_firewall_allows_address(addr, port, 2);
+}
+
+int
+fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port)
+{
+  return _fascist_firewall_allows_address(addr, port, 1);
 }
 
 /** Return 0 if every setting in <b>options</b> is reasonable.  Else
@@ -1886,6 +1928,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
                  int from_setconf)
 {
   int result = 0;
+  int i;
   config_line_t *cl;
   addr_policy_t *addr_policy=NULL;
   const char *uname;
@@ -2066,16 +2109,16 @@ options_validate(or_options_t *old_options, or_options_t *options,
     result = -1;
 
   if (options->FascistFirewall && !options->ReachableAddresses) {
-    smartlist_t *instead = smartlist_create();
-    config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
-    new_line->key = tor_strdup("ReachableAddresses");
-    /* If we're configured with the old format, we need to prepend some
-     * open ports. */
-    if (!smartlist_len(options->FirewallPorts)) {
-      smartlist_add(options->FirewallPorts, tor_strdup("80"));
-      smartlist_add(options->FirewallPorts, tor_strdup("443"));
-    }
-    SMARTLIST_FOREACH(options->FirewallPorts, const char *, portno,
+    if (smartlist_len(options->FirewallPorts)) {
+      /* We already have firewall ports set, so migrate them to
+       * ReachableAddresses, which will set ReachableOR and ReachableDir-
+       * Addresses if they aren't set otherwise*/
+      smartlist_t *instead = smartlist_create();
+      config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
+      new_line->key = tor_strdup("ReachableAddresses");
+      /* If we're configured with the old format, we need to prepend some
+       * open ports. */
+      SMARTLIST_FOREACH(options->FirewallPorts, const char *, portno,
       {
         int p = atoi(portno);
         char *s;
@@ -2084,19 +2127,44 @@ options_validate(or_options_t *old_options, or_options_t *options,
         tor_snprintf(s, 16, "*:%d", p);
         smartlist_add(instead, s);
       });
-    new_line->value = smartlist_join_strings(instead,",",0,NULL);
-    /* These have been deprecated since 0.1.1.5-alpha-cvs */
-    log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall and FirewallPorts "
-        "config options to new format: \"ReachableAddresses %s\"",
-        new_line->value);
-    options->ReachableAddresses = new_line;
-    SMARTLIST_FOREACH(instead, char *, cp, tor_free(cp));
-    smartlist_free(instead);
+      new_line->value = smartlist_join_strings(instead,",",0,NULL);
+      /* These have been deprecated since 0.1.1.5-alpha-cvs */
+      log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall and FirewallPorts "
+          "config options to new format: \"ReachableAddresses %s\"",
+          new_line->value);
+      options->ReachableAddresses = new_line;
+      SMARTLIST_FOREACH(instead, char *, cp, tor_free(cp));
+      smartlist_free(instead);
+    } else {
+      /* We do not have FirewallPorts set, so add 80 to ReachableDir-,
+       * and 443 to ReachableORAddresses */
+      if (!options->ReachableDirAddresses) {
+        config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
+        new_line->key = tor_strdup("ReachableDirAddresses");
+        new_line->value = tor_strdup("*:80");
+        options->ReachableDirAddresses = new_line;
+        log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall config option "
+            "to new format: \"ReachableDirAddresses *:80\"");
+      }
+      if (!options->ReachableORAddresses) {
+        config_line_t *new_line = tor_malloc_zero(sizeof(config_line_t));
+        new_line->key = tor_strdup("ReachableORAddresses");
+        new_line->value = tor_strdup("*:443");
+        options->ReachableORAddresses = new_line;
+        log(LOG_NOTICE, LD_CONFIG, "Converting FascistFirewall config option "
+            "to new format: \"ReachableORAddresses *:443\"");
+      }
+    }
   }
 
-  if (options->ReachableAddresses) {
+  for (i=0; i<3; i++){
+    config_line_t **linep = 
+      (i==0) ? &options->ReachableAddresses :
+      (i==1) ? &options->ReachableORAddresses :
+               &options->ReachableDirAddresses;
+    if (!*linep)
+      continue;
     /* We need to end with a reject *:*, not an implicit accept *:* */
-    config_line_t **linep = &options->ReachableAddresses;
     for (;;) {
       if (!strcmp((*linep)->value, "reject *:*")) /* already there */
         break;
@@ -2110,9 +2178,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  if (options->ReachableAddresses && server_mode(options))
+  if ((options->ReachableAddresses ||
+       options->ReachableORAddresses ||
+       options->ReachableDirAddresses) &&
+      server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "
-           "of the Internet, so they must not set ReachableAddresses "
+           "of the Internet, so they must not set Reachable*Addresses "
            "or FascistFirewall.");
 
   options->_AllowUnverified = 0;
@@ -2292,12 +2363,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (config_parse_addr_policy(options->ReachableAddresses, &addr_policy,
                                ADDR_POLICY_ACCEPT))
     REJECT("Error in ReachableAddresses entry.");
+  if (config_parse_addr_policy(options->ReachableORAddresses, &addr_policy,
+                               ADDR_POLICY_ACCEPT))
+    REJECT("Error in ReachableORAddresses entry.");
+  if (config_parse_addr_policy(options->ReachableDirAddresses, &addr_policy,
+                               ADDR_POLICY_ACCEPT))
+    REJECT("Error in ReachableDirAddresses entry.");
   if (config_parse_addr_policy(options->AuthDirReject, &addr_policy,
                                ADDR_POLICY_REJECT))
-    REJECT("Error in ReachableAddresses entry.");
+    REJECT("Error in AuthDirReject entry.");
   if (config_parse_addr_policy(options->AuthDirInvalid, &addr_policy,
                                ADDR_POLICY_REJECT))
-    REJECT("Error in ReachableAddresses entry.");
+    REJECT("Error in AuthDirInvalid entry.");
 
   addr_policy_free(addr_policy);
 

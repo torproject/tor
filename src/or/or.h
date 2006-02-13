@@ -1278,6 +1278,10 @@ typedef struct {
                                * (strings). */
   config_line_t *ReachableAddresses; /**< Which IP:ports our firewall allows
                                       * (exit policy.) */
+  config_line_t *ReachableORAddresses; /**< Which IP:ports our firewall allows
+                                        * (exit policy.) */
+  config_line_t *ReachableDirAddresses; /**< Which IP:ports our firewall allows
+                                         * (exit policy.) */
 
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */
@@ -1613,8 +1617,9 @@ int or_state_save(void);
 
 int config_getinfo_helper(const char *question, char **answer);
 
-int firewall_is_fascist(void);
-int fascist_firewall_allows_address(uint32_t addr, uint16_t port);
+int firewall_is_fascist_or(void);
+int fascist_firewall_allows_address_or(uint32_t addr, uint16_t port);
+int fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port);
 
 /********************************* connection.c ***************************/
 

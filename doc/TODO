@@ -36,7 +36,8 @@ N - building on freebsd 6.0: (with multiple openssl installations)
     - <arma> should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?
 
-  - Split into ReachableDirAddresses and ReachableORAddresses
+  o Split into ReachableDirAddresses and ReachableORAddresses
+    - document
 R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
     new entry, but failed. Bad news. XXX.
 N - look at the proposed os x uninstaller:
@@ -91,6 +92,8 @@ R - When we connect to a Tor server, it sends back a signed cell listing
     - non-naming dirservers don't need to have an approved-routers file.
     - What are criteria to be a dirserver?  Write a policy.
 
+  - Document AuthDirInvalid, AuthDirReject, AuthDirRejectUnlisted
+  - are there other options that we haven't documented so far?
 
 Deferred from 0.1.1.x:
 
@@ -110,7 +113,14 @@ N - Display the reasons in 'destroy' and 'truncated' cells under some
     file descriptors for saving files, etc. Otherwise we'll trigger
     asserts when we're out of file descriptors and crash.
 
-  - <weasel> it would be nice to support a unix socket for the control thing.
+  X <weasel> it would be nice to support a unix socket for the control thing.
+    The main motivation behind this was that we could let unix permissions
+    take care of the authentication step: everybody who can connect to the
+    socket is authenticated.  However, the linux unix(7) manual page suggests
+    that requiring read/write permissions on the socket in order to use it
+    is Linux specific, and that many BSD-derived systems ignore the permissions
+    on the socket file.  Portable programs should not rely on this feature for
+    security, therefore the motivation for this feature is gone.
 
   - the tor client can do the "automatic proxy config url" thing?
 
