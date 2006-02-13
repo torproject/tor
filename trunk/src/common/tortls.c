@@ -495,12 +495,12 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
     return r;
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG);
   if (err == _TOR_TLS_ZERORETURN) {
-    debug(LD_NET,"read returned r=%d; TLS is closed",r);
+    log_debug(LD_NET,"read returned r=%d; TLS is closed",r);
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
   } else {
     tor_assert(err != TOR_TLS_DONE);
-    debug(LD_NET,"read returned r=%d, err=%d",r,err);
+    log_debug(LD_NET,"read returned r=%d, err=%d",r,err);
     return err;
   }
 }
@@ -522,8 +522,8 @@ tor_tls_write(tor_tls_t *tls, char *cp, size_t n)
   if (tls->wantwrite_n) {
     /* if WANTWRITE last time, we must use the _same_ n as before */
     tor_assert(n >= tls->wantwrite_n);
-    debug(LD_NET,"resuming pending-write, (%d to flush, reusing %d)",
-           (int)n, (int)tls->wantwrite_n);
+    log_debug(LD_NET,"resuming pending-write, (%d to flush, reusing %d)",
+              (int)n, (int)tls->wantwrite_n);
     n = tls->wantwrite_n;
     tls->wantwrite_n = 0;
   }
@@ -657,11 +657,11 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
   int r = -1;
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl))) {
-    warn(LD_PROTOCOL, "Peer has no certificate");
+    log_warn(LD_PROTOCOL, "Peer has no certificate");
     goto error;
   }
   if (!(name = X509_get_subject_name(cert))) {
-    warn(LD_PROTOCOL, "Peer certificate has no subject name");
+    log_warn(LD_PROTOCOL, "Peer certificate has no subject name");
     goto error;
   }
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef)
@@ -671,11 +671,11 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
   if (lenout == -1)
     goto error;
   if (((int)strspn(buf, LEGAL_NICKNAME_CHARACTERS)) < lenout) {
-    warn(LD_PROTOCOL,
-         "Peer certificate nickname \"%s\" has illegal characters.", buf);
+    log_warn(LD_PROTOCOL,
+             "Peer certificate nickname \"%s\" has illegal characters.", buf);
     if (strchr(buf, '.'))
-      warn(LD_PROTOCOL, "  (Maybe it is not really running Tor at its "
-           "advertised OR port.)");
+      log_warn(LD_PROTOCOL, "  (Maybe it is not really running Tor at its "
+               "advertised OR port.)");
     goto error;
   }
 
@@ -700,11 +700,12 @@ log_cert_lifetime(X509 *cert, const char *problem)
   struct tm tm;
 
   if (problem)
-    warn(LD_GENERAL,"Certificate %s: is your system clock set incorrectly?",
-           problem);
+    log_warn(LD_GENERAL,
+             "Certificate %s: is your system clock set incorrectly?",
+             problem);
 
   if (!(bio = BIO_new(BIO_s_mem()))) {
-    warn(LD_GENERAL, "Couldn't allocate BIO!"); goto end;
+    log_warn(LD_GENERAL, "Couldn't allocate BIO!"); goto end;
   }
   if (!(ASN1_TIME_print(bio, X509_get_notBefore(cert)))) {
     tls_log_errors(LOG_WARN, "printing certificate lifetime");
@@ -723,9 +724,9 @@ log_cert_lifetime(X509 *cert, const char *problem)
 
   strftime(mytime, 32, "%b %d %H:%M:%S %Y GMT", tor_gmtime_r(&now, &tm));
 
-  warn(LD_GENERAL,
-       "(certificate lifetime runs from %s through %s. Your time is %s.)",
-       s1,s2,mytime);
+  log_warn(LD_GENERAL,
+           "(certificate lifetime runs from %s through %s. Your time is %s.)",
+           s1,s2,mytime);
 
  end:
   /* Not expected to get invoked */
