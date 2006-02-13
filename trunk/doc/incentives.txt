@@ -271,22 +271,29 @@
    directory to see if they really do offer roughly the bandwidth
    they advertise. Include these observations in the directory. (For
    simplicity, the directory servers could be the measurers.) Then Tor
-   servers weight priority for other servers depending on advertised
-   bandwidth, giving particularly low priority to connections not
-   listed or that failed their spot-checks. The spot-checking can be
-   done anonymously to prevent selectively performing only for the
-   measurers, because hey, we have an anonymity network.
+   servers give priority to other servers. We'd like to weight the
+   priority by advertised bandwidth to encourage people to donate more,
+   but it seems hard to distinguish between a slow server and a busy
+   server.
+
+   The spot-checking can be done anonymously to prevent selectively
+   performing only for the measurers, because hey, we have an anonymity
+   network.
 
    We could also reward exit nodes by giving them better priority, but
    like above this only will affect their first hop. Another problem
    is that it's darn hard to spot-check whether a server allows exits
-   to all the pieces of the Internet that it claims to. A last problem
-   is that since directory servers will be doing their tests directly
-   (easy to detect) or indirectly (through other Tor servers), then
-   we know that we can get away with poor performance for people that
-   aren't listed in the directory. Maybe we can turn this around and
-   call it a feature though -- another reason to get listed in the
-   directory.
+   to all the pieces of the Internet that it claims to. If necessary,
+   perhaps this can be solved by a distributed reporting mechanism,
+   where clients that can reach a site from one exit but not another
+   anonymously submit that site to the measurers, who verify.
+
+   A last problem is that since directory servers will be doing their
+   tests directly (easy to detect) or indirectly (through other Tor
+   servers), then we know that we can get away with poor performance for
+   people that aren't listed in the directory. Maybe we can turn this
+   around and call it a feature though -- another reason to get listed
+   in the directory.
 
 5. Recommendations and next steps.
 
