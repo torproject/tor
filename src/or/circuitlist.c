@@ -218,7 +218,7 @@ circuit_state_to_string(int state)
     case CIRCUIT_STATE_OR_WAIT: return "connecting to server";
     case CIRCUIT_STATE_OPEN: return "open";
     default:
-      warn(LD_BUG, "Bug: unknown circuit state %d", state);
+      log_warn(LD_BUG, "Bug: unknown circuit state %d", state);
       tor_snprintf(buf, sizeof(buf), "unknown state [%d]", state);
       return buf;
   }
@@ -408,11 +408,13 @@ circuit_get_by_circid_orconn_impl(uint16_t circ_id, connection_t *conn)
     circuit_t *circ;
     for (circ=global_circuitlist;circ;circ = circ->next) {
       if (circ->p_conn == conn && circ->p_circ_id == circ_id) {
-        warn(LD_BUG, "circuit matches p_conn, but not in hash table (Bug!)");
+        log_warn(LD_BUG,
+                 "circuit matches p_conn, but not in hash table (Bug!)");
         return circ;
       }
       if (circ->n_conn == conn && circ->n_circ_id == circ_id) {
-        warn(LD_BUG, "circuit matches n_conn, but not in hash table (Bug!)");
+        log_warn(LD_BUG,
+                 "circuit matches n_conn, but not in hash table (Bug!)");
         return circ;
       }
     }
@@ -565,9 +567,10 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   circuit_t *circ;
   circuit_t *best=NULL;
 
-  debug(LD_CIRC,"Hunting for a circ to cannibalize: purpose %d, uptime %d, "
-        "capacity %d, internal %d",
-        purpose, need_uptime, need_capacity, internal);
+  log_debug(LD_CIRC,
+            "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
+            "capacity %d, internal %d",
+            purpose, need_uptime, need_capacity, internal);
 
   for (circ=global_circuitlist; circ; circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
@@ -666,9 +669,9 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   }
   if (reason == END_CIRC_AT_ORIGIN) {
     if (!CIRCUIT_IS_ORIGIN(circ)) {
-      warn(LD_BUG, "Specified 'at-origin' non-reason for ending circuit, "
-           "but circuit was not at origin. (called %s:%d, purpose=%d)",
-           file, line, circ->purpose);
+      log_warn(LD_BUG, "Specified 'at-origin' non-reason for ending circuit, "
+               "but circuit was not at origin. (called %s:%d, purpose=%d)",
+               file, line, circ->purpose);
     }
     reason = END_CIRC_REASON_NONE;
   } else if (CIRCUIT_IS_ORIGIN(circ) && reason != END_CIRC_REASON_NONE) {
@@ -677,7 +680,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     reason = END_CIRC_REASON_NONE;
   }
   if (reason < _END_CIRC_REASON_MIN || reason > _END_CIRC_REASON_MAX) {
-    warn(LD_BUG, "Reason %d out of range at %s:%d", reason, file, line);
+    log_warn(LD_BUG, "Reason %d out of range at %s:%d", reason, file, line);
     reason = END_CIRC_REASON_NONE;
   }
 
@@ -706,10 +709,10 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     tor_assert(circ->build_state->chosen_exit);
     /* treat this like getting a nack from it */
-    info(LD_REND, "Failed intro circ %s to %s (awaiting ack). "
-         "Removing from descriptor.",
-         safe_str(circ->rend_query),
-         safe_str(build_state_get_exit_nickname(circ->build_state)));
+    log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). "
+             "Removing from descriptor.",
+             safe_str(circ->rend_query),
+             safe_str(build_state_get_exit_nickname(circ->build_state)));
     rend_client_remove_intro_point(circ->build_state->chosen_exit,
                                    circ->rend_query);
   }
