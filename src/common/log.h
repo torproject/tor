@@ -128,15 +128,15 @@ void _log_fn(int severity, uint32_t domain,
  * of the current function name. */
 #define log_fn(severity, domain, args...)               \
   _log_fn(severity, domain, __PRETTY_FUNCTION__, args)
-#define debug(domain, args...)                          \
+#define log_debug(domain, args...)                          \
   _log_fn(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args)
-#define info(domain, args...)                           \
+#define log_info(domain, args...)                           \
   _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
-#define notice(domain, args...)                         \
+#define log_notice(domain, args...)                         \
   _log_fn(LOG_NOTICE, domain, __PRETTY_FUNCTION__, args)
-#define warn(domain, args...)                           \
+#define log_warn(domain, args...)                           \
   _log_fn(LOG_WARN, domain, __PRETTY_FUNCTION__, args)
-#define err(domain, args...)                            \
+#define log_err(domain, args...)                            \
   _log_fn(LOG_ERR, domain, __PRETTY_FUNCTION__, args)
 
 #else /* ! defined(__GNUC__) */

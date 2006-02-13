@@ -359,7 +359,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     if (listener == -1)
       return -tor_socket_errno(-1);
     if (!SOCKET_IS_POLLABLE(listener)) {
-      warn(LD_NET, "Too many connections; can't open socketpair");
+      log_warn(LD_NET, "Too many connections; can't open socketpair");
       tor_close_socket(listener);
 #ifdef MS_WINDOWS
       return -ENFILE;
@@ -381,7 +381,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     if (connector == -1)
       goto tidy_up_and_fail;
     if (!SOCKET_IS_POLLABLE(connector)) {
-      warn(LD_NET, "Too many connections; can't open socketpair");
+      log_warn(LD_NET, "Too many connections; can't open socketpair");
       goto tidy_up_and_fail;
     }
     /* We want to find out the port number to connect to.  */
@@ -399,7 +399,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     if (acceptor == -1)
       goto tidy_up_and_fail;
     if (!SOCKET_IS_POLLABLE(acceptor)) {
-      warn(LD_NET, "Too many connections; can't open socketpair");
+      log_warn(LD_NET, "Too many connections; can't open socketpair");
       goto tidy_up_and_fail;
     }
     if (size != sizeof(listen_addr))
@@ -457,7 +457,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
   log_fn(LOG_INFO, LD_NET,
          "This platform is missing getrlimit(). Proceeding.");
   if (limit < cap) {
-    log(LOG_INFO, LD_CONFIG, "ConnLimit must be at most %d. Using that.", cap);
+    log_info(LD_CONFIG, "ConnLimit must be at most %d. Using that.", cap);
     limit = cap;
   }
 #else
@@ -467,25 +467,25 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
   tor_assert(cap > 0);
 
   if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
-    warn(LD_NET, "Could not get maximum number of file descriptors: %s",
-           strerror(errno));
+    log_warn(LD_NET, "Could not get maximum number of file descriptors: %s",
+             strerror(errno));
     return -1;
   }
   if (rlim.rlim_max < limit) {
-    warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
-         "limited to %lu. Please change your ulimit -n.",
-         limit, (unsigned long)rlim.rlim_max);
+    log_warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
+             "limited to %lu. Please change your ulimit -n.",
+             limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
   most = (rlim.rlim_max > cap) ? cap : (unsigned) rlim.rlim_max;
   if (most > rlim.rlim_cur) {
-    info(LD_NET,"Raising max file descriptors from %lu to %lu.",
-           (unsigned long)rlim.rlim_cur, most);
+    log_info(LD_NET,"Raising max file descriptors from %lu to %lu.",
+             (unsigned long)rlim.rlim_cur, most);
   }
   rlim.rlim_cur = most;
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
-    warn(LD_CONFIG, "Could not set maximum number of file descriptors: %s",
-           strerror(errno));
+    log_warn(LD_CONFIG, "Could not set maximum number of file descriptors: %s",
+             strerror(errno));
     return -1;
   }
   /* leave some overhead for logs, etc, */
@@ -493,7 +493,8 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
 #endif
 
   if (limit < ULIMIT_BUFFER) {
-    warn(LD_CONFIG,"ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
+    log_warn(LD_CONFIG,
+             "ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
     return -1;
   }
   return limit - ULIMIT_BUFFER;
@@ -512,7 +513,7 @@ switch_id(char *user, char *group)
   if (user) {
     pw = getpwnam(user);
     if (pw == NULL) {
-      err(LD_CONFIG,"User '%s' not found.", user);
+      log_err(LD_CONFIG,"User '%s' not found.", user);
       return -1;
     }
   }
@@ -521,17 +522,17 @@ switch_id(char *user, char *group)
   if (group) {
     gr = getgrnam(group);
     if (gr == NULL) {
-      err(LD_CONFIG,"Group '%s' not found.", group);
+      log_err(LD_CONFIG,"Group '%s' not found.", group);
       return -1;
     }
 
     if (setgid(gr->gr_gid) != 0) {
-      err(LD_GENERAL,"Error setting GID: %s", strerror(errno));
+      log_err(LD_GENERAL,"Error setting GID: %s", strerror(errno));
       return -1;
     }
   } else if (user) {
     if (setgid(pw->pw_gid) != 0) {
-      err(LD_GENERAL,"Error setting GID: %s", strerror(errno));
+      log_err(LD_GENERAL,"Error setting GID: %s", strerror(errno));
       return -1;
     }
   }
@@ -540,7 +541,7 @@ switch_id(char *user, char *group)
      privileges */
   if (user) {
     if (setuid(pw->pw_uid) != 0) {
-      err(LD_GENERAL,"Error setting UID: %s", strerror(errno));
+      log_err(LD_GENERAL,"Error setting UID: %s", strerror(errno));
       return -1;
     }
   }
@@ -548,8 +549,8 @@ switch_id(char *user, char *group)
   return 0;
 #endif
 
-  err(LD_CONFIG,
-      "User or group specified, but switching users is not supported.");
+  log_err(LD_CONFIG,
+          "User or group specified, but switching users is not supported.");
   return -1;
 }
 
@@ -563,7 +564,7 @@ get_user_homedir(const char *username)
   tor_assert(username);
 
   if (!(pw = getpwnam(username))) {
-    err(LD_CONFIG,"User \"%s\" not found.", username);
+    log_err(LD_CONFIG,"User \"%s\" not found.", username);
     return NULL;
   }
   return tor_strdup(pw->pw_dir);
@@ -909,7 +910,7 @@ tor_gettimeofday(struct timeval *timeval)
   /* number of 100-nsec units since Jan 1, 1601 */
   GetSystemTimeAsFileTime(&ft.ft_ft);
   if (ft.ft_64 < EPOCH_BIAS) {
-    err(LD_GENERAL,"System time is before 1970; failing.");
+    log_err(LD_GENERAL,"System time is before 1970; failing.");
     exit(1);
   }
   ft.ft_64 -= EPOCH_BIAS;
@@ -917,7 +918,7 @@ tor_gettimeofday(struct timeval *timeval)
   timeval->tv_usec = (unsigned) ((ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC);
 #elif defined(HAVE_GETTIMEOFDAY)
   if (gettimeofday(timeval, NULL)) {
-    err(LD_GENERAL,"gettimeofday failed.");
+    log_err(LD_GENERAL,"gettimeofday failed.");
     /* If gettimeofday dies, we have either given a bad timezone (we didn't),
        or segfaulted.*/
     exit(1);
@@ -1026,7 +1027,7 @@ tor_mutex_acquire(tor_mutex_t *m)
       tor_assert(0);
       break;
     case WAIT_FAILED:
-      warn(LD_GENERAL, "Failed to acquire mutex: %d", GetLastError());
+      log_warn(LD_GENERAL, "Failed to acquire mutex: %d", GetLastError());
   }
 }
 void
@@ -1035,7 +1036,7 @@ tor_mutex_release(tor_mutex_t *m)
   BOOL r;
   r = ReleaseMutex(m->handle);
   if (!r) {
-    warn(LD_GENERAL, "Failed to release mutex: %d", GetLastError());
+    log_warn(LD_GENERAL, "Failed to release mutex: %d", GetLastError());
   }
 }
 unsigned long
@@ -1207,7 +1208,7 @@ network_init(void)
   int r;
   r = WSAStartup(0x101,&WSAData);
   if (r) {
-    warn(LD_NET,"Error initializing windows network layer: code was %d",r);
+    log_warn(LD_NET,"Error initializing windows network layer: code was %d",r);
     return -1;
   }
   /* WSAData.iMaxSockets might show the max sockets we're allowed to use.
