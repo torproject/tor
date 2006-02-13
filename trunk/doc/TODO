@@ -52,7 +52,7 @@ N - look at the proposed os x uninstaller:
     - update dir-spec with what we decided for each of these
 N - commit edmanm's win32 makefile to tor cvs contrib
   o add a GUARD flag to the network-status entries.
-R   - Clients use it. (But not till the directories have upgraded!)
+    o Clients use it. (But not till the directories have upgraded!)
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
