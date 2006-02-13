@@ -20,7 +20,7 @@ rend_client_introcirc_has_opened(circuit_t *circ)
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
   tor_assert(circ->cpath);
 
-  info(LD_REND,"introcirc is open");
+  log_info(LD_REND,"introcirc is open");
   connection_ap_attach_pending();
 }
 
@@ -31,10 +31,10 @@ static int
 rend_client_send_establish_rendezvous(circuit_t *circ)
 {
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
-  info(LD_REND, "Sending an ESTABLISH_RENDEZVOUS cell");
+  log_info(LD_REND, "Sending an ESTABLISH_RENDEZVOUS cell");
 
   if (crypto_rand(circ->rend_cookie, REND_COOKIE_LEN) < 0) {
-    warn(LD_BUG, "Internal error: Couldn't produce random cookie.");
+    log_warn(LD_BUG, "Internal error: Couldn't produce random cookie.");
     circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
@@ -43,7 +43,7 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
                                    circ->rend_cookie, REND_COOKIE_LEN,
                                    circ->cpath->prev)<0) {
     /* circ is already marked for close */
-    warn(LD_GENERAL, "Couldn't send ESTABLISH_RENDEZVOUS cell");
+    log_warn(LD_GENERAL, "Couldn't send ESTABLISH_RENDEZVOUS cell");
     return -1;
   }
 
@@ -70,14 +70,15 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
                                    rendcirc->rend_query));
 
   if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
-    warn(LD_REND,"query '%s' didn't have valid rend desc in cache. Failing.",
-         safe_str(introcirc->rend_query));
+    log_warn(LD_REND,
+             "query '%s' didn't have valid rend desc in cache. Failing.",
+             safe_str(introcirc->rend_query));
     goto err;
   }
 
   /* first 20 bytes of payload are the hash of bob's pk */
   if (crypto_pk_get_digest(entry->parsed->pk, payload)<0) {
-    warn(LD_BUG, "Internal error: couldn't hash public key.");
+    log_warn(LD_BUG, "Internal error: couldn't hash public key.");
     goto err;
   }
 
@@ -88,11 +89,11 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
       tor_malloc_zero(sizeof(crypt_path_t));
     cpath->magic = CRYPT_PATH_MAGIC;
     if (!(cpath->dh_handshake_state = crypto_dh_new())) {
-      warn(LD_BUG, "Internal error: couldn't allocate DH.");
+      log_warn(LD_BUG, "Internal error: couldn't allocate DH.");
       goto err;
     }
     if (crypto_dh_generate_public(cpath->dh_handshake_state)<0) {
-      warn(LD_BUG, "Internal error: couldn't generate g^x.");
+      log_warn(LD_BUG, "Internal error: couldn't generate g^x.");
       goto err;
     }
   }
@@ -122,7 +123,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   if (crypto_dh_get_public(cpath->dh_handshake_state, tmp+dh_offset,
                            DH_KEY_LEN)<0) {
-    warn(LD_BUG, "Internal error: couldn't extract g^x.");
+    log_warn(LD_BUG, "Internal error: couldn't extract g^x.");
     goto err;
   }
 
@@ -133,7 +134,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
                                       dh_offset+DH_KEY_LEN,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
-    warn(LD_BUG,"Internal error: hybrid pk encrypt failed.");
+    log_warn(LD_BUG,"Internal error: hybrid pk encrypt failed.");
     goto err;
   }
 
@@ -145,7 +146,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
                                    payload, payload_len,
                                    introcirc->cpath->prev)<0) {
     /* introcirc is already marked for close. leave rendcirc alone. */
-    warn(LD_BUG, "Couldn't send INTRODUCE1 cell");
+    log_warn(LD_BUG, "Couldn't send INTRODUCE1 cell");
     return -1;
   }
 
@@ -167,7 +168,7 @@ rend_client_rendcirc_has_opened(circuit_t *circ)
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
-  info(LD_REND,"rendcirc is open");
+  log_info(LD_REND,"rendcirc is open");
 
   /* generate a rendezvous cookie, store it in circ */
   if (rend_client_send_establish_rendezvous(circ) < 0) {
@@ -184,8 +185,9 @@ rend_client_introduction_acked(circuit_t *circ,
   circuit_t *rendcirc;
 
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
-    warn(LD_PROTOCOL, "Received REND_INTRODUCE_ACK on unexpected circuit %d.",
-         circ->n_circ_id);
+    log_warn(LD_PROTOCOL,
+             "Received REND_INTRODUCE_ACK on unexpected circuit %d.",
+             circ->n_circ_id);
     circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
@@ -198,13 +200,13 @@ rend_client_introduction_acked(circuit_t *circ,
     /* Locate the rend circ which is waiting to hear about this ack,
      * and tell it.
      */
-    info(LD_REND,"Received ack. Telling rend circ...");
+    log_info(LD_REND,"Received ack. Telling rend circ...");
     rendcirc = circuit_get_by_rend_query_and_purpose(
                circ->rend_query, CIRCUIT_PURPOSE_C_REND_READY);
     if (rendcirc) { /* remember the ack */
       rendcirc->purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
     } else {
-      info(LD_REND,"...Found no rend circ. Dropping on the floor.");
+      log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }
     /* close the circuit: we won't need it anymore. */
     circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACKED;
@@ -224,16 +226,17 @@ rend_client_introduction_acked(circuit_t *circ,
       int result;
       extend_info = rend_client_get_random_intro(circ->rend_query);
       if (!extend_info) {
-        warn(LD_REND, "No introduction points left for %s. Closing.",
-             safe_str(circ->rend_query));
+        log_warn(LD_REND, "No introduction points left for %s. Closing.",
+                 safe_str(circ->rend_query));
         circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
         return -1;
       }
-      info(LD_REND,
-           "Got nack for %s from %s. Re-extending circ %d, this time to %s.",
-           safe_str(circ->rend_query),
-           circ->build_state->chosen_exit->nickname, circ->n_circ_id,
-           extend_info->nickname);
+      log_info(LD_REND,
+               "Got nack for %s from %s. Re-extending circ %d, "
+               "this time to %s.",
+               safe_str(circ->rend_query),
+               circ->build_state->chosen_exit->nickname, circ->n_circ_id,
+               extend_info->nickname);
       result = circuit_extend_to_new_exit(circ, extend_info);
       extend_info_free(extend_info);
       return result;
@@ -250,8 +253,8 @@ void
 rend_client_refetch_renddesc(const char *query)
 {
   if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
-    info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
-         "already in progress.", safe_str(query));
+    log_info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
+             "already in progress.", safe_str(query));
   } else {
     /* not one already; initiate a dir rend desc lookup */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_RENDDESC, query, 1);
@@ -273,12 +276,12 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 
   r = rend_cache_lookup_entry(query, -1, &ent);
   if (r<0) {
-    warn(LD_BUG, "Bug: malformed service ID '%s'.", safe_str(query));
+    log_warn(LD_BUG, "Bug: malformed service ID '%s'.", safe_str(query));
     return -1;
   }
   if (r==0) {
-    info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
-         safe_str(query));
+    log_info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
+             safe_str(query));
     rend_client_refetch_renddesc(query);
     return 0;
   }
@@ -312,8 +315,9 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
   }
 
   if (!ent->parsed->n_intro_points) {
-    info(LD_REND,"No more intro points remain for %s. Re-fetching descriptor.",
-         safe_str(query));
+    log_info(LD_REND,
+             "No more intro points remain for %s. Re-fetching descriptor.",
+             safe_str(query));
     rend_client_refetch_renddesc(query);
 
     /* move all pending streams back to renddesc_wait */
@@ -324,8 +328,8 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 
     return 0;
   }
-  info(LD_REND,"%d options left for %s.",
-       ent->parsed->n_intro_points, safe_str(query));
+  log_info(LD_REND,"%d options left for %s.",
+           ent->parsed->n_intro_points, safe_str(query));
   return 1;
 }
 
@@ -338,13 +342,13 @@ rend_client_rendezvous_acked(circuit_t *circ, const char *request,
 {
   /* we just got an ack for our establish-rendezvous. switch purposes. */
   if (circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
-    warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "
-         "Closing circ.");
+    log_warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "
+             "Closing circ.");
     circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
-  info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
-       "rendezvous.");
+  log_info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
+           "rendezvous.");
   circ->purpose = CIRCUIT_PURPOSE_C_REND_READY;
   return 0;
 }
@@ -360,15 +364,15 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request,
   if ((circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
        circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
       || !circ->build_state->pending_final_cpath) {
-    warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not "
-         "expecting it. Closing.");
+    log_warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not "
+             "expecting it. Closing.");
     circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     return -1;
   }
 
   if (request_len != DH_KEY_LEN+DIGEST_LEN) {
-    warn(LD_PROTOCOL,"Incorrect length (%d) on RENDEZVOUS2 cell.",
-         (int)request_len);
+    log_warn(LD_PROTOCOL,"Incorrect length (%d) on RENDEZVOUS2 cell.",
+             (int)request_len);
     goto err;
   }
 
@@ -379,7 +383,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request,
   tor_assert(hop->dh_handshake_state);
   if (crypto_dh_compute_secret(hop->dh_handshake_state, request, DH_KEY_LEN,
                                keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
-    warn(LD_GENERAL, "Couldn't complete DH handshake.");
+    log_warn(LD_GENERAL, "Couldn't complete DH handshake.");
     goto err;
   }
   /* ... and set up cpath. */
@@ -388,7 +392,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request,
 
   /* Check whether the digest is right... */
   if (memcmp(keys, request+DH_KEY_LEN, DIGEST_LEN)) {
-    warn(LD_PROTOCOL, "Incorrect digest of key material.");
+    log_warn(LD_PROTOCOL, "Incorrect digest of key material.");
     goto err;
   }
 
@@ -440,7 +444,7 @@ rend_client_desc_here(const char *query)
         entry->parsed->n_intro_points > 0) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
-      info(LD_REND,"Rend desc is usable. Launching circuits.");
+      log_info(LD_REND,"Rend desc is usable. Launching circuits.");
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
 
       /* restart their timeout values, so they get a fair shake at
@@ -451,12 +455,12 @@ rend_client_desc_here(const char *query)
 
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
-        warn(LD_REND,"Rendezvous attempt failed. Closing.");
+        log_warn(LD_REND,"Rendezvous attempt failed. Closing.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       }
     } else { /* 404, or fetch didn't get that far */
-      notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
-             "unavailable (try again later).", safe_str(query));
+      log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
+                 "unavailable (try again later).", safe_str(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
     }
   }
@@ -473,8 +477,9 @@ rend_client_get_random_intro(const char *query)
   rend_cache_entry_t *entry;
 
   if (rend_cache_lookup_entry(query, -1, &entry) < 1) {
-    warn(LD_REND,"Query '%s' didn't have valid rend desc in cache. Failing.",
-         safe_str(query));
+    log_warn(LD_REND,
+             "Query '%s' didn't have valid rend desc in cache. Failing.",
+             safe_str(query));
     return NULL;
   }
 
@@ -491,8 +496,8 @@ rend_client_get_random_intro(const char *query)
     char *choice = entry->parsed->intro_points[i];
     routerinfo_t *router = router_get_by_nickname(choice, 0);
     if (!router) {
-      info(LD_REND, "Unknown router with nickname '%s'; trying another.",
-           choice);
+      log_info(LD_REND, "Unknown router with nickname '%s'; trying another.",
+               choice);
       tor_free(choice);
       entry->parsed->intro_points[i] =
         entry->parsed->intro_points[--entry->parsed->n_intro_points];
