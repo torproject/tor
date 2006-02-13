@@ -82,20 +82,20 @@ parse_socks4a_resolve_response(const char *response, size_t len,
   tor_assert(addr_out);
 
   if (len < RESPONSE_LEN) {
-    warn(LD_PROTOCOL,"Truncated socks response.");
+    log_warn(LD_PROTOCOL,"Truncated socks response.");
     return -1;
   }
   if (((uint8_t)response[0])!=0) { /* version: 0 */
-    warn(LD_PROTOCOL,"Nonzero version in socks response: bad format.");
+    log_warn(LD_PROTOCOL,"Nonzero version in socks response: bad format.");
     return -1;
   }
   status = (uint8_t)response[1];
   if (get_uint16(response+2)!=0) { /* port: 0 */
-    warn(LD_PROTOCOL,"Nonzero port in socks response: bad format.");
+    log_warn(LD_PROTOCOL,"Nonzero port in socks response: bad format.");
     return -1;
   }
   if (status != 90) {
-    warn(LD_NET,"Got status response '%d': socks request failed.", status);
+    log_warn(LD_NET,"Got status response '%d': socks request failed.", status);
     return -1;
   }
 
@@ -136,7 +136,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   }
 
   if ((len = build_socks4a_resolve_request(&req, "", hostname))<0) {
-    err(LD_BUG,"Error generating SOCKS request");
+    log_err(LD_BUG,"Error generating SOCKS request");
     return -1;
   }
 
@@ -157,7 +157,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   while (len < RESPONSE_LEN) {
     r = recv(s, response_buf+len, RESPONSE_LEN-len, 0);
     if (r==0) {
-      warn(LD_NET,"EOF while reading SOCKS response");
+      log_warn(LD_NET,"EOF while reading SOCKS response");
       return -1;
     }
     if (r<0) {
@@ -212,7 +212,7 @@ main(int argc, char **argv)
     add_stream_log(LOG_WARN, LOG_ERR, "<stderr>", stderr);
   }
   if (n_args == 1) {
-    debug(LD_CONFIG, "defaulting to localhost:9050");
+    log_debug(LD_CONFIG, "defaulting to localhost:9050");
     sockshost = 0x7f000001u; /* localhost */
     socksport = 9050; /* 9050 */
   } else if (n_args == 2) {
@@ -221,7 +221,7 @@ main(int argc, char **argv)
       return 1;
     }
     if (socksport == 0) {
-      debug(LD_CONFIG, "defaulting to port 9050");
+      log_debug(LD_CONFIG, "defaulting to port 9050");
       socksport = 9050;
     }
   } else {
@@ -236,7 +236,7 @@ main(int argc, char **argv)
   }
 
   if (network_init()<0) {
-    err(LD_NET,"Error initializing network; exiting.");
+    log_err(LD_NET,"Error initializing network; exiting.");
     return 1;
   }
 

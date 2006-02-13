@@ -121,20 +121,20 @@ add_service(rend_service_t *service)
     service->intro_exclude_nodes = tor_strdup("");
 
   if (!smartlist_len(service->ports)) {
-    warn(LD_CONFIG, "Hidden service with no ports configured; ignoring.");
+    log_warn(LD_CONFIG, "Hidden service with no ports configured; ignoring.");
     rend_service_free(service);
   } else {
     smartlist_set_capacity(service->ports, -1);
     smartlist_add(rend_service_list, service);
-    debug(LD_REND,"Configuring service with directory \"%s\"",
-          service->directory);
+    log_debug(LD_REND,"Configuring service with directory \"%s\"",
+              service->directory);
     for (i = 0; i < smartlist_len(service->ports); ++i) {
       char addrbuf[INET_NTOA_BUF_LEN];
       p = smartlist_get(service->ports, i);
       addr.s_addr = htonl(p->real_addr);
       tor_inet_ntoa(&addr, addrbuf, sizeof(addrbuf));
-      debug(LD_REND,"Service maps port %d to %s:%d",
-            p->virtual_port, addrbuf, p->real_port);
+      log_debug(LD_REND,"Service maps port %d to %s:%d",
+                p->virtual_port, addrbuf, p->real_port);
     }
   }
 }
@@ -161,14 +161,14 @@ parse_port_config(const char *string)
   smartlist_split_string(sl, string, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(sl) < 1 || smartlist_len(sl) > 2) {
-    warn(LD_CONFIG, "Bad syntax in hidden service port configuration.");
+    log_warn(LD_CONFIG, "Bad syntax in hidden service port configuration.");
     goto err;
   }
 
   virtport = atoi(smartlist_get(sl,0));
   if (virtport < 1 || virtport > 65535) {
-    warn(LD_CONFIG, "Missing or invalid port in hidden service port "
-         "configuration.");
+    log_warn(LD_CONFIG, "Missing or invalid port in hidden service port "
+             "configuration.");
     goto err;
   }
 
@@ -180,8 +180,8 @@ parse_port_config(const char *string)
     addrport = smartlist_get(sl,1);
     if (strchr(addrport, ':') || strchr(addrport, '.')) {
       if (parse_addr_port(addrport, NULL, &addr, &p)<0) {
-        warn(LD_CONFIG,"Unparseable address in hidden service port "
-             "configuration.");
+        log_warn(LD_CONFIG,"Unparseable address in hidden service port "
+                 "configuration.");
         goto err;
       }
       realport = p?p:virtport;
@@ -237,8 +237,8 @@ rend_config_services(or_options_t *options, int validate_only)
       continue;
     }
     if (!service) {
-      warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
-           line->key);
+      log_warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
+               line->key);
       rend_service_free(service);
       return -1;
     }
@@ -251,16 +251,18 @@ rend_config_services(or_options_t *options, int validate_only)
       smartlist_add(service->ports, portcfg);
     } else if (!strcasecmp(line->key, "HiddenServiceNodes")) {
       if (service->intro_prefer_nodes) {
-        warn(LD_CONFIG, "Got multiple HiddenServiceNodes lines for a single "
-             "service.");
+        log_warn(LD_CONFIG,
+                 "Got multiple HiddenServiceNodes lines for a single "
+                 "service.");
         return -1;
       }
       service->intro_prefer_nodes = tor_strdup(line->value);
     } else {
       tor_assert(!strcasecmp(line->key, "HiddenServiceExcludeNodes"));
       if (service->intro_exclude_nodes) {
-        warn(LD_CONFIG, "Got multiple HiddenServiceExcludedNodes lines for "
-             "a single service.");
+        log_warn(LD_CONFIG,
+                 "Got multiple HiddenServiceExcludedNodes lines for "
+                 "a single service.");
         return -1;
       }
       service->intro_exclude_nodes = tor_strdup(line->value);
@@ -303,8 +305,8 @@ rend_service_update_descriptor(rend_service_t *service)
   for (i=0; i < n; ++i) {
     router = router_get_by_nickname(smartlist_get(service->intro_nodes, i),1);
     if (!router) {
-      info(LD_REND,"Router '%s' not found. Skipping.",
-           (char*)smartlist_get(service->intro_nodes, i));
+      log_info(LD_REND,"Router '%s' not found. Skipping.",
+               (char*)smartlist_get(service->intro_nodes, i));
       continue;
     }
     circ = find_intro_circuit(router, service->pk_digest);
@@ -333,7 +335,8 @@ rend_service_load_keys(void)
     s = smartlist_get(rend_service_list,i);
     if (s->private_key)
       continue;
-    info(LD_REND, "Loading hidden-service keys from \"%s\"", s->directory);
+    log_info(LD_REND, "Loading hidden-service keys from \"%s\"",
+             s->directory);
 
     /* Check/create directory */
     if (check_private_dir(s->directory, CPD_CREATE) < 0)
@@ -342,7 +345,7 @@ rend_service_load_keys(void)
     /* Load key */
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
         strlcat(fname,"/private_key",sizeof(fname)) >= sizeof(fname)) {
-      warn(LD_CONFIG, "Directory name too long: \"%s\".", s->directory);
+      log_warn(LD_CONFIG, "Directory name too long: \"%s\".", s->directory);
       return -1;
     }
     s->private_key = init_key_from_file(fname);
@@ -351,16 +354,16 @@ rend_service_load_keys(void)
 
     /* Create service file */
     if (rend_get_service_id(s->private_key, s->service_id)<0) {
-      warn(LD_BUG, "Internal error: couldn't encode service ID.");
+      log_warn(LD_BUG, "Internal error: couldn't encode service ID.");
       return -1;
     }
     if (crypto_pk_get_digest(s->private_key, s->pk_digest)<0) {
-      warn(LD_BUG, "Bug: Couldn't compute hash of public key.");
+      log_warn(LD_BUG, "Bug: Couldn't compute hash of public key.");
       return -1;
     }
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
         strlcat(fname,"/hostname",sizeof(fname)) >= sizeof(fname)) {
-      warn(LD_CONFIG, "Directory name too long: \"%s\".", s->directory);
+      log_warn(LD_CONFIG, "Directory name too long: \"%s\".", s->directory);
       return -1;
     }
     tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
@@ -426,41 +429,42 @@ rend_service_introduce(circuit_t *circuit, const char *request,
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);
-  info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %d.",
-       serviceid, circuit->n_circ_id);
+  log_info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %d.",
+           serviceid, circuit->n_circ_id);
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_INTRO) {
-    warn(LD_PROTOCOL, "Got an INTRODUCE2 over a non-introduction circuit %d.",
-         circuit->n_circ_id);
+    log_warn(LD_PROTOCOL,
+             "Got an INTRODUCE2 over a non-introduction circuit %d.",
+             circuit->n_circ_id);
     return -1;
   }
 
   /* min key length plus digest length plus nickname length */
   if (request_len < DIGEST_LEN+REND_COOKIE_LEN+(MAX_NICKNAME_LEN+1)+
       DH_KEY_LEN+42) {
-    warn(LD_PROTOCOL, "Got a truncated INTRODUCE2 cell on circ %d.",
-         circuit->n_circ_id);
+    log_warn(LD_PROTOCOL, "Got a truncated INTRODUCE2 cell on circ %d.",
+             circuit->n_circ_id);
     return -1;
   }
 
   /* first DIGEST_LEN bytes of request is service pk digest */
   service = rend_service_get_by_pk_digest(request);
   if (!service) {
-    warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
-         serviceid);
+    log_warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
+             serviceid);
     return -1;
   }
   if (memcmp(circuit->rend_pk_digest, request, DIGEST_LEN)) {
     base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request, 10);
-    warn(LD_REND, "Got an INTRODUCE2 cell for the wrong service (%s).",
-         serviceid);
+    log_warn(LD_REND, "Got an INTRODUCE2 cell for the wrong service (%s).",
+             serviceid);
     return -1;
   }
 
   keylen = crypto_pk_keysize(service->private_key);
   if (request_len < keylen+DIGEST_LEN) {
-    warn(LD_PROTOCOL,
-         "PK-encrypted portion of INTRODUCE2 cell was truncated.");
+    log_warn(LD_PROTOCOL,
+             "PK-encrypted portion of INTRODUCE2 cell was truncated.");
     return -1;
   }
   /* Next N bytes is encrypted with service key */
@@ -468,7 +472,7 @@ rend_service_introduce(circuit_t *circuit, const char *request,
        service->private_key,buf,request+DIGEST_LEN,request_len-DIGEST_LEN,
        PK_PKCS1_OAEP_PADDING,1);
   if (r<0) {
-    warn(LD_PROTOCOL, "Couldn't decrypt INTRODUCE2 cell.");
+    log_warn(LD_PROTOCOL, "Couldn't decrypt INTRODUCE2 cell.");
     return -1;
   }
   len = r;
@@ -485,14 +489,14 @@ rend_service_introduce(circuit_t *circuit, const char *request,
 
     klen = ntohs(get_uint16(buf+7+DIGEST_LEN));
     if ((int)len != 7+DIGEST_LEN+2+klen+20+128) {
-      warn(LD_PROTOCOL, "Bad length %u for version 2 INTRODUCE2 cell.",
-           (int)len);
+      log_warn(LD_PROTOCOL, "Bad length %u for version 2 INTRODUCE2 cell.",
+               (int)len);
       goto err;
     }
     extend_info->onion_key = crypto_pk_asn1_decode(buf+7+DIGEST_LEN+2, klen);
     if (!extend_info->onion_key) {
-      warn(LD_PROTOCOL,
-           "Error decoding onion key in version 2 INTRODUCE2 cell.");
+      log_warn(LD_PROTOCOL,
+               "Error decoding onion key in version 2 INTRODUCE2 cell.");
       goto err;
     }
     ptr = buf+7+DIGEST_LEN+2+klen;
@@ -514,13 +518,13 @@ rend_service_introduce(circuit_t *circuit, const char *request,
     /* XXX when 0.1.0.x is obsolete, change this to reject version < 2. */
     ptr=memchr(rp_nickname,0,nickname_field_len);
     if (!ptr || ptr == rp_nickname) {
-      warn(LD_PROTOCOL,
-           "Couldn't find a null-padded nickname in INTRODUCE2 cell.");
+      log_warn(LD_PROTOCOL,
+               "Couldn't find a null-padded nickname in INTRODUCE2 cell.");
       return -1;
     }
     if ((version == 0 && !is_legal_nickname(rp_nickname)) ||
         (version == 1 && !is_legal_nickname_or_hexdigest(rp_nickname))) {
-      warn(LD_PROTOCOL, "Bad nickname in INTRODUCE2 cell.");
+      log_warn(LD_PROTOCOL, "Bad nickname in INTRODUCE2 cell.");
       return -1;
     }
     /* Okay, now we know that a nickname is at the start of the buffer. */
@@ -530,8 +534,8 @@ rend_service_introduce(circuit_t *circuit, const char *request,
                                * any */
     router = router_get_by_nickname(rp_nickname, 0);
     if (!router) {
-      info(LD_REND, "Couldn't find router '%s' named in rendezvous cell.",
-           rp_nickname);
+      log_info(LD_REND, "Couldn't find router '%s' named in rendezvous cell.",
+               rp_nickname);
       goto err;
     }
 
@@ -539,7 +543,7 @@ rend_service_introduce(circuit_t *circuit, const char *request,
   }
 
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
-    warn(LD_PROTOCOL, "Bad length %u for INTRODUCE2 cell.", (int)len);
+    log_warn(LD_PROTOCOL, "Bad length %u for INTRODUCE2 cell.", (int)len);
     return -1;
   }
 
@@ -549,13 +553,13 @@ rend_service_introduce(circuit_t *circuit, const char *request,
   /* Try DH handshake... */
   dh = crypto_dh_new();
   if (!dh || crypto_dh_generate_public(dh)<0) {
-    warn(LD_BUG,"Internal error: couldn't build DH state "
-         "or generate public key.");
+    log_warn(LD_BUG,"Internal error: couldn't build DH state "
+             "or generate public key.");
     goto err;
   }
   if (crypto_dh_compute_secret(dh, ptr+REND_COOKIE_LEN, DH_KEY_LEN, keys,
                                DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
-    warn(LD_BUG, "Internal error: couldn't complete DH handshake");
+    log_warn(LD_BUG, "Internal error: couldn't complete DH handshake");
     goto err;
   }
 
@@ -575,14 +579,15 @@ rend_service_introduce(circuit_t *circuit, const char *request,
       break;
   }
   if (!launched) { /* give up */
-    warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
-         "point '%s' for service %s.",
-         extend_info->nickname, serviceid);
+    log_warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
+             "point '%s' for service %s.",
+             extend_info->nickname, serviceid);
     goto err;
   }
-  info(LD_REND,
-       "Accepted intro; launching circuit to '%s' (cookie %s) for service %s.",
-       extend_info->nickname, hexcookie, serviceid);
+  log_info(LD_REND,
+           "Accepted intro; launching circuit to '%s' "
+           "(cookie %s) for service %s.",
+           extend_info->nickname, hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
   memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
@@ -624,10 +629,11 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   if (!oldcirc->build_state ||
       oldcirc->build_state->failure_count > MAX_REND_FAILURES ||
       oldcirc->build_state->expiry_time < time(NULL)) {
-    info(LD_REND,"Attempt to build circuit to %s for rendezvous has failed "
-         "too many times or expired; giving up.",
-         oldcirc->build_state ? oldcirc->build_state->chosen_exit->nickname :
-         "*unknown*");
+    log_info(LD_REND,
+             "Attempt to build circuit to %s for rendezvous has failed "
+             "too many times or expired; giving up.",
+             oldcirc->build_state ?
+               oldcirc->build_state->chosen_exit->nickname : "*unknown*");
     return;
   }
 
@@ -635,19 +641,19 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   tor_assert(oldstate);
 
   if (oldstate->pending_final_cpath == NULL) {
-    info(LD_REND,"Skipping relaunch of circ that failed on its first hop. "
-         "Initiator will retry.");
+    log_info(LD_REND,"Skipping relaunch of circ that failed on its first hop. "
+             "Initiator will retry.");
     return;
   }
 
-  info(LD_REND,"Reattempting rendezvous circuit to %s",
-       oldstate->chosen_exit->nickname);
+  log_info(LD_REND,"Reattempting rendezvous circuit to %s",
+           oldstate->chosen_exit->nickname);
 
   newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
                                oldstate->chosen_exit, 0, 1, 1);
   if (!newcirc) {
-    warn(LD_REND,"Couldn't relaunch rendezvous circuit to %s.",
-         oldstate->chosen_exit->nickname);
+    log_warn(LD_REND,"Couldn't relaunch rendezvous circuit to %s.",
+             oldstate->chosen_exit->nickname);
     return;
   }
   newstate = newcirc->build_state;
@@ -671,8 +677,9 @@ rend_service_launch_establish_intro(rend_service_t *service,
 {
   circuit_t *launched;
 
-  info(LD_REND, "Launching circuit to introduction point %s for service %s",
-       nickname, service->service_id);
+  log_info(LD_REND,
+           "Launching circuit to introduction point %s for service %s",
+           nickname, service->service_id);
 
   rep_hist_note_used_internal(time(NULL), 1, 0);
 
@@ -680,8 +687,9 @@ rend_service_launch_establish_intro(rend_service_t *service,
   launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
                                         nickname, 1, 0, 1);
   if (!launched) {
-    info(LD_REND, "Can't launch circuit to establish introduction at '%s'.",
-         nickname);
+    log_info(LD_REND,
+             "Can't launch circuit to establish introduction at '%s'.",
+             nickname);
     return -1;
   }
   strlcpy(launched->rend_query, service->service_id,
@@ -715,14 +723,14 @@ rend_service_intro_has_opened(circuit_t *circuit)
 
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
-    warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
-         serviceid, circuit->n_circ_id);
+    log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
+             serviceid, circuit->n_circ_id);
     goto err;
   }
 
-  info(LD_REND,
-       "Established circuit %d as introduction point for service %s",
-       circuit->n_circ_id, serviceid);
+  log_info(LD_REND,
+           "Established circuit %d as introduction point for service %s",
+           circuit->n_circ_id, serviceid);
 
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
   len = crypto_pk_asn1_encode(service->private_key, buf+2,
@@ -736,16 +744,16 @@ rend_service_intro_has_opened(circuit_t *circuit)
   len += 20;
   r = crypto_pk_private_sign_digest(service->private_key, buf+len, buf, len);
   if (r<0) {
-    warn(LD_BUG, "Internal error: couldn't sign introduction request.");
+    log_warn(LD_BUG, "Internal error: couldn't sign introduction request.");
     goto err;
   }
   len += r;
 
   if (connection_edge_send_command(NULL, circuit,RELAY_COMMAND_ESTABLISH_INTRO,
                                    buf, len, circuit->cpath->prev)<0) {
-    info(LD_GENERAL,
-         "Couldn't send introduction request for service %s on circuit %d",
-         serviceid, circuit->n_circ_id);
+    log_info(LD_GENERAL,
+             "Couldn't send introduction request for service %s on circuit %d",
+             serviceid, circuit->n_circ_id);
     goto err;
   }
 
@@ -764,13 +772,14 @@ rend_service_intro_established(circuit_t *circuit, const char *request,
   rend_service_t *service;
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
-    warn(LD_PROTOCOL, "received INTRO_ESTABLISHED cell on non-intro circuit.");
+    log_warn(LD_PROTOCOL,
+             "received INTRO_ESTABLISHED cell on non-intro circuit.");
     goto err;
   }
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
-    warn(LD_REND, "Unknown service on introduction circuit %d.",
-         circuit->n_circ_id);
+    log_warn(LD_REND, "Unknown service on introduction circuit %d.",
+             circuit->n_circ_id);
     goto err;
   }
   service->desc_is_dirty = time(NULL);
@@ -804,14 +813,15 @@ rend_service_rendezvous_has_opened(circuit_t *circuit)
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);
 
-  info(LD_REND,
-       "Done building circuit %d to rendezvous with cookie %s for service %s",
-       circuit->n_circ_id, hexcookie, serviceid);
+  log_info(LD_REND,
+           "Done building circuit %d to rendezvous with "
+           "cookie %s for service %s",
+           circuit->n_circ_id, hexcookie, serviceid);
 
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
-    warn(LD_GENERAL, "Internal error: unrecognized service ID on "
-         "introduction circuit.");
+    log_warn(LD_GENERAL, "Internal error: unrecognized service ID on "
+             "introduction circuit.");
     goto err;
   }
 
@@ -819,7 +829,7 @@ rend_service_rendezvous_has_opened(circuit_t *circuit)
   memcpy(buf, circuit->rend_cookie, REND_COOKIE_LEN);
   if (crypto_dh_get_public(hop->dh_handshake_state,
                            buf+REND_COOKIE_LEN, DH_KEY_LEN)<0) {
-    warn(LD_GENERAL,"Couldn't get DH public key.");
+    log_warn(LD_GENERAL,"Couldn't get DH public key.");
     goto err;
   }
   memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->handshake_digest,
@@ -829,7 +839,7 @@ rend_service_rendezvous_has_opened(circuit_t *circuit)
   if (connection_edge_send_command(NULL, circuit, RELAY_COMMAND_RENDEZVOUS1,
                                    buf, REND_COOKIE_LEN+DH_KEY_LEN+DIGEST_LEN,
                                    circuit->cpath->prev)<0) {
-    warn(LD_GENERAL, "Couldn't send RENDEZVOUS1 cell.");
+    log_warn(LD_GENERAL, "Couldn't send RENDEZVOUS1 cell.");
     goto err;
   }
 
@@ -905,8 +915,8 @@ upload_service_descriptor(rend_service_t *service, int version)
                                      version,
                                      service->private_key,
                                      &desc, &desc_len)<0) {
-    warn(LD_BUG, "Internal error: couldn't encode service descriptor; "
-         "not uploading.");
+    log_warn(LD_BUG, "Internal error: couldn't encode service descriptor; "
+             "not uploading.");
     return;
   }
 
@@ -963,8 +973,8 @@ rend_services_introduce(void)
       intro = smartlist_get(service->intro_nodes, j);
       router = router_get_by_nickname(intro, 0);
       if (!router || !find_intro_circuit(router,service->pk_digest)) {
-        info(LD_REND,"Giving up on %s as intro point for %s.",
-             intro, service->service_id);
+        log_info(LD_REND,"Giving up on %s as intro point for %s.",
+                 intro, service->service_id);
         tor_free(intro);
         smartlist_del(service->intro_nodes,j--);
         changed = 1;
@@ -996,8 +1006,9 @@ rend_services_introduce(void)
                get_options()->_AllowUnverified & ALLOW_UNVERIFIED_INTRODUCTION,
                0);
       if (!router) {
-        warn(LD_REND, "Could only establish %d introduction points for %s.",
-             smartlist_len(service->intro_nodes), service->service_id);
+        log_warn(LD_REND,
+                 "Could only establish %d introduction points for %s.",
+                 smartlist_len(service->intro_nodes), service->service_id);
         break;
       }
       changed = 1;
@@ -1009,8 +1020,8 @@ rend_services_introduce(void)
       smartlist_add(intro_routers, router);
       smartlist_add(exclude_routers, router);
       smartlist_add(service->intro_nodes, hex_digest);
-      info(LD_REND, "Picked router %s as an intro point for %s.",
-           router->nickname, service->service_id);
+      log_info(LD_REND, "Picked router %s as an intro point for %s.",
+               router->nickname, service->service_id);
     }
 
     /* Reset exclude_routers, for the next time around the loop. */
@@ -1025,8 +1036,8 @@ rend_services_introduce(void)
       intro = smartlist_get(service->intro_nodes, j);
       r = rend_service_launch_establish_intro(service, intro);
       if (r<0) {
-        warn(LD_REND, "Error launching circuit to node %s for service %s.",
-             intro, service->service_id);
+        log_warn(LD_REND, "Error launching circuit to node %s for service %s.",
+                 intro, service->service_id);
       }
     }
   }
@@ -1117,14 +1128,14 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
   char serviceid[REND_SERVICE_ID_LEN+1];
 
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
-  debug(LD_REND,"beginning to hunt for addr/port");
+  log_debug(LD_REND,"beginning to hunt for addr/port");
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circ->rend_pk_digest,10);
   service = rend_service_get_by_pk_digest(circ->rend_pk_digest);
   if (!service) {
-    warn(LD_REND, "Couldn't find any service associated with pk %s on "
-         "rendezvous circuit %d; closing.",
-         serviceid, circ->n_circ_id);
+    log_warn(LD_REND, "Couldn't find any service associated with pk %s on "
+             "rendezvous circuit %d; closing.",
+             serviceid, circ->n_circ_id);
     return -1;
   }
   for (i = 0; i < smartlist_len(service->ports); ++i) {
@@ -1135,8 +1146,8 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
       return 0;
     }
   }
-  info(LD_REND, "No virtual port mapping exists for port %d on service %s",
-       conn->port,serviceid);
+  log_info(LD_REND, "No virtual port mapping exists for port %d on service %s",
+           conn->port,serviceid);
   return -1;
 }
 

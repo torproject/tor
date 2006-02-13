@@ -717,7 +717,7 @@ rep_hist_load_state(or_state_t *state, const char **err)
         v = tor_parse_uint64(cp, 10, 0, UINT64_MAX, &ok, NULL);
         if (!ok) {
           all_ok=0;
-          notice(LD_GENERAL, "Could not parse '%s' into a number.'", cp);
+          log_notice(LD_GENERAL, "Could not parse '%s' into a number.'", cp);
         }
         add_obs(b, start, v);
         start += NUM_SECS_BW_SUM_INTERVAL;
@@ -840,7 +840,7 @@ rep_hist_get_predicted_ports(time_t now)
     tmp_time = smartlist_get(predicted_ports_times, i);
     if (*tmp_time + PREDICTED_CIRCS_RELEVANCE_TIME < now) {
       tmp_port = smartlist_get(predicted_ports_list, i);
-      debug(LD_CIRC, "Expiring predicted port %d", *tmp_port);
+      log_debug(LD_CIRC, "Expiring predicted port %d", *tmp_port);
       smartlist_del(predicted_ports_list, i);
       smartlist_del(predicted_ports_times, i);
       rephist_total_alloc -= sizeof(uint16_t)+sizeof(time_t);
