@@ -1518,14 +1518,14 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     smartlist_add(excluded, r);
     routerlist_add_family(excluded, r);
   }
-  if (firewall_is_fascist()) {
+  if (firewall_is_fascist_or()) {
     /* exclude all ORs that listen on the wrong port */
     routerlist_t *rl = router_get_routerlist();
     int i;
 
     for (i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
-      if (!fascist_firewall_allows_address(r->addr,r->or_port))
+      if (!fascist_firewall_allows_address_or(r->addr,r->or_port))
         smartlist_add(excluded, r);
     }
   }
@@ -1717,8 +1717,8 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity)
     return NULL;
   if (router_is_unreliable(r, need_uptime, need_capacity, 0))
     return NULL;
-  if (firewall_is_fascist() &&
-      !fascist_firewall_allows_address(r->addr,r->or_port))
+  if (firewall_is_fascist_or() &&
+      !fascist_firewall_allows_address_or(r->addr,r->or_port))
     return NULL;
   return r;
 }

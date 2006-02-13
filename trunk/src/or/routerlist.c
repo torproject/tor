@@ -437,7 +437,7 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     if (requireother && router_digest_is_me(status->identity_digest))
       continue;
     if (fascistfirewall) {
-      if (!fascist_firewall_allows_address(status->addr, status->dir_port))
+      if (!fascist_firewall_allows_address_dir(status->addr, status->dir_port))
         continue;
     }
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
@@ -482,7 +482,7 @@ router_pick_trusteddirserver_impl(int need_v1_authority,
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
       if (fascistfirewall) {
-        if (!fascist_firewall_allows_address(d->addr, d->dir_port))
+        if (!fascist_firewall_allows_address_dir(d->addr, d->dir_port))
           continue;
       }
       smartlist_add(sl, &d->fake_status);
