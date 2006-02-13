@@ -1837,6 +1837,12 @@ parse_reachable_addresses(void)
 {
   or_options_t *options = get_options();
 
+  if (options->ReachableDirAddresses &&
+      options->ReachableORAddresses &&
+      options->ReachableAddresses)
+    log_warn(LD_CONFIG, "Both ReachableDirAddresses and ReachableORAddresses are set. "
+                        "ReachableAddresses setting will be ignored.");
+
   addr_policy_free(reachable_or_addr_policy);
   reachable_or_addr_policy = NULL;
   if (!options->ReachableORAddresses && options->ReachableAddresses)
