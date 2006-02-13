@@ -1426,8 +1426,12 @@ int
 addr_mask_get_bits(uint32_t mask)
 {
   int i;
+  if (mask == 0)
+    return 0;
+  if (mask == 0xFFFFFFFFu)
+    return 32;
   for (i=0; i<=32; ++i) {
-    if (mask == ~((1<<(32-i))-1)) {
+    if (mask == (uint32_t) ~((1u<<(32-i))-1)) {
       return i;
     }
   }
@@ -1493,7 +1497,7 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
              "Bad number of mask bits on address range; rejecting.");
         goto err;
       }
-      *mask_out = ~((1<<(32-bits))-1);
+      *mask_out = ~((1u<<(32-bits))-1);
     } else if (tor_inet_aton(mask, &in) != 0) {
       *mask_out = ntohl(in.s_addr);
     } else {
