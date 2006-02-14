@@ -623,6 +623,7 @@ run_connection_housekeeping(int i, time_t now)
     return; /* we're all done here, the rest is just for OR conns */
 
 #define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7) /* a week */
+#define TLS_TIMEOUT                             (60) /* a minute */
   if (!conn->is_obsolete) {
     if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
       log_info(LD_OR,
@@ -633,7 +634,9 @@ run_connection_housekeeping(int i, time_t now)
     } else {
       connection_t *best =
         connection_or_get_by_identity_digest(conn->identity_digest);
-      if (best && best != conn) {
+      if (best && best != conn &&
+          (conn->state == OR_CONN_STATE_OPEN ||
+           now > conn->timestamp_created + TLS_TIMEOUT)) {
         log_info(LD_OR,
                  "Marking duplicate conn to %s:%d obsolete "
                  "(fd %d, %d secs old).",
