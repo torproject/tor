@@ -637,6 +637,13 @@ run_connection_housekeeping(int i, time_t now)
       if (best && best != conn &&
           (conn->state == OR_CONN_STATE_OPEN ||
            now > conn->timestamp_created + TLS_TIMEOUT)) {
+          /* We only mark as obsolete connections that already are in
+           * OR_CONN_STATE_OPEN, i.e. that have finished their TLS handshaking.
+           * This is necessay because authorities judge whether a router is
+           * reachable based on whether they were able to TLS handshake with it
+           * recently.  Without this check we would expire connections too
+           * early for router->last_reachable to be updated.
+           */
         log_info(LD_OR,
                  "Marking duplicate conn to %s:%d obsolete "
                  "(fd %d, %d secs old).",
