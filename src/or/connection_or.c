@@ -398,9 +398,8 @@ connection_or_get_by_identity_digest(const char *digest)
     if (!best->is_obsolete && conn->is_obsolete)
       continue; /* We never prefer obsolete over non-obsolete connections. */
 
-      /* If both are obsolete we prefer the newer: */
-    if ((best->is_obsolete && conn->is_obsolete && newer) ||
-      /* We prefer non-obsolete connections */
+    if (
+      /* We prefer non-obsolete connections: */
         (best->is_obsolete && !conn->is_obsolete) ||
       /* If both have circuits we prefer the newer: */
         (best->n_circuits && conn->n_circuits && newer) ||
