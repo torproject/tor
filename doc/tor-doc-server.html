@@ -195,7 +195,7 @@ try to determine whether the ports you configured are reachable from
 the outside. This may take up to 20 minutes. Look for a log entry like
 <tt>Self-testing indicates your ORPort is reachable from the outside. Excellent.</tt>
 If you don't see this message, it means that your server is not reachable
-from the outside -- you should re-check your firewalls, check that it's
+from the outside &mdash; you should re-check your firewalls, check that it's
 testing the IP and port you think it should be testing, etc.
 </p>
 
@@ -228,7 +228,7 @@ include the following information in the message:
 <ul>
 <li>Your server's nickname</li>
 <li>The fingerprint for your server's key (the contents of the
-"fingerprint" file in your DataDirectory -- on Windows, look in
+"fingerprint" file in your DataDirectory &mdash; on Windows, look in
 \<i>username</i>\Application&nbsp;Data\tor\ or \Application&nbsp;Data\tor\;
 on OS X, look in /Library/Tor/var/lib/tor/; and on Linux/BSD/Unix,
 look in /var/lib/tor or ~/.tor)
@@ -289,7 +289,18 @@ ports are 22, 110, and 143.
 </p>
 
 <p>
-10. (Unix only). Make a separate user to run the server. If you
+10. If your Tor server provides other services on the same IP address
+&mdash; such as a public webserver &mdash; make sure that connections to the
+webserver are allowed from the local host too. You need to allow these
+connections because Tor clients will detect that your Tor server is the <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ExitEavesdroppers">safest
+way to reach that webserver</a>, and always build a circuit that ends
+at your server. If you don't want to allow the connections, you must
+explicitly reject them in your exit policy.
+</p>
+
+<p>
+11. (Unix only). Make a separate user to run the server. If you
 installed the OS X package or the deb or the rpm, this is already
 done. Otherwise, you can do it by hand. (The Tor server doesn't need to
 be run as root, so it's good practice to not run it as root. Running
@@ -300,7 +311,7 @@ into a chroot jail</a>.)
 </p>
 
 <p>
-11. (Unix only.) Your operating system probably limits the number
+12. (Unix only.) Your operating system probably limits the number
 of open file descriptors per process to 1024 (or even less). If you
 plan to be running a fast exit node, this is probably not enough. On
 Linux, you should add a line like "toruser hard nofile 8192" to your
@@ -313,7 +324,7 @@ you launch Tor.
 </p>
 
 <p>
-12. If you installed Tor via some package or installer, it probably starts
+13. If you installed Tor via some package or installer, it probably starts
 Tor for you automatically on boot. But if you installed from source,
 you may find the initscripts in contrib/tor.sh or contrib/torctl useful.
 </p>
