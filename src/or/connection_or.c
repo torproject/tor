@@ -394,12 +394,22 @@ connection_or_get_by_identity_digest(const char *digest)
         conn->state != OR_CONN_STATE_OPEN)
       continue; /* avoid non-open conns if we can */
     newer = best->timestamp_created < conn->timestamp_created;
-    if (conn->is_obsolete && (!best->is_obsolete || !newer))
-      continue; /* we have something, and it's better than this. */
-    if (best->n_circuits && !conn->n_circuits)
-      continue; /* prefer conns with circuits on them */
-    if (newer)
-      best = conn; /* lastly, prefer newer conns */
+
+    if (!best->is_obsolete && conn->is_obsolete)
+      continue; /* We never prefer obsolete over non-obsolete connections. */
+
+      /* If both are obsolete we prefer the newer: */
+    if ((best->is_obsolete && conn->is_obsolete && newer) ||
+      /* We prefer non-obsolete connections */
+        (best->is_obsolete && !conn->is_obsolete) ||
+      /* If both have circuits we prefer the newer: */
+        (best->n_circuits && conn->n_circuits && newer) ||
+      /* If neither has circuits we prefer the newer: */
+        (!best->n_circuits && !conn->n_circuits && newer) ||
+      /* We prefer connections with circuits: */
+        (!best->n_circuits && conn->n_circuits)) {
+      best = conn;
+    };
   }
   return best;
 }
