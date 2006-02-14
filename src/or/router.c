@@ -620,6 +620,10 @@ consider_publishable_server(time_t now, int force)
  * whether we already have a connection open -- but if <b>try_all</b>
  * is 0, we want to load balance such that we only try a few connections
  * per call.
+ *
+ * The load balancing is such that if we get called once every ten
+ * seconds, we will cycle through all the tests in 1280 seconds (a
+ * bit over 20 minutes).
  */
 void
 router_retry_connections(int testing_reachability, int try_all)
