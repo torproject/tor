@@ -261,7 +261,7 @@ cpuworker_main(void *data)
                  "(either rotated keys or died).");
       } else {
         log_info(LD_OR,
-                 "CPU worker editing because of error on connection to Tor "
+                 "CPU worker exiting because of error on connection to Tor "
                  "process.");
         log_info(LD_OR,"(Error on %d was %s)",
                  fd, tor_socket_strerror(tor_socket_errno(fd)));
