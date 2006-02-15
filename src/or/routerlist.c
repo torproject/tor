@@ -1820,6 +1820,7 @@ int
 router_load_single_router(const char *s, const char **msg)
 {
   routerinfo_t *ri;
+  int r;
   smartlist_t *lst;
   tor_assert(msg);
   *msg = NULL;
@@ -1840,10 +1841,11 @@ router_load_single_router(const char *s, const char **msg)
   smartlist_add(lst, ri);
   routers_update_status_from_networkstatus(lst, 0);
 
-  if (router_add_to_routerlist(ri, msg, 0, 0)<0) {
-    log_warn(LD_DIR, "Couldn't add router to list: %s Dropping.",
-             *msg?*msg:"(No message).");
+  if ((r=router_add_to_routerlist(ri, msg, 0, 0))<0) {
     /* we've already assigned to *msg now, and ri is already freed */
+    tor_assert(*msg);
+    if (r < -1)
+      log_warn(LD_DIR, "Couldn't add router to list: %s Dropping.", *msg);
     smartlist_free(lst);
     return 0;
   } else {
