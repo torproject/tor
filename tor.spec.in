@@ -15,6 +15,13 @@
 %define toruser @TORUSER@
 %define torgroup @TORGROUP@
 
+## Target a specific arch and OS
+#
+# default is i386 linux
+%define target gnu
+%define target_cpu i386
+%define target_os linux
+
 ## Version song and dance
 #
 # This should be the Tor version number, as it appears on the tarball,
@@ -24,6 +31,11 @@
 %define native_version       @VERSION@
 
 %define version %(echo %{native_version} | sed -e 's/-/./g')
+
+## Define output filename 
+# 
+# This creates filenames based upon the value of target_cpu defined above
+%define _build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%{target_cpu}.rpm
 
 ## Release and OS identification song and dance
 #
@@ -144,7 +156,10 @@ for high-stakes anonymity.
 %setup -q -n %{name}-%{native_version}
 
 %build
-%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
+%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
+	--build=%{target_cpu}-pc-%{target_os}-%{target} \
+	--host=%{target_cpu}-pc-%{target_os}-%{target}  \
+	--target=%{target_cpu}-pc-%{target_os}-%{target}
 %make
 
 %install
