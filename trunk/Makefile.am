@@ -23,10 +23,9 @@ dist-rpm: dist
 	    mkdir $$RPM_BUILD_DIR/$$subdir;                     \
 	done;                                                   \
 	cp tor-$(VERSION).tar.gz $$RPM_BUILD_DIR/SOURCES;       \
-	rpmbuild -ba --define "_topdir $$RPM_BUILD_DIR"	tor.spec;
-#	   $$RPMBUILD_OPTIONS tor.spec; 			\
+	rpmbuild -ba --define "_topdir $$RPM_BUILD_DIR"	tor.spec; \
 	mv $$RPM_BUILD_DIR/SRPMS/* .;                           \
-	mv $$RPM_BUILD_DIR/RPMS/*/* .;                          \
+	mv $$RPM_BUILD_DIR/RPMS/* .;				\
 	rm -rf $$RPM_BUILD_DIR
 
 dist-osx:
