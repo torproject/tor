@@ -1,49 +1,58 @@
-Instructions for building various rpms on various architectures
+These are instructions for building Tor binaries in the rpm format on 
+various cpu architectures and operating systems.  Each rpm will require
+glibc on the target system.  It is believed that any rpm-based linux 
+distribution should have semi-current glibc installed by default.  
+If you run into a distribution that does not work with glibc, or does 
+not contain it, please let us know the details.  
 
-This will build various architecture and cpu tuned versions of tor 
-bundled in a convenient rpm.  Each rpm will require glibc on the target
-system (which any rpm based linux distro should have already installed
-by default).  These are the exact same steps used to build the
-official rpms of tor
+These are the exact same steps used to build the official rpms of Tor.
 
-If you wish to further tune tor rpms beyond this list, see the GCC doc
-page for further options:
-http://gcc.gnu.org/onlinedocs/gcc-4.0.2/gcc/i386-and-x86_002d64-Options.html
+If you wish to further tune Tor binaries in rpm format beyond this list, 
+see the GCC doc page for further options:
+http://gcc.gnu.org/onlinedocs/gcc-4.0.2/gcc/
 
-i386 with zero tuning (most compatible, should run on a true i386 cpu):
-	1) download tor source tarball
-	2) at shell prompt, export CFLAGS="-march=i386 -mtune=i386"
-	3) in the extracted tor source dir, configure as follows:
-	    ./configure --build=i386-pc-linux-gnu --host=i386-pc-linux-gnu --target=i386-pc-linux-gnu
-	4) Edit tor.spec.in, find the following line:
-	    %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
-	add to it:
-   	    --build=i386-pc-linux-gnu --host=i386-pc-linux-gnu --target=i386-pc-linux-gnu
-	5) make dist-rpm
-	6) Install from the .i386.rpm file.
+The tor.spec.in file contains the basic info needed to tune the binaries
+produced in rpm format. The key parameters to tune are located in the
+third section of the tor.spec.in file.  Locate the section similar to
+this:
 
-i686 with i686 tuning (best for pentium pro, pentium2, pentium3, and
-pentium4-class CPUS including the pentium4):
-	1) download tor source tarball
-	2) at shell prompt, export CFLAGS="-march=i686 -mtune=i686"
-	3) in the extracted tor source dir, configure as follows:
-	    ./configure --build=i686-pc-linux-gnu --host=i686-pc-linux-gnu --target=i686-pc-linux-gnu
-	4) Edit tor.spec.in, find the following line:
-	    %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
-	add to it:
-	    --build=i686-pc-linux-gnu --host=i686-pc-linux-gnu --target=i686-pc-linux-gnu
-	5) make dist-rpm
-	6) Install from the .i686.rpm file.
+## Target a specific arch and OS
+#
+# default is i386 linux
+%define target gnu
+%define target_cpu i386
+%define target_os linux
 
-athlon64 with athlon64 tuning (best for Athlon64 and Opteron):
-	1) download tor source tarball
-	2) at shell prompt, export CFLAGS="-march=athlon64 -mtune=athlon64"
-	3) in the extracted tor source dir, configure as follows:
-	    ./configure --build=athlon64-pc-linux-gnu --host=athlon64-pc-linux-gnu --target=athlon64-pc-linux-gnu
-	4) Edit tor.spec.in, find the following line:
-	    %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
-	add to it:
-	    --build=athlon64-pc-linux-gnu --host=athlon64-pc-linux-gnu --target=athlon64-pc-linux-gnu
-	5) make dist-rpm
-	6) Install from the .athlon64.rpm file.
+
+The three parameters: target, target_cpu, and target_os are used
+throughout the "make dist-rpm" process.  They control the parameters
+passed to "configure" and the final tuning of the binaries produced.  
+The default settings, as shown above, create binaries for the widest
+range of Intel x86 or compatible architectures.
+
+The paramters can be set as follows:
+
+The "target" parameter:
+This should be "gnu", "redhat", or the short name of your linux distribution.
+Other possibilities are "mandrake" or "suse".  This is passed to
+"configure" through the --host, --build, and --target parameters.
+Therefore, this "target" parameter must be a valid OS for "configure" as
+well.
+
+
+The "target_cpu" parameter:
+This parameter controls the optimization and tuning of your binaries via
+gcc and "configure".  This parameter is passed to gcc via the -mtune= or
+-mcpu= options.  The "configure" script will also receive this parameter
+through the --host, --build, and --target parameters.  Therefore, this
+"target_cpu" parameter must be valid for both gcc and "configure".  A
+few common options for this parameter may be "athlon64, i686, pentium4" or
+others.
+
+
+The "target_os" parameter:
+This parameter controls the target operating system.  Normally, this is
+only "linux".  If you wish to build rpms for a non-linux operating
+system, you can replace "linux" with your operating system.
+
 
