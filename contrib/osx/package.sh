@@ -13,26 +13,8 @@
 # set to the latest Tor version, and Tor already built.
 #
 
-######################
-# The following steps are the exact steps used to produce the "official" OSX build of tor
-#
-# Summary:
-# 1) Compile and install the latest release of libevent
-# 2) Acquire privoxyosx_setup_3.0.3.zip.  Remember where you put this file.
-# 3) Acquire and install your preferred version of tor via "make dist-osx"
-#
-# Details:
-# 1)  You need to download the latest libevent from http://www.monkey.org/~provos/libevent/
-# 1a) At a shell prompt, export CFLAGS="-march=powerpc -mtune=powerpc"
-# 1b) The first step of compiling libevent is to configure it as follows: 
-# 	configure --enable-static --disable-shared
-# 1c) Complete the "make" and "make install".  
-# 2) Get your preferred version of the tor source from tor.eff.org
-# 2a) Edit /path/to/tor/contrib/osx/package.sh (the file you are reading) and confirm PRIVOXY_PKG_ZIP= is set 
-#     to the correct path to find the file privoxyosx_setup_3.0.3.zip
-# 2b) In the top level, this means /path/to/tor/, not tor/contrib/osx, do a configure with these parameters:
-#     configure --prefix=/Library/Tor --bindir=/Library/Tor --sysconfdir=/Library
-# 2c) In same top level dir, do a "make dist-osx".  You'll have a .dmg file when complete.  Install from this dmg.
+# Read the documentation located in tor/doc/tor-osx-dmg-creation.txt on
+# how to build Tor for OSX
 
 # Where have we put the zip file containing Privoxy?  Edit this if your
 # privoxy lives somewhere else.
