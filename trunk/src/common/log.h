@@ -142,11 +142,11 @@ void _log_fn(int severity, uint32_t domain,
 #else /* ! defined(__GNUC__) */
 
 void _log_fn(int severity, uint32_t domain, const char *format, ...);
-void debug(uint32_t domain, const char *format, ...);
-void info(uint32_t domain, const char *format, ...);
-void notice(uint32_t domain, const char *format, ...);
-void warn(uint32_t domain, const char *format, ...);
-void err(uint32_t domain, const char *format, ...);
+void log_debug(uint32_t domain, const char *format, ...);
+void log_info(uint32_t domain, const char *format, ...);
+void log_notice(uint32_t domain, const char *format, ...);
+void log_warn(uint32_t domain, const char *format, ...);
+void log_err(uint32_t domain, const char *format, ...);
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
 /* MSVC 6 and earlier don't have __FUNCTION__, or even __LINE__. */

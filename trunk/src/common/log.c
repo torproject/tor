@@ -264,7 +264,7 @@ _log_fn(int severity, uint32_t domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-debug(uint32_t domain, const char *format, ...)
+log_debug(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -273,7 +273,7 @@ debug(uint32_t domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-info(uint32_t domain, const char *format, ...)
+log_info(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -282,7 +282,7 @@ info(uint32_t domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-notice(uint32_t domain, const char *format, ...)
+log_notice(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -291,7 +291,7 @@ notice(uint32_t domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-warn(uint32_t domain, const char *format, ...)
+log_warn(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
@@ -300,7 +300,7 @@ warn(uint32_t domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-err(uint32_t domain, const char *format, ...)
+log_err(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
