@@ -14,13 +14,11 @@ Details:
 1)  Download the latest libevent from 
 http://www.monkey.org/~provos/libevent/
 
-2) At a shell prompt, export CFLAGS="-march=powerpc -mtune=powerpc"
-
-3) The first step of compiling libevent is to configure it as
+2) The first step of compiling libevent is to configure it as
 follows:
        ./configure --enable-static --disable-shared
 
-4) Complete the "make" and "make install".  You will need to be root,
+3) Complete the "make" and "make install".  You will need to be root,
 or sudo -s, to complete the "make install".
 
 
@@ -40,7 +38,8 @@ file privoxyosx_setup_3.0.3.zip
 
 2) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
-     configure --prefix=/Library/Tor --bindir=/Library/Tor --sysconfdir=/Library
+     configure --prefix=/Library/Tor --bindir=/Library/Tor \
+     --sysconfdir=/Library --enable-static --disable-shared
 
 3) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.
