@@ -142,15 +142,20 @@ void _log_fn(int severity, uint32_t domain,
 #else /* ! defined(__GNUC__) */
 
 void _log_fn(int severity, uint32_t domain, const char *format, ...);
-void log_debug(uint32_t domain, const char *format, ...);
-void log_info(uint32_t domain, const char *format, ...);
-void log_notice(uint32_t domain, const char *format, ...);
-void log_warn(uint32_t domain, const char *format, ...);
-void log_err(uint32_t domain, const char *format, ...);
+void _log_debug(uint32_t domain, const char *format, ...);
+void _log_info(uint32_t domain, const char *format, ...);
+void _log_notice(uint32_t domain, const char *format, ...);
+void _log_warn(uint32_t domain, const char *format, ...);
+void _log_err(uint32_t domain, const char *format, ...);
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
 /* MSVC 6 and earlier don't have __FUNCTION__, or even __LINE__. */
 #define log_fn _log_fn
+#define log_debug _log_debug
+#define log_info _log_info
+#define log_notice _log_notice
+#define log_warn _log_warn
+#define log_err _log_err
 /*
 #define debug _debug
 #define info _info
@@ -166,6 +171,11 @@ extern const char *_log_fn_function_name;
  * do {...} while (0) trick to wrap this macro, since the macro can't take
  * arguments. */
 #define log_fn (_log_fn_function_name=__FUNCTION__),_log_fn
+#define log_debug (_log_fn_function_name=__FUNCTION__),_log_debug
+#define log_info (_log_fn_function_name=__FUNCTION__),_log_info
+#define log_notice (_log_fn_function_name=__FUNCTION__),_log_notice
+#define log_warn (_log_fn_function_name=__FUNCTION__),_log_warn
+#define log_err (_log_fn_function_name=__FUNCTION__),_log_err
 /*
 #define debug (_log_fn_function_name=__FUNCTION__),_debug
 #define info (_log_fn_function_name=__FUNCTION__),_info
