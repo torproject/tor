@@ -50,6 +50,8 @@ If the quickstart doesn't work for you:
   If you have problems finding libraries, try
     CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
     ./configure
+  or
+    ./configure --with-libevent-dir=/usr/local
   rather than simply ./configure.
 
   If you have mysterious autoconf failures while linking openssl,
