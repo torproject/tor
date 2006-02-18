@@ -876,6 +876,13 @@ static int connection_bucket_read_limit(connection_t *conn) {
   return at_most;
 }
 
+/** Return 1 if the global write bucket has no bytes in it,
+ * or return 0 if it does. */
+int global_write_bucket_empty(void)
+{
+  return global_write_bucket <= 0;
+}
+
 /** We just read num_read onto conn. Decrement buckets appropriately. */
 static void connection_read_bucket_decrement(connection_t *conn, int num_read) {
   global_read_bucket -= num_read; //tor_assert(global_read_bucket >= 0);

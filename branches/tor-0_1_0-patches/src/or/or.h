@@ -1289,6 +1289,7 @@ void connection_expire_held_open(void);
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
 int retry_all_listeners(int force);
 
+int global_write_bucket_empty(void);
 void connection_bucket_init(void);
 void connection_bucket_refill(struct timeval *now);
 

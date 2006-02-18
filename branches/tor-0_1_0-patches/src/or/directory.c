@@ -968,6 +968,14 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
 
+    if (global_write_bucket_empty()) {
+      log_fn(LOG_INFO,
+           "Client asked for the mirrored directory, but we've been "
+           "writing too many bytes lately. Sending 503 Dir busy.");
+      write_http_status_line(conn, 503, "Directory busy, try again later");
+      return 0;
+    }
+
     log_fn(LOG_DEBUG,"Dumping %sdirectory to client.",
            deflated?"deflated ":"");
     format_rfc1123_time(date, time(NULL));
