@@ -2947,7 +2947,7 @@ options_init_logs(or_options_t *options, int validate_only)
       }
     } else if (!strcasecmp(smartlist_get(elts,1), "stderr")) {
       if (daemon) {
-        log_warn(LD_CONFIG, "Can't log to stdout with RunAsDaemon set.");
+        log_warn(LD_CONFIG, "Can't log to stderr with RunAsDaemon set.");
         ok = 0; goto cleanup;
       }
       if (!validate_only) {
