@@ -1,8 +1,9 @@
 tor (0.1.1.13-alpha-cvs-0) unreleased; urgency=low
 
   * CVS SNAPSHOT.
+  * Include 0.1.0.17 changelog in experimental tree.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 10 Feb 2006 16:21:49 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 14 Feb 2006 05:24:11 +0100
 
 tor (0.1.1.13-alpha-1) experimental; urgency=low
 
@@ -107,6 +108,12 @@ tor (0.1.1.5-alpha-1) UNRELEASED; urgency=low
   * Forward port debian/ patches.
 
  -- Peter Palfrader <weasel@debian.org>  Fri, 12 Aug 2005 17:02:23 +0200
+
+tor (0.1.0.17-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 18 Feb 2006 02:49:45 +0100
 
 tor (0.1.0.16-1) unstable; urgency=low
 
