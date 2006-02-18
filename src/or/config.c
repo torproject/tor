@@ -1888,8 +1888,10 @@ firewall_is_fascist_or(void)
 int
 _fascist_firewall_allows_address(uint32_t addr, uint16_t port, int dir_or_or)
 {
+  addr_policy_result_t p;
+
   assert(dir_or_or == 1 || dir_or_or == 2);
-  addr_policy_result_t p = router_compare_addr_to_addr_policy(
+  p = router_compare_addr_to_addr_policy(
                addr, port, dir_or_or == 1 ?
                            reachable_dir_addr_policy :
                            reachable_or_addr_policy);
