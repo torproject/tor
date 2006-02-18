@@ -264,47 +264,47 @@ _log_fn(int severity, uint32_t domain, const char *format, ...)
   _log_fn_function_name = NULL;
 }
 void
-log_debug(uint32_t domain, const char *format, ...)
+_log_debug(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(LOG_DEBUG, domain, NULL, format, ap);
+  logv(LOG_DEBUG, domain, _log_fn_function_name, format, ap);
   va_end(ap);
   _log_fn_function_name = NULL;
 }
 void
-log_info(uint32_t domain, const char *format, ...)
+_log_info(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(LOG_INFO, domain, NULL, format, ap);
+  logv(LOG_INFO, domain, _log_fn_function_name, format, ap);
   va_end(ap);
   _log_fn_function_name = NULL;
 }
 void
-log_notice(uint32_t domain, const char *format, ...)
+_log_notice(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(LOG_NOTICE, domain, NULL, format, ap);
+  logv(LOG_NOTICE, domain, _log_fn_function_name, format, ap);
   va_end(ap);
   _log_fn_function_name = NULL;
 }
 void
-log_warn(uint32_t domain, const char *format, ...)
+_log_warn(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(LOG_WARN, domain, NULL, format, ap);
+  logv(LOG_WARN, domain, _log_fn_function_name, format, ap);
   va_end(ap);
   _log_fn_function_name = NULL;
 }
 void
-log_err(uint32_t domain, const char *format, ...)
+_log_err(uint32_t domain, const char *format, ...)
 {
   va_list ap;
   va_start(ap,format);
-  logv(LOG_ERR, domain, NULL, format, ap);
+  logv(LOG_ERR, domain, _log_fn_function_name, format, ap);
   va_end(ap);
   _log_fn_function_name = NULL;
 }
