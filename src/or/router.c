@@ -695,6 +695,8 @@ router_upload_dir_desc_to_dirservers(int force)
     log_warn(LD_GENERAL, "No descriptor; skipping upload");
     return;
   }
+  if (!get_options()->PublishServerDescriptor)
+    return;
   if (!force && !desc_needs_upload)
     return;
   desc_needs_upload = 0;

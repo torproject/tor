@@ -1060,6 +1060,9 @@ rend_consider_services_upload(time_t now)
   rend_service_t *service;
   int rendpostperiod = get_options()->RendPostPeriod;
 
+  if (!get_options()->PublishHidServDescriptors)
+    return;
+
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
     if (!service->next_upload_time) { /* never been uploaded yet */
