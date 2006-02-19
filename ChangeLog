@@ -1,3 +1,47 @@
+Changes in version 0.1.1.14-alpha - 2006-02-xx
+  o Bugfixes on 0.1.1.x:
+    - Don't die if we ask for a stdout or stderr log (even implicitly)
+      and we're set to RunAsDaemon -- just warn.
+    - We still had a few bugs in the OR connection rotation code that
+      caused directory servers to slowly aggregate connections to other
+      fast Tor servers. This time for sure!
+    - Make log entries on Win32 include the name of the function again.
+    - We were treating a pair of exit policies if they were equal even
+      if one said accept and the other said reject -- causing us to
+      not always publish a new descriptor since we thought nothing
+      had changed.
+    - Retry pending server downloads as well as pending networkstatus
+      downloads when we unexpectedly get a socks request.
+    - We were ignoring the IS_FAST flag in the directory status,
+      meaning we were willing to pick trivial-bandwidth nodes for "fast"
+      connections.
+
+  o Features:
+    - If we're trying to be a Tor server and running Windows 95/98/ME
+      as a server, explain that we'll likely crash.
+    - When we're a server, a client asks for an old-style directory,
+      and our write bucket is empty, don't give it to him. This way
+      small servers can continue to serve the directory *sometimes*,
+      without getting overloaded.
+    - Compress exit policies even more -- look for duplicate lines
+      and remove them.
+    - Clients now honor the "guard" flag in the router status when
+      picking entry guards, rather than looking at is_fast or is_stable.
+    - Retain unrecognized lines in $DATADIR/state file, so that we can
+      be forward-compatible.
+    - Generate 18.0.0.0/8 address policy format in descs when we can;
+      warn when the mask is not reducible to a bit-prefix.
+    - Let the user set ControlListenAddress in the torrc.  This can be
+      dangerous, but there are some cases (like a secured LAN) where it
+      makes sense.
+    - Split ReachableAddresses into ReachableDirAddresses and
+      ReachableORAddresses, so we can restrict Dir conns to port 80
+      and OR conns to port 443.
+    - Now we can target arch and OS in rpm builds (contributed by
+      Phobos). Also make the resulting dist-rpm filename match the
+      target arch.
+
+
 Changes in version 0.1.1.13-alpha - 2006-02-09
   o Crashes in 0.1.1.x:
     - When you tried to setconf ORPort via the controller, Tor would
