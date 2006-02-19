@@ -36,8 +36,6 @@ N - building on freebsd 6.0: (with multiple openssl installations)
     - <arma> should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?
 
-  o Split into ReachableDirAddresses and ReachableORAddresses
-    o document
 R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
     new entry, but failed. Bad news. XXX.
 N - look at the proposed os x uninstaller:
@@ -55,8 +53,6 @@ N - commit edmanm's win32 makefile to tor cvs contrib
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
-  o make log entries include function names in win32 again.
-  - ...and make it compile and work right on Windows again.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
 R - streamline how we define a guard node as 'up'. document it
