@@ -116,6 +116,20 @@ you use it, you will be distinguishable from other users, because you won't
 believe the same authorities they do.
 .LP
 .TP
+\fBFetchHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
+If set to 0, Tor will never fetch any hidden service descriptors from
+the rendezvous directories. This option is only useful if you're using
+a Tor controller that handles hidserv fetches for you.
+(Default: 1)
+.LP
+.TP
+\fBFetchServerDescriptors \fR\fB0\fR|\fB1\fR\fP
+If set to 0, Tor will never fetch any network status summaries or server
+descriptors from the directory servers. This option is only useful if
+you're using a Tor controller that handles directory fetches for you.
+(Default: 1)
+.LP
+.TP
 \fBGroup \fR\fIGID\fP
 On startup, setgid to this user.
 .LP
@@ -224,9 +238,7 @@ If set to 1, Tor will under no circumstances run as a server. The default
 is to run as a client unless ORPort is configured.  (Usually,
 you don't need to set this; Tor is pretty smart at figuring out whether
 you are reliable and high-bandwidth enough to be a useful server.)
-
-This option will likely be deprecated in the future; see the \fBNoPublish\fP
-option below. (Default: 0)
+(Default: 0)
 .LP
 .TP
 \fBEntryNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
@@ -494,14 +506,6 @@ and 19 characters inclusive, and must contain only the characters
 [a-zA-Z0-9].
 .LP
 .TP
-\fBNoPublish \fR\fB0\fR|\fB1\fR\fP
-If you set NoPublish 1, Tor will act as a server if you have an ORPort
-defined, but it will not publish its descriptor to the dirservers. This
-option is useful if you're testing out your server, or if you're using
-alternate dirservers (e.g. for other Tor networks such as Blossom).
-(Default: 0)
-.LP
-.TP
 \fBNumCPUs \fR\fInum\fP
 How many processes to use at once for decrypting onionskins. (Default: 1)
 .LP
@@ -514,6 +518,14 @@ Advertise this port to listen for connections from Tor clients and servers.
 Bind to this IP address to listen for connections from Tor clients and
 servers. If you specify a port, bind to this port rather than the one
 specified in ORPort. (Default: 0.0.0.0)
+.LP
+.TP
+\fBPublishServerDescriptor \fR\fB0\fR|\fB1\fR\fP
+If set to 0, Tor will act as a server if you have an ORPort
+defined, but it will not publish its descriptor to the dirservers. This
+option is useful if you're testing out your server, or if you're using
+a Tor controller that handles directory publishing for you.
+(Default: 1)
 .LP
 .TP
 \fBRedirectExit \fR\fIpattern target\fP
@@ -694,6 +706,13 @@ ones; most people can leave this unset.
 \fBHiddenServiceExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
 Do not use the specified nodes as introduction points for the hidden
 service. In normal use there is no reason to set this.
+.LP
+.TP
+\fBPublishHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
+If set to 0, Tor will run any hidden services you configure, but it won't
+advertise them to the rendezvous directory. This option is only useful
+if you're using a Tor controller that handles hidserv publishing for you.
+(Default: 1)
 .LP
 .TP
 \fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
