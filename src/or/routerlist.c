@@ -3449,11 +3449,18 @@ update_router_descriptor_client_downloads(time_t now)
   } else {
     should_delay = (last_routerdesc_download_attempted +
                     MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
-    if (!should_delay)
-      log_info(LD_DIR,
+    if (!should_delay) {
+      if (last_routerdesc_download_attempted) {
+        log_info(LD_DIR,
            "There are not many downloadable routerdescs, but we've "
            "been waiting long enough (%d seconds). Downloading.",
            (int)(now-last_routerdesc_download_attempted));
+      } else {
+        log_info(LD_DIR,
+           "There are not many downloadable routerdescs, but we've "
+           "never downloaded descriptors before.  Downloading.");
+      }
+    }
   }
 
   if (! should_delay) {
