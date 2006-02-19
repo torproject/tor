@@ -267,7 +267,7 @@ ReachableAddresses instead. (Default: 80, 443)
 .LP
 .TP
 \fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
-A comma-separated list of IP addressess and ports that your firewall allows you
+A comma-separated list of IP addresses and ports that your firewall allows you
 to connect to. The format is as
 for the addresses in ExitPolicy, except that "accept" is understood
 unless "reject" is explicitly provided.  For example, 'ReachableAddresses

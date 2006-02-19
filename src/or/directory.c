@@ -146,7 +146,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
       if (post_to_v1_only && !ds->is_v1_authority)
         continue;
       post_via_tor = purpose_is_private(purpose) ||
-                     !fascist_firewall_allows_address_dir(ds->addr,ds->dir_port);
+              !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
       directory_initiate_command_routerstatus(rs, purpose, post_via_tor,
                                               NULL, payload, payload_len);
     });

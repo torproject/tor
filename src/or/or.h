@@ -1276,12 +1276,9 @@ typedef struct {
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   smartlist_t *FirewallPorts; /**< Which ports our firewall allows
                                * (strings). */
-  config_line_t *ReachableAddresses; /**< Which IP:ports our firewall allows
-                                      * (exit policy.) */
-  config_line_t *ReachableORAddresses; /**< Which IP:ports our firewall allows
-                                        * (exit policy.) */
-  config_line_t *ReachableDirAddresses; /**< Which IP:ports our firewall allows
-                                         * (exit policy.) */
+  config_line_t *ReachableAddresses; /**< IP:ports our firewall allows. */
+  config_line_t *ReachableORAddresses; /**< IP:ports for OR conns. */
+  config_line_t *ReachableDirAddresses; /**< IP:ports for Dir conns. */
 
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */
