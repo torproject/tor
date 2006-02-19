@@ -3653,7 +3653,12 @@ write_configuration_file(const char *fname, or_options_t *options)
       ++i;
     }
     log_notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
-    rename(fname, fn_tmp);
+    if (rename(fname, fn_tmp) < 0) {
+      log_warn(LD_FS, "Couldn't rename \"%s\" to \"%s\": %s",
+             fname, fn_tmp, strerror(errno));
+      tor_free(fn_tmp);
+      goto err;
+    }
     tor_free(fn_tmp);
   }
 
