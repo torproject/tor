@@ -252,6 +252,8 @@ rend_client_introduction_acked(circuit_t *circ,
 void
 rend_client_refetch_renddesc(const char *query)
 {
+  if (!get_options()->FetchHidServDescriptors)
+    return;
   if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
     log_info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
              "already in progress.", safe_str(query));

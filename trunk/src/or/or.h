@@ -1270,6 +1270,13 @@ typedef struct {
                                    * versions? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int NoPublish; /**< Boolean: should we never publish a descriptor? */
+  int PublishServerDescriptor; /**< Do we publish our descriptor as normal? */
+  int PublishHidServDescriptors; /**< and our hidden service descriptors? */
+  int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
+  int FetchHidServDescriptors; /** and hidden service descriptors? */
+  int AllDirActionsPrivate; /**< Should every directory action be sent
+                             * through a Tor circuit? */
+
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
   int _ConnLimit; /**< Maximum allowed number of simultaneous connections. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */

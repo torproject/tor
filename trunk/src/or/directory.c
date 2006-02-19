@@ -111,6 +111,8 @@ dir_policy_permits_address(uint32_t addr)
 static int
 purpose_is_private(uint8_t purpose)
 {
+  if (get_options()->AllDirActionsPrivate)
+    return 1;
   if (purpose == DIR_PURPOSE_FETCH_DIR ||
       purpose == DIR_PURPOSE_UPLOAD_DIR ||
       purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
@@ -170,6 +172,10 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
                         purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
   int need_v2_support = purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
                         purpose == DIR_PURPOSE_FETCH_SERVERDESC;
+
+  if (!options->FetchServerDescriptors &&
+      (need_v1_support || need_v2_support))
+    return;
 
   if (directconn) {
     if (prefer_authority) {
