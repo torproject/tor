@@ -169,8 +169,8 @@ init_key_from_file_name_changed(const char *fname_old,
 
   /* The old filename exists, and the new one doesn't.  Rename and load. */
   if (rename(fname_old, fname_new) < 0) {
-    log_fn(LOG_ERR, LD_FS, "Couldn't rename \"%s\" to \"%s\": %s",
-           fname_old, fname_new, strerror(errno));
+    log_warn(LD_FS, "Couldn't rename \"%s\" to \"%s\": %s",
+             fname_old, fname_new, strerror(errno));
     return NULL;
   }
   return init_key_from_file(fname_new);
