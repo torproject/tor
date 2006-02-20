@@ -1545,7 +1545,8 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
   }
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-  if (is_internal_IP(htonl(in.s_addr), 0) && !options->NoPublish) {
+  if (is_internal_IP(htonl(in.s_addr), 0) &&
+      options->PublishServerDescriptor) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers) {
       /* if they are using the default dirservers, disallow internal IPs
@@ -2099,8 +2100,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->AuthoritativeDir && options->ClientOnly)
     REJECT("Running as authoritative directory, but ClientOnly also set.");
 
-  if (options->AuthoritativeDir && options->NoPublish)
-    REJECT("You cannot set both AuthoritativeDir and NoPublish.");
+  if (options->NoPublish) {
+    log(LOG_WARN, LD_CONFIG,
+        "NoPublish is obsolete. Use PublishServerDescriptor instead.");
+    options->PublishServerDescriptor = 0;
+  }
 
   if (options->ConnLimit <= 0) {
     log(LOG_WARN, LD_CONFIG,
@@ -2517,6 +2521,8 @@ options_transition_affects_descriptor(or_options_t *old_options,
       old_options->DirPort != new_options->DirPort ||
       old_options->ClientOnly != new_options->ClientOnly ||
       old_options->NoPublish != new_options->NoPublish ||
+      old_options->PublishServerDescriptor !=
+        new_options->PublishServerDescriptor ||
       old_options->BandwidthRate != new_options->BandwidthRate ||
       old_options->BandwidthBurst != new_options->BandwidthBurst ||
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
