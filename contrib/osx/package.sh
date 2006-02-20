@@ -25,10 +25,29 @@ PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.3.zip
 #   http://developer.apple.com/documentation/DeveloperTools/Conceptual/SoftwareDistribution/index.html
 #   man packagemaker
 
-# Make sure VERSION is set, so we don't name the package "Tor  Bundle.dmg"
+# Make sure VERSION is set, so we don't name the package "Tor--$OS-Bundle.dmg"
 if [ "XX$VERSION" = 'XX' ]; then
   echo "VERSION not set."
   exit 1
+fi
+
+## Determine OSX Version
+# map version to name
+if [ -x /usr/bin/sw_vers ]; then
+# This is poor, yet functional.  We don't care about the 3rd number in
+# the OS version
+  OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
+    case "$OSVER" in
+    	"10.5") OS="leopard";;
+	"10.4") OS="tiger";;
+	"10.3") OS="panther";;
+	"10.2") OS="jaguar";;
+	"10.1") OS="puma";;
+	"10.0") OS="cheetah";;
+	*) OS="unknown";;
+    esac
+else
+  OS="unknown"
 fi
 
 # Where will we put our temporary files?
@@ -104,7 +123,7 @@ $PACKAGEMAKER -build                     \
 ### Assemble the metapackage.  Packagemaker won't buld metapackages from
 # the command line, so we need to do it by hand.
 
-MPKG=$BUILD_DIR/output/Tor\ Bundle.mpkg
+MPKG=$BUILD_DIR/output/Tor-$VERSION-$OS-Bundle.mpkg
 mkdir -p "$MPKG/Contents/Resources"
 echo -n "pmkrpkg1" > "$MPKG/Contents/PkgInfo"
 cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
@@ -130,7 +149,7 @@ cp LICENSE $BUILD_DIR/output/Tor\ License.txt
 
 DOC=$BUILD_DIR/output/Documents
 mkdir $DOC
-cp doc/tor-doc.html doc/tor-doc.css $DOC
+cp doc/tor-doc.html doc/tor-doc.css doc/tor-doc-osx.html $DOC
 cp AUTHORS $DOC/AUTHORS.txt
 groff doc/tor.1 -T ps -m man | pstopdf - $DOC/tor-reference.pdf
 groff doc/tor-resolve.1 -T ps -m man | pstopdf - $DOC/tor-resolve.pdf
@@ -144,10 +163,10 @@ cp ChangeLog $DOC/Advanced/ChangeLog.txt
 
 find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 
-mv $BUILD_DIR/output "$BUILD_DIR/Tor $VERSION Bundle"
-rm -f "Tor $VERSION Bundle.dmg"
+mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$OS-Bundle"
+rm -f "Tor-$VERSION-$OS-Bundle.dmg"
 USER="`whoami`"
-sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor $VERSION Bundle" "Tor $VERSION Bundle.dmg"
-sudo chown "$USER" "Tor $VERSION Bundle.dmg"
+sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor-$VERSION-$OS-Bundle" "Tor-$VERSION-$OS-Bundle.dmg"
+sudo chown "$USER" "Tor-$VERSION-$OS-Bundle.dmg"
 
 sudo rm -rf $BUILD_DIR
