@@ -1076,8 +1076,8 @@ handle_control_saveconf(connection_t *conn, uint32_t len,
       send_control0_error(conn, ERR_INTERNAL,
                           "Unable to write configuration to disk.");
     else
-      connection_write_str_to_buf("551 Unable to write configuration to disk.",
-                                  conn);
+      connection_write_str_to_buf(
+        "551 Unable to write configuration to disk.\r\n", conn);
   } else {
     send_control_done(conn);
   }
