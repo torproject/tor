@@ -29,17 +29,13 @@ Website:
   - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
 
-for 0.1.1.x:
+for 0.1.1.x-rc:
 N - building on freebsd 6.0: (with multiple openssl installations)
     . <nickm> "Let's try to find a way to make it run and make the version
        match, but if not, let's just make it run."
     - <arma> should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?
 
-R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
-    new entry, but failed. Bad news. XXX.
-N - look at the proposed os x uninstaller:
-    http://archives.seul.org/or/talk/Jan-2006/msg00038.html
   - support dir 503s better
     o clients don't log as loudly when they receive them
     - they don't count toward the 3-strikes rule
@@ -49,24 +45,41 @@ N - look at the proposed os x uninstaller:
     - authorities should *never* 503 a cache, but *should* 503 clients
       when they feel like it.
     - update dir-spec with what we decided for each of these
-N - commit edmanm's win32 makefile to tor cvs contrib
   - when logging unknown http headers, this could include bad escape codes?
     - more generally, attacker-controller log entries with newlines in them
       are dangerous for our users.
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
+R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
+    new entry, but failed. Bad news. XXX.
 R - streamline how we define a guard node as 'up'. document it
     somewhere.
 R - reduce log severity for guard nodes.
 R - make guard node timeout higher.
-R - look into "uncounting" bytes spent on local connections. so
-    we can bandwidthrate but still have fast downloads.
 N . Clean and future-proof exit policy formats a bit.
     o Likewise accept, but don't generate /bits formats (unless they're
       accepted in 0.0.9 and later).
     o Warn when we see a netmask that isn't a prefix.
     - Make clients understand "private:*" in exit policies, even though
       we don't generate it yet.
+
+for 0.1.1.x-final:
+  - find 10 dirservers.
+    - Make it no longer default for v2 dirservers to support v1.
+    - non-versioning dirservers don't need to set recommended*versions.
+    - non-naming dirservers don't need to have an approved-routers file.
+    - What are criteria to be a dirserver?  Write a policy.
+  - Document AuthDirInvalid, AuthDirReject, AuthDirRejectUnlisted
+  - are there other options that we haven't documented so far?
+  - look at the proposed os x uninstaller:
+    http://archives.seul.org/or/talk/Jan-2006/msg00038.html
+
+Deferred from 0.1.1.x:
+
+N - commit edmanm's win32 makefile to tor cvs contrib
+
+R - look into "uncounting" bytes spent on local connections. so
+    we can bandwidthrate but still have fast downloads.
 
 R - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
@@ -81,17 +94,6 @@ R - When we connect to a Tor server, it sends back a signed cell listing
     - Verify that a new cell type is okay with deployed codebase
     - Specify
     - Implement
-
-  - find 10 dirservers.
-    - Make it no longer default for v2 dirservers to support v1.
-    - non-versioning dirservers don't need to set recommended*versions.
-    - non-naming dirservers don't need to have an approved-routers file.
-    - What are criteria to be a dirserver?  Write a policy.
-
-  - Document AuthDirInvalid, AuthDirReject, AuthDirRejectUnlisted
-  - are there other options that we haven't documented so far?
-
-Deferred from 0.1.1.x:
 
 R - failed rend desc fetches sometimes don't get retried.
   - Add config options to not publish and not fetch rend descs.
