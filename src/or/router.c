@@ -472,8 +472,8 @@ router_orport_found_reachable(void)
     if (!clique_mode(get_options()))
       log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                  "the outside. Excellent.%s",
-                 get_options()->NoPublish ?
-                   "" : " Publishing server descriptor.");
+                 get_options()->PublishServerDescriptor ?
+                   " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
     consider_publishable_server(time(NULL), 1);
@@ -557,7 +557,7 @@ proxy_mode(or_options_t *options)
 /** Decide if we're a publishable server. We are a publishable server if:
  * - We don't have the ClientOnly option set
  * and
- * - We don't have the NoPublish option set
+ * - We have the PublishServerDescriptor option set
  * and
  * - We have ORPort set
  * and
@@ -571,7 +571,7 @@ decide_if_publishable_server(time_t now)
 
   if (options->ClientOnly)
     return 0;
-  if (options->NoPublish)
+  if (!options->PublishServerDescriptor)
     return 0;
   if (!server_mode(options))
     return 0;
