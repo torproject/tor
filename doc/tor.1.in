@@ -441,7 +441,7 @@ If \fB/\fP\fIMASK\fP is omitted then this policy just applies to the host
 given.  Instead of giving a host or network you can also use "\fB*\fP" to
 denote the universe (0.0.0.0/0).  \fIPORT\fP can be a single port number,
 an interval of ports "\fIFROM_PORT\fP\fB-\fP\fITO_PORT\fP", or "\fB*\fP".
-If \fiPORT\fP is omitted, that means "\fB*\fP".
+If \fIPORT\fP is omitted, that means "\fB*\fP".
 
 For example, "accept 18.7.22.69:*,reject 18.0.0.0/8:*,accept *:*" would
 reject any traffic destined for MIT except for web.mit.edu, and
