@@ -3662,7 +3662,8 @@ write_configuration_file(const char *fname, or_options_t *options)
     tor_free(fn_tmp);
   }
 
-  write_str_to_file(fname, new_val, 0);
+  if (write_str_to_file(fname, new_val, 0) < 0)
+    goto err;
 
   r = 0;
   goto done;
