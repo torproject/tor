@@ -379,13 +379,14 @@ rend_cache_store(const char *desc, size_t desc_len)
   tor_snprintf(key, sizeof(key), "%c%s", parsed->version?'1':'0', query);
   now = time(NULL);
   if (parsed->timestamp < now-REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
-    log_warn(LD_REND,"Service descriptor %s is too old.", safe_str(query));
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Service descriptor %s is too old.", safe_str(query));
     rend_service_descriptor_free(parsed);
     return -1;
   }
   if (parsed->timestamp > now+REND_CACHE_MAX_SKEW) {
-    log_warn(LD_REND,"Service descriptor %s is too far in the future.",
-             safe_str(query));
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Service descriptor %s is too far in the future.", safe_str(query));
     rend_service_descriptor_free(parsed);
     return -1;
   }
