@@ -217,6 +217,12 @@
    hopefully there's an easy design in the literature to point to --
    this is clearly not my field.
 
+3.10. Different-priority cells arriving on the same TCP connection.
+
+
+
+
+
 4. Sample designs.
 
 4.1. Two classes of service for circuits.
