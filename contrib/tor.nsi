@@ -113,7 +113,7 @@ Section "Tor" Tor
    File /oname=$configfile "..\src\config\torrc.sample"
 SectionEnd
 
-Section "OpenSSL 0.9.7e" OpenSSL
+Section "OpenSSL 0.9.8a" OpenSSL
    SetOutPath $INSTDIR
    File "${BIN}\libeay32.dll"
    File "${BIN}\ssleay32.dll"
