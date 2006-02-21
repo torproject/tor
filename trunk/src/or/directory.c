@@ -1722,8 +1722,9 @@ directory_handle_command_post(connection_t *conn, char *headers,
     /* rendezvous descriptor post */
     if (rend_cache_store(body, body_len) < 0) {
 //      char tmp[1024*2+1];
-      log_notice(LD_DIRSERV,"Rejected rend descriptor (length %d) from %s.",
-                 (int)body_len, origin);
+      log_fn(LOG_PROTOCOL_WARN, LD_DIRSERV,
+             "Rejected rend descriptor (length %d) from %s.",
+             (int)body_len, origin);
 #if 0
       if (body_len <= 1024) {
         base16_encode(tmp, sizeof(tmp), body, body_len);
