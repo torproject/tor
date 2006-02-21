@@ -1,4 +1,4 @@
-Changes in version 0.1.1.14-alpha - 2006-02-xx
+Changes in version 0.1.1.14-alpha - 2006-02-20
   o Bugfixes on 0.1.1.x:
     - Don't die if we ask for a stdout or stderr log (even implicitly)
       and we're set to RunAsDaemon -- just warn.
@@ -15,6 +15,8 @@ Changes in version 0.1.1.14-alpha - 2006-02-xx
     - We were ignoring the IS_FAST flag in the directory status,
       meaning we were willing to pick trivial-bandwidth nodes for "fast"
       connections.
+    - If the controller's SAVECONF command fails (e.g. due to file
+      permissions), let it know that it failed.
 
   o Features:
     - If we're trying to be a Tor server and running Windows 95/98/ME
@@ -40,6 +42,13 @@ Changes in version 0.1.1.14-alpha - 2006-02-xx
     - Now we can target arch and OS in rpm builds (contributed by
       Phobos). Also make the resulting dist-rpm filename match the
       target arch.
+    - New config options to help controllers: FetchServerDescriptors
+      and FetchHidServDescriptors for whether to fetch server
+      info and hidserv info or let the controller do it, and
+      PublishServerDescriptor and PublishHidServDescriptors.
+    - Also let the controller set the __AllDirActionsPrivate config
+      option if you want all directory fetches/publishes to happen via
+      Tor (it assumes your controller bootstraps your circuits).
 
 
 Changes in version 0.1.1.13-alpha - 2006-02-09
