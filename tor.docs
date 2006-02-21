@@ -3,7 +3,6 @@ README
 INSTALL
 debian/README.privoxy
 debian/README.Debian
-doc/FAQ
 doc/HACKING
 doc/TODO
 doc/control-spec.txt
