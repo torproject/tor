@@ -31,7 +31,7 @@
 
 !include "MUI.nsh"
 
-!define VERSION "0.1.1.14-alpha-cvs"
+!define VERSION "0.1.1.14-alpha"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "http://tor.eff.org/"
 
@@ -121,16 +121,27 @@ SectionEnd
 
 Section "Documents" Docs
    SetOutPath "$INSTDIR\Documents"
-   File "..\doc\tor-spec.txt"
-   #File "..\doc\FAQ"
+   ;File "..\doc\FAQ"
    File "..\doc\HACKING"
-   File "..\doc\rend-spec.txt"
    File "..\doc\control-spec.txt"
-   File "..\doc\tor-doc.html"
-   File "..\doc\tor-doc.css"
+   File "..\doc\dir-spec.txt"
+   File "..\doc\rend-spec.txt"
+   File "..\doc\socks-extensions.txt"
+   File "..\doc\stylesheet.css"
+   File "..\doc\tor-spec.txt"
+   File "..\doc\tor-doc-osx.html"
+   File "..\doc\tor-doc-server.html"
+   File "..\doc\tor-doc-unix.html"
+   File "..\doc\tor-doc-win32.html"
+   File "..\doc\tor-hidden-service.html"
+   File "..\doc\tor-switchproxy.html"
+   File "..\doc\version-spec.txt"
+   ;
    File "..\doc\tor-resolve.html"
    File "..\doc\tor-reference.html"
+   ;
    File "..\doc\design-paper\tor-design.pdf"
+   ;
    File "..\README"
    File "..\AUTHORS"
    File "..\ChangeLog"
