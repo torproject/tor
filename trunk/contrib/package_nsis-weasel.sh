@@ -78,4 +78,4 @@ echo "Now run"
 echo '  t:'
 echo '  cd \tor\win_tmp\contrib'
 echo '  c:\programme\nsis\makensis tor.nsi'
-echo '  move tor-*.exe ../..'
+echo '  move tor-*.exe ../../..'
