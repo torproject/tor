@@ -259,7 +259,7 @@ exit 0
 
 %files
 %defattr(-,root,root)
-%doc AUTHORS INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO doc/FAQ
+%doc AUTHORS INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO
 %{_mandir}/man*/*
 %{_bindir}/tor
 %{_bindir}/torctl
