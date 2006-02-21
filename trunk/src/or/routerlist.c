@@ -2837,10 +2837,11 @@ routers_update_all_from_networkstatus(void)
           log_notice(LD_GENERAL, "This version of Tor (%s) is newer than any "
                  "recommended version%s, according to %d/%d recent network "
                  "statuses.  Versions recommended by at least %d recent "
-                 "authorities are: %s",
+                 "authorit%s are: %s",
                  VERSION,
                  consensus == VS_NEW_IN_SERIES ? " in its series" : "",
-                 n_recent-n_recommended, n_recent, n_recent/2, rec);
+                 n_recent-n_recommended, n_recent, n_recent/2,
+                 n_recent/2 > 1 ? "ies" : "y", rec);
           have_warned_about_new_version = 1;
           tor_free(rec);
         }
