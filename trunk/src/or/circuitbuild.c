@@ -1792,7 +1792,8 @@ add_an_entry_guard(routerinfo_t *chosen)
 
 again:
   if (--tries_left <= 0) {
-    log_warn(LD_CIRC, "Tried finding a new entry, but failed. Bad news. XXX.");
+    log_warn(LD_CIRC, "Tried finding a new entry guard, but failed. "
+             "Can you reach the Tor network?");
     return NULL;
   }
   if (chosen)
