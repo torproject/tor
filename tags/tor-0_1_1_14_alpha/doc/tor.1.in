@@ -1,0 +1,799 @@
+.TH TOR 1 "January 2006" "TOR"
+.SH NAME
+tor \- The second-generation onion router
+.SH SYNOPSIS
+.B tor
+[\fIOPTION value\fR]...
+.SH DESCRIPTION
+.I tor
+is a connection-oriented anonymizing communication
+service. Users choose a source-routed path through a set of nodes, and
+negotiate a "virtual circuit" through the network, in which each node
+knows its predecessor and successor, but no others. Traffic flowing down
+the circuit is unwrapped by a symmetric key at each node, which reveals
+the downstream node.
+.PP
+Basically \fItor\fR provides a distributed network of servers ("onion
+routers"). Users bounce their TCP streams -- web traffic, ftp, ssh, etc --
+around the routers, and recipients, observers, and even the routers
+themselves have difficulty tracking the source of the stream.
+.SH OPTIONS
+\fB-h, -help\fP
+Display a short help message and exit.
+.LP
+.TP
+\fB-f \fR\fIFILE\fP
+FILE contains further "option value" pairs. (Default: @CONFDIR@/torrc)
+.LP
+.TP
+Other options can be specified either on the command-line (\fI--option
+value\fR), or in the configuration file (\fIoption value\fR).
+Options are case-insensitive.
+.LP
+.TP
+\fBBandwidthRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
+A token bucket limits the average incoming bandwidth on this node to
+the specified number of bytes per second. (Default: 3 MB)
+.LP
+.TP
+\fBBandwidthBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
+Limit the maximum token bucket size (also known as the burst) to the
+given number of bytes. (Default: 6 MB)
+.LP
+.TP
+\fBMaxAdvertisedBandwidth \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
+If set, we will not advertise more than this amount of bandwidth for our
+BandwidthRate. Server operators who want to reduce the number of clients
+who ask to build circuits through them (since this is proportional to
+advertised bandwidth rate) can thus reduce the CPU demands on their
+server without impacting network performance.
+.LP
+.TP
+\fBConnLimit \fR\fINUM\fP
+The minimum number of file descriptors that must be available to
+the Tor process before it will start. Tor will ask the OS for as
+many file descriptors as the OS will allow (you can find this
+by "ulimit -H -n"). If this number is less than ConnLimit, then
+Tor will refuse to start.
+
+You probably don't need to adjust this. It has no effect on
+Windows since that platform lacks getrlimit(). (Default: 1024)
+.LP
+.TP
+\fBControlPort \fR\fIPort\fP
+If set, Tor will accept connections on
+this port, and allow those connections to control the Tor process using the
+Tor Control Protocol (described in control-spec.txt).  Note: unless you also
+specify one of \fBHashedControlPassword\fP or \fBCookieAuthentication\fP,
+setting this option will cause Tor to allow any process on the local host to
+control it.
+.LP
+.TP
+\fBControlListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind the controller listener to this address. If you specify a port,
+bind to this port rather than the one specified in ControlPort. We
+strongly recommend that you leave this alone unless you know what you're
+doing, since giving attackers access to your control listener is really
+dangerous. (Default: 127.0.0.1)
+.LP
+.TP
+\fBHashedControlPassword \fR\fIhashed_password\fP
+Don't allow any connections on the control port except when the other process
+knows the password whose one-way hash is \fIhashed_password\fP.  You can
+compute the hash of a password by running "tor --hash-password
+\fIpassword\fP".
+.LP
+.TP
+\fBCookieAuthentication \fR\fB0\fR|\fB1\fP
+If this option is set to 1, don't allow any connections on the control port
+except when the connecting process knows the contents of a file named
+"control_auth_cookie", which Tor will create in its data directory.  This
+authentication methods should only be used on systems with good filesystem
+security. (Default: 0)
+.LP
+.TP
+\fBDataDirectory \fR\fIDIR\fP
+Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
+.LP
+.TP
+\fBDirFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
+Every time the specified period elapses, Tor downloads a directory.
+A directory contains a signed list of all known servers as well as
+their current liveness status. A value of "0 seconds" tells Tor to choose an
+appropriate default. (Default: 1 hour for clients, 20 minutes for servers)
+.LP
+.TP
+\fBDirServer \fR[\fInickname\fR] [\fBv1\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
+Use a nonstandard authoritative directory server at the provided
+address and port, with the specified key fingerprint.  This option can
+be repeated many times, for multiple authoritative directory
+servers.  If the "v1" option is provided, Tor will use this server as an
+authority for old-style (v1) directories as well.  (Only directory mirrors
+care about this.) If no \fBdirserver\fP line is given, Tor will use the default
+directory servers: moria1, moria2, and tor26.  NOTE: this option is intended
+for setting up a private Tor network with its own directory authorities.  If
+you use it, you will be distinguishable from other users, because you won't
+believe the same authorities they do.
+.LP
+.TP
+\fBFetchHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
+If set to 0, Tor will never fetch any hidden service descriptors from
+the rendezvous directories. This option is only useful if you're using
+a Tor controller that handles hidserv fetches for you.
+(Default: 1)
+.LP
+.TP
+\fBFetchServerDescriptors \fR\fB0\fR|\fB1\fR\fP
+If set to 0, Tor will never fetch any network status summaries or server
+descriptors from the directory servers. This option is only useful if
+you're using a Tor controller that handles directory fetches for you.
+(Default: 1)
+.LP
+.TP
+\fBGroup \fR\fIGID\fP
+On startup, setgid to this user.
+.LP
+.TP
+\fBHttpProxy\fR \fIhost\fR[:\fIport\fR]\fP
+Tor will make all its directory requests through this host:port
+(or host:80 if port is not specified),
+rather than connecting directly to any directory servers.
+.LP
+.TP
+\fBHttpProxyAuthenticator\fR \fIusername:password\fP
+If defined, Tor will use this username:password for Basic Http proxy
+authentication, as in RFC 2617. This is currently the only form of
+Http proxy authentication that Tor supports; feel free to submit a
+patch if you want it to support others.
+.LP
+.TP
+\fBHttpsProxy\fR \fIhost\fR[:\fIport\fR]\fP
+Tor will make all its OR (SSL) connections through this host:port
+(or host:443 if port is not specified), via HTTP CONNECT rather than
+connecting directly to servers.  You may want to set \fBFascistFirewall\fR
+to restrict the set of ports you might try to connect to, if your Https
+proxy only allows connecting to certain ports.
+.LP
+.TP
+\fBHttpsProxyAuthenticator\fR \fIusername:password\fP
+If defined, Tor will use this username:password for Basic Https proxy
+authentication, as in RFC 2617. This is currently the only form of
+Https proxy authentication that Tor supports; feel free to submit a
+patch if you want it to support others.
+.LP
+.TP
+\fBKeepalivePeriod \fR\fINUM\fP
+To keep firewalls from expiring connections, send a padding keepalive
+cell every NUM seconds on open connections that are in use. If the
+connection has no open circuits, it will instead be closed after NUM
+seconds of idleness. (Default: 5 minutes)
+.LP
+.TP
+\fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBstderr\fR|\fBstdout\fR|\fBsyslog\fR\fP
+Send all messages between \fIminSeverity\fR and \fImaxSeverity\fR to
+the standard output stream, the standard error stream, or to the system
+log. (The "syslog" value is only supported on Unix.)  Recognized
+severity levels are debug, info, notice, warn, and err.  We advise using
+"notice" in most cases, since anything more verbose may provide sensitive
+information to an attacker who obtains the logs.  If only one
+severity level is given, all messages of that level or higher will be
+sent to the listed destination.
+.LP
+.TP
+\fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBfile\fR \fIFILENAME\fP
+As above, but send log messages to the listed filename.  The "Log"
+option may appear more than once in a configuration file.  Messages
+are sent to all the logs that match their severity level.
+.LP
+.TP
+\fBOutboundBindAddress \fR\fIIP\fP
+Make all outbound connections originate from the IP address specified.  This
+is only useful when you have multiple network interfaces, and you want all
+of Tor's outgoing connections to use a single one.
+.LP
+.TP
+\fBPidFile \fR\fIFILE\fP
+On startup, write our PID to FILE. On clean shutdown, remove FILE.
+.LP
+.TP
+\fBRunAsDaemon \fR\fB0\fR|\fB1\fR\fP
+If 1, Tor forks and daemonizes to the background. (Default: 0)
+.LP
+.TP
+\fBSafeLogging \fR\fB0\fR|\fB1\fP
+If 1, Tor replaces potentially sensitive strings in the logs
+(e.g. addresses) with the string [scrubbed]. This way logs can still be
+useful, but they don't leave behind personally identifying information
+about what sites a user might have visited. (Default: 1)
+.LP
+.TP
+\fBStatusFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
+Every time the specified period elapses, Tor downloads signed status
+information about the current state of known servers.  A value of
+"0 seconds" tells Tor to choose an appropriate default. (Default: 30
+minutes for clients, 15 minutes for servers)
+.LP
+.TP
+\fBUser \fR\fIUID\fP
+On startup, setuid to this user.
+.LP
+.TP
+\fBHardwareAccel \fR\fI0|1\fP
+If non-zero, try to use crypto hardware acceleration when
+available. This is untested and probably buggy. (Default: 0)
+
+.SH CLIENT OPTIONS
+.PP
+The following options are useful only for clients (that is, if \fBSOCKSPort\fP is non-zero):
+.LP
+.TP
+\fBAllowUnverifiedNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
+Allow no-name routers (ones that the dirserver operators don't
+know anything about) in only these positions in your circuits.
+The default is "middle,rendezvous", and other choices are not advised.
+.LP
+.TP
+\fBClientOnly \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor will under no circumstances run as a server. The default
+is to run as a client unless ORPort is configured.  (Usually,
+you don't need to set this; Tor is pretty smart at figuring out whether
+you are reliable and high-bandwidth enough to be a useful server.)
+(Default: 0)
+.LP
+.TP
+\fBEntryNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+A list of preferred nodes to use for the first hop in the circuit, if possible.
+.LP
+.TP
+\fBExitNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+A list of preferred nodes to use for the last hop in the circuit, if possible.
+.LP
+.TP
+\fBExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+A list of nodes to never use when building a circuit.
+.LP
+.TP
+\fBStrictExitNodes \fR\fB0\fR|\fB1\fR\fP
+If 1, Tor will never use any nodes besides those listed in "exitnodes" for
+the last hop of a circuit.
+.LP
+.TP
+\fBStrictEntryNodes \fR\fB0\fR|\fB1\fR\fP
+If 1, Tor will never use any nodes besides those listed in "entrynodes" for
+the first hop of a circuit.
+.LP
+.TP
+\fBFascistFirewall \fR\fB0\fR|\fB1\fR\fP
+If 1, Tor will only create outgoing connections to ORs running on ports that
+your firewall allows (defaults to 80 and 443; see \fBFirewallPorts\fR).  This will
+allow you to run Tor as a client behind a firewall with restrictive policies,
+but will not allow you to run as a server behind such a firewall.
+This option is deprecated; use
+ReachableAddresses instead.
+.LP
+.TP
+\fBFirewallPorts \fR\fIPORTS\fP
+A list of ports that your firewall allows you to connect to.  Only
+used when \fBFascistFirewall\fR is set. This option is deprecated; use
+ReachableAddresses instead. (Default: 80, 443)
+.LP
+.TP
+\fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
+A comma-separated list of IP addresses and ports that your firewall allows you
+to connect to. The format is as
+for the addresses in ExitPolicy, except that "accept" is understood
+unless "reject" is explicitly provided.  For example, 'ReachableAddresses
+99.0.0.0/8, reject 18.0.0.0/8:80, accept *:80' means that your
+firewall allows connections to everything inside net 99, rejects port
+80 connections to net 18, and accepts connections to port 80 otherwise.
+(Default: 'accept *:*'.)
+.LP
+.TP
+\fBReachableDirAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
+Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
+these restrictions when fetching directory information, using standard HTTP
+GET requests. If not set explicitly then the value of \fBfBReachableAddresses\fP
+is used.  If \fBHttpProxy\fR is set then these connections will go through that
+proxy.
+.LP
+.TP
+\fBReachableORAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
+Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
+these restrictions when connecting to Onion Routers, using TLS/SSL.  If not set
+explicitly then the value of \fBfBReachableAddresses\fP is used. If
+\fBHttpsProxy\fR is set then these connections will go through that proxy.
+
+The separation between \fBReachableORAddresses\fP and
+\fBReachableDirAddresses\fP is only interesting when you are connecting through
+proxies (see \fBHttpProxy\fR and \fBHttpsProxy\fR).  Most proxies limit TLS
+connections (which Tor uses to connect to Onion Routers) to port 443, and some
+limit HTTP GET requests (which Tor uses for fetching directory information) to
+port 80.
+.LP
+.TP
+\fBLongLivedPorts \fR\fIPORTS\fP
+A list of ports for services that tend to have long-running connections
+(e.g. chat and interactive shells). Circuits for streams that use these
+ports will contain only high-uptime nodes, to reduce the chance that a
+node will go down before the stream is finished. (Default: 21, 22, 706, 1863, 5050, 
+5190, 5222, 5223, 6667, 8300, 8888)
+.LP
+.TP
+\fBMapAddress\fR \fIaddress\fR \fInewaddress\fR
+When a request for address arrives to Tor, it will rewrite it to newaddress before 
+processing it. For example, if you always want connections to www.indymedia.org to 
+exit via \fItorserver\fR (where \fItorserver\fR is the nickname of the server), 
+use "MapAddress www.indymedia.org www.indymedia.org.torserver.exit".
+.LP
+.TP
+\fBNewCircuitPeriod \fR\fINUM\fP
+Every NUM seconds consider whether to build a new circuit. (Default: 30 seconds)
+.LP
+.TP
+\fBMaxCircuitDirtiness \fR\fINUM\fP
+Feel free to reuse a circuit that was first used at most NUM seconds
+ago, but never attach a new stream to a circuit that is too old. (Default: 10 minutes)
+.LP
+.TP
+\fBNodeFamily \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+The named Tor servers constitute a "family" of similar or co-administered
+servers, so never use any two of them in the same circuit. Defining a
+NodeFamily is only needed when a server doesn't list the family itself
+(with MyFamily). This option can be used multiple times.
+.LP
+.TP
+.\" \fBPathlenCoinWeight \fR\fI0.0-1.0\fP
+.\" Paths are 3 hops plus a geometric distribution centered around this coinweight. 
+.\" Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
+.\" .TP
+\fBRendNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+A list of preferred nodes to use for the rendezvous point, if possible.
+.LP
+.TP
+\fBRendExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+A list of nodes to never use when choosing a rendezvous point.
+.LP
+.TP
+\fBSOCKSPort \fR\fIPORT\fP
+Advertise this port to listen for connections from SOCKS-speaking
+applications.  Set this to 0 if you don't want to allow application
+connections. (Default: 9050)
+.LP
+.TP
+\fBSOCKSListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind to this address to listen for connections from SOCKS-speaking
+applications. (Default: 127.0.0.1) You can also specify a port
+(e.g. 192.168.0.1:9100). This directive can be specified multiple times
+to bind to multiple addresses/ports.
+.LP
+.TP
+\fBSOCKSPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
+Set an entrance policy for this server, to limit who can connect to the SOCKS ports. 
+The policies have the same form as exit policies below.
+.LP
+.TP
+\fBTrackHostExits \fR\fIhost\fR,\fI.domain\fR,\fI...\fR\fP
+For each value in the comma separated list, Tor will track recent connections
+to hosts that match this value and attempt to
+reuse the same exit node for each. If the value is prepended with a '.', it is
+treated as matching an entire domain. If one of the values is just a '.', it
+means match everything. This option is useful if you frequently connect to
+sites that will expire all your authentication cookies (ie log you out) if
+your IP address changes. Note that this option does have the disadvantage of
+making it more clear that a given history is
+associated with a single user. However, most people who would wish to observe
+this will observe it through cookies or other protocol-specific means anyhow.
+.LP
+.TP
+\fBTrackHostExitsExpire \fR\fINUM\fP
+Since exit servers go up and down, it is desirable to expire the association
+between host and exit server after NUM seconds. The default
+is 1800 seconds (30 minutes).
+.LP
+.TP
+\fBUseEntryGuards \fR\fI0|1\fP
+If this option is set to 1, we pick a few long-term entry servers, and
+try to stick with them.  This is desirable because
+constantly changing servers increases the odds that an adversary who owns
+some servers will observe a fraction of your paths.
+(Defaults to 1.)
+.LP
+.TP
+\fBNumEntryGuards \fR\fINUM\fP
+If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
+as long-term entries for our circuits.
+(Defaults to 3.)
+.LP
+.TP
+\fBTestSocks \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled, Tor will make a notice-level log entry for
+each connection to the Socks port indicating whether the request used
+a hostname (safe) or an IP address (unsafe). This helps to determine
+whether an application using Tor is possibly leaking DNS requests.
+(Default: 0)
+
+.SH SERVER OPTIONS
+.PP
+The following options are useful only for servers (that is, if \fBORPort\fP is non-zero):
+.LP
+.TP
+\fBAddress \fR\fIaddress\fP
+The IP or fqdn of this server (e.g. moria.mit.edu). You can leave this
+unset, and Tor will guess your IP.
+.LP
+.TP
+\fBAssumeReachable \fR\fB0\fR|\fB1\fR\fP
+This option is used when bootstrapping a new Tor network. If set to 1,
+don't do self-reachability testing; just upload your server descriptor
+immediately. If \fBAuthoritativeDirectory\fP is also set, this option
+instructs the dirserver to bypass remote reachability testing too and
+list all connected servers as running.
+.LP
+.TP
+\fBContactInfo \fR\fIemail_address\fP
+Administrative contact information for server.
+.LP
+.TP
+\fBExitPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
+Set an exit policy for this server. Each policy is of the form
+"\fBaccept\fP|\fBreject\fP \fIADDR\fP[\fB/\fP\fIMASK\fP]\fB[:\fP\fIPORT\fP]".
+If \fB/\fP\fIMASK\fP is omitted then this policy just applies to the host
+given.  Instead of giving a host or network you can also use "\fB*\fP" to
+denote the universe (0.0.0.0/0).  \fIPORT\fP can be a single port number,
+an interval of ports "\fIFROM_PORT\fP\fB-\fP\fITO_PORT\fP", or "\fB*\fP".
+If \fIPORT\fP is omitted, that means "\fB*\fP".
+
+For example, "accept 18.7.22.69:*,reject 18.0.0.0/8:*,accept *:*" would
+reject any traffic destined for MIT except for web.mit.edu, and
+accept anything else.
+
+To specify all internal and link-local networks (including 0.0.0.0/8,
+169.254.0.0/16, 127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8, and
+172.16.0.0/12), you can use the "private" alias instead of an address.
+These addresses are rejected by default (at the beginning of your
+exit policy) unless you set the ExitPolicyRejectPrivate config option
+to 0. For example, once you've done that, you could allow HTTP to
+127.0.0.1 and block all other connections to internal networks with
+"accept
+127.0.0.1:80,reject private:*".  See RFC 1918 and RFC 3330 for more
+details about internal and reserved IP address space.
+
+This directive can be specified multiple times so you don't have to put
+it all on one line.
+
+Policies are considered first to last, and the first match wins. If
+you want to _replace_ the default exit policy, end your exit policy with
+either a reject *:* or an accept *:*. Otherwise, you're _augmenting_
+(prepending to) the default exit policy. The default exit policy is:
+.PD 0
+.RS 12
+.IP "reject *:25"
+.IP "reject *:119"
+.IP "reject *:135-139"
+.IP "reject *:445"
+.IP "reject *:465"
+.IP "reject *:587"
+.IP "reject *:1214"
+.IP "reject *:4661-4666"
+.IP "reject *:6346-6429"
+.IP "reject *:6699"
+.IP "reject *:6881-6999"
+.IP "accept *:*"
+.RE
+.PD
+.LP
+.TP
+\fBExitPolicyRejectPrivate \fR\fB0\fR|\fB1\fR\fP
+Reject all private (local) networks at the beginning of your exit
+policy. See above entry on ExitPolicy. (Default: 1)
+.LP
+.TP
+\fBMaxOnionsPending \fR\fINUM\fP
+If you have more than this number of onionskins queued for decrypt, reject new ones. (Default: 100)
+.LP
+.TP
+\fBMyFamily \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+Declare that this Tor server is controlled or administered by a group
+or organization identical or similar to that of the other named servers.
+When two servers both declare that they are in the same 'family', Tor clients
+will not use them in the same circuit.  (Each server only needs to list the
+other servers in its family; it doesn't need to list itself, but it won't hurt.)
+.LP
+.TP
+\fBNickname \fR\fIname\fP
+Set the server's nickname to 'name'. Nicknames must be between 1
+and 19 characters inclusive, and must contain only the characters
+[a-zA-Z0-9].
+.LP
+.TP
+\fBNumCPUs \fR\fInum\fP
+How many processes to use at once for decrypting onionskins. (Default: 1)
+.LP
+.TP
+\fBORPort \fR\fIPORT\fP
+Advertise this port to listen for connections from Tor clients and servers.
+.LP
+.TP
+\fBORListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind to this IP address to listen for connections from Tor clients and
+servers. If you specify a port, bind to this port rather than the one
+specified in ORPort. (Default: 0.0.0.0)
+.LP
+.TP
+\fBPublishServerDescriptor \fR\fB0\fR|\fB1\fR\fP
+If set to 0, Tor will act as a server if you have an ORPort
+defined, but it will not publish its descriptor to the dirservers. This
+option is useful if you're testing out your server, or if you're using
+a Tor controller that handles directory publishing for you.
+(Default: 1)
+.LP
+.TP
+\fBRedirectExit \fR\fIpattern target\fP
+Whenever an outgoing connection tries to connect to one of a given set
+of addresses, connect to \fItarget\fP (an \fIaddress:port\fP pair) instead.
+The address
+pattern is given in the same format as for an exit policy.  The
+address translation applies after exit policies are applied.  Multiple
+\fBRedirectExit\fP options can be used: once any one has matched
+successfully, no subsequent rules are considered.  You can specify that no
+redirection is to be performed on a given set of addresses by using the
+special target string "pass", which prevents subsequent rules from being
+considered.
+.LP
+.TP
+\fBShutdownWaitLength\fR \fINUM\fP
+When we get a SIGINT and we're a server, we begin shutting down: we close
+listeners and start refusing new circuits. After \fBNUM\fP seconds,
+we exit. If we get a second SIGINT, we exit immediately.  (Default:
+30 seconds)
+.LP
+.TP
+\fBDirPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
+Every time the specified period elapses, Tor uploads its server
+descriptors to the directory servers.  This information is also
+uploaded whenever it changes.  (Default: 20 minutes)
+.LP
+.TP
+\fBAccountingMax \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
+Never send more than the specified number of bytes in a given
+accounting period, or receive more than that number in the period.
+For example, with AccountingMax set to 1 GB, a server could send 900 MB
+and receive 800 MB and continue running. It will only hibernate once one
+of the two reaches 1 GB.
+When the number of bytes is exhausted, Tor will hibernate until some
+time in the next accounting period.  To prevent all servers from
+waking at the same time, Tor will also wait until a random point in
+each period before waking up.  If you have bandwidth cost issues,
+enabling hibernation is preferable to setting a low bandwidth, since it
+provides users with a collection of fast servers that are up some of
+the time, which is more useful than a set of slow servers that are
+always "available".
+.LP
+.TP
+\fBAccountingStart \fR\fBday\fR|\fBweek\fR|\fBmonth\fR [\fIday\fR] \fIHH:MM\fR\fP
+Specify how long accounting periods last.  If \fBmonth\fP is given,
+each accounting period runs from the time \fIHH:MM\fR on the
+\fIday\fRth day of one month to the same day and time of the next.
+(The day must be between 1 and 28.)  If \fBweek\fP is given, each
+accounting period runs from the time \fIHH:MM\fR of the \fIday\fRth
+day of one week to the same day and time of the next week, with Monday
+as day 1 and Sunday as day 7.  If \fBday\fR is given, each accounting
+period runs from the time \fIHH:MM\fR each day to the same time on the
+next day.  All times are local, and given in 24-hour time.  (Defaults to
+"month 1 0:00".)
+
+.SH DIRECTORY SERVER OPTIONS
+.PP
+The following options are useful only for directory servers (that is, if \fBDirPort\fP is non-zero):
+.LP
+.TP
+\fBAuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set to 1, Tor operates as an authoritative
+directory server.  Instead of caching the directory, it generates its
+own list of good servers, signs it, and sends that to the clients.
+Unless the clients already have you listed as a trusted directory, you
+probably do not want to set this option.  Please coordinate with the other
+admins at tor-ops@freehaven.net if you think you should be a directory.
+.LP
+.TP
+\fBV1AuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor also
+generates a version 1 directory (for Tor clients up to 0.1.0.x).
+(As of Tor 0.1.1.12 every (v2) authoritative directory still provides most of
+the v1 directory functionality, even without this option set to 1.
+This however is expected to change in the future.)
+.LP
+.TP
+\fBVersioningAuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set to 1, Tor adds information on
+which versions of Tor are still believed safe for use to
+the published directory.  Each version 1 authority is
+automatically a versioning authority; version 2 authorities
+provide this service optionally.  See \fBRecommendedVersions\fP,
+\fBRecommendedClientVersions\fP, and \fBRecommendedServerVersions\fP.
+.LP
+.TP
+\fBNamingAuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set to 1, then the server advertises that it has
+opinions about nickname-to-fingerprint bindings.  It will include these
+opinions in its published network-status pages, by listing servers with
+the flag "Named" if a correct binding between that nickname and
+fingerprint has been registered with the dirserver.  Naming dirservers
+will refuse to accept or publish descriptors that contradict a
+registered binding.  See \fBapproved-routers\fP in the \fBFILES\fP
+section below.
+.LP
+.TP
+\fBDirPort \fR\fIPORT\fP
+Advertise the directory service on this port.
+.LP
+.TP
+\fBDirListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind the directory service to this address. If you specify a port, bind
+to this port rather than the one specified in DirPort. (Default: 0.0.0.0)
+.LP
+.TP
+\fBDirPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
+Set an entrance policy for this server, to limit who can connect to the directory ports. 
+The policies have the same form as exit policies above.
+.LP
+.TP
+\fBRecommendedVersions \fR\fISTRING\fP
+STRING is a comma-separated list of Tor versions currently believed
+to be safe. The list is included in each directory, and nodes which
+pull down the directory learn whether they need to upgrade.  This
+option can appear multiple times: the values from multiple lines are
+spliced together.
+When this is set then
+\fBVersioningAuthoritativeDirectory\fP should be set too.
+.LP
+.TP
+\fBRecommendedClientVersions \fR\fISTRING\fP
+STRING is a comma-separated list of Tor versions currently believed
+to be safe for clients to use.  This information is included in version 2
+directories.  If this is not set then the value of \fBRecommendedVersions\fR
+is used.
+When this is set then
+\fBVersioningAuthoritativeDirectory\fP should be set too.
+.LP
+.TP
+\fBRecommendedServerVersions \fR\fISTRING\fP
+STRING is a comma-separated list of Tor versions currently believed
+to be safe for servers to use.  This information is included in version 2
+directories.  If this is not set then the value of \fBRecommendedVersions\fR
+is used.
+When this is set then
+\fBVersioningAuthoritativeDirectory\fP should be set too.
+.LP
+.TP
+\fBDirAllowPrivateAddresses \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor will accept router descriptors with arbitrary "Address"
+elements. Otherwise, if the address is not an IP or is a private IP,
+it will reject the router descriptor. Defaults to 0.
+.LP
+.TP
+\fBRunTesting \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor tries to build circuits through all of the servers it
+knows about, so it can tell which are up and which are down.  This
+option is only useful for authoritative directories, so you probably
+don't want to use it.
+
+.SH HIDDEN SERVICE OPTIONS
+.PP
+The following options are used to configure a hidden service.
+.LP
+.TP
+\fBHiddenServiceDir \fR\fIDIRECTORY\fP
+Store data files for a hidden service in DIRECTORY.  Every hidden
+service must have a separate directory.  You may use this option multiple
+times to specify multiple services.
+.LP
+.TP
+\fBHiddenServicePort \fR\fIVIRTPORT \fR[\fITARGET\fR]\fP
+Configure a virtual port VIRTPORT for a hidden service.  You may use this
+option multiple times; each time applies to the service using the most recent
+hiddenservicedir.  By default, this option maps the virtual port to the
+same port on 127.0.0.1.  You may override the target port, address, or both
+by specifying a target of addr, port, or addr:port.
+.LP
+.TP
+\fBHiddenServiceNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+If possible, use the specified nodes as introduction points for the hidden
+service. If this is left unset, Tor will be smart and pick some reasonable
+ones; most people can leave this unset.
+.LP
+.TP
+\fBHiddenServiceExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+Do not use the specified nodes as introduction points for the hidden
+service. In normal use there is no reason to set this.
+.LP
+.TP
+\fBPublishHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
+If set to 0, Tor will run any hidden services you configure, but it won't
+advertise them to the rendezvous directory. This option is only useful
+if you're using a Tor controller that handles hidserv publishing for you.
+(Default: 1)
+.LP
+.TP
+\fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
+Every time the specified period elapses, Tor uploads any rendezvous
+service descriptors to the directory servers.  This information is also
+uploaded whenever it changes.  (Default: 20 minutes)
+
+.\" UNDOCUMENTED
+.\" ignoreversion
+
+.SH SIGNALS
+Tor catches the following signals:
+.LP
+.TP
+\fBSIGTERM\fR
+Tor will catch this, clean up and sync to disk if necessary, and exit.
+.LP
+.TP
+\fBSIGINT\fR
+Tor clients behave as with SIGTERM; but Tor servers will do a controlled
+slow shutdown, closing listeners and waiting 30 seconds before exiting.
+(The delay can be configured with the ShutdownWaitLength config option.)
+.LP
+.TP
+\fBSIGHUP\fR
+The signal instructs Tor to reload its configuration (including closing
+and reopening logs), fetch a new directory, and kill and restart its
+helper processes if applicable.
+.LP
+.TP
+\fBSIGUSR1\fR
+Log statistics about current connections, past connections, and
+throughput.
+.LP
+.TP
+\fBSIGUSR2\fR
+Switch all logs to loglevel debug. You can go back to the old loglevels
+by sending a SIGHUP.
+.LP
+.TP
+\fBSIGCHLD\fR
+Tor receives this signal when one of its helper processes has exited,
+so it can clean up.
+.LP
+.TP
+\fBSIGPIPE\fR
+Tor catches this signal and ignores it.
+.LP
+.TP
+\fBSIGXFSZ\fR
+If this signal exists on your platform, Tor catches and ignores it.
+
+.SH FILES
+.LP
+.TP
+.B @CONFDIR@/torrc
+The configuration file, which contains "option value" pairs.
+.LP
+.TP
+.B @LOCALSTATEDIR@/lib/tor/
+The tor process stores keys and other data here.
+.LP
+.TP
+.B \fIDataDirectory\fP/approved-routers
+Only for naming authoritative directory servers
+(see \fBNamingAuthoritativeDirectory\fP).
+This file lists nickname to identity bindings.  Each line lists a
+nickname and a fingerprint seperated by whitespace.  See your
+\fBfingerprint\fP file in the \fIDataDirectory\fP for an example line.
+If the nickname is \fB!reject\fP then descriptors from the given
+identity (fingerprint) are rejected by the authoritative directory
+server. If it is \fB!invalid\fP then descriptors are accepted but marked
+in the directory as not valid, that is, not recommended.
+.SH SEE ALSO
+.BR privoxy (1),
+.BR tsocks (1),
+.BR torify (1)
+
+.BR http://tor.eff.org/
+
+.SH BUGS
+Plenty, probably. Tor is still in development. Please report them.
+.SH AUTHORS
+Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.

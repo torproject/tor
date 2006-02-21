@@ -1,0 +1,66 @@
+#!/bin/sh -e
+
+# checking debian-tor account
+
+uid=`getent passwd debian-tor | cut -d ":" -f 3`
+home=`getent passwd debian-tor | cut -d ":" -f 6`
+
+# if there is the uid the account is there and we can do
+# the sanit(ar)y checks otherwise we can safely create it.
+
+if [ "$uid" ]; then
+    # guess??? the checks!!!
+    if [ $uid -ge 100 ] && [ $uid -le 999 ]; then
+    	echo "debian-tor uid check: ok"
+    else
+    	echo "ERROR: debian-tor account has a non-system uid!"
+	echo "Please check /usr/share/doc/tor/README.Debian on how to"
+	echo "correct this problem"
+	exit 1
+    fi
+    if [ "$home" = "/var/lib/tor" ]; then
+        echo "debian-tor homedir check: ok"
+    else
+	echo "ERROR: debian-tor account has an invalid home directory!"
+	echo "Please check /usr/share/doc/tor/README.Debian on how to"
+	echo "correct this problem"
+	exit 1
+    fi
+else
+    # what this might mean?? oh creating a system l^Huser!
+    adduser --quiet \
+            --system \
+            --disabled-password \
+            --home /var/lib/tor \
+	    --no-create-home \
+	    --shell /bin/bash \
+	    --group \
+    debian-tor
+fi
+
+# ch{owning,moding} things around
+# We will do nothing across upgrades.
+
+if [ "$2" = "" ]; then
+    for i in lib log run; do
+	chown -R debian-tor:debian-tor /var/$i/tor
+	chmod -R 700 /var/$i/tor
+	find /var/$i/tor -type f -exec chmod 600 '{}' ';'
+    done
+    chgrp -R adm  /var/log/tor
+    chmod -R g+rX /var/log/tor
+    chmod    g+s  /var/log/tor
+else
+    # fix permissions of logs after 0.0.8+0.0.9pre5-1
+    if [ "$1" = "configure" ]; then
+        if dpkg --compare-versions "$2" le "0.0.8+0.0.9pre5-1" ; then
+            chgrp -R adm  /var/log/tor
+            chmod -R g+rX /var/log/tor
+            chmod    g+s  /var/log/tor
+        fi
+    fi
+fi
+
+#DEBHELPER#
+
+exit 0
