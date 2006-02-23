@@ -405,19 +405,32 @@ $Id$
 3.10. EXTENDCIRCUIT
 
   Sent from the client to the server.  The format is:
-      "EXTENDCIRCUIT" SP CircuitID SP ServerID *("," ServerID) CRLF
+      "EXTENDCIRCUIT" SP CircuitID SP
+                      ServerID *("," ServerID) SP
+                      ("purpose=" Purpose) CRLF
 
-  This request takes one of two forms: either the Circuit ID is zero, in
+  This request takes one of two forms: either the CircuitID is zero, in
   which case it is a request for the server to build a new circuit according
-  to the specified path, or the Circuit ID is nonzero, in which case it is a
+  to the specified path, or the CircuitID is nonzero, in which case it is a
   request for the server to extend an existing circuit with that ID according
   to the specified path.
 
-  If the request is successful, the server sends a reply containing a message
-  body consisting of the Circuit ID of the (maybe newly created) circuit.
-  The syntax is "250" SP "EXTENDED" SP CircuitID CRLF.
+  If CircuitID is 0 and "purpose=" is specified, then the circuit's
+  purpose is set. Two choices are recognized: "general" and
+  "controller". If not specified, circuits are created as "general".
 
-3.11. ATTACHSTREAM
+  If the request is successful, the server sends a reply containing a
+  message body consisting of the CircuitID of the (maybe newly created)
+  circuit. The syntax is "250" SP "EXTENDED" SP CircuitID CRLF.
+
+3.11. SETCIRCUITPURPOSE
+
+  Sent from the client to the server.  The format is:
+      "SETCIRCUITPURPOSE" SP CircuitID SP Purpose CRLF
+
+  This changes the circuit's purpose. See EXTENDCIRCUIT above for details.
+
+3.12. ATTACHSTREAM
 
   Sent from the client to the server.  The syntax is:
      "ATTACHSTREAM" SP StreamID SP CircuitID CRLF
@@ -446,7 +459,7 @@ $Id$
   via TC when "__LeaveStreamsUnattached" is false may cause a race between
   Tor and the controller, as both attempt to attach streams to circuits.}
 
-3.12. POSTDESCRIPTOR
+3.13. POSTDESCRIPTOR
 
   Sent from the client to the server. The syntax is:
     "+POSTDESCRIPTOR" CRLF Descriptor CRLF "." CRLF
@@ -462,7 +475,7 @@ $Id$
   why the server was not added.  If the descriptor is added, Tor replies with
   "250 OK".
 
-3.13. REDIRECTSTREAM
+3.14. REDIRECTSTREAM
 
   Sent from the client to the server. The syntax is:
     "REDIRECTSTREAM" SP StreamID SP Address (SP Port) CRLF
@@ -477,7 +490,7 @@ $Id$
 
   Tor replies with "250 OK" on success.
 
-3.14. CLOSESTREAM
+3.15. CLOSESTREAM
 
   Sent from the client to the server.  The syntax is:
 
@@ -491,7 +504,7 @@ $Id$
   Tor replies with "250 OK" on success, or a 512 if there aren't enough
   arguments, or a 552 if it doesn't recognize the StreamID or reason.
 
-3.15. CLOSECIRCUIT
+3.16. CLOSECIRCUIT
 
    The syntax is:
      CLOSECIRCUIT SP CircuitID *(SP Flag) CRLF
@@ -506,7 +519,7 @@ $Id$
   Tor replies with "250 OK" on success, or a 512 if there aren't enough
   arguments, or a 552 if it doesn't recognize the CircuitID.
 
-3.16. QUIT
+3.17. QUIT
 
   Tells the server to hang up on this controller connection. This command
   can be used before authenticating.

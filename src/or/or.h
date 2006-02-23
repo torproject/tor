@@ -423,7 +423,9 @@ typedef enum {
 #define CIRCUIT_PURPOSE_S_REND_JOINED 16
 /** A testing circuit; not meant to be used for actual traffic. */
 #define CIRCUIT_PURPOSE_TESTING 17
-#define _CIRCUIT_PURPOSE_MAX 17
+/** A controller made this circuit and Tor should not use it. */
+#define CIRCUIT_PURPOSE_CONTROLLER 18
+#define _CIRCUIT_PURPOSE_MAX 18
 
 /** True iff the circuit purpose <b>p</b> is for a circuit that
  * originated at this node. */
