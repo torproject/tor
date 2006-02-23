@@ -22,7 +22,7 @@
    that provide resources will get and provide better service on average.
 
    This approach could be complemented with an anonymous e-cash
-   implementation to let people spend reputations gained in one context
+   implementation to let people spend reputations gained from one context
    in another context.
 
 2.2. "Soft" or qualitative reputation tracking.
@@ -84,10 +84,10 @@
 3.3. Guard nodes
 
    As of Tor 0.1.1.11, Tor users pick from a small set of semi-permanent
-   "guard nodes" for their first hop of each circuit. This seems to have
-   a big impact on pairwise reputation systems since you will only be
-   cashing in on your reputation to a few people, and it is unlikely
-   that a given pair of nodes will use each other as guard nodes.
+   "guard nodes" for their first hop of each circuit. This seems like it
+   would have a big impact on pairwise reputation systems since you
+   will only be cashing in on your reputation to a few people, and it is
+   unlikely that a given pair of nodes will use each other as guard nodes.
 
    What does this imply? For one, it means that we don't care at all
    about the opinions of most of the servers out there -- we should
@@ -121,9 +121,9 @@
    partitioned randomly but instead based on some external properties.
    Social network topologies can provide incentives in other ways, because
    people may be more inclined to help out their friends, and more willing
-   to relay traffic if only their friends are relaying through them. It
-   also opens the door for out-of-band incentive schemes because of the
-   out-of-band links in the graph.
+   to relay traffic if most of the traffic they are relaying comes
+   from their friends. It also opens the door for out-of-band incentive
+   schemes because of the out-of-band links in the graph.
 
 3.5. Profit-maximizing vs. Altruism.
 
@@ -139,8 +139,8 @@
    if we turn the act of relaying traffic into a selfish act.
 
    I am not too worried about this issue for now, since we're aiming
-   for an incentive scheme so effective that it produces thousands of
-   new servers.
+   for an incentive scheme so effective that it produces tens of
+   thousands of new servers.
 
 3.6. What part of the node's performance do you measure?
 
@@ -150,7 +150,7 @@
 
    Further, many transactions in Tor involve fetching lots of
    bytes and not sending very many. So it seems that we want to turn
-   things around: we need to measure how quickly a node can _send_
+   things around: we need to measure how quickly a node is _sending_
    us bytes, and then only send it bytes in proportion to that.
 
    However, a sneaky user could simply connect to a node and send some
@@ -168,7 +168,7 @@
 
    If we build a good incentive system, we'll still need to tune it
    to provide the right bandwidth allocation -- if we reserve too much
-   bandwidth for fast servers, then we're wasting some potential, but we
+   bandwidth for fast servers, then we're wasting some potential, but
    if we reserve too little, then fewer people will opt to become servers.
    In fact, finding an optimum balance is especially hard because it's
    a moving target: the better our incentive mechanism (and the lower
@@ -193,35 +193,69 @@
    still be uncertain whether the fast node originated the traffic, or
    was the entry node for some other lucky user -- and we already accept
    this level of attack in other cases such as the Murdoch-Danezis attack
-   (http://freehaven.net/anonbib/#torta05).
+   [http://freehaven.net/anonbib/#torta05].
 
 3.9. How do we allocate bandwidth over the course of a second?
 
    This may be a simple matter of engineering, but it still needs to be
    addressed. Our current token bucket design refills each bucket once a
    second. If we have N tokens in our bucket, and we don't know ahead of
-   time how many connections are going to want to send how many bytes,
+   time how many connections are going to want to send out how many bytes,
    how do we balance providing quick service to the traffic that is
    already here compared to providing service to potential high-importance
    future traffic?
 
    If we have only two classes of service, here is a simple design:
    At each point, when we are 1/t through the second, the total number
-   of non-priority bytes we are willing to accept is N/t. Thus if N
-   priority bytes arrive at the beginning of the second, we drain our
-   whole bucket then, and otherwise we provide some delayed service to
-   the non-priority bytes.
+   of non-priority bytes we are willing to send out is N/t. Thus if N
+   priority bytes are waiting at the beginning of the second, we drain
+   our whole bucket then, and otherwise we provide some delayed service
+   to the non-priority bytes.
 
    Does this design expand to cover the case of three priority classes?
    Ideally we'd give each remote server its own priority number. Or
    hopefully there's an easy design in the literature to point to --
    this is clearly not my field.
 
+   Is our current flow control mechanism (each circuit and each stream
+   start out with a certain window, and once they've exhausted it they
+   need to receive an ack before they can send more) going to have
+   problems with this new design now that we'll be queueing more bytes
+   for less preferred nodes? If it turns out we do, the first fix is
+   to have the windows start out at zero rather than start out full --
+   it will slow down the startup phase but protect us better.
+
+   While we have outgoing cells queued for a given server, we have the
+   option of reordering them based on the priority of the previous hop.
+   Is this going to turn out to be useful? If we're the exit node (that
+   is, there is no previous hop) what priority do those cells get?
+
+   Should we do this prioritizing just for sending out bytes (as I've
+   described here) or would it help to do it also for receiving bytes?
+   See next section.
+
 3.10. Different-priority cells arriving on the same TCP connection.
 
+   In some of the proposed designs, servers want to give specific circuits
+   priority rather than having all circuits from them get the same class
+   of service.
 
+   Since Tor uses TCP's flow control for rate limiting, this constraints
+   our design choices -- it is easy to give different TCP connections
+   different priorities, but it is hard to give different cells on the
+   same connection priority, because you have to read them to know what
+   priority they're supposed to get.
 
+   There are several possible solutions though. First is that we rely on
+   the sender to reorder them so the highest priority cells (circuits) are
+   more often first. Second is that if we open two TCP connections -- one
+   for the high-priority cells, and one for the low-priority cells. (But
+   this prevents us from changing the priority of a circuit because
+   we would need to migrate it from one connection to the other.) A
+   third approach is to remember which connections have recently sent
+   us high-priority cells, and preferentially read from those connections.
 
+   Hopefully we can get away with not solving this section at all.
 
 4. Sample designs.
 
