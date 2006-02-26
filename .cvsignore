@@ -2,6 +2,7 @@ Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache
+build-stamp
 configure
 orconfig.h
 orconfig.h.in
@@ -11,6 +12,7 @@ config.status
 config.guess
 config.sub
 conftest*
+patch-stamp
 stamp-h
 stamp-h.in
 stamp-h1
