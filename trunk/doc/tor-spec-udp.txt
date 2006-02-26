@@ -1,0 +1,366 @@
+[This proposed Tor extension has not been implemented yet. It is currently
+in request-for-comments state. -RD]
+
+                  Tor Unreliable Datagram Extension Proposal
+
+                               Marc Liberatore
+
+Abstract
+
+Contents
+
+0. Introduction
+
+  Tor is a distributed overlay network designed to anonymize low-latency
+  TCP-based applications.  The current tor specification supports only
+  TCP-based traffic.  This limitation prevents the use of tor to anonymize
+  other important applications, notably voice over IP software.  This document
+  is a proposal to extend the tor specification to support UDP traffic.
+
+  The basic design philosophy of this extension is to add support for
+  tunneling unreliable datagrams through tor with as few modifications to the
+  protocol as possible.  As currently specified, tor cannot directly support
+  such tunneling, as connections between nodes are built using transport layer
+  security (TLS) atop TCP.  The latency incurred by TCP is likely unacceptable
+  to the operation of most UDP-based application level protocols.
+
+  Thus, we propose the addition of links between nodes using datagram
+  transport layer security (DTLS).  These links allow packets to traverse a
+  route through tor quickly, but their unreliable nature requires minor
+  changes to the tor protocol.  This proposal outlines the necessary
+  additions and changes to the tor specification to support UDP traffic.
+
+  We note that a separate set of DTLS links between nodes creates a second
+  overlay, distinct from the that composed of TLS links.  This separation and
+  resulting decrease in each anonymity set's size will make certain attacks
+  easier.  However, it is our belief that VoIP support in tor will
+  dramatically increase its appeal, and correspondingly, the size of its user
+  base, number of deployed nodes, and total traffic relayed.  These increases
+  should help offset the loss of anonymity that two distinct networks imply.
+
+1. Overview of Tor-UDP and its complications
+
+  As described above, this proposal extends the Tor specification to support
+  UDP with as few changes as possible.  Tor's overlay network is managed
+  through TLS based connections; we will re-use this control plane to set up
+  and tear down circuits that relay UDP traffic.  These circuits be built atop
+  DTLS, in a fashion analogous to how Tor currently sends TCP traffic over
+  TLS.
+
+  The unreliability of DTLS circuits creates problems for Tor at two levels:
+
+      1. Tor's encryption of the relay layer does not allow independent
+      decryption of individual records. If record N is not received, then
+      record N+1 will not decrypt correctly, as the counter for AES/CTR is
+      maintained implicitly.
+
+      2. Tor's end-to-end integrity checking works under the assumption that
+      all RELAY cells are delivered.  This assumption is invalid when cells
+      are sent over DTLS.
+
+  The fix for the first problem is straightforward: add an explicit sequence
+  number to each cell.  To fix the second problem, we introduce a
+  system of nonces and hashes to RELAY packets.
+
+  In the following sections, we mirror the layout of the Tor Protocol
+  Specification, presenting the necessary modifications to the Tor protocol as
+  a series of deltas.
+
+2. Connections
+
+  Tor-UDP uses DTLS for encryption of some links.  All DTLS links must have
+  corresponding TLS links, as all control messages are sent over TLS.  All
+  implementations MUST support the DTLS ciphersuite "[TODO]".
+
+  DTLS connections are formed using the same protocol as TLS connections.
+  This occurs upon request, following at CREATE_UDP or CREATE_FAST_UDP cell,
+  as detailed in section 4.6.
+
+  Once a paired TLS/DTLS connection is established, the two sides send cells
+  to one another.  All but two types of cells are sent over TLS links.  RELAY
+  cells containing the commands RELAY_UDP_DATA and RELAY_UDP_DROP, specified
+  below, are sent over DTLS links.  [Should all cells still be 512 bytes long?
+  Perhaps upon completion of a preliminary implementation, we should do a
+  performance evaluation for some class of UDP traffic, such as VoIP. - ML]
+  Cells may be sent embedded in TLS or DTLS records of any size or divided
+  across such records.  The framing of these records MUST NOT leak any more
+  information than the above differentiation on the basis of cell type.  [I am
+  uncomfortable with this leakage, but don't see any simple, elegant way
+  around it. -ML]
+
+  As with TLS connections, DTLS connections are not permanent.
+
+3. Cell format
+
+  Each cell contains the following fields:
+
+        CircID                                [2 bytes]
+        Command                               [1 byte]
+        Sequence Number                       [2 bytes]
+        Payload (padded with 0 bytes)         [507 bytes]
+                                         [Total size: 512 bytes]
+
+  The 'Command' field holds one of the following values:
+       0 -- PADDING         (Padding)                     (See Sec 6.2)
+       1 -- CREATE          (Create a circuit)            (See Sec 4)
+       2 -- CREATED         (Acknowledge create)          (See Sec 4)
+       3 -- RELAY           (End-to-end data)             (See Sec 5)
+       4 -- DESTROY         (Stop using a circuit)        (See Sec 4)
+       5 -- CREATE_FAST     (Create a circuit, no PK)     (See Sec 4)
+       6 -- CREATED_FAST    (Circuit created, no PK)      (See Sec 4)
+       7 -- CREATE_UDP      (Create a UDP circuit)        (See Sec 4)
+       8 -- CREATED_UDP     (Acknowledge UDP create)      (See Sec 4)
+       9 -- CREATE_FAST_UDP (Create a UDP circuit, no PK) (See Sec 4)
+      10 -- CREATED_FAST_UDP(UDP circuit created, no PK)  (See Sec 4)
+
+  The sequence number allows for AES/CTR decryption of RELAY cells
+  independently of one another; this functionality is required to support
+  cells sent over DTLS.  The sequence number is described in more detail in
+  section 4.5.
+
+  [Should the sequence number only appear in RELAY packets?  The overhead is
+  small, and I'm hesitant to force more code paths on the implementor.]
+
+  [Having separate commands for UDP circuits seems necessary, unless we can
+  assume a flag day event for a large number of tor nodes.]
+
+4. Circuit management
+
+4.2. Setting circuit keys
+
+  Keys are set up for UDP circuits in the same fashion as for TCP circuits.
+  Each UDP circuit shares keys with its corresponding TCP circuit.
+
+4.3. Creating circuits
+
+  UDP circuits are created as TCP circuits, using the *_UDP cells as
+  appropriate.
+
+4.4. Tearing down circuits
+
+  UDP circuits are torn down as TCP circuits, using the *_UDP cells as
+  appropriate.
+
+4.5. Routing relay cells
+
+  When an OR receives a RELAY cell, it checks the cell's circID and
+  determines whether it has a corresponding circuit along that
+  connection.  If not, the OR drops the RELAY cell.
+
+  Otherwise, if the OR is not at the OP edge of the circuit (that is,
+  either an 'exit node' or a non-edge node), it de/encrypts the payload
+  with AES/CTR, as follows:
+       'Forward' relay cell (same direction as CREATE):
+           Use Kf as key; decrypt, using sequence number to synchronize
+           ciphertext and keystream.
+       'Back' relay cell (opposite direction from CREATE):
+           Use Kb as key; encrypt, using sequence number to synchronize
+           ciphertext and keystream.
+  Note that in counter mode, decrypt and encrypt are the same operation.
+
+  Each stream encrypted by a Kf or Kb has a corresponding unique state,
+  captured by a sequence number; the originator of each such stream chooses
+  the initial sequence number randomly, and increments it only with RELAY
+  cells.  [This counts cells; unlike, say, TCP, tor uses fixed-size cells, so
+  there's no need for counting bytes directly.  Right? - ML]
+
+  The OR then decides whether it recognizes the relay cell, by
+  inspecting the payload as described in section 5.1 below.  If the OR
+  recognizes the cell, it processes the contents of the relay cell.
+  Otherwise, it passes the decrypted relay cell along the circuit if
+  the circuit continues.  If the OR at the end of the circuit
+  encounters an unrecognized relay cell, an error has occurred: the OR
+  sends a DESTROY cell to tear down the circuit.
+
+  When a relay cell arrives at an OP, the OP decrypts the payload
+  with AES/CTR as follows:
+        OP receives data cell:
+           For I=N...1,
+               Decrypt with Kb_I, using the sequence number as above.  If the
+               payload is recognized (see section 5.1), then stop and process
+               the payload.
+
+  For more information, see section 5 below.
+
+4.6. CREATE_UDP and CREATED_UDP cells
+
+  Users set up UDP circuits incrementally.  The procedure is similar to that
+  for TCP circuits, as described in section 4.1.  In addition to the TLS
+  connection to the first node, the OP also attempts to open a DTLS
+  connection.  If this succeeds, the OP sends a CREATE_UDP cell, with a
+  payload in the same format as a CREATE cell.  To extend a UDP circuit past
+  the first hop, the OP sends an EXTEND_UDP relay cell (see section 5) which
+  instructs the last node in the circuit to send a CREATE_UDP cell to extend
+  the circuit.
+
+  The relay payload for an EXTEND_UDP relay cell consists of:
+         Address                       [4 bytes]
+         TCP port                      [2 bytes]
+         UDP port                      [2 bytes]
+         Onion skin                    [186 bytes]
+         Identity fingerprint          [20 bytes]
+  
+  The address field and ports denote the IPV4 address and ports of the next OR
+  in the circuit.
+
+  The payload for a CREATED_UDP cell or the relay payload for an
+  RELAY_EXTENDED_UDP cell is identical to that of the corresponding CREATED or
+  RELAY_EXTENDED cell.  Both circuits are established using the same key.
+
+  Note that the existence of a UDP circuit implies the
+  existence of a corresponding TCP circuit, sharing keys, sequence numbers,
+  and any other relevant state.
+
+4.6.1 CREATE_FAST_UDP/CREATED_FAST_UDP cells
+
+  As above, the OP must successfully connect using DTLS before attempting to
+  send a CREATE_FAST_UDP cell.  Otherwise, the procedure is the same as in
+  section 4.1.1.
+
+5. Application connections and stream management
+
+5.1. Relay cells
+
+  Within a circuit, the OP and the exit node use the contents of RELAY cells
+  to tunnel end-to-end commands, TCP connections ("Streams"), and UDP packets
+  across circuits.  End-to-end commands and UDP packets can be initiated by
+  either edge; streams are initiated by the OP.
+
+  The payload of each unencrypted RELAY cell consists of:
+        Relay command           [1 byte]
+        'Recognized'            [2 bytes]
+        StreamID                [2 bytes]
+        Digest                  [4 bytes]
+        Length                  [2 bytes]
+        Data                    [498 bytes]
+
+  The relay commands are:
+        1 -- RELAY_BEGIN        [forward]
+        2 -- RELAY_DATA         [forward or backward]
+        3 -- RELAY_END          [forward or backward]
+        4 -- RELAY_CONNECTED    [backward]
+        5 -- RELAY_SENDME       [forward or backward]
+        6 -- RELAY_EXTEND       [forward]
+        7 -- RELAY_EXTENDED     [backward]
+        8 -- RELAY_TRUNCATE     [forward]
+        9 -- RELAY_TRUNCATED    [backward]
+       10 -- RELAY_DROP         [forward or backward]
+       11 -- RELAY_RESOLVE      [forward]
+       12 -- RELAY_RESOLVED     [backward]
+       13 -- RELAY_BEGIN_UDP    [forward]
+       14 -- RELAY_DATA_UDP     [forward or backward]
+       15 -- RELAY_EXTEND_UDP   [forward]
+       16 -- RELAY_EXTENDED_UDP [backward]
+       17 -- RELAY_DROP_UDP     [forward or backward]
+
+  Commands labelled as "forward" must only be sent by the originator
+  of the circuit. Commands labelled as "backward" must only be sent by
+  other nodes in the circuit back to the originator. Commands marked
+  as either can be sent either by the originator or other nodes.
+
+  The 'recognized' field in any unencrypted relay payload is always set to
+  zero. 
+
+  The 'digest' field can have two meanings.  For all cells sent over TLS
+  connections (that is, all commands and all non-UDP RELAY data), it is
+  computed as the first four bytes of the running SHA-1 digest of all the
+  bytes that have been sent reliably and have been destined for this hop of
+  the circuit or originated from this hop of the circuit, seeded from Df or Db
+  respectively (obtained in section 4.2 above), and including this RELAY
+  cell's entire payload (taken with the digest field set to zero).  Cells sent
+  over DTLS connections do not affect this running digest.  Each cell sent
+  over DTLS (that is, RELAY_DATA_UDP and RELAY_DROP_UDP) has the digest field
+  set to the SHA-1 digest of the current RELAY cells' entire payload, with the
+  digest field set to zero.  Coupled with a randomly-chosen streamID, this
+  provides per-cell integrity checking on UDP cells.
+
+  When the 'recognized' field of a RELAY cell is zero, and the digest
+  is correct, the cell is considered "recognized" for the purposes of
+  decryption (see section 4.5 above).
+
+  (The digest does not include any bytes from relay cells that do
+  not start or end at this hop of the circuit. That is, it does not
+  include forwarded data. Therefore if 'recognized' is zero but the
+  digest does not match, the running digest at that node should
+  not be updated, and the cell should be forwarded on.)
+
+  All RELAY cells pertaining to the same tunneled TCP stream have the
+  same streamID.  Such streamIDs are chosen arbitrarily by the OP.  RELAY
+  cells that affect the entire circuit rather than a particular
+  stream use a StreamID of zero.
+
+  All RELAY cells pertaining to the same UDP tunnel have the same streamID.
+  This streamID is chosen randomly by the OP, but cannot be zero.
+
+  The 'Length' field of a relay cell contains the number of bytes in
+  the relay payload which contain real payload data. The remainder of
+  the payload is padded with NUL bytes.
+
+  If the RELAY cell is recognized but the relay command is not
+  understood, the cell must be dropped and ignored. Its contents
+  still count with respect to the digests, though. [Before
+  0.1.1.10, Tor closed circuits when it received an unknown relay
+  command. Perhaps this will be more forward-compatible. -RD]
+
+5.2.1.  Opening UDP tunnels and transferring data
+
+  To open a new anonymized UDP connection, the OP chooses an open
+  circuit to an exit that may be able to connect to the destination
+  address, selects a random streamID not yet used on that circuit,
+  and constructs a RELAY_BEGIN_UDP cell with a payload encoding the address
+  and port of the destination host.  The payload format is:
+
+        ADDRESS | ':' | PORT | [00]
+
+  where  ADDRESS can be a DNS hostname, or an IPv4 address in
+  dotted-quad format, or an IPv6 address surrounded by square brackets;
+  and where PORT is encoded in decimal.
+
+  [What is the [00] for? -NM]
+  [It's so the payload is easy to parse out with string funcs -RD]
+
+  Upon receiving this cell, the exit node resolves the address as necessary.
+  If the address cannot be resolved, the exit node replies with a RELAY_END
+  cell.  (See 5.4 below.)  Otherwise, the exit node replies with a
+  RELAY_CONNECTED cell, whose payload is in one of the following formats:
+      The IPv4 address to which the connection was made [4 octets]
+      A number of seconds (TTL) for which the address may be cached [4 octets]
+   or
+      Four zero-valued octets [4 octets]
+      An address type (6)     [1 octet]
+      The IPv6 address to which the connection was made [16 octets]
+      A number of seconds (TTL) for which the address may be cached [4 octets]
+  [XXXX Versions of Tor before 0.1.1.6 ignore and do not generate the TTL
+  field.  No version of Tor currently generates the IPv6 format.]
+
+  The OP waits for a RELAY_CONNECTED cell before sending any data.
+  Once a connection has been established, the OP and exit node
+  package UDP data in RELAY_DATA_UDP cells, and upon receiving such
+  cells, echo their contents to the corresponding socket.
+  RELAY_DATA_UDP cells sent to unrecognized streams are dropped.
+
+  Relay RELAY_DROP_UDP cells are long-range dummies; upon receiving such
+  a cell, the OR or OP must drop it.
+
+5.3. Closing streams
+
+  UDP tunnels are closed in a fashion corresponding to TCP connections.
+
+6. Flow Control
+
+  UDP streams are not subject to flow control.
+
+7.2. Router descriptor format.
+
+The items' formats are as follows:
+   "router" nickname address ORPort SocksPort DirPort UDPPort
+
+      Indicates the beginning of a router descriptor.  "address" must be
+      an IPv4 address in dotted-quad format. The last three numbers
+      indicate the TCP ports at which this OR exposes
+      functionality. ORPort is a port at which this OR accepts TLS
+      connections for the main OR protocol; SocksPort is deprecated and
+      should always be 0; DirPort is the port at which this OR accepts
+      directory-related HTTP connections; and UDPPort is a port at which
+      this OR accepts DTLS connections for UDP data.  If any port is not
+      supported, the value 0 is given instead of a port number.
