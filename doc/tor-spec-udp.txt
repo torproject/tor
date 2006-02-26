@@ -73,7 +73,7 @@ Contents
   implementations MUST support the DTLS ciphersuite "[TODO]".
 
   DTLS connections are formed using the same protocol as TLS connections.
-  This occurs upon request, following at CREATE_UDP or CREATE_FAST_UDP cell,
+  This occurs upon request, following a CREATE_UDP or CREATE_FAST_UDP cell,
   as detailed in section 4.6.
 
   Once a paired TLS/DTLS connection is established, the two sides send cells
@@ -119,10 +119,13 @@ Contents
   section 4.5.
 
   [Should the sequence number only appear in RELAY packets?  The overhead is
-  small, and I'm hesitant to force more code paths on the implementor.]
+  small, and I'm hesitant to force more code paths on the implementor. -ML]
+  [There's already a separate relay header that has other material in it,
+  so it wouldn't be the end of the world to move it there if it's
+  appropriate. -RD]
 
   [Having separate commands for UDP circuits seems necessary, unless we can
-  assume a flag day event for a large number of tor nodes.]
+  assume a flag day event for a large number of tor nodes. -ML]
 
 4. Circuit management
 
@@ -130,6 +133,10 @@ Contents
 
   Keys are set up for UDP circuits in the same fashion as for TCP circuits.
   Each UDP circuit shares keys with its corresponding TCP circuit.
+
+  [If the keys are used for both TCP and UDP connections, how does it
+  work to mix sequence-number-less cells with sequenced-numbered cells --
+  how do you know you have the encryption order right? -RD]
 
 4.3. Creating circuits
 
@@ -157,12 +164,16 @@ Contents
            Use Kb as key; encrypt, using sequence number to synchronize
            ciphertext and keystream.
   Note that in counter mode, decrypt and encrypt are the same operation.
+  [Since the sequence number is only 2 bytes, what do you do when it
+  rolls over? -RD]
 
   Each stream encrypted by a Kf or Kb has a corresponding unique state,
   captured by a sequence number; the originator of each such stream chooses
   the initial sequence number randomly, and increments it only with RELAY
   cells.  [This counts cells; unlike, say, TCP, tor uses fixed-size cells, so
   there's no need for counting bytes directly.  Right? - ML]
+  [I believe this is true. You'll find out for sure when you try to
+  build it. ;) -RD]
 
   The OR then decides whether it recognizes the relay cell, by
   inspecting the payload as described in section 5.1 below.  If the OR
@@ -199,7 +210,7 @@ Contents
          UDP port                      [2 bytes]
          Onion skin                    [186 bytes]
          Identity fingerprint          [20 bytes]
-  
+
   The address field and ports denote the IPV4 address and ports of the next OR
   in the circuit.
 
@@ -273,6 +284,9 @@ Contents
   set to the SHA-1 digest of the current RELAY cells' entire payload, with the
   digest field set to zero.  Coupled with a randomly-chosen streamID, this
   provides per-cell integrity checking on UDP cells.
+  [If you drop malformed UDP relay cells but don't close the circuit,
+  then this 8 bytes of digest is not as strong as what we get in the
+  TCP-circuit side. Is this a problem? -RD]
 
   When the 'recognized' field of a RELAY cell is zero, and the digest
   is correct, the cell is considered "recognized" for the purposes of
@@ -364,3 +378,10 @@ The items' formats are as follows:
       directory-related HTTP connections; and UDPPort is a port at which
       this OR accepts DTLS connections for UDP data.  If any port is not
       supported, the value 0 is given instead of a port number.
+
+Other sections:
+
+What changes need to happen to each node's exit policy to support this? -RD
+
+
+
