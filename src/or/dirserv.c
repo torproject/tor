@@ -346,13 +346,14 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
       log_debug(LD_DIRSERV,"Good fingerprint for '%s'",nickname);
     return FP_NAMED; /* Right fingerprint. */
   } else {
-    if (should_log)
+    if (should_log) {
       log_warn(LD_DIRSERV,
                "Mismatched fingerprint for '%s': expected '%s' got '%s'. "
                "ContactInfo '%s', platform '%s'.)",
                nickname, nn_ent->fingerprint, fp,
                contact ? contact : "",
-               platform ? platform : "");
+               platform ? escaped(platform) : "");
+    }
     if (msg)
       *msg = "Rejected: There is already a verified server with this nickname "
         "and a different fingerprint.";

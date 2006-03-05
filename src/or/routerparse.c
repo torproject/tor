@@ -468,8 +468,8 @@ router_parse_runningrouters(const char *str)
     log_warn(LD_DIR, "Error tokenizing directory"); goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_warn(LD_DIR, "Unrecognized keyword '%s'; can't parse running-routers",
-             tok->args[0]);
+    log_warn(LD_DIR, "Unrecognized keyword %s; can't parse running-routers",
+             escaped(tok->args[0]));
     goto err;
   }
   tok = smartlist_get(tokens,0);
@@ -736,9 +736,9 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
     log_warn(LD_DIR,
-             "Unrecognized critical keyword '%s'; skipping descriptor. "
+             "Unrecognized critical keyword %s; skipping descriptor. "
              "(It may be from another version of Tor.)",
-             tok->args[0]);
+             escaped(tok->args[0]));
     goto err;
   }
 
@@ -852,7 +852,8 @@ router_parse_entry_from_string(const char *s, const char *end)
     }
     tor_strstrip(tok->args[0], " ");
     if (base16_decode(d, DIGEST_LEN, tok->args[0], strlen(tok->args[0]))) {
-      log_warn(LD_DIR, "Couldn't decode fingerprint '%s'", tok->args[0]);
+      log_warn(LD_DIR, "Couldn't decode fingerprint %s",
+               escaped(tok->args[0]));
       goto err;
     }
     if (memcmp(d,router->cache_info.identity_digest, DIGEST_LEN)!=0) {
@@ -882,7 +883,8 @@ router_parse_entry_from_string(const char *s, const char *end)
     router->declared_family = smartlist_create();
     for (i=0;i<tok->n_args;++i) {
       if (!is_legal_nickname_or_hexdigest(tok->args[i])) {
-        log_warn(LD_DIR, "Illegal nickname '%s' in family line", tok->args[i]);
+        log_warn(LD_DIR, "Illegal nickname %s in family line",
+                 escaped(tok->args[i]));
         goto err;
       }
       smartlist_add(router->declared_family, tor_strdup(tok->args[i]));
@@ -977,8 +979,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_warn(LD_DIR, "Unrecognized keyword \"%s\" in router status; skipping.",
-             tok->args[0]);
+    log_warn(LD_DIR, "Unrecognized keyword %s in router status; skipping.",
+             escaped(tok->args[0]));
     goto err;
   }
   if (!(tok = find_first_by_keyword(tokens, K_R))) {
@@ -993,19 +995,19 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
 
   if (!is_legal_nickname(tok->args[0])) {
     log_warn(LD_DIR,
-             "Invalid nickname '%s' in router status; skipping.",
-             tok->args[0]);
+             "Invalid nickname %s in router status; skipping.",
+             escaped(tok->args[0]));
     goto err;
   }
   strlcpy(rs->nickname, tok->args[0], sizeof(rs->nickname));
 
   if (digest_from_base64(rs->identity_digest, tok->args[1])) {
-    log_warn(LD_DIR, "Error decoding digest '%s'", tok->args[1]);
+    log_warn(LD_DIR, "Error decoding digest %s", escaped(tok->args[1]));
     goto err;
   }
 
   if (digest_from_base64(rs->descriptor_digest, tok->args[2])) {
-    log_warn(LD_DIR, "Error decoding digest '%s'", tok->args[2]);
+    log_warn(LD_DIR, "Error decoding digest %s", escaped(tok->args[2]));
     goto err;
   }
 
@@ -1018,7 +1020,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   }
 
   if (tor_inet_aton(tok->args[5], &in) == 0) {
-    log_warn(LD_DIR, "Error parsing address '%s'", tok->args[5]);
+    log_warn(LD_DIR, "Error parsing address '%s'", escaped(tok->args[5]));
     goto err;
   }
   rs->addr = ntohl(in.s_addr);
@@ -1097,8 +1099,8 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_warn(LD_DIR, "Unrecognized keyword '%s'; can't parse network-status",
-             tok->args[0]);
+    log_warn(LD_DIR, "Unrecognized keyword %s; can't parse network-status",
+             escaped(tok->args[0]));
     goto err;
   }
   ns = tor_malloc_zero(sizeof(networkstatus_t));
@@ -1119,7 +1121,7 @@ networkstatus_parse_from_string(const char *s)
   }
   ns->source_address = tok->args[0]; tok->args[0] = NULL;
   if (tor_inet_aton(tok->args[1], &in) == 0) {
-    log_warn(LD_DIR, "Error parsing address '%s'", tok->args[1]);
+    log_warn(LD_DIR, "Error parsing address %s", escaped(tok->args[1]));
     goto err;
   }
   ns->source_addr = ntohl(in.s_addr);
@@ -1140,7 +1142,7 @@ networkstatus_parse_from_string(const char *s)
   }
   if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
-    log_warn(LD_DIR, "Couldn't decode fingerprint '%s'", tok->args[0]);
+    log_warn(LD_DIR, "Couldn't decode fingerprint %s", escaped(tok->args[0]));
     goto err;
   }
 
@@ -1369,7 +1371,7 @@ router_parse_addr_policy(directory_token_t *tok)
 
 policy_read_failed:
   tor_assert(newe->string);
-  log_warn(LD_DIR,"Couldn't parse line '%s'. Dropping", newe->string);
+  log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(newe->string));
   tor_free(newe->string);
   tor_free(newe);
   return NULL;

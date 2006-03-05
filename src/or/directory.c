@@ -537,7 +537,7 @@ directory_send_command(connection_t *conn, const char *platform,
       tor_assert(!payload);
       log_debug(LD_DIR,
                 "Asking for compressed directory from server running %s",
-                platform?platform:"<unknown version>");
+                platform?escaped(platform):"<unknown version>");
       httpcommand = "GET";
       url = tor_strdup("/tor/dir.z");
       break;
@@ -712,7 +712,8 @@ http_get_origin(const char *headers, connection_t *conn)
   if (fwd) {
     size_t len = strlen(fwd)+strlen(conn->address)+32;
     char *result = tor_malloc(len);
-    tor_snprintf(result, len, "'%s' (forwarded for '%s')", conn->address, fwd);
+    tor_snprintf(result, len, "'%s' (forwarded for %s)", conn->address,
+                 escaped(fwd));
     tor_free(fwd);
     return result;
   } else {
@@ -754,7 +755,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
   if (sscanf(headers, "HTTP/1.%d %d", &n1, &n2) < 2 ||
       (n1 != 0 && n1 != 1) ||
       (n2 < 100 || n2 >= 600)) {
-    log_warn(LD_HTTP,"Failed to parse header '%s'",headers);
+    log_warn(LD_HTTP,"Failed to parse header %s",escaped(headers));
     return -1;
   }
   *code = n2;
@@ -801,8 +802,8 @@ parse_http_response(const char *headers, int *code, time_t *date,
     } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
       *compression = GZIP_METHOD;
     } else {
-      log_info(LD_HTTP, "Unrecognized content encoding: '%s'. Trying to deal.",
-               enc);
+      log_info(LD_HTTP, "Unrecognized content encoding: %s. Trying to deal.",
+               escaped(enc));
       *compression = -1;
     }
   }
@@ -891,8 +892,8 @@ connection_dir_client_reached_eof(connection_t *conn)
   if (!reason) reason = tor_strdup("[no reason given]");
 
   log_debug(LD_DIR,
-            "Received response from directory server '%s:%d': %d \"%s\"",
-            conn->address, conn->port, status_code, reason);
+            "Received response from directory server '%s:%d': %d %s",
+            conn->address, conn->port, status_code, escaped(reason));
 
   if (date_header > 0) {
     now = time(NULL);
@@ -914,9 +915,9 @@ connection_dir_client_reached_eof(connection_t *conn)
   }
 
   if (status_code == 503) {
-    log_info(LD_DIR,"Received http status code %d (\"%s\") from server "
+    log_info(LD_DIR,"Received http status code %d (%s) from server "
              "'%s:%d'. I'll try again soon.",
-             status_code, reason, conn->address, conn->port);
+             status_code, escaped(reason), conn->address, conn->port);
     tor_free(body); tor_free(headers); tor_free(reason);
     return -1;
   }
@@ -982,9 +983,9 @@ connection_dir_client_reached_eof(connection_t *conn)
     log_info(LD_DIR,"Received directory (size %d) from server '%s:%d'",
              (int)body_len, conn->address, conn->port);
     if (status_code != 200) {
-      log_warn(LD_DIR,"Received http status code %d (\"%s\") from server "
+      log_warn(LD_DIR,"Received http status code %d (%s) from server "
                "'%s:%d'. I'll try again soon.",
-               status_code, reason, conn->address, conn->port);
+               status_code, escaped(reason), conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -999,9 +1000,9 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* just update our list of running routers, if this list is new info */
     log_info(LD_DIR,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
-      log_warn(LD_DIR,"Received http status code %d (\"%s\") from server "
+      log_warn(LD_DIR,"Received http status code %d (%s) from server "
                "'%s:%d'. I'll try again soon.",
-               status_code, reason, conn->address, conn->port);
+               status_code, escaped(reason), conn->address, conn->port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -1023,9 +1024,9 @@ connection_dir_client_reached_eof(connection_t *conn)
              "'%s:%d'",(int) body_len, conn->address, conn->port);
     if (status_code != 200) {
       log_warn(LD_DIR,
-           "Received http status code %d (\"%s\") from server "
+           "Received http status code %d (%s) from server "
            "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
-           status_code, reason, conn->address, conn->port,
+           status_code, escaped(reason), conn->address, conn->port,
            conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
       connection_dir_download_networkstatus_failed(conn);
@@ -1083,9 +1084,9 @@ connection_dir_client_reached_eof(connection_t *conn)
       /* 404 means that it didn't have them; no big deal.
        * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
       log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
-             "Received http status code %d (\"%s\") from server '%s:%d' "
+             "Received http status code %d (%s) from server '%s:%d' "
              "while fetching \"/tor/server/%s\". I'll try again soon.",
-             status_code, reason, conn->address, conn->port,
+             status_code, escaped(reason), conn->address, conn->port,
              conn->requested_resource);
       if (!which) {
         connection_dir_download_routerdesc_failed(conn);
@@ -1137,22 +1138,22 @@ connection_dir_client_reached_eof(connection_t *conn)
                  "descriptor: finished.");
         break;
       case 400:
-        log_warn(LD_GENERAL,"http status 400 (\"%s\") response from "
+        log_warn(LD_GENERAL,"http status 400 (%s) response from "
                  "dirserver '%s:%d'. Please correct.",
-                 reason, conn->address, conn->port);
+                 escaped(reason), conn->address, conn->port);
         break;
       case 403:
         log_warn(LD_GENERAL,
-             "http status 403 (\"%s\") response from dirserver "
+             "http status 403 (%s) response from dirserver "
              "'%s:%d'. Is your clock skewed? Have you mailed us your key "
              "fingerprint? Are you using the right key? Are you using a "
              "private IP address? See http://tor.eff.org/doc/"
-             "tor-doc-server.html", reason, conn->address, conn->port);
+             "tor-doc-server.html",escaped(reason), conn->address, conn->port);
         break;
       default:
         log_warn(LD_GENERAL,
-             "http status %d (\"%s\") reason unexpected (server '%s:%d').",
-             status_code, reason, conn->address, conn->port);
+             "http status %d (%s) reason unexpected (server '%s:%d').",
+             status_code, escaped(reason), conn->address, conn->port);
         break;
     }
     /* return 0 in all cases, since we don't want to mark any
@@ -1161,8 +1162,8 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
-             "(\"%s\"))",
-             (int)body_len, status_code, reason);
+             "(%s))",
+             (int)body_len, status_code, escaped(reason));
     switch (status_code) {
       case 200:
         if (rend_cache_store(body, body_len) < 0) {
@@ -1181,13 +1182,13 @@ connection_dir_client_reached_eof(connection_t *conn)
         break;
       case 400:
         log_warn(LD_REND,
-                 "http status 400 (\"%s\"). Dirserver didn't like our "
-                 "rendezvous query?", reason);
+                 "http status 400 (%s). Dirserver didn't like our "
+                 "rendezvous query?", escaped(reason));
         break;
       default:
-        log_warn(LD_REND,"http status %d (\"%s\") response unexpected (server "
-             "'%s:%d').",
-             status_code, reason, conn->address, conn->port);
+        log_warn(LD_REND,"http status %d (%s) response unexpected (server "
+                 "'%s:%d').",
+                 status_code, escaped(reason), conn->address, conn->port);
         break;
     }
   }
@@ -1197,17 +1198,17 @@ connection_dir_client_reached_eof(connection_t *conn)
       case 200:
         log_info(LD_REND,
                  "Uploading rendezvous descriptor: finished with status "
-                 "200 (\"%s\")", reason);
+                 "200 (%s)", escaped(reason));
         break;
       case 400:
-        log_warn(LD_REND,"http status 400 (\"%s\") response from dirserver "
+        log_warn(LD_REND,"http status 400 (%s) response from dirserver "
                  "'%s:%d'. Malformed rendezvous descriptor?",
-                 reason, conn->address, conn->port);
+                 escaped(reason), conn->address, conn->port);
         break;
       default:
-        log_warn(LD_REND,"http status %d (\"%s\") response unexpected (server "
+        log_warn(LD_REND,"http status %d (%s) response unexpected (server "
                  "'%s:%d').",
-                 status_code, reason, conn->address, conn->port);
+                 status_code, escaped(reason), conn->address, conn->port);
         break;
     }
   }
@@ -1728,7 +1729,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
 #if 0
       if (body_len <= 1024) {
         base16_encode(tmp, sizeof(tmp), body, body_len);
-        log_notice(LD_DIRSERV,"Body was: %s", tmp);
+        log_notice(LD_DIRSERV,"Body was: %s", escaped(tmp));
       }
 #endif
       write_http_status_line(conn, 400, "Invalid service descriptor rejected");
@@ -1775,15 +1776,15 @@ directory_handle_command(connection_t *conn)
     /* case 1, fall through */
   }
 
-  log_debug(LD_DIRSERV,"headers '%s', body '%s'.", headers, body);
+  //log_debug(LD_DIRSERV,"headers %s, body %s.", headers, body);
 
   if (!strncasecmp(headers,"GET",3))
     r = directory_handle_command_get(conn, headers, body, body_len);
   else if (!strncasecmp(headers,"POST",4))
     r = directory_handle_command_post(conn, headers, body, body_len);
   else {
-    log_warn(LD_PROTOCOL,"Got headers '%s' with unknown command. Closing.",
-             headers);
+    log_warn(LD_PROTOCOL,"Got headers %s with unknown command. Closing.",
+             escaped(headers));
     r = -1;
   }
 
@@ -1904,7 +1905,7 @@ dir_routerdesc_download_failed(smartlist_t *failed)
   /* update_router_descriptor_downloads(time(NULL)); */
 }
 
-/* Given a directory <b>resource</b> request generated by us, containing zero
+/* Given a directory <b>resource</b> request, containing zero
  * or more strings separated by plus signs, followed optionally by ".z", store
  * the strings, in order, into <b>fp_out</b>.  If <b>compressed_out</b> is
  * non-NULL, set it to 1 if the resource ends in ".z", else set it to 0.  If
@@ -1938,13 +1939,13 @@ dir_split_resource_into_fingerprints(const char *resource,
       cp = smartlist_get(fp_out, i);
       if (strlen(cp) != HEX_DIGEST_LEN) {
         log_info(LD_DIR,
-                 "Skipping digest \"%s\" with non-standard length.", cp);
+                 "Skipping digest %s with non-standard length.", escaped(cp));
         smartlist_del(fp_out, i--);
         goto again;
       }
       d = tor_malloc_zero(DIGEST_LEN);
       if (base16_decode(d, DIGEST_LEN, cp, HEX_DIGEST_LEN)<0) {
-        log_info(LD_DIR, "Skipping non-decodable digest \"%s\"", cp);
+        log_info(LD_DIR, "Skipping non-decodable digest %s", escaped(cp));
         smartlist_del(fp_out, i--);
         goto again;
       }

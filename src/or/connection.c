@@ -772,7 +772,7 @@ connection_connect(connection_t *conn, char *address,
   } else if (!SOCKET_IS_POLLABLE(s)) {
     log_warn(LD_NET,
             "Too many connections; can't create pollable connection to %s",
-            safe_str(address));
+             safe_str(address));
     tor_close_socket(s);
     return -1;
   }
