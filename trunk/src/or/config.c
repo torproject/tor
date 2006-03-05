@@ -3299,7 +3299,9 @@ config_parse_addr_policy(config_line_t *cfg,
           log_warn(LD_CONFIG, "Address policy element '%s' can't be expressed "
                    "as a bit prefix.", ent);
         }
-        nextp = &((*nextp)->next);
+        /* Advance nextp to the end of the policy. */
+        while (*nextp)
+          nextp = &((*nextp)->next);
       } else {
         log_warn(LD_CONFIG,"Malformed policy '%s'.", ent);
         r = -1;

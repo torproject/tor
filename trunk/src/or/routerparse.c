@@ -151,6 +151,8 @@ static struct {
 /* static function prototypes */
 static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok);
 static addr_policy_t *router_parse_addr_policy(directory_token_t *tok);
+static addr_policy_t *router_parse_private_addr_policy_private(
+                                               directory_token_t *tok);
 static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str, const char *end_str);
 static void token_free(directory_token_t *tok);
@@ -1338,6 +1340,9 @@ router_parse_addr_policy(directory_token_t *tok)
     return NULL;
   arg = tok->args[0];
 
+  if (!strcmpstart(arg,"private"))
+    return router_parse_private_addr_policy_private(tok);
+
   newe = tor_malloc_zero(sizeof(addr_policy_t));
 
   newe->string = tor_malloc(8+strlen(arg));
@@ -1368,6 +1373,56 @@ policy_read_failed:
   tor_free(newe->string);
   tor_free(newe);
   return NULL;
+}
+
+/** Parse an exit policy line of the format "accept/reject private:...".
+ * This didn't exist until Tor 0.1.1.15, so nobody should generate it in
+ * router descriptors until earlier versions are obsolete.
+ */
+static addr_policy_t *
+router_parse_private_addr_policy_private(directory_token_t *tok)
+{
+  /* XXXX duplicated from config.c */
+  static const char *private_nets[] = {
+    "0.0.0.0/8", "169.254.0.0/16",
+    "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",NULL };
+  char *arg;
+  addr_policy_t *result, **nextp;
+  int net;
+  uint16_t port_min, port_max;
+
+  arg = tok->args[0];
+  if (strcmpstart(arg, "private"))
+    return NULL;
+  arg += strlen("private");
+  arg = (char*) eat_whitespace(arg);
+  if (!arg || *arg != ':')
+    return NULL;
+
+  if (parse_port_range(arg+1, &port_min, &port_max)<0)
+    return NULL;
+
+  nextp = &result;
+  for (net = 0; private_nets[net]; ++net) {
+    size_t len;
+    *nextp = tor_malloc_zero(sizeof(addr_policy_t));
+    (*nextp)->policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
+      : ADDR_POLICY_ACCEPT;
+    len = strlen(arg)+strlen(private_nets[net])+16;
+    (*nextp)->string = tor_malloc(len+1);
+    tor_snprintf((*nextp)->string, len, "%s %s%s",
+                 tok->tp == K_REJECT ? "reject" : "accept",
+                 private_nets[net], arg);
+    if (parse_addr_and_port_range((*nextp)->string + 7,
+                                  &(*nextp)->addr, &(*nextp)->msk,
+                                  &(*nextp)->prt_min, &(*nextp)->prt_max)) {
+      log_warn(LD_BUG, "Couldn't parse an address range we generated!");
+      return NULL;
+    }
+    nextp = &(*nextp)->next;
+  }
+
+  return result;
 }
 
 /** Log and exit if <b>t</b> is malformed */
