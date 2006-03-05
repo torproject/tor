@@ -12,7 +12,9 @@ $Id$
   This protocol replaces version 0 of TC, which is now deprecated.  For
   reference, TC is described in "control-spec-v0.txt".  Implementors are
   recommended to avoid using TC directly, but instead to use a library that
-  can easily be updated to use the newer protocol.
+  can easily be updated to use the newer protocol.  (Version 0 is used by Tor
+  versions 0.1.0.x; the protocol in this document only works with Tor
+  versions in the 0.1.1.x series and later.)
 
 1. Protocol outline
 
