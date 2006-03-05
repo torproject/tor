@@ -672,7 +672,8 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
     goto error;
   if (((int)strspn(buf, LEGAL_NICKNAME_CHARACTERS)) < lenout) {
     log_warn(LD_PROTOCOL,
-             "Peer certificate nickname \"%s\" has illegal characters.", buf);
+             "Peer certificate nickname %s has illegal characters.",
+             escaped(buf));
     if (strchr(buf, '.'))
       log_warn(LD_PROTOCOL, "  (Maybe it is not really running Tor at its "
                "advertised OR port.)");

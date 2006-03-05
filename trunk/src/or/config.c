@@ -518,6 +518,16 @@ safe_str(const char *address)
     return address;
 }
 
+/** DOCDOC */
+const char *
+escaped_safe_str(const char *address)
+{
+  if (get_options()->SafeLogging)
+    return "[scrubbed]";
+  else
+    return escaped(address);
+}
+
 /** Add the default directory servers directly into the trusted dir list. */
 static void
 add_default_trusted_dirservers(void)

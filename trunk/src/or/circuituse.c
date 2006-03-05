@@ -733,7 +733,7 @@ circuit_build_failed(circuit_t *circ)
       log_info(LD_REND,
                "Couldn't connect to Alice's chosen rend point %s "
                "(%s hop failed).",
-               build_state_get_exit_nickname(circ->build_state),
+               escaped(build_state_get_exit_nickname(circ->build_state)),
                failed_at_last_hop?"last":"non-last");
       rend_service_relaunch_rendezvous(circ);
       break;

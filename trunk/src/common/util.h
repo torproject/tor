@@ -90,6 +90,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s);
 void tor_strupper(char *s);
+int tor_strisprint(const char *s);
 int strcmpstart(const char *s1, const char *s2);
 int strcasecmpstart(const char *s1, const char *s2);
 int strcmpend(const char *s1, const char *s2);
@@ -112,6 +113,8 @@ const char *eat_whitespace(const char *s);
 const char *eat_whitespace_no_nl(const char *s);
 const char *find_whitespace(const char *s);
 int tor_digest_is_zero(const char *digest);
+char *esc_for_log(const char *string);
+const char *escaped(const char *string);
 
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);

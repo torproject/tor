@@ -945,7 +945,8 @@ connection_ap_handshake_rewrite_and_attach(connection_t *conn)
   hostname_type_t addresstype;
 
   tor_strlower(socks->address); /* normalize it */
-  log_debug(LD_APP,"Client asked for %s:%d", safe_str(socks->address),
+  log_debug(LD_APP,"Client asked for %s:%d",
+            safe_str(socks->address),
             socks->port);
 
   /* For address map controls, remap the address */
@@ -1516,6 +1517,12 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   }
   if (port==0) {
     log_warn(LD_PROTOCOL,"Missing port in relay begin cell. Dropping.");
+    tor_free(address);
+    return 0;
+  }
+  if (!tor_strisprint(address)) {
+    log_warn(LD_PROTOCOL,"Non-printing characters in address %s in relay "
+             "begin cell. Dropping.", escaped(address));
     tor_free(address);
     return 0;
   }

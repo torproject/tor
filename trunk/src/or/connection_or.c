@@ -181,8 +181,8 @@ connection_or_read_proxy_response(connection_t *conn)
 
   if (status_code == 200) {
     log_info(LD_OR,
-             "HTTPS connect to '%s' successful! (200 \"%s\") Starting TLS.",
-             conn->address, reason);
+             "HTTPS connect to '%s' successful! (200 %s) Starting TLS.",
+             conn->address, escaped(reason));
     tor_free(reason);
     if (connection_tls_start_handshake(conn, 0) < 0) {
       /* TLS handshaking error of some kind. */
@@ -194,9 +194,9 @@ connection_or_read_proxy_response(connection_t *conn)
   }
   /* else, bad news on the status code */
   log_warn(LD_OR,
-           "The https proxy sent back an unexpected status code %d (\"%s\"). "
+           "The https proxy sent back an unexpected status code %d (%s). "
            "Closing.",
-           status_code, reason);
+           status_code, escaped(reason));
   tor_free(reason);
   connection_mark_for_close(conn);
   return -1;

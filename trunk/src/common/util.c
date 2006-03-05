@@ -329,6 +329,16 @@ tor_strupper(char *s)
   }
 }
 
+int
+tor_strisprint(const char *s)
+{
+  while (*s) {
+    if (!TOR_ISPRINT(*s))
+      return 0;
+  }
+  return 1;
+}
+
 /* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
@@ -564,6 +574,100 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   return 0;
 }
 
+/** Allocate and return a new string representing the contents of <b>s</b>,
+ * surrounded by quotes and using standard C escapes.
+ *
+ * Generally, we use this for logging values that come in over the network
+ * to keep them from tricking users.
+ *
+ * We trust values from the resolver, OS, configuration file, and command line
+ * to not be maliciously ill-formed.  We validate incoming routerdescs and
+ * SOCKS requests and addresses from BEGIN cells as they're parsed;
+ * afterwards, we trust them as non-malicious.
+ */
+char *
+esc_for_log(const char *s)
+{
+  const char *cp;
+  char *result, *outp;
+  size_t len = 3;
+  for (cp = s; *cp; ++cp) {
+    switch (*cp) {
+      case '\\':
+      case '\"':
+      case '\'':
+        len += 2;
+        break;
+      default:
+        if (TOR_ISPRINT(*cp))
+          ++len;
+        else
+          len += 4;
+        break;
+    }
+  }
+
+  result = outp = tor_malloc(len);
+  *outp++ = '\"';
+  for (cp = s; *cp; ++cp) {
+    switch (*cp) {
+      case '\\':
+      case '\"':
+      case '\'':
+        *outp++ = '\\';
+        *outp++ = *cp;
+        break;
+      case '\n':
+        *outp++ = '\\';
+        *outp++ = 'n';
+        break;
+      case '\t':
+        *outp++ = '\\';
+        *outp++ = 't';
+        break;
+      case '\r':
+        *outp++ = '\\';
+        *outp++ = 'r';
+        break;
+      default:
+        if (TOR_ISPRINT(*cp)) {
+          *outp++ = *cp;
+        } else {
+          tor_snprintf(outp, 5, "\\%03o", (uint8_t) *cp);
+          outp += 4;
+        }
+        break;
+    }
+  }
+
+  *outp++ = '\"';
+  *outp++ = 0;
+
+  return result;
+}
+
+/** Allocate and return a new string representing the contents of <b>s</b>,
+ * surrounded by quotes and using standard C escapes.
+ *
+ * THIS FUNCTION IS NOT REENTRANT.  Don't call it from outside the main
+ * thread.  Also, each call invalidates the last-returned value, so don't
+ * try log_warn(LD_GENERAL, "%s %s", escaped(a), escaped(b));
+ */
+const char *
+escaped(const char *s)
+{
+  static char *_escaped_val = NULL;
+  if (_escaped_val)
+    tor_free(_escaped_val);
+
+  if (s)
+    _escaped_val = esc_for_log(s);
+  else
+    _escaped_val = NULL;
+
+  return _escaped_val;
+}
+
 /* =====
  * Time
  * ===== */
@@ -700,7 +804,9 @@ parse_rfc1123_time(const char *buf, time_t *t)
   if (sscanf(buf, "%3s, %d %3s %d %d:%d:%d GMT", weekday,
              &tm.tm_mday, month, &tm.tm_year, &tm.tm_hour,
              &tm.tm_min, &tm.tm_sec) < 7) {
-    log_warn(LD_GENERAL, "Got invalid RFC1123 time \"%s\"", buf);
+    char *esc = esc_for_log(buf);
+    log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
+    tor_free(esc);
     return -1;
   }
 
@@ -712,14 +818,18 @@ parse_rfc1123_time(const char *buf, time_t *t)
     }
   }
   if (m<0) {
-    log_warn(LD_GENERAL, "Got invalid RFC1123 time \"%s\"", buf);
+    char *esc = esc_for_log(buf);
+    log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
+    tor_free(esc);
     return -1;
   }
   tm.tm_mon = m;
 
   if (tm.tm_year < 1970) {
+    char *esc = esc_for_log(buf);
     log_warn(LD_GENERAL,
-             "Got invalid RFC1123 time \"%s\". (Before 1970)", buf);
+             "Got invalid RFC1123 time %s. (Before 1970)", esc);
+    tor_free(esc);
     return -1;
   }
   tm.tm_year -= 1900;
@@ -768,7 +878,9 @@ parse_iso_time(const char *cp, time_t *t)
   st_tm.tm_sec = second;
 #endif
   if (st_tm.tm_year < 70) {
-    log_warn(LD_GENERAL, "Got invalid ISO time \"%s\". (Before 1970)", cp);
+    char *esc = esc_for_log(cp);
+    log_warn(LD_GENERAL, "Got invalid ISO time %s. (Before 1970)", esc);
+    tor_free(esc);
     return -1;
   }
   *t = tor_timegm(&st_tm);
@@ -1222,7 +1334,7 @@ expand_filename(const char *filename)
       home = getenv("HOME");
       if (!home) {
         log_warn(LD_CONFIG, "Couldn't find $HOME environment variable while "
-                 "expanding %s", filename);
+                 "expanding \"%s\"", filename);
         return NULL;
       }
       home = tor_strdup(home);
@@ -1385,13 +1497,15 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
     _address = tor_strndup(addrport, colon-addrport);
     _port = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);
     if (!_port) {
-      log_warn(LD_GENERAL, "Port '%s' out of range", colon+1);
+      log_warn(LD_GENERAL, "Port %s out of range", escaped(colon+1));
       ok = 0;
     }
     if (!port_out) {
+      char *esc_addrport = esc_for_log(addrport);
       log_warn(LD_GENERAL,
-               "Port '%s' given on '%s' when not required",
-               colon+1, addrport);
+               "Port %s given on %s when not required",
+               escaped(colon+1), esc_addrport);
+      tor_free(esc_addrport);
       ok = 0;
     }
   } else {
@@ -1402,7 +1516,7 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
   if (addr) {
     /* There's an addr pointer, so we need to resolve the hostname. */
     if (tor_lookup_hostname(_address,addr)) {
-      log_warn(LD_NET, "Couldn't look up '%s'", _address);
+      log_warn(LD_NET, "Couldn't look up %s", escaped(_address));
       ok = 0;
       *addr = 0;
     }
@@ -1464,13 +1578,13 @@ parse_port_range(const char *port, uint16_t *port_min_out,
                                                 &endptr);
       if (*endptr || !*port_max_out) {
         log_warn(LD_GENERAL,
-                 "Malformed port \"%s\" on address range rejecting.",
-                 port);
+                 "Malformed port %s on address range rejecting.",
+                 escaped(port));
       }
     } else if (*endptr || !*port_min_out) {
       log_warn(LD_GENERAL,
-               "Malformed port \"%s\" on address range; rejecting.",
-               port);
+               "Malformed port %s on address range; rejecting.",
+               escaped(port));
       return -1;
     } else {
       *port_max_out = *port_min_out;
@@ -1523,8 +1637,8 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
   } else if (tor_inet_aton(address, &in) != 0) {
     *addr_out = ntohl(in.s_addr);
   } else {
-    log_warn(LD_GENERAL, "Malformed IP \"%s\" in address pattern; rejecting.",
-             address);
+    log_warn(LD_GENERAL, "Malformed IP %s in address pattern; rejecting.",
+             escaped(address));
     goto err;
   }
 
@@ -1548,8 +1662,8 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
       *mask_out = ntohl(in.s_addr);
     } else {
       log_warn(LD_GENERAL,
-               "Malformed mask \"%s\" on address range; rejecting.",
-               mask);
+               "Malformed mask %s on address range; rejecting.",
+               escaped(mask));
       goto err;
     }
   }

@@ -913,6 +913,12 @@ test_util(void)
     test_streq(tmpbuf, "18.244.0.188");
   }
 
+  /* Test 'escaped' */
+  test_streq("\"\"", escaped(""));
+  test_streq("\"abcd\"", escaped("abcd"));
+  test_streq("\"\\\\\\n\\r\\t\\\"\\'\"", escaped("\\\n\r\t\"\'"));
+  test_streq("\"z\\001abc\\277d\"", escaped("z\001abc\277d"));
+
   /* XXXX test older functions. */
   smartlist_free(sl);
 }

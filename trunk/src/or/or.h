@@ -1591,6 +1591,7 @@ or_options_t *get_options(void);
 int set_options(or_options_t *new_val);
 void config_free_all(void);
 const char *safe_str(const char *address);
+const char *escaped_safe_str(const char *address);
 
 int config_get_lines(char *string, config_line_t **result);
 void config_free_lines(config_line_t *front);
