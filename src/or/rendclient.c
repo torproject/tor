@@ -71,8 +71,8 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
 
   if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
     log_warn(LD_REND,
-             "query '%s' didn't have valid rend desc in cache. Failing.",
-             safe_str(introcirc->rend_query));
+             "query %s didn't have valid rend desc in cache. Failing.",
+             escaped_safe_str(introcirc->rend_query));
     goto err;
   }
 
@@ -227,14 +227,14 @@ rend_client_introduction_acked(circuit_t *circ,
       extend_info = rend_client_get_random_intro(circ->rend_query);
       if (!extend_info) {
         log_warn(LD_REND, "No introduction points left for %s. Closing.",
-                 safe_str(circ->rend_query));
+                 escaped_safe_str(circ->rend_query));
         circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
         return -1;
       }
       log_info(LD_REND,
                "Got nack for %s from %s. Re-extending circ %d, "
                "this time to %s.",
-               safe_str(circ->rend_query),
+               escaped_safe_str(circ->rend_query),
                circ->build_state->chosen_exit->nickname, circ->n_circ_id,
                extend_info->nickname);
       result = circuit_extend_to_new_exit(circ, extend_info);
@@ -256,7 +256,7 @@ rend_client_refetch_renddesc(const char *query)
     return;
   if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
     log_info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
-             "already in progress.", safe_str(query));
+             "already in progress.", escaped_safe_str(query));
   } else {
     /* not one already; initiate a dir rend desc lookup */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_RENDDESC, query, 1);
@@ -278,12 +278,12 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 
   r = rend_cache_lookup_entry(query, -1, &ent);
   if (r<0) {
-    log_warn(LD_BUG, "Bug: malformed service ID '%s'.", safe_str(query));
+    log_warn(LD_BUG, "Bug: malformed service ID %s.", escaped_safe_str(query));
     return -1;
   }
   if (r==0) {
     log_info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
-             safe_str(query));
+             escaped_safe_str(query));
     rend_client_refetch_renddesc(query);
     return 0;
   }
@@ -319,7 +319,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
   if (!ent->parsed->n_intro_points) {
     log_info(LD_REND,
              "No more intro points remain for %s. Re-fetching descriptor.",
-             safe_str(query));
+             escaped_safe_str(query));
     rend_client_refetch_renddesc(query);
 
     /* move all pending streams back to renddesc_wait */
@@ -331,7 +331,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
     return 0;
   }
   log_info(LD_REND,"%d options left for %s.",
-           ent->parsed->n_intro_points, safe_str(query));
+           ent->parsed->n_intro_points, escaped_safe_str(query));
   return 1;
 }
 
