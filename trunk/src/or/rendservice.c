@@ -430,7 +430,7 @@ rend_service_introduce(circuit_t *circuit, const char *request,
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);
   log_info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %d.",
-           serviceid, circuit->n_circ_id);
+           escaped(serviceid), circuit->n_circ_id);
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_INTRO) {
     log_warn(LD_PROTOCOL,
@@ -451,13 +451,13 @@ rend_service_introduce(circuit_t *circuit, const char *request,
   service = rend_service_get_by_pk_digest(request);
   if (!service) {
     log_warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
-             serviceid);
+             escaped(serviceid));
     return -1;
   }
   if (memcmp(circuit->rend_pk_digest, request, DIGEST_LEN)) {
     base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request, 10);
     log_warn(LD_REND, "Got an INTRODUCE2 cell for the wrong service (%s).",
-             serviceid);
+             escaped(serviceid));
     return -1;
   }
 
@@ -534,8 +534,8 @@ rend_service_introduce(circuit_t *circuit, const char *request,
                                * any */
     router = router_get_by_nickname(rp_nickname, 0);
     if (!router) {
-      log_info(LD_REND, "Couldn't find router '%s' named in rendezvous cell.",
-               rp_nickname);
+      log_info(LD_REND, "Couldn't find router %s named in rendezvous cell.",
+               escaped(rp_nickname));
       goto err;
     }
 
@@ -646,13 +646,13 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
     return;
   }
 
-  log_info(LD_REND,"Reattempting rendezvous circuit to %s",
+  log_info(LD_REND,"Reattempting rendezvous circuit to '%s'",
            oldstate->chosen_exit->nickname);
 
   newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
                                oldstate->chosen_exit, 0, 1, 1);
   if (!newcirc) {
-    log_warn(LD_REND,"Couldn't relaunch rendezvous circuit to %s.",
+    log_warn(LD_REND,"Couldn't relaunch rendezvous circuit to '%s'.",
              oldstate->chosen_exit->nickname);
     return;
   }
