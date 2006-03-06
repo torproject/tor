@@ -1414,6 +1414,7 @@ handle_getinfo_helper(const char *question, char **answer)
         state = "CONNECTED";
       else
         state = "LAUNCHED";
+      /* XXX non-open conns may not have nickname assigned yet */
       slen = strlen(conns[i]->nickname)+strlen(state)+2;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%s %s",conns[i]->nickname,state);
