@@ -335,6 +335,7 @@ tor_strisprint(const char *s)
   while (*s) {
     if (!TOR_ISPRINT(*s))
       return 0;
+    s++;
   }
   return 1;
 }
