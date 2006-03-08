@@ -1815,6 +1815,7 @@ typedef enum or_conn_status_event_t {
   OR_CONN_EVENT_CONNECTED    = 1,
   OR_CONN_EVENT_FAILED       = 2,
   OR_CONN_EVENT_CLOSED       = 3,
+  OR_CONN_EVENT_NEW          = 4,
 } or_conn_status_event_t;
 
 void control_update_global_event_mask(void);

@@ -1407,17 +1407,26 @@ handle_getinfo_helper(const char *question, char **answer)
     for (i=0; i < n_conns; ++i) {
       const char *state;
       char *s;
+      char name[128];
       size_t slen;
-      if (conns[i]->type != CONN_TYPE_OR || conns[i]->marked_for_close)
+      connection_t *conn = conns[i];
+      if (conn->type != CONN_TYPE_OR || conn->marked_for_close)
         continue;
-      if (conns[i]->state == OR_CONN_STATE_OPEN)
+      if (conn->state == OR_CONN_STATE_OPEN)
         state = "CONNECTED";
-      else
+      else if (conn->nickname)
         state = "LAUNCHED";
-      /* XXX non-open conns may not have nickname assigned yet */
-      slen = strlen(conns[i]->nickname)+strlen(state)+2;
+      else
+        state = "NEW";
+      if (conn->nickname)
+        strlcpy(name, conn->nickname, sizeof(name));
+      else
+        tor_snprintf(name, sizeof(name), "%s:%d",
+                     conn->address, conn->port);
+
+      slen = strlen(name)+strlen(state)+2;
       s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%s %s",conns[i]->nickname,state);
+      tor_snprintf(s, slen, "%s %s", name, state);
       smartlist_add(status, s);
     }
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
@@ -2579,12 +2588,18 @@ control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
 
   if (EVENT_IS_INTERESTING0(EVENT_OR_CONN_STATUS)) {
     buf[0] = (uint8_t)tp;
-    strlcpy(buf+1,conn->nickname,sizeof(buf)-1);
+    strlcpy(buf+1,conn->nickname ? conn->nickname : "",sizeof(buf)-1);
     len = strlen(buf+1);
     send_control0_event(EVENT_OR_CONN_STATUS, (uint32_t)(len+1), buf);
   }
   if (EVENT_IS_INTERESTING1(EVENT_OR_CONN_STATUS)) {
     const char *status;
+    char name[128];
+    if (conn->nickname)
+      strlcpy(name, conn->nickname, sizeof(name));
+    else
+      tor_snprintf(name, sizeof(name), "%s:%d",
+                   conn->address, conn->port);
     switch (tp)
       {
       case OR_CONN_EVENT_LAUNCHED: status = "LAUNCHED"; break;
@@ -2597,7 +2612,7 @@ control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
       }
     send_control1_event(EVENT_OR_CONN_STATUS,
                         "650 ORCONN %s %s\r\n",
-                        conn->nickname, status);
+                        name, status);
   }
   return 0;
 }

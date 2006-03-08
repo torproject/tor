@@ -733,6 +733,7 @@ connection_init_accepted_conn(connection_t *conn)
 
   switch (conn->type) {
     case CONN_TYPE_OR:
+      control_event_or_conn_status(conn, OR_CONN_EVENT_NEW);
       return connection_tls_start_handshake(conn, 1);
     case CONN_TYPE_AP:
       conn->state = AP_CONN_STATE_SOCKS_WAIT;
