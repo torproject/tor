@@ -321,7 +321,7 @@ $Id$
    provide a unique descriptor to a client, and thereby partition that client
    from the rest of the network.)
 
-   The descriptor for a server whose digest (in hex) is <D> should be
+   The server descriptor with (descriptor) digest <D> (in hex) should be
    available at:
       http://<hostname>/tor/server/d/<D>.z
 
@@ -344,6 +344,10 @@ $Id$
      - A zlib-compressed concatenated list of objects.
    Directory servers MAY generate either format: the former requires less
    CPU, but the latter requires less bandwidth.
+
+   Clients SHOULD use upper case letters (A-F) when base16-encoding
+   fingerprints.  Servers MUST accept both upper and lower case fingerprints
+   in requests.
 
 5. Client operation: downloading information
 
