@@ -677,6 +677,19 @@ If set to 1, Tor tries to build circuits through all of the servers it
 knows about, so it can tell which are up and which are down.  This
 option is only useful for authoritative directories, so you probably
 don't want to use it.
+.LP
+.TP
+\fBAuthDirInvalid \fR\fIAddressPattern\fR...\fP
+Authoritative directories only. A set of address patterns for servers that
+will never be listed as "valid" in any network status document that this
+authority publishes.
+.LP
+.TP
+\fBAuthDirReject \fR\fIAddressPattern\fR...\fP
+Authoritative directories only.  A set of address patterns for servers that
+will never be listed at all in any network status document that this
+authority publishes, or accepted as an OR address in any descriptor submitted
+for publication by this authority.
 
 .SH HIDDEN SERVICE OPTIONS
 .PP
