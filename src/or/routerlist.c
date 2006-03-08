@@ -1967,7 +1967,7 @@ add_networkstatus_to_cache(const char *s,
 
 /** How far in the future do we allow a network-status to get before removing
  * it? (seconds) */
-#define NETWORKSTATUS_ALLOW_SKEW (48*60*60)
+#define NETWORKSTATUS_ALLOW_SKEW (24*60*60)
 /** Given a string <b>s</b> containing a network status that we received at
  * <b>arrived_at</b> from <b>source</b>, try to parse it, see if we want to
  * store it, and put it into our cache is necessary.
@@ -2272,9 +2272,6 @@ update_networkstatus_cache_downloads(time_t now)
   }
 }
 
-/*XXXX Should these be configurable? NM*/
-/** How old (in seconds) can a network-status be before we try replacing it? */
-#define NETWORKSTATUS_MAX_VALIDITY (48*60*60)
 /** How long (in seconds) does a client wait after getting a network status
  * before downloading the next in sequence? */
 #define NETWORKSTATUS_CLIENT_DL_INTERVAL (30*60)
@@ -2301,7 +2298,7 @@ update_networkstatus_client_downloads(time_t now)
 
   /* This is a little tricky.  We want to download enough network-status
    * objects so that we have at least half of them under
-   * NETWORKSTATUS_MAX_VALIDITY publication time.  We want to download a new
+   * NETWORKSTATUS_MAX_AGE publication time.  We want to download a new
    * *one* if the most recent one's publication time is under
    * NETWORKSTATUS_CLIENT_DL_INTERVAL.
    */
@@ -2317,7 +2314,7 @@ update_networkstatus_client_downloads(time_t now)
          --n_running_dirservers;
          continue;
        }
-       if (ns->published_on > now-NETWORKSTATUS_MAX_VALIDITY)
+       if (ns->published_on > now-NETWORKSTATUS_MAX_AGE)
          ++n_live;
        if (!most_recent || ns->received_on > most_recent_received) {
          most_recent_idx = ds_sl_idx; /* magic variable from FOREACH */
