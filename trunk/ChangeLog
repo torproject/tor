@@ -16,7 +16,7 @@ Changes in version 0.1.1.14-alpha - 2006-02-20
       meaning we were willing to pick trivial-bandwidth nodes for "fast"
       connections.
     - If the controller's SAVECONF command fails (e.g. due to file
-      permissions), let it know that it failed.
+      permissions), let the controller know that it failed.
 
   o Features:
     - If we're trying to be a Tor server and running Windows 95/98/ME
@@ -814,6 +814,32 @@ Changes in version 0.1.1.1-alpha - 2005-06-29
       our protocol works.
     - Spiffy new support for crypto hardware accelerators. Can somebody
       test this?
+
+
+Changes in version 0.1.0.17 - 2006-02-17
+  o Crash bugfixes on 0.1.0.x:
+    - When servers with a non-zero DirPort came out of hibernation,
+      sometimes they would trigger an assert.
+
+  o Other important bugfixes:
+    - On platforms that don't have getrlimit (like Windows), we were
+      artificially constraining ourselves to a max of 1024
+      connections. Now just assume that we can handle as many as 15000
+      connections. Hopefully this won't cause other problems.
+
+  o Backported features:
+    - When we're a server, a client asks for an old-style directory,
+      and our write bucket is empty, don't give it to him. This way
+      small servers can continue to serve the directory *sometimes*,
+      without getting overloaded.
+    - Whenever you get a 503 in response to a directory fetch, try
+      once more. This will become important once servers start sending
+      503's whenever they feel busy.
+    - Fetch a new directory every 120 minutes, not every 40 minutes.
+      Now that we have hundreds of thousands of users running the old
+      directory algorithm, it's starting to hurt a lot.
+    - Bump up the period for forcing a hidden service descriptor upload
+      from 20 minutes to 1 hour.
 
 
 Changes in version 0.1.0.16 - 2006-01-02
