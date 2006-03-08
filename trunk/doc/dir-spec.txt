@@ -331,6 +331,7 @@ $Id$
 
    The most recent descriptor for this server should be at:
       http://<hostname>/tor/server/authority.z
+    [Nothing in Tor uses this resource but it is at times handy for debugging.]
 
    A concatenated set of the most recent descriptors for all known servers
    should be available at:
