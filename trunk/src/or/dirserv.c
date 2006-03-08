@@ -457,7 +457,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
       "timezone is not correct.";
     return -1;
   }
-  if (ri->cache_info.published_on < now-ROUTER_MAX_AGE) {
+  if (ri->cache_info.published_on < now-ROUTER_MAX_AGE_TO_PUBLISH) {
     log_fn(severity, LD_DIRSERV,
            "Publication time for router with nickname '%s' is too far "
            "(%d minutes) in the past. Not adding (ContactInfo '%s', "
@@ -742,7 +742,7 @@ list_server_status(smartlist_t *routers, char **router_status_out)
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
   smartlist_t *rs_entries;
   time_t now = time(NULL);
-  time_t cutoff = now - ROUTER_MAX_AGE;
+  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   int authdir_mode = get_options()->AuthoritativeDir;
   tor_assert(router_status_out);
 
@@ -917,7 +917,7 @@ set_cached_dir(cached_dir_t *d, char *directory, time_t when)
   if (when<=d->published) {
     log_info(LD_DIRSERV, "Ignoring old directory; not caching.");
     tor_free(directory);
-  } else if (when>=now+ROUTER_MAX_AGE) {
+  } else if (when>=now+ROUTER_MAX_AGE_TO_PUBLISH) {
     log_info(LD_DIRSERV, "Ignoring future directory; not caching.");
     tor_free(directory);
   } else {
@@ -1327,7 +1327,7 @@ generate_v2_networkstatus(void)
   crypto_pk_env_t *private_key = get_identity_key();
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
-  time_t cutoff = now - ROUTER_MAX_AGE;
+  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   int naming = options->NamingAuthoritativeDir;
   int versioning = options->VersioningAuthoritativeDir;
   const char *contact;
@@ -1593,7 +1593,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     smartlist_free(digests);
   } else if (!strcmpstart(key, "/tor/server/fp/")) {
     smartlist_t *digests = smartlist_create();
-    time_t cutoff = time(NULL) - ROUTER_MAX_AGE;
+    time_t cutoff = time(NULL) - ROUTER_MAX_AGE_TO_PUBLISH;
     key += strlen("/tor/server/fp/");
     dir_split_resource_into_fingerprints(key, digests, NULL, 1);
     SMARTLIST_FOREACH(digests, const char *, d,

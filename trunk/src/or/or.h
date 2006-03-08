@@ -190,9 +190,14 @@
 
 /** How old do we allow a router to get before removing it
  * from the router list? In seconds. */
-#define ROUTER_MAX_AGE (60*60*24)
+#define ROUTER_MAX_AGE (60*60*48)
+/** How old can a router get before we (as a server) will no longer
+ * consider it live? In seconds. */
+#define ROUTER_MAX_AGE_TO_PUBLISH (60*60*20)
 /** How old do we let a saved descriptor get before removing it? */
-#define OLD_ROUTER_DESC_MAX_AGE (60*60*48)
+#define OLD_ROUTER_DESC_MAX_AGE (60*60*60)
+/** How old do we let a networkstatus get before ignoring it? */
+#define NETWORKSTATUS_MAX_AGE (60*60*24)
 
 typedef enum {
   CIRC_ID_TYPE_LOWER=0,
