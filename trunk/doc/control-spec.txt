@@ -681,9 +681,9 @@ $Id$
                "SENTCONNECT"  / ; Sent a connect cell along a circuit
                "SENTRESOLVE"  / ; Sent a resolve cell along a circuit
                "SUCCEEDED"    / ; Received a reply; stream established
-               "FAILED"       / ; Stream failed and not retriable.
+               "FAILED"       / ; Stream failed and not retriable
                "CLOSED"       / ; Stream closed
-               "DETACHED"       ; Detached from circuit; still retriable.
+               "DETACHED"       ; Detached from circuit; still retriable
 
        Target = Address ":" Port
 
@@ -693,9 +693,18 @@ $Id$
 4.1.3. OR Connection status changed
 
   The syntax is:
-    "650" SP "ORCONN" SP ServerID SP ORStatus
+    "650" SP "ORCONN" SP (ServerID / Target) SP ORStatus
 
-    ORStatus = "LAUNCHED" / "CONNECTED" / "FAILED" / "CLOSED"
+    ORStatus = "NEW" / "LAUNCHED" / "CONNECTED" / "FAILED" / "CLOSED"
+
+  NEW is for incoming connections, and LAUNCHED is for outgoing
+  connections. CONNECTED means the TLS handshake has finished (in
+  either direction). FAILED means a connection is being closed that
+  hasn't finished its handshake, and CLOSED is for connections that
+  have handshaked.
+
+  A ServerID is specified unless it's a NEW connection, in which
+  case we don't know what server it is yet, so we use Address:Port.
 
 4.1.4. Bandwidth used in the last second
 
