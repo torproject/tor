@@ -52,20 +52,6 @@ N - building on freebsd 6.0: (with multiple openssl installations)
       logging them, and test values more closely as they arrive...
     - But what to do about contact_info and platform?
     - (Didn't finish converting rend*.c)
-  - Make "setconf" and "hup" behavior cleaner for LINELIST config
-    options (e.g. Log). Bug 238.
-R - Jan 26 10:25:04.832 [warn] add_an_entry_guard(): Tried finding a
-    new entry, but failed. Bad news. XXX.
-R - streamline how we define a guard node as 'up'. document it
-    somewhere.
-R - reduce log severity for guard nodes.
-R - make guard node timeout higher.
-  o Clean and future-proof exit policy formats a bit.
-    o Likewise accept, but don't generate /bits formats (unless they're
-      accepted in 0.0.9 and later).
-    o Warn when we see a netmask that isn't a prefix.
-    o Make clients understand "private:*" in exit policies, even though
-      we don't generate it yet.
 
 for 0.1.1.x-final:
   - find 10 dirservers.
@@ -73,13 +59,16 @@ for 0.1.1.x-final:
     - non-versioning dirservers don't need to set recommended*versions.
     - non-naming dirservers don't need to have an approved-routers file.
     - What are criteria to be a dirserver?  Write a policy.
-  - Document AuthDirInvalid, AuthDirReject, AuthDirRejectUnlisted
   - are there other options that we haven't documented so far?
   - look at the proposed os x uninstaller:
     http://archives.seul.org/or/talk/Jan-2006/msg00038.html
 
 Deferred from 0.1.1.x:
 
+R - streamline how we define a guard node as 'up'. document it
+    somewhere.
+  - Make "setconf" and "hup" behavior cleaner for LINELIST config
+    options (e.g. Log). Bug 238.
 N - commit edmanm's win32 makefile to tor cvs contrib
 
 R - look into "uncounting" bytes spent on local connections. so
