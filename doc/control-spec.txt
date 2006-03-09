@@ -479,6 +479,11 @@ $Id$
   via TC when "__LeaveStreamsUnattached" is false may cause a race between
   Tor and the controller, as both attempt to attach streams to circuits.}
 
+  {Implementation note: You can try to attachstream to a stream that
+  has already sent a connect or resolve request but hasn't succeeded
+  yet, in which case Tor will detach the stream from its current circuit
+  before proceeding with the new attach request.}
+
 3.13. POSTDESCRIPTOR
 
   Sent from the client to the server. The syntax is:
