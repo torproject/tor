@@ -690,6 +690,13 @@ Authoritative directories only.  A set of address patterns for servers that
 will never be listed at all in any network status document that this
 authority publishes, or accepted as an OR address in any descriptor submitted
 for publication by this authority.
+.LP
+.TP
+\fBAuthDirRejectUnlisted \fR\fB0\fR|\fB1\fR\fP
+Authoritative directories only.  If set to 1, the directory server
+rejects all uploaded server descriptors that aren't explicitly listed
+in the fingerprints file. This acts as a "panic button" if we get
+Sybiled. (Default: 0)
 
 .SH HIDDEN SERVICE OPTIONS
 .PP
