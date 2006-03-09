@@ -1,3 +1,35 @@
+Changes in version 0.1.1.15-rc - 2006-03-09
+  o Bugfixes and cleanups on 0.1.1.x:
+    - When we're printing strings from the network, don't try to print
+      non-printable characters. This protects us against shell escape
+      sequence exploits, and also against attacks to fool humans into
+      misreading their logs.
+    - Fix a bug where Tor would fail to establish any connections if you
+      left it off for 24 hours and then started it: we were happy with
+      the obsolete network statuses, but they all referred to router
+      descriptors that were too old to fetch, so we ended up with no
+      valid router descriptors.
+    - Fix a seg fault in the controller's "getinfo orconn-status" command
+      while listing status on incoming handshaking connections. Introduce
+      a status name "NEW" for these connections.
+    - Don't abandon entry guards until they've been down or gone for
+      a whole month.
+    - Cleaner and quieter log messages.
+
+  o New features:
+    - New controller signal NEWNYM that makes new application requests
+      use clean circuits.
+    - Add a new circuit purpose 'controller' to let the controller ask
+      for a circuit that Tor won't try to use. Extend the EXTENDCIRCUIT
+      controller command to let you specify the purpose if you're starting
+      a new circuit.  Add a new SETCIRCUITPURPOSE controller command to
+      let you change a circuit's purpose after it's been created.
+    - Accept "private:*" in routerdesc exit policies; not generated yet
+      because older Tors do not understand it.
+    - Add BSD-style contributed startup script "rc.subr" from Peter
+      Thoenen.
+
+
 Changes in version 0.1.1.14-alpha - 2006-02-20
   o Bugfixes on 0.1.1.x:
     - Don't die if we ask for a stdout or stderr log (even implicitly)
