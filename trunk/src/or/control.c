@@ -1815,7 +1815,9 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
       return 0;
   }
 
-  if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT) {
+  if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT &&
+      ap_conn->state != AP_CONN_STATE_CONNECT_WAIT &&
+      ap_conn->state != AP_CONN_STATE_RESOLVE_WAIT) {
     if (STATE_IS_V0(conn->state)) {
       send_control0_error(conn, ERR_NO_STREAM,
                           "Connection is not managed by controller.");
@@ -1825,6 +1827,17 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
                           conn);
     }
     return 0;
+  }
+
+  /* Do we need to detach it first? */
+  if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT) {
+    circuit_t *circ = circuit_get_by_edge_conn(conn);
+    connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
+    /* Un-mark it as ending, since we're going to reuse it. */
+    conn->has_sent_end = 0;
+    if (circ)
+      circuit_detach_stream(circ,conn);
+    conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
   if (zero_circ) {
