@@ -1809,8 +1809,7 @@ again:
     goto again;
   }
   entry = tor_malloc_zero(sizeof(entry_guard_t));
-  /* XXXX Downgrade this to info before release. NM */
-  log_notice(LD_CIRC, "Chose '%s' as new entry guard.", router->nickname);
+  log_info(LD_CIRC, "Chose '%s' as new entry guard.", router->nickname);
   strlcpy(entry->nickname, router->nickname, sizeof(entry->nickname));
   memcpy(entry->identity, router->cache_info.identity_digest, DIGEST_LEN);
   if (chosen)
@@ -1851,14 +1850,12 @@ entry_guards_free_all(void)
   }
 }
 
-/* XXX These are 12 hours for now, but I'd like to make them 30 days */
-
 /** How long (in seconds) do we allow an entry guard to be nonfunctional
  * before we give up on it? */
-#define ENTRY_ALLOW_DOWNTIME (1*12*60*60)
+#define ENTRY_ALLOW_DOWNTIME (30*24*60*60)
 /** How long (in seconds) do we allow an entry guard to be unlisted in the
  * directory before we give up on it? */
-#define ENTRY_ALLOW_UNLISTED (1*12*60*60)
+#define ENTRY_ALLOW_UNLISTED (30*24*60*60)
 
 /** Remove all entry guards that have been down or unlisted for so
  * long that we don't think they'll come up again. Return 1 if we
@@ -1888,7 +1885,7 @@ remove_dead_entries(void)
     if (why) {
       base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
       format_local_iso_time(tbuf, since);
-      log_warn(LD_CIRC,
+      log_info(LD_CIRC,
                "Entry guard '%s' (%s) has been %s since %s; removing.",
                entry->nickname, dbuf, why, tbuf);
       tor_free(entry);
@@ -1923,8 +1920,6 @@ entry_guards_set_status_from_directory(void)
 
   now = time(NULL);
 
-  /*XXXX Most of these warns should be non-warns. */
-
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       routerinfo_t *r = router_get_by_digest(entry->identity);
@@ -1932,13 +1927,13 @@ entry_guards_set_status_from_directory(void)
         if (! entry->unlisted_since) {
           entry->unlisted_since = time(NULL);
           changed = 1;
-          log_warn(LD_CIRC,"Entry guard '%s' is not listed by directories.",
+          log_info(LD_CIRC,"Entry guard '%s' is not listed by directories.",
                    entry->nickname);
           severity = LOG_WARN;
         }
       } else {
         if (entry->unlisted_since) {
-          log_warn(LD_CIRC,"Entry guard '%s' is listed again by directories.",
+          log_info(LD_CIRC,"Entry guard '%s' is listed again by directories.",
                    entry->nickname);
           changed = 1;
           severity = LOG_WARN;
@@ -1947,15 +1942,15 @@ entry_guards_set_status_from_directory(void)
         if (! r->is_running) {
           if (! entry->down_since) {
             entry->down_since = now;
-            log_warn(LD_CIRC, "Entry guard '%s' is now down.",
+            log_info(LD_CIRC, "Entry guard '%s' is now down.",
                      entry->nickname);
             changed = 1;
             severity = LOG_WARN;
           }
         } else {
           if (entry->down_since) {
-            log_notice(LD_CIRC,"Entry guard '%s' is up in latest directories.",
-                       entry->nickname);
+            log_info(LD_CIRC,"Entry guard '%s' is up in latest directories.",
+                     entry->nickname);
             changed = 1;
           }
           entry->down_since = 0;
@@ -2017,18 +2012,17 @@ entry_guard_set_status(const char *digest, int succeeded)
                 if (e == entry)
                   break;
               });
-            log_notice(LD_CIRC,
-                       "Connected to new entry guard '%s'. Marking earlier "
-                       "entry guards up. %d/%d entry guards usable/new.",
-                       entry->nickname,
-                       num_live_entry_guards(), smartlist_len(entry_guards));
+            log_info(LD_CIRC,
+                     "Connected to new entry guard '%s'. Marking earlier "
+                     "entry guards up. %d/%d entry guards usable/new.",
+                     entry->nickname,
+                     num_live_entry_guards(), smartlist_len(entry_guards));
             log_entry_guards(LOG_INFO);
             changed = 1;
           }
           if (entry->down_since) {
             entry->down_since = 0;
-            /*XXXX shouldn't be so loud. NM */
-            log_notice(LD_CIRC,
+            log_info(LD_CIRC,
                   "Connection to formerly down entry guard '%s' succeeded. "
                   "%d/%d entry guards usable/new.", entry->nickname,
                   num_live_entry_guards(), smartlist_len(entry_guards));
@@ -2037,7 +2031,7 @@ entry_guard_set_status(const char *digest, int succeeded)
           }
         } else {
           if (!entry->made_contact) { /* dump him */
-            log_notice(LD_CIRC,
+            log_info(LD_CIRC,
                    "Connection to never-contacted entry guard '%s' failed. "
                    "Removing from the list. %d/%d entry guards usable/new.",
                    entry->nickname,
@@ -2048,8 +2042,8 @@ entry_guard_set_status(const char *digest, int succeeded)
             changed = 1;
           } else if (!entry->down_since) {
             entry->down_since = time(NULL);
-            log_warn(LD_CIRC, "Connection to entry guard '%s' failed."
-                     " %d/%d entry guards usable/new.",
+            log_info(LD_CIRC, "Connection to entry guard '%s' failed. "
+                     "%d/%d entry guards usable/new.",
                      entry->nickname,
                      num_live_entry_guards(), smartlist_len(entry_guards));
             log_entry_guards(LOG_INFO);
