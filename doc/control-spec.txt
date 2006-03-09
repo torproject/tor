@@ -219,7 +219,7 @@ $Id$
      "SIGNAL" SP Signal CRLF
 
      Signal = "RELOAD" / "SHUTDOWN" / "DUMP" / "DEBUG" / "HALT" /
-              "HUP" / "INT" / "USR1" / "USR2" / "TERM"
+              "HUP" / "INT" / "USR1" / "USR2" / "TERM" / "NEWNYM"
 
   The meaning of the signals are:
 
@@ -231,6 +231,8 @@ $Id$
                    circuits. (like USR1)
       DEBUG     -- Debug: switch all open logs to loglevel debug. (like USR2)
       HALT      -- Immediate shutdown: clean up and exit now. (like TERM)
+      NEWNYM    -- Switch to clean circuits, so new application requests
+                   don't share any circuits with old ones.
 
   The server responds with "250 OK" if the signal is recognized (or simply
   closes the socket if it was asked to close immediately), or "552
