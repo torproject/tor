@@ -1220,6 +1220,9 @@ control_signal_act(int the_signal)
     case 15:
       signal_callback(0,0,(void*)(uintptr_t)SIGTERM);
       break;
+    case SIGNEWNYM:
+      signal_callback(0,0,(void*)(uintptr_t)SIGNEWNYM);
+      break;
     default:
       return -1;
     }
@@ -1274,6 +1277,9 @@ signal_callback(int fd, short events, void *arg)
                                                 zombies */
       break;
 #endif
+    case SIGNEWNYM:
+      circuit_expire_all_dirty_circs();
+      break;
   }
 }
 

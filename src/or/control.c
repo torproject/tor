@@ -1118,6 +1118,8 @@ handle_control_signal(connection_t *conn, uint32_t len,
       sig = SIGUSR2;
     else if (!strcasecmp(s, "HALT") || !strcasecmp(s, "TERM"))
       sig = SIGTERM;
+    else if (!strcasecmp(s, "NEWNYM"))
+      sig = SIGNEWNYM;
     else {
       connection_printf_to_buf(conn, "552 Unrecognized signal code \"%s\"\r\n",
                                s);
