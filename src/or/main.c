@@ -1278,7 +1278,7 @@ signal_callback(int fd, short events, void *arg)
 }
 
 /**
- * Write current memory uusage information to the log.
+ * Write current memory usage information to the log.
  */
 static void
 dumpmemusage(int severity)
