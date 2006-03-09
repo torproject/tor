@@ -55,6 +55,11 @@
    accept claims from every Tor user and build a complex weighting /
    reputation system to decide which claims are "probably" right.
 
+   One possible way to implement the latter is something similar to
+   EigenTrust [http://www.stanford.edu/~sdkamvar/papers/eigentrust.pdf],
+   where the opinion of nodes with high reputation more is weighted
+   higher.
+
 3. Related issues we need to keep in mind.
 
 3.1. Relay and exit configuration needs to be easy and usable.
@@ -97,6 +102,10 @@
    not just through direct interaction (beginning of the circuit) but
    also through indirect interaction (middle of the circuit). That way
    you can never be sure when your guards are measuring you.
+
+   Both 3.2 and 3.3 may be solved by having a global notion of reputation,
+   as in 2.3 and 2.4. However, computing the global reputation from local
+   views could be expensive (O(n^2)) when the network is really large.
 
 3.4. Restricted topology: benefits and roadmap.
 
@@ -163,6 +172,15 @@
    Maybe that complexity is sufficient to deter most lazy users. Or
    maybe it's an argument in favor of a more penny-counting reputation
    approach.
+
+   Addendum: I was more thinking of measuring based on who is the service
+   provider and service receiver for the circuit. Say Alice builds a
+   circuit to Bob. Then Bob is providing service to Alice, since he
+   otherwise wouldn't need to spend is bandwidth. So traffic in either
+   direction should be charged to Alice. Of course, the same attack would
+   work, namely, Bob could cheat by sending bytes back quickly. So someone
+   close to the origin needs to detect this and close the circuit, if
+   necessary. -JN
 
 3.7. What is the appropriate resource balance for servers vs. clients?
 
@@ -255,14 +273,105 @@
    third approach is to remember which connections have recently sent
    us high-priority cells, and preferentially read from those connections.
 
-   Hopefully we can get away with not solving this section at all.
+   Hopefully we can get away with not solving this section at all. But if
+   necessary, we can consult Ed Knightly, a Professor at Rice
+   [http://www.ece.rice.edu/~knightly/], for his extensive experience on
+   networking QoS.
+
+3.11. Global reputation system: Congestion on high reputation servers?
+
+   If the notion of reputation is global (as in 2.3 or 2.4), circuits that
+   go through successive high reputation servers would be the fastest and
+   most reliable. This would incentivize everyone, regardless of their own
+   reputation, to choose only the highest reputation servers in its
+   circuits, causing an over-congestion on those servers.
+
+   One could argue, though, that once those servers are over-congested,
+   their bandwidth per circuit drops, which would in turn lower their
+   reputation in the future. A question is whether this would overall
+   stablize.
+
+   Another possible way is to keep a cap on reputation. In this way, a
+   fraction of servers would have the same high reputation, thus balancing
+   such load.
+
+3.12. Another anonymity attack: learning from service levels.
+
+   If reputation is local, it may be possible for an evil node to learn
+   the identity of the origin through provision of differential service.
+   For instance, the evil node provides crappy bandwidth to everyone,
+   until it finds a circuit that it wants to trace the origin, then it
+   provides good bandwidth. Now, as only those directly or indirectly
+   observing this circuit would like the evil node, it can test each node
+   by building a circuit via each node to another evil node. If the
+   bandwidth is high, it is (somewhat) likely that the node was a part of
+   the circuit.
+
+   This problem does not exist if the reputation is global and nodes only
+   follow the global reputation, i.e., completely ignore their own view.
+
+3.13. DoS through high priority traffic.
+
+   Assume there is an evil node with high reputation (or high value on
+   Alice) and this evil node wants to deny the service to Alice. What it
+   needs to do is to send a lot of traffic to Alice. To Alice, all traffic
+   from this evil node is of high priority. If the choice of circuits are
+   too based toward high priority circuits, Alice would spend most of her
+   available bandwidth on this circuit, thus providing poor bandwidth to
+   everyone else. Everyone else would start to dislike Alice, making it
+   even harder for her to forward other nodes' traffic. This could cause
+   Alice to have a low reputation, and the only high bandwidth circuit
+   Alice could use would be via the evil node.
 
 4. Sample designs.
 
 4.1. Two classes of service for circuits.
 
+   Whenever a circuit is built, it is specified by the origin which class,
+   either "premium" or "normal", this circuit belongs. A premium circuit
+   gets preferred treatment at each node. A node "spends" its value, which
+   it earned a priori by providing service, to the next node by sending
+   and receiving bytes. Once a node has overspent its values, the circuit
+   cannot stay as premium. It can either breaks or converts into a normal
+   circuit. Each node also reserves a small portion of bandwidth for
+   normal circuits to prevent starvation.
+
+   Pro: Even if a node has no value to spend, it can still use normal
+   circuits. This allow casual user to use Tor without forcing them to run
+   a server.
+
+   Pro: Nodes have incentive to forward traffic as quick and as much as
+   possible to accumulate value.
+
+   Con: There is no proactive method for a node to rebalance its debt. It
+   has to wait until there happens to be a circuit in the opposite
+   direction.
+
+   Con: A node needs to build circuits in such a way that each node in the
+   circuit has to have good values to the next node. This requires
+   non-local knowledge and makes circuits less reliable as the values are
+   used up in the circuit.
+
+   Con: May discourage nodes to forward traffic in some circuits, as they
+   worry about spending more useful values to get less useful values in
+   return.
+
 4.2. Treat all the traffic from the node with the same service;
      hard reputation system.
+
+   This design is similar to 4.1, except that instead of having two
+   classes of circuits, there is only one. All the circuits are
+   prioritized based on the value of the interacting node.
+
+   Pro: It is simpler to design and give priority based on connections,
+   not circuits.
+
+   Con: A node only needs to keep a few guard nodes happy to forward their
+   traffic.
+
+   Con: Same as in 4.1, may discourage nodes to forward traffic in some
+   circuits, as they worry about spending more useful values to get less
+   useful values in return.
 
 4.3. Treat all the traffic from the node with the same service;
      soft reputation system.
@@ -300,7 +409,10 @@
    one way through: if there are few exits, then they will attract a
    lot of use, so lots of people will like them, so when they try to
    use the network they will find their first hop to be particularly
-   pleasant. After that they're like the rest of the world though.
+   pleasant. After that they're like the rest of the world though. (An
+   alternative would be to reward exit nodes with higher values. At the
+   extreme, we could even ask the directory servers to suggest the extra
+   values, based on the current availability of exit nodes.)
 
    Pro: this is a pretty easy design to add; and it can be phased in
    incrementally simply by having new nodes behave differently.
@@ -337,5 +449,16 @@
 
 5. Recommendations and next steps.
 
+5.1. Simulation.
 
+   For simulation trace, we can use two: one is what we obtained from Tor
+   and one from existing web traces.
+
+   We want to simulate all the four cases in 4.1-4. For 4.4, we may want
+   to look at two variations: (1) the directory servers check the
+   bandwidth themselves through Tor; (2) each node reports their perceived
+   values on other nodes, while the directory servers use EigenTrust to
+   compute global reputation and broadcast those.
+
+5.2. Deploying into existing Tor network.
 
