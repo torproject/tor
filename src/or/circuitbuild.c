@@ -1929,14 +1929,14 @@ entry_guards_set_status_from_directory(void)
           changed = 1;
           log_info(LD_CIRC,"Entry guard '%s' is not listed by directories.",
                    entry->nickname);
-          severity = LOG_WARN;
+          severity = LOG_INFO;
         }
       } else {
         if (entry->unlisted_since) {
           log_info(LD_CIRC,"Entry guard '%s' is listed again by directories.",
                    entry->nickname);
           changed = 1;
-          severity = LOG_WARN;
+          severity = LOG_INFO;
         }
         entry->unlisted_since = 0;
         if (! r->is_running) {
@@ -1945,7 +1945,7 @@ entry_guards_set_status_from_directory(void)
             log_info(LD_CIRC, "Entry guard '%s' is now down.",
                      entry->nickname);
             changed = 1;
-            severity = LOG_WARN;
+            severity = LOG_INFO;
           }
         } else {
           if (entry->down_since) {
