@@ -1,8 +1,11 @@
 tor (0.1.1.15-rc-1) experimental; urgency=low
 
   * New upstream version.
+  * Apparently passing --host to configure when not cross-compiling
+    is evil now and greatly confuses configure.  So don't do it unless it
+    actually differs from --build host.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 21 Feb 2006 05:19:01 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sat, 11 Mar 2006 20:04:36 +0100
 
 tor (0.1.1.14-alpha-1) experimental; urgency=low
 

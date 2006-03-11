@@ -6,16 +6,22 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-# These are used for cross-compiling and for saving the configure script
-# from having to guess our platform (since we know it already)
-DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
-DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
-LOCALHOST_IP  ?= $(shell getent hosts localhost | awk '{print $$1}')
-
-CFLAGS = -Wall -g
-
 export PACKAGE=tor
 include /usr/share/dpatch/dpatch.make
+
+# These are used for cross-compiling and for saving the configure script
+# from having to guess our platform (since we know it already)
+export DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+export DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+CFLAGS ?= -Wall -g
+ifeq ($(DEB_BUILD_GNU_TYPE), $(DEB_HOST_GNU_TYPE))
+  confflags += --build $(DEB_HOST_GNU_TYPE)
+else
+  confflags += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
+endif
+
+
+LOCALHOST_IP  ?= $(shell getent hosts localhost | awk '{print $$1}')
 
 # Do not optimize the build with "noopt"
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
@@ -53,8 +59,7 @@ config.status: configure
 	@if [ "$(LOCALHOST_IP)" != "127.0.0.1" ]; then echo; echo; echo; echo; echo; echo "######################################################################"; echo "WARNING: This system does not think localhost is 127.0.0.1.  Will ignore result of testsuite.  Please fix your system/chroot."; echo "######################################################################"; echo; echo; echo; echo; echo "Note: 'getent hosts localhost' should return '127.0.0.1 localhost'"; echo; fi
 	dh_testdir
 	CFLAGS="$(CFLAGS)" ./configure \
-		--host=$(DEB_HOST_GNU_TYPE) \
-		--build=$(DEB_BUILD_GNU_TYPE) \
+		$(confflags) \
 		--prefix=/usr \
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info \
