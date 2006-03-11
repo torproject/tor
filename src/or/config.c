@@ -992,7 +992,7 @@ config_find_option(config_format_t *fmt, const char *key)
       return &fmt->vars[i];
     }
   }
-  /* Okay, unrecognized options */
+  /* Okay, unrecognized option */
   return NULL;
 }
 
@@ -1143,9 +1143,19 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
     c->key = tor_strdup(var->name);
   }
 
-  if (!strlen(c->value)) { /* reset or clear it, then return */
-    if (!clear_first) /* not already cleared */
-      option_reset(fmt, options, var, use_defaults);
+  if (!strlen(c->value)) {
+    /* reset or clear it, then return */
+    if (!clear_first) {
+      if (var->type == CONFIG_TYPE_LINELIST ||
+          var->type == CONFIG_TYPE_LINELIST_S) {
+        /* We got an empty linelist from the torrc or commandline.
+           As a special case, call this an error. Warn and ignore. */
+        log_warn(LD_CONFIG,
+                 "Linelist option '%s' has no value. Skipping.", c->key);
+      } else { /* not already cleared */
+        option_reset(fmt, options, var, use_defaults);
+      }
+    }
     return 0;
   }
 
@@ -1330,6 +1340,9 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
  *    0                1       "set to null first"
  *    1                1       "set to defaults first"
  * Return 0 on success, -1 on bad key, -2 on bad value.
+ *
+ * As an additional special case, if a LINELIST config option has
+ * no value and clear_first is 0, then warn and ignore it.
  */
 
 /*
@@ -1700,8 +1713,8 @@ options_dup(config_format_t *fmt, or_options_t *old)
     line = get_assigned_option(fmt, old, fmt->vars[i].name);
     if (line) {
       if (config_assign(fmt, newopts, line, 0, 0) < 0) {
-        log_warn(LD_BUG, "Bug: config_get_assigned_option() generated "
-                 "something we couldn't config_assign().");
+        log_err(LD_BUG, "Bug: config_get_assigned_option() generated "
+                "something we couldn't config_assign().");
         tor_assert(0);
       }
     }
