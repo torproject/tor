@@ -66,3 +66,9 @@ fi
 if [ -d /Library/StartupItems/Privoxy ]; then
   find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel
 fi
+
+# Copy Documentation
+cp -r $PACKAGE_PATH/Contents/Resources/documents $TARGET/documents
+
+# Copy Uninstaller
+cp -r $PACKAGE_PATH/Contents/Resources/*ninstall* $TARGET/

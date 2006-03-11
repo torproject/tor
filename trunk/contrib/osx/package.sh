@@ -79,12 +79,26 @@ cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cp contrib/osx/Tor_Uninstaller.applescript $BUILD_DIR/tor_resources/Tor_Uninstaller.applescript
 cp contrib/osx/uninstall_tor_bundle.sh $BUILD_DIR/tor_resources/uninstall_tor_bundle.sh
+cp contrib/osx/tor_logo.gif $BUILD_DIR/tor_resources/background.gif
 cat <<EOF > $BUILD_DIR/tor_resources/Welcome.txt
 Tor: an anonymous Internet communication system
 
 Tor is a system for using the internet anonymously, and allowing
 others to do so.
 EOF
+
+### Assemble documentation
+
+DOC=$BUILD_DIR/tor_resources/documents
+mkdir $DOC
+cp doc/tor-doc.html doc/tor-doc.css doc/tor-doc-osx.html $DOC
+cp AUTHORS $DOC/AUTHORS.txt
+groff doc/tor.1.in -T ps -m man | pstopdf -i -o $DOC/tor-reference.pdf
+groff doc/tor-resolve.1 -T ps -m man | pstopdf -i -o $DOC/tor-resolve.pdf
+mkdir $DOC/Advanced
+cp doc/tor-spec.txt doc/rend-spec.txt doc/control-spec.txt doc/socks-extensions.txt doc/version-spec.txt $DOC/Advanced
+cp doc/HACKING $DOC/Advanced/HACKING.txt
+cp ChangeLog $DOC/Advanced/ChangeLog.txt
 
 find $BUILD_DIR/tor_packageroot -print0 |sudo xargs -0 chown root:wheel
 
@@ -131,8 +145,7 @@ cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
 cp contrib/osx/TorBundleInfo.plist "$MPKG/Contents/Info.plist"
 cp contrib/osx/TorBundleWelcome.rtf "$MPKG/Contents/Resources/Welcome.rtf"
 cp contrib/osx/TorBundleDesc.plist "$MPKG/Contents/Resources/Description.plist"
-cp contrib/osx/Tor_Uninstaller.applescript "$MPKG/Contents/Resources/Tor_Uninstaller.applescript"
-cp contrib/osx/uninstall_tor_bundle.sh "$MPKG/Contents/Resources/uninstall_tor_bundle.sh"
+cp contrib/osx/tor_logo.gif "$MPKG/Contents/Resources/background.gif"
 
 # Move all the subpackages into place.  unzip Privoxy.pkg into place,
 # and fix its file permissions so we can rm -rf it later.
@@ -146,20 +159,6 @@ cp $PRIVOXY_RESDIR/License.html $BUILD_DIR/output/Privoxy\ License.html
 cp $PRIVOXY_RESDIR/ReadMe.txt $BUILD_DIR/output/Privoxy\ ReadMe.txt
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/output/Tor\ ReadMe.rtf
 cp LICENSE $BUILD_DIR/output/Tor\ License.txt
-
-### Assemble documentation
-
-DOC=$BUILD_DIR/output/Documents
-mkdir $DOC
-cp doc/tor-doc.html doc/tor-doc.css doc/tor-doc-osx.html $DOC
-cp AUTHORS $DOC/AUTHORS.txt
-groff doc/tor.1 -T ps -m man | pstopdf - $DOC/tor-reference.pdf
-groff doc/tor-resolve.1 -T ps -m man | pstopdf - $DOC/tor-resolve.pdf
-
-mkdir $DOC/Advanced
-cp doc/tor-spec.txt doc/rend-spec.txt doc/control-spec.txt doc/socks-extensions.txt doc/version-spec.txt $DOC/Advanced
-cp doc/HACKING $DOC/Advanced/HACKING.txt
-cp ChangeLog $DOC/Advanced/ChangeLog.txt
 
 ### Package it all into a DMG
 
