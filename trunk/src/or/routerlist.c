@@ -3792,6 +3792,14 @@ routerlist_assert_ok(routerlist_t *rl)
   }
 }
 
+/** Allocate and return a new string representing the contact info
+ * and platform string for <b>router</b>,
+ * surrounded by quotes and using standard C escapes.
+ *
+ * THIS FUNCTION IS NOT REENTRANT.  Don't call it from outside the main
+ * thread.  Also, each call invalidates the last-returned value, so don't
+ * try log_warn(LD_GENERAL, "%s %s", esc_router_info(a), esc_router_info(b));
+ */
 const char *
 esc_router_info(routerinfo_t *router)
 {
