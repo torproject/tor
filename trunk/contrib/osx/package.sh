@@ -79,6 +79,7 @@ cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cp contrib/osx/Tor_Uninstaller.applescript $BUILD_DIR/tor_resources/Tor_Uninstaller.applescript
 cp contrib/osx/uninstall_tor_bundle.sh $BUILD_DIR/tor_resources/uninstall_tor_bundle.sh
+cp contrib/osx/package_list.txt $BUILD_DIR/tor_resources/package_list.txt
 cp contrib/osx/tor_logo.gif $BUILD_DIR/tor_resources/background.gif
 cat <<EOF > $BUILD_DIR/tor_resources/Welcome.txt
 Tor: an anonymous Internet communication system
