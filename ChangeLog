@@ -1,5 +1,5 @@
-Changes in version 0.1.1.15-rc - 2006-03-09
-  o Bugfixes and cleanups on 0.1.1.x:
+Changes in version 0.1.1.15-rc - 2006-03-11
+  o Bugfixes and cleanups:
     - When we're printing strings from the network, don't try to print
       non-printable characters. This protects us against shell escape
       sequence exploits, and also against attacks to fool humans into
@@ -12,6 +12,9 @@ Changes in version 0.1.1.15-rc - 2006-03-09
     - Fix a seg fault in the controller's "getinfo orconn-status" command
       while listing status on incoming handshaking connections. Introduce
       a status name "NEW" for these connections.
+    - If we get a linelist or linelist_s config option from the torrc
+      (e.g. ExitPolicy) and it has no value, warn and skip rather than
+      silently resetting it to its default.
     - Don't abandon entry guards until they've been down or gone for
       a whole month.
     - Cleaner and quieter log messages.
