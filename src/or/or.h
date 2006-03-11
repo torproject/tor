@@ -2362,6 +2362,7 @@ void networkstatus_list_update_recent(time_t now);
 void router_reset_descriptor_download_failures(void);
 void router_reset_status_download_failures(void);
 int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
+const char *esc_router_info(routerinfo_t *router);
 
 /********************************* routerparse.c ************************/
 

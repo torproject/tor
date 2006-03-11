@@ -592,6 +592,10 @@ esc_for_log(const char *s)
   const char *cp;
   char *result, *outp;
   size_t len = 3;
+  if (!s) {
+    return tor_strdup("");
+  }
+
   for (cp = s; *cp; ++cp) {
     switch (*cp) {
       case '\\':
