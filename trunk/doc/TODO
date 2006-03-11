@@ -50,8 +50,8 @@ N - building on freebsd 6.0: (with multiple openssl installations)
     are dangerous for our users.
     o So... add functions to escape potentially malicious values before
       logging them, and test values more closely as they arrive...
-    - But what to do about contact_info and platform?
-    - (Didn't finish converting rend*.c)
+    o But what to do about contact_info and platform?
+    o (Didn't finish converting rend*.c)
 
 for 0.1.1.x-final:
   - find 10 dirservers.

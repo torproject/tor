@@ -3792,3 +3792,25 @@ routerlist_assert_ok(routerlist_t *rl)
   }
 }
 
+const char *
+esc_router_info(routerinfo_t *router)
+{
+  static char *info;
+  char *esc_contact, *esc_platform;
+  size_t len;
+  if (info)
+    tor_free(info);
+
+  esc_contact = esc_for_log(router->contact_info);
+  esc_platform = esc_for_log(router->platform);
+
+  len = strlen(esc_contact)+strlen(esc_platform)+32;
+  info = tor_malloc(len);
+  tor_snprintf(info, len, "Contact %s, Platform %s", esc_contact,
+               esc_platform);
+  tor_free(esc_contact);
+  tor_free(esc_platform);
+
+  return info;
+}
+

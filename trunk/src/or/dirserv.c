@@ -347,12 +347,14 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
     return FP_NAMED; /* Right fingerprint. */
   } else {
     if (should_log) {
+      char *esc_contact = esc_for_log(contact);
       log_warn(LD_DIRSERV,
                "Mismatched fingerprint for '%s': expected '%s' got '%s'. "
                "ContactInfo '%s', platform '%s'.)",
                nickname, nn_ent->fingerprint, fp,
-               contact ? contact : "",
+               esc_contact,
                platform ? escaped(platform) : "");
+       tor_free(esc_contact);
     }
     if (msg)
       *msg = "Rejected: There is already a verified server with this nickname "
@@ -449,10 +451,9 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   if (ri->cache_info.published_on > now+ROUTER_ALLOW_SKEW) {
     log_fn(severity, LD_DIRSERV, "Publication time for nickname '%s' is too "
            "far (%d minutes) in the future; possible clock skew. Not adding "
-           "(ContactInfo '%s', platform '%s').",
+           "(%s)",
            ri->nickname, (int)((ri->cache_info.published_on-now)/60),
-           ri->contact_info ? ri->contact_info : "",
-           ri->platform ? ri->platform : "");
+           esc_router_info(ri));
     *msg = "Rejected: Your clock is set too far in the future, or your "
       "timezone is not correct.";
     return -1;
@@ -460,11 +461,9 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   if (ri->cache_info.published_on < now-ROUTER_MAX_AGE_TO_PUBLISH) {
     log_fn(severity, LD_DIRSERV,
            "Publication time for router with nickname '%s' is too far "
-           "(%d minutes) in the past. Not adding (ContactInfo '%s', "
-           "platform '%s').",
+           "(%d minutes) in the past. Not adding (%s)",
            ri->nickname, (int)((now-ri->cache_info.published_on)/60),
-           ri->contact_info ? ri->contact_info : "",
-           ri->platform ? ri->platform : "");
+           esc_router_info(ri));
     *msg = "Rejected: Server is expired, or your clock is too far in the past,"
       " or your timezone is not correct.";
     return -1;
@@ -472,10 +471,9 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   if (dirserv_router_has_valid_address(ri) < 0) {
     log_fn(severity, LD_DIRSERV,
            "Router with nickname '%s' has invalid address '%s'. "
-           "Not adding (ContactInfo '%s', platform '%s').",
+           "Not adding (%s).",
            ri->nickname, ri->address,
-           ri->contact_info ? ri->contact_info : "",
-           ri->platform ? ri->platform : "");
+           esc_router_info(ri));
     *msg = "Rejected: Address is not an IP, or IP is a private address.";
     return -1;
   }
