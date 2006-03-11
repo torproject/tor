@@ -1,6 +1,6 @@
-tor (0.1.1.14-alpha-cvs-0) unreleased; urgency=low
+tor (0.1.1.15-rc-1) experimental; urgency=low
 
-  * CVS SNAPSHOT
+  * New upstream version.
 
  -- Peter Palfrader <weasel@debian.org>  Tue, 21 Feb 2006 05:19:01 +0100
 
