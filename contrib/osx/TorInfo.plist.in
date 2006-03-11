@@ -18,5 +18,9 @@
 	<true/>
 	<key>IFPkgFlagRootVolumeOnly</key>
 	<true/>
+	<key>IfPkgFlagBackgroundScaling</key>
+	<string>proportional</string>
+	<key>IFPkgFlagBackgroundAlignment</key>
+	<string>bottomleft</string>
 </dict>
 </plist>
