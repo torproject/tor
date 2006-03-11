@@ -1,0 +1,338 @@
+/* This is copied from http://tor.eff.org/stylesheet.css
+ * If you want to edit something, edit that one and then
+ * copy it over to here. */
+
+body {
+    background-color: #FFFFFF;
+    margin-top: 0px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    font-style: normal;
+    color: #000000;
+    padding-top: 0px;
+}
+
+/* images */
+
+img {
+    border: 0;
+}
+
+
+li { 
+   margin: .2em .2em .2em 1em;
+  
+}
+
+/* this centers the page */
+
+.center {
+    text-align: center;
+    background-color: white;
+    margin: 0px auto 0 auto;
+    width: 85%;
+}
+
+.center table {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+}
+
+/* for the shadow box */
+
+table.shadowbox {
+    width: 788px;
+    border-collapse: collapse;
+    padding: 0;
+    margin-bottom: 2em;
+}
+
+table.shadowbox td {
+    margin: 0;
+    padding: 0;
+}
+
+/* spacer */
+
+td.spacer {
+    width: 110px;
+}
+
+
+
+div.banner {
+    text-align: center;
+    height: 79px;
+    margin-bottom: 10px;
+    width:100%;
+}
+
+table.table-banner {
+    margin: 0 auto 0 auto;
+    background-image: url("/images/tor_mast.gif");
+    background-repeat: no-repeat;
+}
+
+
+
+
+div.bottom {
+    font-size: 0.8em;
+    margin-top: 2cm;
+    margin-left: 1em;
+    margin-right: 1em;
+    text-align: right;
+}
+
+/* the sidebar */
+
+div.sidebar {
+    float: right;
+    padding-top: 10px;
+    padding-right: 10px;
+    padding-bottom: 15px;
+    padding-left: 10px;
+    width: 260px;
+    text-align: center;
+}
+
+
+/* The main column (left text) */
+
+div.main-column {
+    padding: 15px 0 10px 10px;
+    text-indent: 0pt;
+    font-size: 1em;
+    text-align: left;
+}
+
+/* formatting styles */
+
+h1 {
+    font-size: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+h2 {
+    font-size: 1.2em;
+    margin-bottom: 0em;
+    font-weight: bold;
+    margin-top: 0;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
+a:link {
+    color: blue;
+    font-size: 1em;
+}
+
+a:visited {
+    color: purple;
+    font-size: 1em;
+}
+
+
+a.anchor:link {
+    font-size: 1em;
+    color: black;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+a.anchor:visited {
+    font-size: 12pt;
+    color: black;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+a.anchor {
+    font-size: 1em;
+    color: black;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+td {
+    vertical-align: top;
+}
+
+a.smalllink {
+    font-size: 0.8em;
+}
+
+/* the banner */
+
+table.banner {
+    width: 100%;
+    height: 79px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+td.banner-left {
+    background-image: url("/images/top-left.png");
+    background-repeat: no-repeat;
+    width: 193px;
+}
+
+td.banner-middle {
+    background-image: url("/images/top-middle.png");
+    background-repeat: repeat-x;
+    vertical-align: bottom;
+    padding-bottom: 10px;
+    color: white;
+    font-weight: bold;
+    font-size: 1em;
+}
+
+td.banner-middle a, td.banner-middle a:visited {
+    color: white;
+    font-weight: bold;
+    font-size: 1em;
+}
+
+td.banner-middle a:hover {
+    color: #FF7F00;
+    font-weight: bold;
+    font-size: 1em;
+}
+
+td.banner-right {
+    background-image: url("/images/top-right.png");
+    background-repeat: no-repeat;
+    width: 40px;
+    background-position: right;
+    padding-top: 8px;
+}
+
+.banner-middle a.current {
+    text-decoration: none;
+    color: #FF7F00;
+    font-weight: bold;
+    font-size: 1em;
+    width: auto;
+    text-align: auto;
+    left: -50px;
+}
+
+.donatebutton {
+        width: auto;
+        text-align: center;
+}
+
+.donatebutton a {
+        margin: 10px 0 0 0;
+        font-weight: bold;
+        display: block;
+        padding: 6px;
+        background-color: #00802B;
+        border-top: 1px solid #00A838;
+        border-left: 1px solid #00A838;
+        border-bottom: 1px solid #00591E;
+        border-right: 1px solid #00591E;
+        color: #FFFFFF;
+}
+
+.donatebutton a:hover {
+        color: orange;
+}
+
+.donatebutton a:active {
+        color: orange;
+}
+
+/* these styles are for the menu on the gui contest pages */
+
+.guileft {
+	 width: 25%;
+	 float: left;
+	 padding: 0;
+	 margin: 0;
+}
+
+.guimenu {
+	 border: 1px solid #AAA6AB;
+	 background-color: #E2DFE3;
+	 margin: 0 15px 15px 0;
+	 padding: 0;
+}
+
+.guimenuinner a {
+	      display: block;
+	      text-decoration: none;
+	      padding: 2px 0px 0px 12px;
+	      margin: 0 0 0 0px;
+	      color: #333333;
+}
+
+.guimenuinner a:visited {
+	      color: #333333;
+}
+
+.guimenuinner a:hover {
+	      background-image: url(gui/img/arrow.png);
+	      background-repeat: no-repeat;
+	      background-position: left;
+	      color: #EF8012;
+}
+
+.guimenuinner a.on {
+	      background-image: url(gui/img/arrow.png);
+	      background-repeat: no-repeat;
+	      background-position: left;
+	      color: #EF8012;
+}
+
+
+.guimenu h1 {
+         width: 85%;
+	 font-size: 16px;
+	 margin: 0 0 8px 0;
+	 padding: 0;
+	 border-bottom: 1px solid #AAA6AB;
+}
+
+.curveleft {
+	   background-image: url(gui/img/corner-topleft.png);
+	   background-repeat: no-repeat;
+	   background-position: top left;
+	   margin: -1px;
+}
+
+.curveright {
+	    background-image: url(gui/img/corner-topright.png);
+	    background-repeat: no-repeat;
+	    background-position: top right;
+}
+
+.guimenuinner {
+	      
+	      padding: 0 10px 0 10px;
+}
+
+//.wiki {
+      padding: 5px 40px 0 0;
+      display: block;
+      text-align: right;
+}
+
+
+.curvebottomleft {
+		 background-image: url(gui/img/corner-bottomleft.png);
+		 background-repeat: no-repeat;
+		 background-position: bottom left;
+		 margin: -1px;
+}
+
+.curvebottomright {
+		  background-image: url(gui/img/corner-bottomright.png);
+		  background-repeat: no-repeat;
+		  background-position: bottom right;
+}
+
