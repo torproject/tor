@@ -131,6 +131,8 @@ cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
 cp contrib/osx/TorBundleInfo.plist "$MPKG/Contents/Info.plist"
 cp contrib/osx/TorBundleWelcome.rtf "$MPKG/Contents/Resources/Welcome.rtf"
 cp contrib/osx/TorBundleDesc.plist "$MPKG/Contents/Resources/Description.plist"
+cp contrib/osx/Tor_Uninstaller.applescript "$MPKG/Contents/Resources/Tor_Uninstaller.applescript"
+cp contrib/osx/uninstall_tor_bundle.sh "$MPKG/Contents/Resources/uninstall_tor_bundle.sh"
 
 # Move all the subpackages into place.  unzip Privoxy.pkg into place,
 # and fix its file permissions so we can rm -rf it later.
