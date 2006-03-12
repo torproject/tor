@@ -69,7 +69,6 @@ uint64_t buf_total_alloc = 0;
 /** Size, in bytes, for minimum 'shrink' size for buffers.  Buffers may start
  * out smaller than this, but they will never autoshrink to less
  * than this size. */
-#define MIN_GREEDY_SHRINK_SIZE (16*1024)
 #define MIN_LAZY_SHRINK_SIZE (4*1024)
 
 static INLINE void peek_from_buf(char *string, size_t string_len, buf_t *buf);
@@ -1156,8 +1155,6 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
   }
 }
 
-#define CONTROL_CMD_FRAGMENTHEADER 0x0010
-#define CONTROL_CMD_FRAGMENT       0x0011
 /** If there is a complete version 0 control message waiting on buf, then store
  * its contents into *<b>type_out</b>, store its body's length into
  * *<b>len_out</b>, allocate and store a string for its body into

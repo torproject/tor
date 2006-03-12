@@ -48,8 +48,6 @@ typedef uint32_t u32;
 typedef uint8_t u8;
 
 #ifndef USE_OPENSSL_AES
-#define MAXKC   (256/32)
-#define MAXKB   (256/8)
 #define MAXNR   14
 
 static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/],

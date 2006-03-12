@@ -16,6 +16,7 @@ const char connection_or_c_id[] =
 
 /** How much clock skew do we tolerate when checking certificates for
  * known routers? (sec) */
+
 #define TIGHT_CERT_ALLOW_SKEW (90*60)
 
 static int connection_tls_finish_handshake(connection_t *conn);

@@ -23,8 +23,6 @@ const char cpuworker_c_id[] =
 
 /** The tag specifies which circuit this onionskin was from. */
 #define TAG_LEN 8
-/** How many bytes are sent from tor to the cpuworker? */
-#define LEN_ONION_QUESTION (1+TAG_LEN+ONIONSKIN_CHALLENGE_LEN)
 /** How many bytes are sent from the cpuworker back to tor? */
 #define LEN_ONION_RESPONSE \
   (1+TAG_LEN+ONIONSKIN_REPLY_LEN+CPATH_KEY_MATERIAL_LEN)

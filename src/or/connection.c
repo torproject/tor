@@ -2113,6 +2113,8 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_EXIT:
       tor_assert(conn->state >= _EXIT_CONN_STATE_MIN);
       tor_assert(conn->state <= _EXIT_CONN_STATE_MAX);
+      tor_assert(conn->purpose >= _EXIT_PURPOSE_MIN);
+      tor_assert(conn->purpose <= _EXIT_PURPOSE_MAX);
       break;
     case CONN_TYPE_AP:
       tor_assert(conn->state >= _AP_CONN_STATE_MIN);
@@ -2126,8 +2128,8 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->purpose <= _DIR_PURPOSE_MAX);
       break;
     case CONN_TYPE_DNSWORKER:
-      tor_assert(conn->state == DNSWORKER_STATE_IDLE ||
-                 conn->state == DNSWORKER_STATE_BUSY);
+      tor_assert(conn->state >= _DNSWORKER_STATE_MIN);
+      tor_assert(conn->state <= _DNSWORKER_STATE_MAX);
       break;
     case CONN_TYPE_CPUWORKER:
       tor_assert(conn->state >= _CPUWORKER_STATE_MIN);
