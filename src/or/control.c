@@ -1831,13 +1831,13 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
 
   /* Do we need to detach it first? */
   if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT) {
-    circuit_t *tmpcirc = circuit_get_by_edge_conn(conn);
-    connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
+    circuit_t *tmpcirc = circuit_get_by_edge_conn(ap_conn);
+    connection_edge_end(ap_conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* Un-mark it as ending, since we're going to reuse it. */
-    conn->has_sent_end = 0;
+    ap_conn->has_sent_end = 0;
     if (tmpcirc)
-      circuit_detach_stream(tmpcirc,conn);
-    conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
+      circuit_detach_stream(tmpcirc,ap_conn);
+    ap_conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
   if (zero_circ) {
