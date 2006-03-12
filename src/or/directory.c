@@ -1783,8 +1783,9 @@ directory_handle_command(connection_t *conn)
   else if (!strncasecmp(headers,"POST",4))
     r = directory_handle_command_post(conn, headers, body, body_len);
   else {
-    log_warn(LD_PROTOCOL,"Got headers %s with unknown command. Closing.",
-             escaped(headers));
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Got headers %s with unknown command. Closing.",
+           escaped(headers));
     r = -1;
   }
 
