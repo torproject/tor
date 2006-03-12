@@ -689,8 +689,10 @@ list_single_server_status(routerinfo_t *desc, int is_live)
   return tor_strdup(buf);
 }
 
-#define REACHABLE_TIMEOUT (90*60) /* ninety minutes */
-/* Make sure this is at least 3 times the value of get_dir_fetch_period() */
+/** Each server needs to have passed a reachability test no more
+ * than this number of seconds ago, or he is listed as down in
+ * the directory. */
+#define REACHABLE_TIMEOUT (30*60)
 
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
