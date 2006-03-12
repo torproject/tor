@@ -694,19 +694,14 @@ list_single_server_status(routerinfo_t *desc, int is_live)
 
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
- * or - we're connected to it and we've found it reachable recently. */
+ * or - We've found it reachable recently. */
 static int
 dirserv_thinks_router_is_reachable(routerinfo_t *router, time_t now)
 {
-  connection_t *conn;
   if (router_is_me(router) && !we_are_hibernating())
     return 1;
-  conn = connection_or_get_by_identity_digest(
-      router->cache_info.identity_digest);
-  if (conn && conn->state == OR_CONN_STATE_OPEN)
-    return get_options()->AssumeReachable ||
-           now < router->last_reachable + REACHABLE_TIMEOUT;
-  return 0;
+  return get_options()->AssumeReachable ||
+         now < router->last_reachable + REACHABLE_TIMEOUT;
 }
 
 /** Return 1 if we're confident that there's a problem with
@@ -716,13 +711,9 @@ int
 dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
                                                time_t now)
 {
-  connection_t *conn;
   if (router->is_hibernating)
     return 0;
-  conn = connection_or_get_by_identity_digest(
-    router->cache_info.identity_digest);
-  if (conn && conn->state == OR_CONN_STATE_OPEN &&
-      now >= router->last_reachable + 2*REACHABLE_TIMEOUT &&
+  if (now >= router->last_reachable + 2*REACHABLE_TIMEOUT &&
       router->testing_since &&
       now >= router->testing_since + 2*REACHABLE_TIMEOUT)
     return 1;
