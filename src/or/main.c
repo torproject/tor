@@ -89,13 +89,32 @@ static char* nt_strerror(uint32_t errnum);
 #define nt_service_is_stopped() (0)
 #endif
 
-#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL 18*60*60 /* 18 hours */
-#define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
+/** If our router descriptor ever goes this long without being regenerated
+ * because something changed, we force an immediate regenerate-and-upload. */
+#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL (18*60*60)
+/** How often do we check whether part of our router info has changed in a way
+ * that would require an upload? */
+#define CHECK_DESCRIPTOR_INTERVAL (60)
+/** How often do we (as a router) check whether our IP address has changed? */
 #define CHECK_IPADDRESS_INTERVAL (15*60) /* 15 minutes */
-#define BUF_SHRINK_INTERVAL 60 /* one minute */
-#define DESCRIPTOR_RETRY_INTERVAL 10
-#define DESCRIPTOR_FAILURE_RESET_INTERVAL 60*60
-#define ENTROPY_INTERVAL 60*60
+/** How often do we check buffers for empty space that can be deallocated? */
+#define BUF_SHRINK_INTERVAL (60)
+/** How often do we check for router descriptors that we should download? */
+#define DESCRIPTOR_RETRY_INTERVAL (10)
+/** How often do we 'forgive' undownloadable router descriptors and attempt
+ * to download them again? */
+#define DESCRIPTOR_FAILURE_RESET_INTERVAL (60*60)
+/** How often do we add more entropy to OpenSSL's RNG pool? */
+#define ENTROPY_INTERVAL (60*60)
+/** How long do we let a directory connection stall before expiring it? */
+#define DIR_CONN_MAX_STALL (5*60)
+
+/** How old do we let a connection to an OR get before deciding it's
+ * obsolete? */
+#define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7)
+/** How long do we OR connections to handshake before we decide that they
+ * could be obsolete? */
+#define TLS_HANDSHAKE_TIMEOUT           (60)
 
 /********* END VARIABLES ************/
 
@@ -604,7 +623,7 @@ run_connection_housekeeping(int i, time_t now)
 
   /* Expire any directory connections that haven't sent anything for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
-      conn->timestamp_lastwritten + 5*60 < now) {
+      conn->timestamp_lastwritten + DIR_CONN_MAX_STALL < now) {
     log_info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
              conn->s, conn->purpose);
     /* This check is temporary; it's to let us know whether we should consider
@@ -623,8 +642,6 @@ run_connection_housekeeping(int i, time_t now)
   if (!connection_speaks_cells(conn))
     return; /* we're all done here, the rest is just for OR conns */
 
-#define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7) /* a week */
-#define TLS_TIMEOUT                             (60) /* a minute */
   if (!conn->is_obsolete) {
     if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
       log_info(LD_OR,
@@ -637,10 +654,10 @@ run_connection_housekeeping(int i, time_t now)
         connection_or_get_by_identity_digest(conn->identity_digest);
       if (best && best != conn &&
           (conn->state == OR_CONN_STATE_OPEN ||
-           now > conn->timestamp_created + TLS_TIMEOUT)) {
+           now > conn->timestamp_created + TLS_HANDSHAKE_TIMEOUT)) {
           /* We only mark as obsolete connections that already are in
            * OR_CONN_STATE_OPEN, i.e. that have finished their TLS handshaking.
-           * This is necessay because authorities judge whether a router is
+           * This is necessary because authorities judge whether a router is
            * reachable based on whether they were able to TLS handshake with it
            * recently.  Without this check we would expire connections too
            * early for router->last_reachable to be updated.

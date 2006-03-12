@@ -2220,8 +2220,15 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 }
 
 /* XXXX These should be configurable, perhaps? NM */
-#define AUTHORITY_NS_CACHE_INTERVAL 5*60
-#define NONAUTHORITY_NS_CACHE_INTERVAL 15*60
+
+/** How frequently do directory authorities re-download fresh networkstatus
+ * documents? */
+#define AUTHORITY_NS_CACHE_INTERVAL (5*60)
+
+/** How frequently do non-authority directory caches re-download fresh
+ * networkstatus documents? */
+#define NONAUTHORITY_NS_CACHE_INTERVAL (15*60)
+
 /** We are a directory server, and so cache network_status documents.
  * Initiate downloads as needed to update them.  For authorities, this means
  * asking each trusted directory for its network-status.  For caches, this
@@ -2685,7 +2692,7 @@ networkstatus_get_by_digest(const char *digest)
 
 /** We believe networkstatuses more recent than this when they tell us that
  * our server is broken, invalid, obsolete, etc. */
-#define SELF_OPINION_INTERVAL 90*60
+#define SELF_OPINION_INTERVAL (90*60)
 
 /** Return a string naming the versions of Tor recommended by
  * at least n_needed versioning networkstatuses */
@@ -2865,7 +2872,7 @@ routers_update_all_from_networkstatus(void)
 
 /** Allow any network-status newer than this to influence our view of who's
  * running. */
-#define DEFAULT_RUNNING_INTERVAL 60*60
+#define DEFAULT_RUNNING_INTERVAL (60*60)
 /** If possible, always allow at least this many network-statuses to influence
  * our view of who's running. */
 #define MIN_TO_INFLUENCE_RUNNING 3
@@ -3328,14 +3335,16 @@ initiate_descriptor_downloads(routerstatus_t *source,
   tor_free(resource);
 }
 
+/** Clients don't download any descriptor this recent, since it will probably
+ * not have propageted to enough caches. */
+#define ESTIMATED_PROPAGATION_TIME (10*60)
+
 /** Return new list of ID fingerprints for routers that we (as a client) would
  * like to download.
  */
 static smartlist_t *
 router_list_client_downloadable(void)
 {
-#define MAX_OLD_SERVER_DOWNLOAD_RATE 2*60*60
-#define ESTIMATED_PROPAGATION_TIME 10*60
   int n_downloadable = 0;
   smartlist_t *downloadable = smartlist_create();
   digestmap_t *downloading;
@@ -3415,11 +3424,23 @@ update_router_descriptor_client_downloads(time_t now)
    *   So use 96 because it's a nice number.
    */
 #define MAX_DL_PER_REQUEST 96
+  /** Don't split our requests so finely that we are requesting fewer than
+   * this number per server. */
 #define MIN_DL_PER_REQUEST 4
+  /** To prevent a single screwy cache from confusing us by selective reply,
+   * try to split our requests into at least this this many requests. */
 #define MIN_REQUESTS 3
+  /** If we want fewer than this many descriptors, wait until we
+   * want more, or until MAX_(CLIENT|SERVER)_INTERVAL_WITHOUT_REQUEST has
+   * passed. */
 #define MAX_DL_TO_DELAY 16
-#define MAX_CLIENT_INTERVAL_WITHOUT_REQUEST 10*60
-#define MAX_SERVER_INTERVAL_WITHOUT_REQUEST 1*60
+  /** When directory clients have only a few servers to request, they batch
+   * them until they have more, or until this amount of time has passed. */
+#define MAX_CLIENT_INTERVAL_WITHOUT_REQUEST (10*60)
+  /** When directory caches and authorities have only a few servers to
+   * request, they batch them until they have more, or until this amount of
+   * time has passed. */
+#define MAX_SERVER_INTERVAL_WITHOUT_REQUEST (60)
   smartlist_t *downloadable = NULL;
   int should_delay, n_downloadable;
   or_options_t *options = get_options();
@@ -3682,6 +3703,10 @@ router_reset_descriptor_download_failures(void)
   last_routerdesc_download_attempted = 0;
 }
 
+/** Any changes in a router descriptor's publication time larger than this are
+ * automatically non-cosmetic. */
+#define ROUTER_MAX_COSMETIC_TIME_DIFFERENCE (12*60*60)
+
 /** Return true iff the only differences between r1 and r2 are such that
  * would not cause a recent (post 0.1.1.6) dirserver to republish.
  */
@@ -3733,7 +3758,8 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
     return 0;
 
   /* Did more than 12 hours pass? */
-  if (r1->cache_info.published_on + 12*60*60 < r2->cache_info.published_on)
+  if (r1->cache_info.published_on + ROUTER_MAX_COSMETIC_TIME_DIFFERENCE
+      < r2->cache_info.published_on)
     return 0;
 
   /* Did uptime fail to increase by approximately the amount we would think,

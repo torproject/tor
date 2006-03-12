@@ -187,9 +187,9 @@
 #endif
 
 /** How often do we rotate onion keys? */
-#define MIN_ONION_KEY_LIFETIME (7*24*60*60) /* once a week */
+#define MIN_ONION_KEY_LIFETIME (7*24*60*60)
 /** How often do we rotate TLS contexts? */
-#define MAX_SSL_KEY_LIFETIME (120*60)
+#define MAX_SSL_KEY_LIFETIME (2*60*60)
 
 /** How old do we allow a router to get before removing it
  * from the router list? In seconds. */
@@ -532,7 +532,7 @@ typedef enum {
 #define CELL_CREATED_FAST 6
 
 /** How long to test reachability before complaining to the user. */
-#define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
+#define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
 
 /* people behind fascist firewalls use only these ports */
 #define REQUIRED_FIREWALL_DIRPORT 80
