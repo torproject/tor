@@ -233,7 +233,7 @@ rend_get_service_id(crypto_pk_env_t *pk, char *out)
 
 /** How old do we let hidden service descriptors get discarding them as too
  * old? */
-#define REND_CACHE_MAX_AGE (48*60*60)
+#define REND_CACHE_MAX_AGE (2*24*60*60)
 /** How wrong to we assume our clock may be when checking whether hidden
  * services are too old or too new? */
 #define REND_CACHE_MAX_SKEW (24*60*60)

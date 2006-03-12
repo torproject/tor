@@ -63,26 +63,12 @@ const char crypto_c_id[] =
 
 #if OPENSSL_VERSION_NUMBER < 0x00905000l
 #error "We require openssl >= 0.9.5"
-#elif OPENSSL_VERSION_NUMBER < 0x00906000l
-#define OPENSSL_095
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000l
-#define OPENSSL_PRE_097
 #define NO_ENGINES
 #else
 #include <openssl/engine.h>
-#endif
-
-/* Certain functions that return a success code in OpenSSL 0.9.6 return void
- * (and don't indicate errors) in OpenSSL version 0.9.5.
- *
- * [OpenSSL 0.9.5 matters, because it ships with Redhat 6.2.]
- */
-#ifdef OPENSSL_095
-#define RETURN_SSL_OUTCOME(exp) (exp); return 0
-#else
-#define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
 /** Macro: is k a valid RSA public or private key? */

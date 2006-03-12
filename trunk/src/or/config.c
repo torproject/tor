@@ -336,9 +336,6 @@ typedef struct {
                *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
   } while (0)
 
-/** Largest allowed config line */
-#define CONFIG_LINE_T_MAXLEN 4096
-
 static void config_line_append(config_line_t **lst,
                                const char *key, const char *val);
 static void option_clear(config_format_t *fmt, or_options_t *options,
@@ -4140,6 +4137,9 @@ config_getinfo_helper(const char *question, char **answer)
   return 0;
 }
 
+#include "../common/ht.h"
+#include "../common/test.h"
+
 /** Dump the version of every file to the log. */
 static void
 print_cvs_version(void)
@@ -4184,6 +4184,8 @@ print_cvs_version(void)
   puts(COMPAT_H_ID);
   puts(CONTAINER_H_ID);
   puts(CRYPTO_H_ID);
+  puts(HT_H_ID);
+  puts(TEST_H_ID);
   puts(LOG_H_ID);
   puts(TORGZIP_H_ID);
   puts(TORINT_H_ID);

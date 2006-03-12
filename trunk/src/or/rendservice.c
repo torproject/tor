@@ -27,7 +27,7 @@ typedef struct rend_service_port_config_t {
 #define NUM_INTRO_POINTS 3
 
 /** If we can't build our intro circuits, don't retry for this long. */
-#define INTRO_CIRC_RETRY_PERIOD 60*5
+#define INTRO_CIRC_RETRY_PERIOD (60*5)
 /** Don't try to build more than this many circuits before giving up
  * for a while.*/
 #define MAX_INTRO_CIRCS_PER_PERIOD 10
@@ -926,10 +926,6 @@ upload_service_descriptor(rend_service_t *service, int version)
 
   service->desc_is_dirty = 0;
 }
-
-/* XXXX Make this longer once directories remember service descriptors across
- * restarts.*/
-#define MAX_SERVICE_PUBLICATION_INTERVAL (15*60)
 
 /** For every service, check how many intro points it currently has, and:
  *  - Pick new intro points as necessary.

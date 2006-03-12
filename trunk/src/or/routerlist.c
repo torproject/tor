@@ -3437,10 +3437,6 @@ update_router_descriptor_client_downloads(time_t now)
   /** When directory clients have only a few servers to request, they batch
    * them until they have more, or until this amount of time has passed. */
 #define MAX_CLIENT_INTERVAL_WITHOUT_REQUEST (10*60)
-  /** When directory caches and authorities have only a few servers to
-   * request, they batch them until they have more, or until this amount of
-   * time has passed. */
-#define MAX_SERVER_INTERVAL_WITHOUT_REQUEST (60)
   smartlist_t *downloadable = NULL;
   int should_delay, n_downloadable;
   or_options_t *options = get_options();

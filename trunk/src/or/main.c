@@ -96,7 +96,7 @@ static char* nt_strerror(uint32_t errnum);
  * that would require an upload? */
 #define CHECK_DESCRIPTOR_INTERVAL (60)
 /** How often do we (as a router) check whether our IP address has changed? */
-#define CHECK_IPADDRESS_INTERVAL (15*60) /* 15 minutes */
+#define CHECK_IPADDRESS_INTERVAL (15*60)
 /** How often do we check buffers for empty space that can be deallocated? */
 #define BUF_SHRINK_INTERVAL (60)
 /** How often do we check for router descriptors that we should download? */
