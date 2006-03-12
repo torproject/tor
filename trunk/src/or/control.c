@@ -1840,12 +1840,7 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
     ap_conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
-  if (zero_circ) {
-    connection_ap_handshake_rewrite_and_attach(ap_conn);
-    send_control_done(conn);
-    return 0;
-  }
-  if (circ->state != CIRCUIT_STATE_OPEN) {
+  if (circ && circ->state != CIRCUIT_STATE_OPEN) {
     if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_INTERNAL,
                           "Refuse to attach stream to non-open circ.");
@@ -1855,7 +1850,7 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
                           conn);
     return 0;
   }
-  if (connection_ap_handshake_attach_chosen_circuit(ap_conn, circ) != 1) {
+  if (connection_ap_handshake_rewrite_and_attach(ap_conn, circ) < 0) {
     if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");
     else
