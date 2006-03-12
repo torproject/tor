@@ -1758,8 +1758,8 @@ int address_is_in_virtual_range(const char *addr);
 const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
                              time_t max_expires);
-int
-connection_ap_handshake_rewrite_and_attach(connection_t *conn);
+int connection_ap_handshake_rewrite_and_attach(connection_t *conn,
+                                               circuit_t *circ);
 
 void parse_socks_policy(void);
 void free_socks_policy(void);

@@ -930,7 +930,9 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
 }
 
 /* Connection <b>conn</b> just finished its socks handshake, or the
- * controller asked us to take care of it.
+ * controller asked us to take care of it. If <b>circ</b> is defined,
+ * then that's where we'll want to attach it. Otherwise we have to
+ * figure it out ourselves.
  *
  * First, parse whether it's a .exit address, remap it, and so on. Then
  * it's for a general circuit, try to attach it to a circuit (or launch
@@ -939,7 +941,8 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
  * rendezvous descriptor is already here and fresh enough).
  */
 int
-connection_ap_handshake_rewrite_and_attach(connection_t *conn)
+connection_ap_handshake_rewrite_and_attach(connection_t *conn,
+                                           circuit_t *circ)
 {
   socks_request_t *socks = conn->socks_request;
   hostname_type_t addresstype;
@@ -1048,7 +1051,7 @@ connection_ap_handshake_rewrite_and_attach(connection_t *conn)
         return -1;
       }
 
-      if (!conn->chosen_exit_name) {
+      if (!conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */
         routerinfo_t *r =
           router_find_exact_exit_enclave(socks->address, socks->port);
@@ -1067,7 +1070,10 @@ connection_ap_handshake_rewrite_and_attach(connection_t *conn)
       rep_hist_note_used_port(socks->port, time(NULL));
     }
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-    if (connection_ap_handshake_attach_circuit(conn) < 0) {
+    if ((circ &&
+         connection_ap_handshake_attach_chosen_circuit(conn, circ) < 0) ||
+        (!circ &&
+         connection_ap_handshake_attach_circuit(conn) < 0)) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       return -1;
     }
@@ -1086,6 +1092,13 @@ connection_ap_handshake_rewrite_and_attach(connection_t *conn)
                                              0,NULL,-1);
       connection_mark_unattached_ap(conn,
                                     END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+      return -1;
+    }
+
+    if (circ) {
+      log_warn(LD_CONTROL, "Attachstream to a circuit is not "
+               "supported for .onion addresses currently. Failing.");
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
 
@@ -1183,8 +1196,8 @@ connection_ap_handshake_process_socks(connection_t *conn)
   if (options->LeaveStreamsUnattached) {
     conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
     return 0;
-  } else
-    return connection_ap_handshake_rewrite_and_attach(conn);
+  }
+  return connection_ap_handshake_rewrite_and_attach(conn, NULL);
 }
 
 /** Iterate over the two bytes of stream_id until we get one that is not
