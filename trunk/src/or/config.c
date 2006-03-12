@@ -851,7 +851,8 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
         !strcmp(argv[i],"--hash-password")) {
       i += 2; /* command-line option with argument. ignore them. */
       continue;
-    } else if (!strcmp(argv[i],"--list-fingerprint")) {
+    } else if (!strcmp(argv[i],"--list-fingerprint") ||
+               !strcmp(argv[i],"--verify-config")) {
       i += 1; /* command-line option. ignore it. */
       continue;
     } else if (!strcmp(argv[i],"--nt-service")) {
