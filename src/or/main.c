@@ -1543,7 +1543,8 @@ tor_cleanup(void)
     unlink(options->PidFile);
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
-  or_state_save();
+  if (options->command == CMD_RUN_TOR)
+    or_state_save();
   tor_free_all(0); /* move tor_free_all back into the ifdef below later. XXX*/
   crypto_global_cleanup();
 #ifdef USE_DMALLOC
