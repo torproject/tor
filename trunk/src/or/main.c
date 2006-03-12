@@ -1539,12 +1539,13 @@ tor_cleanup(void)
   or_options_t *options = get_options();
   /* Remove our pid file. We don't care if there was an error when we
    * unlink, nothing we could do about it anyways. */
-  if (options->PidFile && options->command == CMD_RUN_TOR)
-    unlink(options->PidFile);
-  if (accounting_is_enabled(options))
-    accounting_record_bandwidth_usage(time(NULL));
-  if (options->command == CMD_RUN_TOR)
+  if (options->command == CMD_RUN_TOR) {
+    if (options->PidFile)
+      unlink(options->PidFile);
+    if (accounting_is_enabled(options))
+      accounting_record_bandwidth_usage(time(NULL));
     or_state_save();
+  }
   tor_free_all(0); /* move tor_free_all back into the ifdef below later. XXX*/
   crypto_global_cleanup();
 #ifdef USE_DMALLOC
