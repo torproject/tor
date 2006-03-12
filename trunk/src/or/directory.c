@@ -56,7 +56,9 @@ static void note_request(const char *key, size_t bytes);
 
 static addr_policy_t *dir_policy = NULL;
 
-#define ALLOW_DIRECTORY_TIME_SKEW 30*60 /* 30 minutes */
+/** How far in the future do we allow a directory server to tell us it is
+ * before deciding that one of us has the wrong time? */
+#define ALLOW_DIRECTORY_TIME_SKEW (30*60)
 
 /********* END VARIABLES ************/
 

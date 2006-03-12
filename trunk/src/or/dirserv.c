@@ -14,7 +14,7 @@ const char dirserv_c_id[] =
  **/
 
 /** How far in the future do we allow a router to get? (seconds) */
-#define ROUTER_ALLOW_SKEW (60*60*12) /* 12 hours */
+#define ROUTER_ALLOW_SKEW (60*60*12)
 /** How many seconds do we wait before regenerating the directory? */
 #define DIR_REGEN_SLACK_TIME 30
 /** If we're a cache, keep this many networkstatuses around from non-trusted

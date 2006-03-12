@@ -913,7 +913,10 @@ mark_my_descriptor_dirty(void)
   desc_clean_since = 0;
 }
 
-#define MAX_BANDWIDTH_CHANGE_FREQ 20*60
+/** How frequently will we republish our descriptor because of large (factor
+ * of 2) shifts in estimated bandwidth? */
+#define MAX_BANDWIDTH_CHANGE_FREQ (20*60)
+
 /** Check whether bandwidth has changed a lot since the last time we announced
  * bandwidth. If so, mark our descriptor dirty. */
 void

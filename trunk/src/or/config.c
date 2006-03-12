@@ -1952,6 +1952,24 @@ fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port)
                                           reachable_dir_addr_policy);
 }
 
+/** Lowest allowable value for DirFetchPeriod; if this is too low, clients can
+ * overload the directory system. */
+#define MIN_DIR_FETCH_PERIOD (10*60)
+/** Lowest allowable value for RendPostPeriod; if this is too low, hidden
+ * services can overload the directory system. */
+#define MIN_REND_POST_PERIOD (5*60)
+/** Lowest allowable value for StatusFetchPeriod; if this is too low, clients
+ * can overload the directory system. */
+#define MIN_STATUS_FETCH_PERIOD (5*60)
+
+/** Highest allowable value for DirFetchPeriod, StatusFetchPeriod, and
+ * RendPostPeriod. */
+#define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
+/** Highest allowable value for DirFetchPeriod for directory caches. */
+#define MAX_CACHE_DIR_FETCH_PERIOD (60*60)
+/** Highest allowable value for StatusFetchPeriod for directory caches. */
+#define MAX_CACHE_STATUS_FETCH_PERIOD (15*60)
+
 /** Return 0 if every setting in <b>options</b> is reasonable.  Else
  * warn and return -1.  Should have no side effects, except for
  * normalizing the contents of <b>options</b>.
@@ -2256,14 +2274,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->SocksPort >= 1 &&
       (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0))
     REJECT("PathlenCoinWeight option must be >=0.0 and <1.0.");
-
-#define MIN_DIR_FETCH_PERIOD 600
-#define MIN_REND_POST_PERIOD 300
-#define MIN_STATUS_FETCH_PERIOD 60
-
-#define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
-#define MAX_CACHE_DIR_FETCH_PERIOD 3600
-#define MAX_CACHE_STATUS_FETCH_PERIOD 900
 
   if (options->DirFetchPeriod &&
       options->DirFetchPeriod < MIN_DIR_FETCH_PERIOD) {

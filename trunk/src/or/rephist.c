@@ -382,9 +382,14 @@ rep_history_clean(time_t before)
   }
 }
 
+/** For how many seconds do we keep track of individual per-second bandwidth
+ * totals? */
 #define NUM_SECS_ROLLING_MEASURE 10
-#define NUM_SECS_BW_SUM_IS_VALID (24*60*60) /* one day */
+/** How large are the intervals for with we track and report bandwidth use? */
 #define NUM_SECS_BW_SUM_INTERVAL (15*60)
+/** How far in the past do we remember and publish bandwidth use? */
+#define NUM_SECS_BW_SUM_IS_VALID (24*60*60)
+/** How many bandwidth usage intervals do we remember? (derived.) */
 #define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
 
 /**
@@ -818,7 +823,9 @@ rep_hist_note_used_port(uint16_t port, time_t now)
   add_predicted_port(port, now);
 }
 
-#define PREDICTED_CIRCS_RELEVANCE_TIME (3600) /* 1 hour */
+/** For this long after we've seen a request for a given port, assume that
+ * we'll want to make connections to the same port in the future.  */
+#define PREDICTED_CIRCS_RELEVANCE_TIME (60*60)
 
 /** Return a pointer to the list of port numbers that
  * are likely to be asked for in the near future.

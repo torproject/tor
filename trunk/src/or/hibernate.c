@@ -430,6 +430,10 @@ accounting_run_housekeeping(time_t now)
   }
 }
 
+/** When we have no idea how fast we are, how long do we assume it will take
+ * us to exhaust our bandwidth? */
+#define GUESS_TIME_TO_USE_BANDWIDTH (24*60*60)
+
 /** Based on our interval and our estimated bandwidth, choose a
  * deterministic (but random-ish) time to wake up. */
 static void
@@ -463,7 +467,7 @@ accounting_set_wakeup_time(void)
     char buf2[ISO_TIME_LEN+1];
     format_local_iso_time(buf1, interval_start_time);
     format_local_iso_time(buf2, interval_end_time);
-    time_to_exhaust_bw = 24*60*60;
+    time_to_exhaust_bw = GUESS_TIME_TO_USE_BANDWIDTH;
     interval_wakeup_time = interval_start_time;
 
     log_notice(LD_ACCT,

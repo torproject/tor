@@ -333,7 +333,7 @@ circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
   return 0;
 }
 
-/** Don't keep more than 10 unused open circuits around. */
+/** Don't keep more than this many unused open circuits around. */
 #define MAX_UNUSED_OPEN_CIRCUITS 12
 
 /** Figure out how many circuits we have open that are clean. Make
@@ -547,6 +547,9 @@ circuit_about_to_close_connection(connection_t *conn)
   } /* end switch */
 }
 
+/** How old do we let an unused circuit get before expiring it? */
+#define CIRCUIT_UNUSED_CIRC_TIMEOUT (60*60)
+
 /** Find each circuit that has been dirty for too long, and has
  * no streams on it: mark it for close.
  */
@@ -576,7 +579,6 @@ circuit_expire_old_circuits(void)
     } else if (!circ->timestamp_dirty && CIRCUIT_IS_ORIGIN(circ) &&
                circ->state == CIRCUIT_STATE_OPEN &&
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-#define CIRCUIT_UNUSED_CIRC_TIMEOUT 3600 /* an hour */
       if (circ->timestamp_created + CIRCUIT_UNUSED_CIRC_TIMEOUT < now) {
         log_debug(LD_CIRC,
                   "Closing circuit that has been unused for %d seconds.",
