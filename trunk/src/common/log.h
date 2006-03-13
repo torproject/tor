@@ -149,7 +149,7 @@ void _log_warn(uint32_t domain, const char *format, ...);
 void _log_err(uint32_t domain, const char *format, ...);
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
-/* MSVC 6 and earlier don't have __FUNCTION__, or even __LINE__. */
+/* MSVC 6 and earlier don't have __func__, or even __LINE__. */
 #define log_fn _log_fn
 #define log_debug _log_debug
 #define log_info _log_info
@@ -170,18 +170,18 @@ extern const char *_log_fn_function_name;
 /* We abuse the comma operator here, since we can't use the standard
  * do {...} while (0) trick to wrap this macro, since the macro can't take
  * arguments. */
-#define log_fn (_log_fn_function_name=__FUNCTION__),_log_fn
-#define log_debug (_log_fn_function_name=__FUNCTION__),_log_debug
-#define log_info (_log_fn_function_name=__FUNCTION__),_log_info
-#define log_notice (_log_fn_function_name=__FUNCTION__),_log_notice
-#define log_warn (_log_fn_function_name=__FUNCTION__),_log_warn
-#define log_err (_log_fn_function_name=__FUNCTION__),_log_err
+#define log_fn (_log_fn_function_name=__func__),_log_fn
+#define log_debug (_log_fn_function_name=__func__),_log_debug
+#define log_info (_log_fn_function_name=__func__),_log_info
+#define log_notice (_log_fn_function_name=__func__),_log_notice
+#define log_warn (_log_fn_function_name=__func__),_log_warn
+#define log_err (_log_fn_function_name=__func__),_log_err
 /*
-#define debug (_log_fn_function_name=__FUNCTION__),_debug
-#define info (_log_fn_function_name=__FUNCTION__),_info
-#define notice (_log_fn_function_name=__FUNCTION__),_notice
-#define warn (_log_fn_function_name=__FUNCTION__),_warn
-#define err (_log_fn_function_name=__FUNCTION__),_err
+#define debug (_log_fn_function_name=__func__),_debug
+#define info (_log_fn_function_name=__func__),_info
+#define notice (_log_fn_function_name=__func__),_notice
+#define warn (_log_fn_function_name=__func__),_warn
+#define err (_log_fn_function_name=__func__),_err
 */
 #endif
 

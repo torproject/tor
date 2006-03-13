@@ -491,6 +491,45 @@ AC_CHECK_FUNC(gethostbyname_r, [
  CFLAGS=$OLD_CFLAGS
 ])
 
+AC_CACHE_CHECK([whether the C compiler supports __func__],
+  ac_cv_have_func_macro,
+  AC_COMPILE_IFELSE([
+#include <stdio.h>
+int main(int c, char **v) { puts(__func__); }],
+  ac_cv_have_func_macro=yes,
+  ac_cv_have_func_macro=no))
+
+AC_CACHE_CHECK([whether the C compiler supports __FUNC__],
+  ac_cv_have_FUNC_macro,
+  AC_COMPILE_IFELSE([
+#include <stdio.h>
+int main(int c, char **v) { puts(__FUNC__); }],
+  ac_cv_have_FUNC_macro=yes,
+  ac_cv_have_FUNC_macro=no))
+
+AC_CACHE_CHECK([whether the C compiler supports __FUNCTION__],
+  ac_cv_have_FUNCTION_macro,
+  AC_COMPILE_IFELSE([
+#include <stdio.h>
+int main(int c, char **v) { puts(__FUNCTION__); }],
+  ac_cv_have_FUNCTION_macro=yes,
+  ac_cv_have_FUNCTION_macro=no))
+
+if test $ac_cv_have_func_macro = 'yes'; then
+  AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
+fi
+
+
+if test $ac_cv_have_FUNC_macro = 'yes'; then
+  AC_DEFINE(HAVE_MACRO__FUNC__, 1, [Defined if the compiler supports __FUNC__])
+fi
+
+if test $ac_cv_have_FUNCTION_macro = 'yes'; then
+  AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
+           [Defined if the compiler supports __FUNCTION__])
+fi
+
+
 # $prefix stores the value of the --prefix command line option, or
 # NONE if the option wasn't set.  In the case that it wasn't set, make
 # it be the default, so that we can use it to expand directories now.
