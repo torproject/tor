@@ -183,7 +183,7 @@ AC_CACHE_CHECK([whether we need extra options to link libevent],
                 libevent_runs=yes, libevent_runs=no)
       if test $libevent_runs = yes ; then
         if test -z "$le_extra" ; then
-	  ac_cv_libevent_linker_option='(none)'
+          ac_cv_libevent_linker_option='(none)'
         else
           ac_cv_libevent_linker_option=$le_extra
         fi
@@ -299,7 +299,7 @@ return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
         right_version=yes, right_version=no)
         if test "$right_version" = yes; then
           if test -z "$ssl_extra" ; then
-  	    ac_cv_openssl_linker_option='(none)'
+            ac_cv_openssl_linker_option='(none)'
           else
             ac_cv_openssl_linker_option=$ssl_extra
           fi
@@ -313,11 +313,11 @@ return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
         AC_MSG_ERROR([Found linkable OpenSSL in $ac_cv_openssl_dir, but it doesn't run, even with -R.  Maybe specify another using --with-ssl-dir?])
       else
         if test -z "$linked_with" ; then
-	    ac_cv_openssl_linker_option='(none)'
+            ac_cv_openssl_linker_option='(none)'
         else
             ac_cv_openssl_linker_option=$linked_with
         fi
-        AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it link against with the same version I found header files for..])
+        AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it link against with the same version I found header files for.])
       fi
     fi
     LDFLAGS="$saved_LDFLAGS"
