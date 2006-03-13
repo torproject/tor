@@ -314,10 +314,12 @@ _log_err(uint32_t domain, const char *format, ...)
 void
 close_logs(void)
 {
-  logfile_t *victim;
-  while (logfiles) {
-    victim = logfiles;
-    logfiles = logfiles->next;
+  logfile_t *victim, *next;
+  next = logfiles;
+  logfiles = NULL;
+  while (next) {
+    victim = next;
+    next = next->next;
     close_log(victim);
     tor_free(victim->filename);
     tor_free(victim);
