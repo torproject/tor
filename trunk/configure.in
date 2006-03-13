@@ -291,6 +291,7 @@ int main(void)
         fi
         AC_TRY_RUN([
 #include <openssl/opensslv.h>
+#include <openssl/crypto.h>
 int main(void) { return OPENSSL_VERSION_NUMBER == SSLeay(); }],
         right_version=yes, right_version=no)
         if test "$right_version" = yes; then
