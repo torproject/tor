@@ -41,9 +41,9 @@
 #define tor_assert(expr) do {                                           \
     if (!(expr)) {                                                      \
       log(LOG_ERR, LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.", \
-          _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);                 \
+          _SHORT_FILE_, __LINE__, __func__, #expr);                 \
       fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",      \
-              _SHORT_FILE_, __LINE__, __FUNCTION__, #expr);             \
+              _SHORT_FILE_, __LINE__, __func__, #expr);             \
       abort();                                                          \
     } } while (0)
 #endif

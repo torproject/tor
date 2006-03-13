@@ -52,14 +52,29 @@
 #define INLINE inline
 #endif
 
-/* Windows compilers before VC7 don't have __FUNCTION__. */
-#if defined(_MSC_VER) && _MSC_VER < 1300
-#define __FUNCTION__ "???"
+/* Try to get a reasonable __func__ substitute in place. */
+#if defined(_MSC_VER)
+/* MSVC compilers before VC7 don't have __func__ at all; later ones call it
+ * __FUNCTION__. */
+#if _MSC_VER < 1300
+#define __func__ "???"
+#else
+#define __func__ __FUNCTION__
 #endif
 
-#if defined(__sgi) && !defined(__GNUC__) && defined(__c99)
-#define __FUNCTION__ __func__
+#else
+/* For platforms where autoconf works, make sure __func__ is defined
+ * sanely. */
+#ifndef HAVE_MACRO__func__
+#ifdef HAVE_MACRO__FUNCTION__
+#define __func__ __FUNCTION__
+#elif HAVE_MACRO__FUNC__
+#define __func__ __FUNC__
+#else
+#define __func__ "???"
 #endif
+#endif /* ifndef MAVE_MACRO__func__ */
+#endif /* if(not windows) */
 
 /* ===== String compatibility */
 #ifdef MS_WINDOWS
