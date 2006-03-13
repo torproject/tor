@@ -1566,7 +1566,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
   }
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-  if (is_internal_IP(htonl(in.s_addr), 0) &&
+  if (is_internal_IP(ntohl(in.s_addr), 0) &&
       options->PublishServerDescriptor) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers) {
