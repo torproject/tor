@@ -443,7 +443,7 @@ accounting_set_wakeup_time(void)
   char digest[DIGEST_LEN];
   crypto_digest_env_t *d_env;
   int time_in_interval;
-  int time_to_exhaust_bw;
+  uint64_t time_to_exhaust_bw;
   int time_to_consider;
 
   if (! identity_key_is_set()) {
@@ -478,10 +478,16 @@ accounting_set_wakeup_time(void)
     return;
   }
 
-  time_to_exhaust_bw = (int)
-    (get_options()->AccountingMax/expected_bandwidth_usage)*60;
   time_in_interval = interval_end_time - interval_start_time;
-  time_to_consider = time_in_interval - time_to_exhaust_bw;
+
+  time_to_exhaust_bw =
+    (get_options()->AccountingMax/expected_bandwidth_usage)*60;
+  if (time_to_exhaust_bw > TIME_MAX) {
+    time_to_exhaust_bw = TIME_MAX;
+    time_to_consider = 0;
+  } else {
+    time_to_consider = time_in_interval - (int)time_to_exhaust_bw;
+  }
 
   if (time_to_consider<=0) {
     interval_wakeup_time = interval_start_time;
@@ -504,13 +510,16 @@ accounting_set_wakeup_time(void)
     char buf2[ISO_TIME_LEN+1];
     char buf3[ISO_TIME_LEN+1];
     char buf4[ISO_TIME_LEN+1];
-    time_t down_time = interval_wakeup_time+time_to_exhaust_bw;
+    time_t down_time;
+    if (interval_wakeup_time+time_to_exhaust_bw > TIME_MAX)
+      down_time = TIME_MAX;
+    else
+      down_time = (time_t)(interval_wakeup_time+time_to_exhaust_bw);
     if (down_time>interval_end_time)
       down_time = interval_end_time;
     format_local_iso_time(buf1, interval_start_time);
     format_local_iso_time(buf2, interval_wakeup_time);
-    format_local_iso_time(buf3,
-                   down_time<interval_end_time?down_time:interval_end_time);
+    format_local_iso_time(buf3, down_time);
     format_local_iso_time(buf4, interval_end_time);
 
     log_notice(LD_ACCT,
