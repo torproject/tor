@@ -319,8 +319,9 @@ connection_stop_reading(connection_t *conn)
   log_debug(LD_NET,"connection_stop_reading() called.");
   if (event_del(conn->read_event))
     log_warn(LD_NET, "Error from libevent setting read event state for %d "
-             "to unwatched.",
-             conn->s);
+             "to unwatched: %s",
+             conn->s,
+             tor_socket_strerror(tor_socket_errno(conn->s)));
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
@@ -332,8 +333,9 @@ connection_start_reading(connection_t *conn)
 
   if (event_add(conn->read_event, NULL))
     log_warn(LD_NET, "Error from libevent setting read event state for %d "
-             "to watched.",
-             conn->s);
+             "to watched: %s",
+             conn->s,
+             tor_socket_strerror(tor_socket_errno(conn->s)));
 }
 
 /** Return true iff <b>conn</b> is listening for write events. */
@@ -354,9 +356,9 @@ connection_stop_writing(connection_t *conn)
 
   if (event_del(conn->write_event))
     log_warn(LD_NET, "Error from libevent setting write event state for %d "
-             "to unwatched.",
-             conn->s);
-
+             "to unwatched: %s",
+             conn->s,
+             tor_socket_strerror(tor_socket_errno(conn->s)));
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
@@ -368,8 +370,9 @@ connection_start_writing(connection_t *conn)
 
   if (event_add(conn->write_event, NULL))
     log_warn(LD_NET, "Error from libevent setting write event state for %d "
-             "to watched.",
-             conn->s);
+             "to watched: %s",
+             conn->s,
+             tor_socket_strerror(tor_socket_errno(conn->s)));
 }
 
 /** Close all connections that have been scheduled to get closed */
