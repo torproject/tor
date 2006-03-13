@@ -92,7 +92,7 @@ EOF
 
 DOC=$BUILD_DIR/tor_resources/documents
 mkdir $DOC
-cp doc/tor-doc.html doc/tor-doc.css doc/tor-doc-osx.html $DOC
+cp doc/stylesheet.css doc/tor-doc-osx.html $DOC
 cp AUTHORS $DOC/AUTHORS.txt
 groff doc/tor.1.in -T ps -m man | pstopdf -i -o $DOC/tor-reference.pdf
 groff doc/tor-resolve.1 -T ps -m man | pstopdf -i -o $DOC/tor-resolve.pdf
