@@ -292,7 +292,10 @@ int main(void)
         AC_TRY_RUN([
 #include <openssl/opensslv.h>
 #include <openssl/crypto.h>
-int main(void) { return OPENSSL_VERSION_NUMBER == SSLeay(); }],
+#include <stdio.h>
+int main(void) {
+return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
+}],
         right_version=yes, right_version=no)
         if test "$right_version" = yes; then
           if test -z "$ssl_extra" ; then
@@ -314,7 +317,7 @@ int main(void) { return OPENSSL_VERSION_NUMBER == SSLeay(); }],
         else
             ac_cv_openssl_linker_option=$linked_with
         fi
-        AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it run with the same version as the headers made us expect.])
+        AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it link against with the same version I found header files for..])
       fi
     fi
     LDFLAGS="$saved_LDFLAGS"
