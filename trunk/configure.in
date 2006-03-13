@@ -109,6 +109,7 @@ dnl Where do you live, libevent?  And how do we call you?
 AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
   saved_LIBS="$LIBS"
   saved_LDFLAGS="$LDFLAGS"
+  saved_CPPFLAGS="$CPPFLAGS"
   le_found=no
   for ledir in $trylibeventdir "" $prefix /usr/local ; do
     LDFLAGS="$saved_LDFLAGS"
@@ -124,9 +125,16 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
       else
         LDFLAGS="-L$ledir $LDFLAGS"
       fi
+      if test -d "$ledir/include" ; then
+        CPPFLAGS="-I$ledir/include $CPPFLAGS"
+      else
+        CPPFLAGS="-I$ledir $CPPFLAGS"
+      fi
     fi
-    # Can I link it?
-    AC_TRY_LINK([], [ void *event_init(void); event_init(); ],
+    # Can I compile and link it?
+    AC_TRY_LINK([struct timeval { long tv_sec; long tv_usec; };
+typedef unsigned char u_char; typedef unsigned long size_t;
+#include <event.h>], [ event_init(); ],
        [ libevent_linked=yes ], [ libevent_linked=no ])
     if test $libevent_linked = yes; then
        if test ! -z "$ledir" ; then
@@ -140,6 +148,7 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
   done
   LIBS="$saved_LIBS"
   LDFLAGS="$saved_LDFLAGS"
+  CPPFLAGS="$saved_CPPFLAGS"
   if test $le_found = no ; then
     AC_MSG_ERROR([Could not find a linkable libevent. You can specify an explicit path using --with-libevent-dir])
   fi
@@ -156,7 +165,6 @@ if test $ac_cv_libevent_dir != "(system)"; then
   if test -d "$ac_cv_libevent_dir/include" ; then
     CPPFLAGS="-I$ac_cv_libevent_dir/include $CPPFLAGS"
   else
-
     CPPFLAGS="-I$ac_cv_libevent_dir $CPPFLAGS"
   fi
 fi
@@ -199,6 +207,7 @@ dnl Where do you live, openssl?  And how do we call you?
 AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
   saved_LIBS="$LIBS"
   saved_LDFLAGS="$LDFLAGS"
+  saved_CPPFLAGS="$CPPFLAGS"
   ssl_found=no
   for ssldir in $tryssldir "" $prefix /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /usr/pkg /opt /opt/openssl ; do
     LDFLAGS="$saved_LDFLAGS"
@@ -214,10 +223,15 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
       else
         LDFLAGS="-L$ssldir $LDFLAGS"
       fi
+      if test -d "$ssldir/include" ; then
+        CPPFLAGS="-I$ssldir/include $CPPFLAGS"
+      else
+        CPPFLAGS="-I$ssldir $CPPFLAGS"
+      fi
     fi
     # Can I link it?
-    AC_TRY_LINK([],
-       [ void RAND_add(const void *, int, double); RAND_add((void*)0,0,0); ],
+    AC_TRY_LINK([#include <openssl/rand.h>],
+       [ RAND_add((void*)0,0,0); ],
        [ openssl_linked=yes ], [ openssl_linked=no ])
     if test $openssl_linked = yes; then
        if test ! -z "$ssldir" ; then
@@ -231,6 +245,7 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
   done
   LIBS="$saved_LIBS"
   LDFLAGS="$saved_LDFLAGS"
+  CPPFLAGS="$saved_CPPFLAGS"
   if test $ssl_found = no ; then
     AC_MSG_ERROR([Could not find a linkable OpenSSL. You can specify an explicit path using --with-ssl-dir])
   fi
