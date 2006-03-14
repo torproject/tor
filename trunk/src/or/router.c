@@ -244,8 +244,7 @@ init_keys(void)
   char keydir[512];
   char keydir2[512];
   char fingerprint[FINGERPRINT_LEN+1];
-  /*nickname fp\n\0 */
-  char fingerprint_line[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];
+  char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3]; /*nickname<space>fp\n\0 */
   char *cp;
   const char *mydesc, *datadir;
   crypto_pk_env_t *prkey;

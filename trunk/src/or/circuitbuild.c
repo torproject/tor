@@ -338,7 +338,7 @@ circuit_handle_first_hop(circuit_t *circ)
 {
   crypt_path_t *firsthop;
   connection_t *n_conn;
-  char tmpbuf[INET_NTOA_BUF_LEN+1];
+  char tmpbuf[INET_NTOA_BUF_LEN];
   struct in_addr in;
 
   firsthop = onion_next_hop_in_cpath(circ->cpath);
