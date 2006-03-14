@@ -292,7 +292,6 @@ int main(void)
         AC_TRY_RUN([
 #include <openssl/opensslv.h>
 #include <openssl/crypto.h>
-#include <stdio.h>
 int main(void) {
 return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
 }],
