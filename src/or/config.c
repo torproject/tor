@@ -1532,6 +1532,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
   struct hostent *rent;
   char hostname[256];
   int explicit_ip=1;
+  int explicit_hostname=1;
   char tmpbuf[INET_NTOA_BUF_LEN];
   static uint32_t old_addr=0;
   const char *address = options->Address;
@@ -1542,6 +1543,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
     strlcpy(hostname, address, sizeof(hostname));
   } else { /* then we need to guess our address */
     explicit_ip = 0; /* it's implicit */
+    explicit_hostname = 0; /* it's implicit */
 
     if (gethostname(hostname, sizeof(hostname)) < 0) {
       log_warn(LD_NET,"Error obtaining local hostname");
@@ -1557,12 +1559,55 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
     explicit_ip = 0;
     rent = (struct hostent *)gethostbyname(hostname);
     if (!rent) {
-      log_warn(LD_CONFIG,"Could not resolve local Address '%s'. Failing.",
-               hostname);
-      return -1;
+      uint32_t interface_ip;
+
+      if (explicit_hostname) {
+        log_warn(LD_CONFIG,"Could not resolve local Address '%s'. Failing.",
+                 hostname);
+        return -1;
+      }
+      log_notice(LD_CONFIG, "Could not resolve guessed local hostname '%s'. "
+                            "Trying something else.", hostname);
+      if (get_interface_address(&interface_ip)) {
+        log_warn(LD_CONFIG, "Could not get local interface IP address. "
+                 "Failing.");
+        return -1;
+      }
+      in.s_addr = htonl(interface_ip);
+      tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
+      log_notice(LD_CONFIG, "Learned IP address '%s' for local interface."
+               " Using that.", tmpbuf);
+      strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
+    } else {
+      tor_assert(rent->h_length == 4);
+      memcpy(&in.s_addr, rent->h_addr, rent->h_length);
+
+      if (!explicit_hostname &&
+          is_internal_IP(ntohl(in.s_addr), 0)) {
+        uint32_t interface_ip;
+
+        tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
+        log_notice(LD_CONFIG, "Guessed local hostname '%s' resolves to an "
+          "internal IP (%s).  Trying something else.", hostname, tmpbuf);
+
+        if (get_interface_address(&interface_ip)) {
+          log_warn(LD_CONFIG, "Could not get local interface IP address. "
+                              "Too bad.");
+        } else if (is_internal_IP(interface_ip, 0)) {
+          struct in_addr in2;
+          in2.s_addr = htonl(interface_ip);
+          tor_inet_ntoa(&in2,tmpbuf,sizeof(tmpbuf));
+          log_notice(LD_CONFIG, "Interface IP '%s' is an internal address "
+                                "too.  Ignoring.", tmpbuf);
+        } else {
+          in.s_addr = htonl(interface_ip);
+          tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
+          log_notice(LD_CONFIG, "Learned IP address '%s' for local interface."
+                                " Using that.", tmpbuf);
+          strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
+        }
+      }
     }
-    tor_assert(rent->h_length == 4);
-    memcpy(&in.s_addr, rent->h_addr, rent->h_length);
   }
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
