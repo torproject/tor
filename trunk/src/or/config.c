@@ -1588,7 +1588,8 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
 
         tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
         log_notice(LD_CONFIG, "Guessed local hostname '%s' resolves to an "
-          "internal IP (%s).  Trying something else.", hostname, tmpbuf);
+          "internal IP address (%s).  Trying something else.", hostname,
+          tmpbuf);
 
         if (get_interface_address(&interface_ip)) {
           log_warn(LD_CONFIG, "Could not get local interface IP address. "
