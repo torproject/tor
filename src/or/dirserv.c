@@ -1310,7 +1310,7 @@ generate_v2_networkstatus(void)
   char *outp, *endp;
   or_options_t *options = get_options();
   char fingerprint[FINGERPRINT_LEN+1];
-  char ipaddr[INET_NTOA_BUF_LEN+1];
+  char ipaddr[INET_NTOA_BUF_LEN];
   char published[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];
   struct in_addr in;
