@@ -1912,7 +1912,7 @@ entry_guards_set_status_from_directory(void)
   routerlist_t *routers;
   time_t now;
   int changed = 0;
-  int severity = LOG_NOTICE;
+  int severity = LOG_INFO;
   if (! entry_guards)
     return;
 
