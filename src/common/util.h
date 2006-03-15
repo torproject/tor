@@ -90,7 +90,6 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s);
 void tor_strupper(char *s);
-int tor_strisprint(const char *s);
 int strcmpstart(const char *s1, const char *s2);
 int strcasecmpstart(const char *s1, const char *s2);
 int strcmpend(const char *s1, const char *s2);

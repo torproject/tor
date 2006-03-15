@@ -329,17 +329,6 @@ tor_strupper(char *s)
   }
 }
 
-int
-tor_strisprint(const char *s)
-{
-  while (*s) {
-    if (!TOR_ISPRINT(*s))
-      return 0;
-    s++;
-  }
-  return 1;
-}
-
 /* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
