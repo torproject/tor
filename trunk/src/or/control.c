@@ -1455,6 +1455,27 @@ handle_getinfo_helper(const char *question, char **answer)
     smartlist_free(mappings);
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
+  } else if (!strcmpstart(question, "dir/server/")) {
+    size_t answer_len = 0, url_len = strlen(question)+2;
+    char *url = tor_malloc(url_len);
+    int res;
+    smartlist_t *descs = smartlist_create();
+    const char *msg;
+    char *cp;
+    tor_snprintf(url, url_len, "/tor/%s", question+4);
+    res = dirserv_get_routerdescs(descs, url, &msg);
+    SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
+                      answer_len += sd->signed_descriptor_len);
+    cp = *answer = tor_malloc(answer_len+1);
+    SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
+                      {
+                        memcpy(cp, signed_descriptor_get_body(sd),
+                               sd->signed_descriptor_len);
+                        cp += sd->signed_descriptor_len;
+                      });
+    *cp = '\0';
+    tor_free(url);
+    smartlist_free(descs);
   }
   return 0;
 }
