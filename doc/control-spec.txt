@@ -412,7 +412,8 @@ $Id$
       contents, provided according to the specification for the URLs listed
       in Section 4.4 of dir-spec.txt.  Note that Tor MUST NOT provide
       private information, such as descriptors for routers not marked as
-      general-purpose.
+      general-purpose.  When asked for 'authority' information for which this
+      Tor is not authoritative, Tor replies with an empty string.
 
   Examples:
      C: GETINFO version desc/name/moria1

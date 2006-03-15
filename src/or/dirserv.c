@@ -1555,6 +1555,9 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
  * recognize the key (URL).
  * If -1 is returned *<b>msg</b> will be set to an appropriate error
  * message.
+ *
+ * (Despite its name, this function is also called from the controller, which
+ * exposes a similar means to fetch descriptors.)
  */
 int
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
