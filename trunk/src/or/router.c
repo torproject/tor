@@ -854,7 +854,8 @@ router_rebuild_descriptor(int force)
        else
          member = router_get_by_nickname(name, 1);
        if (!member) {
-         if (!smartlist_string_isin(warned_nonexistent_family, name)) {
+         if (!smartlist_string_isin(warned_nonexistent_family, name) &&
+             !is_legal_hexdigest(name)) {
            log_warn(LD_CONFIG,
                     "I have no descriptor for the router named \"%s\" "
                     "in my declared family; I'll use the nickname as is, but "
@@ -1213,13 +1214,24 @@ is_legal_nickname(const char *s)
 int
 is_legal_nickname_or_hexdigest(const char *s)
 {
-  size_t len;
-  tor_assert(s);
   if (*s!='$')
     return is_legal_nickname(s);
+  else
+    return is_legal_hexdigest(s);
+}
 
+
+/** Return true iff <b>s</b> is a legally valid hex-encoded identity-key
+ * digest. */
+int
+is_legal_hexdigest(const char *s)
+{
+  size_t len;
+  tor_assert(s);
   len = strlen(s);
-  return len == HEX_DIGEST_LEN+1 && strspn(s+1,HEX_CHARACTERS)==len-1;
+  return (len == HEX_DIGEST_LEN+1 &&
+          s[0] == '$' &&
+          strspn(s+1,HEX_CHARACTERS)==len-1);
 }
 
 /** Forget that we have issued any router-related warnings, so that we'll
