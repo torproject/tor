@@ -2341,6 +2341,7 @@ void add_trusted_dir_server(const char *nickname,
                             const char *address, uint16_t port,
                             const char *digest, int supports_v1);
 void clear_trusted_dir_servers(void);
+int any_trusted_dir_supports_v1(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
 local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
 void update_networkstatus_downloads(time_t now);
