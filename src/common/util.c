@@ -329,6 +329,19 @@ tor_strupper(char *s)
   }
 }
 
+/** Return 1 if every character in <b>s</b> is printable, else return 0.
+ */
+int
+tor_strisprint(const char *s)
+{
+  while (*s) {
+    if (!TOR_ISPRINT(*s))
+      return 0;
+    s++;
+  }
+  return 1;
+}
+
 /* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
