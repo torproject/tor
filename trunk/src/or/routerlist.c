@@ -2785,13 +2785,15 @@ routers_update_all_from_networkstatus(void)
 
   me = router_get_my_routerinfo();
   if (me && !have_warned_about_unverified_status) {
-    int n_recent = 0, n_listing = 0, n_valid = 0, n_named = 0;
+    int n_recent = 0, n_listing = 0, n_valid = 0, n_named = 0, n_naming = 0;
     routerstatus_t *rs;
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
       if (ns->received_on + SELF_OPINION_INTERVAL < now)
         continue;
       ++n_recent;
+      if (ns->binds_names)
+        ++n_naming;
       if (!(rs = networkstatus_find_entry(ns, me->cache_info.identity_digest)))
         continue;
       ++n_listing;
@@ -2808,15 +2810,16 @@ routers_update_all_from_networkstatus(void)
        * have tried all of them? -RD */
       if (n_valid <= n_recent/2)  {
         log_warn(LD_GENERAL,
-                 "%d/%d recent directory servers list us as invalid. Please "
+                 "%d/%d recent statements from directory authorities list us "
+                 "as invalid. Please "
                  "consider sending your identity fingerprint to the tor-ops.",
                  n_recent-n_valid, n_recent);
         have_warned_about_unverified_status = 1;
-      } else if (!n_named) { // (n_named <= n_recent/2) {
-        log_warn(LD_GENERAL, "0/%d recent directory servers recognize this "
-                 "server. Please consider sending your identity fingerprint "
-                 "to the tor-ops.",
-                 n_recent);
+      } else if (!n_named && n_naming) { // (n_named <= n_recent/2) {
+        log_warn(LD_GENERAL, "0/%d name-binding directory authorities "
+                 "recognize this server. Please consider sending your "
+                 "identity fingerprint to the tor-ops.",
+                 n_naming);
         have_warned_about_unverified_status = 1;
       }
     }
@@ -2873,7 +2876,8 @@ routers_update_all_from_networkstatus(void)
         tor_free(rec);
       }
     } else {
-      log_info(LD_GENERAL, "%d/%d recent directories think my version is ok.",
+      log_info(LD_GENERAL, "%d/%d recently downloaded statements from "
+               "directory authorities say my version is ok.",
                n_recommended, n_recent);
     }
   }
