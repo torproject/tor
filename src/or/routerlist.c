@@ -2678,6 +2678,17 @@ clear_trusted_dir_servers(void)
   }
 }
 
+/** Return 1 if any trusted dir server supports v1 directories,
+ * else return 0. */
+int
+any_trusted_dir_supports_v1(void)
+{
+  if (trusted_dir_servers)
+    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
+                      if (ent->is_v1_authority) return 1);
+  return 0;
+}
+
 /** Return the network status with a given identity digest. */
 networkstatus_t *
 networkstatus_get_by_digest(const char *digest)
