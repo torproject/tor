@@ -1533,6 +1533,13 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     tor_free(address);
     return 0;
   }
+  if (!tor_strisprint(address)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Non-printing characters in address %s in relay "
+           "begin cell. Dropping.", escaped(address));
+    tor_free(address);
+    return 0;
+  }
 
   log_debug(LD_EXIT,"Creating new exit connection.");
   n_stream = connection_new(CONN_TYPE_EXIT);
