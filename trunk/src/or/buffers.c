@@ -1003,7 +1003,13 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
           req->address[len] = 0;
           req->port = ntohs(get_uint16(buf->cur+5+len));
           buf_remove_from_front(buf, 5+len+2);
-
+          if (!tor_strisprint(req->address) || strchr(req->address,'\"')) {
+            log_warn(LD_PROTOCOL,
+                     "Your application (using socks5 on port %d) gave Tor "
+                     "a malformed hostname: %s. Rejecting the connection.",
+                     req->port, escaped(req->address));
+            return -1;
+          }
           if (log_sockstype)
             log_notice(LD_APP,
                   "Your application (using socks5 on port %d) gave "
@@ -1098,6 +1104,13 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
       log_debug(LD_APP,"socks4: Everything is here. Success.");
       strlcpy(req->address, startaddr ? startaddr : tmpbuf,
               sizeof(req->address));
+      if (!tor_strisprint(req->address) || strchr(req->address,'\"')) {
+        log_warn(LD_PROTOCOL,
+                 "Your application (using socks4 on port %d) gave Tor "
+                 "a malformed hostname: %s. Rejecting the connection.",
+                 req->port, escaped(req->address));
+        return -1;
+      }
       /* next points to the final \0 on inbuf */
       buf_remove_from_front(buf, next-buf->cur+1);
       return 1;
