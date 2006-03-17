@@ -2181,8 +2181,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
       options->RecommendedServerVersions =
         config_lines_dup(options->RecommendedVersions);
     if (options->UseEntryGuards) {
-      log_notice(LD_CONFIG, "Authoritative directory servers can't set "
-                 "UseEntryGuards. Disabling.");
+      log_info(LD_CONFIG, "Authoritative directory servers can't set "
+               "UseEntryGuards. Disabling.");
       options->UseEntryGuards = 0;
     }
   }
