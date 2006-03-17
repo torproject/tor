@@ -74,7 +74,7 @@
 #define __func__ "???"
 #endif
 #endif /* ifndef MAVE_MACRO__func__ */
-#endif /* if(not windows) */
+#endif /* if not windows */
 
 /* ===== String compatibility */
 #ifdef MS_WINDOWS

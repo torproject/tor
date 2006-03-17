@@ -718,9 +718,11 @@ client_dns_set_addressmap(const char *address, uint32_t val,
                           int ttl)
 {
   struct in_addr in;
-  char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_HEX_NICKNAME_LEN+10]; /* <address>.<hex or nickname>.exit\0  or just  <address>\0 */
+  /* <address>.<hex or nickname>.exit\0  or just  <address>\0 */
+  char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_HEX_NICKNAME_LEN+10];
+  /* 123.123.123.123.<hex or nickname>.exit\0   or just  123.123.123.123\0 */
+  char extendedval[INET_NTOA_BUF_LEN+MAX_HEX_NICKNAME_LEN+10];
   char valbuf[INET_NTOA_BUF_LEN];
-  char extendedval[INET_NTOA_BUF_LEN+MAX_HEX_NICKNAME_LEN+10]; /* 123.123.123.123.<hex or nickname>.exit\0   or just  123.123.123.123\0 */
 
   tor_assert(address); tor_assert(val);
 
