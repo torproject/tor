@@ -451,7 +451,15 @@ $Id$
 
   This changes the circuit's purpose. See EXTENDCIRCUIT above for details.
 
-3.12. ATTACHSTREAM
+3.12. SETROUTERPURPOSE
+
+  Sent from the client to the server.  The format is:
+      "SETROUTERPURPOSE" SP NicknameOrKey SP Purpose CRLF
+
+  This changes the descriptor's purpose. See +POSTDESCRIPTOR below
+  for details.
+
+3.13. ATTACHSTREAM
 
   Sent from the client to the server.  The syntax is:
      "ATTACHSTREAM" SP StreamID SP CircuitID CRLF
@@ -485,12 +493,14 @@ $Id$
   yet, in which case Tor will detach the stream from its current circuit
   before proceeding with the new attach request.}
 
-3.13. POSTDESCRIPTOR
+3.14. POSTDESCRIPTOR
 
   Sent from the client to the server. The syntax is:
-    "+POSTDESCRIPTOR" CRLF Descriptor CRLF "." CRLF
+    "+POSTDESCRIPTOR" ("purpose=" Purpose) CRLF Descriptor CRLF "." CRLF
 
-  This message informs the server about a new descriptor.
+  This message informs the server about a new descriptor. If Purpose is
+  specified, it must be either "general" or "controller", else we
+  return a 552 error.
 
   The descriptor, when parsed, must contain a number of well-specified
   fields, including fields for its nickname and identity.
@@ -501,7 +511,7 @@ $Id$
   why the server was not added.  If the descriptor is added, Tor replies with
   "250 OK".
 
-3.14. REDIRECTSTREAM
+3.15. REDIRECTSTREAM
 
   Sent from the client to the server. The syntax is:
     "REDIRECTSTREAM" SP StreamID SP Address (SP Port) CRLF
@@ -516,7 +526,7 @@ $Id$
 
   Tor replies with "250 OK" on success.
 
-3.15. CLOSESTREAM
+3.16. CLOSESTREAM
 
   Sent from the client to the server.  The syntax is:
 
@@ -530,7 +540,7 @@ $Id$
   Tor replies with "250 OK" on success, or a 512 if there aren't enough
   arguments, or a 552 if it doesn't recognize the StreamID or reason.
 
-3.16. CLOSECIRCUIT
+3.17. CLOSECIRCUIT
 
    The syntax is:
      CLOSECIRCUIT SP CircuitID *(SP Flag) CRLF
@@ -545,7 +555,7 @@ $Id$
   Tor replies with "250 OK" on success, or a 512 if there aren't enough
   arguments, or a 552 if it doesn't recognize the CircuitID.
 
-3.17. QUIT
+3.18. QUIT
 
   Tells the server to hang up on this controller connection. This command
   can be used before authenticating.
