@@ -2172,14 +2172,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->AuthoritativeDir) {
     if (!options->ContactInfo)
       REJECT("Authoritative directory servers must set ContactInfo");
-    if (VersioningAuthoritativeDir && !options->RecommendedVersions)
-      REJECT("Versioning auth dir servers must set RecommendedVersions.");
+    if (options->V1AuthoritativeDir && !options->RecommendedVersions)
+      REJECT("V1 auth dir servers must set RecommendedVersions.");
     if (!options->RecommendedClientVersions)
       options->RecommendedClientVersions =
         config_lines_dup(options->RecommendedVersions);
     if (!options->RecommendedServerVersions)
       options->RecommendedServerVersions =
         config_lines_dup(options->RecommendedVersions);
+    if (options->VersioningAuthoritativeDir &&
+        (!options->RecommendedClientVersions ||
+         !options->RecommendedServerVersions))
+      REJECT("Versioning auth dir servers must set Recommended*Versions.");
     if (options->UseEntryGuards) {
       log_info(LD_CONFIG, "Authoritative directory servers can't set "
                "UseEntryGuards. Disabling.");
