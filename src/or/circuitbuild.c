@@ -608,7 +608,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
         has_completed_circuit=1;
         /* FFFF Log a count of known routers here */
         log(LOG_NOTICE, LD_GENERAL,
-            "Tor has successfully opened a circuit. Looks like it's working.");
+            "Tor has successfully opened a circuit. Looks like client functionality is working.");
         if (server_mode(options) && !check_whether_orport_reachable()) {
           inform_testing_reachability();
           consider_testing_reachability();
