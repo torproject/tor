@@ -33,6 +33,7 @@ static void update_networkstatus_cache_downloads(time_t now);
 static void update_networkstatus_client_downloads(time_t now);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void routerlist_assert_ok(routerlist_t *rl);
+static int have_tried_downloading_all_statuses(void);
 
 #define MAX_DESCRIPTORS_PER_ROUTER 5
 
@@ -2815,7 +2816,7 @@ routers_update_all_from_networkstatus(void)
                  "consider sending your identity fingerprint to the tor-ops.",
                  n_recent-n_valid, n_recent);
         have_warned_about_unverified_status = 1;
-      } else if (!n_named && n_naming) { // (n_named <= n_recent/2) {
+      } else if (!n_named && have_tried_downloading_all_statuses()) {
         log_warn(LD_GENERAL, "0/%d name-binding directory authorities "
                  "recognize this server. Please consider sending your "
                  "identity fingerprint to the tor-ops.",
@@ -3689,6 +3690,26 @@ router_have_minimum_dir_info(void)
   }
   have_enough = res;
   return res;
+}
+
+/** Return true iff we have downloaded, or attempted to download, a network
+ * status for each authority. */
+static int
+have_tried_downloading_all_statuses(void)
+{
+  if (!trusted_dir_servers)
+    return 0;
+
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+    {
+      /* If we don't have the status, and we haven't failed to get the status,
+       * we haven't tried to get the status. */
+      if (!networkstatus_get_by_digest(ds->digest) &&
+          !ds->n_networkstatus_failures)
+        return 0;
+    });
+
+  return 1;
 }
 
 /** Reset the descriptor download failure count on all routers, so that we
