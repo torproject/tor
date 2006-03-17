@@ -244,7 +244,8 @@ init_keys(void)
   char keydir[512];
   char keydir2[512];
   char fingerprint[FINGERPRINT_LEN+1];
-  char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3]; /*nickname<space>fp\n\0 */
+  /*nickname<space>fp\n\0 */
+  char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
   char *cp;
   const char *mydesc, *datadir;
   crypto_pk_env_t *prkey;
@@ -1219,7 +1220,6 @@ is_legal_nickname_or_hexdigest(const char *s)
   else
     return is_legal_hexdigest(s);
 }
-
 
 /** Return true iff <b>s</b> is a legally valid hex-encoded identity-key
  * digest. */
