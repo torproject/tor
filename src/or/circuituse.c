@@ -852,7 +852,6 @@ circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
   if (exit_nickname) {
     router = router_get_by_nickname(exit_nickname, 1);
     if (!router) {
-      /*XXXXNM domain? */
       log_warn(LD_GENERAL, "No such OR as '%s'", exit_nickname);
       return NULL;
     }
