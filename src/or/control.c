@@ -169,8 +169,8 @@ static int handle_control_getinfo(connection_t *conn, uint32_t len,
                                   const char *body);
 static int handle_control_extendcircuit(connection_t *conn, uint32_t len,
                                         const char *body);
-static int handle_control_setcircuitpurpose(connection_t *conn, uint32_t len,
-                                        const char *body);
+static int handle_control_setpurpose(connection_t *conn, int for_circuits,
+                                     uint32_t len, const char *body);
 static int handle_control_attachstream(connection_t *conn, uint32_t len,
                                         const char *body);
 static int handle_control_postdescriptor(connection_t *conn, uint32_t len,
@@ -1576,19 +1576,22 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   return 0;
 }
 
-/** If <b>string</b> contains a recognized circuit purpose,
+/** If <b>string</b> contains a recognized purpose (for
+ * circuits if <b>for_circuits</b> is 1, else for routers),
  * possibly prefaced with the string "purpose=", then assign it
  * and return 0. Otherwise return -1. */
 static int
-get_purpose(char *string, uint8_t *purpose)
+get_purpose(char *string, int for_circuits, uint8_t *purpose)
 {
   if (!strcmpstart(string, "purpose="))
     string += strlen("purpose=");
 
   if (!strcmp(string, "general"))
-    *purpose = CIRCUIT_PURPOSE_C_GENERAL;
+    *purpose = for_circuits ? CIRCUIT_PURPOSE_C_GENERAL :
+                              ROUTER_PURPOSE_GENERAL;
   else if (!strcmp(string, "controller"))
-    *purpose = CIRCUIT_PURPOSE_CONTROLLER;
+    *purpose = for_circuits ? CIRCUIT_PURPOSE_CONTROLLER :
+                              ROUTER_PURPOSE_GENERAL;
   else { /* not a recognized purpose */
     return -1;
   }
@@ -1656,7 +1659,7 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
       goto done;
     }
     if (zero_circ && smartlist_len(args)>2) {
-      if (get_purpose(smartlist_get(args,2), &intended_purpose) < 0) {
+      if (get_purpose(smartlist_get(args,2), 1, &intended_purpose) < 0) {
         connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
                                  (char *)smartlist_get(args,2));
         goto done;
@@ -1739,36 +1742,50 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** Called when we get a SETCIRCUITPURPOSE message. If we can find
- * the circuit and it's a valid purpose, change it. */
+/** Called when we get a SETCIRCUITPURPOSE (if <b>for_circuits</b>
+ * is 1) or SETROUTERPURPOSE message. If we can find
+ * the circuit/router and it's a valid purpose, change it. */
 static int
-handle_control_setcircuitpurpose(connection_t *conn, uint32_t len,
-                                 const char *body)
+handle_control_setpurpose(connection_t *conn, int for_circuits,
+                          uint32_t len, const char *body)
 {
-  circuit_t *circ;
+  circuit_t *circ = NULL;
+  routerinfo_t *ri = NULL;
   uint8_t new_purpose;
   smartlist_t *args = smartlist_create();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(args)<2) {
     connection_printf_to_buf(conn,
-                             "512 Missing argument to SETCIRCUITPURPOSE\r\n");
+                             "512 Missing argument to SET%sPURPOSE\r\n",
+                             for_circuits ? "CIRCUIT" : "ROUTER");
     goto done;
   }
 
-  if (!(circ = get_circ(smartlist_get(args,0)))) {
-    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
-                             (char*)smartlist_get(args, 0));
-    goto done;
+  if (for_circuits) {
+    if (!(circ = get_circ(smartlist_get(args,0)))) {
+      connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
+                               (char*)smartlist_get(args, 0));
+      goto done;
+    }
+  } else {
+    if (!(ri = router_get_by_nickname(smartlist_get(args,0), 0))) {
+      connection_printf_to_buf(conn, "552 Unknown router \"%s\"\r\n",
+                               (char*)smartlist_get(args, 0));
+      goto done;
+    }
   }
 
-  if (get_purpose(smartlist_get(args,1), &new_purpose) < 0) {
+  if (get_purpose(smartlist_get(args,1), for_circuits, &new_purpose) < 0) {
     connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
                              (char *)smartlist_get(args,1));
     goto done;
   }
 
-  circ->purpose = new_purpose;
+  if (for_circuits)
+    circ->purpose = new_purpose;
+  else
+    ri->purpose = new_purpose;
   connection_write_str_to_buf("250 OK\r\n", conn);
 
 done:
@@ -1891,16 +1908,32 @@ handle_control_postdescriptor(connection_t *conn, uint32_t len,
   char *desc;
   int v0 = STATE_IS_V0(conn->state);
   const char *msg=NULL;
+  uint8_t purpose = ROUTER_PURPOSE_GENERAL;
 
   if (v0)
     desc = (char*)body;
   else {
-    const char *cp = memchr(body, '\n', len);
+    char *cp = memchr(body, '\n', len);
+    smartlist_t *args = smartlist_create();
     tor_assert(cp);
+    *cp++ = '\0';
+    smartlist_split_string(args, body, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    if (smartlist_len(args)) {
+      if (get_purpose(smartlist_get(args,0), 0, &purpose) < 0) {
+        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
+                                 (char *)smartlist_get(args,0));
+        SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+        smartlist_free(args);
+        return 0;
+      }
+    }
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
     read_escaped_data(cp, len-(cp-body), 1, &desc);
   }
 
-  switch (router_load_single_router(desc, &msg)) {
+  switch (router_load_single_router(desc, purpose, &msg)) {
   case -1:
     if (!msg) msg = "Could not parse descriptor";
     if (v0)
@@ -2296,7 +2329,10 @@ connection_control_process_inbuf_v1(connection_t *conn)
     if (handle_control_extendcircuit(conn, data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SETCIRCUITPURPOSE")) {
-    if (handle_control_setcircuitpurpose(conn, data_len, args))
+    if (handle_control_setpurpose(conn, 1, data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "SETROUTERPURPOSE")) {
+    if (handle_control_setpurpose(conn, 0, data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "ATTACHSTREAM")) {
     if (handle_control_attachstream(conn, data_len, args))
