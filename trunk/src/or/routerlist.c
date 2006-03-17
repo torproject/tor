@@ -647,7 +647,7 @@ router_nickname_is_in_list(routerinfo_t *router, const char *list)
 }
 
 /** Add every router from our routerlist that is currently running to
- * <b>sl</b>.
+ * <b>sl</b>, so that we can pick a node for a circuit.
  */
 static void
 router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
@@ -660,6 +660,7 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
   {
     if (router->is_running &&
+        router->purpose == ROUTER_PURPOSE_GENERAL &&
         (router->is_verified ||
         (allow_unverified &&
          !router_is_unreliable(router, need_uptime,
@@ -1817,7 +1818,7 @@ routerlist_remove_old_routers(void)
  * This is used only by the controller.
  */
 int
-router_load_single_router(const char *s, const char **msg)
+router_load_single_router(const char *s, uint8_t purpose, const char **msg)
 {
   routerinfo_t *ri;
   int r;
@@ -1830,6 +1831,7 @@ router_load_single_router(const char *s, const char **msg)
     *msg = "Couldn't parse router descriptor.";
     return -1;
   }
+  ri->purpose = purpose;
   if (router_is_me(ri)) {
     log_warn(LD_DIR, "Router's identity key matches mine; dropping.");
     *msg = "Router's identity key matches mine.";

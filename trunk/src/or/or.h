@@ -817,6 +817,12 @@ typedef struct {
   unsigned int is_stable:1; /** Do we think this is a stable OR? */
   unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
 
+/** Tor can use this desc for circuit-building. */
+#define ROUTER_PURPOSE_GENERAL 0
+/** Tor should avoid using this desc for circuit-building. */
+#define ROUTER_PURPOSE_CONTROLLER 1
+  uint8_t purpose; /** Should Tor use this desc for circuit-building? */
+
   /* The below items are used only by authdirservers for
    * reachability testing. */
   /** When was the last time we could reach this OR? */
@@ -2322,7 +2328,8 @@ void routerlist_remove_old_routers(void);
 void networkstatus_list_clean(time_t now);
 int router_add_to_routerlist(routerinfo_t *router, const char **msg,
                              int from_cache, int from_fetch);
-int router_load_single_router(const char *s, const char **msg);
+int router_load_single_router(const char *s, uint8_t purpose,
+                              const char **msg);
 void router_load_routers_from_string(const char *s, int from_cache,
                                      smartlist_t *requested_fingerprints);
 typedef enum {
