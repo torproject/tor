@@ -79,9 +79,14 @@ static time_t last_routerdesc_download_attempted = 0;
  * mirrors).  Clients don't use this now. */
 static time_t last_networkstatus_download_attempted = 0;
 
-/* DOCDOC */
+/** True iff we have logged a warning about this OR not being verified or
+ * not being named. */
 static int have_warned_about_unverified_status = 0;
+/** True iff we have logged a warning about this OR's version being older than
+ * listed by the authorities  */
 static int have_warned_about_old_version = 0;
+/** True iff we have logged a warning about this OR's version being newer than
+ * listed by the authorities  */
 static int have_warned_about_new_version = 0;
 
 /** Repopulate our list of network_status_t objects from the list cached on
@@ -880,7 +885,6 @@ router_hex_digest_matches(routerinfo_t *router, const char *hexdigest)
   if (hexdigest[0] == '$')
     ++hexdigest;
 
-  /* XXXXNM Any place that uses this inside a loop could probably do better. */
   if (strlen(hexdigest) != HEX_DIGEST_LEN ||
       base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0)
     return 0;
@@ -1462,7 +1466,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          int from_cache, int from_fetch)
 {
   int i;
-  char id_digest[DIGEST_LEN];
+  const char *id_digest;
   int authdir = get_options()->AuthoritativeDir;
   int authdir_verified = 0;
 
@@ -1471,11 +1475,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   if (!routerlist)
     router_get_routerlist();
 
-  /* XXXX NM If this assert doesn't trigger, we should remove the id_digest
-   * local. */
-  crypto_pk_get_digest(router->identity_pkey, id_digest);
-  tor_assert(!memcmp(id_digest, router->cache_info.identity_digest,
-                     DIGEST_LEN));
+  id_digest = router->cache_info.identity_digest;
 
   /* Make sure that we haven't already got this exact descriptor. */
   if (digestmap_get(routerlist->desc_digest_map,
@@ -1582,7 +1582,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         connection_t *conn;
         while ((conn = connection_or_get_by_identity_digest(
                       old_router->cache_info.identity_digest))) {
-          // And LD_OR? XXXXNM
           log_info(LD_DIR,"Closing conn to router '%s'; there is now a named "
                    "router with that name.",
                    old_router->nickname);
@@ -2219,8 +2218,6 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
   });
   return 0;
 }
-
-/* XXXX These should be configurable, perhaps? NM */
 
 /** How frequently do directory authorities re-download fresh networkstatus
  * documents? */
@@ -3422,7 +3419,8 @@ router_list_client_downloadable(void)
   return downloadable;
 }
 
-/** Initiate new router downloads as needed.
+/** Initiate new router downloads as needed, using the strategy for
+ * non-directory-servers.
  *
  * We only allow one router descriptor download at a time.
  * If we have less than two network-status documents, we ask
@@ -3463,7 +3461,6 @@ update_router_descriptor_client_downloads(time_t now)
   }
 
   if (networkstatus_list && smartlist_len(networkstatus_list) < 2) {
-    /* XXXX Is this redundant? -NM */
     log_info(LD_DIR,
              "Not enough networkstatus documents to launch requests.");
   }
@@ -3515,7 +3512,9 @@ update_router_descriptor_client_downloads(time_t now)
   smartlist_free(downloadable);
 }
 
-/* DOCDOC */
+/** Launch downloads for router status as needed, using the strategy used by
+ * authorities and caches: download every descriptor we don't have but would
+ * serve from a random authoritiy that lists it. */
 static void
 update_router_descriptor_cache_downloads(time_t now)
 {
@@ -3637,7 +3636,7 @@ update_router_descriptor_cache_downloads(time_t now)
   digestmap_free(map,NULL);
 }
 
-/* DOCDOC */
+/** Launch downloads for router status as needed. */
 void
 update_router_descriptor_downloads(time_t now)
 {

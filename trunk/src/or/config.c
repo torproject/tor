@@ -272,7 +272,8 @@ static config_var_t _state_vars[] = {
 #undef VAR
 #undef OBSOLETE
 
-/** DOCDOC*/
+/** Represents an English description of a configuration variable; used when
+ * generating configuration file comments. */
 typedef struct config_var_description_t {
   const char *name;
   const char *description;
@@ -434,10 +435,14 @@ static or_options_t *global_options = NULL;
 static char *torrc_fname = NULL;
 /** Persistent serialized state. */
 static or_state_t *global_state = NULL;
-/** DOCDOC */
+/** Parsed addr_policy_t describing which addresses we believe we can start
+ * circuits at. */
 static addr_policy_t *reachable_or_addr_policy = NULL;
+/** Parsed addr_policy_t describing which addresses we believe we can connect
+ * to directories at. */
 static addr_policy_t *reachable_dir_addr_policy = NULL;
 
+/** Allocate an empty configuration object of a given format type. */
 static void *
 config_alloc(config_format_t *fmt)
 {
@@ -481,6 +486,8 @@ set_options(or_options_t *new_val)
   return 0;
 }
 
+/** Release all memory and resources held by global configuration structures.
+ */
 void
 config_free_all(void)
 {
@@ -515,7 +522,7 @@ safe_str(const char *address)
     return address;
 }
 
-/** DOCDOC */
+/** Equivalent to escaped(safe_str(address)) */
 const char *
 escaped_safe_str(const char *address)
 {
@@ -952,7 +959,8 @@ config_free_lines(config_line_t *front)
   }
 }
 
-/** DOCDOC */
+/** Return the description for a given configuration variable, or NULL if no
+ * description exists. */
 static const char *
 config_find_description(config_format_t *fmt, const char *name)
 {
@@ -1782,7 +1790,8 @@ options_init(or_options_t *options)
   config_init(&options_format, options);
 }
 
-/* DOCDOC */
+/* Set all vars in the configuration object 'options' to their default
+ * values. */
 static void
 config_init(config_format_t *fmt, void *options)
 {
@@ -1798,7 +1807,8 @@ config_init(config_format_t *fmt, void *options)
   }
 }
 
-/* DOCDOC */
+/* Allocate and return a new string holding the written-out values of the vars
+ * in 'options' If 'minimal', do not write out any default-valued vars. */
 static char *
 config_dump(config_format_t *fmt, void *options, int minimal)
 {
@@ -1904,7 +1914,8 @@ validate_ports_csv(smartlist_t *sl, const char *name)
   return result;
 }
 
-/** DOCDOC */
+/** Helper: parse the Reachable(Dir|OR)?Addresses fields into
+ * reachable_(or|dir)_addr_policy. */
 static void
 parse_reachable_addresses(void)
 {
@@ -2013,10 +2024,10 @@ fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port)
 /** Highest allowable value for StatusFetchPeriod for directory caches. */
 #define MAX_CACHE_STATUS_FETCH_PERIOD (15*60)
 
-/** Return 0 if every setting in <b>options</b> is reasonable.  Else
- * warn and return -1.  Should have no side effects, except for
- * normalizing the contents of <b>options</b>.
- * DOCDOC old_options.
+/** Return 0 if every setting in <b>options</b> is reasonable, and a
+ * permissible transition from <b>old_options</b>.  Else warn and return -1.
+ * Should have no side effects, except for normalizing the contents of
+ * <b>options</b>.
  *
  * XXX
  * If <b>from_setconf</b>, we were called by the controller, and our
@@ -3967,26 +3978,14 @@ check_libevent_version(const char *m, const char *v, int server)
 }
 #endif
 
-/* Versioning issues and state: we want to be able to understand old state
- * files, and not choke on new ones.
- *
- * We could preserve all unrecognized variables across invocations, but we
- * could screw up order, if their order is significant with respect to
- * existing options.
- *
- * We could just dump unrecognized variables if you downgrade.
- *
- * This needs thought. XXXX NM
- */
-
-/** DOCDOC */
+/** Return the persistent state struct for this Tor. */
 or_state_t *
 get_or_state(void)
 {
   return global_state;
 }
 
-/** DOCDOC */
+/** Return the filename used to write and read the persistent state. */
 static char *
 get_or_state_fname(void)
 {
@@ -3998,7 +3997,11 @@ get_or_state_fname(void)
   return fname;
 }
 
-/** DOCDOC */
+/** Return 0 if every setting in <b>state</b> is reasonable, and a
+ * permissible transition from <b>old_state</b>.  Else warn and return -1.
+ * Should have no side effects, except for normalizing the contents of
+ * <b>state</b>.
+ */
 /* XXX from_setconf is here because of bug 238 */
 static int
 or_state_validate(or_state_t *old_state, or_state_t *state, int from_setconf)
@@ -4016,7 +4019,7 @@ or_state_validate(or_state_t *old_state, or_state_t *state, int from_setconf)
   return 0;
 }
 
-/** DOCDOC */
+/** Replace the current persistent state with <b>new_state</b> */
 static void
 or_state_set(or_state_t *new_state)
 {
@@ -4031,7 +4034,9 @@ or_state_set(or_state_t *new_state)
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
 }
 
-/* DOCDOC */
+/** Reload the persistent state from disk, generating a new state as needed.
+ * Return 0 on success, less than 0 on failure.
+ */
 int
 or_state_load(void)
 {
@@ -4091,7 +4096,7 @@ or_state_load(void)
   return r;
 }
 
-/** DOCDOC */
+/** Write the persistent state to disk. Return 0 for success, <0 on failure. */
 int
 or_state_save(void)
 {
@@ -4135,7 +4140,10 @@ or_state_save(void)
   return 0;
 }
 
-/** DOCDOC */
+/** Helper to implement GETINFO functions about configuration variables (not
+ * their values).  Given a "config/names" question, set *<b>answer</b> to a
+ * new string describing the supported configuration variables and their
+ * types. */
 int
 config_getinfo_helper(const char *question, char **answer)
 {
