@@ -2172,8 +2172,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->AuthoritativeDir) {
     if (!options->ContactInfo)
       REJECT("Authoritative directory servers must set ContactInfo");
-    if (!options->RecommendedVersions)
-      REJECT("Authoritative directory servers must set RecommendedVersions.");
+    if (VersioningAuthoritativeDir && !options->RecommendedVersions)
+      REJECT("Versioning auth dir servers must set RecommendedVersions.");
     if (!options->RecommendedClientVersions)
       options->RecommendedClientVersions =
         config_lines_dup(options->RecommendedVersions);
