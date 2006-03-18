@@ -462,8 +462,8 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
        * an https proxy, our https proxy is down. Don't blame the
        * Tor server. */
       if (!options->HttpsProxy) {
-        router_mark_as_down(conn->identity_digest);
         entry_guard_set_status(conn->identity_digest, 0);
+        router_set_status(conn->identity_digest, 0);
       }
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       connection_free(conn);
@@ -637,6 +637,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
              "but got %s",
              conn->address, conn->port, expected, seen);
       entry_guard_set_status(conn->identity_digest, 0);
+      router_set_status(conn->identity_digest, 0);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       as_advertised = 0;
     }
@@ -703,6 +704,7 @@ connection_tls_finish_handshake(connection_t *conn)
       /* pending circs get closed in circuit_about_to_close_connection() */
       return -1;
     }
+    router_set_status(conn->identity_digest, 1);
   }
   connection_watch_events(conn, EV_READ);
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */

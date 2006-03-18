@@ -348,6 +348,7 @@ connection_about_to_close_connection(connection_t *conn)
         if (connection_or_nonopen_was_started_here(conn)) {
           rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
           entry_guard_set_status(conn->identity_digest, 0);
+          router_set_status(conn->identity_digest, 0);
           control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
         }
       } else if (conn->hold_open_until_flushed) {
@@ -1425,11 +1426,11 @@ connection_handle_write(connection_t *conn)
 
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
-        /* it's safe to pass OPs to router_mark_as_down(), since it just
+        /* it's safe to pass OPs to router_set_status(), since it just
          * ignores unrecognized routers
          */
         if (conn->type == CONN_TYPE_OR && !get_options()->HttpsProxy)
-          router_mark_as_down(conn->identity_digest);
+          router_set_status(conn->identity_digest, 0);
         return -1;
       } else {
         return 0; /* no change, see if next time is better */

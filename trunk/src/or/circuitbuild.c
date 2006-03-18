@@ -1410,19 +1410,20 @@ count_acceptable_routers(smartlist_t *routers)
   n = smartlist_len(routers);
   for (i=0;i<n;i++) {
     r = smartlist_get(routers, i);
-//    log_fn(LOG_DEBUG,"Contemplating whether router %d (%s) is a new option.",
-//           i, r->nickname);
+//    log_debug(LD_CIRC,
+//              "Contemplating whether router %d (%s) is a new option.",
+//              i, r->nickname);
     if (r->is_running == 0) {
-//      log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
+//      log_debug(LD_CIRC,"Nope, the directory says %d is not running.",i);
       goto next_i_loop;
     }
     if (r->is_verified == 0) {
-//      log_fn(LOG_DEBUG,"Nope, the directory says %d is not verified.",i);
+//      log_debug(LD_CIRC,"Nope, the directory says %d is not verified.",i);
       /* XXXX009 But unverified routers *are* sometimes acceptable. */
       goto next_i_loop;
     }
     num++;
-//    log_fn(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
+//    log_debug(LD_CIRC,"I like %d. num_acceptable_routers now %d.",i, num);
     next_i_loop:
       ; /* C requires an explicit statement after the label */
   }

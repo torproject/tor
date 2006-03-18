@@ -1409,9 +1409,10 @@ routerlist_reset_warnings(void)
   have_warned_about_new_version = 0;
 }
 
-/** Mark the router with ID <b>digest</b> as non-running in our routerlist. */
+/** Mark the router with ID <b>digest</b> as running or non-running
+ * in our routerlist. */
 void
-router_mark_as_down(const char *digest)
+router_set_status(const char *digest, int up)
 {
   routerinfo_t *router;
   local_routerstatus_t *status;
@@ -1419,19 +1420,20 @@ router_mark_as_down(const char *digest)
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
                     if (!memcmp(d->digest, digest, DIGEST_LEN))
-                      d->is_running = 0);
+                      d->is_running = up);
 
   router = router_get_by_digest(digest);
   if (router) {
-    log_debug(LD_DIR,"Marking router '%s' as down.",router->nickname);
-    if (router_is_me(router) && !we_are_hibernating())
+    log_debug(LD_DIR,"Marking router '%s' as %s.",
+              router->nickname, up ? "up" : "down");
+    if (!up && router_is_me(router) && !we_are_hibernating())
       log_warn(LD_NET, "We just marked ourself as down. Are your external "
                "addresses reachable?");
-    router->is_running = 0;
+    router->is_running = up;
   }
   status = router_get_combined_status_by_digest(digest);
   if (status) {
-    status->status.is_running = 0;
+    status->status.is_running = up;
   }
 }
 

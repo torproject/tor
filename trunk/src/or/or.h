@@ -2323,7 +2323,7 @@ void routerstatus_free(routerstatus_t *routerstatus);
 void networkstatus_free(networkstatus_t *networkstatus);
 void routerlist_free_all(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
-void router_mark_as_down(const char *digest);
+void router_set_status(const char *digest, int up);
 void routerlist_remove_old_routers(void);
 void networkstatus_list_clean(time_t now);
 int router_add_to_routerlist(routerinfo_t *router, const char **msg,
