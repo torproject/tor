@@ -536,15 +536,18 @@ escaped_safe_str(const char *address)
 static void
 add_default_trusted_dirservers(void)
 {
+  int i;
   const char *dirservers[] = {
-"moria1 v1 18.244.0.188:9031 "
-                           "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
-"moria2 v1 18.244.0.114:80  719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF",
-"tor26 v1 86.59.21.38:80    847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D"
+    "moria1 v1 18.244.0.188:9031 "
+      "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
+    "moria2 v1 18.244.0.114:80 "
+      "719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF",
+    "tor26 v1 86.59.21.38:80 "
+      "847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D",
+    NULL
   };
-  parse_dir_server_line(dirservers[0], 0);
-  parse_dir_server_line(dirservers[1], 0);
-  parse_dir_server_line(dirservers[2], 0);
+  for (i=0; dirservers[i]; i++)
+    parse_dir_server_line(dirservers[i], 0);
 }
 
 /** Fetch the active option list, and take actions based on it. All of the
