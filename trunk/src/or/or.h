@@ -228,9 +228,9 @@ typedef enum {
 #define CONN_TYPE_DNSWORKER 10
 /** Connection from the main process to a CPU worker process. */
 #define CONN_TYPE_CPUWORKER 11
-/** Type for listenting for connections from user interface process */
+/** Type for listening for connections from user interface process. */
 #define CONN_TYPE_CONTROL_LISTENER 12
-/** Type for connections from user interface process */
+/** Type for connections from user interface process. */
 #define CONN_TYPE_CONTROL 13
 #define _CONN_TYPE_MAX 13
 
@@ -287,7 +287,7 @@ typedef enum {
 /** State for a SOCKS connection: waiting for SOCKS request. */
 #define AP_CONN_STATE_SOCKS_WAIT 5
 /** State for a SOCKS connection: got a y.onion URL; waiting to receive
- * rendezvous rescriptor. */
+ * rendezvous descriptor. */
 #define AP_CONN_STATE_RENDDESC_WAIT 6
 /** The controller will attach this connection to a circuit; it isn't our
  * job to do so. */
@@ -1824,7 +1824,7 @@ void control_adjust_event_log_severity(void);
 
 /** Execute the statement <b>stmt</b>, which may log events concerning the
  * connection <b>conn</b>.  To prevent infinite loops, disable log messages
- * being stent to controllers if <b>conn</b> is a control connection.
+ * being sent to controllers if <b>conn</b> is a control connection.
  *
  * Stmt must not contain any return or goto statements.
  */
