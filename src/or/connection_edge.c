@@ -995,15 +995,12 @@ connection_ap_handshake_rewrite_and_attach(connection_t *conn,
         return -1;
       }
     } else {
-      struct in_addr in;
       routerinfo_t *r;
       conn->chosen_exit_name = tor_strdup(socks->address);
       r = router_get_by_nickname(conn->chosen_exit_name, 1);
       *socks->address = 0;
       if (r) {
-        /* XXXX Should this use server->address instead? */
-        in.s_addr = htonl(r->addr);
-        strlcpy(socks->address, inet_ntoa(in), sizeof(socks->address));
+        strlcpy(socks->address, r->address, sizeof(socks->address));
       } else {
         log_warn(LD_APP,
                  "Unrecognized server in exit address '%s.exit'. Refusing.",
