@@ -1544,7 +1544,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
           router->num_unreachable_notifications =
              old_router->num_unreachable_notifications;
         }
-        if (authdir &&
+        if (authdir && !from_cache && !from_fetch &&
             dirserv_thinks_router_is_blatantly_unreachable(router,
                                                            time(NULL))) {
           if (router->num_unreachable_notifications >= 3) {
