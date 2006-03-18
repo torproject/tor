@@ -3245,7 +3245,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       router->is_named = rs->status.is_named;
 
     if (!authdir) {
-      /* If we're an authdir, don't believe others. */
+      /* If we're not an authdir, believe others. */
       router->is_verified = rs->status.is_valid;
       router->is_running = rs->status.is_running;
       router->is_fast = rs->status.is_fast;

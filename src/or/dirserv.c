@@ -173,8 +173,13 @@ dirserv_parse_fingerprint_file(const char *fname)
 
   cf = read_file_to_str(fname, 0);
   if (!cf) {
-    log_warn(LD_FS, "Cannot open fingerprint file %s", fname);
-    return -1;
+    if (get_options()->NamingAuthoritativeDir) {
+      log_warn(LD_FS, "Cannot open fingerprint file '%s'. Failing.", fname);
+      return -1;
+    } else {
+      log_info(LD_FS, "Cannot open fingerprint file '%s'. Returning.", fname);
+      return 0;
+    }
   }
   result = config_get_lines(cf, &front);
   tor_free(cf);

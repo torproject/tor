@@ -996,8 +996,8 @@ new_route_len(double cw, uint8_t purpose, extend_info_t *exit,
       purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
     routelen++;
 #endif
-  log_debug(LD_CIRC,"Chosen route length %d (%d routers available).",routelen,
-            smartlist_len(routers));
+  log_debug(LD_CIRC,"Chosen route length %d (%d routers available).",
+            routelen, smartlist_len(routers));
 
   num_acceptable_routers = count_acceptable_routers(routers);
 
