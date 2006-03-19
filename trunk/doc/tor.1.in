@@ -227,9 +227,10 @@ available. This is untested and probably buggy. (Default: 0)
 The following options are useful only for clients (that is, if \fBSOCKSPort\fP is non-zero):
 .LP
 .TP
-\fBAllowUnverifiedNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
-Allow no-name routers (ones that the dirserver operators don't
-know anything about) in only these positions in your circuits.
+\fBAllowInvalidNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
+Allow routers that the dirserver operators consider invalid (not
+trustworthy or otherwise not working right) in only these positions in
+your circuits.
 The default is "middle,rendezvous", and other choices are not advised.
 .LP
 .TP
