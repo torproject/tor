@@ -406,11 +406,20 @@ as long-term entries for our circuits.
 (Defaults to 3.)
 .LP
 .TP
+\fBSafeSocks \fR\fI0|1\fP
+When this option is enabled, Tor will reject application connections that
+use unsafe variants of the socks protocol -- ones that only provide an
+IP address, meaning the application is doing a DNS resolve first.
+Specifically, these are socks4 and socks5 when not doing remote DNS.
+(Defaults to 0.)
+.LP
+.TP
 \fBTestSocks \fR\fB0\fR|\fB1\fR\fP
 When this option is enabled, Tor will make a notice-level log entry for
 each connection to the Socks port indicating whether the request used
-a hostname (safe) or an IP address (unsafe). This helps to determine
-whether an application using Tor is possibly leaking DNS requests.
+a safe socks protocol or an unsafe one (see above entry on SafeSocks).
+This helps to determine whether an application using Tor is possibly
+leaking DNS requests.
 (Default: 0)
 
 .SH SERVER OPTIONS
