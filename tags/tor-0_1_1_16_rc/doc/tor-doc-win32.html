@@ -1,0 +1,224 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+  <title>Tor MS Windows Install Instructions</title>
+  <meta name="Author" content="Roger Dingledine" />
+  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1" />
+  <link rel="stylesheet" type="text/css" href="stylesheet.css" />
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+</head>
+
+<body>
+
+<!-- TITLE BAR & NAVIGATION -->
+
+<table class="banner" border="0" cellpadding="0" cellspacing="0">
+    <tr>
+        <td class="banner-left"></td>
+        <td class="banner-middle">
+<a href="/">Home</a>
+<a href="/overview">Overview</a>
+<a href="/download">Download</a>
+<a href="/documentation">Docs</a>
+<a href="/volunteer">Volunteer</a>
+<a href="/people">People</a>
+<a href="/donate">Donate!</a>
+        </td>
+        <td class="banner-right"></td>
+    </tr>
+</table>
+ 
+<!-- END TITLE BAR & NAVIGATION -->
+
+<div class="center">
+
+<div class="main-column">
+
+<h1>Running the <a href="http://tor.eff.org/">Tor</a> client on MS Windows</h1>
+<br />
+
+<p>
+<b>Note that these are the installation instructions for running a Tor
+client on MS Windows (98, 98SE, NT4, 2000, XP, Server).
+If you want to relay traffic for others to help the network grow (please
+do), read the <a href="tor-doc-server.html">Configuring a server</a>
+guide.</b>
+</p>
+
+<hr />
+<a id="installing"></a>
+<h2><a class="anchor" href="#installing">Step One: Download and Install Tor</a></h2>
+<br />
+
+<p>
+The install for MS Windows bundles <a href="http://tor.eff.org/">Tor</a>,
+<a href="http://www.freehaven.net/~edmanm/torcp/">TorCP</a>
+(a Tor controller that lets you monitor and control Tor), and <a
+href="http://www.privoxy.org">Privoxy</a> (a filtering web proxy) into
+one package, with the three applications pre-configured to work together.
+<a href="http://tor.eff.org/download">Download either the stable or
+the experimental version from the download page</a>.
+</p>
+
+<p>
+<b>If you want to configure yourself to be a Tor server via TorCP,
+you will need the experimental version of the bundle.</b>
+</p>
+
+<p>If the bundles don't work for you, you can download Tor by itself
+from the <a href="http://tor.eff.org/download">download page</a>, and then <a
+href="http://tor.eff.org/cvs/tor/doc/tor-doc-unix.html#privoxy">install
+and configure Privoxy on your own</a>.
+</p>
+
+<img alt="tor installer splash page"
+src="http://tor.eff.org/img/screenshot-win32-installer-splash.png" />
+
+<p>If you have previously installed Tor, TorCP, or Privoxy
+you can deselect whichever components you do not need to install
+in the dialog shown below.
+</p>
+
+<img alt="select components to install"
+src="http://tor.eff.org/img/screenshot-win32-installer-components.png" />
+
+<p>After you have completed the installer, the components
+you selected will automatically be started for you.
+</p>
+
+<!--
+<p>Tor comes configured as a client by default. It uses a built-in
+default configuration file, and most people won't need to change any of
+the settings. Tor is now installed.
+</p>
+-->
+
+<hr />
+<a id="using"></a>
+<h2><a class="anchor" href="#using">Step Two: Configure your applications to use Tor</a></h2>
+<br />
+
+<p>After installing Tor and Privoxy, you need to configure your
+applications to use them. The first step is to set up web browsing.</p>
+
+<p>If you're using Firefox (we recommend it), check out our <a
+href="tor-switchproxy.html">Tor SwitchProxy howto</a> to set up
+a plugin that makes it easy to switch between using Tor and using a
+direct connection.</p>
+
+<p>Otherwise, you need to manually configure your browser to HTTP proxy
+at localhost port 8118.
+(That's where Privoxy listens.)
+In Mozilla, this is in Edit|Preferences|Advanced|Proxies.
+In Opera 7.5x it's Tools|Preferences|Network|Proxy servers.
+In IE, it's Tools|Internet Options|Connections|LAN Settings|Advanced.
+You should click the "use the same proxy server for all protocols"
+button; but see <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#FtpProxy">this
+note</a> about Tor and ftp proxies.
+In IE, this looks something like:</p>
+
+<img alt="Proxy settings in IE"
+src="http://tor.eff.org/img/screenshot-win32-ie-proxies.jpg" />
+
+<p>Using Privoxy is <strong>necessary</strong> because <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS">browsers
+leak your DNS requests when they use a SOCKS proxy directly</a>, which
+is bad for your anonymity. Privoxy also removes certain dangerous
+headers from your web requests, and blocks obnoxious ad sites like
+Doubleclick.</p>
+
+<p>To Torify other applications that support HTTP proxies, just
+point them at Privoxy (that is, localhost port 8118). To use SOCKS
+directly (for instant messaging, Jabber, IRC, etc), you can point
+your application directly at Tor (localhost port 9050), but see <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#SOCKSAndDNS">this
+FAQ entry</a> for why this may be dangerous. For applications
+that support neither SOCKS nor HTTP, take a look at <a
+href="http://www.socks.permeo.com/Download/SocksCapDownload/index.asp">SocksCap</a> or
+<a href="http://www.freecap.ru/eng/">FreeCap</a>.
+(FreeCap is free software; SocksCap is proprietary.)</p>
+
+<p>For information on how to Torify other applications, check out the
+<a href="http://wiki.noreply.org/wiki/TheOnionRouter/TorifyHOWTO">Torify
+HOWTO</a>.
+</p>
+
+<hr />
+<a id="verify"></a>
+<h2><a class="anchor" href="#verify">Step Three: Make sure it's working</a></h2>
+<br />
+
+<p>
+Check to see that Privoxy and TorCP are running and that TorCP has
+successfully started Tor. Privoxy's icon is a green or blue circle with a "P"
+in it, and TorCP uses a fat grey onion with a green checkmark in your
+system notification area, as shown below:
+</p>
+
+<img alt="TorCP Tray Icon"
+src="http://tor.eff.org/img/screenshot-win32-torcp.png">
+
+<p>
+Next, you should try using your browser with Tor and make
+sure that your IP address is being anonymized. Click on the <a
+href="http://serifos.eecs.harvard.edu/cgi-bin/ipaddr.pl?tor=1">Tor
+detector</a> and see whether it thinks you're using Tor or not.
+(If that site is down, see <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#IsMyConnectionPrivate">this
+FAQ entry</a> for more suggestions on how to test your Tor.)
+</p>
+
+<p>If you have a personal firewall that limits your computer's
+ability to connect to itself, be sure to allow connections from
+your local applications to local port 8118 and port 9050. If
+your firewall blocks outgoing connections, punch a hole so
+it can connect to at least TCP ports 80 and 443, and then see <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#FirewalledClient">this
+FAQ entry</a>.
+</p>
+
+<p>If it's still not working, look at <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ItDoesntWork">this
+FAQ entry</a> for hints.</p>
+
+<hr />
+<a id="server"></a>
+<h2><a class="anchor" href="#server">Step Four: Configure it as a server</a></h2>
+<br />
+
+<p>The Tor network relies on volunteers to donate bandwidth. The more
+people who run servers, the faster the Tor network will be. If you have
+at least 20 kilobytes/s each way, please help out Tor by configuring your
+Tor to be a server too. We have many features that make Tor servers easy
+and convenient, including rate limiting for bandwidth, exit policies so
+you can limit your exposure to abuse complaints, and support for dynamic
+IP addresses.</p>
+
+<p>Having servers in many different places on the Internet is what
+makes Tor users secure. <a
+href="http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerAnonymity">You
+may also get stronger anonymity yourself</a>,
+since remote sites can't know whether connections originated at your
+computer or were relayed from others.</p>
+
+<p>Read more at our <a href="tor-doc-server.html">Configuring a server</a>
+guide.</p>
+
+<hr />
+
+<p>If you have suggestions for improving this document, please post
+them on <a href="http://bugs.noreply.org/tor">our bugtracker</a> in the
+website category. Thanks!</p>
+
+  </div><!-- #main -->
+</div>
+  <div class="bottom" id="bottom">
+     <i><a href="/contact"
+     class="smalllink">Webmaster</a></i> - $Id$
+  </div>
+</body>
+</html>
+

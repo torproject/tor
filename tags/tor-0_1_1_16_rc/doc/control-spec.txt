@@ -1,0 +1,803 @@
+$Id$
+
+                   TC: A Tor control protocol (Version 1)
+
+0. Scope
+
+  This document describes an implementation-specific protocol that is used
+  for other programs (such as frontend user-interfaces) to communicate with a
+  locally running Tor process.  It is not part of the Tor onion routing
+  protocol.
+
+  This protocol replaces version 0 of TC, which is now deprecated.  For
+  reference, TC is described in "control-spec-v0.txt".  Implementors are
+  recommended to avoid using TC directly, but instead to use a library that
+  can easily be updated to use the newer protocol.  (Version 0 is used by Tor
+  versions 0.1.0.x; the protocol in this document only works with Tor
+  versions in the 0.1.1.x series and later.)
+
+1. Protocol outline
+
+  TC is a bidirectional message-based protocol.  It assumes an underlying
+  stream for communication between a controlling process (the "client"
+  or "controller") and a Tor process (or "server").  The stream may be
+  implemented via TCP, TLS-over-TCP, a Unix-domain socket, or so on,
+  but it must provide reliable in-order delivery.  For security, the
+  stream should not be accessible by untrusted parties.
+
+  In TC, the client and server send typed messages to each other over the
+  underlying stream.  The client sends "commands" and the server sends
+  "replies".
+
+  By default, all messages from the server are in response to messages from
+  the client.  Some client requests, however, will cause the server to send
+  messages to the client indefinitely far into the future.  Such
+  "asynchronous" replies are marked as such.
+
+  Servers respond to messages in the order messages are received.
+
+2. Message format
+
+2.1. Description format
+
+  The message formats listed below use ABNF as described in RFC2234.
+  The protocol itself is loosely based on SMTP (see RFC 2821).
+
+  We use the following nonterminals from RFC2822: atom, qcontent
+
+  We define the following general-use nonterminals:
+
+     String = DQUOTE *qcontent DQUOTE
+
+  There are explicitly no limits on line length.  All 8-bit characters are
+  permitted unless explicitly disallowed.
+
+2.2. Commands from controller to Tor
+
+    Command = Keyword Arguments CRLF / "+" Keyword Arguments CRLF Data
+    Keyword = 1*ALPHA
+    Arguments = *(SP / VCHAR)
+
+  Specific commands and their arguments are described below in section 3.
+
+2.3. Replies from Tor to the controller
+
+    Reply = *(MidReplyLine / DataReplyLine) EndReplyLine
+
+    MidReplyLine = "-" ReplyLine
+    DataReplyLine = "+" ReplyLine Data
+    EndReplyLine = SP ReplyLine
+    ReplyLine = StatusCode [ SP ReplyText ]  CRLF
+    ReplyText = XXXX
+    StatusCode = XXXX
+
+  Specific replies are mentioned below in section 3, and described more fully
+  in section 4.
+
+2.4. General-use tokens
+
+  ; Identifiers for servers.
+  ServerID = Nickname / Fingerprint
+  Nickname = 1*19 NicknameChar
+  NicknameChar = "a"-"z" / "A"-"Z" / "0" - "9"
+  Fingerprint = "$" 40*HEXDIG
+
+  ; Unique identifiers for streams or circuits.  Currently, Tor only
+  ; uses digits, but this may change
+  StreamID = 1*16 IDChar
+  CircuitID = 1*16 IDChar
+  IDChar = ALPHA / DIGIT
+
+  Address = ip4-address / ip6-address / hostname   (XXXX Define these)
+
+  ; A "Data" section is a sequence of octets concluded by the terminating
+  ; sequence CRLF "." CRLF.  The terminating sequence may not appear in the
+  ; body of the data.  Leading periods on lines in the data are escaped with
+  ; an additional leading period as in RFC2821 section 4.5.2
+  Data = *DataLine "." CRLF
+  DataLine = CRLF / "." 1*LineItem CRLF / NonDotItem *LineItem CRLF
+  LineItem = NonCR / 1*CR NonCRLF
+  NonDotItem = NonDotCR / 1*CR NonCRLF
+
+3. Commands
+
+  All commands and other keywords are case-insensitive.
+
+3.1. SETCONF
+
+  Change the value of one or more configuration variables.  The syntax is:
+
+    "SETCONF" 1*(SP keyword ["=" String]) CRLF
+
+  Tor behaves as though it had just read each of the key-value pairs
+  from its configuration file.  Keywords with no corresponding values have
+  their configuration values reset to 0 or NULL (use RESETCONF if you want
+  to set it back to its default).  SETCONF is all-or-nothing: if there
+  is an error in any of the configuration settings, Tor sets none of them.
+
+  Tor responds with a "250 configuration values set" reply on success.
+  If some of the listed keywords can't be found, Tor replies with a
+  "552 Unrecognized option" message. Otherwise, Tor responds with a
+  "513 syntax error in configuration values" reply on syntax error, or a
+  "553 impossible configuration setting" reply on a semantic error.
+
+  When a configuration option takes multiple values, or when multiple
+  configuration keys form a context-sensitive group (see GETCONF below), then
+  setting _any_ of the options in a SETCONF command is taken to reset all of
+  the others.  For example, if two ORBindAddress values are configured, and a
+  SETCONF command arrives containing a single ORBindAddress value, the new
+  command's value replaces the two old values.
+
+3.2. RESETCONF
+
+  Remove all settings for a given configuration option entirely, assign
+  its default value (if any), and then assign the String provided.
+  Typically the String is left empty, to simply set an option back to
+  its default. The syntax is:
+
+    "RESETCONF" 1*(SP keyword ["=" String]) CRLF
+
+  Otherwise it behaves like SETCONF above.
+
+3.3. GETCONF
+
+  Request the value of a configuration variable.  The syntax is:
+
+    "GETCONF" 1*(SP keyword) CRLF
+
+  If all of the listed keywords exist in the Tor configuration, Tor replies
+  with a series of reply lines of the form:
+      250 keyword=value
+  If any option is set to a 'default' value semantically different from an
+  empty string, Tor may reply with a reply line of the form:
+      250 keyword
+
+  If some of the listed keywords can't be found, Tor replies with a
+  "552 unknown configuration keyword" message.
+
+  If an option appears multiple times in the configuration, all of its
+  key-value pairs are returned in order.
+
+  Some options are context-sensitive, and depend on other options with
+  different keywords.  These cannot be fetched directly.  Currently there
+  is only one such option: clients should use the "HiddenServiceOptions"
+  virtual keyword to get all HiddenServiceDir, HiddenServicePort,
+  HiddenServiceNodes, and HiddenServiceExcludeNodes option settings.
+
+3.4. SETEVENTS
+
+  Request the server to inform the client about interesting events.  The
+  syntax is:
+
+     "SETEVENTS" [SP "EXTENDED"] *(SP EventCode) CRLF
+
+     EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
+         "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
+         "AUTHDIR_NEWDESCS"
+
+  Any events *not* listed in the SETEVENTS line are turned off; thus, sending
+  SETEVENTS with an empty body turns off all event reporting.
+
+  The server responds with a "250 OK" reply on success, and a "552
+  Unrecognized event" reply if one of the event codes isn't recognized.  (On
+  error, the list of active event codes isn't changed.)
+
+  If the flag string "EXTENDED" is provided, Tor may provide extra
+  information with events for this connection; see 4.1 for more information.
+  NOTE: All events on a given connection will be provided in extended format,
+  or none.
+  NOTE: "EXTENDED" is only supported in Tor 0.1.1.9-alpha or later.
+
+3.5. AUTHENTICATE
+
+  Sent from the client to the server.  The syntax is:
+     "AUTHENTICATE" [ SP 1*HEXDIG / QuotedString ] CRLF
+
+  The server responds with "250 OK" on success or "515 Bad authentication" if
+  the authentication cookie is incorrect.
+
+  The format of the 'cookie' is implementation-dependent; see 5.1 below for
+  information on how the standard Tor implementation handles it.
+
+  If Tor requires authentication and the controller has not yet sent an
+  AUTHENTICATE message, Tor sends a "514 authentication required" reply to
+  any other kind of message.
+
+3.6. SAVECONF
+
+  Sent from the client to the server.  The syntax is:
+     "SAVECONF" CRLF
+
+  Instructs the server to write out its config options into its torrc. Server
+  returns "250 OK" if successful, or "551 Unable to write configuration
+  to disk" if it can't write the file or some other error occurs.
+
+3.7. SIGNAL
+
+  Sent from the client to the server. The syntax is:
+
+     "SIGNAL" SP Signal CRLF
+
+     Signal = "RELOAD" / "SHUTDOWN" / "DUMP" / "DEBUG" / "HALT" /
+              "HUP" / "INT" / "USR1" / "USR2" / "TERM" / "NEWNYM"
+
+  The meaning of the signals are:
+
+      RELOAD    -- Reload: reload config items, refetch directory. (like HUP)
+      SHUTDOWN  -- Controlled shutdown: if server is an OP, exit immediately.
+                   If it's an OR, close listeners and exit after 30 seconds.
+                   (like INT)
+      DUMP      -- Dump stats: log information about open connections and
+                   circuits. (like USR1)
+      DEBUG     -- Debug: switch all open logs to loglevel debug. (like USR2)
+      HALT      -- Immediate shutdown: clean up and exit now. (like TERM)
+      NEWNYM    -- Switch to clean circuits, so new application requests
+                   don't share any circuits with old ones.
+
+  The server responds with "250 OK" if the signal is recognized (or simply
+  closes the socket if it was asked to close immediately), or "552
+  Unrecognized signal" if the signal is unrecognized.
+
+3.8. MAPADDRESS
+
+  Sent from the client to the server.  The syntax is:
+
+    "MAPADDRESS" 1*(Address "=" Address SP) CRLF
+
+  The first address in each pair is an "original" address; the second is a
+  "replacement" address.  The client sends this message to the server in
+  order to tell it that future SOCKS requests for connections to the original
+  address should be replaced with connections to the specified replacement
+  address.  If the addresses are well-formed, and the server is able to
+  fulfill the request, the server replies with a 250 message:
+    250-OldAddress1=NewAddress1
+    250 OldAddress2=NewAddress2
+
+  containing the source and destination addresses.  If request is
+  malformed, the server replies with "512 syntax error in command
+  argument".  If the server can't fulfill the request, it replies with
+  "451 resource exhausted."
+
+  The client may decline to provide a body for the original address, and
+  instead send a special null address ("0.0.0.0" for IPv4, "::0" for IPv6, or
+  "." for hostname), signifying that the server should choose the original
+  address itself, and return that address in the reply.  The server
+  should ensure that it returns an element of address space that is unlikely
+  to be in actual use.  If there is already an address mapped to the
+  destination address, the server may reuse that mapping.
+
+  If the original address is already mapped to a different address, the old
+  mapping is removed.  If the original address and the destination address
+  are the same, the server removes any mapping in place for the original
+  address.
+
+  Example:
+    C: MAPADDRESS 0.0.0.0=tor.eff.org 1.2.3.4=tor.freehaven.net
+    S: 250-127.192.10.10=tor.eff.org
+    S: 250 1.2.3.4=tor.freehaven.net
+
+  {Note: This feature is designed to be used to help Tor-ify applications
+  that need to use SOCKS4 or hostname-less SOCKS5.  There are three
+  approaches to doing this:
+     1. Somehow make them use SOCKS4a or SOCKS5-with-hostnames instead.
+     2. Use tor-resolve (or another interface to Tor's resolve-over-SOCKS
+        feature) to resolve the hostname remotely.  This doesn't work
+        with special addresses like x.onion or x.y.exit.
+     3. Use MAPADDRESS to map an IP address to the desired hostname, and then
+        arrange to fool the application into thinking that the hostname
+        has resolved to that IP.
+  This functionality is designed to help implement the 3rd approach.}
+
+  Mappings set by the controller last until the Tor process exits:
+  they never expire. If the controller wants the mapping to last only
+  a certain time, then it must explicitly un-map the address when that
+  time has elapsed.
+
+3.9. GETINFO
+
+  Sent from the client to the server.  The syntax is as for GETCONF:
+    "GETINFO" 1*(SP keyword) CRLF
+  one or more NL-terminated strings.  The server replies with an INFOVALUE
+  message.
+
+  Unlike GETCONF, this message is used for data that are not stored in the Tor
+  configuration file, and that may be longer than a single line.  On success,
+  one ReplyLine is sent for each requested value, followed by a final 250 OK
+  ReplyLine.  If a value fits on a single line, the format is:
+      250-keyword=value
+  If a value must be split over multiple lines, the format is:
+      250+keyword=
+      value
+      .
+  Recognized keys and their values include:
+
+    "version" -- The version of the server's software, including the name
+      of the software. (example: "Tor 0.0.9.4")
+
+    "config-file" -- The location of Tor's configuration file ("torrc").
+
+    "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest server
+      descriptor for a given OR, NUL-terminated.  If no such OR is known, the
+      corresponding value is an empty string.
+
+    "desc/all-recent" -- the latest server descriptor for every router that
+      Tor knows about.
+
+    "network-status" -- a space-separated list of all known OR identities.
+      This is in the same format as the router-status line in directories;
+      see tor-spec.txt for details.
+
+    "addr-mappings/all"
+    "addr-mappings/config"
+    "addr-mappings/cache"
+    "addr-mappings/control" -- a space-separated list of address
+      mappings, each in the form of "from-address=to-address".
+      The 'config' key returns those address mappings set in the
+      configuration; the 'cache' key returns the mappings in the
+      client-side DNS cache; the 'control' key returns the mappings set
+      via the control interface; the 'all' target returns the mappings
+      set through any mechanism.
+
+    "circuit-status"
+      A series of lines as for a circuit status event. Each line is of
+      the form:
+         CircuitID SP CircStatus SP Path CRLF
+
+    "stream-status"
+      A series of lines as for a stream status event.  Each is of the form:
+         StreamID SP StreamStatus SP CircID SP Target CRLF
+
+    "orconn-status"
+      A series of lines as for an OR connection status event.  Each is of the
+      form:
+         ServerID SP ORStatus CRLF
+
+    "entry-guards"
+      A series of lines listing the currently chosen entry guards, if any.
+      Each is of the form:
+         ServerID  SP (Status-with-time / Status) CRLF
+
+         Status-with-time = ("down" / "unlisted") SP ISOTime
+         Status = ("up" / "never-connected")
+
+      [From 0.1.1.4-alpha to 0.1.1.10-alpha, this was called "helper-nodes".
+       Tor still supports calling it that for now, but support will be
+       removed in the future.]
+
+    "accounting/enabled"
+    "accounting/hibernating"
+    "accounting/bytes"
+    "accounting/bytes-left"
+    "accounting/interval-start"
+    "accounting/interval-wake"
+    "accounting/interval-end"
+      Information about accounting status.  If accounting is enabled,
+      "enabled" is 1; otherwise it is 0.  The "hibernating" field is "hard"
+      if we are accepting no data; "soft" if we're accepting no new
+      connections, and "awake" if we're not hibernating at all.  The "bytes"
+      and "bytes-left" fields contain (read-bytes SP write-bytes), for the
+      start and the rest of the interval respectively.  The 'interval-start'
+      and 'interval-end' fields are the borders of the current interval; the
+      'interval-wake' field is the time within the current interval (if any)
+      where we plan[ned] to start being active.
+
+    "config/names"
+      A series of lines listing the available configuration options. Each is
+      of the form:
+         OptionName SP OptionType [ SP Documentation ] CRLF
+         OptionName = Keyword
+         OptionType = "Integer" / "TimeInterval" / "DataSize" / "Float" /
+           "Boolean" / "Time" / "CommaList" / "Dependant" / "Virtual" /
+           "String" / "LineList"
+         Documentation = Text
+
+    "info/names"
+      A series of lines listing the available GETINFO options.  Each is of
+      one of these forms:
+         OptionName SP Documentation CRLF
+         OptionPrefix SP Documentation CRLF
+         OptionPrefix = OptionName "/*"
+
+    "dir/status/authority"
+    "dir/status/fp/<F>"
+    "dir/status/fp/<F1>+<F2>+<F3>"
+    "dir/status/all"
+    "dir/server/fp/<F>"
+    "dir/server/fp/<F1>+<F2>+<F3>"
+    "dir/server/d/<D>"
+    "dir/server/d/<D1>+<D2>+<D3>"
+    "dir/server/authority"
+    "dir/server/all"
+      [DRAFT] [Not Implemented] A series of lines listing directory
+      contents, provided according to the specification for the URLs listed
+      in Section 4.4 of dir-spec.txt.  Note that Tor MUST NOT provide
+      private information, such as descriptors for routers not marked as
+      general-purpose.  When asked for 'authority' information for which this
+      Tor is not authoritative, Tor replies with an empty string.
+
+  Examples:
+     C: GETINFO version desc/name/moria1
+     S: 250+desc/name/moria=
+     S: [Descriptor for moria]
+     S: .
+     S: 250-version=Tor 0.1.1.0-alpha-cvs
+     S: 250 OK
+
+3.10. EXTENDCIRCUIT
+
+  Sent from the client to the server.  The format is:
+      "EXTENDCIRCUIT" SP CircuitID SP
+                      ServerID *("," ServerID) SP
+                      ("purpose=" Purpose) CRLF
+
+  This request takes one of two forms: either the CircuitID is zero, in
+  which case it is a request for the server to build a new circuit according
+  to the specified path, or the CircuitID is nonzero, in which case it is a
+  request for the server to extend an existing circuit with that ID according
+  to the specified path.
+
+  If CircuitID is 0 and "purpose=" is specified, then the circuit's
+  purpose is set. Two choices are recognized: "general" and
+  "controller". If not specified, circuits are created as "general".
+
+  If the request is successful, the server sends a reply containing a
+  message body consisting of the CircuitID of the (maybe newly created)
+  circuit. The syntax is "250" SP "EXTENDED" SP CircuitID CRLF.
+
+3.11. SETCIRCUITPURPOSE
+
+  Sent from the client to the server.  The format is:
+      "SETCIRCUITPURPOSE" SP CircuitID SP Purpose CRLF
+
+  This changes the circuit's purpose. See EXTENDCIRCUIT above for details.
+
+3.12. SETROUTERPURPOSE
+
+  Sent from the client to the server.  The format is:
+      "SETROUTERPURPOSE" SP NicknameOrKey SP Purpose CRLF
+
+  This changes the descriptor's purpose. See +POSTDESCRIPTOR below
+  for details.
+
+3.13. ATTACHSTREAM
+
+  Sent from the client to the server.  The syntax is:
+     "ATTACHSTREAM" SP StreamID SP CircuitID CRLF
+
+  This message informs the server that the specified stream should be
+  associated with the specified circuit.  Each stream may be associated with
+  at most one circuit, and multiple streams may share the same circuit.
+  Streams can only be attached to completed circuits (that is, circuits that
+  have sent a circuit status 'BUILT' event or are listed as built in a
+  GETINFO circuit-status request).
+
+  If the circuit ID is 0, responsibility for attaching the given stream is
+  returned to Tor.
+
+  Tor responds with "250 OK" if it can attach the stream, 552 if the circuit
+  or stream didn't exist, or 551 if the stream couldn't be attached for
+  another reason.
+
+  {Implementation note: Tor will close unattached streams by itself,
+  roughly two minutes after they are born. Let the developers know if
+  that turns out to be a problem.}
+
+  {Implementation note: By default, Tor automatically attaches streams to
+  circuits itself, unless the configuration variable
+  "__LeaveStreamsUnattached" is set to "1".  Attempting to attach streams
+  via TC when "__LeaveStreamsUnattached" is false may cause a race between
+  Tor and the controller, as both attempt to attach streams to circuits.}
+
+  {Implementation note: You can try to attachstream to a stream that
+  has already sent a connect or resolve request but hasn't succeeded
+  yet, in which case Tor will detach the stream from its current circuit
+  before proceeding with the new attach request.}
+
+3.14. POSTDESCRIPTOR
+
+  Sent from the client to the server. The syntax is:
+    "+POSTDESCRIPTOR" ("purpose=" Purpose) CRLF Descriptor CRLF "." CRLF
+
+  This message informs the server about a new descriptor. If Purpose is
+  specified, it must be either "general" or "controller", else we
+  return a 552 error.
+
+  The descriptor, when parsed, must contain a number of well-specified
+  fields, including fields for its nickname and identity.
+
+  If there is an error in parsing the descriptor, the server must send a "554
+  Invalid descriptor" reply.  If the descriptor is well-formed but the server
+  chooses not to add it, it must reply with a 251 message whose body explains
+  why the server was not added.  If the descriptor is added, Tor replies with
+  "250 OK".
+
+3.15. REDIRECTSTREAM
+
+  Sent from the client to the server. The syntax is:
+    "REDIRECTSTREAM" SP StreamID SP Address (SP Port) CRLF
+
+  Tells the server to change the exit address on the specified stream.  If
+  Port is specified, changes the destination port as well.  No remapping
+  is performed on the new provided address.
+
+  To be sure that the modified address will be used, this event must be sent
+  after a new stream event is received, and before attaching this stream to
+  a circuit.
+
+  Tor replies with "250 OK" on success.
+
+3.16. CLOSESTREAM
+
+  Sent from the client to the server.  The syntax is:
+
+    "CLOSESTREAM" SP StreamID SP Reason *(SP Flag) CRLF
+
+  Tells the server to close the specified stream.  The reason should be one
+  of the Tor RELAY_END reasons given in tor-spec.txt, as a decimal.  Flags is
+  not used currently; Tor servers SHOULD ignore unrecognized flags.  Tor may
+  hold the stream open for a while to flush any data that is pending.
+
+  Tor replies with "250 OK" on success, or a 512 if there aren't enough
+  arguments, or a 552 if it doesn't recognize the StreamID or reason.
+
+3.17. CLOSECIRCUIT
+
+   The syntax is:
+     CLOSECIRCUIT SP CircuitID *(SP Flag) CRLF
+     Flag = "IfUnused"
+
+  Tells the server to close the specified circuit.   If "IfUnused" is
+  provided, do not close the circuit unless it is unused.
+
+  Other flags may be defined in the future; Tor SHOULD ignore unrecognized
+  flags.
+
+  Tor replies with "250 OK" on success, or a 512 if there aren't enough
+  arguments, or a 552 if it doesn't recognize the CircuitID.
+
+3.18. QUIT
+
+  Tells the server to hang up on this controller connection. This command
+  can be used before authenticating.
+
+4. Replies
+
+  Reply codes follow the same 3-character format as used by SMTP, with the
+  first character defining a status, the second character defining a
+  subsystem, and the third designating fine-grained information.
+
+  The TC protocol currently uses the following first characters:
+
+    2yz   Positive Completion Reply
+       The command was successful; a new request can be started.
+
+    4yz   Temporary Negative Completion reply
+       The command was unsuccessful but might be reattempted later.
+
+    5yz   Permanent Negative Completion Reply
+       The command was unsuccessful; the client should not try exactly
+       that sequence of commands again.
+
+    6yz   Asynchronous Reply
+       Sent out-of-order in response to an earlier SETEVENTS command.
+
+  The following second characters are used:
+
+    x0z   Syntax
+       Sent in response to ill-formed or nonsensical commands.
+
+    x1z   Protocol
+       Refers to operations of the Tor Control protocol.
+
+    x5z   Tor
+       Refers to actual operations of Tor system.
+
+  The following codes are defined:
+
+     250 OK
+     251 Operation was unnecessary
+         [Tor has declined to perform the operation, but no harm was done.]
+
+     451 Resource exhausted
+
+     500 Syntax error: protocol
+
+     510 Unrecognized command
+     511 Unimplemented command
+     512 Syntax error in command argument
+     513 Unrecognized command argument
+     514 Authentication required
+     515 Bad authentication
+
+     550 Unspecified Tor error
+
+     551 Internal error
+               [Something went wrong inside Tor, so that the client's
+                request couldn't be fulfilled.]
+
+     552 Unrecognized entity
+               [A configuration key, a stream ID, circuit ID, event,
+                mentioned in the command did not actually exist.]
+
+     553 Invalid configuration value
+         [The client tried to set a configuration option to an
+           incorrect, ill-formed, or impossible value.]
+
+     554 Invalid descriptor
+
+     555 Unmanaged entity
+
+     650 Asynchronous event notification
+
+  Unless specified to have specific contents, the human-readable messages
+  in error replies should not be relied upon to match those in this document.
+
+4.1. Asynchronous events
+
+  These replies can be sent after a corresponding SETEVENTS command has been
+  received.  They will not be interleaved with other Reply elements, but they
+  can appear between a command and its corresponding reply.  For example,
+  this sequence is possible:
+
+     C: SETEVENTS CIRC
+     S: 250 OK
+     C: GETCONF SOCKSPORT ORPORT
+     S: 650 CIRC 1000 EXTENDED moria1,moria2
+     S: 250-SOCKSPORT=9050
+     S: 250 ORPORT=0
+
+  But this sequence is disallowed:
+     C: SETEVENTS CIRC
+     S: 250 OK
+     C: GETCONF SOCKSPORT ORPORT
+     S: 250-SOCKSPORT=9050
+     S: 650 CIRC 1000 EXTENDED moria1,moria2
+     S: 250 ORPORT=0
+
+  Clients SHOULD tolerate more arguments in an asynchonous reply than
+  expected, and SHOULD tolerate more lines in an asynchronous reply than
+  expected.  For instance, a client that expects a CIRC message like:
+      650 CIRC 1000 EXTENDED moria1,moria2
+  should tolerate:
+      650-CIRC 1000 EXTENDED moria1,moria2 0xBEEF
+      650-EXTRAMAGIC=99
+      650 ANONYMITY=high
+
+  If clients ask for extended events, then each event line as specified below
+  will be followed by additional extensions.  Clients that do so MUST
+  tolerate additional arguments and lines.  Additional lines will be of the
+  form
+      "650" ("-"/" ") KEYWORD ["=" ARGUMENTS] CRLF
+  Additional arguments will be of the form
+      SP KEYWORD ["=" ( QuotedString / * NonSpDquote ) ]
+  Such clients MUST tolerate lines with keywords they do not recognize.
+
+4.1.1. Circuit status changed
+
+   The syntax is:
+
+     "650" SP "CIRC" SP CircuitID SP CircStatus SP Path
+
+      CircStatus =
+               "LAUNCHED" / ; circuit ID assigned to new circuit
+               "BUILT"    / ; all hops finished, can now accept streams
+               "EXTENDED" / ; one more hop has been completed
+               "FAILED"   / ; circuit closed (was not built)
+               "CLOSED"     ; circuit closed (was built)
+
+      Path = ServerID *("," ServerID)
+
+4.1.2. Stream status changed
+
+    The syntax is:
+
+      "650" SP "STREAM" SP StreamID SP StreamStatus SP CircID SP Target
+
+      StreamStatus =
+               "NEW"          / ; New request to connect
+               "NEWRESOLVE"   / ; New request to resolve an address
+               "SENTCONNECT"  / ; Sent a connect cell along a circuit
+               "SENTRESOLVE"  / ; Sent a resolve cell along a circuit
+               "SUCCEEDED"    / ; Received a reply; stream established
+               "FAILED"       / ; Stream failed and not retriable
+               "CLOSED"       / ; Stream closed
+               "DETACHED"       ; Detached from circuit; still retriable
+
+       Target = Address ":" Port
+
+  The circuit ID designates which circuit this stream is attached to.  If
+  the stream is unattached, the circuit ID "0" is given.
+
+4.1.3. OR Connection status changed
+
+  The syntax is:
+    "650" SP "ORCONN" SP (ServerID / Target) SP ORStatus
+
+    ORStatus = "NEW" / "LAUNCHED" / "CONNECTED" / "FAILED" / "CLOSED"
+
+  NEW is for incoming connections, and LAUNCHED is for outgoing
+  connections. CONNECTED means the TLS handshake has finished (in
+  either direction). FAILED means a connection is being closed that
+  hasn't finished its handshake, and CLOSED is for connections that
+  have handshaked.
+
+  A ServerID is specified unless it's a NEW connection, in which
+  case we don't know what server it is yet, so we use Address:Port.
+
+4.1.4. Bandwidth used in the last second
+
+  The syntax is:
+     "650" SP "BW" SP BytesRead SP BytesWritten
+     BytesRead = 1*DIGIT
+     BytesWritten = 1*DIGIT
+
+4.1.5. Log message
+
+  The syntax is:
+     "650" SP Severity SP ReplyText
+  or
+     "650+" Severity CRLF Data
+
+     Severity = "DEBUG" / "INFO" / "NOTICE" / "WARN"/ "ERR"
+
+4.1.6. New descriptors available
+
+  Syntax:
+     "650" SP "NEWDESC" 1*(SP ServerID)
+
+4.1.7. New Address mapping
+
+  Syntax:
+     "650" SP "ADDRMAP" SP Address SP Address SP Expiry
+     Expiry = DQOUTE ISOTime DQUOTE / "NEVER"
+
+4.1.8. Descriptors uploaded to us in our role as authoritative dirserver
+
+  Syntax:
+     "650" "+" "AUTHDIR_NEWDESCS" CRLF Action CRLF Message CRLF
+       Descriptor CRLF "." CRLF
+     Action = "ACCEPTED" / "DROPPED" / "REJECTED"
+     Message = Text
+
+5. Implementation notes
+
+5.1. Authentication
+
+  By default, the current Tor implementation trusts all local users.
+
+  If the 'CookieAuthentication' option is true, Tor writes a "magic cookie"
+  file named "control_auth_cookie" into its data directory.  To authenticate,
+  the controller must send the contents of this file.
+
+  If the 'HashedControlPassword' option is set, it must contain the salted
+  hash of a secret password.  The salted hash is computed according to the
+  S2K algorithm in RFC 2440 (OpenPGP), and prefixed with the s2k specifier.
+  This is then encoded in hexadecimal, prefixed by the indicator sequence
+  "16:".  Thus, for example, the password 'foo' could encode to:
+     16:660537E3E1CD49996044A3BF558097A981F539FEA2F9DA662B4626C1C2
+        ++++++++++++++++**^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           salt                       hashed value
+                       indicator
+  You can generate the salt of a password by calling
+           'tor --hash-password <password>'
+  or by using the example code in the Python and Java controller libraries.
+  To authenticate under this scheme, the controller sends Tor the original
+  secret that was used to generate the password.
+
+5.2. Don't let the buffer get too big.
+
+  If you ask for lots of events, and 16MB of them queue up on the buffer,
+  the Tor process will close the socket.
+
+5.3. Backward compatibility
+
+  For backward compatibility with the "version 0" control protocol, Tor checks
+  whether the third octet the first command is zero.  If it is, Tor
+  assumes that version 0 is in use.  This feature is deprecated, and will be
+  removed in the 0.1.2.x Tor development series.
+
+  In order to detect which version of the protocol is supported controllers
+  should send the sequence [00 00 0D 0A].  This is a valid and unrecognized
+  command in both protocol versions, and implementations can detect which
+  error they have received.
+

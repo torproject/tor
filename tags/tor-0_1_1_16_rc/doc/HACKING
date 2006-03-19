@@ -1,0 +1,113 @@
+
+1. Coding conventions
+
+1.1. Details
+
+  Use tor_malloc, tor_free, tor_snprintf, tor_strdup, and tor_gettimeofday
+  instead of their generic equivalents.  (They always succeed or exit.)
+
+  Use INLINE instead of 'inline', so that we work properly on windows.
+
+1.2. Calling and naming conventions
+
+  Whenever possible, functions should return -1 on error and and 0 on
+  success.
+
+  For multi-word identifiers, use lowercase words combined with
+  underscores. (e.g., "multi_word_identifier").  Use ALL_CAPS for macros and
+  constants.
+
+  Typenames should end with "_t".
+
+  Function names should be prefixed with a module name or object name.  (In
+  general, code to manipulate an object should be a module with the same
+  name as the object, so it's hard to tell which convention is used.)
+
+  Functions that do things should have imperative-verb names
+  (e.g. buffer_clear, buffer_resize); functions that return booleans should
+  have predicate names (e.g. buffer_is_empty, buffer_needs_resizing).
+
+1.3. What To Optimize
+
+  Don't optimize anything if it's not in the critical path.  Right now,
+  the critical path seems to be AES, logging, and the network itself.
+  Feel free to do your own profiling to determine otherwise.
+
+1.4. Log conventions
+
+  Log convention: use only these four log severities.
+
+    ERR is if something fatal just happened.
+    WARN if something bad happened, but we're still running. The
+      bad thing is either a bug in the code, an attack or buggy
+      protocol/implementation of the remote peer, etc. The operator should
+      examine the bad thing and try to correct it.
+    NOTICE if it's something the operator will want to know about.
+    (No error or warning messages should be expected during normal OR or OP
+      operation. I expect most people to run on -l notice eventually. If a
+      library function is currently called such that failure always means
+      ERR, then the library function should log WARN and let the caller
+      log ERR.)
+    INFO means something happened (maybe bad, maybe ok), but there's nothing
+      you need to (or can) do about it.
+    DEBUG is for everything louder than INFO.
+
+  [XXX Proposed convention: every messages of severity INFO or higher should
+  either (A) be intelligible to end-users who don't know the Tor source; or
+  (B) somehow inform the end-users that they aren't expected to understand
+  the message (perhaps with a string like "internal error").  Option (A) is
+  to be preferred to option (B). -NM]
+
+1.5. Doxygen
+
+  We use the 'doxygen' utility to generate documentation from our source code.
+  Here's how to use it:
+
+  1. Begin every file that should be documented with
+         /**
+          * \file filename.c
+          * \brief Short desccription of the file.
+          **/
+
+     (Doxygen will recognize any comment beginning with /** as special.)
+
+  2. Before any function, structure, #define, or variable you want to
+     document, add a comment of the form:
+
+        /** Describe the function's actions in imperative sentences.
+         *
+         * Use blank lines for paragraph breaks
+         *   - and
+         *   - hyphens
+         *   - for
+         *   - lists.
+         *
+         * Write <b>argument_names</b> in boldface.
+         *
+         * \code
+         *     place_example_code();
+         *     between_code_and_endcode_commands();
+         * \endcode
+         */
+
+  3. Make sure to escape the characters "<", ">", "\", "%" and "#" as "\<",
+     "\>", "\\", "\%", and "\#".
+
+  4. To document structure members, you can use two forms:
+
+       struct foo {
+         /** You can put the comment before an element; */
+         int a;
+         int b; /**< Or use the less-than symbol to put the comment after the element. */
+       };
+
+  5. To generate documentation from the Tor source code, type:
+
+     $ doxygen -g
+
+     To generate a file called 'Doxyfile'.  Edit that file and run 'doxygen' to
+     generate the API documentation.
+
+  6. See the Doxygen manual for more information; this summary just scratches
+     the surface.
+

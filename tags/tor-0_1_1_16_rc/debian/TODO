@@ -1,0 +1,12 @@
+Legend:
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+- make debian specific changes only apply when run as debian-tor
+- setuid/gid to debian-tor if run as root
+- don't enable coredumps by default
+- fix shipped html docs to refer to local stylesheet

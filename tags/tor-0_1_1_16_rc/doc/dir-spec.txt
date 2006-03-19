@@ -1,0 +1,522 @@
+$Id$
+
+                  Tor directory protocol for 0.1.1.x series
+
+0. Scope and preliminaries
+
+   This document should eventually be merged to replace and supplement the
+   existing notes on directories in tor-spec.txt.
+
+   This is not a finalized version; what we actually wind up implementing
+   may be different from the system described here.
+
+0.1. Goals
+
+   There are several problems with the way Tor handles directory information
+   in version 0.1.0.x and earlier.  Here are the problems we try to fix with
+   this new design, already partially implemented in 0.1.1.x:
+      1. Directories are very large and use up a lot of bandwidth: clients
+         download descriptors for all router several times an hour.
+      2. Every directory authority is a trust bottleneck: if a single
+         directory authority lies, it can make clients believe for a time an
+         arbitrarily distorted view of the Tor network.
+      3. Our current "verified server" system is kind of nonsensical.
+      4. Getting more directory authorities adds more points of failure and
+         worsens possible partitioning attacks.
+
+   There are two problems that remain unaddressed by this design.
+      5. Requiring every client to know about every router won't scale.
+      6. Requiring every directory cache to know every router won't scale.
+
+1. Outline
+
+   There is a small set (say, around 10) of semi-trusted directory
+   authorities.  A default list of authorities is shipped with the Tor
+   software. Users can change this list, but are encouraged not to do so, in
+   order to avoid partitioning attacks.
+
+   Routers periodically upload signed "descriptors" to the directory
+   authorities describing their keys, capabilities, and other information.
+   Routers may act as directory mirrors (also called "caches"), to reduce
+   load on the directory authorities.  They announce this in their
+   descriptors.
+
+   Each directory authority periodically generates and signs a compact
+   "network status" document that lists that authority's view of the current
+   descriptors and status for known routers, but which does not include the
+   descriptors themselves.
+
+   Directory mirrors download, cache, and re-serve network-status documents
+   to clients.
+
+   Clients, directory mirrors, and directory authorities all use
+   network-status documents to find out when their list of routers is
+   out-of-date.  If it is, they download any missing router descriptors.
+   Clients download missing descriptors from mirrors; mirrors and authorities
+   download from authorities.  Descriptors are downloaded by the hash of the
+   descriptor, not by the server's identity key: this prevents servers from
+   attacking clients by giving them descriptors nobody else uses.
+
+   All directory information is uploaded and downloaded with HTTP.
+
+   Coordination among directory authorities is done client-side: clients
+   compute a vote-like algorithm among the network-status documents they
+   have, and base their decisions on the result.
+
+1.1. What's different from 0.1.0.x?
+
+   Clients used to download a signed concatenated set of router descriptors
+   (called a "directory") from directory mirrors, regardless of which
+   descriptors had changed.
+
+   Between downloading directories, clients would download "network-status"
+   documents that would list which servers were supposed to running.
+
+   Clients would always believe the most recently published network-status
+   document they were served.
+
+   Routers used to upload fresh descriptors all the time, whether their keys
+   and other information had changed or not.
+
+2. Router operation
+
+   The router descriptor format is unchanged from tor-spec.txt.
+
+   ORs SHOULD generate a new router descriptor whenever any of the
+   following events have occurred:
+
+      - A period of time (18 hrs by default) has passed since the last
+        time a descriptor was generated.
+
+      - A descriptor field other than bandwidth or uptime has changed.
+
+      - Bandwidth has changed by more than +/- 50% from the last time a
+        descriptor was generated, and at least a given interval of time
+        (20 mins by default) has passed since then.
+
+      - Its uptime has been reset (by restarting).
+
+   After generating a descriptor, ORs upload it to every directory
+   authority they know, by posting it to the URL
+
+      http://<hostname>/tor/
+
+3. Network status format
+
+   Directory authorities generate, sign, and compress network-status
+   documents.  Directory servers SHOULD generate a fresh network-status
+   document when the contents of such a document would be different from the
+   last one generated, and some time (at least one second, possibly longer)
+   has passed since the last one was generated.
+
+   The network status document contains a preamble, a set of router status
+   entries, and a signature, in that order.
+
+   We use the same meta-format as used for directories and router descriptors
+   in "tor-spec.txt".  Implementations MAY insert blank lines
+   for clarity between sections; these blank lines are ignored.
+   Implementations MUST NOT depend on blank lines in any particular location.
+
+   As used here, "whitespace" is a sequence of 1 or more tab or space
+   characters.
+
+   The preamble contains:
+
+      "network-status-version" -- A document format version.  For this
+         specification, the version is "2".
+      "dir-source" -- The authority's hostname, current IP address, and
+         directory port, all separated by whitespace.
+      "fingerprint" -- A base16-encoded hash of the signing key's
+         fingerprint, with no additional spaces added.
+      "contact" -- An arbitrary string describing how to contact the
+         directory server's administrator.  Administrators should include at
+         least an email address and a PGP fingerprint.
+      "dir-signing-key" -- The directory server's public signing key.
+      "client-versions" -- A comma-separated list of recommended client
+        versions.
+      "server-versions" -- A comma-separated list of recommended server
+        versions.
+      "published" -- The publication time for this network-status object.
+      "dir-options" -- A set of flags, in any order, separated by whitespace:
+          "Names" if this directory authority performs name bindings.
+          "Versions" if this directory authority recommends software versions.
+
+   The dir-options entry is optional.  The "-versions" entries are required if
+   the "Versions" flag is present.  The other entries are required and must
+   appear exactly once. The "network-status-version" entry must appear first;
+   the others may appear in any order.  Implementations MUST ignore
+   additional arguments to the items above, and MUST ignore unrecognized
+   flags.
+
+   For each router, the router entry contains:  (This format is designed for
+   conciseness.)
+
+      "r" -- followed by the following elements, in order, separated by
+          whitespace:
+          - The OR's nickname,
+          - A hash of its identity key, encoded in base64, with trailing =
+            signs removed.
+          - A hash of its most recent descriptor, encoded in base64, with
+            trailing = signs removed.  (The hash is calculated as for
+            computing the signature of a descriptor.)
+          - The publication time of its most recent descriptor, in the form
+            YYYY-MM-DD HH:MM:SS, in GMT.
+          - An IP address
+          - An OR port
+          - A directory port (or "0" for none")
+      "s" -- A series of whitespace-separated status flags, in any order:
+          "Authority" if the router is a directory authority.
+          "Exit" if the router is useful for building general-purpose exit
+             circuits.
+          "Fast" if the router is suitable for high-bandwidth circuits.
+          "Guard" if the router is suitable for use as an entry guard.
+             (Currently, this means 'fast' and 'stable'.)
+          "Named" if the router's identity-nickname mapping is canonical,
+             and this authority binds names.
+          "Stable" if the router is suitable for long-lived circuits.
+          "Running" if the router is currently usable.
+          "Valid" if the router has been 'validated'.
+          "V2Dir" if the router implements this protocol.
+
+      The "r" entry for each router must appear first and is required.  The
+      's" entry is optional.  Unrecognized flags and extra elements on the
+      "r" line must be ignored.
+
+   The signature section contains:
+
+      "directory-signature". A signature of the rest of the document using
+      the directory authority's signing key.
+
+   We compress the network status list with zlib before transmitting it.
+
+3.1. Establishing server status
+
+   [[XXXXX Describe how authorities actually decide Fast, Named, Stable,
+   Running, Valid
+
+   For each OR, a directory server remembers whether the OR was running and
+   functional the last time they tried to connect to it, and possibly other
+   liveness information.
+
+   Directory server administrators may label some servers or IPs as
+   blacklisted, and elect not to include them in their network-status lists.
+
+   Thus, the network-status list includes all non-blacklisted,
+   non-expired, non-superseded descriptors for ORs that the directory has
+   observed at least once to be running.
+
+   Directory server administrators may decide to support name binding.  If
+   they do, then they must maintain a file of nickname-to-identity-key
+   mappings, and try to keep this file consistent with other directory
+   servers.  If they don't, they act as clients, and report bindings made by
+   other directory servers (name X is bound to identity Y if at least one
+   binding directory lists it, and no directory binds X to some other Y'.)
+
+   ]]
+
+4. Directory server operation
+
+   All directory authorities and directory mirrors ("directory servers")
+   implement this section, except as noted.
+
+4.1. Accepting uploads (authorities only)
+
+   When a router posts a signed descriptor to a directory authority, the
+   authority first checks whether it is well-formed and correctly
+   self-signed.  If it is, the authority next verifies that the nickname
+   question is already assigned to a router with a different public key.
+   Finally, the authority MAY check that the router is not blacklisted
+   because of its key, IP, or another reason.
+
+   If the descriptor passes these tests, and the authority does not already
+   have a descriptor for a router with this public key, it accepts the
+   descriptor and remembers it.
+
+   If the authority _does_ have a descriptor with the same public key, the
+   newly uploaded descriptor is remembered if its publication time is more
+   recent than the most recent old descriptor for that router, and either:
+      - There are non-cosmetic differences between the old descriptor and the
+        new one.
+      - Enough time has passed between the descriptors' publication times.
+        (Currently, 12 hours.)
+
+   Differences between router descriptors are "non-cosmetic" if they would be
+   sufficient to force an upload as described in section 2 above.
+
+   Note that the "cosmetic difference" test only applies to uploaded
+   descriptors, not to descriptors that the authority downloads from other
+   authorities.
+
+4.2. Downloading network-status documents
+
+   All directory servers (authorities and mirrors) try to keep a fresh
+   set of network-status documents from every authority.  To do so,
+   every 5 minutes, each authority asks every other authority for its
+   most recent network-status document.  Every 15 minutes, each mirror
+   picks a random authority and asks it for the most recent network-status
+   documents for all the authorities the authority knows about (including
+   the chosen authority itself).
+
+   Directory servers and mirrors remember and serve the most recent
+   network-status document they have from each authority.  Other
+   network-status documents don't need to be stored.  If the most recent
+   network-status document is over 10 days old, it is discarded anyway.
+   Mirrors SHOULD store and serve network-status documents from authorities
+   they don't recognize, but SHOULD NOT use such documents for any other
+   purpose.
+
+4.3. Downloading and storing router descriptors
+
+   Periodically (currently, every 10 seconds), directory servers check
+   whether there are any specific descriptors (as identified by descriptor
+   hash in a network-status document) that they do not have and that they
+   are not currently trying to download.
+
+   If so, the directory server launches requests to the authorities for these
+   descriptors, such that each authority is only asked for descriptors listed
+   in its most recent network-status.  When more than one authority lists the
+   descriptor, we choose which to ask at random.
+
+   If one of these downloads fails, we do not try to download that descriptor
+   from the authority that failed to serve it again unless we receive a newer
+   network-status from that authority that lists the same descriptor.
+
+   Directory servers must potentially cache multiple descriptors for each
+   router. Servers must not discard any descriptor listed by any current
+   network-status document from any authority.  If there is enough space to
+   store additional descriptors [XXXXXX then how do we pick.]
+
+   Authorities SHOULD NOT download descriptors for routers that they would
+   immediately reject for reasons listed in 3.1.
+
+4.4. HTTP URLs
+
+   "Fingerprints" in these URLs are base-16-encoded SHA1 hashes.
+
+   The authoritative network-status published by a host should be available at:
+      http://<hostname>/tor/status/authority.z
+
+   The network-status published by a host with fingerprint
+   <F> should be available at:
+      http://<hostname>/tor/status/fp/<F>.z
+
+   The network-status documents published by hosts with fingerprints
+   <F1>,<F2>,<F3> should be available at:
+      http://<hostname>/tor/status/fp/<F1>+<F2>+<F3>.z
+
+   The most recent network-status documents from all known authorities,
+   concatenated, should be available at:
+         http://<hostname>/tor/status/all.z
+
+   The most recent descriptor for a server whose identity key has a
+   fingerprint of <F> should be available at:
+      http://<hostname>/tor/server/fp/<F>.z
+
+   The most recent descriptors for servers with identity fingerprints
+   <F1>,<F2>,<F3> should be available at:
+      http://<hostname>/tor/server/fp/<F1>+<F2>+<F3>.z
+
+   (NOTE: Implementations SHOULD NOT download descriptors by identity key
+   fingerprint. This allows a corrupted server (in collusion with a cache) to
+   provide a unique descriptor to a client, and thereby partition that client
+   from the rest of the network.)
+
+   The server descriptor with (descriptor) digest <D> (in hex) should be
+   available at:
+      http://<hostname>/tor/server/d/<D>.z
+
+   The most recent descriptors with digests <D1>,<D2>,<D3> should be
+   available at:
+      http://<hostname>/tor/server/d/<D1>+<D2>+<D3>.z
+
+   The most recent descriptor for this server should be at:
+      http://<hostname>/tor/server/authority.z
+    [Nothing in the Tor protocol uses this resource yet, but it is useful
+     for debugging purposes. Also, the official Tor implementations
+     (starting at 0.1.1.x) use this resource to test whether a server's
+     own DirPort is reachable.]
+
+   A concatenated set of the most recent descriptors for all known servers
+   should be available at:
+      http://<hostname>/tor/server/all.z
+
+   For debugging, directories SHOULD expose non-compressed objects at URLs like
+   the above, but without the final ".z".
+
+   Clients MUST handle compressed concatenated information in two forms:
+     - A concatenated list of zlib-compressed objects.
+     - A zlib-compressed concatenated list of objects.
+   Directory servers MAY generate either format: the former requires less
+   CPU, but the latter requires less bandwidth.
+
+   Clients SHOULD use upper case letters (A-F) when base16-encoding
+   fingerprints.  Servers MUST accept both upper and lower case fingerprints
+   in requests.
+
+5. Client operation: downloading information
+
+   Every Tor that is not a directory server (that is, clients and ORs that do
+   not have a DirPort set) implements this section.
+
+5.1. Downloading network-status documents
+
+   Each client maintains an ordered list of directory authorities.
+   Insofar as possible, clients SHOULD all use the same ordered list.
+
+   Clients check whether they have enough recently published network-status
+   documents (currently, this means that they must have a network-status
+   published within the last 48 hours for over half of the authorities).
+   If they do not, they download enough network-status documents so that this
+   is so.
+
+   Also, if the most recently published network-status document is over 30
+   minutes old, the client downloads a network-status document.
+
+   When choosing which documents to download, clients treat their list of
+   directory authorities as a circular ring, and begin with the authority
+   appearing immediately after the authority for their most recently
+   published network-status document.
+
+   If enough mirrors (currently 4) claim not to have a given network status,
+   we stop trying to download that authority's network-status, until we
+   download a new network-status that makes us believe that the authority in
+   question is running.
+
+   Network-status documents published over 10 hours in the past are
+   discarded.
+
+5.2. Downloading router descriptors
+
+   Clients try to have the best descriptor for each router.  A descriptor is
+   "best" if:
+      * it the most recently published descriptor listed for that router by
+        at least two network-status documents.
+      * OR, no descriptor for that router is listed by two or more
+        network-status documents, and it is the most recently published
+        descriptor listed by any network-status document.
+
+   Periodically (currently every 10 seconds) clients check whether there are
+   any "downloadable" descriptors.  A descriptor is downloadable if:
+      - It is the "best" descriptor for some router.
+      - The descriptor was published at least 5 minutes (???) in the past.
+        [This prevents clients from trying to fetch descriptors that the
+        mirrors have not yet retrieved and cached.]
+      - The client does not currently have it.
+      - The client is not currently trying to download it.
+
+   If at least 1/16 of known routers have downloadable descriptors, or if
+   enough time (currently 10 minutes) has passed since the last time the
+   client tried to download descriptors, it launches requests for all
+   downloadable descriptors, as described in 5.3 below.
+
+   When a descriptor download fails, the client notes it, and does not
+   consider the descriptor downloadable again until a certain amount of time
+   has passed. (Currently 0 seconds for the first failure, 60 seconds for the
+   second, 5 minutes for the third, 10 minutes for the fourth, and 1 day
+   thereafter.)  Periodically (currently once an hour) clients reset the
+   failure count.
+
+   No descriptors are downloaded until the client has downloaded more than
+   half of the network-status documents.
+
+5.3. Managing downloads
+
+   When a client has no live network-status documents, it downloads
+   network-status documents from a randomly chosen authority.  In all other
+   cases, the client downloads from mirrors randomly chosen from among those
+   believed to be V2 directory servers.  (This information comes from the
+   network-status documents; see 6 below.)
+
+   When downloading multiple router descriptors, the client chooses multiple
+   mirrors so that:
+     - At least 3 different mirrors are used, except when this would result
+       in more than one request for under 4 descriptors.
+     - No more than 128 descriptors are requested from a single mirror.
+     - Otherwise, as few mirrors as possible are used.
+   After choosing mirrors, the client divides the descriptors among them
+   randomly.
+
+   After receiving any response client MUST discard any network-status
+   documents and descriptors that it did not request.
+
+6. Using directory information
+
+   Everyone besides directory authorities uses the approaches in this section
+   to decide which servers to use and what their keys are likely to be.
+   (Directory authorities just believe their own opinions, as in 3.1 above.)
+
+6.1. Choosing routers for circuits.
+
+   Tor implementations only pay attention to "live" network-status documents.
+   A network status is "live" if it is the most recently downloaded network
+   status document for a given directory server, and the server is a
+   directory server trusted by the client, and the network-status document is
+   no more than 2 days old.
+
+   For time-sensitive information, Tor implementations focus on "recent"
+   network-status documents.  A network status is "recent" if it is live, and
+   if it was published in the last 60 minutes.  If there are fewer
+   than 3 such documents, the most recently published 3 are "recent."  If
+   there are fewer than 3 in all, all are "recent.")
+
+   Circuits SHOULD NOT be built until the client has enough directory
+   information: at least two live network-status documents, and descriptors
+   for at least 1/4 of the servers believed to be running.
+
+   A server is "listed" if it is included by more than half of the live
+   network status documents.  Clients SHOULD NOT use unlisted servers.
+
+   A server is "valid" if it is listed as valid by more than half of the live
+   network-status documents.  Clients SHOULD NOT use non-valid servers unless
+   specifically configured to do so.
+
+   A server is "running" if it is listed as running by more than half of the
+   recent network-status documents.  Clients SHOULD NOT try to use
+   non-running servers.
+
+   A server is believed to be a directory mirror if it is listed as a V2
+   directory by more than half of the recent network-status documents.
+
+6.1. Managing naming
+
+   In order to provide human-memorable names for individual server
+   identities, some directory servers bind names to IDs.  Clients handle
+   names in two ways:
+
+   When a client encounters a name it has not mapped before:
+
+      If all the live "Naming" network-status documents the client has
+      claim that the name binds to some identity ID, and the client has at
+      least three live network-status documents, the client maps the name to
+      ID.
+
+   If a client encounters a name it has mapped before:
+
+      It uses the last-mapped identity value, unless all of the "Naming"
+      network status documents that list the name bind it to some other
+      identity.
+
+   When a user tries to refer to a router with a name that does not have a
+   mapping under the above rules, the implementation SHOULD warn the user.
+   After giving the warning, the implementation MAY use a router that at
+   least one Naming authority maps the name to, so long as no other naming
+   authority maps that name to a different router.
+
+6.2. Software versions
+
+   An implementation of Tor SHOULD warn when it has live network-statuses from
+   more than half of the authorities, and it is running a software version
+   not listed on more than half of the live "Versioning" network-status
+   documents.
+
+TODO:
+    - Resolve XXXXs
+    - Are the magic numbers above sane?
+
+    - Client-knowledge partitioning is worrisome.  Most versions of this
+      don't seem to be worse than the Danezis-Murdoch tracing attack, since
+      an attacker can't do more than deduce probable exits from entries (or
+      vice versa).  But what about when the client connects to A and B but in
+      a different order?  How bad can it be partitioned based on its
+      knowledge?
+
