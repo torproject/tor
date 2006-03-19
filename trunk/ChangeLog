@@ -1,3 +1,55 @@
+Changes in version 0.1.1.16-rc - 2006-03-18
+  o Bugfixes on 0.1.1.15-rc:
+    - Fix assert when the controller asks to attachstream a connect-wait
+      or resolve-wait stream.
+    - Now do address rewriting when the controller asks us to attach
+      to a particular circuit too. This will let Blossom specify
+      "moria2.exit" without having to learn what moria2's IP address is.
+    - Make the "tor --verify-config" command-line work again, so people
+      can automatically check if their torrc will parse.
+    - Authoritative dirservers no longer require an open connection from
+      a server to consider him "reachable". We need this change because
+      when we add new auth dirservers, old servers won't know not to
+      hang up on them.
+    - Let Tor build on Sun CC again.
+    - Fix an off-by-one buffer size in dirserv.c that magically never
+      hit our three authorities but broke sjmurdoch's own tor network.
+    - If we as a directory mirror don't know of any v1 directory
+      authorities, then don't try to cache any v1 directories.
+    - Stop warning about unknown servers in our family when they are
+      given as hex digests.
+    - Stop complaining as quickly to the server operator that he
+      hasn't registered his nickname/key binding.
+    - Various cleanups so we can add new V2 Auth Dirservers.
+    - Change "AllowUnverifiedNodes" to "AllowInvalidNodes", to
+      reflect the updated flags in our v2 dir protocol.
+    - Resume allowing non-printable characters for exit streams (both
+      for connecting and for resolving). Now we tolerate applications
+      that don't follow the RFCs. But continue to block malformed names
+      at the socks side.
+
+  o Bugfixes on 0.1.0.x:
+    - Fix assert bug in close_logs(): when we close and delete logs,
+      remove them all from the global "logfiles" list.
+    - Fix minor integer overflow in calculating when we expect to use up
+      our bandwidth allocation before hibernating.
+    - Fix a couple of bugs in OpenSSL detection. Also, deal better when
+      there are multiple SSLs installed with different versions.
+    - When we try to be a server and Address is not explicitly set and
+      our hostname resolves to a private IP address, try to use an
+      interface address if it has a public address. Now Windows machines
+      that think of themselves as localhost can work by default.
+
+  o New features:
+    - Let the controller ask for GETINFO dir/server/foo so it can ask
+      directly rather than connecting to the dir port.
+    - Let the controller tell us about certain router descriptors
+      that it doesn't want Tor to use in circuits. Implement
+      SETROUTERPURPOSE and modify +POSTDESCRIPTOR to do this.
+    - New config option SafeSocks to reject all application connections
+      using unsafe socks protocols. Defaults to off.
+
+
 Changes in version 0.1.1.15-rc - 2006-03-11
   o Bugfixes and cleanups:
     - When we're printing strings from the network, don't try to print
