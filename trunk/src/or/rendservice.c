@@ -999,7 +999,7 @@ rend_services_introduce(void)
       char *hex_digest;
       router = router_choose_random_node(service->intro_prefer_nodes,
                service->intro_exclude_nodes, exclude_routers, 1, 0, 0,
-               get_options()->_AllowUnverified & ALLOW_UNVERIFIED_INTRODUCTION,
+               get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION,
                0);
       if (!router) {
         log_warn(LD_REND,
