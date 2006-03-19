@@ -833,12 +833,12 @@ router_rebuild_descriptor(int force)
                            options->ExitPolicyRejectPrivate);
 
   if (desc_routerinfo) { /* inherit values */
-    ri->is_verified = desc_routerinfo->is_verified;
+    ri->is_valid = desc_routerinfo->is_valid;
     ri->is_running = desc_routerinfo->is_running;
     ri->is_named = desc_routerinfo->is_named;
   }
   if (authdir_mode(options))
-    ri->is_verified = ri->is_named = 1; /* believe in yourself */
+    ri->is_valid = ri->is_named = 1; /* believe in yourself */
   if (options->MyFamily) {
     smartlist_t *family;
     if (!warned_nonexistent_family)

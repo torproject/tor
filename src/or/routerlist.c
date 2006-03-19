@@ -79,9 +79,9 @@ static time_t last_routerdesc_download_attempted = 0;
  * mirrors).  Clients don't use this now. */
 static time_t last_networkstatus_download_attempted = 0;
 
-/** True iff we have logged a warning about this OR not being verified or
+/** True iff we have logged a warning about this OR not being valid or
  * not being named. */
-static int have_warned_about_unverified_status = 0;
+static int have_warned_about_invalid_status = 0;
 /** True iff we have logged a warning about this OR's version being older than
  * listed by the authorities  */
 static int have_warned_about_old_version = 0;
@@ -412,7 +412,7 @@ router_pick_trusteddirserver(int need_v1_authority,
                                            requireother, fascistfirewall);
 }
 
-/** Pick a random running verified directory server/mirror from our
+/** Pick a random running valid directory server/mirror from our
  * routerlist.  Don't pick an authority if any non-authorities are viable.
  * If <b>fascistfirewall</b>,
  * make sure the router we pick is allowed by our firewall options.
@@ -650,7 +650,7 @@ router_nickname_is_in_list(routerinfo_t *router, const char *list)
  * <b>sl</b>, so that we can pick a node for a circuit.
  */
 static void
-router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
+router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_invalid,
                                         int need_uptime, int need_capacity,
                                         int need_guard)
 {
@@ -661,12 +661,12 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
   {
     if (router->is_running &&
         router->purpose == ROUTER_PURPOSE_GENERAL &&
-        (router->is_verified ||
-        (allow_unverified &&
+        (router->is_valid ||
+        (allow_invalid &&
          !router_is_unreliable(router, need_uptime,
                                need_capacity, need_guard)))) {
-      /* If it's running, and either it's verified or we're ok picking
-       * unverified routers and this one is suitable.
+      /* If it's running, and either it's valid or we're ok picking
+       * invalid routers and this one is suitable.
        */
       smartlist_add(sl, router);
     }
@@ -819,7 +819,7 @@ router_choose_random_node(const char *preferred,
                           smartlist_t *excludedsmartlist,
                           int need_uptime, int need_capacity,
                           int need_guard,
-                          int allow_unverified, int strict)
+                          int allow_invalid, int strict)
 {
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice = NULL;
@@ -842,7 +842,7 @@ router_choose_random_node(const char *preferred,
     /* Then give up on our preferred choices: any node
      * will do that has the required attributes. */
     sl = smartlist_create();
-    router_add_running_routers_to_smartlist(sl, allow_unverified,
+    router_add_running_routers_to_smartlist(sl, allow_invalid,
                                             need_uptime, need_capacity,
                                             need_guard);
     smartlist_subtract(sl,excludednodes);
@@ -864,7 +864,7 @@ router_choose_random_node(const char *preferred,
                need_uptime?", stable":"",
                need_guard?", guard":"");
       choice = router_choose_random_node(
-        NULL, excluded, excludedsmartlist, 0, 0, 0, allow_unverified, 0);
+        NULL, excluded, excludedsmartlist, 0, 0, 0, allow_invalid, 0);
     }
   }
   smartlist_free(excludednodes);
@@ -1404,7 +1404,7 @@ routerlist_reset_warnings(void)
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
                     rs->name_lookup_warned = 0);
 
-  have_warned_about_unverified_status = 0;
+  have_warned_about_invalid_status = 0;
   have_warned_about_old_version = 0;
   have_warned_about_new_version = 0;
 }
@@ -1471,7 +1471,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   int i;
   const char *id_digest;
   int authdir = get_options()->AuthoritativeDir;
-  int authdir_verified = 0;
+  int authdir_believes_valid = 0;
 
   tor_assert(msg);
 
@@ -1501,7 +1501,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       routerinfo_free(router);
       return -2;
     }
-    authdir_verified = router->is_verified;
+    authdir_believes_valid = router->is_valid;
   } else if (from_fetch) {
     /* Only check the descriptor digest against the network statuses when
      * we are receiving in response to a fetch. */
@@ -1567,17 +1567,17 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         }
         directory_set_dirty();
         *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
-               authdir_verified ? "Verified server updated" :
-                ("Unverified server updated. (Have you sent us your key "
-                 "fingerprint?)");
+               authdir_believes_valid ? "Valid server updated" :
+                ("Invalid server updated. (This dirserver is marking your "
+                 "server as unapproved.)");
         return unreachable ? 1 : 0;
       }
     } else if (!strcasecmp(router->nickname, old_router->nickname)) {
       /* nicknames match, keys don't. */
       if (router->is_named) {
-        /* The new verified router replaces the old one; remove the
+        /* The new named router replaces the old one; remove the
          * old one.  And carry on to the end of the list, in case
-         * there are more old unverified routers with this nickname
+         * there are more old unnamed routers with this nickname.
          */
         /* mark-for-close connections using the old key, so we can
          * make new ones with the new key.
@@ -1592,8 +1592,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         }
         routerlist_remove(routerlist, old_router, i--, 0);
       } else if (old_router->is_named) {
-        /* Can't replace a verified router with an unverified one. */
-        log_debug(LD_DIR, "Skipping unverified entry for verified router '%s'",
+        /* Can't replace a named router with an unnamed one. */
+        log_debug(LD_DIR, "Skipping unnamed entry for named router '%s'",
                   router->nickname);
         routerinfo_free(router);
         *msg =
@@ -2786,7 +2786,7 @@ routers_update_all_from_networkstatus(void)
   routers_update_status_from_networkstatus(routerlist->routers, 0);
 
   me = router_get_my_routerinfo();
-  if (me && !have_warned_about_unverified_status) {
+  if (me && !have_warned_about_invalid_status) {
     int n_recent = 0, n_listing = 0, n_valid = 0, n_named = 0, n_naming = 0;
     routerstatus_t *rs;
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
@@ -2816,13 +2816,13 @@ routers_update_all_from_networkstatus(void)
                  "as invalid. Please "
                  "consider sending your identity fingerprint to the tor-ops.",
                  n_recent-n_valid, n_recent);
-        have_warned_about_unverified_status = 1;
+        have_warned_about_invalid_status = 1;
       } else if (!n_named && have_tried_downloading_all_statuses()) {
         log_warn(LD_GENERAL, "0/%d name-binding directory authorities "
                  "recognize this server. Please consider sending your "
                  "identity fingerprint to the tor-ops.",
                  n_naming);
-        have_warned_about_unverified_status = 1;
+        have_warned_about_invalid_status = 1;
       }
     }
   }
@@ -3217,7 +3217,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
 }
 
 /** Given a list <b>routers</b> of routerinfo_t *, update each routers's
- * is_named, is_verified, and is_running fields according to our current
+ * is_named, is_valid, and is_running fields according to our current
  * networkstatus_t documents. */
 void
 routers_update_status_from_networkstatus(smartlist_t *routers,
@@ -3248,7 +3248,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
 
     if (!authdir) {
       /* If we're not an authdir, believe others. */
-      router->is_verified = rs->status.is_valid;
+      router->is_valid = rs->status.is_valid;
       router->is_running = rs->status.is_running;
       router->is_fast = rs->status.is_fast;
       router->is_stable = rs->status.is_stable;

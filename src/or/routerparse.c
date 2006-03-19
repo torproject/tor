@@ -640,7 +640,7 @@ check_directory_signature(const char *digest,
 
 /** Given a string *<b>s</b> containing a concatenated sequence of router
  * descriptors, parses them and stores the result in <b>dest</b>.  All routers
- * are marked running and verified.  Advances *s to a point immediately
+ * are marked running and valid.  Advances *s to a point immediately
  * following the last router entry.  Ignore any trailing router entries that
  * are not complete. Returns 0 on success and -1 on failure.
  */

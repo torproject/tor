@@ -1164,14 +1164,14 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       n_supported[i] = -1;
       continue; /* skip routers that are not suitable */
     }
-    if (!router->is_verified &&
-        (!(options->_AllowUnverified & ALLOW_UNVERIFIED_EXIT) ||
+    if (!router->is_valid &&
+        (!(options->_AllowInvalid & ALLOW_INVALID_EXIT) ||
          router_is_unreliable(router, 1, 1, 0))) {
-      /* if it's unverified, and either we don't want it or it's unsuitable */
+      /* if it's invalid, and either we don't want it or it's unsuitable */
       n_supported[i] = -1;
-//      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- unverified router.",
+//      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- invalid router.",
 //             router->nickname, i);
-      continue; /* skip unverified routers */
+      continue; /* skip invalid routers */
     }
     if (router_exit_policy_rejects_all(router)) {
       n_supported[i] = -1;
@@ -1309,14 +1309,14 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, get_options()->ExcludeNodes,
                NULL, need_uptime, need_capacity, 0,
-               get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
+               get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0);
       else
         return choose_good_exit_server_general(dir,need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       return router_choose_random_node(
                options->RendNodes, options->RendExcludeNodes,
                NULL, need_uptime, need_capacity, 0,
-               options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
+               options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS, 0);
   }
   log_warn(LD_BUG,"Bug: unhandled purpose %d", purpose);
   tor_fragile_assert();
@@ -1417,9 +1417,9 @@ count_acceptable_routers(smartlist_t *routers)
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not running.",i);
       goto next_i_loop;
     }
-    if (r->is_verified == 0) {
-//      log_debug(LD_CIRC,"Nope, the directory says %d is not verified.",i);
-      /* XXXX009 But unverified routers *are* sometimes acceptable. */
+    if (r->is_valid == 0) {
+//      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
+      /* XXXX009 But invalid routers *are* sometimes acceptable. */
       goto next_i_loop;
     }
     num++;
@@ -1486,7 +1486,7 @@ choose_good_middle_server(uint8_t purpose,
   choice = router_choose_random_node(
            NULL, get_options()->ExcludeNodes, excluded,
            state->need_uptime, state->need_capacity, 0,
-           get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
+           get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0);
   smartlist_free(excluded);
   return choice;
 }
@@ -1538,7 +1538,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
            excluded, state ? state->need_uptime : 0,
            state ? state->need_capacity : 0,
            state ? 0 : 1,
-           options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY, 0);
+           options->_AllowInvalid & ALLOW_INVALID_ENTRY, 0);
   smartlist_free(excluded);
   return choice;
 }

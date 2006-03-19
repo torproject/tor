@@ -64,6 +64,7 @@ static config_abbrev_t _option_abbrevs[] = {
   PLURAL(StrictEntryNode),
   PLURAL(StrictExitNode),
   { "l", "Log", 1, 0},
+  { "AllowUnverifiedNodes", "AllowInvalidNodes", 0, 0},
   { "BandwidthRateBytes", "BandwidthRate", 0, 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0, 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
@@ -126,7 +127,7 @@ static config_var_t _option_vars[] = {
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("Address",             STRING,   Address,              NULL),
   VAR("__AllDirActionsPrivate",BOOL,   AllDirActionsPrivate, "0"),
-  VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes,
+  VAR("AllowInvalidNodes",   CSV,      AllowInvalidNodes,
                                                         "middle,rendezvous"),
   VAR("AssumeReachable",     BOOL,     AssumeReachable,      "0"),
   VAR("AuthDirInvalid",      LINELIST, AuthDirInvalid,       NULL),
@@ -1336,12 +1337,12 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
  * clearing, or make the value 0 or NULL.
  *
  * Here are the use cases:
- * 1. A non-empty AllowUnverified line in your torrc. Appends to current
+ * 1. A non-empty AllowInvalid line in your torrc. Appends to current
  *    if linelist, replaces current if csv.
- * 2. An empty AllowUnverified line in your torrc. Should clear it.
- * 3. "RESETCONF AllowUnverified" sets it to default.
- * 4. "SETCONF AllowUnverified" makes it NULL.
- * 5. "SETCONF AllowUnverified=foo" clears it and sets it to "foo".
+ * 2. An empty AllowInvalid line in your torrc. Should clear it.
+ * 3. "RESETCONF AllowInvalid" sets it to default.
+ * 4. "SETCONF AllowInvalid" makes it NULL.
+ * 5. "SETCONF AllowInvalid=foo" clears it and sets it to "foo".
  *
  * Use_defaults   Clear_first
  *    0                0       "append"
@@ -2311,22 +2312,22 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "of the Internet, so they must not set Reachable*Addresses "
            "or FascistFirewall.");
 
-  options->_AllowUnverified = 0;
-  if (options->AllowUnverifiedNodes) {
-    SMARTLIST_FOREACH(options->AllowUnverifiedNodes, const char *, cp, {
+  options->_AllowInvalid = 0;
+  if (options->AllowInvalidNodes) {
+    SMARTLIST_FOREACH(options->AllowInvalidNodes, const char *, cp, {
         if (!strcasecmp(cp, "entry"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_ENTRY;
+          options->_AllowInvalid |= ALLOW_INVALID_ENTRY;
         else if (!strcasecmp(cp, "exit"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_EXIT;
+          options->_AllowInvalid |= ALLOW_INVALID_EXIT;
         else if (!strcasecmp(cp, "middle"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_MIDDLE;
+          options->_AllowInvalid |= ALLOW_INVALID_MIDDLE;
         else if (!strcasecmp(cp, "introduction"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_INTRODUCTION;
+          options->_AllowInvalid |= ALLOW_INVALID_INTRODUCTION;
         else if (!strcasecmp(cp, "rendezvous"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_RENDEZVOUS;
+          options->_AllowInvalid |= ALLOW_INVALID_RENDEZVOUS;
         else {
           log(LOG_WARN, LD_CONFIG,
-              "Unrecognized value '%s' in AllowUnverifiedNodes", cp);
+              "Unrecognized value '%s' in AllowInvalidNodes", cp);
           result = -1;
         }
       });

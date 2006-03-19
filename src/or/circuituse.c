@@ -1081,7 +1081,7 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ)
     return;
 
   /* write down the fingerprint of the chosen exit, not the nickname,
-   * because the chosen exit might not be verified. */
+   * because the chosen exit might not be named. */
   base16_encode(fp, sizeof(fp),
                 circ->build_state->chosen_exit->identity_digest, DIGEST_LEN);
 

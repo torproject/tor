@@ -808,7 +808,7 @@ typedef struct {
   /* local info */
   unsigned int is_running:1; /**< As far as we know, is this OR currently
                               * running? */
-  unsigned int is_verified:1; /**< Has a trusted dirserver validated this OR?
+  unsigned int is_valid:1; /**< Has a trusted dirserver validated this OR?
                                *  (For Authdir: Have we validated this OR?)
                                */
   unsigned int is_named:1; /**< Do we believe the nickname that this OR gives
@@ -1175,11 +1175,11 @@ struct circuit_t {
 
 typedef struct circuit_t circuit_t;
 
-#define ALLOW_UNVERIFIED_ENTRY        1
-#define ALLOW_UNVERIFIED_EXIT         2
-#define ALLOW_UNVERIFIED_MIDDLE       4
-#define ALLOW_UNVERIFIED_RENDEZVOUS   8
-#define ALLOW_UNVERIFIED_INTRODUCTION 16
+#define ALLOW_INVALID_ENTRY        1
+#define ALLOW_INVALID_EXIT         2
+#define ALLOW_INVALID_MIDDLE       4
+#define ALLOW_INVALID_RENDEZVOUS   8
+#define ALLOW_INVALID_INTRODUCTION 16
 
 /** An entry specifying a set of addresses and ports that should be remapped
  * to another address and port before exiting this exit node. */
@@ -1240,8 +1240,8 @@ typedef struct {
   char *RendExcludeNodes; /**< Comma-separated list of nicknames not to use
                            * as introduction points. */
 
-  smartlist_t *AllowUnverifiedNodes; /**< List of "entry", "middle", "exit" */
-  int _AllowUnverified; /**< Bitmask; derived from AllowUnverifiedNodes; */
+  smartlist_t *AllowInvalidNodes; /**< List of "entry", "middle", "exit" */
+  int _AllowInvalid; /**< Bitmask; derived from AllowInvalidNodes; */
   config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   int ExitPolicyRejectPrivate; /**< Should we not exit to local addresses? */
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
@@ -2303,7 +2303,7 @@ routerinfo_t *router_choose_random_node(const char *preferred,
                                         smartlist_t *excludedsmartlist,
                                         int need_uptime, int need_bandwidth,
                                         int need_guard,
-                                        int allow_unverified, int strict);
+                                        int allow_invalid, int strict);
 routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);

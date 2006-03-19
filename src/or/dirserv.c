@@ -362,7 +362,7 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
        tor_free(esc_contact);
     }
     if (msg)
-      *msg = "Rejected: There is already a verified server with this nickname "
+      *msg = "Rejected: There is already a named server with this nickname "
         "and a different fingerprint.";
     return FP_REJECT; /* Wrong fingerprint. */
   }
@@ -485,14 +485,14 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   /* Okay, looks like we're willing to accept this one. */
   switch (status) {
     case FP_NAMED:
-      ri->is_named = ri->is_verified = 1;
+      ri->is_named = ri->is_valid = 1;
       break;
     case FP_VALID:
       ri->is_named = 0;
-      ri->is_verified = 1;
+      ri->is_valid = 1;
       break;
     case FP_INVALID:
-      ri->is_named = ri->is_verified = 0;
+      ri->is_named = ri->is_valid = 0;
       break;
     default:
       tor_assert(0);
@@ -556,8 +556,8 @@ dirserv_add_descriptor(const char *desc, const char **msg)
     control_event_descriptors_changed(changed);
     smartlist_free(changed);
     if (!*msg) {
-      *msg =  ri->is_verified ? "Verified server descriptor accepted" :
-        "Unverified server descriptor accepted";
+      *msg =  ri->is_valid ? "Descriptor for valid server accepted" :
+        "Descriptor for invalid server accepted";
     }
     return r == 0 ? 2 : 1;
   }
@@ -586,26 +586,26 @@ directory_remove_invalid(void)
         changed = 1;
         break;
       case FP_NAMED:
-        if (!ent->is_verified || !ent->is_named) {
+        if (!ent->is_valid || !ent->is_named) {
           log_info(LD_DIRSERV,
-                   "Router '%s' is now verified and named.", ent->nickname);
-          ent->is_verified = ent->is_named = 1;
+                   "Router '%s' is now valid and named.", ent->nickname);
+          ent->is_valid = ent->is_named = 1;
           changed = 1;
         }
         break;
       case FP_VALID:
-        if (!ent->is_verified || ent->is_named) {
-          log_info(LD_DIRSERV, "Router '%s' is now verified.", ent->nickname);
-          ent->is_verified = 1;
+        if (!ent->is_valid || ent->is_named) {
+          log_info(LD_DIRSERV, "Router '%s' is now valid.", ent->nickname);
+          ent->is_valid = 1;
           ent->is_named = 0;
           changed = 1;
         }
         break;
       case FP_INVALID:
-        if (ent->is_verified || ent->is_named) {
+        if (ent->is_valid || ent->is_named) {
           log_info(LD_DIRSERV,
-                   "Router '%s' is no longer verified.", ent->nickname);
-          ent->is_verified = ent->is_named = 0;
+                   "Router '%s' is no longer valid.", ent->nickname);
+          ent->is_valid = ent->is_named = 0;
           changed = 1;
         }
         break;
@@ -683,7 +683,7 @@ list_single_server_status(routerinfo_t *desc, int is_live)
   if (!is_live) {
     *cp++ = '!';
   }
-  if (desc->is_verified) {
+  if (desc->is_valid) {
     strlcpy(cp, desc->nickname, sizeof(buf)-(cp-buf));
     cp += strlen(cp);
     *cp++ = '=';
@@ -1267,7 +1267,7 @@ _compare_longs(const void **a, const void **b)
 }
 
 /** Look through the routerlist, and assign the median uptime
- * of running verified servers to stable_uptime. */
+ * of running valid servers to stable_uptime. */
 static void
 dirserv_compute_stable_uptime(routerlist_t *rl)
 {
@@ -1275,7 +1275,7 @@ dirserv_compute_stable_uptime(routerlist_t *rl)
   long *up;
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-    if (ri->is_running && ri->is_verified) {
+    if (ri->is_running && ri->is_valid) {
       up = tor_malloc(sizeof(long));
       *up = ri->uptime;
       smartlist_add(uptimes, up);
@@ -1401,7 +1401,7 @@ generate_v2_networkstatus(void)
       int f_authority = router_digest_is_trusted_dir(
                                       ri->cache_info.identity_digest);
       int f_named = naming && ri->is_named;
-      int f_valid = ri->is_verified;
+      int f_valid = ri->is_valid;
       int f_guard = f_fast && f_stable;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */
@@ -1628,7 +1628,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
  * a certificate with digest <b>digest_rcvd</b> and nickname
  * <b>nickname_rcvd</b>.  When this happens, it's clear that any other
  * descriptors for that address/port combination must be unusable:
- * delete them if they are not verified.
+ * delete them if they are not valid.
  *
  * Also, if as_advertised is 1, then inform the reachability checker
  * that we could get to this guy.
@@ -1653,7 +1653,7 @@ dirserv_orconn_tls_done(const char *address,
     int drop = 0;
     if (strcasecmp(address, ri->address) || or_port != ri->or_port)
       continue;
-    if (!ri->is_verified) {
+    if (!ri->is_valid) {
       /* We have a router at the same address! */
       if (strcasecmp(ri->nickname, nickname_rcvd)) {
         log_notice(LD_DIRSERV,
