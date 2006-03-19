@@ -897,11 +897,14 @@ fetch_from_buf_http(buf_t *buf,
  * If <b>log_sockstype</b> is non-zero, then do a notice-level log of whether
  * the connection is possibly leaking DNS requests locally or not.
  *
+ * If <b>safe_socks</b> is true, then reject unsafe socks protocols.
+ *
  * If returning 0 or -1, <b>req->address</b> and <b>req->port</b> are
  * undefined.
  */
 int
-fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
+fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
+                     int log_sockstype, int safe_socks)
 {
   unsigned char len;
   char tmpbuf[INET_NTOA_BUF_LEN];
@@ -984,8 +987,11 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
                 "themselves may leak information. Consider using Socks4A "
                 "(e.g. via privoxy or socat) instead.  For more information, "
                 "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
-                "TorFAQ#SOCKSAndDNS", req->port);
+                "TorFAQ#SOCKSAndDNS.%s", req->port,
+                safe_socks ? " Rejecting." : "");
 //            have_warned_about_unsafe_socks = 1; // (for now, warn every time)
+            if (safe_socks)
+              return -1;
           }
           return 1;
         case 3: /* fqdn */
@@ -1075,8 +1081,13 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req, int log_sockstype)
                  "Your application (using socks4 on port %d) is giving Tor "
                  "only an IP address. Applications that do DNS resolves "
                  "themselves may leak information. Consider using Socks4A "
-                 "(e.g. via privoxy or socat) instead.", req->port);
+                 "(e.g. via privoxy or socat) instead. For more information, "
+                 "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
+                 "TorFAQ#SOCKSAndDNS.%s", req->port,
+                 safe_socks ? " Rejecting." : "");
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
+        if (safe_socks)
+          return -1;
       }
       if (socks4_prot == socks4a) {
         if (next+1 == buf->cur+buf->datalen) {
