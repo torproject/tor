@@ -281,7 +281,7 @@ connection_edge_finished_connecting(connection_t *conn)
   in.s_addr = htonl(conn->addr);
   tor_inet_ntoa(&in,valbuf,sizeof(valbuf));
   log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
-           safe_str(conn->address),conn->port,safe_str(valbuf));
+           escaped_safe_str(conn->address),conn->port,safe_str(valbuf));
 
   conn->state = EXIT_CONN_STATE_OPEN;
   connection_watch_events(conn, EV_READ); /* stop writing, continue reading */
@@ -1533,6 +1533,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     tor_free(address);
     return 0;
   }
+#if 0
   if (!tor_strisprint(address)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Non-printing characters in address %s in relay "
@@ -1540,6 +1541,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     tor_free(address);
     return 0;
   }
+#endif
 
   log_debug(LD_EXIT,"Creating new exit connection.");
   n_stream = connection_new(CONN_TYPE_EXIT);
@@ -1685,7 +1687,7 @@ connection_exit_connect(connection_t *conn)
   if (!connection_edge_is_rendezvous_stream(conn) &&
       router_compare_to_my_exit_policy(conn)) {
     log_info(LD_EXIT,"%s:%d failed exit policy. Closing.",
-             safe_str(conn->address), conn->port);
+             escaped_safe_str(conn->address), conn->port);
     connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, conn->cpath_layer);
     circuit_detach_stream(circuit_get_by_edge_conn(conn), conn);
     connection_free(conn);
@@ -1707,7 +1709,7 @@ connection_exit_connect(connection_t *conn)
           in.s_addr = htonl(addr);
           tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
           log_debug(LD_EXIT, "Redirecting connection from %s:%d to %s:%d",
-                    safe_str(conn->address), conn->port,
+                    escaped_safe_str(conn->address), conn->port,
                     safe_str(tmpbuf), port);
         }
         break;

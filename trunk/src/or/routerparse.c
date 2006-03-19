@@ -1020,7 +1020,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   }
 
   if (tor_inet_aton(tok->args[5], &in) == 0) {
-    log_warn(LD_DIR, "Error parsing address '%s'", escaped(tok->args[5]));
+    log_warn(LD_DIR, "Error parsing address %s", escaped(tok->args[5]));
     goto err;
   }
   rs->addr = ntohl(in.s_addr);
