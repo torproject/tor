@@ -218,6 +218,7 @@ static config_var_t _option_vars[] = {
   VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "0"),
   VAR("RunTesting",          BOOL,     RunTesting,           "0"),
   VAR("SafeLogging",         BOOL,     SafeLogging,          "1"),
+  VAR("SafeSocks",           BOOL,     SafeSocks,            "0"),
   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),
   VAR("SocksListenAddress",  LINELIST, SocksListenAddress,   NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
