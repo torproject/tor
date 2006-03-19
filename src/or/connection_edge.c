@@ -1163,7 +1163,8 @@ connection_ap_handshake_process_socks(connection_t *conn)
 
   log_debug(LD_APP,"entered.");
 
-  sockshere = fetch_from_buf_socks(conn->inbuf, socks, options->TestSocks);
+  sockshere = fetch_from_buf_socks(conn->inbuf, socks,
+                                   options->TestSocks, options->SafeSocks);
   if (sockshere == 0) {
     if (socks->replylen) {
       connection_write_to_buf(socks->reply, socks->replylen, conn);
