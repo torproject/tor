@@ -1240,6 +1240,7 @@ should_generate_v2_networkstatus(void)
 
 static uint32_t stable_uptime = 0; /* start at a safe value */
 static uint32_t fast_bandwidth = 0;
+static uint32_t guard_bandwidth = 0;
 
 /** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
  * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
@@ -1295,9 +1296,12 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     stable_uptime = *(uint32_t*)smartlist_get(uptimes,
                                               smartlist_len(uptimes)/2);
 
-  if (smartlist_len(bandwidths))
+  if (smartlist_len(bandwidths)) {
     fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
-                                               smartlist_len(bandwidths)/2);
+                                               smartlist_len(bandwidths)/8);
+    guard_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
+                                                smartlist_len(bandwidths)/2);
+  }
 
   log_info(LD_DIRSERV, "Uptime cutoff is %lu seconds.",
            (unsigned long)stable_uptime);
@@ -1419,7 +1423,8 @@ generate_v2_networkstatus(void)
                                       ri->cache_info.identity_digest);
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_valid;
-      int f_guard = f_fast && f_stable;
+      int f_guard = f_fast && f_stable &&
+                           ri->bandwidthcapacity > guard_bandwidth;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */
       int f_v2_dir = ri->dir_port &&
