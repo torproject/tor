@@ -1238,7 +1238,8 @@ should_generate_v2_networkstatus(void)
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }
 
-long stable_uptime = 0; /* start at a safe value */
+static uint32_t stable_uptime = 0; /* start at a safe value */
+static uint32_t fast_bandwidth = 0;
 
 /** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
  * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
@@ -1251,46 +1252,62 @@ dirserv_thinks_router_is_unreliable(routerinfo_t *router,
 {
   if (need_uptime && router->uptime < stable_uptime)
     return 1;
-  if (need_capacity &&
-      router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
+  if (need_capacity && router->bandwidthcapacity < fast_bandwidth)
     return 1;
   return 0;
 }
 
 static int
-_compare_longs(const void **a, const void **b)
+_compare_uint32(const void **a, const void **b)
 {
-  long first = **(long **)a, second = **(long **)b;
+  uint32_t first = **(uint32_t **)a, second = **(uint32_t **)b;
   if (first < second) return -1;
   if (first > second) return 1;
   return 0;
 }
 
 /** Look through the routerlist, and assign the median uptime
- * of running valid servers to stable_uptime. */
+ * of running valid servers to stable_uptime, and the median bandwidth
+ * capacity to fast_bandwidth. */
 static void
-dirserv_compute_stable_uptime(routerlist_t *rl)
+dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
-  smartlist_t *uptimes = smartlist_create();
-  long *up;
+  smartlist_t *uptimes, *bandwidths;
+
+  uptimes = smartlist_create();
+  bandwidths = smartlist_create();
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->is_running && ri->is_valid) {
-      up = tor_malloc(sizeof(long));
-      *up = ri->uptime;
+      uint32_t *up = tor_malloc(sizeof(uint32_t));
+      *up = (uint32_t) ri->uptime;
       smartlist_add(uptimes, up);
+      uint32_t *bw = tor_malloc(sizeof(uint32_t));
+      *bw = (uint32_t) ri->bandwidthcapacity;
+      smartlist_add(bandwidths, bw);
     }
   });
 
-  smartlist_sort(uptimes, _compare_longs);
+  smartlist_sort(uptimes, _compare_uint32);
+  smartlist_sort(bandwidths, _compare_uint32);
 
-  stable_uptime = *(long *)smartlist_get(uptimes,
-                                         smartlist_len(uptimes)/2);
+  if (smartlist_len(uptimes))
+    stable_uptime = *(uint32_t*)smartlist_get(uptimes,
+                                              smartlist_len(uptimes)/2);
 
-  log_info(LD_DIRSERV, "Uptime cutoff is %ld seconds.", stable_uptime);
+  if (smartlist_len(bandwidths))
+    fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
+                                               smartlist_len(bandwidths)/2);
 
-  SMARTLIST_FOREACH(uptimes, long *, up, tor_free(up));
+  log_info(LD_DIRSERV, "Uptime cutoff is %lu seconds.",
+           (unsigned long)stable_uptime);
+  log_info(LD_DIRSERV, "Bandwidth cutoff is %lu bytes.",
+           (unsigned long)fast_bandwidth);
+
+  SMARTLIST_FOREACH(uptimes, uint32_t *, up, tor_free(up));
+  SMARTLIST_FOREACH(bandwidths, uint32_t *, bw, tor_free(bw));
   smartlist_free(uptimes);
+  smartlist_free(bandwidths);
 }
 
 /** For authoritative directories only: replace the contents of
@@ -1388,7 +1405,7 @@ generate_v2_networkstatus(void)
     ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
   });
 
-  dirserv_compute_stable_uptime(rl);
+  dirserv_compute_performance_thresholds(rl);
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
