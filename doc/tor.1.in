@@ -242,26 +242,30 @@ you are reliable and high-bandwidth enough to be a useful server.)
 (Default: 0)
 .LP
 .TP
-\fBEntryNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-A list of preferred nodes to use for the first hop in the circuit, if possible.
-.LP
-.TP
-\fBExitNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-A list of preferred nodes to use for the last hop in the circuit, if possible.
-.LP
-.TP
 \fBExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
 A list of nodes to never use when building a circuit.
 .LP
 .TP
-\fBStrictExitNodes \fR\fB0\fR|\fB1\fR\fP
-If 1, Tor will never use any nodes besides those listed in "exitnodes" for
-the last hop of a circuit.
+\fBEntryNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+A list of preferred nodes to use for the first hop in the circuit.
+These are treated only as preferences unless StrictEntryNodes (see
+below) is also set.
+.LP
+.TP
+\fBExitNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+A list of preferred nodes to use for the last hop in the circuit.
+These are treated only as preferences unless StrictExitNodes (see
+below) is also set.
 .LP
 .TP
 \fBStrictEntryNodes \fR\fB0\fR|\fB1\fR\fP
-If 1, Tor will never use any nodes besides those listed in "entrynodes" for
+If 1, Tor will never use any nodes besides those listed in "EntryNodes" for
 the first hop of a circuit.
+.LP
+.TP
+\fBStrictExitNodes \fR\fB0\fR|\fB1\fR\fP
+If 1, Tor will never use any nodes besides those listed in "ExitNodes" for
+the last hop of a circuit.
 .LP
 .TP
 \fBFascistFirewall \fR\fB0\fR|\fB1\fR\fP
