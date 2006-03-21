@@ -675,7 +675,7 @@ run_connection_housekeeping(int i, time_t now)
     }
   }
 
-  if (conn->is_obsolete && conn->n_circuits == 0) {
+  if (conn->is_obsolete && !conn->n_circuits) {
     /* no unmarked circs -- mark it now */
     log_info(LD_OR,
              "Expiring non-used OR connection to fd %d (%s:%d) [Obsolete].",
@@ -694,14 +694,14 @@ run_connection_housekeeping(int i, time_t now)
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
-    } else if (we_are_hibernating() && conn->n_circuits == 0 &&
+    } else if (we_are_hibernating() && !conn->n_circuits &&
                !buf_datalen(conn->outbuf)) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
                "[Hibernating or exiting].",
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
-    } else if (!clique_mode(options) && conn->n_circuits &&
+    } else if (!clique_mode(options) && !conn->n_circuits &&
                (!router || !server_mode(options) ||
                 !router_is_clique_mode(router))) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
