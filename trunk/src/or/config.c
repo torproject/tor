@@ -4018,14 +4018,25 @@ static int
 or_state_validate(or_state_t *old_state, or_state_t *state, int from_setconf)
 {
   const char *err;
-  tor_version_t v;
+
   if (entry_guards_parse_state(state, 0, &err)<0) {
     log_warn(LD_GENERAL, "Unable to parse entry nodes: %s", err);
     return -1;
   }
-  if (state->TorVersion && tor_version_parse(state->TorVersion, &v)) {
-    log_warn(LD_GENERAL, "Can't parse Tor version '%s' from your state file. "
-             "Proceeding anyway.", state->TorVersion);
+  if (state->TorVersion) {
+    tor_version_t v;
+    if (tor_version_parse(state->TorVersion, &v)) {
+      log_warn(LD_GENERAL, "Can't parse Tor version '%s' from your state file. "
+               "Proceeding anyway.", state->TorVersion);
+    } else { /* take action based on v */
+      if (tor_version_as_new_as(state->TorVersion, "0.1.1.10-alpha") &&
+          !tor_version_as_new_as(state->TorVersion, "0.1.1.16-rc-cvs")) {
+        log_notice(LD_CONFIG, "Detected state file from buggy version '%s'. "
+                   "Enabling workaround to choose working entry guards.",
+                   state->TorVersion);
+        config_free_lines(state->EntryGuards);
+      }
+    }
   }
   return 0;
 }
@@ -4040,7 +4051,7 @@ or_state_set(or_state_t *new_state)
     config_free(&state_format, global_state);
   global_state = new_state;
   if (entry_guards_parse_state(global_state, 1, &err)<0)
-    log_warn(LD_GENERAL,"Unparseable helper nodes state: %s",err);
+    log_warn(LD_GENERAL,"Unparseable guard nodes state: %s",err);
   if (rep_hist_load_state(global_state, &err)<0)
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
 }
