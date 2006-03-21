@@ -224,7 +224,7 @@ available. This is untested and probably buggy. (Default: 0)
 
 .SH CLIENT OPTIONS
 .PP
-The following options are useful only for clients (that is, if \fBSOCKSPort\fP is non-zero):
+The following options are useful only for clients (that is, if \fBSocksPort\fP is non-zero):
 .LP
 .TP
 \fBAllowInvalidNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
@@ -359,22 +359,28 @@ A list of preferred nodes to use for the rendezvous point, if possible.
 A list of nodes to never use when choosing a rendezvous point.
 .LP
 .TP
-\fBSOCKSPort \fR\fIPORT\fP
-Advertise this port to listen for connections from SOCKS-speaking
+\fBSocksPort \fR\fIPORT\fP
+Advertise this port to listen for connections from Socks-speaking
 applications.  Set this to 0 if you don't want to allow application
 connections. (Default: 9050)
 .LP
 .TP
-\fBSOCKSListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
-Bind to this address to listen for connections from SOCKS-speaking
+\fBSocksListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind to this address to listen for connections from Socks-speaking
 applications. (Default: 127.0.0.1) You can also specify a port
 (e.g. 192.168.0.1:9100). This directive can be specified multiple times
 to bind to multiple addresses/ports.
 .LP
 .TP
-\fBSOCKSPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
-Set an entrance policy for this server, to limit who can connect to the SOCKS ports. 
+\fBSocksPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
+Set an entrance policy for this server, to limit who can connect to the
+Socks ports.
 The policies have the same form as exit policies below.
+.LP
+.TP
+\fBSocksTimeout \fR\fINUM\fP
+Let a socks connection wait NUM seconds unattached before we fail it.
+(Default: 2 minutes.)
 .LP
 .TP
 \fBTrackHostExits \fR\fIhost\fR,\fI.domain\fR,\fI...\fR\fP
