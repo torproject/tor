@@ -183,7 +183,7 @@ circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose,
 /** If we find a circuit that isn't open yet and was born this many
  * seconds ago, then assume something went wrong, and cull it.
  */
-#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 30
+#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 60
 
 /** Close all circuits that start at us, aren't open, and were born
  * at least MIN_SECONDS_BEFORE_EXPIRING_CIRC seconds ago.
