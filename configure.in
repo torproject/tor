@@ -191,7 +191,7 @@ AC_CACHE_CHECK([whether we need extra options to link libevent],
         break
       fi
     done
-    if test le_runs = no ; then
+    if test $le_runs = no ; then
       AC_MSG_ERROR([Found linkable libevent in $ac_cv_libevent_dir, but it doesn't run, even with -R.  Maybe specify another using --with-libevent-dir?])
     fi
     LDFLAGS="$saved_LDFLAGS"
