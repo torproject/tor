@@ -524,8 +524,11 @@ circuit_about_to_close_connection(connection_t *conn)
    */
   switch (conn->type) {
     case CONN_TYPE_OR: {
-      /* Inform any pending (not attached) circs that they should give up. */
-      circuit_n_conn_done(conn, 0);
+      if (connection_state_is_open(conn)) {
+        /* Inform any pending (not attached) circs that they should
+         * give up. */
+        circuit_n_conn_done(conn, 0);
+      }
       /* Now close all the attached circuits on it. */
       circuit_unlink_all_from_or_conn(conn, END_CIRC_REASON_OR_CONN_CLOSED);
       return;
