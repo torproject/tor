@@ -1424,7 +1424,9 @@ generate_v2_networkstatus(void)
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_valid;
       int f_guard = f_fast && f_stable &&
-                           ri->bandwidthcapacity > guard_bandwidth;
+                    ri->bandwidthcapacity > guard_bandwidth &&
+                    (!tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") ||
+                     tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs"));
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */
       int f_v2_dir = ri->dir_port &&
