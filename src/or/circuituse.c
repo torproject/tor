@@ -13,9 +13,6 @@ const char circuituse_c_id[] =
 
 #include "or.h"
 
-/** Longest time to wait for a circuit before closing an AP connection */
-#define CONN_AP_MAX_ATTACH_DELAY 59
-
 /********* START VARIABLES **********/
 
 extern circuit_t *global_circuitlist; /* from circuitlist.c */
@@ -1154,7 +1151,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
   tor_assert(conn->socks_request);
 
   conn_age = time(NULL) - conn->timestamp_created;
-  if (conn_age > CONN_AP_MAX_ATTACH_DELAY) {
+  if (conn_age > get_options()->SocksTimeout) {
     log_notice(LD_APP,
                "Tried for %d seconds to get a connection to %s:%d. Giving up.",
                conn_age, safe_str(conn->socks_request->address),

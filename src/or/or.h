@@ -1315,6 +1315,8 @@ typedef struct {
   int StatusFetchPeriod; /**< How often do we fetch running-routers lists? */
   int KeepalivePeriod; /**< How often do we send padding cells to keep
                         * connections alive? */
+  int SocksTimeout; /**< How long do we let a socks connection wait
+                     * unattached before we fail it? */
   int MaxOnionsPending; /**< How many circuit CREATE requests do we allow
                          * to wait simultaneously before we start dropping
                          * them? */
