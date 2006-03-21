@@ -546,7 +546,7 @@ add_default_trusted_dirservers(void)
       "719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF",
     "tor26 v1 86.59.21.38:80 "
       "847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D",
-    "lefkada 140.247.60.64:9030 "
+    "lefkada 140.247.60.64:80 "
       "38D4 F5FC F7B1 0232 28B8 95EA 56ED E7D5 CCDC AF32",
     NULL
   };
