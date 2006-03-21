@@ -205,9 +205,10 @@ tor_gzip_uncompress(char **out, size_t *out_len,
         if (stream->avail_in == 0)
           goto done;
         /* There may be more compressed data here. */
-        /* XXX But if so, this is not the right way to find it. If
-         * we call inflateInit2 below, stream->state will get
-         * re-zcalloc'ed and we'll leak the old one. -RD */
+        if ((r = inflateEnd(stream)) != Z_OK) {
+          log_warn(LD_GENERAL, "Error freeing gzip structures");
+          goto err;
+        }
         if (inflateInit2(stream, method_bits(method)) != Z_OK) {
           log_warn(LD_GENERAL, "Error from inflateInit2: %s",
                    stream->msg?stream->msg:"<no message>");
