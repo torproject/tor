@@ -223,6 +223,7 @@ static config_var_t _option_vars[] = {
   VAR("SocksListenAddress",  LINELIST, SocksListenAddress,   NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
+  VAR("SocksTimeout",        INTERVAL, SocksTimeout,         "2 minutes"),
   /* if StatusFetchPeriod is 0, see get_status_fetch_period() in main.c */
   VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "0 seconds"),
   VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes,     "0"),

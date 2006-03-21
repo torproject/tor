@@ -314,7 +314,7 @@ connection_edge_finished_connecting(connection_t *conn)
  * connection_ap_handshake_attach_circuit() to attach to a new circuit (if
  * available) or launch a new one.
  *
- * For rendezvous streams, simply give up after 45 seconds (with no
+ * For rendezvous streams, simply give up after SocksTimeout seconds (with no
  * retry attempt).
  */
 void
@@ -335,7 +335,7 @@ connection_ap_expire_beginning(void)
     if (conn->type != CONN_TYPE_AP)
       continue;
     if (conn->state == AP_CONN_STATE_CONTROLLER_WAIT) {
-      if (now - conn->timestamp_lastread >= 120) {
+      if (now - conn->timestamp_lastread >= options->SocksTimeout) {
         log_notice(LD_APP, "Closing unattached stream.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
@@ -355,7 +355,7 @@ connection_ap_expire_beginning(void)
       continue;
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
-      if (now - conn->timestamp_lastread > 45) {
+      if (now - conn->timestamp_lastread > options->SocksTimeout) {
         log_notice(LD_REND,
                    "Rend stream is %d seconds late. Giving up on address"
                    " '%s.onion'.",
