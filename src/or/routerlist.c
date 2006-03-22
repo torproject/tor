@@ -2738,6 +2738,8 @@ compute_recommended_versions(time_t now, int client)
       vers = client ? ns->client_versions : ns->server_versions;
       if (!vers)
         continue;
+      /* XXX Attack: a single dirserver can make a version recommended
+       * by repeating it many times in his recommended list. -RD */
       smartlist_split_string(combined, vers, ",",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     });
@@ -2809,22 +2811,18 @@ routers_update_all_from_networkstatus(void)
         ++n_named;
     });
 
-    if (n_recent >= 2 && n_listing >= 2) {
-      /* XXX When we have more than 3 dirservers, these warnings
-       * might become spurious depending on which combination of
-       * network-statuses we have. Perhaps we should wait until we
-       * have tried all of them? -RD */
+    if (n_recent >= 2 && n_listing >= 2 &&
+        have_tried_downloading_all_statuses()) {
       if (n_valid <= n_recent/2)  {
         log_warn(LD_GENERAL,
                  "%d/%d recent statements from directory authorities list us "
-                 "as invalid. Please "
-                 "consider sending your identity fingerprint to the tor-ops.",
+                 "as unapproved. Are you misconfigured?",
                  n_recent-n_valid, n_recent);
         have_warned_about_invalid_status = 1;
-      } else if (!n_named && have_tried_downloading_all_statuses()) {
+      } else if (n_naming && !n_named) {
         log_warn(LD_GENERAL, "0/%d name-binding directory authorities "
-                 "recognize this server. Please consider sending your "
-                 "identity fingerprint to the tor-ops.",
+                 "recognize your nickname. Please consider sending your "
+                 "nickname and identity fingerprint to the tor-ops.",
                  n_naming);
         have_warned_about_invalid_status = 1;
       }
@@ -3591,7 +3589,7 @@ update_router_descriptor_cache_downloads(time_t now)
    * - if d is a member of some downloadable[x], d is a member of some
    *   download_from[y].  (Everything we want to download, we try to download
    *   from somebody.)
-   * - If d is a mamber of download_from[y], d is a member of downloadable[y].
+   * - If d is a member of download_from[y], d is a member of downloadable[y].
    *   (We only try to download descriptors from authorities who claim to have
    *   them.)
    * - No d is a member of download_from[x] and download_from[y] s.t. x != y.
@@ -3657,21 +3655,25 @@ update_router_descriptor_downloads(time_t now)
 }
 
 /** Return true iff we have enough networkstatus and router information to
- * start building circuits.  Right now, this means "at least 2 networkstatus
- * documents, and at least 1/4 of expected routers." */
+ * start building circuits.  Right now, this means "more than half the
+ * networkstatus documents, and at least 1/4 of expected routers." */
 //XXX should consider whether we have enough exiting nodes here.
 int
 router_have_minimum_dir_info(void)
 {
   int tot = 0, num_running = 0;
-  int n_ns, res, avg;
+  int n_ns, n_authorities, res, avg;
   static int have_enough = 0;
   if (!networkstatus_list || !routerlist) {
     res = 0;
     goto done;
   }
+  n_authorities = smartlist_len(trusted_dir_servers);
   n_ns = smartlist_len(networkstatus_list);
-  if (n_ns<2) {
+  if (n_ns<=n_authorities/2) {
+    log_info(LD_DIR,
+             "We have %d of %d network statuses, and we want "
+             "more than %d.", n_ns, n_authorities, n_authorities/2);
     res = 0;
     goto done;
   }
