@@ -1096,11 +1096,12 @@ do_hup(void)
    * force a retry there. */
 
   if (server_mode(options)) {
-    const char *descriptor;
+//    const char *descriptor;
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
     dnsworkers_rotate();
+#if 0
     /* Write out a fresh descriptor, but leave old one on failure. */
     router_rebuild_descriptor(1);
     descriptor = router_get_my_descriptor();
@@ -1112,6 +1113,7 @@ do_hup(void)
         return 0;
       }
     }
+#endif
   }
   return 0;
 }

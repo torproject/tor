@@ -311,7 +311,7 @@ init_keys(void)
     log_err(LD_GENERAL,"Error initializing TLS context");
     return -1;
   }
-  /* 4. Dump router descriptor to 'router.desc' */
+  /* 4. Build our router descriptor. */
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
   if (!mydesc) {
@@ -332,11 +332,13 @@ init_keys(void)
     }
   }
 
+#if 0
   tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", datadir);
   log_info(LD_GENERAL,"Dumping descriptor to \"%s\"...",keydir);
   if (write_str_to_file(keydir, mydesc,0)) {
     return -1;
   }
+#endif
   /* 5. Dump fingerprint to 'fingerprint' */
   tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   log_info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
