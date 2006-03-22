@@ -1281,9 +1281,9 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->is_running && ri->is_valid) {
       uint32_t *up = tor_malloc(sizeof(uint32_t));
+      uint32_t *bw = tor_malloc(sizeof(uint32_t));
       *up = (uint32_t) ri->uptime;
       smartlist_add(uptimes, up);
-      uint32_t *bw = tor_malloc(sizeof(uint32_t));
       *bw = (uint32_t) ri->bandwidthcapacity;
       smartlist_add(bandwidths, bw);
     }
