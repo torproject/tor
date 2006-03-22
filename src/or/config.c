@@ -4036,6 +4036,7 @@ or_state_validate(or_state_t *old_state, or_state_t *state, int from_setconf)
                    "Enabling workaround to choose working entry guards.",
                    state->TorVersion);
         config_free_lines(state->EntryGuards);
+        state->EntryGuards = NULL;
       }
     }
   }
