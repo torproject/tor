@@ -234,6 +234,22 @@ your circuits.
 The default is "middle,rendezvous", and other choices are not advised.
 .LP
 .TP
+\fBCircuitBuildTimeout \fR\fINUM\fP
+Try for at most NUM seconds when building circuits. If the circuit
+isn't open in that time, give up on it.
+(Default: 1 minute.)
+.LP
+.TP
+\fBCircuitIdleTimeout \fR\fINUM\fP
+If we have keept a clean (never used) circuit around for NUM seconds,
+then close it. This way when the Tor client is entirely idle, it can
+expire all of its circuits, and then expire its TLS connections. Also,
+if we end up making a circuit that is not useful for exiting any of
+the requests we're receiving, it won't forever take up a slot in the
+circuit list.
+(Default: 1 hour.)
+.LP
+.TP
 \fBClientOnly \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will under no circumstances run as a server. The default
 is to run as a client unless ORPort is configured.  (Usually,
