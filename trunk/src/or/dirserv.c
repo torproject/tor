@@ -799,11 +799,12 @@ dirserv_dump_directory_to_string(char **dir_out,
   char *recommended_versions;
   char digest[DIGEST_LEN];
   char published[ISO_TIME_LEN+1];
-  time_t published_on;
   char *buf = NULL;
   size_t buf_len;
   size_t identity_pkey_len;
   routerlist_t *rl = router_get_routerlist();
+  time_t now = time(NULL);
+  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
 
   tor_assert(dir_out);
   *dir_out = NULL;
@@ -820,13 +821,13 @@ dirserv_dump_directory_to_string(char **dir_out,
   recommended_versions =
     format_versions_list(get_options()->RecommendedVersions);
 
-  published_on = time(NULL);
-  format_iso_time(published, published_on);
+  format_iso_time(published, now);
 
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-                    buf_len += ri->cache_info.signed_descriptor_len+1);
+                    if (ri->cache_info.published_on >= cutoff)
+                      buf_len += ri->cache_info.signed_descriptor_len+1);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
      function, though strictly speaking we shouldn't be able to exceed
@@ -851,6 +852,8 @@ dirserv_dump_directory_to_string(char **dir_out,
     {
       size_t len = ri->cache_info.signed_descriptor_len;
       const char *body;
+      if (ri->cache_info.published_on < cutoff)
+        continue;
       if (cp+len+1 >= buf+buf_len)
         goto truncated;
       body = signed_descriptor_get_body(&ri->cache_info);
