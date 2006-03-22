@@ -1317,6 +1317,10 @@ typedef struct {
                         * connections alive? */
   int SocksTimeout; /**< How long do we let a socks connection wait
                      * unattached before we fail it? */
+  int CircuitBuildTimeout; /**< Cull non-open circuits that were born
+                            * at least this many seconds ago. */
+  int CircuitIdleTimeout; /**< Cull open clean circuits that were born
+                           * at least this many seconds ago. */
   int MaxOnionsPending; /**< How many circuit CREATE requests do we allow
                          * to wait simultaneously before we start dropping
                          * them? */
