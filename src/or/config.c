@@ -136,6 +136,8 @@ static config_var_t _option_vars[] = {
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "6 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "3 MB"),
+  VAR("CircuitBuildTimeout", INTERVAL, CircuitBuildTimeout,  "1 minute"),
+  VAR("CircuitIdleTimeout",  INTERVAL, CircuitIdleTimeout,   "1 hour"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ConnLimit",           UINT,     ConnLimit,            "1024"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),

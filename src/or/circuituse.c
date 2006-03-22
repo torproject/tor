@@ -19,7 +19,7 @@ extern circuit_t *global_circuitlist; /* from circuitlist.c */
 
 /********* END VARIABLES ************/
 
-static void circuit_expire_old_circuits(void);
+static void circuit_expire_old_circuits(time_t now);
 static void circuit_increment_failure_count(void);
 
 /* Return 1 if <b>circ</b> could be returned by circuit_get_best().
@@ -177,19 +177,14 @@ circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose,
   return best;
 }
 
-/** If we find a circuit that isn't open yet and was born this many
- * seconds ago, then assume something went wrong, and cull it.
- */
-#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 60
-
 /** Close all circuits that start at us, aren't open, and were born
- * at least MIN_SECONDS_BEFORE_EXPIRING_CIRC seconds ago.
+ * at least CircuitBuildTimeout seconds ago.
  */
 void
 circuit_expire_building(time_t now)
 {
   circuit_t *victim, *circ = global_circuitlist;
-  time_t cutoff = now - MIN_SECONDS_BEFORE_EXPIRING_CIRC;
+  time_t cutoff = now - get_options()->CircuitBuildTimeout;
 
   while (circ) {
     victim = circ;
@@ -431,7 +426,7 @@ circuit_build_needed_circs(time_t now)
     time_to_new_circuit = now + get_options()->NewCircuitPeriod;
     if (proxy_mode(get_options()))
       addressmap_clean(now);
-    circuit_expire_old_circuits();
+    circuit_expire_old_circuits(now);
 
 #if 0 /* disable for now, until predict-and-launch-new can cull leftovers */
     circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
@@ -547,17 +542,14 @@ circuit_about_to_close_connection(connection_t *conn)
   } /* end switch */
 }
 
-/** How old do we let an unused circuit get before expiring it? */
-#define CIRCUIT_UNUSED_CIRC_TIMEOUT (60*60)
-
 /** Find each circuit that has been dirty for too long, and has
  * no streams on it: mark it for close.
  */
 static void
-circuit_expire_old_circuits(void)
+circuit_expire_old_circuits(time_t now)
 {
   circuit_t *circ;
-  time_t now = time(NULL);
+  time_t cutoff = now - get_options()->CircuitIdleTimeout;
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (circ->marked_for_close)
@@ -579,7 +571,7 @@ circuit_expire_old_circuits(void)
     } else if (!circ->timestamp_dirty && CIRCUIT_IS_ORIGIN(circ) &&
                circ->state == CIRCUIT_STATE_OPEN &&
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-      if (circ->timestamp_created + CIRCUIT_UNUSED_CIRC_TIMEOUT < now) {
+      if (circ->timestamp_created < cutoff) {
         log_debug(LD_CIRC,
                   "Closing circuit that has been unused for %d seconds.",
                   (int)(now - circ->timestamp_created));
