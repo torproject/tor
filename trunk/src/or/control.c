@@ -1257,6 +1257,7 @@ list_getinfo_options(void)
     "desc/id/* Server descriptor by hex ID\n"
     "desc/name/* Server descriptor by nickname.\n"
     "desc/all-recent Latest server descriptor for every router\n"
+    "dir/server/* Fetch server descriptors -- see dir-spec.txt\n"
     "entry-guards Which nodes will we use as entry guards?\n"
     "info/names List of GETINFO options, types, and documentation.\n"
     "network-status List of hex IDs, nicknames, server statuses.\n"
