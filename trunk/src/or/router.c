@@ -354,6 +354,10 @@ init_keys(void)
     log_err(LD_FS, "Error writing fingerprint line to file");
     return -1;
   }
+
+  log(LOG_NOTICE, LD_GENERAL,
+      "Your Tor server's identity key fingerprint is '%s %s'.",
+      options->Nickname, fingerprint);
   if (!authdir_mode(options))
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
