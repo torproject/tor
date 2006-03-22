@@ -1,3 +1,30 @@
+Changes in version 0.1.1.17-rc - 2006-03-xx
+  o Major fixes:
+    - Clients and servers since 0.1.1.10-alpha have been expiring
+      connections whenever they are idle for 5 minutes and they *do*
+      have circuits on them. Oops. With this new version, clients will
+      discard entry guards and avoid choosing entry guards running these
+      flawed versions.
+
+  o Little fixes:
+    - Resume building on irix64, netbsd 2.0, etc.
+    - Fix memory leak when uncompressing concatenated zlib streams.
+    - Make the v2 dir's "Fast" flag based on median capacity, just like
+      "Stable" is based on median uptime. Name everything in the top
+      7/8 Fast, and only the top 1/2 gets to be a Guard.
+
+  o Add lefkada.eecs.harvard.edu as a fourth authoritative directory
+    server.
+
+  o New config options rather than constants in the code:
+    - SocksTimeout: How long do we let a socks connection wait
+      unattached before we fail it?
+    - CircuitBuildTimeout: Cull non-open circuits that were born
+      at least this many seconds ago.
+    - CircuitIdleTimeout: Cull open clean circuits that were born
+      at least this many seconds ago.
+
+
 Changes in version 0.1.1.16-rc - 2006-03-18
   o Bugfixes on 0.1.1.15-rc:
     - Fix assert when the controller asks to attachstream a connect-wait
