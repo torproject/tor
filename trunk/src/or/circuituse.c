@@ -516,7 +516,7 @@ circuit_about_to_close_connection(connection_t *conn)
    */
   switch (conn->type) {
     case CONN_TYPE_OR: {
-      if (connection_state_is_open(conn)) {
+      if (!connection_state_is_open(conn)) {
         /* Inform any pending (not attached) circs that they should
          * give up. */
         circuit_n_conn_done(conn, 0);
