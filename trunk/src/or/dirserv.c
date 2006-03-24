@@ -720,9 +720,9 @@ dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
 {
   if (router->is_hibernating)
     return 0;
-  if (now >= router->last_reachable + 2*REACHABLE_TIMEOUT &&
+  if (now >= router->last_reachable + 4*REACHABLE_TIMEOUT &&
       router->testing_since &&
-      now >= router->testing_since + 2*REACHABLE_TIMEOUT)
+      now >= router->testing_since + 4*REACHABLE_TIMEOUT)
     return 1;
   return 0;
 }
