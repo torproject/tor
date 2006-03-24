@@ -742,8 +742,15 @@ get_uname(void)
           { VER_SUITE_TERMINAL,           " {terminal services}" },
           { 0, NULL },
         };
+        memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
-        GetVersionEx((LPOSVERSIONINFO)&info);
+        if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
+          int err = GetLastError();
+          strlcpy(uname_result, "Bizarre version of Windows where GetVersionEx"
+                  " doesn't work.", sizeof(uname_result));
+          uname_result_is_set = 1;
+          return uname_result;
+        }
         if (info.dwMajorVersion == 4 && info.dwMinorVersion == 0) {
           if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)
             plat = "Windows NT 4.0";
