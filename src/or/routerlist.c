@@ -1225,7 +1225,7 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
   // routerlist_assert_ok(rl);
 }
 
-/** Remove an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
+/** Remove an item <b>ri</b> from the routerlist <b>rl</b>, updating indices
  * as needed. If <b>idx</b> is nonnegative and smartlist_get(rl-&gt;routers,
  * idx) == ri, we don't need to do a linear search over the list to decide
  * which to remove.  We fill the gap in rl-&gt;routers with a later element in
@@ -1545,6 +1545,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
              old_router->num_unreachable_notifications;
         }
         if (authdir && !from_cache && !from_fetch &&
+            router_have_minimum_dir_info() &&
             dirserv_thinks_router_is_blatantly_unreachable(router,
                                                            time(NULL))) {
           if (router->num_unreachable_notifications >= 3) {
@@ -2853,6 +2854,7 @@ routers_update_all_from_networkstatus(void)
       }
     });
     if (n_recent > 2 && n_recommended < n_recent/2) {
+/* XXX Should this be n_recommended <= n_recent/2 ? -RD */
       if (consensus == VS_NEW || consensus == VS_NEW_IN_SERIES) {
         if (!have_warned_about_new_version) {
           char *rec = compute_recommended_versions(now, !is_server);
