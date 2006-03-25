@@ -51,10 +51,11 @@
    The option above has the directory servers doing all of the
    measurements. This doesn't scale. We can set it up so we have "deputy
    testers" -- trusted other nodes that do performance testing and report
-   their results. If we want to be really adventurous, we could even
+   their results.
+
+   If we want to be really adventurous, we could even
    accept claims from every Tor user and build a complex weighting /
    reputation system to decide which claims are "probably" right.
-
    One possible way to implement the latter is something similar to
    EigenTrust [http://www.stanford.edu/~sdkamvar/papers/eigentrust.pdf],
    where the opinion of nodes with high reputation more is weighted
