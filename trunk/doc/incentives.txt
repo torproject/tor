@@ -324,6 +324,20 @@
    Alice to have a low reputation, and the only high bandwidth circuit
    Alice could use would be via the evil node.
 
+3.14. If you run a fast server, can you run your client elsewhere?
+
+   A lot of people want to run a fast server at a colocation facility,
+   and then reap the rewards using their cablemodem or DSL Tor client.
+
+   If we use anonymous micropayments, where reputation can literally
+   be transferred, this is trivial.
+
+   If we pick a design where servers accrue reputation and can only
+   use it themselves, though, the clients can configure the servers as
+   their entry nodes and "inherit" their reputation. In this approach
+   we would let servers configure a set of IP addresses or keys that get
+   "like local" service.
+
 4. Sample designs.
 
 4.1. Two classes of service for circuits.
