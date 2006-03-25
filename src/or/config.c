@@ -1605,8 +1605,8 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
         uint32_t interface_ip;
 
         tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-        log_notice(LD_CONFIG, "Guessed local hostname '%s' resolves to an "
-          "internal IP address (%s).  Trying something else.", hostname,
+        log_notice(LD_CONFIG, "Guessed local hostname '%s' resolves to a "
+          "private IP address (%s).  Trying something else.", hostname,
           tmpbuf);
 
         if (get_interface_address(&interface_ip)) {
@@ -1616,7 +1616,7 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
           struct in_addr in2;
           in2.s_addr = htonl(interface_ip);
           tor_inet_ntoa(&in2,tmpbuf,sizeof(tmpbuf));
-          log_notice(LD_CONFIG, "Interface IP '%s' is an internal address "
+          log_notice(LD_CONFIG, "Interface IP '%s' is a private address "
                                 "too.  Ignoring.", tmpbuf);
         } else {
           in.s_addr = htonl(interface_ip);
