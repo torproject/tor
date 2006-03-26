@@ -318,7 +318,7 @@ static config_var_description_t state_description[] = {
   { NULL, NULL },
 };
 
-typedef int (*validate_fn_t)(void*,void*,int);
+typedef int (*validate_fn_t)(void*,void*,int,char**);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
@@ -353,16 +353,17 @@ static int option_is_same(config_format_t *fmt,
                           or_options_t *o1, or_options_t *o2,
                           const char *name);
 static or_options_t *options_dup(config_format_t *fmt, or_options_t *old);
-static int options_validate(or_options_t *old_options,
-                            or_options_t *options, int from_setconf);
-static int options_act_reversible(or_options_t *old_options);
+static int options_validate(or_options_t *old_options, or_options_t *options,
+                            int from_setconf, char **msg);
+static int options_act_reversible(or_options_t *old_options, char **msg);
 static int options_act(or_options_t *old_options);
-static int options_transition_allowed(or_options_t *old, or_options_t *new);
+static int options_transition_allowed(or_options_t *old, or_options_t *new,
+                                      char **msg);
 static int options_transition_affects_workers(or_options_t *old_options,
                                               or_options_t *new_options);
 static int options_transition_affects_descriptor(or_options_t *old_options,
                                                  or_options_t *new_options);
-static int check_nickname_list(const char *lst, const char *name);
+static int check_nickname_list(const char *lst, const char *name, char **msg);
 static void config_register_addressmaps(or_options_t *options);
 
 static int parse_dir_server_line(const char *line, int validate_only);
@@ -370,7 +371,7 @@ static int config_cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b);
 static int config_addr_policy_covers(addr_policy_t *a, addr_policy_t *b);
 static int config_addr_policy_intersects(addr_policy_t *a, addr_policy_t *b);
 static int parse_redirect_line(smartlist_t *result,
-                               config_line_t *line);
+                               config_line_t *line, char **msg);
 static int parse_log_severity_range(const char *range, int *min_out,
                                     int *max_out);
 static int convert_log_option(or_options_t *options,
@@ -386,13 +387,13 @@ static config_line_t *get_assigned_option(config_format_t *fmt,
                                      or_options_t *options, const char *key);
 static void config_init(config_format_t *fmt, void *options);
 static int or_state_validate(or_state_t *old_options, or_state_t *options,
-                             int from_setconf);
+                             int from_setconf, char **msg);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void print_cvs_version(void);
 static void parse_reachable_addresses(void);
-static int init_libevent(void);
+static void init_libevent(void);
 static int opt_streq(const char *s1, const char *s2);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 static void check_libevent_version(const char *m, const char *v, int server);
@@ -470,18 +471,19 @@ get_options(void)
  * as necessary.
  */
 int
-set_options(or_options_t *new_val)
+set_options(or_options_t *new_val, char **msg)
 {
   or_options_t *old_options = global_options;
   global_options = new_val;
   /* Note that we pass the *old* options below, for comparison. It
    * pulls the new options directly out of global_options. */
-  if (options_act_reversible(old_options)<0) {
+  if (options_act_reversible(old_options, msg)<0) {
+    tor_assert(*msg);
     global_options = old_options;
     return -1;
   }
   if (options_act(old_options) < 0) { /* acting on the options failed. die. */
-    log_err(LD_CONFIG,
+    log_err(LD_BUG,
             "Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
@@ -564,7 +566,7 @@ add_default_trusted_dirservers(void)
  * Return 0 if all goes well, return -1 if things went badly.
  */
 static int
-options_act_reversible(or_options_t *old_options)
+options_act_reversible(or_options_t *old_options, char **msg)
 {
   smartlist_t *new_listeners = smartlist_create();
   smartlist_t *replaced_listeners = smartlist_create();
@@ -584,45 +586,53 @@ options_act_reversible(or_options_t *old_options)
   if (options->User || options->Group) {
     if (switch_id(options->User, options->Group) != 0) {
       /* No need to roll back, since you can't change the value. */
+      *msg = tor_strdup("Problem with User or Group value. "
+                        "See logs for details.");
       goto done;
     }
   }
 
   /* Set up libevent. */
   if (running_tor && !libevent_initialized) {
-    if (init_libevent())
-      goto done;
+    init_libevent();
     libevent_initialized = 1;
   }
 
   /* Ensure data directory is private; create if possible. */
   if (check_private_dir(options->DataDirectory, CPD_CREATE)<0) {
-    log_err(LD_FS, "Couldn't access/create private data directory \"%s\"",
-            options->DataDirectory);
-    /* No need to roll back, since you can't change the value. */
+    char buf[1024];
+    int tmp = tor_snprintf(buf, sizeof(buf),
+              "Couldn't access/create private data directory \"%s\"",
+              options->DataDirectory);
+    *msg = tor_strdup(tmp >= 0 ? buf : "internal error");
     goto done;
+    /* No need to roll back, since you can't change the value. */
   }
 
   /* Bail out at this point if we're not going to be a client or server:
-   * we don't run  */
+   * we don't run Tor itself. */
   if (options->command != CMD_RUN_TOR)
     goto commit;
 
   options->_ConnLimit =
     set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
-  if (options->_ConnLimit < 0)
+  if (options->_ConnLimit < 0) {
+    *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
     goto rollback;
+  }
   set_conn_limit = 1;
 
   if (retry_all_listeners(0, replaced_listeners, new_listeners) < 0) {
-    log_err(LD_CONFIG, "Failed to bind one of the listener ports.");
+    *msg = tor_strdup("Failed to bind one of the listener ports.");
     goto rollback;
   }
 
   mark_logs_temp(); /* Close current logs once new logs are open. */
   logs_marked = 1;
-  if (options_init_logs(options, 0)<0) /* Configure the log(s) */
+  if (options_init_logs(options, 0)<0) { /* Configure the log(s) */
+    *msg = tor_strdup("Failed to init Log options. See logs for details.");
     goto rollback;
+  }
 
  commit:
   r = 0;
@@ -642,6 +652,7 @@ options_act_reversible(or_options_t *old_options)
 
  rollback:
   r = -1;
+  tor_assert(*msg);
 
   if (logs_marked) {
     rollback_log_changes();
@@ -671,7 +682,7 @@ options_act_reversible(or_options_t *old_options)
  *
  * Return 0 if all goes well, return -1 if it's time to die.
  *
- * Note 2: We haven't moved all the "act on new configuration" logic
+ * Note: We haven't moved all the "act on new configuration" logic
  * here yet.  Some is still in do_hup() and other places.
  */
 static int
@@ -727,8 +738,11 @@ options_act(or_options_t *old_options)
 
   {
     smartlist_t *sl = smartlist_create();
+    char *errmsg = NULL;
     for (cl = options->RedirectExit; cl; cl = cl->next) {
-      if (parse_redirect_line(sl, cl)<0)
+      if (parse_redirect_line(sl, cl, &errmsg)<0)
+        log_warn(LD_CONFIG, "%s", errmsg);
+        tor_free(errmsg);
         return -1;
     }
     set_exit_redirects(sl);
@@ -1427,9 +1441,13 @@ config_assign(config_format_t *fmt, void *options,
  * ok, then throw out the old one and stick with the new one. Else,
  * revert to old and return failure.  Return 0 on success, -1 on bad
  * keys, -2 on bad values, -3 on bad transition, and -4 on failed-to-set.
+ * 
+ * If not success, point *<b>msg</b> to a newly allocated string describing
+ * what went wrong.
  */
 int
-options_trial_assign(config_line_t *list, int use_defaults, int clear_first)
+options_trial_assign(config_line_t *list, int use_defaults,
+                     int clear_first, char **msg)
 {
   int r;
   or_options_t *trial_options = options_dup(&options_format, get_options());
@@ -1437,20 +1455,21 @@ options_trial_assign(config_line_t *list, int use_defaults, int clear_first)
   if ((r=config_assign(&options_format, trial_options,
                        list, use_defaults, clear_first)) < 0) {
     config_free(&options_format, trial_options);
+    *msg = tor_strdup("Failed to parse options. See logs for details.");
     return r;
   }
 
-  if (options_validate(get_options(), trial_options, 1) < 0) {
+  if (options_validate(get_options(), trial_options, 1, msg) < 0) {
     config_free(&options_format, trial_options);
     return -2;
   }
 
-  if (options_transition_allowed(get_options(), trial_options) < 0) {
+  if (options_transition_allowed(get_options(), trial_options, msg) < 0) {
     config_free(&options_format, trial_options);
     return -3;
   }
 
-  if (set_options(trial_options)<0) {
+  if (set_options(trial_options, msg)<0) {
     config_free(&options_format, trial_options);
     return -4;
   }
@@ -1665,17 +1684,16 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
 }
 
 /** Called when we don't have a nickname set.  Try to guess a good nickname
- * based on the hostname, and return it in a newly allocated string. */
+ * based on the hostname, and return it in a newly allocated string. If we
+ * can't, return NULL and let the caller warn if it wants to. */
 static char *
 get_default_nickname(void)
 {
   char localhostname[256];
   char *cp, *out, *outp;
 
-  if (gethostname(localhostname, sizeof(localhostname)) < 0) {
-    log_warn(LD_NET,"Error obtaining local hostname");
+  if (gethostname(localhostname, sizeof(localhostname)) < 0)
     return NULL;
-  }
 
   /* Put it in lowercase; stop at the first dot. */
   for (cp = localhostname; *cp; ++cp) {
@@ -1828,11 +1846,17 @@ config_dump(config_format_t *fmt, void *options, int minimal)
   char *result;
   int i;
   const char *desc;
+  char *msg = NULL;
 
   defaults = config_alloc(fmt);
   config_init(fmt, defaults);
-  fmt->validate_fn(NULL,defaults, 1);
-    /* XXX use a 1 here so we don't add a new log line while dumping */
+
+  /* XXX use a 1 here so we don't add a new log line while dumping */
+  if (fmt->validate_fn(NULL,defaults, 1, &msg) < 0) {
+    log_err(LD_BUG, "Failed to validate default config.");
+    tor_free(msg);
+    tor_assert(0);
+  }
 
   elements = smartlist_create();
   for (i=0; fmt->vars[i].name; ++i) {
@@ -1902,12 +1926,12 @@ options_dump(or_options_t *options, int minimal)
 
 /* Return 0 if every element of sl is a string holding a decimal
  * representation of a port number, or if sl is NULL.
- * Otherwise return -1. */
+ * Otherwise set *msg and return -1. */
 static int
-validate_ports_csv(smartlist_t *sl, const char *name)
+validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
 {
   int i;
-  int result = 0;
+  char buf[1024];
   tor_assert(name);
 
   if (!sl)
@@ -1917,11 +1941,13 @@ validate_ports_csv(smartlist_t *sl, const char *name)
   {
     i = atoi(cp);
     if (i < 1 || i > 65535) {
-      log(LOG_WARN, LD_CONFIG, "Port '%s' out of range in %s", cp, name);
-      result=-1;
+      int r = tor_snprintf(buf, sizeof(buf),
+                           "Port '%s' out of range in %s", cp, name);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
+      return -1;
     }
   });
-  return result;
+  return 0;
 }
 
 /** Helper: parse the Reachable(Dir|OR)?Addresses fields into
@@ -2035,9 +2061,11 @@ fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port)
 #define MAX_CACHE_STATUS_FETCH_PERIOD (15*60)
 
 /** Return 0 if every setting in <b>options</b> is reasonable, and a
- * permissible transition from <b>old_options</b>.  Else warn and return -1.
+ * permissible transition from <b>old_options</b>. Else return -1.
  * Should have no side effects, except for normalizing the contents of
  * <b>options</b>.
+ *
+ * On error, tor_strdup an error explanation into *<b>msg</b>.
  *
  * XXX
  * If <b>from_setconf</b>, we were called by the controller, and our
@@ -2046,16 +2074,19 @@ fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port)
  */
 static int
 options_validate(or_options_t *old_options, or_options_t *options,
-                 int from_setconf)
+                 int from_setconf, char **msg)
 {
-  int result = 0;
-  int i;
+  int i, r;
   config_line_t *cl;
   addr_policy_t *addr_policy=NULL;
   const char *uname;
+  char buf[1024];
 #define REJECT(arg) \
-  do { log(LOG_WARN, LD_CONFIG, arg); result = -1; } while (0)
+  do { *msg = tor_strdup(arg); return -1; } while (0)
 #define COMPLAIN(arg) do { log(LOG_WARN, LD_CONFIG, arg); } while (0)
+
+  tor_assert(msg);
+  *msg = NULL;
 
   if (options->ORPort < 0 || options->ORPort > 65535)
     REJECT("ORPort option out of bounds.");
@@ -2112,16 +2143,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->Nickname == NULL) {
     if (server_mode(options)) {
       if (!(options->Nickname = get_default_nickname()))
-        return -1;
+        REJECT("Error obtaining local hostname");
       log_notice(LD_CONFIG, "Choosing default nickname '%s'",
                  options->Nickname);
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {
-      log(LOG_WARN, LD_CONFIG,
+      r = tor_snprintf(buf, sizeof(buf),
           "Nickname '%s' is wrong length or contains illegal characters.",
           options->Nickname);
-      result = -1;
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
+      return -1;
     }
   }
 
@@ -2131,21 +2163,20 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "misconfigured or something else goes wrong.");
 
   if (normalize_log_options(options))
-    return -1;
+    REJECT("Failed to normalize old Log options. See logs for details.");
 
   /* Special case on first boot if no Log options are given. */
-  if (!options->Logs && !from_setconf) {
+  if (!options->Logs && !from_setconf)
     config_line_append(&options->Logs, "Log", "notice stdout");
-  }
 
   if (options_init_logs(options, 1)<0) /* Validate the log(s) */
-    return -1;
+    REJECT("Failed to validate Log options. See logs for details.");
 
   if (server_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
     if (resolve_my_address(options, &tmp, NULL) < 0)
-      result = -1;
+      REJECT("Failed to resolve/guess local address. See logs for details.");
   }
 
 #ifndef MS_WINDOWS
@@ -2217,10 +2248,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->ConnLimit <= 0) {
-    log(LOG_WARN, LD_CONFIG,
+    r = tor_snprintf(buf, sizeof(buf),
         "ConnLimit must be greater than 0, but was set to %d",
         options->ConnLimit);
-    result = -1;
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    return -1;
   }
 
   if (options->_AccountingMaxKB) {
@@ -2230,11 +2262,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->_AccountingMaxKB = 0;
   }
 
-  if (validate_ports_csv(options->FirewallPorts, "FirewallPorts") < 0)
-    result = -1;
+  if (validate_ports_csv(options->FirewallPorts, "FirewallPorts", msg) < 0)
+    return -1;
 
-  if (validate_ports_csv(options->LongLivedPorts, "LongLivedPorts") < 0)
-    result = -1;
+  if (validate_ports_csv(options->LongLivedPorts, "LongLivedPorts", msg) < 0)
+    return -1;
 
   if (options->FascistFirewall && !options->ReachableAddresses) {
     if (smartlist_len(options->FirewallPorts)) {
@@ -2332,9 +2364,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
         else if (!strcasecmp(cp, "rendezvous"))
           options->_AllowInvalid |= ALLOW_INVALID_RENDEZVOUS;
         else {
-          log(LOG_WARN, LD_CONFIG,
+          r = tor_snprintf(buf, sizeof(buf),
               "Unrecognized value '%s' in AllowInvalidNodes", cp);
-          result = -1;
+          *msg = tor_strdup(r >= 0 ? buf : "internal error");
+          return -1;
         }
       });
   }
@@ -2398,26 +2431,32 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("KeepalivePeriod option must be positive.");
 
   if (options->BandwidthRate > INT_MAX) {
-    log(LOG_WARN,LD_CONFIG,"BandwidthRate must be less than %d",INT_MAX);
-    result = -1;
+    r = tor_snprintf(buf, sizeof(buf),
+                     "BandwidthRate must be less than %d",INT_MAX);
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    return -1;
   }
   if (options->BandwidthBurst > INT_MAX) {
-    log(LOG_WARN,LD_CONFIG,"BandwidthBurst must be less than %d",INT_MAX);
-    result = -1;
+    r = tor_snprintf(buf, sizeof(buf),
+                     "BandwidthBurst must be less than %d",INT_MAX);
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    return -1;
   }
   if (server_mode(options) &&
       options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH*2) {
-    log(LOG_WARN,LD_CONFIG,"BandwidthRate is set to %d bytes/second. "
-        "For servers, it must be at least %d.",
-        (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH*2);
-    result = -1;
+    r = tor_snprintf(buf, sizeof(buf),
+                     "BandwidthRate is set to %d bytes/second. "
+                     "For servers, it must be at least %d.",
+                     (int)options->BandwidthRate,
+                     ROUTER_REQUIRED_MIN_BANDWIDTH*2);
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    return -1;
   }
   if (options->BandwidthRate > options->BandwidthBurst)
     REJECT("BandwidthBurst must be at least equal to BandwidthRate.");
 
-  if (accounting_parse_options(options, 1)<0) {
-    result = -1;
-  }
+  if (accounting_parse_options(options, 1)<0)
+    REJECT("Failed to parse accounting options. See logs for details.");
 
   if (options->HttpProxy) { /* parse it now */
     if (parse_addr_port(options->HttpProxy, NULL,
@@ -2457,21 +2496,21 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseEntryGuards && ! options->NumEntryGuards)
     REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
 
-  if (check_nickname_list(options->ExitNodes, "ExitNodes"))
-    result = -1;
-  if (check_nickname_list(options->EntryNodes, "EntryNodes"))
-    result = -1;
-  if (check_nickname_list(options->ExcludeNodes, "ExcludeNodes"))
-    result = -1;
-  if (check_nickname_list(options->RendNodes, "RendNodes"))
-    result = -1;
-  if (check_nickname_list(options->RendNodes, "RendExcludeNodes"))
-    result = -1;
-  if (check_nickname_list(options->MyFamily, "MyFamily"))
-    result = -1;
+  if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))
+    return -1;
+  if (check_nickname_list(options->EntryNodes, "EntryNodes", msg))
+    return -1;
+  if (check_nickname_list(options->ExcludeNodes, "ExcludeNodes", msg))
+    return -1;
+  if (check_nickname_list(options->RendNodes, "RendNodes", msg))
+    return -1;
+  if (check_nickname_list(options->RendNodes, "RendExcludeNodes", msg))
+    return -1;
+  if (check_nickname_list(options->MyFamily, "MyFamily", msg))
+    return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
-    if (check_nickname_list(cl->value, "NodeFamily"))
-      result = -1;
+    if (check_nickname_list(cl->value, "NodeFamily", msg))
+      return -1;
   }
 
   if (config_parse_exit_policy(options->ExitPolicy, &addr_policy,
@@ -2503,8 +2542,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   addr_policy_free(addr_policy);
 
   for (cl = options->RedirectExit; cl; cl = cl->next) {
-    if (parse_redirect_line(NULL, cl)<0)
-      result = -1;
+    if (parse_redirect_line(NULL, cl, msg)<0)
+      return -1;
   }
 
   if (options->DirServers) {
@@ -2518,14 +2557,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
                  "change in the future.  Be sure you know what you're doing.");
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 1)<0)
-        result = -1;
+        REJECT("DirServer line did not parse. See logs for details.");
     }
   }
 
   if (rend_config_services(options, 1) < 0)
-    result = -1;
+    REJECT("Failed to configure rendezvous options. See logs for details.");
 
-  return result;
+  return 0;
 #undef REJECT
 #undef COMPLAIN
 }
@@ -2545,45 +2584,46 @@ opt_streq(const char *s1, const char *s2)
 
 /** Check if any of the previous options have changed but aren't allowed to. */
 static int
-options_transition_allowed(or_options_t *old, or_options_t *new_val)
+options_transition_allowed(or_options_t *old, or_options_t *new_val,
+                           char **msg)
 {
   if (!old)
     return 0;
 
   if (!opt_streq(old->PidFile, new_val->PidFile)) {
-    log_warn(LD_CONFIG,"PidFile is not allowed to change. Failing.");
+    *msg = tor_strdup("PidFile is not allowed to change.");
     return -1;
   }
 
   if (old->RunAsDaemon != new_val->RunAsDaemon) {
-    log_warn(LD_CONFIG,
-             "While Tor is running, changing RunAsDaemon is not allowed."
-             " Failing.");
+    *msg = tor_strdup("While Tor is running, changing RunAsDaemon "
+                      "is not allowed.");
     return -1;
   }
 
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    log_warn(LD_CONFIG,"While Tor is running, changing DataDirectory "
-             "(\"%s\"->\"%s\") is not allowed. Failing.",
-             old->DataDirectory, new_val->DataDirectory);
+    char buf[1024];
+    int r = tor_snprintf(buf, sizeof(buf),
+               "While Tor is running, changing DataDirectory "
+               "(\"%s\"->\"%s\") is not allowed.",
+               old->DataDirectory, new_val->DataDirectory);
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
 
   if (!opt_streq(old->User, new_val->User)) {
-    log_warn(LD_CONFIG,"While Tor is running, changing User is not allowed. "
-             "Failing.");
+    *msg = tor_strdup("While Tor is running, changing User is not allowed.");
     return -1;
   }
 
   if (!opt_streq(old->Group, new_val->Group)) {
-    log_warn(LD_CONFIG,"While Tor is running, changing Group is not allowed. "
-             "Failing.");
+    *msg = tor_strdup("While Tor is running, changing Group is not allowed.");
     return -1;
   }
 
   if (old->HardwareAccel != new_val->HardwareAccel) {
-    log_warn(LD_CONFIG,"While Tor is running, changing HardwareAccel is not "
-             "allowed. Failing.");
+    *msg = tor_strdup("While Tor is running, changing HardwareAccel is "
+                      "not allowed.");
     return -1;
   }
 
@@ -2700,7 +2740,7 @@ get_default_conf_file(void)
  * nicknames, or NULL. Return 0 on success. Warn and return -1 on failure.
  */
 static int
-check_nickname_list(const char *lst, const char *name)
+check_nickname_list(const char *lst, const char *name, char **msg)
 {
   int r = 0;
   smartlist_t *sl;
@@ -2712,8 +2752,12 @@ check_nickname_list(const char *lst, const char *name)
   SMARTLIST_FOREACH(sl, const char *, s,
     {
       if (!is_legal_nickname_or_hexdigest(s)) {
-        log_warn(LD_CONFIG, "Invalid nickname '%s' in %s line", s, name);
+        char buf[1024];
+        int tmp = tor_snprintf(buf, sizeof(buf),
+                  "Invalid nickname '%s' in %s line", s, name);
+        *msg = tor_strdup(tmp >= 0 ? buf : "internal error");
         r = -1;
+        break;
       }
     });
   SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
@@ -2730,7 +2774,7 @@ options_init_from_torrc(int argc, char **argv)
 {
   or_options_t *oldoptions, *newoptions;
   config_line_t *cl;
-  char *cf=NULL, *fname=NULL;
+  char *cf=NULL, *fname=NULL, *errmsg=NULL;
   int i, retval;
   int using_default_torrc;
   static char **backup_argv;
@@ -2844,19 +2888,24 @@ options_init_from_torrc(int argc, char **argv)
     goto err;
 
   /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, 0) < 0)
+  if (options_validate(oldoptions, newoptions, 0, &errmsg) < 0)
     goto err;
 
-  if (options_transition_allowed(oldoptions, newoptions) < 0)
+  if (options_transition_allowed(oldoptions, newoptions, &errmsg) < 0)
     goto err;
 
-  if (set_options(newoptions))
+  if (set_options(newoptions, &errmsg))
     goto err; /* frees and replaces old options */
+
   return 0;
  err:
   tor_free(fname);
   torrc_fname = NULL;
   config_free(&options_format, newoptions);
+  if (errmsg) {
+    log(LOG_WARN,LD_CONFIG,"%s",errmsg);
+    tor_free(errmsg);
+  }
   return -1;
 }
 
@@ -3509,9 +3558,9 @@ addr_policy_free(addr_policy_t *p)
 /** Parse a single RedirectExit line's contents from <b>line</b>.  If
  *  they are valid, and <b>result</b> is not NULL, add an element to
  *  <b>result</b> and return 0. Else if they are valid, return 0.
- *  Else return -1. */
+ *  Else set *msg and return -1. */
 static int
-parse_redirect_line(smartlist_t *result, config_line_t *line)
+parse_redirect_line(smartlist_t *result, config_line_t *line, char **msg)
 {
   smartlist_t *elements = NULL;
   exit_redirect_t *r;
@@ -3523,12 +3572,12 @@ parse_redirect_line(smartlist_t *result, config_line_t *line)
   smartlist_split_string(elements, line->value, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(elements) != 2) {
-    log_warn(LD_CONFIG, "Wrong number of elements in RedirectExit line");
+    *msg = tor_strdup("Wrong number of elements in RedirectExit line");
     goto err;
   }
   if (parse_addr_and_port_range(smartlist_get(elements,0),&r->addr,&r->mask,
                                 &r->port_min,&r->port_max)) {
-    log_warn(LD_CONFIG, "Error parsing source address in RedirectExit line");
+    *msg = tor_strdup("Error parsing source address in RedirectExit line");
     goto err;
   }
   if (0==strcasecmp(smartlist_get(elements,1), "pass")) {
@@ -3536,7 +3585,7 @@ parse_redirect_line(smartlist_t *result, config_line_t *line)
   } else {
     if (parse_addr_port(smartlist_get(elements,1),NULL,&r->addr_dest,
                              &r->port_dest)) {
-      log_warn(LD_CONFIG, "Error parsing dest address in RedirectExit line");
+      *msg = tor_strdup("Error parsing dest address in RedirectExit line");
       goto err;
     }
     r->is_redirect = 1;
@@ -3555,6 +3604,7 @@ parse_redirect_line(smartlist_t *result, config_line_t *line)
       tor_free(r);
     return 0;
   } else {
+    tor_assert(*msg);
     return -1;
   }
 }
@@ -3911,7 +3961,7 @@ config_parse_interval(const char *s, int *ok)
 /**
  * Initialize the libevent library.
  */
-static int
+static void
 init_libevent(void)
 {
   configure_libevent_logging();
@@ -3939,8 +3989,6 @@ init_libevent(void)
       "You have a very old version of libevent.  It is likely to be buggy; "
       "please consider building Tor with a more recent version.");
 #endif
-
-  return 0;
 }
 
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
@@ -4018,12 +4066,10 @@ get_or_state_fname(void)
  */
 /* XXX from_setconf is here because of bug 238 */
 static int
-or_state_validate(or_state_t *old_state, or_state_t *state, int from_setconf)
+or_state_validate(or_state_t *old_state, or_state_t *state,
+                  int from_setconf, char **msg)
 {
-  const char *err;
-
-  if (entry_guards_parse_state(state, 0, &err)<0) {
-    log_warn(LD_GENERAL, "Unable to parse entry nodes: %s", err);
+  if (entry_guards_parse_state(state, 0, msg)<0) {
     return -1;
   }
   if (state->TorVersion) {
@@ -4049,15 +4095,19 @@ or_state_validate(or_state_t *old_state, or_state_t *state, int from_setconf)
 static void
 or_state_set(or_state_t *new_state)
 {
-  const char *err;
+  char *err = NULL;
   tor_assert(new_state);
   if (global_state)
     config_free(&state_format, global_state);
   global_state = new_state;
-  if (entry_guards_parse_state(global_state, 1, &err)<0)
-    log_warn(LD_GENERAL,"Unparseable guard nodes state: %s",err);
-  if (rep_hist_load_state(global_state, &err)<0)
+  if (entry_guards_parse_state(global_state, 1, &err)<0) {
+    log_warn(LD_GENERAL,"%s",err);
+    tor_free(err);
+  }
+  if (rep_hist_load_state(global_state, &err)<0) {
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
+    tor_free(err);
+  }
 }
 
 /** Reload the persistent state from disk, generating a new state as needed.
@@ -4068,6 +4118,7 @@ or_state_load(void)
 {
   or_state_t *new_state = NULL;
   char *contents = NULL, *fname;
+  char *errmsg = NULL;
   int r = -1;
 
   fname = get_or_state_fname();
@@ -4098,8 +4149,11 @@ or_state_load(void)
       goto done;
   }
 
-  if (or_state_validate(NULL, new_state, 1) < 0)
+  if (or_state_validate(NULL, new_state, 1, &errmsg) < 0) {
+    log_warn(LD_GENERAL, "%s", errmsg);
+    tor_free(errmsg);
     goto done;
+  }
 
   if (contents)
     log_info(LD_GENERAL, "Loaded state from \"%s\"", fname);

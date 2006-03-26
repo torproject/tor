@@ -1614,12 +1614,17 @@ int
 main(int c, char**v)
 {
   or_options_t *options = options_new();
+  char *errmsg = NULL;
   options->command = CMD_RUN_UNITTESTS;
   network_init();
   setup_directory();
   options_init(options);
   options->DataDirectory = tor_strdup(temp_dir);
-  set_options(options);
+  if (set_options(options, &errmsg) < 0) {
+    printf("Failed to set initial options: %s\n", errmsg);
+    tor_free(errmsg);
+    return 1;
+  }
 
   crypto_seed_rng();
 

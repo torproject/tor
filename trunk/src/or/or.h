@@ -1527,7 +1527,7 @@ int entry_guard_set_status(const char *digest, int succeeded);
 void entry_nodes_should_be_added(void);
 void entry_guards_prepend_from_config(void);
 void entry_guards_update_state(or_state_t *state);
-int entry_guards_parse_state(or_state_t *state, int set, const char **err);
+int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 int entry_guards_getinfo(const char *question, char **answer);
 void entry_guards_free_all(void);
 
@@ -1607,7 +1607,7 @@ extern uint64_t stats_n_destroy_cells_processed;
 /********************************* config.c ***************************/
 
 or_options_t *get_options(void);
-int set_options(or_options_t *new_val);
+int set_options(or_options_t *new_val, char **msg);
 void config_free_all(void);
 const char *safe_str(const char *address);
 const char *escaped_safe_str(const char *address);
@@ -1615,7 +1615,7 @@ const char *escaped_safe_str(const char *address);
 int config_get_lines(char *string, config_line_t **result);
 void config_free_lines(config_line_t *front);
 int options_trial_assign(config_line_t *list, int use_defaults,
-                         int clear_first);
+                         int clear_first, char **msg);
 int resolve_my_address(or_options_t *options, uint32_t *addr,
                        char **hostname_out);
 void options_init(or_options_t *options);
@@ -2097,7 +2097,7 @@ int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
                                     int *need_capacity);
 
 void rep_hist_update_state(or_state_t *state);
-int rep_hist_load_state(or_state_t *state, const char **err);
+int rep_hist_load_state(or_state_t *state, char **err);
 
 void rep_hist_free_all(void);
 
