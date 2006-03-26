@@ -694,7 +694,7 @@ rep_hist_update_state(or_state_t *state)
 /** Set bandwidth history from our saved state.
  */
 int
-rep_hist_load_state(or_state_t *state, const char **err)
+rep_hist_load_state(or_state_t *state, char **err)
 {
   time_t s_begins, start;
   time_t now = time(NULL);
@@ -742,8 +742,7 @@ rep_hist_load_state(or_state_t *state, const char **err)
   }
 
   if (!all_ok) {
-    if (err)
-      *err = "Parsing of bandwidth history values failed";
+    *err = tor_strdup("Parsing of bandwidth history values failed");
     /* and create fresh arrays */
     tor_free(read_array);
     tor_free(write_array);

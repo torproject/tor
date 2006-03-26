@@ -663,6 +663,7 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
   int r;
   config_line_t *lines=NULL;
   char *start = body;
+  char *errstring = NULL;
   int v0 = STATE_IS_V0(conn->state);
 
   if (!v0) {
@@ -717,11 +718,13 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
     }
   }
 
-  if ((r=options_trial_assign(lines, use_defaults, clear_first)) < 0) {
+  if ((r=options_trial_assign(lines, use_defaults,
+                              clear_first, &errstring)) < 0) {
     int v0_err;
     const char *msg;
     log_warn(LD_CONTROL,
-             "Controller gave us config lines that didn't validate.");
+             "Controller gave us config lines that didn't validate: %s.",
+             errstring);
     switch (r) {
       case -1:
         v0_err = ERR_UNRECOGNIZED_CONFIG_KEY;
@@ -744,9 +747,10 @@ control_setconf_helper(connection_t *conn, uint32_t len, char *body,
     if (v0) {
       send_control0_error(conn, v0_err, msg);
     } else {
-      connection_printf_to_buf(conn, "%s\r\n", msg);
+      connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
     }
     config_free_lines(lines);
+    tor_free(errstring);
     return 0;
   }
   config_free_lines(lines);

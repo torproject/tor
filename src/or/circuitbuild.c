@@ -2184,17 +2184,17 @@ choose_random_entry(cpath_build_state_t *state)
 /** Parse <b>state</b> and learn about the entry guards it describes.
  * If <b>set</b> is true, and there are no errors, replace the global
  * entry_list with what we find.
- * On success, return 0. On failure, set *<b>err</b> to a string
+ * On success, return 0. On failure, alloc into *<b>msg</b> a string
  * describing the error, and return -1.
  */
 int
-entry_guards_parse_state(or_state_t *state, int set, const char **err)
+entry_guards_parse_state(or_state_t *state, int set, char **msg)
 {
   entry_guard_t *node = NULL;
   smartlist_t *new_entry_guards = smartlist_create();
   config_line_t *line;
 
-  *err = NULL;
+  *msg = NULL;
   for (line = state->EntryGuards; line; line = line->next) {
     if (!strcasecmp(line->key, "EntryGuard")) {
       smartlist_t *args = smartlist_create();
@@ -2205,28 +2205,33 @@ entry_guards_parse_state(or_state_t *state, int set, const char **err)
       smartlist_split_string(args, line->value, " ",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
       if (smartlist_len(args)<2) {
-        *err = "Too few arguments to EntryGuard";
+        *msg = tor_strdup("Unable to parse entry nodes: "
+                          "Too few arguments to EntryGuard");
       } else if (!is_legal_nickname(smartlist_get(args,0))) {
-        *err = "Bad nickname for EntryGuard";
+        *msg = tor_strdup("Unable to parse entry nodes: "
+                          "Bad nickname for EntryGuard");
       } else {
         strlcpy(node->nickname, smartlist_get(args,0), MAX_NICKNAME_LEN+1);
         if (base16_decode(node->identity, DIGEST_LEN, smartlist_get(args,1),
                           strlen(smartlist_get(args,1)))<0) {
-          *err = "Bad hex digest for EntryGuard";
+          *msg = tor_strdup("Unable to parse entry nodes: "
+                            "Bad hex digest for EntryGuard");
         }
       }
       SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
       smartlist_free(args);
-      if (*err)
+      if (*msg)
         break;
     } else {
       time_t when;
       if (!node) {
-        *err = "EntryGuardDownSince/UnlistedSince without EntryGuard";
+        *msg = tor_strdup("Unable to parse entry nodes: "
+               "EntryGuardDownSince/UnlistedSince without EntryGuard");
         break;
       }
       if (parse_iso_time(line->value, &when)<0) {
-        *err = "Bad time in EntryGuardDownSince/UnlistedSince";
+        *msg = tor_strdup("Unable to parse entry nodes: "
+                          "Bad time in EntryGuardDownSince/UnlistedSince");
         break;
       }
       if (!strcasecmp(line->key, "EntryGuardDownSince"))
@@ -2236,7 +2241,7 @@ entry_guards_parse_state(or_state_t *state, int set, const char **err)
     }
   }
 
-  if (*err || !set) {
+  if (*msg || !set) {
     SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e, tor_free(e));
     smartlist_free(new_entry_guards);
   } else { /* !*err && set */
@@ -2247,7 +2252,7 @@ entry_guards_parse_state(or_state_t *state, int set, const char **err)
     entry_guards = new_entry_guards;
     entry_guards_dirty = 0;
   }
-  return *err ? -1 : 0;
+  return *msg ? -1 : 0;
 }
 
 /** Our list of entry guards has changed, or some element of one
