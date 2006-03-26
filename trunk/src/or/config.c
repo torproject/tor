@@ -1037,9 +1037,10 @@ config_find_option(config_format_t *fmt, const char *key)
  */
 static int
 config_assign_value(config_format_t *fmt, or_options_t *options,
-                    config_line_t *c)
+                    config_line_t *c, char **msg)
 {
-  int i, ok;
+  int i, r, ok;
+  char buf[1024];
   config_var_t *var;
   void *lvalue;
 
@@ -1055,9 +1056,10 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_UINT:
     i = tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
     if (!ok) {
-      log(LOG_WARN, LD_CONFIG,
+      r = tor_snprintf(buf, sizeof(buf),
           "Int keyword '%s %s' is malformed or out of bounds.",
           c->key, c->value);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     *(int *)lvalue = i;
@@ -1066,6 +1068,10 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_INTERVAL: {
     i = config_parse_interval(c->value, &ok);
     if (!ok) {
+      r = tor_snprintf(buf, sizeof(buf),
+          "Interval '%s %s' is malformed or out of bounds.",
+          c->key, c->value);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     *(int *)lvalue = i;
@@ -1075,6 +1081,10 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_MEMUNIT: {
     uint64_t u64 = config_parse_memunit(c->value, &ok);
     if (!ok) {
+      r = tor_snprintf(buf, sizeof(buf),
+          "Value '%s %s' is malformed or out of bounds.",
+          c->key, c->value);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     *(uint64_t *)lvalue = u64;
@@ -1084,7 +1094,10 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_BOOL:
     i = tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
-      log(LOG_WARN, LD_CONFIG, "Boolean keyword '%s' expects 0 or 1.", c->key);
+      r = tor_snprintf(buf, sizeof(buf),
+          "Boolean '%s %s' expects 0 or 1.",
+          c->key, c->value);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     *(int *)lvalue = i;
@@ -1101,8 +1114,9 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
 
   case CONFIG_TYPE_ISOTIME:
     if (parse_iso_time(c->value, (time_t *)lvalue)) {
-      log(LOG_WARN, LD_CONFIG,
+      r = tor_snprintf(buf, sizeof(buf),
           "Invalid time '%s' for keyword '%s'", c->value, c->key);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     break;
@@ -1128,7 +1142,9 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     log_warn(LD_CONFIG, "Skipping obsolete configuration option '%s'", c->key);
     break;
   case CONFIG_TYPE_LINELIST_V:
-    log_warn(LD_CONFIG, "Can't provide value for virtual option '%s'", c->key);
+    r = tor_snprintf(buf, sizeof(buf),
+        "You may not provide a value for virtual option '%s'", c->key);
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   default:
     tor_assert(0);
@@ -1148,7 +1164,8 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
  */
 static int
 config_assign_line(config_format_t *fmt, or_options_t *options,
-                   config_line_t *c, int use_defaults, int clear_first)
+                   config_line_t *c, int use_defaults,
+                   int clear_first, char **msg)
 {
   config_var_t *var;
 
@@ -1163,7 +1180,10 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
       config_line_append((config_line_t**)lvalue, c->key, c->value);
       return 0;
     } else {
-      log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", c->key);
+      char buf[1024];
+      int tmp = tor_snprintf(buf, sizeof(buf),
+                "Unknown option '%s'.  Failing.", c->key);
+      *msg = tor_strdup(tmp >= 0 ? buf : "internal error");
       return -1;
     }
   }
@@ -1189,7 +1209,7 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
     return 0;
   }
 
-  if (config_assign_value(fmt, options, c) < 0)
+  if (config_assign_value(fmt, options, c, msg) < 0)
     return -2;
   return 0;
 }
@@ -1348,7 +1368,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
 
 /** Iterate through the linked list of requested options <b>list</b>.
  * For each item, convert as appropriate and assign to <b>options</b>.
- * If an item is unrecognized, return -1 immediately,
+ * If an item is unrecognized, set *msg and return -1 immediately,
  * else return 0 for success.
  *
  * If <b>clear_first</b>, interpret config options as replacing (not
@@ -1403,8 +1423,8 @@ options_trial_assign() calls config_assign(1, 1)
     returns.
 */
 static int
-config_assign(config_format_t *fmt, void *options,
-              config_line_t *list, int use_defaults, int clear_first)
+config_assign(config_format_t *fmt, void *options, config_line_t *list,
+              int use_defaults, int clear_first, char **msg)
 {
   config_line_t *p;
 
@@ -1429,7 +1449,8 @@ config_assign(config_format_t *fmt, void *options,
   /* pass 3: assign. */
   while (list) {
     int r;
-    if ((r=config_assign_line(fmt, options, list, use_defaults, clear_first)))
+    if ((r=config_assign_line(fmt, options, list, use_defaults,
+                              clear_first, msg)))
       return r;
     list = list->next;
   }
@@ -1453,9 +1474,8 @@ options_trial_assign(config_line_t *list, int use_defaults,
   or_options_t *trial_options = options_dup(&options_format, get_options());
 
   if ((r=config_assign(&options_format, trial_options,
-                       list, use_defaults, clear_first)) < 0) {
+                       list, use_defaults, clear_first, msg)) < 0) {
     config_free(&options_format, trial_options);
-    *msg = tor_strdup("Failed to parse options. See logs for details.");
     return r;
   }
 
@@ -1530,6 +1550,7 @@ option_reset(config_format_t *fmt, or_options_t *options,
 {
   config_line_t *c;
   void *lvalue;
+  char *msg = NULL;
   CHECK(fmt, options);
   option_clear(fmt, options, var); /* clear it first */
   if (!use_defaults)
@@ -1539,7 +1560,10 @@ option_reset(config_format_t *fmt, or_options_t *options,
     c = tor_malloc_zero(sizeof(config_line_t));
     c->key = tor_strdup(var->name);
     c->value = tor_strdup(var->initvalue);
-    config_assign_value(fmt, options, c);
+    if (config_assign_value(fmt, options, c, &msg) < 0) {
+      log_warn(LD_BUG, "Failed to assign default: %s", msg);
+      tor_free(msg); /* if this happens it's a bug */
+    }
     config_free_lines(c);
   }
 }
@@ -1792,9 +1816,11 @@ options_dup(config_format_t *fmt, or_options_t *old)
       continue;
     line = get_assigned_option(fmt, old, fmt->vars[i].name);
     if (line) {
-      if (config_assign(fmt, newopts, line, 0, 0) < 0) {
+      char *msg = NULL;
+      if (config_assign(fmt, newopts, line, 0, 0, &msg) < 0) {
         log_err(LD_BUG, "Bug: config_get_assigned_option() generated "
-                "something we couldn't config_assign().");
+                "something we couldn't config_assign(): %s", msg);
+        tor_free(msg);
         tor_assert(0);
       }
     }
@@ -2873,7 +2899,7 @@ options_init_from_torrc(int argc, char **argv)
     tor_free(cf);
     if (retval < 0)
       goto err;
-    retval = config_assign(&options_format, newoptions, cl, 0, 0);
+    retval = config_assign(&options_format, newoptions, cl, 0, 0, &errmsg);
     config_free_lines(cl);
     if (retval < 0)
       goto err;
@@ -2882,7 +2908,7 @@ options_init_from_torrc(int argc, char **argv)
   /* Go through command-line variables too */
   if (config_get_commandlines(argc, argv, &cl) < 0)
     goto err;
-  retval = config_assign(&options_format, newoptions, cl, 0, 0);
+  retval = config_assign(&options_format, newoptions, cl, 0, 0, &errmsg);
   config_free_lines(cl);
   if (retval < 0)
     goto err;
@@ -2903,7 +2929,7 @@ options_init_from_torrc(int argc, char **argv)
   torrc_fname = NULL;
   config_free(&options_format, newoptions);
   if (errmsg) {
-    log(LOG_WARN,LD_CONFIG,"%s",errmsg);
+    log(LOG_WARN,LD_CONFIG,"Failed to parse/validate config: %s", errmsg);
     tor_free(errmsg);
   }
   return -1;
@@ -4143,15 +4169,14 @@ or_state_load(void)
     int assign_retval;
     if (config_get_lines(contents, &lines)<0)
       goto done;
-    assign_retval = config_assign(&state_format, new_state, lines, 0, 0);
+    assign_retval = config_assign(&state_format, new_state,
+                                  lines, 0, 0, &errmsg);
     config_free_lines(lines);
     if (assign_retval<0)
       goto done;
   }
 
   if (or_state_validate(NULL, new_state, 1, &errmsg) < 0) {
-    log_warn(LD_GENERAL, "%s", errmsg);
-    tor_free(errmsg);
     goto done;
   }
 
@@ -4168,6 +4193,10 @@ or_state_load(void)
 
   r = 0;
  done:
+  if (errmsg) {
+    log_warn(LD_GENERAL, "%s", errmsg);
+    tor_free(errmsg);
+  }
   tor_free(fname);
   tor_free(contents);
   if (new_state)
