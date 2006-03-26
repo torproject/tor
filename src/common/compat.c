@@ -513,7 +513,7 @@ switch_id(char *user, char *group)
   if (user) {
     pw = getpwnam(user);
     if (pw == NULL) {
-      log_err(LD_CONFIG,"User '%s' not found.", user);
+      log_warn(LD_CONFIG,"User '%s' not found.", user);
       return -1;
     }
   }
@@ -522,17 +522,17 @@ switch_id(char *user, char *group)
   if (group) {
     gr = getgrnam(group);
     if (gr == NULL) {
-      log_err(LD_CONFIG,"Group '%s' not found.", group);
+      log_warn(LD_CONFIG,"Group '%s' not found.", group);
       return -1;
     }
 
     if (setgid(gr->gr_gid) != 0) {
-      log_err(LD_GENERAL,"Error setting GID: %s", strerror(errno));
+      log_warn(LD_GENERAL,"Error setting GID: %s", strerror(errno));
       return -1;
     }
   } else if (user) {
     if (setgid(pw->pw_gid) != 0) {
-      log_err(LD_GENERAL,"Error setting GID: %s", strerror(errno));
+      log_warn(LD_GENERAL,"Error setting GID: %s", strerror(errno));
       return -1;
     }
   }
@@ -541,7 +541,7 @@ switch_id(char *user, char *group)
      privileges */
   if (user) {
     if (setuid(pw->pw_uid) != 0) {
-      log_err(LD_GENERAL,"Error setting UID: %s", strerror(errno));
+      log_warn(LD_GENERAL,"Error setting UID: %s", strerror(errno));
       return -1;
     }
   }
@@ -549,8 +549,8 @@ switch_id(char *user, char *group)
   return 0;
 #endif
 
-  log_err(LD_CONFIG,
-          "User or group specified, but switching users is not supported.");
+  log_warn(LD_CONFIG,
+           "User or group specified, but switching users is not supported.");
   return -1;
 }
 
