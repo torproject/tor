@@ -5,16 +5,36 @@ Changes in version 0.1.1.17-rc - 2006-03-xx
       have circuits on them. Oops. With this new version, clients will
       discard entry guards and avoid choosing entry guards running these
       flawed versions.
+    - Fix memory leak when uncompressing concatenated zlib streams. This
+      was causing substantial leaks over time on Tor servers.
+    - The v1 directory was including servers as much as 48 hours old,
+      because that's how the new routerlist->routers works. Now only
+      include them if they're 20 hours old or less.
 
-  o Little fixes:
+  o Minor fixes:
     - Resume building on irix64, netbsd 2.0, etc.
-    - Fix memory leak when uncompressing concatenated zlib streams.
+     - On non-gcc compilers (e.g. solaris), use "-g -O" instead of
+       "-Wall -g -O2".
+    - Stop writing the "router.desc" file, ever. Nothing uses it anymore,
+      and it is confusing some users.
+    - Stop caching the v1 directory so often.
+    - Change our win32 uname() hack to be more forgiving about what
+      win32 versions it thinks it's found.
+
+  o New features:
+    - Add lefkada.eecs.harvard.edu as a fourth authoritative directory
+      server.
+    - When the controller's *setconf commands fail, collect an error
+      message in a string and hand it back to the controller.
     - Make the v2 dir's "Fast" flag based on median capacity, just like
       "Stable" is based on median uptime. Name everything in the top
       7/8 Fast, and only the top 1/2 gets to be a Guard.
-
-  o Add lefkada.eecs.harvard.edu as a fourth authoritative directory
-    server.
+    - Log server fingerprint on startup, so new server operators don't
+      have to go hunting around their filesystem for it.
+    - Return a robots.txt on our dirport to discourage google indexing.
+    - Let the controller ask for GETINFO dir/status/foo so it can ask
+      directly rather than connecting to the dir port. Only works when
+      dirport is set for now.
 
   o New config options rather than constants in the code:
     - SocksTimeout: How long do we let a socks connection wait
