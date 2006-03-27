@@ -1481,6 +1481,26 @@ handle_getinfo_helper(const char *question, char **answer)
     *cp = '\0';
     tor_free(url);
     smartlist_free(descs);
+  } else if (!strcmpstart(question, "dir/status/")) {
+    smartlist_t *status_list;
+    size_t len;
+    char *cp;
+    if (!get_options()->DirPort)
+      return 0;
+    status_list = smartlist_create();
+    if (!dirserv_get_networkstatus_v2(status_list,
+                                      question+strlen("dir/status/"))) {
+      smartlist_free(status_list);
+      return 0;
+    }
+    len = 0;
+    SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
+    cp = *answer = tor_malloc(len+1);
+    SMARTLIST_FOREACH(status_list, cached_dir_t *, d, {
+      memcpy(cp, d->dir, d->dir_len);
+      cp += d->dir_len;
+      });
+    *cp = '\0';
   }
   return 0;
 }
