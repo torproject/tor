@@ -595,7 +595,11 @@ AC_DEFINE([LOCALSTATEDIR], [], [Default location to store state files.])
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
-CFLAGS="$CFLAGS -Wall -g -O2"
+if test $ac_cv_c_compiler_gnu = yes; then
+  CFLAGS="$CFLAGS -Wall -g -O2"
+else
+  CFLAGS="$CFLAGS -g -O"
+fi
 # Add some more warnings which we use in the cvs version but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
 #CFLAGS="$CFLAGS -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline"
