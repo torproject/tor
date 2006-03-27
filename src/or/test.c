@@ -1453,11 +1453,11 @@ test_exit_policies(void)
 
 //  test_assert(exit_policy_implicitly_allows_local_networks(policy, 0));
   test_assert(ADDR_POLICY_ACCEPTED ==
-          router_compare_addr_to_addr_policy(0x01020304u, 2, policy));
+          compare_addr_to_addr_policy(0x01020304u, 2, policy));
   test_assert(ADDR_POLICY_PROBABLY_ACCEPTED ==
-          router_compare_addr_to_addr_policy(0, 2, policy));
+          compare_addr_to_addr_policy(0, 2, policy));
   test_assert(ADDR_POLICY_REJECTED ==
-          router_compare_addr_to_addr_policy(0xc0a80102, 2, policy));
+          compare_addr_to_addr_policy(0xc0a80102, 2, policy));
 
   addr_policy_free(policy);
 

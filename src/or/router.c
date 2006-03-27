@@ -722,7 +722,7 @@ router_compare_to_my_exit_policy(connection_t *conn)
   if (!conn->addr)
     return -1;
 
-  return router_compare_addr_to_addr_policy(conn->addr, conn->port,
+  return compare_addr_to_addr_policy(conn->addr, conn->port,
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 }
 
@@ -835,8 +835,8 @@ router_rebuild_descriptor(int force)
   if (options->BandwidthRate > options->MaxAdvertisedBandwidth)
     ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
 
-  config_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
-                           options->ExitPolicyRejectPrivate);
+  policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
+                             options->ExitPolicyRejectPrivate);
 
   if (desc_routerinfo) { /* inherit values */
     ri->is_valid = desc_routerinfo->is_valid;

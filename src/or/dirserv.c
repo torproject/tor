@@ -41,7 +41,6 @@ static char *format_versions_list(config_line_t *ln);
 /* Should be static; exposed for testing */
 int add_fingerprint_to_dir(const char *nickname, const char *fp,
                            smartlist_t *list);
-static int router_is_general_exit(routerinfo_t *ri);
 static router_status_t dirserv_router_get_status(const routerinfo_t *router,
                                                  const char **msg);
 static router_status_t
@@ -54,40 +53,6 @@ static int dirserv_thinks_router_is_reachable(routerinfo_t *router,
                                               time_t now);
 
 /************** Fingerprint handling code ************/
-
-static addr_policy_t *authdir_reject_policy = NULL;
-static addr_policy_t *authdir_invalid_policy = NULL;
-
-/** Parse authdir policy strings from the configuration.
- */
-void
-parse_authdir_policy(void)
-{
-  addr_policy_t *n;
-  if (authdir_reject_policy) {
-    addr_policy_free(authdir_reject_policy);
-    authdir_reject_policy = NULL;
-  }
-  config_parse_addr_policy(get_options()->AuthDirReject,
-                           &authdir_reject_policy, ADDR_POLICY_REJECT);
-  /* ports aren't used. */
-  for (n=authdir_reject_policy; n; n = n->next) {
-    n->prt_min = 1;
-    n->prt_max = 65535;
-  }
-
-  if (authdir_invalid_policy) {
-    addr_policy_free(authdir_invalid_policy);
-    authdir_invalid_policy = NULL;
-  }
-  config_parse_addr_policy(get_options()->AuthDirInvalid,
-                           &authdir_invalid_policy, ADDR_POLICY_REJECT);
-  /* ports aren't used. */
-  for (n=authdir_invalid_policy; n; n = n->next) {
-    n->prt_min = 1;
-    n->prt_max = 65535;
-  }
-}
 
 /** A member of fingerprint_list: maps a name to a fingerprint.
  **/
@@ -320,12 +285,7 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
   }
 
   if (!nn_ent) { /* No such server known with that nickname */
-    addr_policy_result_t rej = router_compare_addr_to_addr_policy(
-                       addr, or_port, authdir_reject_policy);
-    addr_policy_result_t inv = router_compare_addr_to_addr_policy(
-                       addr, or_port, authdir_invalid_policy);
-
-    if (rej == ADDR_POLICY_PROBABLY_REJECTED || rej == ADDR_POLICY_REJECTED) {
+    if (!authdir_policy_permits_address(addr, or_port)) {
       if (should_log)
         log_info(LD_DIRSERV, "Rejecting '%s' because of address '%s'",
                  nickname, address);
@@ -333,7 +293,7 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
         *msg = "Authdir is rejecting routers in this range.";
       return FP_REJECT;
     }
-    if (inv == ADDR_POLICY_PROBABLY_REJECTED || inv == ADDR_POLICY_REJECTED) {
+    if (!authdir_policy_valid_address(addr, or_port)) {
       if (should_log)
         log_info(LD_DIRSERV, "Not marking '%s' valid because of address '%s'",
                  nickname, address);
@@ -1203,33 +1163,6 @@ dirserv_get_runningrouters(const char **rr, int compress)
                          "v1 network status list", 1);
 }
 
-/** Return true iff <b>ri</b> is "useful as an exit node", meaning
- * it allows exit to at least one /8 address space for at least
- * one of ports 80, 443, and 6667. */
-static int
-router_is_general_exit(routerinfo_t *ri)
-{
-  static const int ports[] = { 80, 443, 6667 };
-  int n_allowed = 0;
-  int i;
-  for (i = 0; i < 3; ++i) {
-    struct addr_policy_t *policy = ri->exit_policy;
-    for ( ; policy; policy = policy->next) {
-      if (policy->prt_min > ports[i] || policy->prt_max < ports[i])
-        continue; /* Doesn't cover our port. */
-      if ((policy->msk & 0x00fffffful) != 0)
-        continue; /* Narrower than a /8. */
-      if ((policy->addr & 0xff000000ul) == 0x7f000000ul)
-        continue; /* 127.x */
-      /* We have a match that is at least a /8. */
-      if (policy->policy_type == ADDR_POLICY_ACCEPT)
-        ++n_allowed;
-      break;
-    }
-  }
-  return n_allowed > 0;
-}
-
 /** For authoritative directories: the current (v2) network status */
 static cached_dir_t the_v2_networkstatus = { NULL, NULL, 0, 0, 0 };
 
@@ -1416,7 +1349,7 @@ generate_v2_networkstatus(void)
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
-      int f_exit = router_is_general_exit(ri);
+      int f_exit = exit_policy_is_general_exit(ri->exit_policy);
       int f_stable = ri->is_stable =
                      !dirserv_thinks_router_is_unreliable(ri, 1, 0);
       int f_fast = ri->is_fast =
@@ -1721,10 +1654,6 @@ dirserv_free_all(void)
     smartlist_free(fingerprint_list);
     fingerprint_list = NULL;
   }
-  if (authdir_reject_policy)
-    addr_policy_free(authdir_reject_policy);
-  if (authdir_invalid_policy)
-    addr_policy_free(authdir_invalid_policy);
   clear_cached_dir(&the_directory);
   clear_cached_dir(&the_runningrouters);
   clear_cached_dir(&the_v2_networkstatus);

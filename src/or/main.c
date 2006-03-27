@@ -1531,8 +1531,6 @@ tor_free_all(int postfork)
   routerlist_free_all();
   addressmap_free_all();
   set_exit_redirects(NULL); /* free the registered exit redirects */
-  free_socks_policy();
-  free_dir_policy();
   dirserv_free_all();
   rend_service_free_all();
   rend_cache_free_all();
@@ -1542,6 +1540,7 @@ tor_free_all(int postfork)
   circuit_free_all();
   entry_guards_free_all();
   connection_free_all();
+  policies_free_all();
   if (!postfork) {
     config_free_all();
     router_free_all();

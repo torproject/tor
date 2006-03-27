@@ -707,7 +707,7 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
   {
     if (router->is_running &&
         router->addr == addr &&
-        router_compare_addr_to_addr_policy(addr, port, router->exit_policy) ==
+        compare_addr_to_addr_policy(addr, port, router->exit_policy) ==
           ADDR_POLICY_ACCEPTED)
       return router;
   });
@@ -2403,82 +2403,6 @@ update_networkstatus_downloads(time_t now)
       update_networkstatus_client_downloads(time(NULL));
 }
 
-/** Decide whether a given addr:port is definitely accepted,
- * definitely rejected, probably accepted, or probably rejected by a
- * given policy.  If <b>addr</b> is 0, we don't know the IP of the
- * target address. If <b>port</b> is 0, we don't know the port of the
- * target address.
- *
- * For now, the algorithm is pretty simple: we look for definite and
- * uncertain matches.  The first definite match is what we guess; if
- * it was preceded by no uncertain matches of the opposite policy,
- * then the guess is definite; otherwise it is probable.  (If we
- * have a known addr and port, all matches are definite; if we have an
- * unknown addr/port, any address/port ranges other than "all" are
- * uncertain.)
- *
- * We could do better by assuming that some ranges never match typical
- * addresses (127.0.0.1, and so on).  But we'll try this for now.
- */
-addr_policy_result_t
-router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
-                                   addr_policy_t *policy)
-{
-  int maybe_reject = 0;
-  int maybe_accept = 0;
-  int match = 0;
-  int maybe = 0;
-  addr_policy_t *tmpe;
-
-  for (tmpe=policy; tmpe; tmpe=tmpe->next) {
-    maybe = 0;
-    if (!addr) {
-      /* Address is unknown. */
-      if ((port >= tmpe->prt_min && port <= tmpe->prt_max) ||
-           (!port && tmpe->prt_min<=1 && tmpe->prt_max>=65535)) {
-        /* The port definitely matches. */
-        if (tmpe->msk == 0) {
-          match = 1;
-        } else {
-          maybe = 1;
-        }
-      } else if (!port) {
-        /* The port maybe matches. */
-        maybe = 1;
-      }
-    } else {
-      /* Address is known */
-      if ((addr & tmpe->msk) == (tmpe->addr & tmpe->msk)) {
-        if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
-          /* Exact match for the policy */
-          match = 1;
-        } else if (!port) {
-          maybe = 1;
-        }
-      }
-    }
-    if (maybe) {
-      if (tmpe->policy_type == ADDR_POLICY_REJECT)
-        maybe_reject = 1;
-      else
-        maybe_accept = 1;
-    }
-    if (match) {
-      if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
-        /* If we already hit a clause that might trigger a 'reject', than we
-         * can't be sure of this certain 'accept'.*/
-        return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED :
-                              ADDR_POLICY_ACCEPTED;
-      } else {
-        return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED :
-                              ADDR_POLICY_REJECTED;
-      }
-    }
-  }
-  /* accept all by default. */
-  return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
-}
-
 /** Return 1 if all running sufficiently-stable routers will reject
  * addr:port, return 0 if any might accept it. */
 int
@@ -2492,7 +2416,7 @@ router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
   {
     if (router->is_running &&
         !router_is_unreliable(router, need_uptime, 0, 0)) {
-      r = router_compare_addr_to_addr_policy(addr, port, router->exit_policy);
+      r = compare_addr_to_addr_policy(addr, port, router->exit_policy);
       if (r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED)
         return 0; /* this one could be ok. good enough. */
     }
@@ -2505,7 +2429,7 @@ router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
 int
 router_exit_policy_rejects_all(routerinfo_t *router)
 {
-  return router_compare_addr_to_addr_policy(0, 0, router->exit_policy)
+  return compare_addr_to_addr_policy(0, 0, router->exit_policy)
     == ADDR_POLICY_REJECTED;
 }
 
@@ -3691,7 +3615,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
       (r1->contact_info && r2->contact_info &&
        strcasecmp(r1->contact_info, r2->contact_info)) ||
       r1->is_hibernating != r2->is_hibernating ||
-      config_cmp_addr_policies(r1->exit_policy, r2->exit_policy))
+      cmp_addr_policies(r1->exit_policy, r2->exit_policy))
     return 0;
   if ((r1->declared_family == NULL) != (r2->declared_family == NULL))
     return 0;

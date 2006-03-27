@@ -13,7 +13,6 @@ const char connection_edge_c_id[] =
 
 #include "or.h"
 
-static addr_policy_t *socks_policy = NULL;
 /* List of exit_redirect_t */
 static smartlist_t *redirect_exit_list = NULL;
 
@@ -1809,62 +1808,12 @@ connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
     addr_policy_result_t r;
     if (tor_inet_aton(conn->socks_request->address, &in))
       addr = ntohl(in.s_addr);
-    r = router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
-                                           exit->exit_policy);
+    r = compare_addr_to_addr_policy(addr, conn->socks_request->port,
+                                    exit->exit_policy);
     if (r == ADDR_POLICY_REJECTED || r == ADDR_POLICY_PROBABLY_REJECTED)
       return 0;
   }
   return 1;
-}
-
-/** A helper function for socks_policy_permits_address() below.
- *
- * Parse options->SocksPolicy in the same way that the exit policy
- * is parsed, and put the processed version in socks_policy.
- * Ignore port specifiers.
- */
-void
-parse_socks_policy(void)
-{
-  addr_policy_t *n;
-  if (socks_policy) {
-    addr_policy_free(socks_policy);
-    socks_policy = NULL;
-  }
-  config_parse_addr_policy(get_options()->SocksPolicy, &socks_policy, -1);
-  /* ports aren't used. */
-  for (n=socks_policy; n; n = n->next) {
-    n->prt_min = 1;
-    n->prt_max = 65535;
-  }
-}
-
-/** Free all storage held by our SOCKS allow policy
- */
-void
-free_socks_policy(void)
-{
-  addr_policy_free(socks_policy);
-  socks_policy = NULL;
-}
-
-/** Return 1 if <b>addr</b> is permitted to connect to our socks port,
- * based on <b>socks_policy</b>. Else return 0.
- */
-int
-socks_policy_permits_address(uint32_t addr)
-{
-  int a;
-
-  if (!socks_policy) /* 'no socks policy' means 'accept' */
-    return 1;
-  a = router_compare_addr_to_addr_policy(addr, 1, socks_policy);
-  if (a==ADDR_POLICY_REJECTED)
-    return 0;
-  else if (a==ADDR_POLICY_ACCEPTED)
-    return 1;
-  log_warn(LD_BUG, "Bug: Got unexpected 'maybe' answer from socks policy");
-  return 0;
 }
 
 /** Make connection redirection follow the provided list of

@@ -54,59 +54,11 @@ static void note_request(const char *key, size_t bytes);
 
 /********* START VARIABLES **********/
 
-static addr_policy_t *dir_policy = NULL;
-
 /** How far in the future do we allow a directory server to tell us it is
  * before deciding that one of us has the wrong time? */
 #define ALLOW_DIRECTORY_TIME_SKEW (30*60)
 
 /********* END VARIABLES ************/
-
-/** Parse get_options()-&gt;DirPolicy, and put the processed version in
- * &dir_policy.  Ignore port specifiers.
- */
-void
-parse_dir_policy(void)
-{
-  addr_policy_t *n;
-  if (dir_policy) {
-    addr_policy_free(dir_policy);
-    dir_policy = NULL;
-  }
-  config_parse_addr_policy(get_options()->DirPolicy, &dir_policy, -1);
-  /* ports aren't used. */
-  for (n=dir_policy; n; n = n->next) {
-    n->prt_min = 1;
-    n->prt_max = 65535;
-  }
-}
-
-/** Free storage used to hold parsed directory policy */
-void
-free_dir_policy(void)
-{
-  addr_policy_free(dir_policy);
-  dir_policy = NULL;
-}
-
-/** Return 1 if <b>addr</b> is permitted to connect to our dir port,
- * based on <b>dir_policy</b>. Else return 0.
- */
-int
-dir_policy_permits_address(uint32_t addr)
-{
-  int a;
-
-  if (!dir_policy) /* 'no dir policy' means 'accept' */
-    return 1;
-  a = router_compare_addr_to_addr_policy(addr, 1, dir_policy);
-  if (a==ADDR_POLICY_REJECTED)
-    return 0;
-  else if (a==ADDR_POLICY_ACCEPTED)
-    return 1;
-  log_warn(LD_BUG, "Bug: got unexpected 'maybe' answer from dir policy");
-  return 0;
-}
 
 /** Return true iff the directory purpose 'purpose' must use an
  * anonymous connection to a directory. */

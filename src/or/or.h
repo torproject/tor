@@ -1621,13 +1621,6 @@ int resolve_my_address(or_options_t *options, uint32_t *addr,
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
 int options_init_logs(or_options_t *options, int validate_only);
-int config_parse_exit_policy(config_line_t *cfg,
-                             addr_policy_t **dest,
-                             int rejectprivate);
-int config_parse_addr_policy(config_line_t *cfg,
-                             addr_policy_t **dest,
-                             int assume_action);
-int config_cmp_addr_policies(addr_policy_t *a, addr_policy_t *b);
 void addr_policy_free(addr_policy_t *p);
 int option_is_recognized(const char *key);
 const char *option_get_canonical_name(const char *key);
@@ -1642,10 +1635,6 @@ int or_state_load(void);
 int or_state_save(void);
 
 int config_getinfo_helper(const char *question, char **answer);
-
-int firewall_is_fascist_or(void);
-int fascist_firewall_allows_address_or(uint32_t addr, uint16_t port);
-int fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port);
 
 /********************************* connection.c ***************************/
 
@@ -1768,10 +1757,6 @@ void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
 int connection_ap_handshake_rewrite_and_attach(connection_t *conn,
                                                circuit_t *circ);
 
-void parse_socks_policy(void);
-void free_socks_policy(void);
-int socks_policy_permits_address(uint32_t addr);
-
 void set_exit_redirects(smartlist_t *lst);
 typedef enum hostname_type_t {
   NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME, BAD_HOSTNAME
@@ -1888,7 +1873,6 @@ int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
 /********************************* directory.c ***************************/
 
-int dir_policy_permits_address(uint32_t addr);
 void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *resource,
@@ -1913,8 +1897,6 @@ int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
 void connection_dir_request_failed(connection_t *conn);
-void parse_dir_policy(void);
-void free_dir_policy(void);
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,
                                     int decode_hex);
@@ -1922,7 +1904,6 @@ char *directory_dump_request_log(void);
 
 /********************************* dirserv.c ***************************/
 
-void parse_authdir_policy(void);
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
 void dirserv_free_fingerprint_list(void);
@@ -2046,6 +2027,37 @@ int fast_client_handshake(const char *handshake_state,
                           size_t key_out_len);
 
 void clear_pending_onions(void);
+
+/********************************* policies.c ************************/
+
+typedef enum {
+  ADDR_POLICY_ACCEPTED=0,
+  ADDR_POLICY_REJECTED=-1,
+  ADDR_POLICY_PROBABLY_ACCEPTED=1,
+  ADDR_POLICY_PROBABLY_REJECTED=2
+} addr_policy_result_t;
+
+int firewall_is_fascist_or(void);
+int fascist_firewall_allows_address_or(uint32_t addr, uint16_t port);
+int fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port);
+int dir_policy_permits_address(uint32_t addr);
+int socks_policy_permits_address(uint32_t addr);
+int authdir_policy_permits_address(uint32_t addr, uint16_t port);
+int authdir_policy_valid_address(uint32_t addr, uint16_t port);
+
+int validate_addr_policies(or_options_t *options, char **msg);
+void policies_parse_from_options(or_options_t *options);
+
+int cmp_addr_policies(addr_policy_t *a, addr_policy_t *b);
+addr_policy_result_t compare_addr_to_addr_policy(uint32_t addr,
+                              uint16_t port, addr_policy_t *policy);
+int policies_parse_exit_policy(config_line_t *cfg,
+                               addr_policy_t **dest,
+                               int rejectprivate);
+int exit_policy_is_general_exit(addr_policy_t *policy);
+
+void addr_policy_free(addr_policy_t *p);
+void policies_free_all(void);
 
 /********************************* relay.c ***************************/
 
@@ -2205,12 +2217,6 @@ int rend_mid_rendezvous(circuit_t *circ, const char *request,
                         size_t request_len);
 
 /********************************* router.c ***************************/
-typedef enum {
-  ADDR_POLICY_ACCEPTED=0,
-  ADDR_POLICY_REJECTED=-1,
-  ADDR_POLICY_PROBABLY_ACCEPTED=1,
-  ADDR_POLICY_PROBABLY_REJECTED=2
-} addr_policy_result_t;
 
 void set_onion_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_onion_key(void);
@@ -2347,13 +2353,11 @@ typedef enum {
 int router_set_networkstatus(const char *s, time_t arrived_at,
                              networkstatus_source_t source,
                              smartlist_t *requested_fingerprints);
-addr_policy_result_t router_compare_addr_to_addr_policy(uint32_t addr,
-                              uint16_t port, addr_policy_t *policy);
 
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
-
 int router_exit_policy_rejects_all(routerinfo_t *router);
+
 void add_trusted_dir_server(const char *nickname,
                             const char *address, uint16_t port,
                             const char *digest, int supports_v1);
