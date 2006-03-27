@@ -1479,6 +1479,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
   if (!routerlist)
     router_get_routerlist();
+  if (!networkstatus_list)
+    networkstatus_list = smartlist_create();
 
   id_digest = router->cache_info.identity_digest;
 
