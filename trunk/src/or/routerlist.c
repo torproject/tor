@@ -37,8 +37,6 @@ static int have_tried_downloading_all_statuses(void);
 static routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
                                                 const char *digest);
 
-#define MAX_DESCRIPTORS_PER_ROUTER 5
-
 /****************************************************************************/
 
 /** Global list of a trusted_dir_server_t object for each trusted directory
@@ -1171,6 +1169,17 @@ dump_routerlist_mem_usage(int severity)
       smartlist_len(routerlist->old_routers), U64_PRINTF_ARG(olddescs));
 }
 
+/** Return the greatest number of routerdescs we'll hold for any given router.
+ */
+static int
+max_descriptors_per_router(void)
+{
+  int n_authorities = 0;
+  if (trusted_dir_servers)
+    n_authorities = smartlist_len(trusted_dir_servers);
+  return (n_authorities < 5) ? 5 : n_authorities;
+}
+
 /** Return non-zero if we have a lot of extra descriptors in our
  * routerlist, and should get rid of some of them. Else return 0.
  *
@@ -1183,7 +1192,7 @@ static INLINE int
 routerlist_is_overfull(routerlist_t *rl)
 {
   return smartlist_len(rl->old_routers) >
-    smartlist_len(rl->routers)*(MAX_DESCRIPTORS_PER_ROUTER+1);
+    smartlist_len(rl->routers)*(max_descriptors_per_router()+1);
 }
 
 static INLINE int
@@ -1657,7 +1666,7 @@ _compare_duration_idx(const void *_d1, const void *_d2)
 /** The range <b>lo</b> through <b>hi</b> inclusive of routerlist->old_routers
  * must contain routerinfo_t with the same identity and with publication time
  * in ascending order.  Remove members from this range until there are no more
- * than MAX_DESCRIPTORS_PER_ROUTER remaining.  Start by removing the oldest
+ * than max_descriptors_per_router() remaining.  Start by removing the oldest
  * members from before <b>cutoff</b>, then remove members which were current
  * for the lowest amount of time.  The order of members of old_routers at
  * indices <b>lo</b> or higher may be changed.
@@ -1683,7 +1692,7 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
 #endif
 
   /* Check whether we need to do anything at all. */
-  n_extra = n - MAX_DESCRIPTORS_PER_ROUTER;
+  n_extra = n - max_descriptors_per_router();
   if (n_extra <= 0)
     return;
 
@@ -1796,10 +1805,10 @@ routerlist_remove_old_routers(void)
    * members. (We'd keep all the members if we could, but we'd like to save
    * space.) First, check whether we have too many router descriptors, total.
    * We're okay with having too many for some given router, so long as the
-   * total number doesn't approach MAX_DESCRIPTORS_PER_ROUTER*len(router).
+   * total number doesn't approach max_descriptors_per_router()*len(router).
    */
   if (smartlist_len(routerlist->old_routers) <
-      smartlist_len(routerlist->routers) * (MAX_DESCRIPTORS_PER_ROUTER - 1))
+      smartlist_len(routerlist->routers) * (max_descriptors_per_router() - 1))
     goto done;
 
   smartlist_sort(routerlist->old_routers, _compare_old_routers_by_identity);
