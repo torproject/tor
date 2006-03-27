@@ -1542,11 +1542,11 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         /* Same key, but old */
         log_debug(LD_DIR, "Skipping not-new descriptor for router '%s'",
                   router->nickname);
-        routerlist_insert_old(routerlist, router);
-        *msg = "Router descriptor was not new.";
         /* Only journal this desc if we'll be serving it. */
         if (!from_cache && get_options()->DirPort)
           router_append_to_journal(&router->cache_info);
+        routerlist_insert_old(routerlist, router);
+        *msg = "Router descriptor was not new.";
         return -1;
       } else {
         /* Same key, new. */
