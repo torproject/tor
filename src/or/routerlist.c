@@ -34,6 +34,8 @@ static void update_networkstatus_client_downloads(time_t now);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void routerlist_assert_ok(routerlist_t *rl);
 static int have_tried_downloading_all_statuses(void);
+static routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
+                                                const char *digest);
 
 #define MAX_DESCRIPTORS_PER_ROUTER 5
 
@@ -1514,6 +1516,17 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
+  /* We no longer need a router with this descriptor digest. */
+  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+  {
+    routerstatus_t *rs =
+      networkstatus_find_entry(ns, router->cache_info.identity_digest);
+    if (rs && !memcmp(rs->descriptor_digest,
+                      router->cache_info.signed_descriptor_digest,
+                      DIGEST_LEN))
+      rs->need_to_mirror = 0;
+  });
+
   /* If we have a router with this name, and the identity key is the same,
    * choose the newer one. If the identity key has changed, and one of the
    * routers is named, drop the unnamed ones. (If more than one are named,
@@ -1529,6 +1542,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                   router->nickname);
         routerlist_insert_old(routerlist, router);
         *msg = "Router descriptor was not new.";
+        /* Only journal this desc if we'll be serving it. */
+        if (!from_cache && get_options()->DirPort)
+          router_append_to_journal(&router->cache_info);
         return -1;
       } else {
         /* Same key, new. */
@@ -3062,7 +3078,6 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
 {
   trusted_dir_server_t *ds;
   local_routerstatus_t *rs;
-  routerstatus_t *rs2;
   or_options_t *options = get_options();
   int authdir = options->AuthoritativeDir;
   int namingdir = options->AuthoritativeDir &&
@@ -3098,16 +3113,6 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       rs->n_download_failures = 0;
       rs->next_attempt_at = 0;
     }
-
-    /* Note that we have this descriptor.  This may be redundant? */
-    SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
-      {
-        rs2 = networkstatus_find_entry(ns, router->cache_info.identity_digest);
-        if (rs2 && !memcmp(rs2->descriptor_digest,
-                           router->cache_info.signed_descriptor_digest,
-                           DIGEST_LEN))
-          rs2->need_to_mirror = 0;
-      });
   });
 }
 
