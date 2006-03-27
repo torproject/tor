@@ -358,7 +358,7 @@ init_keys(void)
   }
 
   log(LOG_NOTICE, LD_GENERAL,
-      "Your Tor server's identity key fingerprint is '%s %s'.",
+      "Your Tor server's identity key fingerprint is '%s %s'",
       options->Nickname, fingerprint);
   if (!authdir_mode(options))
     return 0;
