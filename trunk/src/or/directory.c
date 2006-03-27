@@ -1613,6 +1613,22 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
+  if (!strcmp(url,"/tor/robots.txt")) { /* /robots.txt will have been
+                                           rewritten to /tor/robots.txt */
+    char robots[] = "User-agent: *\r\nDisallow: /\r\n";
+    size_t len = strlen(robots);
+    format_rfc1123_time(date, time(NULL));
+    tor_snprintf(tmp, sizeof(tmp),
+                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                 "Content-Type: text/plain\r\n\r\n",
+                 date,
+                 (int)len);
+    connection_write_to_buf(tmp, strlen(tmp), conn);
+    connection_write_to_buf(robots, len, conn);
+    tor_free(url);
+    return 0;
+  }
+
   /* we didn't recognize the url */
   write_http_status_line(conn, 404, "Not found");
   tor_free(url);
