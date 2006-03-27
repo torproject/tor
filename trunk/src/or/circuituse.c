@@ -311,7 +311,7 @@ circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
         if (conn) {
           ok = connection_ap_can_use_exit(conn, exitrouter);
         } else {
-          addr_policy_result_t r = router_compare_addr_to_addr_policy(
+          addr_policy_result_t r = compare_addr_to_addr_policy(
               0, port, exitrouter->exit_policy);
           ok = r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED;
         }

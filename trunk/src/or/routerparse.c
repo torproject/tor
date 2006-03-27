@@ -1258,7 +1258,7 @@ networkstatus_parse_from_string(const char *s)
   return ns;
 }
 
-/** Parse the exit policy in the string <b>s</b> and return it.  If
+/** Parse the addr policy in the string <b>s</b> and return it.  If
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
  * ADDR_POLICY_REJECT) for items that specify no action.
  */
@@ -1290,7 +1290,7 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
   }
   tok = get_next_token(&cp, RTR);
   if (tok->tp == _ERR) {
-    log_warn(LD_DIR, "Error reading exit policy: %s", tok->error);
+    log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
     goto err;
   }
   if (tok->tp != K_ACCEPT && tok->tp != K_REJECT) {
@@ -1298,7 +1298,7 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
     goto err;
   }
 
-  /* Now that we've gotten an exit policy, add it to the router. */
+  /* Now that we've gotten an addr policy, add it to the router. */
   r = router_parse_addr_policy(tok);
   goto done;
  err:
