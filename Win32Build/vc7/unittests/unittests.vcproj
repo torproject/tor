@@ -32,9 +32,10 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="wsock32.lib c:\openssl\lib\vc\libeay32.lib c:\openssl\lib\vc\ssleay32.lib ws2_32.lib ..\..\..\contrib\libevent\win32-prj\Debug\libevent.lib"
+				AdditionalDependencies="wsock32.lib t:\openssl\install\lib\vc\libeay32.lib t:\openssl\install\lib\vc\ssleay32.lib ws2_32.lib ..\..\..\contrib\libevent\win32-prj\Debug\libevent.lib"
 				OutputFile="$(OutDir)/unittests.exe"
 				LinkIncremental="2"
+				IgnoreDefaultLibraryNames="LIBCD"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/unittests.pdb"
 				SubSystem="1"
@@ -187,6 +188,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\win32\orconfig.h">
+			</File>
+			<File
+				RelativePath="..\..\..\src\or\policies.c">
 			</File>
 			<File
 				RelativePath="..\..\..\src\or\relay.c">

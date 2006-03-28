@@ -34,9 +34,10 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="wsock32.lib c:\openssl\lib\vc\ssleay32.lib c:\openssl\lib\vc\libeay32.lib ..\..\..\contrib\libevent\win32-prj\Debug\libevent.lib ws2_32.lib"
+				AdditionalDependencies="wsock32.lib t:\openssl\install\lib\vc\ssleay32.lib t:\openssl\install\lib\vc\libeay32.lib ..\..\..\contrib\libevent\win32-prj\Debug\libevent.lib ws2_32.lib"
 				OutputFile="$(OutDir)/Tor.exe"
 				LinkIncremental="2"
+				IgnoreDefaultLibraryNames="LIBCD"
 				DelayLoadDLLs="advapi32.dll"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/Tor.pdb"
@@ -193,6 +194,9 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\win32\orconfig.h">
+			</File>
+			<File
+				RelativePath="..\..\..\src\or\policies.c">
 			</File>
 			<File
 				RelativePath="..\..\..\src\or\relay.c">
