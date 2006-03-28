@@ -23,15 +23,15 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad tor-0.1.1.5/src/or/config.c /tmp/dpep.YwfNhI/tor-0.1.1.5/src/or/config.c
---- tor-0.1.1.5/src/or/config.c
-+++ /tmp/dpep.YwfNhI/tor-0.1.1.5/src/or/config.c
-@@ -1548,7 +1548,7 @@
+diff -urNad tor-0.1.1.17/src/or/config.c /tmp/dpep.YwfNhI/tor-0.1.1.17/src/or/config.c
+--- tor-0.1.1.17/src/or/config.c
++++ /tmp/dpep.YwfNhI/tor-0.1.1.17/src/or/config.c
+@@ -2079,7 +2079,7 @@
  
    /* Special case on first boot if no Log options are given. */
-   if (!options->Logs && !from_setconf) {
+   if (!options->Logs && !from_setconf)
 -    config_line_append(&options->Logs, "Log", "notice stdout");
 +    config_line_append(&options->Logs, "Log", "notice file /var/log/tor/log");
-   }
  
    if (options_init_logs(options, 1)<0) /* Validate the log(s) */
+     REJECT("Failed to validate Log options. See logs for details.");
