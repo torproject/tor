@@ -1,0 +1,246 @@
+#!/usr/bin/python
+# Copyright 2005-2006 Nick Mathewson
+# See the LICENSE file in the Tor distribution for licensing information.
+
+"""
+ exitlist -- Given a Tor directory on stdin, lists the Tor servers
+ that accept connections to given addreses.
+
+ example usage (Tor 0.1.0.16 and earlier):
+
+    python2.2 exitlist < ~/.tor/cached-directory
+
+ example usage (Tor 0.1.1.10-alpha and later):
+
+    python2.2 exitlist < ~/.tor/cached-routers*
+
+"""
+
+# Requires Python 2.2 or later.
+
+#
+# Change this to True if you want more verbose output.  By default, we
+# only print the IPs of the servers that accept any the listed
+# addresses, one per line.
+#
+VERBOSE = False
+
+#
+# Change this to True if you want to reverse the output, and list the
+# servers that accept *none* of the listed addresses.
+#
+INVERSE = False
+
+#
+# Change this list to contain all of the target services you are interested
+# in.  It must contain one entry per line, each consisting of an IPv4 address,
+# a colon, and a port number.
+#
+ADDRESSES_OF_INTEREST = """
+    192.168.0.1:80
+"""
+
+
+#
+# YOU DO NOT NEED TO EDIT AFTER THIS POINT.
+#
+
+import sys
+import re
+import getopt
+import socket
+import struct
+
+assert sys.version_info >= (2,2)
+
+
+def maskIP(ip,mask):
+    return "".join([chr(ord(a) & ord(b)) for a,b in zip(ip,mask)])
+
+def maskFromLong(lng):
+    return struct.pack("!L", lng)
+
+def maskByBits(n):
+    return maskFromLong(0xffffffffl ^ ((1L<<(32-n))-1))
+
+class Pattern:
+    """
+    >>> import socket
+    >>> ip1 = socket.inet_aton("192.169.64.11")
+    >>> ip2 = socket.inet_aton("192.168.64.11")
+    >>> ip3 = socket.inet_aton("18.244.0.188")
+
+    >>> print Pattern.parse("18.244.0.188")
+    18.244.0.188/255.255.255.255:1-65535
+    >>> print Pattern.parse("18.244.0.188/16:*")
+    18.244.0.0/255.255.0.0:1-65535
+    >>> print Pattern.parse("18.244.0.188/2.2.2.2:80")
+    2.0.0.0/2.2.2.2:80-80
+    >>> print Pattern.parse("192.168.0.1/255.255.00.0:22-25")
+    192.168.0.0/255.255.0.0:22-25
+    >>> p1 = Pattern.parse("192.168.0.1/255.255.00.0:22-25")
+    >>> import socket
+    >>> p1.appliesTo(ip1, 22)
+    False
+    >>> p1.appliesTo(ip2, 22)
+    True
+    >>> p1.appliesTo(ip2, 25)
+    True
+    >>> p1.appliesTo(ip2, 26)
+    False
+    """
+    def __init__(self, ip, mask, portMin, portMax):
+        self.ip = maskIP(ip,mask)
+        self.mask = mask
+        self.portMin = portMin
+        self.portMax = portMax
+
+    def __str__(self):
+        return "%s/%s:%s-%s"%(socket.inet_ntoa(self.ip),
+                              socket.inet_ntoa(self.mask),
+                              self.portMin,
+                              self.portMax)
+
+    def parse(s):
+        if ":" in s:
+            addrspec, portspec = s.split(":",1)
+        else:
+            addrspec, portspec = s, "*"
+
+        if addrspec == '*':
+            ip,mask = "\x00\x00\x00\x00","\x00\x00\x00\x00"
+        elif '/' not in addrspec:
+            ip = socket.inet_aton(addrspec)
+            mask = "\xff\xff\xff\xff"
+        else:
+            ip,mask = addrspec.split("/",1)
+            ip = socket.inet_aton(ip)
+            if "." in mask:
+                mask = socket.inet_aton(mask)
+            else:
+                mask = maskByBits(int(mask))
+
+        if portspec == '*':
+            portMin = 1
+            portMax = 65535
+        elif '-' not in portspec:
+            portMin = portMax = int(portspec)
+        else:
+            portMin, portMax = map(int,portspec.split("-",1))
+
+        return Pattern(ip,mask,portMin,portMax)
+
+    parse = staticmethod(parse)
+
+    def appliesTo(self, ip, port):
+        return ((maskIP(ip,self.mask) == self.ip) and
+                (self.portMin <= port <= self.portMax))
+
+class Policy:
+    """
+    >>> import socket
+    >>> ip1 = socket.inet_aton("192.169.64.11")
+    >>> ip2 = socket.inet_aton("192.168.64.11")
+    >>> ip3 = socket.inet_aton("18.244.0.188")
+
+    >>> pol = Policy.parseLines(["reject *:80","accept 18.244.0.188:*"])
+    >>> print str(pol).strip()
+    reject 0.0.0.0/0.0.0.0:80-80
+    accept 18.244.0.188/255.255.255.255:1-65535
+    >>> pol.accepts(ip1,80)
+    False
+    >>> pol.accepts(ip3,80)
+    False
+    >>> pol.accepts(ip3,81)
+    True
+    """
+
+    def __init__(self, lst):
+        self.lst = lst
+
+    def parseLines(lines):
+        r = []
+        for item in lines:
+            a,p=item.split(" ",1)
+            if a == 'accept':
+                a = True
+            elif a == 'reject':
+                a = False
+            else:
+                raise ValueError("Unrecognized action %r",a)
+            p = Pattern.parse(p)
+            r.append((p,a))
+        return Policy(r)
+
+    parseLines = staticmethod(parseLines)
+
+    def __str__(self):
+        r = []
+        for pat, accept in self.lst:
+            rule = accept and "accept" or "reject"
+            r.append("%s %s\n"%(rule,pat))
+        return "".join(r)
+
+    def accepts(self, ip, port):
+        for pattern,accept in self.lst:
+            if pattern.appliesTo(ip,port):
+                return accept
+        return True
+
+class Server:
+    def __init__(self, name, ip, policy):
+        self.name = name
+        self.ip = ip
+        self.policy = policy
+
+def run():
+    servers = []
+    policy = []
+    name = ip = None
+    for line in sys.stdin.xreadlines():
+        if line.startswith('router '):
+            if name:
+                servers.append(Server(name, ip, Policy.parseLines(policy)))
+            _, name, ip, rest = line.split(" ", 3)
+            policy = []
+        elif line.startswith('accept ') or line.startswith('reject '):
+            policy.append(line.strip())
+
+    if name:
+        servers.append(Server(name, ip, Policy.parseLines(policy)))
+
+    targets = []
+    for line in ADDRESSES_OF_INTEREST.split("\n"):
+        line = line.strip()
+        if not line: continue
+        p = Pattern.parse(line)
+        targets.append((p.ip, p.portMin))
+
+    accepters, rejecters = [], []
+    for s in servers:
+        for ip,port in targets:
+            if s.policy.accepts(ip,port):
+                accepters.append(s)
+                break
+        else:
+            rejecters.append(s)
+
+    if INVERSE:
+        printlist = rejecters
+    else:
+        printlist = accepters
+
+    if VERBOSE:
+        for s in printlist:
+            print "%s\t%s"%(s.ip,s.name)
+    else:
+        for s in printlist:
+            print s.ip
+
+def _test():
+    import doctest, exitparse
+    return doctest.testmod(exitparse)
+#_test()
+
+run()
+
