@@ -4,7 +4,7 @@ dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 dnl See LICENSE for licensing information
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.1.1.17-rc)
+AM_INIT_AUTOMAKE(tor, 0.1.1.17-rc-cvs)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
