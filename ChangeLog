@@ -28,9 +28,9 @@ Changes in version 0.1.1.17-rc - 2006-03-28
       server.
     - When the controller's *setconf commands fail, collect an error
       message in a string and hand it back to the controller.
-    - Make the v2 dir's "Fast" flag based on median capacity, just like
-      "Stable" is based on median uptime. Name everything in the top
-      7/8 Fast, and only the top 1/2 gets to be a Guard.
+    - Make the v2 dir's "Fast" flag based on relative capacity, just
+      like "Stable" is based on median uptime. Name everything in the
+      top 7/8 Fast, and only the top 1/2 gets to be a Guard.
     - Log server fingerprint on startup, so new server operators don't
       have to go hunting around their filesystem for it.
     - Return a robots.txt on our dirport to discourage google indexing.
