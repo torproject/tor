@@ -1,3 +1,10 @@
+tor (0.1.1.17-rc-1) experimental; urgency=low
+
+  * New upstream version.
+  * Forward port patches/07_log_to_file_by_default.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 28 Mar 2006 09:48:04 +0200
+
 tor (0.1.1.16-rc-1) experimental; urgency=low
 
   * New upstream version.
