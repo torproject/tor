@@ -1,51 +1,12 @@
-Quickstart version for users:
 
--1) If you don't have libevent, install it.  Source is at
-    http://www.monkey.org/~provos/libevent/ .
-0) Download the absolute newest version. No, really.
-  http://tor.eff.org/dist/
-1) tar xvf it, and then cd into the directory.
-2) ./configure
-3) make
-4) make install (as root if necessary)
-5) tor (if it doesn't work, give it the whole path or fix your path)
-  You don't need to run this as root, and you probably shouldn't.
-  (If you're having problems, try running it with "-l info" to get
-   more details.)
-6) point your browser to socks4 or socks5 proxy at localhost port
-  9050. In mozilla, this is in edit|preferences|advanced|proxies. This
-  allows you to test to make sure Tor is installed correctly.
-  (If you have a personal firewall, be sure to allow local connections
-   to port 9050.)
-  (If your firewall blocks outgoing connections, punch a hole so it
-   can connect to TCP *:9001-9004 and *:9031-9033)
-  (If you're using Safari as your browser, keep in mind that OS X before
-   10.3 claims to support socks but does not. You must do step 8.)
-7) make sure you've set it up correctly: go to
-  http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
-  you're coming from. If it works, you should probably go on to step 8,
-  to get better privacy.
+Most users should simply follow the directions at
+http://tor.eff.org/docs/tor-doc-unix
 
-8) Optionally, install privoxy (www.privoxy.org), and add the line
-  "forward-socks4a / localhost:9050 ." (without the quotes -- don't forget
-  the dot) to its config file. Then change your mozilla to http proxy
-  at localhost port 8118 (and no socks proxy). You should also set your
-  SSL proxy to the same thing, to hide your https traffic. Using privoxy
-  will give you good html scrubbing as well.
+If you got the source from cvs, run "./autogen.sh", which will run the
+various auto* programs and then run ./configure for you. From there,
+refer to the above instructions.
 
-*****If this works for you, you can stop reading here******
-
-If you got the source from cvs:
-
-  Run "./autogen.sh", which will run the various auto* programs and then
-  run ./configure for you. From there, start at step 3 in the quickstart
-  list above.
-
-If the quickstart doesn't work for you:
-
-  Starting with Tor 0.1.0.0, Tor uses libevent for its asynchronous
-  networking core.  If you don't have libevent, you'll need to install it.
-  You can get it at http://www.monkey.org/~provos/libevent/.
+If it doesn't build for you:
 
   If you have problems finding libraries, try
     CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
@@ -58,10 +19,6 @@ If the quickstart doesn't work for you:
   consider setting your LD_LIBRARY_PATH to the openssl lib directory.
   For example, "setenv LD_LIBRARY_PATH /usr/athena/lib".
 
-  Check out the list archives at http://archives.seul.org/or/dev/ or
-  the bug tracker at
-  http://bugs.noreply.org/flyspray/index.php?tasks=all&project=4 and 
-  see if somebody else has reported your problem. If not, please 
-  subscribe and let us know what you did to fix it, or give us the 
-  details and we'll see what we can do.
+  Lastly, check out
+  http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ItDoesntWork
 
