@@ -592,13 +592,12 @@ dirserver_getinfo_unregistered(const char *question)
   answerlist = smartlist_create();
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ent, {
     r = dirserv_router_get_status(ent, NULL);
-    if (ent->bandwidthcapacity >= (size_t)min_bw &&
-        ent->bandwidthrate >= (size_t)min_bw &&
+    if (router_get_advertised_bandwidth(ent) >= (size_t)min_bw &&
         r != FP_NAMED) {
       /* then log this one */
       tor_snprintf(buf, sizeof(buf),
                    "%s: BW %d on '%s'.",
-                   ent->nickname, ent->bandwidthcapacity,
+                   ent->nickname, router_get_advertised_bandwidth(ent),
                    ent->platform ? ent->platform : "");
       smartlist_add(answerlist, tor_strdup(buf));
     }
@@ -1189,7 +1188,8 @@ dirserv_thinks_router_is_unreliable(routerinfo_t *router,
 {
   if (need_uptime && router->uptime < stable_uptime)
     return 1;
-  if (need_capacity && router->bandwidthcapacity < fast_bandwidth)
+  if (need_capacity &&
+      router_get_advertised_bandwidth(router) < fast_bandwidth)
     return 1;
   return 0;
 }
@@ -1204,8 +1204,8 @@ _compare_uint32(const void **a, const void **b)
 }
 
 /** Look through the routerlist, and assign the median uptime
- * of running valid servers to stable_uptime, and the median bandwidth
- * capacity to fast_bandwidth. */
+ * of running valid servers to stable_uptime, and the relative bandwidth
+ * capacities to fast_bandwidth and guard_bandwidth. */
 static void
 dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
@@ -1220,7 +1220,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       uint32_t *bw = tor_malloc(sizeof(uint32_t));
       *up = (uint32_t) ri->uptime;
       smartlist_add(uptimes, up);
-      *bw = (uint32_t) ri->bandwidthcapacity;
+      *bw = router_get_advertised_bandwidth(ri);
       smartlist_add(bandwidths, bw);
     }
   });
@@ -1360,7 +1360,7 @@ generate_v2_networkstatus(void)
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_valid;
       int f_guard = f_fast && f_stable &&
-                    ri->bandwidthcapacity > guard_bandwidth &&
+                    router_get_advertised_bandwidth(ri) > guard_bandwidth &&
                     (!tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") ||
                      tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs"));
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor

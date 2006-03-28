@@ -752,6 +752,16 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl, int need_uptime,
   }
 }
 
+/** Return the smaller of the router's configured BandwidthRate
+ * and its advertised capacity. */
+uint32_t
+router_get_advertised_bandwidth(routerinfo_t *router)
+{
+  if (router->bandwidthcapacity < router->bandwidthrate)
+    return router->bandwidthcapacity;
+  return router->bandwidthrate;
+}
+
 #define MAX_BELIEVABLE_BANDWIDTH 1500000 /* 1.5 MB/sec */
 
 /** Choose a random element of router list <b>sl</b>, weighted by
@@ -771,8 +781,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
   bandwidths = smartlist_create();
   for (i = 0; i < smartlist_len(sl); ++i) {
     router = smartlist_get(sl, i);
-    this_bw = (router->bandwidthcapacity < router->bandwidthrate) ?
-               router->bandwidthcapacity : router->bandwidthrate;
+    this_bw = router_get_advertised_bandwidth(router);
     /* if they claim something huge, don't believe it */
     if (this_bw > MAX_BELIEVABLE_BANDWIDTH)
       this_bw = MAX_BELIEVABLE_BANDWIDTH;
