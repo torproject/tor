@@ -1,4 +1,4 @@
-Changes in version 0.1.1.17-rc - 2006-03-xx
+Changes in version 0.1.1.17-rc - 2006-03-28
   o Major fixes:
     - Clients and servers since 0.1.1.10-alpha have been expiring
       connections whenever they are idle for 5 minutes and they *do*
@@ -13,11 +13,13 @@ Changes in version 0.1.1.17-rc - 2006-03-xx
 
   o Minor fixes:
     - Resume building on irix64, netbsd 2.0, etc.
-     - On non-gcc compilers (e.g. solaris), use "-g -O" instead of
-       "-Wall -g -O2".
+    - On non-gcc compilers (e.g. solaris), use "-g -O" instead of
+      "-Wall -g -O2".
     - Stop writing the "router.desc" file, ever. Nothing uses it anymore,
       and it is confusing some users.
-    - Stop caching the v1 directory so often.
+    - Mirrors stop caching the v1 directory so often.
+    - Make the max number of old descriptors that a cache will hold
+      rise with the number of directory authorities, so we can scale.
     - Change our win32 uname() hack to be more forgiving about what
       win32 versions it thinks it's found.
 
