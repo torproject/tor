@@ -3,8 +3,8 @@ Changes in version 0.1.1.17-rc - 2006-03-28
     - Clients and servers since 0.1.1.10-alpha have been expiring
       connections whenever they are idle for 5 minutes and they *do*
       have circuits on them. Oops. With this new version, clients will
-      discard entry guards and avoid choosing entry guards running these
-      flawed versions.
+      discard their previous entry guard choices and avoid choosing
+      entry guards running these flawed versions.
     - Fix memory leak when uncompressing concatenated zlib streams. This
       was causing substantial leaks over time on Tor servers.
     - The v1 directory was including servers as much as 48 hours old,
