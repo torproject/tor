@@ -1,6 +1,4 @@
 AUTHORS
-README
-INSTALL
 debian/README.privoxy
 debian/README.Debian
 doc/HACKING
