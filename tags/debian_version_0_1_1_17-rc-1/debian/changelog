@@ -1,0 +1,673 @@
+tor (0.1.1.17-rc-1) experimental; urgency=low
+
+  * New upstream version.
+  * Forward port patches/07_log_to_file_by_default.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 28 Mar 2006 09:48:04 +0200
+
+tor (0.1.1.16-rc-1) experimental; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon, 20 Mar 2006 02:03:29 +0100
+
+tor (0.1.1.15-rc-1) experimental; urgency=low
+
+  * New upstream version.
+  * Apparently passing --host to configure when not cross-compiling
+    is evil now and greatly confuses configure.  So don't do it unless it
+    actually differs from --build host.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 11 Mar 2006 20:04:36 +0100
+
+tor (0.1.1.14-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * Include 0.1.0.17 changelog in experimental tree.
+  * doc/FAQ is no longer shipped, so remove it from debian/tor.docs.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 21 Feb 2006 05:16:21 +0100
+
+tor (0.1.1.13-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * Forward port patches/02_add_debian_files_in_manpage.
+  * Forward port patches/03_tor_manpage_in_section_8.
+  * Create /var/run/tor on init script start if it does
+    not exist already.
+  * Set default ulimit -n to 8k instead of 4k in /etc/default/tor.
+  * Print that we're raising the ulimit to stdout in the init script.
+  * Add CVE numbers to past issues in the changelog where applicable.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 10 Feb 2006 14:38:11 +0100
+
+tor (0.1.1.12-alpha-1) experimental; urgency=low
+
+  * New upstream version, that was a quick one. :)
+  * Forward port patches/02_add_debian_files_in_manpage.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 12 Jan 2006 02:53:27 +0100
+
+tor (0.1.1.11-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+    - Implement "entry guards": automatically choose a handful of entry
+      nodes and stick with them for all circuits.  This will increase
+      security dramatically against certain end-point attacks
+      (closes: #349283, CVE-2006-0414).
+  * Forward port patches/07_log_to_file_by_default.
+  * Forward port 0.1.0.16 changelog and change to copyright file.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 11 Jan 2006 12:08:25 +0100
+
+tor (0.1.1.10-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * doc/tor-doc.css and doc/tor-doc.html are no longer in the upstream
+    tarball, remove them from debian/tor.docs.
+  * add the following new files to tor.docs: doc/socks-extensions.txt,
+    doc/stylesheet.css, doc/tor-doc-server.html, doc/tor-doc-unix.html
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 11 Dec 2005 14:02:41 +0100
+
+tor (0.1.1.9-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * Remove 08_add_newlines_between_serverdescriptors.dpatch.
+  * Update 06_add_compile_time_defaults.dpatch
+  * Use bin/bash for the init script instead of bin/sh.  We are using
+    ulimit -n which is not POSIX  (closes: #338797).
+  * Remove the EVENT_NOEPOLL block from etc/default/tor.
+  * Add an ARGS block to etc/default/tor as suggested in #338425.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 15 Nov 2005 23:29:54 +0100
+
+tor (0.1.1.8-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * Add patch from CVS to
+    "Insert a newline between all router descriptors when generating (old
+    style) signed directories, in case somebody was counting on that".
+    r1.247 of dirserv.c, <20051008060243.85F41140808C@moria.seul.org>
+
+ -- Peter Palfrader <weasel@debian.org>  Sat,  8 Oct 2005 20:24:39 +0200
+
+tor (0.1.1.7-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * More merging from 0.1.0.14+XXXX:
+    - The tor-dbg package does not really need its own copy of copyright
+      and changelog in usr/share/doc/tor-dbg.
+  * Forward port 03_tor_manpage_in_section_8.dpatch
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 14 Sep 2005 17:52:35 +0200
+
+tor (0.1.1.6-alpha-2) experimental; urgency=low
+
+  * Merge 0.1.0.14+XXXX changes.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 14 Sep 2005 15:05:16 +0200
+
+tor (0.1.1.6-alpha-1) experimental; urgency=low
+
+  * Experimental upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 10 Sep 2005 10:17:43 +0200
+
+tor (0.1.1.5-alpha-cvs-1) UNRELEASED; urgency=low
+
+  * Even more experimental cvs snapshot.
+  * Testsuite is mandatory again.
+  * Forward port 03_tor_manpage_in_section_8.dpatch
+  * Forward port 06_add_compile_time_defaults.dpatch
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  9 Sep 2005 23:22:38 +0200
+
+tor (0.1.1.5-alpha-1) UNRELEASED; urgency=low
+
+  * Experimental upstream version.
+  * Allow test suite to fail, it's broken in this version.
+  * Update list of files from doc/ that should be installed.
+  * Forward port debian/ patches.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 12 Aug 2005 17:02:23 +0200
+
+tor (0.1.0.17-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 18 Feb 2006 02:49:45 +0100
+
+tor (0.1.0.16-1) unstable; urgency=low
+
+  * New upstream version.
+  * Update copyright file for 2006.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue,  3 Jan 2006 13:59:34 +0100
+
+tor (0.1.0.15-1) unstable; urgency=low
+
+  * New upstream release.
+  * Forward port 03_tor_manpage_in_section_8.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 24 Sep 2005 15:15:34 +0200
+
+tor (0.1.0.14-2) unstable; urgency=low
+
+  * Ship debugging information in a separate package now, instead
+    of simply not stripping tor.  This is still useful while tor is
+    young.  Ideally it would go away some time.
+  * Add LSB comments to init script as suggested by Petter Reinholdtsen
+    on the debian-devel list:
+    - http://lists.debian.org/debian-devel/2005/08/msg01172.html
+    - http://wiki.debian.net/?LSBInitScripts
+  * Work around broken chroots that do not resolve localhost or resolve
+    it to the wrong IP.  We now catch such cases in debian/rules, shout
+    at the buildd maintainer, and ignore the result of our test suite.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 21 Sep 2005 10:23:25 +0200
+
+tor (0.1.0.14-1) unstable; urgency=high
+
+  * New upstream version - changes, among others:
+    - Fixes the other half of the bug with crypto handshakes (CVE-2005-2643).
+  * Since gs-gpl on s390 is broken (#321435) and unable to
+    build PDFs of our images for the design paper this version
+    ships them in the source and uses them on s390, should building
+    them from source really fail.
+  * Increase standards-version from 3.6.1 to 3.6.2.  No changes
+    necessary.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  8 Aug 2005 23:55:05 +0200
+
+tor (0.1.0.13-1) unstable; urgency=high
+
+  * New upstream version:
+    - Explicitly set no-unaligned-access for sparc in configure.in.
+      it turns out the new gcc's let you compile broken code, but
+      that doesn't make it not-broken (closes: #320140).
+    - Fix a critical bug in the security of our crypto handshakes.
+      (Therefore set urgency to high).
+    and more (see upstream changelog).
+  * Slightly improve init script to give you proper error messages when
+    you do not run it as root.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  5 Aug 2005 01:27:49 +0200
+
+tor (0.1.0.12-1) unstable; urgency=medium
+
+  * New upstream version:
+    - New IP for tor26 directory server,
+    - fix a possible double-free in tor_gzip_uncompress,
+    - and more (see upstream changelog).
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 19 Jul 2005 17:36:24 +0200
+
+tor (0.1.0.11-1) unstable; urgency=high
+
+  * New upstream version (closes: #316753):
+    - Fixes a serious bug: servers now honor their exit policies -
+      In 0.1.0.x only clients enforced them so far.  0.0.9.x is
+      not affected.
+  * Build depend on libevent-dev >= 1.1.
+  * Urgency high because 0.0.9.10-1 did not make it into testing after
+    like 3 weeks because of an impending ftp-master move.  So I might
+    just as well upload this one.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  4 Jul 2005 17:53:48 +0200
+
+tor (0.1.0.10-0.pre.1) UNRELEASED; urgency=low
+
+  * New upstream version.
+  * Add a watch file.
+  * Forward port 03_tor_manpage_in_section_8.
+  * Forward port 06_add_compile_time_defaults.
+  * Add libevent-dev to build-depends.
+  * Update URL to tor in debian/control and debian/copyright.
+  * Add a snippet to disable epoll in etc/default/tor, commented out.
+  * Add a snippet to set nice level in etc/default/tor.
+  * Wait for 60 seconds in init stop.  35 is too little.
+  * Don't depend on python anymore - tor-resolve is C now.
+  * If "with-dmalloc" is in DEB_BUILD_OPTIONS we build against libdmalloc4.
+    Of course the -dev package needs to be installed.
+  * Update README.Debian to say that upstream now does have a default
+    for DataDirectory.
+  * Don't fail in the init script when we cannot raise the ulimit.
+    Instead just warn a bit (closes: #312882).
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 15 Jun 2005 16:38:06 +0200
+
+tor (0.0.9.10-1) unstable; urgency=high
+
+  * While we're waiting for a newer libevent to enter sid, make another
+    upload of the 0.0.9.x tree:
+    - Refuse relay cells that claim to have a length larger than the
+      maximum allowed. This prevents a potential attack that could read
+      arbitrary memory (e.g. keys) from an exit server's process
+      (CVE-2005-2050).
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 16 Jun 2005 22:56:11 +0200
+
+tor (0.0.9.9-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 23 Apr 2005 23:58:47 +0200
+
+tor (0.0.9.8-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  8 Apr 2005 09:11:34 +0200
+
+tor (0.0.9.7-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  1 Apr 2005 09:52:12 +0200
+
+tor (0.0.9.6-1) unstable; urgency=low
+
+  * New upstream version.
+  * Upstream used newer auto* tools, so hopefully the new config.sub
+    and config.guess files (2003-08-18) are good enough to build
+    tor on ppc64 (closes: #300376: FTBFS on ppc64).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 25 Mar 2005 01:34:28 +0100
+
+tor (0.0.9.5-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 24 Feb 2005 09:45:52 +0100
+
+tor (0.0.9.4-1) unstable; urgency=low
+
+  * New upstream version.
+  * Set ulimit for file descriptors to 4096 in our init
+    script.
+  * Use SIGINT to shutdown tor.  That way - if you are a server -
+    tor will stop accepting new connections immediately, and
+    give existing connections a grace period of 30 seconds in
+    which they might complete their task.  If you just run a
+    client it should make no difference.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  4 Feb 2005 00:20:25 +0100
+
+tor (0.0.9.3-1) unstable; urgency=low
+
+  * New upstream version.
+  * Forward port 07_log_to_file_by_default.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 23 Jan 2005 16:01:58 +0100
+
+tor (0.0.9.2-1) unstable; urgency=low
+
+  * New upstream version.
+  * Update debian/copyright (it's 2005).
+  * Add sharedscripts tor logrotate.d/tor.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue,  4 Jan 2005 11:14:03 +0100
+
+tor (0.0.9.1-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 16 Dec 2004 00:16:47 +0100
+
+tor (0.0.8+0.0.9rc7-1) unstable; urgency=medium
+
+  * New upstream release (candidate).
+    For real this time.  Looks like our rc6 orig.tar.gz
+    was in fact the rc5 one.
+  * forward port patches/07_log_to_file_by_default
+
+ -- Peter Palfrader <weasel@debian.org>  Wed,  8 Dec 2004 15:22:44 +0100
+
+tor (0.0.8+0.0.9rc6-1) unstable; urgency=medium
+
+  * New upstream release (candidate).
+    - cleans up more integer underflows that don't look exploitable.
+      But one never knows (-> medium).
+  * Remove those 'date' calls in debian/rules again that were
+    added in rc5-1.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  6 Dec 2004 11:11:23 +0100
+
+tor (0.0.8+0.0.9rc5-1) unstable; urgency=medium
+
+  * New upstream release (candidate).
+    - medium because it fixes an integer overflow that might
+      be exploitable, but doesn't seem to be currently.
+  * Add a few 'date' calls in debian/rules, so I can see how long
+    building the docs take on autobuilders.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed,  1 Dec 2004 10:02:08 +0100
+
+tor (0.0.8+0.0.9rc3-1) unstable; urgency=low
+
+  * New upstream release (candidate).
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 25 Nov 2004 10:33:42 +0100
+
+tor (0.0.8+0.0.9rc2-1) unstable; urgency=low
+
+  * New upstream release (candidate).
+  * Nick's patch is now part of upstream, remove it from
+    the debian diff.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 24 Nov 2004 09:03:13 +0100
+
+tor (0.0.8+0.0.9rc1-1) unstable; urgency=low
+
+  * New upstream release (candidate).
+  * Apply nick's patch against config.c (1.267) to handle
+    absense of units in BandwidthRate.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 23 Nov 2004 11:57:49 +0100
+
+tor (0.0.8+0.0.9pre6-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+  * Install control-spec.txt into usr/share/doc/tor/.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 16 Nov 2004 04:49:32 +0100
+
+tor (0.0.8+0.0.9pre5-2) unstable; urgency=low
+
+  * Symlink tor(8) manpage to torrc(5).
+  * Make logs readable by the system administrators (group adm).
+  * Point to /var/log/tor (the directory) instead of a single
+    file (/var/log/tor/log) in the debian patch of the manpage.
+  * Do not patch the default torrc to include settings we really want.
+    Instead modify the compiled in default options.  Those settings are
+
+    - RunAsDaemon is enabled by default.
+    - PidFile is set to /var/run/tor/tor.pid.  No default upstream.
+    - default logging goes to /var/log/tor/log instead of stdout.
+    - DataDirectory is set to /var/lib/tor by default.  No default upstream.
+
+    This is also documented in the new debian/README.Debian.
+  * Remove /usr/bin/tor-control.py from the binary package, it is
+    not really useful yet, and wasn't meant to be installed by
+    default.
+  * Change init startup script to properly deal with tor
+    printing stuff on startup.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 18:30:50 +0100
+
+tor (0.0.8+0.0.9pre5-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+  * 04_fix_test can be backed out again.
+  * Make sure all patches apply cleanly.
+  * No longer use --pidfile, --logfile, and --runasdaemon
+    command line options.  Set them in the configfile instead.
+  * Change the description slightly, to say "don't rely on the current Tor
+    network if you really need strong anonymity", instead of "Tor will not
+    provide anonymity currently".
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 10 Nov 2004 04:43:10 +0100
+
+tor (0.0.8+0.0.9pre4-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+  * Apply patch from cvs to fix a segfault in src/or/test
+    (test.c, 1.131).
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 17 Oct 2004 19:04:31 +0200
+
+tor (0.0.8+0.0.9pre3-1) unstable; urgency=high
+
+  * New upstream (pre)release.
+  * Fixes at least one segfault that can be triggered remotely,
+    a format string vulnerability which probably is not exploitable,
+    and several assert bugs.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 14 Oct 2004 13:36:45 +0200
+
+tor (0.0.8+0.0.9pre2-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun,  3 Oct 2004 01:29:13 +0200
+
+tor (0.0.8+0.0.9pre1-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+  * Built depend on zlib1g-dev.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  1 Oct 2004 21:28:49 +0200
+
+tor (0.0.8-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 27 Aug 2004 14:08:10 +0200
+
+tor (0.0.7.2+0.0.8rc1-1) unstable; urgency=low
+
+  * New upstream release candidate.
+  * Install design paper in usr/share/doc/tor, not usr/share/doc.  Ooops.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 18 Aug 2004 09:59:13 +0200
+
+tor (0.0.7.2+0.0.8pre3-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+  * Ship AUTHORS, doc/CLIENTS, doc/FAQ, doc/HACKING, doc/TODO,
+    doc/tor-doc.{css,html}, doc/{rend,tor}-spec.txt with the binary package.
+  * Build tor-design.{pdf,ps}, wich adds new build-dependencies:
+    tetex-{bin,extra}, transfig, and gs.
+  * Support DEB_BUILD_OPTIONS option 'nodoc' to skip building tor-design.
+    With nodoc the build will not need tetex-{bin,extra}, transfig, and gs.
+  * Support DEB_BUILD_OPTIONS option 'nocheck' to skip unittests
+    ('notest' is an alias')
+  * Enable coredumps by default, this is still development code.
+  * Modify 02_add_debian_files_in_manpage to still apply.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun,  8 Aug 2004 15:03:32 +0200
+
+tor (0.0.7.2+0.0.8pre2-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+  * Depend on python as we now have a python script: tor_resolve
+
+ -- Peter Palfrader <weasel@debian.org>  Wed,  4 Aug 2004 20:09:26 +0200
+
+tor (0.0.7.2-1) unstable; urgency=medium
+
+  * New upstream release.
+    Fixes another instance of that remote crash bug.
+  * Mention another reason why stop/reload may fail in the init script.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu,  8 Jul 2004 03:21:32 +0200
+
+tor (0.0.7.1-1) unstable; urgency=medium
+
+  * New upstream release.
+    Fixes a bug that allows a remote crash on exit nodes.
+  * Logrotate var/log/tor/*log instead of just var/log/tor/log, in
+    case the admin wants several logs.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  5 Jul 2004 19:18:12 +0200
+
+tor (0.0.7-1) unstable; urgency=low
+
+  * New upstream version
+    closes: #249893: FTBFS on ia64
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  7 Jun 2004 21:46:08 +0200
+
+tor (0.0.6.2-1) unstable; urgency=medium
+
+  * New upstream release (breaks backwards compatibility yet again).
+  * Recommend socat.
+  * Since tor is in /usr/sbin, the manpage should be in section 8, not
+    in section 1.  Move it there, including updating the section in
+    the manpage itself and the reference in torify(1).
+  * Update debian/copyright file.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 16 May 2004 10:47:20 +0200
+
+tor (0.0.6.1-1) unstable; urgency=medium
+
+  * New upstream release (breaks backwards compatibility).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  7 May 2004 00:24:49 +0200
+
+tor (0.0.6-1) unstable; urgency=low
+
+  * New upstream release (breaks backwards compatibility).
+
+ -- Peter Palfrader <weasel@debian.org>  Sun,  2 May 2004 23:58:36 +0200
+
+tor (0.0.5+0.0.6rc4-1) unstable; urgency=low
+
+  * New upstream release candidate.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun,  2 May 2004 14:36:59 +0200
+
+tor (0.0.5+0.0.6rc3-1) unstable; urgency=low
+
+  * New upstream release candidate.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 29 Apr 2004 11:52:07 +0200
+
+tor (0.0.5+0.0.6rc2-1) unstable; urgency=low
+
+  * New upstream release candidate.
+  * Mention upstream website and mailinglist archives in long
+    description.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon, 26 Apr 2004 12:23:20 +0200
+
+tor (0.0.5-1) unstable; urgency=low
+
+  * New upstream release.
+  * Upstream installs a torrc.sample file now, rather than torrc.
+    Keep using torrc as dpkg handles conffile upgrades.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 30 Mar 2004 20:54:00 +0200
+
+tor (0.0.4-1) unstable; urgency=low
+
+  * New upstream release (how the version numbers fly by :).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 26 Mar 2004 23:46:09 +0100
+
+tor (0.0.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * Also mention that tree.h is by Niels Provos in debian/copyright.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 26 Mar 2004 20:36:08 +0100
+
+tor (0.0.2-1) unstable; urgency=low
+
+  * New upstream release.
+  * Uses strlcpy and strlcat by Todd C. Miller, mention him in
+    debian/copyright.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 19 Mar 2004 12:37:17 +0100
+
+tor (0.0.1+0.0.2pre27-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon, 15 Mar 2004 05:19:16 +0100
+
+tor (0.0.1+0.0.2pre26-1) unstable; urgency=low
+
+  * New upstream release.
+  * Mention log and pidfile location in tor.1.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon, 15 Mar 2004 02:21:29 +0100
+
+tor (0.0.1+0.0.2pre25-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu,  4 Mar 2004 23:05:38 +0100
+
+tor (0.0.1+0.0.2pre24-1) unstable; urgency=low
+
+  * New upstream release.
+  * Do not strip binaries for now.
+  * Add "# ulimit -c unlimited" to tor.default
+  * Always enable DataDirectory.
+  * Actually use dpatch now (to modify upstream torrc.in)
+  * Wait for tor to die in init stop.  Let the user know if it doesn't.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed,  3 Mar 2004 14:10:25 +0100
+
+tor (0.0.1+0.0.2pre23-1) unstable; urgency=low
+
+  * New upstream release.
+  * The one test that always failed has been fixed:  removed comment from
+    rules file.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 29 Feb 2004 12:36:33 +0100
+
+tor (0.0.1+0.0.2pre22-1) unstable; urgency=low
+
+  * New upstream release.
+  * Upstream has moved tor back to usr/bin, but we will keep it in
+    usr/sbin.  That's the right place and it doesn't break my tab
+    completion there.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 27 Feb 2004 01:59:09 +0100
+
+tor (0.0.1+0.0.2pre21-1) unstable; urgency=low
+
+  * New upstream release.
+  * 0.0.2pre20-2 removed the Recommends: on privoxy rather
+    than tsocks (which is now required) by mistake.  Fix that.
+  * package description: Mention that the package starts the OP by default and
+    that OR can be enabled in the config.
+  * tor moved to sbin, updating init script.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 18 Feb 2004 10:08:12 +0100
+
+tor (0.0.1+0.0.2pre20-2) unstable; urgency=low
+
+  * Add torify script, documentation, and config file.  Means we also
+    depend on tsocks now rather than just recommending it.  Right now
+    we install it in debian/rules, but upcoming versions might install
+    it in upstream's make install target.
+  * There's an upstream ChangeLog file now.  Enjoy!
+  * Add a README.privoxy file that explains how to setup privoxy to
+    go over tor.
+  * As is the case too often, the INSTALL file not only covers
+    installation, but also basic usage and configuration.  Therefore
+    include it in the docs dir.
+  * Add a lintian override for the INSTALL file.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 02:32:00 +0100
+
+tor (0.0.1+0.0.2pre20-1) unstable; urgency=low
+
+  * New upstream version.
+    - various design paper updates
+    - resolve cygwin warnings
+    - split the token bucket into "rate" and "burst" params
+    - try to resolve discrepency between bytes transmitted over TLS and actual
+      bandwidth use
+    - setuid to user _before_ complaining about running as root
+    - fix several memleaks and double frees
+    - minor logging fixes
+    - add more debugging for logs.
+    - various documentation fixes and improvements
+    - for perforcmance testing, paths are always 3 hops, not "3 or more"
+      (this will go away at a later date again)
+  * Add dependency on adduser which was previously missing.
+  * Change short description to a nicer one.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jan 2004 10:10:45 +0100
+
+tor (0.0.1+0.0.2pre19-1) unstable; urgency=low
+
+  * Initial Release  (closes: #216611).
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 10 Jan 2004 11:20:06 +0100
+
