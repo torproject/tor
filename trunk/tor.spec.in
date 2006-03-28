@@ -22,6 +22,16 @@
 %define target_cpu i386
 %define target_os linux
 
+## Override any system rpm macros
+#
+%define _arch %{target_cpu}
+%define _build_arch %{target_cpu}
+%define _vendor %{target_os}
+%define _host %{target_cpu}-pc-%{target_os}-%{target}
+%define _host_cpu %{target_cpu}
+%define _host_vendor %{target_os}
+%define optflags -march=%{target_cpu} -mcpu=%{target_cpu} -O
+
 ## Version song and dance
 #
 # This should be the Tor version number, as it appears on the tarball,
@@ -157,9 +167,7 @@ for high-stakes anonymity.
 
 %build
 %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
-	--build=%{target_cpu}-pc-%{target_os}-%{target} \
-	--host=%{target_cpu}-pc-%{target_os}-%{target}  \
-	--target=%{target_cpu}-pc-%{target_os}-%{target}
+	--build=%{_host} --host=%{_host} --target=%{_host}
 %make
 
 %install
@@ -274,6 +282,11 @@ exit 0
 %attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+
+* Tue Mar 28 2006 Andrew Lewman <phobos@interloper.org>
+- converted to build the specified target cpu and arch
+- override related rpm macros to build correctly
+- see OR-CVS for details
 
 * Mon Jan 17 2005 John Bashinski <jbash@velvet.com>
 - Take runtime user and group names from configure system. Default
