@@ -743,7 +743,19 @@ format_versions_list(config_line_t *ln)
   return result;
 }
 
-/** Generate a new directory and write it into a newly allocated string.
+/** Return 1 if <b>ri</b>'s descriptor is worth including in the v1
+ * directory, else return 0.
+ */
+static int
+live_enough_for_v1_dir(routerinfo_t *ri, time_t now)
+{
+  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
+  if (ri->cache_info.published_on < cutoff)
+    return 0;
+  return 1;
+}
+
+/** Generate a new v1 directory and write it into a newly allocated string.
  * Point *<b>dir_out</b> to the allocated string.  Sign the
  * directory with <b>private_key</b>.  Return 0 on success, -1 on
  * failure.
@@ -763,7 +775,6 @@ dirserv_dump_directory_to_string(char **dir_out,
   size_t identity_pkey_len;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
-  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
 
   tor_assert(dir_out);
   *dir_out = NULL;
@@ -785,7 +796,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-                    if (ri->cache_info.published_on >= cutoff)
+                    if (live_enough_for_v1_dir(ri, now))
                       buf_len += ri->cache_info.signed_descriptor_len+1);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
@@ -811,7 +822,7 @@ dirserv_dump_directory_to_string(char **dir_out,
     {
       size_t len = ri->cache_info.signed_descriptor_len;
       const char *body;
-      if (ri->cache_info.published_on < cutoff)
+      if (!live_enough_for_v1_dir(ri, now))
         continue;
       if (cp+len+1 >= buf+buf_len)
         goto truncated;
@@ -1065,7 +1076,7 @@ dirserv_get_directory(const char **directory, int compress)
 }
 
 /**
- * Generate a fresh directory (authdirservers only.)
+ * Generate a fresh v1 directory (authdirservers only.)
  */
 static int
 dirserv_regenerate_directory(void)
