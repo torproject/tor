@@ -752,6 +752,10 @@ live_enough_for_v1_dir(routerinfo_t *ri, time_t now)
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   if (ri->cache_info.published_on < cutoff)
     return 0;
+#if 0
+  if (!ri->is_running || !ri->is_valid)
+    return 0;
+#endif
   return 1;
 }
 
