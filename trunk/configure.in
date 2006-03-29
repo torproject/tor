@@ -316,7 +316,7 @@ return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
         else
             ac_cv_openssl_linker_option=$linked_with
         fi
-        AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it link against with the same version I found header files for.])
+        AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it link against the same version I found header files for.])
       fi
     fi
     LDFLAGS="$saved_LDFLAGS"
