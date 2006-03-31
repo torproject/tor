@@ -8,6 +8,7 @@ SUBDIRS = design-paper
 DIST_SUBDIRS = design-paper
 
 website:
+	cd $(srcdir)/../../website && $(MAKE)
 	mkdir $(distdir)/website
 	cp -p $(srcdir)/../../website/docs/tor-*.html.* \
 	$(srcdir)/../../website/stylesheet.css $(distdir)/website
