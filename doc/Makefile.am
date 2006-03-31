@@ -7,13 +7,13 @@ SUBDIRS = design-paper
 
 DIST_SUBDIRS = design-paper
 
-website:
+website: ../../website/docs/
 	cd $(srcdir)/../../website && $(MAKE)
 	rm -rf website
 	mkdir website
 	cp $(srcdir)/../../website/docs/tor-*.html.* \
 		$(srcdir)/../../website/stylesheet.css website
-img:
+img: ../../website/img/
 	rm -rf img
 	mkdir img
 	cp $(srcdir)/../../website/img/*.png \
