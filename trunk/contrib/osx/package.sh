@@ -94,6 +94,9 @@ DOC=$BUILD_DIR/tor_resources/documents
 mkdir $DOC
 mkdir $DOC/howto
 cp doc/website/stylesheet.css doc/website/tor-doc-osx.html.* $DOC/howto
+cp doc/website/tor-doc-server.html.* $DOC/howto
+cp doc/website/tor-hidden-service.html.* $DOC/howto
+cp doc/website/tor-switchproxy.html.* $DOC/howto
 mkdir $DOC/img
 cp doc/img/screenshot-osx* $DOC/img
 cp AUTHORS $DOC/AUTHORS.txt
