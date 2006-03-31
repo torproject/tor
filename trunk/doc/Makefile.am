@@ -9,11 +9,14 @@ DIST_SUBDIRS = design-paper
 
 website:
 	cd $(srcdir)/../../website && $(MAKE)
-	mkdir $(distdir)/website
-	cp -p $(srcdir)/../../website/docs/tor-*.html.* \
-	$(srcdir)/../../website/stylesheet.css $(distdir)/website
+	rm -rf website
+	mkdir website
+	cp $(srcdir)/../../website/docs/tor-*.html.* \
+		$(srcdir)/../../website/stylesheet.css website
 img:
-	mkdir $(distdir)/img
-	cp -p $(srcdir)/../../website/img/*.png \
-	$(srcdir)/../../website/img/*.jpg $(distdir)/img
+	rm -rf img
+	mkdir img
+	cp $(srcdir)/../../website/img/*.png \
+		$(srcdir)/../../website/img/*.jpg img
 
+.PHONY: website img
