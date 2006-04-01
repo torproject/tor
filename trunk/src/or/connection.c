@@ -555,12 +555,14 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
       helpfulhint = ". Is Tor already running?";
     log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
              tor_socket_strerror(e), helpfulhint);
+    tor_close_socket(s);
     goto err;
   }
 
   if (listen(s,SOMAXCONN) < 0) {
     log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
              tor_socket_strerror(tor_socket_errno(s)));
+    tor_close_socket(s);
     goto err;
   }
 
@@ -792,6 +794,7 @@ connection_connect(connection_t *conn, char *address,
       if (bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr)) < 0) {
         log_warn(LD_NET,"Error binding network socket: %s",
                  tor_socket_strerror(tor_socket_errno(s)));
+        tor_close_socket(s);
         return -1;
       }
     }
