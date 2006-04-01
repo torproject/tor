@@ -1506,8 +1506,10 @@ handle_getinfo_helper(const char *question, char **answer)
     smartlist_t *status_list;
     size_t len;
     char *cp;
-    if (!get_options()->DirPort)
+    if (!get_options()->DirPort) {
+      log_warn(LD_CONTROL, "getinfo dir/status/ requires an open dirport.");
       return 0;
+    }
     status_list = smartlist_create();
     dirserv_get_networkstatus_v2(status_list,
                                  question+strlen("dir/status/"));
