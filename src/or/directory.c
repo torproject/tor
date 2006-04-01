@@ -1430,10 +1430,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     const char *key = url + strlen("/tor/status/");
     if (deflated)
       url[url_len-2] = '\0';
-    if (dirserv_get_networkstatus_v2(dir_objs, key)) {
-      smartlist_free(dir_objs);
-      return 0;
-    }
+    dirserv_get_networkstatus_v2(dir_objs, key);
     if (!strcmpstart(key, "fp/"))
       request_type = deflated?"/tor/status/fp.z":"/tor/status/fp";
     else if (!strcmpstart(key, "authority"))

@@ -1509,11 +1509,8 @@ handle_getinfo_helper(const char *question, char **answer)
     if (!get_options()->DirPort)
       return 0;
     status_list = smartlist_create();
-    if (!dirserv_get_networkstatus_v2(status_list,
-                                      question+strlen("dir/status/"))) {
-      smartlist_free(status_list);
-      return 0;
-    }
+    dirserv_get_networkstatus_v2(status_list,
+                                 question+strlen("dir/status/"));
     len = 0;
     SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
     cp = *answer = tor_malloc(len+1);
