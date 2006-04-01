@@ -1166,7 +1166,6 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
   else
     smartlist_split_string(lines, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  /* XXXX Make errors conformant. */
   SMARTLIST_FOREACH(lines, char *, line,
   {
     tor_strlower(line);
@@ -1177,11 +1176,25 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
     if (smartlist_len(elts) == 2) {
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
+      size_t anslen = strlen(line)+512;
+      char *ans = tor_malloc(anslen);
       if (!is_plausible_address(from)) {
+        if (!v0) {
+          tor_snprintf(ans, anslen,
+            "512-syntax error: invalid address '%s'", from);
+          smartlist_add(reply, ans);
+        } else
+          tor_free(ans); /* don't respond if v0 */
         log_warn(LD_CONTROL,
                  "Skipping invalid argument '%s' in MapAddress msg",
              from);
       } else if (!is_plausible_address(to)) {
+        if (!v0) {
+          tor_snprintf(ans, anslen,
+            "512-syntax error: invalid address '%s'", to);
+          smartlist_add(reply, ans);
+        } else
+          tor_free(ans); /* don't respond if v0 */
         log_warn(LD_CONTROL,
                  "Skipping invalid argument '%s' in MapAddress msg", to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
@@ -1189,12 +1202,16 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
               !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!address) {
+          if (!v0) {
+            tor_snprintf(ans, anslen,
+              "451-resource exhausted: skipping '%s'", line);
+            smartlist_add(reply, ans);
+          } else
+            tor_free(ans); /* don't respond if v0 */
           log_warn(LD_CONTROL,
                    "Unable to allocate address for '%s' in MapAddress msg",
                    safe_str(line));
         } else {
-          size_t anslen = strlen(address)+strlen(to)+8;
-          char *ans = tor_malloc(anslen);
           if (v0)
             tor_snprintf(ans, anslen, "%s %s", address, to);
           else
@@ -1204,17 +1221,21 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
       } else {
         addressmap_register(from, tor_strdup(to), 1);
         if (v0)
-          smartlist_add(reply, tor_strdup(line));
-        else {
-          size_t anslen = strlen(line)+8;
-          char *ans = tor_malloc(anslen);
+          tor_snprintf(ans, anslen, "%s", line);
+        else
           tor_snprintf(ans, anslen, "250-%s", line);
-          smartlist_add(reply, ans);
-        }
+        smartlist_add(reply, ans);
       }
     } else {
-      log_warn(LD_CONTROL,
-               "Skipping MapAddress line with wrong number of items.");
+      if (!v0) {
+        size_t anslen = strlen(line)+256;
+        char *ans = tor_malloc(anslen);
+        tor_snprintf(ans, anslen,
+          "512-syntax error: mapping '%s' has wrong number of items.", line);
+        smartlist_add(reply, ans);
+      }
+      log_info(LD_CONTROL, "Skipping MapAddress '%s': wrong "
+                           "number of items.", safe_str(line));
     }
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_clear(elts);
