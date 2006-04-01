@@ -1230,8 +1230,8 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
       if (!v0) {
         size_t anslen = strlen(line)+256;
         char *ans = tor_malloc(anslen);
-        tor_snprintf(ans, anslen,
-          "512-syntax error: mapping '%s' has wrong number of items.", line);
+        tor_snprintf(ans, anslen, "512-syntax error: mapping '%s' is "
+                     "not of expected form 'foo=bar'.", line);
         smartlist_add(reply, ans);
       }
       log_info(LD_CONTROL, "Skipping MapAddress '%s': wrong "
