@@ -1284,7 +1284,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   }
   if (options->StrictExitNodes) {
     log_warn(LD_CIRC,
-             "No exit routers seem to be running; can't choose an exit.");
+             "No specified exit routers seem to be running, and "
+             "StrictExitNodes is set: can't choose an exit.");
   }
   return NULL;
 }
