@@ -1256,7 +1256,7 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
       tor_free(r);
     } else {
       const char *response =
-        "512 syntax error: not enough arguments to mapaddress.";
+        "512 syntax error: not enough arguments to mapaddress.\r\n";
       connection_write_to_buf(response, strlen(response), conn);
     }
   }
