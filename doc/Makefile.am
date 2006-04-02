@@ -8,15 +8,21 @@ SUBDIRS = design-paper
 DIST_SUBDIRS = design-paper
 
 website: ../../website/docs/
-	cd $(srcdir)/../../website && $(MAKE)
 	rm -rf website
 	mkdir website
-	cp $(srcdir)/../../website/docs/tor-*.html.* \
-		$(srcdir)/../../website/stylesheet.css website
+	if test -d $(srcdir)/../../website ; then \
+		cd $(srcdir)/../../website && $(MAKE); \
+	fi
+	if test -d $(srcdir)/../../website ; then \
+		cp $(srcdir)/../../website/docs/tor-*.html.* \
+			$(srcdir)/../../website/stylesheet.css website; \
+	fi
 img: ../../website/img/
 	rm -rf img
 	mkdir img
-	cp $(srcdir)/../../website/img/*.png \
-		$(srcdir)/../../website/img/*.jpg img
+	if test -d $(srcdir)/../../website/img; then \
+		cp $(srcdir)/../../website/img/*.png \
+			$(srcdir)/../../website/img/*.jpg img; \
+	fi
 
 .PHONY: website img
