@@ -2084,6 +2084,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options_init_logs(options, 1)<0) /* Validate the log(s) */
     REJECT("Failed to validate Log options. See logs for details.");
 
+  if (options->NoPublish) {
+    log(LOG_WARN, LD_CONFIG,
+        "NoPublish is obsolete. Use PublishServerDescriptor instead.");
+    options->PublishServerDescriptor = 0;
+  }
+
   if (server_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
@@ -2152,12 +2158,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->AuthoritativeDir && options->ClientOnly)
     REJECT("Running as authoritative directory, but ClientOnly also set.");
-
-  if (options->NoPublish) {
-    log(LOG_WARN, LD_CONFIG,
-        "NoPublish is obsolete. Use PublishServerDescriptor instead.");
-    options->PublishServerDescriptor = 0;
-  }
 
   if (options->ConnLimit <= 0) {
     r = tor_snprintf(buf, sizeof(buf),
