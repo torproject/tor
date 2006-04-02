@@ -7,10 +7,7 @@ doc/control-spec.txt
 doc/dir-spec.txt
 doc/rend-spec.txt
 doc/socks-extensions.txt
-doc/stylesheet.css
-doc/tor-doc-server.html
-doc/tor-doc-unix.html
-doc/tor-hidden-service.html
+doc/website/stylesheet.css
+doc/website/tor-*
 doc/tor-spec.txt
-doc/tor-switchproxy.html
 doc/version-spec.txt
