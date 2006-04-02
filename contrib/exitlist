@@ -6,7 +6,7 @@
  exitlist -- Given a Tor directory on stdin, lists the Tor servers
  that accept connections to given addreses.
 
- example usage (Tor 0.1.0.16 and earlier):
+ example usage (Tor 0.1.0.x and earlier):
 
     python2.2 exitlist < ~/.tor/cached-directory
 
