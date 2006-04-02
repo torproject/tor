@@ -1198,10 +1198,12 @@ static uint32_t guard_bandwidth = 0;
  * bandwidth.
  */
 static int
-dirserv_thinks_router_is_unreliable(routerinfo_t *router,
+dirserv_thinks_router_is_unreliable(time_t now,
+                                    routerinfo_t *router,
                                     int need_uptime, int need_capacity)
 {
-  if (need_uptime && router->uptime < stable_uptime)
+  if (need_uptime &&
+      router->uptime+(now - router->cache_info.published_on) < stable_uptime)
     return 1;
   if (need_capacity &&
       router_get_advertised_bandwidth(router) < fast_bandwidth)
@@ -1225,6 +1227,7 @@ static void
 dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
   smartlist_t *uptimes, *bandwidths;
+  time_t now = time(NULL);
 
   uptimes = smartlist_create();
   bandwidths = smartlist_create();
@@ -1233,7 +1236,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     if (ri->is_running && ri->is_valid) {
       uint32_t *up = tor_malloc(sizeof(uint32_t));
       uint32_t *bw = tor_malloc(sizeof(uint32_t));
-      *up = (uint32_t) ri->uptime;
+      *up = (uint32_t) ri->uptime + (now - ri->cache_info.published_on);
       smartlist_add(uptimes, up);
       *bw = router_get_advertised_bandwidth(ri);
       smartlist_add(bandwidths, bw);
@@ -1365,19 +1368,23 @@ generate_v2_networkstatus(void)
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
       int f_exit = exit_policy_is_general_exit(ri->exit_policy);
+      /* These versions dump connections with idle live circuits
+         sometimes. D'oh!*/
+      int unstable_version =
+        tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") &&
+        !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
       int f_stable = ri->is_stable =
-                     !dirserv_thinks_router_is_unreliable(ri, 1, 0);
+        !dirserv_thinks_router_is_unreliable(now, ri, 1, 0) &&
+        !unstable_version;
       int f_fast = ri->is_fast =
-                   !dirserv_thinks_router_is_unreliable(ri, 0, 1);
+        !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
       int f_running = ri->is_running; /* computed above */
       int f_authority = router_digest_is_trusted_dir(
                                       ri->cache_info.identity_digest);
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_valid;
       int f_guard = f_fast && f_stable &&
-                    router_get_advertised_bandwidth(ri) > guard_bandwidth &&
-                    (!tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") ||
-                     tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs"));
+        router_get_advertised_bandwidth(ri) > guard_bandwidth;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */
       int f_v2_dir = ri->dir_port &&
