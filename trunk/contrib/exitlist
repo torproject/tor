@@ -12,7 +12,7 @@
 
  example usage (Tor 0.1.1.10-alpha and later):
 
-    python2.2 exitlist < ~/.tor/cached-routers*
+    cat ~/.tor/cached-routers* | python2.2 exitlist
 
 """
 
