@@ -28,6 +28,10 @@ $Id$
       5. Requiring every client to know about every router won't scale.
       6. Requiring every directory cache to know every router won't scale.
 
+   We attempt to fix 1-4 here, and to build a solution that will work when we
+   figure out an answer for 5.  We haven't thought at all about what to do
+   about 6.
+
 1. Outline
 
    There is a small set (say, around 10) of semi-trusted directory
@@ -99,7 +103,7 @@ $Id$
    After generating a descriptor, ORs upload it to every directory
    authority they know, by posting it to the URL
 
-      http://<hostname>/tor/
+      http://<hostname:port>/tor/
 
 3. Network status format
 
@@ -191,12 +195,45 @@ $Id$
 
 3.1. Establishing server status
 
-   [[XXXXX Describe how authorities actually decide Fast, Named, Stable,
-   Running, Valid
+   (This section describes how directory authorities choose which status
+   flags to apply to routers, as of Tor 0.1.1.18-rc. Later directory
+   authorities MAY do things differently, so long as clients keep working
+   well.  Clients MUST NOT depend on the exact behaviors in this section.)
 
-   For each OR, a directory server remembers whether the OR was running and
-   functional the last time they tried to connect to it, and possibly other
-   liveness information.
+   "Valid" -- a router is 'Valid' if it seems to have been running well for a
+   while, and is running a version of Tor not known to be broken, and the
+   directory authority has not blacklisted it as suspicious.
+
+   "Named" -- Directory authority administrators may decide to support name
+   binding.  If they do, then they must maintain a file of
+   nickname-to-identity-key mappings, and try to keep this file consistent
+   with other directory authorities.  If they don't, they act as clients, and
+   report bindings made by other directory authorities (name X is bound to
+   identity Y if at least one binding directory lists it, and no directory
+   binds X to some other Y'.)  A router is called 'Named' if the router
+   believes the given name should be bound to the given key.
+
+   "Running" -- A router is 'Running' if the authority managed to connect to
+   it successfully within the last 30 minutes.
+
+   "Stable" -- A router is 'Stable' if its uptime is above median for known
+   running, valid routers, and it's running a version of Tor not known to
+   drop circuits stupidly.  (0.1.1.10-alpha throught 0.1.1.16-rc are stupid
+   this way.)
+
+   "Fast" -- A router is 'Fast' if its bandwidth is in the top 7/8ths for
+   known running, valid routers.
+
+   "Guard" -- A router is a possible 'Guard' if it is 'Stable' and its
+   bandwidth is above median for known running, valid routers.
+
+   "Authority" -- A router is called an 'Authority' if the authority
+   generating the network-status document believes it is an authority.
+
+   "V2Dir" -- A router supports the v2 directory protocol if it has an open
+   directory port, and it is running a version of the directory protocol that
+   supports the functionality clients need.  (Currently, this is
+   0.1.1.9-alpha or later.)
 
    Directory server administrators may label some servers or IPs as
    blacklisted, and elect not to include them in their network-status lists.
@@ -204,15 +241,6 @@ $Id$
    Thus, the network-status list includes all non-blacklisted,
    non-expired, non-superseded descriptors for ORs that the directory has
    observed at least once to be running.
-
-   Directory server administrators may decide to support name binding.  If
-   they do, then they must maintain a file of nickname-to-identity-key
-   mappings, and try to keep this file consistent with other directory
-   servers.  If they don't, they act as clients, and report bindings made by
-   other directory servers (name X is bound to identity Y if at least one
-   binding directory lists it, and no directory binds X to some other Y'.)
-
-   ]]
 
 4. Directory server operation
 
@@ -247,7 +275,7 @@ $Id$
    descriptors, not to descriptors that the authority downloads from other
    authorities.
 
-4.2. Downloading network-status documents
+4.2. Downloading network-status documents (authorities and caches)
 
    All directory servers (authorities and mirrors) try to keep a fresh
    set of network-status documents from every authority.  To do so,
@@ -263,9 +291,10 @@ $Id$
    network-status document is over 10 days old, it is discarded anyway.
    Mirrors SHOULD store and serve network-status documents from authorities
    they don't recognize, but SHOULD NOT use such documents for any other
-   purpose.
+   purpose.  Mirrors SHOULD discard network-status documents older than 48
+   hours.
 
-4.3. Downloading and storing router descriptors
+4.3. Downloading and storing router descriptors (authorities and caches)
 
    Periodically (currently, every 10 seconds), directory servers check
    whether there are any specific descriptors (as identified by descriptor
@@ -284,7 +313,9 @@ $Id$
    Directory servers must potentially cache multiple descriptors for each
    router. Servers must not discard any descriptor listed by any current
    network-status document from any authority.  If there is enough space to
-   store additional descriptors [XXXXXX then how do we pick.]
+   store additional descriptors, servers SHOULD try to hold those which
+   clients are likely download the most.  (Currently, this is judged based on
+   the interval for which each descriptor seemed newest.)
 
    Authorities SHOULD NOT download descriptors for routers that they would
    immediately reject for reasons listed in 3.1.
@@ -363,27 +394,42 @@ $Id$
    Each client maintains an ordered list of directory authorities.
    Insofar as possible, clients SHOULD all use the same ordered list.
 
-   Clients check whether they have enough recently published network-status
-   documents (currently, this means that they must have a network-status
-   published within the last 48 hours for over half of the authorities).
-   If they do not, they download enough network-status documents so that this
-   is so.
+   Clients consider a network-status document "live" if it was published
+   within the last 24 hours.
+
+   Clients try to have a live network-status document hours from *every*
+   authority, and try to periodically get new network-status documents from
+   each authority in rotation as follows:
+
+   If a client is missing a live network-status document for any authority, it
+   tries to fetch it from a directory cache.  On failure, the client waits
+   briefly, then tries that network-status document again from another
+   cache.  The client does not build circuits until, for every authority, it
+   has a live network-status document, or until is has tried and failed to
+   get a networkstatus document.
 
    Also, if the most recently published network-status document is over 30
-   minutes old, the client downloads a network-status document.
-
-   When choosing which documents to download, clients treat their list of
+   minutes old, the client downloads a network-status document.  When
+   choosing which documents to download, clients treat their list of
    directory authorities as a circular ring, and begin with the authority
    appearing immediately after the authority for their most recently
    published network-status document.
 
+   Clients discard all network-status documents over 24 hours old.
+
    If enough mirrors (currently 4) claim not to have a given network status,
    we stop trying to download that authority's network-status, until we
    download a new network-status that makes us believe that the authority in
-   question is running.
+   question is running.  Clients should wait a little longer after each
+   failure.
 
-   Network-status documents published over 10 hours in the past are
-   discarded.
+   Clients SHOULD try to batch as many network-status requests as possible
+   into each HTTP GET.
+
+   (Note: clients can and should pick caches based on the network-status
+   information they have: once they have first fetched network-status info
+   from an authority, they should not need to go to the authority directly
+   again.)
 
 5.2. Downloading router descriptors
 
@@ -398,13 +444,15 @@ $Id$
    Periodically (currently every 10 seconds) clients check whether there are
    any "downloadable" descriptors.  A descriptor is downloadable if:
       - It is the "best" descriptor for some router.
-      - The descriptor was published at least 5 minutes (???) in the past.
-        [This prevents clients from trying to fetch descriptors that the
-        mirrors have not yet retrieved and cached.]
+      - The descriptor was published at least 10 minutes in the past.
+        (This prevents clients from trying to fetch descriptors that the
+        mirrors have probably not yet retrieved and cached.)
       - The client does not currently have it.
       - The client is not currently trying to download it.
+      - The client would not discard it immediately upon receiving it.
+      - The client thinks it is running and valid (see 6.1 below).
 
-   If at least 1/16 of known routers have downloadable descriptors, or if
+   If at least 16 known routers have downloadable descriptors, or if
    enough time (currently 10 minutes) has passed since the last time the
    client tried to download descriptors, it launches requests for all
    downloadable descriptors, as described in 5.3 below.
@@ -451,7 +499,7 @@ $Id$
    A network status is "live" if it is the most recently downloaded network
    status document for a given directory server, and the server is a
    directory server trusted by the client, and the network-status document is
-   no more than 2 days old.
+   no more than 1 day old.
 
    For time-sensitive information, Tor implementations focus on "recent"
    network-status documents.  A network status is "recent" if it is live, and
@@ -460,22 +508,36 @@ $Id$
    there are fewer than 3 in all, all are "recent.")
 
    Circuits SHOULD NOT be built until the client has enough directory
-   information: at least two live network-status documents, and descriptors
-   for at least 1/4 of the servers believed to be running.
+   information: network-statuses (or failed attempts to download
+   networkstatuses) for all authorities, network-statues for at more than
+   half of the authorites, and descriptors for at least 1/4 of the servers
+   believed to be running.
 
    A server is "listed" if it is included by more than half of the live
    network status documents.  Clients SHOULD NOT use unlisted servers.
 
-   A server is "valid" if it is listed as valid by more than half of the live
-   network-status documents.  Clients SHOULD NOT use non-valid servers unless
-   specifically configured to do so.
+   Clients believe the flags "Valid", "Exit", "Fast", "Guard", "Stable", and
+   "V2Dir" about a given router when they are asserted by more than half of
+   the live network-status documents.  Clients believe the flag "Running" if
+   it is listed by more than half of the recent network-status documents.
 
-   A server is "running" if it is listed as running by more than half of the
-   recent network-status documents.  Clients SHOULD NOT try to use
-   non-running servers.
+   These flags are used as follows:
 
-   A server is believed to be a directory mirror if it is listed as a V2
-   directory by more than half of the recent network-status documents.
+     - Clients SHOULD NOT use non-'Valid' or non-'Running' routers unless
+       requested to do so.
+
+     - Clients SHOULD NOT use non-'Fast' routers for any purpose other than
+       very-low-bandwidth circuits (such as introduction circuits).
+
+     - Clients SHOULD NOT use non-'Stable' routers for circuits that are
+       likely to need to be open for a very long time (such as those used for
+       IRC or SSH connections).
+
+     - Clients SHOULD NOT choose non-'Guard' nodes when picking entry guard
+       nodes.
+
+     - Clients SHOULD NOT download directory information from non-'V2Dir'
+       caches.
 
 6.1. Managing naming
 
@@ -502,6 +564,8 @@ $Id$
    least one Naming authority maps the name to, so long as no other naming
    authority maps that name to a different router.
 
+   (XXXX The last-bound thing above isn't implemented)
+
 6.2. Software versions
 
    An implementation of Tor SHOULD warn when it has live network-statuses from
@@ -509,14 +573,8 @@ $Id$
    not listed on more than half of the live "Versioning" network-status
    documents.
 
-TODO:
-    - Resolve XXXXs
-    - Are the magic numbers above sane?
+   (XXXX not up-to-date)
 
-    - Client-knowledge partitioning is worrisome.  Most versions of this
-      don't seem to be worse than the Danezis-Murdoch tracing attack, since
-      an attacker can't do more than deduce probable exits from entries (or
-      vice versa).  But what about when the client connects to A and B but in
-      a different order?  How bad can it be partitioned based on its
-      knowledge?
+6.3. Warning about a router's status.
 
+   (XXXX not up-to-date)
