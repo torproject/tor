@@ -298,7 +298,7 @@ $Id$
   Sent from the client to the server.  The syntax is as for GETCONF:
     "GETINFO" 1*(SP keyword) CRLF
   one or more NL-terminated strings.  The server replies with an INFOVALUE
-  message.
+  message, or a 551 or 552 error.
 
   Unlike GETCONF, this message is used for data that are not stored in the Tor
   configuration file, and that may be longer than a single line.  On success,
