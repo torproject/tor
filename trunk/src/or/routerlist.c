@@ -2102,10 +2102,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   if (!trusted_dir) {
     if (!skewed && get_options()->DirPort) {
-      /* XXX This is great as a first cut, but it looks like
-       * any old person can give us an untrusted network-status and
-       * we'll write it to disk as the newest one we have?
-       * Also, there is no limit on the number that we'll store? -RD */
+      /* We got a non-trusted networkstatus, and we're a directory cache.
+       * This means that we asked an authority, and it told us about another
+       * authority we didn't recognize. */
       add_networkstatus_to_cache(s, source, ns);
       networkstatus_free(ns);
     }
@@ -2335,19 +2334,21 @@ update_networkstatus_cache_downloads(time_t now)
 static void
 update_networkstatus_client_downloads(time_t now)
 {
-  int n_live = 0, needed = 0, n_running_dirservers, n_dirservers, i;
+  int n_live = 0, n_dirservers, n_running_dirservers, needed = 0;
+  int fetch_latest = 0;
   int most_recent_idx = -1;
   trusted_dir_server_t *most_recent = NULL;
   time_t most_recent_received = 0;
   char *resource, *cp;
   size_t resource_len;
+  smartlist_t *missing;
 
   if (connection_get_by_type_purpose(CONN_TYPE_DIR,
                                      DIR_PURPOSE_FETCH_NETWORKSTATUS))
     return;
 
   /* This is a little tricky.  We want to download enough network-status
-   * objects so that we have at least half of them under
+   * objects so that we have all of them under
    * NETWORKSTATUS_MAX_AGE publication time.  We want to download a new
    * *one* if the most recent one's publication time is under
    * NETWORKSTATUS_CLIENT_DL_INTERVAL.
@@ -2355,77 +2356,82 @@ update_networkstatus_client_downloads(time_t now)
   if (!trusted_dir_servers || !smartlist_len(trusted_dir_servers))
     return;
   n_dirservers = n_running_dirservers = smartlist_len(trusted_dir_servers);
+  missing = smartlist_create();
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
        networkstatus_t *ns = networkstatus_get_by_digest(ds->digest);
-       if (!ns)
-         continue;
        if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
          --n_running_dirservers;
          continue;
        }
-       if (ns->published_on > now-NETWORKSTATUS_MAX_AGE)
+       if (ns && ns->published_on > now-NETWORKSTATUS_MAX_AGE)
          ++n_live;
-       if (!most_recent || ns->received_on > most_recent_received) {
+       else
+         smartlist_add(missing, ds->digest);
+       if (ns && (!most_recent || ns->received_on > most_recent_received)) {
          most_recent_idx = ds_sl_idx; /* magic variable from FOREACH */
          most_recent = ds;
          most_recent_received = ns->received_on;
        }
      });
 
-  /* Download enough so we have at least half live, but no more than all the
-   * trusted dirservers we know.
-   */
-  if (n_live < (n_dirservers/2)+1)
-    needed = (n_dirservers/2)+1-n_live;
-  if (needed > n_running_dirservers)
-    needed = n_running_dirservers;
-
-  if (needed)
-    log_info(LD_DIR, "For %d/%d running directory servers, we have %d live"
-             " network-status documents. Downloading %d.",
-             n_running_dirservers, n_dirservers, n_live, needed);
-
   /* Also, download at least 1 every NETWORKSTATUS_CLIENT_DL_INTERVAL. */
-  if (n_running_dirservers &&
-      most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL &&
-      needed < 1) {
+  if (!smartlist_len(missing) &&
+      most_recent_received < now-NETWORKSTATUS_CLIENT_DL_INTERVAL) {
     log_info(LD_DIR, "Our most recent network-status document (from %s) "
              "is %d seconds old; downloading another.",
              most_recent?most_recent->description:"nobody",
              (int)(now-most_recent_received));
+    fetch_latest = 1;
     needed = 1;
-  }
-
-  if (!needed)
+  } else if (smartlist_len(missing)) {
+    log_info(LD_DIR, "For %d/%d running directory servers, we have %d live"
+             " network-status documents. Downloading %d.",
+             n_running_dirservers, n_dirservers, n_live,
+             smartlist_len(missing));
+    needed = smartlist_len(missing);
+  } else {
+    smartlist_free(missing);
     return;
+  }
 
   /* If no networkstatus was found, choose a dirserver at random as "most
    * recent". */
   if (most_recent_idx<0)
     most_recent_idx = crypto_rand_int(n_dirservers);
 
+  if (fetch_latest) {
+    int i;
+    for (i = most_recent_idx + 1; i; ++i) {
+      trusted_dir_server_t *ds;
+      if (i >= n_dirservers)
+        i = 0;
+      ds = smartlist_get(trusted_dir_servers, i);
+      if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES)
+        continue;
+      smartlist_add(missing, ds->digest);
+      break;
+    }
+  }
+
   /* Build a request string for all the resources we want. */
-  resource_len = needed * (HEX_DIGEST_LEN+1) + 6;
+  resource_len = smartlist_len(missing) * (HEX_DIGEST_LEN+1) + 6;
   resource = tor_malloc(resource_len);
   memcpy(resource, "fp/", 3);
   cp = resource+3;
-  for (i = most_recent_idx+1; needed; ++i) {
-    trusted_dir_server_t *ds;
-    if (i >= n_dirservers)
-      i = 0;
-    ds = smartlist_get(trusted_dir_servers, i);
-    if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES)
-      continue;
-    base16_encode(cp, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
-    cp += HEX_DIGEST_LEN;
-    --needed;
-    if (needed)
-      *cp++ = '+';
-  }
+  needed = smartlist_len(missing);
+  SMARTLIST_FOREACH(missing, const char *, d,
+    {
+      base16_encode(cp, HEX_DIGEST_LEN+1, d, DIGEST_LEN);
+      cp += HEX_DIGEST_LEN;
+      --needed;
+      if (needed)
+        *cp++ = '+';
+    });
   memcpy(cp, ".z", 3);
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
   tor_free(resource);
+  smartlist_free(missing);
 }
 
 /** Launch requests for networkstatus documents as appropriate. */
@@ -3525,7 +3531,8 @@ int
 router_have_minimum_dir_info(void)
 {
   int tot = 0, num_running = 0;
-  int n_ns, n_authorities, res, avg;
+  int n_ns, n_tried, n_authorities, res, avg;
+  static int have_ever_tried_all = 0;
   static int have_enough = 0;
   if (!networkstatus_list || !routerlist) {
     res = 0;
@@ -3539,6 +3546,20 @@ router_have_minimum_dir_info(void)
              "more than %d.", n_ns, n_authorities, n_authorities/2);
     res = 0;
     goto done;
+  }
+  if (!have_ever_tried_all) {
+    n_tried=n_ns;
+    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+                      if (ds->n_networkstatus_failures) ++n_tried);
+    if (n_tried < n_authorities) {
+      log_info(LD_DIR,
+               "We have only tried downloading %d/%d network statuses.",
+               n_tried, n_authorities);
+      res = 0;
+      goto done;
+    } else {
+      have_ever_tried_all = 1;
+    }
   }
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
                     tot += smartlist_len(ns->entries));
