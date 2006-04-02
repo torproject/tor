@@ -1247,16 +1247,22 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
   if (v0) {
     r = smartlist_join_strings(reply, "\n", 1, &sz);
     send_control_done2(conn,r,sz);
+    tor_free(r);
   } else {
-    if (smartlist_len(reply))
+    if (smartlist_len(reply)) {
       ((char*)smartlist_get(reply,smartlist_len(reply)-1))[3] = ' ';
-    r = smartlist_join_strings(reply, "\r\n", 1, &sz);
-    connection_write_to_buf(r, sz, conn);
+      r = smartlist_join_strings(reply, "\r\n", 1, &sz);
+      connection_write_to_buf(r, sz, conn);
+      tor_free(r);
+    } else {
+      const char *response =
+        "512 syntax error: not enough arguments to mapaddress.";
+      connection_write_to_buf(response, strlen(response), conn);
+    }
   }
 
   SMARTLIST_FOREACH(reply, char *, cp, tor_free(cp));
   smartlist_free(reply);
-  tor_free(r);
   return 0;
 }
 
