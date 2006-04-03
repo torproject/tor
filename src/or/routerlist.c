@@ -2874,7 +2874,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
   n_trusted = smartlist_len(trusted_dir_servers);
   n_statuses = smartlist_len(networkstatus_list);
 
-  if (n_statuses < (n_trusted/2)+1) {
+  if (n_statuses <= n_trusted/2) {
     /* Not enough statuses to adjust status. */
     log_notice(LD_DIR,
                "Not enough statuses to update router status list. (%d/%d)",
