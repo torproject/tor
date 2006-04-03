@@ -394,8 +394,10 @@ $Id$
    Each client maintains an ordered list of directory authorities.
    Insofar as possible, clients SHOULD all use the same ordered list.
 
-   Clients consider a network-status document "live" if it was published
-   within the last 24 hours.
+   For each network-status document a client has, it keeps track of its
+   publication time *and* the time when the client retrieved it.  Clients
+   consider a network-status document "live" if it was published within the
+   last 24 hours.
 
    Clients try to have a live network-status document hours from *every*
    authority, and try to periodically get new network-status documents from
@@ -408,12 +410,12 @@ $Id$
    has a live network-status document, or until is has tried and failed to
    get a network-status document.
 
-   Also, if the most recently published network-status document is over 30
+   If the most recently _retrieved_ network-status document is over 30
    minutes old, the client attempts to download a network-status document.
    When choosing which documents to download, clients treat their list of
    directory authorities as a circular ring, and begin with the authority
    appearing immediately after the authority for their most recently
-   published network-status document.  If this attempt fails, the client
+   retrieved network-status document.  If this attempt fails, the client
    retries at other caches several times, before moving on to the next
    network-status document in sequence.
 
