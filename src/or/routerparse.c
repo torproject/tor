@@ -1926,8 +1926,24 @@ _compare_tor_version_str_ptr(const void **_a, const void **_b)
 
 /** Sort a list of string-representations of versions in ascending order. */
 void
-sort_version_list(smartlist_t *versions)
+sort_version_list(smartlist_t *versions, int remove_duplicates)
 {
+  int i;
+
   smartlist_sort(versions, _compare_tor_version_str_ptr);
+  if (!remove_duplicates)
+    return;
+
+  for (i = 1; i < smartlist_len(versions); ++i) {
+    void *a, *b;
+    a = smartlist_get(versions, i-1);
+    b = smartlist_get(versions, i);
+    /* use version_cmp so we catch multiple representations of the same
+     * version */
+    if (_compare_tor_version_str_ptr(a,b) == 0) {
+      tor_free(smartlist_get(versions, i));
+      smartlist_del(versions, i--);
+    }
+  }
 }
 

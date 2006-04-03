@@ -1481,8 +1481,6 @@ router_set_status(const char *digest, int up)
  * This function should be called *after*
  * routers_update_status_from_networkstatus; subsequently, you should call
  * router_rebuild_store and control_event_descriptors_changed.
- *
- * XXXX never replace your own descriptor.
  */
 int
 router_add_to_routerlist(routerinfo_t *router, const char **msg,
@@ -1546,6 +1544,13 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                       DIGEST_LEN))
       rs->need_to_mirror = 0;
   });
+
+  /* Probably, there's no way to actually pass this function our own
+   * descriptor, but in case there is, don't replace our own descriptor. */
+  if (router_is_me(router)) {
+    routerinfo_free(router);
+    return 0;
+  }
 
   /* If we have a router with this name, and the identity key is the same,
    * choose the newer one. If the identity key has changed, and one of the
@@ -2606,6 +2611,8 @@ compute_recommended_versions(time_t now, int client)
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
       const char *vers;
+      smartlist_t *versions;
+      int i;
       if (! ns->recommends_versions)
         continue;
       if (ns->received_on + SELF_OPINION_INTERVAL < now)
@@ -2614,13 +2621,13 @@ compute_recommended_versions(time_t now, int client)
       vers = client ? ns->client_versions : ns->server_versions;
       if (!vers)
         continue;
-      /* XXX Attack: a single dirserver can make a version recommended
-       * by repeating it many times in his recommended list. -RD */
-      smartlist_split_string(combined, vers, ",",
+      versions = smartlist_create();
+      smartlist_split_string(versions, vers, ",",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+      sort_version_list(versions, 1);
     });
 
-  sort_version_list(combined);
+  sort_version_list(combined, 0);
 
   current = NULL;
   n_seen = 0;
@@ -2733,7 +2740,6 @@ routers_update_all_from_networkstatus(void)
       }
     });
     if (n_recent > 2 && n_recommended < n_recent/2) {
-/* XXX Should this be n_recommended <= n_recent/2 ? -RD */
       if (consensus == VS_NEW || consensus == VS_NEW_IN_SERIES) {
         if (!have_warned_about_new_version) {
           char *rec = compute_recommended_versions(now, !is_server);
