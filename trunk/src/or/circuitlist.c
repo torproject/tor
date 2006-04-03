@@ -676,7 +676,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     reason = END_CIRC_REASON_NONE;
   } else if (CIRCUIT_IS_ORIGIN(circ) && reason != END_CIRC_REASON_NONE) {
     /* Don't warn about this; there are plenty of places where our code
-     * is origin-agnosic. */
+     * is origin-agnostic. */
     reason = END_CIRC_REASON_NONE;
   }
   if (reason < _END_CIRC_REASON_MIN || reason > _END_CIRC_REASON_MAX) {
