@@ -2630,12 +2630,14 @@ compute_recommended_versions(time_t now, int client)
       if (current && !strcmp(cp, current)) {
         ++n_seen;
       } else {
+/* XXX Another case of requiring only half, not more than half -RD */
         if (n_seen >= n_recent/2 && current)
           smartlist_add(recommended, current);
         n_seen = 0;
         current = cp;
       }
     });
+/* XXX and here -RD */
   if (n_seen >= n_recent/2 && current)
     smartlist_add(recommended, current);
 
