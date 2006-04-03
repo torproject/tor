@@ -1942,7 +1942,7 @@ sort_version_list(smartlist_t *versions, int remove_duplicates)
      * version */
     if (_compare_tor_version_str_ptr(a,b) == 0) {
       tor_free(smartlist_get(versions, i));
-      smartlist_del(versions, i--);
+      smartlist_del_keeporder(versions, i--);
     }
   }
 }
