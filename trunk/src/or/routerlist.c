@@ -2689,6 +2689,8 @@ routers_update_all_from_networkstatus(void)
         ++n_named;
     });
 
+/* XXX Why require more than 1 recent or listing? If the user
+ * has only one authority shouldn't he also get these warnings? -RD */
     if (n_recent >= 2 && n_listing >= 2 &&
         have_tried_downloading_all_statuses()) {
       if (n_valid <= n_recent/2)  {
