@@ -406,7 +406,7 @@ $Id$
    briefly, then tries that network-status document again from another
    cache.  The client does not build circuits until, for every authority, it
    has a live network-status document, or until is has tried and failed to
-   get a networkstatus document.
+   get a network-status document.
 
    Also, if the most recently published network-status document is over 30
    minutes old, the client downloads a network-status document.  When
@@ -435,9 +435,10 @@ $Id$
 
    Clients try to have the best descriptor for each router.  A descriptor is
    "best" if:
-      * it the most recently published descriptor listed for that router by
-        at least two network-status documents.
-      * OR, no descriptor for that router is listed by two or more
+      * It is the most recently published descriptor listed for that router
+        by at least two network-status documents.
+        OR,
+      * No descriptor for that router is listed by two or more
         network-status documents, and it is the most recently published
         descriptor listed by any network-status document.
 
@@ -509,7 +510,7 @@ $Id$
 
    Circuits SHOULD NOT be built until the client has enough directory
    information: network-statuses (or failed attempts to download
-   networkstatuses) for all authorities, network-statues for at more than
+   network-statuses) for all authorities, network-statuses for at more than
    half of the authorites, and descriptors for at least 1/4 of the servers
    believed to be running.
 
