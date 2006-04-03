@@ -409,11 +409,11 @@ $Id$
    get a network-status document.
 
    Also, if the most recently published network-status document is over 30
-   minutes old, the client downloads a network-status document.  When
-   choosing which documents to download, clients treat their list of
+   minutes old, the client attempts to download a network-status document.
+   When choosing which documents to download, clients treat their list of
    directory authorities as a circular ring, and begin with the authority
    appearing immediately after the authority for their most recently
-   published network-status document.
+   published network-status document.  
 
    Clients discard all network-status documents over 24 hours old.
 
