@@ -256,7 +256,7 @@ $Id$
   containing the source and destination addresses.  If request is
   malformed, the server replies with "512 syntax error in command
   argument".  If the server can't fulfill the request, it replies with
-  "451 resource exhausted."
+  "451 resource exhausted".
 
   The client may decline to provide a body for the original address, and
   instead send a special null address ("0.0.0.0" for IPv4, "::0" for IPv6, or
