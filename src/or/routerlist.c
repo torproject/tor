@@ -3317,7 +3317,7 @@ update_router_descriptor_client_downloads(time_t now)
    * try to split our requests into at least this this many requests. */
 #define MIN_REQUESTS 3
   /** If we want fewer than this many descriptors, wait until we
-   * want more, or until MAX_(CLIENT|SERVER)_INTERVAL_WITHOUT_REQUEST has
+   * want more, or until MAX_CLIENT_INTERVAL_WITHOUT_REQUEST has
    * passed. */
 #define MAX_DL_TO_DELAY 16
   /** When directory clients have only a few servers to request, they batch
