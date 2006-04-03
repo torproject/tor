@@ -2612,7 +2612,6 @@ compute_recommended_versions(time_t now, int client)
     {
       const char *vers;
       smartlist_t *versions;
-      int i;
       if (! ns->recommends_versions)
         continue;
       if (ns->received_on + SELF_OPINION_INTERVAL < now)
