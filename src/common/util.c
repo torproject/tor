@@ -1722,6 +1722,8 @@ is_plausible_address(const char *name)
   const char *cp;
   tor_assert(name);
   /* We could check better here. */
+  if (!*name)
+    return 0;
   for (cp=name; *cp; cp++) {
     if (*cp != '.' && *cp != '-' && !TOR_ISALNUM(*cp))
       return 0;
