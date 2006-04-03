@@ -3445,7 +3445,7 @@ update_router_descriptor_cache_downloads(time_t now)
             continue;
           if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
             log_warn(LD_BUG,
-                     "We have a router descriptor, but need_to_mirror=1.");
+                 "Bug: We have a router descriptor, but need_to_mirror=1.");
             rs->need_to_mirror = 0;
             continue;
           }
@@ -3579,6 +3579,8 @@ router_have_minimum_dir_info(void)
        if (rs->status.is_running)
          num_running++;
      });
+  /* XXX if more than 3/4 of the routers in the network are down
+   * or invalid, does this mean we'll never become happy? -RD */
   res = smartlist_len(routerlist->routers) >= (avg/4) && num_running > 2;
  done:
   if (res && !have_enough) {
