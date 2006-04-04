@@ -944,7 +944,8 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
         return router;
       else {
         ++n_matches;
-        best_match = router;
+        if (n_matches <= 1 || router->is_running)
+          best_match = router;
       }
     } else if (maybedigest &&
                !memcmp(digest, router->cache_info.identity_digest, DIGEST_LEN)
