@@ -573,13 +573,26 @@ $Id$
 
 6.2. Software versions
 
-   An implementation of Tor SHOULD warn when it has live network-statuses from
-   more than half of the authorities, and it is running a software version
+   An implementation of Tor SHOULD warn when it has fetched (or has
+   attempted to fetch and failed four consecutive times) a network-status
+   for each authority, and it is running a software version
    not listed on more than half of the live "Versioning" network-status
    documents.
 
-   (XXXX not up-to-date)
-
 6.3. Warning about a router's status.
 
-   (XXXX not up-to-date)
+   If a router tries to publish its descriptor to a Naming authority
+   that has its nickname mapped to another key, the router SHOULD
+   warn the operator that it is either using the wrong key or is using
+   an already claimed nickname.
+
+   If a router has fetched (or attempted to fetch and failed four
+   consecutive times) a network-status for every authority, and at
+   least one of the authorities is "Naming", and no live "Naming"
+   authorities publish a binding for the router's nickname, the
+   router SHOULD remind the operator that the chosen nickname is not
+   bound to this key at the authorities, and suggest contacting the
+   authority operators.
+
+   ...
+
