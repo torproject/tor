@@ -967,7 +967,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
             continue;
           rs = router_get_combined_status_by_digest(
                                           router->cache_info.identity_digest);
-          if (!rs->name_lookup_warned) {
+          if (rs && !rs->name_lookup_warned) {
             rs->name_lookup_warned = 1;
             any_unwarned = 1;
           }
@@ -984,7 +984,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
         log_warn(LD_CONFIG,
                  "There are multiple matches for the nickname \"%s\","
                  " but none is listed as named by the directory authories. "
-                 "Choosing one arbitrarily.  If you meant one in particular, "
+                 "Choosing one arbitrarily. If you meant one in particular, "
                  "you should say %s.", nickname, alternatives);
         tor_free(alternatives);
       }
