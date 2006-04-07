@@ -2408,13 +2408,17 @@ update_networkstatus_client_downloads(time_t now)
 
   if (fetch_latest) {
     int i;
-    for (i = most_recent_idx + 1; i; ++i) {
+    int n_failed = 0;
+    for (i = most_recent_idx + 1; 1; ++i) {
       trusted_dir_server_t *ds;
       if (i >= n_dirservers)
         i = 0;
       ds = smartlist_get(trusted_dir_servers, i);
-      if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES)
+      if (n_failed < n_dirservers &&
+          ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
+        ++n_failed;
         continue;
+      }
       smartlist_add(missing, ds->digest);
       break;
     }
@@ -3579,7 +3583,11 @@ router_have_minimum_dir_info(void)
          num_running++;
      });
   /* XXX if more than 3/4 of the routers in the network are down
-   * or invalid, does this mean we'll never become happy? -RD */
+   * or invalid, does this mean we'll never become happy? -RD
+   * Right. We should base the required fraction on the number of
+   * routers we would like to download if we could.  I think right now we
+   * only decline to download non-running routers, but we might want
+   * to split out the test so we can keep these in sync. -NM */
   res = smartlist_len(routerlist->routers) >= (avg/4) && num_running > 2;
  done:
   if (res && !have_enough) {
