@@ -33,7 +33,7 @@ static void update_networkstatus_cache_downloads(time_t now);
 static void update_networkstatus_client_downloads(time_t now);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void routerlist_assert_ok(routerlist_t *rl);
-static int have_tried_downloading_all_statuses(void);
+static int have_tried_downloading_all_statuses(int n_failures);
 static routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
                                                 const char *digest);
 
@@ -2677,7 +2677,8 @@ routers_update_all_from_networkstatus(void)
   routers_update_status_from_networkstatus(routerlist->routers, 0);
 
   me = router_get_my_routerinfo();
-  if (me && !have_warned_about_invalid_status) {
+  if (me && !have_warned_about_invalid_status &&
+      have_tried_downloading_all_statuses(4)) {
     int n_recent = 0, n_listing = 0, n_valid = 0, n_named = 0, n_naming = 0;
     routerstatus_t *rs;
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
@@ -2696,10 +2697,7 @@ routers_update_all_from_networkstatus(void)
         ++n_named;
     });
 
-/* XXX Why require more than 1 recent or listing? If the user
- * has only one authority shouldn't he also get these warnings? -RD */
-    if (n_recent >= 2 && n_listing >= 2 &&
-        have_tried_downloading_all_statuses()) {
+    if (n_recent && n_listing) {
       if (n_valid <= n_recent/2)  {
         log_warn(LD_GENERAL,
                  "%d/%d recent statements from directory authorities list us "
@@ -2718,7 +2716,8 @@ routers_update_all_from_networkstatus(void)
 
   entry_guards_set_status_from_directory();
 
-  if (!have_warned_about_old_version) {
+  if (!have_warned_about_old_version &&
+      have_tried_downloading_all_statuses(4)) {
     int n_recent = 0;
     int n_recommended = 0;
     int is_server = server_mode(get_options());
@@ -2739,7 +2738,7 @@ routers_update_all_from_networkstatus(void)
         consensus = version_status_join(consensus, vs);
       }
     });
-    if (n_recent > 2 && n_recommended < n_recent/2) {
+    if (n_recent && n_recommended <= n_recent/2) {
       if (consensus == VS_NEW || consensus == VS_NEW_IN_SERIES) {
         if (!have_warned_about_new_version) {
           char *rec = compute_recommended_versions(now, !is_server);
@@ -3597,10 +3596,10 @@ router_have_minimum_dir_info(void)
   return res;
 }
 
-/** Return true iff we have downloaded, or attempted to download, a network
- * status for each authority. */
+/** Return true iff we have downloaded, or attempted to download at least
+ * n_failures times, a network status for each authority. */
 static int
-have_tried_downloading_all_statuses(void)
+have_tried_downloading_all_statuses(int n_failures)
 {
   if (!trusted_dir_servers)
     return 0;
@@ -3610,7 +3609,7 @@ have_tried_downloading_all_statuses(void)
       /* If we don't have the status, and we haven't failed to get the status,
        * we haven't tried to get the status. */
       if (!networkstatus_get_by_digest(ds->digest) &&
-          !ds->n_networkstatus_failures)
+          ds->n_networkstatus_failures <= n_failures)
         return 0;
     });
 
