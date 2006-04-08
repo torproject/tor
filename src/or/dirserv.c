@@ -1641,16 +1641,16 @@ dirserv_orconn_tls_done(const char *address,
       /* We have a router at the same address! */
       if (strcasecmp(ri->nickname, nickname_rcvd)) {
         log_notice(LD_DIRSERV,
-                   "Dropping descriptor: nickname '%s' does not match "
-                   "nickname '%s' in cert from %s:%d",
+                   "Dropping old descriptor: nickname '%s' does not match "
+                   "nickname '%s' in new cert from %s:%d",
                    ri->nickname, nickname_rcvd, address, or_port);
         drop = 1;
       } else if (memcmp(ri->cache_info.identity_digest, digest_rcvd,
                         DIGEST_LEN)) {
         log_notice(LD_DIRSERV,
-                   "Dropping descriptor: identity key does not match "
-                   "key in cert from %s:%d",
-                   address, or_port);
+                   "Dropping old descriptor for nickname '%s': "
+                   "identity key does not match key in new cert from %s:%d",
+                   ri->nickname, address, or_port);
         drop = 1;
       }
     }
