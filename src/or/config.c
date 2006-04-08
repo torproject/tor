@@ -535,6 +535,8 @@ add_default_trusted_dirservers(void)
       "847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D",
     "lefkada 140.247.60.64:80 "
       "38D4 F5FC F7B1 0232 28B8 95EA 56ED E7D5 CCDC AF32",
+    "dizum 194.109.206.212:80 "
+      "7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
     NULL
   };
   for (i=0; dirservers[i]; i++)
