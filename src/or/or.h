@@ -1286,6 +1286,7 @@ typedef struct {
   int PublishHidServDescriptors; /**< and our hidden service descriptors? */
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /** and hidden service descriptors? */
+  int FetchUselessRouters; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */
 

@@ -3251,8 +3251,9 @@ client_would_use_router(routerstatus_t *rs, time_t now)
     /* This one is too old to consider. */
     return 0;
   }
-  if (!rs->is_running) {
-    /* If we had this router descriptor, we wouldn't even bother using it. */
+  if (!rs->is_running && !get_options()->FetchUselessRouters) {
+    /* If we had this router descriptor, we wouldn't even bother using it.
+     * But, if we want to have a complete list, fetch it anyway. */
     return 0;
   }
   if (rs->published_on + ESTIMATED_PROPAGATION_TIME > now) {
