@@ -1637,18 +1637,19 @@ dirserv_orconn_tls_done(const char *address,
     int drop = 0;
     if (strcasecmp(address, ri->address) || or_port != ri->or_port)
       continue;
+    /* XXX For 0.1.2.x, we should do something smarter here than !is_valid. */
     if (!ri->is_valid) {
       /* We have a router at the same address! */
       if (strcasecmp(ri->nickname, nickname_rcvd)) {
         log_notice(LD_DIRSERV,
-                   "Dropping old descriptor: nickname '%s' does not match "
-                   "nickname '%s' in new cert from %s:%d",
+                   "Dropping old invalid descriptor: nickname '%s' does "
+                   "not match nickname '%s' in new cert from %s:%d",
                    ri->nickname, nickname_rcvd, address, or_port);
         drop = 1;
       } else if (memcmp(ri->cache_info.identity_digest, digest_rcvd,
                         DIGEST_LEN)) {
         log_notice(LD_DIRSERV,
-                   "Dropping old descriptor for nickname '%s': "
+                   "Dropping old invalid descriptor for nickname '%s': "
                    "identity key does not match key in new cert from %s:%d",
                    ri->nickname, address, or_port);
         drop = 1;
