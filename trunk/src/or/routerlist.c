@@ -3251,7 +3251,7 @@ client_would_use_router(routerstatus_t *rs, time_t now)
     /* This one is too old to consider. */
     return 0;
   }
-  if (!rs->is_running && !get_options()->FetchUselessRouters) {
+  if (!rs->is_running && !get_options()->FetchUselessDescriptors) {
     /* If we had this router descriptor, we wouldn't even bother using it.
      * But, if we want to have a complete list, fetch it anyway. */
     return 0;
