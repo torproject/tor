@@ -402,6 +402,10 @@ read_to_buf_impl(int s, size_t at_most, buf_t *buf,
   if (read_result < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
+#ifdef MS_WINDOWS
+      if (e == WSAENOBUFS)
+        log_warn(LD_NET,"recv() failed: WSAENOBUFS. Not enough ram?");
+#endif
       return -1;
     }
     return 0; /* would block. */
@@ -572,6 +576,10 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
   if (write_result < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
+#ifdef MS_WINDOWS
+      if (e == WSAENOBUFS)
+        log_warn(LD_NET,"write() failed: WSAENOBUFS. Not enough ram?");
+#endif
       return -1;
     }
     log_debug(LD_NET,"write() would block, returning.");
