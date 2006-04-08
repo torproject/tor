@@ -918,7 +918,7 @@ typedef struct networkstatus_t {
                                        * recommends client and server software
                                        * versions. */
 
-  smartlist_t *entries; /**< List of router_status_t*.   This list is kept
+  smartlist_t *entries; /**< List of routerstatus_t*.   This list is kept
                          * sorted by identity_digest. */
 } networkstatus_t;
 
