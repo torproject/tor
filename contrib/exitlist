@@ -2,21 +2,21 @@
 # Copyright 2005-2006 Nick Mathewson
 # See the LICENSE file in the Tor distribution for licensing information.
 
+# Requires Python 2.2 or later.
+
 """
  exitlist -- Given a Tor directory on stdin, lists the Tor servers
  that accept connections to given addreses.
 
  example usage (Tor 0.1.0.x and earlier):
 
-    python2.2 exitlist < ~/.tor/cached-directory
+    python exitlist < ~/.tor/cached-directory
 
  example usage (Tor 0.1.1.10-alpha and later):
 
-    cat ~/.tor/cached-routers* | python2.2 exitlist
+    cat ~/.tor/cached-routers* | python exitlist
 
 """
-
-# Requires Python 2.2 or later.
 
 #
 # Change this to True if you want more verbose output.  By default, we
