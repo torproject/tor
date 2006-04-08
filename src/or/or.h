@@ -1621,7 +1621,6 @@ int resolve_my_address(or_options_t *options, uint32_t *addr,
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
 int options_init_logs(or_options_t *options, int validate_only);
-void addr_policy_free(addr_policy_t *p);
 int option_is_recognized(const char *key);
 const char *option_get_canonical_name(const char *key);
 config_line_t *option_get_assignment(or_options_t *options,
