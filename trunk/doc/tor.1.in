@@ -130,6 +130,15 @@ you're using a Tor controller that handles directory fetches for you.
 (Default: 1)
 .LP
 .TP
+\fBFetchUselessDescriptors \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor will fetch every non-obsolete descriptor from the
+authorities that it hears about. Otherwise, it will avoid fetching
+useless descriptors, for example for routers that are not running.
+This option is useful if you're using the contributed "exitlist"
+script to enumerate Tor nodes that exit to certain addresses.
+(Default: 0)
+.LP
+.TP
 \fBGroup \fR\fIGID\fP
 On startup, setgid to this user.
 .LP
