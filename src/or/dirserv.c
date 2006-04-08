@@ -1348,8 +1348,8 @@ generate_v2_networkstatus(void)
                "contact %s\n"
                "published %s\n"
                "dir-options%s%s\n"
-               "client-versions %s\n"
-               "server-versions %s\n"
+               "%s%s" /* client versions %s */
+               "%s%s%s" /* \nserver versions %s \n */
                "dir-signing-key\n%s\n",
                hostname, ipaddr, (int)options->DirPort,
                fingerprint,
@@ -1357,8 +1357,11 @@ generate_v2_networkstatus(void)
                published,
                naming ? " Names" : "",
                versioning ? " Versions" : "",
+               versioning ? "client-versions " : "",
                client_versions,
+               versioning ? "\nserver-versions " : "",
                server_versions,
+               versioning ? "\n" : "",
                identity_pkey);
   outp = status + strlen(status);
   endp = status + len;
