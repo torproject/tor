@@ -662,6 +662,7 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_invalid,
     if (router->is_running &&
         router->purpose == ROUTER_PURPOSE_GENERAL &&
         (router->is_valid ||
+/* XXX this next part is wrong and should be fixed one day -RD */
         (allow_invalid &&
          !router_is_unreliable(router, need_uptime,
                                need_capacity, need_guard)))) {
@@ -3237,6 +3238,27 @@ initiate_descriptor_downloads(routerstatus_t *source,
  * not have propageted to enough caches. */
 #define ESTIMATED_PROPAGATION_TIME (10*60)
 
+/** Return 0 if this routerstatus is obsolete, too new, isn't
+ * running, or otherwise not a descriptor that we would make any
+ * use of even if we had it. Else return 1. */
+static int
+client_would_use_router(routerstatus_t *rs, time_t now)
+{
+  if (rs->published_on + ROUTER_MAX_AGE < now) {
+    /* This one is too old to consider. */
+    return 0;
+  }
+  if (!rs->is_running) {
+    /* If we had this router descriptor, we wouldn't even bother using it. */
+    return 0;
+  }
+  if (rs->published_on + ESTIMATED_PROPAGATION_TIME > now) {
+    /* Most caches probably don't have this descriptor yet. */
+    return 0;
+  }
+  return 1;
+}
+
 /** Return new list of ID fingerprints for routers that we (as a client) would
  * like to download.
  */
@@ -3248,8 +3270,7 @@ router_list_client_downloadable(void)
   digestmap_t *downloading;
   time_t now = time(NULL);
   /* these are just used for logging */
-  int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0,
-    n_obsolete = 0, n_too_young = 0, n_wouldnt_use = 0;
+  int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0, n_wouldnt_use = 0;
 
   if (!routerstatus_list)
     return downloadable;
@@ -3261,15 +3282,12 @@ router_list_client_downloadable(void)
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
   {
     routerinfo_t *ri;
-    if (rs->status.published_on + ROUTER_MAX_AGE < now) {
-      /* This one is too old to consider. */
-      ++n_obsolete;
+    if (!client_would_use_router(&rs->status, now)) {
+      /* We wouldn't want this descriptor even if we got it. */
+      ++n_wouldnt_use;
     } else if (digestmap_get(downloading, rs->status.descriptor_digest)) {
       /* We're downloading this one now. */
       ++n_in_progress;
-    } else if (!rs->status.is_running) {
-      /* If we had this router descriptor, we wouldn't even bother using it. */
-      ++n_wouldnt_use;
     } else if (router_get_by_descriptor_digest(rs->status.descriptor_digest)) {
       /* We have the 'best' descriptor for this router. */
       ++n_uptodate;
@@ -3278,9 +3296,6 @@ router_list_client_downloadable(void)
       /* Oddly, we have a descriptor more recent than the 'best' one, but it
          was once best. So that's okay. */
       ++n_uptodate;
-    } else if (rs->status.published_on + ESTIMATED_PROPAGATION_TIME > now) {
-      /* Most caches probably don't have this descriptor yet. */
-      ++n_too_young;
     } else if (rs->next_attempt_at > now) {
       /* We failed too recently to try again. */
       ++n_not_ready;
@@ -3293,10 +3308,10 @@ router_list_client_downloadable(void)
 
 #if 0
   log_info(LD_DIR,
-       "%d router descriptors are downloadable. %d are too old to consider. "
-       "%d are in progress. %d are up-to-date. %d are too young to consider. "
+       "%d router descriptors are downloadable. "
+       "%d are in progress. %d are up-to-date. "
        "%d are non-useful. %d failed too recently to retry.",
-       n_downloadable, n_obsolete, n_in_progress, n_uptodate, n_too_young,
+       n_downloadable, n_in_progress, n_uptodate,
        n_wouldnt_use, n_not_ready);
 #endif
 
@@ -3536,6 +3551,16 @@ update_router_descriptor_downloads(time_t now)
   }
 }
 
+static int
+routerstatus_count_usable_entries(smartlist_t *entries)
+{
+  int count = 0;
+  time_t now = time(NULL);
+  SMARTLIST_FOREACH(entries, routerstatus_t *, rs,
+                    if (client_would_use_router(rs, now)) count++);
+  return count;
+}
+
 /** Return true iff we have enough networkstatus and router information to
  * start building circuits.  Right now, this means "more than half the
  * networkstatus documents, and at least 1/4 of expected routers." */
@@ -3575,19 +3600,13 @@ router_have_minimum_dir_info(void)
     }
   }
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
-                    tot += smartlist_len(ns->entries));
+                    tot += routerstatus_count_usable_entries(ns->entries));
   avg = tot / n_ns;
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
      {
        if (rs->status.is_running)
          num_running++;
      });
-  /* XXX if more than 3/4 of the routers in the network are down
-   * or invalid, does this mean we'll never become happy? -RD
-   * Right. We should base the required fraction on the number of
-   * routers we would like to download if we could.  I think right now we
-   * only decline to download non-running routers, but we might want
-   * to split out the test so we can keep these in sync. -NM */
   res = smartlist_len(routerlist->routers) >= (avg/4) && num_running > 2;
  done:
   if (res && !have_enough) {
