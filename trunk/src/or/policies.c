@@ -262,7 +262,8 @@ load_policy_from_option(config_line_t *config, addr_policy_t **policy,
   }
 }
 
-void policies_parse_from_options(or_options_t *options)
+void
+policies_parse_from_options(or_options_t *options)
 {
   load_policy_from_option(options->SocksPolicy, &socks_policy, -1);
   load_policy_from_option(options->DirPolicy, &dir_policy, -1);
@@ -272,7 +273,6 @@ void policies_parse_from_options(or_options_t *options)
                           &authdir_invalid_policy, ADDR_POLICY_REJECT);
   parse_reachable_addresses();
 }
-
 
 /** Compare two provided address policy items, and return -1, 0, or 1
  * if the first is less than, equal to, or greater than the second. */

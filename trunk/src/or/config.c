@@ -1441,7 +1441,7 @@ config_assign(config_format_t *fmt, void *options, config_line_t *list,
  * ok, then throw out the old one and stick with the new one. Else,
  * revert to old and return failure.  Return 0 on success, -1 on bad
  * keys, -2 on bad values, -3 on bad transition, and -4 on failed-to-set.
- * 
+ *
  * If not success, point *<b>msg</b> to a newly allocated string describing
  * what went wrong.
  */

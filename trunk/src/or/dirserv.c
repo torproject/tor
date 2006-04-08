@@ -1192,6 +1192,12 @@ static uint32_t stable_uptime = 0; /* start at a safe value */
 static uint32_t fast_bandwidth = 0;
 static uint32_t guard_bandwidth = 0;
 
+static INLINE int
+real_uptime(routerinfo_t *router, time_t now)
+{
+  return router->uptime + (now - router->cache_info.published_on);
+}
+
 /** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
  * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
  * If <b>need_capacity</b> is non-zero, we require a minimum advertised
@@ -1203,7 +1209,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
                                     int need_uptime, int need_capacity)
 {
   if (need_uptime &&
-      router->uptime+(now - router->cache_info.published_on) < stable_uptime)
+      (unsigned)real_uptime(router, now) < stable_uptime)
     return 1;
   if (need_capacity &&
       router_get_advertised_bandwidth(router) < fast_bandwidth)
@@ -1236,7 +1242,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     if (ri->is_running && ri->is_valid) {
       uint32_t *up = tor_malloc(sizeof(uint32_t));
       uint32_t *bw = tor_malloc(sizeof(uint32_t));
-      *up = (uint32_t) ri->uptime + (now - ri->cache_info.published_on);
+      *up = (uint32_t) real_uptime(ri, now);
       smartlist_add(uptimes, up);
       *bw = router_get_advertised_bandwidth(ri);
       smartlist_add(bandwidths, bw);
