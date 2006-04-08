@@ -1031,6 +1031,9 @@ router_digest_is_trusted_dir(const char *digest)
 {
   if (!trusted_dir_servers)
     return 0;
+  if (get_options()->AuthoritativeDir &&
+      router_digest_is_me(digest))
+    return 1;
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
                     if (!memcmp(digest, ent->digest, DIGEST_LEN)) return 1);
   return 0;
