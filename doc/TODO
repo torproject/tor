@@ -253,8 +253,6 @@ Future version:
   - DoS protection: TLS puzzles, public key ops, bandwidth exhaustion.
     - Specify?
   - tor-resolve script should use socks5 to get better error messages.
-  - make min uptime a function of the available choices (say, choose 60th
-    percentile, not 1 day.)
   - Track uptime as %-of-time-up, as well as time-since-last-down.
   - hidserv offerers shouldn't need to define a SocksPort
     * figure out what breaks for this, and do it.
@@ -264,6 +262,8 @@ Future version:
   X start handling server descriptors without a socksport?
   - tor should be able to have a pool of outgoing IP addresses
     that it is able to rotate through. (maybe)
+  - let each hidden service (or other thing) specify its own
+    OutboundBindAddress?
 
 Blue-sky:
   - Patch privoxy and socks protocol to pass strings to the browser.
