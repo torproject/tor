@@ -1136,6 +1136,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
 {
   int retval;
   int conn_age;
+  int severity;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -1143,11 +1144,12 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
   tor_assert(conn->socks_request);
 
   conn_age = time(NULL) - conn->timestamp_created;
+  severity = (!conn->addr && !conn->port) ? LOG_INFO : LOG_NOTICE;
   if (conn_age > get_options()->SocksTimeout) {
-    log_notice(LD_APP,
-               "Tried for %d seconds to get a connection to %s:%d. Giving up.",
-               conn_age, safe_str(conn->socks_request->address),
-               conn->socks_request->port);
+    log_fn(severity, LD_APP,
+           "Tried for %d seconds to get a connection to %s:%d. Giving up.",
+           conn_age, safe_str(conn->socks_request->address),
+           conn->socks_request->port);
     return -1;
   }
 

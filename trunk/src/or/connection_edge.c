@@ -326,6 +326,7 @@ connection_ap_expire_beginning(void)
   int n, i;
   time_t now = time(NULL);
   or_options_t *options = get_options();
+  int severity;
 
   get_connection_array(&carray, &n);
 
@@ -333,9 +334,11 @@ connection_ap_expire_beginning(void)
     conn = carray[i];
     if (conn->type != CONN_TYPE_AP)
       continue;
+    /* if it's an internal bridge connection, don't yell its status. */
+    severity = (!conn->addr && !conn->port) ? LOG_INFO : LOG_NOTICE;
     if (conn->state == AP_CONN_STATE_CONTROLLER_WAIT) {
       if (now - conn->timestamp_lastread >= options->SocksTimeout) {
-        log_notice(LD_APP, "Closing unattached stream.");
+        log_fn(severity, LD_APP, "Closing unattached stream.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
       continue;
@@ -355,11 +358,11 @@ connection_ap_expire_beginning(void)
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (now - conn->timestamp_lastread > options->SocksTimeout) {
-        log_notice(LD_REND,
-                   "Rend stream is %d seconds late. Giving up on address"
-                   " '%s.onion'.",
-                   (int)(now - conn->timestamp_lastread),
-                   safe_str(conn->socks_request->address));
+        log_fn(severity, LD_REND,
+               "Rend stream is %d seconds late. Giving up on address"
+               " '%s.onion'.",
+               (int)(now - conn->timestamp_lastread),
+               safe_str(conn->socks_request->address));
         connection_edge_end(conn, END_STREAM_REASON_TIMEOUT,
                             conn->cpath_layer);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
@@ -368,12 +371,12 @@ connection_ap_expire_beginning(void)
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
     nickname = build_state_get_exit_nickname(circ->build_state);
-    log_notice(LD_APP,
-               "We tried for %d seconds to connect to '%s' using exit '%s'."
-               " Retrying on a new circuit.",
-               (int)(now - conn->timestamp_lastread),
-               safe_str(conn->socks_request->address),
-               nickname ? nickname : "*unnamed*");
+    log_fn(severity, LD_APP,
+           "We tried for %d seconds to connect to '%s' using exit '%s'."
+           " Retrying on a new circuit.",
+           (int)(now - conn->timestamp_lastread),
+           safe_str(conn->socks_request->address),
+           nickname ? nickname : "*unnamed*");
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* un-mark it as ending, since we're going to reuse it */
