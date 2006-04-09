@@ -3597,8 +3597,6 @@ router_have_minimum_dir_info(void)
       log_info(LD_DIR,
                "We have only tried downloading %d/%d network statuses.",
                n_tried, n_authorities);
-      res = 0;
-      goto done;
     } else {
       have_ever_tried_all = 1;
     }
