@@ -2883,9 +2883,9 @@ routerstatus_list_update_from_networkstatus(time_t now)
 
   if (n_statuses <= n_trusted/2) {
     /* Not enough statuses to adjust status. */
-    log_notice(LD_DIR,
-               "Not enough statuses to update router status list. (%d/%d)",
-               n_statuses, n_trusted);
+    log_info(LD_DIR,
+             "Not enough statuses to update router status list. (%d/%d)",
+             n_statuses, n_trusted);
     return;
   }
 
