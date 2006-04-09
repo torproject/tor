@@ -316,9 +316,8 @@ $Id$
 
     "config-file" -- The location of Tor's configuration file ("torrc").
 
-    "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest server
-      descriptor for a given OR, NUL-terminated.  If no such OR is known, the
-      corresponding value is an empty string.
+    "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest
+      server descriptor for a given OR, NUL-terminated.
 
     "desc/all-recent" -- the latest server descriptor for every router that
       Tor knows about.
