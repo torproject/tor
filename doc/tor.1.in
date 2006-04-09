@@ -57,7 +57,7 @@ by "ulimit -H -n"). If this number is less than ConnLimit, then
 Tor will refuse to start.
 
 You probably don't need to adjust this. It has no effect on
-Windows since that platform lacks getrlimit(). (Default: 1024)
+Windows since that platform lacks getrlimit(). (Default: 1000)
 .LP
 .TP
 \fBControlPort \fR\fIPort\fP
