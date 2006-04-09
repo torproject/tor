@@ -123,7 +123,8 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   int directconn = !purpose_is_private(purpose);
 
   int need_v1_support = purpose == DIR_PURPOSE_FETCH_DIR ||
-                        purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
+                        purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
+                        purpose == DIR_PURPOSE_FETCH_RENDDESC;
   int need_v2_support = purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
                         purpose == DIR_PURPOSE_FETCH_SERVERDESC;
 
@@ -154,7 +155,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
         log_info(LD_DIR,
                  "No router found for %s; falling back to dirserver list",
                  which);
-        rs = router_pick_trusteddirserver(1, 1, 1,
+        rs = router_pick_trusteddirserver(need_v1_support, 1, 1,
                                           retry_if_no_servers);
         if (!rs)
           directconn = 0; /* last resort: try routing it via Tor */
@@ -165,7 +166,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
     /* Never use fascistfirewall; we're going via Tor. */
     if (purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask authdirservers, any of them will do */
-      rs = router_pick_trusteddirserver(0, 0, 0, retry_if_no_servers);
+      rs = router_pick_trusteddirserver(1, 0, 0, retry_if_no_servers);
     } else {
       /* anybody with a non-zero dirport will do. Disregard firewalls. */
       rs = router_pick_directory_server(1, 0, need_v2_support,
