@@ -16,6 +16,9 @@
 
     cat ~/.tor/cached-routers* | python exitlist
 
+ If you're using Tor 0.1.1.18-rc or later, you should look at
+ the "FetchUselessDescriptors" config option in the man page.
+
 """
 
 #
