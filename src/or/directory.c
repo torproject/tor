@@ -1824,7 +1824,7 @@ dir_networkstatus_download_failed(smartlist_t *failed)
 }
 
 /** Called when one or more routerdesc fetches have failed (with uppercase
- * fingerprints listed in <b>failed</>). */
+ * fingerprints listed in <b>failed</b>). */
 static void
 dir_routerdesc_download_failed(smartlist_t *failed)
 {
