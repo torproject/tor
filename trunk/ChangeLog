@@ -1,3 +1,49 @@
+Changes in version 0.1.1.18-rc - 2006-04-09
+  o Major fixes:
+    - Work harder to download live network-statuses from all the
+      directory authorities we know about. Improve the threshold
+      decision logic so we're more robust to edge cases.
+    - When fetching rendezvous descriptors, we were willing to ask
+      v2 authorities too, which would always return 404.
+
+  o Minor fixes:
+    - Stop listing down or invalid nodes in the v1 directory. This will
+      reduce its bulk by about 1/3, and reduce load on directory mirrors.
+    - When deciding whether a router is Fast or Guard-worthy, consider
+      his advertised BandwidthRate and not just the BandwidthCapacity.
+    - No longer ship INSTALL and README files -- they are useless now.
+    - Force rpmbuild to behave and honor target_cpu.
+    - Avoid warnings about machine/limits.h on Debian GNU/kFreeBSD.
+    - Start to include translated versions of the tor-doc-*.html
+      files, along with the screenshots. Still needs more work.
+    - Start sending back 512 and 451 errors if mapaddress fails,
+      rather than not sending anything back at all.
+    - When we fail to bind or listen on an incoming or outgoing
+      socket, we should close it before failing. otherwise we just
+      leak it. (thanks to weasel for finding.)
+    - Allow "getinfo dir/status/foo" to work, as long as your DirPort
+      is enabled. (This is a hack, and will be fixed in 0.1.2.x.)
+    - Make NoPublish (even though deprecated) work again.
+    - Fix a minor security flaw where a versioning auth dirserver
+      could list a recommended version many times in a row to make
+      clients more convinced that it's recommended.
+    - Fix crash bug if there are two unregistered servers running
+      with the same nickname, one of them is down, and you ask for
+      them by nickname in your EntryNodes or ExitNodes. Also, try
+      to pick the one that's running rather than an arbitrary one.
+    - Fix an infinite loop we could hit if we go offline for too long.
+    - Complain when we hit WSAENOBUFS on recv() or write() too.
+      Perhaps this will help us hunt the bug.
+    - If you're not a versioning dirserver, don't put the string
+      "client-versions \nserver-versions \n" in your network-status.
+
+  o New features:
+    - Add tor.dizum.com as the fifth authoritative directory server.
+    - Add a new config option FetchUselessDescriptors, off by default,
+      for when you plan to run "exitlist" on your client and you want
+      to know about even the non-running descriptors.
+
+
 Changes in version 0.1.1.17-rc - 2006-03-28
   o Major fixes:
     - Clients and servers since 0.1.1.10-alpha have been expiring
