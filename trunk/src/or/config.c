@@ -139,7 +139,7 @@ static config_var_t _option_vars[] = {
   VAR("CircuitBuildTimeout", INTERVAL, CircuitBuildTimeout,  "1 minute"),
   VAR("CircuitIdleTimeout",  INTERVAL, CircuitIdleTimeout,   "1 hour"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
-  VAR("ConnLimit",           UINT,     ConnLimit,            "1024"),
+  VAR("ConnLimit",           UINT,     ConnLimit,            "1000"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("ControlListenAddress",LINELIST, ControlListenAddress, NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
