@@ -17,9 +17,8 @@ N - Mark up spec; note unclear points about servers
 N - Mention controller libs someplace.
   D FAQ entry: why gnutls is bad/not good for tor
 P - flesh out the rest of the section 6 of the faq
-P - gather pointers to livecd distros that include tor
-R . more pictures from ren. he wants to describe the tor handshake, i want to
-    talk about hidden services.
+R . more pictures from ren. he wants to describe the tor handshake
+R - make a page with the hidden service diagrams.
 NR- write a spec appendix for 'being nice with tor'
   - tor-in-the-media page
   - Remove need for HACKING file.
@@ -46,18 +45,18 @@ N - building on freebsd 6.0: (with multiple openssl installations)
       when they feel like it.
     - update dir-spec with what we decided for each of these
 
-  - find 10 dirservers.
-    - Make it no longer default for v2 dirservers to support v1.
-    - non-versioning dirservers don't need to set recommended*versions.
-    - non-naming dirservers don't need to have an approved-routers file.
-    - What are criteria to be a dirserver?  Write a policy.
+  o find N dirservers.
+    o Make it no longer default for v2 dirservers to support v1.
+    o non-versioning dirservers don't need to set recommended*versions.
+    o non-naming dirservers don't need to have an approved-routers file.
+    o What are criteria to be a dirserver?  Write a policy.
   - are there other options that we haven't documented so far?
-  - look at the proposed os x uninstaller:
+  . look at the proposed os x uninstaller:
     http://archives.seul.org/or/talk/Jan-2006/msg00038.html
 
 - Interim things:
   - provide no-cache no-index headers from the dirport?
-  - remove down/useless descriptors from v1 directory?
+  o remove down/useless descriptors from v1 directory?
 
 Deferred from 0.1.1.x:
 
@@ -77,7 +76,7 @@ R - Christian Grothoff's attack of infinite-length circuit.
     - Specify, including thought about
     - Implement
 
-R - When we connect to a Tor server, it sends back a signed cell listing
+R - When we connect to a Tor server, it sends back a cell listing
     the IP it believes it is using. Use this to block dvorak's attack.
     Also, this is a fine time to say what time you think it is.
     - Verify that a new cell type is okay with deployed codebase
@@ -85,9 +84,6 @@ R - When we connect to a Tor server, it sends back a signed cell listing
     - Implement
 
 R - failed rend desc fetches sometimes don't get retried.
-  - Add config options to not publish and not fetch rend descs.
-  - Add controller interfaces to hear rend desc events and learn
-    about rend descs. In base16 I guess for now.
 
 N - Display the reasons in 'destroy' and 'truncated' cells under some
     circumstances?
@@ -175,13 +171,13 @@ R   - kill dns workers more slowly
       . for os x
     . figure out how to make nt service stuff work?
       . Document it.
-    . Add version number to directory.
+    o Add version number to directory.
 N   - Vet all pending installer patches
       - Win32 installer plus privoxy, sockscap/freecap, etc.
       - Vet win32 systray helper code
 
   - document:
-    - torcp needs more attention in the tor-doc-win32.
+    o torcp needs more attention in the tor-doc-win32.
     - recommend gaim.
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
@@ -205,6 +201,8 @@ N   - Vet all pending installer patches
     - and there's some amount of backwards compatibility.
     - teach clients, intro points, and hidservs about auth mechanisms.
     - come up with a few more auth mechanisms.
+  - auth mechanisms to let hidden service midpoint and responder filter
+    connection requests.
 
   . Come up with a coherent strategy for bandwidth buckets and TLS. (The
     logic for reading from TLS sockets is likely to overrun the bandwidth
@@ -256,8 +254,6 @@ Future version:
   - Track uptime as %-of-time-up, as well as time-since-last-down.
   - hidserv offerers shouldn't need to define a SocksPort
     * figure out what breaks for this, and do it.
-  - auth mechanisms to let hidden service midpoint and responder filter
-    connection requests.
   - Relax clique assumptions.
   X start handling server descriptors without a socksport?
   - tor should be able to have a pool of outgoing IP addresses
