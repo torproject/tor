@@ -45,17 +45,24 @@ for fn in \
 	dir-spec.txt \
 	rend-spec.txt \
 	socks-extensions.txt \
-	stylesheet.css \
-	tor-spec.txt \
-	tor-doc-osx.html \
-	tor-doc-server.html \
-	tor-doc-unix.html \
-	tor-doc-win32.html \
-	tor-hidden-service.html \
-	tor-switchproxy.html \
 	version-spec.txt \
+	\
+	website/stylesheet.css \
+	website/tor-doc-osx.html.en \
+	website/tor-doc-osx.html.it \
+	website/tor-doc-server.html.en \
+	website/tor-doc-server.html.it \
+	website/tor-doc-unix.html.en \
+	website/tor-doc-unix.html.it \
+	website/tor-doc-win32.html.en \
+	website/tor-doc-win32.html.es \
+	website/tor-doc-win32.html.it \
+	website/tor-hidden-service.html.en \
+	website/tor-switchproxy.html.en \
+	website/tor-switchproxy.html.it \
+	 \
 	; do
-    clean_newlines doc/$fn win_tmp/doc/$fn
+    clean_newlines doc/"$fn" win_tmp/doc/"`basename $fn`"
 done
 
 cp doc/design-paper/tor-design.pdf win_tmp/doc/design-paper/tor-design.pdf
