@@ -89,7 +89,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
   int post_via_tor;
   int post_to_v1_only;
 
-  router_get_trusted_dir_servers(&dirservers);
+  dirservers = router_get_trusted_dir_servers();
   tor_assert(dirservers);
   /* Only old dirservers handle rendezvous descriptor publishing. */
   post_to_v1_only = (purpose == DIR_PURPOSE_UPLOAD_RENDDESC);
@@ -296,6 +296,9 @@ connection_dir_download_networkstatus_failed(connection_t *conn)
   }
   if (!strcmpstart(conn->requested_resource, "all")) {
     /* We're a non-authoritative directory cache; try again. */
+    smartlist_t *trusted_dirs = router_get_trusted_dir_servers();
+    SMARTLIST_FOREACH(trusted_dirs, trusted_dir_server_t *, ds,
+                      ++ds->n_networkstatus_failures);
     directory_get_from_dirserver(conn->purpose, "all.z",
                                  0 /* don't retry_if_no_servers */);
   } else if (!strcmpstart(conn->requested_resource, "fp/")) {
@@ -993,6 +996,16 @@ connection_dir_client_reached_eof(connection_t *conn)
       which = smartlist_create();
       dir_split_resource_into_fingerprints(conn->requested_resource+3,
                                            which, NULL, 0);
+    } else if (conn->requested_resource &&
+               !strcmpstart(conn->requested_resource, "all")) {
+      which = smartlist_create();
+      SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                        trusted_dir_server_t *, ds,
+        {
+          char *cp = tor_malloc(HEX_DIGEST_LEN+1);
+          base16_encode(cp, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
+          smartlist_add(which, cp);
+        });
     }
     cp = body;
     while (*cp) {

@@ -306,17 +306,17 @@ router_reload_router_list(void)
   return 0;
 }
 
-/** Set *<b>outp</b> to a smartlist containing a list of
- * trusted_dir_server_t * for all known trusted dirservers.  Callers
- * must not modify the list or its contents.
+/** Return a smartlist containing a list of trusted_dir_server_t * for all
+ * known trusted dirservers.  Callers must not modify the list or its
+ * contents.
  */
-void
-router_get_trusted_dir_servers(smartlist_t **outp)
+smartlist_t *
+router_get_trusted_dir_servers(void)
 {
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_create();
 
-  *outp = trusted_dir_servers;
+  return trusted_dir_servers;
 }
 
 /** Try to find a running dirserver. If there are no running dirservers
