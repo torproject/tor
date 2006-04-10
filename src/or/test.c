@@ -416,19 +416,6 @@ test_crypto(void)
   test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
   tor_free(cp);
 
-  /* Check DER encoding */
-  i=crypto_pk_DER64_encode_public_key(pk1, &cp);
-  test_assert(i>0);
-  test_assert(cp);
-  test_assert(!strchr(cp, ' '));
-  test_assert(!strchr(cp, '\n'));
-  test_eq(0, crypto_pk_cmp_keys(pk1, pk1));
-  crypto_free_pk_env(pk2);
-  pk2 = crypto_pk_DER64_decode_public_key(cp);
-  test_assert(pk2);
-  test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
-  tor_free(cp);
-
   test_eq(128, crypto_pk_keysize(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
 

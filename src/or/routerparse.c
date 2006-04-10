@@ -540,14 +540,6 @@ find_dir_signing_key(const char *str)
   if (tok->key) {
     key = tok->key;
     tok->key = NULL; /* steal reference. */
-  } else if (tok->n_args >= 1) {
-    /** XXXX Once all the directories are running 0.1.0.6-rc or later, we
-     * can remove this logic. */
-    key = crypto_pk_DER64_decode_public_key(tok->args[0]);
-    if (!key) {
-      log_warn(LD_DIR, "Unparseable dir-signing-key argument");
-      return NULL;
-    }
   } else {
     log_warn(LD_DIR, "Dir-signing-key token contained no key");
     return NULL;
