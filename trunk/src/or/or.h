@@ -1290,12 +1290,8 @@ typedef struct {
   int TrackHostExitsExpire; /**< Number of seconds until we expire an
                              * addressmap */
   config_line_t *AddressMap; /**< List of address map directives. */
-  int DirFetchPeriod; /**< How often do we fetch new directories? */
-  int DirPostPeriod; /**< How often do we post our server descriptor to the
-                      * authoritative directory servers? */
   int RendPostPeriod; /**< How often do we post each rendezvous service
                        * descriptor? Remember to publish them independently. */
-  int StatusFetchPeriod; /**< How often do we fetch running-routers lists? */
   int KeepalivePeriod; /**< How often do we send padding cells to keep
                         * connections alive? */
   int SocksTimeout; /**< How long do we let a socks connection wait
