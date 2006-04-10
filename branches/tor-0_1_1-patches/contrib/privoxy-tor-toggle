@@ -1,0 +1,73 @@
+#!/bin/sh
+# A script to turn Tor SOCKS4a in Privoxy on or off.
+
+CONFFILE=/etc/privoxy/config            # privoxy config file.
+TOR_REG="forward.*localhost:9050"       # Regular expression to find Tor in privoxy
+PRIVOXY="/etc/init.d/privoxy restart"   # command to reload privoxy config file.
+SED="/bin/sed"                          # sed command, of course.
+GREP="/bin/grep"                        # grep command.
+
+usage () {
+echo "\
+privoxy-tor-toggle: Change Privoxy's configuration to use/not use Tor.
+Usage:
+   privoxy.tor                  <-- Switch Tor on or off.
+   privoxy.tor [on|off]         <-- Set Tor on or off.
+   privoxy.tor status           <-- Display Tor's current status.
+   privoxy.tor [-h|--help|-?]   <-- Print usage.
+"
+}
+
+# Find out the current status of tor. Set $tor_status
+get_status () {
+   gret=`$GREP -l -e "^$TOR_REG"  $CONFFILE`
+   if [ x$gret = x ] ; then
+        tor_status=off;
+   else
+        tor_status=on;
+   fi
+   return
+}
+
+# Turn tor on/off according to $1
+set_tor () {
+   tor_gate=$1
+   get_status
+   if [ $tor_status = $tor_gate ] ; then
+      echo "Tor is already $1."
+      return
+   elif [ $tor_gate = flip ] ; then
+        if [ $tor_status = on ] ; then
+                tor_gate=off
+        elif [ $tor_status = off ] ; then
+                tor_gate=on
+        fi
+   fi
+   echo "Turning Tor $tor_gate..."
+   if [ $tor_gate = on ] ; then
+        reg=s/^#\($TOR_REG\)/\\1/
+        $SED -i.bak -r "$reg"  $CONFFILE
+   else
+        reg=s/^\($TOR_REG\)/#\\1/
+        $SED -i.bak -r "$reg" $CONFFILE
+   fi
+   $PRIVOXY
+   return 0;
+}
+
+if [ x$1 = x ] ; then
+   set_tor flip
+elif [ $1 = on ] ; then
+   set_tor on
+elif [ $1 = off ] ; then
+   set_tor off
+elif [ $1 = status ] ; then
+   get_status
+   echo "Tor is $tor_status"
+elif [ $1 = --help ] || [ $1 = -h ] || [ $1 = "-?" ] ; then
+   usage
+   exit 0
+else
+   echo "Unrecognized option: \"$1\""
+fi
+

@@ -1,0 +1,88 @@
+#!/bin/sh
+
+# TorPostflight gets invoked after any install or upgrade.
+
+ADDSYSUSER=$RECEIPT_PATH/addsysuser
+if [ ! -x "$ADDSYSUSER" ]; then
+  echo "Could not find addsysuser script."
+  exit 1
+fi
+
+TORUSER=_tor
+TORGROUP=daemon
+TARGET=$2/Library/Tor
+TORDIR=$TARGET/var/lib/tor
+LOGDIR=$TARGET/var/log/tor
+
+# Create user $TORUSER in group daemon.  If it's already there, great.
+$ADDSYSUSER $TORUSER "Tor System user" $TORDIR
+
+# Create the tor directory, if it doesn't exist.
+if [ ! -d $TORDIR ]; then
+  mkdir -p $TORDIR
+fi
+if [ ! -d $LOGDIR ]; then
+  mkdir -p $LOGDIR
+fi
+# Check its permissions.
+chown $TORUSER $TORDIR
+chgrp daemon $TORDIR
+chmod 700 $TORDIR
+chown $TORUSER $LOGDIR
+chgrp daemon $LOGDIR
+chmod 700 $LOGDIR
+
+# Create the configuration file only if there wan't one already.
+if [ ! -f $TARGET/torrc ]; then
+  cp $TARGET/torrc.sample $TARGET/torrc
+fi
+
+# Ensure symbolic links
+cd /usr/bin
+if [ -e /usr/bin/tor -a ! -L /usr/bin/tor ]; then
+  mv tor tor_old
+fi
+if [ -e /usr/bin/tor-resolve -a ! -L /usr/bin/tor-resolve ]; then
+  mv tor-resolve tor-resolve_old
+fi
+ln -sf $TARGET/tor .
+ln -sf $TARGET/tor-resolve .
+
+cd /usr/share/man/man1
+MAN1=$TARGET/man/man1
+ln -sf $MAN1/*.1 .
+
+if [ ! -e /var/log/tor -o -L /var/log/tor ]; then
+  cd /var/log
+  rm -f tor
+  ln -sf $LOGDIR tor
+fi
+
+if [ -d /Library/StartupItems/Tor ]; then
+  rm -f /Library/StartupItems/Tor/Tor.loc
+  echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
+fi
+
+if [ -d /Library/StartupItems/Privoxy ]; then
+  find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel
+fi
+
+# Copy Documentation
+if [ -d $PACKAGE_PATH/Contents/Resources/documents ];then
+   cp -r $PACKAGE_PATH/Contents/Resources/documents $TARGET/documents
+fi
+
+# Copy Uninstaller
+if [ -f $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.applescript ]; then 
+   cp $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.applescript $TARGET/Tor_Uninstaller.applescript
+   chmod 755 $TARGET/Tor_Uninstaller.applescript
+fi
+
+if [ -f $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh ]; then
+   cp $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh $TARGET/uninstall_tor_bundle.sh
+   chmod 755 $TARGET/uninstall_tor_bundle.sh
+fi
+
+if [ -f $PACKAGE_PATH/Contents/Resources/package_list.txt ]; then
+   cp $PACKAGE_PATH/Contents/Resources/package_list.txt $TARGET/package_list.txt
+fi
