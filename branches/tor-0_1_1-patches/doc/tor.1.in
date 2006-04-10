@@ -96,13 +96,6 @@ security. (Default: 0)
 Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 .LP
 .TP
-\fBDirFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
-Every time the specified period elapses, Tor downloads a directory.
-A directory contains a signed list of all known servers as well as
-their current liveness status. A value of "0 seconds" tells Tor to choose an
-appropriate default. (Default: 1 hour for clients, 20 minutes for servers)
-.LP
-.TP
 \fBDirServer \fR[\fInickname\fR] [\fBv1\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
 Use a nonstandard authoritative directory server at the provided
 address and port, with the specified key fingerprint.  This option can
@@ -214,13 +207,6 @@ If 1, Tor replaces potentially sensitive strings in the logs
 (e.g. addresses) with the string [scrubbed]. This way logs can still be
 useful, but they don't leave behind personally identifying information
 about what sites a user might have visited. (Default: 1)
-.LP
-.TP
-\fBStatusFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
-Every time the specified period elapses, Tor downloads signed status
-information about the current state of known servers.  A value of
-"0 seconds" tells Tor to choose an appropriate default. (Default: 30
-minutes for clients, 15 minutes for servers)
 .LP
 .TP
 \fBUser \fR\fIUID\fP
@@ -591,12 +577,6 @@ When we get a SIGINT and we're a server, we begin shutting down: we close
 listeners and start refusing new circuits. After \fBNUM\fP seconds,
 we exit. If we get a second SIGINT, we exit immediately.  (Default:
 30 seconds)
-.LP
-.TP
-\fBDirPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
-Every time the specified period elapses, Tor uploads its server
-descriptors to the directory servers.  This information is also
-uploaded whenever it changes.  (Default: 20 minutes)
 .LP
 .TP
 \fBAccountingMax \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
