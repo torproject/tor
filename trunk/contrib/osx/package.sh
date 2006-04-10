@@ -97,8 +97,8 @@ cp doc/website/stylesheet.css doc/website/tor-doc-osx.html.* $DOC/howto
 cp doc/website/tor-doc-server.html.* $DOC/howto
 cp doc/website/tor-hidden-service.html.* $DOC/howto
 cp doc/website/tor-switchproxy.html.* $DOC/howto
-mkdir $DOC/img
-cp doc/img/screenshot-osx* $DOC/img
+#mkdir $DOC/img
+#cp doc/img/screenshot-osx* $DOC/img
 cp AUTHORS $DOC/AUTHORS.txt
 groff doc/tor.1.in -T ps -m man | pstopdf -i -o $DOC/tor-reference.pdf
 groff doc/tor-resolve.1 -T ps -m man | pstopdf -i -o $DOC/tor-resolve.pdf
