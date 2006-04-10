@@ -548,40 +548,6 @@ directory_all_unreachable(time_t now)
   }
 }
 
-/**
- * Return the interval to wait between directory downloads, in seconds.
- */
-static INLINE int
-get_dir_fetch_period(or_options_t *options)
-{
-  if (options->DirFetchPeriod)
-    /* Value from config file. */
-    return options->DirFetchPeriod;
-  else if (options->DirPort)
-    /* Default for directory server */
-    return 60*60;
-  else
-    /* Default for average user. */
-    return 120*60;
-}
-
-/**
- * Return the interval to wait betweeen router status downloads, in seconds.
- */
-static INLINE int
-get_status_fetch_period(or_options_t *options)
-{
-  if (options->StatusFetchPeriod)
-    /* Value from config file. */
-    return options->StatusFetchPeriod;
-  else if (options->DirPort)
-    /* Default for directory server */
-    return 15*60;
-  else
-    /* Default for average user. */
-    return 30*60;
-}
-
 /** This function is called whenever we successfully pull down some new
  * network statuses or server descriptors. */
 void
@@ -830,7 +796,8 @@ run_scheduled_events(time_t now)
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
 
-    time_to_fetch_directory = now + get_dir_fetch_period(options);
+#define V1_DIR_FETCH_PERIOD (60*60)
+    time_to_fetch_directory = now + V1_DIR_FETCH_PERIOD;
 
     /* Also, take this chance to remove old information from rephist
      * and the rend cache. */
@@ -846,7 +813,8 @@ run_scheduled_events(time_t now)
     if (!authdir_mode(options) || !options->V1AuthoritativeDir) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
-    time_to_fetch_running_routers = now + get_status_fetch_period(options);
+#define V1_RUNNINGROUTERS_FETCH_PERIOD (20*60)
+    time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
   }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old

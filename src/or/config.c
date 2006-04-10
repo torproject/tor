@@ -148,8 +148,7 @@ static config_var_t _option_vars[] = {
   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
   VAR("DirListenAddress",    LINELIST, DirListenAddress,     NULL),
-  /* if DirFetchPeriod is 0, see get_dir_fetch_period() in main.c */
-  VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "0 seconds"),
+  OBSOLETE("DirFetchPeriod"),
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
   OBSOLETE("DirPostPeriod"),
@@ -227,8 +226,7 @@ static config_var_t _option_vars[] = {
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksTimeout",        INTERVAL, SocksTimeout,         "2 minutes"),
-  /* if StatusFetchPeriod is 0, see get_status_fetch_period() in main.c */
-  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "0 seconds"),
+  OBSOLETE("StatusFetchPeriod"),
   VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes,     "0"),
   VAR("StrictExitNodes",     BOOL,     StrictExitNodes,      "0"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
@@ -1958,23 +1956,13 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
   return 0;
 }
 
-/** Lowest allowable value for DirFetchPeriod; if this is too low, clients can
- * overload the directory system. */
-#define MIN_DIR_FETCH_PERIOD (10*60)
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (5*60)
-/** Lowest allowable value for StatusFetchPeriod; if this is too low, clients
- * can overload the directory system. */
-#define MIN_STATUS_FETCH_PERIOD (5*60)
 
 /** Highest allowable value for DirFetchPeriod, StatusFetchPeriod, and
  * RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
-/** Highest allowable value for DirFetchPeriod for directory caches. */
-#define MAX_CACHE_DIR_FETCH_PERIOD (60*60)
-/** Highest allowable value for StatusFetchPeriod for directory caches. */
-#define MAX_CACHE_STATUS_FETCH_PERIOD (15*60)
 
 /** Return 0 if every setting in <b>options</b> is reasonable, and a
  * permissible transition from <b>old_options</b>. Else return -1.
@@ -2291,51 +2279,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
       (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0))
     REJECT("PathlenCoinWeight option must be >=0.0 and <1.0.");
 
-  if (options->DirFetchPeriod &&
-      options->DirFetchPeriod < MIN_DIR_FETCH_PERIOD) {
-    log(LOG_WARN, LD_CONFIG,
-        "DirFetchPeriod option must be at least %d seconds. Clipping.",
-        MIN_DIR_FETCH_PERIOD);
-    options->DirFetchPeriod = MIN_DIR_FETCH_PERIOD;
-  }
-  if (options->StatusFetchPeriod &&
-      options->StatusFetchPeriod < MIN_STATUS_FETCH_PERIOD) {
-    log(LOG_WARN, LD_CONFIG,
-        "StatusFetchPeriod option must be at least %d seconds. Clipping.",
-        MIN_STATUS_FETCH_PERIOD);
-    options->StatusFetchPeriod = MIN_STATUS_FETCH_PERIOD;
-  }
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
     log(LOG_WARN,LD_CONFIG,"RendPostPeriod option must be at least %d seconds."
         " Clipping.", MIN_REND_POST_PERIOD);
     options->RendPostPeriod = MIN_REND_POST_PERIOD;
   }
 
-  if (options->DirPort && ! options->AuthoritativeDir) {
-    if (options->DirFetchPeriod > MAX_CACHE_DIR_FETCH_PERIOD) {
-      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have "
-          "DirFetchPeriod less than %d seconds. Clipping.",
-          MAX_CACHE_DIR_FETCH_PERIOD);
-      options->DirFetchPeriod = MAX_CACHE_DIR_FETCH_PERIOD;
-    }
-    if (options->StatusFetchPeriod > MAX_CACHE_STATUS_FETCH_PERIOD) {
-      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have "
-          "StatusFetchPeriod less than %d seconds. Clipping.",
-          MAX_CACHE_STATUS_FETCH_PERIOD);
-      options->StatusFetchPeriod = MAX_CACHE_STATUS_FETCH_PERIOD;
-    }
-  }
-
-  if (options->DirFetchPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, LD_CONFIG, "DirFetchPeriod is too large; clipping to %ds.",
-        MAX_DIR_PERIOD);
-    options->DirFetchPeriod = MAX_DIR_PERIOD;
-  }
-  if (options->StatusFetchPeriod > MAX_DIR_PERIOD) {
-    log(LOG_WARN, LD_CONFIG,"StatusFetchPeriod is too large; clipping to %ds.",
-        MAX_DIR_PERIOD);
-    options->StatusFetchPeriod = MAX_DIR_PERIOD;
-  }
   if (options->RendPostPeriod > MAX_DIR_PERIOD) {
     log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
         MAX_DIR_PERIOD);
