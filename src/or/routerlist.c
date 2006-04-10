@@ -2602,30 +2602,28 @@ networkstatus_get_by_digest(const char *digest)
 #define SELF_OPINION_INTERVAL (90*60)
 
 /** Return a string naming the versions of Tor recommended by
- * at least n_needed versioning networkstatuses */
+ * more than half the versioning networkstatuses. */
 static char *
 compute_recommended_versions(time_t now, int client)
 {
   int n_seen;
   char *current;
   smartlist_t *combined, *recommended;
-  int n_recent;
+  int n_versioning;
   char *result;
 
   if (!networkstatus_list)
     return tor_strdup("<none>");
 
   combined = smartlist_create();
-  n_recent = 0;
+  n_versioning = 0;
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
       const char *vers;
       smartlist_t *versions;
       if (! ns->recommends_versions)
         continue;
-      if (ns->received_on + SELF_OPINION_INTERVAL < now)
-        continue;
-      n_recent++;
+      n_versioning++;
       vers = client ? ns->client_versions : ns->server_versions;
       if (!vers)
         continue;
@@ -2647,13 +2645,13 @@ compute_recommended_versions(time_t now, int client)
       if (current && !strcmp(cp, current)) {
         ++n_seen;
       } else {
-        if (n_seen > n_recent/2 && current)
+        if (n_seen >= n_versioning/2 && current)
           smartlist_add(recommended, current);
         n_seen = 0;
         current = cp;
       }
     });
-  if (n_seen > n_recent/2 && current)
+  if (n_seen >= n_versioning/2 && current)
     smartlist_add(recommended, current);
 
   result = smartlist_join_strings(recommended, ", ", 0, NULL);
@@ -2726,7 +2724,7 @@ routers_update_all_from_networkstatus(void)
 
   if (!have_warned_about_old_version &&
       have_tried_downloading_all_statuses(4)) {
-    int n_recent = 0;
+    int n_versioning = 0;
     int n_recommended = 0;
     int is_server = server_mode(get_options());
     version_status_t consensus = VS_RECOMMENDED;
@@ -2740,24 +2738,24 @@ routers_update_all_from_networkstatus(void)
               VERSION, is_server ? ns->server_versions : ns->client_versions);
       if (vs == VS_RECOMMENDED)
         ++n_recommended;
-      if (n_recent++ == 0) {
+      if (n_versioning++ == 0) {
         consensus = vs;
       } else if (consensus != vs) {
         consensus = version_status_join(consensus, vs);
       }
     });
-    if (n_recent && n_recommended <= n_recent/2) {
+    if (n_versioning && n_recommended <= n_versioning/2) {
       if (consensus == VS_NEW || consensus == VS_NEW_IN_SERIES) {
         if (!have_warned_about_new_version) {
           char *rec = compute_recommended_versions(now, !is_server);
           log_notice(LD_GENERAL, "This version of Tor (%s) is newer than any "
-                 "recommended version%s, according to %d/%d recent network "
-                 "statuses.  Versions recommended by more than %d recent "
+                 "recommended version%s, according to %d/%d network "
+                 "statuses. Versions recommended by more than %d "
                  "authorit%s are: %s",
                  VERSION,
                  consensus == VS_NEW_IN_SERIES ? " in its series" : "",
-                 n_recent-n_recommended, n_recent, n_recent/2,
-                 n_recent/2 > 1 ? "ies" : "y", rec);
+                 n_versioning-n_recommended, n_versioning, n_versioning/2,
+                 n_versioning/2 > 1 ? "ies" : "y", rec);
           have_warned_about_new_version = 1;
           tor_free(rec);
         }
@@ -2765,18 +2763,18 @@ routers_update_all_from_networkstatus(void)
         char *rec = compute_recommended_versions(now, !is_server);
         log_warn(LD_GENERAL, "Please upgrade! "
                  "This version of Tor (%s) is %s, according to "
-                 "%d/%d recent network statuses.  Versions recommended by "
-                 "at least %d recent authorit%s are: %s",
+                 "%d/%d network statuses. Versions recommended by "
+                 "at least %d authorit%s are: %s",
                  VERSION, consensus == VS_OLD ? "obsolete" : "not recommended",
-                 n_recent-n_recommended, n_recent, n_recent/2,
-                 n_recent/2 > 1 ? "ies" : "y", rec);
+                 n_versioning-n_recommended, n_versioning, n_versioning/2,
+                 n_versioning/2 > 1 ? "ies" : "y", rec);
         have_warned_about_old_version = 1;
         tor_free(rec);
       }
     } else {
-      log_info(LD_GENERAL, "%d/%d recently downloaded statements from "
+      log_info(LD_GENERAL, "%d/%d statements from "
                "directory authorities say my version is ok.",
-               n_recommended, n_recent);
+               n_recommended, n_versioning);
     }
   }
 
