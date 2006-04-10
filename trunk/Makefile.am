@@ -15,14 +15,15 @@ EXTRA_DIST = INSTALL README AUTHORS LICENSE ChangeLog tor.spec tor.spec.in
 #install-data-local:
 #	$(INSTALL) -m 755 -d $(LOCALSTATEDIR)/lib/tor
 
-dist-rpm: dist
+# Assume a tarball is in .. for now.
+dist-rpm: 
 	RPM_BUILD_DIR="/tmp/tor-rpm-build-$$$$";                \
 	rm -rf $$RPM_BUILD_DIR;                                 \
 	mkdir $$RPM_BUILD_DIR || exit 1;                        \
 	for subdir in BUILD RPMS SOURCES SPECS SRPMS; do        \
 	    mkdir $$RPM_BUILD_DIR/$$subdir;                     \
 	done;                                                   \
-	cp tor-$(VERSION).tar.gz $$RPM_BUILD_DIR/SOURCES;       \
+	cp ../tor-$(VERSION).tar.gz $$RPM_BUILD_DIR/SOURCES;       \
 	rpmbuild -ba --define "_topdir $$RPM_BUILD_DIR"	tor.spec; \
 	mv $$RPM_BUILD_DIR/SRPMS/* .;                           \
 	mv $$RPM_BUILD_DIR/RPMS/* .;				\
