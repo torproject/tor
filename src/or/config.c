@@ -3191,7 +3191,7 @@ parse_dir_server_line(const char *line, int validate_only)
   char *addrport=NULL, *address=NULL, *nickname=NULL, *fingerprint=NULL;
   uint16_t port;
   char digest[DIGEST_LEN];
-  int supports_v1 = 1; /*XXXX011 change default when clients support v2. */
+  int is_v1_authority = 0;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
@@ -3210,7 +3210,7 @@ parse_dir_server_line(const char *line, int validate_only)
   if (!strcmp(smartlist_get(items, 0), "v1")) {
     char *v1 = smartlist_get(items, 0);
     tor_free(v1);
-    supports_v1 = 1;
+    is_v1_authority = 1;
     smartlist_del_keeporder(items, 0);
   }
 
@@ -3242,7 +3242,7 @@ parse_dir_server_line(const char *line, int validate_only)
   if (!validate_only) {
     log_debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address, (int)port,
               (char*)smartlist_get(items,1));
-    add_trusted_dir_server(nickname, address, port, digest, supports_v1);
+    add_trusted_dir_server(nickname, address, port, digest, is_v1_authority);
   }
 
   r = 0;
