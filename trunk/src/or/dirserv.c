@@ -969,7 +969,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
     digestmap_remove(cached_v2_networkstatus, identity);
   }
 
-  router_get_trusted_dir_servers(&trusted_dirs);
+  trusted_dirs = router_get_trusted_dir_servers();
   if (digestmap_size(cached_v2_networkstatus) >
       smartlist_len(trusted_dirs) + MAX_UNTRUSTED_NETWORKSTATUSES) {
     /* We need to remove the oldest untrusted networkstatus. */
