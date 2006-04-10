@@ -1,8 +1,15 @@
-tor (0.1.1.1XXXXXX) unrleased; urgency=low
+tor (0.1.1.18-rc-1) experimental; urgency=low
 
-  * no longer ship INSTALL and README files, they are useless now.
+  * New upstream version.
+  * update debian/tor.doc:
+    - no longer ship INSTALL and README files, they are useless now.
+    - doc/stylesheet.css, doc/tor-doc-server.html, doc/tor-doc-unix.html,
+      doc/tor-hidden-service.html, doc/tor-switchproxy.html got replaced
+      by doc/website/stylesheet.css and doc/website/tor-* which is more
+      or less the same, only taken from the website.  Some links are
+      probably broken still, but this should get fixed eventually.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 28 Mar 2006 15:28:04 +0200
+ -- Peter Palfrader <weasel@debian.org>  Mon, 10 Apr 2006 12:00:50 +0200
 
 tor (0.1.1.17-rc-1) experimental; urgency=low
 
