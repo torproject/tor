@@ -3645,8 +3645,8 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
   if (state->TorVersion) {
     tor_version_t v;
     if (tor_version_parse(state->TorVersion, &v)) {
-      log_warn(LD_GENERAL, "Can't parse Tor version '%s' from your state file. "
-               "Proceeding anyway.", state->TorVersion);
+      log_warn(LD_GENERAL, "Can't parse Tor version '%s' from your state "
+               "file. Proceeding anyway.", state->TorVersion);
     } else { /* take action based on v */
       if (tor_version_as_new_as(state->TorVersion, "0.1.1.10-alpha") &&
           !tor_version_as_new_as(state->TorVersion, "0.1.1.16-rc-cvs")) {
