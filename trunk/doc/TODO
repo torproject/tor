@@ -58,6 +58,8 @@ N - building on freebsd 6.0: (with multiple openssl installations)
   - provide no-cache no-index headers from the dirport?
   o remove down/useless descriptors from v1 directory?
   - exitlist should avoid outputting the same IP address twice.
+  - if we have no predicted ports, don't fetch router descriptors.
+    this way we are more dormant.
 
 Deferred from 0.1.1.x:
 
