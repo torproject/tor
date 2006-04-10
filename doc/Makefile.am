@@ -20,9 +20,9 @@ website: ../../website/docs/
 img: ../../website/img/
 	rm -rf img
 	mkdir img
-	if test -d $(srcdir)/../../website/img; then \
-		cp $(srcdir)/../../website/img/*.png \
-			$(srcdir)/../../website/img/*.jpg img; \
-	fi
+#	if test -d $(srcdir)/../../website/img; then \
+#		cp $(srcdir)/../../website/img/*.png \
+#			$(srcdir)/../../website/img/*.jpg img; \
+#	fi
 
 .PHONY: website img
