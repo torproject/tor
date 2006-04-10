@@ -1,4 +1,4 @@
-Changes in version 0.1.1.18-rc - 2006-04-09
+Changes in version 0.1.1.18-rc - 2006-04-10
   o Major fixes:
     - Work harder to download live network-statuses from all the
       directory authorities we know about. Improve the threshold
@@ -36,6 +36,9 @@ Changes in version 0.1.1.18-rc - 2006-04-09
       Perhaps this will help us hunt the bug.
     - If you're not a versioning dirserver, don't put the string
       "client-versions \nserver-versions \n" in your network-status.
+    - Lower the minimum required number of file descriptors to 1000,
+      so we can have some overhead for Valgrind on Linux, where the
+      default ulimit -n is 1024.
 
   o New features:
     - Add tor.dizum.com as the fifth authoritative directory server.
