@@ -826,7 +826,7 @@ run_scheduled_events(time_t now)
     if (options->DirPort && !options->V1AuthoritativeDir) {
       /* XXX actually, we should only do this if we want to advertise
        * our dirport. not simply if we configured one. -RD */
-      if (any_trusted_dir_supports_v1())
+      if (any_trusted_dir_is_v1_authority())
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
 

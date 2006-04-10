@@ -2487,7 +2487,7 @@ router_exit_policy_rejects_all(routerinfo_t *router)
  * <b>address</b> is NULL, add ourself. */
 void
 add_trusted_dir_server(const char *nickname, const char *address,
-                       uint16_t port, const char *digest, int supports_v1)
+                       uint16_t port, const char *digest, int is_v1_authority)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
@@ -2520,7 +2520,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->addr = a;
   ent->dir_port = port;
   ent->is_running = 1;
-  ent->is_v1_authority = supports_v1;
+  ent->is_v1_authority = is_v1_authority;
   memcpy(ent->digest, digest, DIGEST_LEN);
 
   dlen = 64 + strlen(hostname) + (nickname?strlen(nickname):0);
@@ -2570,7 +2570,7 @@ clear_trusted_dir_servers(void)
 /** Return 1 if any trusted dir server supports v1 directories,
  * else return 0. */
 int
-any_trusted_dir_supports_v1(void)
+any_trusted_dir_is_v1_authority(void)
 {
   if (trusted_dir_servers)
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
