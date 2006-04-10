@@ -1935,7 +1935,7 @@ sort_version_list(smartlist_t *versions, int remove_duplicates)
     return;
 
   for (i = 1; i < smartlist_len(versions); ++i) {
-    char *a, *b;
+    const void *a, *b;
     a = smartlist_get(versions, i-1);
     b = smartlist_get(versions, i);
     /* use version_cmp so we catch multiple representations of the same
