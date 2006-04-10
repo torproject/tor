@@ -2633,6 +2633,8 @@ compute_recommended_versions(time_t now, int client)
       smartlist_split_string(versions, vers, ",",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
       sort_version_list(versions, 1);
+      smartlist_add_all(combined, versions);
+      smartlist_free(versions);
     });
 
   sort_version_list(combined, 0);
@@ -2645,15 +2647,13 @@ compute_recommended_versions(time_t now, int client)
       if (current && !strcmp(cp, current)) {
         ++n_seen;
       } else {
-/* XXX Another case of requiring only half, not more than half -RD */
-        if (n_seen >= n_recent/2 && current)
+        if (n_seen > n_recent/2 && current)
           smartlist_add(recommended, current);
         n_seen = 0;
         current = cp;
       }
     });
-/* XXX and here -RD */
-  if (n_seen >= n_recent/2 && current)
+  if (n_seen > n_recent/2 && current)
     smartlist_add(recommended, current);
 
   result = smartlist_join_strings(recommended, ", ", 0, NULL);
@@ -2752,7 +2752,7 @@ routers_update_all_from_networkstatus(void)
           char *rec = compute_recommended_versions(now, !is_server);
           log_notice(LD_GENERAL, "This version of Tor (%s) is newer than any "
                  "recommended version%s, according to %d/%d recent network "
-                 "statuses.  Versions recommended by at least %d recent "
+                 "statuses.  Versions recommended by more than %d recent "
                  "authorit%s are: %s",
                  VERSION,
                  consensus == VS_NEW_IN_SERIES ? " in its series" : "",
