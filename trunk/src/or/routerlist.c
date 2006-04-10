@@ -1550,13 +1550,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       rs->need_to_mirror = 0;
   });
 
-  /* Probably, there's no way to actually pass this function our own
-   * descriptor, but in case there is, don't replace our own descriptor. */
-  if (router_is_me(router)) {
-    routerinfo_free(router);
-    return 0;
-  }
-
   /* If we have a router with this name, and the identity key is the same,
    * choose the newer one. If the identity key has changed, and one of the
    * routers is named, drop the unnamed ones. (If more than one are named,
