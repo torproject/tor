@@ -1,0 +1,616 @@
+dnl $Id$
+dnl Copyright (c) 2001-2004, Roger Dingledine
+dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
+dnl See LICENSE for licensing information
+
+AC_INIT
+AM_INIT_AUTOMAKE(tor, 0.1.1.18-rc)
+AM_CONFIG_HEADER(orconfig.h)
+
+AC_CANONICAL_HOST
+
+if test -f /etc/redhat-release; then
+    CFLAGS="$CFLAGS -I/usr/kerberos/include"
+fi
+
+AC_ARG_ENABLE(debug,
+ AC_HELP_STRING(--enable-debug, compile with debugging info),
+[if test x$enableval = xyes; then
+    CFLAGS="$CFLAGS -g"
+fi])
+
+AC_ARG_ENABLE(threads,
+     AC_HELP_STRING(--disable-threads, disable multi-threading support))
+
+if test x$enable_threads = x; then
+   case $host in
+    *-*-netbsd* | *-*-openbsd* )
+     # Don't try multithreading on netbsd -- there is no threadsafe DNS
+     # lookup function there.
+     AC_MSG_NOTICE([You are running OpenBSD or NetBSD; I am assuming that
+getaddrinfo is not threadsafe here, so I will disable threads.])
+     enable_threads="no";;
+    *-*-solaris* )
+     # Don't try multithreading on solaris -- cpuworkers seem to lock.
+     AC_MSG_NOTICE([You are running Solaris; Sometimes threading makes
+cpu workers lock up here, so I will disable threads.])
+     enable_threads="no";;
+    *)
+     enable_threads="yes";;
+   esac
+fi
+
+if test $enable_threads = "yes"; then
+  AC_DEFINE(ENABLE_THREADS, 1, [Defined if we will try to use multithreading])
+fi
+
+case $host in
+   *-*-solaris* )
+     AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])
+     ;;
+esac
+
+AC_PROG_CC
+AC_PROG_MAKE_SET
+AC_PROG_RANLIB
+
+# The big search for OpenSSL
+# copied from openssh's configure.ac
+tryssldir=""
+AC_ARG_WITH(ssl-dir,
+        [  --with-ssl-dir=PATH     Specify path to OpenSSL installation ],
+        [
+                if test "x$withval" != "xno" ; then
+                        tryssldir=$withval
+                fi
+        ]
+)
+
+trylibeventdir=""
+AC_ARG_WITH(libevent-dir,
+       [  --with-libevent-dir=PATH     Specify path to Libevent installation ],
+       [
+                if test "x$withval" != "xno" ; then
+                        trylibeventdir=$withval
+                fi
+       ]
+)
+
+TORUSER=_tor
+AC_ARG_WITH(tor-user,
+        [  --with-tor-user=NAME    Specify username for tor daemon ],
+        [
+           TORUSER=$withval
+        ]
+)
+AC_SUBST(TORUSER)
+
+TORGROUP=_tor
+AC_ARG_WITH(tor-group,
+        [  --with-tor-group=NAME   Specify group name for tor daemon ],
+        [
+           TORGROUP=$withval
+        ]
+)
+AC_SUBST(TORGROUP)
+
+AC_SEARCH_LIBS(socket, [socket])
+AC_SEARCH_LIBS(gethostbyname, [nsl])
+AC_SEARCH_LIBS(dlopen, [dl])
+
+if test $enable_threads = "yes"; then
+  AC_SEARCH_LIBS(pthread_create, [pthread])
+  AC_SEARCH_LIBS(pthread_detach, [pthread])
+fi
+
+dnl ------------------------------------------------------
+dnl Where do you live, libevent?  And how do we call you?
+
+AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
+  saved_LIBS="$LIBS"
+  saved_LDFLAGS="$LDFLAGS"
+  saved_CPPFLAGS="$CPPFLAGS"
+  le_found=no
+  for ledir in $trylibeventdir "" $prefix /usr/local ; do
+    LDFLAGS="$saved_LDFLAGS"
+    LIBS="$saved_LIBS -levent"
+
+    # Skip the directory if it isn't there.
+    if test ! -z "$ledir" -a ! -d "$ledir" ; then
+       continue;
+    fi
+    if test ! -z "$ledir" ; then
+      if test -d "$ledir/lib" ; then
+        LDFLAGS="-L$ledir/lib $LDFLAGS"
+      else
+        LDFLAGS="-L$ledir $LDFLAGS"
+      fi
+      if test -d "$ledir/include" ; then
+        CPPFLAGS="-I$ledir/include $CPPFLAGS"
+      else
+        CPPFLAGS="-I$ledir $CPPFLAGS"
+      fi
+    fi
+    # Can I compile and link it?
+    AC_TRY_LINK([#include <sys/time.h>
+#include <sys/types.h>
+#include <event.h>], [ event_init(); ],
+       [ libevent_linked=yes ], [ libevent_linked=no ])
+    if test $libevent_linked = yes; then
+       if test ! -z "$ledir" ; then
+         ac_cv_libevent_dir=$ledir
+       else
+         ac_cv_libevent_dir="(system)"
+       fi
+       le_found=yes
+       break
+    fi
+  done
+  LIBS="$saved_LIBS"
+  LDFLAGS="$saved_LDFLAGS"
+  CPPFLAGS="$saved_CPPFLAGS"
+  if test $le_found = no ; then
+    AC_MSG_ERROR([Could not find a linkable libevent. You can specify an explicit path using --with-libevent-dir])
+  fi
+])
+LIBS="$LIBS -levent"
+if test $ac_cv_libevent_dir != "(system)"; then
+  if test -d "$ac_cv_libevent_dir/lib" ; then
+    LDFLAGS="-L$ac_cv_libevent_dir/lib $LDFLAGS"
+    le_libdir="$ac_cv_libevent_dir/lib"
+  else
+    LDFLAGS="-L$ac_cv_libevent_dir $LDFLAGS"
+    le_libdir="$ac_cv_libevent_dir"
+  fi
+  if test -d "$ac_cv_libevent_dir/include" ; then
+    CPPFLAGS="-I$ac_cv_libevent_dir/include $CPPFLAGS"
+  else
+    CPPFLAGS="-I$ac_cv_libevent_dir $CPPFLAGS"
+  fi
+fi
+
+AC_CACHE_CHECK([whether we need extra options to link libevent],
+               ac_cv_libevent_linker_option, [
+    saved_LDFLAGS="$LDFLAGS"
+    le_runs=no
+    linked_with=nothing
+    for le_extra in "" "-Wl,-R$le_libdir" "-R$le_libdir" ; do
+      LDFLAGS="$le_extra $saved_LDFLAGS"
+      AC_TRY_RUN([void *event_init(void);
+                int main(int c, char **v) {
+                   event_init(); return 0;
+                }],
+                libevent_runs=yes, libevent_runs=no)
+      if test $libevent_runs = yes ; then
+        if test -z "$le_extra" ; then
+          ac_cv_libevent_linker_option='(none)'
+        else
+          ac_cv_libevent_linker_option=$le_extra
+        fi
+        le_runs=yes
+        break
+      fi
+    done
+    if test $le_runs = no ; then
+      AC_MSG_ERROR([Found linkable libevent in $ac_cv_libevent_dir, but it doesn't run, even with -R.  Maybe specify another using --with-libevent-dir?])
+    fi
+    LDFLAGS="$saved_LDFLAGS"
+])
+
+if test $ac_cv_libevent_linker_option != '(none)' ; then
+   LDFLAGS="$ac_cv_libevent_linker_option $LDFLAGS"
+fi
+
+dnl ------------------------------------------------------
+dnl Where do you live, openssl?  And how do we call you?
+
+AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
+  saved_LIBS="$LIBS"
+  saved_LDFLAGS="$LDFLAGS"
+  saved_CPPFLAGS="$CPPFLAGS"
+  ssl_found=no
+  for ssldir in $tryssldir "" $prefix /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /usr/pkg /opt /opt/openssl ; do
+    LDFLAGS="$saved_LDFLAGS"
+    LIBS="$saved_LIBS -lssl -lcrypto"
+
+    # Skip the directory if it isn't there.
+    if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
+       continue;
+    fi
+    if test ! -z "$ssldir" ; then
+      if test -d "$ssldir/lib" ; then
+        LDFLAGS="-L$ssldir/lib $LDFLAGS"
+      else
+        LDFLAGS="-L$ssldir $LDFLAGS"
+      fi
+      if test -d "$ssldir/include" ; then
+        CPPFLAGS="-I$ssldir/include $CPPFLAGS"
+      else
+        CPPFLAGS="-I$ssldir $CPPFLAGS"
+      fi
+    fi
+    # Can I link it?
+    AC_TRY_LINK([#include <openssl/rand.h>],
+       [ RAND_add((void*)0,0,0); ],
+       [ openssl_linked=yes ], [ openssl_linked=no ])
+    if test $openssl_linked = yes; then
+       if test ! -z "$ssldir" ; then
+         ac_cv_openssl_dir=$ssldir
+       else
+         ac_cv_openssl_dir="(system)"
+       fi
+       ssl_found=yes
+       break
+    fi
+  done
+  LIBS="$saved_LIBS"
+  LDFLAGS="$saved_LDFLAGS"
+  CPPFLAGS="$saved_CPPFLAGS"
+  if test $ssl_found = no ; then
+    AC_MSG_ERROR([Could not find a linkable OpenSSL. You can specify an explicit path using --with-ssl-dir])
+  fi
+])
+LIBS="$LIBS -lssl -lcrypto"
+if test "$ac_cv_openssl_dir" != "(system)"; then
+  if test -d "$ac_cv_openssl_dir/lib" ; then
+    LDFLAGS="-L$ac_cv_openssl_dir/lib $LDFLAGS"
+    ssl_libdir="$ac_cv_openssl_dir/lib"
+  else
+    LDFLAGS="-L$ac_cv_openssl_dir $LDFLAGS"
+    ssl_libdir="$ac_cv_openssl_dir"
+  fi
+  if test -d "$ac_cv_openssl_dir/include" ; then
+    CPPFLAGS="-I$ac_cv_openssl_dir/include $CPPFLAGS"
+  else
+    CPPFLAGS="-I$ac_cv_openssl_dir $CPPFLAGS"
+  fi
+fi
+
+AC_CACHE_CHECK([whether we need extra options to link OpenSSL],
+               ac_cv_openssl_linker_option, [
+    saved_LDFLAGS="$LDFLAGS"
+    ssl_runs=no
+    linked_with=nothing
+    for ssl_extra in "" "-Wl,-R$ssl_libdir" "-R$ssl_libdir" ; do
+      LDFLAGS="$ssl_extra $saved_LDFLAGS"
+      AC_TRY_RUN([
+#include <string.h>
+#include <openssl/rand.h>
+int main(void)
+{
+        char a[2048];
+        memset(a, 0, sizeof(a));
+        RAND_add(a, sizeof(a), sizeof(a));
+        return(RAND_status() <= 0);
+}
+                        ],
+                openssl_runs=yes, openssl_runs=no)
+      if test $openssl_runs = yes ; then
+        if test "$linked_with" = nothing; then
+           linked_with="$ssl_extra"
+        fi
+        AC_TRY_RUN([
+#include <openssl/opensslv.h>
+#include <openssl/crypto.h>
+int main(void) {
+return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
+}],
+        right_version=yes, right_version=no)
+        if test "$right_version" = yes; then
+          if test -z "$ssl_extra" ; then
+            ac_cv_openssl_linker_option='(none)'
+          else
+            ac_cv_openssl_linker_option=$ssl_extra
+          fi
+          ssl_runs=yes
+          break
+        fi
+     fi
+    done
+    if test $ssl_runs = no ; then
+      if test "$linked_with" = 'nothing' ; then
+        AC_MSG_ERROR([Found linkable OpenSSL in $ac_cv_openssl_dir, but it doesn't run, even with -R.  Maybe specify another using --with-ssl-dir?])
+      else
+        if test -z "$linked_with" ; then
+            ac_cv_openssl_linker_option='(none)'
+        else
+            ac_cv_openssl_linker_option=$linked_with
+        fi
+        AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it link against the same version I found header files for.])
+      fi
+    fi
+    LDFLAGS="$saved_LDFLAGS"
+])
+
+if test "$ac_cv_openssl_linker_option" != '(none)' ; then
+   LDFLAGS="$ac_cv_openssl_linker_option $LDFLAGS"
+fi
+
+dnl Make sure to enable support for large off_t if avalable.
+
+AC_SYS_LARGEFILE
+
+dnl The warning message here is no longer strictly accurate.
+
+AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h time.h pwd.h grp.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+
+AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. Tor requires libevent to build.))
+
+AC_CHECK_HEADERS(zlib.h, , AC_MSG_ERROR(Zlib header (zlib.h) not found. Tor requires zlib to build. You may need to install a zlib development package.))
+
+dnl These headers are not essential
+
+AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h stddef.h inttypes.h utime.h sys/utime.h)
+
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam getpwuid ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem)
+
+if test $enable_threads = "yes"; then
+  AC_CHECK_HEADERS(pthread.h)
+  AC_CHECK_FUNCS(pthread_create)
+fi
+
+AC_FUNC_FSEEKO
+
+AC_CHECK_MEMBERS([struct timeval.tv_sec])
+
+dnl In case we aren't given a working stdint.h, we'll need to grow our own.
+dnl Watch out.
+
+AC_CHECK_SIZEOF(int8_t)
+AC_CHECK_SIZEOF(int16_t)
+AC_CHECK_SIZEOF(int32_t)
+AC_CHECK_SIZEOF(int64_t)
+AC_CHECK_SIZEOF(uint8_t)
+AC_CHECK_SIZEOF(uint16_t)
+AC_CHECK_SIZEOF(uint32_t)
+AC_CHECK_SIZEOF(uint64_t)
+AC_CHECK_SIZEOF(intptr_t)
+AC_CHECK_SIZEOF(uintptr_t)
+
+dnl AC_CHECK_TYPES([int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, intptr_t, uintptr_t])
+
+AC_CHECK_SIZEOF(char)
+AC_CHECK_SIZEOF(short)
+AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(long)
+AC_CHECK_SIZEOF(long long)
+AC_CHECK_SIZEOF(__int64)
+AC_CHECK_SIZEOF(void *)
+AC_CHECK_SIZEOF(time_t)
+AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
+AC_TRY_RUN([
+int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }],
+  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes)
+])
+
+if test $tor_cv_time_t_signed = yes; then
+  AC_DEFINE([TIME_T_IS_SIGNED], 1,
+            [Define to 1 iff time_t is signed])
+fi
+
+AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+])
+
+# We want to make sure that we _don't_ have a cell_t defined, like IRIX does.
+
+AC_CHECK_SIZEOF(cell_t)
+
+# Now, let's see about alignment requirements.  On some platforms, we override
+# the default.
+case $host in
+ ia64-*-* | arm-*-* | sparc-*-* | sparc64-*-* )
+    tor_cv_unaligned_ok=no
+    ;;
+ # On the following architectures unaligned access works, but is not done in
+ # hardware.  This means that when you try to do unaligned access the kernel
+ # gets to sort out an exception and then work around to somehow make your
+ # reqest work, which is quite expensive.  Therefore it's probably better to
+ # not even do it.
+ alpha-*-* | mips-*-* | mipsel-*-* )
+    tor_cv_unaligned_ok=no
+    ;;
+ *)
+AC_CACHE_CHECK([whether unaligned int access is allowed], tor_cv_unaligned_ok,
+[AC_RUN_IFELSE([AC_LANG_SOURCE(
+[[int main () { char s[] = "A\x00\x00\x00\x00\x00\x00\x00";
+return *(int*)(&s[1]); }]])],
+       [tor_cv_unaligned_ok=yes],
+       [tor_cv_unaligned_ok=no],
+       [tor_cv_unaligned_ok=cross])])
+esac
+
+if test $tor_cv_unaligned_ok = yes; then
+  AC_DEFINE([UNALIGNED_INT_ACCESS_OK], 1,
+            [Define to 1 iff unaligned int access is allowed])
+fi
+
+# Now make sure that NULL can be represented as zero bytes.
+AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
+[AC_RUN_IFELSE([AC_LANG_SOURCE(
+[[#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#ifdef HAVE_STDDEF_H
+#include <stddef.h>
+#endif
+int main () { char *p1,*p2; p1=NULL; memset(&p2,0,sizeof(p2));
+return memcmp(&p1,&p2,sizeof(char*))?1:0; }]])],
+       [tor_cv_null_is_zero=yes],
+       [tor_cv_null_is_zero=no],
+       [tor_cv_null_is_zero=cross])])
+
+if test $tor_cv_null_is_zero = yes; then
+  AC_DEFINE([NULL_REP_IS_ZERO_BYTES], 1,
+            [Define to 1 iff memset(0) sets pointers to NULL])
+fi
+
+# Whether we should use the dmalloc memory allocation debugging library.
+AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
+AC_ARG_WITH(dmalloc,
+[  --with-dmalloc          Use debug memory allocation library. ],
+[if [[ "$withval" = "yes" ]]; then
+  dmalloc=1
+  AC_MSG_RESULT(yes)
+else
+  dmalloc=1
+  AC_MSG_RESULT(no)
+fi], [ dmalloc=0; AC_MSG_RESULT(no) ]
+)
+
+if [[ $dmalloc -eq 1 ]]; then
+  AC_CHECK_HEADERS(dmalloc.h, , AC_MSG_ERROR(dmalloc header file not found. Do you have the development files for dmalloc installed?))
+  AC_SEARCH_LIBS(dmalloc_malloc, [dmallocth dmalloc], , AC_MSG_ERROR(Libdmalloc library not found. If you enable it you better have it installed.))
+  AC_DEFINE(USE_DMALLOC, 1, [Debug memory allocation library])
+  AC_DEFINE(DMALLOC_FUNC_CHECK, 1, [Enable dmalloc's malloc function check])
+fi
+
+# Allow user to specify an alternate syslog facility
+AC_ARG_WITH(syslog-facility,
+[  --with-syslog-facility=LOG syslog facility to use (default=LOG_DAEMON)],
+syslog_facility="$withval", syslog_facility="LOG_DAEMON")
+AC_DEFINE_UNQUOTED(LOGFACILITY,$syslog_facility,[name of the syslog facility])
+AC_SUBST(LOGFACILITY)
+
+# Check for gethostbyname_r in all its glorious incompatible versions.
+#   (This logic is based on that in Python's configure.in)
+AH_TEMPLATE(HAVE_GETHOSTBYNAME_R,
+  [Define this if you have any gethostbyname_r()])
+
+AC_CHECK_FUNC(gethostbyname_r, [
+  AC_MSG_CHECKING([how many arguments gethostbyname_r() wants])
+  OLD_CFLAGS=$CFLAGS
+  CFLAGS="$CFLAGS $MY_CPPFLAGS $MY_THREAD_CPPFLAGS $MY_CFLAGS"
+  AC_TRY_COMPILE([
+#include <netdb.h>
+  ], [
+    char *cp1, *cp2;
+    struct hostent *h1, *h2;
+    int i1, i2;
+    (void)gethostbyname_r(cp1,h1,cp2,i1,&h2,&i2);
+  ], [
+    AC_DEFINE(HAVE_GETHOSTBYNAME_R)
+    AC_DEFINE(HAVE_GETHOSTBYNAME_R_6_ARG, 1,
+     [Define this if gethostbyname_r takes 6 arguments])
+    AC_MSG_RESULT(6)
+  ], [
+    AC_TRY_COMPILE([
+#include <netdb.h>
+    ], [
+      char *cp1, *cp2;
+      struct hostent *h1;
+      int i1, i2;
+      (void)gethostbyname_r(cp1,h1,cp2,i1,&i2);
+    ], [
+      AC_DEFINE(HAVE_GETHOSTBYNAME_R)
+      AC_DEFINE(HAVE_GETHOSTBYNAME_R_5_ARG, 1,
+        [Define this if gethostbyname_r takes 5 arguments])
+      AC_MSG_RESULT(5)
+   ], [
+      AC_TRY_COMPILE([
+#include <netdb.h>
+     ], [
+       char *cp1;
+       struct hostent *h1;
+       struct hostent_data hd;
+       (void) gethostbyname_r(cp1,h1,&hd);
+     ], [
+       AC_DEFINE(HAVE_GETHOSTBYNAME_R)
+       AC_DEFINE(HAVE_GETHOSTBYNAME_R_3_ARG, 1,
+         [Define this if gethostbyname_r takes 3 arguments])
+       AC_MSG_RESULT(3)
+     ], [
+       AC_MSG_RESULT(0)
+     ])
+  ])
+ ])
+ CFLAGS=$OLD_CFLAGS
+])
+
+AC_CACHE_CHECK([whether the C compiler supports __func__],
+  ac_cv_have_func_macro,
+  AC_COMPILE_IFELSE([
+#include <stdio.h>
+int main(int c, char **v) { puts(__func__); }],
+  ac_cv_have_func_macro=yes,
+  ac_cv_have_func_macro=no))
+
+AC_CACHE_CHECK([whether the C compiler supports __FUNC__],
+  ac_cv_have_FUNC_macro,
+  AC_COMPILE_IFELSE([
+#include <stdio.h>
+int main(int c, char **v) { puts(__FUNC__); }],
+  ac_cv_have_FUNC_macro=yes,
+  ac_cv_have_FUNC_macro=no))
+
+AC_CACHE_CHECK([whether the C compiler supports __FUNCTION__],
+  ac_cv_have_FUNCTION_macro,
+  AC_COMPILE_IFELSE([
+#include <stdio.h>
+int main(int c, char **v) { puts(__FUNCTION__); }],
+  ac_cv_have_FUNCTION_macro=yes,
+  ac_cv_have_FUNCTION_macro=no))
+
+if test $ac_cv_have_func_macro = 'yes'; then
+  AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
+fi
+
+
+if test $ac_cv_have_FUNC_macro = 'yes'; then
+  AC_DEFINE(HAVE_MACRO__FUNC__, 1, [Defined if the compiler supports __FUNC__])
+fi
+
+if test $ac_cv_have_FUNCTION_macro = 'yes'; then
+  AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
+           [Defined if the compiler supports __FUNCTION__])
+fi
+
+
+# $prefix stores the value of the --prefix command line option, or
+# NONE if the option wasn't set.  In the case that it wasn't set, make
+# it be the default, so that we can use it to expand directories now.
+if test "x$prefix" = "xNONE"; then
+  prefix=$ac_default_prefix
+fi
+
+# and similarly for $exec_prefix
+if test "x$exec_prefix" = "xNONE"; then
+  exec_prefix=$prefix
+fi
+
+CONFDIR=`eval echo $sysconfdir/tor`
+AC_SUBST(CONFDIR)
+AC_DEFINE_UNQUOTED(CONFDIR,"$CONFDIR")
+AC_DEFINE([CONFDIR], [], [tor's configuration directory])
+
+BINDIR=`eval echo $bindir`
+AC_SUBST(BINDIR)
+
+LOCALSTATEDIR=`eval echo $localstatedir`
+AC_SUBST(LOCALSTATEDIR)
+AC_DEFINE_UNQUOTED(LOCALSTATEDIR,"$LOCALSTATEDIR")
+AC_DEFINE([LOCALSTATEDIR], [], [Default location to store state files.])
+
+# Set CFLAGS _after_ all the above checks, since our warnings are stricter
+# than autoconf's macros like.
+if test $ac_cv_c_compiler_gnu = yes; then
+  CFLAGS="$CFLAGS -Wall -g -O2"
+else
+  CFLAGS="$CFLAGS -g -O"
+fi
+# Add some more warnings which we use in the cvs version but not in the
+# released versions.  (Some relevant gcc versions can't handle these.)
+#CFLAGS="$CFLAGS -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline"
+# Add these in when you feel like fun.
+#CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement -Wold-style-definition"
+
+echo "confdir: $CONFDIR"
+
+AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile)
+
+if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
+  ./contrib/updateVersions.pl
+fi
+
