@@ -49,10 +49,13 @@
 #include <sys/limits.h>
 #endif
 #ifdef HAVE_MACHINE_LIMITS_H
-#ifndef __FreeBSD__
+#if !defined(__FreeBSD__) && !defined(__FreeBSD_kernel__)
   /* FreeBSD has a bug where it complains that this file is obsolete,
      and I should migrate to using sys/limits. It complains even when
-     I include both. */
+     I include both.
+     __FreeBSD_kernel__ is defined by Debian GNU/kFreeBSD which
+      does the same thing (but doesn't defined __FreeBSD__).
+     */
 #include <machine/limits.h>
 #endif
 #endif
