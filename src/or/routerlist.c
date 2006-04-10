@@ -3574,7 +3574,6 @@ router_have_minimum_dir_info(void)
 {
   int tot = 0, num_running = 0;
   int n_ns, n_tried, n_authorities, res, avg;
-  static int have_ever_tried_all = 0;
   static int have_enough = 0;
   if (!networkstatus_list || !routerlist) {
     res = 0;
@@ -3588,18 +3587,6 @@ router_have_minimum_dir_info(void)
              "more than %d.", n_ns, n_authorities, n_authorities/2);
     res = 0;
     goto done;
-  }
-  if (!have_ever_tried_all) {
-    n_tried=n_ns;
-    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
-                      if (ds->n_networkstatus_failures) ++n_tried);
-    if (n_tried < n_authorities) {
-      log_info(LD_DIR,
-               "We have only tried downloading %d/%d network statuses.",
-               n_tried, n_authorities);
-    } else {
-      have_ever_tried_all = 1;
-    }
   }
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
                     tot += routerstatus_count_usable_entries(ns->entries));
