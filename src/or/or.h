@@ -22,7 +22,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -38,27 +37,10 @@
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
 #endif
-#include "../common/torint.h"
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
-#ifdef HAVE_SYS_LIMITS_H
-#include <sys/limits.h>
-#endif
-#ifdef HAVE_MACHINE_LIMITS_H
-#ifndef __FreeBSD__
-  /* FreeBSD has a bug where it complains that this file is obsolete,
-     and I should migrate to using sys/limits. It complains even when
-     I include both. */
-#include <machine/limits.h>
-#endif
-#endif
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
-#endif
+#include "../common/torint.h"
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
