@@ -3573,7 +3573,7 @@ int
 router_have_minimum_dir_info(void)
 {
   int tot = 0, num_running = 0;
-  int n_ns, n_tried, n_authorities, res, avg;
+  int n_ns, n_authorities, res, avg;
   static int have_enough = 0;
   if (!networkstatus_list || !routerlist) {
     res = 0;
