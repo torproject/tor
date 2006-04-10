@@ -1935,12 +1935,12 @@ sort_version_list(smartlist_t *versions, int remove_duplicates)
     return;
 
   for (i = 1; i < smartlist_len(versions); ++i) {
-    void *a, *b;
+    char *a, *b;
     a = smartlist_get(versions, i-1);
     b = smartlist_get(versions, i);
     /* use version_cmp so we catch multiple representations of the same
      * version */
-    if (_compare_tor_version_str_ptr(a,b) == 0) {
+    if (_compare_tor_version_str_ptr(&a,&b) == 0) {
       tor_free(smartlist_get(versions, i));
       smartlist_del_keeporder(versions, i--);
     }
