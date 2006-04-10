@@ -403,12 +403,13 @@ $Id$
    authority, and try to periodically get new network-status documents from
    each authority in rotation as follows:
 
-   If a client is missing a live network-status document for any authority, it
-   tries to fetch it from a directory cache.  On failure, the client waits
-   briefly, then tries that network-status document again from another
-   cache.  The client does not build circuits until, for every authority, it
-   has a live network-status document, or until is has tried and failed to
-   get a network-status document.
+   If a client is missing a live network-status document for any
+   authority, it tries to fetch it from a directory cache.  On failure,
+   the client waits briefly, then tries that network-status document
+   again from another cache.  The client does not build circuits until it
+   has live network-status documents from more than half the authorities
+   it trusts, and it has descriptors for more than 1/4 of the routers
+   that it believes are running.
 
    If the most recently _retrieved_ network-status document is over 30
    minutes old, the client attempts to download a network-status document.
