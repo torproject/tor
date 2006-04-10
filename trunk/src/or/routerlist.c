@@ -2731,8 +2731,7 @@ routers_update_all_from_networkstatus(void)
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
       version_status_t vs;
-      if (!ns->recommends_versions ||
-          ns->received_on + SELF_OPINION_INTERVAL < now )
+      if (!ns->recommends_versions)
         continue;
       vs = tor_version_is_obsolete(
               VERSION, is_server ? ns->server_versions : ns->client_versions);
