@@ -23,7 +23,8 @@ dist-rpm:
 	for subdir in BUILD RPMS SOURCES SPECS SRPMS; do        \
 	    mkdir $$RPM_BUILD_DIR/$$subdir;                     \
 	done;                                                   \
-	cp ../tor-$(VERSION).tar.gz $$RPM_BUILD_DIR/SOURCES;       \
+	tar zcf tor-$(VERSION).tar.gz ../tor;			\
+	cp tor-$(VERSION).tar.gz $$RPM_BUILD_DIR/SOURCES;    	\
 	rpmbuild -ba --define "_topdir $$RPM_BUILD_DIR"	tor.spec; \
 	mv $$RPM_BUILD_DIR/SRPMS/* .;                           \
 	mv $$RPM_BUILD_DIR/RPMS/* .;				\
