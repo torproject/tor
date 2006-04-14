@@ -2704,7 +2704,7 @@ routers_update_all_from_networkstatus(void)
                  n_recent-n_valid, n_recent);
         have_warned_about_invalid_status = 1;
       } else if (n_naming && !n_named) {
-        log_warn(LD_GENERAL, "0/%d name-binding directory authorities "
+        log_info(LD_GENERAL, "0/%d name-binding directory authorities "
                  "recognize your nickname. Please consider sending your "
                  "nickname and identity fingerprint to the tor-ops.",
                  n_naming);
