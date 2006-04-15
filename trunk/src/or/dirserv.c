@@ -1257,6 +1257,9 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   if (smartlist_len(bandwidths)) {
     fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
                                                smartlist_len(bandwidths)/8);
+    if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH)
+      fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
+                                                 smartlist_len(bandwidths)/4);
     guard_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
                                                 smartlist_len(bandwidths)/2);
   }
