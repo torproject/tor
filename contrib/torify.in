@@ -1,7 +1,33 @@
-#! /bin/sh
+#! /bin/sh -x
 # Wrapper script for use of the tsocks(8) transparent socksification library
 # See the tsocks(1) and torify(1) manpages.
+# Modified by Jacob Appelbaum <jacob@appelbaum.net> April 16th 2006
 
+# Define and ensure we have tsocks
+TSOCKS=`which tsocks`;
+if [ ! -x $TSOCKS ];
+then
+        echo "Can't find tsocks in PATH. Perhaps you haven't installed it?";
+        exit 1;
+fi
+
+# Check for any argument list
+if [ -z $1 ];
+then
+        echo "Usage: $0 <application> <arguments>";
+        exit 1;
+fi
+
+# Define our tsocks config file
 TSOCKS_CONF_FILE=@CONFDIR@/tor-tsocks.conf
 export TSOCKS_CONF_FILE
-exec tsocks "$@"
+
+# Check that we've got a tsocks config file
+if [ -r $TSOCKS_CONF_FILE ];
+then
+	exec tsocks "$@"
+else
+	echo "Error: Missing tsocks configuration file \"$TSOCKS_CONF_FILE\".";
+	exit 1;
+fi
+
