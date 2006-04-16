@@ -1317,7 +1317,7 @@ dumpstats(int severity)
     if (!connection_is_listener(conn)) {
       log(severity,LD_GENERAL,
           "Conn %d is to '%s:%d'.", i,
-          escaped_safe_str(conn->address), conn->port);
+          safe_str(conn->address), conn->port);
       log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",
           i,
