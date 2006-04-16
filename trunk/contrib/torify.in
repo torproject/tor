@@ -1,4 +1,4 @@
-#! /bin/sh -x
+#! /bin/sh
 # Wrapper script for use of the tsocks(8) transparent socksification library
 # See the tsocks(1) and torify(1) manpages.
 # Modified by Jacob Appelbaum <jacob@appelbaum.net> April 16th 2006
