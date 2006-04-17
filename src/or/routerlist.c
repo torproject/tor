@@ -612,6 +612,9 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
         }
       }
     } else {
+      /* XXX If it's down, we won't *have* the descriptor, since we
+       * don't fetch down descriptors. Need to check if it's in the
+       * status too before complaining. */
       if (!warned) {
         log_fn(have_dir_info ? LOG_WARN : LOG_INFO, LD_CONFIG,
                "Nickname list includes '%s' which isn't a known router.",nick);
