@@ -1000,7 +1000,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
         base16_encode(fp, sizeof(fp),
                       best_match->cache_info.identity_digest, DIGEST_LEN);
         log_warn(LD_CONFIG, "You specified a server \"%s\" by name, but the "
-             "directory authorities do not have a listing for this name. "
+             "directory authorities do not have a binding for this nickname. "
              "To make sure you get the same server in the future, refer to "
              "it by key, as \"$%s\".", nickname, fp);
         rs->name_lookup_warned = 1;
