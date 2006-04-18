@@ -792,13 +792,11 @@ parse_virtual_addr_network(const char *val, int validate_only,
     return -1;
   }
 
-#if 0
   if (bits > 16) {
     if (msg) *msg = tor_strdup("VirtualAddressNetwork expects a class B "
                                "network or larger");
     return -1;
   }
-#endif
 
   if (validate_only)
     return 0;
