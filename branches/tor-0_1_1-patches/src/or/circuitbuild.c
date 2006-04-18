@@ -1420,7 +1420,6 @@ count_acceptable_routers(smartlist_t *routers)
     }
     if (r->is_valid == 0) {
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
-      /* XXXX009 But invalid routers *are* sometimes acceptable. */
       goto next_i_loop;
     }
     num++;

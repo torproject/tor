@@ -237,10 +237,6 @@ init_key_from_file(const char *fname)
 int
 init_keys(void)
 {
-  /* XXX009 Two problems with how this is called:
-   * 1. It should be idempotent for servers, so we can call init_keys
-   *    as much as we need to.
-   */
   char keydir[512];
   char keydir2[512];
   char fingerprint[FINGERPRINT_LEN+1];
