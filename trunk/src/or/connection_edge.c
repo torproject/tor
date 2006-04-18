@@ -750,15 +750,65 @@ client_dns_set_addressmap(const char *address, uint32_t val,
                       time(NULL) + ttl);
 }
 
-/* Currently, we hand out 127.192.0.1 through 127.254.254.254.
+/* By default, we hand out 127.192.0.1 through 127.254.254.254.
  * These addresses should map to localhost, so even if the
  * application accidentally tried to connect to them directly (not
  * via Tor), it wouldn't get too far astray.
  *
  * Eventually, we should probably make this configurable.
  */
-#define MIN_UNUSED_IPV4 0x7fc00001u
-#define MAX_UNUSED_IPV4 0x7ffefefeu
+static uint32_t virtual_addr_network = 0x7fc00000u;
+static uint32_t virtual_addr_netmask = 0xffc00000u;
+static int virtual_addr_netmask_bits = 10;
+static uint32_t next_virtual_addr    = 0x7fc00000u;
+
+/** Read a netmask of the form 127.192.0.0/10 from "val", and check whether
+ * it's a valid set of virtual addresses to hand out in response to MAPADDRESS
+ * requests.  Return 0 on success; set *msg and return -1 on failure.  If
+ * validate_only is false, sets the actual virtual address range to the parsed
+ * value. */
+int
+parse_virtual_addr_network(const char *val, int validate_only,
+                           const char **msg)
+{
+  uint32_t addr, mask;
+  uint16_t port_min, port_max;
+  int bits;
+
+  if (parse_addr_and_port_range(val, &addr, &mask, &port_min, &port_max)) {
+    *msg = "Error parsing VirtualAddressNetwork";
+    return -1;
+  }
+
+  if (port_min != 1 || port_max != 65535) {
+    *msg = "Can't specify ports on VirtualAddressNetwork";
+    return -1;
+  }
+
+  bits = addr_mask_get_bits(mask);
+  if (bits < 0) {
+    *msg = "VirtualAddressNetwork must have a mask that can be expressed "
+      "as a prefix";
+    return -1;
+  }
+
+  if (bits > 16) {
+    *msg = "VirtualAddressNetwork expects a class B network or larger";
+    return -1;
+  }
+
+  if (validate_only)
+    return 0;
+
+  virtual_addr_network = addr & mask;
+  virtual_addr_netmask = mask;
+  virtual_addr_netmask_bits = bits;
+
+  if ((next_virtual_addr & mask) != addr)
+    next_virtual_addr = addr;
+
+  return 0;
+}
 
 /**
  * Return true iff <b>addr</b> is likely to have been returned by
@@ -773,7 +823,7 @@ address_is_in_virtual_range(const char *address)
     return 1;
   } else if (tor_inet_aton(address, &in)) {
     uint32_t addr = ntohl(in.s_addr);
-    if (addr >= MIN_UNUSED_IPV4 && addr <= MAX_UNUSED_IPV4)
+    if ((addr & virtual_addr_netmask) == virtual_addr_network)
       return 1;
   }
   return 0;
@@ -787,7 +837,6 @@ static char *
 addressmap_get_virtual_address(int type)
 {
   char buf[64];
-  static uint32_t next_ipv4 = MIN_UNUSED_IPV4;
   struct in_addr in;
 
   if (type == RESOLVED_TYPE_HOSTNAME) {
@@ -799,19 +848,26 @@ addressmap_get_virtual_address(int type)
     } while (strmap_get(addressmap, buf));
     return tor_strdup(buf);
   } else if (type == RESOLVED_TYPE_IPV4) {
-    while (1) {
+    uint32_t available = 1u << virtual_addr_netmask_bits;
+    while (available) {
       /* Don't hand out any .0 or .255 address. */
-      while ((next_ipv4 & 0xff) == 0 ||
-             (next_ipv4 & 0xff) == 0xff)
-        ++next_ipv4;
-      in.s_addr = htonl(next_ipv4);
+      while ((next_virtual_addr & 0xff) == 0 ||
+             (next_virtual_addr & 0xff) == 0xff) {
+        ++next_virtual_addr;
+      }
+      in.s_addr = htonl(next_virtual_addr);
       tor_inet_ntoa(&in, buf, sizeof(buf));
       if (!strmap_get(addressmap, buf))
         break;
 
-      ++next_ipv4;
-      if (next_ipv4 > MAX_UNUSED_IPV4)
-        next_ipv4 = MIN_UNUSED_IPV4;
+      ++next_virtual_addr;
+      --available;
+      if (! --available) {
+        log_warn(LD_CONFIG, "Ran out of virtual addresses!");
+        return NULL;
+      }
+      if ((next_virtual_addr & virtual_addr_netmask) != virtual_addr_network)
+        next_virtual_addr = virtual_addr_network;
     }
     return tor_strdup(buf);
   } else {

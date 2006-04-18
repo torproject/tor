@@ -238,6 +238,7 @@ static config_var_t _option_vars[] = {
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
+  VAR("VirtualAddrNetwork",  STRING,   VirtualAddrNetwork,   "127.192.0.0/10"),
   VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -677,6 +678,7 @@ options_act(or_options_t *old_options)
   size_t len;
   or_options_t *options = get_options();
   int running_tor = options->command == CMD_RUN_TOR;
+  const char *msg;
 
   clear_trusted_dir_servers();
   if (options->DirServers) {
@@ -745,6 +747,7 @@ options_act(or_options_t *old_options)
 
   /* Register addressmap directives */
   config_register_addressmaps(options);
+  parse_virtual_addr_network(options->VirtualAddrNetwork, 0, &msg);
 
   /* Update address policies. */
   policies_parse_from_options(options);
@@ -2403,6 +2406,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (rend_config_services(options, 1) < 0)
     REJECT("Failed to configure rendezvous options. See logs for details.");
+
+  if (parse_virtual_addr_network(options->VirtualAddrNetwork, 1, msg)<0)
+    return -1;
 
   return 0;
 #undef REJECT
