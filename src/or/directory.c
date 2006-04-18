@@ -534,8 +534,8 @@ directory_send_command(connection_t *conn, const char *platform,
 
       httpcommand = "GET";
       /* Request the most recent versioned descriptor. */
-      // XXXX011
-      //tor_snprintf(url, sizeof(url), "/tor/rendezvous1/%s", resource);
+      // (XXXX We were going to switch this to fetch rendezvous1 descriptors,
+      // but that never got testing, and it wasn't a good design.)
       len = strlen(resource)+32;
       url = tor_malloc(len);
       tor_snprintf(url, len, "/tor/rendezvous/%s", resource);
