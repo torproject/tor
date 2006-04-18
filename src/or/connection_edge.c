@@ -764,38 +764,41 @@ static uint32_t next_virtual_addr    = 0x7fc00000u;
 
 /** Read a netmask of the form 127.192.0.0/10 from "val", and check whether
  * it's a valid set of virtual addresses to hand out in response to MAPADDRESS
- * requests.  Return 0 on success; set *msg and return -1 on failure.  If
- * validate_only is false, sets the actual virtual address range to the parsed
- * value. */
+ * requests.  Return 0 on success; set *msg (if provided) to a newly allocated
+ * string and return -1 on failure.  If validate_only is false, sets the
+ * actual virtual address range to the parsed value. */
 int
 parse_virtual_addr_network(const char *val, int validate_only,
-                           const char **msg)
+                           char **msg)
 {
   uint32_t addr, mask;
   uint16_t port_min, port_max;
   int bits;
 
   if (parse_addr_and_port_range(val, &addr, &mask, &port_min, &port_max)) {
-    *msg = "Error parsing VirtualAddressNetwork";
+    if (msg) *msg = tor_strdup("Error parsing VirtualAddressNetwork");
     return -1;
   }
 
   if (port_min != 1 || port_max != 65535) {
-    *msg = "Can't specify ports on VirtualAddressNetwork";
+    if (msg) *msg = tor_strdup("Can't specify ports on VirtualAddressNetwork");
     return -1;
   }
 
   bits = addr_mask_get_bits(mask);
   if (bits < 0) {
-    *msg = "VirtualAddressNetwork must have a mask that can be expressed "
-      "as a prefix";
+    if (msg) *msg = tor_strdup("VirtualAddressNetwork must have a mask that "
+                               "can be expressed as a prefix");
     return -1;
   }
 
+#if 0
   if (bits > 16) {
-    *msg = "VirtualAddressNetwork expects a class B network or larger";
+    if (msg) *msg = tor_strdup("VirtualAddressNetwork expects a class B "
+                               "network or larger");
     return -1;
   }
+#endif
 
   if (validate_only)
     return 0;
@@ -848,7 +851,9 @@ addressmap_get_virtual_address(int type)
     } while (strmap_get(addressmap, buf));
     return tor_strdup(buf);
   } else if (type == RESOLVED_TYPE_IPV4) {
-    uint32_t available = 1u << virtual_addr_netmask_bits;
+    // This is an imperfect estimate of how many addresses are available, but
+    // that's ok.
+    uint32_t available = 1u << (32-virtual_addr_netmask_bits);
     while (available) {
       /* Don't hand out any .0 or .255 address. */
       while ((next_virtual_addr & 0xff) == 0 ||
@@ -862,6 +867,7 @@ addressmap_get_virtual_address(int type)
 
       ++next_virtual_addr;
       --available;
+      log_notice(LD_CONFIG, "%d addrs available", (int)available);
       if (! --available) {
         log_warn(LD_CONFIG, "Ran out of virtual addresses!");
         return NULL;
