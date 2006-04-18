@@ -131,11 +131,11 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
 
   if (!result) {
     log_err(LD_MM,"Out of memory. Dying.");
-    /* XXX if these functions die within a worker process, they won't
-     * call spawn_exit */
+    /* If these functions die within a worker process, they won't call
+     * spawn_exit, but that's ok, since the parent will run out of memory soon
+     * anyway. */
     exit(1);
   }
-//  memset(result,'X',size); /* deadbeef to encourage bugs */
   return result;
 }
 
