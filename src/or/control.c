@@ -1595,7 +1595,6 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
     for (i = 0; i < smartlist_len(answers); i += 2) {
       char *k = smartlist_get(answers, i);
       char *v = smartlist_get(answers, i+1);
-      /*XXXX Not an adequate test! XXXX011 */
       if (!strchr(v, '\n') && !strchr(v, '\r')) {
         connection_printf_to_buf(conn, "250-%s=", k);
         connection_write_str_to_buf(v, conn);

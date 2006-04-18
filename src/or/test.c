@@ -1324,7 +1324,7 @@ test_dir_format(void)
   {
   char d[DIGEST_LEN];
   const char *m;
-  /* XXXX NM re-enable. 011 */
+  /* XXXX NM re-enable. */
   /* Make sure routers aren't too far in the past any more. */
   r1.cache_info.published_on = time(NULL);
   r2.cache_info.published_on = time(NULL)-3*60*60;
