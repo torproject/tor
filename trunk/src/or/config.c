@@ -678,7 +678,7 @@ options_act(or_options_t *old_options)
   size_t len;
   or_options_t *options = get_options();
   int running_tor = options->command == CMD_RUN_TOR;
-  const char *msg;
+  char *msg;
 
   clear_trusted_dir_servers();
   if (options->DirServers) {
@@ -2407,7 +2407,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (rend_config_services(options, 1) < 0)
     REJECT("Failed to configure rendezvous options. See logs for details.");
 
-  if (parse_virtual_addr_network(options->VirtualAddrNetwork, 1, msg)<0)
+  if (parse_virtual_addr_network(options->VirtualAddrNetwork, 1, NULL)<0)
     return -1;
 
   return 0;

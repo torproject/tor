@@ -1729,7 +1729,7 @@ int addressmap_already_mapped(const char *address);
 void addressmap_register(const char *address, char *new_address,
                          time_t expires);
 int parse_virtual_addr_network(const char *val, int validate_only,
-                               const char **msg);
+                               char **msg);
 int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
 void client_dns_set_addressmap(const char *address, uint32_t val,

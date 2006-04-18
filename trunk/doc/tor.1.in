@@ -442,6 +442,12 @@ a safe socks protocol or an unsafe one (see above entry on SafeSocks).
 This helps to determine whether an application using Tor is possibly
 leaking DNS requests.
 (Default: 0)
+.LP
+.TP
+\fBVirutalAddrNetwork \fR\fIAddress\fB/\fIbits\fP
+When a controller asks for a virtual (unused) address with the
+'MAPADDRESS' command, Tor picks an unassigned address from this range.
+(Default: 127.192.0.0/10)
 
 .SH SERVER OPTIONS
 .PP
