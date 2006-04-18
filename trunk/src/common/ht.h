@@ -188,7 +188,6 @@ ht_string_hash(const char *s)
                        int (*fn)(struct type *, void *),                \
                        void *data)                                      \
   {                                                                     \
-    /* XXXX use tricks to prevent concurrent mod? */                    \
     unsigned idx;                                                       \
     int remove;                                                         \
     struct type **p, **nextp, *next;                                    \
@@ -261,77 +260,6 @@ ht_string_hash(const char *s)
       return NULL;                                                      \
     }                                                                   \
   }
-
-#if 0
-/* Helpers for an iterator type that saves some mod operations at the expense
- * of many branches. Not worth it, it seems. */
-
-#define HT_ITER(type)                               \
-  struct type##_ITER {                              \
-    struct type **hti_nextp;                        \
-    unsigned hti_bucket;                            \
-  }
-
-  static INLINE void                                                    \
-  name##_HT_ITER_START(struct name *head, struct type##_ITER *iter)     \
-  {                                                                     \
-    /* XXXX Magic to stop modifications? */                             \
-    iter->hti_bucket = 0;                                               \
-    while (iter->hti_bucket < head->hth_table_length) {                 \
-      iter->hti_nextp = &head->hth_table[iter->hti_bucket];             \
-      if (*iter->hti_nextp)                                             \
-        return;                                                         \
-      ++iter->hti_bucket;                                               \
-    }                                                                   \
-    iter->hti_nextp = NULL;                                             \
-  }                                                                     \
-  static INLINE int                                                     \
-  name##_HT_ITER_DONE(struct name *head, struct type##_ITER *iter)      \
-  {                                                                     \
-    return iter->hti_nextp == NULL;                                     \
-  }                                                                     \
-  static INLINE struct type *                                           \
-  name##_HT_ITER_GET(struct name *head, struct type##_ITER *iter)       \
-  {                                                                     \
-    return *iter->hti_nextp;                                            \
-  }                                                                     \
-  static INLINE void                                                    \
-  name##_HT_ITER_NEXT(struct name *head, struct type##_ITER *iter)      \
-  {                                                                     \
-    if (!iter->hti_nextp)                                               \
-      return;                                                           \
-    if ((*iter->hti_nextp)->field.hte_next) {                           \
-      iter->hti_nextp = &(*iter->hti_nextp)->field.hte_next;            \
-      return;                                                           \
-    }                                                                   \
-    while (++iter->hti_bucket < head->hth_table_length) {               \
-      iter->hti_nextp = &head->hth_table[iter->hti_bucket];             \
-      if (*iter->hti_nextp)                                             \
-        return;                                                         \
-      ++iter->hti_bucket;                                               \
-    }                                                                   \
-    iter->hti_nextp = NULL;                                             \
-  }                                                                     \
-  static INLINE void                                                    \
-  name##_HT_ITER_NEXT_RMV(struct name *head, struct type##_ITER *iter)  \
-  {                                                                     \
-    if (!iter->hti_nextp)                                               \
-      return;                                                           \
-    --head->hth_n_entries;                                              \
-    if ((*iter->hti_nextp)->field.hte_next) {                           \
-      *iter->hti_nextp = (*iter->hti_nextp)->field.hte_next;            \
-      if (*iter->hti_nextp)                                             \
-        return;                                                         \
-    }                                                                   \
-    while (++iter->hti_bucket < head->hth_table_length) {               \
-      iter->hti_nextp = &head->hth_table[iter->hti_bucket];             \
-      if (*iter->hti_nextp)                                             \
-        return;                                                         \
-      ++iter->hti_bucket;                                               \
-    }                                                                   \
-    iter->hti_nextp = NULL;                                             \
-  }
-#endif
 
 #define HT_GENERATE(name, type, field, hashfn, eqfn, load, mallocfn,    \
                     reallocfn, freefn)                                  \
