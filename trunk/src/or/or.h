@@ -865,7 +865,8 @@ typedef struct local_routerstatus_t {
                                       */
 } local_routerstatus_t;
 
-/*XXXX011 make this configurable? */
+/** How many times will we try to download a router's descriptor before giving
+ * up? */
 #define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8
 
 /** Contents of a (v2 or later) network status object. */

@@ -725,7 +725,7 @@ connection_dns_process_inbuf(connection_t *conn)
       connection_fetch_from_buf(&success,1,conn);
       connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
       log_warn(LD_EXIT,"Discarding idle dns answer (success %d, addr %d.)",
-               success, addr); // XXX safe_str
+               success, addr);
     }
     return 0;
   }

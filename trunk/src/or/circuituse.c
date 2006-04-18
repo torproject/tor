@@ -1057,7 +1057,7 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ)
 
   SMARTLIST_FOREACH(options->TrackHostExits, const char *, cp, {
     if (cp[0] == '.') { /* match end */
-      /* XXX strstr is probably really bad here */
+      /* XXX strstr is probably really bad here. */
       if ((str = strstr(conn->socks_request->address, &cp[1]))) {
         if (str == conn->socks_request->address
           || strcmp(str, &cp[1]) == 0) {

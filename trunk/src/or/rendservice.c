@@ -515,7 +515,6 @@ rend_service_introduce(circuit_t *circuit, const char *request,
       rp_nickname = buf;
       version = 0;
     }
-    /* XXX when 0.1.0.x is obsolete, change this to reject version < 2. */
     ptr=memchr(rp_nickname,0,nickname_field_len);
     if (!ptr || ptr == rp_nickname) {
       log_warn(LD_PROTOCOL,
@@ -1072,7 +1071,6 @@ rend_consider_services_upload(time_t now)
        * descriptor and ours has been stable for 5 seconds, upload a
        * new one of each format. */
       upload_service_descriptor(service, 0);
-      // XXXX011 upload_service_descriptor(service, 1);
       service->next_upload_time = now + rendpostperiod;
     }
   }
