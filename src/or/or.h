@@ -1408,6 +1408,9 @@ typedef struct {
                        * of our PK time by sending CREATE_FAST cells? */
 
   addr_policy_t *reachable_addr_policy; /**< Parsed from ReachableAddresses */
+
+  char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
+                             * MAPADDRESS requests. */
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -1750,6 +1753,8 @@ void addressmap_rewrite(char *address, size_t maxlen);
 int addressmap_already_mapped(const char *address);
 void addressmap_register(const char *address, char *new_address,
                          time_t expires);
+int parse_virtual_addr_network(const char *val, int validate_only,
+                               const char **msg);
 int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
 void client_dns_set_addressmap(const char *address, uint32_t val,
