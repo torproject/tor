@@ -1,0 +1,118 @@
+#!/usr/bin/ruby
+
+# add-tor  -  Add a tor fingerprint line to the approved-routers file
+#
+# Tor's approved-routers file is expected to be versioned using RCS.
+# This script checks for uncommitted changes, does a checkout of the
+# file, adds the new fingerprint with a comment stating the server's
+# operator, and commits the file to RCS again (using -u so that the
+# working copy is not removed.
+#
+# Operator and fingerprint line are read from stdin.
+#
+# Before adding a fingerprint line approved-routers is checked for
+# rough syntactical correctness.  This script also checks that the
+# nickname and fingerprint to be added to not already exist in the
+# binding list.
+
+
+# Copyright (c) 2006 by Peter Palfrader
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+BINDING = '/etc/tor/approved-routers'
+
+def mysys(cmd)
+	unless system(cmd)
+		STDERR.puts "ERROR: #{cmd} failed"
+		exit 1
+	end
+end
+
+def check_nick(n)
+	n =~ /^[a-zA-Z0-9]+$/
+end
+
+def check_fpr(fpr)
+	fpr =~ /^([0-9A-F]{4} ){9}[0-9A-F]{4}$/
+end
+
+def parse_fprline(fprline)
+	n = fprline[0 ... fprline.index(' ')]
+	f = fprline[fprline.index(' ') + 1 .. -1 ]
+	unless check_nick(n) and check_fpr(f)
+		STDERR.puts "Invalid fpr syntax '#{fprline}'"
+		exit 1
+	end
+	[n, f]
+end
+
+
+
+unless system("rcsdiff -q -u #{BINDING}")
+	STDERR.puts "Uncommitted changes in #{BINDING}.  Aborting."
+	exit 1
+end
+
+puts "Checking out #{BINDING}..."
+mysys("co -l #{BINDING}")
+
+print "Operator: "
+@operator = readline.chop
+unless @operator.index('@')
+	STDERR.puts "ERROR: No @ found"
+	exit 1
+end
+
+print "FPR Line: "
+@fprline = readline.chop
+
+@operator = "test <fo>"
+@fprline = 'lrtte A5C5 81DA 6272 77B3 E5F9 736D CF82 0BF9 249D 6262'
+(@nickname, @fpr) = parse_fprline(@fprline)
+
+binding = File.new(BINDING,  "r+")
+binding.readlines.each do |line|
+	line.chop!
+	next if line[0..0] == "#"
+	(n,f) = parse_fprline(line)
+	if (n == @nickname)
+		STDERR.puts
+		STDERR.puts "ERROR: Nickname #{n} already exists in #{BINDING} (fpr: #{f})"
+		exit 1
+	end
+	if (f == @fpr)
+		STDERR.puts
+		STDERR.puts "ERROR: Fpr #{f} already exists in #{BINDING} (nickname: #{n})"
+		exit 1
+	end
+end
+
+puts
+puts '| # ' + @operator
+puts '| '   + @fprline
+puts
+
+binding.puts '# '+@operator
+binding.puts @fprline
+binding.close
+
+puts "Committing #{BINDING}..."
+mysys("ci -u -m'Add #{@nickname}' #{BINDING}")
