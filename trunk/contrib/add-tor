@@ -83,9 +83,6 @@ end
 
 print "FPR Line: "
 @fprline = readline.chop
-
-@operator = "test <fo>"
-@fprline = 'lrtte A5C5 81DA 6272 77B3 E5F9 736D CF82 0BF9 249D 6262'
 (@nickname, @fpr) = parse_fprline(@fprline)
 
 binding = File.new(BINDING,  "r+")
