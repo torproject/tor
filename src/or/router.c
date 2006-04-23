@@ -760,8 +760,8 @@ router_get_my_routerinfo(void)
   if (!server_mode(get_options()))
     return NULL;
 
-  if (!desc_routerinfo) {
-    if (router_rebuild_descriptor(1))
+  if (!desc_routerinfo || !desc_clean_since) {
+    if (router_rebuild_descriptor(!desc_routerinfo))
       return NULL;
   }
   return desc_routerinfo;
@@ -774,10 +774,8 @@ const char *
 router_get_my_descriptor(void)
 {
   const char *body;
-  if (!desc_routerinfo) {
-    if (router_rebuild_descriptor(1))
-      return NULL;
-  }
+  if (!router_get_my_routerinfo())
+    return NULL;
   body = signed_descriptor_get_body(&desc_routerinfo->cache_info);
   log_debug(LD_GENERAL,"my desc is '%s'", body);
   return body;
