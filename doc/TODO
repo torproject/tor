@@ -12,16 +12,16 @@ P       - phobos claims
         D Deferred
         X Abandoned
 
-Non-Coding, Soon:
-N - Mark up spec; note unclear points about servers
-N - Mention controller libs someplace.
-  D FAQ entry: why gnutls is bad/not good for tor
+Non-Coding:
+  - Mark up spec; note unclear points about servers
+  - Mention controller libs someplace.
 P - flesh out the rest of the section 6 of the faq
-R . more pictures from ren. he wants to describe the tor handshake
+  . more pictures from ren. he wants to describe the tor handshake
 R - make a page with the hidden service diagrams.
 NR- write a spec appendix for 'being nice with tor'
   - tor-in-the-media page
   - Remove need for HACKING file.
+  - Figure out licenses for website material.
 
 Website:
   - and remove home and make the "Tor" picture be the link to home.
@@ -29,7 +29,7 @@ Website:
     stickers directly, etc.
 
 for 0.1.1.x-final:
-N - building on freebsd 6.0: (with multiple openssl installations)
+  - building on freebsd 6.0: (with multiple openssl installations)
     . <nickm> "Let's try to find a way to make it run and make the version
        match, but if not, let's just make it run."
     - <arma> should we detect if we have a --with-ssl-dir and try the -R
@@ -45,11 +45,6 @@ N - building on freebsd 6.0: (with multiple openssl installations)
       when they feel like it.
     - update dir-spec with what we decided for each of these
 
-  o find N dirservers.
-    o Make it no longer default for v2 dirservers to support v1.
-    o non-versioning dirservers don't need to set recommended*versions.
-    o non-naming dirservers don't need to have an approved-routers file.
-    o What are criteria to be a dirserver?  Write a policy.
   - are there other options that we haven't documented so far?
   . look at the proposed os x uninstaller:
     http://archives.seul.org/or/talk/Jan-2006/msg00038.html
@@ -61,83 +56,36 @@ N - building on freebsd 6.0: (with multiple openssl installations)
   - if we have no predicted ports, don't fetch router descriptors.
     this way we are more dormant.
 
-Deferred from 0.1.1.x:
+Must-have items for 0.1.2.x:
 
-  - We need a way for the authorities to declare that nodes are
-    in a family. Needs design.
+  - Directory guards
+R - Server usability
+N - Better hidden service performance, with possible redesign.
+  - Asynchronous DNS
+  - Better estimates in the directory of whether servers have good uptime
+    (high expected time to failure) or good guard qualities (high
+    fractional uptime).
+  - memory usage on dir servers.
+    copy less!
+N - oprofile including kernel time on multiple platforms
 
-R - streamline how we define a guard node as 'up'. document it
-    somewhere.
-  - Make "setconf" and "hup" behavior cleaner for LINELIST config
-    options (e.g. Log). Bug 238.
-N - commit edmanm's win32 makefile to tor cvs contrib
-
-R - look into "uncounting" bytes spent on local connections. so
-    we can bandwidthrate but still have fast downloads.
-
-R - Christian Grothoff's attack of infinite-length circuit.
-    the solution is to have a separate 'extend-data' cell type
-    which is used for the first N data cells, and only
-    extend-data cells can be extend requests.
-    - Specify, including thought about
-    - Implement
-
-R - When we connect to a Tor server, it sends back a cell listing
-    the IP it believes it is using. Use this to block dvorak's attack.
-    Also, this is a fine time to say what time you think it is.
-    - Verify that a new cell type is okay with deployed codebase
-    - Specify
-    - Implement
-
-R - failed rend desc fetches sometimes don't get retried.
-
-N - Display the reasons in 'destroy' and 'truncated' cells under some
-    circumstances?
-
-  - If the server is spewing complaints about raising your ulimit -n,
-    we should add a note about this to the server descriptor so other
-    people can notice too.
-
-  - We need a getrlimit equivalent on Windows so we can reserve some
-    file descriptors for saving files, etc. Otherwise we'll trigger
-    asserts when we're out of file descriptors and crash.
-
-  X <weasel> it would be nice to support a unix socket for the control thing.
-    The main motivation behind this was that we could let unix permissions
-    take care of the authentication step: everybody who can connect to the
-    socket is authenticated.  However, the linux unix(7) manual page suggests
-    that requiring read/write permissions on the socket in order to use it
-    is Linux specific, and that many BSD-derived systems ignore the permissions
-    on the socket file.  Portable programs should not rely on this feature for
-    security, therefore the motivation for this feature is gone.
-
-  - the tor client can do the "automatic proxy config url" thing?
-
-R - clients prefer to avoid exit nodes for non-exit path positions.
-
-  - Automatically determine what ports are reachable and start using
-    those, if circuits aren't working and it's a pattern we recognize
-    ("port 443 worked once and port 9001 keeps not working").
-
-N - Should router info have a pointer to routerstatus?
-    - We should at least do something about the duplicated fields.
-
-N . Additional controller features
+Items for 0.1.2:
+  - Improve controller
       - change circuit status events to give more details, like purpose,
         whether they're internal, when they become dirty, when they become
         too dirty for further circuits, etc.
-R       - What do we want here, exactly?
-N       - Specify and implement it.
+        - What do we want here, exactly?
+        - Specify and implement it.
       - Change stream status events analogously.
-R       - What do we want here, exactly?
-N       - Specify and implement it.
+        - What do we want here, exactly?
+        - Specify and implement it.
       - Make other events "better".
       - Change stream status events analogously.
-R       - What do we want here, exactly?
-N       - Specify and implement it.
+        - What do we want here, exactly?
+        - Specify and implement it.
       - Make other events "better" analogously
-R       - What do we want here, exactly?
-N       - Specify and implement it.
+        - What do we want here, exactly?
+        - Specify and implement it.
       . Expose more information via getinfo:
         - import and export rendezvous descriptors
         - Review all static fields for additional candidates
@@ -147,6 +95,74 @@ N       - Specify and implement it.
       - It would be nice to request address lookups from the controller
         without using SOCKS.
       - Make everything work with hidden services
+
+  - Clients should refer to avoid exit nodes for non-exit path positions.
+    (bug 200)
+  - Make "setconf" and "hup" behavior cleaner for LINELIST config
+    options (e.g. Log). Bug 238.
+
+  - We need a way for the authorities to declare that nodes are
+    in a family.  Also, it kinda sucks that family declarations use O(N^2)
+    space in the descriptors.
+    - Design
+    - Implement
+
+  - Have a "ReallyFast" status flag that means it.
+
+R - look into "uncounting" bytes spent on local connections. so
+    we can bandwidthrate but still have fast downloads.
+
+  - When we connect to a Tor server, it sends back a cell listing
+    the IP it believes it is using. Use this to block dvorak's attack.
+    Also, this is a fine time to say what time you think it is.
+    o Verify that a new cell type is okay with deployed codebase
+    - Specify
+    - Implement
+
+R - Failed rend desc fetches sometimes don't get retried.
+
+  - Directory system improvements
+    - config option to publish what ports you listen on, beyond
+      ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
+      - Parse this.
+      - Relay this in networkstatus.
+
+    - Non-directories don't need to keep descriptors in memory.
+      - Remember file and offset.
+      - Keep a journal FD for appending router descriptors
+
+Topics to think about during 0.1.2.x development:
+  - Figure out non-clique.
+  - Figure out partial network knowledge.
+  - Figure out incentives.
+  - Figure out hidden services.
+
+Minor items for 0.1.2.x as time permits.
+  - Streamline how we define a guard node as 'up'. document it
+    somewhere.
+  - Better installers and build processes.
+    - Commit edmanm's win32 makefil eto tor cvs contrib, or write a new one.
+    - Can we cross-compile?
+R - Christian Grothoff's attack of infinite-length circuit.
+    the solution is to have a separate 'extend-data' cell type
+    which is used for the first N data cells, and only
+    extend-data cells can be extend requests.
+    - Specify, including thought about anonymity implications.
+    - Implement
+N - Display the reasons in 'destroy' and 'truncated' cells under some
+    circumstances?
+  - If the server is spewing complaints about raising your ulimit -n,
+    we should add a note about this to the server descriptor so other
+    people can notice too.
+  - We need a getrlimit equivalent on Windows so we can reserve some
+    file descriptors for saving files, etc. Otherwise we'll trigger
+    asserts when we're out of file descriptors and crash.
+  - the tor client can do the "automatic proxy config url" thing?
+  - Automatically determine what ports are reachable and start using
+    those, if circuits aren't working and it's a pattern we recognize
+    ("port 443 worked once and port 9001 keeps not working").
+N - Should router info have a pointer to routerstatus?
+    - We should at least do something about the duplicated fields.
 
   X switch accountingmax to count total in+out, not either in or
     out. it's easy to move in this direction (not risky), but hard to
@@ -160,16 +176,6 @@ R   - kill dns workers more slowly
     . Some back-out mechanism for auto-approval
       - a way of rolling back approvals to before a timestamp
         - Consider minion-like fingerprint file/log combination.
-
-    - config option to publish what ports you listen on, beyond
-      ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
-      - Parse this.
-      - Relay this in networkstatus.
-
-    - Non-directories don't need to keep descriptors in memory.
-      o Make descriptor-fetching happen via an indirection function.
-      - Remember file and offset.
-      - Keep a journal FD for appending router descriptors.
 
   - packaging and ui stuff:
     . multiple sample torrc files
@@ -226,27 +232,6 @@ N   - Vet all pending installer patches
   - Do something to prevent spurious EXTEND cells from making middleman
     nodes connect all over.  Rate-limit failed connections, perhaps?
 
-
-Major items for 0.1.2.x:
-
-  - Directory guards
-R - Server usability
-N - Better hidden service performance
-  - Improve controller
-  - Asynchronous DNS
-  - Better estimates in the directory of whether servers have good uptime
-    (high expected time to failure) or good guard qualities (high
-    fractional uptime).
-  - memory usage on dir servers.
-    copy less!
-N - oprofile including kernel time.
-
-Topics to think about during 0.1.2.x development:
-  - Figure out non-clique.
-  - Figure out partial network knowledge.
-  - Figure out incentives.
-
-
 Future version:
   - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
   - Handle full buffers without totally borking
@@ -285,4 +270,3 @@ Blue-sky:
     streams, at least according to the protocol. But we handle all that
     we've seen in the wild.
     (Pending a user who needs this)
-
