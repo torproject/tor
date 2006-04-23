@@ -131,6 +131,8 @@ R - Failed rend desc fetches sometimes don't get retried.
       - Remember file and offset.
       - Keep a journal FD for appending router descriptors
 
+  - Make reverse DNS work.
+
 Topics to think about during 0.1.2.x development:
   - Figure out non-clique.
   - Figure out partial network knowledge.
