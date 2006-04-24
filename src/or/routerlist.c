@@ -36,6 +36,9 @@ static void routerlist_assert_ok(routerlist_t *rl);
 static int have_tried_downloading_all_statuses(int n_failures);
 static routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
                                                 const char *digest);
+static local_routerstatus_t *router_get_combined_status_by_nickname(
+                                                const char *nickname,
+                                                int warn_if_unnamed);
 
 /****************************************************************************/
 
@@ -611,10 +614,7 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
           smartlist_add(warned_nicknames, tor_strdup(nick));
         }
       }
-    } else {
-      /* XXX If it's down, we won't *have* the descriptor, since we
-       * don't fetch down descriptors. Need to check if it's in the
-       * status too before complaining. */
+    } else if (!router_get_combined_status_by_nickname(nick, warn_if_unnamed)) {
       if (!warned) {
         log_fn(have_dir_info ? LOG_WARN : LOG_INFO, LD_CONFIG,
                "Nickname list includes '%s' which isn't a known router.",nick);
@@ -2247,6 +2247,68 @@ router_get_combined_status_by_digest(const char *digest)
     return NULL;
   return smartlist_bsearch(routerstatus_list, digest,
                            _compare_digest_to_routerstatus_entry);
+}
+
+static local_routerstatus_t *
+router_get_combined_status_by_nickname(const char *nickname,
+                                       int warn_if_unnamed)
+{
+  char digest[DIGEST_LEN];
+  local_routerstatus_t *best=NULL;
+  smartlist_t *matches=NULL;
+
+  if (!routerstatus_list || !nickname)
+    return NULL;
+
+  if (nickname[0] == '$') {
+    if (base16_decode(digest, DIGEST_LEN, nickname+1, strlen(nickname))<0)
+      return NULL;
+    return router_get_combined_status_by_digest(digest);
+  } else if (strlen(nickname) == HEX_DIGEST_LEN &&
+       (base16_decode(digest, DIGEST_LEN, nickname+1, strlen(nickname))==0)) {
+    return router_get_combined_status_by_digest(digest);
+  }
+
+  matches = smartlist_create();
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, lrs,
+    {
+      if (!strcasecmp(lrs->status.nickname, nickname)) {
+        if (lrs->status.is_named) {
+          smartlist_free(matches);
+          return lrs;
+        } else {
+          smartlist_add(matches, lrs);
+          best = lrs;
+        }
+      }
+    });
+
+  if (smartlist_len(matches)>1 && warn_if_unnamed) {
+    int any_unwarned=0;
+    SMARTLIST_FOREACH(matches, local_routerstatus_t *, lrs,
+      {
+        if (! lrs->name_lookup_warned) {
+          lrs->name_lookup_warned=1;
+          any_unwarned=1;
+        }
+      });
+    if (any_unwarned) {
+      log_warn(LD_CONFIG, "There are multiple matches for the nickname \"%s\",",
+               " but none is listed as named by the directory authories. "
+               "Choosing one arbitrarily.");
+    }
+  } else if (warn_if_unnamed) {
+    char fp[HEX_DIGEST_LEN+1];
+    base16_encode(fp, sizeof(fp),
+                  best->status.identity_digest, DIGEST_LEN);
+    log_warn(LD_CONFIG, "You specified a server \"%s\" by name, but the "
+             "directory authorities do not have a binding for this nickname. "
+             "To make sure you get the same server in the future, refer to "
+             "it by key, as \"$%s\".", nickname, fp);
+    best->name_lookup_warned = 1;
+  }
+  smartlist_free(matches);
+  return best;
 }
 
 /** Return true iff any networkstatus includes a descriptor whose digest
