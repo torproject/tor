@@ -1,0 +1,306 @@
+$Id$
+
+                           Tor Path Specification
+
+                              Roger Dingledine
+                               Nick Mathewson
+
+Note: This is an attempt to specify Tor as currently implemented.  Future
+versions of Tor will implement improved algorithms.
+
+This document tries to cover how Tor chooses to build circuits and assign
+streams to circuits.  Other implementations MAY take other approaches, but
+implementors should be aware of the anonymity and load-balancing implications
+of their choices.
+
+THIS SPEC ISN'T DONE OR CORRECT.  I'm just copying in relevant info so
+far. -NM
+
+X.  Guard nodes
+
+(From some emails by arma)
+
+Hi folks,
+
+I've gotten the codebase to the point that I'm going to start trying
+to make helper nodes work well. With luck they will be on by default in
+the final 0.1.1.x release.
+
+For background on helper nodes, read
+http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#RestrictedEntry
+
+First order of business: the phrase "helper node" sucks. We always have
+to define it after we say it to somebody. Nick likes the phrase "contact
+node", because they are your point-of-contact into the network. That is
+better than phrases like "bridge node". The phrase "fixed entry node"
+doesn't seem to work with non-math people, because they wonder what was
+broken about it. I'm sort of partial to the phrase "entry node" or maybe
+"restricted entry node". In any case, if you have ideas on names, please
+mail me off-list and I'll collate them.
+
+Right now the code exists to pick helper nodes, store our choices to
+disk, and use them for our entry nodes. But there are three topics
+to tackle before I'm comfortable turning them on by default. First,
+how to handle churn: since Tor nodes are not always up, and sometimes
+disappear forever, we need a plan for replacing missing helpers in a
+safe way. Second, we need a way to distinguish "the network is down"
+from "all my helpers are down", also in a safe way. Lastly, we need to
+examine the situation where a client picks three crummy helper nodes
+and is forever doomed to a lousy Tor experience. Here's my plan:
+
+How to handle churn.
+  - Keep track of whether you have ever actually established a
+    connection to each helper. Any helper node in your list that you've
+    never used is ok to drop immediately. Also, we don't save that
+    one to disk.
+  - If all our helpers are down, we need more helper nodes: add a new
+    one to the *end*of our list. Only remove dead ones when they have
+    been gone for a very long time (months).
+  - Pick from the first n (by default 3) helper nodes in your list
+    that are up (according to the network-statuses) and reachable
+    (according to your local firewall config).
+    - This means that order matters when writing/reading them to disk.
+
+How to deal with network down.
+  - While all helpers are down/unreachable and there are no established
+    or on-the-way testing circuits, launch a testing circuit. (Do this
+    periodically in the same way we try to establish normal circuits
+    when things are working normally.)
+    (Testing circuits are a special type of circuit, that streams won't
+    attach to by accident.)
+  - When a testing circuit succeeds, mark all helpers up and hold
+    the testing circuit open.
+  - If a connection to a helper succeeds, close all testing circuits.
+    Else mark that helper down and try another.
+  - If the last helper is marked down and we already have a testing
+    circuit established, then add the first hop of that testing circuit
+    to the end of our helper node list, close that testing circuit,
+    and go back to square one. (Actually, rather than closing the
+    testing circuit, can we get away with converting it to a normal
+    circuit and beginning to use it immediately?)
+
+How to pick non-sucky helpers.
+  - When we're picking a new helper nodes, don't use ones which aren't
+    reachable according to our local ReachableAddresses configuration.
+  (There's an attack here: if I pick my helper nodes in a very
+   restrictive environment, say "ReachableAddresses 18.0.0.0/255.0.0.0:*",
+   then somebody watching me use the network from another location will
+   guess where I first joined the network. But let's ignore it for now.)
+  - Right now we choose new helpers just like we'd choose any entry
+    node: they must be "stable" (claim >1day uptime) and "fast" (advertise
+    >10kB capacity). In 0.1.1.11-alpha, clients let dirservers define
+    "stable" and "fast" however they like, and they just believe them.
+    So the next step is to make them a function of the current network:
+    e.g. line up all the 'up' nodes in order and declare the top
+    three-quarter to be stable, fast, etc, as long as they meet some
+    minimum too.
+  - If that's not sufficient (it won't be), dirservers should introduce
+    a new status flag: in additional to "stable" and "fast", we should
+    also describe certain nodes as "entry", meaning they are suitable
+    to be chosen as a helper. The first difference would be that we'd
+    demand the top half rather than the top three-quarters. Another
+    requirement would be to look at "mean time between returning" to
+    ensure that these nodes spend most of their time available. (Up for
+    two days straight, once a month, is not good enough.)
+  - Lastly, we need a function, given our current set of helpers and a
+    directory of the rest of the network, that decides when our helper
+    set has become "too crummy" and we need to add more. For example,
+    this could be based on currently advertised capacity of each of
+    our helpers, and it would also be based on the user's preferences
+    of speed vs. security.
+
+***
+
+Lasse wrote:
+> I am a bit concerned with performance if we are to have e.g. two out of
+> three helper nodes down or unreachable. How often should Tor check if
+> they are back up and running?
+
+Right now Tor believes a threshold of directory servers when deciding
+whether each server is up. When Tor observes a server to be down
+(connection failed or building the first hop of the circuit failed),
+it marks it as down and doesn't try it again, until it gets a new
+network-status from somebody, at which point it takes a new concensus
+and marks the appropriate servers as up.
+
+According to sec 5.1 of dir-spec.txt, the client will try to fetch a new
+network-status at least every 30 minutes, and more often in certain cases.
+
+With the proposed scheme, we'll also mark all our helpers as up shortly
+after the last one is marked down.
+
+> When should there be
+> added an extra node to the helper node list? This is kind of an
+> important threshold?
+
+I agree, this is an important question. I don't have a good answer yet. Is
+it terrible, anonymity-wise, to add a new helper every time only one of
+your helpers is up? Notice that I say add rather than replace -- so you'd
+only use this fourth helper when one of your main three helpers is down,
+and if three of your four are down, you'd add a fifth, but only use it
+when two of the first four are down, etc.
+
+In fact, this may be smarter than just picking a random node for your
+testing circuit, because if your network goes up and down a lot, then
+eventually you have a chance of using any entry node in the network for
+your testing circuit.
+
+We have a design choice here. Do we only try to use helpers for the
+connections that will have streams on them (revealing our communication
+partners), or do we also want to restrict the overall set of nodes that
+we'll connect to, to discourage people from enumerating all Tor clients?
+
+I'm increasingly of the belief that we want to hide our presence too,
+based on the fact that Steven and George and others keep coming up with
+attacks that start with "Assuming we know the set of users".
+
+If so, then here's a revised "How to deal with network down" section:
+
+  1) When a helper is marked down or the helper list shrinks, and as
+     a result the total number of helpers that are either (up and
+     reachable) or (reachable but never connected to) is <= 1, then pick
+     a new helper and add it to the end of the list.
+     [We count nodes that have never been connected to, since otherwise
+      we might keep on adding new nodes before trying any of them. By
+      "reachable" I mean "is allowed by ReachableAddresses".]
+  2) When you fail to connect to a helper that has never been connected
+     to, you remove him from the list right then (and the above rule
+     might kick in).
+  3) When you succeed at connecting to a helper that you've never
+     connected to before, mark all reachable helpers earlier in the list
+     as up, and close that circuit.
+     [We close the circuit, since if the other helpers are now up, we
+      prefer to use them for circuits that will reveal communication
+      partners.]
+
+This certainly seems simpler. Are there holes that I'm missing?
+
+> If running from a laptop you will meet different firewall settings, so
+> how should Helper Nodes settings keep up with moving from an open
+> ReachableAddresses to a FascistFirewall setting after the helper nodes
+> have been selected?
+
+I added the word "reachable" to three places in the above list, and I
+believe that totally solves this question.
+
+And as a bonus, it leads to an answer to Nick's attack ("If I pick
+my helper nodes all on 18.0.0.0:*, then I move, you'll know where I
+bootstrapped") -- the answer is to pick your original three helper nodes
+without regard for reachability. Then the above algorithm will add some
+more that are reachable for you, and if you move somewhere, it's more
+likely (though not certain) that some of the originals will become useful.
+Is that smart or just complex?
+
+> What happens if(when?) performance of the third node is bad?
+
+My above solution solves this a little bit, in that we always try to
+have two nodes available. But what if they are both up but bad? I'm not
+sure. As my previous mail said, we need some function, given our list
+of helpers and the network directory, that will tell us when we're in a
+bad situation. I can imagine some simple versions of this function --
+for example, when both our working helpers are in the bottom half of
+the nodes, ranked by capacity.
+
+But the hard part: what's the remedy when we decide there's something
+to fix? Do we add a third, and now we have two crummy ones and a new
+one? Or do we drop one or both of the bad ones?
+
+Perhaps we believe the latest claim from the network-status concensus,
+and we count a helper the dirservers believe is crummy as "not worth
+trying" (equivalent to "not reachable under our current ReachableAddresses
+config") -- and then the above algorithm would end up adding good ones,
+but we'd go back to the originals if they resume being acceptable? That's
+an appealing design. I wonder if it will cause the typical Tor user to
+have a helper node list that comprises most of the network, though. I'm
+ok with this.
+
+> Another point you might want to keep in mind, is the possibility to
+> reuse the code in order to add a second layer helper node (meaning node
+> number two) to "protect" the first layer (node number one) helper nodes.
+> These nodes should be tied to each of the first layer nodes. E.g. there
+> is one helper node list, as described in your mail, for each of the
+> first layer nodes, following their create/destroy.
+
+True. Does that require us to add a fourth hop to our path length,
+since the first hop is from a limited set, the second hop is from a
+limited set, and the third hop might also be constrained because, say,
+we're asking for an unusual exit port?
+
+> Another of the things might worth adding to the to do list is
+> localization of server (helper) nodes. Making it possible to pick
+> countries/regions where you do (not) want your helper nodes located. (As
+> in "HelperNodesLocated us,!eu" etc.) I know this requires the use of
+> external data and may not be worth it, but it _could_ be integrated at
+> the directory servers only -- adding a list of node IP's and e.g. a
+> country/region code to the directory and thus reduce the overhead. (?)
+> Maybe extending the Family-term?
+
+I think we are heading towards doing path selection based on geography,
+but I don't have a good sense yet of how that will actually turn out --
+that is, with what mechanism Tor clients will learn the information they
+need. But this seems to be something that is orthogonal to the rest of
+this discussion, so I look forward to having somebody else solve it for
+us, and fitting it in when it's ready. :)
+
+> And I would like to keep an option to pick the first X helper nodes
+> myself and then let Tor extend this list if these nodes are down (like
+> EntryNodes in current code). Even if this opens up for some new types of
+> "relationship" attacks.
+
+Good idea. Here's how I'd like to name these:
+
+The "EntryNodes" config option is a list of seed helper nodes. When we
+read EntryNodes, any node listed in entrynodes but not in the current
+helper node list gets *pre*pended to the helper node list.
+
+The "NumEntryNodes" config option (currently called NumHelperNodes)
+specifies the number of up, reachable, good-enough helper nodes that
+will make up the pool of possible choices for first hop, counted from
+the front of the helper node list until we have enough.
+
+The "UseEntryNodes" config option (currently called UseHelperNodes)
+tells us to turn on all this helper node behavior. If you set EntryNodes,
+then this option is implied.
+
+The "StrictEntryNodes" config option, provided for backward compatibility
+and for debugging, means a) we replace the helper node list with the
+current EntryNodes list, and b) whenever we would do an operation that
+alters the helper node list, we don't. (Yes, this means that if all the
+helper nodes are down, we lose until we mark them up again. But this is
+how it behaves now.)
+
+> I am sure my next point has been asked before, but what about testing
+> the current speed of the connections when looking for new helper nodes,
+> not only testing the connectivity? I know this might contribute to a lot
+> of overhead in the network, but if this only occur e.g. when using
+> helper nodes as a Hidden Service it might not have that large an impact,
+> but could help availability for the services?
+
+If we're just going to be testing them when we're first picking them,
+then it seems we can do the same thing by letting the directory servers
+test them. This has the added benefit that all the (behaving) clients
+use the same data, so they don't end up partitioned by a node that
+(for example) performs selectively for his victims.
+
+Another idea would be to periodically keep track of what speeds you get
+through your helpers, and make decisions from this. The reason we haven't
+done this yet is because there are a lot of variables -- perhaps the
+web site is slow, perhaps some other node in the path is slow, perhaps
+your local network is slow briefly, perhaps you got unlucky, etc.  I
+believe that over time (assuming the user has roughly the same browsing
+habits) all of these would average out and you'd get a usable answer,
+but I don't have a good sense of how long it would take to converge,
+so I don't know whether this would be worthwhile.
+
+> BTW. I feel confortable with all the terms helper/entry/contact nodes,
+> but I think you (the developers) should just pick one and stay with it
+> to avoid confusion.
+
+I think I'm going to try to co-opt the term 'Entry' node for this
+purpose. We're going to have to keep referring to helper nodes for the
+research community for a while though, so they realize that Tor does
+more than just let users ask for certain entry nodes.
+
+
+
+
