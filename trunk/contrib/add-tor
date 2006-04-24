@@ -10,9 +10,9 @@
 #
 # Operator and fingerprint line are read from stdin.
 #
-# Before adding a fingerprint line approved-routers is checked for
+# Before adding a fingerprint line, approved-routers is checked for
 # rough syntactical correctness.  This script also checks that the
-# nickname and fingerprint to be added to not already exist in the
+# nickname and fingerprint to be added do not already exist in the
 # binding list.
 
 
