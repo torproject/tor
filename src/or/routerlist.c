@@ -988,7 +988,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
         char *alternatives = smartlist_join_strings(fps, "; ",0,NULL);
         log_warn(LD_CONFIG,
                  "There are multiple matches for the nickname \"%s\","
-                 " but none is listed as named by the directory authories. "
+                 " but none is listed as named by the directory authorities. "
                  "Choosing one arbitrarily. If you meant one in particular, "
                  "you should say %s.", nickname, alternatives);
         tor_free(alternatives);
@@ -2294,7 +2294,7 @@ router_get_combined_status_by_nickname(const char *nickname,
       });
     if (any_unwarned) {
       log_warn(LD_CONFIG, "There are multiple matches for the nickname \"%s\",",
-               " but none is listed as named by the directory authories. "
+               " but none is listed as named by the directory authorites. "
                "Choosing one arbitrarily.");
     }
   } else if (warn_if_unnamed && best) {
