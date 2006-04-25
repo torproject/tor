@@ -396,8 +396,11 @@ process_pending_task(connection_t *cpuworker)
     log_warn(LD_OR,"assign_to_cpuworker failed. Ignoring.");
 }
 
-/** How long do we let a cpuworker work before deciding that it's wedged? */
-#define CPUWORKER_BUSY_TIMEOUT (60*60)
+/** How long should we let a cpuworker stay busy before we give
+ * up on it and decide that we have a bug or infinite loop?
+ * This value is high because some servers with low memory/cpu
+ * sometimes spend an hour or more swapping, and Tor starves. */
+#define CPUWORKER_BUSY_TIMEOUT (60*60*12)
 
 /** We have a bug that I can't find. Sometimes, very rarely, cpuworkers get
  * stuck in the 'busy' state, even though the cpuworker process thinks of
