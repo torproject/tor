@@ -2297,7 +2297,7 @@ router_get_combined_status_by_nickname(const char *nickname,
                " but none is listed as named by the directory authorites. "
                "Choosing one arbitrarily.");
     }
-  } else if (warn_if_unnamed && best) {
+  } else if (warn_if_unnamed && best && !best->name_lookup_warned) {
     char fp[HEX_DIGEST_LEN+1];
     base16_encode(fp, sizeof(fp),
                   best->status.identity_digest, DIGEST_LEN);
