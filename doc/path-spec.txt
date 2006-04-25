@@ -22,23 +22,39 @@ list.  -NM
 * We build some circuits preemptively, and some on-demand.
 * We attach greedily, and expire after time.
 
+1b. Types of circuits.
+* Stable / Ordinary
+* Internal / Exit
+
 2. Building circuits
 
 * Preemptive building
 * On-demand building
+  * Cannibalizing circuits
 * Choosing the path first, building second.
 * Choosing the length of the circuit.
 * Choosing entries, midpoints, exits.
+  * the .exit notation
+* exitnodes, entrynodes, strictexitnodes, strictentrynodes.
 * What to do when an extend fails
 * Keeping track of 'expected' ports
-* Backing off from circuit building when a long time has passed
-* 
+  * And expected hidden service use (client-side and hidserv-side)
+  * Backing off from circuit building when a long time has passed
 
 3. Attaching streams to circuits
+  * Including via the controller.
+  * Timeouts and when Tor autoretries.
+    * What stream-end-reasons are appropriate for retrying.
+
 
 4. Rendezvous circuits
 
 5. Guard nodes
+
+6. Testing circuits
+
+
+
 
 (From some emails by arma)
 
