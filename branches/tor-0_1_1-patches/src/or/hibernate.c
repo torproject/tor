@@ -862,9 +862,10 @@ consider_hibernation(time_t now)
                  "Bandwidth soft limit reached; commencing hibernation.");
       hibernate_begin(HIBERNATE_STATE_LOWBANDWIDTH, now);
     } else if (accounting_enabled && now < interval_wakeup_time) {
-      format_iso_time(buf,interval_wakeup_time);
+      format_local_iso_time(buf,interval_wakeup_time);
       log_notice(LD_ACCT,
-                 "Commencing hibernation. We will wake up at %s GMT", buf);
+                 "Commencing hibernation. We will wake up at %s local time.",
+                 buf);
       hibernate_go_dormant(now);
     }
   }
