@@ -1421,6 +1421,10 @@ count_acceptable_routers(smartlist_t *routers)
     if (r->is_valid == 0) {
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
       goto next_i_loop;
+      /* XXX This clause makes us count incorrectly: if AllowInvalidRouters
+       * allows this node in some places, then we're getting an inaccurate
+       * count. For now, be conservative and don't count it. But later we
+       * should try to be smarter. */
     }
     num++;
 //    log_debug(LD_CIRC,"I like %d. num_acceptable_routers now %d.",i, num);
