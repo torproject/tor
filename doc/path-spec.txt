@@ -14,9 +14,31 @@ implementors should be aware of the anonymity and load-balancing implications
 of their choices.
 
 THIS SPEC ISN'T DONE OR CORRECT.  I'm just copying in relevant info so
-far. -NM
+far.  The starred points are things we should cover, but not an exhaustive
+list.  -NM
 
-X.  Guard nodes
+1. General operation
+
+* We build some circuits preemptively, and some on-demand.
+* We attach greedily, and expire after time.
+
+2. Building circuits
+
+* Preemptive building
+* On-demand building
+* Choosing the path first, building second.
+* Choosing the length of the circuit.
+* Choosing entries, midpoints, exits.
+* What to do when an extend fails
+* Keeping track of 'expected' ports
+* Backing off from circuit building when a long time has passed
+* 
+
+3. Attaching streams to circuits
+
+4. Rendezvous circuits
+
+5. Guard nodes
 
 (From some emails by arma)
 
