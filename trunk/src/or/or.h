@@ -755,6 +755,8 @@ typedef struct signed_descriptor_t {
   char signed_descriptor_digest[DIGEST_LEN];
   char identity_digest[DIGEST_LEN];
   time_t published_on;
+  enum { SAVED_NOWHERE=0, SAVED_IN_CACHE, SAVED_IN_JOURNAL } saved_location;
+  off_t saved_offset;
 } signed_descriptor_t;
 
 /** Information about another onion router in the network. */
@@ -2402,7 +2404,8 @@ int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
-                                  smartlist_t *dest);
+                                  smartlist_t *dest,
+                                  int from_cache);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey,
