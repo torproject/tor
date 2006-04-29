@@ -186,6 +186,8 @@ router_append_to_journal(signed_descriptor_t *desc)
     tor_free(fname);
     return -1;
   }
+  desc->saved_location = SAVED_IN_JOURNAL;
+  desc->saved_offset = router_journal_len;
 
   tor_free(fname);
   router_journal_len += len;
@@ -242,6 +244,20 @@ router_rebuild_store(int force)
   if (write_chunks_to_file(fname, chunk_list, 0)<0) {
     log_warn(LD_FS, "Error writing router store to disk.");
     goto done;
+  }
+  for (i = 0; i < 2; ++i) {
+    smartlist_t *lst = (i == 0) ? routerlist->old_routers :
+                                  routerlist->routers;
+    off_t offset = 0;
+    SMARTLIST_FOREACH(lst, void *, ptr,
+    {
+      signed_descriptor_t *sd = (i==0) ?
+        ((signed_descriptor_t*)ptr): &((routerinfo_t*)ptr)->cache_info;
+
+      sd->saved_location = SAVED_IN_CACHE;
+      sd->saved_offset = offset;
+      offset += sd->signed_descriptor_len;
+    });
   }
 
   tor_snprintf(fname, fname_len, "%s/cached-routers.new",
@@ -1920,7 +1936,7 @@ router_load_routers_from_string(const char *s, int from_cache,
   char fp[HEX_DIGEST_LEN+1];
   const char *msg;
 
-  router_parse_list_from_string(&s, routers);
+  router_parse_list_from_string(&s, routers, from_cache);
 
   routers_update_status_from_networkstatus(routers, !from_cache);
 

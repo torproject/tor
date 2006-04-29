@@ -637,15 +637,17 @@ check_directory_signature(const char *digest,
  * are not complete. Returns 0 on success and -1 on failure.
  */
 int
-router_parse_list_from_string(const char **s, smartlist_t *dest)
+router_parse_list_from_string(const char **s, smartlist_t *dest,
+                              int from_cache)
 {
   routerinfo_t *router;
-  const char *end, *cp;
+  const char *end, *cp, *start;
 
   tor_assert(s);
   tor_assert(*s);
   tor_assert(dest);
 
+  start = *s;
   while (1) {
     *s = eat_whitespace(*s);
     /* Don't start parsing the rest of *s unless it contains a router. */
@@ -682,6 +684,10 @@ router_parse_list_from_string(const char **s, smartlist_t *dest)
     if (!router) {
       log_warn(LD_DIR, "Error reading router; skipping");
       continue;
+    }
+    if (from_cache) {
+      router->cache_info.saved_location = SAVED_IN_CACHE;
+      router->cache_info.saved_offset = *s - start;
     }
     smartlist_add(dest, router);
   }
