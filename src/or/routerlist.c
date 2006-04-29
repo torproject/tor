@@ -614,7 +614,7 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
           smartlist_add(warned_nicknames, tor_strdup(nick));
         }
       }
-    } else if (!router_get_combined_status_by_nickname(nick, warn_if_unnamed)) {
+    } else if (!router_get_combined_status_by_nickname(nick,warn_if_unnamed)) {
       if (!warned) {
         log_fn(have_dir_info ? LOG_WARN : LOG_INFO, LD_CONFIG,
                "Nickname list includes '%s' which isn't a known router.",nick);
@@ -2293,7 +2293,7 @@ router_get_combined_status_by_nickname(const char *nickname,
         }
       });
     if (any_unwarned) {
-      log_warn(LD_CONFIG, "There are multiple matches for the nickname \"%s\",",
+      log_warn(LD_CONFIG,"There are multiple matches for the nickname \"%s\",",
                " but none is listed as named by the directory authorites. "
                "Choosing one arbitrarily.");
     }
