@@ -1,0 +1,41 @@
+#!/bin/sh
+
+## Originally written by Peter Palfrader.
+
+## This script lets you quickly check if a given router (by nickname)
+## will let you do a TLS handshake, or will let you download a directory.
+
+## Usage: check-tor nickname
+
+#set -x
+
+router="$1"
+dirserver="http://belegost.seul.org:80/tor/"
+
+lines=$( wget -q $dirserver --proxy=off -O - | grep -A5 '^router '"$router"' ' )
+line=$( echo "$lines" | head -n1 )
+
+if [ -z "$line" ]; then
+	echo "Not found" >&2
+	exit 1
+fi
+
+echo "$lines"
+echo
+
+ipor=$( echo "$line" | awk '{printf "%s:%s", $3, $4}' )
+
+op=$( echo "$line" | awk '{printf $6}' )
+ipop=$( echo "$line" | awk '{printf "%s:%s", $3, $6}' )
+
+echo
+echo ">>" openssl s_client -connect "$ipor"
+timeout 5 openssl s_client -connect "$ipor" < /dev/null
+if [ "$op" != "0" ]; then
+	echo
+	echo ">>" wget --proxy=off -O - http://$ipop/tor/
+	timeout 5 wget --proxy=off -O - http://$ipop/tor/ | head -n3
+fi
+
+echo
+echo -n "$router "; echo "$lines" | grep 'fingerprint' | sed -e 's/^opt //' -e 's/^fingerprint //';
