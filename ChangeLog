@@ -1,4 +1,4 @@
-Changes in version 0.1.1.19-rc - 2006-04-25
+Changes in version 0.1.1.19-rc - 2006-05-03
   o Minor bugs:
     - Regenerate our local descriptor if it's dirty and we try to use
       it locally (e.g. if it changes during reachability detection).
