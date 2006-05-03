@@ -1,3 +1,27 @@
+Changes in version 0.1.1.19-rc - 2006-05-03
+  o Minor bugs:
+    - Regenerate our local descriptor if it's dirty and we try to use
+      it locally (e.g. if it changes during reachability detection).
+    - If we setconf our ORPort to 0, we continued to listen on the
+      old ORPort and receive connections.
+    - Avoid a second warning about machine/limits.h on Debian
+      GNU/kFreeBSD.
+    - Be willing to add our own routerinfo into the routerlist.
+      Now authorities will include themselves in their directories
+      and network-statuses.
+    - Stop trying to upload rendezvous descriptors to every
+      directory authority: only try the v1 authorities.
+    - Servers no longer complain when they think they're not
+      registered with the directory authorities. There were too many
+      false positives.
+    - Backport dist-rpm changes so rpms can be built without errors.
+
+  o Features:
+    - Implement an option, VirtualAddrMask, to set which addresses
+      get handed out in response to mapaddress requests. This works
+      around a bug in tsocks where 127.0.0.0/8 is never socksified.
+
+
 Changes in version 0.1.1.18-rc - 2006-04-10
   o Major fixes:
     - Work harder to download live network-statuses from all the
