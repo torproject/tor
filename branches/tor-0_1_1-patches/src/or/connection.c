@@ -855,7 +855,8 @@ static int
 retry_listeners(int type, config_line_t *cfg,
                 int port_option, const char *default_addr, int force,
                 smartlist_t *replaced_conns,
-                smartlist_t *new_conns)
+                smartlist_t *new_conns,
+                int never_open_conns)
 {
   smartlist_t *launch = smartlist_create();
   int free_launch_elts = 1;
@@ -935,17 +936,19 @@ retry_listeners(int type, config_line_t *cfg,
 
   /* Now open all the listeners that are configured but not opened. */
   i = 0;
-  SMARTLIST_FOREACH(launch, config_line_t *, cfg,
-    {
-      conn = connection_create_listener(cfg->value, (uint16_t) port_option,
-                                        type);
-      if (!conn) {
-        i = -1;
-      } else {
-        if (new_conns)
-          smartlist_add(new_conns, conn);
-      }
-  });
+  if (!never_open_conns) {
+    SMARTLIST_FOREACH(launch, config_line_t *, cfg,
+      {
+        conn = connection_create_listener(cfg->value, (uint16_t) port_option,
+                                          type);
+        if (!conn) {
+          i = -1;
+        } else {
+          if (new_conns)
+            smartlist_add(new_conns, conn);
+        }
+    });
+  }
 
   if (free_launch_elts) {
     SMARTLIST_FOREACH(launch, config_line_t *, cfg,
@@ -970,23 +973,22 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
 {
   or_options_t *options = get_options();
 
-  if (server_mode(options) &&
-      retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
+  if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
                       options->ORPort, "0.0.0.0", force,
-                      replaced_conns, new_conns)<0)
+                      replaced_conns, new_conns, options->ClientOnly)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
                       options->DirPort, "0.0.0.0", force,
-                      replaced_conns, new_conns)<0)
+                      replaced_conns, new_conns, 0)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksListenAddress,
                       options->SocksPort, "127.0.0.1", force,
-                      replaced_conns, new_conns)<0)
+                      replaced_conns, new_conns, 0)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1", force,
-                      replaced_conns, new_conns)<0)
+                      replaced_conns, new_conns, 0)<0)
     return -1;
 
   return 0;
