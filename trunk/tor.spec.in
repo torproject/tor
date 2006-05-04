@@ -163,8 +163,7 @@ strength of the anonymity provided. Tor is not presently suitable
 for high-stakes anonymity.
 
 %prep
-#%setup -q -n %{name}-%{native_version}
-%setup -q -n %{name}
+%setup -q -n %{name}-%{native_version}
 
 %build
 %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
