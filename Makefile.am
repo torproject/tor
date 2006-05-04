@@ -22,11 +22,16 @@ dist-rpm:
 	for subdir in BUILD RPMS SOURCES SPECS SRPMS; do        \
 	    mkdir $$RPM_BUILD_DIR/$$subdir;                     \
 	done;                                                   \
-	cp ./../tor-$(VERSION).tar.gz $$RPM_BUILD_DIR/SOURCES;       \
-	rpmbuild -ba --define "_topdir $$RPM_BUILD_DIR"	tor.spec; \
-	mv $$RPM_BUILD_DIR/SRPMS/* .;                           \
-	mv $$RPM_BUILD_DIR/RPMS/* .;				\
-	rm -rf $$RPM_BUILD_DIR
+        mkdir $$RPM_BUILD_DIR/SOURCES/tor-$(VERSION);           \
+        cp -R ./ $$RPM_BUILD_DIR/SOURCES/tor-$(VERSION)/;       \
+        pushd $$RPM_BUILD_DIR/SOURCES/;                         \
+        tar zcf tor-$(VERSION).tar.gz ./;                       \
+        popd;                                                   \
+        rpmbuild -ba --define "_topdir $$RPM_BUILD_DIR" tor.spec; \
+        mv $$RPM_BUILD_DIR/SRPMS/* .;                           \
+        mv $$RPM_BUILD_DIR/RPMS/* .;                            \
+        rm -rf $$RPM_BUILD_DIR
+
 
 dist-osx:
 	@if [ "x$(prefix)" != 'x/Library/Tor' ]; then \
