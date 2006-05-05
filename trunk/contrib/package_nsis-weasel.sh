@@ -17,6 +17,7 @@ mkdir win_tmp
 mkdir win_tmp/bin
 mkdir win_tmp/contrib
 mkdir win_tmp/doc
+mkdir win_tmp/doc/website
 mkdir win_tmp/doc/design-paper
 mkdir win_tmp/doc/contrib
 mkdir win_tmp/src
@@ -40,30 +41,19 @@ clean_localstatedir() {
 }
 
 for fn in \
-	HACKING \
-	control-spec.txt \
-	dir-spec.txt \
-	rend-spec.txt \
-	socks-extensions.txt \
-	version-spec.txt \
+	doc/HACKING \
+	doc/control-spec.txt \
+	doc/dir-spec.txt \
+	doc/rend-spec.txt \
+	doc/socks-extensions.txt \
+	doc/tor-spec.txt \
+	doc/version-spec.txt \
 	\
-	website/stylesheet.css \
-	website/tor-doc-osx.html.en \
-	website/tor-doc-osx.html.it \
-	website/tor-doc-server.html.en \
-	website/tor-doc-server.html.it \
-	website/tor-doc-unix.html.en \
-	website/tor-doc-unix.html.it \
-	website/tor-doc-win32.html.en \
-	website/tor-doc-win32.html.es \
-	website/tor-doc-win32.html.it \
-	website/tor-hidden-service.html.en \
-	website/tor-switchproxy.html.en \
-	website/tor-switchproxy.html.it \
-	 \
+	doc/website/* \
 	; do
-    clean_newlines doc/"$fn" win_tmp/doc/"`basename $fn`"
+    clean_newlines "$fn" win_tmp/"$fn"
 done
+mmv win_tmp/doc/website/"*.html.*" win_tmp/doc/website/"#1.#2.html"
 
 cp doc/design-paper/tor-design.pdf win_tmp/doc/design-paper/tor-design.pdf
 
@@ -77,7 +67,19 @@ done
 
 clean_localstatedir src/config/torrc.sample.in win_tmp/src/config/torrc.sample
 
-cp contrib/tor.nsi win_tmp/contrib
+cp contrib/tor.nsi.in win_tmp/contrib/tor.nsi
+(
+	echo '/WEBSITE-FILES-HERE/'
+	echo 'a' # append
+	for fn in win_tmp/doc/website/*; do
+		echo -n 'File "..\doc\website\'
+		echo -n "`basename $fn`"
+		echo '"'
+	done
+	echo "." # end input
+	echo "w" # write
+	echo "q" # quit
+) | ed win_tmp/contrib/tor.nsi
 
 cd win_tmp/contrib
 

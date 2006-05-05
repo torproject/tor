@@ -129,19 +129,7 @@ Section "Documents" Docs
    File "..\doc\socks-extensions.txt"
    File "..\doc\version-spec.txt"
    ;
-   File "..\doc\stylesheet.css"
-   File "..\doc\tor-doc-osx.html.en"
-   File "..\doc\tor-doc-osx.html.it"
-   File "..\doc\tor-doc-server.html.en"
-   File "..\doc\tor-doc-server.html.it"
-   File "..\doc\tor-doc-unix.html.en"
-   File "..\doc\tor-doc-unix.html.it"
-   File "..\doc\tor-doc-win32.html.en"
-   File "..\doc\tor-doc-win32.html.es"
-   File "..\doc\tor-doc-win32.html.it"
-   File "..\doc\tor-hidden-service.html.en"
-   File "..\doc\tor-switchproxy.html.en"
-   File "..\doc\tor-switchproxy.html.it"
+   ; WEBSITE-FILES-HERE
    ;
    File "..\doc\tor-resolve.html"
    File "..\doc\tor-reference.html"
