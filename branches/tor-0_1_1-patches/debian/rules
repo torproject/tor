@@ -35,11 +35,6 @@ endif
 #	INSTALL_PROGRAM += -s
 #endif
 
-# Prevent the design paper from being built with "nodoc"
-ifneq (,$(findstring nodoc,$(DEB_BUILD_OPTIONS)))
-	BUILD_DOC = no
-endif
-
 # Prevent the unit tests from being run with "nocheck"
 ifneq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
 	RUN_TEST = no
@@ -111,19 +106,7 @@ build-stamp:  config.status
 	fi
 	# XXX ends
 
-	if [ "$(BUILD_DOC)" != "no" ]; then \
-		make -C doc/design-paper tor-design.ps tor-design.pdf || \
-		( echo -e "*\n*\n*\n*"; \
-		  echo "* Building some docs failed, perhaps because you did not install the"; \
-		  echo "* declared build dependencies and then used -o with dpkg-buildpackage."; \
-		  echo "*"; \
-		  echo "* If you want to skip this part, you can set nodoc in DEB_BUILD_OPTIONS" ; \
-		  echo "* and start the build again.  DEB_BUILD_OPTIONS=nodoc dpkg-buildpackage.."; \
-		  echo -e "*\n*\n*\n*"; \
-		  false ); \
-	else \
-		echo -e "\n\nSkipping tor-design.{ps,pdf}\n\n"; \
-	fi
+	make -C doc/design-paper tor-design.ps tor-design.pdf
 
 	touch build-stamp
 
@@ -173,10 +156,6 @@ binary-arch: build install
 	dh_testroot
 	dh_installchangelogs ChangeLog
 	dh_installdocs
-	if [ "$(BUILD_DOC)" != "no" ]; then \
-		install -m 644 doc/design-paper/tor-design.ps  $(CURDIR)/debian/tor/usr/share/doc/tor/; \
-		install -m 644 doc/design-paper/tor-design.pdf $(CURDIR)/debian/tor/usr/share/doc/tor/; \
-	fi
 	dh_installexamples
 #	dh_install
 #	dh_installdebconf
