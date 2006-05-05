@@ -2,7 +2,7 @@
 
 $CONFIGURE_IN = './configure.in';
 $ORCONFIG_H = './src/win32/orconfig.h';
-$TOR_NSI = './contrib/tor.nsi';
+$TOR_NSI = './contrib/tor.nsi.in';
 
 sub demand {
     my $fn = shift;
