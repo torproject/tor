@@ -2,6 +2,7 @@ tor (0.1.1.XXXXXXX) XXperimental; urgency=low
 
   * Remove support for my nodoc DEB_BUILD_OPTIONS variable.  It clutters
     stuff and I haven't used it in ages.
+  * Update debian/tor.docs file.
 
  -- Peter Palfrader <weasel@debian.org>  Wed, 12 Apr 2006 00:27:54 +0200
 
