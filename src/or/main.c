@@ -1468,8 +1468,7 @@ tor_init(int argc, char *argv[])
   atexit(exit_function);
 
   if (options_init_from_torrc(argc,argv) < 0) {
-    log_err(LD_CONFIG,"Reading config failed--see warnings above. "
-            "For usage, try -h.");
+    log_err(LD_CONFIG,"Reading config failed--see warnings above.");
     return -1;
   }
 
