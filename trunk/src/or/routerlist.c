@@ -2777,12 +2777,12 @@ routers_update_all_from_networkstatus(void)
         ++n_named;
     });
 
-    if (n_recent && n_listing) {
-      if (n_valid <= n_recent/2)  {
-        log_warn(LD_GENERAL,
+    if (n_listing) {
+      if (n_valid <= n_listing/2)  {
+        log_info(LD_GENERAL,
                  "%d/%d recent statements from directory authorities list us "
                  "as unapproved. Are you misconfigured?",
-                 n_recent-n_valid, n_recent);
+                 n_listing-n_valid, n_listing);
         have_warned_about_invalid_status = 1;
       } else if (n_naming && !n_named) {
         log_info(LD_GENERAL, "0/%d name-binding directory authorities "
