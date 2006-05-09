@@ -2763,7 +2763,7 @@ routers_update_all_from_networkstatus(void)
 
     if (n_recent && n_listing) {
       if (n_valid <= n_recent/2)  {
-        log_warn(LD_GENERAL,
+        log_info(LD_GENERAL,
                  "%d/%d recent statements from directory authorities list us "
                  "as unapproved. Are you misconfigured?",
                  n_recent-n_valid, n_recent);
