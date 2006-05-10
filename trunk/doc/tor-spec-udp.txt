@@ -383,5 +383,7 @@ Other sections:
 
 What changes need to happen to each node's exit policy to support this? -RD
 
-
+Switching to UDP means managing the queues of incoming packets better,
+so we don't miss packets. How does this interact with doing large public
+key operations (handshakes) in the same thread?
 
