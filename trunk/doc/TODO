@@ -28,8 +28,7 @@ Website:
   - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
 
-for 0.1.1.x-final:
-  - building on freebsd 6.0: (with multiple openssl installations)
+R - track down the patch for cross-compiling.
     . <nickm> "Let's try to find a way to make it run and make the version
        match, but if not, let's just make it run."
     - <arma> should we detect if we have a --with-ssl-dir and try the -R
@@ -210,7 +209,6 @@ N   - Vet all pending installer patches
       - Vet win32 systray helper code
 
   - document:
-    o torcp needs more attention in the tor-doc-win32.
     - recommend gaim.
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
