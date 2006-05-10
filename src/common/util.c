@@ -46,23 +46,6 @@ const char util_c_id[] = "$Id$";
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
-#ifdef HAVE_SYS_LIMITS_H
-#include <sys/limits.h>
-#endif
-#ifdef HAVE_MACHINE_LIMITS_H
-#ifndef __FreeBSD__
-  /* FreeBSD has a bug where it complains that this file is obsolete,
-     and I should migrate to using sys/limits. It complains even when
-     I include both. */
-#include <machine/limits.h>
-#endif
-#endif
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
-#endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
