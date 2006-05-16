@@ -14,6 +14,11 @@ TARGET=$2/Library/Tor
 TORDIR=$TARGET/var/lib/tor
 LOGDIR=$TARGET/var/log/tor
 
+# Check defaults for TARGET
+if [ "$TARGET" == "//Library/Tor" ]; then
+	TARGET=/Library/Tor
+fi
+
 # Create user $TORUSER in group daemon.  If it's already there, great.
 $ADDSYSUSER $TORUSER "Tor System user" $TORDIR
 
