@@ -340,7 +340,7 @@ $Id$
     "circuit-status"
       A series of lines as for a circuit status event. Each line is of
       the form:
-         CircuitID SP CircStatus SP Path CRLF
+         CircuitID SP CircStatus [SP Path] CRLF
 
     "stream-status"
       A series of lines as for a stream status event.  Each is of the form:
@@ -675,7 +675,7 @@ $Id$
 
    The syntax is:
 
-     "650" SP "CIRC" SP CircuitID SP CircStatus SP Path
+     "650" SP "CIRC" SP CircuitID SP CircStatus [SP Path]
 
       CircStatus =
                "LAUNCHED" / ; circuit ID assigned to new circuit
@@ -685,6 +685,9 @@ $Id$
                "CLOSED"     ; circuit closed (was built)
 
       Path = ServerID *("," ServerID)
+
+   The path is provided only when the circuit has been extended at least one
+   hop.
 
 4.1.2. Stream status changed
 
