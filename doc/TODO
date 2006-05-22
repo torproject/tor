@@ -12,6 +12,8 @@ P       - phobos claims
         D Deferred
         X Abandoned
 
+ask Jan to be the translation coordinator? add to volunteer page.
+
 Non-Coding:
   - Mark up spec; note unclear points about servers
   - Mention controller libs someplace.
@@ -44,9 +46,6 @@ R - track down the patch for cross-compiling.
       when they feel like it.
     - update dir-spec with what we decided for each of these
 
-  - are there other options that we haven't documented so far?
-  . look at the proposed os x uninstaller:
-    http://archives.seul.org/or/talk/Jan-2006/msg00038.html
 
 - Interim things:
   - provide no-cache no-index headers from the dirport?
@@ -58,6 +57,7 @@ Must-have items for 0.1.2.x:
     without demanding that exit node.
   - If we have no predicted ports, don't fetch router descriptors.
     This way we are more dormant.
+  - non-v1 authorities should not accept rend descs.
   - Directory guards
 R - Server usability
     - look into "uncounting" bytes spent on local connections. so
@@ -207,7 +207,7 @@ R   - kill dns workers more slowly
   - packaging and ui stuff:
     . multiple sample torrc files
     - uninstallers
-      . for os x
+      . make sure phobos's os x uninstaller works.
     . figure out how to make nt service stuff work?
       . Document it.
     o Add version number to directory.
