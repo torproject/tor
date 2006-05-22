@@ -50,21 +50,28 @@ R - track down the patch for cross-compiling.
 
 - Interim things:
   - provide no-cache no-index headers from the dirport?
-  o remove down/useless descriptors from v1 directory?
   - exitlist should avoid outputting the same IP address twice.
-  - if we have no predicted ports, don't fetch router descriptors.
-    this way we are more dormant.
 
 Must-have items for 0.1.2.x:
 
+  - If we fail to connect via an exit enclave, (warn and) try again
+    without demanding that exit node.
+  - If we have no predicted ports, don't fetch router descriptors.
+    This way we are more dormant.
   - Directory guards
 R - Server usability
+    - look into "uncounting" bytes spent on local connections. so
+      we can bandwidthrate but still have fast downloads.
+    - Write limiting; separate token bucket for write
+    - dir answers include a your-ip-address-is header, so we can
+      break our dependency on dyndns.
 N - Better hidden service performance, with possible redesign.
   - Asynchronous DNS
     - What to use? C-ares? Libdns? AGL's patch?
   - Better estimates in the directory of whether servers have good uptime
     (high expected time to failure) or good guard qualities (high
     fractional uptime).
+    - AKA Track uptime as %-of-time-up, as well as time-since-last-down.
 N . memory usage on dir servers. copy less!
     o Remember offset and location of each descriptor in the cache/journal
     - When sending a big pile of descs to a client, don't shove them all on
@@ -73,7 +80,7 @@ N . memory usage on dir servers. copy less!
         refcounted.  (Only slightly; we'd only need to know whether it's on
         the routerlist->routers or routerlist->old_routers, and how many
         directory conns are returning it.)
-      - Possibly, we could just to keep a list of the descriptor digests for
+      - Possibly, we could just keep a list of the descriptor digests for
         the descriptors we still want to send.  We might end up truncating
         some replies by returning fewer descriptors than were requested (if
         somebody requests a desc that we throw away before we deliver it),
@@ -88,6 +95,8 @@ N . memory usage on dir servers. copy less!
 N - oprofile including kernel time on multiple platforms
 
 Items for 0.1.2:
+  - We need a separate list of "hidserv authorities" if we want to
+    retire moria1 from the main list.
   - Improve controller
       - change circuit status events to give more details, like purpose,
         whether they're internal, when they become dirty, when they become
@@ -114,7 +123,7 @@ Items for 0.1.2:
         without using SOCKS.
       - Make everything work with hidden services
 
-  - Clients should refer to avoid exit nodes for non-exit path positions.
+  - Clients should prefer to avoid exit nodes for non-exit path positions.
     (bug 200)
   - Make "setconf" and "hup" behavior cleaner for LINELIST config
     options (e.g. Log). Bug 238.
@@ -125,10 +134,7 @@ Items for 0.1.2:
     - Design
     - Implement
 
-  - Have a "ReallyFast" status flag that means it.
-
-R - look into "uncounting" bytes spent on local connections. so
-    we can bandwidthrate but still have fast downloads.
+  - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
 
   - When we connect to a Tor server, it sends back a cell listing
     the IP it believes it is using. Use this to block dvorak's attack.
@@ -158,10 +164,10 @@ Topics to think about during 0.1.2.x development:
   - Figure out hidden services.
 
 Minor items for 0.1.2.x as time permits.
-  - Streamline how we define a guard node as 'up'. document it
-    somewhere.
+  - The bw_accounting file should get merged into the state file.
+  - Streamline how we define a guard node as 'up'. document it somewhere.
   - Better installers and build processes.
-    - Commit edmanm's win32 makefil eto tor cvs contrib, or write a new one.
+    - Commit edmanm's win32 makefile to tor cvs contrib, or write a new one.
     - Can we cross-compile?
 R - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
@@ -177,7 +183,8 @@ N - Display the reasons in 'destroy' and 'truncated' cells under some
   - We need a getrlimit equivalent on Windows so we can reserve some
     file descriptors for saving files, etc. Otherwise we'll trigger
     asserts when we're out of file descriptors and crash.
-  - the tor client can do the "automatic proxy config url" thing?
+  X the tor client can do the "automatic proxy config url" thing?
+    (no, let's leave this for applications like torbutton)
   - Automatically determine what ports are reachable and start using
     those, if circuits aren't working and it's a pattern we recognize
     ("port 443 worked once and port 9001 keeps not working").
@@ -220,7 +227,7 @@ N   - Vet all pending installer patches
   - Clients should estimate their skew as median of skew from servers
     over last N seconds.
   - Security
-    - Alices avoid duplicate class C nodes.
+    - Alices avoid duplicate /24 servers.
     - Analyze how bad the partitioning is or isn't.
 
   . Update the hidden service stuff for the new dir approach.
@@ -245,7 +252,6 @@ N   - Vet all pending installer patches
   - Make router_is_general_exit() a bit smarter once we're sure what it's for.
 
   - rewrite how libevent does select() on win32 so it's not so very slow.
-  - Write limiting; separate token bucket for write
   - Audit everything to make sure rend and intro points are just as likely to
     be us as not.
   - Do something to prevent spurious EXTEND cells from making middleman
@@ -261,7 +267,6 @@ Future version:
   - DoS protection: TLS puzzles, public key ops, bandwidth exhaustion.
     - Specify?
   - tor-resolve script should use socks5 to get better error messages.
-  - Track uptime as %-of-time-up, as well as time-since-last-down.
   - hidserv offerers shouldn't need to define a SocksPort
     * figure out what breaks for this, and do it.
   - Relax clique assumptions.
@@ -289,3 +294,4 @@ Blue-sky:
     streams, at least according to the protocol. But we handle all that
     we've seen in the wild.
     (Pending a user who needs this)
+
