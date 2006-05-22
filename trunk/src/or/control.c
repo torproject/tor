@@ -2852,8 +2852,12 @@ control_event_descriptors_changed(smartlist_t *routers)
     tor_free(msg);
   }
   if (EVENT_IS_INTERESTING1(EVENT_NEW_DESC)) {
-    msg = smartlist_join_strings(identities, " ", 0, &len);
-    send_control1_event(EVENT_NEW_DESC, "650 NEWDESC %s\r\n", msg);
+    char *ids = smartlist_join_strings(identities, " ", 0, &len);
+    size_t len = strlen(ids)+32;
+    msg = tor_malloc(len);
+    tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
+    send_control1_event_string(EVENT_NEW_DESC, msg);
+    tor_free(ids);
     tor_free(msg);
   }
   SMARTLIST_FOREACH(identities, char *, cp, tor_free(cp));
