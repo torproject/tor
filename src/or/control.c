@@ -443,12 +443,12 @@ get_escaped_string(const char *start, size_t in_len_max,
  * <b>conn</b>-\>outbuf.  The message may be truncated if it is too long,
  * but it will always end with a CRLF sequence.
  *
- * Currently the length of the message is limited to 1024 (including the
+ * Currently the length of the message is limited to 2048 (including the
  * ending \n\r\0. */
 static void
 connection_printf_to_buf(connection_t *conn, const char *format, ...)
 {
-#define CONNECTION_PRINTF_TO_BUF_BUFFERSIZE 1024
+#define CONNECTION_PRINTF_TO_BUF_BUFFERSIZE 2048
   va_list ap;
   char buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE];
   int r;
