@@ -12,44 +12,10 @@ P       - phobos claims
         D Deferred
         X Abandoned
 
-ask Jan to be the translation coordinator? add to volunteer page.
-
-Non-Coding:
-  - Mark up spec; note unclear points about servers
-  - Mention controller libs someplace.
-P - flesh out the rest of the section 6 of the faq
-  . more pictures from ren. he wants to describe the tor handshake
-R - make a page with the hidden service diagrams.
-NR- write a spec appendix for 'being nice with tor'
-  - tor-in-the-media page
-  - Remove need for HACKING file.
-  - Figure out licenses for website material.
-
-Website:
-  - and remove home and make the "Tor" picture be the link to home.
-  - put the logo on the website, in source form, so people can put it on
-    stickers directly, etc.
-
-R - track down the patch for cross-compiling.
     . <nickm> "Let's try to find a way to make it run and make the version
        match, but if not, let's just make it run."
     - <arma> should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?
-
-  - support dir 503s better
-    o clients don't log as loudly when they receive them
-    - they don't count toward the 3-strikes rule
-      - should there be some threshold of 503's after which we give up?
-    - think about how to split "router is down" from "dirport shouldn't
-      be tried for a while"?
-    - authorities should *never* 503 a cache, but *should* 503 clients
-      when they feel like it.
-    - update dir-spec with what we decided for each of these
-
-
-- Interim things:
-  - provide no-cache no-index headers from the dirport?
-  - exitlist should avoid outputting the same IP address twice.
 
 Must-have items for 0.1.2.x:
 
@@ -95,6 +61,15 @@ N . memory usage on dir servers. copy less!
 N - oprofile including kernel time on multiple platforms
 
 Items for 0.1.2:
+  - support dir 503s better
+    o clients don't log as loudly when they receive them
+    - they don't count toward the 3-strikes rule
+      - should there be some threshold of 503's after which we give up?
+    - think about how to split "router is down" from "dirport shouldn't
+      be tried for a while"?
+    - authorities should *never* 503 a cache, but *should* 503 clients
+      when they feel like it.
+    - update dir-spec with what we decided for each of these
   - We need a separate list of "hidserv authorities" if we want to
     retire moria1 from the main list.
   - Improve controller
@@ -156,6 +131,9 @@ R - Failed rend desc fetches sometimes don't get retried.
       - Keep a journal FD for appending router descriptors
 
   - Make reverse DNS work.
+
+  - provide no-cache no-index headers from the dirport?
+  - exitlist should avoid outputting the same IP address twice.
 
 Topics to think about during 0.1.2.x development:
   - Figure out non-clique.
@@ -294,4 +272,23 @@ Blue-sky:
     streams, at least according to the protocol. But we handle all that
     we've seen in the wild.
     (Pending a user who needs this)
+
+Non-Coding:
+  - Mark up spec; note unclear points about servers
+  - Mention controller libs someplace.
+P - flesh out the rest of the section 6 of the faq
+  . more pictures from ren. he wants to describe the tor handshake
+NR- write a spec appendix for 'being nice with tor'
+  - tor-in-the-media page
+  - Remove need for HACKING file.
+  - Figure out licenses for website material.
+
+Website:
+  - and remove home and make the "Tor" picture be the link to home.
+  - put the logo on the website, in source form, so people can put it on
+    stickers directly, etc.
+R - make a page with the hidden service diagrams.
+
+  - ask Jan to be the translation coordinator? add to volunteer page.
+R - track down the patch for cross-compiling.
 
