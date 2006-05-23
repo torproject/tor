@@ -1,3 +1,10 @@
+tor (0.1.1.20-1) unstable; urgency=low
+
+  * New upstream stable release: The 0.1.1.x tree is now the new stable
+    tree.  Upload to unstable rather than experimental.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 23 May 2006 20:16:25 +0200
+
 tor (0.1.1.19-rc-1) experimental; urgency=low
 
   * New upstream version.
