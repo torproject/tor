@@ -1,12 +1,10 @@
 #!/bin/bash
 # $Id$
-# Copyright 2006 Michael Mohr
+# Copyright 2006 Michael Mohr with modifications by Roger Dingledine
 # See LICENSE for licensing information.
 
 #######################################################################
 #  Tor-cross: a tool to help cross-compile Tor
-#
-#  mailto:tor-assistants@freehaven.net
 #
 #  The purpose of a cross-compiler is to produce an executable for
 #  one system (CPU) on another.  This is useful, for example, when
@@ -14,10 +12,6 @@
 #  You might, for example, wish to cross-compile a program on your
 #  host (the computer you're working on now) for a target such as
 #  a router or handheld computer.
-#
-#  This script automatically patches two files in the Tor source:
-#        configure.in	: remove test programs
-#        compat.h	: remove check for NULL==0
 #
 #  A number of environment variables must be set in order for this
 #  script to work:
@@ -53,10 +47,10 @@
 #
 #######################################################################
 
-# disable some show-stopping bugs (see cross.patch for more)
+# disable the platform-specific tests in configure
 export CROSS_COMPILE=yes
 
-if [ ! -f configure.in ]
+if [ ! -f configure ]
 then
   echo "Please run this script from the root of the Tor distribution."
   exit -1
@@ -109,19 +103,7 @@ then
   make clean
 fi
 
-# check if the source has already been patched
-patch -f -p1 -R --dry-run < contrib/cross.patch > /dev/null 2>&1
-# if it hasn't, rerun the autotools
-if [ $? -ne 0 ]
-then
-  patch -p1 < contrib/cross.patch
-  aclocal
-  autoconf
-  autoheader
-  automake --add-missing
-fi
-
-# Set up the buld environment and try to run configure
+# Set up the build environment and try to run configure
 export PATH=$PATH:$CROSSPATH
 export RANLIB=${ARCH_PREFIX}ranlib
 export CC=${ARCH_PREFIX}gcc
@@ -165,3 +147,4 @@ echo ""
 echo "Tor should be compiled at this point.  Now run 'make install' to"
 echo "install to $PREFIX"
 echo ""
+
