@@ -1659,6 +1659,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     connection_free(n_stream);
     return 0;
   }
+  log_debug(LD_EXIT,"about to start the dns_resolve().");
 
   /* send it off to the gethostbyname farm */
   switch (dns_resolve(n_stream)) {
@@ -1670,6 +1671,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       circ->n_streams = n_stream;
       assert_circuit_ok(circ);
 
+      log_debug(LD_EXIT,"about to call connection_exit_connect().");
       connection_exit_connect(n_stream);
       return 0;
     case -1: /* resolve failed */
