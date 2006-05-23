@@ -1,0 +1,12 @@
+@LOCALSTATEDIR@/log/tor/*log {
+	daily
+	rotate 5
+	compress
+	delaycompress
+	missingok
+	notifempty
+	sharedscripts
+	postrotate
+		/etc/rc.d/init.d/tor reload > /dev/null
+	endscript
+}
