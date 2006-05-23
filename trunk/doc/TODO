@@ -150,7 +150,7 @@ Minor items for 0.1.2.x as time permits.
 R - Streamline how we define a guard node as 'up'. document it somewhere.
   - Better installers and build processes.
     - Commit edmanm's win32 makefile to tor cvs contrib, or write a new one.
-    - Can we cross-compile?
+    o Can we cross-compile?
 R - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
@@ -294,5 +294,5 @@ Website:
 R - make a page with the hidden service diagrams.
 
   - ask Jan to be the translation coordinator? add to volunteer page.
-R - track down the patch for cross-compiling.
+  o track down the patch for cross-compiling.
 
