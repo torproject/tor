@@ -199,7 +199,9 @@ On startup, write our PID to FILE. On clean shutdown, remove FILE.
 .LP
 .TP
 \fBRunAsDaemon \fR\fB0\fR|\fB1\fR\fP
-If 1, Tor forks and daemonizes to the background. (Default: 0)
+If 1, Tor forks and daemonizes to the background. This option has
+no effect on Windows; instead you should use the --service command-line
+option. (Default: 0)
 .LP
 .TP
 \fBSafeLogging \fR\fB0\fR|\fB1\fP
