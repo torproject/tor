@@ -61,6 +61,9 @@ N . memory usage on dir servers. copy less!
 N - oprofile including kernel time on multiple platforms
 
 Items for 0.1.2:
+R - remember the last time we saw one of our entry guards labelled with
+    the GUARD flag. If it's been too long, it is not suitable for use.
+    If it's been really too long, remove it from the list.
   - make tor's use of openssl operate on buffers rather than sockets,
     so we can make use of libevent's buffer paradigm once it has one.
   - make tor's use of libevent tolerate either the socket or the
