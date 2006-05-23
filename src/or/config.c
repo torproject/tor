@@ -2955,7 +2955,12 @@ options_init_logs(or_options_t *options, int validate_only)
   config_line_t *opt;
   int ok;
   smartlist_t *elts;
-  int daemon = options->RunAsDaemon;
+  int daemon =
+#ifdef MS_WINDOWS
+               0;
+#else
+               options->RunAsDaemon;
+#endif
 
   ok = 1;
   elts = smartlist_create();
