@@ -7,12 +7,12 @@ Changes in version 0.1.1.20 - 2006-05-23
       Palfrader).
     - Fix a rare assert error when we've tried all intro points for
       a hidden service and we try fetching the service descriptor again:
-      "Assertion conn->state != AP_CONN_STATE_RENDDESC_WAIT failed"
-    - Setconf SocksListenAddress killed Tor if it fails to bind. Now back
+      "Assertion conn->state != AP_CONN_STATE_RENDDESC_WAIT failed".
+    - Setconf SocksListenAddress kills Tor if it fails to bind. Now back
       out and refuse the setconf if it would fail.
     - If you specify a relative torrc path and you set RunAsDaemon in
-      your torrc, then it chdir()'s to the new directory. If you HUP,
-      it tries to load the new torrc location, fails, and exits.
+      your torrc, then it chdir()'s to the new directory. If you then
+      HUP, it tries to load the new torrc location, fails, and exits.
       The fix: no longer allow a relative path to torrc when using -f.
     - Check for integer overflows in more places, when adding elements
       to smartlists. This could possibly prevent a buffer overflow
@@ -21,7 +21,7 @@ Changes in version 0.1.1.20 - 2006-05-23
   o Security fixes, major:
     - When we're printing strings from the network, don't try to print
       non-printable characters. Now we're safer against shell escape
-      sequence exploits, and also against attacks to fool humans into
+      sequence exploits, and also against attacks to fool users into
       misreading their logs.
     - Implement entry guards: automatically choose a handful of entry
       nodes and stick with them for all circuits. Only pick new guards
@@ -55,28 +55,23 @@ Changes in version 0.1.1.20 - 2006-05-23
       periodically, so it's not so bad.)
     - When we were cannibalizing a circuit with a particular exit
       node in mind, we weren't checking to see if that exit node was
-      already present earlier in the circuit. Oops.
+      already present earlier in the circuit. Now we are.
     - Require server descriptors to list IPv4 addresses -- hostnames
-      are no longer allowed. This also fixes some potential security
-      problems with people providing hostnames as their address and then
+      are no longer allowed. This also fixes potential vulnerabilities
+      to servers providing hostnames as their address and then
       preferentially resolving them so they can partition users.
     - Our logic to decide if the OR we connected to was the right guy
       was brittle and maybe open to a mitm for invalid routers.
 
   o Security fixes, minor:
-    - Adjust tor-spec to parameterize cell and key lengths. Now Ian
-      Goldberg can prove things about our handshake protocol more
+    - Adjust tor-spec.txt to parameterize cell and key lengths. Now
+      Ian Goldberg can prove things about our handshake protocol more
       easily.
-    - Make dirservers generate a separate "guard" flag to mean
-      "would make a good entry guard". Clients now honor the "guard"
-      flag rather than looking at is_fast or is_stable.
-    - Fix a possible way to DoS dirservers.
+    - Make directory authorities generate a separate "guard" flag to
+      mean "would make a good entry guard". Clients now honor the
+      is_guard flag rather than looking at is_fast or is_stable.
     - Try to list MyFamily elements by key, not by nickname, and warn
       if we've not heard of a server.
-    - When the client asked for a rendezvous port that the hidden
-      service didn't want to provide, we were sending an IP address
-      back along with the end cell. Fortunately, it was zero. But stop
-      that anyway.
     - Start using RAND_bytes rather than RAND_pseudo_bytes from
       OpenSSL. Also, reseed our entropy every hour, not just at
       startup. And add entropy in 512-bit chunks, not 160-bit chunks.
@@ -94,14 +89,19 @@ Changes in version 0.1.1.20 - 2006-05-23
       It's important to keep them separate because internal circuits
       have their last hops picked like middle hops, rather than like
       exit hops. So exiting on them will break the user's expectations.
+    - Fix a possible way to DoS dirservers.
+    - When the client asked for a rendezvous port that the hidden
+      service didn't want to provide, we were sending an IP address
+      back along with the end cell. Fortunately, it was zero. But stop
+      that anyway.
 
   o Packaging improvements:
-    - Implement --with-libevent-dir option to ./configure. Also, improve
+    - Implement --with-libevent-dir option to ./configure. Improve
       search techniques to find libevent, and use those for openssl too.
-    - Fix a couple of bugs in OpenSSL detection. Also, deal better when
+    - Fix a couple of bugs in OpenSSL detection. Deal better when
       there are multiple SSLs installed with different versions.
     - Avoid warnings about machine/limits.h on Debian GNU/kFreeBSD.
-    - On non-gcc compilers (e.g. solaris), use "-g -O" instead of
+    - On non-gcc compilers (e.g. Solaris's cc), use "-g -O" instead of
       "-Wall -g -O2".
     - Make unit tests (and other invocations that aren't the real Tor)
       run without launching listeners, creating subdirectories, and so on.
@@ -116,20 +116,22 @@ Changes in version 0.1.1.20 - 2006-05-23
       connections.
     - Start shipping socks-extensions.txt, tor-doc-unix.html,
       tor-doc-server.html, and stylesheet.css in the tarball.
-    - Stop shipping tor-doc.html in the tarball.
-    - No longer ship INSTALL and README files -- they are useless now.
-    - Add Peter Palfrader's check-tor script to tor/contrib/
-      It lets you easily check whether a given server (referenced by
-      nickname) is reachable by you.
+    - Stop shipping tor-doc.html, INSTALL, and README in the tarball.
+      They are useless now.
+    - Add Peter Palfrader's contributed check-tor script. It lets you
+      easily check whether a given server (referenced by nickname)
+      is reachable by you.
     - Add BSD-style contributed startup script "rc.subr" from Peter
       Thoenen.
 
   o Directory improvements -- new directory protocol:
     - See tor/doc/dir-spec.txt for all the juicy details. Key points:
+    - Authorities and caches publish individual descriptors (by
+      digest, by fingerprint, by "all", and by "tell me yours").
     - Clients don't download or use the old directory anymore. Now they
-      download and use network-statuses from the trusted dirservers,
-      and fetch individual server descriptors as needed from mirrors.
-    - Clients don't download descriptors for non-running servers.
+      download network-statuses from the directory authorities, and
+      fetch individual server descriptors as needed from mirrors.
+    - Clients don't download descriptors of non-running servers.
     - Download descriptors by digest, not by fingerprint. Caches try to
       download all listed digests from authorities; clients try to
       download "best" digests from caches. This avoids partitioning
@@ -149,16 +151,16 @@ Changes in version 0.1.1.20 - 2006-05-23
     - Add a new flag to network-status indicating whether the server
       can answer v2 directory requests too.
     - Directory mirrors now cache up to 16 unrecognized network-status
-      docs. Now we can add new authdirservers and they'll be cached too.
+      docs, so new directory authorities will be cached too.
     - Stop parsing, storing, or using running-routers output (but
       mirrors still cache and serve it).
-    - Clients consider a threshold of versioning dirservers (dirservers
-      who have an opinion about which Tor versions are still recommended)
+    - Clients consider a threshold of "versioning" directory authorities
       before deciding whether to warn the user that he's obsolete.
-    - Publish individual descriptors (by fingerprint, by "all", and by
-      "tell me yours").
-    - Publish client and server recommended versions separately.
+    - Authorities publish separate sorted lists of recommended versions
+      for clients and for servers.
     - Change DirServers config line to note which dirs are v1 authorities.
+    - Put nicknames on the DirServer line, so we can refer to them
+      without requiring all our users to memorize their IP addresses.
     - Remove option when getting directory cache to see whether they
       support running-routers; they all do now. Replace it with one
       to see whether caches support v2 stuff.
@@ -169,17 +171,19 @@ Changes in version 0.1.1.20 - 2006-05-23
       authorities, then don't try to cache any v1 directories.
 
   o Other directory improvements:
-    - Add lefkada.eecs.harvard.edu as a fourth authoritative directory
-      server.
-    - Add tor.dizum.com as the fifth authoritative directory server.
-    - Authoritative dirservers no longer require an open connection from
+    - Add lefkada.eecs.harvard.edu and tor.dizum.com as fourth and
+      fifth authoritative directory servers.
+    - Directory authorities no longer require an open connection from
       a server to consider him "reachable". We need this change because
-      when we add new auth dirservers, old servers won't know not to
-      hang up on them.
+      when we add new directory authorities, old servers won't know not
+      to hang up on them.
     - Dir authorities now do their own external reachability testing
       of each server, and only list as running the ones they found to
       be reachable. We also send back warnings to the server's logs if
       it uploads a descriptor that we already believe is unreachable.
+    - Spread the directory authorities' reachability testing over the
+      entire testing interval, so we don't try to do 500 TLS's at once
+      every 20 minutes.
     - Make the "stable" router flag in network-status be the median of
       the uptimes of running valid servers, and make clients pay
       attention to the network-status flags. Thus the cutoff adapts
@@ -188,9 +192,6 @@ Changes in version 0.1.1.20 - 2006-05-23
     - Make the v2 dir's "Fast" flag based on relative capacity, just
       like "Stable" is based on median uptime. Name everything in the
       top 7/8 Fast, and only the top 1/2 gets to be a Guard.
-    - Make directory servers return better http 404 error messages
-      instead of a generic "Servers unavailable".
-    - When writing the RecommendedVersions lines, sort them first.
     - Retry directory requests if we fail to get an answer we like
       from a given dirserver (we were retrying before, but only if
       we fail to connect).
@@ -205,23 +206,23 @@ Changes in version 0.1.1.20 - 2006-05-23
       entries as "don't tell this to controllers", so we avoid cycles.
     - New controller function "getinfo accounting", to ask how
       many bytes we've used in this time period.
-    - Add a "RESETCONF" command so you can set config options like
+    - Add a "resetconf" command so you can set config options like
       AllowUnverifiedNodes and LongLivedPorts to "". Also, if you give
       a config option in the torrc with no value, then it clears it
       entirely (rather than setting it to its default).
-    - Add a "GETINFO config-file" to tell us where torrc is. Also
+    - Add a "getinfo config-file" to tell us where torrc is. Also
       expose guard nodes, config options/names.
-    - Add a QUIT command (when when using the controller manually).
-    - Add a new signal NEWNYM to "change pseudonyms" -- that is, to stop
-      using any currently-dirty circuits for new streams, so we don't
-      link new actions to old actions. This also occurs on HUP (or
-      SIGNAL RELOAD).
+    - Add a "quit" command (when when using the controller manually).
+    - Add a new signal "newnym" to "change pseudonyms" -- that is, to
+      stop using any currently-dirty circuits for new streams, so we
+      don't link new actions to old actions. This also occurs on HUP
+      or "signal reload".
     - If we would close a stream early (e.g. it asks for a .exit that
       we know would refuse it) but the LeaveStreamsUnattached config
       option is set by the controller, then don't close it.
-    - Add a new controller event type AUTHDIR_NEWDESCS that allows
+    - Add a new controller event type "authdir_newdescs" that allows
       controllers to get all server descriptors that were uploaded to
-      a router in its role as authoritative dirserver.
+      a router in its role as directory authority.
     - New controller option "getinfo desc/all-recent" to fetch the
       latest server descriptor for every router that Tor knows about.
     - Fix the controller's "attachstream 0" command to treat conn like
@@ -233,9 +234,9 @@ Changes in version 0.1.1.20 - 2006-05-23
       changes options that will affect them; and initialize the dns
       worker cache tree whether or not we start out as a server.
     - Add a new circuit purpose 'controller' to let the controller ask
-      for a circuit that Tor won't try to use. Extend the EXTENDCIRCUIT
+      for a circuit that Tor won't try to use. Extend the "extendcircuit"
       controller command to let you specify the purpose if you're starting
-      a new circuit.  Add a new SETCIRCUITPURPOSE controller command to
+      a new circuit.  Add a new "setcircuitpurpose" controller command to
       let you change a circuit's purpose after it's been created.
     - Let the controller ask for "getinfo dir/server/foo" so it can ask
       directly rather than connecting to the dir port. "getinfo
@@ -243,24 +244,20 @@ Changes in version 0.1.1.20 - 2006-05-23
       is enabled.
     - Let the controller tell us about certain router descriptors
       that it doesn't want Tor to use in circuits. Implement
-      SETROUTERPURPOSE and modify +POSTDESCRIPTOR to do this.
+      "setrouterpurpose" and modify "+postdescriptor" to do this.
     - If the controller's *setconf commands fail, collect an error
       message in a string and hand it back to the controller -- don't
       just tell them to go read their logs.
 
   o Scalability, resource management, and performance:
-    - Fix a major load balance bug: we were round-robining in 16 KB
+    - Fix a major load balance bug: we were round-robin reading in 16 KB
       chunks, and servers with bandwidthrate of 20 KB, while downloading
       a 600 KB directory, would starve their other connections. Now we
       try to be a bit more fair.
-    - If we're a server, a client asks for an old-style directory,
-      and our write bucket is empty, don't give it to him. This way
-      small servers can continue to serve the directory *sometimes*,
-      without getting overloaded.
     - Be more conservative about whether to advertise our DirPort.
       The main change is to not advertise if we're running at capacity
-      and either a) we could hibernate or b) our capacity is low and
-      we're using a default DirPort.
+      and either a) we could hibernate ever or b) our capacity is low
+      and we're using a default DirPort.
     - We weren't cannibalizing circuits correctly for
       CIRCUIT_PURPOSE_C_ESTABLISH_REND and
       CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, so we were being forced to
@@ -271,25 +268,14 @@ Changes in version 0.1.1.20 - 2006-05-23
       remove them.
     - Generate 18.0.0.0/8 address policy format in descs when we can;
       warn when the mask is not reducible to a bit-prefix.
-    - On platforms that don't have getrlimit (like Windows), we were
-      artificially constraining ourselves to a max of 1024
-      connections. Now just assume that we can handle as many as 15000
-      connections. Hopefully this won't cause other problems.
-    - Spread the authdirservers' reachability testing over the entire
-      testing interval, so we don't try to do 500 TLS's at once every
-      20 minutes.
-    - Reduce memory requirements in our structs by changing the order
-      of fields.
     - There used to be two ways to specify your listening ports in a
       server descriptor: on the "router" line and with a separate "ports"
       line. Remove support for the "ports" line.
-    - Replace balanced trees with hash tables: this should make stuff
-      significantly faster.
-    - Many other CPU and memory improvements.
-    - Inline bottleneck smartlist functions; use fast versions by default.
-    - Add a "Map from digest to void*" abstraction digestmap_t so we
-      can do less hex encoding/decoding. Use it in router_get_by_digest()
-      to resolve a performance bottleneck.
+    - Reduce memory requirements in our structs by changing the order
+      of fields. Replace balanced trees with hash tables. Inline
+      bottleneck smartlist functions. Add a "Map from digest to void*"
+      abstraction so we can do less hex encoding/decoding, and use it
+      in router_get_by_digest(). Many other CPU and memory improvements.
     - Allow tor_gzip_uncompress to extract as much as possible from
       truncated compressed data. Try to extract as many
       descriptors as possible from truncated http responses (when
@@ -307,8 +293,8 @@ Changes in version 0.1.1.20 - 2006-05-23
       It *works*, but is very slow, so we treat them as if it doesn't.
 
   o Other bugfixes and improvements:
-    - Start storing useful information to $DATADIR/state file, so we
-      can remember things across invocations of Tor. Retain unrecognized
+    - Start storing useful information to $DATADIR/state, so we can
+      remember things across invocations of Tor. Retain unrecognized
       lines so we can be forward-compatible, and write a TorVersion line
       so we can be backward-compatible.
     - If ORPort is set, Address is not explicitly set, and our hostname
@@ -327,13 +313,11 @@ Changes in version 0.1.1.20 - 2006-05-23
     - It turns out we couldn't bootstrap a network since we added
       reachability detection in 0.1.0.1-rc. Good thing the Tor network
       has never gone down. Add an AssumeReachable config option to let
-      servers and dirservers bootstrap. When we're trying to build a
+      servers and authorities bootstrap. When we're trying to build a
       high-uptime or high-bandwidth circuit but there aren't enough
       suitable servers, try being less picky rather than simply failing.
     - Newly bootstrapped Tor networks couldn't establish hidden service
       circuits until they had nodes with high uptime. Be more tolerant.
-    - We were marking servers down when they could not answer every piece
-      of the directory request we sent them. This was far too harsh.
     - Really busy servers were keeping enough circuits open on stable
       connections that they were wrapping around the circuit_id
       space. (It's only two bytes.) This exposed a bug where we would
@@ -346,7 +330,7 @@ Changes in version 0.1.1.20 - 2006-05-23
     - On Windows, you can't always reopen a port right after you've
       closed it. So change retry_listeners() to only close and re-open
       ports that have changed.
-    - Workaround a problem with some http proxies where they refuse GET
+    - Workaround a problem with some http proxies that refuse GET
       requests that specify "Content-Length: 0". Reported by Adrian.
     - Recover better from TCP connections to Tor servers that are
       broken but don't tell you (it happens!); and rotate TLS
@@ -370,8 +354,8 @@ Changes in version 0.1.1.20 - 2006-05-23
       memory leaks better.
     - Never call free() on tor_malloc()d memory. This will help us
       use dmalloc to detect memory leaks.
-    - Some Tor servers process billions of cells per day. These statistics
-      need to be uint64_t's.
+    - Some Tor servers process billions of cells per day. These
+      statistics are now uint64_t's.
     - Check [X-]Forwarded-For headers in HTTP requests when generating
       log messages. This lets people run dirservers (and caches) behind
       Apache but still know which IP addresses are causing warnings.
@@ -384,8 +368,8 @@ Changes in version 0.1.1.20 - 2006-05-23
       and its existence is confusing some users.
 
   o Config option fixes:
-    - Add a new config option ExitPolicyRejectPrivate which defaults to
-      1. This means all exit policies will begin with rejecting private
+    - Add a new config option ExitPolicyRejectPrivate which defaults
+      to on. Now all exit policies will begin with rejecting private
       addresses, unless the server operator explicitly turns it off.
     - Bump the default bandwidthrate to 3 MB, and burst to 6 MB.
     - Add new ReachableORAddresses and ReachableDirAddresses options
@@ -405,10 +389,9 @@ Changes in version 0.1.1.20 - 2006-05-23
       e.g. ExitPolicy, and it has no value, warn and skip rather than
       silently resetting it to its default.
     - Setconf was appending items to linelists, not clearing them.
-    - Add MyFamily to torrc.sample in the server section.
+    - Add MyFamily to torrc.sample in the server section, so operators
+      will be more likely to learn that it exists.
     - Make ContactInfo mandatory for authoritative directory servers.
-    - Put nicknames on the DirServer line, so we can refer to them
-      without requiring all our users to memorize their IP addresses.
     - MaxConn has been obsolete for a while now. Document the ConnLimit
       config option, which is a *minimum* number of file descriptors
       that must be available else Tor refuses to start.
@@ -416,8 +399,8 @@ Changes in version 0.1.1.20 - 2006-05-23
       only warn, never exit, when we're running an obsolete version.
     - Make MonthlyAccountingStart config option truly obsolete now.
     - Correct the man page entry on TrackHostExitsExpire.
-    - Let auth dir servers start without specifying an Address config
-      option.
+    - Let directory authorities start even if they don't specify an
+      Address config option.
     - Change "AllowUnverifiedNodes" to "AllowInvalidNodes", to
       reflect the updated flags in our v2 dir protocol.
 
@@ -425,7 +408,7 @@ Changes in version 0.1.1.20 - 2006-05-23
     - Add a new config option FastFirstHopPK (on by default) so clients
       do a trivial crypto handshake for their first hop, since TLS has
       already taken care of confidentiality and authentication.
-    - Let the user set ControlListenAddress in the torrc.  This can be
+    - Let the user set ControlListenAddress in the torrc. This can be
       dangerous, but there are some cases (like a secured LAN) where it
       makes sense.
     - New config options to help controllers: FetchServerDescriptors
@@ -435,17 +418,20 @@ Changes in version 0.1.1.20 - 2006-05-23
     - Also let the controller set the __AllDirActionsPrivate config
       option if you want all directory fetches/publishes to happen via
       Tor (it assumes your controller bootstraps your circuits).
-    - "HardwareAccel" config option: support for crypto hardware
+    - Add "HardwareAccel" config option: support for crypto hardware
       accelerators via OpenSSL. Off by default, until we find somebody
       smart who can test it for us. (It appears to produce seg faults
       in at least some cases.)
-    - New config option "AuthDirRejectUnlisted" for auth dirservers as
-      a panic button: if we get flooded with unusable servers we can
+    - New config option "AuthDirRejectUnlisted" for directory authorities
+      as a panic button: if we get flooded with unusable servers we can
       revert to only listing servers in the approved-routers file.
-    - Auth dir servers can now mark a fingerprint as "!reject" or
-      "!invalid" in the approved-routers file (as its nickname), to
-      refuse descriptors outright or include them but marked as invalid.
-    - Add a new config option TestSocks so people can see if their
+    - Directory authorities can now reject/invalidate by key and IP,
+      with the config options "AuthDirInvalid" and "AuthDirReject", or
+      by marking a fingerprint as "!reject" or "!invalid" (as its
+      nickname) in the approved-routers file. This is useful since
+      currently we automatically list servers as running and usable
+      even if we know they're jerks.
+    - Add a new config option TestSocks so people can see whether their
       applications are using socks4, socks4a, socks5-with-ip, or
       socks5-with-fqdn. This way they don't have to keep mucking
       with tcpdump and wondering if something got cached somewhere.
@@ -454,10 +440,6 @@ Changes in version 0.1.1.20 - 2006-05-23
       every single internal or nonroutable network space.
     - Accept "private:*" in routerdesc exit policies; not generated yet
       because older Tors do not understand it.
-    - Dirservers can now reject/invalidate by key and IP, with the
-      config options "AuthDirInvalid" and "AuthDirReject". This is
-      useful since currently we automatically list servers as running
-      and usable even if we know they're jerks.
     - Add configuration option "V1AuthoritativeDirectory 1" which
       moria1, moria2, and tor26 have set.
     - Implement an option, VirtualAddrMask, to set which addresses
@@ -483,8 +465,10 @@ Changes in version 0.1.1.20 - 2006-05-23
     - Divide log messages into logging domains. Once we put some sort
       of interface on this, it will let people looking at more verbose
       log levels specify the topics they want to hear more about.
-    - Provide dire warnings to any users who set DirServer; move it out
-      of torrc.sample and into torrc.complete.
+    - Log server fingerprint on startup, so new server operators don't
+      have to go hunting around their filesystem for it.
+    - Provide dire warnings to any users who set DirServer manually;
+      move it out of torrc.sample and into torrc.complete.
     - Make the log message less scary when all the dirservers are
       temporarily unreachable.
     - When tor_socketpair() fails in Windows, give a reasonable
@@ -494,8 +478,8 @@ Changes in version 0.1.1.20 - 2006-05-23
       culling them.
     - Handle duplicate lines in approved-routers files without warning.
     - We were whining about using socks4 or socks5-with-local-lookup
-      even when it's an IP in the "virtual" range we designed exactly
-      for this case.
+      even when it's an IP address in the "virtual" range we designed
+      exactly for this case.
     - Check for named servers when looking them up by nickname;
       warn when we're calling a non-named server by its nickname;
       don't warn twice about the same name.
@@ -526,15 +510,11 @@ Changes in version 0.1.1.20 - 2006-05-23
       "Got an end because of misc error, but we're not an AP. Closing."
     - Fix wrong log message when you add a "HiddenServiceNodes" config
       line without any HiddenServiceDir line (reported by Chris Thomas).
-    - Authdirs now stop whining so loudly about bad descriptors that
-      they fetch from other dirservers. So when there's a log complaint,
-      it's for sure from a freshly uploaded descriptor.
+    - Directory authorities now stop whining so loudly about bad
+      descriptors that they fetch from other dirservers. So when there's
+      a log complaint, it's for sure from a freshly uploaded descriptor.
     - When logging via syslog, include the pid whenever we provide
       a log entry. Suggested by Todd Fries.
-    - When we get an EOF or a timeout on a directory connection, note
-      how many bytes of serverdesc we are dropping. This will help
-      us determine whether it is smart to parse incomplete serverdesc
-      responses.
     - When we're shutting down and we do something like try to post a
       server descriptor or rendezvous descriptor, don't complain that
       we seem to be unreachable. Of course we are, we're shutting down.
@@ -545,8 +525,6 @@ Changes in version 0.1.1.20 - 2006-05-23
       more likely to realize if they add bad characters (like quotes)
       to the torrc.
     - NT service patch from Matt Edman to improve error messages on Win32.
-    - Log server fingerprint on startup, so new server operators don't
-      have to go hunting around their filesystem for it.
 
 
 Changes in version 0.1.0.17 - 2006-02-17
