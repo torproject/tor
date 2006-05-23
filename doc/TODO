@@ -61,6 +61,10 @@ N . memory usage on dir servers. copy less!
 N - oprofile including kernel time on multiple platforms
 
 Items for 0.1.2:
+  - make tor's use of openssl operate on buffers rather than sockets,
+    so we can make use of libevent's buffer paradigm once it has one.
+  - make tor's use of libevent tolerate either the socket or the
+    buffer paradigm; includes unifying the functions in connect.c.
   - support dir 503s better
     o clients don't log as loudly when they receive them
     - they don't count toward the 3-strikes rule
