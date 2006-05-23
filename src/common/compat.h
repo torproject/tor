@@ -223,21 +223,10 @@ const char *tor_socket_strerror(int e);
 /* ===== OS compatibility */
 const char *get_uname(void);
 
-/* Some platforms segfault when you try to access a multi-byte type
- * that isn't aligned to a word boundary.  The macros and/or functions
- * below can be used to access unaligned data on any platform.
- */
-#ifdef UNALIGNED_INT_ACCESS_OK
-#define get_uint16(cp) (*(uint16_t*)(cp))
-#define get_uint32(cp) (*(uint32_t*)(cp))
-#define set_uint16(cp,v) do { *(uint16_t*)(cp) = (v); } while (0)
-#define set_uint32(cp,v) do { *(uint32_t*)(cp) = (v); } while (0)
-#else
 uint16_t get_uint16(const char *cp);
 uint32_t get_uint32(const char *cp);
 void set_uint16(char *cp, uint16_t v);
 void set_uint32(char *cp, uint32_t v);
-#endif
 
 int set_max_file_descriptors(unsigned long limit, unsigned long cap);
 int switch_id(char *user, char *group);

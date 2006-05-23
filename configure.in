@@ -398,35 +398,6 @@ AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
 
 AC_CHECK_SIZEOF(cell_t)
 
-# Now, let's see about alignment requirements.  On some platforms, we override
-# the default.
-case $host in
- ia64-*-* | arm-*-* | sparc-*-* | sparc64-*-* )
-    tor_cv_unaligned_ok=no
-    ;;
- # On the following architectures unaligned access works, but is not done in
- # hardware.  This means that when you try to do unaligned access the kernel
- # gets to sort out an exception and then work around to somehow make your
- # reqest work, which is quite expensive.  Therefore it's probably better to
- # not even do it.
- alpha-*-* | mips-*-* | mipsel-*-* )
-    tor_cv_unaligned_ok=no
-    ;;
- *)
-AC_CACHE_CHECK([whether unaligned int access is allowed], tor_cv_unaligned_ok,
-[AC_RUN_IFELSE([AC_LANG_SOURCE(
-[[int main () { char s[] = "A\x00\x00\x00\x00\x00\x00\x00";
-return *(int*)(&s[1]); }]])],
-       [tor_cv_unaligned_ok=yes],
-       [tor_cv_unaligned_ok=no],
-       [tor_cv_unaligned_ok=cross])])
-esac
-
-if test $tor_cv_unaligned_ok = yes; then
-  AC_DEFINE([UNALIGNED_INT_ACCESS_OK], 1,
-            [Define to 1 iff unaligned int access is allowed])
-fi
-
 # Now make sure that NULL can be represented as zero bytes.
 AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
