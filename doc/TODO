@@ -19,11 +19,11 @@ P       - phobos claims
 
 Must-have items for 0.1.2.x:
 
-  - If we fail to connect via an exit enclave, (warn and) try again
+R - If we fail to connect via an exit enclave, (warn and) try again
     without demanding that exit node.
-  - If we have no predicted ports, don't fetch router descriptors.
+R - If we have no predicted ports, don't fetch router descriptors.
     This way we are more dormant.
-  - non-v1 authorities should not accept rend descs.
+R - non-v1 authorities should not accept rend descs.
   - Directory guards
 R - Server usability
     - look into "uncounting" bytes spent on local connections. so
@@ -147,7 +147,7 @@ Topics to think about during 0.1.2.x development:
 
 Minor items for 0.1.2.x as time permits.
   - The bw_accounting file should get merged into the state file.
-  - Streamline how we define a guard node as 'up'. document it somewhere.
+R - Streamline how we define a guard node as 'up'. document it somewhere.
   - Better installers and build processes.
     - Commit edmanm's win32 makefile to tor cvs contrib, or write a new one.
     - Can we cross-compile?
@@ -167,9 +167,6 @@ N - Display the reasons in 'destroy' and 'truncated' cells under some
     asserts when we're out of file descriptors and crash.
   X the tor client can do the "automatic proxy config url" thing?
     (no, let's leave this for applications like torbutton)
-  - Automatically determine what ports are reachable and start using
-    those, if circuits aren't working and it's a pattern we recognize
-    ("port 443 worked once and port 9001 keeps not working").
 N - Should router info have a pointer to routerstatus?
     - We should at least do something about the duplicated fields.
 
@@ -240,6 +237,9 @@ N   - Vet all pending installer patches
     nodes connect all over.  Rate-limit failed connections, perhaps?
 
 Future version:
+R - Automatically determine what ports are reachable and start using
+    those, if circuits aren't working and it's a pattern we recognize
+    ("port 443 worked once and port 9001 keeps not working").
   - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
   - Handle full buffers without totally borking
   - Rate-limit OR and directory connections overall and per-IP and
