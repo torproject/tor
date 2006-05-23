@@ -443,12 +443,12 @@ get_escaped_string(const char *start, size_t in_len_max,
  * <b>conn</b>-\>outbuf.  The message may be truncated if it is too long,
  * but it will always end with a CRLF sequence.
  *
- * Currently the length of the message is limited to 2048 (including the
+ * Currently the length of the message is limited to 1024 (including the
  * ending \n\r\0. */
 static void
 connection_printf_to_buf(connection_t *conn, const char *format, ...)
 {
-#define CONNECTION_PRINTF_TO_BUF_BUFFERSIZE 2048
+#define CONNECTION_PRINTF_TO_BUF_BUFFERSIZE 1024
   va_list ap;
   char buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE];
   int r;
@@ -2847,8 +2847,12 @@ control_event_descriptors_changed(smartlist_t *routers)
     smartlist_add(identities, tor_strdup(buf));
   });
   if (EVENT_IS_INTERESTING0(EVENT_NEW_DESC)) {
-    msg = smartlist_join_strings(identities, ",", 0, &len);
-    send_control0_event(EVENT_NEW_DESC, len+1, msg);
+    char *ids = smartlist_join_strings(identities, " ", 0, &len);
+    size_t len = strlen(ids)+32;
+    msg = tor_malloc(len);
+    tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
+    send_control1_event_string(EVENT_NEW_DESC, msg);
+    tor_free(ids);
     tor_free(msg);
   }
   if (EVENT_IS_INTERESTING1(EVENT_NEW_DESC)) {
