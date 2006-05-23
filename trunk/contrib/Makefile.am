@@ -3,7 +3,7 @@ DIST_SUBDIRS = osx
 
 confdir = $(sysconfdir)/tor
 
-EXTRA_DIST = exitlist tor-tsocks.conf torify.1 TorControl.py tor.nsi.in tor.sh torctl rc.subr ExerciseServer.py PathDemo.py
+EXTRA_DIST = exitlist tor-tsocks.conf torify.1 TorControl.py tor.nsi.in tor.sh torctl rc.subr ExerciseServer.py PathDemo.py cross.sh
 
 conf_DATA = tor-tsocks.conf
 
