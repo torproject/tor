@@ -339,6 +339,8 @@ dns_resolve(connection_t *exitconn)
   exitconn->state = EXIT_CONN_STATE_RESOLVING;
 
   insert_resolve(resolve);
+  log_debug(LD_EXIT,"Assigning question %s to dnsworker.",
+            escaped_safe_str(exitconn->address));
   return assign_to_dnsworker(exitconn);
 }
 
