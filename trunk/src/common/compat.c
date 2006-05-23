@@ -206,7 +206,6 @@ tor_fix_source_file(const char *fname)
 }
 #endif
 
-#ifndef UNALIGNED_INT_ACCESS_OK
 /**
  * Read a 16-bit value beginning at <b>cp</b>.  Equivalent to
  * *(uint16_t*)(cp), but will not cause segfaults on platforms that forbid
@@ -249,7 +248,6 @@ set_uint32(char *cp, uint32_t v)
 {
   memcpy(cp,&v,4);
 }
-#endif
 
 /**
  * Rename the file <b>from</b> to the file <b>to</b>.  On unix, this is
