@@ -169,6 +169,7 @@ if test $ac_cv_libevent_dir != "(system)"; then
   fi
 fi
 
+if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether we need extra options to link libevent],
                ac_cv_libevent_linker_option, [
     saved_LDFLAGS="$LDFLAGS"
@@ -199,6 +200,7 @@ AC_CACHE_CHECK([whether we need extra options to link libevent],
 
 if test $ac_cv_libevent_linker_option != '(none)' ; then
    LDFLAGS="$ac_cv_libevent_linker_option $LDFLAGS"
+fi
 fi
 
 dnl ------------------------------------------------------
@@ -266,6 +268,8 @@ if test "$ac_cv_openssl_dir" != "(system)"; then
   fi
 fi
 
+if test -z $CROSS_COMPILE
+then
 AC_CACHE_CHECK([whether we need extra options to link OpenSSL],
                ac_cv_openssl_linker_option, [
     saved_LDFLAGS="$LDFLAGS"
@@ -325,6 +329,7 @@ return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
 if test "$ac_cv_openssl_linker_option" != '(none)' ; then
    LDFLAGS="$ac_cv_openssl_linker_option $LDFLAGS"
 fi
+fi
 
 dnl Make sure to enable support for large off_t if avalable.
 
@@ -377,11 +382,18 @@ AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(time_t)
+
+if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
 AC_TRY_RUN([
 int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }],
   tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes)
 ])
+else
+  # Cross-compiling; let's hope the target platform isn't loony.
+  AC_MSG_NOTICE([Cross compiling: assuming that time_t is signed.])
+  tor_cv_time_t_signed=yes
+fi
 
 if test $tor_cv_time_t_signed = yes; then
   AC_DEFINE([TIME_T_IS_SIGNED], 1,
@@ -399,6 +411,7 @@ AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
 AC_CHECK_SIZEOF(cell_t)
 
 # Now make sure that NULL can be represented as zero bytes.
+if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
 [[#include <stdlib.h>
@@ -412,6 +425,12 @@ return memcmp(&p1,&p2,sizeof(char*))?1:0; }]])],
        [tor_cv_null_is_zero=yes],
        [tor_cv_null_is_zero=no],
        [tor_cv_null_is_zero=cross])])
+
+else
+  # Cross-compiling; let's hope that the target isn't raving mad.
+  AC_MSG_NOTICE([Cross-compiling: we'll assume that NULL is represented as a sequence of 0-valued bytes.])
+  tor_cv_null_is_zero=yes
+fi
 
 if test $tor_cv_null_is_zero = yes; then
   AC_DEFINE([NULL_REP_IS_ZERO_BYTES], 1,
