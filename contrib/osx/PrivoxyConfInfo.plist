@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleIdentifier</key>
+	<string>Privoxy configuration for Tor</string>
 	<key>CFBundleGetInfoString</key>
 	<string>Privoxy configuration for Tor</string>
 	<key>CFBundleName</key>
