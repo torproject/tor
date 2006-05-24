@@ -1023,7 +1023,7 @@ handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
     }
   }
   if (options->CookieAuthentication) {
-    if (len == AUTHENTICATION_COOKIE_LEN &&
+    if (password_len == AUTHENTICATION_COOKIE_LEN &&
         !memcmp(authentication_cookie, password, password_len)) {
       goto ok;
     }
