@@ -726,10 +726,11 @@ options_act(or_options_t *old_options)
     smartlist_t *sl = smartlist_create();
     char *errmsg = NULL;
     for (cl = options->RedirectExit; cl; cl = cl->next) {
-      if (parse_redirect_line(sl, cl, &errmsg)<0)
+      if (parse_redirect_line(sl, cl, &errmsg)<0) {
         log_warn(LD_CONFIG, "%s", errmsg);
         tor_free(errmsg);
         return -1;
+      }
     }
     set_exit_redirects(sl);
   }
