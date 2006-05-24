@@ -234,7 +234,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   if ((nid = OBJ_txt2nid("organizationName")) == NID_undef)
     goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   (unsigned char*)"TOR", -1, -1, 0)))
+                                   (unsigned char*)"Tor", -1, -1, 0)))
     goto error;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
@@ -248,7 +248,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   if ((nid = OBJ_txt2nid("organizationName")) == NID_undef)
     goto error;
   if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
-                                   (unsigned char*)"TOR", -1, -1, 0)))
+                                   (unsigned char*)"Tor", -1, -1, 0)))
     goto error;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
