@@ -189,10 +189,11 @@ crypto_global_init(int useAccel)
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
+    if (useAccel < 0) {
+      log_warn(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
+    }
 #ifndef NO_ENGINES
-    if (useAccel) {
-      if (useAccel < 0)
-        log_warn(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
+    if (useAccel > 0) {
       log_info(LD_CRYPTO, "Initializing OpenSSL engine support.");
       ENGINE_load_builtin_engines();
       if (!ENGINE_register_all_complete())
