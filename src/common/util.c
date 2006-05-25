@@ -1697,8 +1697,9 @@ tor_dup_addr(uint32_t addr)
   return tor_strdup(buf);
 }
 
-/* Return true iff <b>name</b> looks like it might be a hostname or IP
- * address of some kind. */
+/* Return true iff <b>name</b> looks like it might be a hostname,
+ * nickname, key, or IP address of some kind, suitable for the
+ * controller's "mapaddress" command. */
 int
 is_plausible_address(const char *name)
 {
@@ -1707,10 +1708,12 @@ is_plausible_address(const char *name)
   /* We could check better here. */
   if (!*name)
     return 0;
+#if 0
   for (cp=name; *cp; cp++) {
     if (*cp != '.' && *cp != '-' && !TOR_ISALNUM(*cp))
       return 0;
   }
+#endif
 
   return 1;
 }
