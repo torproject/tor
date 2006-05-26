@@ -581,11 +581,13 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
 
   check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) {
-    log_info(LD_PROTOCOL,"Peer didn't send a cert! Closing.");
+    log_info(LD_PROTOCOL,"Peer (%s:%d) didn't send a cert! Closing.",
+             conn->address, conn->port);
     return -1;
   }
   check_no_tls_errors();
-  if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, sizeof(nickname))) {
+  if (tor_tls_get_peer_cert_nickname(severity, conn->tls, nickname,
+                                     sizeof(nickname))) {
     log_fn(severity,LD_PROTOCOL,"Other side (%s:%d) has a cert without a "
            "valid nickname. Closing.",
            conn->address, conn->port);
