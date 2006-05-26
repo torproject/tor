@@ -1,5 +1,5 @@
-SUBDIRS = osx
-DIST_SUBDIRS = osx
+SUBDIRS = osx suse
+DIST_SUBDIRS = osx suse
 
 confdir = $(sysconfdir)/tor
 
