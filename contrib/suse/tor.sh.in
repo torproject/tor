@@ -40,12 +40,12 @@ rc_reset
 # Increase open file descriptors a reasonable amount
 ulimit -n 8192
 
-TORCTL=/usr/local/bin/torctl
+TORCTL=@BINDIR@/torctl
 
 # torctl will use these environment variables
-TORUSER=_tor
+TORUSER=@TORUSER@
 export TORUSER
-TORGROUP=_tor
+TORGROUP=@TORGROUP@
 export TORGROUP
 
 if [ -x /bin/su ] ; then
