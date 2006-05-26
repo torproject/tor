@@ -1722,7 +1722,7 @@ tor_dup_addr(uint32_t addr)
 int
 is_plausible_address(const char *name)
 {
-  const char *cp;
+//  const char *cp;
   tor_assert(name);
   /* We could check better here. */
   if (!*name)
