@@ -598,7 +598,7 @@ fi
 
 echo "confdir: $CONFDIR"
 
-AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/tor.sh)
+AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh)
 
 if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
   ./contrib/updateVersions.pl
