@@ -3463,8 +3463,8 @@ update_router_descriptor_client_downloads(time_t now)
            (int)(now-last_routerdesc_download_attempted));
       } else {
         log_info(LD_DIR,
-           "There are not many downloadable routerdescs, but we've "
-           "never downloaded descriptors before.  Downloading.");
+           "There are not many downloadable routerdescs, but we haven't "
+           "tried downloading descriptors recently. Downloading.");
       }
     }
   }
