@@ -112,8 +112,8 @@ static char* nt_strerror(uint32_t errnum);
 /** How old do we let a connection to an OR get before deciding it's
  * obsolete? */
 #define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7)
-/** How long do we OR connections to handshake before we decide that they
- * could be obsolete? */
+/** How long do we let OR connections handshake before we decide that
+ * they are obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT           (60)
 
 /********* END VARIABLES ************/
