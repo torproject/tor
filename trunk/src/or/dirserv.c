@@ -656,7 +656,7 @@ list_single_server_status(routerinfo_t *desc, int is_live)
 /** Each server needs to have passed a reachability test no more
  * than this number of seconds ago, or he is listed as down in
  * the directory. */
-#define REACHABLE_TIMEOUT (30*60)
+#define REACHABLE_TIMEOUT (45*60)
 
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
