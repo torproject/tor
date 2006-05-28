@@ -87,6 +87,9 @@ const char compat_c_id[] =
 #ifdef HAVE_SYS_UTIME_H
 #include <sys/utime.h>
 #endif
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#endif
 
 #include "log.h"
 #include "util.h"
@@ -102,6 +105,63 @@ const char compat_c_id[] =
 /* used by inet_addr, not defined on solaris anywhere!? */
 #ifndef INADDR_NONE
 #define INADDR_NONE ((unsigned long) -1)
+#endif
+
+#ifdef HAVE_SYS_MMAP
+const char *
+tor_mmap_file(const char *filename, size_t *size)
+{
+  int fd; /* router file */
+  char *string;
+  int page_size;
+
+  tor_assert(filename);
+  tor_assert(size);
+
+  fd = open(filename, O_RDONLY, 0);
+  if (fd<0) {
+    log_warn(LD_FS,"Could not open \"%s\" for mmap().",filename);
+    return NULL;
+  }
+
+  *size = lseek(fd, 0, SEEK_END);
+  lseek(fd, 0, SEEK_SET);
+  /* ensure page alignment */
+  page_size = getpagesize();
+  *size += (page_size + (page_size-(*size%page_size)));
+
+  string = mmap(0, *size, PROT_READ, MAP_PRIVATE, fd, 0);
+  if(string == MAP_FAILED) {
+    log_warn(LD_FS,"Could not mmap file \"%s\": %s", filename,
+             strerror(errno));
+    return NULL;
+  }
+
+  close(fd);
+
+  return string;
+}
+
+void
+tor_munmap_file(const char *memory, size_t size)
+{
+  munmap((char*)memory, size);
+}
+#else
+const char *
+tor_mmap_file(const char *filename, size_t *size)
+{
+  char *res = read_file_to_str(filename, 1);
+  *size = strlen(res) + 1;
+  return res;
+}
+
+void
+tor_munmap_file(const char *memory, size_t size)
+{
+  char *mem = (char*) memory;
+  tor_free(mem);
+}
 #endif
 
 /** Replacement for snprintf.  Differs from platform snprintf in two

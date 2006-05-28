@@ -101,6 +101,9 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #define U64_LITERAL(n) (n ## llu)
 #endif
 
+const char *tor_mmap_file(const char *filename, size_t *size);
+void tor_munmap_file(const char *memory, size_t size);
+
 int tor_snprintf(char *str, size_t size, const char *format, ...)
      CHECK_PRINTF(3,4);
 int tor_vsnprintf(char *str, size_t size, const char *format, va_list args);
