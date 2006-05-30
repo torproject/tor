@@ -3435,6 +3435,12 @@ update_router_descriptor_client_downloads(time_t now)
              "Called router_descriptor_client_downloads() on a dir mirror?");
   }
 
+  if (rep_hist_circbuilding_dormant()) {
+    log_info(LD_CIRC, "Skipping descriptor downloads: we haven't need "
+             "any circuits lately.");
+    return;
+  }
+
   /* XXX here's another magic 2 that probably should be replaced
    * by <= smartlist_len(trusted_dir_servers)/2
    * or by a function returning same.  -- weasel */

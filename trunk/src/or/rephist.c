@@ -751,6 +751,8 @@ rep_hist_load_state(or_state_t *state, char **err)
   return 0;
 }
 
+/*********************************************************************/
+
 /** A list of port numbers that have been used recently. */
 static smartlist_t *predicted_ports_list=NULL;
 /** The corresponding most recently used time for each port. */
@@ -909,6 +911,15 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
     *need_uptime = 1;
   if (predicted_internal_capacity_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
     *need_capacity = 1;
+  return 1;
+}
+
+/** Return 1 if we have no need for circuits currently, else return 0. */
+int
+rep_hist_circbuilding_dormant(void)
+{
+  if (predicted_ports_list || predicted_internal_time)
+    return 0; /* nothing used lately. */
   return 1;
 }
 

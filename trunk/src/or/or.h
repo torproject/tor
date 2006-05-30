@@ -473,6 +473,7 @@ typedef enum {
 #define RESOLVED_TYPE_ERROR_TRANSIENT 0xF0
 #define RESOLVED_TYPE_ERROR 0xF1
 
+/* XXX We should document the meaning of these. */
 #define END_CIRC_AT_ORIGIN           -1
 #define _END_CIRC_REASON_MIN            0
 #define END_CIRC_REASON_NONE            0
@@ -2084,6 +2085,8 @@ void rep_hist_note_bytes_read(int num_bytes, time_t when);
 void rep_hist_note_bytes_written(int num_bytes, time_t when);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(void);
+void rep_hist_update_state(or_state_t *state);
+int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);
 
 void rep_hist_note_used_port(uint16_t port, time_t now);
@@ -2094,8 +2097,7 @@ void rep_hist_note_used_internal(time_t now, int need_uptime,
 int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
                                     int *need_capacity);
 
-void rep_hist_update_state(or_state_t *state);
-int rep_hist_load_state(or_state_t *state, char **err);
+int rep_hist_circbuilding_dormant(void);
 
 void rep_hist_free_all(void);
 
