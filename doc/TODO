@@ -17,32 +17,21 @@ P       - phobos claims
     - <arma> should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?
 
-Must-have items for 0.1.2.x:
-
-R - If we fail to connect via an exit enclave, (warn and) try again
-    without demanding that exit node.
-R o If we have no predicted ports, don't fetch router descriptors.
-    This way we are more dormant.
-R - non-v1 authorities should not accept rend descs.
-  - Directory guards
-R - Server usability
-    - look into "uncounting" bytes spent on local connections. so
-      we can bandwidthrate but still have fast downloads.
-    - Write limiting; separate token bucket for write
-    - dir answers include a your-ip-address-is header, so we can
-      break our dependency on dyndns.
-    - "bandwidth classes", for incoming vs initiated-here conns.
-N - Better hidden service performance, with possible redesign.
-  - Asynchronous DNS
-    - What to use? C-ares? Libdns? AGL's patch?
-  - Better estimates in the directory of whether servers have good uptime
-    (high expected time to failure) or good guard qualities (high
-    fractional uptime).
-    - AKA Track uptime as %-of-time-up, as well as time-since-last-down.
-N . memory usage on dir servers. copy less!
-    o Remember offset and location of each descriptor in the cache/journal
-    - When sending a big pile of descs to a client, don't shove them all on
-      the buffer at once.
+Items for 0.1.2.x:
+  - Servers are easy to setup and run: being a relay is about as easy as
+    being a client.
+    - Reduce resource load
+      - look into "uncounting" bytes spent on local connections. so
+        we can bandwidthrate but still have fast downloads.
+      - Write limiting; separate token bucket for write
+      - dir answers include a your-ip-address-is header, so we can
+        break our dependency on dyndns.
+      - Count TLS bandwidth more accurately
+      - Write-limit directory responses.
+    . Improve memory usage on tight-memory machines.
+      o Remember offset and location of each descriptor in the cache/journal
+      - When sending a big pile of descs to a client, don't shove them all on
+        the buffer at once.
       X This may require routerinfo_t or signed_descriptor_t to get slightly
         refcounted.  (Only slightly; we'd only need to know whether it's on
         the routerlist->routers or routerlist->old_routers, and how many
@@ -55,31 +44,142 @@ N . memory usage on dir servers. copy less!
         clients can already handle truncated replies.
       - But what do we do about compression? That's the part that makes
         stuff hard.
+      - Make clients handle missing Content-Length tags.
+      - Implement on-the-fly compression
+      - Make sure offset is correct in the presence of windows FS insanity.
+      - Consider whether it's smart to mmap cache files where possible.
+      - Consider whether it's smart to lazy-load routerdescs on non-directories.
+    - "bandwidth classes", for incoming vs initiated-here conns.
+N   - Asynchronous DNS
 
-    - Make sure offset is correct in the presence of windows FS insanity.
-    - Consider whether it's smart to mmap cache files where possible.
-    - Consider whether it's smart to lazy-load routerdescs on non-directories.
-N - oprofile including kernel time on multiple platforms
+  - Security improvements
+    - Directory guards
+R   - remember the last time we saw one of our entry guards labelled with
+      the GUARD flag. If it's been too long, it is not suitable for use.
+      If it's been really too long, remove it from the list.
 
-Items for 0.1.2:
-R - remember the last time we saw one of our entry guards labelled with
-    the GUARD flag. If it's been too long, it is not suitable for use.
-    If it's been really too long, remove it from the list.
-  - make tor's use of openssl operate on buffers rather than sockets,
-    so we can make use of libevent's buffer paradigm once it has one.
-  - make tor's use of libevent tolerate either the socket or the
-    buffer paradigm; includes unifying the functions in connect.c.
-  - support dir 503s better
-    o clients don't log as loudly when they receive them
-    - they don't count toward the 3-strikes rule
-      - should there be some threshold of 503's after which we give up?
-    - think about how to split "router is down" from "dirport shouldn't
-      be tried for a while"?
-    - authorities should *never* 503 a cache, but *should* 503 clients
-      when they feel like it.
-    - update dir-spec with what we decided for each of these
-  - We need a separate list of "hidserv authorities" if we want to
-    retire moria1 from the main list.
+  - Make reverse DNS work.
+
+  - Performance improvements
+    - Better estimates in the directory of whether servers have good uptime
+      (high expected time to failure) or good guard qualities (high
+      fractional uptime).
+      - AKA Track uptime as %-of-time-up, as well as time-since-last-down.
+    - Clients should prefer to avoid exit nodes for non-exit path positions.
+      (bug 200)
+    - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
+
+  - Critical but minor bugs, backport candiates.
+R   - Failed rend desc fetches sometimes don't get retried.
+    - If we fail to connect via an exit enclave, (warn and) try again
+      without demanding that exit node.
+R   - non-v1 authorities should not accept rend descs.
+    - We need a separate list of "hidserv authorities" if we want to
+      retire moria1 from the main list.
+    - support dir 503s better
+      o clients don't log as loudly when they receive them
+      - they don't count toward the 3-strikes rule
+        - should there be some threshold of 503's after which we give up?
+      - think about how to split "router is down" from "dirport shouldn't
+        be tried for a while"?
+      - authorities should *never* 503 a cache, but *should* 503 clients
+        when they feel like it.
+      - update dir-spec with what we decided for each of these
+    - provide no-cache no-index headers from the dirport?
+
+  - Windows server usability
+    - Solve the ENOBUFS problem.
+      - make tor's use of openssl operate on buffers rather than sockets,
+        so we can make use of libevent's buffer paradigm once it has one.
+      - make tor's use of libevent tolerate either the socket or the
+        buffer paradigm; includes unifying the functions in connect.c.
+    - We need a getrlimit equivalent on Windows so we can reserve some
+      file descriptors for saving files, etc. Otherwise we'll trigger
+      asserts when we're out of file descriptors and crash.
+M   - rewrite how libevent does select() on win32 so it's not so very slow.
+      - Add overlapped IO
+
+  - When we connect to a Tor server, it sends back a cell listing
+    the IP it believes it is using. Use this to block dvorak's attack.
+    Also, this is a fine time to say what time you think it is.
+    o Verify that a new cell type is okay with deployed codebase
+    - Specify
+    - Implement
+
+  - Directory system improvements
+    - config option to publish what ports you listen on, beyond
+      ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
+      - Parse this.
+      - Relay this in networkstatus.
+
+N - Exitlist should avoid outputting the same IP address twice.
+
+N - Write path-spec.txt
+
+  - Packaging
+    - Tell people about OSX Uninstaller
+    - Quietly document NT Service options
+
+  - Docs
+    - More prominently, we should have a recommended apps list.
+      - recommend gaim.
+      - unrecommend IE because of ftp:// bug.
+    - torrc.complete.in needs attention?
+
+Topics to think about during 0.1.2.x development:
+  * Figure out incentives.
+    - (How can we make this tolerant of a bad v0?)
+  * Figure out non-clique.
+  * Figure out China.
+  - Figure out avoiding duplicate /24 lines
+  - Figure out partial network knowledge.
+  - Figure out hidden services.
+
+Minor items for 0.1.2.x as time permits.
+  - The bw_accounting file should get merged into the state file.
+  - Streamline how we define a guard node as 'up'.
+  - Better installers and build processes.
+    - Commit edmanm's win32 makefile to tor cvs contrib, or write a new one.
+  - Christian Grothoff's attack of infinite-length circuit.
+    the solution is to have a separate 'extend-data' cell type
+    which is used for the first N data cells, and only
+    extend-data cells can be extend requests.
+    - Specify, including thought about anonymity implications.
+  - Display the reasons in 'destroy' and 'truncated' cells under some
+    circumstances?
+  - We need a way for the authorities to declare that nodes are
+    in a family.  Also, it kinda sucks that family declarations use O(N^2)
+    space in the descriptors.
+  - If the server is spewing complaints about raising your ulimit -n,
+    we should add a note about this to the server descriptor so other
+    people can notice too.
+  - cpu fixes:
+    - see if we should make use of truncate to retry
+    - kill dns workers more slowly
+  . Directory changes
+    . Some back-out mechanism for auto-approval
+      - a way of rolling back approvals to before a timestamp
+        - Consider minion-like fingerprint file/log combination.
+  - packaging and ui stuff:
+    . multiple sample torrc files
+    . figure out how to make nt service stuff work?
+      . Document it.
+    - Vet all pending installer patches
+      - Win32 installer plus privoxy, sockscap/freecap, etc.
+      - Vet win32 systray helper code
+
+  . Update the hidden service stuff for the new dir approach.
+    - switch to an ascii format, maybe sexpr?
+    - authdirservers publish blobs of them.
+    - other authdirservers fetch these blobs.
+    - hidserv people have the option of not uploading their blobs.
+    - you can insert a blob via the controller.
+    - and there's some amount of backwards compatibility.
+    - teach clients, intro points, and hidservs about auth mechanisms.
+    - come up with a few more auth mechanisms.
+  - auth mechanisms to let hidden service midpoint and responder filter
+    connection requests.
+
   - Improve controller
       - change circuit status events to give more details, like purpose,
         whether they're internal, when they become dirty, when they become
@@ -106,127 +206,6 @@ R - remember the last time we saw one of our entry guards labelled with
         without using SOCKS.
       - Make everything work with hidden services
 
-  - Clients should prefer to avoid exit nodes for non-exit path positions.
-    (bug 200)
-  - Make "setconf" and "hup" behavior cleaner for LINELIST config
-    options (e.g. Log). Bug 238.
-
-  - We need a way for the authorities to declare that nodes are
-    in a family.  Also, it kinda sucks that family declarations use O(N^2)
-    space in the descriptors.
-    - Design
-    - Implement
-
-  - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
-
-  - When we connect to a Tor server, it sends back a cell listing
-    the IP it believes it is using. Use this to block dvorak's attack.
-    Also, this is a fine time to say what time you think it is.
-    o Verify that a new cell type is okay with deployed codebase
-    - Specify
-    - Implement
-
-R - Failed rend desc fetches sometimes don't get retried.
-
-  - Directory system improvements
-    - config option to publish what ports you listen on, beyond
-      ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
-      - Parse this.
-      - Relay this in networkstatus.
-
-    - Non-directories don't need to keep descriptors in memory.
-      - Remember file and offset.
-      - Keep a journal FD for appending router descriptors
-
-  - Make reverse DNS work.
-
-  - provide no-cache no-index headers from the dirport?
-  - exitlist should avoid outputting the same IP address twice.
-
-Topics to think about during 0.1.2.x development:
-  - Figure out non-clique.
-  - Figure out partial network knowledge.
-  - Figure out incentives.
-  - Figure out hidden services.
-
-Minor items for 0.1.2.x as time permits.
-  - The bw_accounting file should get merged into the state file.
-R - Streamline how we define a guard node as 'up'. document it somewhere.
-  - Better installers and build processes.
-    - Commit edmanm's win32 makefile to tor cvs contrib, or write a new one.
-R - Christian Grothoff's attack of infinite-length circuit.
-    the solution is to have a separate 'extend-data' cell type
-    which is used for the first N data cells, and only
-    extend-data cells can be extend requests.
-    - Specify, including thought about anonymity implications.
-    - Implement
-N - Display the reasons in 'destroy' and 'truncated' cells under some
-    circumstances?
-  - If the server is spewing complaints about raising your ulimit -n,
-    we should add a note about this to the server descriptor so other
-    people can notice too.
-  - We need a getrlimit equivalent on Windows so we can reserve some
-    file descriptors for saving files, etc. Otherwise we'll trigger
-    asserts when we're out of file descriptors and crash.
-  X the tor client can do the "automatic proxy config url" thing?
-    (no, let's leave this for applications like torbutton)
-N - Should router info have a pointer to routerstatus?
-    - We should at least do something about the duplicated fields.
-
-  X switch accountingmax to count total in+out, not either in or
-    out. it's easy to move in this direction (not risky), but hard to
-    back out if we decide we prefer it the way it already is. hm.
-
-  - cpu fixes:
-    - see if we should make use of truncate to retry
-R   - kill dns workers more slowly
-
-  . Directory changes
-    . Some back-out mechanism for auto-approval
-      - a way of rolling back approvals to before a timestamp
-        - Consider minion-like fingerprint file/log combination.
-
-  - packaging and ui stuff:
-    . multiple sample torrc files
-    - uninstallers
-      . make sure phobos's os x uninstaller works.
-    . figure out how to make nt service stuff work?
-      . Document it.
-    o Add version number to directory.
-N   - Vet all pending installer patches
-      - Win32 installer plus privoxy, sockscap/freecap, etc.
-      - Vet win32 systray helper code
-
-  - document:
-    - recommend gaim.
-    - unrecommend IE because of ftp:// bug.
-    - torrc.complete.in needs attention?
-
-  - Security
-    - Alices avoid duplicate /24 servers.
-    - Analyze how bad the partitioning is or isn't.
-
-  . Update the hidden service stuff for the new dir approach.
-    - switch to an ascii format, maybe sexpr?
-    - authdirservers publish blobs of them.
-    - other authdirservers fetch these blobs.
-    - hidserv people have the option of not uploading their blobs.
-    - you can insert a blob via the controller.
-    - and there's some amount of backwards compatibility.
-    - teach clients, intro points, and hidservs about auth mechanisms.
-    - come up with a few more auth mechanisms.
-  - auth mechanisms to let hidden service midpoint and responder filter
-    connection requests.
-
-  . Come up with a coherent strategy for bandwidth buckets and TLS. (The
-    logic for reading from TLS sockets is likely to overrun the bandwidth
-    buckets under heavy load.  (Really, the logic was never right in the
-    first place.)  Also, we should audit all users of get_pending_bytes().)
-      - Make it harder to circumvent bandwidth caps: look at number of bytes
-        sent across sockets, not number sent inside TLS stream.
-
-M - rewrite how libevent does select() on win32 so it's not so very slow.
-
 Future version:
   - Bind to random port when making outgoing connections to Tor servers,
     to reduce remote sniping attacks.
@@ -234,12 +213,12 @@ Future version:
     before we approve them.
   - Clients should estimate their skew as median of skew from servers
     over last N seconds.
-R - Make router_is_general_exit() a bit smarter once we're sure what it's for.
+  - Make router_is_general_exit() a bit smarter once we're sure what it's for.
   - Audit everything to make sure rend and intro points are just as likely to
     be us as not.
   - Do something to prevent spurious EXTEND cells from making middleman
     nodes connect all over.  Rate-limit failed connections, perhaps?
-R - Automatically determine what ports are reachable and start using
+  - Automatically determine what ports are reachable and start using
     those, if circuits aren't working and it's a pattern we recognize
     ("port 443 worked once and port 9001 keeps not working").
   - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
@@ -253,12 +232,11 @@ R - Automatically determine what ports are reachable and start using
   - tor-resolve script should use socks5 to get better error messages.
   - hidserv offerers shouldn't need to define a SocksPort
     * figure out what breaks for this, and do it.
-  - Relax clique assumptions.
-  X start handling server descriptors without a socksport?
   - tor should be able to have a pool of outgoing IP addresses
     that it is able to rotate through. (maybe)
   - let each hidden service (or other thing) specify its own
     OutboundBindAddress?
+  - Better hidden service performance, with possible redesign.
 
 Blue-sky:
   - Patch privoxy and socks protocol to pass strings to the browser.
