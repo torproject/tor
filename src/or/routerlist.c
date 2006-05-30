@@ -1798,7 +1798,7 @@ routerlist_remove_old_routers(void)
 
   retain = digestmap_new();
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
-  if (server_mode(options) && options->DirPort) {
+  if (options->DirPort) {
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
       {
         SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
@@ -2527,10 +2527,10 @@ void
 update_networkstatus_downloads(time_t now)
 {
   or_options_t *options = get_options();
-  if (server_mode(options) && options->DirPort)
-      update_networkstatus_cache_downloads(time(NULL));
-    else
-      update_networkstatus_client_downloads(time(NULL));
+  if (options->DirPort)
+    update_networkstatus_cache_downloads(time(NULL));
+  else
+    update_networkstatus_client_downloads(time(NULL));
 }
 
 /** Return 1 if all running sufficiently-stable routers will reject
@@ -3430,9 +3430,9 @@ update_router_descriptor_client_downloads(time_t now)
   int should_delay, n_downloadable;
   or_options_t *options = get_options();
 
-  if (server_mode(options) && options->DirPort) {
+  if (options->DirPort) {
     log_warn(LD_BUG,
-             "Called router_descriptor_client_downloads() on a mirror?");
+             "Called router_descriptor_client_downloads() on a dir mirror?");
   }
 
   /* XXX here's another magic 2 that probably should be replaced
@@ -3503,9 +3503,9 @@ update_router_descriptor_cache_downloads(time_t now)
   int n_download;
   or_options_t *options = get_options();
 
-  if (!(server_mode(options) && options->DirPort)) {
+  if (!options->DirPort) {
     log_warn(LD_BUG, "Called update_router_descriptor_cache_downloads() "
-             "on a non-mirror?");
+             "on a non-dir-mirror?");
   }
 
   if (!networkstatus_list || !smartlist_len(networkstatus_list))
@@ -3619,7 +3619,7 @@ void
 update_router_descriptor_downloads(time_t now)
 {
   or_options_t *options = get_options();
-  if (server_mode(options) && options->DirPort) {
+  if (options->DirPort) {
     update_router_descriptor_cache_downloads(now);
   } else {
     update_router_descriptor_client_downloads(now);
