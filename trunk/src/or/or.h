@@ -652,9 +652,8 @@ struct connection_t {
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it.
                   */
-  crypto_pk_env_t *identity_pkey; /**< Public RSA key for the other side's
-                                   * signing key. */
-  char identity_digest[DIGEST_LEN]; /**< Hash of identity_pkey */
+  char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
+                                     * the other side's signing key. */
   char *nickname; /**< Nickname of OR on other side (if any). */
 
   /** Nickname of planned exit node -- used with .exit support. */
