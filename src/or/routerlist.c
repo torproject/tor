@@ -3436,7 +3436,7 @@ update_router_descriptor_client_downloads(time_t now)
   }
 
   if (rep_hist_circbuilding_dormant()) {
-    log_info(LD_CIRC, "Skipping descriptor downloads: we haven't need "
+    log_info(LD_CIRC, "Skipping descriptor downloads: we haven't needed "
              "any circuits lately.");
     return;
   }
