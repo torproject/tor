@@ -386,7 +386,7 @@ $Id$
 
 5. Client operation: downloading information
 
-   Every Tor that is not a directory server (that is, clients and ORs that do
+   Every Tor that is not a directory server (that is, those that do
    not have a DirPort set) implements this section.
 
 5.1. Downloading network-status documents
