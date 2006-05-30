@@ -224,8 +224,6 @@ _connection_free(connection_t *conn)
     }
   }
 
-  if (conn->identity_pkey)
-    crypto_free_pk_env(conn->identity_pkey);
   tor_free(conn->nickname);
   tor_free(conn->socks_request);
   tor_free(conn->incoming_cmd);

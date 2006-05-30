@@ -319,7 +319,6 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
   conn->addr = router->addr;
   conn->port = router->or_port;
   conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
-  conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   connection_or_set_identity_digest(conn, router->cache_info.identity_digest);
   conn->nickname = tor_strdup(router->nickname);
   tor_free(conn->address);
