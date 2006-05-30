@@ -31,6 +31,7 @@ R - Server usability
     - Write limiting; separate token bucket for write
     - dir answers include a your-ip-address-is header, so we can
       break our dependency on dyndns.
+    - "bandwidth classes", for incoming vs initiated-here conns.
 N - Better hidden service performance, with possible redesign.
   - Asynchronous DNS
     - What to use? C-ares? Libdns? AGL's patch?
@@ -153,7 +154,6 @@ Minor items for 0.1.2.x as time permits.
 R - Streamline how we define a guard node as 'up'. document it somewhere.
   - Better installers and build processes.
     - Commit edmanm's win32 makefile to tor cvs contrib, or write a new one.
-    o Can we cross-compile?
 R - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
@@ -202,12 +202,6 @@ N   - Vet all pending installer patches
     - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
 
-  - Bind to random port when making outgoing connections to Tor servers,
-    to reduce remote sniping attacks.
-  - Have new people be in limbo and need to demonstrate usefulness
-    before we approve them.
-  - Clients should estimate their skew as median of skew from servers
-    over last N seconds.
   - Security
     - Alices avoid duplicate /24 servers.
     - Analyze how bad the partitioning is or isn't.
@@ -231,15 +225,20 @@ N   - Vet all pending installer patches
       - Make it harder to circumvent bandwidth caps: look at number of bytes
         sent across sockets, not number sent inside TLS stream.
 
-  - Make router_is_general_exit() a bit smarter once we're sure what it's for.
+M - rewrite how libevent does select() on win32 so it's not so very slow.
 
-  - rewrite how libevent does select() on win32 so it's not so very slow.
+Future version:
+  - Bind to random port when making outgoing connections to Tor servers,
+    to reduce remote sniping attacks.
+  - Have new people be in limbo and need to demonstrate usefulness
+    before we approve them.
+  - Clients should estimate their skew as median of skew from servers
+    over last N seconds.
+R - Make router_is_general_exit() a bit smarter once we're sure what it's for.
   - Audit everything to make sure rend and intro points are just as likely to
     be us as not.
   - Do something to prevent spurious EXTEND cells from making middleman
     nodes connect all over.  Rate-limit failed connections, perhaps?
-
-Future version:
 R - Automatically determine what ports are reachable and start using
     those, if circuits aren't working and it's a pattern we recognize
     ("port 443 worked once and port 9001 keeps not working").
