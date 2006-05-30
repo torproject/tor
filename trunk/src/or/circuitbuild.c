@@ -426,8 +426,7 @@ circuit_n_conn_done(connection_t *or_conn, int status)
         circuit_mark_for_close(circ, END_CIRC_REASON_OR_IDENTITY);
         continue;
       }
-      log_debug(LD_CIRC,
-                "Found circ %d, sending create cell.", circ->n_circ_id);
+      log_debug(LD_CIRC, "Found circ, sending create cell.");
       /* circuit_deliver_create_cell will set n_circ_id and add us to
        * orconn_circuid_circuit_map, so we don't need to call
        * set_circid_orconn here. */
