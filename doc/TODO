@@ -21,7 +21,7 @@ Must-have items for 0.1.2.x:
 
 R - If we fail to connect via an exit enclave, (warn and) try again
     without demanding that exit node.
-R - If we have no predicted ports, don't fetch router descriptors.
+R o If we have no predicted ports, don't fetch router descriptors.
     This way we are more dormant.
 R - non-v1 authorities should not accept rend descs.
   - Directory guards
