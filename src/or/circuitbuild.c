@@ -423,7 +423,7 @@ circuit_n_conn_done(connection_t *or_conn, int status)
                 DIGEST_LEN)) {
       if (!status) { /* or_conn failed; close circ */
         log_info(LD_CIRC,"or_conn failed. Closing circ.");
-        circuit_mark_for_close(circ, END_CIRC_REASON_OR_IDENTITY);
+        circuit_mark_for_close(circ, END_CIRC_REASON_OR_CONN_CLOSED);
         continue;
       }
       log_debug(LD_CIRC, "Found circ, sending create cell.");
