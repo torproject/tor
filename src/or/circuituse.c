@@ -542,8 +542,8 @@ circuit_about_to_close_connection(connection_t *conn)
   } /* end switch */
 }
 
-/** Find each circuit that has been dirty for too long, and has
- * no streams on it: mark it for close.
+/** Find each circuit that has been unused for too long, or dirty
+ * for too long and has no streams on it: mark it for close.
  */
 static void
 circuit_expire_old_circuits(time_t now)
