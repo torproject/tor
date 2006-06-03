@@ -924,7 +924,7 @@ rep_hist_circbuilding_dormant(void)
     return 0;
 
   /* see if we'll still need to build testing circuits */
-  if (server_mode(options) && !check_whether_orport_reachable())
+  if (server_mode(get_options()) && !check_whether_orport_reachable())
     return 0;
   if (!check_whether_dirport_reachable())
     return 0;

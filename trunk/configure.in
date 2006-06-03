@@ -44,6 +44,18 @@ if test $enable_threads = "yes"; then
   AC_DEFINE(ENABLE_THREADS, 1, [Defined if we will try to use multithreading])
 fi
 
+AC_ARG_ENABLE(eventdns,
+     AC_HELP_STRING(--enable-eventdns, enable asynchronous dns module),
+     [case "${enableval}" in 
+        yes) eventdns=true ;;
+        no)  eventdns=false ;;
+        *) AC_MSG_ERROR(bad value for --enable-eventdns) ;;
+      esac], [eventdns=false])
+AM_CONDITIONAL(EVENTDNS, test x$eventdns = xtrue)
+if test x$eventdns = xtrue; then
+   AC_DEFINE([USE_EVENTDNS], 1, "Define to 1 if we'll be using eventdns.c")
+fi
+
 case $host in
    *-*-solaris* )
      AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])
@@ -347,7 +359,7 @@ dnl These headers are not essential
 
 AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h stddef.h inttypes.h utime.h sys/utime.h sys/mman.h)
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam getpwuid ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem mmap)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam getpwuid ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem mmap strtok_r)
 
 if test $enable_threads = "yes"; then
   AC_CHECK_HEADERS(pthread.h)
