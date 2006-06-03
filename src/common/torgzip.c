@@ -15,7 +15,7 @@ const char torgzip_c_id[] =
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#ifdef MS_WINDOWS
+#ifdef _MSC_VER
 #include "..\..\contrib\zlib\zlib.h"
 #else
 #include <zlib.h>

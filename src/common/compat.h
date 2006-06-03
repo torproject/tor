@@ -89,7 +89,7 @@ size_t strlcat(char *dst, const char *src, size_t siz);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _MSC_VER
 #define U64_PRINTF_ARG(a) (a)
 #define U64_SCANF_ARG(a) (a)
 #define U64_FORMAT "%I64u"
