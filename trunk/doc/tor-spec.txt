@@ -571,7 +571,12 @@ when do we rotate which keys (tls, link, etc)?
        The IPv6 address to which the connection was made [16 octets]
        A number of seconds (TTL) for which the address may be cached [4 octets]
    [XXXX Versions of Tor before 0.1.1.6 ignore and do not generate the TTL
-   field.  No version of Tor currently generates the IPv6 format.]
+   field.  No version of Tor currently generates the IPv6 format.
+
+   Tor servers before 0.1.2.0 set the TTL field to a fixed value.  Later
+   versions set the TTL to the last value seen from a DNS server, and expire
+   their own cached entries after a fixed interval.  This prevents certain
+   attacks.]
 
    The OP waits for a RELAY_CONNECTED cell before sending any data.
    Once a connection has been established, the OP and exit node

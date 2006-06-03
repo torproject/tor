@@ -131,7 +131,7 @@ tor_mmap_file(const char *filename, size_t *size)
   *size += (page_size + (page_size-(*size%page_size)));
 
   string = mmap(0, *size, PROT_READ, MAP_PRIVATE, fd, 0);
-  if(string == MAP_FAILED) {
+  if (string == MAP_FAILED) {
     log_warn(LD_FS,"Could not mmap file \"%s\": %s", filename,
              strerror(errno));
     return NULL;

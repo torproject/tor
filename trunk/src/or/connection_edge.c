@@ -196,8 +196,7 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   if (reason == END_STREAM_REASON_EXITPOLICY &&
       !connection_edge_is_rendezvous_stream(conn)) {
     set_uint32(payload+1, htonl(conn->addr));
-    /* XXXX fill with a real TTL! */
-    set_uint32(payload+5, htonl(MAX_DNS_ENTRY_AGE));
+    set_uint32(payload+5, htonl(dns_clip_ttl(conn->address_ttl)));
     payload_len += 8;
   }
 
@@ -297,7 +296,7 @@ connection_edge_finished_connecting(connection_t *conn)
     char connected_payload[8];
     set_uint32(connected_payload, htonl(conn->addr));
     set_uint32(connected_payload+4,
-               htonl(MAX_DNS_ENTRY_AGE)); /* XXXX fill with a real TTL */
+               htonl(dns_clip_ttl(conn->address_ttl)));
     if (connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
         RELAY_COMMAND_CONNECTED, connected_payload, 8, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
@@ -682,7 +681,7 @@ client_dns_incr_failures(const char *address)
   addressmap_entry_t *ent = strmap_get(addressmap, address);
   if (!ent) {
     ent = tor_malloc_zero(sizeof(addressmap_entry_t));
-    ent->expires = time(NULL)+MAX_DNS_ENTRY_AGE;
+    ent->expires = time(NULL) + MAX_DNS_ENTRY_AGE;
     strmap_set(addressmap,address,ent);
   }
   ++ent->num_resolve_failures;
@@ -726,10 +725,10 @@ client_dns_set_addressmap(const char *address, uint32_t val,
   char extendedval[INET_NTOA_BUF_LEN+MAX_HEX_NICKNAME_LEN+10];
   char valbuf[INET_NTOA_BUF_LEN];
 
-  tor_assert(address); tor_assert(val);
+  tor_assert(address);
+  tor_assert(val);
 
-  if (ttl<0 || ttl>MAX_DNS_ENTRY_AGE)
-    ttl = MAX_DNS_ENTRY_AGE;
+  ttl = dns_clip_ttl(ttl);
 
   if (tor_inet_aton(address, &in))
     return; /* If address was an IP address already, don't add a mapping. */
@@ -1817,7 +1816,7 @@ connection_exit_connect(connection_t *conn)
     char connected_payload[8];
     set_uint32(connected_payload, htonl(conn->addr));
     set_uint32(connected_payload+4,
-               htonl(MAX_DNS_ENTRY_AGE)); /* XXXX fill with a real TTL */
+               htonl(dns_clip_ttl(conn->address_ttl)));
     connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
                                  RELAY_COMMAND_CONNECTED,
                                  connected_payload, 8, conn->cpath_layer);

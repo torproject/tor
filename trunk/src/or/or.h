@@ -161,12 +161,14 @@
 #define MAX_HEADERS_SIZE 50000
 #define MAX_BODY_SIZE 500000
 
-#ifdef TOR_PERF
-/** How long do we keep DNS cache entries before purging them? */
-#define MAX_DNS_ENTRY_AGE (150*60)
-#else
+/** How long do we keep DNS cache entries before purging them (regardless of
+ * their TTL)? */
 #define MAX_DNS_ENTRY_AGE (30*60)
-#endif
+#define DEFAULT_DNS_TTL (30*60)
+/** How long can a TTL be before we stop believing it? */
+#define MAX_DNS_TTL (3*60*60)
+/** How small can a TTL be before we stop believing it? */
+#define MIN_DNS_TTL (60)
 
 /** How often do we rotate onion keys? */
 #define MIN_ONION_KEY_LIFETIME (7*24*60*60)
@@ -652,6 +654,8 @@ struct connection_t {
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it.
                   */
+  uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
+                         * connection.  Exit connections only. */
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the other side's signing key. */
   char *nickname; /**< Nickname of OR on other side (if any). */
@@ -1927,6 +1931,7 @@ void dirserv_free_all(void);
 
 void dns_init(void);
 void dns_free_all(void);
+uint32_t dns_clip_ttl(uint32_t ttl);
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_reached_eof(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
