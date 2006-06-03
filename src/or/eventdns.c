@@ -344,17 +344,17 @@ static const int global_nameserver_timeouts_length = sizeof(global_nameserver_ti
 
 const char *const eventdns_error_strings[] = {"no error", "The name server was unable to interpret the query", "The name server suffered an internal error", "The requested domain name does not exist", "The name server refused to reply to the request"};
 
-static struct nameserver *nameserver_pick();
+static struct nameserver *nameserver_pick(void);
 static void eventdns_request_insert(struct request *req, struct request **head);
 static void nameserver_ready_callback(int fd, short events, void *arg);
-static int eventdns_transmit();
+static int eventdns_transmit(void);
 static int eventdns_request_transmit(struct request *req);
 static void nameserver_send_probe(struct nameserver *const ns);
 static void search_request_finished(struct request *const);
 static int search_try_next(struct request *const req);
 static int search_request_new(const char *const name, int flags, eventdns_callback_type user_callback, void *user_arg);
-static void eventdns_requests_pump_waiting_queue();
-static u16 transaction_id_pick();
+static void eventdns_requests_pump_waiting_queue(void);
+static u16 transaction_id_pick(void);
 static struct request *request_new(const char *name, int flags, eventdns_callback_type callback, void *ptr);
 static void request_submit(struct request *req);
 
@@ -389,9 +389,10 @@ nameserver_prod_callback(int fd, short events, void *arg) {
 // and wait longer to send the next probe packet.
 static void
 nameserver_probe_failed(struct nameserver *const ns) {
+	const struct timeval * timeout;
 	assert(ns->state == 0);
 	evtimer_del(&ns->timeout_event);
-	const struct timeval *const timeout =
+	timeout =
 	  &global_nameserver_timeouts[MIN(ns->failed_times,
 					  global_nameserver_timeouts_length - 1)];
 	ns->failed_times++;
@@ -404,6 +405,7 @@ nameserver_probe_failed(struct nameserver *const ns) {
 // many packets have timed out etc
 static void
 nameserver_failed(struct nameserver *const ns) {
+	struct request *req, *started_at;
 	// if this nameserver has already been marked as failed
 	// then don't do anything
 	if (!ns->state) return;
@@ -429,7 +431,8 @@ nameserver_failed(struct nameserver *const ns) {
 	// trying to reassign requests to one
 	if (!global_good_nameservers) return;
 
-	struct request *req = req_head, *const started_at = req_head;
+	req = req_head;
+	started_at = req_head;
 	if (req) {
 		do {
 			if (req->tx_count == 0 && req->ns == ns) {
@@ -523,12 +526,12 @@ request_reissue(struct request *req) {
 // this function looks for space on the inflight queue and promotes
 // requests from the waiting queue if it can.
 static void
-eventdns_requests_pump_waiting_queue() {
+eventdns_requests_pump_waiting_queue(void) {
 	while (global_requests_inflight < global_max_requests_inflight &&
 	    global_requests_waiting) {
+		struct request *req;
 		// move a request from the waiting queue to the inflight queue
 		assert(req_waiting_head);
-		struct request *req;
 		if (req_waiting_head->next == req_waiting_head) {
 			// only one item in the queue
 			req = req_waiting_head;
@@ -625,6 +628,7 @@ reply_parse(u8 *packet, int length) {
 	u32 ttl, ttl_r = 0xffffffff;
 	u32 addresses[MAX_ADDRS];
 	int addresses_done = 0;
+	uint i;
 
 	GET16(trans_id);
 	GET16(flags);
@@ -660,7 +664,6 @@ reply_parse(u8 *packet, int length) {
 		j += label_len; \
 	}
 
-	uint i;
 	// skip over each question in the reply
 	for (i = 0; i < questions; ++i) {
 		// the question looks like
@@ -682,8 +685,8 @@ reply_parse(u8 *packet, int length) {
 		GET16(datalength);
 
 		if (type == TYPE_A && class == CLASS_INET) {
-			const uint addrcount = datalength >> 2;  // each IP address is 4 bytes
-			const uint addrtocopy = MIN(MAX_ADDRS - addresses_done, addrcount);
+			const int addrcount = datalength >> 2;  // each IP address is 4 bytes
+			const int addrtocopy = MIN(MAX_ADDRS - addresses_done, addrcount);
 
 			ttl_r = MIN(ttl_r, ttl);
 			// we only bother with the first four addresses.
@@ -707,18 +710,19 @@ reply_parse(u8 *packet, int length) {
 
 // Try to choose a strong transaction id which isn't already in flight
 static u16
-transaction_id_pick() {
+transaction_id_pick(void) {
 	for (;;) {
+		const struct request *req = req_head, *started_at;
 #ifdef DNS_USE_CPU_CLOCK_FOR_ID
 		struct timespec ts;
-		if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts)) abort();
 		const u16 trans_id = ts.tv_nsec & 0xffff;
+		if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts)) abort();
 #endif
 
 #ifdef DNS_USE_GETTIMEOFDAY_FOR_ID
 		struct timeval tv;
-		gettimeofday(&tv, NULL);
 		const u16 trans_id = tv.tv_usec & 0xffff;
+		gettimeofday(&tv, NULL);
 #endif
 
 #ifdef DNS_USE_OPENSSL_FOR_ID
@@ -735,7 +739,7 @@ transaction_id_pick() {
 
 		if (trans_id == 0xffff) continue;
 		// now check to see if that id is already inflight
-		const struct request *req = req_head, *const started_at = req_head;
+		req = started_at = req_head;
 		if (req) {
 			do {
 				if (req->trans_id == trans_id) break;
@@ -751,7 +755,8 @@ transaction_id_pick() {
 // nameservers which we think are down and load balence across the rest
 // by updating the server_head global each time.
 static struct nameserver *
-nameserver_pick() {
+nameserver_pick(void) {
+	struct nameserver *started_at = server_head, *picked;
 	if (!server_head) return NULL;
 
 	// if we don't have any good nameservers then there's no
@@ -760,9 +765,8 @@ nameserver_pick() {
 		server_head = server_head->next;
 		return server_head;
 	}
-	
+
 	// remember that nameservers are in a circular list
-	struct nameserver *started_at = server_head, *picked;
 	for (;;) {
 		if (server_head->state) {
 			// we think this server is currently good
@@ -899,6 +903,8 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 		u8 *const buf) {
 	int j = 0;  // current offset into buf
 	u16 _t;  // used by the macros
+	u8 *labels;
+	int labels_len;
 	
 #define APPEND16(x) do { _t = htons(x); memcpy(buf + j, &_t, 2); j += 2; } while(0);
 	APPEND16(trans_id);
@@ -908,8 +914,8 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 	APPEND16(0);  // no authority
 	APPEND16(0);  // no additional
 
-	u8 *labels = (u8 *) alloca(name_len + 2);
-	const int labels_len = dnsname_to_labels(labels, name, name_len);
+	labels = (u8 *) alloca(name_len + 2);
+	labels_len = dnsname_to_labels(labels, name, name_len);
 	if (labels_len < 0) return labels_len;
 	memcpy(buf + j, labels, labels_len);
 	j += labels_len;
@@ -957,7 +963,7 @@ eventdns_request_transmit_to(struct request *req, struct nameserver *server) {
 	if (r < 0) {
 		if (errno == EAGAIN) return 1;
 		return 2;
-	} else if (r != req->request_len) {
+	} else if (r != (int)req->request_len) {
 		return 1;  // short write
 	} else {
 		return 0;
@@ -972,7 +978,7 @@ eventdns_request_transmit_to(struct request *req, struct nameserver *server) {
 //   1 failed
 static int
 eventdns_request_transmit(struct request *req) {
-	int retcode = 0;
+	int retcode = 0, r;
 	
 	// if we fail to send this packet then this flag marks it
 	// for eventdns_transmit
@@ -985,7 +991,7 @@ eventdns_request_transmit(struct request *req) {
 		return 1;
 	}
 
-	const int r = eventdns_request_transmit_to(req, req->ns);
+	r = eventdns_request_transmit_to(req, req->ns);
 	switch (r) {
 	case 1:
 		// temp failure
@@ -1019,12 +1025,13 @@ nameserver_probe_callback(int result, char type, int count, int ttl, void *addre
 
 static void
 nameserver_send_probe(struct nameserver *const ns) {
+	struct request *req;
 	// here we need to send a probe to a given nameserver
 	// in the hope that it is up now.
 
   	log("Sending probe to %lx\n", (unsigned long)ns->address);
 
-	struct request *const req = request_new("www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
+	req = request_new("www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
 	// we force this into the inflight queue no matter what
 	request_trans_id_set(req, transaction_id_pick());
 	req->ns = ns;
@@ -1035,7 +1042,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 //   0 didn't try to transmit anything
 //   1 tried to transmit something
 static int
-eventdns_transmit() {
+eventdns_transmit(void) {
 	char did_try_to_transmit = 0;
 
 	if (req_head) {
@@ -1060,16 +1067,17 @@ eventdns_nameserver_add(unsigned long int address) {
 	// first check to see if we already have this nameserver
 	
 	const struct nameserver *server = server_head, *const started_at = server_head;
+	struct nameserver *ns;
+	struct sockaddr_in sin;
+	int err = 0;
 	if (server) {
 		do {
 			if (server->address == address) return 3;
 			server = server->next;
 		} while (server != started_at);
 	}
-	
-	struct nameserver *ns = (struct nameserver *) malloc(sizeof(struct nameserver));
-	struct sockaddr_in sin;
-	int err = 0;
+
+	ns = (struct nameserver *) malloc(sizeof(struct nameserver));
 
 	memset(ns, 0, sizeof(struct nameserver));
 
@@ -1155,13 +1163,15 @@ request_new(const char *name, int flags, eventdns_callback_type callback, void *
 	const u16 trans_id = issuing_now ? transaction_id_pick() : 0xffff;
 	// the request data is alloced in a single block with the header
 	struct request *const req = (struct request *) malloc(sizeof(struct request) + request_max_len);
+	int rlen;
 	memset(req, 0, sizeof(struct request));
 
 	// request data lives just after the header
 	req->request = ((u8 *) req) + sizeof(struct request);
 	req->request_appended = 1;  // denotes that the request data shouldn't be free()ed
-	req->request_len = eventdns_request_data_build(name, name_len, trans_id, TYPE_A, CLASS_INET, req->request);
-	if (req->request_len < 0) goto err1;
+	rlen = eventdns_request_data_build(name, name_len, trans_id, TYPE_A, CLASS_INET, req->request);
+	if (rlen < 0) goto err1;
+	req->request_len = rlen;
 	req->trans_id = trans_id;
 	req->tx_count = 0;
 	req->user_pointer = ptr;
@@ -1245,7 +1255,7 @@ search_state_decref(struct search_state *const state) {
 };
 
 static struct search_state *
-search_state_new() {
+search_state_new(void) {
 	struct search_state *state = (struct search_state *) malloc(sizeof(struct search_state));
 	memset(state, 0, sizeof(struct search_state));
 	state->refcount = 1;
@@ -1255,7 +1265,7 @@ search_state_new() {
 }
 
 static void
-search_postfix_clear() {
+search_postfix_clear(void) {
 	search_state_decref(global_search_state);
 	
 	global_search_state = search_state_new();
@@ -1263,19 +1273,21 @@ search_postfix_clear() {
 
 // exported function
 void
-eventdns_search_clear() {
+eventdns_search_clear(void) {
 	search_postfix_clear();
 }
 
 static void
 search_postfix_add(const char *domain) {
+	int domain_len;
+	struct search_domain *sdomain;
 	while (domain[0] == '.') domain++;
-	const int domain_len = strlen(domain);
+	domain_len = strlen(domain);
 
 	if (!global_search_state) global_search_state = search_state_new();
 	global_search_state->num_domains++;
 
-	struct search_domain *sdomain = (struct search_domain *) malloc(sizeof(struct search_domain) + domain_len);
+	sdomain = (struct search_domain *) malloc(sizeof(struct search_domain) + domain_len);
 	memcpy( ((u8 *) sdomain) + sizeof(struct search_domain), domain, domain_len);
 	sdomain->next = global_search_state->head;
 	sdomain->len = domain_len;
@@ -1286,7 +1298,7 @@ search_postfix_add(const char *domain) {
 // reverse the order of members in the postfix list. This is needed because,
 // when parsing resolv.conf we push elements in the wrong order
 static void
-search_reverse() {
+search_reverse(void) {
 	struct search_domain *cur, *prev = NULL, *next;
 	cur = global_search_state->head;
 	while (cur) {
@@ -1313,12 +1325,12 @@ eventdns_search_ndots_set(const int ndots) {
 }
 
 static void
-search_set_from_hostname() {
-	char hostname[HOST_NAME_MAX + 1];
+search_set_from_hostname(void) {
+	char hostname[HOST_NAME_MAX + 1], *domainname;
 
 	search_postfix_clear();
 	if (gethostname(hostname, sizeof(hostname))) return;
-	char *domainname = strchr(hostname, '.');
+	domainname = strchr(hostname, '.');
 	if (!domainname) return;
 	search_postfix_add(domainname);
 }
@@ -1390,14 +1402,16 @@ static int
 search_try_next(struct request *const req) {
 	if (req->search_state) {
 		// it is part of a search
+		char *new_name;
+		struct request *newreq;
 		req->search_index++;
 		if (req->search_index >= req->search_state->num_domains) {
 			// no more postfixes to try, however we may need to try
 			// this name without a postfix
 			if (string_num_dots(req->search_origname) < req->search_state->ndots) {
 				// yep, we need to try it raw
-				log("search: trying raw query %s\n", req->search_origname);
 				struct request *const newreq = request_new(req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
+				log("search: trying raw query %s\n", req->search_origname);
 				if (newreq) {
 					request_submit(newreq);
 					return 0;
@@ -1406,9 +1420,9 @@ search_try_next(struct request *const req) {
 			return 1;
 		}
 
-		char *const new_name = search_make_new(req->search_state, req->search_index, req->search_origname);
+		new_name = search_make_new(req->search_state, req->search_index, req->search_origname);
 		log("search: now trying %s (%d)\n", new_name, req->search_index);
-		struct request *const newreq = request_new(new_name, req->search_flags, req->user_callback, req->user_pointer);
+		newreq = request_new(new_name, req->search_flags, req->user_callback, req->user_pointer);
 		free(new_name);
 		if (!newreq) return 1;
 		newreq->search_origname = req->search_origname;
@@ -1485,8 +1499,8 @@ resolv_conf_parse_line(char *const start, int flags) {
 			search_postfix_add(domain);
 		}
 	} else if (!strcmp(first_token, "search") && (flags & DNS_OPTION_SEARCH)) {
-		search_postfix_clear();
 		const char *domain;
+		search_postfix_clear();
 
 		while ((domain = NEXT_TOKEN)) {
 			search_postfix_add(domain);
@@ -1532,11 +1546,14 @@ resolv_conf_parse_line(char *const start, int flags) {
 int
 eventdns_resolv_conf_parse(int flags, const char *const filename) {
 	struct stat st;
+	int fd;
+	u8 *resolv;
+	char *start;
 	int err = 0;
 
 	log("parsing resolve file %s\n", filename);
 
-	const int fd = open(filename, O_RDONLY);
+	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
 		eventdns_resolv_set_defaults(flags);
 		return 0;
@@ -1550,13 +1567,13 @@ eventdns_resolv_conf_parse(int flags, const char *const filename) {
 	}
 	if (st.st_size > 65535) { err = 3; goto out1; }  // no resolv.conf should be any bigger
 
-	u8 *const resolv = (u8 *) malloc(st.st_size + 1);
+	resolv = (u8 *) malloc(st.st_size + 1);
 	if (!resolv) { err = 4; goto out1; }
 	
 	if (read(fd, resolv, st.st_size) != st.st_size) { err = 5; goto out2; }
 	resolv[st.st_size] = 0;  // we malloced an extra byte
 	
-	char *start = (char *) resolv;
+	start = (char *) resolv;
 	for (;;) {
 		char *const newline = strchr(start, '\n');
 		if (!newline) {

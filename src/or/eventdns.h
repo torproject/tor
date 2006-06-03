@@ -41,9 +41,9 @@ int eventdns_nameserver_add(unsigned long int address);
 int eventdns_nameserver_ip_add(const char *ip_as_string);
 int eventdns_resolve(const char *name, int flags, eventdns_callback_type callback, void *ptr);
 int eventdns_resolv_conf_parse(int flags, const char *);
-void eventdns_search_clear();
+void eventdns_search_clear(void);
 void eventdns_search_add(const char *domain);
-void eventdns_search_ndots_set();
+void eventdns_search_ndots_set(const int ndots);
 
 #define DNS_NO_SEARCH 1
 
