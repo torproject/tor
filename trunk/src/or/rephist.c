@@ -918,8 +918,17 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 int
 rep_hist_circbuilding_dormant(void)
 {
+  /* Any ports used lately? These are pre-seeded if we just started
+   * up or if we're running a hidden service. */
   if (predicted_ports_list || predicted_internal_time)
-    return 0; /* nothing used lately. */
+    return 0;
+
+  /* see if we'll still need to build testing circuits */
+  if (server_mode(options) && !check_whether_orport_reachable())
+    return 0;
+  if (!check_whether_dirport_reachable())
+    return 0;
+
   return 1;
 }
 
