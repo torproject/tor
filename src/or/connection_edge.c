@@ -711,7 +711,7 @@ client_dns_clear_failures(const char *address)
  * ".exitname.exit" before registering the mapping.
  *
  * If <b>ttl</b> is nonnegative, the mapping will be valid for
- * <b>ttl</b>seconds.
+ * <b>ttl</b>seconds; otherwise, we use the default.
  */
 void
 client_dns_set_addressmap(const char *address, uint32_t val,
@@ -728,7 +728,10 @@ client_dns_set_addressmap(const char *address, uint32_t val,
   tor_assert(address);
   tor_assert(val);
 
-  ttl = dns_clip_ttl(ttl);
+  if (ttl<0)
+    ttl = DEFAULT_DNS_TTL;
+  else
+    ttl = dns_clip_ttl(ttl);
 
   if (tor_inet_aton(address, &in))
     return; /* If address was an IP address already, don't add a mapping. */
