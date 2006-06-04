@@ -477,7 +477,7 @@ request_finished(struct request *const req, struct request **head) {
 		}
 	}
 
-	log("Removing timeout for %x\n", (unsigned) req);
+	log("Removing timeout for %lx\n", (unsigned long) req);
 	evtimer_del(&req->timeout_event);
 
 	search_request_finished(req);
@@ -933,7 +933,7 @@ static void
 eventdns_request_timeout_callback(int fd, short events, void *arg) {
 	struct request *const req = (struct request *) arg;
 	
-	log("Request %x timed out\n", (unsigned) arg);
+	log("Request %lx timed out\n", (unsigned long) arg);
 
 	req->ns->timedout++;
 	if (req->ns->timedout > global_max_nameserver_timeout) {
@@ -1005,7 +1005,7 @@ eventdns_request_transmit(struct request *req) {
 		// fall through
 	default:
 		// all ok
-		log("Setting timeout for %x\n", (unsigned) req);
+		log("Setting timeout for %lx\n", (unsigned long) req);
 		evtimer_set(&req->timeout_event, eventdns_request_timeout_callback, req);
 		evtimer_add(&req->timeout_event, &global_timeout);
 		req->tx_count++;
