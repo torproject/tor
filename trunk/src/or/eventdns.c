@@ -358,6 +358,33 @@ static u16 transaction_id_pick(void);
 static struct request *request_new(const char *name, int flags, eventdns_callback_type callback, void *ptr);
 static void request_submit(struct request *req);
 
+#ifdef MS_WINDOWS
+static int
+last_error(int sock)
+{
+	int optval, optvallen=sizeof(optval);
+	int err = WSAGetLastError();
+	if (err == WSAEWOULDBLOCK && sock >= 0) {
+		if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&optval,
+			       &optvallen))
+			return err;
+		if (optval)
+			return optval;
+	}
+	return err;
+
+}
+static int
+error_is_eagain(int sock)
+{
+	int err = last_error(sock);
+	return err == EAGAIN || err == WSAEWOULDBLOCK;
+}
+#else
+#define last_error(sock) (errno)
+#define error_is_eagain(sock) (errno == EAGAIN)
+#endif
+
 // This walks the list of inflight requests to find the
 // one with a matching transaction id. Returns NULL on
 // failure
@@ -796,7 +823,7 @@ nameserver_read(struct nameserver *ns) {
 	for (;;) {
           	const int r = recv(ns->socket, packet, sizeof(packet), 0);
 		if (r < 0) {
-			if (errno == EAGAIN) return;
+			if (error_is_eagain(ns->socket)) return;
 			nameserver_failed(ns);
 			return;
 		}
@@ -961,7 +988,7 @@ static int
 eventdns_request_transmit_to(struct request *req, struct nameserver *server) {
 	const int r = send(server->socket, req->request, req->request_len, 0);
 	if (r < 0) {
-		if (errno == EAGAIN) return 1;
+		if (error_is_eagain(server->socket)) return 1;
 		return 2;
 	} else if (r != (int)req->request_len) {
 		return 1;  // short write
@@ -1083,7 +1110,14 @@ eventdns_nameserver_add(unsigned long int address) {
 
 	ns->socket = socket(PF_INET, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
+#ifdef MS_WINDOWS
+        {
+		int nonblocking = 1;
+		ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
+	}
+#else
         fcntl(ns->socket, F_SETFL, O_NONBLOCK);
+#endif
 	sin.sin_addr.s_addr = address;
 	sin.sin_port = htons(53);
 	sin.sin_family = AF_INET;
