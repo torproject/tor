@@ -480,7 +480,7 @@ router_orport_found_reachable(void)
                    " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
-    consider_publishable_server(time(NULL), 1);
+    consider_publishable_server(1);
   }
 }
 
@@ -569,7 +569,7 @@ proxy_mode(or_options_t *options)
  * - We have the AuthoritativeDirectory option set.
  */
 static int
-decide_if_publishable_server(time_t now)
+decide_if_publishable_server(void)
 {
   or_options_t *options = get_options();
 
@@ -593,7 +593,7 @@ decide_if_publishable_server(time_t now)
  * determine what IP address and ports to test.
  */
 void
-consider_publishable_server(time_t now, int force)
+consider_publishable_server(int force)
 {
   int rebuilt;
 
@@ -601,7 +601,7 @@ consider_publishable_server(time_t now, int force)
     return;
 
   rebuilt = router_rebuild_descriptor(0);
-  if (decide_if_publishable_server(now)) {
+  if (decide_if_publishable_server()) {
     set_server_advertised(1);
     if (rebuilt == 0)
       router_upload_dir_desc_to_dirservers(force);
@@ -951,6 +951,7 @@ check_descriptor_ipaddress_changed(time_t now)
 {
   uint32_t prev, cur;
   or_options_t *options = get_options();
+  (void) now;
 
   if (!desc_routerinfo)
     return;

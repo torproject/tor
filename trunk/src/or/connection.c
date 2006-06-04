@@ -1107,6 +1107,9 @@ connection_bucket_refill(struct timeval *now)
   connection_t *conn;
   connection_t **carray;
   or_options_t *options = get_options();
+  /* Not used, but it should be! We might have rolled over more than one
+   * second! XXXX */
+  (void) now;
 
   /* refill the global buckets */
   if (global_read_bucket < (int)options->BandwidthBurst) {
@@ -2018,6 +2021,7 @@ connection_reached_eof(connection_t *conn)
 void
 assert_connection_ok(connection_t *conn, time_t now)
 {
+  (void) now; /* XXXX unused. */
   tor_assert(conn);
   tor_assert(conn->magic == CONNECTION_MAGIC);
   tor_assert(conn->type >= _CONN_TYPE_MIN);

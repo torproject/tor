@@ -1633,6 +1633,7 @@ dirserv_orconn_tls_done(const char *address,
   tor_assert(address);
   tor_assert(digest_rcvd);
   tor_assert(nickname_rcvd);
+  (void) as_advertised; // XXXX This should really be implemented. -NM
 
   // XXXXNM We should really have a better solution here than dropping
   // XXXXNM whole routers; otherwise, they come back way too easily.

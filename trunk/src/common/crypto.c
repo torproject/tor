@@ -1802,6 +1802,8 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 static void
 _openssl_locking_cb(int mode, int n, const char *file, int line)
 {
+  (void)file;
+  (void)line;
   if (!_openssl_mutexes)
     /* This is not a really good  fix for the
      * "release-freed-lock-from-separate-thread-on-shutdown" problem, but

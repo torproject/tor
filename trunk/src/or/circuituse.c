@@ -605,6 +605,10 @@ circuit_testing_failed(circuit_t *circ, int at_last_hop)
   log_info(LD_GENERAL,
            "Our testing circuit (to see if your ORPort is reachable) "
            "has failed. I'll try again later.");
+
+  /* These aren't used yet. */
+  (void)circ;
+  (void)at_last_hop;
 }
 
 /** The circuit <b>circ</b> has just become open. Take the next

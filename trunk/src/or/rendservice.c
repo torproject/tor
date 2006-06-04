@@ -769,6 +769,8 @@ rend_service_intro_established(circuit_t *circuit, const char *request,
                                size_t request_len)
 {
   rend_service_t *service;
+  (void) request;
+  (void) request_len;
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
     log_warn(LD_PROTOCOL,

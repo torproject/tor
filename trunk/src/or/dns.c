@@ -1057,18 +1057,21 @@ dnsworkers_rotate(void)
 int
 connection_dns_finished_flushing(connection_t *conn)
 {
+  (void)conn;
   tor_assert(0);
   return 0;
 }
 int
 connection_dns_process_inbuf(connection_t *conn)
 {
+  (void)conn;
   tor_assert(0);
   return 0;
 }
 int
 connection_dns_reached_eof(connection_t *conn)
 {
+  (void)conn;
   tor_assert(0);
   return 0;
 }

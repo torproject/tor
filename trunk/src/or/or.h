@@ -2227,7 +2227,7 @@ void consider_testing_reachability(void);
 void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);
 void server_has_changed_ip(void);
-void consider_publishable_server(time_t now, int force);
+void consider_publishable_server(int force);
 
 int authdir_mode(or_options_t *options);
 int clique_mode(or_options_t *options);

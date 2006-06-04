@@ -160,6 +160,7 @@ void
 tor_munmap_file(const char *memory, size_t size)
 {
   char *mem = (char*) memory;
+  (void)size;
   tor_free(mem);
 }
 #endif

@@ -324,6 +324,8 @@ connection_dir_download_routerdesc_failed(connection_t *conn)
   /* Try again. No need to increment the failure count for routerdescs, since
    * it's not their fault.*/
   /* update_router_descriptor_downloads(time(NULL)); */
+  (void) conn;
+  /* XXXX Why did the above get commented out? -NM */
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
@@ -1331,7 +1333,8 @@ directory_dump_request_log(void)
 static void
 note_request(const char *key, size_t bytes)
 {
-  return;
+  (void)key;
+  (void)bytes;
 }
 
 char *
@@ -1355,6 +1358,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
   char *url = NULL;
   char tmp[8192];
   char date[RFC1123_TIME_LEN+1];
+  /* We ignore the body of a GET request. */
+  (void)body;
+  (void)body_len;
 
   log_debug(LD_DIRSERV,"Received GET command.");
 
