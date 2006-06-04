@@ -1489,6 +1489,7 @@ static void
 option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
 {
   void *lvalue = STRUCT_VAR_P(options, var->var_offset);
+  (void)fmt; /* unused */
   switch (var->type) {
     case CONFIG_TYPE_STRING:
       tor_free(*(char**)lvalue);
@@ -3601,6 +3602,10 @@ static int
 or_state_validate(or_state_t *old_state, or_state_t *state,
                   int from_setconf, char **msg)
 {
+  /* We don't use these; only options do. Still, we need to match that
+   * signature. */
+  (void) from_setconf;
+  (void) old_state;
   if (entry_guards_parse_state(state, 0, msg)<0) {
     return -1;
   }

@@ -654,6 +654,7 @@ connection_edge_process_end_not_open(
   struct in_addr in;
   routerinfo_t *exitrouter;
   int reason = *(cell->payload+RELAY_HEADER_SIZE);
+  (void) layer_hint; /* unused */
 
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&
       conn->type == CONN_TYPE_AP) {

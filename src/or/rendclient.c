@@ -183,6 +183,7 @@ rend_client_introduction_acked(circuit_t *circ,
                                const char *request, size_t request_len)
 {
   circuit_t *rendcirc;
+  (void) request; // XXXX Use this.
 
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     log_warn(LD_PROTOCOL,
@@ -342,6 +343,8 @@ int
 rend_client_rendezvous_acked(circuit_t *circ, const char *request,
                              size_t request_len)
 {
+  (void) request;
+  (void) request_len;
   /* we just got an ack for our establish-rendezvous. switch purposes. */
   if (circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
     log_warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "

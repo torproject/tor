@@ -950,6 +950,8 @@ clean_name_for_stat(char *name)
       return;
     name[len-1]='\0';
   }
+#else
+  (void)name;
 #endif
 }
 

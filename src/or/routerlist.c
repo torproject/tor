@@ -2528,9 +2528,9 @@ update_networkstatus_downloads(time_t now)
 {
   or_options_t *options = get_options();
   if (options->DirPort)
-    update_networkstatus_cache_downloads(time(NULL));
+    update_networkstatus_cache_downloads(now);
   else
-    update_networkstatus_client_downloads(time(NULL));
+    update_networkstatus_client_downloads(now);
 }
 
 /** Return 1 if all running sufficiently-stable routers will reject
@@ -2685,6 +2685,7 @@ compute_recommended_versions(time_t now, int client)
   smartlist_t *combined, *recommended;
   int n_versioning;
   char *result;
+  (void) now; /* right now, we consider *all* ors. */
 
   if (!networkstatus_list)
     return tor_strdup("<none>");
@@ -3508,6 +3509,7 @@ update_router_descriptor_cache_downloads(time_t now)
   int i, j, n;
   int n_download;
   or_options_t *options = get_options();
+  (void) now;
 
   if (!options->DirPort) {
     log_warn(LD_BUG, "Called update_router_descriptor_cache_downloads() "

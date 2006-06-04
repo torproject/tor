@@ -397,6 +397,8 @@ static void
 conn_read_callback(int fd, short event, void *_conn)
 {
   connection_t *conn = _conn;
+  (void)fd;
+  (void)event;
 
   log_debug(LD_NET,"socket %d wants to read.",conn->s);
 
@@ -427,6 +429,8 @@ static void
 conn_write_callback(int fd, short events, void *_conn)
 {
   connection_t *conn = _conn;
+  (void)fd;
+  (void)events;
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "socket %d wants to write.",conn->s));
 
@@ -534,6 +538,7 @@ void
 directory_all_unreachable(time_t now)
 {
   connection_t *conn;
+  (void)now;
 
   stats_n_seconds_working=0; /* reset it */
 
@@ -828,7 +833,7 @@ run_scheduled_events(time_t now)
     }
     mark_my_descriptor_dirty_if_older_than(
                                   now - FORCE_REGENERATE_DESCRIPTOR_INTERVAL);
-    consider_publishable_server(now, 0);
+    consider_publishable_server(0);
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */
     if (server_mode(options) &&
@@ -925,6 +930,9 @@ second_elapsed_callback(int fd, short event, void *args)
   size_t bytes_read;
   int seconds_elapsed;
   or_options_t *options = get_options();
+  (void)fd;
+  (void)event;
+  (void)args;
   if (!timeout_event) {
     timeout_event = tor_malloc_zero(sizeof(struct event));
     evtimer_set(timeout_event, second_elapsed_callback, NULL);
@@ -1227,6 +1235,8 @@ static void
 signal_callback(int fd, short events, void *arg)
 {
   uintptr_t sig = (uintptr_t)arg;
+  (void)fd;
+  (void)events;
   switch (sig)
     {
     case SIGTERM:
