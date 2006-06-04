@@ -34,7 +34,7 @@
  *
  * This library is designed to be included and shipped with your source
  * code. You statically link with it. You should also test for the
- * existance of strtok_r and define HAVE_STRTOK_R if you have it.
+ * existence of strtok_r and define HAVE_STRTOK_R if you have it.
  *
  * The DNS protocol requires a good source of id numbers and these
  * numbers should be unpredictable for spoofing reasons. There are
@@ -43,12 +43,12 @@
  *
  * DNS_USE_GETTIMEOFDAY_FOR_ID:
  *   Using the bottom 16 bits of the usec result from gettimeofday. This
- *   is a pretty poor solution but should work anywhere
+ *   is a pretty poor solution but should work anywhere.
  * DNS_USE_CPU_CLOCK_FOR_ID:
  *   Using the bottom 16 bits of the nsec result from the CPU's time
  *   counter. This is better, but may not work everywhere. Requires
  *   POSIX realtime support and you'll need to link against -lrt on
- *   glibc systems at least
+ *   glibc systems at least.
  * DNS_USE_OPENSSL_FOR_ID:
  *   Uses the OpenSSL RAND_bytes call to generate the data. You must
  *   have seeded the pool before making any calls to this library.
