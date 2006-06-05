@@ -1084,9 +1084,15 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
   uint32_t addr = 0;
   if (result == DNS_ERR_NONE) {
     if (type == DNS_IPv4_A && count) {
+      char answer_buf[INET_NTOA_BUF_LEN+1];
+      struct in_addr in;
       uint32_t *addrs = addresses;
+      in.s_addr = addrs[0];
       addr = ntohl(addrs[0]);
       status = DNS_RESOLVE_SUCCEEDED;
+      tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
+      log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
+                escaped_safe_str(string_address), escaped_safe_str(answer_buf));
     } else if (count) {
       log_warn(LD_EXIT, "eventdns returned only non-IPv4 answers for %s.",
                escaped_safe_str(string_address));
@@ -1106,8 +1112,11 @@ static int
 assign_to_dnsworker(connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->address);
-  int r = eventdns_resolve(exitconn->address, DNS_QUERY_NO_SEARCH,
-                           eventdns_callback, addr);
+  int r;
+  log_info(LD_EXIT, "Launching eventdns request for %s",
+           escaped_safe_str(exitconn->address));
+  r = eventdns_resolve(exitconn->address, DNS_QUERY_NO_SEARCH,
+                       eventdns_callback, addr);
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);
