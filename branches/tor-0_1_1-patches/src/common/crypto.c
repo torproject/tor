@@ -190,7 +190,7 @@ crypto_global_init(int useAccel)
     _crypto_global_initialized = 1;
     setup_openssl_threading();
     if (useAccel < 0) {
-      log_warn(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
+      log_info(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
     }
 #ifndef NO_ENGINES
     if (useAccel > 0) {
