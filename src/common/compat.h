@@ -175,10 +175,6 @@ int touch_file(const char *fname);
 typedef int socklen_t;
 #endif
 
-/* Now that we use libevent, all real sockets are safe for polling ... or
- * if they aren't, libevent will help us. */
-#define SOCKET_IS_POLLABLE(fd) ((fd)>=0)
-
 struct in_addr;
 int tor_inet_aton(const char *cp, struct in_addr *addr);
 int tor_lookup_hostname(const char *name, uint32_t *addr);
