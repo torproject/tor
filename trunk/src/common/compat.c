@@ -415,17 +415,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     }
 
     listener = socket(AF_INET, type, 0);
-    if (listener == -1)
+    if (listener < 0)
       return -tor_socket_errno(-1);
-    if (!SOCKET_IS_POLLABLE(listener)) {
-      log_warn(LD_NET, "Too many connections; can't open socketpair");
-      tor_close_socket(listener);
-#ifdef MS_WINDOWS
-      return -ENFILE;
-#else
-      return -ENCONN;
-#endif
-    }
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -437,12 +428,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
       goto tidy_up_and_fail;
 
     connector = socket(AF_INET, type, 0);
-    if (connector == -1)
+    if (connector < 0)
       goto tidy_up_and_fail;
-    if (!SOCKET_IS_POLLABLE(connector)) {
-      log_warn(LD_NET, "Too many connections; can't open socketpair");
-      goto tidy_up_and_fail;
-    }
     /* We want to find out the port number to connect to.  */
     size = sizeof(connect_addr);
     if (getsockname(listener, (struct sockaddr *) &connect_addr, &size) == -1)
@@ -455,12 +442,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 
     size = sizeof(listen_addr);
     acceptor = accept(listener, (struct sockaddr *) &listen_addr, &size);
-    if (acceptor == -1)
+    if (acceptor < 0)
       goto tidy_up_and_fail;
-    if (!SOCKET_IS_POLLABLE(acceptor)) {
-      log_warn(LD_NET, "Too many connections; can't open socketpair");
-      goto tidy_up_and_fail;
-    }
     if (size != sizeof(listen_addr))
       goto abort_tidy_up_and_fail;
     tor_close_socket(listener);

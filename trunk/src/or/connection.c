@@ -532,10 +532,6 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
   if (s < 0) {
     log_warn(LD_NET,"Socket creation failed.");
     goto err;
-  } else if (!SOCKET_IS_POLLABLE(s)) {
-    log_warn(LD_NET,"Too many connections; can't create pollable listener.");
-    tor_close_socket(s);
-    goto err;
   }
 
 #ifndef MS_WINDOWS
@@ -635,16 +631,9 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   memset(addrbuf, 0, sizeof(addrbuf));
 
   news = accept(conn->s,(struct sockaddr *)&addrbuf,&remotelen);
-  if (!SOCKET_IS_POLLABLE(news)) {
-    /* accept() error, or too many conns to poll */
-    int e;
-    if (news>=0) {
-      /* Too many conns to poll. */
-      log_warn(LD_NET,"Too many connections; couldn't accept connection.");
-      tor_close_socket(news);
-      return 0;
-    }
-    e = tor_socket_errno(conn->s);
+  if (news < 0) {
+    /* accept() error */
+    int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
     } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
@@ -770,12 +759,6 @@ connection_connect(connection_t *conn, char *address,
   if (s < 0) {
     log_warn(LD_NET,"Error creating network socket: %s",
              tor_socket_strerror(tor_socket_errno(-1)));
-    return -1;
-  } else if (!SOCKET_IS_POLLABLE(s)) {
-    log_warn(LD_NET,
-            "Too many connections; can't create pollable connection to %s",
-             escaped_safe_str(address));
-    tor_close_socket(s);
     return -1;
   }
 
