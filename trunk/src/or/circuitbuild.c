@@ -418,9 +418,15 @@ circuit_n_conn_done(connection_t *or_conn, int status)
     tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
     if (!circ->n_conn &&
         circ->n_addr == or_conn->addr &&
-        circ->n_port == or_conn->port &&
-        !memcmp(or_conn->identity_digest, circ->n_conn_id_digest,
-                DIGEST_LEN)) {
+        circ->n_port == or_conn->port) {
+      if (memcmp(or_conn->identity_digest, circ->n_conn_id_digest,
+                 DIGEST_LEN)) {
+        log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
+               "Pending circuit to %s:%d is intended for different digest!",
+               or_conn->address, or_conn->port);
+        circuit_mark_for_close(circ, END_CIRC_REASON_OR_IDENTITY);
+        continue;
+      }
       if (!status) { /* or_conn failed; close circ */
         log_info(LD_CIRC,"or_conn failed. Closing circ.");
         circuit_mark_for_close(circ, END_CIRC_REASON_OR_CONN_CLOSED);
