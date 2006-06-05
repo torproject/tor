@@ -449,6 +449,14 @@ circuit_n_conn_done(connection_t *or_conn, int status)
         }
         tor_free(circ->onionskin);
         circuit_set_state(circ, CIRCUIT_STATE_OPEN);
+        /* XXX: Since circuit_set_state removes circ from the
+         * circuits_pending_or_conns, we will skip over whatever
+         * the next entry is when we proceed with the SMARTLIST_FOREACH.
+         * Thus if there's ever more than one entry, we will miss some.
+         *
+         * Is this true? If so, is the fix to decrement circ_sl_idx
+         * here too? -RD
+         */
       }
     }
   });
