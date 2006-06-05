@@ -691,12 +691,8 @@ circuit_build_failed(circuit_t *circ)
 
   switch (circ->purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
-      if (circ->state != CIRCUIT_STATE_OPEN) {
-        /* If we never built the circuit, note it as a failure. */
-        /* Note that we can't just check circ->cpath here, because if
-         * circuit-building failed immediately, it won't be set yet. */
-        circuit_increment_failure_count();
-      }
+      /* If we never built the circuit, note it as a failure. */
+      circuit_increment_failure_count();
       break;
     case CIRCUIT_PURPOSE_TESTING:
       circuit_testing_failed(circ, failed_at_last_hop);
@@ -718,9 +714,7 @@ circuit_build_failed(circuit_t *circ)
       break;
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       /* at Alice, waiting for Bob */
-      if (circ->state != CIRCUIT_STATE_OPEN) {
-        circuit_increment_failure_count();
-      }
+      circuit_increment_failure_count();
       /* Alice will pick a new rend point when this one dies, if
        * the stream in question still cares. No need to act here. */
       break;
