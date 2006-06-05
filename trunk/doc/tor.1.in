@@ -198,6 +198,12 @@ of Tor's outgoing connections to use a single one.
 On startup, write our PID to FILE. On clean shutdown, remove FILE.
 .LP
 .TP
+\fBProtocolWarnings \fR\fB0\fR|\fB1\fR\fP
+If 1, Tor will log with severity 'warn' various cases of other parties
+not following the Tor specification. Otherwise, they are logged with
+severity 'info'. (Default: 0)
+.LP
+.TP
 \fBRunAsDaemon \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor forks and daemonizes to the background. This option has
 no effect on Windows; instead you should use the --service command-line
