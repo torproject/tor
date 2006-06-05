@@ -229,7 +229,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#ifdef HAVE_ALLOCA_H
 #include <alloca.h>
+#endif
 #include <assert.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -385,6 +387,21 @@ error_is_eagain(int sock)
 #define error_is_eagain(sock) (errno == EAGAIN)
 #endif
 
+#ifndef NDEBUG
+static const char *
+debug_ntoa(u32 address)
+{
+	static char buf[32];
+	u32 a = ntohl(address);
+	sprintf(buf, "%d.%d.%d.%d",
+                      (int)(u8)((a>>24)&0xff),
+                      (int)(u8)((a>>16)&0xff),
+                      (int)(u8)((a>>8 )&0xff),
+  		      (int)(u8)((a    )&0xff));
+	return buf;
+}
+#endif
+
 // This walks the list of inflight requests to find the
 // one with a matching transaction id. Returns NULL on
 // failure
@@ -437,7 +454,7 @@ nameserver_failed(struct nameserver *const ns) {
 	// then don't do anything
 	if (!ns->state) return;
 
-	log("Nameserver %lx has failed\n", (unsigned long)ns->address);
+	log("Nameserver %s has failed\n", debug_ntoa(ns->address));
 	global_good_nameservers--;
 	assert(global_good_nameservers >= 0);
 	if (global_good_nameservers == 0) {
@@ -475,7 +492,7 @@ nameserver_failed(struct nameserver *const ns) {
 static void
 nameserver_up(struct nameserver *const ns) {
 	if (ns->state) return;
-	log("Nameserver %lx is back up\n", (unsigned long)ns->address);
+	log("Nameserver %s is back up\n", debug_ntoa(ns->address));
 	evtimer_del(&ns->timeout_event);
 	ns->state = 1;
 	ns->failed_times = 0;
@@ -941,7 +958,7 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 	APPEND16(0);  // no authority
 	APPEND16(0);  // no additional
 
-	labels = (u8 *) alloca(name_len + 2);
+	labels = (u8 *) malloc(name_len + 2);
 	labels_len = dnsname_to_labels(labels, name, name_len);
 	if (labels_len < 0) return labels_len;
 	memcpy(buf + j, labels, labels_len);
@@ -1056,7 +1073,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 	// here we need to send a probe to a given nameserver
 	// in the hope that it is up now.
 
-  	log("Sending probe to %lx\n", (unsigned long)ns->address);
+  	log("Sending probe to %s\n", debug_ntoa(ns->address));
 
 	req = request_new("www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
 	// we force this into the inflight queue no matter what
