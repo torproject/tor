@@ -707,7 +707,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
     (n_conn->is_obsolete &&
      router_digest_version_as_new_as(id_digest,"0.1.1.9-alpha-cvs"))) {
-     /* Note that this will close circuits where the onion has the same
+     /* Note that this will close circuits that have the same
      * router twice in a row in the path. I think that's ok.
      */
     struct in_addr in;
@@ -2015,6 +2015,8 @@ entry_guard_set_status(const char *digest, int succeeded)
             SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
               {
                 routerinfo_t *r;
+                if (e == entry)
+                  break;
                 if (e->made_contact) {
                   e->down_since = 0;
                   r = entry_is_live(e, 0, 1);
@@ -2023,8 +2025,6 @@ entry_guard_set_status(const char *digest, int succeeded)
                     r->is_running = 1;
                   }
                 }
-                if (e == entry)
-                  break;
               });
             log_info(LD_CIRC,
                      "Connected to new entry guard '%s'. Marking earlier "
