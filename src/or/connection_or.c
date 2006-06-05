@@ -431,13 +431,11 @@ connection_t *
 connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 {
   connection_t *conn;
-  routerinfo_t *me;
   or_options_t *options = get_options();
 
   tor_assert(id_digest);
 
-  if (server_mode(options) && (me=router_get_my_routerinfo()) &&
-      router_digest_is_me(id_digest)) {
+  if (server_mode(options) && router_digest_is_me(id_digest)) {
     log_info(LD_PROTOCOL,"Client asked me to connect to myself. Refusing.");
     return NULL;
   }
