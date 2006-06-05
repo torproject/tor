@@ -1085,7 +1085,7 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
   if (result == DNS_ERR_NONE) {
     if (type == DNS_IPv4_A && count) {
       uint32_t *addrs = addresses;
-      addr = addrs[0];
+      addr = ntohl(addrs[0]);
       status = DNS_RESOLVE_SUCCEEDED;
     } else if (count) {
       log_warn(LD_EXIT, "eventdns returned only non-IPv4 answers for %s.",
