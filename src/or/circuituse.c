@@ -602,6 +602,9 @@ circuit_testing_failed(circuit_t *circ, int at_last_hop)
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   else
 #endif
+  if (server_mode(get_options()) && check_whether_orport_reachable())
+    return;
+
   log_info(LD_GENERAL,
            "Our testing circuit (to see if your ORPort is reachable) "
            "has failed. I'll try again later.");
