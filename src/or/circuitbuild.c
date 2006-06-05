@@ -2003,6 +2003,8 @@ entry_guard_set_status(const char *digest, int succeeded)
             SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
               {
                 routerinfo_t *r;
+                if (e == entry)
+                  break;
                 if (e->made_contact) {
                   e->down_since = 0;
                   r = entry_is_live(e, 0, 1);
@@ -2011,8 +2013,6 @@ entry_guard_set_status(const char *digest, int succeeded)
                     r->is_running = 1;
                   }
                 }
-                if (e == entry)
-                  break;
               });
             log_info(LD_CIRC,
                      "Connected to new entry guard '%s'. Marking earlier "
