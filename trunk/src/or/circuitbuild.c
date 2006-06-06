@@ -404,12 +404,15 @@ void
 circuit_n_conn_done(connection_t *or_conn, int status)
 {
   extern smartlist_t *circuits_pending_or_conns;
+  smartlist_t *changed_circs;
 
   log_debug(LD_CIRC,"or_conn to %s, status=%d",
             or_conn->nickname ? or_conn->nickname : "NULL", status);
 
   if (!circuits_pending_or_conns)
     return;
+
+  changed_circs = smartlist_create();
 
   SMARTLIST_FOREACH(circuits_pending_or_conns, circuit_t *, circ,
   {
@@ -454,18 +457,18 @@ circuit_n_conn_done(connection_t *or_conn, int status)
           continue;
         }
         tor_free(circ->onionskin);
-        circuit_set_state(circ, CIRCUIT_STATE_OPEN);
-        /* XXX: Since circuit_set_state removes circ from the
-         * circuits_pending_or_conns, we will skip over whatever
-         * the next entry is when we proceed with the SMARTLIST_FOREACH.
-         * Thus if there's ever more than one entry, we will miss some.
-         *
-         * Is this true? If so, is the fix to decrement circ_sl_idx
-         * here too? -RD
-         */
+        /* We don't want to change circ's state here, since the act
+         * of doing that modifies the circuits_pending_or_conns list
+         * that we're looping through right now. So collect a list of
+         * circs to change their state when we're done. */
+        smartlist_add(changed_circs, circ);
       }
     }
   });
+
+  SMARTLIST_FOREACH(changed_circs, circuit_t *, circ,
+    circuit_set_state(circ, CIRCUIT_STATE_OPEN));
+  smartlist_free(changed_circs);
 }
 
 /** Find a new circid that isn't currently in use on the circ->n_conn
