@@ -329,6 +329,9 @@ spawn_cpuworker(void)
     return -1;
   }
 
+  tor_assert(fdarray[0] >= 0);
+  tor_assert(fdarray[1] >= 0);
+
   fd = fdarray[0];
   spawn_func(cpuworker_main, (void*)fdarray);
   log_debug(LD_OR,"just spawned a cpu worker.");

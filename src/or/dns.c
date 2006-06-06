@@ -941,6 +941,9 @@ spawn_dnsworker(void)
     return -1;
   }
 
+  tor_assert(fdarray[0] >= 0);
+  tor_assert(fdarray[1] >= 0);
+
   /* log_fn(LOG_NOTICE,"Before spawn: fdarray @%d has %d:%d",
             (int)fdarray, fdarray[0],fdarray[1]); */
 

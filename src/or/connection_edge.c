@@ -1398,6 +1398,9 @@ connection_ap_make_bridge(char *address, uint16_t port)
     return -1;
   }
 
+  tor_assert(fd[0] >= 0);
+  tor_assert(fd[1] >= 0);
+
   set_socket_nonblocking(fd[0]);
   set_socket_nonblocking(fd[1]);
 
