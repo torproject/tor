@@ -32,7 +32,8 @@ tor_tls_t *tor_tls_new(int sock, int is_server, int use_no_cert);
 int tor_tls_is_server(tor_tls_t *tls);
 void tor_tls_free(tor_tls_t *tls);
 int tor_tls_peer_has_cert(tor_tls_t *tls);
-int tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen);
+int tor_tls_get_peer_cert_nickname(int severity, tor_tls_t *tls,
+                                   char *buf, size_t buflen);
 int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity);
 int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);
 int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);

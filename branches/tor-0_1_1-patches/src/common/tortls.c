@@ -648,7 +648,8 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
  * NUL-terminate.  Return 0 on success, -1 on failure.
  */
 int
-tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
+tor_tls_get_peer_cert_nickname(int severity, tor_tls_t *tls,
+                               char *buf, size_t buflen)
 {
   X509 *cert = NULL;
   X509_NAME *name = NULL;
@@ -657,11 +658,11 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
   int r = -1;
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl))) {
-    log_warn(LD_PROTOCOL, "Peer has no certificate");
+    log_fn(severity, LD_PROTOCOL, "Peer has no certificate");
     goto error;
   }
   if (!(name = X509_get_subject_name(cert))) {
-    log_warn(LD_PROTOCOL, "Peer certificate has no subject name");
+    log_fn(severity, LD_PROTOCOL, "Peer certificate has no subject name");
     goto error;
   }
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef)
@@ -671,12 +672,13 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
   if (lenout == -1)
     goto error;
   if (((int)strspn(buf, LEGAL_NICKNAME_CHARACTERS)) < lenout) {
-    log_warn(LD_PROTOCOL,
-             "Peer certificate nickname %s has illegal characters.",
-             escaped(buf));
+    log_fn(severity, LD_PROTOCOL,
+           "Peer certificate nickname %s has illegal characters.",
+           escaped(buf));
     if (strchr(buf, '.'))
-      log_warn(LD_PROTOCOL, "  (Maybe it is not really running Tor at its "
-               "advertised OR port.)");
+      log_fn(severity, LD_PROTOCOL,
+             "  (Maybe it is not really running Tor at its "
+             "advertised OR port.)");
     goto error;
   }
 
@@ -686,7 +688,7 @@ tor_tls_get_peer_cert_nickname(tor_tls_t *tls, char *buf, size_t buflen)
   if (cert)
     X509_free(cert);
 
-  tls_log_errors(LOG_WARN, "getting peer certificate nickname");
+  tls_log_errors(severity, "getting peer certificate nickname");
   return r;
 }
 
