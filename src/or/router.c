@@ -456,6 +456,8 @@ consider_testing_reachability(void)
   }
 
   if (!check_whether_orport_reachable()) {
+    log_info(LD_CIRC, "Testing reachability of my ORPort: %s:%d.",
+             me->address, me->or_port);
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   }
 
