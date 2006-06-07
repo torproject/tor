@@ -149,7 +149,6 @@
 #define cell_t tor_cell_t
 #endif
 
-#define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 19
 /* Hex digest plus dollar sign. */
 #define MAX_HEX_NICKNAME_LEN (HEX_DIGEST_LEN+1)
@@ -666,11 +665,12 @@ struct connection_t {
 /* Used only by OR connections: */
   tor_tls_t *tls; /**< TLS connection state (OR only.) */
 
-  /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
-  int bandwidth; /**< Connection bandwidth. (OPEN ORs only.) */
+  /* bandwidth* and receiver_bucket only used by ORs in OPEN state: */
+  int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
+  int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
   int receiver_bucket; /**< When this hits 0, stop receiving. Every second we
-                        * add 'bandwidth' to this, capping it at 10*bandwidth.
-                        * (OPEN ORs only)
+                        * add 'bandwidthrate' to this, capping it at
+                        * bandwidthburst. (OPEN ORs only)
                         */
   circ_id_type_t circ_id_type; /**< When we send CREATE cells along this
                                 * connection, which half of the space should
@@ -1320,6 +1320,10 @@ typedef struct {
                             * to use in a second? */
   uint64_t MaxAdvertisedBandwidth; /**< How much bandwidth are we willing to
                                     * tell people we have? */
+  uint64_t RelayBandwidthRate; /**< How much bandwidth, on average, are we
+                                 * willing to use for all relayed conns? */
+  uint64_t RelayBandwidthBurst; /**< How much bandwidth, at maximum, will we
+                                 * use in a second for all relayed conns? */
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */

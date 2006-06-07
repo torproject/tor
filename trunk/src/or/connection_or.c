@@ -314,11 +314,8 @@ connection_or_finished_connecting(connection_t *conn)
 static void
 connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
 {
-  or_options_t *options = get_options();
-
   conn->addr = router->addr;
   conn->port = router->or_port;
-  conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
   connection_or_set_identity_digest(conn, router->cache_info.identity_digest);
   conn->nickname = tor_strdup(router->nickname);
   tor_free(conn->address);
@@ -331,33 +328,34 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
 static void
 connection_or_init_conn_from_address(connection_t *conn,
                                      uint32_t addr, uint16_t port,
-                                     const char *id_digest)
+                                     const char *id_digest,
+                                     int started_here)
 {
-  const char *n;
   or_options_t *options = get_options();
   routerinfo_t *r = router_get_by_digest(id_digest);
+  conn->bandwidthrate = (int)options->BandwidthRate;
+  conn->receiver_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
   if (r) {
     connection_or_init_conn_from_router(conn,r);
-    return;
-  }
-  conn->addr = addr;
-  conn->port = port;
-  /* This next part isn't really right, but it's good enough for now. */
-  conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
-  connection_or_set_identity_digest(conn, id_digest);
-  /* If we're an authoritative directory server, we may know a
-   * nickname for this router. */
-  n = dirserv_get_nickname_by_digest(id_digest);
-  if (n) {
-    conn->nickname = tor_strdup(n);
   } else {
-    conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
-    conn->nickname[0] = '$';
-    base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
-                  conn->identity_digest, DIGEST_LEN);
+    const char *n;
+    conn->addr = addr;
+    conn->port = port;
+    connection_or_set_identity_digest(conn, id_digest);
+    /* If we're an authoritative directory server, we may know a
+     * nickname for this router. */
+    n = dirserv_get_nickname_by_digest(id_digest);
+    if (n) {
+      conn->nickname = tor_strdup(n);
+    } else {
+      conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
+      conn->nickname[0] = '$';
+      base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
+                    conn->identity_digest, DIGEST_LEN);
+    }
+    tor_free(conn->address);
+    conn->address = tor_dup_addr(addr);
   }
-  tor_free(conn->address);
-  conn->address = tor_dup_addr(addr);
 }
 
 /** Return the best connection of type OR with the
@@ -443,7 +441,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
   conn = connection_new(CONN_TYPE_OR);
 
   /* set up conn so it's got all the data we need to remember */
-  connection_or_init_conn_from_address(conn, addr, port, id_digest);
+  connection_or_init_conn_from_address(conn, addr, port, id_digest, 1);
   conn->state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED);
 
@@ -658,8 +656,6 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
  * If he initiated the connection, make sure he's not already connected,
  * then initialize conn from the information in router.
  *
- * If I'm not a server, set bandwidth to the default OP bandwidth.
- *
  * If all is successful, call circuit_n_conn_done() to handle events
  * that have been pending on the tls handshake completion. Also set the
  * directory to be dirty (only matters if I'm an authdirserver).
@@ -675,17 +671,8 @@ connection_tls_finish_handshake(connection_t *conn)
     return -1;
 
   if (!started_here) {
-#if 0
-    connection_t *c;
-    if ((c=connection_or_get_by_identity_digest(digest_rcvd))) {
-      log_debug(LD_OR,
-                "Router '%s' is already connected on fd %d. Dropping fd %d.",
-                c->nickname, c->s, conn->s);
-      return -1;
-    }
-#endif
     connection_or_init_conn_from_address(conn,conn->addr,conn->port,
-                                         digest_rcvd);
+                                         digest_rcvd, 0);
 
     /* Annotate that we received a TLS connection.
      * (Todo: only actually consider ourselves reachable if there
@@ -699,10 +686,6 @@ connection_tls_finish_handshake(connection_t *conn)
      * cell; so some servers rarely find themselves reachable. */
     if (!is_local_IP(conn->addr))
       router_orport_found_reachable();
-  }
-
-  if (!server_mode(get_options())) { /* If I'm an OP... */
-    conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
   }
 
   directory_set_dirty();
