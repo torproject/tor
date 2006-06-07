@@ -686,6 +686,19 @@ connection_tls_finish_handshake(connection_t *conn)
 #endif
     connection_or_init_conn_from_address(conn,conn->addr,conn->port,
                                          digest_rcvd);
+
+    /* Annotate that we received a TLS connection.
+     * (Todo: only actually consider ourselves reachable if there
+     * exists a testing circuit using conn.)
+     *
+     * We already consider ourselves reachable if we can ever process
+     * a create cell -- see onionskin_answer() in circuitbuild.c.
+     *
+     * The reason this bandaid is here is because there's a bug in
+     * Tor 0.1.1.x where middle hops don't always send their create
+     * cell; so some servers rarely find themselves reachable. */
+    if (!is_local_IP(conn->addr))
+      router_orport_found_reachable();
   }
 
   if (!server_mode(get_options())) { /* If I'm an OP... */
