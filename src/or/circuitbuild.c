@@ -976,7 +976,7 @@ onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload, char *keys)
   log_debug(LD_CIRC,"Finished sending 'created' cell.");
 
   if (!is_local_IP(circ->p_conn->addr) &&
-      tor_tls_is_server(circ->p_conn->tls)) {
+      !connection_or_nonopen_was_started_here(circ->p_conn)) {
     /* record that we could process create cells from a non-local conn
      * that we didn't initiate; presumably this means that create cells
      * can reach us too. */

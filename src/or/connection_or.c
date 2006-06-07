@@ -543,11 +543,9 @@ int
 connection_or_nonopen_was_started_here(connection_t *conn)
 {
   tor_assert(conn->type == CONN_TYPE_OR);
-
-  if (tor_digest_is_zero(conn->identity_digest))
-    return 0;
-  else
-    return 1;
+  if (!conn->tls)
+    return 1; /* it's still in proxy states or something */
+  return !tor_tls_is_server(conn->tls);
 }
 
 /** Conn just completed its handshake. Return 0 if all is well, and
