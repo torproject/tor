@@ -701,8 +701,8 @@ connection_tls_finish_handshake(connection_t *conn)
      * The reason this bandaid is here is because there's a bug in
      * Tor 0.1.1.x where middle hops don't always send their create
      * cell; so some servers rarely find themselves reachable. */
-    if (!is_local_IP(conn->addr))
-      router_orport_found_reachable();
+//    if (!is_local_IP(conn->addr))
+//      router_orport_found_reachable();
   }
 
   if (!server_mode(get_options())) { /* If I'm an OP... */
