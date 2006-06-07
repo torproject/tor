@@ -492,7 +492,7 @@ int
 connection_tls_start_handshake(connection_t *conn, int receiving)
 {
   conn->state = OR_CONN_STATE_HANDSHAKING;
-  conn->tls = tor_tls_new(conn->s, receiving, 0);
+  conn->tls = tor_tls_new(conn->s, receiving);
   if (!conn->tls) {
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
