@@ -301,11 +301,12 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 #define CIPHER_LIST SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA
 #endif
 
-/** Create a new TLS context.  If we are going to be using it as a
- * server, it must have isServer set to true, <b>identity</b> set to the
- * identity key used to sign that certificate, and <b>nickname</b> set to
- * the server's nickname.  If we're only going to be a client,
- * isServer should be false, identity should be NULL, and nickname
+/** Create a new TLS context for use with Tor TLS handshakes.
+ * <b>identity</b> should be set to the identity key used to sign the
+ * certificate, and <b>nickname</b> set to the nickname to use.
+ *
+ * XXX to be removed next:
+ * If we're only going to be a client, identity should be NULL, and nickname
  * should be NULL.  Return -1 if failure, else 0.
  *
  * You can call this function multiple times.  Each time you call it,
@@ -313,8 +314,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
  * the new SSL context.
  */
 int
-tor_tls_context_new(crypto_pk_env_t *identity,
-                    int isServer, const char *nickname,
+tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
                     unsigned int key_lifetime)
 {
   crypto_pk_env_t *rsa = NULL;
@@ -331,22 +331,20 @@ tor_tls_context_new(crypto_pk_env_t *identity,
 
   tor_tls_init();
 
-  if (isServer) {
-    /* Generate short-term RSA key. */
-    if (!(rsa = crypto_new_pk_env()))
-      goto error;
-    if (crypto_pk_generate_key(rsa)<0)
-      goto error;
-    /* Create certificate signed by identity key. */
-    cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
-                                      key_lifetime);
-    /* Create self-signed certificate for identity key. */
-    idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
-                                        IDENTITY_CERT_LIFETIME);
-    if (!cert || !idcert) {
-      log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
-      goto error;
-    }
+  /* Generate short-term RSA key. */
+  if (!(rsa = crypto_new_pk_env()))
+    goto error;
+  if (crypto_pk_generate_key(rsa)<0)
+    goto error;
+  /* Create certificate signed by identity key. */
+  cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
+                                    key_lifetime);
+  /* Create self-signed certificate for identity key. */
+  idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
+                                      IDENTITY_CERT_LIFETIME);
+  if (!cert || !idcert) {
+    log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
+    goto error;
   }
 
   result = tor_malloc(sizeof(tor_tls_context_t));
@@ -376,7 +374,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
       idcert=NULL; /* The context now owns the reference to idcert */
     }
     SSL_CTX_set_session_cache_mode(*ctx, SSL_SESS_CACHE_OFF);
-    if (isServer && !client_only) {
+    if (!client_only) {
       tor_assert(rsa);
       if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
         goto error;
