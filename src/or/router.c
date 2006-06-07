@@ -260,7 +260,7 @@ init_keys(void)
       return -1;
     set_identity_key(prkey);
     /* Create a TLS context; default the client nickname to "client". */
-    if (tor_tls_context_new(get_identity_key(), 1,
+    if (tor_tls_context_new(get_identity_key(),
                             options->Nickname ? options->Nickname : "client",
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_err(LD_GENERAL,"Error creating TLS context for OP.");
@@ -302,7 +302,7 @@ init_keys(void)
   }
 
   /* 3. Initialize link key and TLS context. */
-  if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
+  if (tor_tls_context_new(get_identity_key(), options->Nickname,
                           MAX_SSL_KEY_LIFETIME) < 0) {
     log_err(LD_GENERAL,"Error initializing TLS context");
     return -1;
