@@ -1043,10 +1043,8 @@ static void
 connection_read_bucket_decrement(connection_t *conn, int num_read)
 {
   global_read_bucket -= num_read;
-  //tor_assert(global_read_bucket >= 0);
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     conn->receiver_bucket -= num_read;
-    //tor_assert(conn->receiver_bucket >= 0);
   }
 }
 
@@ -1071,8 +1069,7 @@ connection_consider_empty_buckets(connection_t *conn)
   }
 }
 
-/** Initialize the global read bucket to options->BandwidthBurst,
- * and current_time to the current time. */
+/** Initialize the global read bucket to options->BandwidthBurst. */
 void
 connection_bucket_init(void)
 {
@@ -1110,7 +1107,9 @@ connection_bucket_refill(struct timeval *now)
     conn = carray[i];
 
     if (connection_receiver_bucket_should_increase(conn)) {
-      conn->receiver_bucket = conn->bandwidth;
+      conn->receiver_bucket += conn->bandwidthrate;
+      if (conn->receiver_bucket > conn->bandwidthburst)
+        conn->receiver_bucket = conn->bandwidthburst;
       //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i,
       //       conn->receiver_bucket);
     }
@@ -1147,7 +1146,7 @@ connection_receiver_bucket_should_increase(connection_t *conn)
   if (conn->state != OR_CONN_STATE_OPEN)
     return 0; /* only open connections play the rate limiting game */
 
-  if (conn->receiver_bucket >= conn->bandwidth)
+  if (conn->receiver_bucket >= conn->bandwidthburst)
     return 0;
 
   return 1;
