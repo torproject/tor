@@ -595,13 +595,6 @@ circuit_testing_opened(circuit_t *circ)
 static void
 circuit_testing_failed(circuit_t *circ, int at_last_hop)
 {
-#if 0
-  routerinfo_t *me = router_get_my_routerinfo();
-
-  if (!at_last_hop)
-    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
-  else
-#endif
   if (server_mode(get_options()) && check_whether_orport_reachable())
     return;
 
