@@ -920,7 +920,7 @@ rep_hist_circbuilding_dormant(void)
 {
   /* Any ports used lately? These are pre-seeded if we just started
    * up or if we're running a hidden service. */
-  if (predicted_ports_list || predicted_internal_time)
+  if (smartlist_len(predicted_ports_list) || predicted_internal_time)
     return 0;
 
   /* see if we'll still need to build testing circuits */
