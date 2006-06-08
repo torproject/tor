@@ -2105,7 +2105,7 @@ void rep_hist_note_used_internal(time_t now, int need_uptime,
 int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
                                     int *need_capacity);
 
-int rep_hist_circbuilding_dormant(void);
+int rep_hist_circbuilding_dormant(time_t now);
 
 void rep_hist_free_all(void);
 

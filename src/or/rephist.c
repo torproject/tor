@@ -916,11 +916,12 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 
 /** Return 1 if we have no need for circuits currently, else return 0. */
 int
-rep_hist_circbuilding_dormant(void)
+rep_hist_circbuilding_dormant(time_t now)
 {
   /* Any ports used lately? These are pre-seeded if we just started
    * up or if we're running a hidden service. */
-  if (smartlist_len(predicted_ports_list) || predicted_internal_time)
+  if (smartlist_len(predicted_ports_list) ||
+      predicted_internal_time + PREDICTED_CIRCS_RELEVANCE_TIME >= now)
     return 0;
 
   /* see if we'll still need to build testing circuits */

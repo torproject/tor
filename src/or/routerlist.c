@@ -3436,7 +3436,7 @@ update_router_descriptor_client_downloads(time_t now)
              "Called router_descriptor_client_downloads() on a dir mirror?");
   }
 
-  if (rep_hist_circbuilding_dormant()) {
+  if (rep_hist_circbuilding_dormant(now)) {
     log_info(LD_CIRC, "Skipping descriptor downloads: we haven't needed "
              "any circuits lately.");
     return;
