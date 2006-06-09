@@ -327,9 +327,12 @@ close_logs(void)
 }
 
 /** Remove and free the log entry <b>victim</b> from the linked-list
- * logfiles (it must be present in the list when this function is
- * called). After this function is called, the caller shouldn't refer
- * to <b>victim</b> anymore.
+ * logfiles (it is probably present, but it might not be due to thread
+ * racing issues). After this function is called, the caller shouldn't
+ * refer to <b>victim</b> anymore.
+ *
+ * Long-term, we need to do something about races in the log subsystem
+ * in general. See bug 222 for more details.
  */
 static void
 delete_log(logfile_t *victim)
@@ -339,8 +342,10 @@ delete_log(logfile_t *victim)
     logfiles = victim->next;
   else {
     for (tmpl = logfiles; tmpl && tmpl->next != victim; tmpl=tmpl->next) ;
-    tor_assert(tmpl);
-    tor_assert(tmpl->next == victim);
+//    tor_assert(tmpl);
+//    tor_assert(tmpl->next == victim);
+    if (!tmpl)
+      return;
     tmpl->next = victim->next;
   }
   tor_free(victim->filename);
