@@ -1548,6 +1548,14 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
         smartlist_add(excluded, r);
     }
   }
+  /* and exclude current entry guards, if applicable */
+  if (options->UseEntryGuards && entry_guards) {
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+      {
+        if ((r = router_get_by_digest(entry->identity)))
+          smartlist_add(excluded, r);
+      });
+  }
   // XXX we should exclude busy exit nodes here, too,
   // but only if there are enough other nodes available.
   choice = router_choose_random_node(
