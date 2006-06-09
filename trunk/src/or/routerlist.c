@@ -3442,10 +3442,8 @@ update_router_descriptor_client_downloads(time_t now)
     return;
   }
 
-  /* XXX here's another magic 2 that probably should be replaced
-   * by <= smartlist_len(trusted_dir_servers)/2
-   * or by a function returning same.  -- weasel */
-  if (networkstatus_list && smartlist_len(networkstatus_list) < 2) {
+  if (networkstatus_list && smartlist_len(networkstatus_list) <=
+                            smartlist_len(trusted_dir_servers)/2) {
     log_info(LD_DIR,
              "Not enough networkstatus documents to launch requests.");
   }
