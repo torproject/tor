@@ -339,8 +339,10 @@ delete_log(logfile_t *victim)
     logfiles = victim->next;
   else {
     for (tmpl = logfiles; tmpl && tmpl->next != victim; tmpl=tmpl->next) ;
-    tor_assert(tmpl);
-    tor_assert(tmpl->next == victim);
+//    tor_assert(tmpl);
+//    tor_assert(tmpl->next == victim);
+    if (!tmpl)
+      return;
     tmpl->next = victim->next;
   }
   tor_free(victim->filename);
