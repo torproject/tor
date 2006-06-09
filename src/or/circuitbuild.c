@@ -1817,12 +1817,15 @@ add_an_entry_guard(routerinfo_t *chosen)
   routerinfo_t *router;
   entry_guard_t *entry;
 
-  if (chosen)
+  if (chosen) {
     router = chosen;
-  else
+    if (is_an_entry_guard(router->cache_info.identity_digest))
+      return NULL;
+  } else {
     router = choose_good_entry_server(CIRCUIT_PURPOSE_C_GENERAL, NULL);
-  if (!router)
-    return NULL;
+    if (!router)
+      return NULL;
+  }
   entry = tor_malloc_zero(sizeof(entry_guard_t));
   log_info(LD_CIRC, "Chose '%s' as new entry guard.", router->nickname);
   strlcpy(entry->nickname, router->nickname, sizeof(entry->nickname));
