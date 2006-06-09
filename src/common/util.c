@@ -609,7 +609,7 @@ esc_for_log(const char *s)
         len += 2;
         break;
       default:
-        if (TOR_ISPRINT(*cp))
+        if (TOR_ISPRINT(*cp) && ((uint8_t)*cp)<127)
           ++len;
         else
           len += 4;
@@ -640,10 +640,10 @@ esc_for_log(const char *s)
         *outp++ = 'r';
         break;
       default:
-        if (TOR_ISPRINT(*cp)) {
+        if (TOR_ISPRINT(*cp) && ((uint8_t)*cp)<127) {
           *outp++ = *cp;
         } else {
-          tor_snprintf(outp, 5, "\\%03o", (uint8_t) *cp);
+          tor_snprintf(outp, 5, "\\%03o", (int)(uint8_t) *cp);
           outp += 4;
         }
         break;
