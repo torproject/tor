@@ -3668,6 +3668,8 @@ router_have_minimum_dir_info(void)
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
                     tot += routerstatus_count_usable_entries(ns->entries));
   avg = tot / n_ns;
+  if (!routerstatus_list)
+    routerstatus_list = smartlist_create();
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
      {
        if (rs->status.is_running)
