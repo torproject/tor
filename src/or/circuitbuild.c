@@ -716,9 +716,6 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
     (n_conn->is_obsolete &&
      router_digest_version_as_new_as(id_digest,"0.1.1.9-alpha-cvs"))) {
-     /* Note that this will close circuits that have the same
-     * router twice in a row in the path. I think that's ok.
-     */
     struct in_addr in;
     char tmpbuf[INET_NTOA_BUF_LEN];
     in.s_addr = htonl(circ->n_addr);
@@ -1552,6 +1549,14 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
         smartlist_add(excluded, r);
     }
   }
+  /* and exclude current entry guards, if applicable */
+  if (options->UseEntryGuards && entry_guards) {
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+      {
+        if ((r = router_get_by_digest(entry->identity)))
+          smartlist_add(excluded, r);
+      });
+  }
   // XXX we should exclude busy exit nodes here, too,
   // but only if there are enough other nodes available.
   choice = router_choose_random_node(
@@ -1799,7 +1804,7 @@ log_entry_guards(int severity)
 
 #define NUM_ENTRY_PICK_TRIES 100
 
-/** Add a new (preferably stable and fast) entry to our
+/** Add a new (preferably stable and fast) router to our
  * entry_guards list. Return a pointer to the router if we succeed,
  * or NULL if we can't find any more suitable entries.
  *
@@ -1811,33 +1816,20 @@ add_an_entry_guard(routerinfo_t *chosen)
 {
   routerinfo_t *router;
   entry_guard_t *entry;
-  int tries_left = NUM_ENTRY_PICK_TRIES;
 
-again:
-  if (--tries_left <= 0) {
-    log_warn(LD_CIRC, "Tried finding a new entry guard, but failed. "
-             "Can you reach the Tor network?");
-    return NULL;
-  }
   if (chosen)
     router = chosen;
   else
     router = choose_good_entry_server(CIRCUIT_PURPOSE_C_GENERAL, NULL);
   if (!router)
     return NULL;
-  /* make sure it's not already an entry */
-  if (is_an_entry_guard(router->cache_info.identity_digest)) {
-    if (chosen)
-      return NULL;
-    goto again;
-  }
   entry = tor_malloc_zero(sizeof(entry_guard_t));
   log_info(LD_CIRC, "Chose '%s' as new entry guard.", router->nickname);
   strlcpy(entry->nickname, router->nickname, sizeof(entry->nickname));
   memcpy(entry->identity, router->cache_info.identity_digest, DIGEST_LEN);
-  if (chosen)
+  if (chosen) /* prepend */
     smartlist_insert(entry_guards, 0, entry);
-  else
+  else /* append */
     smartlist_add(entry_guards, entry);
   log_entry_guards(LOG_INFO);
   return router;
