@@ -623,7 +623,7 @@ esc_for_log(const char *s)
         if (TOR_ISPRINT(*cp) && ((uint8_t)*cp)<127) {
           *outp++ = *cp;
         } else {
-          tor_snprintf(outp, 5, "\\%03o", (uint8_t) *cp);
+          tor_snprintf(outp, 5, "\\%03o", (int)(uint8_t) *cp);
           outp += 4;
         }
         break;
