@@ -3339,8 +3339,8 @@ validate_data_directory(or_options_t *options)
   "if you edit it, comments will not be preserved"
 /** This string can change; it tries to give the reader an idea
  * that editing this file by hand is not a good plan. */
-#define GENERATED_FILE_COMMENT "# If you want a config file with " \
-  "comments, look for torrc.orig.1 or similar"
+#define GENERATED_FILE_COMMENT "# The old torrc file was renamed " \
+  "to torrc.orig.1 or similar, and Tor will ignore it"
 
 /** Save a configuration file for the configuration in <b>options</b>
  * into the file <b>fname</b>.  If the file already exists, and
