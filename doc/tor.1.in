@@ -339,14 +339,15 @@ port 80.
 A list of ports for services that tend to have long-running connections
 (e.g. chat and interactive shells). Circuits for streams that use these
 ports will contain only high-uptime nodes, to reduce the chance that a
-node will go down before the stream is finished. (Default: 21, 22, 706, 1863, 5050, 
-5190, 5222, 5223, 6667, 8300, 8888)
+node will go down before the stream is finished.
+(Default: 21, 22, 706, 1863, 5050, 5190, 5222, 5223, 6667, 8300, 8888)
 .LP
 .TP
 \fBMapAddress\fR \fIaddress\fR \fInewaddress\fR
-When a request for address arrives to Tor, it will rewrite it to newaddress before 
-processing it. For example, if you always want connections to www.indymedia.org to 
-exit via \fItorserver\fR (where \fItorserver\fR is the nickname of the server), 
+When a request for address arrives to Tor, it will rewrite it to
+newaddress before processing it. For example, if you always want
+connections to www.indymedia.org to exit via \fItorserver\fR (where
+\fItorserver\fR is the nickname of the server),
 use "MapAddress www.indymedia.org www.indymedia.org.torserver.exit".
 .LP
 .TP
@@ -355,8 +356,9 @@ Every NUM seconds consider whether to build a new circuit. (Default: 30 seconds)
 .LP
 .TP
 \fBMaxCircuitDirtiness \fR\fINUM\fP
-Feel free to reuse a circuit that was first used at most NUM seconds
-ago, but never attach a new stream to a circuit that is too old. (Default: 10 minutes)
+Feel free to reuse a circuit that was first used at most NUM seconds ago,
+but never attach a new stream to a circuit that is too old.
+(Default: 10 minutes)
 .LP
 .TP
 \fBNodeFamily \fR\fInickname\fR,\fInickname\fR,\fI...\fP
@@ -367,7 +369,7 @@ NodeFamily is only needed when a server doesn't list the family itself
 .LP
 .TP
 .\" \fBPathlenCoinWeight \fR\fI0.0-1.0\fP
-.\" Paths are 3 hops plus a geometric distribution centered around this coinweight. 
+.\" Paths are 3 hops plus a geometric distribution centered around this coinweight.
 .\" Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
 .\" .TP
 \fBRendNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
@@ -673,7 +675,8 @@ to this port rather than the one specified in DirPort. (Default: 0.0.0.0)
 .LP
 .TP
 \fBDirPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
-Set an entrance policy for this server, to limit who can connect to the directory ports. 
+Set an entrance policy for this server, to limit who can connect to the
+directory ports.
 The policies have the same form as exit policies above.
 .LP
 .TP
