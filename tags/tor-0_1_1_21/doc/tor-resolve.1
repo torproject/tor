@@ -1,0 +1,17 @@
+.TH tor-resolve 1 "" Aug-2004 ""
+.\" manual page by Peter Palfrader
+.SH NAME
+.LP
+tor-resolve \- resolve a hostname to an IP address via tor
+
+.SH SYNOPSIS
+\fBtor-resolve\fP\ [-4|-5] \fIhostname\fP\ [\fIsockshost\fP[:\fIsocksport]\fP]
+
+.SH DESCRIPTION
+\fBtor-resolve\fR is a simple script to connect to a SOCKS proxy that
+knows about the SOCKS RESOLVE command, hand it a hostname, and return
+an IP address.
+
+.SH SEE ALSO
+.BR tor (1),
+.BR torify (1).

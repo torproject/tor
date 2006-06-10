@@ -1,0 +1,23 @@
+.TH torify 1 "" Feb-2004 ""
+.\" manual page by Peter Palfrader
+.SH NAME
+.LP
+torify \- wrapper for tsocks and tor
+
+.SH SYNOPSIS
+\fBtorify\fP\ \fIapplication\fP\ [\fIapplication's\ arguments\fP]
+
+.SH DESCRIPTION
+\fBtorify\fR is a simple wrapper that calls tsocks with a tor specific
+configuration file.
+
+tsocks itself is a wrapper between the tsocks library and the application
+that you would like to run socksified.
+
+Please note that since tsocks uses LD_PRELOAD, torify cannot be applied
+to suid binaries.
+
+.SH SEE ALSO
+.BR tor (1),
+.BR tsocks (1),
+.BR tsocks.conf (5).
