@@ -1481,6 +1481,7 @@ choose_good_middle_server(uint8_t purpose,
   routerinfo_t *r, *choice;
   crypt_path_t *cpath;
   smartlist_t *excluded;
+  or_options_t *options = get_options();
   tor_assert(_CIRCUIT_PURPOSE_MIN <= purpose &&
              purpose <= _CIRCUIT_PURPOSE_MAX);
 
@@ -1501,9 +1502,10 @@ choose_good_middle_server(uint8_t purpose,
     }
   }
   choice = router_choose_random_node(
-           NULL, get_options()->ExcludeNodes, excluded,
+           purpose == CIRCUIT_PURPOSE_TESTING ? options->TestVia : NULL,
+           options->ExcludeNodes, excluded,
            state->need_uptime, state->need_capacity, 0,
-           get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0);
+           options->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0);
   smartlist_free(excluded);
   return choice;
 }
