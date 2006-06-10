@@ -9,6 +9,7 @@ Changes in version 0.1.1.21 - 2006-06-10
     - Make our unit tests pass again on certain obscure platforms.
 
   o Other fixes:
+    - Add support for building SUSE RPM packages.
     - Speed up initial bootstrapping for clients: if we are making our
       first ever connection to any entry guard, then don't mark it down
       right after that.
