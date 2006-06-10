@@ -30,7 +30,7 @@
 %define _host %{target_cpu}-pc-%{target_os}-%{target}
 %define _host_cpu %{target_cpu}
 %define _host_vendor %{target_os}
-%define optflags -march=%{target_cpu} -mcpu=%{target_cpu} -O
+%define optflags -march=%{target_cpu} -mtune=%{target_cpu} -O2
 
 ## Version song and dance
 #
@@ -124,13 +124,15 @@ License: BSD-like
 Vendor: R. Dingledine <arma@seul.org>
 Packager: Nick Mathewson <nickm@seul.org>
 
+%if %{is_suse}
+Requires: openssl >= 0.9.6
+BuildRequires: openssl-devel >= 0.9.6, rpm >= 4.0, zlib-devel
+%else 
 Requires: openssl >= 0.9.6, libevent >= 1.1a
 BuildRequires: openssl-devel >= 0.9.6, libevent-devel >= 1.1a
+%endif
 %if %{is_fc}
 BuildRequires: rpm-build >= 4.0
-%endif
-%if %{is_suse}
-BuildRequires: rpm >= 4.0, zlib-devel
 %endif
 Requires(pre): /usr/bin/id, /bin/date, /bin/sh
 Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
@@ -166,8 +168,14 @@ for high-stakes anonymity.
 %setup -q -n %{name}-%{native_version}
 
 %build
+%if %{is_suse}
 %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
-	--build=%{_host} --host=%{_host} --target=%{_host}
+	--build=%{_host} --host=%{_host} --target=%{_host} \
+	--enable-static --disable-shared
+%else
+%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
+	--build=%{_host} --host=%{_host} --target=%{_host} 
+%endif
 %make
 
 %install
@@ -175,7 +183,11 @@ for high-stakes anonymity.
 
 # Install init script and control script
 %__mkdir_p ${RPM_BUILD_ROOT}%{_initrddir}
+%if %{is_suse}
+%__install -p -m 755 contrib/suse/tor.sh ${RPM_BUILD_ROOT}%{_initrddir}/%{name}
+%else
 %__install -p -m 755 contrib/tor.sh ${RPM_BUILD_ROOT}%{_initrddir}/%{name}
+%endif
 %__install -p -m 755 contrib/torctl ${RPM_BUILD_ROOT}%{_bindir}
 
 # Set up config file; "sample" file implements a basic user node.
@@ -232,6 +244,7 @@ exit 0
 # configuration alone.
 if [ $1 -eq 1 ]; then
     /sbin/chkconfig --add %{name}
+    /sbin/chkconfig %{name} on
 fi
 
 # Older tor RPMS used a different username for the tor daemon.
@@ -282,6 +295,12 @@ exit 0
 %attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+
+* Fri May 26 2006 Andrew Lewman <phobos@interloper.org>
+- Add in a few "SUSEisms" to make dist-rpm actually work on suse
+- Turn Tor "on" via chkconfig
+- Update -mcpu to -mtune to make GCC happy
+- see OR-CVS for details
 
 * Tue Mar 28 2006 Andrew Lewman <phobos@interloper.org>
 - converted to build the specified target cpu and arch
