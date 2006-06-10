@@ -1342,6 +1342,7 @@ typedef struct {
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */
+  char *TestVia; /**< When reachability testing, use these as middle hop. */
   config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
   char *ContactInfo; /**< Contact info to be published in the directory */

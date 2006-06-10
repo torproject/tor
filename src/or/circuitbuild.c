@@ -1501,7 +1501,8 @@ choose_good_middle_server(uint8_t purpose,
     }
   }
   choice = router_choose_random_node(
-           NULL, get_options()->ExcludeNodes, excluded,
+           purpose == CIRCUIT_PURPOSE_TESTING ? get_options()->TestVia : NULL,
+           get_options()->ExcludeNodes, excluded,
            state->need_uptime, state->need_capacity, 0,
            get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0);
   smartlist_free(excluded);
