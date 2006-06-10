@@ -233,6 +233,7 @@ static config_var_t _option_vars[] = {
   VAR("StrictExitNodes",     BOOL,     StrictExitNodes,      "0"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   VAR("TestSocks",           BOOL,     TestSocks,            "0"),
+  VAR("TestVia",             STRING,   TestVia,              NULL),
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
   VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
   OBSOLETE("TrafficShaping"),
@@ -2424,6 +2425,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (check_nickname_list(options->RendNodes, "RendNodes", msg))
     return -1;
   if (check_nickname_list(options->RendNodes, "RendExcludeNodes", msg))
+    return -1;
+  if (check_nickname_list(options->TestVia, "TestVia", msg))
     return -1;
   if (check_nickname_list(options->MyFamily, "MyFamily", msg))
     return -1;
