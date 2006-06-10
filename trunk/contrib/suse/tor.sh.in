@@ -63,7 +63,7 @@ fi
 case "$1" in
 
     start)
-    echo -n "Starting tor daemon"
+    echo "Starting tor daemon"
     ## Start daemon with startproc(8). If this fails
     ## the echo return value is set appropriate.
 
@@ -73,21 +73,21 @@ case "$1" in
     ;;
 
     stop)
-    echo -n "Stopping tor daemon" 
+    echo "Stopping tor daemon" 
     startproc -f $TORCTL stop
     # Remember status and be verbose
     rc_status -v
     ;;
 
     restart)
-    echo -n "Restarting tor daemon" 
+    echo "Restarting tor daemon" 
     startproc -f $TORCTL restart
     # Remember status and be verbose
     rc_status -v
     ;;
 
     reload)
-    echo -n "Reloading tor daemon" 
+    echo "Reloading tor daemon" 
     startproc -f $TORCTL reload
     # Remember status and be verbose
     rc_status -v
