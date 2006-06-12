@@ -608,7 +608,6 @@ int
 exit_policy_is_general_exit(addr_policy_t *policy)
 {
   static const int ports[] = { 80, 443, 6667 };
-  int n_allowed = 0;
   int i;
   for (i = 0; i < 3; ++i) {
     struct addr_policy_t *p = policy;
@@ -621,11 +620,10 @@ exit_policy_is_general_exit(addr_policy_t *policy)
         continue; /* 127.x */
       /* We have a match that is at least a /8. */
       if (p->policy_type == ADDR_POLICY_ACCEPT)
-        ++n_allowed;
-      break;
+        return 1;
     }
   }
-  return n_allowed > 0;
+  return 0;
 }
 
 /** Release all storage held by <b>p</b> */
