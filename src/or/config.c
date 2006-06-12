@@ -2078,7 +2078,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to normalize old Log options. See logs for details.");
 
   /* Special case on first boot if no Log options are given. */
-  if (!options->Logs && !from_setconf)
+  if (!options->Logs && !options->RunAsDaemon && !from_setconf)
     config_line_append(&options->Logs, "Log", "notice stdout");
 
   if (options_init_logs(options, 1)<0) /* Validate the log(s) */
