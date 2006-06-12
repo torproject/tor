@@ -1,3 +1,9 @@
+tor (0.1.1.21-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 11 Jun 2006 18:27:13 +0200
+
 tor (0.1.1.20-1) unstable; urgency=low
 
   * New upstream stable release: The 0.1.1.x tree is now the new stable
