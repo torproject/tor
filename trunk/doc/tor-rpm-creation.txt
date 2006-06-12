@@ -1,13 +1,13 @@
-These are instructions for building Tor binaries in the rpm format on 
+These are instructions for building Tor binaries in the rpm format on
 various cpu architectures and operating systems.  Each rpm will require
-glibc on the target system.  It is believed that any rpm-based linux 
-distribution should have semi-current glibc installed by default.  
-If you run into a distribution that does not work with glibc, or does 
-not contain it, please let us know the details.  
+glibc on the target system.  It is believed that any rpm-based linux
+distribution should have semi-current glibc installed by default.
+If you run into a distribution that does not work with glibc, or does
+not contain it, please let us know the details.
 
 These are the exact same steps used to build the official rpms of Tor.
 
-If you wish to further tune Tor binaries in rpm format beyond this list, 
+If you wish to further tune Tor binaries in rpm format beyond this list,
 see the GCC doc page for further options:
 http://gcc.gnu.org/onlinedocs/gcc-4.0.2/gcc/
 
@@ -26,11 +26,11 @@ this:
 
 The three parameters: target, target_cpu, and target_os are used
 throughout the "make dist-rpm" process.  They control the parameters
-passed to "configure" and the final tuning of the binaries produced.  
+passed to "configure" and the final tuning of the binaries produced.
 The default settings, as shown above, create binaries for the widest
 range of Intel x86 or compatible architectures.
 
-The paramters can be set as follows:
+The parameters can be set as follows:
 
 The "target" parameter:
 This should be "gnu", "redhat", or the short name of your linux distribution.
