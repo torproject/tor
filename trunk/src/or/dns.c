@@ -701,6 +701,10 @@ assign_to_dnsworker(connection_t *exitconn)
   tor_free(dnsconn->address);
   dnsconn->address = tor_strdup(exitconn->address);
   dnsconn->state = DNSWORKER_STATE_BUSY;
+  /* touch the lastwritten timestamp, since that's how we check to
+   * see how long it's been since we asked the question, and sometimes
+   * we check before the first call to connection_handle_write(). */
+  dnsconn->timestamp_lastwritten = time(NULL);
   num_dnsworkers_busy++;
 
   len = strlen(dnsconn->address);
