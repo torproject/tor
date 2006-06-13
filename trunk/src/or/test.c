@@ -1320,7 +1320,7 @@ test_dir_format(void)
   test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);
   test_eq(dirserv_add_descriptor(buf,&m), 2);
   get_options()->Nickname = tor_strdup("DirServer");
-  test_assert(!dirserv_dump_directory_to_string(&cp,pk3));
+  test_assert(!dirserv_dump_directory_to_string(&cp,pk3, 0));
   crypto_pk_get_digest(pk3, d);
   test_assert(!router_parse_directory(cp));
   test_eq(2, smartlist_len(dir1->routers));

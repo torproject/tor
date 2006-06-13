@@ -760,11 +760,12 @@ live_enough_for_v1_dir(routerinfo_t *ri, time_t now)
 /** Generate a new v1 directory and write it into a newly allocated string.
  * Point *<b>dir_out</b> to the allocated string.  Sign the
  * directory with <b>private_key</b>.  Return 0 on success, -1 on
- * failure.
+ * failure. If <b>complete</b> is set, give us all the descriptors;
+ * otherwise leave out non-running and non-valid ones.
  */
 int
 dirserv_dump_directory_to_string(char **dir_out,
-                                 crypto_pk_env_t *private_key)
+                                 crypto_pk_env_t *private_key, int complete)
 {
   char *cp;
   char *router_status;
@@ -798,7 +799,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-                    if (live_enough_for_v1_dir(ri, now))
+                    if (complete || live_enough_for_v1_dir(ri, now))
                       buf_len += ri->cache_info.signed_descriptor_len+1);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
@@ -824,7 +825,7 @@ dirserv_dump_directory_to_string(char **dir_out,
     {
       size_t len = ri->cache_info.signed_descriptor_len;
       const char *body;
-      if (!live_enough_for_v1_dir(ri, now))
+      if (!complete && !live_enough_for_v1_dir(ri, now))
         continue;
       if (cp+len+1 >= buf+buf_len)
         goto truncated;
@@ -1086,7 +1087,7 @@ dirserv_regenerate_directory(void)
   char *new_directory=NULL;
 
   if (dirserv_dump_directory_to_string(&new_directory,
-                                       get_identity_key())) {
+                                       get_identity_key(), 0)) {
     log_warn(LD_BUG, "Error creating directory.");
     tor_free(new_directory);
     return -1;

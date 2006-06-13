@@ -1910,7 +1910,8 @@ int dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
                                                    time_t now);
 int list_server_status(smartlist_t *routers, char **router_status_out);
 int dirserv_dump_directory_to_string(char **dir_out,
-                                     crypto_pk_env_t *private_key);
+                                     crypto_pk_env_t *private_key,
+                                     int complete);
 void directory_set_dirty(void);
 size_t dirserv_get_directory(const char **cp, int compress);
 size_t dirserv_get_runningrouters(const char **rr, int compress);
