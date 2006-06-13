@@ -1,3 +1,12 @@
+/* $Id$ */
+
+// Modified from agl's original; see CVS for more info.
+// Try to keep this re-mergeable by Adam.  Don't make it depend on Tor.
+// TODO:
+//   - Check all malloc return values.
+//   - Better logging support
+//   - Learn about nameservers on win32.
+
 /* Async DNS Library
  * Adam Langley <agl@imperialviolet.org>
  * http://www.imperialviolet.org/eventdns.html
@@ -75,7 +84,7 @@
  *
  * In order for this library to be a good replacment for glibc's resolver it
  * supports searching. This involves setting a list of default domains, in
- * which names will be queried for. The number of nots in the query name
+ * which names will be queried for. The number of dots in the query name
  * determines the order in which this list is used.
  *
  * Searching appears to be a single lookup from the point of view of the API,
@@ -112,12 +121,12 @@
  * int eventdns_nameserver_add(unsigned long int addresss)
  *   Add a nameserver. The address should be an IP address in
  *   network byte order. The type of address is chosen so that
- *   it match in_addr.s_addr.
+ *   it matches in_addr.s_addr.
  *   Returns non-zero on error.
  *
  * int eventdns_nameserer_ip_add(const char *ip_as_string)
  *   This wraps the above function by parsing a string as an IP
- *   address and add it as a nameserver.
+ *   address and adds it as a nameserver.
  *   Returns non-zero on error
  *
  * int eventdns_resolve(const char *name, int flags,
@@ -238,6 +247,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX 255
@@ -386,6 +396,9 @@ error_is_eagain(int sock)
 #define last_error(sock) (errno)
 #define error_is_eagain(sock) (errno == EAGAIN)
 #endif
+
+#define ISSPACE(c) isspace((int)(unsigned char)(c))
+#define ISDIGIT(c) isdigit((int)(unsigned char)(c))
 
 #ifndef NDEBUG
 static const char *
@@ -1180,6 +1193,29 @@ eventdns_nameserver_ip_add(const char *ip_as_string) {
 	return eventdns_nameserver_add(ina.s_addr);
 }
 
+/* Add multiple nameservers from a space-or-comma-separated list. */
+static int
+eventdns_nameserver_ip_add_line(const char *ips) {
+	const char *addr;
+	char *buf;
+	int r;
+	while (*ips) {
+		while (ISSPACE(*ips) || *ips == ',' || *ips == '\t')
+			++ips;
+		addr = ips;
+		while (ISDIGIT(*ips) || *ips == '.')
+			++ips;
+		buf = malloc(ips-addr+1);
+		if (!buf) return 4;
+		memcpy(buf, addr, ips-addr);
+		buf[ips-addr] = '\0';
+		r = eventdns_nameserver_ip_add(buf);
+		free(buf);
+		if (r) return r;
+	}
+	return 0;
+}
+
 // insert into the tail of the queue
 static void
 eventdns_request_insert(struct request *req, struct request **head) {
@@ -1651,3 +1687,60 @@ out1:
 	close(fd);
 	return err;
 }
+
+#ifdef MS_WINDOWS
+static int
+load_nameservers_with_getnetworkparams(void)
+{
+	FIXED_INFO *fixed;
+	HMODULE handle = 0;
+	ULONG size = sizeof(FIXED_INFO);
+	void *buf = NULL;
+	int status = 0, r, added_any;
+	IP_ADDR_STRING *ns;
+	DWORD (WINAPI *fn)(FIXED_INFO*, DWORD*);
+
+	if (!(handle = LoadLibrary("iphlpapi.dll")))
+		goto done;
+	if (!(fn = GetProcAddress(handle, "GetNetworkParams")))
+		goto done;
+
+	buf = malloc(size);
+	if (!buf) { status = 4; goto done; }
+	fixed = buf;
+	r = fn(fixed, &size);
+	if (r != ERROR_SUCCESS && r != ERROR_BUFFER_OVERFLOW) {
+		status = -1;
+		goto done;
+	}
+	if (r != ERROR_SUCCESS) {
+		free(buf);
+		buf = malloc(size);
+		if (!buf) { status = 4; goto done; }
+		fixed = buf;
+		r = fn(fixed, &size);
+		if (r != ERROR_SUCCESS) { status = -1; goto done; }
+	}
+
+	assert(fixed);
+	added_any = 0;
+	ns = fixed->DnsServerList;
+	while (ns) {
+		r = eventdns_nameserver_ip_add_line(ns->IpAddress.String);
+		if (r) { status = r; goto done; }
+		added_any = 0;
+		ns = ns->next;
+	}
+
+	if (!added_any)
+		status = -1;
+
+ done:
+	if (buf)
+		free(buf);
+	if (handle)
+		FreeLibrary(handle);
+	return status;
+}
+
+#endif
