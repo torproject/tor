@@ -603,11 +603,12 @@ policies_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
 
 /** Return true iff <b>ri</b> is "useful as an exit node", meaning
  * it allows exit to at least one /8 address space for at least
- * one of ports 80, 443, and 6667. */
+ * two of ports 80, 443, and 6667. */
 int
 exit_policy_is_general_exit(addr_policy_t *policy)
 {
   static const int ports[] = { 80, 443, 6667 };
+  int n_allowed = 0;
   int i;
   for (i = 0; i < 3; ++i) {
     struct addr_policy_t *p = policy;
@@ -620,10 +621,10 @@ exit_policy_is_general_exit(addr_policy_t *policy)
         continue; /* 127.x */
       /* We have a match that is at least a /8. */
       if (p->policy_type == ADDR_POLICY_ACCEPT)
-        return 1;
+        ++n_allowed;
     }
   }
-  return 0;
+  return n_allowed >= 2;
 }
 
 /** Release all storage held by <b>p</b> */
