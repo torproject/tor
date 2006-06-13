@@ -306,22 +306,6 @@ connection_or_finished_connecting(connection_t *conn)
   return 0;
 }
 
-/** Initialize <b>conn</b> to include all the relevant data from <b>router</b>.
- * This function is called either from connection_or_connect(), if
- * we initiated the connect, or from connection_tls_finish_handshake()
- * if the other side initiated it.
- */
-static void
-connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
-{
-  conn->addr = router->addr;
-  conn->port = router->or_port;
-  connection_or_set_identity_digest(conn, router->cache_info.identity_digest);
-  conn->nickname = tor_strdup(router->nickname);
-  tor_free(conn->address);
-  conn->address = tor_strdup(router->address);
-}
-
 /** If we don't necessarily know the router we're connecting to, but we
  * have an addr/port/id_digest, then fill in as much as we can. Start
  * by checking to see if this describes a router we know. */
@@ -335,13 +319,22 @@ connection_or_init_conn_from_address(connection_t *conn,
   routerinfo_t *r = router_get_by_digest(id_digest);
   conn->bandwidthrate = (int)options->BandwidthRate;
   conn->receiver_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
+  connection_or_set_identity_digest(conn, id_digest);
+  conn->addr = addr;
+  conn->port = port;
   if (r) {
-    connection_or_init_conn_from_router(conn,r);
+    if (!started_here) {
+      /* Override the addr/port, so our log messages will make sense.
+       * This is dangerous, since if we ever try looking up a conn by
+       * its actual addr/port, we won't remember. Careful! */
+      conn->addr = r->addr;
+      conn->port = r->or_port;
+    }
+    conn->nickname = tor_strdup(r->nickname);
+    tor_free(conn->address);
+    conn->address = tor_strdup(r->address);
   } else {
     const char *n;
-    conn->addr = addr;
-    conn->port = port;
-    connection_or_set_identity_digest(conn, id_digest);
     /* If we're an authoritative directory server, we may know a
      * nickname for this router. */
     n = dirserv_get_nickname_by_digest(id_digest);
