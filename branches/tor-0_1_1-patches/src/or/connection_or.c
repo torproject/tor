@@ -312,12 +312,15 @@ connection_or_finished_connecting(connection_t *conn)
  * if the other side initiated it.
  */
 static void
-connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
+connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router,
+                                    int started_here)
 {
   or_options_t *options = get_options();
 
-  conn->addr = router->addr;
-  conn->port = router->or_port;
+  if (!started_here) {
+    conn->addr = router->addr;
+    conn->port = router->or_port;
+  }
   conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   connection_or_set_identity_digest(conn, router->cache_info.identity_digest);
@@ -332,17 +335,18 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router)
 static void
 connection_or_init_conn_from_address(connection_t *conn,
                                      uint32_t addr, uint16_t port,
-                                     const char *id_digest)
+                                     const char *id_digest,
+                                     int started_here)
 {
   const char *n;
   or_options_t *options = get_options();
   routerinfo_t *r = router_get_by_digest(id_digest);
-  if (r) {
-    connection_or_init_conn_from_router(conn,r);
-    return;
-  }
   conn->addr = addr;
   conn->port = port;
+  if (r) {
+    connection_or_init_conn_from_router(conn, r, started_here);
+    return;
+  }
   /* This next part isn't really right, but it's good enough for now. */
   conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
   connection_or_set_identity_digest(conn, id_digest);
@@ -446,7 +450,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
   conn = connection_new(CONN_TYPE_OR);
 
   /* set up conn so it's got all the data we need to remember */
-  connection_or_init_conn_from_address(conn, addr, port, id_digest);
+  connection_or_init_conn_from_address(conn, addr, port, id_digest, 1);
   conn->state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED);
 
@@ -690,7 +694,7 @@ connection_tls_finish_handshake(connection_t *conn)
     }
 #endif
     connection_or_init_conn_from_address(conn,conn->addr,conn->port,
-                                         digest_rcvd);
+                                         digest_rcvd, 0);
     /* Annotate that we received a TLS connection.
      * (Todo: only actually consider ourselves reachable if there
      * exists a testing circuit using conn.)
