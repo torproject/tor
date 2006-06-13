@@ -316,6 +316,13 @@ $Id$
 
     "config-file" -- The location of Tor's configuration file ("torrc").
 
+    ["exit-policy/prepend" -- The default exit policy lines that Tor will
+      *prepend* to the ExitPolicy config option.
+     -- Never implemented. Useful?]
+
+    "exit-policy/default" -- The default exit policy lines that Tor will
+      *append* to the ExitPolicy config option.
+
     "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest
       server descriptor for a given OR, NUL-terminated.
 
