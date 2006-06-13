@@ -1491,8 +1491,9 @@ compute_preferred_testing_list(const char *answer)
   }
   log_info(LD_CIRC, "Looking for middle server that doesn't have the "
              "reachability bug, and chose '%s'. Great.", router->nickname);
-  s = tor_malloc(HEX_DIGEST_LEN+1);
-  base16_encode(s, HEX_DIGEST_LEN+1,
+  s = tor_malloc(HEX_DIGEST_LEN+2);
+  s[0] = '$';
+  base16_encode(s+1, HEX_DIGEST_LEN+1,
                 router->cache_info.identity_digest, DIGEST_LEN);
   return s;
 }
