@@ -620,8 +620,10 @@ exit_policy_is_general_exit(addr_policy_t *policy)
       if ((p->addr & 0xff000000ul) == 0x7f000000ul)
         continue; /* 127.x */
       /* We have a match that is at least a /8. */
-      if (p->policy_type == ADDR_POLICY_ACCEPT)
+      if (p->policy_type == ADDR_POLICY_ACCEPT) {
         ++n_allowed;
+        break; /* stop considering this port */
+      }
     }
   }
   return n_allowed >= 2;
