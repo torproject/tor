@@ -26,7 +26,7 @@ static int connection_or_process_cells_from_inbuf(connection_t *conn);
 
 /** Map from identity digest of connected OR or desired OR to a connection_t
  * with that identity digest.  If there is more than one such connection_t,
- * they form a linked list, with next_with_same_id as the next pointer.*/
+ * they form a linked list, with next_with_same_id as the next pointer. */
 static digestmap_t *orconn_identity_map = NULL;
 
 /** If conn is listed in orconn_identity_map, remove it, and clear
