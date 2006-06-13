@@ -16,14 +16,25 @@
 #ifndef EVENTDNS_H
 #define EVENTDNS_H
 
+/* Error codes 0-5 are as described in RFC 1035. */
 #define DNS_ERR_NONE 0
+/* The name server was unable to interpret the query */
 #define DNS_ERR_FORMAT 1
+/* The name server was unable to process this query due to a problem with the
+ * name server */
 #define DNS_ERR_SERVERFAILED 2
+/* The domain name does not exist */
 #define DNS_ERR_NOTEXIST 3
+/* The name server does not support the requested kind of query */
 #define DNS_ERR_NOTIMPL 4
+/* The name server refuses to reform the specified operation for policy
+ * reasons */
 #define DNS_ERR_REFUSED 5
+/* The reply was truncated or ill-formated */
 #define DNS_ERR_TRUNCATED 65
+/* An unknown error occurred */
 #define DNS_ERR_UNKNOWN 66
+/* Communication with the server timed out */
 #define DNS_ERR_TIMEOUT 67
 
 #define DNS_IPv4_A 1
