@@ -1230,10 +1230,10 @@ is_legal_hexdigest(const char *s)
 {
   size_t len;
   tor_assert(s);
+  if (s[0] == '$') s++;
   len = strlen(s);
-  return (len == HEX_DIGEST_LEN+1 &&
-          s[0] == '$' &&
-          strspn(s+1,HEX_CHARACTERS)==len-1);
+  return (len == HEX_DIGEST_LEN &&
+          strspn(s,HEX_CHARACTERS)==len);
 }
 
 /** Forget that we have issued any router-related warnings, so that we'll
