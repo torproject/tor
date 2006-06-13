@@ -1289,12 +1289,14 @@ list_getinfo_options(void)
     "addr-mappings/configl Addresses remapped from configuration options.\n"
     "addr-mappings/control Addresses remapped by a controller.\n"
     "circuit-status Status of each current circuit.\n"
+    "config-file Current location of the \"torrc\" file.\n"
     "config/names List of configuration options, types, and documentation.\n"
     "desc/id/* Server descriptor by hex ID\n"
     "desc/name/* Server descriptor by nickname.\n"
     "desc/all-recent Latest server descriptor for every router\n"
     "dir/server/* Fetch server descriptors -- see dir-spec.txt\n"
     "entry-guards Which nodes will we use as entry guards?\n"
+    "exit-policy/default Default lines appended to config->ExitPolicy\n"
     "info/names List of GETINFO options, types, and documentation.\n"
     "network-status List of hex IDs, nicknames, server statuses.\n"
     "orconn-status Status of each current OR connection.\n"
@@ -1532,6 +1534,8 @@ handle_getinfo_helper(const char *question, char **answer)
       cp += d->dir_len;
       });
     *cp = '\0';
+  } else if (!strcmpstart(question, "exit-policy/")) {
+    return policies_getinfo_helper(question, answer);
   }
   return 0;
 }

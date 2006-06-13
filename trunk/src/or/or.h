@@ -2051,6 +2051,7 @@ int policies_parse_exit_policy(config_line_t *cfg,
                                addr_policy_t **dest,
                                int rejectprivate);
 int exit_policy_is_general_exit(addr_policy_t *policy);
+int policies_getinfo_helper(const char *question, char **answer);
 
 void addr_policy_free(addr_policy_t *p);
 void policies_free_all(void);

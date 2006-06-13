@@ -627,6 +627,18 @@ exit_policy_is_general_exit(addr_policy_t *policy)
   return n_allowed >= 2;
 }
 
+int
+policies_getinfo_helper(const char *question, char **answer)
+{
+  if (!strcmp(question, "exit-policy/default")) {
+    *answer = tor_strdup(DEFAULT_EXIT_POLICY);
+//  } else if (!strcmp(question, "exit-policy/prepend")) {
+  } else {
+    *answer = NULL;
+  }
+  return 0;
+}
+
 /** Release all storage held by <b>p</b> */
 void
 addr_policy_free(addr_policy_t *p)
