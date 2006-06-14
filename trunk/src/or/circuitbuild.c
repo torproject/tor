@@ -1459,7 +1459,8 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
 
 /** Pick a random server digest that's running a Tor version that
  * doesn't have the reachability bug. These are versions 0.1.1.22+
- * and 0.1.2.1-alpha+.
+ * and 0.1.2.1-alpha+. Avoid picking authorities, since we're
+ * probably already connected to them.
  *
  * We only return one, so this doesn't become stupid when the
  * whole network has upgraded. */
@@ -1480,7 +1481,8 @@ compute_preferred_testing_list(const char *answer)
     if (r->is_running && r->is_valid &&
         ((tor_version_as_new_as(r->platform,"0.1.1.21-cvs") &&
           !tor_version_as_new_as(r->platform,"0.1.2.0-alpha-cvs")) ||
-         tor_version_as_new_as(r->platform,"0.1.2.1-alpha")))
+         tor_version_as_new_as(r->platform,"0.1.2.1-alpha")) &&
+        !router_get_trusteddirserver_by_digest(r->cache_info.identity_digest))
       smartlist_add(choices, r));
   router = smartlist_choose(choices);
   smartlist_free(choices);
