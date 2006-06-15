@@ -660,9 +660,13 @@ circuit_send_next_onion_skin(circuit_t *circ)
 void
 circuit_note_clock_jumped(int seconds_elapsed)
 {
-  log(LOG_WARN, LD_GENERAL,
-      "Please report: your clock just jumped %d seconds forward; "
-      "assuming established circuits no longer work.", seconds_elapsed);
+  if (server_mode(get_options()))
+    log(LOG_WARN, LD_GENERAL,
+        "Please report: your clock just jumped %d seconds forward; "
+        "assuming established circuits no longer work.", seconds_elapsed);
+  else
+    log(LOG_NOTICE, LD_GENERAL, "Your clock just jumped %d seconds forward; "
+        "assuming established circuits no longer work.", seconds_elapsed);
   has_completed_circuit=0; /* so it'll log when it works again */
   circuit_mark_all_unused_circs();
   circuit_expire_all_dirty_circs();
