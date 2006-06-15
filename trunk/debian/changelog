@@ -1,3 +1,10 @@
+tor (0.1.2.0-alpha-cvs-1) unstable; urgency=low
+
+  * CVS snapshot.
+  * Forward port 07_log_to_file_by_default.dpatch.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 16 Jun 2006 01:14:04 +0200
+
 tor (0.1.1.21-1) unstable; urgency=low
 
   * New upstream version.
