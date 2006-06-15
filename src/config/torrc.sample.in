@@ -80,7 +80,7 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## NOTE: If you enable these, you should consider mailing your identity
 ## key fingerprint to the tor-ops, so we can add you to the list of
 ## servers that clients will trust. See
-## http://tor.eff.org/cvs/tor/doc/tor-doc-server.html for details.
+## http://tor.eff.org/docs/tor-doc-server.html for details.
 
 ## Required: A unique handle for this server
 #Nickname ididnteditheconfig
