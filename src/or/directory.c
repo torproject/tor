@@ -1664,14 +1664,14 @@ directory_handle_command_get(connection_t *conn, char *headers,
     format_rfc1123_time(date, time(NULL));
     tor_snprintf(tmp, sizeof(tmp),
                  "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-                 "Content-Type: text/plain\r\nContent-Encoding: identity\r\n\r\n",
+                 "Content-Type: text/plain\r\n"
+                 "Content-Encoding: identity\r\n\r\n",
                  date,
                  (int)dlen);
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(new_directory, dlen, conn);
     tor_free(new_directory);
   }
-
 
   /* we didn't recognize the url */
   write_http_status_line(conn, 404, "Not found");
