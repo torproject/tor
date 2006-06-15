@@ -985,9 +985,11 @@ second_elapsed_callback(int fd, short event, void *args)
                me->address, me->dir_port);
   }
 
-  /* if more than 100s have elapsed, probably the clock jumped: doesn't
-   * count. */
-  if (seconds_elapsed < 100)
+/** If more than this many seconds have elapsed, probably the clock
+ * jumped: doesn't count. */
+#define NUM_JUMPED_SECONDS_BEFORE_WARN 10
+/* This used to be 100, but I cranked it down for Mike Chiussi -RD */
+  if (seconds_elapsed < NUM_JUMPED_SECONDS_BEFORE_WARN)
     stats_n_seconds_working += seconds_elapsed;
   else
     circuit_note_clock_jumped(seconds_elapsed);
