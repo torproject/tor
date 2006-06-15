@@ -1099,7 +1099,8 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
       status = DNS_RESOLVE_SUCCEEDED;
       tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
       log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
-                escaped_safe_str(string_address), escaped_safe_str(answer_buf));
+                escaped_safe_str(string_address),
+                escaped_safe_str(answer_buf));
     } else if (count) {
       log_warn(LD_EXIT, "eventdns returned only non-IPv4 answers for %s.",
                escaped_safe_str(string_address));
