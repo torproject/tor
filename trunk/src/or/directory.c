@@ -1671,6 +1671,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(new_directory, dlen, conn);
     tor_free(new_directory);
+    tor_free(url);
+    return 0;
   }
 
   /* we didn't recognize the url */
