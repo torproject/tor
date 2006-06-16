@@ -584,16 +584,16 @@ fi
 
 CONFDIR=`eval echo $sysconfdir/tor`
 AC_SUBST(CONFDIR)
+AH_TEMPLATE([CONFDIR],[tor's configuration directory])
 AC_DEFINE_UNQUOTED(CONFDIR,"$CONFDIR")
-AC_DEFINE([CONFDIR], [], [tor's configuration directory])
 
 BINDIR=`eval echo $bindir`
 AC_SUBST(BINDIR)
 
 LOCALSTATEDIR=`eval echo $localstatedir`
 AC_SUBST(LOCALSTATEDIR)
+AH_TEMPLATE([LOCALSTATEDIR], [Default location to store state files.])
 AC_DEFINE_UNQUOTED(LOCALSTATEDIR,"$LOCALSTATEDIR")
-AC_DEFINE([LOCALSTATEDIR], [], [Default location to store state files.])
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
