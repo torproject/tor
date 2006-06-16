@@ -28,27 +28,31 @@ Items for 0.1.2.x:
         break our dependency on dyndns.
       - Count TLS bandwidth more accurately
       - Write-limit directory responses.
-    . Improve memory usage on tight-memory machines.
-      o Remember offset and location of each descriptor in the cache/journal
-      - When sending a big pile of descs to a client, don't shove them all on
-        the buffer at once.
-      X This may require routerinfo_t or signed_descriptor_t to get slightly
-        refcounted.  (Only slightly; we'd only need to know whether it's on
-        the routerlist->routers or routerlist->old_routers, and how many
-        directory conns are returning it.)
-      - Possibly, we could just keep a list of the descriptor digests for
-        the descriptors we still want to send.  We might end up truncating
-        some replies by returning fewer descriptors than were requested (if
-        somebody requests a desc that we throw away before we deliver it),
-        but this happens only when somebody wants an obsolete desc, and
-        clients can already handle truncated replies.
-      - But what do we do about compression? That's the part that makes
-        stuff hard.
-      - Make clients handle missing Content-Length tags.
-      - Implement on-the-fly compression
-      - Make sure offset is correct in the presence of windows FS insanity.
-      - Consider whether it's smart to mmap cache files where possible.
-      - Consider whether it's smart to lazy-load routerdescs on non-directories.
+N   . Improve memory usage on tight-memory machines.
+      - Directory-related fixes.
+        o Remember offset and location of each descriptor in the cache/journal
+        - When sending a big pile of descs to a client, don't shove them all
+          on the buffer at once. Keep a list of the descriptor digests for
+          the descriptors we still want to send.  We might end up truncating
+          some replies by returning fewer descriptors than were requested (if
+          somebody requests a desc that we throw away before we deliver it),
+          but this happens only when somebody wants an obsolete desc, and
+          clients can already handle truncated replies.
+        - But what do we do about compression? That's the part that makes
+          stuff hard.
+          - Implement compress/decompress-on-the-fly support.
+          - Use it for returning lists of descriptors and lists of
+            network status docs.
+          o Make clients handle missing Content-Length tags.  (Oh, they do.)
+            o Verify that this has happened for a long time.
+        - Try a similar trick for spooling out v1 directories.
+        - Look into pulling serverdescs off buffers as they arrive.
+        - Mmap cache files where possible.
+          - Mmap cached-routers file; when building it, go oldest-to-newest.
+            - Make sure offset is correct in the presence of windows FS
+              insanity.
+          - Save and mmap v1 directories; store them zipped?
+
     - "bandwidth classes", for incoming vs initiated-here conns.
 N   - Asynchronous DNS
 
