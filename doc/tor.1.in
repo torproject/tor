@@ -221,7 +221,7 @@ about what sites a user might have visited. (Default: 1)
 On startup, setuid to this user.
 .LP
 .TP
-\fBHardwareAccel \fR\fI0|1\fP
+\fBHardwareAccel \fR\fB0\fR|\fB1\fP
 If non-zero, try to use crypto hardware acceleration when
 available. This is untested and probably buggy. (Default: 0)
 
@@ -316,7 +316,7 @@ firewall allows connections to everything inside net 99, rejects port
 \fBReachableDirAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
 Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
 these restrictions when fetching directory information, using standard HTTP
-GET requests. If not set explicitly then the value of \fBfBReachableAddresses\fP
+GET requests. If not set explicitly then the value of \fBReachableAddresses\fP
 is used.  If \fBHttpProxy\fR is set then these connections will go through that
 proxy.
 .LP
@@ -324,7 +324,7 @@ proxy.
 \fBReachableORAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
 Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
 these restrictions when connecting to Onion Routers, using TLS/SSL.  If not set
-explicitly then the value of \fBfBReachableAddresses\fP is used. If
+explicitly then the value of \fBReachableAddresses\fP is used. If
 \fBHttpsProxy\fR is set then these connections will go through that proxy.
 
 The separation between \fBReachableORAddresses\fP and
@@ -428,7 +428,7 @@ between host and exit server after NUM seconds. The default
 is 1800 seconds (30 minutes).
 .LP
 .TP
-\fBUseEntryGuards \fR\fI0|1\fP
+\fBUseEntryGuards \fR\fB0\fR|\fB1\fR\fP
 If this option is set to 1, we pick a few long-term entry servers, and
 try to stick with them.  This is desirable because
 constantly changing servers increases the odds that an adversary who owns
@@ -442,7 +442,7 @@ as long-term entries for our circuits.
 (Defaults to 3.)
 .LP
 .TP
-\fBSafeSocks \fR\fI0|1\fP
+\fBSafeSocks \fR\fB0\fR|\fB1\fR\fP
 When this option is enabled, Tor will reject application connections that
 use unsafe variants of the socks protocol -- ones that only provide an
 IP address, meaning the application is doing a DNS resolve first.
@@ -483,7 +483,9 @@ list all connected servers as running.
 .LP
 .TP
 \fBContactInfo \fR\fIemail_address\fP
-Administrative contact information for server.
+Administrative contact information for server. This line might get
+picked up by spam harvesters, so you may want to obscure the fact
+that it's an email address.
 .LP
 .TP
 \fBExitPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
