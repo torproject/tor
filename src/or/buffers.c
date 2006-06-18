@@ -15,8 +15,7 @@ const char buffers_c_id[] =
 
 #include "or.h"
 
-/* XXXX Make sentinels work again. */
-#undef SENTINELS
+#define SENTINELS
 #undef CHECK_AFTER_RESIZE
 #undef PARANOIA
 #undef NOINLINE
@@ -59,6 +58,7 @@ struct buf_t {
   char *cur;      /**< The first byte used for storing data in the buffer. */
   size_t highwater; /**< Largest observed datalen since last buf_shrink */
   size_t len;     /**< Maximum amount of data that <b>mem</b> can hold. */
+  size_t memsize; /**< DOCDOC */
   size_t datalen; /**< Number of bytes currently in <b>mem</b>. */
 };
 
@@ -89,13 +89,14 @@ buf_normalize(buf_t *buf)
     char *newmem, *oldmem;
     size_t sz = (buf->mem+buf->len)-buf->cur;
     log_warn(LD_BUG, "Unexpected non-normalized buffer.");
-    newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(buf->len)));
-    SET_GUARDS(newmem, buf->len);
+    newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(buf->memsize)));
+    SET_GUARDS(newmem, buf->memsize);
     memcpy(newmem, buf->cur, sz);
     memcpy(newmem+sz, buf->mem, buf->datalen-sz);
     oldmem = RAW_MEM(buf->mem);
     tor_free(oldmem); /* Can't use tor_free directly. */
     buf->mem = buf->cur = newmem;
+    buf->len = buf->memsize;
     check();
   }
 }
@@ -230,7 +231,7 @@ buf_resize(buf_t *buf, size_t new_capacity)
             buf->len-offset);
     buf->cur += new_capacity-buf->len;
   }
-  buf->len = new_capacity;
+  buf->memsize = buf->len = new_capacity;
 
 #ifdef CHECK_AFTER_RESIZE
   assert_buf_ok(buf);
@@ -329,7 +330,7 @@ buf_new_with_capacity(size_t size)
   buf->magic = BUFFER_MAGIC;
   buf->cur = buf->mem = GUARDED_MEM(tor_malloc(ALLOC_LEN(size)));
   SET_GUARDS(buf->mem, size);
-  buf->len = size;
+  buf->len = buf->memsize = size;
 
   buf_total_alloc += size;
   assert_buf_ok(buf);
@@ -350,6 +351,7 @@ buf_clear(buf_t *buf)
   buf_total_used -= buf->datalen;
   buf->datalen = 0;
   buf->cur = buf->mem;
+  buf->len = buf->memsize;
 }
 
 /** Return the number of bytes stored in <b>buf</b> */
@@ -1356,7 +1358,7 @@ assert_buf_ok(buf_t *buf)
   {
     uint32_t u32 = get_uint32(buf->mem - 4);
     tor_assert(u32 == START_MAGIC);
-    u32 = get_uint32(buf->mem + buf->len);
+    u32 = get_uint32(buf->mem + buf->memsize);
     tor_assert(u32 == END_MAGIC);
   }
 #endif
