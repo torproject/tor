@@ -1413,7 +1413,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     connection_write_to_buf(tmp, strlen(tmp), conn);
     conn->cached_dir = d;
     conn->cached_dir_offset = 0;
-    if (deflated)
+    if (! deflated)
       conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
     ++d->refcnt;
 
