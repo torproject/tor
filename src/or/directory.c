@@ -1374,9 +1374,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
 
   if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* dir fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
-    dlen = dirserv_get_directory(&cp, deflated);
+    cached_dir_t *d = dirserv_get_directory();
 
-    if (dlen == 0) {
+    if (!d) {
       log_notice(LD_DIRSERV,"Client asked for the mirrored directory, but we "
                  "don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
@@ -1386,6 +1386,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
       tor_free(url);
       return 0;
     }
+    dlen = deflated ? d->dir_z_len : d->dir_len;
 
     if (global_write_bucket_empty()) {
       log_info(LD_DIRSERV,
@@ -1410,7 +1411,14 @@ directory_handle_command_get(connection_t *conn, char *headers,
                  deflated?"application/octet-stream":"text/plain",
                  deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
-    connection_write_to_buf(cp, dlen, conn);
+    conn->cached_dir = d;
+    conn->cached_dir_offset = 0;
+    if (deflated)
+      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
+    ++d->refcnt;
+
+    /* Prime the connection with some data. */
+    connection_dirserv_flushed_some(conn);
     return 0;
   }
 
@@ -1495,11 +1503,11 @@ directory_handle_command_get(connection_t *conn, char *headers,
     int deflated = !strcmp(url+url_len-2, ".z");
     int res;
     const char *msg;
-    smartlist_t *descs = smartlist_create();
     const char *request_type = NULL;
     if (deflated)
       url[url_len-2] = '\0';
-    res = dirserv_get_routerdescs(descs, url, &msg);
+    conn->fingerprint_stack = smartlist_create();
+    res = dirserv_get_routerdescs(conn->fingerprint_stack, url, &msg);
 
     if (!strcmpstart(url, "/tor/server/fp/"))
       request_type = deflated?"/tor/server/fp.z":"/tor/server/fp";
@@ -1516,58 +1524,27 @@ directory_handle_command_get(connection_t *conn, char *headers,
     if (res < 0)
       write_http_status_line(conn, 404, msg);
     else {
-      size_t len = 0;
       format_rfc1123_time(date, time(NULL));
-      SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
-                        len += ri->signed_descriptor_len);
       if (deflated) {
-        size_t compressed_len;
-        char *compressed;
-        char *inp = tor_malloc(len+smartlist_len(descs)+1);
-        char *cp = inp;
-        SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
-           {
-             const char *body = signed_descriptor_get_body(ri);
-             memcpy(cp, body, ri->signed_descriptor_len);
-             cp += ri->signed_descriptor_len;
-             *cp++ = '\n';
-           });
-        *cp = '\0';
-        /* XXXX This could be way more efficiently handled; let's see if it
-         * shows up under oprofile. */
-        if (tor_gzip_compress(&compressed, &compressed_len,
-                              inp, cp-inp, ZLIB_METHOD)<0) {
-          tor_free(inp);
-          smartlist_free(descs);
-          return -1;
-        }
-        tor_free(inp);
+        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+        /* // note_request(request_type, compressed_len); XXXX */
         tor_snprintf(tmp, sizeof(tmp),
-                     "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                     "HTTP/1.0 200 OK\r\nDate: %s\r\n"
                      "Content-Type: application/octet-stream\r\n"
                      "Content-Encoding: deflate\r\n\r\n",
-                     date,
-                     (int)compressed_len);
-        note_request(request_type, compressed_len);
+                     date);
         connection_write_to_buf(tmp, strlen(tmp), conn);
-        connection_write_to_buf(compressed, compressed_len, conn);
-        tor_free(compressed);
       } else {
         tor_snprintf(tmp, sizeof(tmp),
-                     "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                     "HTTP/1.0 200 OK\r\nDate: %s\r\n"
                      "Content-Type: text/plain\r\n\r\n",
-                     date,
-                     (int)len);
-        note_request(request_type, len);
+                     date);
+        /* note_request(request_type, len); XXXX */
         connection_write_to_buf(tmp, strlen(tmp), conn);
-        SMARTLIST_FOREACH(descs, signed_descriptor_t *, ri,
-          {
-            const char *body = signed_descriptor_get_body(ri);
-            connection_write_to_buf(body, ri->signed_descriptor_len, conn);
-          });
       }
+      /* Prime the connection with some data. */
+      connection_dirserv_flushed_some(conn);
     }
-    smartlist_free(descs);
     return 0;
   }
 
@@ -1690,7 +1667,6 @@ static int
 directory_handle_command_post(connection_t *conn, char *headers,
                               char *body, size_t body_len)
 {
-  const char *cp;
   char *origin = NULL;
   char *url = NULL;
 
@@ -1718,7 +1694,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
     int r = dirserv_add_descriptor(body, &msg);
     tor_assert(msg);
     if (r > 0)
-      dirserv_get_directory(&cp, 0); /* rebuild and write to disk */
+      dirserv_get_directory(); /* rebuild and write to disk */
     switch (r) {
       case -2:
       case -1:
