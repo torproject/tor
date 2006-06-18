@@ -1418,6 +1418,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     ++d->refcnt;
 
     /* Prime the connection with some data. */
+    conn->dir_refresh_src = DIR_REFRESH_CACHED_DIR;
     connection_dirserv_flushed_some(conn);
     return 0;
   }
@@ -1544,6 +1545,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
         connection_write_to_buf(tmp, strlen(tmp), conn);
       }
       /* Prime the connection with some data. */
+      if (!strcmpstart(url, "/tor/server/d/"))
+        conn->dir_refresh_src = DIR_REFRESH_SERVER_BY_DIGEST;
+      else
+        conn->dir_refresh_src = DIR_REFRESH_SERVER_BY_FP;
       connection_dirserv_flushed_some(conn);
     }
     return 0;
