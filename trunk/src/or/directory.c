@@ -1522,6 +1522,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
       request_type = deflated?"/tor/server/d.z":"/tor/server/d";
     else
       request_type = "/tor/server/?";
+    if (!strcmpstart(url, "/tor/server/d/"))
+      conn->dir_refresh_src = DIR_REFRESH_SERVER_BY_DIGEST;
+    else
+      conn->dir_refresh_src = DIR_REFRESH_SERVER_BY_FP;
     tor_free(url);
     if (res < 0)
       write_http_status_line(conn, 404, msg);
@@ -1545,10 +1549,6 @@ directory_handle_command_get(connection_t *conn, char *headers,
         connection_write_to_buf(tmp, strlen(tmp), conn);
       }
       /* Prime the connection with some data. */
-      if (!strcmpstart(url, "/tor/server/d/"))
-        conn->dir_refresh_src = DIR_REFRESH_SERVER_BY_DIGEST;
-      else
-        conn->dir_refresh_src = DIR_REFRESH_SERVER_BY_FP;
       connection_dirserv_flushed_some(conn);
     }
     return 0;
