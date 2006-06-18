@@ -1339,9 +1339,8 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
     if (buf->datalen > buf->highwater)
       buf->highwater = buf->datalen;
     buf_total_used += old_avail - avail;
-    if (over)
-      return 0;
   }
+  return 0;
 }
 
 /** Log an error and exit if <b>buf</b> is corrupted.
