@@ -1463,7 +1463,7 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
 }
 
 /** Pick a random server digest that's running a Tor version that
- * doesn't have the reachability bug. These are versions 0.1.1.22+
+ * doesn't have the reachability bug. These are versions 0.1.1.21-cvs+
  * and 0.1.2.1-alpha+. Avoid picking authorities, since we're
  * probably already connected to them.
  *
