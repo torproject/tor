@@ -67,6 +67,7 @@ void *_tor_malloc_zero(size_t size DMALLOC_PARAMS);
 void *_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS);
 char *_tor_strdup(const char *s DMALLOC_PARAMS);
 char *_tor_strndup(const char *s, size_t n DMALLOC_PARAMS);
+void *_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS);
 #ifdef USE_DMALLOC
 extern int dmalloc_free(const char *file, const int line, void *pnt,
                         const int func_id);
@@ -85,6 +86,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define tor_realloc(ptr, size) _tor_realloc(ptr, size DMALLOC_ARGS)
 #define tor_strdup(s)          _tor_strdup(s DMALLOC_ARGS)
 #define tor_strndup(s, n)      _tor_strndup(s, n DMALLOC_ARGS)
+#define tor_memdup(s, n)      _tor_strndup(s, n DMALLOC_ARGS)
 
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"

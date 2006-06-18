@@ -190,6 +190,22 @@ _tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
   return dup;
 }
 
+/** Allocate a chunk of <b>len</b> bytes, with the same contents starting at
+ * <b>mem</b>. */
+void *
+_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
+{
+  char *dup;
+  tor_assert(mem);
+  dup = _tor_malloc(len DMALLOC_FN_ARGS);
+  /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
+   * this function gets called a whole lot, and platform strncpy is
+   * much faster than strlcpy when strlen(s) is much longer than n.
+   */
+  memcpy(dup, mem, len);
+  return dup;
+}
+
 /* =====
  * String manipulation
  * ===== */
