@@ -1331,6 +1331,8 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
         break;
     }
     buf->datalen += old_avail - avail;
+    if (buf->datalen > buf->highwater)
+      buf->highwater = buf->datalen;
     buf_total_used += old_avail - avail;
   }
 }
