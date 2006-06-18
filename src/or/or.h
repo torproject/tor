@@ -698,6 +698,10 @@ struct connection_t {
   char *requested_resource; /**< Which 'resource' did we ask the directory
                              * for?*/
 /* Used only for server sides of some dir connections. */
+  enum {
+    DIR_REFRESH_NONE=0, DIR_REFRESH_SERVER_BY_DIGEST, DIR_REFRESH_SERVER_BY_FP,
+    DIR_REFRESH_CACHED_DIR
+  } dir_refresh_src;
   smartlist_t *fingerprint_stack;
   struct cached_dir_t *cached_dir;
   off_t cached_dir_offset;
