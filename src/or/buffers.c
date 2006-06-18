@@ -15,7 +15,8 @@ const char buffers_c_id[] =
 
 #include "or.h"
 
-#define SENTINELS
+/* XXXX Make sentinels work again. */
+#undef SENTINELS
 #undef CHECK_AFTER_RESIZE
 #undef PARANOIA
 #undef NOINLINE
