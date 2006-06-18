@@ -1750,12 +1750,7 @@ dirserv_orconn_tls_done(const char *address,
 static int
 connection_dirserv_add_servers_to_outbuf(connection_t *conn)
 {
-  int fp;
-
-  if (!strcmpstart(conn->requested_resource, "/tor/server/d/"))
-    fp = 0;
-  else
-    fp = 1;
+  int fp = conn->dir_refresh_src == DIR_REFRESH_SERVER_BY_FP;
 
   while (smartlist_len(conn->fingerprint_stack) &&
          buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
@@ -1842,16 +1837,16 @@ connection_dirserv_flushed_some(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_DIR);
   tor_assert(conn->state == DIR_CONN_STATE_SERVER_WRITING);
 
-  if (! (conn->fingerprint_stack || conn->cached_dir)
+  if (conn->dir_refresh_src == DIR_REFRESH_NONE
       || buf_datalen(conn->outbuf) > DIRSERV_BUFFER_MIN)
     return 0;
 
-  if (!strcmpstart(conn->requested_resource, "/tor/server/")) {
-    return connection_dirserv_add_servers_to_outbuf(conn);
-  } else if (conn->cached_dir) {
-    return connection_dirserv_add_dir_bytes_to_outbuf(conn);
-  } else {
-    return 0;
+  switch (conn->dir_refresh_src) {
+    case DIR_REFRESH_SERVER_BY_DIGEST:
+    case DIR_REFRESH_SERVER_BY_FP:
+      return connection_dirserv_add_servers_to_outbuf(conn);
+    case DIR_REFRESH_CACHED_DIR:
+      return connection_dirserv_add_dir_bytes_to_outbuf(conn);
   }
 }
 
