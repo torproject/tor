@@ -249,15 +249,18 @@ buf_resize(buf_t *buf, size_t new_capacity)
 static INLINE int
 buf_ensure_capacity(buf_t *buf, size_t capacity)
 {
-  size_t new_len;
+  size_t new_len, min_len;
   if (buf->len >= capacity)  /* Don't grow if we're already big enough. */
     return 0;
   if (capacity > MAX_BUF_SIZE) /* Don't grow past the maximum. */
     return -1;
-  /* Find the smallest new_len equal to (2**X)*len for some X; such that
-   * new_len is at least capacity.
+  /* Find the smallest new_len equal to (2**X) for some X; such that
+   * new_len is at least capacity, and at least 2*buf->len.
    */
-  new_len = buf->len*2;
+  min_len = buf->len*2;
+  new_len = 16;
+  while (new_len < min_len)
+    new_len *= 2;
   while (new_len < capacity)
     new_len *= 2;
   /* Resize the buffer. */
@@ -1282,6 +1285,54 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
   data_out[sz+2] = '\0';
   *data_len = sz+2;
   return 1;
+}
+
+/** DOCDOC */
+int
+write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
+                  const char *data, size_t data_len,
+                  int done)
+{
+  char *next;
+  size_t old_avail, avail;
+  while (1) {
+    buf_ensure_capacity(buf, buf->datalen + 1024);
+    next = _buf_end(buf);
+    if (next < buf->cur)
+      old_avail = avail = buf->cur - next;
+    else
+      old_avail = avail = (buf->mem + buf->datalen) - buf->cur;
+    switch (tor_zlib_process(state, &next, &avail, &data, &data_len, done)) {
+      case TOR_ZLIB_DONE:
+        return 0;
+      case TOR_ZLIB_ERR:
+        return -1;
+      case TOR_ZLIB_OK:
+        if (data_len == 0)
+          return 0;
+        break;
+      case TOR_ZLIB_BUF_FULL:
+        if (avail && buf->len >= 1024 + buf->datalen) {
+          /* Zlib says we need more room (ZLIB_BUF_FULL), and we're not about
+           * to wrap around (avail != 0), and resizing won't actually make us
+           * un-full: we're at the end of the buffer, and zlib refuses to
+           * append more here, but there's a pile of free space at the start
+           * of the buffer (about 1K).  So chop a few characters off the
+           * end of the buffer.  This feels silly; anybody got a better hack?
+           *
+           * (We don't just want to expand the buffer nevertheless. Consider a
+           * 1/3 full buffer with a single byte free at the end. zlib will
+           * often refuse to append to that, and so we want to use the
+           * beginning, not double the buffer to be just 1/6 full.)
+           */
+          tor_assert(next >= buf->cur);
+          buf->len -= avail;
+        }
+        break;
+    }
+    buf->datalen += old_avail - avail;
+    buf_total_used += old_avail - avail;
+  }
 }
 
 /** Log an error and exit if <b>buf</b> is corrupted.
