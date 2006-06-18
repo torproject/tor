@@ -3738,6 +3738,9 @@ router_reset_descriptor_download_failures(void)
  * automatically non-cosmetic. */
 #define ROUTER_MAX_COSMETIC_TIME_DIFFERENCE (12*60*60)
 
+/** We allow uptime to vary from how much it ought to be by this much. */
+#define ROUTER_ALLOW_UPTIME_DRIFT (30*60)
+
 /** Return true iff the only differences between r1 and r2 are such that
  * would not cause a recent (post 0.1.1.6) dirserver to republish.
  */
@@ -3797,7 +3800,8 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
    * give or take 30 minutes? */
   r1pub = r1->cache_info.published_on;
   r2pub = r2->cache_info.published_on;
-  if (abs(r2->uptime - (r1->uptime + (r2pub - r1pub))))
+  if (abs(r2->uptime - (r1->uptime + (r2pub - r1pub)))
+      > ROUTER_ALLOW_UPTIME_DRIFT)
     return 0;
 
   /* Otherwise, the difference is cosmetic. */
