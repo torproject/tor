@@ -1847,6 +1847,8 @@ connection_dirserv_flushed_some(connection_t *conn)
       return connection_dirserv_add_servers_to_outbuf(conn);
     case DIR_REFRESH_CACHED_DIR:
       return connection_dirserv_add_dir_bytes_to_outbuf(conn);
+    default:
+      return 0;
   }
 }
 
