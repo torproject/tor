@@ -127,6 +127,32 @@ smartlist_remove(smartlist_t *sl, const void *element)
     }
 }
 
+/** If <b>sl</b> is nonempty, remove and return the final element.  Otherwise,
+ * return NULL. */
+void *
+smartlist_pop_last(smartlist_t *sl)
+{
+  tor_assert(sl);
+  if (sl->num_used)
+    return sl->list[--sl->num_used];
+  else
+    return NULL;
+}
+
+/** Reverse the order of the items in <b>sl</b>. */
+void
+smartlist_reverse(smartlist_t *sl)
+{
+  int i, j;
+  void *tmp;
+  tor_assert(sl);
+  for (i = 0, j = sl->num_used-1; i < j; ++i, --j) {
+    tmp = sl->list[i];
+    sl->list[i] = sl->list[j];
+    sl->list[j] = tmp;
+  }
+}
+
 /** If there are any strings in sl equal to element, remove and free them.
  * Does not preserve order. */
 void

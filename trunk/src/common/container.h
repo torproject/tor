@@ -29,6 +29,8 @@ void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
 void smartlist_remove(smartlist_t *sl, const void *element);
+void *smartlist_pop_last(smartlist_t *sl);
+void smartlist_reverse(smartlist_t *sl);
 void smartlist_string_remove(smartlist_t *sl, const char *element);
 int smartlist_isin(const smartlist_t *sl, const void *element);
 int smartlist_string_isin(const smartlist_t *sl, const char *element);
