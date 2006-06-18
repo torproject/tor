@@ -20,6 +20,7 @@ static int connection_init_accepted_conn(connection_t *conn);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_receiver_bucket_should_increase(connection_t *conn);
 static int connection_finished_flushing(connection_t *conn);
+static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
 static int connection_reached_eof(connection_t *conn);
 static int connection_read_to_buf(connection_t *conn, int *max_to_read);
@@ -241,6 +242,14 @@ _connection_free(connection_t *conn)
     log_warn(LD_BUG, "called on OR conn with non-zeroed identity_digest");
     connection_or_remove_from_identity_map(conn);
   }
+  if (conn->zlib_state)
+    tor_zlib_free(conn->zlib_state);
+  if (conn->fingerprint_stack) {
+    SMARTLIST_FOREACH(conn->fingerprint_stack, char *, cp, tor_free(cp));
+    smartlist_free(conn->fingerprint_stack);
+  }
+  if (conn->cached_dir)
+    cached_dir_decref(conn->cached_dir);
 
   memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
   tor_free(conn);
@@ -1491,9 +1500,13 @@ connection_handle_write(connection_t *conn)
     }
   }
 
-  if (result > 0 && !is_local_IP(conn->addr)) { /* remember it */
-    rep_hist_note_bytes_written(result, now);
-    global_write_bucket -= result;
+  if (result > 0) {
+    if (!is_local_IP(conn->addr)) { /* remember it */
+      rep_hist_note_bytes_written(result, time(NULL));
+      global_write_bucket -= result;
+    }
+    if (connection_flushed_some(conn) < 0)
+      connection_mark_for_close(conn);
   }
 
   if (!connection_wants_to_flush(conn)) { /* it's done flushing */
@@ -1531,9 +1544,13 @@ _connection_controller_force_write(connection_t *conn)
     return;
   }
 
-  if (result > 0 && !is_local_IP(conn->addr)) { /* remember it */
-    rep_hist_note_bytes_written(result, time(NULL));
-    global_write_bucket -= result;
+  if (result > 0) {
+    if (!is_local_IP(conn->addr)) { /* remember it */
+      rep_hist_note_bytes_written(result, time(NULL));
+      global_write_bucket -= result;
+    }
+    if (connection_flushed_some(conn) < 0)
+      connection_mark_for_close(conn);
   }
 
   if (!connection_wants_to_flush(conn)) { /* it's done flushing */
@@ -1911,6 +1928,17 @@ connection_process_inbuf(connection_t *conn, int package_partial)
       tor_fragile_assert();
       return -1;
   }
+}
+
+/** Called whenever we've written data on a connection. */
+static int
+connection_flushed_some(connection_t *conn)
+{
+  if (conn->type == CONN_TYPE_DIR &&
+      conn->state == DIR_CONN_STATE_SERVER_WRITING)
+    return connection_dirserv_flushed_some(conn);
+  else
+    return 0;
 }
 
 /** We just finished flushing bytes from conn-\>outbuf, and there

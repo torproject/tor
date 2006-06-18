@@ -697,6 +697,11 @@ struct connection_t {
 /* Used only by Dir connections */
   char *requested_resource; /**< Which 'resource' did we ask the directory
                              * for?*/
+/* Used only for server sides of some dir connections. */
+  smartlist_t *fingerprint_stack;
+  struct cached_dir_t *cached_dir;
+  off_t cached_dir_offset;
+  tor_zlib_state_t *zlib_state;
 
 /* Used only by AP connections */
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
@@ -750,6 +755,7 @@ typedef struct cached_dir_t {
   size_t dir_len; /**< Length of <b>dir</b> */
   size_t dir_z_len; /**< Length of <b>dir_z</b> */
   time_t published; /**< When was this object published */
+  int refcnt; /**< Reference count for this cached_dir_t. */
 } cached_dir_t;
 
 /** Information need to cache an onion router's descriptor. */
@@ -1468,6 +1474,8 @@ int flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen);
 int flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen);
 
 int write_to_buf(const char *string, size_t string_len, buf_t *buf);
+int write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
+                      const char *data, size_t data_len, int done);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
@@ -1899,6 +1907,7 @@ char *directory_dump_request_log(void);
 
 /********************************* dirserv.c ***************************/
 
+int connection_dirserv_flushed_some(connection_t *conn);
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
 void dirserv_free_fingerprint_list(void);
@@ -1913,7 +1922,7 @@ int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key,
                                      int complete);
 void directory_set_dirty(void);
-size_t dirserv_get_directory(const char **cp, int compress);
+cached_dir_t *dirserv_get_directory(void);
 size_t dirserv_get_runningrouters(const char **rr, int compress);
 void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
@@ -1921,6 +1930,8 @@ void dirserv_set_cached_networkstatus_v2(const char *directory,
                                          const char *identity,
                                          time_t published);
 void dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
+int dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
+                                        const char **msg);
 int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
                             const char **msg);
 void dirserv_orconn_tls_done(const char *address,
@@ -1932,6 +1943,7 @@ int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain);
 int dirserv_would_reject_router(routerstatus_t *rs);
 void dirserv_free_all(void);
+void cached_dir_decref(cached_dir_t *d);
 
 /********************************* dns.c ***************************/
 
