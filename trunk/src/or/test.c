@@ -773,6 +773,16 @@ test_util(void)
   test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
   test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
 
+  /* Test reverse() and pop_last() */
+  smartlist_reverse(sl);
+  cp = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp,"the,router,onion,nickm,by,arma,and");
+  tor_free(cp);
+  cp = smartlist_pop_last(sl);
+  test_streq(cp, "and");
+  tor_free(cp);
+  test_eq(smartlist_len(sl), 6);
+
   /* Test tor_strstrip() */
   strcpy(buf, "Testing 1 2 3");
   test_eq(0, tor_strstrip(buf, ",!"));
@@ -913,8 +923,10 @@ test_util(void)
 static void
 test_gzip(void)
 {
-  char *buf1, *buf2=NULL, *buf3=NULL;
+  char *buf1, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
+  const char *ccp2;
   size_t len1, len2;
+  tor_zlib_state_t *state;
 
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   test_eq(detect_compression_method(buf1, strlen(buf1)), 0);
@@ -979,6 +991,35 @@ test_gzip(void)
   tor_assert(tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
                                  ZLIB_METHOD, 1, LOG_INFO));
   tor_assert(!buf3);
+
+  /* Now, try streaming compression. */
+  tor_free(buf1);
+  tor_free(buf2);
+  tor_free(buf3);
+  state = tor_zlib_new(1, ZLIB_METHOD);
+  tor_assert(state);
+  cp1 = buf1 = tor_malloc(1024);
+  len1 = 1024;
+  ccp2 = "ABCDEFGHIJABCDEFGHIJ";
+  len2 = 21;
+  test_eq(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0),
+          TOR_ZLIB_OK);
+  test_eq(len2, 0); /* Make sure we compressed it all. */
+  test_assert(cp1 > buf1);
+
+  len2 = 0;
+  cp2 = cp1;
+  test_eq(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1),
+          TOR_ZLIB_DONE);
+  test_eq(len2, 0);
+  test_assert(cp1 > cp2); /* Make sure we really added something. */
+
+  tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
+                                  ZLIB_METHOD, 1, LOG_WARN));
+  test_streq(buf3, "ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
+  tor_free(buf3);
+
+  tor_zlib_free(state);
 
   tor_free(buf2);
   tor_free(buf3);
