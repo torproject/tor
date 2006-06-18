@@ -1750,13 +1750,13 @@ dirserv_orconn_tls_done(const char *address,
 static int
 connection_dirserv_add_servers_to_outbuf(connection_t *conn)
 {
-  int fp = conn->dir_refresh_src == DIR_REFRESH_SERVER_BY_FP;
+  int by_fp = conn->dir_refresh_src == DIR_REFRESH_SERVER_BY_FP;
 
   while (smartlist_len(conn->fingerprint_stack) &&
          buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
     char *fp = smartlist_pop_last(conn->fingerprint_stack);
     signed_descriptor_t *sd = NULL;
-    if (fp) {
+    if (by_fp) {
       if (router_digest_is_me(fp)) {
         sd = &(router_get_my_routerinfo()->cache_info);
       } else {

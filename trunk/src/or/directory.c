@@ -1507,7 +1507,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
     if (deflated)
       url[url_len-2] = '\0';
     conn->fingerprint_stack = smartlist_create();
-    res = dirserv_get_routerdescs(conn->fingerprint_stack, url, &msg);
+    res = dirserv_get_routerdesc_fingerprints(conn->fingerprint_stack, url,
+                                              &msg);
 
     if (!strcmpstart(url, "/tor/server/fp/"))
       request_type = deflated?"/tor/server/fp.z":"/tor/server/fp";
