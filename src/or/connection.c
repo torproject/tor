@@ -1602,12 +1602,14 @@ connection_write_to_buf_zlib(connection_t *conn,
                              int done)
 {
   int r;
+  size_t old_datalen;
   if (!data_len)
     return;
   /* if it's marked for close, only allow write if we mean to flush it */
   if (conn->marked_for_close && !conn->hold_open_until_flushed)
     return;
 
+  old_datalen = buf_datalen(conn->outbuf);
   /* XXXX TOO much duplicate code! XXXX012NM */
   CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(
                                 conn->outbuf, state, data, data_len,
@@ -1629,7 +1631,7 @@ connection_write_to_buf_zlib(connection_t *conn,
   }
 
   connection_start_writing(conn);
-  conn->outbuf_flushlen += data_len;
+  conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
 }
 
 /** Return the conn to addr/port that has the most recent
