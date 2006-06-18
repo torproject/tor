@@ -36,7 +36,7 @@ static int runningrouters_is_dirty = 1;
 static int the_v2_networkstatus_is_dirty = 1;
 
 static void directory_remove_invalid(void);
-static int dirserv_regenerate_directory(void);
+static cached_dir_t *dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
 /* Should be static; exposed for testing */
 int add_fingerprint_to_dir(const char *nickname, const char *fp,
@@ -1036,7 +1036,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
 static cached_dir_t *
 dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
                             cached_dir_t *auth_src,
-                            time_t dirty, int (*regenerate)(void),
+                            time_t dirty, cached_dir_t *(*regenerate)(void),
                             const char *name,
                             int is_v1_object)
 {
@@ -1049,7 +1049,7 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
     /* We're authoritative. */
     if (regenerate != NULL) {
       if (dirty && dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
-        if (regenerate()) {
+        if (!(auth_src = regenerate())) {
           log_err(LD_BUG, "Couldn't generate %s?", name);
           exit(1);
         }
@@ -1077,7 +1077,7 @@ dirserv_get_obj(const char **out,
                 int compress,
                 cached_dir_t *cache_src,
                 cached_dir_t *auth_src,
-                time_t dirty, int (*regenerate)(void),
+                time_t dirty, cached_dir_t *(*regenerate)(void),
                 const char *name,
                 int is_v1_object)
 {
@@ -1109,9 +1109,10 @@ dirserv_get_directory(void)
 }
 
 /**
- * Generate a fresh v1 directory (authdirservers only.)
+ * Generate a fresh v1 directory (authdirservers only); set the_directory
+ * and return a pointer to the new value.
  */
-static int
+static cached_dir_t *
 dirserv_regenerate_directory(void)
 {
   char *new_directory=NULL;
@@ -1120,7 +1121,7 @@ dirserv_regenerate_directory(void)
                                        get_identity_key(), 0)) {
     log_warn(LD_BUG, "Error creating directory.");
     tor_free(new_directory);
-    return -1;
+    return NULL;
   }
   cached_dir_decref(the_directory);
   the_directory = new_cached_dir(new_directory, time(NULL));
@@ -1135,14 +1136,14 @@ dirserv_regenerate_directory(void)
    */
   dirserv_set_cached_directory(the_directory->dir, time(NULL), 0);
 
-  return 0;
+  return the_directory;
 }
 
 /** For authoritative directories: the current (v1) network status */
 static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
 
 /** Replace the current running-routers list with a newly generated one. */
-static int
+static cached_dir_t *
 generate_runningrouters(void)
 {
   char *s=NULL;
@@ -1187,11 +1188,11 @@ generate_runningrouters(void)
   set_cached_dir(&the_runningrouters, s, time(NULL));
   runningrouters_is_dirty = 0;
 
-  return 0;
+  return &the_runningrouters;
  err:
   tor_free(s);
   tor_free(router_status);
-  return -1;
+  return NULL;
 }
 
 /** Set *<b>rr</b> to the most recently generated encoded signed
@@ -1310,7 +1311,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 /** For authoritative directories only: replace the contents of
  * <b>the_v2_networkstatus</b> with a newly generated network status
  * object. */
-static int
+static cached_dir_t *
 generate_v2_networkstatus(void)
 {
 #define LONGEST_STATUS_FLAG_NAME_LEN 7
@@ -1322,7 +1323,7 @@ generate_v2_networkstatus(void)
    /* second line */                                                    \
    (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
 
-  int r = -1;
+  cached_dir_t *r = NULL;
   size_t len, identity_pkey_len;
   char *status = NULL, *client_versions = NULL, *server_versions = NULL,
     *identity_pkey = NULL, *hostname = NULL;
@@ -1490,7 +1491,7 @@ generate_v2_networkstatus(void)
   router_set_networkstatus(the_v2_networkstatus.dir, time(NULL), NS_GENERATED,
                            NULL);
 
-  r = 0;
+  r = &the_v2_networkstatus;
  done:
   tor_free(client_versions);
   tor_free(server_versions);
