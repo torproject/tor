@@ -1595,6 +1595,43 @@ connection_write_to_buf(const char *string, size_t len, connection_t *conn)
   conn->outbuf_flushlen += len;
 }
 
+void
+connection_write_to_buf_zlib(connection_t *conn,
+                             tor_zlib_state_t *state,
+                             const char *data, size_t data_len,
+                             int done)
+{
+  int r;
+  if (!data_len)
+    return;
+  /* if it's marked for close, only allow write if we mean to flush it */
+  if (conn->marked_for_close && !conn->hold_open_until_flushed)
+    return;
+
+  /* XXXX TOO much duplicate code! XXXX012NM */
+  CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(
+                                conn->outbuf, state, data, data_len,
+                                done));
+  if (r < 0) {
+    if (CONN_IS_EDGE(conn)) {
+      /* if it failed, it means we have our package/delivery windows set
+         wrong compared to our max outbuf size. close the whole circuit. */
+      log_warn(LD_NET,
+               "write_to_buf failed. Closing circuit (fd %d).", conn->s);
+      circuit_mark_for_close(circuit_get_by_edge_conn(conn),
+                             END_CIRC_REASON_INTERNAL);
+    } else {
+      log_warn(LD_NET,
+               "write_to_buf failed. Closing connection (fd %d).", conn->s);
+      connection_mark_for_close(conn);
+    }
+    return;
+  }
+
+  connection_start_writing(conn);
+  conn->outbuf_flushlen += data_len;
+}
+
 /** Return the conn to addr/port that has the most recent
  * timestamp_created, or NULL if no such conn exists. */
 connection_t *

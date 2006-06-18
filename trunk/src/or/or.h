@@ -1679,6 +1679,10 @@ int connection_handle_write(connection_t *conn);
 void _connection_controller_force_write(connection_t *conn);
 void connection_write_to_buf(const char *string, size_t len,
                              connection_t *conn);
+void connection_write_to_buf_zlib(connection_t *conn,
+                                  tor_zlib_state_t *state,
+                                  const char *data, size_t data_len,
+                                  int done);
 
 connection_t *connection_or_exact_get_by_addr_port(uint32_t addr,
                                                    uint16_t port);

@@ -1771,19 +1771,21 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
     if (!sd)
       continue;
     if (conn->zlib_state) {
-      write_to_buf_zlib(conn->outbuf, conn->zlib_state,
+      connection_write_to_buf_zlib(
+                        conn, conn->zlib_state,
                         sd->signed_descriptor_body, sd->signed_descriptor_len,
                         0);
     } else {
-      write_to_buf(sd->signed_descriptor_body, sd->signed_descriptor_len,
-                   conn->outbuf);
+      connection_write_to_buf(sd->signed_descriptor_body,
+                              sd->signed_descriptor_len,
+                              conn);
     }
   }
 
   if (!smartlist_len(conn->fingerprint_stack)) {
     /* We just wrote the last one; finish up. */
     if (conn->zlib_state) {
-      write_to_buf_zlib(conn->outbuf, conn->zlib_state, "", 0, 1);
+      connection_write_to_buf_zlib(conn, conn->zlib_state, "", 0, 1);
       tor_zlib_free(conn->zlib_state);
       conn->zlib_state = NULL;
     }
@@ -1809,18 +1811,18 @@ connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
     bytes = remaining;
 
   if (conn->zlib_state) {
-    write_to_buf_zlib(conn->outbuf, conn->zlib_state,
-                      conn->cached_dir->dir_z + conn->cached_dir_offset,
-                      bytes, bytes == remaining);
+    connection_write_to_buf_zlib(conn, conn->zlib_state,
+                             conn->cached_dir->dir_z + conn->cached_dir_offset,
+                             bytes, bytes == remaining);
   } else {
-    write_to_buf(conn->cached_dir->dir_z + conn->cached_dir_offset,
-                 bytes, conn->outbuf);
+    connection_write_to_buf(conn->cached_dir->dir_z + conn->cached_dir_offset,
+                            bytes, conn);
   }
   conn->cached_dir_offset += bytes;
   if (bytes == (int)conn->cached_dir->dir_z_len) {
     /* We just wrote the last one; finish up. */
     if (conn->zlib_state) {
-      write_to_buf_zlib(conn->outbuf, conn->zlib_state, "", 0, 1);
+      connection_write_to_buf_zlib(conn, conn->zlib_state, "", 0, 1);
       tor_zlib_free(conn->zlib_state);
       conn->zlib_state = NULL;
     }
