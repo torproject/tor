@@ -3775,7 +3775,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
    * give or take 30 minutes? */
   r1pub = r1->cache_info.published_on;
   r2pub = r2->cache_info.published_on;
-  if (abs(r2->uptime - (r1->uptime + (r2pub - r1pub))))
+  if (abs(r2->uptime - (r1->uptime + (r2pub - r1pub))) > 30*60)
     return 0;
 
   /* Otherwise, the difference is cosmetic. */
