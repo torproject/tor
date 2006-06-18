@@ -1804,6 +1804,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
 
   bytes = DIRSERV_BUFFER_MIN - buf_datalen(conn->outbuf);
   tor_assert(bytes > 0);
+  tor_assert(conn->cached_dir);
   if (bytes < 8192)
     bytes = 8192;
   remaining = conn->cached_dir->dir_z_len - conn->cached_dir_offset;
@@ -1819,7 +1820,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
                             bytes, conn);
   }
   conn->cached_dir_offset += bytes;
-  if (bytes == (int)conn->cached_dir->dir_z_len) {
+  if (conn->cached_dir_offset == (int)conn->cached_dir->dir_z_len) {
     /* We just wrote the last one; finish up. */
     if (conn->zlib_state) {
       connection_write_to_buf_zlib(conn, conn->zlib_state, "", 0, 1);
