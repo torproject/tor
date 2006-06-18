@@ -1305,7 +1305,7 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
     if (next < buf->cur)
       old_avail = avail = buf->cur - next;
     else
-      old_avail = avail = (buf->mem + buf->datalen) - next;
+      old_avail = avail = (buf->mem + buf->len) - next;
     switch (tor_zlib_process(state, &next, &avail, &data, &data_len, done)) {
       case TOR_ZLIB_DONE:
         over = 1;
