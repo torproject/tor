@@ -1296,7 +1296,8 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
 {
   char *next;
   size_t old_avail, avail;
-  while (1) {
+  int over = 0;
+  while (!over) {
     buf_ensure_capacity(buf, buf->datalen + 1024);
     next = _buf_end(buf);
     if (next < buf->cur)
@@ -1305,12 +1306,13 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
       old_avail = avail = (buf->mem + buf->datalen) - buf->cur;
     switch (tor_zlib_process(state, &next, &avail, &data, &data_len, done)) {
       case TOR_ZLIB_DONE:
-        return 0;
+        over = 1;
+        break;
       case TOR_ZLIB_ERR:
         return -1;
       case TOR_ZLIB_OK:
         if (data_len == 0)
-          return 0;
+          over = 1;
         break;
       case TOR_ZLIB_BUF_FULL:
         if (avail && buf->len >= 1024 + buf->datalen) {
@@ -1335,6 +1337,8 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
     if (buf->datalen > buf->highwater)
       buf->highwater = buf->datalen;
     buf_total_used += old_avail - avail;
+    if (over)
+      return 0;
   }
 }
 
