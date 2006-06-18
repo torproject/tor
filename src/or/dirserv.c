@@ -1843,7 +1843,7 @@ connection_dirserv_flushed_some(connection_t *conn)
   tor_assert(conn->state == DIR_CONN_STATE_SERVER_WRITING);
 
   if (conn->dir_refresh_src == DIR_REFRESH_NONE
-      || buf_datalen(conn->outbuf) > DIRSERV_BUFFER_MIN)
+      || buf_datalen(conn->outbuf) >= DIRSERV_BUFFER_MIN)
     return 0;
 
   switch (conn->dir_refresh_src) {
