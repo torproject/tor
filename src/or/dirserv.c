@@ -1789,6 +1789,7 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
     }
     smartlist_free(conn->fingerprint_stack);
     conn->fingerprint_stack = NULL;
+    conn->dir_refresh_src = DIR_REFRESH_NONE;
   }
   return 0;
 }
@@ -1825,6 +1826,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
     }
     cached_dir_decref(conn->cached_dir);
     conn->cached_dir = NULL;
+    conn->dir_refresh_src = DIR_REFRESH_NONE;
   }
   return 0;
 }
