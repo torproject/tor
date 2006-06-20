@@ -12,6 +12,21 @@
 	<string>@VERSION@</string>
 	<key>IFPkgFlagComponentDirectory</key>
 	<string>../.contained_packages</string>
+	<key>IFRequirementDicts</key>
+	<array>
+		<dict>
+		        <key>SpecType</key>
+			<string>plist</string>
+			<key>SpecArgument</key>
+			<string>/System/Library/CoreServices/SystemVersion.plist</string>
+			<key>SpecProperty</key>
+			<string>ProductVersion</string>
+			<key>TestOperator</key>
+			<string>=</string>
+			<key>TestObject</key>
+			<string>OSVER</string>
+		</dict>
+	</array>
 	<key>IFPkgFlagPackageList</key>
 	<array>
 		<dict>
