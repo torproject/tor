@@ -1891,6 +1891,7 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(connection_t *conn)
       if (uncompressing && ! conn->zlib_state &&
           conn->fingerprint_stack && smartlist_len(conn->fingerprint_stack))
         conn->zlib_state = conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
+        /* XXX Nick: the line above is fishy -RD */
       if (r) return r;
     } else if (conn->fingerprint_stack &&
                smartlist_len(conn->fingerprint_stack)) {
