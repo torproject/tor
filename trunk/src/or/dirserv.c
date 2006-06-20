@@ -1870,22 +1870,28 @@ connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
   conn->cached_dir_offset += bytes;
   if (conn->cached_dir_offset == (int)conn->cached_dir->dir_z_len) {
     /* We just wrote the last one; finish up. */
-    if (conn->dir_spool_src == DIR_SPOOL_CACHED_DIR)
-      connection_dirserv_finish_spooling(conn);
+    connection_dirserv_finish_spooling(conn);
     cached_dir_decref(conn->cached_dir);
     conn->cached_dir = NULL;
   }
   return 0;
 }
 
+/* DOCDOC */
 static int
 connection_dirserv_add_networkstatus_bytes_to_outbuf(connection_t *conn)
 {
-  int r;
+
   while (buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
     if (conn->cached_dir) {
-      if ((r = connection_dirserv_add_dir_bytes_to_outbuf(conn)))
-        return r;
+      int uncompressing = (conn->zlib_state != NULL);
+      int r = connection_dirserv_add_dir_bytes_to_outbuf(conn);
+      /* This bit is tricky.  If we were uncompressing the last networkstatus,
+       * we may need to make a new zlib object to uncompress the next one. */
+      if (uncompressing && ! conn->zlib_state &&
+          conn->fingerprint_stack && smartlist_len(conn->fingerprint_stack))
+        conn->zlib_state = conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
+      if (r) return r;
     } else if (conn->fingerprint_stack &&
                smartlist_len(conn->fingerprint_stack)) {
       /* Add another networkstatus; start serving it. */
