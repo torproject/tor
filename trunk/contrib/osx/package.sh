@@ -93,10 +93,10 @@ EOF
 DOC=$BUILD_DIR/tor_resources/documents
 mkdir $DOC
 mkdir $DOC/howto
-cp doc/website/stylesheet.css doc/website/tor-doc-osx.html.* $DOC/howto
-cp doc/website/tor-doc-server.html.* $DOC/howto
-cp doc/website/tor-hidden-service.html.* $DOC/howto
-cp doc/website/tor-switchproxy.html.* $DOC/howto
+#cp doc/website/stylesheet.css doc/website/tor-doc-osx.html.* $DOC/howto
+#cp doc/website/tor-doc-server.html.* $DOC/howto
+#cp doc/website/tor-hidden-service.html.* $DOC/howto
+#cp doc/website/tor-switchproxy.html.* $DOC/howto
 #mkdir $DOC/img
 #cp doc/img/screenshot-osx* $DOC/img
 cp AUTHORS $DOC/AUTHORS.txt
@@ -149,7 +149,7 @@ mkdir -p "$MPKG/Contents/Resources"
 echo -n "pmkrpkg1" > "$MPKG/Contents/PkgInfo"
 cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
 #cp contrib/osx/License.rtf "$MPKG/Contents/Resources"
-cp contrib/osx/TorBundleInfo.plist "$MPKG/Contents/Info.plist"
+sed -E -e "s/OSVER/$OSVER/" contrib/osx/TorBundleInfo.plist > "$MPKG/Contents/Info.plist"
 cp contrib/osx/TorBundleWelcome.rtf "$MPKG/Contents/Resources/Welcome.rtf"
 cp contrib/osx/TorBundleDesc.plist "$MPKG/Contents/Resources/Description.plist"
 cp contrib/osx/tor_logo.gif "$MPKG/Contents/Resources/background.gif"
