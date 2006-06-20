@@ -22,7 +22,7 @@
 			<key>SpecProperty</key>
 			<string>ProductVersion</string>
 			<key>TestOperator</key>
-			<string>=</string>
+			<string>&gt;=</string>
 			<key>TestObject</key>
 			<string>OSVER</string>
 		</dict>
