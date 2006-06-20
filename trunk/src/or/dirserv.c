@@ -945,11 +945,10 @@ clear_cached_dir(cached_dir_t *d)
 
 /** Free all storage held by the cached_dir_t in <b>d</b>. */
 static void
-free_cached_dir(void *_d)
+_free_cached_dir(void *_d)
 {
   cached_dir_t *d = (cached_dir_t *)_d;
-  clear_cached_dir(d);
-  tor_free(d);
+  cached_dir_decref(d);
 }
 
 /** If we have no cached directory, or it is older than <b>when</b>, then
@@ -978,28 +977,30 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
                                     const char *identity,
                                     time_t published)
 {
-  cached_dir_t *d;
+  cached_dir_t *d, *old_d;
   smartlist_t *trusted_dirs;
   if (!cached_v2_networkstatus)
     cached_v2_networkstatus = digestmap_new();
 
-  if (!(d = digestmap_get(cached_v2_networkstatus, identity))) {
-    if (!networkstatus)
-      return;
-    d = tor_malloc_zero(sizeof(cached_dir_t));
-    digestmap_set(cached_v2_networkstatus, identity, d);
-  }
+  old_d = digestmap_get(cached_v2_networkstatus, identity);
+  if (!old_d && !networkstatus)
+    return;
 
-  tor_assert(d);
   if (networkstatus) {
-    if (published > d->published) {
-      set_cached_dir(d, tor_strdup(networkstatus), published);
+    if (!old_d || published > old_d->published) {
+      d = new_cached_dir(tor_strdup(networkstatus), published);
+      digestmap_set(cached_v2_networkstatus, identity, d);
+      if (old_d)
+        cached_dir_decref(old_d);
     }
   } else {
-    free_cached_dir(d);
-    digestmap_remove(cached_v2_networkstatus, identity);
+    if (old_d) {
+      digestmap_remove(cached_v2_networkstatus, identity);
+      cached_dir_decref(old_d);
+    }
   }
 
+  /* Now purge old entries. */
   trusted_dirs = router_get_trusted_dir_servers();
   if (digestmap_size(cached_v2_networkstatus) >
       smartlist_len(trusted_dirs) + MAX_UNTRUSTED_NETWORKSTATUSES) {
@@ -1024,7 +1025,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
     tor_assert(oldest);
     d = digestmap_remove(cached_v2_networkstatus, oldest);
     if (d)
-      free_cached_dir(d);
+      cached_dir_decref(d);
   }
 }
 
@@ -1209,7 +1210,7 @@ dirserv_get_runningrouters(const char **rr, int compress)
 }
 
 /** For authoritative directories: the current (v2) network status */
-static cached_dir_t the_v2_networkstatus = { NULL, NULL, 0, 0, 0, -1 };
+static cached_dir_t *the_v2_networkstatus = NULL;
 
 static int
 should_generate_v2_networkstatus(void)
@@ -1485,13 +1486,14 @@ generate_v2_networkstatus(void)
     goto done;
   }
 
-  set_cached_dir(&the_v2_networkstatus, status, time(NULL));
+  if (the_v2_networkstatus)
+    cached_dir_decref(the_v2_networkstatus);
+  the_v2_networkstatus = new_cached_dir(status, time(NULL));
   status = NULL; /* So it doesn't get double-freed. */
   the_v2_networkstatus_is_dirty = 0;
-  router_set_networkstatus(the_v2_networkstatus.dir, time(NULL), NS_GENERATED,
-                           NULL);
-
-  r = &the_v2_networkstatus;
+  router_set_networkstatus(the_v2_networkstatus->dir,
+                           time(NULL), NS_GENERATED, NULL);
+  r = the_v2_networkstatus;
  done:
   tor_free(client_versions);
   tor_free(server_versions);
@@ -1499,6 +1501,44 @@ generate_v2_networkstatus(void)
   tor_free(hostname);
   tor_free(identity_pkey);
   return r;
+}
+
+/* DOCDOC */
+void
+dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
+                                          const char *key)
+{
+  tor_assert(result);
+
+  if (!cached_v2_networkstatus)
+    cached_v2_networkstatus = digestmap_new();
+
+  if (should_generate_v2_networkstatus())
+    generate_v2_networkstatus();
+
+  if (!strcmp(key,"authority")) {
+    if (get_options()->AuthoritativeDir) {
+      routerinfo_t *me = router_get_my_routerinfo();
+      if (me)
+        smartlist_add(result,
+                      tor_memdup(me->cache_info.identity_digest, DIGEST_LEN));
+    }
+  } else if (!strcmp(key, "all")) {
+    digestmap_iter_t *iter;
+    iter = digestmap_iter_init(cached_v2_networkstatus);
+    while (!digestmap_iter_done(iter)) {
+      const char *ident;
+      void *val;
+      digestmap_iter_get(iter, &ident, &val);
+      smartlist_add(result, tor_memdup(ident, DIGEST_LEN));
+      iter = digestmap_iter_next(cached_v2_networkstatus, iter);
+    }
+    if (smartlist_len(result) == 0)
+      log_warn(LD_DIRSERV,
+               "Client requested 'all' network status objects; we have none.");
+  } else if (!strcmpstart(key, "fp/")) {
+    dir_split_resource_into_fingerprints(key+3, result, NULL, 1);
+  }
 }
 
 /** Look for a network status object as specified by <b>key</b>, which should
@@ -1519,7 +1559,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
     if (get_options()->AuthoritativeDir) {
       cached_dir_t *d =
         dirserv_pick_cached_dir_obj(NULL,
-                                    &the_v2_networkstatus,
+                                    the_v2_networkstatus,
                                     the_v2_networkstatus_is_dirty,
                                     generate_v2_networkstatus,
                                     "network status list", 0);
@@ -1747,11 +1787,23 @@ dirserv_orconn_tls_done(const char *address,
  * below this threshold. */
 #define DIRSERV_BUFFER_MIN 16384
 
+static int
+connection_dirserv_finish_spooling(connection_t *conn)
+{
+  if (conn->zlib_state) {
+    connection_write_to_buf_zlib(conn, conn->zlib_state, "", 0, 1);
+    tor_zlib_free(conn->zlib_state);
+    conn->zlib_state = NULL;
+  }
+  conn->dir_spool_src = DIR_SPOOL_NONE;
+  return 0;
+}
+
 /** DOCDOC */
 static int
 connection_dirserv_add_servers_to_outbuf(connection_t *conn)
 {
-  int by_fp = conn->dir_refresh_src == DIR_REFRESH_SERVER_BY_FP;
+  int by_fp = conn->dir_spool_src == DIR_SPOOL_SERVER_BY_FP;
 
   while (smartlist_len(conn->fingerprint_stack) &&
          buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
@@ -1785,14 +1837,9 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
 
   if (!smartlist_len(conn->fingerprint_stack)) {
     /* We just wrote the last one; finish up. */
-    if (conn->zlib_state) {
-      connection_write_to_buf_zlib(conn, conn->zlib_state, "", 0, 1);
-      tor_zlib_free(conn->zlib_state);
-      conn->zlib_state = NULL;
-    }
+    connection_dirserv_finish_spooling(conn);
     smartlist_free(conn->fingerprint_stack);
     conn->fingerprint_stack = NULL;
-    conn->dir_refresh_src = DIR_REFRESH_NONE;
   }
   return 0;
 }
@@ -1823,14 +1870,44 @@ connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
   conn->cached_dir_offset += bytes;
   if (conn->cached_dir_offset == (int)conn->cached_dir->dir_z_len) {
     /* We just wrote the last one; finish up. */
-    if (conn->zlib_state) {
-      connection_write_to_buf_zlib(conn, conn->zlib_state, "", 0, 1);
-      tor_zlib_free(conn->zlib_state);
-      conn->zlib_state = NULL;
-    }
+    if (conn->dir_spool_src == DIR_SPOOL_CACHED_DIR)
+      connection_dirserv_finish_spooling(conn);
     cached_dir_decref(conn->cached_dir);
     conn->cached_dir = NULL;
-    conn->dir_refresh_src = DIR_REFRESH_NONE;
+  }
+  return 0;
+}
+
+static int
+connection_dirserv_add_networkstatus_bytes_to_outbuf(connection_t *conn)
+{
+  int r;
+  while (buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
+    if (conn->cached_dir) {
+      if ((r = connection_dirserv_add_dir_bytes_to_outbuf(conn)))
+        return r;
+    } else if (conn->fingerprint_stack &&
+               smartlist_len(conn->fingerprint_stack)) {
+      /* Add another networkstatus; start serving it. */
+      char *fp = smartlist_pop_last(conn->fingerprint_stack);
+      cached_dir_t *d;
+      if (router_digest_is_me(fp))
+        d = the_v2_networkstatus;
+      else
+        d = digestmap_get(cached_v2_networkstatus, fp);
+      tor_free(fp);
+      if (d) {
+        ++d->refcnt;
+        conn->cached_dir = d;
+        conn->cached_dir_offset = 0;
+      }
+    } else {
+      connection_dirserv_finish_spooling(conn);
+      if (conn->fingerprint_stack)
+        smartlist_free(conn->fingerprint_stack);
+      conn->fingerprint_stack = NULL;
+      return 0;
+    }
   }
   return 0;
 }
@@ -1843,16 +1920,18 @@ connection_dirserv_flushed_some(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_DIR);
   tor_assert(conn->state == DIR_CONN_STATE_SERVER_WRITING);
 
-  if (conn->dir_refresh_src == DIR_REFRESH_NONE
+  if (conn->dir_spool_src == DIR_SPOOL_NONE
       || buf_datalen(conn->outbuf) >= DIRSERV_BUFFER_MIN)
     return 0;
 
-  switch (conn->dir_refresh_src) {
-    case DIR_REFRESH_SERVER_BY_DIGEST:
-    case DIR_REFRESH_SERVER_BY_FP:
+  switch (conn->dir_spool_src) {
+    case DIR_SPOOL_SERVER_BY_DIGEST:
+    case DIR_SPOOL_SERVER_BY_FP:
       return connection_dirserv_add_servers_to_outbuf(conn);
-    case DIR_REFRESH_CACHED_DIR:
+    case DIR_SPOOL_CACHED_DIR:
       return connection_dirserv_add_dir_bytes_to_outbuf(conn);
+    case DIR_SPOOL_NETWORKSTATUS:
+      return connection_dirserv_add_networkstatus_bytes_to_outbuf(conn);
     default:
       return 0;
   }
@@ -1872,11 +1951,11 @@ dirserv_free_all(void)
   }
   cached_dir_decref(the_directory);
   clear_cached_dir(&the_runningrouters);
-  clear_cached_dir(&the_v2_networkstatus);
+  cached_dir_decref(the_v2_networkstatus);
   cached_dir_decref(cached_directory);
   clear_cached_dir(&cached_runningrouters);
   if (cached_v2_networkstatus) {
-    digestmap_free(cached_v2_networkstatus, free_cached_dir);
+    digestmap_free(cached_v2_networkstatus, _free_cached_dir);
     cached_v2_networkstatus = NULL;
   }
 }
