@@ -1896,7 +1896,6 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(connection_t *conn)
 	if (uncompressing && ! conn->zlib_state &&
 	    conn->fingerprint_stack &&
 	    smartlist_len(conn->fingerprint_stack)) {
-	  log_notice(LD_GENERAL, "New zlib buf.");
 	  conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
 	}
       }
