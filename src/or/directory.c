@@ -1418,7 +1418,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     ++d->refcnt;
 
     /* Prime the connection with some data. */
-    conn->dir_refresh_src = DIR_REFRESH_CACHED_DIR;
+    conn->dir_spool_src = DIR_SPOOL_CACHED_DIR;
     connection_dirserv_flushed_some(conn);
     return 0;
   }
@@ -1454,12 +1454,12 @@ directory_handle_command_get(connection_t *conn, char *headers,
     /* v2 network status fetch. */
     size_t url_len = strlen(url);
     int deflated = !strcmp(url+url_len-2, ".z");
-    smartlist_t *dir_objs = smartlist_create();
+    smartlist_t *dir_fps = smartlist_create();
     const char *request_type = NULL;
     const char *key = url + strlen("/tor/status/");
     if (deflated)
       url[url_len-2] = '\0';
-    dirserv_get_networkstatus_v2(dir_objs, key);
+    dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
     if (!strcmpstart(key, "fp/"))
       request_type = deflated?"/tor/status/fp.z":"/tor/status/fp";
     else if (!strcmpstart(key, "authority"))
@@ -1470,32 +1470,29 @@ directory_handle_command_get(connection_t *conn, char *headers,
     else
       request_type = "/tor/status/?";
     tor_free(url);
-    if (!smartlist_len(dir_objs)) { /* we failed to create/cache cp */
+    if (!smartlist_len(dir_fps)) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Network status object unavailable");
-      smartlist_free(dir_objs);
+      smartlist_free(dir_fps);
       return 0;
     }
-    dlen = 0;
-    SMARTLIST_FOREACH(dir_objs, cached_dir_t *, d,
-                      dlen += deflated?d->dir_z_len:d->dir_len);
-    note_request(request_type,dlen);
+    // note_request(request_type,dlen);
     format_rfc1123_time(date, time(NULL));
     tor_snprintf(tmp, sizeof(tmp),
-                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
+                 "HTTP/1.0 200 OK\r\nDate: %s\r\n"
                  "Content-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
                  date,
-                 (int)dlen,
                  deflated?"application/octet-stream":"text/plain",
                  deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
-    SMARTLIST_FOREACH(dir_objs, cached_dir_t *, d,
-       {
-         if (deflated)
-           connection_write_to_buf(d->dir_z, d->dir_z_len, conn);
-         else
-           connection_write_to_buf(d->dir, d->dir_len, conn);
-       });
-    smartlist_free(dir_objs);
+
+    conn->fingerprint_stack = dir_fps;
+    if (! deflated)
+      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
+
+    /* Prime the connection with some data. */
+    conn->dir_spool_src = DIR_SPOOL_NETWORKSTATUS;
+    connection_dirserv_flushed_some(conn);
+
     return 0;
   }
 
@@ -1523,9 +1520,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
     else
       request_type = "/tor/server/?";
     if (!strcmpstart(url, "/tor/server/d/"))
-      conn->dir_refresh_src = DIR_REFRESH_SERVER_BY_DIGEST;
+      conn->dir_spool_src = DIR_SPOOL_SERVER_BY_DIGEST;
     else
-      conn->dir_refresh_src = DIR_REFRESH_SERVER_BY_FP;
+      conn->dir_spool_src = DIR_SPOOL_SERVER_BY_FP;
     tor_free(url);
     if (res < 0)
       write_http_status_line(conn, 404, msg);

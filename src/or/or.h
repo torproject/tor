@@ -699,9 +699,9 @@ struct connection_t {
                              * for?*/
 /* Used only for server sides of some dir connections. */
   enum {
-    DIR_REFRESH_NONE=0, DIR_REFRESH_SERVER_BY_DIGEST, DIR_REFRESH_SERVER_BY_FP,
-    DIR_REFRESH_CACHED_DIR
-  } dir_refresh_src;
+    DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
+    DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS
+  } dir_spool_src;
   smartlist_t *fingerprint_stack;
   struct cached_dir_t *cached_dir;
   off_t cached_dir_offset;
@@ -1938,6 +1938,8 @@ void dirserv_set_cached_networkstatus_v2(const char *directory,
                                          const char *identity,
                                          time_t published);
 void dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
+void dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
+                                               const char *key);
 int dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
                                         const char **msg);
 int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
