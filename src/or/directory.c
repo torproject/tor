@@ -306,7 +306,7 @@ connection_dir_download_networkstatus_failed(connection_t *conn)
      * failed, and possibly retry them later.*/
     smartlist_t *failed = smartlist_create();
     dir_split_resource_into_fingerprints(conn->requested_resource+3,
-                                         failed, NULL, 0);
+                                         failed, NULL, 0, 0);
     if (smartlist_len(failed)) {
       dir_networkstatus_download_failed(failed);
       SMARTLIST_FOREACH(failed, char *, cp, tor_free(cp));
@@ -997,7 +997,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         !strcmpstart(conn->requested_resource,"fp/")) {
       which = smartlist_create();
       dir_split_resource_into_fingerprints(conn->requested_resource+3,
-                                           which, NULL, 0);
+                                           which, NULL, 0, 0);
     } else if (conn->requested_resource &&
                !strcmpstart(conn->requested_resource, "all")) {
       which = smartlist_create();
@@ -1045,7 +1045,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         !strcmpstart(conn->requested_resource,"d/")) {
       which = smartlist_create();
       dir_split_resource_into_fingerprints(conn->requested_resource+2,
-                                           which, NULL, 0);
+                                           which, NULL, 0, 0);
       n_asked_for = smartlist_len(which);
     }
     if (status_code != 200) {
@@ -1906,21 +1906,21 @@ dir_routerdesc_download_failed(smartlist_t *failed)
  * the strings, in order, into <b>fp_out</b>.  If <b>compressed_out</b> is
  * non-NULL, set it to 1 if the resource ends in ".z", else set it to 0.  If
  * decode_hex is true, then delete all elements that aren't hex digests, and
- * decode the rest.
+ * decode the rest.  If sort_uniq is true, then sort the list and remove
+ * all duplicates.
  */
 int
 dir_split_resource_into_fingerprints(const char *resource,
                                      smartlist_t *fp_out, int *compressed_out,
-                                     int decode_hex)
+                                     int decode_hex, int sort_uniq)
 {
-  int old_len;
+  smartlist_t *fp_tmp = smartlist_create();
   tor_assert(fp_out);
-  old_len = smartlist_len(fp_out);
-  smartlist_split_string(fp_out, resource, "+", 0, 0);
+  smartlist_split_string(fp_tmp, resource, "+", 0, 0);
   if (compressed_out)
     *compressed_out = 0;
-  if (smartlist_len(fp_out) > old_len) {
-    char *last = smartlist_get(fp_out,smartlist_len(fp_out)-1);
+  if (smartlist_len(fp_tmp)) {
+    char *last = smartlist_get(fp_tmp,smartlist_len(fp_tmp)-1);
     size_t last_len = strlen(last);
     if (last_len > 2 && !strcmp(last+last_len-2, ".z")) {
       last[last_len-2] = '\0';
@@ -1931,27 +1931,51 @@ dir_split_resource_into_fingerprints(const char *resource,
   if (decode_hex) {
     int i;
     char *cp, *d = NULL;
-    for (i = old_len; i < smartlist_len(fp_out); ++i) {
-      cp = smartlist_get(fp_out, i);
+    for (i = 0; i < smartlist_len(fp_tmp); ++i) {
+      cp = smartlist_get(fp_tmp, i);
       if (strlen(cp) != HEX_DIGEST_LEN) {
         log_info(LD_DIR,
                  "Skipping digest %s with non-standard length.", escaped(cp));
-        smartlist_del(fp_out, i--);
+        smartlist_del_keeporder(fp_tmp, i--);
         goto again;
       }
       d = tor_malloc_zero(DIGEST_LEN);
       if (base16_decode(d, DIGEST_LEN, cp, HEX_DIGEST_LEN)<0) {
         log_info(LD_DIR, "Skipping non-decodable digest %s", escaped(cp));
-        smartlist_del(fp_out, i--);
+        smartlist_del_keeporder(fp_tmp, i--);
         goto again;
       }
-      smartlist_set(fp_out, i, d);
+      smartlist_set(fp_tmp, i, d);
       d = NULL;
     again:
       tor_free(cp);
       tor_free(d);
     }
   }
+  if (sort_uniq) {
+    smartlist_t *fp_tmp2 = smartlist_create();
+    int i;
+    if (decode_hex)
+      smartlist_sort_digests(fp_tmp);
+    else
+      smartlist_sort_strings(fp_tmp);
+    if (smartlist_len(fp_tmp))
+      smartlist_add(fp_tmp2, smartlist_get(fp_tmp, 0));
+    for (i = 1; i < smartlist_len(fp_tmp); ++i) {
+      char *cp = smartlist_get(fp_tmp, i);
+      char *last = smartlist_get(fp_tmp2, smartlist_len(fp_tmp2)-1);
+      
+      if ((decode_hex && memcmp(cp, last, DIGEST_LEN))
+	  || (!decode_hex && strcasecmp(cp, last)))
+	smartlist_add(fp_tmp2, cp);
+      else
+	tor_free(cp);
+    }
+    smartlist_free(fp_tmp);
+    fp_tmp = fp_tmp2;
+  }
+  smartlist_add_all(fp_out, fp_tmp);
+  smartlist_free(fp_tmp);
   return 0;
 }
 

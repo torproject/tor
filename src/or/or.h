@@ -1910,7 +1910,7 @@ int connection_dir_finished_connecting(connection_t *conn);
 void connection_dir_request_failed(connection_t *conn);
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,
-                                    int decode_hex);
+                                    int decode_hex, int sort_uniq);
 char *directory_dump_request_log(void);
 
 /********************************* dirserv.c ***************************/

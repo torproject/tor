@@ -1533,11 +1533,12 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
       smartlist_add(result, tor_memdup(ident, DIGEST_LEN));
       iter = digestmap_iter_next(cached_v2_networkstatus, iter);
     }
+    smartlist_sort_digests(result);
     if (smartlist_len(result) == 0)
       log_warn(LD_DIRSERV,
                "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
-    dir_split_resource_into_fingerprints(key+3, result, NULL, 1);
+    dir_split_resource_into_fingerprints(key+3, result, NULL, 1, 1);
   }
 }
 
@@ -1586,7 +1587,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
                "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
     smartlist_t *digests = smartlist_create();
-    dir_split_resource_into_fingerprints(key+3, digests, NULL, 1);
+    dir_split_resource_into_fingerprints(key+3, digests, NULL, 1, 1);
     SMARTLIST_FOREACH(digests, char *, cp,
         {
           cached_dir_t *cached;
@@ -1629,10 +1630,10 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
                     tor_memdup(ri->cache_info.identity_digest, DIGEST_LEN));
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     key += strlen("/tor/server/d/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1);
+    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
   } else if (!strcmpstart(key, "/tor/server/fp/")) {
     key += strlen("/tor/server/fp/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1);
+    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
   } else {
     *msg = "Key not recognized";
     return -1;
@@ -1680,7 +1681,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/d/");
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1);
+    dir_split_resource_into_fingerprints(key, digests, NULL, 1, 1);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          signed_descriptor_t *sd = router_get_by_descriptor_digest(d);
@@ -1693,7 +1694,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     smartlist_t *digests = smartlist_create();
     time_t cutoff = time(NULL) - ROUTER_MAX_AGE_TO_PUBLISH;
     key += strlen("/tor/server/fp/");
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1);
+    dir_split_resource_into_fingerprints(key, digests, NULL, 1, 1);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          if (router_digest_is_me(d)) {
