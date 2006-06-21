@@ -461,6 +461,20 @@ smartlist_sort_strings(smartlist_t *sl)
   smartlist_sort(sl, _compare_string_ptrs);
 }
 
+/** Helper: compare two DIGEST_LEN digests. */
+static int
+_compare_digests(const void **_a, const void **_b)
+{
+  return memcmp((const char*)*_a, (const char*)*_b, DIGEST_LEN);
+}
+
+/** Sort the list of DIGEST_LEN-byte digests into ascending order. */
+void
+smartlist_sort_digests(smartlist_t *sl)
+{
+  smartlist_sort(sl, _compare_string_ptrs);
+}
+
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
   typedef struct prefix ## entry_t {                      \
     HT_ENTRY(prefix ## entry_t) node;                     \

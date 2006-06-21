@@ -2507,6 +2507,7 @@ update_networkstatus_client_downloads(time_t now)
   resource = tor_malloc(resource_len);
   memcpy(resource, "fp/", 3);
   cp = resource+3;
+  smartlist_sort_digests(missing);
   needed = smartlist_len(missing);
   SMARTLIST_FOREACH(missing, const char *, d,
     {
@@ -3252,7 +3253,7 @@ list_pending_descriptor_downloads(digestmap_t *result)
         !conn->marked_for_close) {
       if (!strcmpstart(conn->requested_resource, prefix))
         dir_split_resource_into_fingerprints(conn->requested_resource+p_len,
-                                             tmp, NULL, 1);
+                                             tmp, NULL, 1, 0);
     }
   }
   SMARTLIST_FOREACH(tmp, char *, d,
@@ -3487,6 +3488,7 @@ update_router_descriptor_client_downloads(time_t now)
              (n_downloadable+n_per_request-1)/n_per_request,
              n_downloadable>n_per_request?"s":"",
              n_downloadable, n_downloadable>1?"s":"", n_per_request);
+    smartlist_sort_digests(downloadable);
     for (i=0; i < n_downloadable; i += n_per_request) {
       initiate_descriptor_downloads(NULL, downloadable, i, i+n_per_request);
     }
