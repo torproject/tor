@@ -38,22 +38,26 @@ N   . Improve memory usage on tight-memory machines.
           somebody requests a desc that we throw away before we deliver it),
           but this happens only when somebody wants an obsolete desc, and
           clients can already handle truncated replies.
-        . But what do we do about compression? That's the part that makes
+        o But what do we do about compression? That's the part that makes
           stuff hard.
           o Implement compress/decompress-on-the-fly support.
           o Use it for returning lists of descriptors.
-          - Use it for returning lists of network status docs. (This will
+          o Use it for returning lists of network status docs. (This will
             take a hybrid approach; let's get the other bits working first.)
           o Make clients handle missing Content-Length tags.  (Oh, they do.)
             o Verify that this has happened for a long time.
         o Try a similar trick for spooling out v1 directories.  These we
           _uncompress_ on the fly.
         - Look into pulling serverdescs off buffers as they arrive.
-        - Mmap cache files where possible.
-          - Mmap cached-routers file; when building it, go oldest-to-newest.
-            - Make sure offset is correct in the presence of windows FS
-              insanity.
-          - Save and mmap v1 directories; store them zipped?
+        . Mmap cache files where possible.
+          o Mmap cached-routers file; when building it, go oldest-to-newest.
+          - More unit tests and asserts for cached-routers file: ensure digest
+            for the right router.  Verify dl by digest, fp, etc.
+          - Make sure cached-routers values and offsets are correct in the
+            presence of windows FS insanity.
+          - Save and mmap v1 directories; store them zipped, not uncompressed 
+          - Store networkstatus docs zipped, not uncompressed.  Maaaybe mmap
+            them too.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
     o Asynchronous DNS
