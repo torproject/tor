@@ -682,7 +682,6 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
     router = router_parse_entry_from_string(*s, end,
                                             saved_location != SAVED_IN_CACHE);
 
-
     if (!router) {
       log_warn(LD_DIR, "Error reading router; skipping");
       *s = end;

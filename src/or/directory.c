@@ -1964,12 +1964,12 @@ dir_split_resource_into_fingerprints(const char *resource,
     for (i = 1; i < smartlist_len(fp_tmp); ++i) {
       char *cp = smartlist_get(fp_tmp, i);
       char *last = smartlist_get(fp_tmp2, smartlist_len(fp_tmp2)-1);
-      
+
       if ((decode_hex && memcmp(cp, last, DIGEST_LEN))
-	  || (!decode_hex && strcasecmp(cp, last)))
-	smartlist_add(fp_tmp2, cp);
+          || (!decode_hex && strcasecmp(cp, last)))
+        smartlist_add(fp_tmp2, cp);
       else
-	tor_free(cp);
+        tor_free(cp);
     }
     smartlist_free(fp_tmp);
     fp_tmp = fp_tmp2;
