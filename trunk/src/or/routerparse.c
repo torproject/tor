@@ -682,15 +682,17 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
     router = router_parse_entry_from_string(*s, end,
                                             saved_location != SAVED_IN_CACHE);
 
-    *s = end;
+
     if (!router) {
       log_warn(LD_DIR, "Error reading router; skipping");
+      *s = end;
       continue;
     }
     if (saved_location != SAVED_NOWHERE) {
       router->cache_info.saved_location = saved_location;
       router->cache_info.saved_offset = *s - start;
     }
+    *s = end;
     smartlist_add(dest, router);
   }
 
