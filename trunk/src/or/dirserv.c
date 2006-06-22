@@ -1808,7 +1808,7 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
 
   while (smartlist_len(conn->fingerprint_stack) &&
          buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
-    char *body;
+    const char *body;
     char *fp = smartlist_pop_last(conn->fingerprint_stack);
     signed_descriptor_t *sd = NULL;
     if (by_fp) {
