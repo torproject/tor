@@ -1002,15 +1002,15 @@ test_gzip(void)
   len1 = 1024;
   ccp2 = "ABCDEFGHIJABCDEFGHIJ";
   len2 = 21;
-  test_eq(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0),
-          TOR_ZLIB_OK);
+  test_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0)
+              == TOR_ZLIB_OK);
   test_eq(len2, 0); /* Make sure we compressed it all. */
   test_assert(cp1 > buf1);
 
   len2 = 0;
   cp2 = cp1;
-  test_eq(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1),
-          TOR_ZLIB_DONE);
+  test_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1)
+              == TOR_ZLIB_DONE);
   test_eq(len2, 0);
   test_assert(cp1 > cp2); /* Make sure we really added something. */
 
@@ -1643,6 +1643,8 @@ main(int c, char**v)
 {
   or_options_t *options = options_new();
   char *errmsg = NULL;
+  (void) c;
+  (void) v;
   options->command = CMD_RUN_UNITTESTS;
   network_init();
   setup_directory();
