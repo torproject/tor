@@ -481,7 +481,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   *msg = NULL;
 
   /* Check: is the descriptor syntactically valid? */
-  ri = router_parse_entry_from_string(desc, NULL);
+  ri = router_parse_entry_from_string(desc, NULL, 1);
   if (!ri) {
     log_warn(LD_DIRSERV, "Couldn't parse uploaded server descriptor");
     *msg = "Rejected: Couldn't parse server descriptor.";
@@ -1808,6 +1808,7 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
 
   while (smartlist_len(conn->fingerprint_stack) &&
          buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
+    char *body;
     char *fp = smartlist_pop_last(conn->fingerprint_stack);
     signed_descriptor_t *sd = NULL;
     if (by_fp) {
@@ -1824,13 +1825,14 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
     tor_free(fp);
     if (!sd)
       continue;
+    body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
       connection_write_to_buf_zlib(
                         conn, conn->zlib_state,
-                        sd->signed_descriptor_body, sd->signed_descriptor_len,
+                        body, sd->signed_descriptor_len,
                         0);
     } else {
-      connection_write_to_buf(sd->signed_descriptor_body,
+      connection_write_to_buf(body,
                               sd->signed_descriptor_len,
                               conn);
     }

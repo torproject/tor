@@ -777,7 +777,10 @@ router_get_my_descriptor(void)
   const char *body;
   if (!router_get_my_routerinfo())
     return NULL;
+  /* Make sure this is nul-terminated. */
+  tor_assert(desc_routerinfo->cache_info.saved_location == SAVED_NOWHERE);
   body = signed_descriptor_get_body(&desc_routerinfo->cache_info);
+  tor_assert(!body[desc_routerinfo->cache_info.signed_descriptor_len]);
   log_debug(LD_GENERAL,"my desc is '%s'", body);
   return body;
 }
@@ -1187,7 +1190,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   cp = s_tmp = s_dup = tor_strdup(s);
-  ri_tmp = router_parse_entry_from_string(cp, NULL);
+  ri_tmp = router_parse_entry_from_string(cp, NULL, 1);
   if (!ri_tmp) {
     log_err(LD_BUG,
             "We just generated a router descriptor we can't parse: <<%s>>",

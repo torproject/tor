@@ -1330,14 +1330,14 @@ handle_getinfo_helper(const char *question, char **answer)
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
-        *answer = tor_strdup(body);
+        *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
     }
   } else if (!strcmpstart(question, "desc/name/")) {
     routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"),1);
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
-        *answer = tor_strdup(body);
+        *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
     }
   } else if (!strcmp(question, "desc/all-recent")) {
     routerlist_t *routerlist = router_get_routerlist();
@@ -1347,7 +1347,8 @@ handle_getinfo_helper(const char *question, char **answer)
       {
         const char *body = signed_descriptor_get_body(&ri->cache_info);
         if (body)
-          smartlist_add(sl, tor_strdup(body));
+          smartlist_add(sl,
+                  tor_strndup(body, ri->cache_info.signed_descriptor_len));
       });
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);

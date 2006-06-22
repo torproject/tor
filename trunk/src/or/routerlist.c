@@ -194,6 +194,21 @@ router_append_to_journal(signed_descriptor_t *desc)
   return 0;
 }
 
+static int
+_compare_old_routers_by_age(const void **_a, const void **_b)
+{
+  const signed_descriptor_t *r1 = *_a, *r2 = *_b;
+  return r1->published_on - r2->published_on;
+}
+
+static int
+_compare_routers_by_age(const void **_a, const void **_b)
+{
+  const routerinfo_t *r1 = *_a, *r2 = *_b;
+  return r1->cache_info.published_on - r2->cache_info.published_on;
+}
+
+
 /** If the journal is too long, or if <b>force</b> is true, then atomically
  * replace the router store with the routers currently in our routerlist, and
  * clear the journal.  Return 0 on success, -1 on failure.
@@ -223,8 +238,16 @@ router_rebuild_store(int force)
   chunk_list = smartlist_create();
 
   for (i = 0; i < 2; ++i) {
-    smartlist_t *lst = (i == 0) ? routerlist->old_routers :
-                                  routerlist->routers;
+    smartlist_t *lst = smartlist_create();
+    /* We sort the routers by age to enhance locality on disk. */
+    if (i==0) {
+      smartlist_add_all(lst, routerlist->old_routers);
+      smartlist_sort(lst, _compare_old_routers_by_age);
+    } else {
+      smartlist_add_all(lst, routerlist->routers);
+      smartlist_sort(lst, _compare_routers_by_age);
+    }
+    /* Now, add the appropriate members to chunk_list */
     SMARTLIST_FOREACH(lst, void *, ptr,
     {
       signed_descriptor_t *sd = (i==0) ?
@@ -233,6 +256,7 @@ router_rebuild_store(int force)
       const char *body = signed_descriptor_get_body(sd);
       if (!body) {
         log_warn(LD_BUG, "Bug! No descriptor available for router.");
+        smartlist_free(lst);
         goto done;
       }
       c = tor_malloc(sizeof(sized_chunk_t));
@@ -240,11 +264,22 @@ router_rebuild_store(int force)
       c->len = sd->signed_descriptor_len;
       smartlist_add(chunk_list, c);
     });
+    smartlist_free(lst);
   }
   if (write_chunks_to_file(fname, chunk_list, 0)<0) {
     log_warn(LD_FS, "Error writing router store to disk.");
     goto done;
   }
+  /* Our mmap is now invalid. */
+  if (routerlist->mmap_descriptors) {
+    tor_munmap_file(routerlist->mmap_descriptors,
+                    routerlist->mmap_descriptors_len);
+    routerlist->mmap_descriptors =
+      tor_mmap_file(fname, &routerlist->mmap_descriptors_len);
+    if (! routerlist->mmap_descriptors)
+      log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
+  }
+
   for (i = 0; i < 2; ++i) {
     smartlist_t *lst = (i == 0) ? routerlist->old_routers :
                                   routerlist->routers;
@@ -256,6 +291,8 @@ router_rebuild_store(int force)
 
       sd->saved_location = SAVED_IN_CACHE;
       sd->saved_offset = offset;
+      if (routerlist->mmap_descriptors)
+        sd->signed_descriptor_body = NULL;
       offset += sd->signed_descriptor_len;
     });
   }
@@ -286,31 +323,32 @@ router_reload_router_list(void)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
-  char *fname = tor_malloc(fname_len);
+  char *fname = tor_malloc(fname_len), *contents;
   struct stat st;
-  int j;
 
   if (!routerlist)
     router_get_routerlist(); /* mallocs and inits it in place */
 
   router_journal_len = router_store_len = 0;
 
-  for (j = 0; j < 2; ++j) {
-    char *contents;
-    tor_snprintf(fname, fname_len,
-                 (j==0)?"%s/cached-routers":"%s/cached-routers.new",
-                 options->DataDirectory);
-    contents = read_file_to_str(fname, 0);
-    if (contents) {
-      stat(fname, &st);
-      if (j==0)
-        router_store_len = st.st_size;
-      else
-        router_journal_len = st.st_size;
-      router_load_routers_from_string(contents, 1, NULL);
-      tor_free(contents);
-    }
+  tor_snprintf(fname, fname_len, "%s/cached-routers", options->DataDirectory);
+  routerlist->mmap_descriptors =
+    tor_mmap_file(fname, &routerlist->mmap_descriptors_len);
+  if (routerlist->mmap_descriptors) {
+    router_store_len = routerlist->mmap_descriptors_len;
+    router_load_routers_from_string(routerlist->mmap_descriptors,
+                                    SAVED_IN_CACHE, NULL);
   }
+
+  tor_snprintf(fname, fname_len, "%s/cached-routers.new",
+               options->DataDirectory);
+  contents = read_file_to_str(fname, 0);
+  if (contents) {
+    stat(fname, &st);
+    router_load_routers_from_string(contents,
+                                    SAVED_IN_JOURNAL, NULL);
+  }
+
   tor_free(fname);
 
   if (router_journal_len) {
@@ -1103,10 +1141,26 @@ router_get_by_descriptor_digest(const char *digest)
   return digestmap_get(routerlist->desc_digest_map, digest);
 }
 
+/* DOCDOC Not always nul-terminated. */
 const char *
 signed_descriptor_get_body(signed_descriptor_t *desc)
 {
-  return desc->signed_descriptor_body;
+  const char *r;
+  size_t len = desc->signed_descriptor_len;
+  tor_assert(len > 32);
+  if (desc->saved_location == SAVED_IN_CACHE && routerlist &&
+      routerlist->mmap_descriptors) {
+    tor_assert(desc->saved_offset + len <= routerlist->mmap_descriptors_len);
+    r = routerlist->mmap_descriptors + desc->saved_offset;
+  } else {
+    r = desc->signed_descriptor_body;
+  }
+  tor_assert(r);
+  tor_assert(!memcmp("router ", r, 7));
+  tor_assert(!memcmp("\n-----END SIGNATURE-----\n",
+                     r + len - 25, 25));
+
+  return r;
 }
 
 /** Return the current list of all known routers. */
@@ -1887,7 +1941,7 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
   tor_assert(msg);
   *msg = NULL;
 
-  if (!(ri = router_parse_entry_from_string(s, NULL))) {
+  if (!(ri = router_parse_entry_from_string(s, NULL, 1))) {
     log_warn(LD_DIR, "Error parsing router descriptor; dropping.");
     *msg = "Couldn't parse router descriptor.";
     return -1;
@@ -1927,16 +1981,18 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
  * uppercased identity fingerprints.  Do not update any router whose
  * fingerprint is not on the list; after updating a router, remove its
  * fingerprint from the list.
+ * DOCDOC saved_location
  */
 void
-router_load_routers_from_string(const char *s, int from_cache,
+router_load_routers_from_string(const char *s, saved_location_t saved_location,
                                 smartlist_t *requested_fingerprints)
 {
   smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
   char fp[HEX_DIGEST_LEN+1];
   const char *msg;
+  int from_cache = (saved_location != SAVED_NOWHERE);
 
-  router_parse_list_from_string(&s, routers, from_cache);
+  router_parse_list_from_string(&s, routers, saved_location);
 
   routers_update_status_from_networkstatus(routers, !from_cache);
 

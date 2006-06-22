@@ -762,6 +762,10 @@ typedef struct cached_dir_t {
   int refcnt; /**< Reference count for this cached_dir_t. */
 } cached_dir_t;
 
+typedef enum {
+   SAVED_NOWHERE=0, SAVED_IN_CACHE, SAVED_IN_JOURNAL
+} saved_location_t;
+
 /** Information need to cache an onion router's descriptor. */
 typedef struct signed_descriptor_t {
   char *signed_descriptor_body;
@@ -769,7 +773,7 @@ typedef struct signed_descriptor_t {
   char signed_descriptor_digest[DIGEST_LEN];
   char identity_digest[DIGEST_LEN];
   time_t published_on;
-  enum { SAVED_NOWHERE=0, SAVED_IN_CACHE, SAVED_IN_JOURNAL } saved_location;
+  saved_location_t saved_location;
   off_t saved_offset;
 } signed_descriptor_t;
 
@@ -933,6 +937,9 @@ typedef struct {
   /** List of signed_descriptor_t for older router descriptors we're
    * caching. */
   smartlist_t *old_routers;
+  /** DOCDOC */
+  const char *mmap_descriptors;
+  size_t mmap_descriptors_len;
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
@@ -2367,7 +2374,8 @@ int router_add_to_routerlist(routerinfo_t *router, const char **msg,
                              int from_cache, int from_fetch);
 int router_load_single_router(const char *s, uint8_t purpose,
                               const char **msg);
-void router_load_routers_from_string(const char *s, int from_cache,
+void router_load_routers_from_string(const char *s,
+                                     saved_location_t saved_location,
                                      smartlist_t *requested_fingerprints);
 typedef enum {
   NS_FROM_CACHE, NS_FROM_DIR, NS_GENERATED
@@ -2440,7 +2448,7 @@ int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
                                   smartlist_t *dest,
-                                  int from_cache);
+                                  saved_location_t saved_location);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey,
@@ -2448,7 +2456,8 @@ int router_parse_routerlist_from_directory(const char *s,
                                            int write_to_cache);
 int router_parse_runningrouters(const char *str);
 int router_parse_directory(const char *str);
-routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
+routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
+                                             int cache_copy);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
                                                     int assume_action);
 version_status_t tor_version_is_obsolete(const char *myversion,
