@@ -472,7 +472,7 @@ _compare_digests(const void **_a, const void **_b)
 void
 smartlist_sort_digests(smartlist_t *sl)
 {
-  smartlist_sort(sl, _compare_string_ptrs);
+  smartlist_sort(sl, _compare_digests);
 }
 
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
