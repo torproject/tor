@@ -208,7 +208,6 @@ _compare_routers_by_age(const void **_a, const void **_b)
   return r1->cache_info.published_on - r2->cache_info.published_on;
 }
 
-
 /** If the journal is too long, or if <b>force</b> is true, then atomically
  * replace the router store with the routers currently in our routerlist, and
  * clear the journal.  Return 0 on success, -1 on failure.
