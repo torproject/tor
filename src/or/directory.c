@@ -1076,7 +1076,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     if (which || (conn->requested_resource &&
                   !strcmpstart(conn->requested_resource, "all"))) {
       /* as we learn from them, we remove them from 'which' */
-      router_load_routers_from_string(body, 0, which);
+      router_load_routers_from_string(body, SAVED_NOWHERE, which);
       directory_info_has_arrived(time(NULL), 0);
     }
     if (which) { /* mark remaining ones as failed */

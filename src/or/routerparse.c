@@ -635,10 +635,11 @@ check_directory_signature(const char *digest,
  * are marked running and valid.  Advances *s to a point immediately
  * following the last router entry.  Ignore any trailing router entries that
  * are not complete. Returns 0 on success and -1 on failure.
+ * DOCDOC saved_location
  */
 int
 router_parse_list_from_string(const char **s, smartlist_t *dest,
-                              int from_cache)
+                              saved_location_t saved_location)
 {
   routerinfo_t *router;
   const char *end, *cp, *start;
@@ -678,15 +679,16 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
       continue;
     }
 
-    router = router_parse_entry_from_string(*s, end);
+    router = router_parse_entry_from_string(*s, end,
+                                            saved_location != SAVED_IN_CACHE);
 
     *s = end;
     if (!router) {
       log_warn(LD_DIR, "Error reading router; skipping");
       continue;
     }
-    if (from_cache) {
-      router->cache_info.saved_location = SAVED_IN_CACHE;
+    if (saved_location != SAVED_NOWHERE) {
+      router->cache_info.saved_location = saved_location;
       router->cache_info.saved_offset = *s - start;
     }
     smartlist_add(dest, router);
@@ -698,9 +700,11 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
 /** Helper function: reads a single router entry from *<b>s</b> ...
  * *<b>end</b>.  Mallocs a new router and returns it if all goes well, else
  * returns NULL.
+ * DOCDOC cache_copy
  */
 routerinfo_t *
-router_parse_entry_from_string(const char *s, const char *end)
+router_parse_entry_from_string(const char *s, const char *end,
+                               int cache_copy)
 {
   routerinfo_t *router = NULL;
   char signed_digest[128];
@@ -747,7 +751,8 @@ router_parse_entry_from_string(const char *s, const char *end)
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
+  if (cache_copy)
+    router->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
   router->cache_info.signed_descriptor_len = end-s;
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 

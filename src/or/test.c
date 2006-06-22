@@ -1297,7 +1297,7 @@ test_dir_format(void)
 
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   cp = buf;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL);
+  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1);
   test_assert(rp1);
   test_streq(rp1->address, r1.address);
   test_eq(rp1->or_port, r1.or_port);
@@ -1320,7 +1320,7 @@ test_dir_format(void)
   test_streq(buf, buf2);
 
   cp = buf;
-  rp2 = router_parse_entry_from_string(&cp);
+  rp2 = router_parse_entry_from_string(&cp,1);
   test_assert(rp2);
   test_streq(rp2->address, r2.address);
   test_eq(rp2->or_port, r2.or_port);
