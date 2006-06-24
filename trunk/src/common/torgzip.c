@@ -348,6 +348,8 @@ tor_zlib_process(tor_zlib_state_t *state,
     case Z_STREAM_END:
       return TOR_ZLIB_DONE;
     case Z_BUF_ERROR:
+      if (state->stream.avail_in == 0)
+        return Z_OK;
       return TOR_ZLIB_BUF_FULL;
     case Z_OK:
       if (state->stream.avail_out == 0)
