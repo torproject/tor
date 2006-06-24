@@ -1299,7 +1299,7 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
   char *next;
   size_t old_avail, avail;
   int over = 0;
-  while (!over) {
+  do {
     buf_ensure_capacity(buf, buf->datalen + 1024);
     next = _buf_end(buf);
     if (next < buf->cur)
@@ -1339,7 +1339,7 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
     if (buf->datalen > buf->highwater)
       buf->highwater = buf->datalen;
     buf_total_used += old_avail - avail;
-  }
+  } while (!over);
   return 0;
 }
 
