@@ -536,7 +536,7 @@ accounting_set_wakeup_time(void)
 
 #define BW_ACCOUNTING_VERSION 1
 /** Save all our bandwidth tracking information to disk. Return 0 on
- * success, -1 on failure*/
+ * success, -1 on failure. */
 int
 accounting_record_bandwidth_usage(time_t now)
 {
@@ -545,11 +545,18 @@ accounting_record_bandwidth_usage(time_t now)
   char time1[ISO_TIME_LEN+1];
   char time2[ISO_TIME_LEN+1];
   char *cp = buf;
+  time_t tmp;
   /* Format is:
      Version\nTime\nTime\nRead\nWrite\nSeconds\nExpected-Rate\n */
 
   format_iso_time(time1, interval_start_time);
   format_iso_time(time2, now);
+  /* now check to see if they're valid times -- if they're not,
+   * and we write them, then tor will refuse to start next time. */
+  if (parse_iso_time(time1, &tmp) || parse_iso_time(time2, &tmp)) {
+    log_warn(LD_ACCT, "Created a time that we refused to parse.");
+    return -1;
+  }
   tor_snprintf(cp, sizeof(buf),
                "%d\n%s\n%s\n"U64_FORMAT"\n"U64_FORMAT"\n%lu\n%lu\n",
                BW_ACCOUNTING_VERSION,
