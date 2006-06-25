@@ -78,6 +78,7 @@ chmod 755 contrib/osx/TorPostflight
 cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cp contrib/osx/Tor_Uninstaller.applescript $BUILD_DIR/tor_resources/Tor_Uninstaller.applescript
+cp contrib/osx/Tor_Uninstaller_bin.app $BUILD_DIR/tor_resources/Tor_Uninstaller_bin.app
 cp contrib/osx/uninstall_tor_bundle.sh $BUILD_DIR/tor_resources/uninstall_tor_bundle.sh
 cp contrib/osx/package_list.txt $BUILD_DIR/tor_resources/package_list.txt
 cp contrib/osx/tor_logo.gif $BUILD_DIR/tor_resources/background.gif
@@ -93,10 +94,10 @@ EOF
 DOC=$BUILD_DIR/tor_resources/documents
 mkdir $DOC
 mkdir $DOC/howto
-cp doc/website/stylesheet.css doc/website/tor-doc-osx.html.* $DOC/howto
-cp doc/website/tor-doc-server.html.* $DOC/howto
-cp doc/website/tor-hidden-service.html.* $DOC/howto
-cp doc/website/tor-switchproxy.html.* $DOC/howto
+#cp doc/website/stylesheet.css doc/website/tor-doc-osx.html.* $DOC/howto
+#cp doc/website/tor-doc-server.html.* $DOC/howto
+#cp doc/website/tor-hidden-service.html.* $DOC/howto
+#cp doc/website/tor-switchproxy.html.* $DOC/howto
 #mkdir $DOC/img
 #cp doc/img/screenshot-osx* $DOC/img
 cp AUTHORS $DOC/AUTHORS.txt
