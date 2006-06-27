@@ -221,6 +221,7 @@ router_rebuild_store(int force)
   smartlist_t *chunk_list = NULL;
   char *fname = NULL;
   int r = -1, i;
+  off_t offset = 0;
 
   if (!force && !router_should_rebuild_store())
     return 0;
@@ -229,6 +230,8 @@ router_rebuild_store(int force)
 
   /* Don't save deadweight. */
   routerlist_remove_old_routers();
+
+  log_info(LD_DIR, "Rebuilding router descriptor cache");
 
   options = get_options();
   fname_len = strlen(options->DataDirectory)+32;
@@ -279,19 +282,19 @@ router_rebuild_store(int force)
       log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
   }
 
+  offset = 0;
   for (i = 0; i < 2; ++i) {
     smartlist_t *lst = (i == 0) ? routerlist->old_routers :
                                   routerlist->routers;
-    off_t offset = 0;
     SMARTLIST_FOREACH(lst, void *, ptr,
     {
       signed_descriptor_t *sd = (i==0) ?
         ((signed_descriptor_t*)ptr): &((routerinfo_t*)ptr)->cache_info;
 
       sd->saved_location = SAVED_IN_CACHE;
-      sd->saved_offset = offset;
-      if (routerlist->mmap_descriptors)
-        sd->signed_descriptor_body = NULL;
+      if (routerlist->mmap_descriptors) {
+        tor_free(sd->signed_descriptor_body); // sets it to null
+      }
       offset += sd->signed_descriptor_len;
     });
   }
