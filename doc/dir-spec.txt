@@ -188,8 +188,10 @@ $Id$
 
    The signature section contains:
 
-      "directory-signature". A signature of the rest of the document using
-      the directory authority's signing key.
+      "directory-signature". A signature of the rest of the document
+      (the document up until the signature, including the line
+      "directory-signature <nick>\n") using the directory authority's
+      signing key.
 
    We compress the network status list with zlib before transmitting it.
 
