@@ -298,6 +298,7 @@ router_rebuild_store(int force)
         tor_free(sd->signed_descriptor_body); // sets it to null
       }
       offset += sd->signed_descriptor_len;
+      signed_descriptor_get_body(sd);
     });
   }
   smartlist_free(old_routers);
