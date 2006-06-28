@@ -296,6 +296,7 @@ router_rebuild_store(int force)
       sd->saved_location = SAVED_IN_CACHE;
       if (routerlist->mmap_descriptors) {
         tor_free(sd->signed_descriptor_body); // sets it to null
+	sd->saved_offset = offset;
       }
       offset += sd->signed_descriptor_len;
       signed_descriptor_get_body(sd);
