@@ -222,6 +222,7 @@ router_rebuild_store(int force)
   char *fname = NULL;
   int r = -1, i;
   off_t offset = 0;
+  smartlist_t *old_routers, *routers;
 
   if (!force && !router_should_rebuild_store())
     return 0;
@@ -239,16 +240,19 @@ router_rebuild_store(int force)
   tor_snprintf(fname, fname_len, "%s/cached-routers", options->DataDirectory);
   chunk_list = smartlist_create();
 
+  old_routers = smartlist_create();
+  smartlist_add_all(old_routers, routerlist->old_routers);
+  smartlist_sort(old_routers, _compare_old_routers_by_age);
+  routers = smartlist_create();
+  smartlist_add_all(routers, routerlist->routers);
+  smartlist_sort(routers, _compare_routers_by_age);
   for (i = 0; i < 2; ++i) {
     smartlist_t *lst = smartlist_create();
     /* We sort the routers by age to enhance locality on disk. */
-    if (i==0) {
-      smartlist_add_all(lst, routerlist->old_routers);
-      smartlist_sort(lst, _compare_old_routers_by_age);
-    } else {
-      smartlist_add_all(lst, routerlist->routers);
-      smartlist_sort(lst, _compare_routers_by_age);
-    }
+    if (i==0)
+      lst = old_routers;
+    else
+      lst = routers;
     /* Now, add the appropriate members to chunk_list */
     SMARTLIST_FOREACH(lst, void *, ptr,
     {
@@ -266,7 +270,6 @@ router_rebuild_store(int force)
       c->len = sd->signed_descriptor_len;
       smartlist_add(chunk_list, c);
     });
-    smartlist_free(lst);
   }
   if (write_chunks_to_file(fname, chunk_list, 0)<0) {
     log_warn(LD_FS, "Error writing router store to disk.");
@@ -284,8 +287,7 @@ router_rebuild_store(int force)
 
   offset = 0;
   for (i = 0; i < 2; ++i) {
-    smartlist_t *lst = (i == 0) ? routerlist->old_routers :
-                                  routerlist->routers;
+    smartlist_t *lst = (i == 0) ? old_routers : routers;
     SMARTLIST_FOREACH(lst, void *, ptr,
     {
       signed_descriptor_t *sd = (i==0) ?
@@ -298,6 +300,8 @@ router_rebuild_store(int force)
       offset += sd->signed_descriptor_len;
     });
   }
+  smartlist_free(old_routers);
+  smartlist_free(routers);
 
   tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
@@ -1159,10 +1163,8 @@ signed_descriptor_get_body(signed_descriptor_t *desc)
   }
   tor_assert(r);
   tor_assert(!memcmp("router ", r, 7));
-#if 0
   tor_assert(!memcmp("\n-----END SIGNATURE-----\n",
                      r + len - 25, 25));
-#endif
 
   return r;
 }
