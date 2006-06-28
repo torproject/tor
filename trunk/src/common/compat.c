@@ -107,7 +107,7 @@ const char compat_c_id[] =
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
-#ifdef HAVE_SYS_MMAP
+#ifdef HAVE_SYS_MMAN
 const char *
 tor_mmap_file(const char *filename, size_t *size)
 {
@@ -152,7 +152,8 @@ const char *
 tor_mmap_file(const char *filename, size_t *size)
 {
   char *res = read_file_to_str(filename, 1);
-  *size = strlen(res) + 1;
+  if (res)
+    *size = strlen(res) + 1;
   return res;
 }
 
