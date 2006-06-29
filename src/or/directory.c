@@ -915,12 +915,12 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* Try declared compression first if we can. */
     if (compression > 0)
       tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression,
-                          allow_partial, LOG_PROTOCOL_WARN);
+                          !allow_partial, LOG_PROTOCOL_WARN);
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
     if (!new_body && guessed > 0 && compression != guessed)
       tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed,
-                          allow_partial, LOG_PROTOCOL_WARN);
+                          !allow_partial, LOG_PROTOCOL_WARN);
     /* If we're pretty sure that we have a compressed directory, and
      * we didn't manage to uncompress it, then warn and bail. */
     if (!plausible && !new_body) {
