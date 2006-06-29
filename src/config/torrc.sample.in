@@ -135,5 +135,5 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ##
 #ExitPolicy accept *:6660-6667,reject *:* # allow irc ports but no more
 #ExitPolicy accept *:119 # accept nntp as well as default exit policy
-#ExitPolicy reject *:* # middleman only -- no exits allowed
+#ExitPolicy reject *:* # no exits allowed
 
