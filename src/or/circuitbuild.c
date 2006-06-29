@@ -1255,7 +1255,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
                  need_uptime?", stable":"");
         return choose_good_exit_server_general(dir, 0, 0);
       }
-      log_notice(LD_CIRC, "All routers are down or middleman -- choosing a "
+      log_notice(LD_CIRC, "All routers are down or won't exit -- choosing a "
                  "doomed exit at random.");
     }
     for (try = 0; try < 2; try++) {
