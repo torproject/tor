@@ -1827,10 +1827,15 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
       continue;
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
+      int last = ! smartlist_len(conn->fingerprint_stack);
       connection_write_to_buf_zlib(
                         conn, conn->zlib_state,
                         body, sd->signed_descriptor_len,
-                        0);
+                        last);
+      if (last) {
+	tor_zlib_free(conn->zlib_state);
+	conn->zlib_state = NULL;
+      }
     } else {
       connection_write_to_buf(body,
                               sd->signed_descriptor_len,
@@ -1840,7 +1845,7 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
 
   if (!smartlist_len(conn->fingerprint_stack)) {
     /* We just wrote the last one; finish up. */
-    connection_dirserv_finish_spooling(conn);
+    conn->dir_spool_src = DIR_SPOOL_NONE;
     smartlist_free(conn->fingerprint_stack);
     conn->fingerprint_stack = NULL;
   }
