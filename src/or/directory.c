@@ -238,7 +238,7 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
 {
   const char *platform = NULL;
   routerinfo_t *router;
-  char address_buf[INET_NTOA_BUF_LEN];
+  char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
   const char *address;
   if ((router = router_get_by_digest(status->identity_digest))) {
@@ -1252,6 +1252,46 @@ write_http_status_line(connection_t *conn, int status,
   connection_write_to_buf(buf, strlen(buf), conn);
 }
 
+/** DOCDOC */
+static void
+write_http_response_header(connection_t *conn, ssize_t length,
+                           const char *type, const char *encoding)
+{
+  char date[RFC1123_TIME_LEN+1];
+  char addr[INET_NTOA_BUF_LEN+1];
+  char tmp[1024];
+  char *cp;
+  struct in_addr in;
+
+  tor_assert(conn);
+  tor_assert(type);
+
+  in.s_addr = htonl(conn->addr);
+  format_rfc1123_time(date, time(NULL));
+  tor_inet_ntoa(&in, addr, sizeof(addr));
+  cp = tmp;
+  tor_snprintf(cp, sizeof(tmp),
+               "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n"
+               "X-You-Are: %s\r\n",
+               date, type, addr);
+  cp += strlen(tmp);
+  if (encoding) {
+    tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
+                 "Content-Encoding: %s\r\n", encoding);
+    cp += strlen(cp);
+  }
+  if (length >= 0) {
+    tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
+                 "Content-Encoding: %ld\r\n", (long)length);
+    cp += strlen(cp);
+  }
+  if (sizeof(tmp)-(cp-tmp) > 3)
+    memcpy(cp, "\r\n", 3);
+  else
+    tor_assert(0);
+  connection_write_to_buf(tmp, strlen(tmp), conn);
+}
+
 /** Helper function: return 1 if there are any dir conns of purpose
  * <b>purpose</b> that are going elsewhere than our own ORPort/Dirport.
  * Else return 0.
@@ -1356,8 +1396,6 @@ directory_handle_command_get(connection_t *conn, char *headers,
   size_t dlen;
   const char *cp;
   char *url = NULL;
-  char tmp[8192];
-  char date[RFC1123_TIME_LEN+1];
   /* We ignore the body of a GET request. */
   (void)body;
   (void)body_len;
@@ -1402,15 +1440,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
 
     log_debug(LD_DIRSERV,"Dumping %sdirectory to client.",
               deflated?"deflated ":"");
-    format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp),
-                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-                 "Content-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
-                 date,
-                 (int)dlen,
-                 deflated?"application/octet-stream":"text/plain",
-                 deflated?"deflate":"identity");
-    connection_write_to_buf(tmp, strlen(tmp), conn);
+    write_http_response_header(conn, dlen,
+                               deflated?"application/octet-stream":"text/plain",
+                               deflated?"deflate":"identity");
     conn->cached_dir = d;
     conn->cached_dir_offset = 0;
     if (! deflated)
@@ -1437,15 +1469,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
 
-    format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp),
-                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-                 "Content-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
-                 date,
-                 (int)dlen,
+    write_http_response_header(conn, dlen,
                  deflated?"application/octet-stream":"text/plain",
                  deflated?"deflate":"identity");
-    connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, strlen(cp), conn);
     return 0;
   }
@@ -1476,14 +1502,6 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
     // note_request(request_type,dlen);
-    format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp),
-                 "HTTP/1.0 200 OK\r\nDate: %s\r\n"
-                 "Content-Type: %s\r\nContent-Encoding: %s\r\n\r\n",
-                 date,
-                 deflated?"application/octet-stream":"text/plain",
-                 deflated?"deflate":"identity");
-    connection_write_to_buf(tmp, strlen(tmp), conn);
 
     conn->fingerprint_stack = dir_fps;
     if (! deflated)
@@ -1527,24 +1545,11 @@ directory_handle_command_get(connection_t *conn, char *headers,
     if (res < 0)
       write_http_status_line(conn, 404, msg);
     else {
-      format_rfc1123_time(date, time(NULL));
-      if (deflated) {
+      write_http_response_header(conn, -1,
+                     deflated?"application/octet_stream":"text/plain",
+                     deflated?"deflate":NULL);
+      if (deflated)
         conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
-        /* // note_request(request_type, compressed_len); XXXX */
-        tor_snprintf(tmp, sizeof(tmp),
-                     "HTTP/1.0 200 OK\r\nDate: %s\r\n"
-                     "Content-Type: application/octet-stream\r\n"
-                     "Content-Encoding: deflate\r\n\r\n",
-                     date);
-        connection_write_to_buf(tmp, strlen(tmp), conn);
-      } else {
-        tor_snprintf(tmp, sizeof(tmp),
-                     "HTTP/1.0 200 OK\r\nDate: %s\r\n"
-                     "Content-Type: text/plain\r\n\r\n",
-                     date);
-        /* note_request(request_type, len); XXXX */
-        connection_write_to_buf(tmp, strlen(tmp), conn);
-      }
       /* Prime the connection with some data. */
       connection_dirserv_flushed_some(conn);
     }
@@ -1572,14 +1577,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
     switch (rend_cache_lookup_desc(query, versioned?-1:0, &descp, &desc_len)) {
       case 1: /* valid */
-        format_rfc1123_time(date, time(NULL));
-        tor_snprintf(tmp, sizeof(tmp),
-                     "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-                     "Content-Type: application/octet-stream\r\n\r\n",
-                     date,
-                     (int)desc_len);
+        write_http_response_header(conn, desc_len, "application/octet-stream",
+                                   NULL);
         note_request("/tor/rendezvous?/", desc_len);
-        connection_write_to_buf(tmp, strlen(tmp), conn);
         /* need to send descp separately, because it may include nuls */
         connection_write_to_buf(descp, desc_len, conn);
         break;
@@ -1597,13 +1597,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   if (!strcmpstart(url,"/tor/bytes.txt")) {
     char *bytes = directory_dump_request_log();
     size_t len = strlen(bytes);
-    format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp),
-                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-                 "Content-Type: text/plain\r\n\r\n",
-                 date,
-                 (int)len);
-    connection_write_to_buf(tmp, strlen(tmp), conn);
+    write_http_response_header(conn, len, "text/plain", NULL);
     connection_write_to_buf(bytes, len, conn);
     tor_free(bytes);
     tor_free(url);
@@ -1614,13 +1608,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
                                            rewritten to /tor/robots.txt */
     char robots[] = "User-agent: *\r\nDisallow: /\r\n";
     size_t len = strlen(robots);
-    format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp),
-                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-                 "Content-Type: text/plain\r\n\r\n",
-                 date,
-                 (int)len);
-    connection_write_to_buf(tmp, strlen(tmp), conn);
+    write_http_response_header(conn, len, "text/plain", NULL);
     connection_write_to_buf(robots, len, conn);
     tor_free(url);
     return 0;
@@ -1641,14 +1629,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
 
     dlen = strlen(new_directory);
 
-    format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp),
-                 "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\n"
-                 "Content-Type: text/plain\r\n"
-                 "Content-Encoding: identity\r\n\r\n",
-                 date,
-                 (int)dlen);
-    connection_write_to_buf(tmp, strlen(tmp), conn);
+    write_http_response_header(conn, dlen, "text/plain", "identity");
+
     connection_write_to_buf(new_directory, dlen, conn);
     tor_free(new_directory);
     tor_free(url);
