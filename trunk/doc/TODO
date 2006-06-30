@@ -24,7 +24,7 @@ Items for 0.1.2.x:
       - look into "uncounting" bytes spent on local connections. so
         we can bandwidthrate but still have fast downloads.
       - Write limiting; separate token bucket for write
-      - dir answers include a your-ip-address-is header, so we can
+      o dir answers include a your-ip-address-is header, so we can
         break our dependency on dyndns.
       - Count TLS bandwidth more accurately
       - Write-limit directory responses.
@@ -55,7 +55,7 @@ N   . Improve memory usage on tight-memory machines.
             for the right router.  Verify dl by digest, fp, etc.
           - Make sure cached-routers values and offsets are correct in the
             presence of windows FS insanity.
-          - Save and mmap v1 directories; store them zipped, not uncompressed 
+          - Save and mmap v1 directories; store them zipped, not uncompressed.
           - Store networkstatus docs zipped, not uncompressed.  Maaaybe mmap
             them too.
 
