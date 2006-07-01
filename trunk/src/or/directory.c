@@ -1282,7 +1282,7 @@ write_http_response_header(connection_t *conn, ssize_t length,
   }
   if (length >= 0) {
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
-                 "Content-Encoding: %ld\r\n", (long)length);
+                 "Content-Length: %ld\r\n", (long)length);
     cp += strlen(cp);
   }
   if (sizeof(tmp)-(cp-tmp) > 3)
