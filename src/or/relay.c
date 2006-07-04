@@ -240,7 +240,6 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
  * Return -1 to indicate that we should mark the circuit for close,
  * else return 0.
  */
-/* wrap this into receive_relay_cell one day */
 static int
 relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
             crypt_path_t **layer_hint, char *recognized)
