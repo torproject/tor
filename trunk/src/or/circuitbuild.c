@@ -54,9 +54,8 @@ static routerinfo_t *choose_random_entry(cpath_build_state_t *state);
 static void entry_guards_changed(void);
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
- * and with the high bit specified by circ_id_type (see
- * decide_circ_id_type()), until we get a circ_id that is not in use
- * by any other circuit on that conn.
+ * and with the high bit specified by conn-\>circ_id_type, until we get
+ * a circ_id that is not in use by any other circuit on that conn.
  *
  * Return it, or 0 if can't get a unique circ_id.
  */
@@ -530,7 +529,7 @@ should_use_create_fast_for_router(routerinfo_t *router)
 {
   or_options_t *options = get_options();
 
-  if (!options->FastFirstHopPK || options->ORPort)
+  if (!options->FastFirstHopPK || server_mode(options))
     return 0;
   else if (!router || !router->platform ||
            !tor_version_as_new_as(router->platform, "0.1.0.6-rc"))
@@ -600,7 +599,7 @@ circuit_send_next_onion_skin(circuit_t *circ)
     circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
     log_info(LD_CIRC,"First hop: finished sending %s cell to '%s'",
              fast ? "CREATE_FAST" : "CREATE",
-             router ?  router->nickname : "<unnamed>");
+             router ? router->nickname : "<unnamed>");
   } else {
     tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
     tor_assert(circ->state == CIRCUIT_STATE_BUILDING);

@@ -551,7 +551,7 @@ connection_or_nonopen_was_started_here(connection_t *conn)
  * buffer is undefined.)
  *
  * As side effects,
- * 1) Set conn->circ_id_type according to tor-spec.txt
+ * 1) Set conn->circ_id_type according to tor-spec.txt.
  * 2) If we're an authdirserver and we initiated the connection: drop all
  *    descriptors that claim to be on that IP/port but that aren't
  *    this guy; and note that this guy is reachable.
