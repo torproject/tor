@@ -173,23 +173,17 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
     return;
   }
 
-  /* If the high bit of the circuit ID is not as expected, then switch
-   * which half of the space we'll use for our own CREATE cells.
-   *
-   * This can happen because Tor 0.0.9pre5 and earlier decide which
-   * half to use based on nickname, and we now use identity keys.
-   */
+  /* If the high bit of the circuit ID is not as expected, close the
+   * circ. */
   id_is_high = cell->circ_id & (1<<15);
-  if (id_is_high && conn->circ_id_type == CIRC_ID_TYPE_HIGHER) {
-    log_info(LD_OR, "Got a high circuit ID from %s (%d); switching to "
-             "low circuit IDs.",
-             conn->nickname ? conn->nickname : "client", conn->s);
-    conn->circ_id_type = CIRC_ID_TYPE_LOWER;
-  } else if (!id_is_high && conn->circ_id_type == CIRC_ID_TYPE_LOWER) {
-    log_info(LD_OR, "Got a low circuit ID from %s (%d); switching to "
-             "high circuit IDs.",
-             conn->nickname ? conn->nickname : "client", conn->s);
-    conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
+  if ((id_is_high && conn->circ_id_type == CIRC_ID_TYPE_HIGHER) ||
+      (!id_is_high && conn->circ_id_type == CIRC_ID_TYPE_LOWER)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Received create cell with unexpected circ_id %d. Closing.",
+           cell->circ_id);
+    connection_or_send_destroy(cell->circ_id, conn,
+                               END_CIRC_REASON_TORPROTOCOL);
+    return;
   }
 
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
@@ -197,7 +191,7 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
   if (circ) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "received CREATE cell (circID %d) for known circ. "
+           "Received CREATE cell (circID %d) for known circ. "
            "Dropping (age %d).",
            cell->circ_id, (int)(time(NULL) - conn->timestamp_created));
     if (router)
@@ -214,7 +208,7 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
     circ->onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
 
-    /* hand it off to the cpuworkers, and then return */
+    /* hand it off to the cpuworkers, and then return. */
     if (assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
       log_warn(LD_GENERAL,"Failed to hand off onionskin. Closing.");
       circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
@@ -223,7 +217,7 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
     log_debug(LD_OR,"success: handed off onionskin.");
   } else {
     /* This is a CREATE_FAST cell; we can handle it immediately without using
-     * a CPU worker.*/
+     * a CPU worker. */
     char keys[CPATH_KEY_MATERIAL_LEN];
     char reply[DIGEST_LEN*2];
     tor_assert(cell->command == CELL_CREATE_FAST);
