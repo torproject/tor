@@ -1,0 +1,24 @@
+
+Most users should simply follow the directions at
+http://tor.eff.org/docs/tor-doc-unix
+
+If you got the source from cvs, run "./autogen.sh", which will run the
+various auto* programs and then run ./configure for you. From there,
+refer to the above instructions.
+
+If it doesn't build for you:
+
+  If you have problems finding libraries, try
+    CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
+    ./configure
+  or
+    ./configure --with-libevent-dir=/usr/local
+  rather than simply ./configure.
+
+  If you have mysterious autoconf failures while linking openssl,
+  consider setting your LD_LIBRARY_PATH to the openssl lib directory.
+  For example, "setenv LD_LIBRARY_PATH /usr/athena/lib".
+
+  Lastly, check out
+  http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ItDoesntWork
+

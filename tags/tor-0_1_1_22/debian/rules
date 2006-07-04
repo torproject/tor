@@ -1,0 +1,181 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export PACKAGE=tor
+include /usr/share/dpatch/dpatch.make
+
+# These are used for cross-compiling and for saving the configure script
+# from having to guess our platform (since we know it already)
+export DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+export DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+CFLAGS ?= -Wall -g
+ifeq ($(DEB_BUILD_GNU_TYPE), $(DEB_HOST_GNU_TYPE))
+  confflags += --build $(DEB_HOST_GNU_TYPE)
+else
+  confflags += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
+endif
+
+
+LOCALHOST_IP  ?= $(shell getent hosts localhost | awk '{print $$1}')
+
+# Do not optimize the build with "noopt"
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O0
+else
+	CFLAGS += -O2
+endif
+
+# Do not strip the binary with "nostrip"
+#ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+#	INSTALL_PROGRAM += -s
+#endif
+
+# Prevent the unit tests from being run with "nocheck"
+ifneq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
+	RUN_TEST = no
+endif
+ifneq (,$(findstring notest,$(DEB_BUILD_OPTIONS)))
+	RUN_TEST = no
+endif
+
+CONF_OPTIONS =
+# build against libdmalloc4 - it better be installed
+ifneq (,$(findstring with-dmalloc,$(DEB_BUILD_OPTIONS)))
+	CONF_OPTIONS += --with-dmalloc
+endif
+
+configure: patch-stamp
+config.status: configure
+	@if [ "$(LOCALHOST_IP)" != "127.0.0.1" ]; then echo; echo; echo; echo; echo; echo "######################################################################"; echo "WARNING: This system does not think localhost is 127.0.0.1.  Will ignore result of testsuite.  Please fix your system/chroot."; echo "######################################################################"; echo; echo; echo; echo; echo "Note: 'getent hosts localhost' should return '127.0.0.1 localhost'"; echo; fi
+	dh_testdir
+	CFLAGS="$(CFLAGS)" ./configure \
+		$(confflags) \
+		--prefix=/usr \
+		--mandir=\$${prefix}/share/man \
+		--infodir=\$${prefix}/share/info \
+		--localstatedir=/var \
+		--sysconfdir=/etc \
+		$(CONF_OPTIONS)
+
+
+build: build-stamp
+
+build-stamp:  config.status
+	dh_testdir
+
+	$(MAKE)
+	@echo
+	@echo
+	# Running unit tests
+	@if [ "$(RUN_TEST)" != "no" ]; then \
+		if [ "$(LOCALHOST_IP)" != "127.0.0.1" ]; then \
+			echo; echo; echo "######################################################################"; echo "WARNING: This system does not think localhost is 127.0.0.1.  Will ignore result of testsuite.  Please fix your system/chroot."; echo "######################################################################"; echo; echo; \
+			echo "src/or/test || true"; \
+			src/or/test || true; \
+		else \
+			echo "src/or/test"; \
+			src/or/test; \
+		fi; \
+	else \
+		echo -e "\n\nSkipping unittests\n\n"; \
+	fi
+	@echo
+
+	# XXX
+	# So, gs-gpl on s390 is broken (#321435) and fails to properly build
+	# .pdf files from .fig files using fig2dev.  Therefore we ship them
+	# until this bug is fixed.
+	#
+	# of course we can always give it a try
+	#
+	# the hexdumps were built using something like
+	#   perl -e 'while (<>) { print unpack ("H*", $_); }' interaction.pdf | fold > hexdump-interaction.pdf
+	if [ "$(DEB_BUILD_GNU_TYPE)" = "s390-linux-gnu" ]; then \
+		cd doc/design-paper; \
+		fig2dev -L pdf cell-struct.fig cell-struct.pdf || \
+			( echo "** Using shipped pdf file because fig2dev failed"; \
+			  perl -e 'while (<>) { chomp; print pack ("H*", $$_); }' ../../debian/hexdump-cell-struct.pdf > cell-struct.pdf ); \
+		fig2dev -L pdf interaction.fig interaction.pdf || \
+			( echo "** Using shipped pdf file because fig2dev failed"; \
+			  perl -e 'while (<>) { chomp; print pack ("H*", $$_); }' ../../debian/hexdump-interaction.pdf > interaction.pdf ); \
+	fi
+	# XXX ends
+
+	make -C doc/design-paper tor-design.ps tor-design.pdf
+
+	touch build-stamp
+
+clean: unpatch
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
+
+	-$(MAKE) distclean
+
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tor
+	# move tor to where it belongs
+	mv $(CURDIR)/debian/tor/etc/tor/torrc.sample $(CURDIR)/debian/tor/etc/tor/torrc
+	mv $(CURDIR)/debian/tor/usr/bin/tor $(CURDIR)/debian/tor/usr/sbin/tor
+	install -d $(CURDIR)/debian/tor/usr/share/man/man8
+	mv $(CURDIR)/debian/tor/usr/share/man/man1/tor.1 $(CURDIR)/debian/tor/usr/share/man/man8/tor.8
+
+	install -m 755 contrib/torify $(CURDIR)/debian/tor/usr/bin
+	install -m 644 contrib/torify.1 $(CURDIR)/debian/tor/usr/share/man/man1
+	install -m 644 contrib/tor-tsocks.conf $(CURDIR)/debian/tor/etc/tor
+
+	install -m 644 debian/tor.lintian-override $(CURDIR)/debian/tor/usr/share/lintian/overrides/tor
+
+	dh_link usr/share/man/man8/tor.8 usr/share/man/man5/torrc.5
+
+	rm -f $(CURDIR)/debian/tor/usr/bin/tor-control.py
+
+	install -d -m 755 $(CURDIR)/debian/tor-dbg/usr/share/doc
+	ln -s tor $(CURDIR)/debian/tor-dbg/usr/share/doc/tor-dbg
+
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs ChangeLog
+	dh_installdocs
+	dh_installexamples
+#	dh_install
+#	dh_installdebconf
+	dh_installlogrotate
+#	dh_installemacsen
+#	dh_installmime
+	dh_installinit
+#	dh_installcron
+	dh_installman
+	dh_link
+	# Change this for debhelper compatibility level 5 or later!
+	dh_strip --dbg-package=tor
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+	@if [ "$(LOCALHOST_IP)" != "127.0.0.1" ]; then echo; echo; echo; echo; echo; echo "######################################################################"; echo "WARNING: This system does not think localhost is 127.0.0.1.  Result of testsuite has been ignored.  Please fix your system/chroot."; echo "######################################################################"; echo; echo; echo; echo; echo "Note: 'getent hosts localhost' should return '127.0.0.1 localhost'"; echo; fi
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install 

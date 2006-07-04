@@ -1,0 +1,479 @@
+
+                 Tor Incentives Design Brainstorms
+
+1. Goals: what do we want to achieve with an incentive scheme?
+
+1.1. Encourage users to provide good relay service (throughput, latency).
+1.2. Encourage users to allow traffic to exit the Tor network from
+     their node.
+
+2. Approaches to learning who should get priority.
+
+2.1. "Hard" or quantitative reputation tracking.
+
+   In this design, we track the number of bytes and throughput in and
+   out of nodes we interact with. When a node asks to send or receive
+   bytes, we provide service proportional to our current record of the
+   node's value. One approach is to let each circuit be either a normal
+   circuit or a premium circuit, and nodes can "spend" their value by
+   sending and receiving bytes on premium circuits: see section 4.1 for
+   details of this design. Another approach (section 4.2) would treat
+   all traffic from the node with the same priority class, and so nodes
+   that provide resources will get and provide better service on average.
+
+   This approach could be complemented with an anonymous e-cash
+   implementation to let people spend reputations gained from one context
+   in another context.
+
+2.2. "Soft" or qualitative reputation tracking.
+
+   Rather than accounting for every byte (if I owe you a byte, I don't
+   owe it anymore once you've spent it), instead I keep a general opinion
+   about each server: my opinion increases when they do good work for me,
+   and it decays with time, but it does not decrease as they send traffic.
+   Therefore we reward servers who provide value to the system without
+   nickle and diming them at each step. We also let them benefit from
+   relaying traffic for others without having to "reserve" some of the
+   payment for their own use. See section 4.3 for a possible design.
+
+2.3. Centralized opinions from the reputation servers.
+
+   The above approaches are complex and we don't have all the answers
+   for them yet. A simpler approach is just to let some central set
+   of trusted servers (say, the Tor directory servers) measure whether
+   people are contributing to the network, and provide a signal about
+   which servers should be rewarded. They can even do the measurements
+   via Tor so servers can't easily perform only when they're being
+   tested. See section 4.4.
+
+2.4. Reputation servers that aggregate opinions.
+
+   The option above has the directory servers doing all of the
+   measurements. This doesn't scale. We can set it up so we have "deputy
+   testers" -- trusted other nodes that do performance testing and report
+   their results.
+
+   If we want to be really adventurous, we could even
+   accept claims from every Tor user and build a complex weighting /
+   reputation system to decide which claims are "probably" right.
+   One possible way to implement the latter is something similar to
+   EigenTrust [http://www.stanford.edu/~sdkamvar/papers/eigentrust.pdf],
+   where the opinion of nodes with high reputation more is weighted
+   higher.
+
+3. Related issues we need to keep in mind.
+
+3.1. Relay and exit configuration needs to be easy and usable.
+
+   Implicit in all of the above designs is the need to make it easy to
+   run a Tor server out of the box. We need to make it stable on all
+   common platforms (including XP), it needs to detect its available
+   bandwidth and not overreach that, and it needs to help the operator
+   through opening up ports on his firewall. Then we need a slick GUI
+   that lets people click a button or two rather than editing text files.
+
+   Once we've done all this, we'll hit our first big question: is
+   most of the barrier to growth caused by the unusability of the current
+   software? If so, are the rest of these incentive schemes superfluous?
+
+3.2. The network effect: how many nodes will you interact with?
+
+   One of the concerns with pairwise reputation systems is that as the
+   network gets thousands of servers, the chance that you're going to
+   interact with a given server decreases. So if 90% of interactions
+   don't have any prior information, the "local" incentive schemes above
+   are going to degrade. This doesn't mean they're pointless -- it just
+   means we need to be aware that this is a limitation, and plan in the
+   background for what step to take next. (It seems that e-cash solutions
+   would scale better, though they have issues of their own.)
+
+3.3. Guard nodes
+
+   As of Tor 0.1.1.11, Tor users pick from a small set of semi-permanent
+   "guard nodes" for their first hop of each circuit. This seems like it
+   would have a big impact on pairwise reputation systems since you
+   will only be cashing in on your reputation to a few people, and it is
+   unlikely that a given pair of nodes will use each other as guard nodes.
+
+   What does this imply? For one, it means that we don't care at all
+   about the opinions of most of the servers out there -- we should
+   focus on keeping our guard nodes happy with us.
+
+   One conclusion from that is that our design needs to judge performance
+   not just through direct interaction (beginning of the circuit) but
+   also through indirect interaction (middle of the circuit). That way
+   you can never be sure when your guards are measuring you.
+
+   Both 3.2 and 3.3 may be solved by having a global notion of reputation,
+   as in 2.3 and 2.4. However, computing the global reputation from local
+   views could be expensive (O(n^2)) when the network is really large.
+
+3.4. Restricted topology: benefits and roadmap.
+
+   As the Tor network continues to grow, we will need to make design
+   changes to the network topology so that each node does not need
+   to maintain connections to an unbounded number of other nodes. For
+   anonymity's sake, we may partition the network such that all
+   the nodes have the same belief about the divisions and each node is
+   in only one partition. (The alternative is that every user fetches
+   his own random subset of the overall node list -- this is bad because
+   of intersection attacks.)
+
+   Therefore the "network horizon" for each user will stay bounded,
+   which helps against the above issues in 3.2 and 3.3.
+
+   It could be that the core of long-lived servers will all get to know
+   each other, and so the critical point that decides whether you get
+   good service is whether the core likes you. Or perhaps it will turn
+   out to work some other way.
+
+   A special case here is the social network, where the network isn't
+   partitioned randomly but instead based on some external properties.
+   Social network topologies can provide incentives in other ways, because
+   people may be more inclined to help out their friends, and more willing
+   to relay traffic if most of the traffic they are relaying comes
+   from their friends. It also opens the door for out-of-band incentive
+   schemes because of the out-of-band links in the graph.
+
+3.5. Profit-maximizing vs. Altruism.
+
+   There are some interesting game theory questions here.
+
+   First, in a volunteer culture, success is measured in public utility
+   or in public esteem. If we add a reward mechanism, there's a risk that
+   reward-maximizing behavior will surpass utility- or esteem-maximizing
+   behavior.
+
+   Specifically, if most of our servers right now are relaying traffic
+   for the good of the community, we may actually *lose* those volunteers
+   if we turn the act of relaying traffic into a selfish act.
+
+   I am not too worried about this issue for now, since we're aiming
+   for an incentive scheme so effective that it produces tens of
+   thousands of new servers.
+
+3.6. What part of the node's performance do you measure?
+
+   We keep referring to having a node measure how well the other nodes
+   receive bytes. But don't leeching clients receive bytes just as well
+   as servers?
+
+   Further, many transactions in Tor involve fetching lots of
+   bytes and not sending very many. So it seems that we want to turn
+   things around: we need to measure how quickly a node is _sending_
+   us bytes, and then only send it bytes in proportion to that.
+
+   However, a sneaky user could simply connect to a node and send some
+   traffic through it, and voila, he has performed for the network. This
+   is no good. The first fix is that we only count if you're receiving
+   bytes "backwards" in the circuit. Now the sneaky user needs to
+   construct a circuit such that his node appears later in the circuit,
+   and then send some bytes back quickly.
+
+   Maybe that complexity is sufficient to deter most lazy users. Or
+   maybe it's an argument in favor of a more penny-counting reputation
+   approach.
+
+   Addendum: I was more thinking of measuring based on who is the service
+   provider and service receiver for the circuit. Say Alice builds a
+   circuit to Bob. Then Bob is providing service to Alice, since he
+   otherwise wouldn't need to spend is bandwidth. So traffic in either
+   direction should be charged to Alice. Of course, the same attack would
+   work, namely, Bob could cheat by sending bytes back quickly. So someone
+   close to the origin needs to detect this and close the circuit, if
+   necessary. -JN
+
+3.7. What is the appropriate resource balance for servers vs. clients?
+
+   If we build a good incentive system, we'll still need to tune it
+   to provide the right bandwidth allocation -- if we reserve too much
+   bandwidth for fast servers, then we're wasting some potential, but
+   if we reserve too little, then fewer people will opt to become servers.
+   In fact, finding an optimum balance is especially hard because it's
+   a moving target: the better our incentive mechanism (and the lower
+   the barrier to setup), the more servers there will be. How do we find
+   the right balance?
+
+   One answer is that it doesn't have to be perfect: we can err on the
+   side of providing extra resources to servers. Then we will achieve our
+   desired goal -- when people complain about speed, we can tell them to
+   run a server, and they will in fact get better performance.
+
+3.8. Anonymity attack: fast connections probably come from good servers.
+
+   If only fast servers can consistently get good performance in the
+   network, they will stand out. "Oh, that connection probably came from
+   one of the top ten servers in the network." Intersection attacks over
+   time can improve the certainty of the attack.
+
+   I'm not too worried about this. First, in periods of low activity,
+   many different people might be getting good performance. This dirties
+   the intersection attack. Second, with many of these schemes, we will
+   still be uncertain whether the fast node originated the traffic, or
+   was the entry node for some other lucky user -- and we already accept
+   this level of attack in other cases such as the Murdoch-Danezis attack
+   [http://freehaven.net/anonbib/#torta05].
+
+3.9. How do we allocate bandwidth over the course of a second?
+
+   This may be a simple matter of engineering, but it still needs to be
+   addressed. Our current token bucket design refills each bucket once a
+   second. If we have N tokens in our bucket, and we don't know ahead of
+   time how many connections are going to want to send out how many bytes,
+   how do we balance providing quick service to the traffic that is
+   already here compared to providing service to potential high-importance
+   future traffic?
+
+   If we have only two classes of service, here is a simple design:
+   At each point, when we are 1/t through the second, the total number
+   of non-priority bytes we are willing to send out is N/t. Thus if N
+   priority bytes are waiting at the beginning of the second, we drain
+   our whole bucket then, and otherwise we provide some delayed service
+   to the non-priority bytes.
+
+   Does this design expand to cover the case of three priority classes?
+   Ideally we'd give each remote server its own priority number. Or
+   hopefully there's an easy design in the literature to point to --
+   this is clearly not my field.
+
+   Is our current flow control mechanism (each circuit and each stream
+   start out with a certain window, and once they've exhausted it they
+   need to receive an ack before they can send more) going to have
+   problems with this new design now that we'll be queueing more bytes
+   for less preferred nodes? If it turns out we do, the first fix is
+   to have the windows start out at zero rather than start out full --
+   it will slow down the startup phase but protect us better.
+
+   While we have outgoing cells queued for a given server, we have the
+   option of reordering them based on the priority of the previous hop.
+   Is this going to turn out to be useful? If we're the exit node (that
+   is, there is no previous hop) what priority do those cells get?
+
+   Should we do this prioritizing just for sending out bytes (as I've
+   described here) or would it help to do it also for receiving bytes?
+   See next section.
+
+3.10. Different-priority cells arriving on the same TCP connection.
+
+   In some of the proposed designs, servers want to give specific circuits
+   priority rather than having all circuits from them get the same class
+   of service.
+
+   Since Tor uses TCP's flow control for rate limiting, this constraints
+   our design choices -- it is easy to give different TCP connections
+   different priorities, but it is hard to give different cells on the
+   same connection priority, because you have to read them to know what
+   priority they're supposed to get.
+
+   There are several possible solutions though. First is that we rely on
+   the sender to reorder them so the highest priority cells (circuits) are
+   more often first. Second is that if we open two TCP connections -- one
+   for the high-priority cells, and one for the low-priority cells. (But
+   this prevents us from changing the priority of a circuit because
+   we would need to migrate it from one connection to the other.) A
+   third approach is to remember which connections have recently sent
+   us high-priority cells, and preferentially read from those connections.
+
+   Hopefully we can get away with not solving this section at all. But if
+   necessary, we can consult Ed Knightly, a Professor at Rice
+   [http://www.ece.rice.edu/~knightly/], for his extensive experience on
+   networking QoS.
+
+3.11. Global reputation system: Congestion on high reputation servers?
+
+   If the notion of reputation is global (as in 2.3 or 2.4), circuits that
+   go through successive high reputation servers would be the fastest and
+   most reliable. This would incentivize everyone, regardless of their own
+   reputation, to choose only the highest reputation servers in its
+   circuits, causing an over-congestion on those servers.
+
+   One could argue, though, that once those servers are over-congested,
+   their bandwidth per circuit drops, which would in turn lower their
+   reputation in the future. A question is whether this would overall
+   stablize.
+
+   Another possible way is to keep a cap on reputation. In this way, a
+   fraction of servers would have the same high reputation, thus balancing
+   such load.
+
+3.12. Another anonymity attack: learning from service levels.
+
+   If reputation is local, it may be possible for an evil node to learn
+   the identity of the origin through provision of differential service.
+   For instance, the evil node provides crappy bandwidth to everyone,
+   until it finds a circuit that it wants to trace the origin, then it
+   provides good bandwidth. Now, as only those directly or indirectly
+   observing this circuit would like the evil node, it can test each node
+   by building a circuit via each node to another evil node. If the
+   bandwidth is high, it is (somewhat) likely that the node was a part of
+   the circuit.
+
+   This problem does not exist if the reputation is global and nodes only
+   follow the global reputation, i.e., completely ignore their own view.
+
+3.13. DoS through high priority traffic.
+
+   Assume there is an evil node with high reputation (or high value on
+   Alice) and this evil node wants to deny the service to Alice. What it
+   needs to do is to send a lot of traffic to Alice. To Alice, all traffic
+   from this evil node is of high priority. If the choice of circuits are
+   too based toward high priority circuits, Alice would spend most of her
+   available bandwidth on this circuit, thus providing poor bandwidth to
+   everyone else. Everyone else would start to dislike Alice, making it
+   even harder for her to forward other nodes' traffic. This could cause
+   Alice to have a low reputation, and the only high bandwidth circuit
+   Alice could use would be via the evil node.
+
+3.14. If you run a fast server, can you run your client elsewhere?
+
+   A lot of people want to run a fast server at a colocation facility,
+   and then reap the rewards using their cablemodem or DSL Tor client.
+
+   If we use anonymous micropayments, where reputation can literally
+   be transferred, this is trivial.
+
+   If we pick a design where servers accrue reputation and can only
+   use it themselves, though, the clients can configure the servers as
+   their entry nodes and "inherit" their reputation. In this approach
+   we would let servers configure a set of IP addresses or keys that get
+   "like local" service.
+
+4. Sample designs.
+
+4.1. Two classes of service for circuits.
+
+   Whenever a circuit is built, it is specified by the origin which class,
+   either "premium" or "normal", this circuit belongs. A premium circuit
+   gets preferred treatment at each node. A node "spends" its value, which
+   it earned a priori by providing service, to the next node by sending
+   and receiving bytes. Once a node has overspent its values, the circuit
+   cannot stay as premium. It can either breaks or converts into a normal
+   circuit. Each node also reserves a small portion of bandwidth for
+   normal circuits to prevent starvation.
+
+   Pro: Even if a node has no value to spend, it can still use normal
+   circuits. This allow casual user to use Tor without forcing them to run
+   a server.
+
+   Pro: Nodes have incentive to forward traffic as quick and as much as
+   possible to accumulate value.
+
+   Con: There is no proactive method for a node to rebalance its debt. It
+   has to wait until there happens to be a circuit in the opposite
+   direction.
+
+   Con: A node needs to build circuits in such a way that each node in the
+   circuit has to have good values to the next node. This requires
+   non-local knowledge and makes circuits less reliable as the values are
+   used up in the circuit.
+
+   Con: May discourage nodes to forward traffic in some circuits, as they
+   worry about spending more useful values to get less useful values in
+   return.
+
+4.2. Treat all the traffic from the node with the same service;
+     hard reputation system.
+
+   This design is similar to 4.1, except that instead of having two
+   classes of circuits, there is only one. All the circuits are
+   prioritized based on the value of the interacting node.
+
+   Pro: It is simpler to design and give priority based on connections,
+   not circuits.
+
+   Con: A node only needs to keep a few guard nodes happy to forward their
+   traffic.
+
+   Con: Same as in 4.1, may discourage nodes to forward traffic in some
+   circuits, as they worry about spending more useful values to get less
+   useful values in return.
+
+4.3. Treat all the traffic from the node with the same service;
+     soft reputation system.
+
+   Rather than a guaranteed system with accounting (as 4.1 and 4.2),
+   we instead try for a best-effort system. All bytes are in the same
+   class of service. You keep track of other Tors by key, and give them
+   service proportional to the service they have given you. That is, in
+   the past when you have tried to push bytes through them, you track the
+   number of bytes and the average bandwidth, and use that to weight the
+   priority of their connections if they try to push bytes through you.
+
+   Now you're going to get minimum service if you don't ever push bytes
+   for other people, and you get increasingly improved service the more
+   active you are. We should have memories fade over time (we'll have
+   to tune that, which could be quite hard).
+
+   Pro: Sybil attacks are pointless because new identities get lowest
+   priority.
+
+   Pro: Smoothly handles periods of both low and high network load. Rather
+   than keeping track of the ratio/difference between what he's done for
+   you and what you've done for him, simply keep track of what he's done
+   for you, and give him priority based on that.
+
+   Based on 3.3 above, it seems we should reward all the nodes in our
+   path, not just the first one -- otherwise the node can provide good
+   service only to its guards. On the other hand, there might be a
+   second-order effect where you want nodes to like you so that *when*
+   your guards choose you for a circuit, they'll be able to get good
+   performance. This tradeoff needs more simulation/analysis.
+
+   This approach focuses on incenting people to relay traffic, but it
+   doesn't do much for incenting them to allow exits. It may help in
+   one way through: if there are few exits, then they will attract a
+   lot of use, so lots of people will like them, so when they try to
+   use the network they will find their first hop to be particularly
+   pleasant. After that they're like the rest of the world though. (An
+   alternative would be to reward exit nodes with higher values. At the
+   extreme, we could even ask the directory servers to suggest the extra
+   values, based on the current availability of exit nodes.)
+
+   Pro: this is a pretty easy design to add; and it can be phased in
+   incrementally simply by having new nodes behave differently.
+
+4.4. Centralized opinions from the reputation servers.
+
+   Have a set of official measurers who spot-check servers from the
+   directory to see if they really do offer roughly the bandwidth
+   they advertise. Include these observations in the directory. (For
+   simplicity, the directory servers could be the measurers.) Then Tor
+   servers give priority to other servers. We'd like to weight the
+   priority by advertised bandwidth to encourage people to donate more,
+   but it seems hard to distinguish between a slow server and a busy
+   server.
+
+   The spot-checking can be done anonymously to prevent selectively
+   performing only for the measurers, because hey, we have an anonymity
+   network.
+
+   We could also reward exit nodes by giving them better priority, but
+   like above this only will affect their first hop. Another problem
+   is that it's darn hard to spot-check whether a server allows exits
+   to all the pieces of the Internet that it claims to. If necessary,
+   perhaps this can be solved by a distributed reporting mechanism,
+   where clients that can reach a site from one exit but not another
+   anonymously submit that site to the measurers, who verify.
+
+   A last problem is that since directory servers will be doing their
+   tests directly (easy to detect) or indirectly (through other Tor
+   servers), then we know that we can get away with poor performance for
+   people that aren't listed in the directory. Maybe we can turn this
+   around and call it a feature though -- another reason to get listed
+   in the directory.
+
+5. Recommendations and next steps.
+
+5.1. Simulation.
+
+   For simulation trace, we can use two: one is what we obtained from Tor
+   and one from existing web traces.
+
+   We want to simulate all the four cases in 4.1-4. For 4.4, we may want
+   to look at two variations: (1) the directory servers check the
+   bandwidth themselves through Tor; (2) each node reports their perceived
+   values on other nodes, while the directory servers use EigenTrust to
+   compute global reputation and broadcast those.
+
+5.2. Deploying into existing Tor network.
+
