@@ -1574,6 +1574,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   }
 
   excluded = smartlist_create();
+  add_nickname_list_to_smartlist(excluded,options->ExcludeNodes,0,0,1);
 
   if (state && (r = build_state_get_exit_router(state))) {
     smartlist_add(excluded, r);
