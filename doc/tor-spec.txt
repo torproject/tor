@@ -752,8 +752,10 @@ when do we rotate which keys (tls, link, etc)?
          Addresses               [variable]
          others?
 
-   Version should be 1. A Tor connection is considered to be using
-   version 0 if the first cell we receive is not a HELLO cell.
+   Version is the "link version", and dictates what types and formats
+   of cells can be sent/received. It should be 1. A Tor connection is
+   considered to be using version 0 if the first cell we receive is not
+   a HELLO cell.
 
    Timestamp is the OR's current Unix time (GMT).
 
