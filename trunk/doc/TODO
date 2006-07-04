@@ -14,8 +14,8 @@ P       - phobos claims
 
     . <nickm> "Let's try to find a way to make it run and make the version
        match, but if not, let's just make it run."
-    - <arma> should we detect if we have a --with-ssl-dir and try the -R
-      by default, if it works?
+    - <arma> "should we detect if we have a --with-ssl-dir and try the -R
+      by default, if it works?"
 
 Items for 0.1.2.x:
   - Servers are easy to setup and run: being a relay is about as easy as
@@ -61,6 +61,8 @@ N   . Improve memory usage on tight-memory machines.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
     o Asynchronous DNS
+      - and test it
+      - make it the default on platforms where it works
 
   - Security improvements
     - Directory guards
@@ -163,6 +165,8 @@ Minor items for 0.1.2.x as time permits.
   - If the server is spewing complaints about raising your ulimit -n,
     we should add a note about this to the server descriptor so other
     people can notice too.
+  - rate limit the number of exit connections to a given destination, to
+    help with DoS/crawling issues.
   - cpu fixes:
     - see if we should make use of truncate to retry
     - kill dns workers more slowly
@@ -177,18 +181,6 @@ Minor items for 0.1.2.x as time permits.
     - Vet all pending installer patches
       - Win32 installer plus privoxy, sockscap/freecap, etc.
       - Vet win32 systray helper code
-
-  . Update the hidden service stuff for the new dir approach.
-    - switch to an ascii format, maybe sexpr?
-    - authdirservers publish blobs of them.
-    - other authdirservers fetch these blobs.
-    - hidserv people have the option of not uploading their blobs.
-    - you can insert a blob via the controller.
-    - and there's some amount of backwards compatibility.
-    - teach clients, intro points, and hidservs about auth mechanisms.
-    - come up with a few more auth mechanisms.
-  - auth mechanisms to let hidden service midpoint and responder filter
-    connection requests.
 
   - Improve controller
       - change circuit status events to give more details, like purpose,
@@ -217,6 +209,17 @@ Minor items for 0.1.2.x as time permits.
       - Make everything work with hidden services
 
 Future version:
+  . Update the hidden service stuff for the new dir approach.
+    - switch to an ascii format, maybe sexpr?
+    - authdirservers publish blobs of them.
+    - other authdirservers fetch these blobs.
+    - hidserv people have the option of not uploading their blobs.
+    - you can insert a blob via the controller.
+    - and there's some amount of backwards compatibility.
+    - teach clients, intro points, and hidservs about auth mechanisms.
+    - come up with a few more auth mechanisms.
+  - auth mechanisms to let hidden service midpoint and responder filter
+    connection requests.
   - Bind to random port when making outgoing connections to Tor servers,
     to reduce remote sniping attacks.
   - Have new people be in limbo and need to demonstrate usefulness
@@ -246,7 +249,8 @@ Future version:
     that it is able to rotate through. (maybe)
   - let each hidden service (or other thing) specify its own
     OutboundBindAddress?
-  - Better hidden service performance, with possible redesign.
+  - Have a mode that doesn't write to disk much, so we can run Tor on
+    flash memory (e.g. Linksys routers).
 
 Blue-sky:
   - Patch privoxy and socks protocol to pass strings to the browser.
