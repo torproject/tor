@@ -857,7 +857,7 @@ tor_tls_get_n_bytes_written(tor_tls_t *tls)
 }
 
 /** Implement check_no_tls_errors: If there are any pending OpenSSL
- * errors, log an error message and assert(0). */
+ * errors, log an error message. */
 void
 _check_no_tls_errors(const char *fname, int line)
 {
