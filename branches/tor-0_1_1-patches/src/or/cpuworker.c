@@ -473,6 +473,10 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
     tag_pack(tag, circ->p_conn->addr, circ->p_conn->port, circ->p_circ_id);
 
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;
+    /* touch the lastwritten timestamp, since that's how we check to
+     * see how long it's been since we asked the question, and sometimes
+     * we check before the first call to connection_handle_write(). */
+    cpuworker->timestamp_lastwritten = time(NULL);
     num_cpuworkers_busy++;
 
     connection_write_to_buf((char*)&question_type, 1, cpuworker);
