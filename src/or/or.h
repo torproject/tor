@@ -1956,6 +1956,7 @@ void dirserv_orconn_tls_done(const char *address,
                              const char *digest_rcvd,
                              const char *nickname,
                              int as_advertised);
+void dirserv_test_reachability(int try_all);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain);
 int dirserv_would_reject_router(routerstatus_t *rs);
@@ -2271,7 +2272,6 @@ int server_mode(or_options_t *options);
 int advertised_server_mode(void);
 int proxy_mode(or_options_t *options);
 
-void router_retry_connections(int testing_reachability, int try_all);
 int router_is_clique_mode(routerinfo_t *router);
 void router_upload_dir_desc_to_dirservers(int force);
 void mark_my_descriptor_dirty_if_older_than(time_t when);

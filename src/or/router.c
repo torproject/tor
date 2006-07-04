@@ -372,8 +372,7 @@ init_keys(void)
                            (uint16_t)options->DirPort, digest,
                            options->V1AuthoritativeDir);
   }
-  /* success */
-  return 0;
+  return 0; /* success */
 }
 
 /* Keep track of whether we should upload our server descriptor,
@@ -385,13 +384,12 @@ static int can_reach_or_port = 0;
 /** Whether we can reach our DirPort from the outside. */
 static int can_reach_dir_port = 0;
 
-/** Return 1 if or port is known reachable; else return 0. */
+/** Return 1 if ORPort is known reachable; else return 0. */
 int
 check_whether_orport_reachable(void)
 {
   or_options_t *options = get_options();
-  return clique_mode(options) ||
-         options->AssumeReachable ||
+  return options->AssumeReachable ||
          can_reach_or_port;
 }
 
@@ -473,11 +471,10 @@ void
 router_orport_found_reachable(void)
 {
   if (!can_reach_or_port) {
-    if (!clique_mode(get_options()))
-      log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
-                 "the outside. Excellent.%s",
-                 get_options()->PublishServerDescriptor ?
-                   " Publishing server descriptor." : "");
+    log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
+               "the outside. Excellent.%s",
+               get_options()->PublishServerDescriptor ?
+                 " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
     consider_publishable_server(1);
@@ -611,57 +608,8 @@ consider_publishable_server(int force)
 }
 
 /*
- * Clique maintenance
+ * Clique maintenance -- to be phased out.
  */
-
-/** OR only: if in clique mode, try to open connections to all of the
- * other ORs we know about. Otherwise, open connections to those we
- * think are in clique mode.
- *
- * If <b>testing_reachability</b> is 0, try to open the connections
- * but only if we don't already have one. If it's 1, then we're an
- * auth dir server, and we should try to connect regardless of
- * whether we already have a connection open -- but if <b>try_all</b>
- * is 0, we want to load balance such that we only try a few connections
- * per call.
- *
- * The load balancing is such that if we get called once every ten
- * seconds, we will cycle through all the tests in 1280 seconds (a
- * bit over 20 minutes).
- */
-void
-router_retry_connections(int testing_reachability, int try_all)
-{
-  time_t now = time(NULL);
-  routerlist_t *rl = router_get_routerlist();
-  or_options_t *options = get_options();
-  static char ctr = 0;
-
-  tor_assert(server_mode(options));
-
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
-    const char *id_digest = router->cache_info.identity_digest;
-    if (router_is_me(router))
-      continue;
-    if (!clique_mode(options) && !router_is_clique_mode(router))
-      continue;
-    if ((testing_reachability &&
-         (try_all || (((uint8_t)id_digest[0]) % 128) == ctr)) ||
-        (!testing_reachability &&
-         !connection_or_get_by_identity_digest(id_digest))) {
-      log_debug(LD_OR,"%sconnecting to %s at %s:%u.",
-                clique_mode(options) ? "(forced) " : "",
-                router->nickname, router->address, router->or_port);
-      /* Remember when we started trying to determine reachability */
-      if (!router->testing_since)
-        router->testing_since = now;
-      connection_or_connect(router->addr, router->or_port,
-                            id_digest);
-    }
-  });
-  if (testing_reachability && !try_all) /* increment ctr */
-    ctr = (ctr + 1) % 128;
-}
 
 /** Return true iff this OR should try to keep connections open to all
  * other ORs. */

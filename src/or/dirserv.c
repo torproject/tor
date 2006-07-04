@@ -1784,6 +1784,39 @@ dirserv_orconn_tls_done(const char *address,
   }
 }
 
+/** Auth dir server only: if <b>try_all</b> is 1, launch connections to
+ * all known routers; else we want to load balance such that we only
+ * try a few connections per call.
+ *
+ * The load balancing is such that if we get called once every ten
+ * seconds, we will cycle through all the tests in 1280 seconds (a
+ * bit over 20 minutes).
+ */
+void
+dirserv_test_reachability(int try_all)
+{
+  time_t now = time(NULL);
+  routerlist_t *rl = router_get_routerlist();
+  static char ctr = 0;
+
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
+    const char *id_digest = router->cache_info.identity_digest;
+    if (router_is_me(router))
+      continue;
+    if (try_all || (((uint8_t)id_digest[0]) % 128) == ctr) {
+      log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
+                router->nickname, router->address, router->or_port);
+      /* Remember when we started trying to determine reachability */
+      if (!router->testing_since)
+        router->testing_since = now;
+      connection_or_connect(router->addr, router->or_port,
+                            id_digest);
+    }
+  });
+  if (!try_all) /* increment ctr */
+    ctr = (ctr + 1) % 128;
+}
+
 /** When we're spooling data onto our outbuf, add more whenever we dip
  * below this threshold. */
 #define DIRSERV_BUFFER_MIN 16384
