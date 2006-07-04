@@ -531,7 +531,8 @@ tor_tls_handshake(tor_tls_t *tls)
   }
   r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO);
   if (ERR_peek_error() != 0) {
-    tls_log_errors(LOG_WARN, "handshaking");
+    tls_log_errors(tls->isServer ? LOG_PROTOCOL_WARN : LOG_WARN,
+                   "handshaking");
     return TOR_TLS_ERROR;
   }
   if (r == TOR_TLS_DONE) {
