@@ -160,7 +160,7 @@ int touch_file(const char *fname);
 
 /* ===== Net compatibility */
 #ifdef MS_WINDOWS
-/** On windows, you have to call close() on fds returned by open(),
+/** On Windows, you have to call close() on fds returned by open(),
  * and closesocket() on fds returned by socket().  On Unix, everything
  * gets close()'d.  We abstract this difference by always using
  * tor_close_socket to close sockets, and always using close() on
@@ -247,8 +247,9 @@ void spawn_exit(void);
 #undef TOR_IS_MULTITHREADED
 #endif
 
-/* Because we use threads instead of processes on Windows, we need locking on
- * Windows.  On Unixy platforms, these functions are no-ops. */
+/* Because we use threads instead of processes on most platforms (Windows,
+ * Linux, etc), we need locking for them.  On platforms with poor thread
+ * support or broken gethostbyname_r, these functions are no-ops. */
 
 typedef struct tor_mutex_t tor_mutex_t;
 #ifdef TOR_IS_MULTITHREADED
