@@ -568,13 +568,9 @@ directory_info_has_arrived(time_t now, int from_cache)
     return;
   }
 
-  if (server_mode(options) &&
-      !we_are_hibernating()) { /* connect to the appropriate routers */
-    if (!authdir_mode(options))
-      router_retry_connections(0, 1);
-    if (!from_cache && has_completed_circuit)
-      consider_testing_reachability();
-  }
+  if (server_mode(options) && !we_are_hibernating() &&
+      !from_cache && has_completed_circuit)
+    consider_testing_reachability();
 }
 
 /** Perform regular maintenance tasks for a single connection.  This
@@ -782,7 +778,7 @@ run_scheduled_events(time_t now)
 
   if (now % 10 == 0 && authdir_mode(options) && !we_are_hibernating()) {
     /* try to determine reachability */
-    router_retry_connections(1, 0);
+    dirserv_test_reachability(0);
   }
 
   /** 2. Periodically, we consider getting a new directory, getting a
@@ -1134,7 +1130,7 @@ do_main_loop(void)
 
   if (authdir_mode(get_options())) {
     /* the directory is already here, run startup things */
-    router_retry_connections(1, 1);
+    dirserv_test_reachability(1);
   }
 
   if (server_mode(get_options())) {
