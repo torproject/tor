@@ -5,12 +5,13 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-Note: This is an attempt to specify Tor as currently implemented.  Future
-versions of Tor will implement improved protocols, and compatibility is not
-guaranteed.
+Note: This document aims to specify Tor as currently implemented.  Future
+versions of Tor will implement improved protocols, and compatibility is
+not guaranteed.
 
-This is not a design document; most design criteria are not examined.  For
-more information on why Tor acts as it does, see tor-design.pdf.
+This specification is not a design document; most design criteria
+are not examined.  For more information on why Tor acts as it does,
+see tor-design.pdf.
 
 TODO: (very soon)
       - REASON_CONNECTFAILED should include an IP.
@@ -22,8 +23,8 @@ when do we rotate which keys (tls, link, etc)?
 0.1.  Notation and encoding
 
    PK -- a public key.
-   SK -- a private key
-   K  -- a key for a symmetric cypher
+   SK -- a private key.
+   K  -- a key for a symmetric cypher.
 
    a|b -- concatenation of 'a' and 'b'.
 
@@ -64,18 +65,20 @@ when do we rotate which keys (tls, link, etc)?
    function.   (For OAEP padding, see
    ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
 
-   For Diffie-Hellman, we use a generator (g) of 2.  For the modulus (p), the
-   1024-bit safe prime from rfc2409, (section 6.2) whose hex representation
-   is:
+   For Diffie-Hellman, we use a generator (g) of 2.  For the modulus (p), we
+   use the 1024-bit safe prime from rfc2409, (section 6.2) whose hex
+   representation is:
 
      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
      "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
      "49286651ECE65381FFFFFFFFFFFFFFFF"
+
    As an optimization, implementations SHOULD choose DH private keys (x) of
    320 bits.  Implementations that do this MUST never use any DH key more
    than once.
+   [May other implementations reuse their DH keys?? -RD]
 
    For a hash function, we use SHA-1.
 
@@ -98,8 +101,11 @@ when do we rotate which keys (tls, link, etc)?
          and let M2 = the rest of M.
          Pad and encrypt K|M1 with PK.  Encrypt M2 with our stream cipher,
          using the key K.  Concatenate these encrypted values.
-   (Note that this "hybrid encryption" approach does not prevent an attacker
-   from adding or removing bytes to the end of M.)
+   [XXX Note that this "hybrid encryption" approach does not prevent
+   an attacker from adding or removing bytes to the end of M. It also
+   allows attackers to modify the bytes not covered by the OAEP --
+   see Goldberg's PET2006 paper for details. We will add a MAC to this
+   scheme one day. -RD]
 
 0.4. Other parameter values
 
@@ -107,7 +113,7 @@ when do we rotate which keys (tls, link, etc)?
 
 1. System overview
 
-   Onion Routing is a distributed overlay network designed to anonymize
+   Tor is a distributed overlay network designed to anonymize
    low-latency TCP-based applications such as web browsing, secure shell,
    and instant messaging. Clients choose a path through the network and
    build a ``circuit'', in which each node (or ``onion router'' or ``OR'')
@@ -160,7 +166,7 @@ when do we rotate which keys (tls, link, etc)?
    minutes) has passed.
 
    (As an exception, directory servers may try to stay connected to all of
-   the ORs.)
+   the ORs -- though this will be phased out for the Tor 0.1.2.x release.)
 
 3. Cell Packet format
 
@@ -178,12 +184,13 @@ when do we rotate which keys (tls, link, etc)?
 
    The 'Command' field holds one of the following values:
          0 -- PADDING     (Padding)                 (See Sec 6.2)
-         1 -- CREATE      (Create a circuit)        (See Sec 4)
-         2 -- CREATED     (Acknowledge create)      (See Sec 4)
-         3 -- RELAY       (End-to-end data)         (See Sec 5)
-         4 -- DESTROY     (Stop using a circuit)    (See Sec 4)
-         5 -- CREATE_FAST (Create a circuit, no PK) (See sec 4)
-         6 -- CREATED_FAST (Circtuit created, no PK) (See Sec 4)
+         1 -- CREATE      (Create a circuit)        (See Sec 4.1)
+         2 -- CREATED     (Acknowledge create)      (See Sec 4.1)
+         3 -- RELAY       (End-to-end data)         (See Sec 4.5 and 5)
+         4 -- DESTROY     (Stop using a circuit)    (See Sec 4.4)
+         5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 4.1)
+         6 -- CREATED_FAST (Circuit created, no PK) (See Sec 4.1)
+         7 -- HELLO       (Introduce the OR)        (See Sec 7.1)
 
    The interpretation of 'Payload' depends on the type of the cell.
       PADDING: Payload is unused.
@@ -206,6 +213,9 @@ when do we rotate which keys (tls, link, etc)?
 
    RELAY cells are used to send commands and data along a circuit; see
    section 5 below.
+
+   HELLO cells are used to introduce parameters and characteristics of
+   Tor clients and servers when connections are established.
 
 4. Circuit management
 
@@ -260,11 +270,6 @@ when do we rotate which keys (tls, link, etc)?
    Public keys are compared numerically by modulus.
 
    As usual with DH, x and y MUST be generated randomly.
-
-   (Older versions of Tor compared OR nicknames, and did it in a broken and
-   unreliable way.  To support versions of Tor earlier than 0.0.9pre6,
-   implementations should notice when the other side of a connection is
-   sending CREATE cells with the "wrong" MSB, and switch accordingly.)
 
 4.1.1. CREATE_FAST/CREATED_FAST cells
 
@@ -429,14 +434,14 @@ when do we rotate which keys (tls, link, etc)?
      2 -- INTERNAL        (Internal error.)
      3 -- REQUESTED       (A client sent a TRUNCATE command.)
      4 -- HIBERNATING     (Not currently operating; trying to save bandwidth.)
-     5 -- RESOURCELIMIT (Out of memory, sockets, or circuit IDs.)
-     6 -- CONNECTFAILED (Unable to reach server.)
+     5 -- RESOURCELIMIT   (Out of memory, sockets, or circuit IDs.)
+     6 -- CONNECTFAILED   (Unable to reach server.)
      7 -- OR_IDENTITY     (Connected to server, but its OR identity was not
                            as expected.)
      8 -- OR_CONN_CLOSED  (The OR connection that was carrying this circuit
                            died.)
 
-   [Versions of Tor prior to 0.1.0.11 didn't sent versions; implementations
+   [Versions of Tor prior to 0.1.0.11 didn't send reasons; implementations
    MUST accept empty TRUNCATED and DESTROY cells.]
 
 4.5. Routing relay cells
@@ -734,9 +739,40 @@ when do we rotate which keys (tls, link, etc)?
    cells when both a) the window is <= 450, and b) there are less than
    ten cell payloads remaining to be flushed at that edge.
 
-7. Directories and routers
+7. Other cell types
 
-7.1. Extensible information format
+7.1. HELLO cells
+
+   When a Tor connection is established, both sides must send a HELLO
+   cell before sending any other cells.
+
+         Version                 [1 byte]
+         Timestamp               [4 bytes]
+         Number of addresses     [1 byte]
+         Addresses               [variable]
+         others?
+
+   Version should be 1. A Tor connection is considered to be using
+   version 0 if the first cell we receive is not a HELLO cell.
+
+   Timestamp is the OR's current Unix time (GMT).
+
+   Each address contains Type/Length/Value as used in Section 5.4.
+   This section lists all addresses that the OR has published and is
+   listening to now -- we include them to block a man-in-the-middle
+   attack on TLS that lets an attacker bounce traffic through his own
+   computers to enable timing and packet-counting attacks.
+   [Do we want to provide just one address? Do we want to be more
+    general by accepting netmasks or something? -RD]
+
+   If we receive a HELLO cell with a version we do not recognize, we drop
+   it. If we receive a HELLO cell with a version that is older than the
+   version we sent in our HELLO cell, we must resend a new HELLO cell
+   using that version.
+
+8. Directories and routers
+
+8.1. Extensible information format
 
 Router descriptors and directories both obey the following lightweight
 extensible information format.
@@ -771,7 +807,7 @@ implementations MUST ignore any item of the form "opt keyword ....." when
 they would not recognize "keyword ....."; and MUST treat "opt keyword ....."
 as synonymous with "keyword ......" when keyword is recognized.
 
-7.2. Router descriptor format.
+8.2. Router descriptor format.
 
 Every router descriptor MUST start with a "router" Item; MUST end with a
 "router-signature" Item and an extra NL; and MUST contain exactly one
@@ -903,7 +939,7 @@ num_ip6_bits ::= an integer between 0 and 128
 Ports are required; if they are not included in the router
 line, they must appear in the "ports" lines.
 
-7.3. Directory format
+8.3. Directory format
 
 A Directory begins with a "signed-directory" item, followed by one each of
 the following, in any order: "recommended-software", "published",
@@ -977,7 +1013,7 @@ error.  [Versions of Tor prior to 0.1.1 did this.]
 If software encounters an unrecognized keyword in the directory header,
 it SHOULD reject the entire directory.
 
-7.4. Network-status descriptor
+8.4. Network-status descriptor
 
 A "network-status" (a.k.a "running-routers") document is a truncated
 directory that contains only the current status of a list of nodes, not
@@ -990,17 +1026,17 @@ entries.
 
      "published" YYYY-MM-DD HH:MM:SS
 
-        (see 7.3 above)
+        (see 8.3 above)
 
      "router-status" list
 
-        (see 7.3 above)
+        (see 8.3 above)
 
      "directory-signature" NL signature
 
-        (see 7.3 above)
+        (see 8.3 above)
 
-7.5. Behavior of a directory server
+8.5. Behavior of a directory server
 
 lists nodes that are connected currently
 speaks HTTP on a socket, spits out directory on request
@@ -1038,7 +1074,7 @@ B.1. ... but which will require backward-incompatible change
   - Drop backward compatibility.
   - We should use a 128-bit subgroup of our DH prime.
   - Handshake should use HMAC.
-  - Multiple cell lengths
+  - Multiple cell lengths.
   - Ability to split circuits across paths (If this is useful.)
   - SENDME windows should be dynamic.
 
