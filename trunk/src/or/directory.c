@@ -45,7 +45,7 @@ static int directory_handle_command(connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
 static int purpose_is_private(uint8_t purpose);
 static char *http_get_header(const char *headers, const char *which);
-static char *http_get_origin(const char *headers, connection_t *conn);
+static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(connection_t *conn);
 static void connection_dir_download_routerdesc_failed(connection_t *conn);
 static void dir_networkstatus_download_failed(smartlist_t *failed);
@@ -657,12 +657,12 @@ http_get_header(const char *headers, const char *which)
   return NULL;
 }
 
-/** Allocate and return a string describing the source of an HTTP request with
- * headers <b>headers</b> received on <b>conn</b>.  The format is either
- * "'1.2.3.4'", or "'1.2.3.4' (forwarded for '5.6.7.8')".
- */
-static char *
-http_get_origin(const char *headers, connection_t *conn)
+/** If <b>headers</b> indicates that a proxy was involved, then rewrite
+ * <b>conn</b>-\>address to describe our best guess of the addresses
+ * involved in this HTTP request. The format is either "1.2.3.4" or
+ * "1.2.3.4 (forwarded for 5.6.7.8)". */
+static void
+http_set_address_origin(const char *headers, connection_t *conn)
 {
   char *fwd;
 
@@ -672,15 +672,11 @@ http_get_origin(const char *headers, connection_t *conn)
   if (fwd) {
     size_t len = strlen(fwd)+strlen(conn->address)+32;
     char *result = tor_malloc(len);
-    tor_snprintf(result, len, "'%s' (forwarded for %s)", conn->address,
+    tor_snprintf(result, len, "%s (forwarded for %s)", conn->address,
                  escaped(fwd));
     tor_free(fwd);
-    return result;
-  } else {
-    size_t len = strlen(conn->address)+3;
-    char *result = tor_malloc(len);
-    tor_snprintf(result, len, "'%s'", conn->address);
-    return result;
+    tor_free(conn->address);
+    conn->address = result;
   }
 }
 
@@ -1258,22 +1254,18 @@ write_http_response_header(connection_t *conn, ssize_t length,
                            const char *type, const char *encoding)
 {
   char date[RFC1123_TIME_LEN+1];
-  char addr[INET_NTOA_BUF_LEN+1];
   char tmp[1024];
   char *cp;
-  struct in_addr in;
 
   tor_assert(conn);
   tor_assert(type);
 
-  in.s_addr = htonl(conn->addr);
   format_rfc1123_time(date, time(NULL));
-  tor_inet_ntoa(&in, addr, sizeof(addr));
   cp = tmp;
   tor_snprintf(cp, sizeof(tmp),
                "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n"
                "X-You-Are: %s\r\n",
-               date, type, addr);
+               date, type, conn->address);
   cp += strlen(tmp);
   if (encoding) {
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
@@ -1652,7 +1644,6 @@ static int
 directory_handle_command_post(connection_t *conn, char *headers,
                               char *body, size_t body_len)
 {
-  char *origin = NULL;
   char *url = NULL;
 
   log_debug(LD_DIRSERV,"Received POST command.");
@@ -1672,7 +1663,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
     return 0;
   }
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
-  origin = http_get_origin(headers, conn);
+  http_set_address_origin(headers, conn);
 
   if (!strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg;
@@ -1684,7 +1675,8 @@ directory_handle_command_post(connection_t *conn, char *headers,
       case -2:
       case -1:
       case 1:
-        log_notice(LD_DIRSERV,"Rejected router descriptor from %s.", origin);
+        log_notice(LD_DIRSERV,"Rejected router descriptor from %s.",
+                   conn->address);
         /* malformed descriptor, or something wrong */
         write_http_status_line(conn, 400, msg);
         break;
@@ -1702,7 +1694,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
 //      char tmp[1024*2+1];
       log_fn(LOG_PROTOCOL_WARN, LD_DIRSERV,
              "Rejected rend descriptor (length %d) from %s.",
-             (int)body_len, origin);
+             (int)body_len, conn->address);
 #if 0
       if (body_len <= 1024) {
         base16_encode(tmp, sizeof(tmp), body, body_len);
@@ -1721,7 +1713,6 @@ directory_handle_command_post(connection_t *conn, char *headers,
 
  done:
   tor_free(url);
-  tor_free(origin);
   return 0;
 }
 
