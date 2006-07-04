@@ -808,6 +808,12 @@ options_act(or_options_t *old_options)
        !opt_streq(old_options->EntryNodes, options->EntryNodes)))
     entry_nodes_should_be_added();
 
+  /* If the user wants to avoid certain nodes, make sure none of them
+   * are already entryguards */
+  if (options->ExcludeNodes) {
+    // XXX TODO
+  }
+
   /* Since our options changed, we might need to regenerate and upload our
    * server descriptor.
    */
