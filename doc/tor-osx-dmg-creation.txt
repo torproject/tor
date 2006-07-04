@@ -22,6 +22,9 @@ follows:
 3) Complete the "make" and "make install".  You will need to be root,
 or sudo -s, to complete the "make install".
 
+4) If you have previouslly installed libevent, go rm the old libevent.so*
+files so the linker doesn't get suckered into using them.
+
 
 ### Acquiring privoxy
 
