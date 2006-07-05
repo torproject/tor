@@ -122,7 +122,7 @@ init_cache_map(void)
 static void
 eventdns_log_cb(const char *msg)
 {
-  log_info(LD_EXIT, "[Eventdns] %s", msg);
+  log(LOG_INFO, LD_EXIT, "eventdns: %s", msg);
 }
 #endif
 
