@@ -118,6 +118,14 @@ init_cache_map(void)
   HT_INIT(&cache_root);
 }
 
+#ifdef USE_EVENTDNS
+static void
+eventdns_log_cb(const char *msg)
+{
+  log_info(LD_EXIT, "[Eventdns] %s", msg);
+}
+#endif
+
 /** Initialize the DNS subsystem; called by the OR process. */
 void
 dns_init(void)
@@ -125,6 +133,7 @@ dns_init(void)
   init_cache_map();
   dnsworkers_rotate();
 #ifdef USE_EVENTDNS
+  eventdns_set_log_fn(eventdns_log_cb);
   eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
                              "/etc/resolv.conf");
 #endif
