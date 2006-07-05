@@ -57,7 +57,7 @@ void eventdns_search_add(const char *domain);
 void eventdns_search_ndots_set(const int ndots);
 
 typedef void (*eventdns_debug_log_fn_type)(const char *msg);
-void evendns_set_log_fn(eventdns_debug_log_fn_type fn);
+void eventdns_set_log_fn(eventdns_debug_log_fn_type fn);
 
 #define DNS_NO_SEARCH 1
 
