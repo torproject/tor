@@ -22,6 +22,23 @@ Changes in version 0.1.2.1-alpha - 2006-06-xx (in progress)
     - Add TestVia config option to the man page.
 
 
+Changes in version 0.1.1.22 - 2006-07-05
+  o Major bugfixes:
+    - Fix a big bug that was causing servers to not find themselves
+      reachable if they changed IP addresses. Since only 0.1.1.22+
+      servers can do reachability testing correctly, now we automatically
+      make sure to test via one of these.
+    - Fix to allow clients and mirrors to learn directory info from
+      descriptor downloads that get cut off partway through.
+    - Directory authorities had a bug in deciding if a newly published
+      descriptor was novel enough to make everybody want a copy -- a few
+      servers seem to be publishing new descriptors many times a minute.
+  o Minor bugfixes:
+    - Fix a rare bug that was causing some servers to complain about
+      "closing wedged cpuworkers" and skip some circuit create requests.
+    - Make the Exit flag in directory status documents actually work.
+
+
 Changes in version 0.1.1.21 - 2006-06-10
   o Crash and assert fixes from 0.1.1.20:
     - Fix a rare crash on Tor servers that have enabled hibernation.
