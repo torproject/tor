@@ -1866,8 +1866,8 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
                         body, sd->signed_descriptor_len,
                         last);
       if (last) {
-	tor_zlib_free(conn->zlib_state);
-	conn->zlib_state = NULL;
+        tor_zlib_free(conn->zlib_state);
+        conn->zlib_state = NULL;
       }
     } else {
       connection_write_to_buf(body,

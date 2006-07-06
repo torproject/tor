@@ -1433,8 +1433,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
     log_debug(LD_DIRSERV,"Dumping %sdirectory to client.",
               deflated?"deflated ":"");
     write_http_response_header(conn, dlen,
-                               deflated?"application/octet-stream":"text/plain",
-                               deflated?"deflate":"identity");
+                          deflated?"application/octet-stream":"text/plain",
+                          deflated?"deflate":"identity");
     conn->cached_dir = d;
     conn->cached_dir_offset = 0;
     if (! deflated)
