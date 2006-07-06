@@ -1486,8 +1486,8 @@ is_local_IP(uint32_t ip)
  * Return 0 on success, -1 on failure.
  */
 int
-parse_addr_port(const char *addrport, char **address, uint32_t *addr,
-                uint16_t *port_out)
+parse_addr_port(int severity, const char *addrport, char **address,
+                uint32_t *addr, uint16_t *port_out)
 {
   const char *colon;
   char *_address = NULL;
@@ -1501,14 +1501,14 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
     _address = tor_strndup(addrport, colon-addrport);
     _port = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);
     if (!_port) {
-      log_warn(LD_GENERAL, "Port %s out of range", escaped(colon+1));
+      log_fn(severity, LD_GENERAL, "Port %s out of range", escaped(colon+1));
       ok = 0;
     }
     if (!port_out) {
       char *esc_addrport = esc_for_log(addrport);
-      log_warn(LD_GENERAL,
-               "Port %s given on %s when not required",
-               escaped(colon+1), esc_addrport);
+      log_fn(severity, LD_GENERAL,
+             "Port %s given on %s when not required",
+             escaped(colon+1), esc_addrport);
       tor_free(esc_addrport);
       ok = 0;
     }
@@ -1520,7 +1520,7 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
   if (addr) {
     /* There's an addr pointer, so we need to resolve the hostname. */
     if (tor_lookup_hostname(_address,addr)) {
-      log_warn(LD_NET, "Couldn't look up %s", escaped(_address));
+      log_fn(severity, LD_NET, "Couldn't look up %s", escaped(_address));
       ok = 0;
       *addr = 0;
     }
