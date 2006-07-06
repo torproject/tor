@@ -1264,7 +1264,7 @@ write_http_response_header(connection_t *conn, ssize_t length,
   cp = tmp;
   tor_snprintf(cp, sizeof(tmp),
                "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n"
-               "X-You-Are: %s\r\n",
+               "X-Your-Address-Is: %s\r\n",
                date, type, conn->address);
   cp += strlen(tmp);
   if (encoding) {
