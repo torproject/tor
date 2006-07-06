@@ -1587,16 +1587,19 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
    */
 
   if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
-    log_warn(LD_PROTOCOL,"relay begin cell has no \\0. Dropping.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Relay begin cell has no \\0. Dropping.");
     return 0;
   }
-  if (parse_addr_port(cell->payload+RELAY_HEADER_SIZE,&address,NULL,&port)<0) {
-    log_warn(LD_PROTOCOL,"Unable to parse addr:port in relay begin cell. "
-             "Dropping.");
+  if (parse_addr_port(LOG_PROTOCOL_WARN, cell->payload+RELAY_HEADER_SIZE,
+                      &address,NULL,&port)<0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Unable to parse addr:port in relay begin cell. Dropping.");
     return 0;
   }
   if (port==0) {
-    log_warn(LD_PROTOCOL,"Missing port in relay begin cell. Dropping.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Missing port in relay begin cell. Dropping.");
     tor_free(address);
     return 0;
   }

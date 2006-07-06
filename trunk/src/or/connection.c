@@ -522,7 +522,7 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
 #endif
 
   memset(&listenaddr,0,sizeof(struct sockaddr_in));
-  if (parse_addr_port(listenaddress, &address, &addr, &usePort)<0) {
+  if (parse_addr_port(LOG_WARN, listenaddress, &address, &addr, &usePort)<0) {
     log_warn(LD_CONFIG,
              "Error parsing/resolving ListenAddress %s", listenaddress);
     return NULL;
@@ -893,7 +893,7 @@ retry_listeners(int type, config_line_t *cfg,
       {
         char *address=NULL;
         uint16_t port;
-        if (! parse_addr_port(wanted->value, &address, NULL, &port)) {
+        if (!parse_addr_port(LOG_WARN, wanted->value, &address, NULL, &port)) {
           int addr_matches = !strcasecmp(address, conn->address);
           tor_free(address);
           if (! port)

@@ -2040,7 +2040,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     for (line = options->SocksListenAddress; line; line = line->next) {
       uint16_t port;
       uint32_t addr;
-      if (parse_addr_port(line->value, &address, &addr, &port)<0)
+      if (parse_addr_port(LOG_WARN, line->value, &address, &addr, &port)<0)
         continue; /* We'll warn about this later. */
       if (!is_internal_IP(addr, 1) &&
           (!old_options || !config_lines_eq(old_options->SocksListenAddress,
@@ -2338,7 +2338,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to parse accounting options. See logs for details.");
 
   if (options->HttpProxy) { /* parse it now */
-    if (parse_addr_port(options->HttpProxy, NULL,
+    if (parse_addr_port(LOG_WARN, options->HttpProxy, NULL,
                         &options->HttpProxyAddr, &options->HttpProxyPort) < 0)
       REJECT("HttpProxy failed to parse or resolve. Please fix.");
     if (options->HttpProxyPort == 0) { /* give it a default */
@@ -2352,7 +2352,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HttpsProxy) { /* parse it now */
-    if (parse_addr_port(options->HttpsProxy, NULL,
+    if (parse_addr_port(LOG_WARN, options->HttpsProxy, NULL,
                         &options->HttpsProxyAddr, &options->HttpsProxyPort) <0)
       REJECT("HttpsProxy failed to parse or resolve. Please fix.");
     if (options->HttpsProxyPort == 0) { /* give it a default */
@@ -3127,8 +3127,8 @@ parse_redirect_line(smartlist_t *result, config_line_t *line, char **msg)
   if (0==strcasecmp(smartlist_get(elements,1), "pass")) {
     r->is_redirect = 0;
   } else {
-    if (parse_addr_port(smartlist_get(elements,1),NULL,&r->addr_dest,
-                             &r->port_dest)) {
+    if (parse_addr_port(LOG_WARN, smartlist_get(elements,1),NULL,
+                        &r->addr_dest, &r->port_dest)) {
       *msg = tor_strdup("Error parsing dest address in RedirectExit line");
       goto err;
     }
@@ -3193,7 +3193,7 @@ parse_dir_server_line(const char *line, int validate_only)
     goto err;
   }
   addrport = smartlist_get(items, 0);
-  if (parse_addr_port(addrport, &address, NULL, &port)<0) {
+  if (parse_addr_port(LOG_WARN, addrport, &address, NULL, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing DirServer address '%s'", addrport);
     goto err;
   }

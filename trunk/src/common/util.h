@@ -168,8 +168,8 @@ int path_is_relative(const char *filename);
 /* Net helpers */
 int is_internal_IP(uint32_t ip, int for_listening);
 int is_local_IP(uint32_t ip);
-int parse_addr_port(const char *addrport, char **address, uint32_t *addr,
-                    uint16_t *port);
+int parse_addr_port(int severity, const char *addrport, char **address,
+                    uint32_t *addr, uint16_t *port_out);
 int parse_port_range(const char *port, uint16_t *port_min_out,
                      uint16_t *port_max_out);
 int parse_addr_and_port_range(const char *s, uint32_t *addr_out,
