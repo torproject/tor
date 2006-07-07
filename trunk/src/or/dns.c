@@ -122,6 +122,11 @@ init_cache_map(void)
 static void
 eventdns_log_cb(const char *msg)
 {
+  if (!strcmpstart(msg, "Resolve requested for") &&
+      get_options()->SafeLogging) {
+    log(LOG_INFO, LD_EXIT, "eventdns: Resolve requested.");
+    return;
+  }
   log(LOG_INFO, LD_EXIT, "eventdns: %s", msg);
 }
 #endif
@@ -130,12 +135,29 @@ eventdns_log_cb(const char *msg)
 void
 dns_init(void)
 {
+
   init_cache_map();
   dnsworkers_rotate();
 #ifdef USE_EVENTDNS
-  eventdns_set_log_fn(eventdns_log_cb);
-  eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
-                             "/etc/resolv.conf");
+  {
+    or_options_t *options = get_options();
+    eventdns_set_log_fn(eventdns_log_cb);
+    if (options->Nameservers && smartlist_len(options->Nameservers)) {
+      SMARTLIST_FOREACH(options->Nameservers, const char *, ip,
+        {
+          struct in_addr in;
+          log_info(LD_EXIT, "Parsing /etc/resolv.conf");
+          if (tor_inet_aton(ip, &in)) {
+            log_info(LD_EXIT, "Adding nameserver '%s'", ip);
+            eventdns_nameserver_add(in.s_addr);
+          }
+        });
+    } else {
+      log_info(LD_EXIT, "Parsing /etc/resolv.conf");
+      eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
+                                 "/etc/resolv.conf");
+    }
+  }
 #endif
 }
 

@@ -58,6 +58,7 @@ static config_abbrev_t _option_abbrevs[] = {
   PLURAL(LongLivedPort),
   PLURAL(HiddenServiceNode),
   PLURAL(HiddenServiceExcludeNode),
+  PLURAL(Nameserver),
   PLURAL(NumCpu),
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
@@ -191,6 +192,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("MonthlyAccountingStart"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NewCircuitPeriod",    INTERVAL, NewCircuitPeriod,     "30 seconds"),
+  VAR("Nameservers",         CSV,      Nameservers,          ""),
   VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
   VAR("NoPublish",           BOOL,     NoPublish,            "0"),
@@ -1971,6 +1973,30 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
   return 0;
 }
 
+/* Return 0 if every element of sl is a string holding an IP address, or if sl
+ * is NULL.  Otherwise set *msg and return -1. */
+static int
+validate_ips_csv(smartlist_t *sl, const char *name, char **msg)
+{
+  char buf[1024];
+  tor_assert(name);
+
+  if (!sl)
+    return 0;
+
+  SMARTLIST_FOREACH(sl, const char *, cp,
+  {
+    struct in_addr in;
+    if (0 == tor_inet_aton(cp, &in)) {
+      int r = tor_snprintf(buf, sizeof(buf),
+                        "Malformed address '%s' out of range in %s", cp, name);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
+      return -1;
+    }
+  });
+  return 0;
+}
+
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (5*60)
@@ -2184,6 +2210,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
 
   if (validate_ports_csv(options->LongLivedPorts, "LongLivedPorts", msg) < 0)
+    return -1;
+
+  if (validate_ips_csv(options->Nameservers, "Nameservers", msg) < 0)
     return -1;
 
   if (options->FascistFirewall && !options->ReachableAddresses) {
