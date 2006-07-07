@@ -83,6 +83,13 @@ if [ -f $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.applescript ]; then
    chmod 755 $TARGET/Tor_Uninstaller.applescript
 fi
 
+if [ -f $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.app.tar.gz ]; then 
+   cp $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.app.tar.gz $TARGET/Tor_Uninstaller.app.tar.gz
+   cd $TARGET && tar zxf Tor_Uninstaller.app.tar.gz 
+   chmod -R 755 $TARGET/Tor_Uninstaller.app
+   chown -R _tor:_tor Tor_Uninstaller.app
+fi
+
 if [ -f $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh ]; then
    cp $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh $TARGET/uninstall_tor_bundle.sh
    chmod 755 $TARGET/uninstall_tor_bundle.sh
