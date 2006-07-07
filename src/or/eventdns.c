@@ -3,8 +3,8 @@
 // Modified from agl's original; see CVS for more info.
 // Try to keep this re-mergeable by Adam.  Don't make it depend on Tor.
 // TODO:
-//   - Check all malloc return values.
 //   - Learn about nameservers on win32.
+//   - Support AAAA (?), A6, and PTR records.
 
 /* Async DNS Library
  * Adam Langley <agl@imperialviolet.org>
@@ -278,7 +278,12 @@ typedef unsigned int uint;
 #define MAX_ADDRS 4  // maximum number of addresses from a single packet
 // which we bother recording
 
-#define TYPE_A 1
+#define TYPE_A         1
+#define TYPE_CNAME     5
+#define TYPE_PTR      12
+#define TYPE_AAAA     28
+#define TYPE_A6       38
+
 #define CLASS_INET 1
 
 struct request {
@@ -767,6 +772,7 @@ reply_parse(u8 *packet, int length) {
 
 		if (type == TYPE_A && class == CLASS_INET) {
 			const int addrcount = datalength >> 2;  // each IP address is 4 bytes
+                        // XXXX do something sane with malformed A answers.
 			const int addrtocopy = MIN(MAX_ADDRS - addresses_done, addrcount);
 
 			ttl_r = MIN(ttl_r, ttl);
@@ -997,6 +1003,7 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 	APPEND16(0);  // no additional
 
 	labels = (u8 *) malloc(name_len + 2);
+        if (!labels) return -1;
 	labels_len = dnsname_to_labels(labels, name, name_len);
 	if (labels_len < 0) return labels_len;
 	memcpy(buf + j, labels, labels_len);
@@ -1115,6 +1122,7 @@ nameserver_send_probe(struct nameserver *const ns) {
   	log("Sending probe to %s", debug_ntoa(ns->address));
 
 	req = request_new("www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
+        if (!req) return;
 	// we force this into the inflight queue no matter what
 	request_trans_id_set(req, transaction_id_pick());
 	req->ns = ns;
@@ -1161,6 +1169,7 @@ eventdns_nameserver_add(unsigned long int address) {
 	}
 
 	ns = (struct nameserver *) malloc(sizeof(struct nameserver));
+        if (!ns) return -1;
 
 	memset(ns, 0, sizeof(struct nameserver));
 
@@ -1277,6 +1286,7 @@ request_new(const char *name, int flags, eventdns_callback_type callback, void *
 	// the request data is alloced in a single block with the header
 	struct request *const req = (struct request *) malloc(sizeof(struct request) + request_max_len);
 	int rlen;
+        if (!req) return NULL;
 	memset(req, 0, sizeof(struct request));
 
 	// request data lives just after the header
@@ -1370,6 +1380,7 @@ search_state_decref(struct search_state *const state) {
 static struct search_state *
 search_state_new(void) {
 	struct search_state *state = (struct search_state *) malloc(sizeof(struct search_state));
+        if (!state) return NULL;
 	memset(state, 0, sizeof(struct search_state));
 	state->refcount = 1;
 	state->ndots = 1;
@@ -1398,9 +1409,11 @@ search_postfix_add(const char *domain) {
 	domain_len = strlen(domain);
 
 	if (!global_search_state) global_search_state = search_state_new();
+        if (!global_search_state) return;
 	global_search_state->num_domains++;
 
 	sdomain = (struct search_domain *) malloc(sizeof(struct search_domain) + domain_len);
+        if (!sdomain) return;
 	memcpy( ((u8 *) sdomain) + sizeof(struct search_domain), domain, domain_len);
 	sdomain->next = global_search_state->head;
 	sdomain->len = domain_len;
@@ -1434,6 +1447,7 @@ eventdns_search_add(const char *domain) {
 void
 eventdns_search_ndots_set(const int ndots) {
 	if (!global_search_state) global_search_state = search_state_new();
+        if (!global_search_state) return;
 	global_search_state->ndots = ndots;
 }
 
@@ -1462,6 +1476,7 @@ search_make_new(const struct search_state *const state, int n, const char *const
 			const u8 *const postfix = ((u8 *) dom) + sizeof(struct search_domain);
 			const int postfix_len = dom->len;
 			char *const newname = (char *) malloc(base_len + need_to_append_dot + postfix_len + 1);
+                        if (!newname) return NULL;
 			memcpy(newname, base_name, base_len);
 			if (need_to_append_dot) newname[base_len] = '.';
 			memcpy(newname + base_len + need_to_append_dot, postfix, postfix_len);
@@ -1487,6 +1502,7 @@ search_request_new(const char *const name, int flags, eventdns_callback_type use
 			req->search_index = -1;
 		} else {
 			char *const new_name = search_make_new(global_search_state, 0, name);
+                        if (!new_name) return 1;
 			req = request_new(new_name, flags, user_callback, user_arg);
 			free(new_name);
 			if (!req) return 1;
@@ -1534,6 +1550,7 @@ search_try_next(struct request *const req) {
 		}
 
 		new_name = search_make_new(req->search_state, req->search_index, req->search_origname);
+                if (!new_name) return 1;
 		log("Search: now trying %s (%d)", new_name, req->search_index);
 		newreq = request_new(new_name, req->search_flags, req->user_callback, req->user_pointer);
 		free(new_name);
@@ -1629,6 +1646,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 				if (!(flags & DNS_OPTION_SEARCH)) continue;
 				log("Setting ndots to %d", ndots);
 				if (!global_search_state) global_search_state = search_state_new();
+                                if (!global_search_state) return;
 				global_search_state->ndots = ndots;
 			} else if (!strncmp(option, "timeout:", 8)) {
 				const int timeout = strtoint(&option[8]);
