@@ -36,6 +36,9 @@
  * can do the job for you with the modern async call getaddrinfo_r
  * (Google for it). Otherwise, please continue.
  *
+ *  [I googled for getaddrinfo_r and got only two hits, one of which was this
+ *  code. Did you mean something different? -NM]
+ *
  * This code is based on libevent and you must call event_init before
  * any of the APIs in this file. You must also seed the OpenSSL random
  * source if you are using OpenSSL for ids (see below).
@@ -81,15 +84,15 @@
  *
  * Searching:
  *
- * In order for this library to be a good replacment for glibc's resolver it
+ * In order for this library to be a good replacement for glibc's resolver it
  * supports searching. This involves setting a list of default domains, in
  * which names will be queried for. The number of dots in the query name
  * determines the order in which this list is used.
  *
  * Searching appears to be a single lookup from the point of view of the API,
  * although many DNS queries may be generated from a single call to
- * eventdns_resolve. Searching can also drastically slow down the resolution of
- * names.
+ * eventdns_resolve. Searching can also drastically slow down the resolution
+ * of names.
  *
  * To disable searching:
  *   1. Never set it up. If you never call eventdns_resolv_conf_parse or
@@ -117,13 +120,13 @@
  *
  * API reference:
  *
- * int eventdns_nameserver_add(unsigned long int addresss)
+ * int eventdns_nameserver_add(unsigned long int address)
  *   Add a nameserver. The address should be an IP address in
  *   network byte order. The type of address is chosen so that
  *   it matches in_addr.s_addr.
  *   Returns non-zero on error.
  *
- * int eventdns_nameserer_ip_add(const char *ip_as_string)
+ * int eventdns_nameserver_ip_add(const char *ip_as_string)
  *   This wraps the above function by parsing a string as an IP
  *   address and adds it as a nameserver.
  *   Returns non-zero on error
@@ -155,7 +158,7 @@
  * int eventdns_resolv_conf_parse(int flags, const char *filename)
  *   Parse a resolv.conf like file from the given filename.
  *
- *   See the manpage for resolv.conf for the format of this file.
+ *   See the man page for resolv.conf for the format of this file.
  *   The flags argument determines what information is parsed from
  *   this file:
  *     DNS_OPTION_SEARCH - domain, search and ndots options
@@ -183,7 +186,7 @@
  * limited and all other requests wait in waiting queue for space. This
  * bounds the number of concurrent requests so that we don't flood the
  * nameserver. Several algorithms require a full walk of the inflight
- * queue and so bounding its size keeps thing going nicly under huge
+ * queue and so bounding its size keeps thing going nicely under huge
  * (many thousands of requests) loads.
  *
  * If a nameserver looses too many requests it is considered down and we
@@ -237,9 +240,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#ifdef HAVE_ALLOCA_H
-#include <alloca.h>
-#endif
 #include <assert.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -282,7 +282,6 @@ typedef unsigned int uint;
 #define TYPE_CNAME     5
 #define TYPE_PTR      12
 #define TYPE_AAAA     28
-#define TYPE_A6       38
 
 #define CLASS_INET 1
 
@@ -839,7 +838,7 @@ transaction_id_pick(void) {
 }
 
 // choose a namesever to use. This function will try to ignore
-// nameservers which we think are down and load balence across the rest
+// nameservers which we think are down and load balance across the rest
 // by updating the server_head global each time.
 static struct nameserver *
 nameserver_pick(void) {
