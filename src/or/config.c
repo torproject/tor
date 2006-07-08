@@ -2189,7 +2189,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
 
   if (options->FascistFirewall && !options->ReachableAddresses) {
-    if (smartlist_len(options->FirewallPorts)) {
+    if (options->FirewallPorts && smartlist_len(options->FirewallPorts)) {
       /* We already have firewall ports set, so migrate them to
        * ReachableAddresses, which will set ReachableORAddresses and
        * ReachableDirAddresses if they aren't set explicitly. */
