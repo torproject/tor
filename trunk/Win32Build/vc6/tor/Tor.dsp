@@ -106,10 +106,6 @@ SOURCE=..\..\..\src\common\crypto.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\..\src\common\fakepoll.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\..\src\common\log.c
 # End Source File
 # Begin Source File
@@ -291,6 +287,10 @@ SOURCE=..\..\..\src\or\main.c
 # Begin Source File
 
 SOURCE=..\..\..\src\or\onion.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\src\or\policies.c
 # End Source File
 # Begin Source File
 
