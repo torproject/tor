@@ -181,7 +181,7 @@ router_append_to_journal(signed_descriptor_t *desc)
 
   tor_assert(len == strlen(body));
 
-  if (append_bytes_to_file(fname, body, len, 0)) {
+  if (append_bytes_to_file(fname, body, len, 1)) {
     log_warn(LD_FS, "Unable to store router descriptor");
     tor_free(fname);
     return -1;
@@ -271,7 +271,7 @@ router_rebuild_store(int force)
       smartlist_add(chunk_list, c);
     });
   }
-  if (write_chunks_to_file(fname, chunk_list, 0)<0) {
+  if (write_chunks_to_file(fname, chunk_list, 1)<0) {
     log_warn(LD_FS, "Error writing router store to disk.");
     goto done;
   }
@@ -308,7 +308,7 @@ router_rebuild_store(int force)
   tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
 
-  write_str_to_file(fname, "", 0);
+  write_str_to_file(fname, "", 1);
 
   r = 0;
   router_store_len = len;
@@ -350,7 +350,7 @@ router_reload_router_list(void)
 
   tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
-  contents = read_file_to_str(fname, 0);
+  contents = read_file_to_str(fname, 1);
   if (contents) {
     stat(fname, &st);
     router_load_routers_from_string(contents,
