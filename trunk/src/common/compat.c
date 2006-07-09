@@ -768,6 +768,7 @@ get_uname(void)
           { 3, 51, "Windows NT 3.51" },
           { -1, -1, NULL }
         };
+#ifdef VER_SUITE_BACKOFFICE
         static struct {
           unsigned int mask; const char *str;
         } win_mask_table[] = {
@@ -785,6 +786,7 @@ get_uname(void)
           { VER_SUITE_TERMINAL,           " {terminal services}" },
           { 0, NULL },
         };
+#endif
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
         if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
@@ -824,6 +826,7 @@ get_uname(void)
                       (int)info.dwMajorVersion,(int)info.dwMinorVersion,
                       info.szCSDVersion);
         }
+#ifdef VER_SUITE_BACKOFFICE
         if (info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
           strlcat(uname_result, " [domain controller]", sizeof(uname_result));
         } else if (info.wProductType == VER_NT_SERVER) {
@@ -843,6 +846,7 @@ get_uname(void)
           tor_snprintf(uname_result+len, sizeof(uname_result)-len,
                        " {0x%x}", info.wSuiteMask);
         }
+#endif
 #else
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
 #endif
