@@ -78,7 +78,7 @@ typedef struct cached_resolve_t {
 
 static void purge_expired_resolves(uint32_t now);
 static void dns_purge_resolve(cached_resolve_t *resolve);
-static void dns_found_answer(char *address, uint32_t addr, char outcome,
+static void dns_found_answer(const char *address, uint32_t addr, char outcome,
                              uint32_t ttl);
 static void send_resolved_cell(connection_t *conn, uint8_t answer_type);
 static int assign_to_dnsworker(connection_t *exitconn);
@@ -593,7 +593,7 @@ dns_purge_resolve(cached_resolve_t *resolve)
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  */
 static void
-dns_found_answer(char *address, uint32_t addr, char outcome, uint32_t ttl)
+dns_found_answer(const char *address, uint32_t addr, char outcome, uint32_t ttl)
 {
   pending_connection_t *pend;
   cached_resolve_t search;
@@ -610,6 +610,7 @@ dns_found_answer(char *address, uint32_t addr, char outcome, uint32_t ttl)
     resolve = tor_malloc_zero(sizeof(cached_resolve_t));
     resolve->state = (outcome == DNS_RESOLVE_SUCCEEDED) ?
       CACHE_STATE_VALID : CACHE_STATE_FAILED;
+    strlcpy(resolve->address, address, sizeof(resolve->address));
     resolve->addr = addr;
     resolve->expire = time(NULL) + dns_get_expiry_ttl(ttl);
     resolve->ttl = ttl;
