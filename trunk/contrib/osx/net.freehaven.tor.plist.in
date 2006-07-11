@@ -9,32 +9,21 @@
 	<string>/Library/Tor/tor</string>
 
 	<key>ProgramArguments</key>
-	<!-- The following array parameters should be set in the config file, not here -->
 	<array>
-	<string>--runasdaemon</string>
-	<string>1</string>
-	<string>--pidfile</string>
-	<string>/var/run/Tor.pid</string>
-	<string>--datadirectory</string>
-	<string>/Library/Tor/var/lib/tor</string>
-	<string>--log</string>
-	<string>"notice file /var/log/tor/tor.log"</string>
+	<string>tor</string>
 	</array>
 
 	<key>UserName</key>
 	<string>_tor</string>
 
 	<key>GroupName</key>
-	<string>_tor</string>
+	<string>daemon</string>
 
 	<key>OnDemand</key>
 	<false/>
 
 	<key>RunAtLoad</key>
 	<true/>
-
-	<key>RootDirectory</key>
-	<string>/Library/Tor/</string>
 
 	<key>ServiceDescription</key>
 	<string>Tor @VERSION@  http://tor.eff.org</string>
