@@ -8,6 +8,19 @@
 	<key>Program</key>
 	<string>/Library/Tor/tor</string>
 
+	<key>ProgramArguments</key>
+	<!-- The following array parameters should be set in the config file, not here -->
+	<array>
+	<string>--runasdaemon</string>
+	<string>1</string>
+	<string>--pidfile</string>
+	<string>/var/run/Tor.pid</string>
+	<string>--datadirectory</string>
+	<string>/Library/Tor/var/lib/tor</string>
+	<string>--log</string>
+	<string>"notice file /var/log/tor/tor.log"</string>
+	</array>
+
 	<key>UserName</key>
 	<string>_tor</string>
 
