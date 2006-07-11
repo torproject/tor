@@ -19,18 +19,82 @@ list.  -NM
 
 1. General operation
 
-* We build some circuits preemptively, and some on-demand.
-* We attach greedily, and expire after time.
+   Tor begins building circuits as soon as it has enough directory
+   information to do so (see section 5.1 of dir-spec.txt).  Some circuits are
+   built preemptively because we expect to need them later (for user
+   traffic), and some are build because of immediate need (for user traffic
+   that no current circuit can handle, for testing the network or our
+   availability, and so on).
+
+   When a client application creates a new stream (by opening a SOCKS
+   connection or launching a resolve request), we attach it to an appropriate
+   open (or in-progress) circuit if one exists, and launch a new circuit only
+   if no current circuit can handle the request.  We rotate circuits over
+   time to avoid some profiling attacks.
+
+   These processes are described in more detail below.
 
 1b. Types of circuits.
+
 * Stable / Ordinary
 * Internal / Exit
 
+1c. Terminology
+
+   A "path" is an ordered sequence of nodes, not yet built as a circuit.
+
+   A "clean" circuit is one that has not yet been used for any stream or
+   rendezvous traffic.
+
+   A "stable" node is one that we believe to have the 'Stable' flag set on
+   the basis of our current directory information.  A "stable" circuit is one
+   that consists entirely of "stable" nodes.
+
+   A "persistent" stream is one that we predict will require a long uptime.
+   Currently, Tor does this by examining the stream's target port, and
+   comparing it to a list of "long-lived" ports. (Default: 21, 22, 706, 1863,
+   5050, 5190, 5222, 5223, 6667, 8300, 8888.)
+
+   An exit node "supports" a stream if the stream's target IP is known, and
+   the stream's IP and target Port are allowed by the exit node's declared
+   exit policy.  A path "supports" a stream if:
+      * The last node in the path "supports" the stream, and
+      * If the stream is "persistent," all the nodes in the path are
+        "stable".
+
+   An exit node "might support" a stream if the stream's target IP is unknown
+   (because we haven't resolved it yet), and the exit node's declared exit
+   policy allows some IPs to exit at that port.  ???
+
 2. Building circuits
 
-* Preemptive building
-* On-demand building
-  * Cannibalizing circuits
+2.1. When we build.
+
+   When running as a client, Tor tries to maintain at least 3 clean circuits,
+   so that new streams can be handled quickly.  To increase the likelihood of
+   success, Tor tries to predict what exit nodes will be useful by choosing
+   from among nodes that support the ports we have used in the recent past.
+
+   If Tor needs to attach a stream that no current exit circuit can support,
+   it looks for an existing clean circuit to cannibalize.  If we find one,
+   we try to extend it another hop to an exit node that might support the
+   stream.  [Must be internal???]
+
+   If no circuit exists, or is currently being built, along a path that
+   might support a stream, we begin building a new circuit that might support
+   the stream.
+
+   
+
+2.2. Path selection
+
+   When we bui
+   
+
+2.3. Handling failure
+
+2.4. Tracking "predicted" ports
+
 * Choosing the path first, building second.
 * Choosing the length of the circuit.
 * Choosing entries, midpoints, exits.
@@ -45,7 +109,6 @@ list.  -NM
   * Including via the controller.
   * Timeouts and when Tor autoretries.
     * What stream-end-reasons are appropriate for retrying.
-
 
 4. Rendezvous circuits
 
@@ -341,4 +404,11 @@ more than just let users ask for certain entry nodes.
 
 
 
+============================================================
+Some stuff that worries me about entry guards. 2006 Jun, Nickm.
 
+1. It is unlikely for two users to have the same set of entry guards.
+
+2. Observing a user is sufficient to learn its entry guards.
+
+3. So, as we move around, we leak our 

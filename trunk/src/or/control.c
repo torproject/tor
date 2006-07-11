@@ -2735,6 +2735,7 @@ control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
       case OR_CONN_EVENT_CONNECTED: status = "CONNECTED"; break;
       case OR_CONN_EVENT_FAILED: status = "FAILED"; break;
       case OR_CONN_EVENT_CLOSED: status = "CLOSED"; break;
+      case OR_CONN_EVENT_NEW: status = "NEW"; break;
       default:
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
