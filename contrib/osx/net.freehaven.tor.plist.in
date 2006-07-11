@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>net.freehaven.tor</string>
+
+	<key>Program</key>
+	<string>/Library/Tor/tor</string>
+
+	<key>UserName</key>
+	<string>_tor</string>
+
+	<key>GroupName</key>
+	<string>_tor</string>
+
+	<key>OnDemand</key>
+	<false/>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<key>RootDirectory</key>
+	<string>/Library/Tor/</string>
+
+	<key>ServiceDescription</key>
+	<string>Tor @VERSION@  http://tor.eff.org</string>
+
+	<key>LowPriorityIO</key>
+	<true/>
+
+	<key>HardResourceLimits</key>
+	<dict>
+	<key>NumberOfFiles</key>
+	<integer>8192</integer>
+	</dict>
+</dict>
+</plist>
