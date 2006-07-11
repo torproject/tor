@@ -57,12 +57,15 @@ typedef struct pending_connection_t {
   struct pending_connection_t *next;
 } pending_connection_t;
 
+#define CACHED_RESOLVE_MAGIC 0x1234F00D
+
 /** A DNS request: possibly completed, possibly pending; cached_resolve
  * structs are stored at the OR side in a hash table, and as a linked
  * list from oldest to newest.
  */
 typedef struct cached_resolve_t {
   HT_ENTRY(cached_resolve_t) node;
+  uint32_t magic;
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
   uint32_t addr; /**< IPv4 addr for <b>address</b>. */
   char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve
@@ -87,6 +90,8 @@ static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static int spawn_enough_dnsworkers(void);
 #endif
+static void assert_cache_ok(void);
+static void assert_resolve_ok(cached_resolve_t *resolve);
 
 /** Hash table of cached_resolve objects. */
 static HT_HEAD(cache_map, cached_resolve_t) cache_root;
@@ -97,6 +102,7 @@ static INLINE int
 cached_resolves_eq(cached_resolve_t *a, cached_resolve_t *b)
 {
   /* make this smarter one day? */
+  assert_resolve_ok(a); // Not b; b may be just a search.
   return !strncmp(a->address, b->address, MAX_ADDRESSLEN);
 }
 
@@ -192,6 +198,7 @@ _free_cached_resolve(cached_resolve_t *r)
     r->pending_connections = victim->next;
     tor_free(victim);
   }
+  r->magic = 0xFF00FF00;
   tor_free(r);
 }
 
@@ -258,6 +265,7 @@ purge_expired_resolves(uint32_t now)
       newest_cached_resolve = NULL; /* then make sure the list's tail knows
                                      * that too */
     HT_REMOVE(cache_map, &cache_root, resolve);
+    resolve->magic = 0xF0BBF0BB;
     tor_free(resolve);
   }
 }
@@ -340,6 +348,8 @@ dns_resolve(connection_t *exitconn)
   assert_connection_ok(exitconn, 0);
   tor_assert(exitconn->s == -1);
 
+  assert_cache_ok();
+
   /* first check if exitconn->address is an IP. If so, we already
    * know the answer. */
   if (tor_inet_aton(exitconn->address, &in) != 0) {
@@ -398,6 +408,7 @@ dns_resolve(connection_t *exitconn)
   }
   /* not there, need to add it */
   resolve = tor_malloc_zero(sizeof(cached_resolve_t));
+  resolve->magic = CACHED_RESOLVE_MAGIC;
   resolve->state = CACHE_STATE_PENDING;
   resolve->expire = now + DEFAULT_DNS_TTL; /* this will get replaced. */
   strlcpy(resolve->address, exitconn->address, sizeof(resolve->address));
@@ -411,6 +422,7 @@ dns_resolve(connection_t *exitconn)
   insert_resolve(resolve);
   log_debug(LD_EXIT,"Assigning question %s to dnsworker.",
             escaped_safe_str(exitconn->address));
+  assert_cache_ok();
   return assign_to_dnsworker(exitconn);
 }
 
@@ -581,7 +593,7 @@ dns_purge_resolve(cached_resolve_t *resolve)
 
   /* remove resolve from the map */
   HT_REMOVE(cache_map, &cache_root, resolve);
-
+  resolve->magic = 0xAAAAAAAA;
   tor_free(resolve);
 }
 
@@ -593,13 +605,16 @@ dns_purge_resolve(cached_resolve_t *resolve)
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  */
 static void
-dns_found_answer(const char *address, uint32_t addr, char outcome, uint32_t ttl)
+dns_found_answer(const char *address, uint32_t addr, char outcome,
+                 uint32_t ttl)
 {
   pending_connection_t *pend;
   cached_resolve_t search;
   cached_resolve_t *resolve;
   connection_t *pendconn;
   circuit_t *circ;
+
+  assert_cache_ok();
 
   strlcpy(search.address, address, sizeof(search.address));
 
@@ -608,6 +623,7 @@ dns_found_answer(const char *address, uint32_t addr, char outcome, uint32_t ttl)
     log_info(LD_EXIT,"Resolved unasked address %s; caching anyway.",
              escaped_safe_str(address));
     resolve = tor_malloc_zero(sizeof(cached_resolve_t));
+    resolve->magic = CACHED_RESOLVE_MAGIC;
     resolve->state = (outcome == DNS_RESOLVE_SUCCEEDED) ?
       CACHE_STATE_VALID : CACHE_STATE_FAILED;
     strlcpy(resolve->address, address, sizeof(resolve->address));
@@ -695,6 +711,8 @@ dns_found_answer(const char *address, uint32_t addr, char outcome, uint32_t ttl)
   if (outcome == DNS_RESOLVE_FAILED_TRANSIENT) { /* remove from cache */
     dns_purge_resolve(resolve);
   }
+
+  assert_cache_ok();
 }
 
 #ifndef USE_EVENTDNS
@@ -1174,4 +1192,25 @@ assign_to_dnsworker(connection_t *exitconn)
   return r ? -1 : 0;
 }
 #endif /* USE_EVENTDNS */
+
+static void
+assert_resolve_ok(cached_resolve_t *resolve)
+{
+  tor_assert(resolve);
+  tor_assert(resolve->magic == CACHED_RESOLVE_MAGIC);
+  tor_assert(strlen(resolve->address) < MAX_ADDRESSLEN);
+  tor_assert(! resolve->next || resolve->next->magic == CACHED_RESOLVE_MAGIC);
+
+}
+
+static void
+assert_cache_ok(void)
+{
+  cached_resolve_t **resolve;
+  tor_assert(_cache_map_HT_REP_OK(&cache_root));
+
+  HT_FOREACH(resolve, cache_map, &cache_root) {
+    assert_resolve_ok(*resolve);
+  }
+}
 
