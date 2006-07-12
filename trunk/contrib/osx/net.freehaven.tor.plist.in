@@ -26,15 +26,50 @@
 	<true/>
 
 	<key>ServiceDescription</key>
-	<string>Tor @VERSION@  http://tor.eff.org</string>
+	<string>Tor @VERSION@ http://tor.eff.org</string>
 
 	<key>LowPriorityIO</key>
 	<true/>
 
+	<!--
 	<key>HardResourceLimits</key>
 	<dict>
-	<key>NumberOfFiles</key>
-	<integer>8192</integer>
+		<key>Core</key>
+		<integer>10000000000</integer>
+
+		<key>CPU</key>
+		<integer>10000000000</integer>
+
+		<key>Data</key>
+		<integer>10000000000</integer>
+
+		<key>FileSize</key>
+		<integer>10000000000</integer>
+
+		<key>MemoryLock</key>
+		<integer>10000000000</integer>
+
+		<key>NumberOfFiles</key>
+		<integer>8192</integer>
+
+		<key>NumberofProcesses</key>
+		<integer>150</integer>
+
+		<key>ResidentSetSize</key>
+		<integer>10000000000</integer>
+
+		<key>Stack</key>
+		<integer>10000000000</integer>
 	</dict>
+	-->
+	<key>Bonjour</key>
+	<false/>
+
+	<key>StandardOutPath</key>
+        <string>/var/log/tor/tor.log</string>
+        <key>StandardErrorPath</key>
+        <string>/var/log/tor/tor.log</string>
+        <key>Debug</key>
+        <true/>
 </dict>
 </plist>
