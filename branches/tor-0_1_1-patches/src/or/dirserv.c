@@ -1193,7 +1193,10 @@ static uint32_t guard_bandwidth = 0;
 static INLINE int
 real_uptime(routerinfo_t *router, time_t now)
 {
-  return router->uptime + (now - router->cache_info.published_on);
+  if (now < router->cache_info.published_on)
+    return router->uptime;
+  else
+    return router->uptime + (now - router->cache_info.published_on);
 }
 
 /** Return 1 if <b>router</b> is not suitable for these parameters, else 0.
