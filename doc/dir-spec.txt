@@ -183,8 +183,8 @@ $Id$
           "V2Dir" if the router implements this protocol.
 
       The "r" entry for each router must appear first and is required.  The
-      's" entry is optional.  Unrecognized flags and extra elements on the
-      "r" line must be ignored.
+      "s" entry is optional.  Unrecognized flags on the "s" line and extra
+      elements on the "r" line must be ignored.
 
    The signature section contains:
 
