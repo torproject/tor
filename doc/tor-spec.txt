@@ -856,7 +856,8 @@ The items' formats are as follows:
 
       A fingerprint (a HASH_LEN-byte of asn1 encoded public key, encoded
       in hex, with a single space after every 4 characters) for this router's
-      identity key.
+      identity key. A descriptor is considered invalid (and MUST be
+      rejected) if the fingerprint line does not match the public key.
 
       [We didn't start parsing this line until Tor 0.1.0.6-rc; it should
        be marked with "opt" until earlier versions of Tor are obsolete.]
@@ -943,6 +944,10 @@ line, they must appear in the "ports" lines.
 
 8.3. Directory format
 
+[Sections 8.3-8.5 describe the old version 1 directory format, which is
+used by Tor 0.0.9.x and 0.1.0.x. See dir-spec.txt for the new version
+2 format, used by 0.1.1.x and 0.1.2.x. -RD]
+
 A Directory begins with a "signed-directory" item, followed by one each of
 the following, in any order: "recommended-software", "published",
 "router-status", "dir-signing-key".  It may include any number of "opt"
@@ -1016,6 +1021,10 @@ If software encounters an unrecognized keyword in the directory header,
 it SHOULD reject the entire directory.
 
 8.4. Network-status descriptor
+
+[Sections 8.3-8.5 describe the old version 1 directory format, which is
+used by Tor 0.0.9.x and 0.1.0.x. See dir-spec.txt for the new version
+2 format, used by 0.1.1.x and 0.1.2.x. -RD]
 
 A "network-status" (a.k.a "running-routers") document is a truncated
 directory that contains only the current status of a list of nodes, not
