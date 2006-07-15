@@ -518,7 +518,7 @@ rend_service_introduce(circuit_t *circuit, const char *request,
     ptr=memchr(rp_nickname,0,nickname_field_len);
     if (!ptr || ptr == rp_nickname) {
       log_warn(LD_PROTOCOL,
-               "Couldn't find a null-padded nickname in INTRODUCE2 cell.");
+               "Couldn't find a nul-padded nickname in INTRODUCE2 cell.");
       return -1;
     }
     if ((version == 0 && !is_legal_nickname(rp_nickname)) ||
