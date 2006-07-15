@@ -1347,7 +1347,7 @@ generate_v2_networkstatus(void)
   int versioning = options->VersioningAuthoritativeDir;
   const char *contact;
 
-  if (resolve_my_address(options, &addr, &hostname)<0) {
+  if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
     log_warn(LD_NET, "Couldn't resolve my hostname");
     goto done;
   }
