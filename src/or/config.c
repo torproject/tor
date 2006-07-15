@@ -1583,8 +1583,8 @@ print_usage(void)
  * public IP address.
  */
 int
-resolve_my_address(or_options_t *options, uint32_t *addr_out,
-                   char **hostname_out)
+resolve_my_address(int warn_severity, or_options_t *options,
+                   uint32_t *addr_out, char **hostname_out)
 {
   struct in_addr in;
   struct hostent *rent;
@@ -1594,6 +1594,8 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
   char tmpbuf[INET_NTOA_BUF_LEN];
   static uint32_t old_addr=0;
   const char *address = options->Address;
+  int notice_severity = warn_severity <= LOG_NOTICE ?
+                          LOG_NOTICE : warn_severity;
 
   tor_assert(addr_out);
 
@@ -1604,13 +1606,13 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
     explicit_hostname = 0; /* it's implicit */
 
     if (gethostname(hostname, sizeof(hostname)) < 0) {
-      log_warn(LD_NET,"Error obtaining local hostname");
+      log_fn(warn_severity, LD_NET,"Error obtaining local hostname");
       return -1;
     }
     log_debug(LD_CONFIG,"Guessed local host name as '%s'",hostname);
   }
 
-  /* now we know hostname. resolve it and keep only the IP */
+  /* now we know hostname. resolve it and keep only the IP address */
 
   if (tor_inet_aton(hostname, &in) == 0) {
     /* then we have to resolve it */
@@ -1620,21 +1622,22 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
       uint32_t interface_ip;
 
       if (explicit_hostname) {
-        log_warn(LD_CONFIG,"Could not resolve local Address '%s'. Failing.",
-                 hostname);
+        log_fn(warn_severity, LD_CONFIG,
+               "Could not resolve local Address '%s'. Failing.", hostname);
         return -1;
       }
-      log_notice(LD_CONFIG, "Could not resolve guessed local hostname '%s'. "
-                            "Trying something else.", hostname);
+      log_fn(notice_severity, LD_CONFIG,
+             "Could not resolve guessed local hostname '%s'. "
+             "Trying something else.", hostname);
       if (get_interface_address(&interface_ip)) {
-        log_warn(LD_CONFIG, "Could not get local interface IP address. "
-                 "Failing.");
+        log_fn(warn_severity, LD_CONFIG,
+               "Could not get local interface IP address. Failing.");
         return -1;
       }
       in.s_addr = htonl(interface_ip);
       tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-      log_notice(LD_CONFIG, "Learned IP address '%s' for local interface."
-               " Using that.", tmpbuf);
+      log_fn(notice_severity, LD_CONFIG, "Learned IP address '%s' for "
+             "local interface. Using that.", tmpbuf);
       strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
     } else {
       tor_assert(rent->h_length == 4);
@@ -1645,24 +1648,26 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
         uint32_t interface_ip;
 
         tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-        log_notice(LD_CONFIG, "Guessed local hostname '%s' resolves to a "
-          "private IP address (%s).  Trying something else.", hostname,
-          tmpbuf);
+        log_fn(notice_severity, LD_CONFIG, "Guessed local hostname '%s' "
+               "resolves to a private IP address (%s).  Trying something "
+               "else.", hostname, tmpbuf);
 
         if (get_interface_address(&interface_ip)) {
-          log_warn(LD_CONFIG, "Could not get local interface IP address. "
-                              "Too bad.");
+          log_fn(warn_severity, LD_CONFIG,
+                 "Could not get local interface IP address. Too bad.");
         } else if (is_internal_IP(interface_ip, 0)) {
           struct in_addr in2;
           in2.s_addr = htonl(interface_ip);
           tor_inet_ntoa(&in2,tmpbuf,sizeof(tmpbuf));
-          log_notice(LD_CONFIG, "Interface IP '%s' is a private address "
-                                "too.  Ignoring.", tmpbuf);
+          log_fn(notice_severity, LD_CONFIG,
+                 "Interface IP address '%s' is a private address too. "
+                 "Ignoring.", tmpbuf);
         } else {
           in.s_addr = htonl(interface_ip);
           tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-          log_notice(LD_CONFIG, "Learned IP address '%s' for local interface."
-                                " Using that.", tmpbuf);
+          log_fn(notice_severity, LD_CONFIG,
+                 "Learned IP address '%s' for local interface."
+                 " Using that.", tmpbuf);
           strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
         }
       }
@@ -1676,18 +1681,18 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
     if (!options->DirServers) {
       /* if they are using the default dirservers, disallow internal IPs
        * always. */
-      log_warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. "
-               "Tor servers that use the default DirServers must have public "
-               "IP addresses.",
-               hostname, tmpbuf);
+      log_fn(warn_severity, LD_CONFIG,
+             "Address '%s' resolves to private IP address '%s'. "
+             "Tor servers that use the default DirServers must have public "
+             "IP addresses.", hostname, tmpbuf);
       return -1;
     }
     if (!explicit_ip) {
       /* even if they've set their own dirservers, require an explicit IP if
        * they're using an internal address. */
-      log_warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. Please "
-               "set the Address config option to be the IP you want to use.",
-               hostname, tmpbuf);
+      log_fn(warn_severity, LD_CONFIG, "Address '%s' resolves to private "
+             "IP address '%s'. Please set the Address config option to be "
+             "the IP address you want to use.", hostname, tmpbuf);
       return -1;
     }
   }
@@ -1695,7 +1700,9 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
   log_debug(LD_CONFIG, "Resolved Address to '%s'.", tmpbuf);
   *addr_out = ntohl(in.s_addr);
   if (old_addr && old_addr != *addr_out) {
-    log_notice(LD_NET, "Your IP seems to have changed. Updating.");
+    /* Leave this as a notice, regardless of the requested severity,
+     * at least until dynamic IP address support becomes bulletproof. */
+    log_notice(LD_NET, "Your IP address seems to have changed. Updating.");
     server_has_changed_ip();
   }
   old_addr = *addr_out;
@@ -2125,7 +2132,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (server_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
-    if (resolve_my_address(options, &tmp, NULL) < 0)
+    if (resolve_my_address(LOG_WARN, options, &tmp, NULL) < 0)
       REJECT("Failed to resolve/guess local address. See logs for details.");
   }
 

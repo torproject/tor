@@ -752,7 +752,7 @@ router_rebuild_descriptor(int force)
   if (desc_clean_since && !force)
     return 0;
 
-  if (resolve_my_address(options, &addr, NULL) < 0) {
+  if (resolve_my_address(LOG_WARN, options, &addr, NULL) < 0) {
     log_warn(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return -1;
   }
@@ -908,7 +908,7 @@ check_descriptor_ipaddress_changed(time_t now)
     return;
 
   prev = desc_routerinfo->addr;
-  if (resolve_my_address(options, &cur, NULL) < 0) {
+  if (resolve_my_address(LOG_WARN, options, &cur, NULL) < 0) {
     log_warn(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }

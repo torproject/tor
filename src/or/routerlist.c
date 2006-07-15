@@ -2645,7 +2645,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
     trusted_dir_servers = smartlist_create();
 
   if (!address) { /* The address is us; we should guess. */
-    if (resolve_my_address(get_options(), &a, &hostname) < 0) {
+    if (resolve_my_address(LOG_WARN, get_options(), &a, &hostname) < 0) {
       log_warn(LD_CONFIG,
                "Couldn't find a suitable address when adding ourself as a "
                "trusted directory server.");
