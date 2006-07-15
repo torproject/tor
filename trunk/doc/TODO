@@ -81,7 +81,29 @@ R   - remember the last time we saw one of our entry guards labelled with
       (bug 200)
     - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
 
+  - A more efficient dir protocol.
+    - Clients stop dumping old descriptors if the network-statuses
+      claim they're still valid.
+      - Later, servers will stop generating new descriptors simply
+        because 18 hours have passed.
+    - Authorities should fetch the network-statuses amongst each
+      other, consensus them, and advertise a communal network-status.
+      This is not so much for safety/complexity as it is to reduce
+      bandwidth requirements for Alice.
+      - How does this interact with our goal of being able to choose
+        your own dir authorities? I guess we're now assuming that all
+        dir authorities know all the other authorities in their "group"?
+    - Should we also look into a "delta since last network-status
+      checkpoint" scheme, to reduce overhead further?
+    - Extend the "r" line in network-status to give a set of buckets (say,
+      comma-separated) for that router.
+      - Buckets are deterministic based on IP address.
+      - Then clients can choose a bucket (or set of buckets) to
+        download and use.
+
   - Critical but minor bugs, backport candiates.
+    - If the client's clock is too far in the past, it will drop (or
+      just not try to get) descriptors, so it'll never build circuits.
 R   - Failed rend desc fetches sometimes don't get retried.
     - If we fail to connect via an exit enclave, (warn and) try again
       without demanding that exit node.
@@ -127,6 +149,8 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
 N - Exitlist should avoid outputting the same IP address twice.
 
 N - Write path-spec.txt
+  - Break the dir v1 stuff out of tor-spec.txt into dir-spec-v1.txt,
+    and change the new dir-spec.txt to dir-spec-v2.txt.
 
   - Packaging
     - Tell people about OSX Uninstaller
@@ -148,6 +172,12 @@ Topics to think about during 0.1.2.x development:
   - Figure out hidden services.
 
 Minor items for 0.1.2.x as time permits.
+  - We should ship with a list of stable dir mirrors -- they're not
+    trusted like the authorities, but they'll provide more robustness
+    and diversity for bootstrapping clients.
+  - Rate limit exit connections to a given destination -- this helps
+    us play nice with websites when Tor users want to crawl them; it
+    also introduces DoS opportunities.
   - The bw_accounting file should get merged into the state file.
   - Streamline how we define a guard node as 'up'.
   - Better installers and build processes.
