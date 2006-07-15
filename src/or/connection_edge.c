@@ -1919,14 +1919,14 @@ parse_extended_hostname(char *address)
     s = strrchr(address,'.');
     if (!s) return 0; /* no dot, thus normal */
     if (!strcmp(s+1,"exit")) {
-      *s = 0; /* null-terminate it */
+      *s = 0; /* nul-terminate it */
       return EXIT_HOSTNAME; /* .exit */
     }
     if (strcmp(s+1,"onion"))
       return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */
 
     /* so it is .onion */
-    *s = 0; /* null-terminate it */
+    *s = 0; /* nul-terminate it */
     if (strlcpy(query, address, REND_SERVICE_ID_LEN+1) >=
         REND_SERVICE_ID_LEN+1)
       goto failed;

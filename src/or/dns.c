@@ -941,7 +941,7 @@ dnsworker_main(void *data)
       crypto_thread_cleanup();
       spawn_exit();
     }
-    address[address_len] = 0; /* null terminate it */
+    address[address_len] = 0; /* nul terminate it */
 
     log_address = esc_for_log(safe_str(address));
     result = tor_lookup_hostname(address, &ip);

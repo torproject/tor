@@ -790,7 +790,7 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
   int v0 = STATE_IS_V0(conn->state);
 
   questions = smartlist_create();
-  (void) body_len; /* body is null-terminated; so we can ignore len. */
+  (void) body_len; /* body is nul-terminated; so we can ignore len. */
   if (v0) {
     smartlist_split_string(questions, body, "\n",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -1160,7 +1160,7 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
   char *r;
   size_t sz;
   int v0 = STATE_IS_V0(conn->state);
-  (void) len; /* body is null-terminated, so it's safe to ignore the length. */
+  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
 
   lines = smartlist_create();
   elts = smartlist_create();
@@ -1552,7 +1552,7 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   char *msg = NULL, *ans = NULL;
   size_t msg_len;
   int v0 = STATE_IS_V0(conn->state);
-  (void) len; /* body is null-terminated, so it's safe to ignore the length. */
+  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
 
   questions = smartlist_create();
   if (v0)
@@ -1814,7 +1814,7 @@ handle_control_setpurpose(connection_t *conn, int for_circuits,
   routerinfo_t *ri = NULL;
   uint8_t new_purpose;
   smartlist_t *args = smartlist_create();
-  (void) len; /* body is null-terminated, so it's safe to ignore the length. */
+  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(args)<2) {

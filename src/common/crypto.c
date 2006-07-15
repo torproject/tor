@@ -509,7 +509,7 @@ crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
   tor_assert(buf->length >= 0);
   *dest = tor_malloc(buf->length+1);
   memcpy(*dest, buf->data, buf->length);
-  (*dest)[buf->length] = 0; /* null terminate it */
+  (*dest)[buf->length] = 0; /* nul terminate it */
   *len = buf->length;
   BUF_MEM_free(buf);
 

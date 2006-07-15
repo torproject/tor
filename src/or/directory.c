@@ -590,7 +590,7 @@ directory_send_command(connection_t *conn, const char *platform,
  * "\%s [http[s]://]\%s HTTP/1..."
  * \endverbatim
  * If it's well-formed, strdup the second \%s into *<b>url</b>, and
- * null-terminate it. If the url doesn't start with "/tor/", rewrite it
+ * nul-terminate it. If the url doesn't start with "/tor/", rewrite it
  * so it does. Return 0.
  * Otherwise, return -1.
  */
