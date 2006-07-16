@@ -5,3 +5,4 @@ TorBundleInfo.plist
 TorDesc.plist
 TorInfo.plist
 TorStartupDesc.plist
+net.freehaven.tor.plist
