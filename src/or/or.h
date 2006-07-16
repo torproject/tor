@@ -603,15 +603,12 @@ struct connection_t {
   uint8_t state; /**< Current state of this connection. */
   uint8_t purpose; /**< Only used for DIR types currently. */
   unsigned wants_to_read:1; /**< Boolean: should we start reading again once
-                            * the bandwidth throttler allows it?
-                            */
+                            * the bandwidth throttler allows it? */
   unsigned wants_to_write:1; /**< Boolean: should we start writing again once
-                             * the bandwidth throttler allows reads?
-                             */
+                             * the bandwidth throttler allows reads? */
   unsigned hold_open_until_flushed:1; /**< Despite this connection's being
                                       * marked for close, do we flush it
-                                      * before closing it?
-                                      */
+                                      * before closing it? */
   unsigned has_sent_end:1; /**< For debugging; only used on edge connections.
                          * Set once we've set the stream end,
                          * and check in circuit_about_to_close_connection(). */
@@ -623,8 +620,8 @@ struct connection_t {
 
   int s; /**< Our socket; -1 if this connection is closed. */
   int poll_index; /* XXXX rename. */
-  struct event *read_event; /**< libevent event structure. */
-  struct event *write_event; /**< libevent event structure. */
+  struct event *read_event; /**< Libevent event structure. */
+  struct event *write_event; /**< Libevent event structure. */
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
   int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn? */
   time_t timestamp_lastread; /**< When was the last time poll() said we could
@@ -646,13 +643,11 @@ struct connection_t {
   uint16_t marked_for_close; /**< Should we close this conn on the next
                               * iteration of the main loop? (If true, holds
                               * the line number where this connection was
-                              * marked.)
-                              */
+                              * marked.) */
   const char *marked_for_close_file; /**< For debugging: in which file were
                                       * we marked for close? */
   char *address; /**< FQDN (or IP) of the guy on the other end.
-                  * strdup into this, because free_connection frees it.
-                  */
+                  * strdup into this, because free_connection frees it. */
   uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
                          * connection.  Exit connections only. */
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
@@ -670,8 +665,7 @@ struct connection_t {
   int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
   int receiver_bucket; /**< When this hits 0, stop receiving. Every second we
                         * add 'bandwidthrate' to this, capping it at
-                        * bandwidthburst. (OPEN ORs only)
-                        */
+                        * bandwidthburst. (OPEN ORs only) */
   circ_id_type_t circ_id_type; /**< When we send CREATE cells along this
                                 * connection, which half of the space should
                                 * we use? */
@@ -696,7 +690,7 @@ struct connection_t {
 
 /* Used only by Dir connections */
   char *requested_resource; /**< Which 'resource' did we ask the directory
-                             * for?*/
+                             * for? */
 /* Used only for server sides of some dir connections. */
   enum {
     DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
