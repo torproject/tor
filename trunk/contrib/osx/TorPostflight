@@ -19,6 +19,25 @@ if [ "$TARGET" == "//Library/Tor" ]; then
 	TARGET=/Library/Tor
 fi
 
+## Determine OSX Version
+# map version to name
+if [ -x /usr/bin/sw_vers ]; then
+# This is poor, yet functional.  We don't care about the 3rd number in
+# the OS version
+  OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
+  case "$OSVER" in
+ 	"10.5") OS="leopard";;
+	"10.4") OS="tiger";;
+	"10.3") OS="panther";;
+	"10.2") OS="jaguar";;
+	"10.1") OS="puma";;
+	"10.0") OS="cheetah";;
+	*) OS="unknown";;
+  esac
+else
+  OS="unknown"
+fi
+
 # Create user $TORUSER in group daemon.  If it's already there, great.
 $ADDSYSUSER $TORUSER "Tor System user" $TORDIR
 
@@ -88,6 +107,7 @@ if [ -f $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.app.tar.gz ]; then
    cd $TARGET && tar zxf Tor_Uninstaller.app.tar.gz 
    chmod -R 755 $TARGET/Tor_Uninstaller.app
    chown -R _tor:_tor Tor_Uninstaller.app
+   rm $TARGET/Tor_Uninstaller.app.tar.gz
 fi
 
 if [ -f $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh ]; then
@@ -97,4 +117,15 @@ fi
 
 if [ -f $PACKAGE_PATH/Contents/Resources/package_list.txt ]; then
    cp $PACKAGE_PATH/Contents/Resources/package_list.txt $TARGET/package_list.txt
+fi
+
+if [ $OS = "tiger" ]; then
+  if [ -f $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist ]; then
+     cp $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist /System/Library/LaunchDaemons/net.freehaven.tor.plist
+  fi
+else
+  if [ -d /Library/StartupItems/Tor ]; then
+    rm -f /Library/StartupItems/Tor/Tor.loc
+    echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
+  fi
 fi

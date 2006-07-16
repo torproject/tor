@@ -82,6 +82,9 @@ cp contrib/osx/Tor_Uninstaller.app.tar.gz $BUILD_DIR/tor_resources/Tor_Uninstall
 cp contrib/osx/uninstall_tor_bundle.sh $BUILD_DIR/tor_resources/uninstall_tor_bundle.sh
 cp contrib/osx/package_list.txt $BUILD_DIR/tor_resources/package_list.txt
 cp contrib/osx/tor_logo.gif $BUILD_DIR/tor_resources/background.gif
+if [ $OS = "tiger" OR $OS = "leopard" ]; then
+cp contrib/osx/net.freehaven.tor.plist $BUILD_DIR/tor_resources/net.freehaven.tor.plist
+fi
 cat <<EOF > $BUILD_DIR/tor_resources/Welcome.txt
 Tor: an anonymous Internet communication system
 
@@ -130,17 +133,22 @@ $PACKAGEMAKER -build                      \
     -d contrib/osx/PrivoxyConfDesc.plist
 
 ### Make Startup Script package
+# If Tiger or later, use launchd.  Otherwise, use StartupItems
 
-mkdir -p $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
-cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
+if [ $OS = "tiger" ]; then
+  cp contrib/osx/net.freehaven.tor.plist $BUILD_DIR/tor_resources/net.freehaven.tor.plist
+else
+  mkdir -p $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
+  cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
    $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 
-find $BUILD_DIR/torstartup_packageroot -print0 | sudo xargs -0 chown root:wheel
-$PACKAGEMAKER -build                     \
-    -p $BUILD_DIR/output/torstartup.pkg  \
-    -f $BUILD_DIR/torstartup_packageroot \
-    -i contrib/osx/TorStartupInfo.plist  \
-    -d contrib/osx/TorStartupDesc.plist
+  find $BUILD_DIR/torstartup_packageroot -print0 | sudo xargs -0 chown root:wheel
+  $PACKAGEMAKER -build                     \
+      -p $BUILD_DIR/output/torstartup.pkg  \
+      -f $BUILD_DIR/torstartup_packageroot \
+      -i contrib/osx/TorStartupInfo.plist  \
+      -d contrib/osx/TorStartupDesc.plist
+fi
 
 ### Assemble the metapackage.  Packagemaker won't buld metapackages from
 # the command line, so we need to do it by hand.

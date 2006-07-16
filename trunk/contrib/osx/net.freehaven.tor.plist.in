@@ -31,7 +31,6 @@
 	<key>LowPriorityIO</key>
 	<true/>
 
-	<!--
 	<key>HardResourceLimits</key>
 	<dict>
 		<key>Core</key>
@@ -61,7 +60,7 @@
 		<key>Stack</key>
 		<integer>10000000000</integer>
 	</dict>
-	-->
+
 	<key>Bonjour</key>
 	<false/>
 
