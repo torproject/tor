@@ -897,7 +897,7 @@ check_descriptor_bandwidth_changed(time_t now)
 }
 
 static void
-log_addr_has_changed(uint32_t prev, uint32_t cur)
+log_addr_has_changed(int severity, uint32_t prev, uint32_t cur)
 {
   char addrbuf_prev[INET_NTOA_BUF_LEN];
   char addrbuf_cur[INET_NTOA_BUF_LEN];
@@ -911,10 +911,10 @@ log_addr_has_changed(uint32_t prev, uint32_t cur)
   tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
 
   if (prev)
-    log_info(LD_GENERAL,
-             "Our IP Address has changed from %s to %s; "
-             "rebuilding descriptor.",
-             addrbuf_prev, addrbuf_cur);
+    log_fn(severity, LD_GENERAL,
+           "Our IP Address has changed from %s to %s; "
+           "rebuilding descriptor.",
+           addrbuf_prev, addrbuf_cur);
   else
     log_notice(LD_GENERAL,
              "Guessed our IP address as %s.",
@@ -941,7 +941,7 @@ check_descriptor_ipaddress_changed(time_t now)
   }
 
   if (prev != cur) {
-    log_addr_has_changed(prev, cur);
+    log_addr_has_changed(LOG_INFO, prev, cur);
     mark_my_descriptor_dirty();
     /* the above call is probably redundant, since resolve_my_address()
      * probably already noticed and marked it dirty. */
@@ -973,7 +973,7 @@ router_new_address_suggestion(const char *suggestion)
   }
 
   if (last_guessed_ip != addr) {
-    log_addr_has_changed(last_guessed_ip, addr);
+    log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr);
     server_has_changed_ip();
     last_guessed_ip = addr; /* router_rebuild_descriptor() will fetch it */
   }
