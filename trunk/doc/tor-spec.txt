@@ -748,9 +748,8 @@ when do we rotate which keys (tls, link, etc)?
 
          Version                 [1 byte]
          Timestamp               [4 bytes]
-         Number of addresses     [1 byte]
-         Addresses               [variable]
-         others?
+         Server-side address     [variable]
+         Client-side address     [variable]
 
    Version is the "link version", and dictates what types and formats
    of cells can be sent/received. It should be 1. A Tor connection is
@@ -760,12 +759,15 @@ when do we rotate which keys (tls, link, etc)?
    Timestamp is the OR's current Unix time (GMT).
 
    Each address contains Type/Length/Value as used in Section 5.4.
-   This section lists all addresses that the OR has published and is
-   listening to now -- we include them to block a man-in-the-middle
+   The first address is the one that the OR has published and is
+   listening to now -- we include it to block a man-in-the-middle
    attack on TLS that lets an attacker bounce traffic through his own
    computers to enable timing and packet-counting attacks.
    [Do we want to provide just one address? Do we want to be more
     general by accepting netmasks or something? -RD]
+   The second address is the one that the client OP or OR has used to
+   connect to the server -- it can be used to learn what your IP address
+   is if you have no other hints.
 
    If we receive a HELLO cell with a version we do not recognize, we drop
    it. If we receive a HELLO cell with a version that is older than the
