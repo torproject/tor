@@ -691,6 +691,7 @@ struct connection_t {
 /* Used only by Dir connections */
   char *requested_resource; /**< Which 'resource' did we ask the directory
                              * for? */
+  unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
 /* Used only for server sides of some dir connections. */
   enum {
     DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
@@ -2274,6 +2275,7 @@ void mark_my_descriptor_dirty_if_older_than(time_t when);
 void mark_my_descriptor_dirty(void);
 void check_descriptor_bandwidth_changed(time_t now);
 void check_descriptor_ipaddress_changed(time_t now);
+void router_new_address_suggestion(const char *suggestion);
 int router_compare_to_my_exit_policy(connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);

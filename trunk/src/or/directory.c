@@ -58,6 +58,8 @@ static void note_request(const char *key, size_t bytes);
  * before deciding that one of us has the wrong time? */
 #define ALLOW_DIRECTORY_TIME_SKEW (30*60)
 
+#define X_ADDRESS_HEADER "X-Your-Address-Is: "
+
 /********* END VARIABLES ************/
 
 /** Return true iff the directory purpose 'purpose' must use an
@@ -386,6 +388,7 @@ directory_initiate_command(const char *address, uint32_t addr,
 
   /* give it an initial state */
   conn->state = DIR_CONN_STATE_CONNECTING;
+  conn->dirconn_direct = (private_connection == 0);
 
   if (!private_connection) {
     /* then we want to connect directly */
@@ -658,9 +661,8 @@ http_get_header(const char *headers, const char *which)
 }
 
 /** If <b>headers</b> indicates that a proxy was involved, then rewrite
- * <b>conn</b>-\>address to describe our best guess of the addresses
- * involved in this HTTP request. The format is either "1.2.3.4" or
- * "1.2.3.4 (forwarded for 5.6.7.8)". */
+ * <b>conn</b>-\>address to describe our best guess of the address that
+ * originated this HTTP request. */
 static void
 http_set_address_origin(const char *headers, connection_t *conn)
 {
@@ -670,13 +672,9 @@ http_set_address_origin(const char *headers, connection_t *conn)
   if (!fwd)
     fwd = http_get_header(headers, "X-Forwarded-For: ");
   if (fwd) {
-    size_t len = strlen(fwd)+strlen(conn->address)+32;
-    char *result = tor_malloc(len);
-    tor_snprintf(result, len, "%s (forwarded for %s)", conn->address,
-                 escaped(fwd));
-    tor_free(fwd);
     tor_free(conn->address);
-    conn->address = result;
+    conn->address = tor_strdup(escaped(fwd));
+    tor_free(fwd);
   }
 }
 
@@ -850,6 +848,15 @@ connection_dir_client_reached_eof(connection_t *conn)
   log_debug(LD_DIR,
             "Received response from directory server '%s:%d': %d %s",
             conn->address, conn->port, status_code, escaped(reason));
+
+  /* now check if it's got any hints for us about our IP address. */
+  if (server_mode(get_options())) {
+    char *guess = http_get_header(headers, X_ADDRESS_HEADER);
+    if (guess) {
+      router_new_address_suggestion(guess);
+      tor_free(guess);
+    }
+  }
 
   if (date_header > 0) {
     now = time(NULL);
@@ -1264,7 +1271,7 @@ write_http_response_header(connection_t *conn, ssize_t length,
   cp = tmp;
   tor_snprintf(cp, sizeof(tmp),
                "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n"
-               "X-Your-Address-Is: %s\r\n",
+               X_ADDRESS_HEADER "%s\r\n",
                date, type, conn->address);
   cp += strlen(tmp);
   if (encoding) {

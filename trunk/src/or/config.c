@@ -2129,7 +2129,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->PublishServerDescriptor = 0;
   }
 
-  if (server_mode(options)) {
+  if (authdir_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
     if (resolve_my_address(LOG_WARN, options, &tmp, NULL) < 0)
