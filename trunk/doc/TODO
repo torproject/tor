@@ -18,6 +18,9 @@ P       - phobos claims
       by default, if it works?"
 
 Items for 0.1.2.x:
+  - We should ship with a list of stable dir mirrors -- they're not
+    trusted like the authorities, but they'll provide more robustness
+    and diversity for bootstrapping clients.
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
     - Reduce resource load
@@ -137,14 +140,8 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
     the IP it believes it is using. Use this to block dvorak's attack.
     Also, this is a fine time to say what time you think it is.
     o Verify that a new cell type is okay with deployed codebase
-    - Specify
+    . Specify HELLO cells
     - Implement
-
-  - Directory system improvements
-    - config option to publish what ports you listen on, beyond
-      ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
-      - Parse this.
-      - Relay this in networkstatus.
 
 N - Exitlist should avoid outputting the same IP address twice.
 
@@ -172,9 +169,6 @@ Topics to think about during 0.1.2.x development:
   - Figure out hidden services.
 
 Minor items for 0.1.2.x as time permits.
-  - We should ship with a list of stable dir mirrors -- they're not
-    trusted like the authorities, but they'll provide more robustness
-    and diversity for bootstrapping clients.
   - Rate limit exit connections to a given destination -- this helps
     us play nice with websites when Tor users want to crawl them; it
     also introduces DoS opportunities.
@@ -237,6 +231,11 @@ Minor items for 0.1.2.x as time permits.
       - It would be nice to request address lookups from the controller
         without using SOCKS.
       - Make everything work with hidden services
+  - Directory system improvements
+    - config option to publish what ports you listen on, beyond
+      ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
+      - Parse this.
+      - Relay this in networkstatus.
 
 Future version:
   . Update the hidden service stuff for the new dir approach.
