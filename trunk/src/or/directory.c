@@ -1501,6 +1501,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
     // note_request(request_type,dlen);
+    write_http_response_header(conn, -1,
+                   deflated?"application/octet_stream":"text/plain",
+                   deflated?"deflate":NULL);
 
     conn->fingerprint_stack = dir_fps;
     if (! deflated)
