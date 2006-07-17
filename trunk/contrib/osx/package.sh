@@ -82,6 +82,7 @@ cp contrib/osx/Tor_Uninstaller.app.tar.gz $BUILD_DIR/tor_resources/Tor_Uninstall
 cp contrib/osx/uninstall_tor_bundle.sh $BUILD_DIR/tor_resources/uninstall_tor_bundle.sh
 cp contrib/osx/package_list.txt $BUILD_DIR/tor_resources/package_list.txt
 cp contrib/osx/tor_logo.gif $BUILD_DIR/tor_resources/background.gif
+cp contrib/osx/net.freehaven.tor.plist $BUILD_DIR/tor_resources/net.freehaven.tor.plist
 cat <<EOF > $BUILD_DIR/tor_resources/Welcome.txt
 Tor: an anonymous Internet communication system
 
