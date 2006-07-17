@@ -181,7 +181,8 @@ circuit_rep_hist_note_result(circuit_t *circ)
   }
   if (server_mode(get_options())) {
     routerinfo_t *me = router_get_my_routerinfo();
-    tor_assert(me);
+    if (!me)
+      return;
     prev_digest = me->cache_info.identity_digest;
   }
   do {
