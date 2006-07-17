@@ -751,6 +751,10 @@ router_rebuild_descriptor(int force)
     if (router_guess_address_from_dir_headers(&addr) < 0) {
       log_info(LD_CONFIG, "No hints from directory headers either. "
                "Will try again later.");
+      /* Stop trying to rebuild our descriptor every second. We'll
+       * learn that it's time to try again when server_has_changed_ip()
+       * marks it dirty. */
+      desc_clean_since = time(NULL);
       return -1;
     }
   }
