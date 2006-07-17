@@ -302,11 +302,14 @@ when do we rotate which keys (tls, link, etc)?
    and server MUST verify that the received g^x or g^y value is not degenerate;
    that is, it must be strictly greater than 1 and strictly less than p-1
    where p is the DH modulus.  Implementations MUST NOT complete a handshake
-   with degenerate keys.  Implementations MAY discard other "weak" g^x values.
+   with degenerate keys.  Implementations MUST NOT discard other "weak"
+   g^x values.
 
-   (Discarding degenerate keys is critical for security; if bad keys are not
-   discarded, an attacker can substitute the server's CREATED cell's g^y with
-   0 or 1, thus creating a known g^xy and impersonating the server.)
+   (Discarding degenerate keys is critical for security; if bad keys
+   are not discarded, an attacker can substitute the server's CREATED
+   cell's g^y with 0 or 1, thus creating a known g^xy and impersonating
+   the server. Discarding other keys may allow attacks to learn bits of
+   the private key.)
 
    (The mainline Tor implementation, in the 0.1.1.x-alpha series, discarded
    all g^x values less than 2^24, greater than p-2^24, or having more than
