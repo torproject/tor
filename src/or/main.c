@@ -731,7 +731,7 @@ run_scheduled_events(time_t now)
     rotate_onion_key();
     cpuworkers_rotate();
     if (router_rebuild_descriptor(1)<0) {
-      log_warn(LD_BUG, "Couldn't rebuild router descriptor");
+      log_info(LD_CONFIG, "Couldn't rebuild router descriptor");
     }
     if (advertised_server_mode())
       router_upload_dir_desc_to_dirservers(0);

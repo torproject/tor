@@ -232,7 +232,8 @@ init_key_from_file(const char *fname)
 }
 
 /** Initialize all OR private keys, and the TLS context, as necessary.
- * On OPs, this only initializes the tls context.
+ * On OPs, this only initializes the tls context. Return 0 on success,
+ * or -1 if Tor should die.
  */
 int
 init_keys(void)
@@ -310,15 +311,15 @@ init_keys(void)
   /* 4. Build our router descriptor. */
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
-  if (!mydesc) {
-    log_err(LD_GENERAL,"Error initializing descriptor.");
-    return -1;
-  }
   if (authdir_mode(options)) {
     const char *m;
     /* We need to add our own fingerprint so it gets recognized. */
     if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
       log_err(LD_GENERAL,"Error adding own fingerprint to approved set");
+      return -1;
+    }
+    if (!mydesc) {
+      log_err(LD_GENERAL,"Error initializing descriptor.");
       return -1;
     }
     if (dirserv_add_descriptor(mydesc, &m) < 0) {
@@ -328,13 +329,6 @@ init_keys(void)
     }
   }
 
-#if 0
-  tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", datadir);
-  log_info(LD_GENERAL,"Dumping descriptor to \"%s\"...",keydir);
-  if (write_str_to_file(keydir, mydesc,0)) {
-    return -1;
-  }
-#endif
   /* 5. Dump fingerprint to 'fingerprint' */
   tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   log_info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
@@ -447,11 +441,8 @@ void
 consider_testing_reachability(void)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  if (!me) {
-    log_warn(LD_BUG,
-             "Bug: router_get_my_routerinfo() did not find my routerinfo?");
+  if (!me)
     return;
-  }
 
   if (!check_whether_orport_reachable()) {
     log_info(LD_CIRC, "Testing reachability of my ORPort: %s:%d.",
@@ -644,7 +635,7 @@ router_upload_dir_desc_to_dirservers(int force)
 
   s = router_get_my_descriptor();
   if (!s) {
-    log_warn(LD_GENERAL, "No descriptor; skipping upload");
+    log_info(LD_GENERAL, "No descriptor; skipping upload");
     return;
   }
   if (!get_options()->PublishServerDescriptor)
