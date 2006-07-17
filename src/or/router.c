@@ -736,9 +736,11 @@ router_get_my_descriptor(void)
 /*DOCDOC*/
 static smartlist_t *warned_nonexistent_family = NULL;
 
+static int router_guess_address_from_dir_headers(uint32_t *guess);
+
 /** If <b>force</b> is true, or our descriptor is out-of-date, rebuild
  * a fresh routerinfo and signed server descriptor for this OR.
- * Return 0 on success, -1 on error.
+ * Return 0 on success, -1 on temporary error.
  */
 int
 router_rebuild_descriptor(int force)
@@ -752,9 +754,14 @@ router_rebuild_descriptor(int force)
   if (desc_clean_since && !force)
     return 0;
 
-  if (resolve_my_address(LOG_WARN, options, &addr, NULL) < 0) {
-    log_warn(LD_CONFIG,"options->Address didn't resolve into an IP.");
-    return -1;
+  if (resolve_my_address(LOG_INFO, options, &addr, NULL) < 0) {
+    log_info(LD_CONFIG, "Could not determine our address locally. "
+             "Checking if directory headers provide any hints.");
+    if (router_guess_address_from_dir_headers(&addr) < 0) {
+      log_info(LD_CONFIG, "No hints from directory headers either. "
+               "Will try again later.");
+      return -1;
+    }
   }
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
@@ -894,6 +901,26 @@ check_descriptor_bandwidth_changed(time_t now)
   }
 }
 
+static void
+log_addr_has_changed(uint32_t prev, uint32_t cur)
+{
+  char addrbuf_prev[INET_NTOA_BUF_LEN];
+  char addrbuf_cur[INET_NTOA_BUF_LEN];
+  struct in_addr in_prev;
+  struct in_addr in_cur;
+
+  in_prev.s_addr = htonl(prev);
+  tor_inet_ntoa(&in_prev, addrbuf_prev, sizeof(addrbuf_prev));
+
+  in_cur.s_addr = htonl(cur);
+  tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
+
+  log_info(LD_GENERAL,
+           "Our IP Address has changed from %s to %s; "
+           "rebuilding descriptor.",
+           addrbuf_prev, addrbuf_cur);
+}
+
 /** Check whether our own address as defined by the Address configuration
  * has changed. This is for routers that get their address from a service
  * like dyndns. If our address has changed, mark our descriptor dirty. */
@@ -908,29 +935,62 @@ check_descriptor_ipaddress_changed(time_t now)
     return;
 
   prev = desc_routerinfo->addr;
-  if (resolve_my_address(LOG_WARN, options, &cur, NULL) < 0) {
-    log_warn(LD_CONFIG,"options->Address didn't resolve into an IP.");
+  if (resolve_my_address(LOG_INFO, options, &cur, NULL) < 0) {
+    log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }
 
   if (prev != cur) {
-    char addrbuf_prev[INET_NTOA_BUF_LEN];
-    char addrbuf_cur[INET_NTOA_BUF_LEN];
-    struct in_addr in_prev;
-    struct in_addr in_cur;
-
-    in_prev.s_addr = htonl(prev);
-    tor_inet_ntoa(&in_prev, addrbuf_prev, sizeof(addrbuf_prev));
-
-    in_cur.s_addr = htonl(cur);
-    tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
-
-    log_info(LD_GENERAL,
-             "Our IP Address has changed from %s to %s; "
-             "rebuilding descriptor.",
-             addrbuf_prev, addrbuf_cur);
+    log_addr_has_changed(prev, cur);
     mark_my_descriptor_dirty();
+    /* the above call is probably redundant, since resolve_my_address()
+     * probably already noticed and marked it dirty. */
   }
+}
+
+static uint32_t last_guessed_ip = 0;
+
+/** A directory authority told us our IP address is <b>suggestion</b>.
+ * If this address is different from the one we think we are now, and
+ * if our computer doesn't actually know its IP address, then switch. */
+void
+router_new_address_suggestion(const char *suggestion)
+{
+  uint32_t addr, cur;
+  struct in_addr in;
+
+  /* first, learn what the IP address actually is */
+  if (!tor_inet_aton(suggestion, &in)) {
+    log_debug(LD_DIR, "Malformed X-Your-Address-Is header. Ignoring.");
+    return;
+  }
+  addr = ntohl(in.s_addr);
+
+  if (resolve_my_address(LOG_INFO, get_options(), &cur, NULL) >= 0) {
+    /* We're all set -- we already know our address. Great. */
+    last_guessed_ip = cur; /* store it in case we need it later */
+    return;
+  }
+
+  if (last_guessed_ip != addr) {
+    log_addr_has_changed(last_guessed_ip, addr);
+    server_has_changed_ip();
+    last_guessed_ip = addr; /* router_rebuild_descriptor() will fetch it */
+  }
+}
+
+/** We failed to resolve our address locally, but we'd like to build
+ * a descriptor and publish / test reachability. If we have a guess
+ * about our address based on directory headers, answer it and return
+ * 0; else return -1. */
+static int
+router_guess_address_from_dir_headers(uint32_t *guess)
+{
+  if (last_guessed_ip) {
+    *guess = last_guessed_ip;
+    return 0;
+  }
+  return -1;
 }
 
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
