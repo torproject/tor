@@ -38,7 +38,7 @@ when do we rotate which keys (tls, link, etc)?
 0.2. Security parameters
 
    Tor uses a stream cipher, a public-key cipher, the Diffie-Hellman
-   protocol, and and a hash function.
+   protocol, and a hash function.
 
    KEY_LEN -- the length of the stream cipher's key, in bytes.
 
