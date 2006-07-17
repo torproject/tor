@@ -910,10 +910,15 @@ log_addr_has_changed(uint32_t prev, uint32_t cur)
   in_cur.s_addr = htonl(cur);
   tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
 
-  log_info(LD_GENERAL,
-           "Our IP Address has changed from %s to %s; "
-           "rebuilding descriptor.",
-           addrbuf_prev, addrbuf_cur);
+  if (prev)
+    log_info(LD_GENERAL,
+             "Our IP Address has changed from %s to %s; "
+             "rebuilding descriptor.",
+             addrbuf_prev, addrbuf_cur);
+  else
+    log_notice(LD_GENERAL,
+             "Guessed our IP address as %s.",
+             addrbuf_cur);
 }
 
 /** Check whether our own address as defined by the Address configuration
