@@ -76,6 +76,19 @@
 #endif /* ifndef MAVE_MACRO__func__ */
 #endif /* if not windows */
 
+#if defined(_MSC_VER) && (_MSC_VER < 1300)
+/* MSVC versions before 7 apparently don't believe that you can cast uint64_t
+ * to double and really mean it. */
+extern inline double U64_TO_DBL(uint64_t x) {
+  int64_t i = (int64_t) x;
+  return (i < 0) ? ((double) INT64_MAX) : (double) i;
+}
+#define DBL_TO_U64(x) ((uint64_t)(int64_t) (x))
+#else
+#define U64_TO_DBL(x) ((double) (x))
+#define DBL_TO_U64(x) ((uint64_t) (x))
+#endif
+
 /* ===== String compatibility */
 #ifdef MS_WINDOWS
 /* Windows names string functions differently from most other platforms. */

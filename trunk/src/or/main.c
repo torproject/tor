@@ -1359,11 +1359,11 @@ dumpstats(int severity)
       U64_PRINTF_ARG(stats_n_destroy_cells_processed));
   if (stats_n_data_cells_packaged)
     log(severity,LD_NET,"Average packaged cell fullness: %2.3f%%",
-        100*(((double)stats_n_data_bytes_packaged) /
+        100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
              (stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
   if (stats_n_data_cells_received)
     log(severity,LD_NET,"Average delivered cell fullness: %2.3f%%",
-        100*(((double)stats_n_data_bytes_received) /
+        100*(U64_TO_DBL(stats_n_data_bytes_received) /
              (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
   if (now - time_of_process_start >= 0)
