@@ -108,7 +108,7 @@ R   - remember the last time we saw one of our entry guards labelled with
     - If the client's clock is too far in the past, it will drop (or
       just not try to get) descriptors, so it'll never build circuits.
 R   - Failed rend desc fetches sometimes don't get retried.
-    - If we fail to connect via an exit enclave, (warn and) try again
+    o If we fail to connect via an exit enclave, (warn and) try again
       without demanding that exit node.
 R   - non-v1 authorities should not accept rend descs.
     - We need a separate list of "hidserv authorities" if we want to

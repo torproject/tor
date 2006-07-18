@@ -696,11 +696,21 @@ connection_edge_process_end_not_open(
         /* rewrite it to an IP if we learned one. */
         addressmap_rewrite(conn->socks_request->address,
                            sizeof(conn->socks_request->address));
+        if (conn->chosen_exit_optional) { /* stop wanting a specific exit */
+          conn->chosen_exit_optional = 0;
+          tor_free(conn->chosen_exit_name);
+        }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
         /* else, conn will get closed below */
         break;
+      case END_STREAM_REASON_CONNECTREFUSED:
+        if (!conn->chosen_exit_optional)
+          break; /* break means it'll close, below */
+        /* Else fall through: expire this circuit, clear the
+         * chosen_exit_name field, and try again. */
       case END_STREAM_REASON_RESOLVEFAILED:
+      case END_STREAM_REASON_TIMEOUT:
       case END_STREAM_REASON_MISC:
         if (client_dns_incr_failures(conn->socks_request->address)
             < MAX_RESOLVE_FAILURES) {
@@ -709,6 +719,10 @@ connection_edge_process_end_not_open(
           tor_assert(circ->timestamp_dirty);
           circ->timestamp_dirty -= get_options()->MaxCircuitDirtiness;
 
+          if (conn->chosen_exit_optional) { /* stop wanting a specific exit */
+            conn->chosen_exit_optional = 0;
+            tor_free(conn->chosen_exit_name);
+          }
           if (connection_ap_detach_retriable(conn, circ) >= 0)
             return 0;
           /* else, conn will get closed below */
@@ -728,6 +742,10 @@ connection_edge_process_end_not_open(
           addr_policy_free(exitrouter->exit_policy);
           exitrouter->exit_policy =
             router_parse_addr_policy_from_string("reject *:*", -1);
+        }
+        if (conn->chosen_exit_optional) { /* stop wanting a specific exit */
+          conn->chosen_exit_optional = 0;
+          tor_free(conn->chosen_exit_name);
         }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
