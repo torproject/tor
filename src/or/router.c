@@ -468,7 +468,6 @@ router_orport_found_reachable(void)
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
-    consider_publishable_server(1);
   }
 }
 
