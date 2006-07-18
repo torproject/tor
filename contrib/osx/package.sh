@@ -25,10 +25,17 @@ PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.3.zip
 #   http://developer.apple.com/documentation/DeveloperTools/Conceptual/SoftwareDistribution/index.html
 #   man packagemaker
 
-# Make sure VERSION is set, so we don't name the package "Tor--$OS-Bundle.dmg"
+# Make sure VERSION is set, so we don't name the package
+# "Tor--$OS-$ARCH-Bundle.dmg"
 if [ "XX$VERSION" = 'XX' ]; then
   echo "VERSION not set."
   exit 1
+fi
+
+if [ -x /usr/bin/arch ]; then
+  ARCH=`/usr/bin/arch`
+else
+  ARCH="unknown"
 fi
 
 ## Determine OSX Version
@@ -151,7 +158,7 @@ fi
 ### Assemble the metapackage.  Packagemaker won't buld metapackages from
 # the command line, so we need to do it by hand.
 
-MPKG=$BUILD_DIR/output/Tor-$VERSION-$OS-Bundle.mpkg
+MPKG=$BUILD_DIR/output/Tor-$VERSION-$OS-$ARCH-Bundle.mpkg
 mkdir -p "$MPKG/Contents/Resources"
 echo -n "pmkrpkg1" > "$MPKG/Contents/PkgInfo"
 cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
@@ -178,10 +185,10 @@ cp LICENSE $BUILD_DIR/output/Tor\ License.txt
 
 find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 
-mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$OS-Bundle"
-rm -f "Tor-$VERSION-$OS-Bundle.dmg"
+mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$OS-$ARCH-Bundle"
+rm -f "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
 USER="`whoami`"
-sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor-$VERSION-$OS-Bundle" "Tor-$VERSION-$OS-Bundle.dmg"
-sudo chown "$USER" "Tor-$VERSION-$OS-Bundle.dmg"
+sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor-$VERSION-$OS-$ARCH-Bundle" "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
+sudo chown "$USER" "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
 
 sudo rm -rf $BUILD_DIR
