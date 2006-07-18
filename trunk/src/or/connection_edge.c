@@ -306,6 +306,21 @@ connection_edge_finished_connecting(connection_t *conn)
   return connection_edge_process_inbuf(conn, 1);
 }
 
+/** Define a schedule for how long to wait between retrying
+ * application connections. Rather than waiting a fixed amount of
+ * time between each retry, we wait only 5 seconds for the first,
+ * 10 seconds for the second, and 15 seconds for each retry after
+ * that. Hopefully this will improve the expected experience. */
+static int
+compute_socks_timeout(connection_t *conn)
+{
+  if (conn->num_socks_retries == 0)
+    return 5;
+  if (conn->num_socks_retries == 1)
+    return 10;
+  return 15;
+}
+
 /** Find all general-purpose AP streams waiting for a response that sent their
  * begin/resolve cell >=15 seconds ago. Detach from their current circuit, and
  * mark their current circuit as unsuitable for new streams. Then call
@@ -326,6 +341,7 @@ connection_ap_expire_beginning(void)
   time_t now = time(NULL);
   or_options_t *options = get_options();
   int severity;
+  int cutoff;
 
   get_connection_array(&carray, &n);
 
@@ -343,10 +359,11 @@ connection_ap_expire_beginning(void)
       continue;
     }
 
-    else if (conn->state != AP_CONN_STATE_RESOLVE_WAIT &&
+    if (conn->state != AP_CONN_STATE_RESOLVE_WAIT &&
         conn->state != AP_CONN_STATE_CONNECT_WAIT)
       continue;
-    if (now - conn->timestamp_lastread < 15)
+    cutoff = compute_socks_timeout(conn);
+    if (now - conn->timestamp_lastread < cutoff)
       continue;
     circ = circuit_get_by_edge_conn(conn);
     if (!circ) { /* it's vanished? */
@@ -385,8 +402,9 @@ connection_ap_expire_beginning(void)
      * unattractive to use for new streams */
     tor_assert(circ->timestamp_dirty);
     circ->timestamp_dirty -= options->MaxCircuitDirtiness;
-    /* give our stream another 15 seconds to try */
-    conn->timestamp_lastread += 15;
+    /* give our stream another 'cutoff' seconds to try */
+    conn->timestamp_lastread += cutoff;
+    conn->num_socks_retries++;
     /* move it back into 'pending' state, and try to attach. */
     if (connection_ap_detach_retriable(conn, circ)<0) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
