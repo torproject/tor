@@ -82,11 +82,6 @@ if [ ! -e /var/log/tor -o -L /var/log/tor ]; then
   ln -sf $LOGDIR tor
 fi
 
-if [ -d /Library/StartupItems/Tor ]; then
-  rm -f /Library/StartupItems/Tor/Tor.loc
-  echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
-fi
-
 if [ -d /Library/StartupItems/Privoxy ]; then
   find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel
 fi
@@ -123,6 +118,8 @@ if [ $OS = "tiger" ]; then
   if [ -f $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist ]; then
      cp $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist /System/Library/LaunchDaemons/net.freehaven.tor.plist
      chmod 644 /System/Library/LaunchDaemons/net.freehaven.tor.plist
+     /bin/launchctl load /System/Library/LaunchDaemons/net.freehaven.tor.plist
+     /bin/launchctl start net.freehaven.tor
   fi
 else
   if [ -d /Library/StartupItems/Tor ]; then
