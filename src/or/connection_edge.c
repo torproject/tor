@@ -387,7 +387,7 @@ connection_ap_expire_beginning(void)
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
     nickname = build_state_get_exit_nickname(circ->build_state);
-    log_fn(severity, LD_APP,
+    log_fn(cutoff < 15 ? LOG_INFO : severity, LD_APP,
            "We tried for %d seconds to connect to '%s' using exit '%s'."
            " Retrying on a new circuit.",
            (int)(now - conn->timestamp_lastread),
