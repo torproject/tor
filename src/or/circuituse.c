@@ -964,8 +964,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       if (conn->chosen_exit_name) {
         routerinfo_t *r;
         if (!(r = router_get_by_nickname(conn->chosen_exit_name, 1))) {
-          /*XXXX NM domain? */
-          log_notice(LD_CIRC,
+          log_notice(LD_APP,
                      "Requested exit point '%s' is not known. Closing.",
                      conn->chosen_exit_name);
           return -1;
