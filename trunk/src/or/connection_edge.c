@@ -1126,6 +1126,7 @@ connection_ap_handshake_rewrite_and_attach(connection_t *conn,
              routers with this nickname */
           conn->chosen_exit_name =
             tor_strdup(hex_str(r->cache_info.identity_digest, DIGEST_LEN));
+          conn->chosen_exit_optional = 1;
         }
       }
 

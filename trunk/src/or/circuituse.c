@@ -963,10 +963,16 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (conn->chosen_exit_name) {
         routerinfo_t *r;
+        int opt = conn->chosen_exit_optional;
         if (!(r = router_get_by_nickname(conn->chosen_exit_name, 1))) {
-          log_notice(LD_APP,
-                     "Requested exit point '%s' is not known. Closing.",
-                     conn->chosen_exit_name);
+          log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
+                 "Requested exit point '%s' is not known. %s.",
+                 conn->chosen_exit_name, opt ? "Trying others" : "Closing");
+          if (opt) {
+            conn->chosen_exit_optional = 0;
+            tor_free(conn->chosen_exit_name);
+            return 0;
+          }
           return -1;
         }
         extend_info = extend_info_from_router(r);
@@ -1151,16 +1157,27 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
 
     if (conn->chosen_exit_name) {
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
+      int opt = conn->chosen_exit_optional;
       if (!router) {
-        log_warn(LD_APP,
-                 "Requested exit point '%s' is not known. Closing.",
-                 conn->chosen_exit_name);
+        log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
+               "Requested exit point '%s' is not known. %s.",
+               conn->chosen_exit_name, opt ? "Trying others" : "Closing");
+        if (opt) {
+          conn->chosen_exit_optional = 0;
+          tor_free(conn->chosen_exit_name);
+          return 0;
+        }
         return -1;
       }
       if (!connection_ap_can_use_exit(conn, router)) {
-        log_warn(LD_APP,
-                 "Requested exit point '%s' would refuse request. Closing.",
-                 conn->chosen_exit_name);
+        log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
+               "Requested exit point '%s' would refuse request. %s.",
+               conn->chosen_exit_name, opt ? "Trying others" : "Closing");
+        if (opt) {
+          conn->chosen_exit_optional = 0;
+          tor_free(conn->chosen_exit_name);
+          return 0;
+        }
         return -1;
       }
     }

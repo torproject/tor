@@ -656,6 +656,8 @@ struct connection_t {
 
   /** Nickname of planned exit node -- used with .exit support. */
   char *chosen_exit_name;
+  /** If 1, and we fail to reach the chosen exit, stop requiring it. */
+  unsigned int chosen_exit_optional:1;
 
 /* Used only by OR connections: */
   tor_tls_t *tls; /**< TLS connection state (OR only.) */
