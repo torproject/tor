@@ -683,7 +683,8 @@ hibernate_hard_limit_reached(void)
 static int
 hibernate_soft_limit_reached(void)
 {
-  uint64_t soft_limit = DBL_TO_U64((get_options()->AccountingMax) * .95);
+  uint64_t soft_limit = DBL_TO_U64(U64_TO_DBL(get_options()->AccountingMax)
+                                     * .95);
   if (!soft_limit)
     return 0;
   return n_bytes_read_in_interval >= soft_limit
