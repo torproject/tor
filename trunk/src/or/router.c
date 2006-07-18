@@ -479,6 +479,7 @@ router_dirport_found_reachable(void)
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
+    mark_my_descriptor_dirty();
   }
 }
 
