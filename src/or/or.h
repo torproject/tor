@@ -658,6 +658,10 @@ struct connection_t {
   char *chosen_exit_name;
   /** If 1, and we fail to reach the chosen exit, stop requiring it. */
   unsigned int chosen_exit_optional:1;
+  /** Number of times we've reassigned this application connection to
+   * a new circuit. We keep track because the timeout is longer if we've
+   * already retried several times. */
+  int num_socks_retries;
 
 /* Used only by OR connections: */
   tor_tls_t *tls; /**< TLS connection state (OR only.) */
