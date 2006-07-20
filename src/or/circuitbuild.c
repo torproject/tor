@@ -524,7 +524,7 @@ inform_testing_reachability(void)
 
 /** Return true iff we should send a create_fast cell to build a circuit
  * starting at <b>router</b>.  (If <b>router</b> is NULL, we don't have
- * information on the router. */
+ * information on the router, so return false.) */
 static INLINE int
 should_use_create_fast_for_router(routerinfo_t *router)
 {
