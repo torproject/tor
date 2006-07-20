@@ -5,21 +5,9 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-Note: This document aims to specify Tor as implemented in 0.1.2.1-alpha-cvs
-and later.  Future versions of Tor will implement improved protocols, and
-compatibility is not guaranteed.
-
-For earlier versions of the protocol, see tor-spec-v0.txt; current versions
-are backward-compatible.
-
-This specification is not a design document; most design criteria
-are not examined.  For more information on why Tor acts as it does,
-see tor-design.pdf.
-
-TODO: (very soon)
-      - REASON_CONNECTFAILED should include an IP.
-      - Copy prose from tor-design to make everything more readable.
-when do we rotate which keys (tls, link, etc)?
+Note: This document specifies Tor as currently implemented in versions
+0.1.2.1-alpha and earlier.  Current protocol designs are described in
+tor-spec.txt.
 
 0. Preliminaries
 
@@ -81,7 +69,6 @@ when do we rotate which keys (tls, link, etc)?
    As an optimization, implementations SHOULD choose DH private keys (x) of
    320 bits.  Implementations that do this MUST never use any DH key more
    than once.
-   [May other implementations reuse their DH keys?? -RD]
 
    For a hash function, we use SHA-1.
 
@@ -124,8 +111,6 @@ when do we rotate which keys (tls, link, etc)?
    the circuit.  Traffic flowing down the circuit is sent in fixed-size
    ``cells'', which are unwrapped by a symmetric key at each node (like
    the layers of an onion) and relayed downstream.
-
-1.1. Protocol Versioning
 
 2. Connections
 
@@ -746,80 +731,4 @@ when do we rotate which keys (tls, link, etc)?
    upon receiving a RELAY_SENDME cell. Edge nodes initiate RELAY_SENDME
    cells when both a) the window is <= 450, and b) there are less than
    ten cell payloads remaining to be flushed at that edge.
-
-7. Other cell types
-
-7.1. HELLO cells
-
-   When a Tor connection is established, both sides must send a HELLO
-   cell before sending any other cells.
-
-         Version                 [1 byte]
-         Timestamp               [4 bytes]
-         Server-side address     [variable]
-         Client-side address     [variable]
-
-   Version is the "link version", and dictates what types and formats
-   of cells can be sent/received. It should be 1. A Tor connection is
-   considered to be using version 0 if the first cell we receive is not
-   a HELLO cell.
-
-   Timestamp is the OR's current Unix time (GMT).
-
-   Each address contains Type/Length/Value as used in Section 5.4.
-   The first address is the one that the OR has published and is
-   listening to now -- we include it to block a man-in-the-middle
-   attack on TLS that lets an attacker bounce traffic through his own
-   computers to enable timing and packet-counting attacks.
-   [Do we want to provide just one address? Do we want to be more
-    general by accepting netmasks or something? -RD]
-   The second address is the one that the client OP or OR has used to
-   connect to the server -- it can be used to learn what your IP address
-   is if you have no other hints.
-
-   If we receive a HELLO cell with a version we do not recognize, we drop
-   it. If we receive a HELLO cell with a version that is older than the
-   version we sent in our HELLO cell, we must resend a new HELLO cell
-   using that version.
-
-
-A.1. Differences between spec and implementation
-
-- The current specification requires all ORs to have IPv4 addresses, but
-  allows servers to exit and resolve to IPv6 addresses, and to declare IPv6
-  addresses in their exit policies.  The current codebase has no IPv6
-  support at all.
-
-B. Things that should change in a later version of the Tor protocol
-
-B.1. ... but which will require backward-incompatible change
-
-  - Circuit IDs should be longer.
-  - IPv6 everywhere.
-  - Maybe, keys should be longer.
-    - Maybe, key-length should be adjustable.  How to do this without
-      making anonymity suck?
-  - Drop backward compatibility.
-  - We should use a 128-bit subgroup of our DH prime.
-  - Handshake should use HMAC.
-  - Multiple cell lengths.
-  - Ability to split circuits across paths (If this is useful.)
-  - SENDME windows should be dynamic.
-
-  - Directory
-     - Stop ever mentioning socks ports
-
-B.1. ... and that will require no changes
-
-   - Mention multiple addr/port combos
-   - Advertised outbound IP?
-   - Migrate streams across circuits.
-
-B.2. ... and that we have no idea how to do.
-
-   - UDP (as transport)
-   - UDP (as content)
-   - Use a better AES mode that has built-in integrity checking,
-     doesn't grow with the number of hops, is not patented, and
-     is implemented and maintained by smart people.
 

@@ -1,28 +1,26 @@
 $Id$
 
-                  Tor directory protocol for 0.1.1.x series
+                      Tor directory protocol, version 1
 
 0. Scope and preliminaries
 
-   This document should eventually be merged to replace and supplement the
-   existing notes on directories in tor-spec.txt.
+   This directory protocol is used by Tor version 0.1.1.x and later.  See
+   dir-spec-v0.txt for information on earlier versions.
 
-   This is not a finalized version; what we actually wind up implementing
-   may be different from the system described here.
+0.1. Goals and motivation
 
-0.1. Goals
-
-   There are several problems with the way Tor handles directory information
+   There were several problems with the way Tor handles directory information
    in version 0.1.0.x and earlier.  Here are the problems we try to fix with
-   this new design, already partially implemented in 0.1.1.x:
-      1. Directories are very large and use up a lot of bandwidth: clients
-         download descriptors for all router several times an hour.
-      2. Every directory authority is a trust bottleneck: if a single
-         directory authority lies, it can make clients believe for a time an
+   this new design, already implemented in 0.1.1.x:
+      1. Directories were very large and use up a lot of bandwidth: clients
+         downloaded descriptors for all router several times an hour.
+      2. Every directory authority was a trust bottleneck: if a single
+         directory authority lied, it could make clients believe for a time an
          arbitrarily distorted view of the Tor network.
       3. Our current "verified server" system is kind of nonsensical.
-      4. Getting more directory authorities adds more points of failure and
-         worsens possible partitioning attacks.
+
+      4. Getting more directory authorities would add more points of failure
+         and worsen possible partitioning attacks.
 
    There are two problems that remain unaddressed by this design.
       5. Requiring every client to know about every router won't scale.
@@ -82,9 +80,43 @@ $Id$
    Routers used to upload fresh descriptors all the time, whether their keys
    and other information had changed or not.
 
-2. Router operation
+1.2. Document meta-format
 
-   The router descriptor format is unchanged from tor-spec.txt.
+  Router descriptors, directories, and running-routers documents all obey the
+  following lightweight extensible information format.
+
+  The highest level object is a Document, which consists of one or more
+  Items.  Every Item begins with a KeywordLine, followed by one or more
+  Objects. A KeywordLine begins with a Keyword, optionally followed by
+  whitespace and more non-newline characters, and ends with a newline.  A
+  Keyword is a sequence of one or more characters in the set [A-Za-z0-9-].
+  An Object is a block of encoded data in pseudo-Open-PGP-style
+  armor. (cf. RFC 2440)
+
+  More formally:
+
+    Document ::= (Item | NL)+
+    Item ::= KeywordLine Object*
+    KeywordLine ::= Keyword NL | Keyword WS ArgumentsChar+ NL
+    Keyword = KeywordChar+
+    KeywordChar ::= 'A' ... 'Z' | 'a' ... 'z' | '0' ... '9' | '-'
+    ArgumentChar ::= any printing ASCII character except NL.
+    WS = (SP | TAB)+
+    Object ::= BeginLine Base-64-encoded-data EndLine
+    BeginLine ::= "-----BEGIN " Keyword "-----" NL
+    EndLine ::= "-----END " Keyword "-----" NL
+
+    The BeginLine and EndLine of an Object must use the same keyword.
+
+  When interpreting a Document, software MUST reject any document containing a
+  KeywordLine that starts with a keyword it doesn't recognize.
+
+  The "opt" keyword is reserved for non-critical future extensions.  All
+  implementations MUST ignore any item of the form "opt keyword ....." when
+  they would not recognize "keyword ....."; and MUST treat "opt keyword ....."
+  as synonymous with "keyword ......" when keyword is recognized.
+
+2. Router operation
 
    ORs SHOULD generate a new router descriptor whenever any of the
    following events have occurred:
@@ -104,6 +136,142 @@ $Id$
    authority they know, by posting it to the URL
 
       http://<hostname:port>/tor/
+
+2.1. Router descriptor format
+
+   Every router descriptor MUST start with a "router" Item; MUST end with a
+   "router-signature" Item and an extra NL; and MUST contain exactly one
+   instance of each of the following Items: "published" "onion-key"
+   "link-key" "signing-key" "bandwidth".  Additionally, a router descriptor
+   MAY contain any number of "accept", "reject", "fingerprint", "uptime", and
+   "opt" Items.  Other than "router" and "router-signature", the items may
+   appear in any order.
+
+   The items' formats are as follows:
+    "router" nickname address ORPort SocksPort DirPort
+
+       Indicates the beginning of a router descriptor.  "address" must be an
+       IPv4 address in dotted-quad format. The last three numbers indicate
+       the TCP ports at which this OR exposes functionality. ORPort is a port
+       at which this OR accepts TLS connections for the main OR protocol;
+       SocksPort is deprecated and should always be 0; and DirPort is the
+       port at which this OR accepts directory-related HTTP connections.  If
+       any port is not supported, the value 0 is given instead of a port
+       number.
+
+    "bandwidth" bandwidth-avg bandwidth-burst bandwidth-observed
+
+       Estimated bandwidth for this router, in bytes per second.  The
+       "average" bandwidth is the volume per second that the OR is willing to
+       sustain over long periods; the "burst" bandwidth is the volume that
+       the OR is willing to sustain in very short intervals.  The "observed"
+       value is an estimate of the capacity this server can handle.  The
+       server remembers the max bandwidth sustained output over any ten
+       second period in the past day, and another sustained input.  The
+       "observed" value is the lesser of these two numbers.
+
+    "platform" string
+
+       A human-readable string describing the system on which this OR is
+       running.  This MAY include the operating system, and SHOULD include
+       the name and version of the software implementing the Tor protocol.
+
+    "published" YYYY-MM-DD HH:MM:SS
+
+       The time, in GMT, when this descriptor was generated.
+
+    "fingerprint"
+
+       A fingerprint (a HASH_LEN-byte of asn1 encoded public key, encoded in
+       hex, with a single space after every 4 characters) for this router's
+       identity key. A descriptor is considered invalid (and MUST be
+       rejected) if the fingerprint line does not match the public key.
+
+       [We didn't start parsing this line until Tor 0.1.0.6-rc; it should
+        be marked with "opt" until earlier versions of Tor are obsolete.]
+
+    "hibernating" 0|1
+
+       If the value is 1, then the Tor server was hibernating when the
+       descriptor was published, and shouldn't be used to build circuits.
+
+       [We didn't start parsing this line until Tor 0.1.0.6-rc; it should be
+        marked with "opt" until earlier versions of Tor are obsolete.]
+
+    "uptime"
+
+       The number of seconds that this OR process has been running.
+
+    "onion-key" NL a public key in PEM format
+
+       This key is used to encrypt EXTEND cells for this OR.  The key MUST be
+       accepted for at least XXXX hours after any new key is published in a
+       subsequent descriptor.
+
+    "signing-key" NL a public key in PEM format
+
+       The OR's long-term identity key.
+
+    "accept" exitpattern
+    "reject" exitpattern
+
+       These lines, in order, describe the rules that an OR follows when
+       deciding whether to allow a new stream to a given address.  The
+       'exitpattern' syntax is described below.
+
+    "router-signature" NL Signature NL
+
+       The "SIGNATURE" object contains a signature of the PKCS1-padded
+       hash of the entire router descriptor, taken from the beginning of the
+       "router" line, through the newline after the "router-signature" line.
+       The router descriptor is invalid unless the signature is performed
+       with the router's identity key.
+
+    "contact" info NL
+
+        Describes a way to contact the server's administrator, preferably
+        including an email address and a PGP key fingerprint.
+
+    "family" names NL
+
+        'Names' is a whitespace-separated list of server nicknames. If two
+        ORs list one another in their "family" entries, then OPs should treat
+        them as a single OR for the purpose of path selection.
+
+        For example, if node A's descriptor contains "family B", and node B's
+        descriptor contains "family A", then node A and node B should never
+        be used on the same circuit.
+
+    "read-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM,NUM,NUM... NL
+    "write-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM,NUM,NUM... NL
+
+        Declare how much bandwidth the OR has used recently. Usage is divided
+        into intervals of NSEC seconds.  The YYYY-MM-DD HH:MM:SS field
+        defines the end of the most recent interval.  The numbers are the
+        number of bytes used in the most recent intervals, ordered from
+        oldest to newest.
+
+        [We didn't start parsing these lines until Tor 0.1.0.6-rc; they should
+         be marked with "opt" until earlier versions of Tor are obsolete.]
+
+2.1. Nonterminals in routerdescriptors 
+
+   nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
+
+   exitpattern ::= addrspec ":" portspec
+   portspec ::= "*" | port | port "-" port
+   port ::= an integer between 1 and 65535, inclusive.
+   addrspec ::= "*" | ip4spec | ip6spec
+   ipv4spec ::= ip4 | ip4 "/" num_ip4_bits | ip4 "/" ip4mask
+   ip4 ::= an IPv4 address in dotted-quad format
+   ip4mask ::= an IPv4 mask in dotted-quad format
+   num_ip4_bits ::= an integer between 0 and 32
+   ip6spec ::= ip6 | ip6 "/" num_ip6_bits
+   ip6 ::= an IPv6 address, surrounded by square brackets.
+   num_ip6_bits ::= an integer between 0 and 128
+
+   Ports are required; if they are not included in the router
+   line, they must appear in the "ports" lines.
 
 3. Network status format
 
