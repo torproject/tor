@@ -9,8 +9,9 @@ Note: This document aims to specify Tor as implemented in 0.1.2.1-alpha-cvs
 and later.  Future versions of Tor will implement improved protocols, and
 compatibility is not guaranteed.
 
-For earlier versions of the protocol, see tor-spec-v0.txt; current versions
-are backward-compatible.
+THIS DOCUMENT IS UNSTABLE.  Right now, we're revising the protocol to remove
+a few long-standing limitations.  For the most stable current version of the
+protocol, see tor-spec-v0.txt; current versions of Tor are backward-compatible.
 
 This specification is not a design document; most design criteria
 are not examined.  For more information on why Tor acts as it does,
@@ -69,7 +70,7 @@ when do we rotate which keys (tls, link, etc)?
    ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
 
    For Diffie-Hellman, we use a generator (g) of 2.  For the modulus (p), we
-   use the 1024-bit safe prime from rfc2409, (section 6.2) whose hex
+   use the 1024-bit safe prime from rfc2409 section 6.2 whose hex
    representation is:
 
      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
@@ -126,6 +127,19 @@ when do we rotate which keys (tls, link, etc)?
    the layers of an onion) and relayed downstream.
 
 1.1. Protocol Versioning
+
+   The node-to-node TLS-based "OR connection" protocol and the multi-hop
+   "circuit" protocol are versioned quasi-independently.  (Certain versions
+   of the circuit protocol may require a minimum version of the connection
+   protocol to be used.)
+
+   Version numbers are incremented for backward-incompatible protocol changes
+   only.  Backward-compatible changes are generally implemented by adding
+   additional fields to existing structures; implementations are constrained
+   to ignore fields they do not expect.
+
+   Parties negotiate OR connection versions as described below in section
+   
 
 2. Connections
 
@@ -188,14 +202,14 @@ when do we rotate which keys (tls, link, etc)?
    associated with.
 
    The 'Command' field holds one of the following values:
-         0 -- PADDING     (Padding)                 (See Sec 6.2)
-         1 -- CREATE      (Create a circuit)        (See Sec 4.1)
-         2 -- CREATED     (Acknowledge create)      (See Sec 4.1)
-         3 -- RELAY       (End-to-end data)         (See Sec 4.5 and 5)
-         4 -- DESTROY     (Stop using a circuit)    (See Sec 4.4)
-         5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 4.1)
-         6 -- CREATED_FAST (Circuit created, no PK) (See Sec 4.1)
-         7 -- HELLO       (Introduce the OR)        (See Sec 7.1)
+         0 -- PADDING     (Padding)                 (See Sec XXX)
+         1 -- CREATE      (Create a circuit)        (See Sec 5.1)
+         2 -- CREATED     (Acknowledge create)      (See Sec 5.1)
+         3 -- RELAY       (End-to-end data)         (See Sec 5.5 and 6)
+         4 -- DESTROY     (Stop using a circuit)    (See Sec 5.4)
+         5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 5.1)
+         6 -- CREATED_FAST (Circuit created, no PK) (See Sec 5.1)
+         7 -- HELLO       (Establish a connection)  (See Sec 4.1)
 
    The interpretation of 'Payload' depends on the type of the cell.
       PADDING: Payload is unused.
@@ -203,9 +217,10 @@ when do we rotate which keys (tls, link, etc)?
       CREATED: Payload contains the handshake response.
       RELAY:   Payload contains the relay header and relay body.
       DESTROY: Payload contains a reason for closing the circuit.
-               (see 4.4)
+               (see 5.4)
    Upon receiving any other value for the command field, an OR must
-   drop the cell.
+   drop the cell.  [XXXX Versions prior to 0.1.0.?? logged a warning
+   when dropping the cell; this is bad behavior. -NM]
 
    The payload is padded with 0 bytes.
 
@@ -222,15 +237,79 @@ when do we rotate which keys (tls, link, etc)?
    HELLO cells are used to introduce parameters and characteristics of
    Tor clients and servers when connections are established.
 
-4. Circuit management
+4, Connection management
 
-4.1. CREATE and CREATED cells
+   Upon establishing a TLS connection, both parties immediately begin
+   negotiating a connection protocol version and other connection parameters.
+
+4.1. HELLO cells
+
+   When a Tor connection is established, both sides must send a HELLO
+   cell before sending any other cells.  (Except see 4.2. below)
+
+         NumVersions            [1 byte]
+         Versions                [NumVersions bytes]
+         Timestamp              [4 bytes]
+         This OR's address      [variable]
+         Other OR's address     [variable]
+
+   "Versions" is a sequence of NumVersions link connection protocol versions,
+   each one byte long.  Parties should list all of the versions which they
+   are able and willing to support.  Parties can only communicate if they
+   have some connection protocol version in common.
+
+   Timestamp is the OR's current Unix time (GMT).
+
+   Each address contains Type/Length/Value as used in Section 6.4.  The first
+   address is the address of the interface the party sending the HELLO cell
+   used to connect to or accept connections from the other -- we include it
+   to block a man-in-the-middle attack on TLS that lets an attacker bounce
+   traffic through his own computers to enable timing and packet-counting
+   attacks.
+
+   The second address is the one that the party sending the HELLO cell
+   believes the other has -- it can be used to learn what your IP address
+   is if you have no other hints.
+
+4.2. Protocol negotiation'
+
+   Version 0.1.2.1-alpha and earlier don't understand HELLO cells, and
+   therefore don't support version negotiation.  Thus, waiting until
+   the other side has send a HELLO cell won't work for these servers: if they
+   send no cells back, it is impossible to tell whether they have sent a
+   HELLO cell that has been stalled, or whether they have dropped our own
+   HELLO cell as unrecognized.  Thus, immediately after a TLS connection has
+   been established, both parties behave as follows:
+
+      1. Both parties send a CREATE cell with an appropriate circuit id,
+         containing an "onion skin" of [00] bytes.
+
+          [XXXX What happens when a client gets a CREATE?]
+
+      2. Both parties send a HELLO cell listing all their versions.
+
+      3. If a DESTROY cell is received before a HELLO cell, the other
+         party does not support HELLO cells, and therefore we can
+         only use protocol version 0.
+
+      4. If a HELLO cell is received, we use the highest numbered version
+         listed by both HELLO cells.
+
+   As an optimization, implementations SHOULD simply use protocol version
+   0 when the other side is recognized as a router running version
+   0.1.1.??-alpha or earlier.
+   [XXXX This will not work with clients: we will send them HELLO cells;
+   they'll warn; users will freak out. -NM]
+
+5. Circuit management
+
+5.1. CREATE and CREATED cells
 
    Users set up circuits incrementally, one hop at a time. To create a
    new circuit, OPs send a CREATE cell to the first node, with the
    first half of the DH handshake; that node responds with a CREATED
    cell with the second half of the DH handshake plus the first 20 bytes
-   of derivative key data (see section 4.2). To extend a circuit past
+   of derivative key data (see section 5.2). To extend a circuit past
    the first hop, the OP sends an EXTEND relay cell (see section 5)
    which instructs the last node in the circuit to send a CREATE cell
    to extend the circuit.
@@ -263,7 +342,7 @@ when do we rotate which keys (tls, link, etc)?
    The payload for a CREATED cell, or the relay payload for an
    EXTENDED cell, contains:
          DH data (g^y)                 [DH_LEN bytes]
-         Derivative key data (KH)      [HASH_LEN bytes]   <see 4.2 below>
+         Derivative key data (KH)      [HASH_LEN bytes]   <see 5.2 below>
 
    The CircID for a CREATE cell is an arbitrarily chosen 2-byte integer,
    selected by the node (OP or OR) that sends the CREATE cell.  To prevent
@@ -276,7 +355,10 @@ when do we rotate which keys (tls, link, etc)?
 
    As usual with DH, x and y MUST be generated randomly.
 
-4.1.1. CREATE_FAST/CREATED_FAST cells
+   To implement backwar-compatible version negotiation, parties MUST
+   drop CREATE cells with all-[00] onion-skins.
+
+5.1.1. CREATE_FAST/CREATED_FAST cells
 
    When initializing the first hop of a circuit, the OP has already
    established the OR's identity and negotiated a secret key using TLS.
@@ -293,14 +375,14 @@ when do we rotate which keys (tls, link, etc)?
    A CREATED_FAST cell contains:
 
        Key material (Y)    [HASH_LEN bytes]
-       Derivative key data [HASH_LEN bytes] (See 4.2 below)
+       Derivative key data [HASH_LEN bytes] (See 5.2 below)
 
    The values of X and Y must be generated randomly.
 
    [Versions of Tor before 0.1.0.6-rc did not support these cell types;
     clients should not send CREATE_FAST cells to older Tor servers.]
 
-4.2. Setting circuit keys
+5.2. Setting circuit keys
 
    Once the handshake between the OP and an OR is completed, both can
    now calculate g^xy with ordinary DH.  Before computing g^xy, both client
@@ -343,7 +425,7 @@ when do we rotate which keys (tls, link, etc)?
    is used to encrypt the stream of data going from the OP to the OR, and
    Kb is used to encrypt the stream of data going from the OR to the OP.
 
-4.3. Creating circuits
+5.3. Creating circuits
 
    When creating a circuit through the network, the circuit creator
    (OP) performs the following steps:
@@ -384,7 +466,7 @@ when do we rotate which keys (tls, link, etc)?
    cell to the next onion router, with the enclosed onion skin as its
    payload.  The initiating onion router chooses some circID not yet
    used on the connection between the two onion routers.  (But see
-   section 4.1. above, concerning choosing circIDs based on
+   section 5.1. above, concerning choosing circIDs based on
    lexicographic order of nicknames.)
 
    When an onion router receives a CREATE cell, if it already has a
@@ -399,7 +481,7 @@ when do we rotate which keys (tls, link, etc)?
    until a break in traffic allows time to do so without harming
    network latency too greatly.)
 
-4.4. Tearing down circuits
+5.4. Tearing down circuits
 
    Circuits are torn down when an unrecoverable error occurs along
    the circuit, or when all streams on a circuit are closed and the
@@ -414,7 +496,7 @@ when do we rotate which keys (tls, link, etc)?
    associated with the corresponding circuit. If it's not the end of
    the circuit, it sends a DESTROY cell for that circuit to the next OR
    in the circuit. If the node is the end of the circuit, then it tears
-   down any associated edge connections (see section 5.1).
+   down any associated edge connections (see section 6.1).
 
    After a DESTROY cell has been processed, an OR ignores all data or
    destroy cells for the corresponding circuit.
@@ -452,7 +534,7 @@ when do we rotate which keys (tls, link, etc)?
    [Versions of Tor prior to 0.1.0.11 didn't send reasons; implementations
    MUST accept empty TRUNCATED and DESTROY cells.]
 
-4.5. Routing relay cells
+5.5. Routing relay cells
 
    When an OR receives a RELAY cell, it checks the cell's circID and
    determines whether it has a corresponding circuit along that
@@ -468,7 +550,7 @@ when do we rotate which keys (tls, link, etc)?
    Note that in counter mode, decrypt and encrypt are the same operation.
 
    The OR then decides whether it recognizes the relay cell, by
-   inspecting the payload as described in section 5.1 below.  If the OR
+   inspecting the payload as described in section 6.1 below.  If the OR
    recognizes the cell, it processes the contents of the relay cell.
    Otherwise, it passes the decrypted relay cell along the circuit if
    the circuit continues.  If the OR at the end of the circuit
@@ -480,13 +562,13 @@ when do we rotate which keys (tls, link, etc)?
          OP receives data cell:
             For I=N...1,
                 Decrypt with Kb_I.  If the payload is recognized (see
-                section 5.1), then stop and process the payload.
+                section 6..1), then stop and process the payload.
 
-   For more information, see section 5 below.
+   For more information, see section 6 below.
 
-5. Application connections and stream management
+6. Application connections and stream management
 
-5.1. Relay cells
+6.1. Relay cells
 
    Within a circuit, the OP and the exit node use the contents of
    RELAY packets to tunnel end-to-end commands and TCP connections
@@ -524,13 +606,13 @@ when do we rotate which keys (tls, link, etc)?
    to zero; the 'digest' field is computed as the first four bytes of
    the running digest of all the bytes that have been destined for
    this hop of the circuit or originated from this hop of the circuit,
-   seeded from Df or Db respectively (obtained in section 4.2 above),
+   seeded from Df or Db respectively (obtained in section 5.2 above),
    and including this RELAY cell's entire payload (taken with the digest
    field set to zero).
 
    When the 'recognized' field of a RELAY cell is zero, and the digest
    is correct, the cell is considered "recognized" for the purposes of
-   decryption (see section 4.5 above).
+   decryption (see section 5.5 above).
 
    (The digest does not include any bytes from relay cells that do
    not start or end at this hop of the circuit. That is, it does not
@@ -553,7 +635,7 @@ when do we rotate which keys (tls, link, etc)?
    0.1.1.10, Tor closed circuits when it received an unknown relay
    command. Perhaps this will be more forward-compatible. -RD]
 
-5.2. Opening streams and transferring data
+6.2. Opening streams and transferring data
 
    To open a new anonymized TCP connection, the OP chooses an open
    circuit to an exit that may be able to connect to the destination
@@ -573,7 +655,7 @@ when do we rotate which keys (tls, link, etc)?
    Upon receiving this cell, the exit node resolves the address as
    necessary, and opens a new TCP connection to the target port.  If the
    address cannot be resolved, or a connection can't be established, the
-   exit node replies with a RELAY_END cell.  (See 5.4 below.)
+   exit node replies with a RELAY_END cell.  (See 6.4 below.)
    Otherwise, the exit node replies with a RELAY_CONNECTED cell, whose
    payload is in one of the following formats:
        The IPv4 address to which the connection was made [4 octets]
@@ -600,7 +682,7 @@ when do we rotate which keys (tls, link, etc)?
    Relay RELAY_DROP cells are long-range dummies; upon receiving such
    a cell, the OR or OP must drop it.
 
-5.3. Closing streams
+6.3. Closing streams
 
    When an anonymized TCP connection is closed, or an edge node
    encounters error on any stream, it sends a 'RELAY_END' cell along the
@@ -668,7 +750,7 @@ when do we rotate which keys (tls, link, etc)?
    If an edge node encounters an error on any stream, it sends a
    'RELAY_END' cell (if possible) and closes the stream immediately.
 
-5.4. Remote hostname lookup
+6.4. Remote hostname lookup
 
    To find the address associated with a hostname, the OP sends a
    RELAY_RESOLVE cell containing the hostname to be resolved.  (For a reverse
@@ -693,9 +775,9 @@ when do we rotate which keys (tls, link, etc)?
     corresponding RELAY_RESOLVED cell must use the same streamID.  No stream
     is actually created by the OR when resolving the name.
 
-6. Flow control
+7. Flow control
 
-6.1. Link throttling
+7.1. Link throttling
 
    Each node should do appropriate bandwidth throttling to keep its
    user happy.
@@ -703,7 +785,7 @@ when do we rotate which keys (tls, link, etc)?
    Communicants rely on TCP's default flow control to push back when they
    stop reading.
 
-6.2. Link padding
+7.2. Link padding
 
    Currently nodes are not required to do any sort of link padding or
    dummy traffic. Because strong attacks exist even with link padding,
@@ -711,7 +793,7 @@ when do we rotate which keys (tls, link, etc)?
    for running a node, we plan to leave out link padding until this
    tradeoff is better understood.
 
-6.3. Circuit-level flow control
+7.3. Circuit-level flow control
 
    To control a circuit's bandwidth usage, each OR keeps track of
    two 'windows', consisting of how many RELAY_DATA cells it is
@@ -737,7 +819,7 @@ when do we rotate which keys (tls, link, etc)?
    sends no more RELAY_DATA cells until receiving a RELAY_SENDME cell.
 [this stuff is badly worded; copy in the tor-design section -RD]
 
-6.4. Stream-level flow control
+7.4. Stream-level flow control
 
    Edge nodes use RELAY_SENDME cells to implement end-to-end flow
    control for individual connections across circuits. Similarly to
@@ -746,41 +828,6 @@ when do we rotate which keys (tls, link, etc)?
    upon receiving a RELAY_SENDME cell. Edge nodes initiate RELAY_SENDME
    cells when both a) the window is <= 450, and b) there are less than
    ten cell payloads remaining to be flushed at that edge.
-
-7. Other cell types
-
-7.1. HELLO cells
-
-   When a Tor connection is established, both sides must send a HELLO
-   cell before sending any other cells.
-
-         Version                 [1 byte]
-         Timestamp               [4 bytes]
-         Server-side address     [variable]
-         Client-side address     [variable]
-
-   Version is the "link version", and dictates what types and formats
-   of cells can be sent/received. It should be 1. A Tor connection is
-   considered to be using version 0 if the first cell we receive is not
-   a HELLO cell.
-
-   Timestamp is the OR's current Unix time (GMT).
-
-   Each address contains Type/Length/Value as used in Section 5.4.
-   The first address is the one that the OR has published and is
-   listening to now -- we include it to block a man-in-the-middle
-   attack on TLS that lets an attacker bounce traffic through his own
-   computers to enable timing and packet-counting attacks.
-   [Do we want to provide just one address? Do we want to be more
-    general by accepting netmasks or something? -RD]
-   The second address is the one that the client OP or OR has used to
-   connect to the server -- it can be used to learn what your IP address
-   is if you have no other hints.
-
-   If we receive a HELLO cell with a version we do not recognize, we drop
-   it. If we receive a HELLO cell with a version that is older than the
-   version we sent in our HELLO cell, we must resend a new HELLO cell
-   using that version.
 
 
 A.1. Differences between spec and implementation
