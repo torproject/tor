@@ -640,8 +640,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   memset(addrbuf, 0, sizeof(addrbuf));
 
   news = accept(conn->s,(struct sockaddr *)&addrbuf,&remotelen);
-  if (news < 0) {
-    /* accept() error */
+  if (news < 0) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
