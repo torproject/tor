@@ -88,8 +88,28 @@ list.  -NM
 
 2.2. Path selection
 
-   When we bui
-   
+   We choose the path for each new circuit before we build it.  We choose the
+   exit node first, followed by the other nodes in the circuit.  We do not
+   choose the same router twice for the same circuit.  We do not choose any
+   router in the same family as another in the same circuit.  We don't choose
+   any non-running or non-valid router unless we have been configured to do
+   so.  When choosing among multiple candidates for a path element, we choose
+   a given router with probability proportional to its advertised bandwidth
+   [the smaller of the 'rate' and 'observed' arguments to the "bandwidth"
+   element in its descriptor].  If a router's advertised bandwidth is greater
+   than MAX_BELIEVEABLE_BANDWIDTH (1.5 MB/sec), we clip to that value.
+
+   Additional restrictions:
+     XXX When to use Fast
+     XXX When to use Stable
+     XXX When to use Named
+
+   If we're building a circuit preemtively, we choose an exit node that might
+   support streams to one of our predicted ports; otherwise, we pick an exit
+   node that will support a pending stream (if the stream's target is known)
+   or that might support a pending stream.
+
+   We pick an entry node from one of our guards; see section 5 below.
 
 2.3. Handling failure
 
