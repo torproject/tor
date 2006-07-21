@@ -56,7 +56,7 @@ chown $TORUSER $LOGDIR
 chgrp daemon $LOGDIR
 chmod 700 $LOGDIR
 
-# Create the configuration file only if there wan't one already.
+# Create the configuration file only if there wasn't one already.
 if [ ! -f $TARGET/torrc ]; then
   cp $TARGET/torrc.sample $TARGET/torrc
 fi
@@ -114,6 +114,7 @@ if [ -f $PACKAGE_PATH/Contents/Resources/package_list.txt ]; then
    cp $PACKAGE_PATH/Contents/Resources/package_list.txt $TARGET/package_list.txt
 fi
 
+# Determine how to start by OS Version
 if [ $OS = "tiger" ]; then
   if [ -f $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist ]; then
      cp $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist /System/Library/LaunchDaemons/net.freehaven.tor.plist
