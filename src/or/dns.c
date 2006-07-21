@@ -551,6 +551,7 @@ dns_cancel_pending_resolve(char *address)
     pend = resolve->pending_connections;
     pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
     pendconn = pend->conn;
+    assert_connection_ok(pendconn, 0);
     tor_assert(pendconn->s == -1);
     if (!pendconn->marked_for_close) {
       connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT,
@@ -726,6 +727,7 @@ assign_to_dnsworker(connection_t *exitconn)
   unsigned char len;
 
   tor_assert(exitconn->state == EXIT_CONN_STATE_RESOLVING);
+  assert_connection_ok(exitconn, 0);
   tor_assert(exitconn->s == -1);
 
   /* respawn here, to be sure there are enough */
@@ -1200,7 +1202,6 @@ assert_resolve_ok(cached_resolve_t *resolve)
   tor_assert(resolve->magic == CACHED_RESOLVE_MAGIC);
   tor_assert(strlen(resolve->address) < MAX_ADDRESSLEN);
   tor_assert(! resolve->next || resolve->next->magic == CACHED_RESOLVE_MAGIC);
-
 }
 
 static void
