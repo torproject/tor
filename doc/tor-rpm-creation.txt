@@ -5,7 +5,7 @@ distribution should have semi-current glibc installed by default.
 If you run into a distribution that does not work with glibc, or does
 not contain it, please let us know the details.
 
-These are the exact same steps used to build the official rpms of Tor.
+These are the exact steps used to build the official rpms of Tor.
 
 If you wish to further tune Tor binaries in rpm format beyond this list,
 see the GCC doc page for further options:
@@ -23,12 +23,11 @@ this:
 %define target_cpu i386
 %define target_os linux
 
-
 The three parameters: target, target_cpu, and target_os are used
 throughout the "make dist-rpm" process.  They control the parameters
 passed to "configure" and the final tuning of the binaries produced.
 The default settings, as shown above, create binaries for the widest
-range of Intel x86 or compatible architectures.
+range of Intel x86 or x86-compatible architectures.
 
 The parameters can be set as follows:
 
@@ -39,7 +38,6 @@ Other possibilities are "mandrake" or "suse".  This is passed to
 Therefore, this "target" parameter must be a valid OS for "configure" as
 well.
 
-
 The "target_cpu" parameter:
 This parameter controls the optimization and tuning of your binaries via
 gcc and "configure".  This parameter is passed to gcc via the -mtune= or
@@ -49,10 +47,7 @@ through the --host, --build, and --target parameters.  Therefore, this
 few common options for this parameter may be "athlon64, i686, pentium4" or
 others.
 
-
 The "target_os" parameter:
 This parameter controls the target operating system.  Normally, this is
 only "linux".  If you wish to build rpms for a non-linux operating
 system, you can replace "linux" with your operating system.
-
-
