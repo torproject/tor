@@ -79,7 +79,7 @@
 #if defined(_MSC_VER) && (_MSC_VER < 1300)
 /* MSVC versions before 7 apparently don't believe that you can cast uint64_t
  * to double and really mean it. */
-extern inline double U64_TO_DBL(uint64_t x) {
+extern INLINE double U64_TO_DBL(uint64_t x) {
   int64_t i = (int64_t) x;
   return (i < 0) ? ((double) INT64_MAX) : (double) i;
 }
