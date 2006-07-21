@@ -1835,7 +1835,7 @@ log_entry_guards(int severity)
     {
       tor_snprintf(buf, sizeof(buf), "%s (%s%s%s)",
                    e->nickname,
-                   e->down_since ? "down " : "up ",
+                   (e->down_since || e->unlisted_since) ? "down " : "up ",
                    e->unlisted_since ? "unlisted " : "listed ",
                    e->made_contact ? "made-contact" : "never-contacted");
       smartlist_add(elements, tor_strdup(buf));
@@ -2022,7 +2022,7 @@ entry_guards_set_status_from_directory(void)
       }
       log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s, and %s.",
                entry->nickname,
-               entry->down_since ? "down" : "up",
+               (entry->down_since || entry->unlisted_since) ? "down" : "up",
                entry->unlisted_since ? "unlisted" : "listed",
                entry_is_live(entry, 0, 1) ? "live" : "not live");
     });
