@@ -881,7 +881,7 @@ static digestmap_t *cached_v2_networkstatus = NULL;
  * <b>directory</b> published on <b>when</b>, unless <b>when</b> is older than
  * the last value, or too far in the future.
  *
- * Does not copy <b>directory</b>; free it if it isn't used.
+ * Does not copy <b>directory</b>; frees it if it isn't used.
  */
 static void
 set_cached_dir(cached_dir_t *d, char *directory, time_t when)
