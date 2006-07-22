@@ -796,7 +796,8 @@ options_act(or_options_t *old_options)
           return -1;
         }
         server_has_changed_ip();
-        if (has_completed_circuit)
+        if (has_completed_circuit ||
+            rep_hist_circbuilding_dormant(time(NULL)))
           inform_testing_reachability();
       }
       cpuworkers_rotate();
