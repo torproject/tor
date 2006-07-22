@@ -568,8 +568,8 @@ directory_info_has_arrived(time_t now, int from_cache)
     return;
   }
 
-  if (server_mode(options) && !we_are_hibernating() &&
-      !from_cache && has_completed_circuit)
+  if (server_mode(options) && !we_are_hibernating() && !from_cache &&
+      (has_completed_circuit || rep_hist_circbuilding_dormant(now)))
     consider_testing_reachability();
 }
 
@@ -833,7 +833,7 @@ run_scheduled_events(time_t now)
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */
     if (server_mode(options) &&
-        has_completed_circuit &&
+        (has_completed_circuit || rep_hist_circbuilding_dormant(now)) &&
         stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
         !we_are_hibernating())
       consider_testing_reachability();
