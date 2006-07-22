@@ -2121,6 +2121,8 @@ int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
 
+int any_predicted_circuits(time_t now);
+
 void rep_hist_free_all(void);
 
 /********************************* rendclient.c ***************************/

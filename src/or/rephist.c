@@ -912,6 +912,15 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
   return 1;
 }
 
+/** Any ports used lately? These are pre-seeded if we just started
+ * up or if we're running a hidden service. */
+int
+any_predicted_circuits(time_t now)
+{
+  return smartlist_len(predicted_ports_list) ||
+         predicted_internal_time + PREDICTED_CIRCS_RELEVANCE_TIME >= now;
+}
+
 /** Free all storage held by the OR/link history caches, by the
  * bandwidth history arrays, or by the port history. */
 void

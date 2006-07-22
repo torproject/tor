@@ -601,7 +601,8 @@ directory_info_has_arrived(time_t now, int from_cache)
       !we_are_hibernating()) { /* connect to the appropriate routers */
     if (!authdir_mode(options))
       router_retry_connections(0, 1);
-    if (!from_cache && has_completed_circuit)
+    if (!from_cache &&
+        (has_completed_circuit || !any_predicted_circuits(now)))
       consider_testing_reachability();
   }
 }
@@ -864,7 +865,7 @@ run_scheduled_events(time_t now)
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */
     if (server_mode(options) &&
-        has_completed_circuit &&
+        (has_completed_circuit || !any_predicted_circuits(now)) &&
         stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
         !we_are_hibernating())
       consider_testing_reachability();
