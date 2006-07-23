@@ -88,6 +88,10 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define tor_strndup(s, n)      _tor_strndup(s, n DMALLOC_ARGS)
 #define tor_memdup(s, n)       _tor_memdup(s, n DMALLOC_ARGS)
 
+/** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
+#define STRUCT_OFFSET(tp, member) \
+  ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
+
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s);
@@ -114,6 +118,7 @@ const char *hex_str(const char *from, size_t fromlen);
 const char *eat_whitespace(const char *s);
 const char *eat_whitespace_no_nl(const char *s);
 const char *find_whitespace(const char *s);
+int tor_mem_is_zero(const char *mem, size_t len);
 int tor_digest_is_zero(const char *digest);
 char *esc_for_log(const char *string);
 const char *escaped(const char *string);
