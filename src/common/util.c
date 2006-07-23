@@ -428,13 +428,30 @@ find_whitespace(const char *s)
   return s;
 }
 
+/** Return true iff the 'len' bytes at 'mem' are all zero. */
+int tor_mem_is_zero(const char *mem, size_t len)
+{
+  static const char ZERO[] = {
+    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+  };
+  while (len >= sizeof(ZERO)) {
+    if (memcmp(mem, ZERO, sizeof(ZERO)))
+      return 0;
+    len -= sizeof(ZERO);
+    mem += sizeof(ZERO);
+  }
+  /* Deal with leftover bytes. */
+  if (len)
+    return ! memcmp(mem, ZERO, len);
+
+  return 1;
+}
+
 /** Return true iff the DIGEST_LEN bytes in digest are all zero. */
 int
 tor_digest_is_zero(const char *digest)
 {
-  static char ZERO_DIGEST[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-
-  return !memcmp(digest, ZERO_DIGEST, DIGEST_LEN);
+  return tor_mem_is_zero(digest, DIGEST_LEN);
 }
 
 #define CHECK_STRTOX_RESULT()                           \
