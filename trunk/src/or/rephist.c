@@ -59,14 +59,13 @@ typedef struct or_history_t {
 /** Map from hex OR identity digest to or_history_t. */
 static digestmap_t *history_map = NULL;
 
-/** Return the or_history_t for the named OR, creating it if necessary.
- */
+/** Return the or_history_t for the named OR, creating it if necessary. */
 static or_history_t *
 get_or_history(const char* id)
 {
   or_history_t *hist;
 
-  if (!memcmp(id, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DIGEST_LEN))
+  if (tor_mem_is_zero(id, DIGEST_LEN))
     return NULL;
 
   hist = digestmap_get(history_map, id);
@@ -93,7 +92,7 @@ get_link_history(const char *from_id, const char *to_id)
   orhist = get_or_history(from_id);
   if (!orhist)
     return NULL;
-  if (!memcmp(to_id, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DIGEST_LEN))
+  if (tor_mem_is_zero(to_id, DIGEST_LEN))
     return NULL;
   lhist = (link_history_t*) digestmap_get(orhist->link_history_map, to_id);
   if (!lhist) {
