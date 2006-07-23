@@ -1070,6 +1070,7 @@ do_hup(void)
 
   if (server_mode(options)) {
 //    const char *descriptor;
+    mark_my_descriptor_dirty();
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
