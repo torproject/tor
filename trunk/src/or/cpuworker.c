@@ -181,8 +181,8 @@ connection_cpu_process_inbuf(connection_t *conn)
       log_debug(LD_OR,"processed onion for a circ that's gone. Dropping.");
       goto done_processing;
     }
-    tor_assert(circ->p_conn);
-    if (onionskin_answer(circ, CELL_CREATED, buf+TAG_LEN,
+    tor_assert(! CIRCUIT_IS_ORIGIN(circ));
+    if (onionskin_answer(TO_OR_CIRCUIT(circ), CELL_CREATED, buf+TAG_LEN,
                          buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       log_warn(LD_OR,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
@@ -386,7 +386,7 @@ spawn_enough_cpuworkers(void)
 static void
 process_pending_task(connection_t *cpuworker)
 {
-  circuit_t *circ;
+  or_circuit_t *circ;
 
   tor_assert(cpuworker);
 
@@ -444,7 +444,7 @@ int
 assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
                     void *task)
 {
-  circuit_t *circ;
+  or_circuit_t *circ;
   char tag[TAG_LEN];
 
   tor_assert(question_type == CPUWORKER_TASK_ONION);
@@ -454,7 +454,7 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
   if (question_type == CPUWORKER_TASK_ONION) {
     circ = task;
-    tor_assert(circ->onionskin);
+    tor_assert(circ->_base.onionskin);
 
     if (num_cpuworkers_busy == num_cpuworkers) {
       log_debug(LD_OR,"No idle cpuworkers. Queuing.");
@@ -484,9 +484,9 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
     connection_write_to_buf((char*)&question_type, 1, cpuworker);
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
-    connection_write_to_buf(circ->onionskin, ONIONSKIN_CHALLENGE_LEN,
+    connection_write_to_buf(circ->_base.onionskin, ONIONSKIN_CHALLENGE_LEN,
                             cpuworker);
-    tor_free(circ->onionskin);
+    tor_free(circ->_base.onionskin);
   }
   return 0;
 }

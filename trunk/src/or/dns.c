@@ -686,12 +686,13 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
 
         circ = circuit_get_by_edge_conn(pend->conn);
         tor_assert(circ);
+        tor_assert(!CIRCUIT_IS_ORIGIN(circ));
         /* unlink pend->conn from resolving_streams, */
         circuit_detach_stream(circ, pend->conn);
         /* and link it to n_streams */
-        pend->conn->next_stream = circ->n_streams;
+        pend->conn->next_stream = TO_OR_CIRCUIT(circ)->n_streams;
         pend->conn->on_circuit = circ;
-        circ->n_streams = pend->conn;
+        TO_OR_CIRCUIT(circ)->n_streams = pend->conn;
 
         connection_exit_connect(pend->conn);
       } else {

@@ -161,7 +161,7 @@ command_process_cell(cell_t *cell, connection_t *conn)
 static void
 command_process_create_cell(cell_t *cell, connection_t *conn)
 {
-  circuit_t *circ;
+  or_circuit_t *circ;
   int id_is_high;
 
   if (we_are_hibernating()) {
@@ -186,9 +186,7 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
     return;
   }
 
-  circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
-
-  if (circ) {
+  if (circuit_get_by_circid_orconn(cell->circ_id, conn)) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received CREATE cell (circID %d) for known circ. "
@@ -201,17 +199,17 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
     return;
   }
 
-  circ = circuit_new(cell->circ_id, conn);
-  circ->purpose = CIRCUIT_PURPOSE_OR;
-  circuit_set_state(circ, CIRCUIT_STATE_ONIONSKIN_PENDING);
+  circ = or_circuit_new(cell->circ_id, conn);
+  circ->_base.purpose = CIRCUIT_PURPOSE_OR;
+  circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_ONIONSKIN_PENDING);
   if (cell->command == CELL_CREATE) {
-    circ->onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
-    memcpy(circ->onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
+    circ->_base.onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
+    memcpy(circ->_base.onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
 
     /* hand it off to the cpuworkers, and then return. */
     if (assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
       log_warn(LD_GENERAL,"Failed to hand off onionskin. Closing.");
-      circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
     }
     log_debug(LD_OR,"success: handed off onionskin.");
@@ -223,12 +221,12 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
     tor_assert(cell->command == CELL_CREATE_FAST);
     if (fast_server_handshake(cell->payload, reply, keys, sizeof(keys))<0) {
       log_warn(LD_OR,"Failed to generate key material. Closing.");
-      circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
     }
     if (onionskin_answer(circ, CELL_CREATED_FAST, reply, keys)<0) {
       log_warn(LD_OR,"Failed to reply to CREATE_FAST cell. Closing.");
-      circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
     }
   }
@@ -264,14 +262,16 @@ command_process_created_cell(cell_t *cell, connection_t *conn)
   }
 
   if (CIRCUIT_IS_ORIGIN(circ)) { /* we're the OP. Handshake this. */
+    origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     log_debug(LD_OR,"at OP. Finishing handshake.");
-    if (circuit_finish_handshake(circ, cell->command, cell->payload) < 0) {
+    if (circuit_finish_handshake(origin_circ, cell->command,
+                                 cell->payload) < 0) {
       log_warn(LD_OR,"circuit_finish_handshake failed.");
       circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
       return;
     }
     log_debug(LD_OR,"Moving to next skin.");
-    if (circuit_send_next_onion_skin(circ) < 0) {
+    if (circuit_send_next_onion_skin(origin_circ) < 0) {
       log_info(LD_OR,"circuit_send_next_onion_skin failed.");
       /* XXX push this circuit_close lower */
       circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
@@ -310,7 +310,9 @@ command_process_relay_cell(cell_t *cell, connection_t *conn)
     return;
   }
 
-  if (cell->circ_id == circ->p_circ_id) { /* it's an outgoing cell */
+  if (!CIRCUIT_IS_ORIGIN(circ) &&
+      cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
+    /* it's an outgoing cell */
     if ((reason = circuit_receive_relay_cell(cell, circ,
                                              CELL_DIRECTION_OUT)) < 0) {
       log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
@@ -357,12 +359,13 @@ command_process_destroy_cell(cell_t *cell, connection_t *conn)
   }
   log_debug(LD_OR,"Received for circID %d.",cell->circ_id);
 
-  if (cell->circ_id == circ->p_circ_id) {
+  if (!CIRCUIT_IS_ORIGIN(circ) &&
+      cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
     /* the destroy came from behind */
-    circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
+    circuit_set_p_circid_orconn(TO_OR_CIRCUIT(circ), 0, NULL);
     circuit_mark_for_close(circ, reason);
   } else { /* the destroy came from ahead */
-    circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
+    circuit_set_n_circid_orconn(circ, 0, NULL);
     if (CIRCUIT_IS_ORIGIN(circ)) {
       circuit_mark_for_close(circ, reason);
     } else {
