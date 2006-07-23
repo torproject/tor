@@ -429,7 +429,8 @@ find_whitespace(const char *s)
 }
 
 /** Return true iff the 'len' bytes at 'mem' are all zero. */
-int tor_mem_is_zero(const char *mem, size_t len)
+int
+tor_mem_is_zero(const char *mem, size_t len)
 {
   static const char ZERO[] = {
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
