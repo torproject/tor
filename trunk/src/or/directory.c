@@ -1673,7 +1673,6 @@ directory_handle_command_post(connection_t *conn, char *headers,
     return 0;
   }
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
-  http_set_address_origin(headers, conn);
 
   if (!strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg;
@@ -1754,6 +1753,7 @@ directory_handle_command(connection_t *conn)
     /* case 1, fall through */
   }
 
+  http_set_address_origin(headers, conn);
   //log_debug(LD_DIRSERV,"headers %s, body %s.", headers, body);
 
   if (!strncasecmp(headers,"GET",3))
