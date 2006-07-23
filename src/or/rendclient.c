@@ -14,10 +14,9 @@ const char rendclient_c_id[] =
 /** Called when we've established a circuit to an introduction point:
  * send the introduction request. */
 void
-rend_client_introcirc_has_opened(circuit_t *circ)
+rend_client_introcirc_has_opened(origin_circuit_t *circ)
 {
-  tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(circ->cpath);
 
   log_info(LD_REND,"introcirc is open");
@@ -28,19 +27,19 @@ rend_client_introcirc_has_opened(circuit_t *circ)
  * it fails, mark the circ for close and return -1. else return 0.
  */
 static int
-rend_client_send_establish_rendezvous(circuit_t *circ)
+rend_client_send_establish_rendezvous(origin_circuit_t *circ)
 {
-  tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
   log_info(LD_REND, "Sending an ESTABLISH_RENDEZVOUS cell");
 
-  if (crypto_rand(circ->rend_cookie, REND_COOKIE_LEN) < 0) {
+  if (crypto_rand(circ->_base.rend_cookie, REND_COOKIE_LEN) < 0) {
     log_warn(LD_BUG, "Internal error: Couldn't produce random cookie.");
-    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
     return -1;
   }
-  if (connection_edge_send_command(NULL,circ,
+  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
-                                   circ->rend_cookie, REND_COOKIE_LEN,
+                                   circ->_base.rend_cookie, REND_COOKIE_LEN,
                                    circ->cpath->prev)<0) {
     /* circ is already marked for close */
     log_warn(LD_GENERAL, "Couldn't send ESTABLISH_RENDEZVOUS cell");
@@ -54,7 +53,8 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
  * down introcirc if possible.
  */
 int
-rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
+rend_client_send_introduction(origin_circuit_t *introcirc,
+                              origin_circuit_t *rendcirc)
 {
   size_t payload_len;
   int r;
@@ -64,15 +64,15 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
   crypt_path_t *cpath;
   off_t dh_offset;
 
-  tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-  tor_assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
-  tor_assert(!rend_cmp_service_ids(introcirc->rend_query,
-                                   rendcirc->rend_query));
+  tor_assert(introcirc->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+  tor_assert(rendcirc->_base.purpose == CIRCUIT_PURPOSE_C_REND_READY);
+  tor_assert(!rend_cmp_service_ids(introcirc->_base.rend_query,
+                                   rendcirc->_base.rend_query));
 
-  if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
+  if (rend_cache_lookup_entry(introcirc->_base.rend_query, -1, &entry) < 1) {
     log_warn(LD_REND,
              "query %s didn't have valid rend desc in cache. Failing.",
-             escaped_safe_str(introcirc->rend_query));
+             escaped_safe_str(introcirc->_base.rend_query));
     goto err;
   }
 
@@ -111,13 +111,15 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
     klen = crypto_pk_asn1_encode(extend_info->onion_key, tmp+7+DIGEST_LEN+2,
                                  sizeof(tmp)-(7+DIGEST_LEN+2));
     set_uint16(tmp+7+DIGEST_LEN, htons(klen));
-    memcpy(tmp+7+DIGEST_LEN+2+klen, rendcirc->rend_cookie, REND_COOKIE_LEN);
+    memcpy(tmp+7+DIGEST_LEN+2+klen, rendcirc->_base.rend_cookie,
+           REND_COOKIE_LEN);
     dh_offset = 7+DIGEST_LEN+2+klen+REND_COOKIE_LEN;
   } else {
     /* Version 0. */
     strncpy(tmp, rendcirc->build_state->chosen_exit->nickname,
             (MAX_NICKNAME_LEN+1)); /* nul pads */
-    memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
+    memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->_base.rend_cookie,
+           REND_COOKIE_LEN);
     dh_offset = MAX_NICKNAME_LEN+1+REND_COOKIE_LEN;
   }
 
@@ -141,7 +143,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
   tor_assert(DIGEST_LEN + r <= RELAY_PAYLOAD_SIZE); /* we overran something */
   payload_len = DIGEST_LEN + r;
 
-  if (connection_edge_send_command(NULL, introcirc,
+  if (connection_edge_send_command(NULL, TO_CIRCUIT(introcirc),
                                    RELAY_COMMAND_INTRODUCE1,
                                    payload, payload_len,
                                    introcirc->cpath->prev)<0) {
@@ -151,22 +153,21 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc)
   }
 
   /* Now, we wait for an ACK or NAK on this circuit. */
-  introcirc->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
+  introcirc->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
 
   return 0;
 err:
-  circuit_mark_for_close(introcirc, END_CIRC_AT_ORIGIN);
-  circuit_mark_for_close(rendcirc, END_CIRC_AT_ORIGIN);
+  circuit_mark_for_close(TO_CIRCUIT(introcirc), END_CIRC_AT_ORIGIN);
+  circuit_mark_for_close(TO_CIRCUIT(rendcirc), END_CIRC_AT_ORIGIN);
   return -1;
 }
 
 /** Called when a rendezvous circuit is open; sends a establish
  * rendezvous circuit as appropriate. */
 void
-rend_client_rendcirc_has_opened(circuit_t *circ)
+rend_client_rendcirc_has_opened(origin_circuit_t *circ)
 {
-  tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
-  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
 
   log_info(LD_REND,"rendcirc is open");
 
@@ -179,17 +180,17 @@ rend_client_rendcirc_has_opened(circuit_t *circ)
 /** Called when get an ACK or a NAK for a REND_INTRODUCE1 cell.
  */
 int
-rend_client_introduction_acked(circuit_t *circ,
+rend_client_introduction_acked(origin_circuit_t *circ,
                                const char *request, size_t request_len)
 {
   circuit_t *rendcirc;
   (void) request; // XXXX Use this.
 
-  if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     log_warn(LD_PROTOCOL,
              "Received REND_INTRODUCE_ACK on unexpected circuit %d.",
-             circ->n_circ_id);
-    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+             circ->_base.n_circ_id);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
     return -1;
   }
 
@@ -203,40 +204,40 @@ rend_client_introduction_acked(circuit_t *circ,
      */
     log_info(LD_REND,"Received ack. Telling rend circ...");
     rendcirc = circuit_get_by_rend_query_and_purpose(
-               circ->rend_query, CIRCUIT_PURPOSE_C_REND_READY);
+               circ->_base.rend_query, CIRCUIT_PURPOSE_C_REND_READY);
     if (rendcirc) { /* remember the ack */
       rendcirc->purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
     } else {
       log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }
     /* close the circuit: we won't need it anymore. */
-    circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACKED;
-    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+    circ->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACKED;
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
-    circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+    circ->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
     /* Remove this intro point from the set of viable introduction
      * points. If any remain, extend to a new one and try again.
      * If none remain, refetch the service descriptor.
      */
     if (rend_client_remove_intro_point(circ->build_state->chosen_exit,
-                                       circ->rend_query) > 0) {
+                                       circ->_base.rend_query) > 0) {
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
       extend_info_t *extend_info;
       int result;
-      extend_info = rend_client_get_random_intro(circ->rend_query);
+      extend_info = rend_client_get_random_intro(circ->_base.rend_query);
       if (!extend_info) {
         log_warn(LD_REND, "No introduction points left for %s. Closing.",
-                 escaped_safe_str(circ->rend_query));
-        circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+                 escaped_safe_str(circ->_base.rend_query));
+        circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
         return -1;
       }
       log_info(LD_REND,
                "Got nack for %s from %s. Re-extending circ %d, "
                "this time to %s.",
-               escaped_safe_str(circ->rend_query),
-               circ->build_state->chosen_exit->nickname, circ->n_circ_id,
+               escaped_safe_str(circ->_base.rend_query),
+               circ->build_state->chosen_exit->nickname, circ->_base.n_circ_id,
                extend_info->nickname);
       result = circuit_extend_to_new_exit(circ, extend_info);
       extend_info_free(extend_info);
@@ -340,38 +341,38 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
  * the circuit to C_REND_READY.
  */
 int
-rend_client_rendezvous_acked(circuit_t *circ, const char *request,
+rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
                              size_t request_len)
 {
   (void) request;
   (void) request_len;
   /* we just got an ack for our establish-rendezvous. switch purposes. */
-  if (circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
     log_warn(LD_PROTOCOL,"Got a rendezvous ack when we weren't expecting one. "
              "Closing circ.");
-    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
     return -1;
   }
   log_info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
            "rendezvous.");
-  circ->purpose = CIRCUIT_PURPOSE_C_REND_READY;
+  circ->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY;
   return 0;
 }
 
 /** Bob sent us a rendezvous cell; join the circuits. */
 int
-rend_client_receive_rendezvous(circuit_t *circ, const char *request,
+rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
                                size_t request_len)
 {
   crypt_path_t *hop;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
 
-  if ((circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
-       circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
+  if ((circ->_base.purpose != CIRCUIT_PURPOSE_C_REND_READY &&
+       circ->_base.purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
       || !circ->build_state->pending_final_cpath) {
     log_warn(LD_PROTOCOL,"Got rendezvous2 cell from hidden service, but not "
              "expecting it. Closing.");
-    circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
     return -1;
   }
 
@@ -405,7 +406,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request,
   hop->dh_handshake_state = NULL;
 
   /* All is well. Extend the circuit. */
-  circ->purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
+  circ->_base.purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
   hop->state = CPATH_STATE_OPEN;
   /* set the windows to default. these are the windows
    * that alice thinks bob has.
@@ -417,7 +418,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request,
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
   return 0;
  err:
-  circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
   return -1;
 }
 

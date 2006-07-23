@@ -1040,7 +1040,10 @@ typedef struct {
   time_t expiry_time;
 } cpath_build_state_t;
 
-#define CIRCUIT_MAGIC 0x35315243u
+#define ORIGIN_CIRCUIT_MAGIC 0x35315243u
+#define OR_CIRCUIT_MAGIC 0x98ABC04Fu
+
+typedef uint16_t circid_t;
 
 /**
  * A circuit is a path over the onion routing
@@ -1064,29 +1067,20 @@ typedef struct {
  * "backward" (towards the OP).  At the OR, a circuit has only two stream
  * ciphers: one for data going forward, and one for data going backward.
  */
-struct circuit_t {
-  uint32_t magic; /**< For memory debugging: must equal CIRCUIT_MAGIC. */
+typedef struct circuit_t {
+  uint32_t magic; /**< For memory and type debugging: must equal
+                   * ORIGIN_CIRCUIT_MAGIC or OR_CIRCUIT_MAGIC. */
 
-  /** The OR connection that is previous in this circuit. */
-  connection_t *p_conn;
   /** The OR connection that is next in this circuit. */
   connection_t *n_conn;
   /** The identity hash of n_conn. */
   char n_conn_id_digest[DIGEST_LEN];
-  /** Linked list of AP streams associated with this circuit. */
-  connection_t *p_streams;
-  /** Linked list of Exit streams associated with this circuit. */
-  connection_t *n_streams;
-  /** Linked list of Exit streams associated with this circuit that are
-   * still being resolved. */
-  connection_t *resolving_streams;
+  /** The circuit_id used in the next (forward) hop of this circuit. */
+  uint16_t n_circ_id;
   /** The IPv4 address of the OR that is next in this circuit. */
   uint32_t n_addr;
   /** The port for the OR that is next in this circuit. */
   uint16_t n_port;
-  /** The next stream_id that will be tried when we're attempting to
-   * construct a new AP stream originating at this circuit. */
-  uint16_t next_stream_id;
   /** How many relay data cells can we package (read from edge streams)
    * on this circuit before we receive a circuit-level sendme cell asking
    * for more? */
@@ -1097,47 +1091,11 @@ struct circuit_t {
    * more. */
   int deliver_window;
 
-  /** The circuit_id used in the previous (backward) hop of this circuit. */
-  uint16_t p_circ_id;
-  /** The circuit_id used in the next (forward) hop of this circuit. */
-  uint16_t n_circ_id;
-
-  /** The cipher used by intermediate hops for cells heading toward the
-   * OP. */
-  crypto_cipher_env_t *p_crypto;
-  /** The cipher used by intermediate hops for cells heading away from
-   * the OP. */
-  crypto_cipher_env_t *n_crypto;
-
-  /** The integrity-checking digest used by intermediate hops, for
-   * cells packaged here and heading towards the OP.
-   */
-  crypto_digest_env_t *p_digest;
-  /** The integrity-checking digest used by intermediate hops, for
-   * cells packaged at the OP and arriving here.
-   */
-  crypto_digest_env_t *n_digest;
-
-  /** Build state for this circuit. It includes the intended path
-   * length, the chosen exit router, rendezvous information, etc.
-   */
-  cpath_build_state_t *build_state;
-  /** The doubly-linked list of crypt_path_t entries, one per hop,
-   * for this circuit. This includes ciphers for each hop,
-   * integrity-checking digests for each hop, and package/delivery
-   * windows for each hop.
-   *
-   * The cpath field is defined only when we are the circuit's origin.
-   */
-  crypt_path_t *cpath;
-
   /** For storage while passing to cpuworker (state
     * CIRCUIT_STATE_ONIONSKIN_PENDING), or while n_conn is pending
     * (state CIRCUIT_STATE_OR_WAIT). When defined, it is always
     * length ONIONSKIN_CHALLENGE_LEN. */
   char *onionskin;
-
-  char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops. */
 
   time_t timestamp_created; /**< When was this circuit created? */
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
@@ -1169,18 +1127,85 @@ struct circuit_t {
    */
   char rend_cookie[REND_COOKIE_LEN];
 
-  /** Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
-   * is not marked for close. */
-  struct circuit_t *rend_splice;
-
   /** Quasi-global identifier for this circuit; used for control.c */
   /* XXXX NM This can get re-used after 2**32 circuits. */
   uint32_t global_identifier;
 
   struct circuit_t *next; /**< Next circuit in linked list. */
-};
+} circuit_t;
 
-typedef struct circuit_t circuit_t;
+typedef struct origin_circuit_t {
+  circuit_t _base;
+
+  /** Linked list of AP streams associated with this circuit. */
+  connection_t *p_streams;
+  /** The next stream_id that will be tried when we're attempting to
+   * construct a new AP stream originating at this circuit. */
+  uint16_t next_stream_id;
+  /** Build state for this circuit. It includes the intended path
+   * length, the chosen exit router, rendezvous information, etc.
+   */
+  cpath_build_state_t *build_state;
+  /** The doubly-linked list of crypt_path_t entries, one per hop,
+   * for this circuit. This includes ciphers for each hop,
+   * integrity-checking digests for each hop, and package/delivery
+   * windows for each hop.
+   *
+   * The cpath field is defined only when we are the circuit's origin.
+   */
+  crypt_path_t *cpath;
+
+} origin_circuit_t;
+
+typedef struct or_circuit_t {
+  circuit_t _base;
+
+  /** The circuit_id used in the previous (backward) hop of this circuit. */
+  circid_t p_circ_id;
+  /** The OR connection that is previous in this circuit. */
+  connection_t *p_conn;
+  /** Linked list of Exit streams associated with this circuit. */
+  connection_t *n_streams;
+  /** Linked list of Exit streams associated with this circuit that are
+   * still being resolved. */
+  connection_t *resolving_streams;
+    /** The cipher used by intermediate hops for cells heading toward the
+   * OP. */
+  crypto_cipher_env_t *p_crypto;
+  /** The cipher used by intermediate hops for cells heading away from
+   * the OP. */
+  crypto_cipher_env_t *n_crypto;
+
+  /** The integrity-checking digest used by intermediate hops, for
+   * cells packaged here and heading towards the OP.
+   */
+  crypto_digest_env_t *p_digest;
+  /** The integrity-checking digest used by intermediate hops, for
+   * cells packaged at the OP and arriving here.
+   */
+  crypto_digest_env_t *n_digest;
+
+  /** Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
+   * is not marked for close. */
+  struct or_circuit_t *rend_splice;
+
+  char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops. */
+} or_circuit_t;
+
+#define TO_CIRCUIT(x)  (&((x)->_base))
+or_circuit_t *TO_OR_CIRCUIT(circuit_t *x);
+extern INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
+{
+  tor_assert(x->magic == OR_CIRCUIT_MAGIC);
+  return (or_circuit_t*) (((char*)x) - STRUCT_OFFSET(or_circuit_t, _base));
+}
+origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x);
+extern INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
+{
+  tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
+  return (origin_circuit_t*)
+    (((char*)x) - STRUCT_OFFSET(origin_circuit_t, _base));
+}
 
 #define ALLOW_INVALID_ENTRY        1
 #define ALLOW_INVALID_EXIT         2
@@ -1505,32 +1530,34 @@ void assert_buf_ok(buf_t *buf);
 
 /********************************* circuitbuild.c **********************/
 
-char *circuit_list_path(circuit_t *circ, int verbose);
-void circuit_log_path(int severity, unsigned int domain, circuit_t *circ);
-void circuit_rep_hist_note_result(circuit_t *circ);
-void circuit_dump_by_conn(connection_t *conn, int severity);
-circuit_t *circuit_init(uint8_t purpose, int need_uptime,
-                        int need_capacity, int internal);
-circuit_t *circuit_establish_circuit(uint8_t purpose, extend_info_t *exit,
+char *circuit_list_path(origin_circuit_t *circ, int verbose);
+void circuit_log_path(int severity, unsigned int domain,
+                      origin_circuit_t *circ);
+void circuit_rep_hist_note_result(origin_circuit_t *circ);
+origin_circuit_t *origin_circuit_init(uint8_t purpose, int need_uptime,
+                                      int need_capacity, int internal);
+origin_circuit_t *circuit_establish_circuit(uint8_t purpose,
+                                     extend_info_t *exit,
                                      int need_uptime, int need_capacity,
                                      int internal);
-int circuit_handle_first_hop(circuit_t *circ);
+int circuit_handle_first_hop(origin_circuit_t *circ);
 void circuit_n_conn_done(connection_t *or_conn, int status);
 int inform_testing_reachability(void);
-int circuit_send_next_onion_skin(circuit_t *circ);
+int circuit_send_next_onion_skin(origin_circuit_t *circ);
 void circuit_note_clock_jumped(int seconds_elapsed);
 int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data,
                               int reverse);
-int circuit_finish_handshake(circuit_t *circ, uint8_t cell_type, char *reply);
-int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
-int onionskin_answer(circuit_t *circ, uint8_t cell_type, char *payload,
+int circuit_finish_handshake(origin_circuit_t *circ, uint8_t cell_type,
+                             char *reply);
+int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer);
+int onionskin_answer(or_circuit_t *circ, uint8_t cell_type, char *payload,
                      char *keys);
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
-int circuit_append_new_exit(circuit_t *circ, extend_info_t *info);
-int circuit_extend_to_new_exit(circuit_t *circ, extend_info_t *info);
+int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
+int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_from_router(routerinfo_t *r);
 extend_info_t *extend_info_dup(extend_info_t *info);
@@ -1551,13 +1578,15 @@ void entry_guards_free_all(void);
 
 circuit_t * _circuit_get_global_list(void);
 const char *circuit_state_to_string(int state);
-enum which_conn_changed_t { P_CONN_CHANGED=1, N_CONN_CHANGED=0 };
-void circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
-                               connection_t *conn,
-                               enum which_conn_changed_t which);
+void circuit_dump_by_conn(connection_t *conn, int severity);
+void circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
+                                 connection_t *conn);
+void circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
+                                 connection_t *conn);
 void circuit_set_state(circuit_t *circ, int state);
 void circuit_close_all_marked(void);
-circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
+origin_circuit_t *origin_circuit_new(void);
+or_circuit_t *or_circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn);
 int circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(connection_t *conn);
@@ -1567,8 +1596,9 @@ circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
                                                  uint8_t purpose);
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
                                          const char *digest, uint8_t purpose);
-circuit_t *circuit_get_rendezvous(const char *cookie);
-circuit_t *circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
+or_circuit_t *circuit_get_rendezvous(const char *cookie);
+origin_circuit_t *circuit_find_to_cannibalize(uint8_t purpose,
+                                       extend_info_t *info,
                                        int need_uptime,
                                        int need_capacity, int internal);
 void circuit_mark_all_unused_circs(void);
@@ -1592,22 +1622,22 @@ int circuit_stream_is_being_handled(connection_t *conn, uint16_t port,
 void circuit_build_needed_circs(time_t now);
 void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
-void circuit_has_opened(circuit_t *circ);
-void circuit_build_failed(circuit_t *circ);
-circuit_t *circuit_launch_by_nickname(uint8_t purpose,
+void circuit_has_opened(origin_circuit_t *circ);
+void circuit_build_failed(origin_circuit_t *circ);
+origin_circuit_t *circuit_launch_by_nickname(uint8_t purpose,
                                       const char *exit_nickname,
                                       int need_uptime, int need_capacity,
                                       int is_internal);
-circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
+origin_circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
                                          extend_info_t *info,
                                          int need_uptime, int need_capacity,
                                          int is_internal);
-circuit_t *circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
+origin_circuit_t *circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
                                     int need_uptime, int need_capacity,
                                     int is_internal);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
-                                                  circuit_t *circ);
+                                                  origin_circuit_t *circ);
 int connection_ap_handshake_attach_circuit(connection_t *conn);
 
 /********************************* command.c ***************************/
@@ -1733,9 +1763,10 @@ int connection_edge_end_errno(connection_t *conn, crypt_path_t *cpath_layer);
 int connection_edge_finished_flushing(connection_t *conn);
 int connection_edge_finished_connecting(connection_t *conn);
 
-int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
+int connection_ap_handshake_send_begin(connection_t *ap_conn,
+                                       origin_circuit_t *circ);
 int connection_ap_handshake_send_resolve(connection_t *ap_conn,
-                                         circuit_t *circ);
+                                         origin_circuit_t *circ);
 
 int connection_ap_make_bridge(char *address, uint16_t port);
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
@@ -1748,13 +1779,13 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int ttl);
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
-int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ);
+int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);
 void connection_exit_connect(connection_t *conn);
 int connection_edge_is_rendezvous_stream(connection_t *conn);
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
-int connection_ap_detach_retriable(connection_t *conn, circuit_t *circ);
+int connection_ap_detach_retriable(connection_t *conn, origin_circuit_t *circ);
 
 void addressmap_init(void);
 void addressmap_clean(time_t now);
@@ -1776,7 +1807,7 @@ const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
                              time_t max_expires);
 int connection_ap_handshake_rewrite_and_attach(connection_t *conn,
-                                               circuit_t *circ);
+                                               origin_circuit_t *circ);
 
 void set_exit_redirects(smartlist_t *lst);
 typedef enum hostname_type_t {
@@ -1865,7 +1896,8 @@ int connection_control_finished_flushing(connection_t *conn);
 int connection_control_reached_eof(connection_t *conn);
 int connection_control_process_inbuf(connection_t *conn);
 
-int control_event_circuit_status(circuit_t *circ, circuit_status_event_t e);
+int control_event_circuit_status(origin_circuit_t *circ,
+                                 circuit_status_event_t e);
 int control_event_stream_status(connection_t *conn, stream_status_event_t e);
 int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
@@ -2026,9 +2058,9 @@ int tor_main(int argc, char *argv[]);
 
 /********************************* onion.c ***************************/
 
-int onion_pending_add(circuit_t *circ);
-circuit_t *onion_next_task(void);
-void onion_pending_remove(circuit_t *circ);
+int onion_pending_add(or_circuit_t *circ);
+or_circuit_t *onion_next_task(void);
+void onion_pending_remove(or_circuit_t *circ);
 
 int onion_skin_create(crypto_pk_env_t *router_key,
                       crypto_dh_env_t **handshake_state_out,
@@ -2148,22 +2180,23 @@ void rep_hist_free_all(void);
 
 /********************************* rendclient.c ***************************/
 
-void rend_client_introcirc_has_opened(circuit_t *circ);
-void rend_client_rendcirc_has_opened(circuit_t *circ);
-int rend_client_introduction_acked(circuit_t *circ, const char *request,
+void rend_client_introcirc_has_opened(origin_circuit_t *circ);
+void rend_client_rendcirc_has_opened(origin_circuit_t *circ);
+int rend_client_introduction_acked(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
 void rend_client_refetch_renddesc(const char *query);
 int rend_client_remove_intro_point(extend_info_t *failed_intro,
                                    const char *query);
-int rend_client_rendezvous_acked(circuit_t *circ, const char *request,
+int rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
                                  size_t request_len);
-int rend_client_receive_rendezvous(circuit_t *circ, const char *request,
+int rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
 void rend_client_desc_here(const char *query);
 
 extend_info_t *rend_client_get_random_intro(const char *query);
 
-int rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc);
+int rend_client_send_introduction(origin_circuit_t *introcirc,
+                                  origin_circuit_t *rendcirc);
 
 /********************************* rendcommon.c ***************************/
 
@@ -2228,25 +2261,27 @@ void rend_services_init(void);
 void rend_services_introduce(void);
 void rend_consider_services_upload(time_t now);
 
-void rend_service_intro_has_opened(circuit_t *circuit);
-int rend_service_intro_established(circuit_t *circuit, const char *request,
+void rend_service_intro_has_opened(origin_circuit_t *circuit);
+int rend_service_intro_established(origin_circuit_t *circuit,
+                                   const char *request,
                                    size_t request_len);
-void rend_service_rendezvous_has_opened(circuit_t *circuit);
-int rend_service_introduce(circuit_t *circuit, const char *request,
+void rend_service_rendezvous_has_opened(origin_circuit_t *circuit);
+int rend_service_introduce(origin_circuit_t *circuit, const char *request,
                            size_t request_len);
-void rend_service_relaunch_rendezvous(circuit_t *oldcirc);
-int rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ);
+void rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc);
+int rend_service_set_connection_addr_port(connection_t *conn,
+                                          origin_circuit_t *circ);
 void rend_service_dump_stats(int severity);
 void rend_service_free_all(void);
 
 /********************************* rendmid.c *******************************/
-int rend_mid_establish_intro(circuit_t *circ, const char *request,
+int rend_mid_establish_intro(or_circuit_t *circ, const char *request,
                              size_t request_len);
-int rend_mid_introduce(circuit_t *circ, const char *request,
+int rend_mid_introduce(or_circuit_t *circ, const char *request,
                        size_t request_len);
-int rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
+int rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
                                   size_t request_len);
-int rend_mid_rendezvous(circuit_t *circ, const char *request,
+int rend_mid_rendezvous(or_circuit_t *circ, const char *request,
                         size_t request_len);
 
 /********************************* router.c ***************************/

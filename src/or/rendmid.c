@@ -15,7 +15,7 @@ const char rendmid_c_id[] =
  * setting the circuit's purpose and service pk digest.
  */
 int
-rend_mid_establish_intro(circuit_t *circ, const char *request,
+rend_mid_establish_intro(or_circuit_t *circ, const char *request,
                          size_t request_len)
 {
   crypto_pk_env_t *pk = NULL;
@@ -31,7 +31,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
            "Received an ESTABLISH_INTRO request on circuit %d",
            circ->p_circ_id);
 
-  if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit.");
     reason = END_CIRC_REASON_TORPROTOCOL;
@@ -89,13 +89,13 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
   c = NULL;
   while ((c = circuit_get_next_by_pk_and_purpose(
                                 c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
-    log_info(LD_REND, "Replacing old circuit %d for service %s",
-             c->p_circ_id, safe_str(serviceid));
+    log_info(LD_REND, "Replacing old circuit for service %s",
+             safe_str(serviceid));
     circuit_mark_for_close(c, END_CIRC_REASON_REQUESTED);
   }
 
   /* Acknowledge the request. */
-  if (connection_edge_send_command(NULL,circ,
+  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_INTRO_ESTABLISHED,
                                    "", 0, NULL)<0) {
     log_info(LD_GENERAL, "Couldn't send INTRO_ESTABLISHED cell.");
@@ -103,8 +103,8 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
   }
 
   /* Now, set up this circuit. */
-  circ->purpose = CIRCUIT_PURPOSE_INTRO_POINT;
-  memcpy(circ->rend_pk_digest, pk_digest, DIGEST_LEN);
+  circ->_base.purpose = CIRCUIT_PURPOSE_INTRO_POINT;
+  memcpy(circ->_base.rend_pk_digest, pk_digest, DIGEST_LEN);
 
   log_info(LD_REND,
            "Established introduction point on circuit %d for service %s",
@@ -116,7 +116,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
   reason = END_CIRC_REASON_TORPROTOCOL;
  err:
   if (pk) crypto_free_pk_env(pk);
-  circuit_mark_for_close(circ, reason);
+  circuit_mark_for_close(TO_CIRCUIT(circ), reason);
   return -1;
 }
 
@@ -125,20 +125,23 @@ rend_mid_establish_intro(circuit_t *circ, const char *request,
  * INTRODUCE2 cell.
  */
 int
-rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
+rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
 {
   circuit_t *intro_circ;
   char serviceid[REND_SERVICE_ID_LEN+1];
   char nak_body[1];
 
-  if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
     log_warn(LD_PROTOCOL,
              "Rejecting INTRODUCE1 on non-OR or non-edge circuit %d.",
              circ->p_circ_id);
     goto err;
   }
 
-  /* change to MAX_HEX_NICKNAME_LEN once 0.0.9.x is obsolete */
+  /* We could change this to MAX_HEX_NICKNAME_LEN now that 0.0.9.x is
+   * obsolete; however, there isn't much reason to do so, and we're going
+   * to revise this protocol anyway.
+   */
   if (request_len < (DIGEST_LEN+(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+
                      DH_KEY_LEN+CIPHER_KEY_LEN+PKCS1_OAEP_PADDING_OVERHEAD)) {
     log_warn(LD_PROTOCOL, "Impossibly short INTRODUCE1 cell on circuit %d; "
@@ -152,7 +155,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
   intro_circ = circuit_get_next_by_pk_and_purpose(
                              NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
-  if (!intro_circ) {
+  if (!intro_circ || CIRCUIT_IS_ORIGIN(intro_circ)) {
     log_info(LD_REND,
              "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; "
              "responding with nack.",
@@ -163,7 +166,8 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
   log_info(LD_REND,
            "Sending introduction request for service %s "
            "from circ %d to circ %d",
-           safe_str(serviceid), circ->p_circ_id, intro_circ->p_circ_id);
+           safe_str(serviceid), circ->p_circ_id,
+           TO_OR_CIRCUIT(intro_circ)->p_circ_id);
 
   /* Great.  Now we just relay the cell down the circuit. */
   if (connection_edge_send_command(NULL, intro_circ,
@@ -174,10 +178,11 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
     goto err;
   }
   /* And sent an ack down Alice's circuit.  Empty body means succeeded. */
-  if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
+  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
+                                   RELAY_COMMAND_INTRODUCE_ACK,
                                    NULL,0,NULL)) {
     log_warn(LD_GENERAL, "Unable to send INTRODUCE_ACK cell to Tor client.");
-    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return -1;
   }
 
@@ -185,11 +190,12 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
  err:
   /* Send the client an NACK */
   nak_body[0] = 1;
-  if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
+  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
+                                   RELAY_COMMAND_INTRODUCE_ACK,
                                    nak_body, 1, NULL)) {
     log_warn(LD_GENERAL, "Unable to send NAK to Tor client.");
     /* Is this right? */
-    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
   }
   return -1;
 }
@@ -198,13 +204,13 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
  * rendezvous cookie.
  */
 int
-rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
+rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
                               size_t request_len)
 {
   char hexid[9];
   int reason = END_CIRC_REASON_TORPROTOCOL;
 
-  if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
     log_warn(LD_PROTOCOL,
              "Tried to establish rendezvous on non-OR or non-edge circuit.");
     goto err;
@@ -222,7 +228,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
   }
 
   /* Acknowledge the request. */
-  if (connection_edge_send_command(NULL,circ,
+  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
                                    "", 0, NULL)<0) {
     log_warn(LD_PROTOCOL, "Couldn't send RENDEZVOUS_ESTABLISHED cell.");
@@ -230,8 +236,8 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
     goto err;
   }
 
-  circ->purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
-  memcpy(circ->rend_cookie, request, REND_COOKIE_LEN);
+  circ->_base.purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
+  memcpy(circ->_base.rend_cookie, request, REND_COOKIE_LEN);
 
   base16_encode(hexid,9,request,4);
 
@@ -241,7 +247,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
 
   return 0;
  err:
-  circuit_mark_for_close(circ, reason);
+  circuit_mark_for_close(TO_CIRCUIT(circ), reason);
   return -1;
 }
 
@@ -250,9 +256,10 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request,
  * connecting the two circuits.
  */
 int
-rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
+rend_mid_rendezvous(or_circuit_t *circ, const char *request,
+                    size_t request_len)
 {
-  circuit_t *rend_circ;
+  or_circuit_t *rend_circ;
   char hexid[9];
   int reason = END_CIRC_REASON_INTERNAL;
   base16_encode(hexid,9,request,request_len<4?request_len:4);
@@ -263,7 +270,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
              circ->p_circ_id, hexid);
   }
 
-  if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
+  if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
     log_info(LD_REND,
              "Tried to complete rendezvous on non-OR or non-edge circuit %d.",
              circ->p_circ_id);
@@ -289,7 +296,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
   }
 
   /* Send the RENDEZVOUS2 cell to Alice. */
-  if (connection_edge_send_command(NULL, rend_circ,
+  if (connection_edge_send_command(NULL, TO_CIRCUIT(rend_circ),
                                    RELAY_COMMAND_RENDEZVOUS2,
                                    request+REND_COOKIE_LEN,
                                    request_len-REND_COOKIE_LEN, NULL)) {
@@ -304,16 +311,16 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
            "Completing rendezvous: circuit %d joins circuit %d (cookie %s)",
            circ->p_circ_id, rend_circ->p_circ_id, hexid);
 
-  circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
-  rend_circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
-  memset(circ->rend_cookie, 0, REND_COOKIE_LEN);
+  circ->_base.purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
+  rend_circ->_base.purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
+  memset(circ->_base.rend_cookie, 0, REND_COOKIE_LEN);
 
   rend_circ->rend_splice = circ;
   circ->rend_splice = rend_circ;
 
   return 0;
  err:
-  circuit_mark_for_close(circ, reason);
+  circuit_mark_for_close(TO_CIRCUIT(circ), reason);
   return -1;
 }
 

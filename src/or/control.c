@@ -1372,7 +1372,7 @@ handle_getinfo_helper(const char *question, char **answer)
       const char *state;
       if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
         continue;
-      path = circuit_list_path(circ,0);
+      path = circuit_list_path(TO_ORIGIN_CIRCUIT(circ),0);
       if (circ->state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
       else if (strlen(path))
@@ -1728,6 +1728,15 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     }
   }
 
+  if (circ && ! CIRCUIT_IS_ORIGIN(circ)) {
+    if (v0)
+      send_control0_error(conn, ERR_NO_CIRC,"Circuit does not originate here");
+    else
+      connection_printf_to_buf(conn,
+                               "555 Circuit does not originate here\r\n");
+    goto done;
+  }
+
   routers = smartlist_create();
   SMARTLIST_FOREACH(router_nicknames, const char *, n,
   {
@@ -1751,20 +1760,20 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
 
   if (zero_circ) {
     /* start a new circuit */
-    circ = circuit_init(intended_purpose, 0, 0, 0);
+    circ = TO_CIRCUIT( origin_circuit_init(intended_purpose, 0, 0, 0) );
   }
 
   /* now circ refers to something that is ready to be extended */
   SMARTLIST_FOREACH(routers, routerinfo_t *, r,
   {
     extend_info_t *info = extend_info_from_router(r);
-    circuit_append_new_exit(circ, info);
+    circuit_append_new_exit(TO_ORIGIN_CIRCUIT(circ), info);
     extend_info_free(info);
   });
 
   /* now that we've populated the cpath, start extending */
   if (zero_circ) {
-    if (circuit_handle_first_hop(circ) < 0) {
+    if (circuit_handle_first_hop(TO_ORIGIN_CIRCUIT(circ)) < 0) {
       circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
       if (v0)
         send_control0_error(conn, ERR_INTERNAL, "couldn't start circuit");
@@ -1775,7 +1784,7 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   } else {
     if (circ->state == CIRCUIT_STATE_OPEN) {
       circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
-      if (circuit_send_next_onion_skin(circ) < 0) {
+      if (circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)) < 0) {
         log_info(LD_CONTROL,
                  "send_next_onion_skin failed; circuit marked for closing.");
         circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
@@ -1940,17 +1949,19 @@ handle_control_attachstream(connection_t *conn, uint32_t len,
     ap_conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
-  if (circ && circ->state != CIRCUIT_STATE_OPEN) {
+  if (circ &&
+      (circ->state != CIRCUIT_STATE_OPEN || ! CIRCUIT_IS_ORIGIN(circ))) {
     if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_INTERNAL,
-                          "Refuse to attach stream to non-open circ.");
+                          "Refuse to attach stream to non-open, origin circ.");
     else
       connection_write_str_to_buf(
-                          "551 Can't attach stream to non-open circuit\r\n",
-                          conn);
+                     "551 Can't attach stream to non-open, origin circuit\r\n",
+                     conn);
     return 0;
   }
-  if (connection_ap_handshake_rewrite_and_attach(ap_conn, circ) < 0) {
+  if (connection_ap_handshake_rewrite_and_attach(ap_conn,
+                                  circ ? TO_ORIGIN_CIRCUIT(circ) : NULL) < 0) {
     if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");
     else
@@ -2195,7 +2206,8 @@ handle_control_closecircuit(connection_t *conn, uint32_t len,
       return 0;
   }
 
-  if (!safe || !circ->p_streams) {
+  if (!safe || !CIRCUIT_IS_ORIGIN(circ) ||
+      !TO_ORIGIN_CIRCUIT(circ)->p_streams) {
     circuit_mark_for_close(circ, END_CIRC_REASON_NONE);
   }
 
@@ -2586,20 +2598,19 @@ connection_control_process_inbuf(connection_t *conn)
 /** Something has happened to circuit <b>circ</b>: tell any interested
  * control connections. */
 int
-control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
+control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
 {
   char *path, *msg;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
-  tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   path = circuit_list_path(circ,0);
   if (EVENT_IS_INTERESTING0(EVENT_CIRCUIT_STATUS)) {
     size_t path_len = strlen(path);
     msg = tor_malloc(1+4+path_len+1); /* event, circid, path, NUL. */
     msg[0] = (uint8_t) tp;
-    set_uint32(msg+1, htonl(circ->global_identifier));
+    set_uint32(msg+1, htonl(circ->_base.global_identifier));
     strlcpy(msg+5,path,path_len+1);
 
     send_control0_event(EVENT_CIRCUIT_STATUS, (uint32_t)(path_len+6), msg);
@@ -2620,7 +2631,7 @@ control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
       }
     send_control1_event(EVENT_CIRCUIT_STATUS,
                         "650 CIRC %lu %s %s\r\n",
-                        (unsigned long)circ->global_identifier,
+                        (unsigned long)circ->_base.global_identifier,
                         status, path);
   }
   tor_free(path);

@@ -17,7 +17,7 @@ const char onion_c_id[] =
 /** Type for a linked list of circuits that are waiting for a free CPU worker
  * to process a waiting onion handshake. */
 typedef struct onion_queue_t {
-  circuit_t *circ;
+  or_circuit_t *circ;
   time_t when_added;
   struct onion_queue_t *next;
 } onion_queue_t;
@@ -35,7 +35,7 @@ static int ol_length=0;
  * if ol_list is too long, in which case do nothing and return -1.
  */
 int
-onion_pending_add(circuit_t *circ)
+onion_pending_add(or_circuit_t *circ)
 {
   onion_queue_t *tmp;
   time_t now = time(NULL);
@@ -75,7 +75,7 @@ onion_pending_add(circuit_t *circ)
     onion_pending_remove(ol_list->circ);
     log_info(LD_CIRC,
              "Circuit create request is too old; cancelling due to overload.");
-    circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
   }
   return 0;
 }
@@ -83,10 +83,10 @@ onion_pending_add(circuit_t *circ)
 /** Remove the first item from ol_list and return it, or return
  * NULL if the list is empty.
  */
-circuit_t *
+or_circuit_t *
 onion_next_task(void)
 {
-  circuit_t *circ;
+  or_circuit_t *circ;
 
   if (!ol_list)
     return NULL; /* no onions pending, we're done */
@@ -103,7 +103,7 @@ onion_next_task(void)
  * circ, remove and free that element. Leave circ itself alone.
  */
 void
-onion_pending_remove(circuit_t *circ)
+onion_pending_remove(or_circuit_t *circ)
 {
   onion_queue_t *tmpo, *victim;
 

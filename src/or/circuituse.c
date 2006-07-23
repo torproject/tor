@@ -32,6 +32,7 @@ circuit_is_acceptable(circuit_t *circ, connection_t *conn,
                       time_t now)
 {
   routerinfo_t *exitrouter;
+  cpath_build_state_t *build_state;
   tor_assert(circ);
   tor_assert(conn);
   tor_assert(conn->socks_request);
@@ -71,11 +72,12 @@ circuit_is_acceptable(circuit_t *circ, connection_t *conn,
    * circuit, it's the magical extra bob hop. so just check the nickname
    * of the one we meant to finish at.
    */
-  exitrouter = build_state_get_exit_router(circ->build_state);
+  build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+  exitrouter = build_state_get_exit_router(build_state);
 
-  if (need_uptime && !circ->build_state->need_uptime)
+  if (need_uptime && !build_state->need_uptime)
     return 0;
-  if (need_internal != circ->build_state->is_internal)
+  if (need_internal != build_state->is_internal)
     return 0;
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
@@ -114,8 +116,10 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
           return 1;
       } else {
         if (a->timestamp_dirty ||
-            b->build_state->is_internal ||
             a->timestamp_created > b->timestamp_created)
+          return 1;
+        if (CIRCUIT_IS_ORIGIN(b) &&
+            TO_ORIGIN_CIRCUIT(b)->build_state->is_internal)
           return 1;
       }
       break;
@@ -149,7 +153,7 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
  * If it's INTRODUCE_ACK_WAIT and must_be_open==0, then return the
  * closest introduce-purposed circuit that you can find.
  */
-static circuit_t *
+static origin_circuit_t *
 circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose,
                  int need_uptime, int need_internal)
 {
@@ -163,6 +167,8 @@ circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose,
              purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
     if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,
                                need_uptime,need_internal,now))
       continue;
@@ -174,7 +180,7 @@ circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose,
       best = circ;
   }
 
-  return best;
+  return best ? TO_ORIGIN_CIRCUIT(best) : NULL;
 }
 
 /** Close all circuits that start at us, aren't open, and were born
@@ -255,7 +261,7 @@ circuit_expire_building(time_t now)
                victim->n_circ_id, victim->state,
                circuit_state_to_string(victim->state), victim->purpose);
 
-    circuit_log_path(LOG_INFO,LD_CIRC,victim);
+    circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
     circuit_mark_for_close(victim, END_CIRC_AT_ORIGIN);
   }
 }
@@ -301,12 +307,14 @@ circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
-        !circ->build_state->is_internal &&
         (!circ->timestamp_dirty ||
          circ->timestamp_dirty + get_options()->MaxCircuitDirtiness > now)) {
-      exitrouter = build_state_get_exit_router(circ->build_state);
-      if (exitrouter &&
-          (!need_uptime || circ->build_state->need_uptime)) {
+      cpath_build_state_t *build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+      if (build_state->is_internal)
+        continue;
+
+      exitrouter = build_state_get_exit_router(build_state);
+      if (exitrouter && (!need_uptime || build_state->need_uptime)) {
         int ok;
         if (conn) {
           ok = connection_ap_can_use_exit(conn, exitrouter);
@@ -343,6 +351,7 @@ circuit_predict_and_launch_new(void)
 
   /* First, count how many of each type of circuit we have already. */
   for (circ=global_circuitlist;circ;circ = circ->next) {
+    cpath_build_state_t *build_state;
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
     if (circ->marked_for_close)
@@ -352,9 +361,10 @@ circuit_predict_and_launch_new(void)
     if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
       continue; /* only pay attention to general-purpose circs */
     num++;
-    if (circ->build_state->is_internal)
+    build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
+    if (build_state->is_internal)
       num_internal++;
-    if (circ->build_state->need_uptime && circ->build_state->is_internal)
+    if (build_state->need_uptime && build_state->is_internal)
       num_uptime_internal++;
   }
 
@@ -455,44 +465,49 @@ circuit_detach_stream(circuit_t *circ, connection_t *conn)
   conn->cpath_layer = NULL; /* make sure we don't keep a stale pointer */
   conn->on_circuit = NULL;
 
-  if (conn == circ->p_streams) {
-    circ->p_streams = conn->next_stream;
-    return;
-  }
-  if (conn == circ->n_streams) {
-    circ->n_streams = conn->next_stream;
-    return;
-  }
-  if (conn == circ->resolving_streams) {
-    circ->resolving_streams = conn->next_stream;
-    return;
-  }
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+    if (conn == origin_circ->p_streams) {
+      origin_circ->p_streams = conn->next_stream;
+      return;
+    }
 
-  for (prevconn = circ->p_streams;
-      prevconn && prevconn->next_stream && prevconn->next_stream != conn;
-      prevconn = prevconn->next_stream)
-    ;
-  if (prevconn && prevconn->next_stream) {
-    prevconn->next_stream = conn->next_stream;
-    return;
-  }
+    for (prevconn = origin_circ->p_streams;
+         prevconn && prevconn->next_stream && prevconn->next_stream != conn;
+         prevconn = prevconn->next_stream)
+      ;
+    if (prevconn && prevconn->next_stream) {
+      prevconn->next_stream = conn->next_stream;
+      return;
+    }
+  } else {
+    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+    if (conn == or_circ->n_streams) {
+      or_circ->n_streams = conn->next_stream;
+      return;
+    }
+    if (conn == or_circ->resolving_streams) {
+      or_circ->resolving_streams = conn->next_stream;
+      return;
+    }
 
-  for (prevconn = circ->n_streams;
-      prevconn && prevconn->next_stream && prevconn->next_stream != conn;
-      prevconn = prevconn->next_stream)
-    ;
-  if (prevconn && prevconn->next_stream) {
-    prevconn->next_stream = conn->next_stream;
-    return;
-  }
+    for (prevconn = or_circ->n_streams;
+         prevconn && prevconn->next_stream && prevconn->next_stream != conn;
+         prevconn = prevconn->next_stream)
+      ;
+    if (prevconn && prevconn->next_stream) {
+      prevconn->next_stream = conn->next_stream;
+      return;
+    }
 
-  for (prevconn = circ->resolving_streams;
-      prevconn && prevconn->next_stream && prevconn->next_stream != conn;
-      prevconn = prevconn->next_stream)
-    ;
-  if (prevconn && prevconn->next_stream) {
-    prevconn->next_stream = conn->next_stream;
-    return;
+    for (prevconn = or_circ->resolving_streams;
+         prevconn && prevconn->next_stream && prevconn->next_stream != conn;
+         prevconn = prevconn->next_stream)
+      ;
+    if (prevconn && prevconn->next_stream) {
+      prevconn->next_stream = conn->next_stream;
+      return;
+    }
   }
 
   log_err(LD_BUG,"edge conn not in circuit's list?");
@@ -543,7 +558,7 @@ circuit_about_to_close_connection(connection_t *conn)
 }
 
 /** Find each circuit that has been unused for too long, or dirty
- * for too long and has no streams on it: mark it for close.
+ * for too long and has no streax=ms on it: mark it for close.
  */
 static void
 circuit_expire_old_circuits(time_t now)
@@ -552,23 +567,21 @@ circuit_expire_old_circuits(time_t now)
   time_t cutoff = now - get_options()->CircuitIdleTimeout;
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
-    if (circ->marked_for_close)
+    if (circ->marked_for_close || ! CIRCUIT_IS_ORIGIN(circ))
       continue;
     /* If the circuit has been dirty for too long, and there are no streams
      * on it, mark it for close.
      */
     if (circ->timestamp_dirty &&
         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now &&
-        CIRCUIT_IS_ORIGIN(circ) &&
-        !circ->p_streams /* nothing attached */ ) {
+        !TO_ORIGIN_CIRCUIT(circ)->p_streams /* nothing attached */ ) {
       log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, purp %d)",
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
       /* (only general and purpose_c circs can get dirty) */
-      tor_assert(!circ->n_streams);
       tor_assert(circ->purpose <= CIRCUIT_PURPOSE_C_REND_JOINED);
       circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
-    } else if (!circ->timestamp_dirty && CIRCUIT_IS_ORIGIN(circ) &&
+    } else if (!circ->timestamp_dirty &&
                circ->state == CIRCUIT_STATE_OPEN &&
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (circ->timestamp_created < cutoff) {
@@ -583,17 +596,17 @@ circuit_expire_old_circuits(time_t now)
 
 /** A testing circuit has completed. Take whatever stats we want. */
 static void
-circuit_testing_opened(circuit_t *circ)
+circuit_testing_opened(origin_circuit_t *circ)
 {
   /* For now, we only use testing circuits to see if our ORPort is
      reachable. But we remember reachability in onionskin_answer(),
      so there's no need to record anything here. Just close the circ. */
-  circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
 }
 
 /** A testing circuit has failed to build. Take whatever stats we want. */
 static void
-circuit_testing_failed(circuit_t *circ, int at_last_hop)
+circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 {
   if (server_mode(get_options()) && check_whether_orport_reachable())
     return;
@@ -614,11 +627,11 @@ circuit_testing_failed(circuit_t *circ, int at_last_hop)
  * that could use circ.
  */
 void
-circuit_has_opened(circuit_t *circ)
+circuit_has_opened(origin_circuit_t *circ)
 {
   control_event_circuit_status(circ, CIRC_EVENT_BUILT);
 
-  switch (circ->purpose) {
+  switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
       connection_ap_attach_pending();
@@ -643,7 +656,7 @@ circuit_has_opened(circuit_t *circ)
       circuit_testing_opened(circ);
       break;
     default:
-      log_err(LD_BUG,"unhandled purpose %d",circ->purpose);
+      log_err(LD_BUG,"unhandled purpose %d",circ->_base.purpose);
       tor_assert(0);
   }
 }
@@ -651,7 +664,7 @@ circuit_has_opened(circuit_t *circ)
 /** Called whenever a circuit could not be successfully built.
  */
 void
-circuit_build_failed(circuit_t *circ)
+circuit_build_failed(origin_circuit_t *circ)
 {
   /* we should examine circ and see if it failed because of
    * the last hop or an earlier hop. then use this info below.
@@ -669,11 +682,12 @@ circuit_build_failed(circuit_t *circ)
     /* We failed at the first hop. If there's an OR connection
        to blame, blame it. */
     connection_t *n_conn = NULL;
-    if (circ->n_conn) {
-      n_conn = circ->n_conn;
-    } else if (circ->state == CIRCUIT_STATE_OR_WAIT) {
+    if (circ->_base.n_conn) {
+      n_conn = circ->_base.n_conn;
+    } else if (circ->_base.state == CIRCUIT_STATE_OR_WAIT) {
       /* we have to hunt for it */
-      n_conn = connection_or_get_by_identity_digest(circ->n_conn_id_digest);
+      n_conn = connection_or_get_by_identity_digest(
+                                               circ->_base.n_conn_id_digest);
     }
     if (n_conn) {
       log_info(LD_OR,
@@ -685,7 +699,7 @@ circuit_build_failed(circuit_t *circ)
     }
   }
 
-  switch (circ->purpose) {
+  switch (circ->_base.purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* If we never built the circuit, note it as a failure. */
       circuit_increment_failure_count();
@@ -695,7 +709,7 @@ circuit_build_failed(circuit_t *circ)
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       /* at Bob, waiting for introductions */
-      if (circ->state != CIRCUIT_STATE_OPEN) {
+      if (circ->_base.state != CIRCUIT_STATE_OPEN) {
         circuit_increment_failure_count();
       }
       /* no need to care here, because bob will rebuild intro
@@ -744,11 +758,11 @@ static int did_circs_fail_last_period = 0;
 
 /** Launch a new circuit; see circuit_launch_by_extend_info() for
  * details on arguments. */
-circuit_t *
+origin_circuit_t *
 circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
                          int need_uptime, int need_capacity, int internal)
 {
-  circuit_t *circ;
+  origin_circuit_t *circ;
   extend_info_t *info = NULL;
   if (exit)
     info = extend_info_from_router(exit);
@@ -765,11 +779,11 @@ circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
  * choose among routers with high bandwidth.  If <b>internal</b> is true, the
  * last hop need not be an exit node. Return the newly allocated circuit on
  * success, or NULL on failure. */
-circuit_t *
+origin_circuit_t *
 circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *extend_info,
                int need_uptime, int need_capacity, int internal)
 {
-  circuit_t *circ;
+  origin_circuit_t *circ;
 
   if (!router_have_minimum_dir_info()) {
     log_debug(LD_CIRC,"Haven't fetched enough directory info yet; canceling "
@@ -785,11 +799,11 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *extend_info,
     if (circ) {
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d",
                build_state_get_exit_nickname(circ->build_state), purpose);
-      circ->purpose = purpose;
+      circ->_base.purpose = purpose;
       /* reset the birth date of this circ, else expire_building
        * will see it and think it's been trying to build since it
        * began. */
-      circ->timestamp_created = time(NULL);
+      circ->_base.timestamp_created = time(NULL);
       switch (purpose) {
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
@@ -829,7 +843,7 @@ circuit_launch_by_extend_info(uint8_t purpose, extend_info_t *extend_info,
 
 /** Launch a new circuit; see circuit_launch_by_extend_info() for
  * details on arguments. */
-circuit_t *
+origin_circuit_t *
 circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
                            int need_uptime, int need_capacity, int internal)
 {
@@ -879,9 +893,9 @@ circuit_reset_failure_count(int timeout)
 static int
 circuit_get_open_circ_or_launch(connection_t *conn,
                                 uint8_t desired_circuit_purpose,
-                                circuit_t **circp)
+                                origin_circuit_t **circp)
 {
-  circuit_t *circ;
+  origin_circuit_t *circ;
   int is_resolve;
   int need_uptime, need_internal;
 
@@ -996,9 +1010,10 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       rep_hist_note_used_internal(time(NULL), need_uptime, 1);
       if (circ) {
         /* write the service_id into circ */
-        strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));
-        if (circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
-            circ->state == CIRCUIT_STATE_OPEN)
+        strlcpy(circ->_base.rend_query, conn->rend_query,
+                sizeof(circ->_base.rend_query));
+        if (circ->_base.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
+            circ->_base.state == CIRCUIT_STATE_OPEN)
           rend_client_rendcirc_has_opened(circ);
       }
     }
@@ -1017,19 +1032,18 @@ circuit_get_open_circ_or_launch(connection_t *conn,
  * circ's cpath.
  */
 static void
-link_apconn_to_circ(connection_t *apconn, circuit_t *circ)
+link_apconn_to_circ(connection_t *apconn, origin_circuit_t *circ)
 {
   /* add it into the linked list of streams on this circuit */
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %d.",
-            circ->n_circ_id);
+            circ->_base.n_circ_id);
   /* reset it, so we can measure circ timeouts */
   apconn->timestamp_lastread = time(NULL);
   apconn->next_stream = circ->p_streams;
-  apconn->on_circuit = circ;
+  apconn->on_circuit = TO_CIRCUIT(circ);
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = apconn;
 
-  tor_assert(CIRCUIT_IS_ORIGIN(circ));
   tor_assert(circ->cpath);
   tor_assert(circ->cpath->prev);
   tor_assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
@@ -1039,7 +1053,7 @@ link_apconn_to_circ(connection_t *apconn, circuit_t *circ)
 /** If an exit wasn't specifically chosen, save the history for future
  * use. */
 static void
-consider_recording_trackhost(connection_t *conn, circuit_t *circ)
+consider_recording_trackhost(connection_t *conn, origin_circuit_t *circ)
 {
   int found_needle = 0;
   char *str;
@@ -1094,7 +1108,7 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ)
  * for connection_ap_handshake_attach_circuit. */
 int
 connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
-                                              circuit_t *circ)
+                                              origin_circuit_t *circ)
 {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -1102,12 +1116,12 @@ connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
              conn->state == AP_CONN_STATE_CONTROLLER_WAIT);
   tor_assert(conn->socks_request);
   tor_assert(circ);
-  tor_assert(circ->state == CIRCUIT_STATE_OPEN);
+  tor_assert(circ->_base.state == CIRCUIT_STATE_OPEN);
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
 
-  if (!circ->timestamp_dirty)
-    circ->timestamp_dirty = time(NULL);
+  if (!circ->_base.timestamp_dirty)
+    circ->_base.timestamp_dirty = time(NULL);
 
   link_apconn_to_circ(conn, circ);
   tor_assert(conn->socks_request);
@@ -1153,7 +1167,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
   }
 
   if (!connection_edge_is_rendezvous_stream(conn)) { /* we're a general conn */
-    circuit_t *circ=NULL;
+    origin_circuit_t *circ=NULL;
 
     if (conn->chosen_exit_name) {
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
@@ -1190,7 +1204,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
 
     log_debug(LD_APP|LD_CIRC,
               "Attaching apconn to circ %d (stream %d sec old).",
-              circ->n_circ_id, conn_age);
+              circ->_base.n_circ_id, conn_age);
     /* here, print the circ's path. so people can figure out which circs are
      * sucking. */
     circuit_log_path(LOG_INFO,LD_APP|LD_CIRC,circ);
@@ -1199,7 +1213,7 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     return connection_ap_handshake_attach_chosen_circuit(conn, circ);
 
   } else { /* we're a rendezvous conn */
-    circuit_t *rendcirc=NULL, *introcirc=NULL;
+    origin_circuit_t *rendcirc=NULL, *introcirc=NULL;
 
     tor_assert(!conn->cpath_layer);
 
@@ -1215,25 +1229,25 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
       log_info(LD_REND,
                "rend joined circ %d already here. attaching. "
                "(stream %d sec old)",
-               rendcirc->n_circ_id, conn_age);
+               rendcirc->_base.n_circ_id, conn_age);
       /* Mark rendezvous circuits as 'newly dirty' every time you use
        * them, since the process of rebuilding a rendezvous circ is so
        * expensive. There is a tradeoffs between linkability and
        * feasibility, at this point.
        */
-      rendcirc->timestamp_dirty = time(NULL);
+      rendcirc->_base.timestamp_dirty = time(NULL);
       link_apconn_to_circ(conn, rendcirc);
       if (connection_ap_handshake_send_begin(conn, rendcirc) < 0)
         return 0; /* already marked, let them fade away */
       return 1;
     }
 
-    if (rendcirc && (rendcirc->purpose ==
+    if (rendcirc && (rendcirc->_base.purpose ==
                      CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)) {
       log_info(LD_REND,
                "pending-join circ %d already here, with intro ack. "
                "Stalling. (stream %d sec old)",
-                rendcirc->n_circ_id, conn_age);
+                rendcirc->_base.n_circ_id, conn_age);
       return 0;
     }
 
@@ -1247,7 +1261,8 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
       tor_assert(introcirc);
       log_info(LD_REND, "Intro circ %d present and awaiting ack (rend %d). "
                "Stalling. (stream %d sec old)",
-               introcirc->n_circ_id, rendcirc ? rendcirc->n_circ_id : 0,
+               introcirc->_base.n_circ_id,
+               rendcirc ? rendcirc->_base.n_circ_id : 0,
                conn_age);
       return 0;
     }
@@ -1255,32 +1270,34 @@ connection_ap_handshake_attach_circuit(connection_t *conn)
     /* now rendcirc and introcirc are each either undefined or not finished */
 
     if (rendcirc && introcirc &&
-        rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
+        rendcirc->_base.purpose == CIRCUIT_PURPOSE_C_REND_READY) {
       log_info(LD_REND,
                "ready rend circ %d already here (no intro-ack yet on "
                "intro %d). (stream %d sec old)",
-               rendcirc->n_circ_id, introcirc->n_circ_id, conn_age);
+               rendcirc->_base.n_circ_id,
+               introcirc->_base.n_circ_id, conn_age);
 
-      tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-      if (introcirc->state == CIRCUIT_STATE_OPEN) {
+      tor_assert(introcirc->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+      if (introcirc->_base.state == CIRCUIT_STATE_OPEN) {
         log_info(LD_REND,"found open intro circ %d (rend %d); sending "
                  "introduction. (stream %d sec old)",
-                 introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
+                 introcirc->_base.n_circ_id, rendcirc->_base.n_circ_id,
+                 conn_age);
         if (rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
         }
-        rendcirc->timestamp_dirty = time(NULL);
-        introcirc->timestamp_dirty = time(NULL);
-        assert_circuit_ok(rendcirc);
-        assert_circuit_ok(introcirc);
+        rendcirc->_base.timestamp_dirty = time(NULL);
+        introcirc->_base.timestamp_dirty = time(NULL);
+        assert_circuit_ok(TO_CIRCUIT(rendcirc));
+        assert_circuit_ok(TO_CIRCUIT(introcirc));
         return 0;
       }
     }
 
     log_info(LD_REND, "Intro (%d) and rend (%d) circs are not both ready. "
              "Stalling conn. (%d sec old)",
-             introcirc ? introcirc->n_circ_id : 0,
-             rendcirc ? rendcirc->n_circ_id : 0, conn_age);
+             introcirc ? introcirc->_base.n_circ_id : 0,
+             rendcirc ? rendcirc->_base.n_circ_id : 0, conn_age);
     return 0;
   }
 }

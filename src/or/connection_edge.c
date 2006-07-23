@@ -60,20 +60,6 @@ _connection_mark_unattached_ap(connection_t *conn, int endreason,
 int
 connection_edge_reached_eof(connection_t *conn)
 {
-#ifdef HALF_OPEN
-  /* eof reached; we're done reading, but we might want to write more. */
-  conn->done_receiving = 1;
-  shutdown(conn->s, 0); /* XXX check return, refactor NM */
-  if (conn->done_sending) {
-    connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
-    connection_mark_for_close(conn);
-  } else {
-    connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
-                                 RELAY_COMMAND_END,
-                                 NULL, 0, conn->cpath_layer);
-  }
-  return 0;
-#else
   if (buf_datalen(conn->inbuf) && connection_state_is_open(conn)) {
     /* it still has stuff to process. don't let it die yet. */
     return 0;
@@ -88,7 +74,6 @@ connection_edge_reached_eof(connection_t *conn)
     connection_mark_for_close(conn);
   }
   return 0;
-#endif
 }
 
 /** Handle new bytes on conn->inbuf based on state:
@@ -386,7 +371,8 @@ connection_ap_expire_beginning(void)
       continue;
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
-    nickname = build_state_get_exit_nickname(circ->build_state);
+    nickname = build_state_get_exit_nickname(
+                                        TO_ORIGIN_CIRCUIT(circ)->build_state);
     log_fn(cutoff < 15 ? LOG_INFO : severity, LD_APP,
            "We tried for %d seconds to connect to '%s' using exit '%s'."
            " Retrying on a new circuit.",
@@ -406,7 +392,7 @@ connection_ap_expire_beginning(void)
     conn->timestamp_lastread += cutoff;
     conn->num_socks_retries++;
     /* move it back into 'pending' state, and try to attach. */
-    if (connection_ap_detach_retriable(conn, circ)<0) {
+    if (connection_ap_detach_retriable(conn, TO_ORIGIN_CIRCUIT(circ))<0) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     }
   } /* end for */
@@ -444,17 +430,17 @@ connection_ap_attach_pending(void)
  * Returns -1 on err, 1 on success, 0 on not-yet-sure.
  */
 int
-connection_ap_detach_retriable(connection_t *conn, circuit_t *circ)
+connection_ap_detach_retriable(connection_t *conn, origin_circuit_t *circ)
 {
   control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE);
   conn->timestamp_lastread = time(NULL);
   if (! get_options()->LeaveStreamsUnattached) {
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-    circuit_detach_stream(circ,conn);
+    circuit_detach_stream(TO_CIRCUIT(circ),conn);
     return connection_ap_handshake_attach_circuit(conn);
   } else {
     conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
-    circuit_detach_stream(circ,conn);
+    circuit_detach_stream(TO_CIRCUIT(circ),conn);
     return 0;
   }
 }
@@ -1026,7 +1012,7 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
  */
 int
 connection_ap_handshake_rewrite_and_attach(connection_t *conn,
-                                           circuit_t *circ)
+                                           origin_circuit_t *circ)
 {
   socks_request_t *socks = conn->socks_request;
   hostname_type_t addresstype;
@@ -1287,7 +1273,7 @@ connection_ap_handshake_process_socks(connection_t *conn)
  * already in use; return it. Return 0 if can't get a unique stream_id.
  */
 static uint16_t
-get_unique_stream_id_by_circ(circuit_t *circ)
+get_unique_stream_id_by_circ(origin_circuit_t *circ)
 {
   connection_t *tmpconn;
   uint16_t test_stream_id;
@@ -1314,7 +1300,8 @@ again:
  * If ap_conn is broken, mark it for close and return -1. Else return 0.
  */
 int
-connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
+connection_ap_handshake_send_begin(connection_t *ap_conn,
+                                   origin_circuit_t *circ)
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
@@ -1326,12 +1313,12 @@ connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
     return -1;
   }
 
   tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:%d",
-               (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) ?
+               (circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL) ?
                  ap_conn->socks_request->address : "",
                ap_conn->socks_request->port);
   payload_len = strlen(payload)+1;
@@ -1339,7 +1326,8 @@ connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   log_debug(LD_APP,
             "Sending relay cell to begin stream %d.", ap_conn->stream_id);
 
-  if (connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
+  if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ),
+                                   RELAY_COMMAND_BEGIN,
                                    payload, payload_len,
                                    ap_conn->cpath_layer) < 0)
     return -1; /* circuit is closed, don't continue */
@@ -1348,7 +1336,7 @@ connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_CONNECT_WAIT;
   log_info(LD_APP,"Address/port sent, ap socket %d, n_circ_id %d",
-           ap_conn->s, circ->n_circ_id);
+           ap_conn->s, circ->_base.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT);
   return 0;
 }
@@ -1359,7 +1347,8 @@ connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
  * If ap_conn is broken, mark it for close and return -1. Else return 0.
  */
 int
-connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
+connection_ap_handshake_send_resolve(connection_t *ap_conn,
+                                     origin_circuit_t *circ)
 {
   int payload_len;
   const char *string_addr;
@@ -1368,12 +1357,12 @@ connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
   tor_assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(ap_conn->socks_request);
   tor_assert(ap_conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
-  tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
+  tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL);
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
     return -1;
   }
 
@@ -1384,13 +1373,14 @@ connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
   log_debug(LD_APP,
             "Sending relay cell to begin stream %d.", ap_conn->stream_id);
 
-  if (connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_RESOLVE,
+  if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ),
+                           RELAY_COMMAND_RESOLVE,
                            string_addr, payload_len, ap_conn->cpath_layer) < 0)
     return -1; /* circuit is closed, don't continue */
 
   ap_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
   log_info(LD_APP,"Address sent for resolve, ap socket %d, n_circ_id %d",
-           ap_conn->s, circ->n_circ_id);
+           ap_conn->s, circ->_base.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE);
   return 0;
 }
@@ -1643,6 +1633,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   n_stream->deliver_window = STREAMWINDOW_START;
 
   if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
+    origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     log_debug(LD_REND,"begin is for rendezvous. configuring stream.");
     n_stream->address = tor_strdup("(rendezvous)");
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
@@ -1650,7 +1641,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
             sizeof(n_stream->rend_query));
     tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);
-    if (rend_service_set_connection_addr_port(n_stream, circ) < 0) {
+    if (rend_service_set_connection_addr_port(n_stream, origin_circ) < 0) {
       log_info(LD_REND,"Didn't find rendezvous service (port %d)",
                n_stream->port);
       connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY,
@@ -1663,12 +1654,12 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     }
     assert_circuit_ok(circ);
     log_debug(LD_REND,"Finished assigning addr/port");
-    n_stream->cpath_layer = circ->cpath->prev; /* link it */
+    n_stream->cpath_layer = origin_circ->cpath->prev; /* link it */
 
     /* add it into the linked list of n_streams on this circuit */
-    n_stream->next_stream = circ->n_streams;
+    n_stream->next_stream = origin_circ->p_streams;
     n_stream->on_circuit = circ;
-    circ->n_streams = n_stream;
+    origin_circ->p_streams = n_stream;
     assert_circuit_ok(circ);
 
     connection_exit_connect(n_stream);
@@ -1693,9 +1684,9 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     case 1: /* resolve worked */
 
       /* add it into the linked list of n_streams on this circuit */
-      n_stream->next_stream = circ->n_streams;
+      n_stream->next_stream = TO_OR_CIRCUIT(circ)->n_streams;
       n_stream->on_circuit = circ;
-      circ->n_streams = n_stream;
+      TO_OR_CIRCUIT(circ)->n_streams = n_stream;
       assert_circuit_ok(circ);
 
       log_debug(LD_EXIT,"about to call connection_exit_connect().");
@@ -1706,9 +1697,9 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       break;
     case 0: /* resolve added to pending list */
       /* add it into the linked list of resolving_streams on this circuit */
-      n_stream->next_stream = circ->resolving_streams;
+      n_stream->next_stream = TO_OR_CIRCUIT(circ)->resolving_streams;
       n_stream->on_circuit = circ;
-      circ->resolving_streams = n_stream;
+      TO_OR_CIRCUIT(circ)->resolving_streams = n_stream;
       assert_circuit_ok(circ);
       ;
   }
@@ -1720,12 +1711,12 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
  * begin resolving the hostname, and (eventually) reply with a RESOLVED cell.
  */
 int
-connection_exit_begin_resolve(cell_t *cell, circuit_t *circ)
+connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
 {
   connection_t *dummy_conn;
   relay_header_t rh;
 
-  assert_circuit_ok(circ);
+  assert_circuit_ok(TO_CIRCUIT(circ));
   relay_header_unpack(&rh, cell->payload);
 
   /* This 'dummy_conn' only exists to remember the stream ID
@@ -1754,9 +1745,9 @@ connection_exit_begin_resolve(cell_t *cell, circuit_t *circ)
       return 0;
     case 0: /* resolve added to pending list */
       dummy_conn->next_stream = circ->resolving_streams;
-      dummy_conn->on_circuit = circ;
+      dummy_conn->on_circuit = TO_CIRCUIT(circ);
       circ->resolving_streams = dummy_conn;
-      assert_circuit_ok(circ);
+      assert_circuit_ok(TO_CIRCUIT(circ));
       break;
   }
   return 0;
