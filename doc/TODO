@@ -18,6 +18,8 @@ P       - phobos claims
       by default, if it works?"
 
 Items for 0.1.2.x:
+  - Bug: We are willing to build circuits using not-up-to-date descriptors,
+    when we get a request and we've been idle a long time.
   - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
     and diversity for bootstrapping clients.
@@ -108,8 +110,10 @@ R   - remember the last time we saw one of our entry guards labelled with
     - If the client's clock is too far in the past, it will drop (or
       just not try to get) descriptors, so it'll never build circuits.
 R   - Failed rend desc fetches sometimes don't get retried.
-    o If we fail to connect via an exit enclave, (warn and) try again
+    . If we fail to connect via an exit enclave, (warn and) try again
       without demanding that exit node.
+      - And recognize when extending to the enclave node is failing,
+        so we can abandon then too.
 R   - non-v1 authorities should not accept rend descs.
     - We need a separate list of "hidserv authorities" if we want to
       retire moria1 from the main list.
