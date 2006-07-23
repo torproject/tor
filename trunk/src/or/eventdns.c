@@ -462,6 +462,8 @@ request_find_from_trans_id(u16 trans_id) {
 static void
 nameserver_prod_callback(int fd, short events, void *arg) {
 	struct nameserver *const ns = (struct nameserver *) arg;
+        (void)fd;
+        (void)events;
 
 	nameserver_send_probe(ns);
 }
@@ -910,6 +912,7 @@ nameserver_write_waiting(struct nameserver *ns, char waiting) {
 static void
 nameserver_ready_callback(int fd, short events, void *arg) {
 	struct nameserver *ns = (struct nameserver *) arg;
+        (void)fd;
 	
 	if (events & EV_WRITE) {
 		ns->choaked = 0;
@@ -1020,6 +1023,8 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 static void
 eventdns_request_timeout_callback(int fd, short events, void *arg) {
 	struct request *const req = (struct request *) arg;
+        (void) fd;
+        (void) events;
 	
 	log("Request %lx timed out", (unsigned long) arg);
 
@@ -1106,6 +1111,11 @@ eventdns_request_transmit(struct request *req) {
 static void
 nameserver_probe_callback(int result, char type, int count, int ttl, void *addresses, void *arg) {
 	struct nameserver *const ns = (struct nameserver *) arg;
+        (void) type;
+        (void) count;
+        (void) ttl;
+        (void) addresses;
+
 	if (result == DNS_ERR_NONE || result == DNS_ERR_NOTEXIST) {
 		// this is a good reply
 		nameserver_up(ns);
@@ -1285,6 +1295,8 @@ request_new(const char *name, int flags, eventdns_callback_type callback, void *
 	// the request data is alloced in a single block with the header
 	struct request *const req = (struct request *) malloc(sizeof(struct request) + request_max_len);
 	int rlen;
+        (void) flags;
+
         if (!req) return NULL;
 	memset(req, 0, sizeof(struct request));
 
