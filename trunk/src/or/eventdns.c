@@ -510,8 +510,8 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	// walk the list of inflight requests to see if any can be reassigned to
 	// a different server. Requests in the waiting queue don't have a
 	// nameserver assigned yet
-	
-	// if we don't have *any* good nameservers then there's no point 
+
+	// if we don't have *any* good nameservers then there's no point
 	// trying to reassign requests to one
 	if (!global_good_nameservers) return;
 
@@ -629,7 +629,7 @@ eventdns_requests_pump_waiting_queue(void) {
 
 		global_requests_waiting--;
 		global_requests_inflight++;
-		
+
 		req->ns = nameserver_pick();
 		request_trans_id_set(req, transaction_id_pick());
 
@@ -647,7 +647,7 @@ reply_handle(u16 trans_id, u16 flags, u32 ttl, u32 addrcount, u32 *addresses) {
 
 	struct request *const req = request_find_from_trans_id(trans_id);
 	if (!req) return;
-	
+
 	if (flags & 0x020f || !addrcount) {
 		// there was an error
 		if (flags & 0x0200) {
@@ -689,7 +689,7 @@ reply_handle(u16 trans_id, u16 flags, u32 ttl, u32 addrcount, u32 *addresses) {
 				return;
 			}
 		}
-		
+
 		// all else failed. Pass the failure up
 		req->user_callback(error, 0, 0, 0, NULL, req->user_pointer);
 		request_finished(req, &req_head);
@@ -731,8 +731,8 @@ reply_parse(u8 *packet, int length) {
 		return;
 	}
 	// if (!answers) return;  // must have an answer of some form
-	
-	// This macro skips a name in the DNS reply. Normally the 
+
+	// This macro skips a name in the DNS reply. Normally the
 	// names are a series of length prefixed strings terminated with
 	// a length of 0 (the lengths are u8's < 63).
 	// However, the length can start with a pair of 1 bits and that
@@ -761,7 +761,7 @@ reply_parse(u8 *packet, int length) {
 
 	// now we have the answer section which looks like
 	// <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
-	
+
 	for (i = 0; i < answers; ++i) {
 		u16 type, class;
 
@@ -899,7 +899,7 @@ nameserver_read(struct nameserver *ns) {
 static void
 nameserver_write_waiting(struct nameserver *ns, char waiting) {
 	if (ns->write_waiting == waiting) return;
-	
+
 	ns->write_waiting = waiting;
 	event_del(&ns->event);
 	event_set(&ns->event, ns->socket, EV_READ | (waiting ? EV_WRITE : 0) | EV_PERSIST,
@@ -913,7 +913,7 @@ static void
 nameserver_ready_callback(int fd, short events, void *arg) {
 	struct nameserver *ns = (struct nameserver *) arg;
         (void)fd;
-	
+
 	if (events & EV_WRITE) {
 		ns->choaked = 0;
 		if (!eventdns_transmit()) {
@@ -941,7 +941,7 @@ dnsname_to_labels(u8 *const buf, const char *name, const int name_len) { \
 	int j = 0;  // current offset into buf
 
 	if (name_len > 255) return -2;
-	
+
 	for (;;) {
 		const char *const start = name;
 		name = strchr(name, '.');
@@ -979,7 +979,7 @@ dnsname_to_labels(u8 *const buf, const char *name, const int name_len) { \
 static int
 eventdns_request_len(const int name_len) {
 	return 96 + // length of the DNS standard header
-		name_len + 2 + 
+		name_len + 2 +
 		4;  // space for the resource type
 }
 
@@ -995,7 +995,7 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 	u16 _t;  // used by the macros
 	u8 *labels;
 	int labels_len;
-	
+
 #define APPEND16(x) do { _t = htons(x); memcpy(buf + j, &_t, 2); j += 2; } while(0);
 	APPEND16(trans_id);
 	APPEND16(0x0100);  // standard query, recusion needed
@@ -1025,7 +1025,7 @@ eventdns_request_timeout_callback(int fd, short events, void *arg) {
 	struct request *const req = (struct request *) arg;
         (void) fd;
         (void) events;
-	
+
 	log("Request %lx timed out", (unsigned long) arg);
 
 	req->ns->timedout++;
@@ -1074,7 +1074,7 @@ eventdns_request_transmit_to(struct request *req, struct nameserver *server) {
 static int
 eventdns_request_transmit(struct request *req) {
 	int retcode = 0, r;
-	
+
 	// if we fail to send this packet then this flag marks it
 	// for eventdns_transmit
 	req->transmit_me = 1;
@@ -1165,7 +1165,7 @@ eventdns_transmit(void) {
 int
 eventdns_nameserver_add(unsigned long int address) {
 	// first check to see if we already have this nameserver
-	
+
 	const struct nameserver *server = server_head, *const started_at = server_head;
 	struct nameserver *ns;
 	struct sockaddr_in sin;
@@ -1219,7 +1219,7 @@ eventdns_nameserver_add(unsigned long int address) {
 	}
 
 	global_good_nameservers++;
-	
+
 	return 0;
 
 out2:
@@ -1402,7 +1402,7 @@ search_state_new(void) {
 static void
 search_postfix_clear(void) {
 	search_state_decref(global_search_state);
-	
+
 	global_search_state = search_state_new();
 }
 
@@ -1624,7 +1624,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 
 	char *const first_token = strtok_r(start, delims, &strtok_state);
 	if (!first_token) return;
-	 
+
 	if (!strcmp(first_token, "nameserver")) {
 		const char *const nameserver = NEXT_TOKEN;
 		struct in_addr ina;
@@ -1650,7 +1650,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 	} else if (!strcmp(first_token, "options")) {
 		const char *option;
 
-		while ((option = NEXT_TOKEN)) { 
+		while ((option = NEXT_TOKEN)) {
 			if (!strncmp(option, "ndots:", 6)) {
 				const int ndots = strtoint(&option[6]);
 				if (ndots == -1) continue;
@@ -1700,7 +1700,7 @@ eventdns_resolv_conf_parse(int flags, const char *const filename) {
 		eventdns_resolv_set_defaults(flags);
 		return 0;
 	}
-	
+
 	if (fstat(fd, &st)) { err = 2; goto out1; }
 	if (!st.st_size) {
 		eventdns_resolv_set_defaults(flags);
@@ -1711,10 +1711,10 @@ eventdns_resolv_conf_parse(int flags, const char *const filename) {
 
 	resolv = (u8 *) malloc(st.st_size + 1);
 	if (!resolv) { err = 4; goto out1; }
-	
+
 	if (read(fd, resolv, st.st_size) != st.st_size) { err = 5; goto out2; }
 	resolv[st.st_size] = 0;  // we malloced an extra byte
-	
+
 	start = (char *) resolv;
 	for (;;) {
 		char *const newline = strchr(start, '\n');
