@@ -1014,7 +1014,7 @@ assert_circuit_ok(const circuit_t *c)
     tor_assert(!circuits_pending_or_conns ||
                !smartlist_isin(circuits_pending_or_conns, c));
   }
-  if (origin_circ->cpath) {
+  if (origin_circ && origin_circ->cpath) {
     assert_cpath_ok(origin_circ->cpath);
   }
   if (c->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED) {
