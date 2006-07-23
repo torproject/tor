@@ -101,10 +101,6 @@ typedef struct config_var_t {
   const char *initvalue; /**< String (or null) describing initial value. */
 } config_var_t;
 
-/** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
-#define STRUCT_OFFSET(tp, member) \
-  ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
-
 #define STRUCT_VAR_P(st, off) \
   ((void*) ( ((char*)st) + off ) )
 
