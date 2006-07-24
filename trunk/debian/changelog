@@ -7,8 +7,11 @@ tor (0.1.2.0-alpha-cvs-1) unstable; urgency=low
     our own DataDirectory and all) only when run as the debian-tor user.
     If invoked as any other user, Tor will behave just like the pristine
     upstream version.
+  * Tell users about the init script when they try to run Tor as root.
+    Should we also do this when they try to run their Tor as any other
+    (non root, non debian-tor) user? - add 11_tor_as_root_more_helpful
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 24 Jul 2006 05:21:00 +0200
+ -- Peter Palfrader <weasel@debian.org>  Mon, 24 Jul 2006 05:37:17 +0200
 
 tor (0.1.1.21-1) unstable; urgency=low
 

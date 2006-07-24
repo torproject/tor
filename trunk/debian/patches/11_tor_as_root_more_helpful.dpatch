@@ -1,0 +1,36 @@
+#! /bin/sh -e
+## 08_no_run_as_root.dpatch by  <weasel@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+if [ $# -lt 1 ]; then
+    echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch} ${2:+-d $2}"
+
+case "$1" in
+    -patch) patch -p1 ${patch_opts} < $0;;
+    -unpatch) patch -R -p1 ${patch_opts} < $0;;
+    *)
+        echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+        exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+--- tor~/src/or/main.c	2006-07-23 19:31:29.000000000 +0200
++++ tor/src/or/main.c	2006-07-24 05:34:30.696138870 +0200
+@@ -1483,7 +1483,7 @@
+ #ifndef MS_WINDOWS
+   if (geteuid()==0)
+     log_warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
+-             "and you probably shouldn't.");
++             "and you probably shouldn't.  Maybe you are looking for the init script?  '/etc/init.d/tor start'");
+ #endif
+ 
+   crypto_global_init(get_options()->HardwareAccel);
