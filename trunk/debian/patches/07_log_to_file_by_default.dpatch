@@ -23,16 +23,22 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad tor-0.1.2.0-alpha-cvs/src/or/config.c /tmp/dpep.YwfNhI/tor-0.1.2.0-alpha-cvs/src/or/config.c
---- tor-0.1.2.0-alpha-cvs/src/or/config.c
-+++ /tmp/dpep.YwfNhI/tor-0.1.2.0-alpha-cvs/src/or/config.c
-@@ -2079,7 +2079,7 @@
+diff -urNad tor~/src/or/config.c tor/src/or/config.c
+--- tor~/src/or/config.c	2006-07-24 05:15:02.576170550 +0200
++++ tor/src/or/config.c	2006-07-24 05:18:45.286651501 +0200
+@@ -2118,8 +2118,13 @@
+     REJECT("Failed to normalize old Log options. See logs for details.");
  
    /* Special case on first boot if no Log options are given. */
 -  if (!options->Logs && !options->RunAsDaemon && !from_setconf)
 -    config_line_append(&options->Logs, "Log", "notice stdout");
-+  if (!options->Logs && !from_setconf)
-+    config_line_append(&options->Logs, "Log", "notice file /var/log/tor/log");
++  if (debian_running_as_debiantor()) {
++    if (!options->Logs && !from_setconf)
++      config_line_append(&options->Logs, "Log", "notice file /var/log/tor/log");
++  } else {
++    if (!options->Logs && !options->RunAsDaemon && !from_setconf)
++      config_line_append(&options->Logs, "Log", "notice stdout");
++  }
  
    if (options_init_logs(options, 1)<0) /* Validate the log(s) */
      REJECT("Failed to validate Log options. See logs for details.");

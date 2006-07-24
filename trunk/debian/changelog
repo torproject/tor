@@ -2,8 +2,13 @@ tor (0.1.2.0-alpha-cvs-1) unstable; urgency=low
 
   * CVS snapshot.
   * Forward port 07_log_to_file_by_default.dpatch.
+  * Previously our defaults for DataDirectory, PidFile, RunAsDaemon, and
+    Log differed from upstreams.  Now Tor behaves just like before (with
+    our own DataDirectory and all) only when run as the debian-tor user.
+    If invoked as any other user, Tor will behave just like the pristine
+    upstream version.
 
- -- Peter Palfrader <weasel@debian.org>  Thu, 22 Jun 2006 00:12:44 +0200
+ -- Peter Palfrader <weasel@debian.org>  Mon, 24 Jul 2006 05:21:00 +0200
 
 tor (0.1.1.21-1) unstable; urgency=low
 
