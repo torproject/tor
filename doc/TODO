@@ -63,6 +63,8 @@ N   . Improve memory usage on tight-memory machines.
           - Save and mmap v1 directories; store them zipped, not uncompressed.
           - Store networkstatus docs zipped, not uncompressed.  Maaaybe mmap
             them too.
+        - Be a little more OO to save memory in frequently
+          replicated structs.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
     o Asynchronous DNS
