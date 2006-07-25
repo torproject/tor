@@ -1803,7 +1803,7 @@ tor_version_parse(const char *s, tor_version_t *out)
 {
   char *eos=NULL, *cp=NULL;
   /* Format is:
-   *   "Tor " ? NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ -cvs ] ]
+   *   "Tor " ? NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ - tag ] ]
    */
   tor_assert(s);
   tor_assert(out);
@@ -1829,7 +1829,6 @@ tor_version_parse(const char *s, tor_version_t *out)
   if (!*eos) {
     out->status = VER_RELEASE;
     out->patchlevel = 0;
-    out->cvs = IS_NOT_CVS;
     return 0;
   }
   cp = eos;
@@ -1857,11 +1856,6 @@ tor_version_parse(const char *s, tor_version_t *out)
   if (*cp == '-' || *cp == '.')
     ++cp;
   strlcpy(out->status_tag, cp, sizeof(out->status_tag));
-  if (0==strcmp(cp, "cvs")) {
-    out->cvs = IS_CVS;
-  } else {
-    out->cvs = IS_NOT_CVS;
-  }
 
   return 0;
 }
@@ -1885,11 +1879,7 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
   else if ((i = a->patchlevel - b->patchlevel))
     return i;
 
-  if (a->major > 0 || a->minor > 0) {
-    return strcmp(a->status_tag, b->status_tag);
-  } else {
-    return (a->cvs - b->cvs);
-  }
+  return strcmp(a->status_tag, b->status_tag);
 }
 
 /** Return true iff versions <b>a</b> and <b>b</b> belong to the same series.

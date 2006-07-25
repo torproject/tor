@@ -2464,9 +2464,6 @@ typedef struct tor_version_t {
    * VER_RELEASE. */
   enum { VER_PRE=0, VER_RC=1, VER_RELEASE=2, } status;
   int patchlevel;
-  /** CVS status.  For version in the post-0.1 format, this is always
-   * IS_NOT_CVS */
-  enum { IS_CVS=0, IS_NOT_CVS=1} cvs;
   char status_tag[MAX_STATUS_TAG_LEN];
 } tor_version_t;
 

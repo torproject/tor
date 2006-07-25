@@ -1387,35 +1387,30 @@ test_dir_format(void)
   test_eq(4, ver1.micro);
   test_eq(VER_PRE, ver1.status);
   test_eq(2, ver1.patchlevel);
-  test_eq(IS_CVS, ver1.cvs);
   test_eq(0, tor_version_parse("0.3.4rc1", &ver1));
   test_eq(0, ver1.major);
   test_eq(3, ver1.minor);
   test_eq(4, ver1.micro);
   test_eq(VER_RC, ver1.status);
   test_eq(1, ver1.patchlevel);
-  test_eq(IS_NOT_CVS, ver1.cvs);
   test_eq(0, tor_version_parse("1.3.4", &ver1));
   test_eq(1, ver1.major);
   test_eq(3, ver1.minor);
   test_eq(4, ver1.micro);
   test_eq(VER_RELEASE, ver1.status);
   test_eq(0, ver1.patchlevel);
-  test_eq(IS_NOT_CVS, ver1.cvs);
   test_eq(0, tor_version_parse("1.3.4.999", &ver1));
   test_eq(1, ver1.major);
   test_eq(3, ver1.minor);
   test_eq(4, ver1.micro);
   test_eq(VER_RELEASE, ver1.status);
   test_eq(999, ver1.patchlevel);
-  test_eq(IS_NOT_CVS, ver1.cvs);
   test_eq(0, tor_version_parse("0.1.2.4-alpha", &ver1));
   test_eq(0, ver1.major);
   test_eq(1, ver1.minor);
   test_eq(2, ver1.micro);
   test_eq(4, ver1.patchlevel);
   test_eq(VER_RELEASE, ver1.status);
-  test_eq(IS_NOT_CVS, ver1.cvs);
   test_streq("alpha", ver1.status_tag);
   test_eq(0, tor_version_parse("0.1.2.4", &ver1));
   test_eq(0, ver1.major);
@@ -1423,7 +1418,6 @@ test_dir_format(void)
   test_eq(2, ver1.micro);
   test_eq(4, ver1.patchlevel);
   test_eq(VER_RELEASE, ver1.status);
-  test_eq(IS_NOT_CVS, ver1.cvs);
   test_streq("", ver1.status_tag);
 
 #define test_eq_vs(vs1, vs2) test_eq_type(version_status_t, "%d", (vs1), (vs2))
