@@ -36,11 +36,11 @@ for $fn (@ARGV) {
             $lastnil = 0;
         }
 	## Terminals are still 80 columns wide in my world.  I refuse to
-	## accept double-line lines.
-	if (/^.{80}/) {
+	## accept double-line lines.  Except, of course, svn Id tags
+	## can make us go long.
+	if (/^.{80}/ && !/\$Id: /) {
 	    print "     Wide:$fn:$.\n";
 	}
-
 	### Juju to skip over comments and strings, since the tests
 	### we're about to do are okay there.
 	if ($C) {
@@ -88,11 +88,10 @@ for $fn (@ARGV) {
                 }
             }
 	    ## Warn about functions not declared at start of line.
-	    if ($in_func_head || 
+	    if ($in_func_head ||
 		($fn !~ /\.h$/ && /^[a-zA-Z0-9_]/ &&
 		 ! /^(?:static )?(?:typedef|struct|union)[^\(]*$/ &&
 		 ! /= *\{$/ && ! /;$/)) {
-		
 		if (/.\{$/){
 		    print "fn() {:$fn:$.\n";
 		    $in_func_head = 0;
