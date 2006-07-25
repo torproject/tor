@@ -1,7 +1,0 @@
-files
-patched
-tor
-tor.postinst.debhelper
-tor.postrm.debhelper
-tor.prerm.debhelper
-tor.substvars

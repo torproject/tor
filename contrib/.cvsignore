@@ -1,8 +1,0 @@
-Makefile
-Makefile.in
-tor.sh
-torctl
-torify
-*.pyc
-*.pyo
-tor.logrotate
