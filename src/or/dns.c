@@ -1173,7 +1173,7 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
 }
 
 static int
-assign_to_dnsworker(connection_t *exitconn)
+assign_to_dnsworker(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
   int r;
@@ -1184,7 +1184,7 @@ assign_to_dnsworker(connection_t *exitconn)
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);
-    if (exitconn->purpose == EXIT_PURPOSE_RESOLVE) {
+    if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE) {
       if (eventdns_err_is_transient(r))
         send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
       else {
