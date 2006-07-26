@@ -136,7 +136,8 @@ connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn)
     if (conn->_base.type == CONN_TYPE_AP) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_DESTROY);
     } else {
-      conn->_base.edge_has_sent_end = 1; /* closing the circuit, nothing to send to */
+      /* closing the circuit, nothing to send an END to */
+      conn->_base.edge_has_sent_end = 1;
       connection_mark_for_close(TO_CONN(conn));
       conn->_base.hold_open_until_flushed = 1;
     }
@@ -240,7 +241,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
       connection_stop_writing(TO_CONN(conn));
       return 0;
     default:
-      log_warn(LD_BUG,"BUG: called in unexpected state %d.", conn->_base.state);
+      log_warn(LD_BUG,"BUG: called in unexpected state %d.",conn->_base.state);
       tor_fragile_assert();
       return -1;
   }
@@ -340,7 +341,8 @@ connection_ap_expire_beginning(void)
       continue;
     conn = TO_EDGE_CONN(carray[i]);
     /* if it's an internal bridge connection, don't yell its status. */
-    severity = (!conn->_base.addr && !conn->_base.port) ? LOG_INFO : LOG_NOTICE;
+    severity = (!conn->_base.addr && !conn->_base.port)
+      ? LOG_INFO : LOG_NOTICE;
     if (conn->_base.state == AP_CONN_STATE_CONTROLLER_WAIT) {
       if (now - conn->_base.timestamp_lastread >= options->SocksTimeout) {
         log_fn(severity, LD_APP, "Closing unattached stream.");
@@ -1834,9 +1836,11 @@ connection_exit_connect(edge_connection_t *edge_conn)
   connection_watch_events(conn, EV_READ);
 
   /* also, deliver a 'connected' cell back through the circuit. */
-  if (connection_edge_is_rendezvous_stream(edge_conn)) { /* rendezvous stream */
+  if (connection_edge_is_rendezvous_stream(edge_conn)) {
+    /* rendezvous stream */
     /* don't send an address back! */
-    connection_edge_send_command(edge_conn, circuit_get_by_edge_conn(edge_conn),
+    connection_edge_send_command(edge_conn,
+                                 circuit_get_by_edge_conn(edge_conn),
                                  RELAY_COMMAND_CONNECTED,
                                  NULL, 0, edge_conn->cpath_layer);
   } else { /* normal stream */
@@ -1845,7 +1849,8 @@ connection_exit_connect(edge_connection_t *edge_conn)
     set_uint32(connected_payload, htonl(conn->addr));
     set_uint32(connected_payload+4,
                htonl(dns_clip_ttl(edge_conn->address_ttl)));
-    connection_edge_send_command(edge_conn, circuit_get_by_edge_conn(edge_conn),
+    connection_edge_send_command(edge_conn,
+                                 circuit_get_by_edge_conn(edge_conn),
                                  RELAY_COMMAND_CONNECTED,
                                  connected_payload, 8, edge_conn->cpath_layer);
   }

@@ -396,7 +396,8 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
   } else {
     for (tmpconn = TO_OR_CIRCUIT(circ)->n_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
-      if (rh.stream_id == tmpconn->stream_id && !tmpconn->_base.marked_for_close) {
+      if (rh.stream_id == tmpconn->stream_id &&
+          !tmpconn->_base.marked_for_close) {
         log_debug(LD_EXIT,"found conn for stream %d.", rh.stream_id);
         if (cell_direction == CELL_DIRECTION_OUT ||
             connection_edge_is_rendezvous_stream(tmpconn))
@@ -405,7 +406,8 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
     }
     for (tmpconn = TO_OR_CIRCUIT(circ)->resolving_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
-      if (rh.stream_id == tmpconn->stream_id && !tmpconn->_base.marked_for_close) {
+      if (rh.stream_id == tmpconn->stream_id &&
+          !tmpconn->_base.marked_for_close) {
         log_debug(LD_EXIT,"found conn for stream %d.", rh.stream_id);
         return tmpconn;
       }
@@ -465,7 +467,8 @@ connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
   if (fromconn && fromconn->_base.marked_for_close) {
     log_warn(LD_BUG,
              "Bug: called on conn that's already marked for close at %s:%d.",
-             fromconn->_base.marked_for_close_file, fromconn->_base.marked_for_close);
+             fromconn->_base.marked_for_close_file,
+             fromconn->_base.marked_for_close);
     return 0;
   }
 
@@ -780,7 +783,8 @@ connection_edge_process_end_not_open(
     circuit_log_path(LOG_INFO,LD_APP,circ);
     connection_mark_unattached_ap(conn, reason);
   } else {
-    conn->_base.edge_has_sent_end = 1; /* we just got an 'end', don't need to send one */
+    /* we just got an 'end', don't need to send one */
+    conn->_base.edge_has_sent_end = 1;
     connection_mark_for_close(TO_CONN(conn));
   }
   return 0;
@@ -807,7 +811,8 @@ connection_edge_process_relay_cell_not_open(
       return 0;
   }
 
-  if (conn->_base.type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
+  if (conn->_base.type == CONN_TYPE_AP &&
+      rh->command == RELAY_COMMAND_CONNECTED) {
     tor_assert(CIRCUIT_IS_ORIGIN(circ));
     if (conn->_base.state != AP_CONN_STATE_CONNECT_WAIT) {
       log_warn(LD_APP,"Got 'connected' while not in state connect_wait. "
@@ -846,7 +851,8 @@ connection_edge_process_relay_cell_not_open(
     }
     return 0;
   }
-  if (conn->_base.type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_RESOLVED) {
+  if (conn->_base.type == CONN_TYPE_AP &&
+      rh->command == RELAY_COMMAND_RESOLVED) {
     int ttl;
     int answer_len;
     if (conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {

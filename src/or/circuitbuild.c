@@ -692,7 +692,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   circ->n_conn = n_conn;
   memcpy(circ->n_conn_id_digest, n_conn->identity_digest, DIGEST_LEN);
-  log_debug(LD_CIRC,"n_conn is %s:%u",n_conn->_base.address,n_conn->_base.port);
+  log_debug(LD_CIRC,"n_conn is %s:%u",
+            n_conn->_base.address,n_conn->_base.port);
 
   if (circuit_deliver_create_cell(circ, CELL_CREATE, onionskin) < 0)
     return -1;

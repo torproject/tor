@@ -3317,9 +3317,9 @@ list_pending_descriptor_downloads(digestmap_t *result)
     if (conn->type == CONN_TYPE_DIR &&
         conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         !conn->marked_for_close) {
-      dir_connection_t *dir_conn = TO_DIR_CONN(conn);
-      if (!strcmpstart(dir_conn->requested_resource, prefix))
-        dir_split_resource_into_fingerprints(dir_conn->requested_resource+p_len,
+      const char *resource = TO_DIR_CONN(conn)->requested_resource;
+      if (!strcmpstart(resource, prefix))
+        dir_split_resource_into_fingerprints(resource + p_len,
                                              tmp, NULL, 1, 0);
     }
   }

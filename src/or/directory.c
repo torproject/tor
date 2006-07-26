@@ -46,7 +46,8 @@ static int body_is_plausible(const char *body, size_t body_len, int purpose);
 static int purpose_is_private(uint8_t purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
-static void connection_dir_download_networkstatus_failed(dir_connection_t *conn);
+static void connection_dir_download_networkstatus_failed(
+                                                      dir_connection_t *conn);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
 static void dir_networkstatus_download_failed(smartlist_t *failed);
 static void dir_routerdesc_download_failed(smartlist_t *failed);
@@ -398,13 +399,15 @@ directory_initiate_command(const char *address, uint32_t addr,
       dir_port = get_options()->HttpProxyPort;
     }
 
-    switch (connection_connect(TO_CONN(conn), conn->_base.address, addr, dir_port)) {
+    switch (connection_connect(TO_CONN(conn), conn->_base.address, addr,
+                               dir_port)) {
       case -1:
         connection_dir_request_failed(conn); /* retry if we want */
         connection_free(TO_CONN(conn));
         return;
       case 1:
-        conn->_base.state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
+        /* start flushing conn */
+        conn->_base.state = DIR_CONN_STATE_CLIENT_SENDING;
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
@@ -848,7 +851,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   log_debug(LD_DIR,
             "Received response from directory server '%s:%d': %d %s",
-            conn->_base.address, conn->_base.port, status_code, escaped(reason));
+            conn->_base.address, conn->_base.port, status_code,
+            escaped(reason));
 
   /* now check if it's got any hints for us about our IP address. */
   if (server_mode(get_options())) {
@@ -881,7 +885,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (status_code == 503) {
     log_info(LD_DIR,"Received http status code %d (%s) from server "
              "'%s:%d'. I'll try again soon.",
-             status_code, escaped(reason), conn->_base.address, conn->_base.port);
+             status_code, escaped(reason), conn->_base.address,
+             conn->_base.port);
     tor_free(body); tor_free(headers); tor_free(reason);
     return -1;
   }
@@ -913,7 +918,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
       log_info(LD_HTTP, "HTTP body from server '%s:%d' was labeled %s, "
                "but it seems to be %s.%s",
-               conn->_base.address, conn->_base.port, description1, description2,
+               conn->_base.address, conn->_base.port, description1,
+               description2,
                (compression>0 && guessed>0)?"  Trying both.":"");
     }
     /* Try declared compression first if we can. */
@@ -949,7 +955,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     if (status_code != 200) {
       log_warn(LD_DIR,"Received http status code %d (%s) from server "
                "'%s:%d'. I'll try again soon.",
-               status_code, escaped(reason), conn->_base.address, conn->_base.port);
+               status_code, escaped(reason), conn->_base.address,
+               conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -966,7 +973,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     if (status_code != 200) {
       log_warn(LD_DIR,"Received http status code %d (%s) from server "
                "'%s:%d'. I'll try again soon.",
-               status_code, escaped(reason), conn->_base.address, conn->_base.port);
+               status_code, escaped(reason), conn->_base.address,
+               conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
@@ -990,8 +998,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       log_warn(LD_DIR,
            "Received http status code %d (%s) from server "
            "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
-           status_code, escaped(reason), conn->_base.address, conn->_base.port,
-           conn->requested_resource);
+           status_code, escaped(reason), conn->_base.address,
+           conn->_base.port, conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
       connection_dir_download_networkstatus_failed(conn);
       return -1;
@@ -1060,8 +1068,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
              "Received http status code %d (%s) from server '%s:%d' "
              "while fetching \"/tor/server/%s\". I'll try again soon.",
-             status_code, escaped(reason), conn->_base.address, conn->_base.port,
-             conn->requested_resource);
+             status_code, escaped(reason), conn->_base.address,
+             conn->_base.port, conn->requested_resource);
       if (!which) {
         connection_dir_download_routerdesc_failed(conn);
       } else {
@@ -1122,12 +1130,14 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              "'%s:%d'. Is your clock skewed? Have you mailed us your key "
              "fingerprint? Are you using the right key? Are you using a "
              "private IP address? See http://tor.eff.org/doc/"
-             "tor-doc-server.html",escaped(reason), conn->_base.address, conn->_base.port);
+             "tor-doc-server.html",escaped(reason), conn->_base.address,
+             conn->_base.port);
         break;
       default:
         log_warn(LD_GENERAL,
              "http status %d (%s) reason unexpected (server '%s:%d').",
-             status_code, escaped(reason), conn->_base.address, conn->_base.port);
+             status_code, escaped(reason), conn->_base.address,
+             conn->_base.port);
         break;
     }
     /* return 0 in all cases, since we don't want to mark any
@@ -1162,7 +1172,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       default:
         log_warn(LD_REND,"http status %d (%s) response unexpected (server "
                  "'%s:%d').",
-                 status_code, escaped(reason), conn->_base.address, conn->_base.port);
+                 status_code, escaped(reason), conn->_base.address,
+                 conn->_base.port);
         break;
     }
   }
@@ -1182,7 +1193,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       default:
         log_warn(LD_REND,"http status %d (%s) response unexpected (server "
                  "'%s:%d').",
-                 status_code, escaped(reason), conn->_base.address, conn->_base.port);
+                 status_code, escaped(reason), conn->_base.address,
+                 conn->_base.port);
         break;
     }
   }
@@ -1617,7 +1629,8 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     return 0;
   }
 
-  if (!strcmp(url,"/tor/dir-all-weaselhack") && (conn->_base.addr == 0x7f000001ul) &&
+  if (!strcmp(url,"/tor/dir-all-weaselhack") &&
+      (conn->_base.addr == 0x7f000001ul) &&
       authdir_mode(get_options())) {
     /* XXX until weasel rewrites his scripts  XXXX012 */
     char *new_directory=NULL;
@@ -1746,7 +1759,8 @@ directory_handle_command(dir_connection_t *conn)
                               &body, &body_len, MAX_BODY_SIZE, 0)) {
     case -1: /* overflow */
       log_warn(LD_DIRSERV,
-               "Invalid input from address '%s'. Closing.", conn->_base.address);
+               "Invalid input from address '%s'. Closing.",
+               conn->_base.address);
       return -1;
     case 0:
       log_debug(LD_DIRSERV,"command not all here yet.");
@@ -1793,7 +1807,8 @@ connection_dir_finished_flushing(dir_connection_t *conn)
       connection_mark_for_close(TO_CONN(conn));
       return 0;
     default:
-      log_warn(LD_BUG,"Bug: called in unexpected state %d.", conn->_base.state);
+      log_warn(LD_BUG,"Bug: called in unexpected state %d.",
+               conn->_base.state);
       tor_fragile_assert();
       return -1;
   }

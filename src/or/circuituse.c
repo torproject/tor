@@ -255,7 +255,8 @@ circuit_expire_building(time_t now)
 
     if (victim->n_conn)
       log_info(LD_CIRC,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
-               victim->n_conn->_base.address, victim->n_port, victim->n_circ_id,
+               victim->n_conn->_base.address, victim->n_port,
+               victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
     else
@@ -296,7 +297,8 @@ circuit_remove_handled_ports(smartlist_t *needed_ports)
  * Else return 0.
  */
 int
-circuit_stream_is_being_handled(edge_connection_t *conn, uint16_t port, int min)
+circuit_stream_is_being_handled(edge_connection_t *conn,
+                                uint16_t port, int min)
 {
   circuit_t *circ;
   routerinfo_t *exitrouter;

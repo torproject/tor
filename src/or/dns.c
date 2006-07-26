@@ -380,21 +380,23 @@ dns_resolve(edge_connection_t *exitconn)
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
         log_debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS "
-                  "resolve of %s",
-                  exitconn->_base.s, escaped_safe_str(exitconn->_base.address));
+                  "resolve of %s", exitconn->_base.s,
+                  escaped_safe_str(exitconn->_base.address));
         exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
         return 0;
       case CACHE_STATE_VALID:
         exitconn->_base.addr = resolve->addr;
         exitconn->address_ttl = resolve->ttl;
         log_debug(LD_EXIT,"Connection (fd %d) found cached answer for %s",
-                  exitconn->_base.s, escaped_safe_str(exitconn->_base.address));
+                  exitconn->_base.s,
+                  escaped_safe_str(exitconn->_base.address));
         if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         return 1;
       case CACHE_STATE_FAILED:
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
-                  exitconn->_base.s, escaped_safe_str(exitconn->_base.address));
+                  exitconn->_base.s,
+                  escaped_safe_str(exitconn->_base.address));
         if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
@@ -766,7 +768,8 @@ assign_to_dnsworker(edge_connection_t *exitconn)
 
   return 0;
 err:
-  dns_cancel_pending_resolve(exitconn->_base.address); /* also sends end and frees */
+  /* also sends end and frees */
+  dns_cancel_pending_resolve(exitconn->_base.address);
   return -1;
 }
 

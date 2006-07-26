@@ -726,8 +726,6 @@ typedef struct edge_connection_t {
 /* Used only by DIR and AP connections: */
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
                                            * querying for? (DIR/AP only) */
-
-
 } edge_connection_t;
 
 typedef struct dir_connection_t {
@@ -1835,11 +1833,13 @@ int connection_or_nonopen_was_started_here(or_connection_t *conn);
 void _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
                                     int line, const char *file);
 int connection_edge_reached_eof(edge_connection_t *conn);
-int connection_edge_process_inbuf(edge_connection_t *conn, int package_partial);
+int connection_edge_process_inbuf(edge_connection_t *conn,
+                                  int package_partial);
 int connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn);
 int connection_edge_end(edge_connection_t *conn, char reason,
                         crypt_path_t *cpath_layer);
-int connection_edge_end_errno(edge_connection_t *conn, crypt_path_t *cpath_layer);
+int connection_edge_end_errno(edge_connection_t *conn,
+                              crypt_path_t *cpath_layer);
 int connection_edge_finished_flushing(edge_connection_t *conn);
 int connection_edge_finished_connecting(edge_connection_t *conn);
 
@@ -1865,7 +1865,8 @@ int connection_edge_is_rendezvous_stream(edge_connection_t *conn);
 int connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
-int connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ);
+int connection_ap_detach_retriable(edge_connection_t *conn,
+                                   origin_circuit_t *circ);
 
 void addressmap_init(void);
 void addressmap_clean(time_t now);
@@ -1912,7 +1913,8 @@ or_connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);
 
-void connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn);
+void connection_or_write_cell_to_buf(const cell_t *cell,
+                                     or_connection_t *conn);
 int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
 
@@ -1978,8 +1980,10 @@ int connection_control_process_inbuf(control_connection_t *conn);
 
 int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e);
-int control_event_stream_status(edge_connection_t *conn, stream_status_event_t e);
-int control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t e);
+int control_event_stream_status(edge_connection_t *conn,
+                                stream_status_event_t e);
+int control_event_or_conn_status(or_connection_t *conn,
+                                 or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, unsigned int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
@@ -2216,7 +2220,8 @@ int connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
                                  size_t payload_len,
                                  crypt_path_t *cpath_layer);
-int connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial);
+int connection_edge_package_raw_inbuf(edge_connection_t *conn,
+                                      int package_partial);
 void connection_edge_consider_sending_sendme(edge_connection_t *conn);
 socks5_reply_status_t connection_edge_end_reason_socks5_response(int reason);
 int errno_to_end_reason(int e);

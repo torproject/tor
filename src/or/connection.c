@@ -2034,7 +2034,8 @@ connection_process_inbuf(connection_t *conn, int package_partial)
       return connection_or_process_inbuf(TO_OR_CONN(conn));
     case CONN_TYPE_EXIT:
     case CONN_TYPE_AP:
-      return connection_edge_process_inbuf(TO_EDGE_CONN(conn), package_partial);
+      return connection_edge_process_inbuf(TO_EDGE_CONN(conn),
+                                           package_partial);
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(TO_DIR_CONN(conn));
     case CONN_TYPE_DNSWORKER:

@@ -444,8 +444,10 @@ conn_write_callback(int fd, short events, void *_conn)
            "Bug: unhandled error on write for %s connection (fd %d); removing",
            conn_type_to_string(conn->type), conn->s);
       tor_fragile_assert();
-      if (CONN_IS_EDGE(conn))
-        conn->edge_has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
+      if (CONN_IS_EDGE(conn)) {
+        /* otherwise we cry wolf about duplicate close */
+        conn->edge_has_sent_end = 1;
+      }
       /* XXX do we need a close-immediate here, so we don't try to flush? */
       connection_mark_for_close(conn);
     }
@@ -552,7 +554,8 @@ directory_all_unreachable(time_t now)
                "Failing connection to '%s:%d'.",
                safe_str(edge_conn->socks_request->address),
                edge_conn->socks_request->port);
-    connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_NET_UNREACHABLE);
+    connection_mark_unattached_ap(edge_conn,
+                                  END_STREAM_REASON_NET_UNREACHABLE);
   }
 }
 

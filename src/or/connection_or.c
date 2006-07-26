@@ -662,8 +662,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
     return -1;
 
   if (!started_here) {
-    connection_or_init_conn_from_address(conn,conn->_base.addr,conn->_base.port,
-                                         digest_rcvd, 0);
+    connection_or_init_conn_from_address(conn,conn->_base.addr,
+                                         conn->_base.port, digest_rcvd, 0);
 
     /* Annotate that we received a TLS connection.
      * (Todo: only actually consider ourselves reachable if there

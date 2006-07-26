@@ -157,7 +157,8 @@ static int handle_control_getconf(control_connection_t *conn, uint32_t len,
                                   const char *body);
 static int handle_control_setevents(control_connection_t *conn, uint32_t len,
                                     const char *body);
-static int handle_control_authenticate(control_connection_t *conn, uint32_t len,
+static int handle_control_authenticate(control_connection_t *conn,
+                                       uint32_t len,
                                        const char *body);
 static int handle_control_saveconf(control_connection_t *conn, uint32_t len,
                                    const char *body);
@@ -167,19 +168,25 @@ static int handle_control_mapaddress(control_connection_t *conn, uint32_t len,
                                      const char *body);
 static int handle_control_getinfo(control_connection_t *conn, uint32_t len,
                                   const char *body);
-static int handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
+static int handle_control_extendcircuit(control_connection_t *conn,
+                                        uint32_t len,
                                         const char *body);
-static int handle_control_setpurpose(control_connection_t *conn, int for_circuits,
+static int handle_control_setpurpose(control_connection_t *conn,
+                                     int for_circuits,
                                      uint32_t len, const char *body);
-static int handle_control_attachstream(control_connection_t *conn, uint32_t len,
+static int handle_control_attachstream(control_connection_t *conn,
+                                       uint32_t len,
                                         const char *body);
-static int handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
+static int handle_control_postdescriptor(control_connection_t *conn,
+                                         uint32_t len,
                                          const char *body);
-static int handle_control_redirectstream(control_connection_t *conn, uint32_t len,
+static int handle_control_redirectstream(control_connection_t *conn,
+                                         uint32_t len,
                                          const char *body);
 static int handle_control_closestream(control_connection_t *conn, uint32_t len,
                                       const char *body);
-static int handle_control_closecircuit(control_connection_t *conn, uint32_t len,
+static int handle_control_closecircuit(control_connection_t *conn,
+                                       uint32_t len,
                                        const char *body);
 static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
                                       size_t len);
@@ -529,7 +536,8 @@ send_control_done2(control_connection_t *conn, const char *msg, size_t len)
 /** Send an error message with error code <b>error</b> and body
  * <b>message</b> down the connection <b>conn</b> */
 static void
-send_control0_error(control_connection_t *conn, uint16_t error, const char *message)
+send_control0_error(control_connection_t *conn, uint16_t error,
+                    const char *message)
 {
   char buf[256];
   size_t len;
@@ -784,7 +792,8 @@ handle_control_resetconf(control_connection_t *conn, uint32_t len, char *body)
 /** Called when we receive a GETCONF message.  Parse the request, and
  * reply with a CONFVALUE or an ERROR message */
 static int
-handle_control_getconf(control_connection_t *conn, uint32_t body_len, const char *body)
+handle_control_getconf(control_connection_t *conn, uint32_t body_len,
+                       const char *body)
 {
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
@@ -887,7 +896,8 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len, const char
 /** Called when we get a SETEVENTS message: update conn->event_mask,
  * and reply with DONE or ERROR. */
 static int
-handle_control_setevents(control_connection_t *conn, uint32_t len, const char *body)
+handle_control_setevents(control_connection_t *conn, uint32_t len,
+                         const char *body)
 {
   uint16_t event_code;
   uint32_t event_mask = 0;
@@ -992,7 +1002,8 @@ decode_hashed_password(char *buf, const char *hashed)
  * OPEN.  Reply with DONE or ERROR.
  */
 static int
-handle_control_authenticate(control_connection_t *conn, uint32_t len, const char *body)
+handle_control_authenticate(control_connection_t *conn, uint32_t len,
+                            const char *body)
 {
   int used_quoted_string = 0;
   or_options_t *options = get_options();
@@ -1157,7 +1168,8 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
 /** Called when we get a MAPADDRESS command; try to bind all listed addresses,
  * and report success or failrue. */
 static int
-handle_control_mapaddress(control_connection_t *conn, uint32_t len, const char *body)
+handle_control_mapaddress(control_connection_t *conn, uint32_t len,
+                          const char *body)
 {
   smartlist_t *elts;
   smartlist_t *lines;
@@ -1552,7 +1564,8 @@ handle_getinfo_helper(const char *question, char **answer)
 /** Called when we receive a GETINFO command.  Try to fetch all requested
  * information, and reply with information or error message. */
 static int
-handle_control_getinfo(control_connection_t *conn, uint32_t len, const char *body)
+handle_control_getinfo(control_connection_t *conn, uint32_t len,
+                       const char *body)
 {
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
@@ -1973,7 +1986,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
     return 0;
   }
   if (connection_ap_handshake_rewrite_and_attach(edge_conn,
-                                  circ ? TO_ORIGIN_CIRCUIT(circ) : NULL) < 0) {
+                               circ ? TO_ORIGIN_CIRCUIT(circ) : NULL) < 0) {
     if (STATE_IS_V0(conn->_base.state))
       send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");
     else
@@ -2456,8 +2469,9 @@ connection_control_process_inbuf_v0(control_connection_t *conn)
 
  again:
   /* Try to suck a control message from the buffer. */
-  switch (fetch_from_buf_control0(conn->_base.inbuf, &body_len, &command_type, &body,
-                                conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V0))
+  switch (fetch_from_buf_control0(conn->_base.inbuf, &body_len, &command_type,
+                          &body,
+                          conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V0))
     {
     case -2:
       tor_free(body);
