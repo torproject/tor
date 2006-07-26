@@ -1,0 +1,13 @@
+#!/bin/sh
+# TorPreFlight is invoked before the install begins
+
+# Find the server keys, if they exist and save them, just in case
+if [ -d /Library/Tor/var/lib/tor/keys ]; then
+	tar zcf ~/`date "+%Y-%m-%d"`-Tor-ServerKeys.backup.tar.gz /Library/Tor/var/lib/tor/keys
+fi
+
+# Remove Tor and everything to do with it
+if [ -f /Library/Tor/uninstall_tor_bundle.sh ]; then
+	/Library/Tor/uninstall_tor_bundle.sh
+fi
+
