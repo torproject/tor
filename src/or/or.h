@@ -1077,10 +1077,10 @@ typedef struct circuit_t {
   char n_conn_id_digest[DIGEST_LEN];
   /** The circuit_id used in the next (forward) hop of this circuit. */
   uint16_t n_circ_id;
-  /** The IPv4 address of the OR that is next in this circuit. */
-  uint32_t n_addr;
   /** The port for the OR that is next in this circuit. */
   uint16_t n_port;
+  /** The IPv4 address of the OR that is next in this circuit. */
+  uint32_t n_addr;
   /** How many relay data cells can we package (read from edge streams)
    * on this circuit before we receive a circuit-level sendme cell asking
    * for more? */
@@ -1122,9 +1122,6 @@ typedef struct origin_circuit_t {
 
   /** Linked list of AP streams associated with this circuit. */
   connection_t *p_streams;
-  /** The next stream_id that will be tried when we're attempting to
-   * construct a new AP stream originating at this circuit. */
-  uint16_t next_stream_id;
   /** Build state for this circuit. It includes the intended path
    * length, the chosen exit router, rendezvous information, etc.
    */
@@ -1154,6 +1151,10 @@ typedef struct origin_circuit_t {
    * for a hidden service, or is S_*.
    */
   char rend_query[REND_SERVICE_ID_LEN+1];
+
+  /** The next stream_id that will be tried when we're attempting to
+   * construct a new AP stream originating at this circuit. */
+  uint16_t next_stream_id;
 
 } origin_circuit_t;
 
