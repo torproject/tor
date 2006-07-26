@@ -31,6 +31,36 @@
 	<key>LowPriorityIO</key>
 	<true/>
 
+	<key>SoftResourceLimits</key>
+	<dict>
+		<key>Core</key>
+		<integer>10000000000</integer>
+
+		<key>CPU</key>
+		<integer>10000000000</integer>
+
+		<key>Data</key>
+		<integer>10000000000</integer>
+
+		<key>FileSize</key>
+		<integer>10000000000</integer>
+
+		<key>MemoryLock</key>
+		<integer>10000000000</integer>
+
+		<key>NumberOfFiles</key>
+		<integer>8192</integer>
+
+		<key>NumberofProcesses</key>
+		<integer>150</integer>
+
+		<key>ResidentSetSize</key>
+		<integer>10000000000</integer>
+
+		<key>Stack</key>
+		<integer>10000000000</integer>
+	</dict>
+
 	<key>HardResourceLimits</key>
 	<dict>
 		<key>Core</key>
