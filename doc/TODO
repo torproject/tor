@@ -66,9 +66,9 @@ N   . Improve memory usage on tight-memory machines.
         - Be a little more OO to save memory in frequently
           replicated structs.
           o Split circuit_t into origin circuits and or circuits
-            - Move as many fields as reasonable out of base class.
-            - Re-pack structs to avoid wasted bytes.
-          - Split connection_t based on type field.
+            . Move as many fields as reasonable out of base class.
+            o Re-pack structs to avoid wasted bytes.
+          o Split connection_t based on type field.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
     o Asynchronous DNS
