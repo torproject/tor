@@ -592,8 +592,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   memcpy(launched->_base.rend_pk_digest, circuit->_base.rend_pk_digest,
          DIGEST_LEN);
   memcpy(launched->_base.rend_cookie, r_cookie, REND_COOKIE_LEN);
-  strlcpy(launched->_base.rend_query, service->service_id,
-          sizeof(launched->_base.rend_query));
+  strlcpy(launched->rend_query, service->service_id,
+          sizeof(launched->rend_query));
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
@@ -663,8 +663,7 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   newstate->pending_final_cpath = oldstate->pending_final_cpath;
   oldstate->pending_final_cpath = NULL;
 
-  memcpy(newcirc->_base.rend_query, oldcirc->_base.rend_query,
-         REND_SERVICE_ID_LEN+1);
+  memcpy(newcirc->rend_query, oldcirc->rend_query, REND_SERVICE_ID_LEN+1);
   memcpy(newcirc->_base.rend_pk_digest, oldcirc->_base.rend_pk_digest,
          DIGEST_LEN);
   memcpy(newcirc->_base.rend_cookie, oldcirc->_base.rend_cookie,
@@ -695,8 +694,8 @@ rend_service_launch_establish_intro(rend_service_t *service,
              nickname);
     return -1;
   }
-  strlcpy(launched->_base.rend_query, service->service_id,
-          sizeof(launched->_base.rend_query));
+  strlcpy(launched->rend_query, service->service_id,
+          sizeof(launched->rend_query));
   memcpy(launched->_base.rend_pk_digest, service->pk_digest, DIGEST_LEN);
 
   if (launched->_base.state == CIRCUIT_STATE_OPEN)

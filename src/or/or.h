@@ -1110,13 +1110,6 @@ typedef struct circuit_t {
   const char *marked_for_close_file; /**< For debugging: in which file was this
                                       * circuit marked for close? */
 
-  /**
-   * The rend_query field holds the y portion of y.onion (nul-terminated)
-   * if purpose is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL
-   * for a hidden service, or is S_*.
-   */
-  char rend_query[REND_SERVICE_ID_LEN+1];
-
   /** The rend_pk_digest field holds a hash of location-hidden service's
    * PK if purpose is INTRO_POINT or S_ESTABLISH_INTRO or S_RENDEZVOUSING.
    */
@@ -1154,6 +1147,13 @@ typedef struct origin_circuit_t {
    * The cpath field is defined only when we are the circuit's origin.
    */
   crypt_path_t *cpath;
+
+  /**
+   * The rend_query field holds the y portion of y.onion (nul-terminated)
+   * if purpose is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL
+   * for a hidden service, or is S_*.
+   */
+  char rend_query[REND_SERVICE_ID_LEN+1];
 
 } origin_circuit_t;
 
@@ -1592,8 +1592,8 @@ int circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(connection_t *conn);
 void circuit_unlink_all_from_or_conn(connection_t *conn, int reason);
 circuit_t *circuit_get_by_global_id(uint32_t id);
-circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
-                                                 uint8_t purpose);
+origin_circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
+                                                        uint8_t purpose);
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
                                          const char *digest, uint8_t purpose);
 or_circuit_t *circuit_get_rendezvous(const char *cookie);

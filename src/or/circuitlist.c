@@ -632,16 +632,18 @@ circuit_unlink_all_from_or_conn(connection_t *conn, int reason)
  *
  * Return NULL if no such circuit exists.
  */
-circuit_t *
+origin_circuit_t *
 circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
 {
   circuit_t *circ;
 
+  tor_assert(CIRCUIT_PURPOSE_IS_ORIGIN(purpose));
+
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (!circ->marked_for_close &&
         circ->purpose == purpose &&
-        !rend_cmp_service_ids(rend_query, circ->rend_query))
-      return circ;
+        !rend_cmp_service_ids(rend_query, TO_ORIGIN_CIRCUIT(circ)->rend_query))
+      return TO_ORIGIN_CIRCUIT(circ);
   }
   return NULL;
 }
@@ -854,10 +856,10 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     /* treat this like getting a nack from it */
     log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). "
              "Removing from descriptor.",
-             safe_str(circ->rend_query),
+             safe_str(ocirc->rend_query),
              safe_str(build_state_get_exit_nickname(ocirc->build_state)));
     rend_client_remove_intro_point(ocirc->build_state->chosen_exit,
-                                   circ->rend_query);
+                                   ocirc->rend_query);
   }
   if (circ->n_conn)
     connection_or_send_destroy(circ->n_circ_id, circ->n_conn, reason);

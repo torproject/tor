@@ -1637,7 +1637,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     log_debug(LD_REND,"begin is for rendezvous. configuring stream.");
     n_stream->address = tor_strdup("(rendezvous)");
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
-    strlcpy(n_stream->rend_query, circ->rend_query,
+    strlcpy(n_stream->rend_query, origin_circ->rend_query,
             sizeof(n_stream->rend_query));
     tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);

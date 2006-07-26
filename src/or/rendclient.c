@@ -66,13 +66,13 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
 
   tor_assert(introcirc->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(rendcirc->_base.purpose == CIRCUIT_PURPOSE_C_REND_READY);
-  tor_assert(!rend_cmp_service_ids(introcirc->_base.rend_query,
-                                   rendcirc->_base.rend_query));
+  tor_assert(!rend_cmp_service_ids(introcirc->rend_query,
+                                   rendcirc->rend_query));
 
-  if (rend_cache_lookup_entry(introcirc->_base.rend_query, -1, &entry) < 1) {
+  if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
     log_warn(LD_REND,
              "query %s didn't have valid rend desc in cache. Failing.",
-             escaped_safe_str(introcirc->_base.rend_query));
+             escaped_safe_str(introcirc->rend_query));
     goto err;
   }
 
@@ -183,7 +183,7 @@ int
 rend_client_introduction_acked(origin_circuit_t *circ,
                                const char *request, size_t request_len)
 {
-  circuit_t *rendcirc;
+  origin_circuit_t *rendcirc;
   (void) request; // XXXX Use this.
 
   if (circ->_base.purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
@@ -204,9 +204,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
      */
     log_info(LD_REND,"Received ack. Telling rend circ...");
     rendcirc = circuit_get_by_rend_query_and_purpose(
-               circ->_base.rend_query, CIRCUIT_PURPOSE_C_REND_READY);
+               circ->rend_query, CIRCUIT_PURPOSE_C_REND_READY);
     if (rendcirc) { /* remember the ack */
-      rendcirc->purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
+      rendcirc->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
     } else {
       log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }
@@ -221,22 +221,22 @@ rend_client_introduction_acked(origin_circuit_t *circ,
      * If none remain, refetch the service descriptor.
      */
     if (rend_client_remove_intro_point(circ->build_state->chosen_exit,
-                                       circ->_base.rend_query) > 0) {
+                                       circ->rend_query) > 0) {
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
       extend_info_t *extend_info;
       int result;
-      extend_info = rend_client_get_random_intro(circ->_base.rend_query);
+      extend_info = rend_client_get_random_intro(circ->rend_query);
       if (!extend_info) {
         log_warn(LD_REND, "No introduction points left for %s. Closing.",
-                 escaped_safe_str(circ->_base.rend_query));
+                 escaped_safe_str(circ->rend_query));
         circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
         return -1;
       }
       log_info(LD_REND,
                "Got nack for %s from %s. Re-extending circ %d, "
                "this time to %s.",
-               escaped_safe_str(circ->_base.rend_query),
+               escaped_safe_str(circ->rend_query),
                circ->build_state->chosen_exit->nickname, circ->_base.n_circ_id,
                extend_info->nickname);
       result = circuit_extend_to_new_exit(circ, extend_info);

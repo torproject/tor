@@ -91,7 +91,8 @@ circuit_is_acceptable(circuit_t *circ, connection_t *conn,
       return 0;
     }
   } else { /* not general */
-    if (rend_cmp_service_ids(conn->rend_query, circ->rend_query)) {
+    if (rend_cmp_service_ids(conn->rend_query,
+                             TO_ORIGIN_CIRCUIT(circ)->rend_query)) {
       /* this circ is not for this conn */
       return 0;
     }
@@ -236,7 +237,8 @@ circuit_expire_building(time_t now)
           /* c_rend_ready circs measure age since timestamp_dirty,
            * because that's set when they switch purposes
            */
-          if (!victim->rend_query[0] || victim->timestamp_dirty > cutoff)
+          if (TO_ORIGIN_CIRCUIT(victim)->rend_query[0] ||
+              victim->timestamp_dirty > cutoff)
             continue;
           break;
         case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
@@ -1010,8 +1012,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       rep_hist_note_used_internal(time(NULL), need_uptime, 1);
       if (circ) {
         /* write the service_id into circ */
-        strlcpy(circ->_base.rend_query, conn->rend_query,
-                sizeof(circ->_base.rend_query));
+        strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));
         if (circ->_base.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->_base.state == CIRCUIT_STATE_OPEN)
           rend_client_rendcirc_has_opened(circ);
