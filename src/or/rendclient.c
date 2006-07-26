@@ -32,14 +32,14 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
   tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
   log_info(LD_REND, "Sending an ESTABLISH_RENDEZVOUS cell");
 
-  if (crypto_rand(circ->_base.rend_cookie, REND_COOKIE_LEN) < 0) {
+  if (crypto_rand(circ->rend_cookie, REND_COOKIE_LEN) < 0) {
     log_warn(LD_BUG, "Internal error: Couldn't produce random cookie.");
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
     return -1;
   }
   if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
-                                   circ->_base.rend_cookie, REND_COOKIE_LEN,
+                                   circ->rend_cookie, REND_COOKIE_LEN,
                                    circ->cpath->prev)<0) {
     /* circ is already marked for close */
     log_warn(LD_GENERAL, "Couldn't send ESTABLISH_RENDEZVOUS cell");
@@ -111,14 +111,14 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     klen = crypto_pk_asn1_encode(extend_info->onion_key, tmp+7+DIGEST_LEN+2,
                                  sizeof(tmp)-(7+DIGEST_LEN+2));
     set_uint16(tmp+7+DIGEST_LEN, htons(klen));
-    memcpy(tmp+7+DIGEST_LEN+2+klen, rendcirc->_base.rend_cookie,
+    memcpy(tmp+7+DIGEST_LEN+2+klen, rendcirc->rend_cookie,
            REND_COOKIE_LEN);
     dh_offset = 7+DIGEST_LEN+2+klen+REND_COOKIE_LEN;
   } else {
     /* Version 0. */
     strncpy(tmp, rendcirc->build_state->chosen_exit->nickname,
             (MAX_NICKNAME_LEN+1)); /* nul pads */
-    memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->_base.rend_cookie,
+    memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie,
            REND_COOKIE_LEN);
     dh_offset = MAX_NICKNAME_LEN+1+REND_COOKIE_LEN;
   }

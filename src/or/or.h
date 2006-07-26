@@ -1110,16 +1110,6 @@ typedef struct circuit_t {
   const char *marked_for_close_file; /**< For debugging: in which file was this
                                       * circuit marked for close? */
 
-  /** The rend_pk_digest field holds a hash of location-hidden service's
-   * PK if purpose is INTRO_POINT or S_ESTABLISH_INTRO or S_RENDEZVOUSING.
-   */
-  char rend_pk_digest[DIGEST_LEN];
-
-  /** Holds rendezvous cookie if purpose is REND_POINT_WAITING or
-   * C_ESTABLISH_REND. Filled with zeroes otherwise.
-   */
-  char rend_cookie[REND_COOKIE_LEN];
-
   /** Quasi-global identifier for this circuit; used for control.c */
   /* XXXX NM This can get re-used after 2**32 circuits. */
   uint32_t global_identifier;
@@ -1147,6 +1137,16 @@ typedef struct origin_circuit_t {
    * The cpath field is defined only when we are the circuit's origin.
    */
   crypt_path_t *cpath;
+
+  /** The rend_pk_digest field holds a hash of location-hidden service's
+   * PK if purpose is S_ESTABLISH_INTRO or S_RENDEZVOUSING.
+   */
+  char rend_pk_digest[DIGEST_LEN];
+
+  /** Holds rendezvous cookie if purpose is C_ESTABLISH_REND. Filled with
+   * zeroes otherwise.
+   */
+  char rend_cookie[REND_COOKIE_LEN];
 
   /**
    * The rend_query field holds the y portion of y.onion (nul-terminated)
@@ -1188,6 +1188,18 @@ typedef struct or_circuit_t {
   /** Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
    * is not marked for close. */
   struct or_circuit_t *rend_splice;
+
+#if REND_COOKIE_LEN >= DIGEST_LEN
+#define REND_TOKEN_LEN REND_COOKIE_LEN
+#else
+#define REND_TOKEN_LEN DIGEST_LEN
+#endif
+
+  /** A hash of location-hidden service's PK if purpose is INTRO_POINT, or a
+   * rendezvous cookie if purpose is REND_POINT_WAITING or
+   * C_ESTABLISH_REND. Filled with zeroes otherwise.
+   */
+  char rend_token[REND_TOKEN_LEN];
 
   char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops. */
 } or_circuit_t;
@@ -1594,9 +1606,10 @@ void circuit_unlink_all_from_or_conn(connection_t *conn, int reason);
 circuit_t *circuit_get_by_global_id(uint32_t id);
 origin_circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
                                                         uint8_t purpose);
-circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
+origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
                                          const char *digest, uint8_t purpose);
 or_circuit_t *circuit_get_rendezvous(const char *cookie);
+or_circuit_t *circuit_get_intro_point(const char *digest);
 origin_circuit_t *circuit_find_to_cannibalize(uint8_t purpose,
                                        extend_info_t *info,
                                        int need_uptime,

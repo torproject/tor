@@ -652,24 +652,41 @@ circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
  * whose rend_pk_digest field is <b>digest</b> and whose purpose is
  * <b>purpose</b>. Returns NULL if no circuit is found.
  * If <b>start</b> is NULL, begin at the start of the list.
+ * DOCDOC origin.
  */
-circuit_t *
-circuit_get_next_by_pk_and_purpose(circuit_t *start,
+origin_circuit_t *
+circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
                                    const char *digest, uint8_t purpose)
 {
   circuit_t *circ;
+  tor_assert(CIRCUIT_PURPOSE_IS_ORIGIN(purpose));
   if (start == NULL)
     circ = global_circuitlist;
   else
-    circ = start->next;
+    circ = TO_CIRCUIT(start)->next;
 
   for ( ; circ; circ = circ->next) {
     if (circ->marked_for_close)
       continue;
     if (circ->purpose != purpose)
       continue;
-    if (!memcmp(circ->rend_pk_digest, digest, DIGEST_LEN))
-      return circ;
+    if (!memcmp(TO_ORIGIN_CIRCUIT(circ)->rend_pk_digest, digest, DIGEST_LEN))
+      return TO_ORIGIN_CIRCUIT(circ);
+  }
+  return NULL;
+}
+
+/* DOCDOC */
+static or_circuit_t *
+circuit_get_by_rend_token_and_purpose(uint8_t purpose, const char *token,
+                                      size_t len)
+{
+  circuit_t *circ;
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (! circ->marked_for_close &&
+        circ->purpose == purpose &&
+        ! memcmp(TO_OR_CIRCUIT(circ)->rend_token, token, len))
+      return TO_OR_CIRCUIT(circ);
   }
   return NULL;
 }
@@ -680,14 +697,20 @@ circuit_get_next_by_pk_and_purpose(circuit_t *start,
 or_circuit_t *
 circuit_get_rendezvous(const char *cookie)
 {
-  circuit_t *circ;
-  for (circ = global_circuitlist; circ; circ = circ->next) {
-    if (! circ->marked_for_close &&
-        circ->purpose == CIRCUIT_PURPOSE_REND_POINT_WAITING &&
-        ! memcmp(circ->rend_cookie, cookie, REND_COOKIE_LEN) )
-      return TO_OR_CIRCUIT(circ);
-  }
-  return NULL;
+  return circuit_get_by_rend_token_and_purpose(
+                                     CIRCUIT_PURPOSE_REND_POINT_WAITING,
+                                     cookie, REND_COOKIE_LEN);
+}
+
+/** Return the circuit waiting for intro cells of the given digest.
+ * Return NULL if no such circuit is found.
+ */
+or_circuit_t *
+circuit_get_intro_point(const char *digest)
+{
+  return circuit_get_by_rend_token_and_purpose(
+                                     CIRCUIT_PURPOSE_INTRO_POINT, digest,
+                                     DIGEST_LEN);
 }
 
 /** Return a circuit that is open, has specified <b>purpose</b>,

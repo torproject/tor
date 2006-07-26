@@ -23,7 +23,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
   char expected_digest[DIGEST_LEN];
   char pk_digest[DIGEST_LEN];
   size_t asn1len;
-  circuit_t *c;
+  or_circuit_t *c;
   char serviceid[REND_SERVICE_ID_LEN+1];
   int reason = END_CIRC_REASON_INTERNAL;
 
@@ -87,11 +87,11 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
 
   /* Close any other intro circuits with the same pk. */
   c = NULL;
-  while ((c = circuit_get_next_by_pk_and_purpose(
-                                c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
+  while ((c = circuit_get_intro_point(pk_digest))) {
     log_info(LD_REND, "Replacing old circuit for service %s",
              safe_str(serviceid));
-    circuit_mark_for_close(c, END_CIRC_REASON_REQUESTED);
+    circuit_mark_for_close(TO_CIRCUIT(c), END_CIRC_REASON_REQUESTED);
+    /* Now it's marked, and it won't be returned next time. */
   }
 
   /* Acknowledge the request. */
@@ -104,7 +104,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
 
   /* Now, set up this circuit. */
   circ->_base.purpose = CIRCUIT_PURPOSE_INTRO_POINT;
-  memcpy(circ->_base.rend_pk_digest, pk_digest, DIGEST_LEN);
+  memcpy(circ->rend_token, pk_digest, DIGEST_LEN);
 
   log_info(LD_REND,
            "Established introduction point on circuit %d for service %s",
@@ -127,7 +127,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
 int
 rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
 {
-  circuit_t *intro_circ;
+  or_circuit_t *intro_circ;
   char serviceid[REND_SERVICE_ID_LEN+1];
   char nak_body[1];
 
@@ -153,9 +153,8 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request,10);
 
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
-  intro_circ = circuit_get_next_by_pk_and_purpose(
-                             NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
-  if (!intro_circ || CIRCUIT_IS_ORIGIN(intro_circ)) {
+  intro_circ = circuit_get_intro_point(request);
+  if (!intro_circ) {
     log_info(LD_REND,
              "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; "
              "responding with nack.",
@@ -167,10 +166,10 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
            "Sending introduction request for service %s "
            "from circ %d to circ %d",
            safe_str(serviceid), circ->p_circ_id,
-           TO_OR_CIRCUIT(intro_circ)->p_circ_id);
+           intro_circ->p_circ_id);
 
   /* Great.  Now we just relay the cell down the circuit. */
-  if (connection_edge_send_command(NULL, intro_circ,
+  if (connection_edge_send_command(NULL, TO_CIRCUIT(intro_circ),
                                    RELAY_COMMAND_INTRODUCE2,
                                    request, request_len, NULL)) {
     log_warn(LD_GENERAL,
@@ -237,7 +236,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
   }
 
   circ->_base.purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
-  memcpy(circ->_base.rend_cookie, request, REND_COOKIE_LEN);
+  memcpy(circ->rend_token, request, REND_COOKIE_LEN);
 
   base16_encode(hexid,9,request,4);
 
@@ -313,7 +312,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const char *request,
 
   circ->_base.purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
   rend_circ->_base.purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
-  memset(circ->_base.rend_cookie, 0, REND_COOKIE_LEN);
+  memset(circ->rend_token, 0, REND_COOKIE_LEN);
 
   rend_circ->rend_splice = circ;
   circ->rend_splice = rend_circ;
