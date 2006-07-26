@@ -60,14 +60,13 @@ static void entry_guards_changed(void);
  * Return it, or 0 if can't get a unique circ_id.
  */
 static uint16_t
-get_unique_circ_id_by_conn(connection_t *conn)
+get_unique_circ_id_by_conn(or_connection_t *conn)
 {
   uint16_t test_circ_id;
   uint16_t attempts=0;
   uint16_t high_bit;
 
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_OR);
   high_bit = (conn->circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   do {
     /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a
@@ -277,7 +276,7 @@ int
 circuit_handle_first_hop(origin_circuit_t *circ)
 {
   crypt_path_t *firsthop;
-  connection_t *n_conn;
+  or_connection_t *n_conn;
   char tmpbuf[INET_NTOA_BUF_LEN];
   struct in_addr in;
 
@@ -298,15 +297,15 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   /* If we don't have an open conn, or the conn we have is obsolete
    * (i.e. old or broken) and the other side will let us make a second
    * connection without dropping it immediately... */
-  if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
-      (n_conn->is_obsolete &&
+  if (!n_conn || n_conn->_base.state != OR_CONN_STATE_OPEN ||
+      (n_conn->_base.or_is_obsolete &&
        router_digest_version_as_new_as(firsthop->extend_info->identity_digest,
                                        "0.1.1.9-alpha-cvs"))) {
     /* not currently connected */
     circ->_base.n_addr = firsthop->extend_info->addr;
     circ->_base.n_port = firsthop->extend_info->port;
 
-    if (!n_conn || n_conn->is_obsolete) { /* launch the connection */
+    if (!n_conn || n_conn->_base.or_is_obsolete) { /* launch the connection */
       n_conn = connection_or_connect(firsthop->extend_info->addr,
                                      firsthop->extend_info->port,
                                      firsthop->extend_info->identity_digest);
@@ -323,8 +322,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
      */
     return 0;
   } else { /* it's already open. use it. */
-    circ->_base.n_addr = n_conn->addr;
-    circ->_base.n_port = n_conn->port;
+    circ->_base.n_addr = n_conn->_base.addr;
+    circ->_base.n_port = n_conn->_base.port;
     circ->_base.n_conn = n_conn;
     log_debug(LD_CIRC,"Conn open. Delivering first onion skin.");
     if (circuit_send_next_onion_skin(circ) < 0) {
@@ -341,7 +340,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
  * Status is 1 if connect succeeded, or 0 if connect failed.
  */
 void
-circuit_n_conn_done(connection_t *or_conn, int status)
+circuit_n_conn_done(or_connection_t *or_conn, int status)
 {
   extern smartlist_t *circuits_pending_or_conns;
   smartlist_t *changed_circs;
@@ -419,7 +418,6 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
 
   tor_assert(circ);
   tor_assert(circ->n_conn);
-  tor_assert(circ->n_conn->type == CONN_TYPE_OR);
   tor_assert(payload);
   tor_assert(cell_type == CELL_CREATE || cell_type == CELL_CREATE_FAST);
 
@@ -621,7 +619,7 @@ circuit_note_clock_jumped(int seconds_elapsed)
 int
 circuit_extend(cell_t *cell, circuit_t *circ)
 {
-  connection_t *n_conn;
+  or_connection_t *n_conn;
   relay_header_t rh;
   char *onionskin;
   char *id_digest=NULL;
@@ -651,8 +649,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   /* If we don't have an open conn, or the conn we have is obsolete
    * (i.e. old or broken) and the other side will let us make a second
    * connection without dropping it immediately... */
-  if (!n_conn || n_conn->state != OR_CONN_STATE_OPEN ||
-    (n_conn->is_obsolete &&
+  if (!n_conn || n_conn->_base.state != OR_CONN_STATE_OPEN ||
+    (n_conn->_base.or_is_obsolete &&
      router_digest_version_as_new_as(id_digest,"0.1.1.9-alpha-cvs"))) {
     struct in_addr in;
     char tmpbuf[INET_NTOA_BUF_LEN];
@@ -668,9 +666,9 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     /* imprint the circuit with its future n_conn->id */
     memcpy(circ->n_conn_id_digest, id_digest, DIGEST_LEN);
 
-    if (n_conn && !n_conn->is_obsolete) {
-      circ->n_addr = n_conn->addr;
-      circ->n_port = n_conn->port;
+    if (n_conn && !n_conn->_base.or_is_obsolete) {
+      circ->n_addr = n_conn->_base.addr;
+      circ->n_port = n_conn->_base.port;
     } else {
      /* we should try to open a connection */
       n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
@@ -689,12 +687,12 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   }
 
   /* these may be different if the router connected to us from elsewhere */
-  circ->n_addr = n_conn->addr;
-  circ->n_port = n_conn->port;
+  circ->n_addr = n_conn->_base.addr;
+  circ->n_port = n_conn->_base.port;
 
   circ->n_conn = n_conn;
   memcpy(circ->n_conn_id_digest, n_conn->identity_digest, DIGEST_LEN);
-  log_debug(LD_CIRC,"n_conn is %s:%u",n_conn->address,n_conn->port);
+  log_debug(LD_CIRC,"n_conn is %s:%u",n_conn->_base.address,n_conn->_base.port);
 
   if (circuit_deliver_create_cell(circ, CELL_CREATE, onionskin) < 0)
     return -1;
@@ -910,7 +908,7 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, char *payload,
   connection_or_write_cell_to_buf(&cell, circ->p_conn);
   log_debug(LD_CIRC,"Finished sending 'created' cell.");
 
-  if (!is_local_IP(circ->p_conn->addr) &&
+  if (!is_local_IP(circ->p_conn->_base.addr) &&
       !connection_or_nonopen_was_started_here(circ->p_conn)) {
     /* record that we could process create cells from a non-local conn
      * that we didn't initiate; presumably this means that create cells
@@ -1048,8 +1046,9 @@ ap_stream_wants_exit_attention(connection_t *conn)
   if (conn->type == CONN_TYPE_AP &&
       conn->state == AP_CONN_STATE_CIRCUIT_WAIT &&
       !conn->marked_for_close &&
-      !connection_edge_is_rendezvous_stream(conn) &&
-      !circuit_stream_is_being_handled(conn, 0, MIN_CIRCUITS_HANDLING_STREAM))
+      !connection_edge_is_rendezvous_stream(TO_EDGE_CONN(conn)) &&
+      !circuit_stream_is_being_handled(TO_EDGE_CONN(conn), 0,
+                                       MIN_CIRCUITS_HANDLING_STREAM))
     return 1;
   return 0;
 }
@@ -1134,7 +1133,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
       if (!ap_stream_wants_exit_attention(carray[j]))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      if (connection_ap_can_use_exit(carray[j], router)) {
+      if (connection_ap_can_use_exit(TO_EDGE_CONN(carray[j]), router)) {
         ++n_supported[i];
 //        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
 //               router->nickname, i, n_supported[i]);

@@ -786,11 +786,12 @@ hibernate_go_dormant(time_t now)
          (conn = connection_get_by_type(CONN_TYPE_AP)) ||
          (conn = connection_get_by_type(CONN_TYPE_EXIT))) {
     if (CONN_IS_EDGE(conn))
-      connection_edge_end(conn, END_STREAM_REASON_HIBERNATING,
-                          conn->cpath_layer);
+      connection_edge_end(TO_EDGE_CONN(conn), END_STREAM_REASON_HIBERNATING,
+                          TO_EDGE_CONN(conn)->cpath_layer);
     log_info(LD_NET,"Closing conn type %d", conn->type);
     if (conn->type == CONN_TYPE_AP) /* send socks failure if needed */
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_HIBERNATING);
+      connection_mark_unattached_ap(TO_EDGE_CONN(conn),
+                                    END_STREAM_REASON_HIBERNATING);
     else
       connection_mark_for_close(conn);
   }

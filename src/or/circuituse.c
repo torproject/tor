@@ -26,7 +26,7 @@ static void circuit_increment_failure_count(void);
  * Else return 0.
  */
 static int
-circuit_is_acceptable(circuit_t *circ, connection_t *conn,
+circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
                       int must_be_open, uint8_t purpose,
                       int need_uptime, int need_internal,
                       time_t now)
@@ -155,7 +155,7 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
  * closest introduce-purposed circuit that you can find.
  */
 static origin_circuit_t *
-circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose,
+circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
                  int need_uptime, int need_internal)
 {
   circuit_t *circ, *best=NULL;
@@ -255,7 +255,7 @@ circuit_expire_building(time_t now)
 
     if (victim->n_conn)
       log_info(LD_CIRC,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
-               victim->n_conn->address, victim->n_port, victim->n_circ_id,
+               victim->n_conn->_base.address, victim->n_port, victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
     else
@@ -296,7 +296,7 @@ circuit_remove_handled_ports(smartlist_t *needed_ports)
  * Else return 0.
  */
 int
-circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min)
+circuit_stream_is_being_handled(edge_connection_t *conn, uint16_t port, int min)
 {
   circuit_t *circ;
   routerinfo_t *exitrouter;
@@ -457,9 +457,9 @@ circuit_build_needed_circs(time_t now)
  * lists of <b>circ</b>, then remove it from the list.
  */
 void
-circuit_detach_stream(circuit_t *circ, connection_t *conn)
+circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
 {
-  connection_t *prevconn;
+  edge_connection_t *prevconn;
 
   tor_assert(circ);
   tor_assert(conn);
@@ -536,10 +536,11 @@ circuit_about_to_close_connection(connection_t *conn)
       if (!connection_state_is_open(conn)) {
         /* Inform any pending (not attached) circs that they should
          * give up. */
-        circuit_n_conn_done(conn, 0);
+        circuit_n_conn_done(TO_OR_CONN(conn), 0);
       }
       /* Now close all the attached circuits on it. */
-      circuit_unlink_all_from_or_conn(conn, END_CIRC_REASON_OR_CONN_CLOSED);
+      circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
+                                      END_CIRC_REASON_OR_CONN_CLOSED);
       return;
     }
     case CONN_TYPE_AP:
@@ -550,11 +551,11 @@ circuit_about_to_close_connection(connection_t *conn)
        * been sent. But don't kill the circuit.
        */
 
-      circ = circuit_get_by_edge_conn(conn);
+      circ = circuit_get_by_edge_conn(TO_EDGE_CONN(conn));
       if (!circ)
         return;
 
-      circuit_detach_stream(circ, conn);
+      circuit_detach_stream(circ, TO_EDGE_CONN(conn));
     }
   } /* end switch */
 }
@@ -683,7 +684,7 @@ circuit_build_failed(origin_circuit_t *circ)
       circ->cpath->state != CPATH_STATE_OPEN) {
     /* We failed at the first hop. If there's an OR connection
        to blame, blame it. */
-    connection_t *n_conn = NULL;
+    or_connection_t *n_conn = NULL;
     if (circ->_base.n_conn) {
       n_conn = circ->_base.n_conn;
     } else if (circ->_base.state == CIRCUIT_STATE_OR_WAIT) {
@@ -695,8 +696,8 @@ circuit_build_failed(origin_circuit_t *circ)
       log_info(LD_OR,
                "Our circuit failed to get a response from the first hop "
                "(%s:%d). I'm going to try to rotate to a better connection.",
-               n_conn->address, n_conn->port);
-      n_conn->is_obsolete = 1;
+               n_conn->_base.address, n_conn->_base.port);
+      n_conn->_base.or_is_obsolete = 1;
       entry_guard_set_status(n_conn->identity_digest, 0);
     }
   }
@@ -893,7 +894,7 @@ circuit_reset_failure_count(int timeout)
  * Write the found or in-progress or launched circ into *circp.
  */
 static int
-circuit_get_open_circ_or_launch(connection_t *conn,
+circuit_get_open_circ_or_launch(edge_connection_t *conn,
                                 uint8_t desired_circuit_purpose,
                                 origin_circuit_t **circp)
 {
@@ -903,7 +904,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 
   tor_assert(conn);
   tor_assert(circp);
-  tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   is_resolve = conn->socks_request->command == SOCKS_COMMAND_RESOLVE;
 
   need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
@@ -966,7 +967,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
                  "No intro points for '%s': refetching service descriptor.",
                  safe_str(conn->rend_query));
         rend_client_refetch_renddesc(conn->rend_query);
-        conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+        conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
       log_info(LD_REND,"Chose '%s' as intro point for '%s'.",
@@ -1033,13 +1034,13 @@ circuit_get_open_circ_or_launch(connection_t *conn,
  * circ's cpath.
  */
 static void
-link_apconn_to_circ(connection_t *apconn, origin_circuit_t *circ)
+link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ)
 {
   /* add it into the linked list of streams on this circuit */
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %d.",
             circ->_base.n_circ_id);
   /* reset it, so we can measure circ timeouts */
-  apconn->timestamp_lastread = time(NULL);
+  apconn->_base.timestamp_lastread = time(NULL);
   apconn->next_stream = circ->p_streams;
   apconn->on_circuit = TO_CIRCUIT(circ);
   /* assert_connection_ok(conn, time(NULL)); */
@@ -1054,7 +1055,7 @@ link_apconn_to_circ(connection_t *apconn, origin_circuit_t *circ)
 /** If an exit wasn't specifically chosen, save the history for future
  * use. */
 static void
-consider_recording_trackhost(connection_t *conn, origin_circuit_t *circ)
+consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
 {
   int found_needle = 0;
   char *str;
@@ -1108,18 +1109,17 @@ consider_recording_trackhost(connection_t *conn, origin_circuit_t *circ)
  * send a begin or resolve cell as appropriate.  Return values are as
  * for connection_ap_handshake_attach_circuit. */
 int
-connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
+connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
                                               origin_circuit_t *circ)
 {
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_AP);
-  tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT ||
-             conn->state == AP_CONN_STATE_CONTROLLER_WAIT);
+  tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT ||
+             conn->_base.state == AP_CONN_STATE_CONTROLLER_WAIT);
   tor_assert(conn->socks_request);
   tor_assert(circ);
   tor_assert(circ->_base.state == CIRCUIT_STATE_OPEN);
 
-  conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+  conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
 
   if (!circ->_base.timestamp_dirty)
     circ->_base.timestamp_dirty = time(NULL);
@@ -1146,19 +1146,18 @@ connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
  * right next step, and return 1.
  */
 int
-connection_ap_handshake_attach_circuit(connection_t *conn)
+connection_ap_handshake_attach_circuit(edge_connection_t *conn)
 {
   int retval;
   int conn_age;
   int severity;
 
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_AP);
-  tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(conn->socks_request);
 
-  conn_age = time(NULL) - conn->timestamp_created;
-  severity = (!conn->addr && !conn->port) ? LOG_INFO : LOG_NOTICE;
+  conn_age = time(NULL) - conn->_base.timestamp_created;
+  severity = (!conn->_base.addr && !conn->_base.port) ? LOG_INFO : LOG_NOTICE;
   if (conn_age > get_options()->SocksTimeout) {
     log_fn(severity, LD_APP,
            "Tried for %d seconds to get a connection to %s:%d. Giving up.",

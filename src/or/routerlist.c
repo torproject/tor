@@ -1705,13 +1705,13 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         /* mark-for-close connections using the old key, so we can
          * make new ones with the new key.
          */
-        connection_t *conn;
+        or_connection_t *conn;
         while ((conn = connection_or_get_by_identity_digest(
                       old_router->cache_info.identity_digest))) {
           log_info(LD_DIR,"Closing conn to router '%s'; there is now a named "
                    "router with that name.",
                    old_router->nickname);
-          connection_mark_for_close(conn);
+          connection_mark_for_close(TO_CONN(conn));
         }
         routerlist_remove(routerlist, old_router, i--, 0);
       } else if (old_router->is_named) {
@@ -3317,8 +3317,9 @@ list_pending_descriptor_downloads(digestmap_t *result)
     if (conn->type == CONN_TYPE_DIR &&
         conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         !conn->marked_for_close) {
-      if (!strcmpstart(conn->requested_resource, prefix))
-        dir_split_resource_into_fingerprints(conn->requested_resource+p_len,
+      dir_connection_t *dir_conn = TO_DIR_CONN(conn);
+      if (!strcmpstart(dir_conn->requested_resource, prefix))
+        dir_split_resource_into_fingerprints(dir_conn->requested_resource+p_len,
                                              tmp, NULL, 1, 0);
     }
   }

@@ -212,11 +212,11 @@ connection_unlink(connection_t *conn, int remove)
   }
   smartlist_remove(closeable_connection_lst, conn);
   if (conn->type == CONN_TYPE_EXIT) {
-    assert_connection_edge_not_dns_pending(conn);
+    assert_connection_edge_not_dns_pending(TO_EDGE_CONN(conn));
   }
-  if (conn->type == CONN_TYPE_OR &&
-      !tor_digest_is_zero(conn->identity_digest)) {
-    connection_or_remove_from_identity_map(conn);
+  if (conn->type == CONN_TYPE_OR) {
+    if (!tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest))
+      connection_or_remove_from_identity_map(TO_OR_CONN(conn));
   }
   connection_free(conn);
 }
@@ -413,7 +413,8 @@ conn_read_callback(int fd, short event, void *_conn)
       tor_fragile_assert();
 #endif
       if (CONN_IS_EDGE(conn))
-        connection_edge_end_errno(conn, conn->cpath_layer);
+        connection_edge_end_errno(TO_EDGE_CONN(conn),
+                                  TO_EDGE_CONN(conn)->cpath_layer);
       connection_mark_for_close(conn);
     }
   }
@@ -443,7 +444,8 @@ conn_write_callback(int fd, short events, void *_conn)
            "Bug: unhandled error on write for %s connection (fd %d); removing",
            conn_type_to_string(conn->type), conn->s);
       tor_fragile_assert();
-      conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
+      if (CONN_IS_EDGE(conn))
+        conn->edge_has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
       /* XXX do we need a close-immediate here, so we don't try to flush? */
       connection_mark_for_close(conn);
     }
@@ -489,7 +491,7 @@ conn_close_if_marked(int i)
                 conn->marked_for_close_file, conn->marked_for_close);
     if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
-        retval = flush_buf_tls(conn->tls, conn->outbuf, sz,
+        retval = flush_buf_tls(TO_OR_CONN(conn)->tls, conn->outbuf, sz,
                                &conn->outbuf_flushlen);
       } else
         retval = -1; /* never flush non-open broken tls connections */
@@ -544,12 +546,13 @@ directory_all_unreachable(time_t now)
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
+    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     log_notice(LD_NET,
                "Is your network connection down? "
                "Failing connection to '%s:%d'.",
-               safe_str(conn->socks_request->address),
-               conn->socks_request->port);
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_NET_UNREACHABLE);
+               safe_str(edge_conn->socks_request->address),
+               edge_conn->socks_request->port);
+    connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_NET_UNREACHABLE);
   }
 }
 
@@ -582,6 +585,7 @@ run_connection_housekeeping(int i, time_t now)
   cell_t cell;
   connection_t *conn = connection_array[i];
   or_options_t *options = get_options();
+  or_connection_t *or_conn;
 
   if (conn->outbuf && !buf_datalen(conn->outbuf))
     conn->timestamp_lastempty = now;
@@ -602,7 +606,7 @@ run_connection_housekeeping(int i, time_t now)
         buf_datalen(conn->inbuf)>=1024) {
       log_info(LD_DIR,"Trying to extract information from wedged server desc "
                "download.");
-      connection_dir_reached_eof(conn);
+      connection_dir_reached_eof(TO_DIR_CONN(conn));
     } else {
       connection_mark_for_close(conn);
     }
@@ -612,17 +616,19 @@ run_connection_housekeeping(int i, time_t now)
   if (!connection_speaks_cells(conn))
     return; /* we're all done here, the rest is just for OR conns */
 
-  if (!conn->is_obsolete) {
+  or_conn = TO_OR_CONN(conn);
+
+  if (!conn->or_is_obsolete) {
     if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
       log_info(LD_OR,
                "Marking OR conn to %s:%d obsolete (fd %d, %d secs old).",
                conn->address, conn->port, conn->s,
                (int)(now - conn->timestamp_created));
-      conn->is_obsolete = 1;
+      conn->or_is_obsolete = 1;
     } else {
-      connection_t *best =
-        connection_or_get_by_identity_digest(conn->identity_digest);
-      if (best && best != conn &&
+      or_connection_t *best =
+        connection_or_get_by_identity_digest(or_conn->identity_digest);
+      if (best && best != or_conn &&
           (conn->state == OR_CONN_STATE_OPEN ||
            now > conn->timestamp_created + TLS_HANDSHAKE_TIMEOUT)) {
           /* We only mark as obsolete connections that already are in
@@ -637,16 +643,16 @@ run_connection_housekeeping(int i, time_t now)
                  "(fd %d, %d secs old).",
                  conn->address, conn->port, conn->s,
                  (int)(now - conn->timestamp_created));
-        conn->is_obsolete = 1;
+        conn->or_is_obsolete = 1;
       }
     }
   }
 
-  if (conn->is_obsolete && !conn->n_circuits) {
+  if (conn->or_is_obsolete && !or_conn->n_circuits) {
     /* no unmarked circs -- mark it now */
     log_info(LD_OR,
              "Expiring non-used OR connection to fd %d (%s:%d) [Obsolete].",
-             conn->s,conn->address, conn->port);
+             conn->s, conn->address, conn->port);
     connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1;
     return;
@@ -655,20 +661,20 @@ run_connection_housekeeping(int i, time_t now)
   /* If we haven't written to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
   if (now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
-    routerinfo_t *router = router_get_by_digest(conn->identity_digest);
+    routerinfo_t *router = router_get_by_digest(or_conn->identity_digest);
     if (!connection_state_is_open(conn)) {
       log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
-    } else if (we_are_hibernating() && !conn->n_circuits &&
+    } else if (we_are_hibernating() && !or_conn->n_circuits &&
                !buf_datalen(conn->outbuf)) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
                "[Hibernating or exiting].",
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
-    } else if (!clique_mode(options) && !conn->n_circuits &&
+    } else if (!clique_mode(options) && !or_conn->n_circuits &&
                (!router || !server_mode(options) ||
                 !router_is_clique_mode(router))) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
@@ -692,7 +698,7 @@ run_connection_housekeeping(int i, time_t now)
              conn->address, conn->port);
       memset(&cell,0,sizeof(cell_t));
       cell.command = CELL_PADDING;
-      connection_or_write_cell_to_buf(&cell, conn);
+      connection_or_write_cell_to_buf(&cell, or_conn);
     }
   }
 }

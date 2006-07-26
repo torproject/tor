@@ -16,19 +16,19 @@ const char relay_c_id[] =
 
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
-static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
+static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                        int cell_direction);
 
 static int
 connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
-                                   connection_t *conn,
+                                   edge_connection_t *conn,
                                    crypt_path_t *layer_hint);
 static void
 circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint);
 static void
 circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
 static int
-circuit_resume_edge_reading_helper(connection_t *conn,
+circuit_resume_edge_reading_helper(edge_connection_t *conn,
                                    circuit_t *circ,
                                    crypt_path_t *layer_hint);
 static int
@@ -144,7 +144,7 @@ relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
 int
 circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
 {
-  connection_t *conn=NULL;
+  or_connection_t *or_conn=NULL;
   crypt_path_t *layer_hint=NULL;
   char recognized=0;
   int reason;
@@ -162,7 +162,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
   }
 
   if (recognized) {
-    conn = relay_lookup_conn(circ, cell, cell_direction);
+    edge_connection_t *conn = relay_lookup_conn(circ, cell, cell_direction);
     if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
       log_debug(LD_OR,"Sending away from origin.");
@@ -190,16 +190,16 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
   /* not recognized. pass it on. */
   if (cell_direction == CELL_DIRECTION_OUT) {
     cell->circ_id = circ->n_circ_id; /* switch it */
-    conn = circ->n_conn;
+    or_conn = circ->n_conn;
   } else if (! CIRCUIT_IS_ORIGIN(circ)) {
     cell->circ_id = TO_OR_CIRCUIT(circ)->p_circ_id; /* switch it */
-    conn = TO_OR_CIRCUIT(circ)->p_conn;
+    or_conn = TO_OR_CIRCUIT(circ)->p_conn;
   } else {
     // XXXX NM WARN.
     return 0;
   }
 
-  if (!conn) {
+  if (!or_conn) {
     // XXXX Can this splice stuff be done more cleanly?
     if (! CIRCUIT_IS_ORIGIN(circ) &&
         TO_OR_CIRCUIT(circ)->rend_splice &&
@@ -225,7 +225,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
 
   log_debug(LD_OR,"Passing on unrecognized cell.");
   ++stats_n_relay_cells_relayed;
-  connection_or_write_cell_to_buf(cell, conn);
+  connection_or_write_cell_to_buf(cell, or_conn);
   return 0;
 }
 
@@ -323,7 +323,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                            int cell_direction,
                            crypt_path_t *layer_hint)
 {
-  connection_t *conn; /* where to send the cell */
+  or_connection_t *conn; /* where to send the cell */
 
   if (cell_direction == CELL_DIRECTION_OUT) {
     crypt_path_t *thishop; /* counter for repeated crypts */
@@ -369,10 +369,10 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
 /** If cell's stream_id matches the stream_id of any conn that's
  * attached to circ, return that conn, else return NULL.
  */
-static connection_t *
+static edge_connection_t *
 relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
 {
-  connection_t *tmpconn;
+  edge_connection_t *tmpconn;
   relay_header_t rh;
 
   relay_header_unpack(&rh, cell->payload);
@@ -387,7 +387,8 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
   if (CIRCUIT_IS_ORIGIN(circ)) {
     for (tmpconn = TO_ORIGIN_CIRCUIT(circ)->p_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
-      if (rh.stream_id == tmpconn->stream_id && !tmpconn->marked_for_close) {
+      if (rh.stream_id == tmpconn->stream_id &&
+          !tmpconn->_base.marked_for_close) {
         log_debug(LD_APP,"found conn for stream %d.", rh.stream_id);
         return tmpconn;
       }
@@ -395,7 +396,7 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
   } else {
     for (tmpconn = TO_OR_CIRCUIT(circ)->n_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
-      if (rh.stream_id == tmpconn->stream_id && !tmpconn->marked_for_close) {
+      if (rh.stream_id == tmpconn->stream_id && !tmpconn->_base.marked_for_close) {
         log_debug(LD_EXIT,"found conn for stream %d.", rh.stream_id);
         if (cell_direction == CELL_DIRECTION_OUT ||
             connection_edge_is_rendezvous_stream(tmpconn))
@@ -404,7 +405,7 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
     }
     for (tmpconn = TO_OR_CIRCUIT(circ)->resolving_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
-      if (rh.stream_id == tmpconn->stream_id && !tmpconn->marked_for_close) {
+      if (rh.stream_id == tmpconn->stream_id && !tmpconn->_base.marked_for_close) {
         log_debug(LD_EXIT,"found conn for stream %d.", rh.stream_id);
         return tmpconn;
       }
@@ -452,7 +453,7 @@ relay_header_unpack(relay_header_t *dest, const char *src)
  * return -1. Else return 0.
  */
 int
-connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
+connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
                              int relay_command, const char *payload,
                              size_t payload_len, crypt_path_t *cpath_layer)
 {
@@ -461,22 +462,22 @@ connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   int cell_direction;
   /* XXXX NM Split this function into a separate versions per circuit type? */
 
-  if (fromconn && fromconn->marked_for_close) {
+  if (fromconn && fromconn->_base.marked_for_close) {
     log_warn(LD_BUG,
              "Bug: called on conn that's already marked for close at %s:%d.",
-             fromconn->marked_for_close_file, fromconn->marked_for_close);
+             fromconn->_base.marked_for_close_file, fromconn->_base.marked_for_close);
     return 0;
   }
 
   if (!circ) {
     tor_assert(fromconn);
-    if (fromconn->type == CONN_TYPE_AP) {
+    if (fromconn->_base.type == CONN_TYPE_AP) {
       log_info(LD_APP,"no circ. Closing conn.");
       connection_mark_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);
     } else {
       log_info(LD_EXIT,"no circ. Closing conn.");
-      fromconn->has_sent_end = 1; /* no circ to send to */
-      connection_mark_for_close(fromconn);
+      fromconn->_base.edge_has_sent_end = 1; /* no circ to send to */
+      connection_mark_for_close(TO_CONN(fromconn));
     }
     return -1;
   }
@@ -665,7 +666,7 @@ edge_reason_is_retriable(int reason)
 static int
 connection_edge_process_end_not_open(
     relay_header_t *rh, cell_t *cell, origin_circuit_t *circ,
-    connection_t *conn, crypt_path_t *layer_hint)
+    edge_connection_t *conn, crypt_path_t *layer_hint)
 {
   struct in_addr in;
   routerinfo_t *exitrouter;
@@ -673,7 +674,7 @@ connection_edge_process_end_not_open(
   (void) layer_hint; /* unused */
 
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&
-      conn->type == CONN_TYPE_AP) {
+      conn->_base.type == CONN_TYPE_AP) {
     log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
              safe_str(conn->socks_request->address),
              connection_edge_end_reason_str(reason));
@@ -775,12 +776,12 @@ connection_edge_process_end_not_open(
   log_info(LD_APP,
            "Edge got end (%s) before we're connected. Marking for close.",
        connection_edge_end_reason_str(rh->length > 0 ? reason : -1));
-  if (conn->type == CONN_TYPE_AP) {
+  if (conn->_base.type == CONN_TYPE_AP) {
     circuit_log_path(LOG_INFO,LD_APP,circ);
     connection_mark_unattached_ap(conn, reason);
   } else {
-    conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
-    connection_mark_for_close(conn);
+    conn->_base.edge_has_sent_end = 1; /* we just got an 'end', don't need to send one */
+    connection_mark_for_close(TO_CONN(conn));
   }
   return 0;
 }
@@ -795,7 +796,7 @@ connection_edge_process_end_not_open(
 static int
 connection_edge_process_relay_cell_not_open(
     relay_header_t *rh, cell_t *cell, circuit_t *circ,
-    connection_t *conn, crypt_path_t *layer_hint)
+    edge_connection_t *conn, crypt_path_t *layer_hint)
 {
   if (rh->command == RELAY_COMMAND_END) {
     if (CIRCUIT_IS_ORIGIN(circ))
@@ -806,17 +807,17 @@ connection_edge_process_relay_cell_not_open(
       return 0;
   }
 
-  if (conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
+  if (conn->_base.type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
     tor_assert(CIRCUIT_IS_ORIGIN(circ));
-    if (conn->state != AP_CONN_STATE_CONNECT_WAIT) {
+    if (conn->_base.state != AP_CONN_STATE_CONNECT_WAIT) {
       log_warn(LD_APP,"Got 'connected' while not in state connect_wait. "
                "Dropping.");
       return 0;
     }
 //    log_fn(LOG_INFO,"Connected! Notifying application.");
-    conn->state = AP_CONN_STATE_OPEN;
+    conn->_base.state = AP_CONN_STATE_OPEN;
     log_info(LD_APP,"'connected' received after %d seconds.",
-             (int)(time(NULL) - conn->timestamp_lastread));
+             (int)(time(NULL) - conn->_base.timestamp_lastread));
     if (rh->length >= 4) {
       uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
       int ttl;
@@ -840,15 +841,15 @@ connection_edge_process_relay_cell_not_open(
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
       /* (We already sent an end cell if possible) */
-      connection_mark_for_close(conn);
+      connection_mark_for_close(TO_CONN(conn));
       return 0;
     }
     return 0;
   }
-  if (conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_RESOLVED) {
+  if (conn->_base.type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_RESOLVED) {
     int ttl;
     int answer_len;
-    if (conn->state != AP_CONN_STATE_RESOLVE_WAIT) {
+    if (conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
       log_warn(LD_APP,"Got a 'resolved' cell while not in state resolve_wait. "
                "Dropping.");
       return 0;
@@ -877,8 +878,8 @@ connection_edge_process_relay_cell_not_open(
 
   log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Got an unexpected relay command %d, in state %d (%s). Dropping.",
-         rh->command, conn->state,
-         conn_state_to_string(conn->type, conn->state));
+         rh->command, conn->_base.state,
+         conn_state_to_string(conn->_base.type, conn->_base.state));
   return 0; /* for forward compatibility, don't kill the circuit */
 //  connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL,
 //                      conn->cpath_layer);
@@ -897,7 +898,7 @@ connection_edge_process_relay_cell_not_open(
  */
 static int
 connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
-                                   connection_t *conn,
+                                   edge_connection_t *conn,
                                    crypt_path_t *layer_hint)
 {
   static int num_seen=0;
@@ -922,7 +923,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
 
-  if (conn && !connection_state_is_open(conn))
+  if (conn && !connection_state_is_open(TO_CONN(conn)))
     return connection_edge_process_relay_cell_not_open(
              &rh, cell, circ, conn, layer_hint);
 
@@ -950,7 +951,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "(relay data) circ deliver_window below 0. Killing.");
         connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL,
                             conn->cpath_layer);
-        connection_mark_for_close(conn);
+        connection_mark_for_close(TO_CONN(conn));
         return -END_CIRC_REASON_TORPROTOCOL;
       }
       log_debug(domain,"circ deliver_window now %d.", layer_hint ?
@@ -971,7 +972,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
       stats_n_data_bytes_received += rh.length;
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
-                              rh.length, conn);
+                              rh.length, TO_CONN(conn));
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case RELAY_COMMAND_END:
@@ -983,7 +984,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
 /* XXX add to this log_fn the exit node's nickname? */
       log_info(domain,"%d: end cell (%s) for stream %d. Removing stream.",
-               conn->s,
+               conn->_base.s,
                connection_edge_end_reason_str(rh.length > 0 ?
                  *(char *)(cell->payload+RELAY_HEADER_SIZE) : -1),
                conn->stream_id);
@@ -991,12 +992,12 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         log_warn(LD_BUG,
                  "Bug: open stream hasn't sent socks answer yet? Closing.");
       /* We just *got* an end; no reason to send one. */
-      conn->has_sent_end = 1;
-      if (!conn->marked_for_close) {
+      conn->_base.edge_has_sent_end = 1;
+      if (!conn->_base.marked_for_close) {
         /* only mark it if not already marked. it's possible to
          * get the 'end' right around when the client hangs up on us. */
-        connection_mark_for_close(conn);
-        conn->hold_open_until_flushed = 1;
+        connection_mark_for_close(TO_CONN(conn));
+        conn->_base.hold_open_until_flushed = 1;
       }
       return 0;
     case RELAY_COMMAND_EXTEND:
@@ -1076,11 +1077,11 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       conn->package_window += STREAMWINDOW_INCREMENT;
       log_debug(domain,"stream-level sendme, packagewindow now %d.",
                 conn->package_window);
-      connection_start_reading(conn);
+      connection_start_reading(TO_CONN(conn));
       /* handle whatever might still be on the inbuf */
       if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
         /* (We already sent an end cell if possible) */
-        connection_mark_for_close(conn);
+        connection_mark_for_close(TO_CONN(conn));
         return 0;
       }
       return 0;
@@ -1139,7 +1140,7 @@ uint64_t stats_n_data_bytes_received = 0;
  * be marked for close, else return 0.
  */
 int
-connection_edge_package_raw_inbuf(connection_t *conn, int package_partial)
+connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial)
 {
   size_t amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
@@ -1147,11 +1148,11 @@ connection_edge_package_raw_inbuf(connection_t *conn, int package_partial)
   unsigned domain = conn->cpath_layer ? LD_APP : LD_EXIT;
 
   tor_assert(conn);
-  tor_assert(!connection_speaks_cells(conn));
-  if (conn->marked_for_close) {
+
+  if (conn->_base.marked_for_close) {
     log_warn(LD_BUG,
              "Bug: called on conn that's already marked for close at %s:%d.",
-             conn->marked_for_close_file, conn->marked_for_close);
+             conn->_base.marked_for_close_file, conn->_base.marked_for_close);
     return 0;
   }
 
@@ -1169,11 +1170,11 @@ repeat_connection_edge_package_raw_inbuf:
   if (conn->package_window <= 0) {
     log_info(domain,"called with package_window %d. Skipping.",
              conn->package_window);
-    connection_stop_reading(conn);
+    connection_stop_reading(TO_CONN(conn));
     return 0;
   }
 
-  amount_to_process = buf_datalen(conn->inbuf);
+  amount_to_process = buf_datalen(conn->_base.inbuf);
 
   if (!amount_to_process)
     return 0;
@@ -1189,10 +1190,10 @@ repeat_connection_edge_package_raw_inbuf:
   stats_n_data_bytes_packaged += length;
   stats_n_data_cells_packaged += 1;
 
-  connection_fetch_from_buf(payload, length, conn);
+  connection_fetch_from_buf(payload, length, TO_CONN(conn));
 
-  log_debug(domain,"(%d) Packaging %d bytes (%d waiting).", conn->s,
-            (int)length, (int)buf_datalen(conn->inbuf));
+  log_debug(domain,"(%d) Packaging %d bytes (%d waiting).", conn->_base.s,
+            (int)length, (int)buf_datalen(conn->_base.inbuf));
 
   if (connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
                                    payload, length, conn->cpath_layer) < 0)
@@ -1208,7 +1209,7 @@ repeat_connection_edge_package_raw_inbuf:
   }
 
   if (--conn->package_window <= 0) { /* is it 0 after decrement? */
-    connection_stop_reading(conn);
+    connection_stop_reading(TO_CONN(conn));
     log_debug(domain,"conn->package_window reached 0.");
     circuit_consider_stop_edge_reading(circ, conn->cpath_layer);
     return 0; /* don't process the inbuf any more */
@@ -1226,11 +1227,11 @@ repeat_connection_edge_package_raw_inbuf:
  * low, send back a suitable number of stream-level sendme cells.
  */
 void
-connection_edge_consider_sending_sendme(connection_t *conn)
+connection_edge_consider_sending_sendme(edge_connection_t *conn)
 {
   circuit_t *circ;
 
-  if (connection_outbuf_too_full(conn))
+  if (connection_outbuf_too_full(TO_CONN(conn)))
     return;
 
   circ = circuit_get_by_edge_conn(conn);
@@ -1244,7 +1245,7 @@ connection_edge_consider_sending_sendme(connection_t *conn)
   while (conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
     log_debug(conn->cpath_layer?LD_APP:LD_EXIT,
               "Outbuf %d, Queueing stream sendme.",
-              (int)conn->outbuf_flushlen);
+              (int)conn->_base.outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, circ, RELAY_COMMAND_SENDME,
                                      NULL, 0, conn->cpath_layer) < 0) {
@@ -1278,21 +1279,21 @@ circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
  * of a linked list of edge streams that should each be considered.
  */
 static int
-circuit_resume_edge_reading_helper(connection_t *conn,
+circuit_resume_edge_reading_helper(edge_connection_t *conn,
                                    circuit_t *circ,
                                    crypt_path_t *layer_hint)
 {
   for ( ; conn; conn=conn->next_stream) {
-    if (conn->marked_for_close)
+    if (conn->_base.marked_for_close)
       continue;
     if ((!layer_hint && conn->package_window > 0) ||
         (layer_hint && conn->package_window > 0 &&
          conn->cpath_layer == layer_hint)) {
-      connection_start_reading(conn);
+      connection_start_reading(TO_CONN(conn));
       /* handle whatever might still be on the inbuf */
       if (connection_edge_package_raw_inbuf(conn, 1)<0) {
         /* (We already sent an end cell if possible) */
-        connection_mark_for_close(conn);
+        connection_mark_for_close(TO_CONN(conn));
         continue;
       }
 
@@ -1315,7 +1316,7 @@ circuit_resume_edge_reading_helper(connection_t *conn,
 static int
 circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
 {
-  connection_t *conn = NULL;
+  edge_connection_t *conn = NULL;
   unsigned domain = layer_hint ? LD_APP : LD_EXIT;
 
   if (!layer_hint) {
@@ -1325,7 +1326,7 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
     if (circ->package_window <= 0) {
       log_debug(domain,"yes, not-at-origin. stopped.");
       for (conn = or_circ->n_streams; conn; conn=conn->next_stream)
-        connection_stop_reading(conn);
+        connection_stop_reading(TO_CONN(conn));
       return 1;
     }
     return 0;
@@ -1344,7 +1345,7 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
     for (conn = TO_ORIGIN_CIRCUIT(circ)->p_streams; conn;
          conn=conn->next_stream)
       if (conn->cpath_layer == layer_hint)
-        connection_stop_reading(conn);
+        connection_stop_reading(TO_CONN(conn));
     return 1;
   }
   return 0;

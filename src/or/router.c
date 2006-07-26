@@ -650,16 +650,16 @@ router_upload_dir_desc_to_dirservers(int force)
  * conn.  Return 0 if we accept; non-0 if we reject.
  */
 int
-router_compare_to_my_exit_policy(connection_t *conn)
+router_compare_to_my_exit_policy(edge_connection_t *conn)
 {
   tor_assert(desc_routerinfo);
 
   /* make sure it's resolved to something. this way we can't get a
      'maybe' below. */
-  if (!conn->addr)
+  if (!conn->_base.addr)
     return -1;
 
-  return compare_addr_to_addr_policy(conn->addr, conn->port,
+  return compare_addr_to_addr_policy(conn->_base.addr, conn->_base.port,
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 }
 

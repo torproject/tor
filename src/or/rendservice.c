@@ -1121,7 +1121,7 @@ rend_service_dump_stats(int severity)
  * or 0 for success.
  */
 int
-rend_service_set_connection_addr_port(connection_t *conn,
+rend_service_set_connection_addr_port(edge_connection_t *conn,
                                       origin_circuit_t *circ)
 {
   rend_service_t *service;
@@ -1142,14 +1142,14 @@ rend_service_set_connection_addr_port(connection_t *conn,
   }
   for (i = 0; i < smartlist_len(service->ports); ++i) {
     p = smartlist_get(service->ports, i);
-    if (conn->port == p->virtual_port) {
-      conn->addr = p->real_addr;
-      conn->port = p->real_port;
+    if (conn->_base.port == p->virtual_port) {
+      conn->_base.addr = p->real_addr;
+      conn->_base.port = p->real_port;
       return 0;
     }
   }
   log_info(LD_REND, "No virtual port mapping exists for port %d on service %s",
-           conn->port,serviceid);
+           conn->_base.port,serviceid);
   return -1;
 }
 

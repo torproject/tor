@@ -27,10 +27,10 @@ uint64_t stats_n_relay_cells_processed = 0;
 uint64_t stats_n_destroy_cells_processed = 0;
 
 /* These are the main four functions for processing cells */
-static void command_process_create_cell(cell_t *cell, connection_t *conn);
-static void command_process_created_cell(cell_t *cell, connection_t *conn);
-static void command_process_relay_cell(cell_t *cell, connection_t *conn);
-static void command_process_destroy_cell(cell_t *cell, connection_t *conn);
+static void command_process_create_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_created_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_relay_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_destroy_cell(cell_t *cell, or_connection_t *conn);
 
 #ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the
@@ -38,8 +38,8 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn);
  * by the number of microseconds used by the call to <b>*func(cell, conn)</b>.
  */
 static void
-command_time_process_cell(cell_t *cell, connection_t *conn, int *time,
-                               void (*func)(cell_t *, connection_t *))
+command_time_process_cell(cell_t *cell, or_connection_t *conn, int *time,
+                               void (*func)(cell_t *, or_connection_t *))
 {
   struct timeval start, end;
   long time_passed;
@@ -68,7 +68,7 @@ command_time_process_cell(cell_t *cell, connection_t *conn, int *time,
  * process each type of cell.
  */
 void
-command_process_cell(cell_t *cell, connection_t *conn)
+command_process_cell(cell_t *cell, or_connection_t *conn)
 {
 #ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
@@ -159,7 +159,7 @@ command_process_cell(cell_t *cell, connection_t *conn)
  * picked up again when the cpuworker finishes decrypting it.
  */
 static void
-command_process_create_cell(cell_t *cell, connection_t *conn)
+command_process_create_cell(cell_t *cell, or_connection_t *conn)
 {
   or_circuit_t *circ;
   int id_is_high;
@@ -191,7 +191,7 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received CREATE cell (circID %d) for known circ. "
            "Dropping (age %d).",
-           cell->circ_id, (int)(time(NULL) - conn->timestamp_created));
+           cell->circ_id, (int)(time(NULL) - conn->_base.timestamp_created));
     if (router)
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Details: nickname \"%s\", platform %s.",
@@ -241,7 +241,7 @@ command_process_create_cell(cell_t *cell, connection_t *conn)
  * extend to the next hop in the circuit if necessary.
  */
 static void
-command_process_created_cell(cell_t *cell, connection_t *conn)
+command_process_created_cell(cell_t *cell, or_connection_t *conn)
 {
   circuit_t *circ;
 
@@ -290,7 +290,7 @@ command_process_created_cell(cell_t *cell, connection_t *conn)
  * circuit_receive_relay_cell() for actual processing.
  */
 static void
-command_process_relay_cell(cell_t *cell, connection_t *conn)
+command_process_relay_cell(cell_t *cell, or_connection_t *conn)
 {
   circuit_t *circ;
   int reason;
@@ -300,7 +300,7 @@ command_process_relay_cell(cell_t *cell, connection_t *conn)
   if (!circ) {
     log_debug(LD_OR,
               "unknown circuit %d on connection from %s:%d. Dropping.",
-              cell->circ_id, conn->address, conn->port);
+              cell->circ_id, conn->_base.address, conn->_base.port);
     return;
   }
 
@@ -345,7 +345,7 @@ command_process_relay_cell(cell_t *cell, connection_t *conn)
  * and passes the destroy cell onward if necessary).
  */
 static void
-command_process_destroy_cell(cell_t *cell, connection_t *conn)
+command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
 {
   circuit_t *circ;
   uint8_t reason;
@@ -354,7 +354,7 @@ command_process_destroy_cell(cell_t *cell, connection_t *conn)
   reason = (uint8_t)cell->payload[0];
   if (!circ) {
     log_info(LD_OR,"unknown circuit %d on connection from %s:%d. Dropping.",
-             cell->circ_id, conn->address, conn->port);
+             cell->circ_id, conn->_base.address, conn->_base.port);
     return;
   }
   log_debug(LD_OR,"Received for circID %d.",cell->circ_id);

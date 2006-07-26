@@ -18,7 +18,7 @@ static connection_t *connection_create_listener(const char *listenaddress,
                                                 uint16_t listenport, int type);
 static int connection_init_accepted_conn(connection_t *conn);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
-static int connection_receiver_bucket_should_increase(connection_t *conn);
+static int connection_receiver_bucket_should_increase(or_connection_t *conn);
 static int connection_finished_flushing(connection_t *conn);
 static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
@@ -161,9 +161,35 @@ connection_new(int type)
   static uint32_t n_connections_allocated = 0;
   connection_t *conn;
   time_t now = time(NULL);
+  size_t length;
+  uint32_t magic;
 
-  conn = tor_malloc_zero(sizeof(connection_t));
-  conn->magic = CONNECTION_MAGIC;
+  switch (type) {
+    case CONN_TYPE_OR:
+      length = sizeof(or_connection_t);
+      magic = OR_CONNECTION_MAGIC;
+      break;
+    case CONN_TYPE_EXIT:
+    case CONN_TYPE_AP:
+      length = sizeof(edge_connection_t);
+      magic = EDGE_CONNECTION_MAGIC;
+      break;
+    case CONN_TYPE_DIR:
+      length = sizeof(dir_connection_t);
+      magic = DIR_CONNECTION_MAGIC;
+      break;
+    case CONN_TYPE_CONTROL:
+      length = sizeof(control_connection_t);
+      magic = CONTROL_CONNECTION_MAGIC;
+      break;
+    default:
+      length = sizeof(connection_t);
+      magic = BASE_CONNECTION_MAGIC;
+      break;
+  }
+
+  conn = tor_malloc_zero(length);
+  conn->magic = magic;
   conn->s = -1; /* give it a default of 'not used' */
   conn->poll_index = -1; /* also default to 'not used' */
   conn->global_identifier = n_connections_allocated++;
@@ -174,10 +200,11 @@ connection_new(int type)
     conn->outbuf = buf_new();
   }
   if (type == CONN_TYPE_AP) {
-    conn->socks_request = tor_malloc_zero(sizeof(socks_request_t));
+    TO_EDGE_CONN(conn)->socks_request =
+      tor_malloc_zero(sizeof(socks_request_t));
   }
-
-  conn->next_circ_id = crypto_rand_int(1<<15);
+  if (type == CONN_TYPE_OR)
+    TO_OR_CONN(conn)->next_circ_id = crypto_rand_int(1<<15);
 
   conn->timestamp_created = now;
   conn->timestamp_lastread = now;
@@ -209,28 +236,72 @@ connection_unregister(connection_t *conn)
 static void
 _connection_free(connection_t *conn)
 {
-  tor_assert(conn->magic == CONNECTION_MAGIC);
+  void *mem;
+  switch (conn->type) {
+    case CONN_TYPE_OR:
+      tor_assert(conn->magic == OR_CONNECTION_MAGIC);
+      mem = TO_OR_CONN(conn);
+      break;
+    case CONN_TYPE_AP:
+    case CONN_TYPE_EXIT:
+      tor_assert(conn->magic == EDGE_CONNECTION_MAGIC);
+      mem = TO_EDGE_CONN(conn);
+      break;
+    case CONN_TYPE_DIR:
+      tor_assert(conn->magic == DIR_CONNECTION_MAGIC);
+      mem = TO_DIR_CONN(conn);
+      break;
+    case CONN_TYPE_CONTROL:
+      tor_assert(conn->magic == CONTROL_CONNECTION_MAGIC);
+      mem = TO_CONTROL_CONN(conn);
+      break;
+    default:
+      tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
+      mem = conn;
+      break;
+  }
 
   if (!connection_is_listener(conn)) {
     buf_free(conn->inbuf);
     buf_free(conn->outbuf);
   }
+
   tor_free(conn->address);
-  tor_free(conn->chosen_exit_name);
 
   if (connection_speaks_cells(conn)) {
-    if (conn->tls) {
-      tor_tls_free(conn->tls);
-      conn->tls = NULL;
+    or_connection_t *or_conn = TO_OR_CONN(conn);
+    if (or_conn->tls) {
+      tor_tls_free(or_conn->tls);
+      or_conn->tls = NULL;
     }
+
+    tor_free(or_conn->nickname);
+  }
+  if (CONN_IS_EDGE(conn)) {
+    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    tor_free(edge_conn->chosen_exit_name);
+    tor_free(edge_conn->socks_request);
+  }
+  if (conn->type == CONN_TYPE_CONTROL) {
+    control_connection_t *control_conn = TO_CONTROL_CONN(conn);
+    tor_free(control_conn->incoming_cmd);
   }
 
-  tor_free(conn->nickname);
-  tor_free(conn->socks_request);
-  tor_free(conn->incoming_cmd);
   tor_free(conn->read_event); /* Probably already freed by connection_free. */
   tor_free(conn->write_event); /* Probably already freed by connection_free. */
-  tor_free(conn->requested_resource);
+
+  if (conn->type == CONN_TYPE_DIR) {
+    dir_connection_t *dir_conn = TO_DIR_CONN(conn);
+    tor_free(dir_conn->requested_resource);
+    if (dir_conn->zlib_state)
+      tor_zlib_free(dir_conn->zlib_state);
+    if (dir_conn->fingerprint_stack) {
+      SMARTLIST_FOREACH(dir_conn->fingerprint_stack, char *, cp, tor_free(cp));
+      smartlist_free(dir_conn->fingerprint_stack);
+    }
+    if (dir_conn->cached_dir)
+      cached_dir_decref(dir_conn->cached_dir);
+  }
 
   if (conn->s >= 0) {
     log_debug(LD_NET,"closing fd %d.",conn->s);
@@ -238,21 +309,13 @@ _connection_free(connection_t *conn)
   }
 
   if (conn->type == CONN_TYPE_OR &&
-      !tor_digest_is_zero(conn->identity_digest)) {
+      !tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest)) {
     log_warn(LD_BUG, "called on OR conn with non-zeroed identity_digest");
-    connection_or_remove_from_identity_map(conn);
+    connection_or_remove_from_identity_map(TO_OR_CONN(conn));
   }
-  if (conn->zlib_state)
-    tor_zlib_free(conn->zlib_state);
-  if (conn->fingerprint_stack) {
-    SMARTLIST_FOREACH(conn->fingerprint_stack, char *, cp, tor_free(cp));
-    smartlist_free(conn->fingerprint_stack);
-  }
-  if (conn->cached_dir)
-    cached_dir_decref(conn->cached_dir);
 
   memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
-  tor_free(conn);
+  tor_free(mem);
 }
 
 /** Make sure <b>conn</b> isn't in any of the global conn lists; then free it.
@@ -266,12 +329,12 @@ connection_free(connection_t *conn)
   if (connection_speaks_cells(conn)) {
     if (conn->state == OR_CONN_STATE_OPEN)
       directory_set_dirty();
-    if (!tor_digest_is_zero(conn->identity_digest)) {
-      connection_or_remove_from_identity_map(conn);
+    if (!tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest)) {
+      connection_or_remove_from_identity_map(TO_OR_CONN(conn));
     }
   }
   if (conn->type == CONN_TYPE_CONTROL) {
-    conn->event_mask = 0;
+    TO_CONTROL_CONN(conn)->event_mask = 0;
     control_update_global_event_mask();
   }
   connection_unregister(conn);
@@ -297,7 +360,7 @@ connection_free_all(void)
   /* We don't want to log any messages to controllers. */
   for (i=0;i<n;i++)
     if (carray[i]->type == CONN_TYPE_CONTROL)
-      carray[i]->event_mask = 0;
+      TO_CONTROL_CONN(carray[i])->event_mask = 0;
   control_update_global_event_mask();
 
   /* Unlink everything from the identity map. */
@@ -326,11 +389,14 @@ void
 connection_about_to_close_connection(connection_t *conn)
 {
   circuit_t *circ;
+  dir_connection_t *dir_conn;
+  or_connection_t *or_conn;
+  edge_connection_t *edge_conn;
 
   assert(conn->marked_for_close);
 
   if (CONN_IS_EDGE(conn)) {
-    if (!conn->has_sent_end) {
+    if (!conn->edge_has_sent_end) {
       log_warn(LD_BUG, "Harmless bug: Edge connection (marked at %s:%d) "
                "hasn't sent end yet?",
                conn->marked_for_close_file, conn->marked_for_close);
@@ -340,23 +406,25 @@ connection_about_to_close_connection(connection_t *conn)
 
   switch (conn->type) {
     case CONN_TYPE_DIR:
+      dir_conn = TO_DIR_CONN(conn);
       if (conn->state < DIR_CONN_STATE_CLIENT_FINISHED) {
         /* It's a directory connection and connecting or fetching
          * failed: forget about this router, and maybe try again. */
-        connection_dir_request_failed(conn);
+        connection_dir_request_failed(dir_conn);
         // XXX if it's rend desc we may want to retry -RD
       }
       if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
-        rend_client_desc_here(conn->rend_query); /* give it a try */
+        rend_client_desc_here(dir_conn->rend_query); /* give it a try */
       break;
     case CONN_TYPE_OR:
+      or_conn = TO_OR_CONN(conn);
       /* Remember why we're closing this connection. */
       if (conn->state != OR_CONN_STATE_OPEN) {
-        if (connection_or_nonopen_was_started_here(conn)) {
-          rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
-          entry_guard_set_status(conn->identity_digest, 0);
-          router_set_status(conn->identity_digest, 0);
-          control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
+        if (connection_or_nonopen_was_started_here(or_conn)) {
+          rep_hist_note_connect_failed(or_conn->identity_digest, time(NULL));
+          entry_guard_set_status(or_conn->identity_digest, 0);
+          router_set_status(or_conn->identity_digest, 0);
+          control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED);
         }
       } else if (conn->hold_open_until_flushed) {
         /* XXXX009 We used to have an arg that told us whether we closed the
@@ -368,30 +436,32 @@ connection_about_to_close_connection(connection_t *conn)
          * flushing still get noted as dead, not disconnected.  But this is an
          * improvement. -NM
          */
-        rep_hist_note_disconnect(conn->identity_digest, time(NULL));
-        control_event_or_conn_status(conn, OR_CONN_EVENT_CLOSED);
-      } else if (conn->identity_digest) {
-        rep_hist_note_connection_died(conn->identity_digest, time(NULL));
-        control_event_or_conn_status(conn, OR_CONN_EVENT_CLOSED);
+        rep_hist_note_disconnect(or_conn->identity_digest, time(NULL));
+        control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED);
+      } else if (or_conn->identity_digest) {
+        rep_hist_note_connection_died(or_conn->identity_digest, time(NULL));
+        control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED);
       }
       break;
     case CONN_TYPE_AP:
-      if (conn->socks_request->has_finished == 0) {
+      edge_conn = TO_EDGE_CONN(conn);
+      if (edge_conn->socks_request->has_finished == 0) {
         /* since conn gets removed right after this function finishes,
          * there's no point trying to send back a reply at this point. */
         log_warn(LD_BUG,"Bug: Closing stream (marked at %s:%d) without sending"
                  " back a socks reply.",
                  conn->marked_for_close_file, conn->marked_for_close);
       } else {
-        control_event_stream_status(conn, STREAM_EVENT_CLOSED);
+        control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED);
       }
       break;
     case CONN_TYPE_EXIT:
+      edge_conn = TO_EDGE_CONN(conn);
       if (conn->state == EXIT_CONN_STATE_RESOLVING) {
-        circ = circuit_get_by_edge_conn(conn);
+        circ = circuit_get_by_edge_conn(edge_conn);
         if (circ)
-          circuit_detach_stream(circ, conn);
-        connection_dns_remove(conn);
+          circuit_detach_stream(circ, edge_conn);
+        connection_dns_remove(edge_conn);
       }
       break;
     case CONN_TYPE_DNSWORKER:
@@ -731,8 +801,8 @@ connection_init_accepted_conn(connection_t *conn)
 
   switch (conn->type) {
     case CONN_TYPE_OR:
-      control_event_or_conn_status(conn, OR_CONN_EVENT_NEW);
-      return connection_tls_start_handshake(conn, 1);
+      control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW);
+      return connection_tls_start_handshake(TO_OR_CONN(conn), 1);
     case CONN_TYPE_AP:
       conn->state = AP_CONN_STATE_SOCKS_WAIT;
       break;
@@ -1006,9 +1076,11 @@ connection_bucket_read_limit(connection_t *conn)
   if (at_most > global_read_bucket)
     at_most = global_read_bucket;
 
-  if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN)
-    if (at_most > conn->receiver_bucket)
-      at_most = conn->receiver_bucket;
+  if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
+    or_connection_t *or_conn = TO_OR_CONN(conn);
+    if (at_most > or_conn->receiver_bucket)
+      at_most = or_conn->receiver_bucket;
+  }
 
   if (at_most < 0)
     return 0;
@@ -1052,7 +1124,7 @@ connection_read_bucket_decrement(connection_t *conn, int num_read)
 {
   global_read_bucket -= num_read;
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
-    conn->receiver_bucket -= num_read;
+    TO_OR_CONN(conn)->receiver_bucket -= num_read;
   }
 }
 
@@ -1069,7 +1141,7 @@ connection_consider_empty_buckets(connection_t *conn)
   }
   if (connection_speaks_cells(conn) &&
       conn->state == OR_CONN_STATE_OPEN &&
-      conn->receiver_bucket <= 0) {
+      TO_OR_CONN(conn)->receiver_bucket <= 0) {
     LOG_FN_CONN(conn,
                 (LOG_DEBUG,LD_NET,"receiver bucket exhausted. Pausing."));
     conn->wants_to_read = 1;
@@ -1114,12 +1186,15 @@ connection_bucket_refill(struct timeval *now)
   for (i=0;i<n;i++) {
     conn = carray[i];
 
-    if (connection_receiver_bucket_should_increase(conn)) {
-      conn->receiver_bucket += conn->bandwidthrate;
-      if (conn->receiver_bucket > conn->bandwidthburst)
-        conn->receiver_bucket = conn->bandwidthburst;
-      //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i,
-      //       conn->receiver_bucket);
+    if (connection_speaks_cells(conn)) {
+      or_connection_t *or_conn = TO_OR_CONN(conn);
+      if (connection_receiver_bucket_should_increase(or_conn)) {
+        or_conn->receiver_bucket += or_conn->bandwidthrate;
+        if (or_conn->receiver_bucket > or_conn->bandwidthburst)
+          or_conn->receiver_bucket = or_conn->bandwidthburst;
+        //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i,
+        //       conn->receiver_bucket);
+      }
     }
 
     if (conn->wants_to_read == 1 /* it's marked to turn reading back on now */
@@ -1128,7 +1203,7 @@ connection_bucket_refill(struct timeval *now)
                                     * not the best place to check this.) */
         && (!connection_speaks_cells(conn) ||
             conn->state != OR_CONN_STATE_OPEN ||
-            conn->receiver_bucket > 0)) {
+            TO_OR_CONN(conn)->receiver_bucket > 0)) {
       /* and either a non-cell conn or a cell conn with non-empty bucket */
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,"waking up conn (fd %d)",conn->s));
       conn->wants_to_read = 0;
@@ -1145,15 +1220,12 @@ connection_bucket_refill(struct timeval *now)
  * should add another pile of tokens to it?
  */
 static int
-connection_receiver_bucket_should_increase(connection_t *conn)
+connection_receiver_bucket_should_increase(or_connection_t *conn)
 {
   tor_assert(conn);
 
-  if (!connection_speaks_cells(conn))
-    return 0; /* edge connections don't use receiver_buckets */
-  if (conn->state != OR_CONN_STATE_OPEN)
+  if (conn->_base.state != OR_CONN_STATE_OPEN)
     return 0; /* only open connections play the rate limiting game */
-
   if (conn->receiver_bucket >= conn->bandwidthburst)
     return 0;
 
@@ -1200,15 +1272,15 @@ loop_again:
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     if (CONN_IS_EDGE(conn)) {
-      connection_edge_end_errno(conn, conn->cpath_layer);
-      if (conn->socks_request) /* broken, so don't send a socks reply back */
-        conn->socks_request->has_finished = 1;
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      connection_edge_end_errno(edge_conn, edge_conn->cpath_layer);
+      if (edge_conn->socks_request) /* broken, don't send a socks reply back */
+        edge_conn->socks_request->has_finished = 1;
     }
     connection_mark_for_close(conn);
     return -1;
   }
-  if (CONN_IS_EDGE(conn) &&
-      try_to_read != max_to_read) {
+  if (CONN_IS_EDGE(conn) && try_to_read != max_to_read) {
     /* instruct it not to try to package partial cells. */
     if (connection_process_inbuf(conn, 0) < 0) {
       return -1;
@@ -1265,29 +1337,32 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
   if (connection_speaks_cells(conn) &&
       conn->state > OR_CONN_STATE_PROXY_READING) {
     int pending;
+    or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       /* continue handshaking even if global token bucket is empty */
-      return connection_tls_continue_handshake(conn);
+      return connection_tls_continue_handshake(or_conn);
     }
 
     log_debug(LD_NET,
               "%d: starting, inbuf_datalen %d (%d pending in tls object)."
               " at_most %d.",
               conn->s,(int)buf_datalen(conn->inbuf),
-              tor_tls_get_pending_bytes(conn->tls), at_most);
+              tor_tls_get_pending_bytes(or_conn->tls), at_most);
 
     /* else open, or closing */
-    result = read_to_buf_tls(conn->tls, at_most, conn->inbuf);
+    result = read_to_buf_tls(or_conn->tls, at_most, conn->inbuf);
 
     switch (result) {
       case TOR_TLS_CLOSE:
         log_info(LD_NET,"TLS connection closed on read. Closing. "
                  "(Nickname %s, address %s",
-                 conn->nickname ? conn->nickname : "not set", conn->address);
+                 or_conn->nickname ? or_conn->nickname : "not set",
+                 conn->address);
         return -1;
       case TOR_TLS_ERROR:
         log_info(LD_NET,"tls error. breaking (nickname %s, address %s).",
-                 conn->nickname ? conn->nickname : "not set", conn->address);
+                 or_conn->nickname ? or_conn->nickname : "not set",
+                 conn->address);
         return -1;
       case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
@@ -1299,12 +1374,12 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
       default:
         break;
     }
-    pending = tor_tls_get_pending_bytes(conn->tls);
+    pending = tor_tls_get_pending_bytes(or_conn->tls);
     if (pending) {
       /* XXXX If we have any pending bytes, read them now.  This *can*
        * take us over our read allotment, but really we shouldn't be
        * believing that SSL bytes are the same as TCP bytes anyway. */
-      int r2 = read_to_buf_tls(conn->tls, pending, conn->inbuf);
+      int r2 = read_to_buf_tls(or_conn->tls, pending, conn->inbuf);
       if (r2<0) {
         log_warn(LD_BUG, "Bug: apparently, reading pending bytes can fail.");
         return -1;
@@ -1409,7 +1484,8 @@ connection_handle_write(connection_t *conn)
       log_warn(LD_BUG,
                "getsockopt() syscall failed?! Please report to tor-ops.");
       if (CONN_IS_EDGE(conn))
-        connection_edge_end_errno(conn, conn->cpath_layer);
+        connection_edge_end_errno(TO_EDGE_CONN(conn),
+                                  TO_EDGE_CONN(conn)->cpath_layer);
       connection_mark_for_close(conn);
       return -1;
     }
@@ -1418,7 +1494,8 @@ connection_handle_write(connection_t *conn)
       if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
         log_info(LD_NET,"in-progress connect failed. Removing.");
         if (CONN_IS_EDGE(conn))
-          connection_edge_end_errno(conn, conn->cpath_layer);
+          connection_edge_end_errno(TO_EDGE_CONN(conn),
+                                    TO_EDGE_CONN(conn)->cpath_layer);
 
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
@@ -1426,7 +1503,7 @@ connection_handle_write(connection_t *conn)
          * ignores unrecognized routers
          */
         if (conn->type == CONN_TYPE_OR && !get_options()->HttpsProxy)
-          router_set_status(conn->identity_digest, 0);
+          router_set_status(TO_OR_CONN(conn)->identity_digest, 0);
         return -1;
       } else {
         return 0; /* no change, see if next time is better */
@@ -1441,9 +1518,10 @@ connection_handle_write(connection_t *conn)
 
   if (connection_speaks_cells(conn) &&
       conn->state > OR_CONN_STATE_PROXY_READING) {
+    or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       connection_stop_writing(conn);
-      if (connection_tls_continue_handshake(conn) < 0) {
+      if (connection_tls_continue_handshake(or_conn) < 0) {
         /* Don't flush; connection is dead. */
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
@@ -1453,7 +1531,7 @@ connection_handle_write(connection_t *conn)
     }
 
     /* else open, or closing */
-    result = flush_buf_tls(conn->tls, conn->outbuf,
+    result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
     switch (result) {
       case TOR_TLS_ERROR:
@@ -1491,7 +1569,8 @@ connection_handle_write(connection_t *conn)
                                 max_to_write, &conn->outbuf_flushlen));
     if (result < 0) {
       if (CONN_IS_EDGE(conn))
-        connection_edge_end_errno(conn, conn->cpath_layer);
+        connection_edge_end_errno(TO_EDGE_CONN(conn),
+                                  TO_EDGE_CONN(conn)->cpath_layer);
 
       connection_close_immediate(conn); /* Don't flush; connection is dead. */
       connection_mark_for_close(conn);
@@ -1521,16 +1600,17 @@ connection_handle_write(connection_t *conn)
 /* A controller event has just happened with such urgency that we
  * need to write it onto controller <b>conn</b> immediately. */
 void
-_connection_controller_force_write(connection_t *conn)
+_connection_controller_force_write(control_connection_t *control_conn)
 {
   /* XXX This is hideous code duplication, but raising it seems a little
    * tricky for now.  Think more about this one.   We only call it for
    * EVENT_ERR_MSG, so messing with buckets a little isn't such a big problem.
    */
   int result;
-  tor_assert(conn);
-  tor_assert(!conn->tls);
-  tor_assert(conn->type == CONN_TYPE_CONTROL);
+  connection_t *conn;
+  tor_assert(control_conn);
+  conn = TO_CONN(control_conn);
+
   if (conn->marked_for_close || conn->s < 0)
     return;
 
@@ -1580,7 +1660,7 @@ connection_write_to_buf(const char *string, size_t len, connection_t *conn)
          wrong compared to our max outbuf size. close the whole circuit. */
       log_warn(LD_NET,
                "write_to_buf failed. Closing circuit (fd %d).", conn->s);
-      circuit_mark_for_close(circuit_get_by_edge_conn(conn),
+      circuit_mark_for_close(circuit_get_by_edge_conn(TO_EDGE_CONN(conn)),
                              END_CIRC_REASON_INTERNAL);
     } else {
       log_warn(LD_NET,
@@ -1595,15 +1675,17 @@ connection_write_to_buf(const char *string, size_t len, connection_t *conn)
 }
 
 void
-connection_write_to_buf_zlib(connection_t *conn,
+connection_write_to_buf_zlib(dir_connection_t *dir_conn,
                              tor_zlib_state_t *state,
                              const char *data, size_t data_len,
                              int done)
 {
   int r;
   size_t old_datalen;
+  connection_t *conn;
   if (!data_len)
     return;
+  conn = TO_CONN(dir_conn);
   /* if it's marked for close, only allow write if we mean to flush it */
   if (conn->marked_for_close && !conn->hold_open_until_flushed)
     return;
@@ -1614,18 +1696,9 @@ connection_write_to_buf_zlib(connection_t *conn,
                                 conn->outbuf, state, data, data_len,
                                 done));
   if (r < 0) {
-    if (CONN_IS_EDGE(conn)) {
-      /* if it failed, it means we have our package/delivery windows set
-         wrong compared to our max outbuf size. close the whole circuit. */
-      log_warn(LD_NET,
-               "write_to_buf failed. Closing circuit (fd %d).", conn->s);
-      circuit_mark_for_close(circuit_get_by_edge_conn(conn),
-                             END_CIRC_REASON_INTERNAL);
-    } else {
-      log_warn(LD_NET,
-               "write_to_buf failed. Closing connection (fd %d).", conn->s);
-      connection_mark_for_close(conn);
-    }
+    log_warn(LD_NET,
+             "write_to_buf failed. Closing connection (fd %d).", conn->s);
+    connection_mark_for_close(conn);
     return;
   }
 
@@ -1635,11 +1708,12 @@ connection_write_to_buf_zlib(connection_t *conn,
 
 /** Return the conn to addr/port that has the most recent
  * timestamp_created, or NULL if no such conn exists. */
-connection_t *
+or_connection_t *
 connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port)
 {
   int i, n;
-  connection_t *conn, *best=NULL;
+  connection_t *conn;
+  or_connection_t *best=NULL;
   connection_t **carray;
 
   get_connection_array(&carray,&n);
@@ -1649,8 +1723,8 @@ connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port)
         conn->addr == addr &&
         conn->port == port &&
         !conn->marked_for_close &&
-        (!best || best->timestamp_created < conn->timestamp_created))
-      best = conn;
+        (!best || best->_base.timestamp_created < conn->timestamp_created))
+      best = TO_OR_CONN(conn);
   }
   return best;
 }
@@ -1772,14 +1846,22 @@ connection_get_by_type_state_rendquery(int type, int state,
   connection_t *conn;
   connection_t **carray;
 
+  tor_assert(type == CONN_TYPE_DIR ||
+             type == CONN_TYPE_AP || type == CONN_TYPE_EXIT);
+
   get_connection_array(&carray,&n);
   for (i=0;i<n;i++) {
     conn = carray[i];
     if (conn->type == type &&
         !conn->marked_for_close &&
-        (!state || state == conn->state) &&
-        !rend_cmp_service_ids(rendquery, conn->rend_query))
-      return conn;
+        (!state || state == conn->state)) {
+      if (type == CONN_TYPE_DIR &&
+          rend_cmp_service_ids(rendquery, TO_DIR_CONN(conn)->rend_query))
+        return conn;
+      else if (CONN_IS_EDGE(conn) &&
+               rend_cmp_service_ids(rendquery, TO_EDGE_CONN(conn)->rend_query))
+        return conn;
+    }
   }
   return NULL;
 }
@@ -1949,18 +2031,18 @@ connection_process_inbuf(connection_t *conn, int package_partial)
 
   switch (conn->type) {
     case CONN_TYPE_OR:
-      return connection_or_process_inbuf(conn);
+      return connection_or_process_inbuf(TO_OR_CONN(conn));
     case CONN_TYPE_EXIT:
     case CONN_TYPE_AP:
-      return connection_edge_process_inbuf(conn, package_partial);
+      return connection_edge_process_inbuf(TO_EDGE_CONN(conn), package_partial);
     case CONN_TYPE_DIR:
-      return connection_dir_process_inbuf(conn);
+      return connection_dir_process_inbuf(TO_DIR_CONN(conn));
     case CONN_TYPE_DNSWORKER:
       return connection_dns_process_inbuf(conn);
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_process_inbuf(conn);
     case CONN_TYPE_CONTROL:
-      return connection_control_process_inbuf(conn);
+      return connection_control_process_inbuf(TO_CONTROL_CONN(conn));
     default:
       log_err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
@@ -1974,7 +2056,7 @@ connection_flushed_some(connection_t *conn)
 {
   if (conn->type == CONN_TYPE_DIR &&
       conn->state == DIR_CONN_STATE_SERVER_WRITING)
-    return connection_dirserv_flushed_some(conn);
+    return connection_dirserv_flushed_some(TO_DIR_CONN(conn));
   else
     return 0;
 }
@@ -1994,18 +2076,18 @@ connection_finished_flushing(connection_t *conn)
 
   switch (conn->type) {
     case CONN_TYPE_OR:
-      return connection_or_finished_flushing(conn);
+      return connection_or_finished_flushing(TO_OR_CONN(conn));
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
-      return connection_edge_finished_flushing(conn);
+      return connection_edge_finished_flushing(TO_EDGE_CONN(conn));
     case CONN_TYPE_DIR:
-      return connection_dir_finished_flushing(conn);
+      return connection_dir_finished_flushing(TO_DIR_CONN(conn));
     case CONN_TYPE_DNSWORKER:
       return connection_dns_finished_flushing(conn);
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_finished_flushing(conn);
     case CONN_TYPE_CONTROL:
-      return connection_control_finished_flushing(conn);
+      return connection_control_finished_flushing(TO_CONTROL_CONN(conn));
     default:
       log_err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
@@ -2026,11 +2108,11 @@ connection_finished_connecting(connection_t *conn)
   switch (conn->type)
     {
     case CONN_TYPE_OR:
-      return connection_or_finished_connecting(conn);
+      return connection_or_finished_connecting(TO_OR_CONN(conn));
     case CONN_TYPE_EXIT:
-      return connection_edge_finished_connecting(conn);
+      return connection_edge_finished_connecting(TO_EDGE_CONN(conn));
     case CONN_TYPE_DIR:
-      return connection_dir_finished_connecting(conn);
+      return connection_dir_finished_connecting(TO_DIR_CONN(conn));
     default:
       log_err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
@@ -2044,18 +2126,18 @@ connection_reached_eof(connection_t *conn)
 {
   switch (conn->type) {
     case CONN_TYPE_OR:
-      return connection_or_reached_eof(conn);
+      return connection_or_reached_eof(TO_OR_CONN(conn));
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
-      return connection_edge_reached_eof(conn);
+      return connection_edge_reached_eof(TO_EDGE_CONN(conn));
     case CONN_TYPE_DIR:
-      return connection_dir_reached_eof(conn);
+      return connection_dir_reached_eof(TO_DIR_CONN(conn));
     case CONN_TYPE_DNSWORKER:
       return connection_dns_reached_eof(conn);
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_reached_eof(conn);
     case CONN_TYPE_CONTROL:
-      return connection_control_reached_eof(conn);
+      return connection_control_reached_eof(TO_CONTROL_CONN(conn));
     default:
       log_err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
@@ -2071,9 +2153,26 @@ assert_connection_ok(connection_t *conn, time_t now)
 {
   (void) now; /* XXXX unused. */
   tor_assert(conn);
-  tor_assert(conn->magic == CONNECTION_MAGIC);
   tor_assert(conn->type >= _CONN_TYPE_MIN);
   tor_assert(conn->type <= _CONN_TYPE_MAX);
+  switch (conn->type) {
+    case CONN_TYPE_OR:
+      tor_assert(conn->magic == OR_CONNECTION_MAGIC);
+      break;
+    case CONN_TYPE_AP:
+    case CONN_TYPE_EXIT:
+      tor_assert(conn->magic == EDGE_CONNECTION_MAGIC);
+      break;
+    case CONN_TYPE_DIR:
+      tor_assert(conn->magic == DIR_CONNECTION_MAGIC);
+      break;
+    case CONN_TYPE_CONTROL:
+      tor_assert(conn->magic == CONTROL_CONNECTION_MAGIC);
+      break;
+    default:
+      tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
+      break;
+  }
 
   if (conn->outbuf_flushlen > 0) {
     tor_assert(connection_is_writing(conn) || conn->wants_to_write);
@@ -2100,9 +2199,8 @@ assert_connection_ok(connection_t *conn, time_t now)
    */
 #endif
 
-  if (conn->type != CONN_TYPE_OR) {
-    tor_assert(!conn->tls);
-  } else {
+  if (conn->type == CONN_TYPE_OR) {
+    or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_OPEN) {
       /* tor_assert(conn->bandwidth > 0); */
       /* the above isn't necessarily true: if we just did a TLS
@@ -2115,42 +2213,30 @@ assert_connection_ok(connection_t *conn, time_t now)
 //    tor_assert(conn->addr && conn->port);
     tor_assert(conn->address);
     if (conn->state > OR_CONN_STATE_PROXY_READING)
-      tor_assert(conn->tls);
+      tor_assert(or_conn->tls);
   }
 
-  if (! CONN_IS_EDGE(conn)) {
-    tor_assert(!conn->stream_id);
-    tor_assert(!conn->next_stream);
-    tor_assert(!conn->cpath_layer);
-    tor_assert(!conn->package_window);
-    tor_assert(!conn->deliver_window);
-#if 0
-    tor_assert(!conn->done_sending);
-    tor_assert(!conn->done_receiving);
-#endif
-  } else {
+  if (CONN_IS_EDGE(conn)) {
+    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     /* XXX unchecked: package window, deliver window. */
-  }
-  if (conn->type == CONN_TYPE_AP) {
-    tor_assert(conn->socks_request);
-    if (conn->state == AP_CONN_STATE_OPEN) {
-      tor_assert(conn->socks_request->has_finished);
-      if (!conn->marked_for_close) {
-        tor_assert(conn->cpath_layer);
-        assert_cpath_layer_ok(conn->cpath_layer);
+    if (conn->type == CONN_TYPE_AP) {
+
+      tor_assert(edge_conn->socks_request);
+      if (conn->state == AP_CONN_STATE_OPEN) {
+        tor_assert(edge_conn->socks_request->has_finished);
+        if (!conn->marked_for_close) {
+          tor_assert(edge_conn->cpath_layer);
+          assert_cpath_layer_ok(edge_conn->cpath_layer);
+        }
       }
     }
-  } else {
-    tor_assert(!conn->socks_request);
-  }
-  if (conn->type == CONN_TYPE_EXIT) {
-    tor_assert(conn->purpose == EXIT_PURPOSE_CONNECT ||
-               conn->purpose == EXIT_PURPOSE_RESOLVE);
-  } else if (conn->type != CONN_TYPE_DIR) {
-    tor_assert(!conn->purpose); /* only used for dir types currently */
+    if (conn->type == CONN_TYPE_EXIT) {
+      tor_assert(conn->purpose == EXIT_PURPOSE_CONNECT ||
+                 conn->purpose == EXIT_PURPOSE_RESOLVE);
+    }
   }
   if (conn->type != CONN_TYPE_DIR) {
-    tor_assert(!conn->requested_resource);
+    tor_assert(!conn->purpose); /* only used for dir types currently */
   }
 
   switch (conn->type)
@@ -2164,7 +2250,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_OR:
       tor_assert(conn->state >= _OR_CONN_STATE_MIN);
       tor_assert(conn->state <= _OR_CONN_STATE_MAX);
-      tor_assert(conn->n_circuits >= 0);
+      tor_assert(TO_OR_CONN(conn)->n_circuits >= 0);
       break;
     case CONN_TYPE_EXIT:
       tor_assert(conn->state >= _EXIT_CONN_STATE_MIN);
@@ -2175,7 +2261,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_AP:
       tor_assert(conn->state >= _AP_CONN_STATE_MIN);
       tor_assert(conn->state <= _AP_CONN_STATE_MAX);
-      tor_assert(conn->socks_request);
+      tor_assert(TO_EDGE_CONN(conn)->socks_request);
       break;
     case CONN_TYPE_DIR:
       tor_assert(conn->state >= _DIR_CONN_STATE_MIN);

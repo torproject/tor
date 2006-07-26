@@ -430,7 +430,7 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
 void
 rend_client_desc_here(const char *query)
 {
-  connection_t *conn;
+  edge_connection_t *conn;
   rend_cache_entry_t *entry;
   time_t now = time(NULL);
   int i, n_conns;
@@ -439,25 +439,26 @@ rend_client_desc_here(const char *query)
   get_connection_array(&carray, &n_conns);
 
   for (i = 0; i < n_conns; ++i) {
-    conn = carray[i];
-    if (conn->type != CONN_TYPE_AP ||
-        conn->state != AP_CONN_STATE_RENDDESC_WAIT ||
-        conn->marked_for_close ||
-        rend_cmp_service_ids(query, conn->rend_query))
+    if (carray[i]->type != CONN_TYPE_AP ||
+        carray[i]->state != AP_CONN_STATE_RENDDESC_WAIT ||
+        carray[i]->marked_for_close)
       continue;
-    assert_connection_ok(conn, now);
+    conn = TO_EDGE_CONN(carray[i]);
+    if (rend_cmp_service_ids(query, conn->rend_query))
+      continue;
+    assert_connection_ok(TO_CONN(conn), now);
     if (rend_cache_lookup_entry(conn->rend_query, -1, &entry) == 1 &&
         entry->parsed->n_intro_points > 0) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
       log_info(LD_REND,"Rend desc is usable. Launching circuits.");
-      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+      conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
 
       /* restart their timeout values, so they get a fair shake at
        * connecting to the hidden service. */
-      conn->timestamp_created = now;
-      conn->timestamp_lastread = now;
-      conn->timestamp_lastwritten = now;
+      conn->_base.timestamp_created = now;
+      conn->_base.timestamp_lastread = now;
+      conn->_base.timestamp_lastwritten = now;
 
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */

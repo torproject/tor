@@ -137,7 +137,7 @@ connection_cpu_process_inbuf(connection_t *conn)
   uint32_t addr;
   uint16_t port;
   uint16_t circ_id;
-  connection_t *p_conn;
+  or_connection_t *p_conn;
   circuit_t *circ;
 
   tor_assert(conn);
@@ -473,7 +473,8 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
       log_info(LD_OR,"circ->p_conn gone. Failing circ.");
       return -1;
     }
-    tag_pack(tag, circ->p_conn->addr, circ->p_conn->port, circ->p_circ_id);
+    tag_pack(tag, circ->p_conn->_base.addr, circ->p_conn->_base.port,
+             circ->p_circ_id);
 
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;
     /* touch the lastwritten timestamp, since that's how we check to

@@ -1825,7 +1825,7 @@ dirserv_test_reachability(int try_all)
 #define DIRSERV_BUFFER_MIN 16384
 
 static int
-connection_dirserv_finish_spooling(connection_t *conn)
+connection_dirserv_finish_spooling(dir_connection_t *conn)
 {
   if (conn->zlib_state) {
     connection_write_to_buf_zlib(conn, conn->zlib_state, "", 0, 1);
@@ -1838,12 +1838,12 @@ connection_dirserv_finish_spooling(connection_t *conn)
 
 /** DOCDOC */
 static int
-connection_dirserv_add_servers_to_outbuf(connection_t *conn)
+connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 {
   int by_fp = conn->dir_spool_src == DIR_SPOOL_SERVER_BY_FP;
 
   while (smartlist_len(conn->fingerprint_stack) &&
-         buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
+         buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
     const char *body;
     char *fp = smartlist_pop_last(conn->fingerprint_stack);
     signed_descriptor_t *sd = NULL;
@@ -1875,7 +1875,7 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
     } else {
       connection_write_to_buf(body,
                               sd->signed_descriptor_len,
-                              conn);
+                              TO_CONN(conn));
     }
   }
 
@@ -1890,11 +1890,11 @@ connection_dirserv_add_servers_to_outbuf(connection_t *conn)
 
 /** DOCDOC */
 static int
-connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
+connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
 {
   int bytes, remaining;
 
-  bytes = DIRSERV_BUFFER_MIN - buf_datalen(conn->outbuf);
+  bytes = DIRSERV_BUFFER_MIN - buf_datalen(conn->_base.outbuf);
   tor_assert(bytes > 0);
   tor_assert(conn->cached_dir);
   if (bytes < 8192)
@@ -1909,7 +1909,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
                              bytes, bytes == remaining);
   } else {
     connection_write_to_buf(conn->cached_dir->dir_z + conn->cached_dir_offset,
-                            bytes, conn);
+                            bytes, TO_CONN(conn));
   }
   conn->cached_dir_offset += bytes;
   if (conn->cached_dir_offset == (int)conn->cached_dir->dir_z_len) {
@@ -1923,10 +1923,10 @@ connection_dirserv_add_dir_bytes_to_outbuf(connection_t *conn)
 
 /* DOCDOC */
 static int
-connection_dirserv_add_networkstatus_bytes_to_outbuf(connection_t *conn)
+connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
 {
 
-  while (buf_datalen(conn->outbuf) < DIRSERV_BUFFER_MIN) {
+  while (buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
     if (conn->cached_dir) {
       int uncompressing = (conn->zlib_state != NULL);
       int r = connection_dirserv_add_dir_bytes_to_outbuf(conn);
@@ -1973,13 +1973,12 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(connection_t *conn)
 /** Called whenever we have flushed some directory data in state
  * SERVER_WRITING. */
 int
-connection_dirserv_flushed_some(connection_t *conn)
+connection_dirserv_flushed_some(dir_connection_t *conn)
 {
-  tor_assert(conn->type == CONN_TYPE_DIR);
-  tor_assert(conn->state == DIR_CONN_STATE_SERVER_WRITING);
+  tor_assert(conn->_base.state == DIR_CONN_STATE_SERVER_WRITING);
 
   if (conn->dir_spool_src == DIR_SPOOL_NONE
-      || buf_datalen(conn->outbuf) >= DIRSERV_BUFFER_MIN)
+      || buf_datalen(conn->_base.outbuf) >= DIRSERV_BUFFER_MIN)
     return 0;
 
   switch (conn->dir_spool_src) {

@@ -576,7 +576,11 @@ typedef struct {
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
 
-#define CONNECTION_MAGIC 0x7C3C304Eu
+#define BASE_CONNECTION_MAGIC 0x7C3C304Eu
+#define OR_CONNECTION_MAGIC 0x7D31FF03u
+#define EDGE_CONNECTION_MAGIC 0xF0374013u
+#define DIR_CONNECTION_MAGIC 0x9988ffeeu
+#define CONTROL_CONNECTION_MAGIC 0x8abc765du
 
 /** Description of a connection to another host or process, and associated
  * data.
@@ -609,14 +613,15 @@ struct connection_t {
   unsigned hold_open_until_flushed:1; /**< Despite this connection's being
                                       * marked for close, do we flush it
                                       * before closing it? */
-  unsigned has_sent_end:1; /**< For debugging; only used on edge connections.
-                         * Set once we've set the stream end,
+
+  unsigned edge_has_sent_end:1; /**< For debugging; only used on edge
+                         * connections.  Set once we've set the stream end,
                          * and check in circuit_about_to_close_connection(). */
   /** For control connections only. If set, we send extended info with control
    * events as appropriate. */
   unsigned int control_events_are_extended:1;
   /** Used for OR conns that shouldn't get any new circs attached to them. */
-  unsigned int is_obsolete:1;
+  unsigned int or_is_obsolete:1;
 
   int s; /**< Our socket; -1 if this connection is closed. */
   int poll_index; /* XXXX rename. */
@@ -648,22 +653,23 @@ struct connection_t {
                                       * we marked for close? */
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it. */
-  uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
-                         * connection.  Exit connections only. */
+
+  /** Quasi-global identifier for this connection; used for control.c */
+  /* XXXX NM This can get re-used after 2**32 circuits. */
+  uint32_t global_identifier;
+
+};
+
+typedef struct connection_t connection_t;
+
+/** DOCDOC */
+typedef struct or_connection_t {
+  connection_t _base;
+
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the other side's signing key. */
   char *nickname; /**< Nickname of OR on other side (if any). */
 
-  /** Nickname of planned exit node -- used with .exit support. */
-  char *chosen_exit_name;
-  /** If 1, and we fail to reach the chosen exit, stop requiring it. */
-  unsigned int chosen_exit_optional:1;
-  /** Number of times we've reassigned this application connection to
-   * a new circuit. We keep track because the timeout is longer if we've
-   * already retried several times. */
-  int num_socks_retries;
-
-/* Used only by OR connections: */
   tor_tls_t *tls; /**< TLS connection state (OR only.) */
 
   /* bandwidth* and receiver_bucket only used by ORs in OPEN state: */
@@ -677,22 +683,55 @@ struct connection_t {
                                 * we use? */
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
-  struct connection_t *next_with_same_id; /**< Next connection with same
+  struct or_connection_t *next_with_same_id; /**< Next connection with same
                                            * identity digest as this one. */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
                           * range 0..1<<15-1. (OR only.)*/
+} or_connection_t;
 
-/* Used only by edge connections: */
+typedef struct edge_connection_t {
+  connection_t _base;
+
   uint16_t stream_id;
-  struct connection_t *next_stream; /**< Points to the next stream at this
-                                     * edge, if any (Edge only). */
+  struct edge_connection_t *next_stream; /**< Points to the next stream at this
+                                          * edge, if any (Edge only). */
   struct crypt_path_t *cpath_layer; /**< A pointer to which node in the circ
                                      * this conn exits at. (Edge only.) */
   int package_window; /**< How many more relay cells can i send into the
                        * circuit? (Edge only.) */
   int deliver_window; /**< How many more relay cells can end at me? (Edge
                        * only.) */
+
+  /** Number of times we've reassigned this application connection to
+   * a new circuit. We keep track because the timeout is longer if we've
+   * already retried several times. */
+  int num_socks_retries;
+
+  /** Nickname of planned exit node -- used with .exit support. */
+  char *chosen_exit_name;
+  /** If 1, and we fail to reach the chosen exit, stop requiring it. */
+  unsigned int chosen_exit_optional:1;
+
+/* Used only by AP connections */
+  socks_request_t *socks_request; /**< SOCKS structure describing request (AP
+                                   * only.) */
+
+  struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
+                                 * connection is using. */
+
+  uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
+                         * connection.  Exit connections only. */
+
+/* Used only by DIR and AP connections: */
+  char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
+                                           * querying for? (DIR/AP only) */
+
+
+} edge_connection_t;
+
+typedef struct dir_connection_t {
+  connection_t _base;
 
 /* Used only by Dir connections */
   char *requested_resource; /**< Which 'resource' did we ask the directory
@@ -708,31 +747,55 @@ struct connection_t {
   off_t cached_dir_offset;
   tor_zlib_state_t *zlib_state;
 
-/* Used only by AP connections */
-  socks_request_t *socks_request; /**< SOCKS structure describing request (AP
-                                   * only.) */
+/* Used only by DIR and AP connections: */
+  char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
+                                           * querying for? (DIR/AP only) */
 
-  /** Quasi-global identifier for this connection; used for control.c */
-  /* XXXX NM This can get re-used after 2**32 circuits. */
-  uint32_t global_identifier;
+  char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
+                                     * the directory server's signing key. */
+} dir_connection_t;
+
+typedef struct control_connection_t {
+  connection_t _base;
 
   /* Used only by control connections */
   uint32_t event_mask;
   uint32_t incoming_cmd_len;
   uint32_t incoming_cmd_cur_len;
   char *incoming_cmd;
-
-/* Used only by DIR and AP connections: */
-  struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
-                                 * connection is using. */
-  char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
-                                           * querying for? (DIR/AP only) */
-
   /* Used only by control v0 connections */
   uint16_t incoming_cmd_type;
-};
+} control_connection_t;
 
-typedef struct connection_t connection_t;
+#define TO_CONN(c) &(((c)->_base))
+#define DOWNCAST(from, to, ptr) \
+  (to*) (((from*)(ptr)) - STRUCT_OFFSET(to, _base))
+
+or_connection_t *TO_OR_CONN(connection_t *);
+dir_connection_t *TO_DIR_CONN(connection_t *);
+edge_connection_t *TO_EDGE_CONN(connection_t *);
+control_connection_t *TO_CONTROL_CONN(connection_t *);
+
+extern INLINE or_connection_t *TO_OR_CONN(connection_t *c)
+{
+  tor_assert(c->magic == OR_CONNECTION_MAGIC);
+  return DOWNCAST(connection_t, or_connection_t, c);
+}
+extern INLINE dir_connection_t *TO_DIR_CONN(connection_t *c)
+{
+  tor_assert(c->magic == DIR_CONNECTION_MAGIC);
+  return DOWNCAST(connection_t, dir_connection_t, c);
+}
+extern INLINE edge_connection_t *TO_EDGE_CONN(connection_t *c)
+{
+  tor_assert(c->magic == EDGE_CONNECTION_MAGIC);
+  return DOWNCAST(connection_t, edge_connection_t, c);
+}
+extern INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
+{
+  tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
+  return DOWNCAST(connection_t, control_connection_t, c);
+}
 
 typedef enum {
   ADDR_POLICY_ACCEPT=1,
@@ -1072,7 +1135,7 @@ typedef struct circuit_t {
                    * ORIGIN_CIRCUIT_MAGIC or OR_CIRCUIT_MAGIC. */
 
   /** The OR connection that is next in this circuit. */
-  connection_t *n_conn;
+  or_connection_t *n_conn;
   /** The identity hash of n_conn. */
   char n_conn_id_digest[DIGEST_LEN];
   /** The circuit_id used in the next (forward) hop of this circuit. */
@@ -1121,7 +1184,7 @@ typedef struct origin_circuit_t {
   circuit_t _base;
 
   /** Linked list of AP streams associated with this circuit. */
-  connection_t *p_streams;
+  edge_connection_t *p_streams;
   /** Build state for this circuit. It includes the intended path
    * length, the chosen exit router, rendezvous information, etc.
    */
@@ -1164,12 +1227,12 @@ typedef struct or_circuit_t {
   /** The circuit_id used in the previous (backward) hop of this circuit. */
   circid_t p_circ_id;
   /** The OR connection that is previous in this circuit. */
-  connection_t *p_conn;
+  or_connection_t *p_conn;
   /** Linked list of Exit streams associated with this circuit. */
-  connection_t *n_streams;
+  edge_connection_t *n_streams;
   /** Linked list of Exit streams associated with this circuit that are
    * still being resolved. */
-  connection_t *resolving_streams;
+  edge_connection_t *resolving_streams;
     /** The cipher used by intermediate hops for cells heading toward the
    * OP. */
   crypto_cipher_env_t *p_crypto;
@@ -1210,14 +1273,16 @@ or_circuit_t *TO_OR_CIRCUIT(circuit_t *x);
 extern INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);
-  return (or_circuit_t*) (((char*)x) - STRUCT_OFFSET(or_circuit_t, _base));
+  //return (or_circuit_t*) (((char*)x) - STRUCT_OFFSET(or_circuit_t, _base));
+  return DOWNCAST(circuit_t, or_circuit_t, x);
 }
 origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x);
 extern INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
-  return (origin_circuit_t*)
-    (((char*)x) - STRUCT_OFFSET(origin_circuit_t, _base));
+  //return (origin_circuit_t*)
+  //  (((char*)x) - STRUCT_OFFSET(origin_circuit_t, _base));
+  return DOWNCAST(circuit_t, origin_circuit_t, x);
 }
 
 #define ALLOW_INVALID_ENTRY        1
@@ -1554,7 +1619,7 @@ origin_circuit_t *circuit_establish_circuit(uint8_t purpose,
                                      int need_uptime, int need_capacity,
                                      int internal);
 int circuit_handle_first_hop(origin_circuit_t *circ);
-void circuit_n_conn_done(connection_t *or_conn, int status);
+void circuit_n_conn_done(or_connection_t *or_conn, int status);
 int inform_testing_reachability(void);
 int circuit_send_next_onion_skin(origin_circuit_t *circ);
 void circuit_note_clock_jumped(int seconds_elapsed);
@@ -1593,17 +1658,18 @@ circuit_t * _circuit_get_global_list(void);
 const char *circuit_state_to_string(int state);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 void circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
-                                 connection_t *conn);
+                                 or_connection_t *conn);
 void circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
-                                 connection_t *conn);
+                                 or_connection_t *conn);
 void circuit_set_state(circuit_t *circ, int state);
 void circuit_close_all_marked(void);
 origin_circuit_t *origin_circuit_new(void);
-or_circuit_t *or_circuit_new(uint16_t p_circ_id, connection_t *p_conn);
-circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn);
-int circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn);
-circuit_t *circuit_get_by_edge_conn(connection_t *conn);
-void circuit_unlink_all_from_or_conn(connection_t *conn, int reason);
+or_circuit_t *or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn);
+circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id,
+                                        or_connection_t *conn);
+int circuit_id_used_on_conn(uint16_t circ_id, or_connection_t *conn);
+circuit_t *circuit_get_by_edge_conn(edge_connection_t *conn);
+void circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason);
 circuit_t *circuit_get_by_global_id(uint32_t id);
 origin_circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
                                                         uint8_t purpose);
@@ -1631,10 +1697,10 @@ void circuit_free_all(void);
 
 void circuit_expire_building(time_t now);
 void circuit_remove_handled_ports(smartlist_t *needed_ports);
-int circuit_stream_is_being_handled(connection_t *conn, uint16_t port,
+int circuit_stream_is_being_handled(edge_connection_t *conn, uint16_t port,
                                     int min);
 void circuit_build_needed_circs(time_t now);
-void circuit_detach_stream(circuit_t *circ, connection_t *conn);
+void circuit_detach_stream(circuit_t *circ, edge_connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
 void circuit_has_opened(origin_circuit_t *circ);
 void circuit_build_failed(origin_circuit_t *circ);
@@ -1650,13 +1716,13 @@ origin_circuit_t *circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
                                     int need_uptime, int need_capacity,
                                     int is_internal);
 void circuit_reset_failure_count(int timeout);
-int connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
+int connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
                                                   origin_circuit_t *circ);
-int connection_ap_handshake_attach_circuit(connection_t *conn);
+int connection_ap_handshake_attach_circuit(edge_connection_t *conn);
 
 /********************************* command.c ***************************/
 
-void command_process_cell(cell_t *cell, connection_t *conn);
+void command_process_cell(cell_t *cell, or_connection_t *conn);
 
 extern uint64_t stats_n_padding_cells_processed;
 extern uint64_t stats_n_create_cells_processed;
@@ -1730,15 +1796,15 @@ int connection_fetch_from_buf(char *string, size_t len, connection_t *conn);
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn);
-void _connection_controller_force_write(connection_t *conn);
+void _connection_controller_force_write(control_connection_t *conn);
 void connection_write_to_buf(const char *string, size_t len,
                              connection_t *conn);
-void connection_write_to_buf_zlib(connection_t *conn,
+void connection_write_to_buf_zlib(dir_connection_t *conn,
                                   tor_zlib_state_t *state,
                                   const char *data, size_t data_len,
                                   int done);
 
-connection_t *connection_or_exact_get_by_addr_port(uint32_t addr,
+or_connection_t *connection_or_exact_get_by_addr_port(uint32_t addr,
                                                    uint16_t port);
 connection_t *connection_get_by_global_id(uint32_t id);
 
@@ -1759,34 +1825,34 @@ int connection_state_is_connecting(connection_t *conn);
 char *alloc_http_authenticator(const char *authenticator);
 
 void assert_connection_ok(connection_t *conn, time_t now);
-int connection_or_nonopen_was_started_here(connection_t *conn);
+int connection_or_nonopen_was_started_here(or_connection_t *conn);
 
 /********************************* connection_edge.c *************************/
 
 #define connection_mark_unattached_ap(conn, endreason) \
   _connection_mark_unattached_ap((conn), (endreason), __LINE__, _SHORT_FILE_)
 
-void _connection_mark_unattached_ap(connection_t *conn, int endreason,
+void _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
                                     int line, const char *file);
-int connection_edge_reached_eof(connection_t *conn);
-int connection_edge_process_inbuf(connection_t *conn, int package_partial);
-int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
-int connection_edge_end(connection_t *conn, char reason,
+int connection_edge_reached_eof(edge_connection_t *conn);
+int connection_edge_process_inbuf(edge_connection_t *conn, int package_partial);
+int connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn);
+int connection_edge_end(edge_connection_t *conn, char reason,
                         crypt_path_t *cpath_layer);
-int connection_edge_end_errno(connection_t *conn, crypt_path_t *cpath_layer);
-int connection_edge_finished_flushing(connection_t *conn);
-int connection_edge_finished_connecting(connection_t *conn);
+int connection_edge_end_errno(edge_connection_t *conn, crypt_path_t *cpath_layer);
+int connection_edge_finished_flushing(edge_connection_t *conn);
+int connection_edge_finished_connecting(edge_connection_t *conn);
 
-int connection_ap_handshake_send_begin(connection_t *ap_conn,
+int connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
                                        origin_circuit_t *circ);
-int connection_ap_handshake_send_resolve(connection_t *ap_conn,
+int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
                                          origin_circuit_t *circ);
 
 int connection_ap_make_bridge(char *address, uint16_t port);
-void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
+void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
                                          size_t replylen,
                                          socks5_reply_status_t status);
-void connection_ap_handshake_socks_resolved(connection_t *conn,
+void connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
                                             const char *answer,
@@ -1794,12 +1860,12 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);
-void connection_exit_connect(connection_t *conn);
-int connection_edge_is_rendezvous_stream(connection_t *conn);
-int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
+void connection_exit_connect(edge_connection_t *conn);
+int connection_edge_is_rendezvous_stream(edge_connection_t *conn);
+int connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
-int connection_ap_detach_retriable(connection_t *conn, origin_circuit_t *circ);
+int connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ);
 
 void addressmap_init(void);
 void addressmap_clean(time_t now);
@@ -1820,7 +1886,7 @@ int address_is_in_virtual_range(const char *addr);
 const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
                              time_t max_expires);
-int connection_ap_handshake_rewrite_and_attach(connection_t *conn,
+int connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                                origin_circuit_t *circ);
 
 void set_exit_redirects(smartlist_t *lst);
@@ -1831,23 +1897,23 @@ hostname_type_t parse_extended_hostname(char *address);
 
 /********************************* connection_or.c ***************************/
 
-void connection_or_remove_from_identity_map(connection_t *conn);
+void connection_or_remove_from_identity_map(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
-connection_t *connection_or_get_by_identity_digest(const char *digest);
+or_connection_t *connection_or_get_by_identity_digest(const char *digest);
 
-int connection_or_reached_eof(connection_t *conn);
-int connection_or_process_inbuf(connection_t *conn);
-int connection_or_finished_flushing(connection_t *conn);
-int connection_or_finished_connecting(connection_t *conn);
+int connection_or_reached_eof(or_connection_t *conn);
+int connection_or_process_inbuf(or_connection_t *conn);
+int connection_or_finished_flushing(or_connection_t *conn);
+int connection_or_finished_connecting(or_connection_t *conn);
 
-connection_t *connection_or_connect(uint32_t addr, uint16_t port,
+or_connection_t *connection_or_connect(uint32_t addr, uint16_t port,
                                     const char *id_digest);
 
-int connection_tls_start_handshake(connection_t *conn, int receiving);
-int connection_tls_continue_handshake(connection_t *conn);
+int connection_tls_start_handshake(or_connection_t *conn, int receiving);
+int connection_tls_continue_handshake(or_connection_t *conn);
 
-void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn);
-int connection_or_send_destroy(uint16_t circ_id, connection_t *conn,
+void connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn);
+int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
 
 /********************************* control.c ***************************/
@@ -1906,14 +1972,14 @@ void control_adjust_event_log_severity(void);
 #define LOG_FN_CONN(conn, args)                 \
   CONN_LOG_PROTECT(conn, log_fn args)
 
-int connection_control_finished_flushing(connection_t *conn);
-int connection_control_reached_eof(connection_t *conn);
-int connection_control_process_inbuf(connection_t *conn);
+int connection_control_finished_flushing(control_connection_t *conn);
+int connection_control_reached_eof(control_connection_t *conn);
+int connection_control_process_inbuf(control_connection_t *conn);
 
 int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e);
-int control_event_stream_status(connection_t *conn, stream_status_event_t e);
-int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
+int control_event_stream_status(edge_connection_t *conn, stream_status_event_t e);
+int control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, unsigned int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
@@ -1959,11 +2025,11 @@ void directory_initiate_command_routerstatus(routerstatus_t *status,
 int parse_http_response(const char *headers, int *code, time_t *date,
                         int *compression, char **response);
 
-int connection_dir_reached_eof(connection_t *conn);
-int connection_dir_process_inbuf(connection_t *conn);
-int connection_dir_finished_flushing(connection_t *conn);
-int connection_dir_finished_connecting(connection_t *conn);
-void connection_dir_request_failed(connection_t *conn);
+int connection_dir_reached_eof(dir_connection_t *conn);
+int connection_dir_process_inbuf(dir_connection_t *conn);
+int connection_dir_finished_flushing(dir_connection_t *conn);
+int connection_dir_finished_connecting(dir_connection_t *conn);
+void connection_dir_request_failed(dir_connection_t *conn);
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,
                                     int decode_hex, int sort_uniq);
@@ -1971,7 +2037,7 @@ char *directory_dump_request_log(void);
 
 /********************************* dirserv.c ***************************/
 
-int connection_dirserv_flushed_some(connection_t *conn);
+int connection_dirserv_flushed_some(dir_connection_t *conn);
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
 void dirserv_free_fingerprint_list(void);
@@ -2021,11 +2087,11 @@ int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_reached_eof(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
 void dnsworkers_rotate(void);
-void connection_dns_remove(connection_t *conn);
-void assert_connection_edge_not_dns_pending(connection_t *conn);
+void connection_dns_remove(edge_connection_t *conn);
+void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);
 void dns_cancel_pending_resolve(char *question);
-int dns_resolve(connection_t *exitconn);
+int dns_resolve(edge_connection_t *exitconn);
 
 /********************************* hibernate.c **********************/
 
@@ -2146,12 +2212,12 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 
 void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
-int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
+int connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
                                  size_t payload_len,
                                  crypt_path_t *cpath_layer);
-int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial);
-void connection_edge_consider_sending_sendme(connection_t *conn);
+int connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial);
+void connection_edge_consider_sending_sendme(edge_connection_t *conn);
 socks5_reply_status_t connection_edge_end_reason_socks5_response(int reason);
 int errno_to_end_reason(int e);
 
@@ -2283,7 +2349,7 @@ void rend_service_rendezvous_has_opened(origin_circuit_t *circuit);
 int rend_service_introduce(origin_circuit_t *circuit, const char *request,
                            size_t request_len);
 void rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc);
-int rend_service_set_connection_addr_port(connection_t *conn,
+int rend_service_set_connection_addr_port(edge_connection_t *conn,
                                           origin_circuit_t *circ);
 void rend_service_dump_stats(int severity);
 void rend_service_free_all(void);
@@ -2332,7 +2398,7 @@ void mark_my_descriptor_dirty(void);
 void check_descriptor_bandwidth_changed(time_t now);
 void check_descriptor_ipaddress_changed(time_t now);
 void router_new_address_suggestion(const char *suggestion);
-int router_compare_to_my_exit_policy(connection_t *conn);
+int router_compare_to_my_exit_policy(edge_connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);
 int router_digest_is_me(const char *digest);

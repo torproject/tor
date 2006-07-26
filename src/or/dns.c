@@ -53,7 +53,7 @@ static time_t last_rotation_time=0;
 
 /** Linked list of connections waiting for a DNS answer. */
 typedef struct pending_connection_t {
-  connection_t *conn;
+  edge_connection_t *conn;
   struct pending_connection_t *next;
 } pending_connection_t;
 
@@ -83,8 +83,8 @@ static void purge_expired_resolves(uint32_t now);
 static void dns_purge_resolve(cached_resolve_t *resolve);
 static void dns_found_answer(const char *address, uint32_t addr, char outcome,
                              uint32_t ttl);
-static void send_resolved_cell(connection_t *conn, uint8_t answer_type);
-static int assign_to_dnsworker(connection_t *exitconn);
+static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
+static int assign_to_dnsworker(edge_connection_t *exitconn);
 #ifndef USE_EVENTDNS
 static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
@@ -226,7 +226,7 @@ purge_expired_resolves(uint32_t now)
 {
   cached_resolve_t *resolve;
   pending_connection_t *pend;
-  connection_t *pendconn;
+  edge_connection_t *pendconn;
 
   /* this is fast because the linked list
    * oldest_cached_resolve is ordered by when they came in.
@@ -251,12 +251,12 @@ purge_expired_resolves(uint32_t now)
         pend = resolve->pending_connections;
         resolve->pending_connections = pend->next;
         /* Connections should only be pending if they have no socket. */
-        tor_assert(pend->conn->s == -1);
+        tor_assert(pend->conn->_base.s == -1);
         pendconn = pend->conn;
         connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT,
                             pendconn->cpath_layer);
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
-        connection_free(pendconn);
+        connection_free(TO_CONN(pendconn));
         tor_free(pend);
       }
     }
@@ -273,7 +273,7 @@ purge_expired_resolves(uint32_t now)
 /** Send a response to the RESOVLE request of a connection. answer_type must
  *  be one of RESOLVED_TYPE_(IPV4|ERROR|ERROR_TRANSIENT) */
 static void
-send_resolved_cell(connection_t *conn, uint8_t answer_type)
+send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
 {
   char buf[RELAY_PAYLOAD_SIZE];
   size_t buflen;
@@ -286,7 +286,7 @@ send_resolved_cell(connection_t *conn, uint8_t answer_type)
     {
     case RESOLVED_TYPE_IPV4:
       buf[1] = 4;
-      set_uint32(buf+2, htonl(conn->addr));
+      set_uint32(buf+2, htonl(conn->_base.addr));
       set_uint32(buf+6, htonl(ttl));
       buflen = 10;
       break;
@@ -337,7 +337,7 @@ insert_resolve(cached_resolve_t *r)
  * dns farm, and return 0.
  */
 int
-dns_resolve(connection_t *exitconn)
+dns_resolve(edge_connection_t *exitconn)
 {
   cached_resolve_t *resolve;
   cached_resolve_t search;
@@ -345,17 +345,17 @@ dns_resolve(connection_t *exitconn)
   struct in_addr in;
   circuit_t *circ;
   uint32_t now = time(NULL);
-  assert_connection_ok(exitconn, 0);
-  tor_assert(exitconn->s == -1);
+  assert_connection_ok(TO_CONN(exitconn), 0);
+  tor_assert(exitconn->_base.s == -1);
 
   assert_cache_ok();
 
-  /* first check if exitconn->address is an IP. If so, we already
+  /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
-  if (tor_inet_aton(exitconn->address, &in) != 0) {
-    exitconn->addr = ntohl(in.s_addr);
+  if (tor_inet_aton(exitconn->_base.address, &in) != 0) {
+    exitconn->_base.addr = ntohl(in.s_addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
-    if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+    if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
       send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
     return 1;
   }
@@ -364,11 +364,11 @@ dns_resolve(connection_t *exitconn)
    * resolves in the hash table. */
   purge_expired_resolves(now);
 
-  /* lower-case exitconn->address, so it's in canonical form */
-  tor_strlower(exitconn->address);
+  /* lower-case exitconn->_base.address, so it's in canonical form */
+  tor_strlower(exitconn->_base.address);
 
   /* now check the hash table to see if 'address' is already there. */
-  strlcpy(search.address, exitconn->address, sizeof(search.address));
+  strlcpy(search.address, exitconn->_base.address, sizeof(search.address));
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (resolve && resolve->expire > now) { /* already there */
     switch (resolve->state) {
@@ -381,27 +381,27 @@ dns_resolve(connection_t *exitconn)
         resolve->pending_connections = pending_connection;
         log_debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS "
                   "resolve of %s",
-                  exitconn->s, escaped_safe_str(exitconn->address));
-        exitconn->state = EXIT_CONN_STATE_RESOLVING;
+                  exitconn->_base.s, escaped_safe_str(exitconn->_base.address));
+        exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
         return 0;
       case CACHE_STATE_VALID:
-        exitconn->addr = resolve->addr;
+        exitconn->_base.addr = resolve->addr;
         exitconn->address_ttl = resolve->ttl;
         log_debug(LD_EXIT,"Connection (fd %d) found cached answer for %s",
-                  exitconn->s, escaped_safe_str(exitconn->address));
-        if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+                  exitconn->_base.s, escaped_safe_str(exitconn->_base.address));
+        if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         return 1;
       case CACHE_STATE_FAILED:
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
-                  exitconn->s, escaped_safe_str(exitconn->address));
-        if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+                  exitconn->_base.s, escaped_safe_str(exitconn->_base.address));
+        if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
         if (circ)
           circuit_detach_stream(circ, exitconn);
-        if (!exitconn->marked_for_close)
-          connection_free(exitconn);
+        if (!exitconn->_base.marked_for_close)
+          connection_free(TO_CONN(exitconn));
         return -1;
     }
     tor_assert(0);
@@ -411,17 +411,17 @@ dns_resolve(connection_t *exitconn)
   resolve->magic = CACHED_RESOLVE_MAGIC;
   resolve->state = CACHE_STATE_PENDING;
   resolve->expire = now + DEFAULT_DNS_TTL; /* this will get replaced. */
-  strlcpy(resolve->address, exitconn->address, sizeof(resolve->address));
+  strlcpy(resolve->address, exitconn->_base.address, sizeof(resolve->address));
 
   /* add us to the pending list */
   pending_connection = tor_malloc_zero(sizeof(pending_connection_t));
   pending_connection->conn = exitconn;
   resolve->pending_connections = pending_connection;
-  exitconn->state = EXIT_CONN_STATE_RESOLVING;
+  exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
 
   insert_resolve(resolve);
   log_debug(LD_EXIT,"Assigning question %s to dnsworker.",
-            escaped_safe_str(exitconn->address));
+            escaped_safe_str(exitconn->_base.address));
   assert_cache_ok();
   return assign_to_dnsworker(exitconn);
 }
@@ -429,7 +429,7 @@ dns_resolve(connection_t *exitconn)
 /** Log an error and abort if conn is waiting for a DNS resolve.
  */
 void
-assert_connection_edge_not_dns_pending(connection_t *conn)
+assert_connection_edge_not_dns_pending(edge_connection_t *conn)
 {
   pending_connection_t *pend;
   cached_resolve_t **resolve;
@@ -455,9 +455,9 @@ assert_all_pending_dns_resolves_ok(void)
     for (pend = (*resolve)->pending_connections;
          pend;
          pend = pend->next) {
-      assert_connection_ok(pend->conn, 0);
-      tor_assert(pend->conn->s == -1);
-      tor_assert(!connection_in_array(pend->conn));
+      assert_connection_ok(TO_CONN(pend->conn), 0);
+      tor_assert(pend->conn->_base.s == -1);
+      tor_assert(!connection_in_array(TO_CONN(pend->conn)));
     }
   }
 }
@@ -465,26 +465,26 @@ assert_all_pending_dns_resolves_ok(void)
 /** Remove <b>conn</b> from the list of connections waiting for conn-\>address.
  */
 void
-connection_dns_remove(connection_t *conn)
+connection_dns_remove(edge_connection_t *conn)
 {
   pending_connection_t *pend, *victim;
   cached_resolve_t search;
   cached_resolve_t *resolve;
 
-  tor_assert(conn->type == CONN_TYPE_EXIT);
-  tor_assert(conn->state == EXIT_CONN_STATE_RESOLVING);
+  tor_assert(conn->_base.type == CONN_TYPE_EXIT);
+  tor_assert(conn->_base.state == EXIT_CONN_STATE_RESOLVING);
 
-  strlcpy(search.address, conn->address, sizeof(search.address));
+  strlcpy(search.address, conn->_base.address, sizeof(search.address));
 
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (!resolve) {
     log_notice(LD_BUG, "Address %s is not pending. Dropping.",
-               escaped_safe_str(conn->address));
+               escaped_safe_str(conn->_base.address));
     return;
   }
 
   tor_assert(resolve->pending_connections);
-  assert_connection_ok(conn,0);
+  assert_connection_ok(TO_CONN(conn),0);
 
   pend = resolve->pending_connections;
 
@@ -493,7 +493,7 @@ connection_dns_remove(connection_t *conn)
     tor_free(pend);
     log_debug(LD_EXIT, "First connection (fd %d) no longer waiting "
               "for resolve of %s",
-              conn->s, escaped_safe_str(conn->address));
+              conn->_base.s, escaped_safe_str(conn->_base.address));
     return;
   } else {
     for ( ; pend->next; pend = pend->next) {
@@ -503,7 +503,7 @@ connection_dns_remove(connection_t *conn)
         tor_free(victim);
         log_debug(LD_EXIT,
                   "Connection (fd %d) no longer waiting for resolve of %s",
-                  conn->s, escaped_safe_str(conn->address));
+                  conn->_base.s, escaped_safe_str(conn->_base.address));
         return; /* more are pending */
       }
     }
@@ -521,7 +521,7 @@ dns_cancel_pending_resolve(char *address)
   pending_connection_t *pend;
   cached_resolve_t search;
   cached_resolve_t *resolve;
-  connection_t *pendconn;
+  edge_connection_t *pendconn;
   circuit_t *circ;
 
   strlcpy(search.address, address, sizeof(search.address));
@@ -549,18 +549,18 @@ dns_cancel_pending_resolve(char *address)
              escaped_safe_str(address));
   while (resolve->pending_connections) {
     pend = resolve->pending_connections;
-    pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
+    pend->conn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
     pendconn = pend->conn;
-    assert_connection_ok(pendconn, 0);
-    tor_assert(pendconn->s == -1);
-    if (!pendconn->marked_for_close) {
+    assert_connection_ok(TO_CONN(pendconn), 0);
+    tor_assert(pendconn->_base.s == -1);
+    if (!pendconn->_base.marked_for_close) {
       connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT,
                           pendconn->cpath_layer);
     }
     circ = circuit_get_by_edge_conn(pendconn);
     if (circ)
       circuit_detach_stream(circ, pendconn);
-    connection_free(pendconn);
+    connection_free(TO_CONN(pendconn));
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }
@@ -612,7 +612,7 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
   pending_connection_t *pend;
   cached_resolve_t search;
   cached_resolve_t *resolve;
-  connection_t *pendconn;
+  edge_connection_t *pendconn;
   circuit_t *circ;
 
   assert_cache_ok();
@@ -659,16 +659,16 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
 
   while (resolve->pending_connections) {
     pend = resolve->pending_connections;
-    assert_connection_ok(pend->conn,time(NULL));
-    pend->conn->addr = resolve->addr;
+    assert_connection_ok(TO_CONN(pend->conn),time(NULL));
+    pend->conn->_base.addr = resolve->addr;
     pend->conn->address_ttl = resolve->ttl;
     pendconn = pend->conn; /* don't pass complex things to the
                               connection_mark_for_close macro */
 
     if (resolve->state == CACHE_STATE_FAILED) {
       /* prevent double-remove. */
-      pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
-      if (pendconn->purpose == EXIT_PURPOSE_CONNECT) {
+      pendconn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
+      if (pendconn->_base.purpose == EXIT_PURPOSE_CONNECT) {
         connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED,
                             pendconn->cpath_layer);
         /* This detach must happen after we send the end cell. */
@@ -678,11 +678,11 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
         /* This detach must happen after we send the resolved cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       }
-      connection_free(pendconn);
+      connection_free(TO_CONN(pendconn));
     } else {
-      if (pendconn->purpose == EXIT_PURPOSE_CONNECT) {
+      if (pendconn->_base.purpose == EXIT_PURPOSE_CONNECT) {
         /* prevent double-remove. */
-        pend->conn->state = EXIT_CONN_STATE_CONNECTING;
+        pend->conn->_base.state = EXIT_CONN_STATE_CONNECTING;
 
         circ = circuit_get_by_edge_conn(pend->conn);
         tor_assert(circ);
@@ -698,12 +698,12 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
       } else {
         /* prevent double-remove.  This isn't really an accurate state,
          * but it does the right thing. */
-        pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
+        pendconn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
         send_resolved_cell(pendconn, RESOLVED_TYPE_IPV4);
         circ = circuit_get_by_edge_conn(pendconn);
         tor_assert(circ);
         circuit_detach_stream(circ, pendconn);
-        connection_free(pendconn);
+        connection_free(TO_CONN(pendconn));
       }
     }
     resolve->pending_connections = pend->next;
@@ -722,14 +722,14 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
  * <b>exitconn</b>-\>address; tell that dns worker to begin resolving.
  */
 static int
-assign_to_dnsworker(connection_t *exitconn)
+assign_to_dnsworker(edge_connection_t *exitconn)
 {
   connection_t *dnsconn;
   unsigned char len;
 
-  tor_assert(exitconn->state == EXIT_CONN_STATE_RESOLVING);
-  assert_connection_ok(exitconn, 0);
-  tor_assert(exitconn->s == -1);
+  tor_assert(exitconn->_base.state == EXIT_CONN_STATE_RESOLVING);
+  assert_connection_ok(TO_CONN(exitconn), 0);
+  tor_assert(exitconn->_base.s == -1);
 
   /* respawn here, to be sure there are enough */
   if (spawn_enough_dnsworkers() < 0) {
@@ -741,18 +741,18 @@ assign_to_dnsworker(connection_t *exitconn)
 
   if (!dnsconn) {
     log_warn(LD_EXIT,"no idle dns workers. Failing.");
-    if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+    if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
       send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
     goto err;
   }
 
   log_debug(LD_EXIT,
             "Connection (fd %d) needs to resolve %s; assigning "
-            "to DNSWorker (fd %d)", exitconn->s,
-            escaped_safe_str(exitconn->address), dnsconn->s);
+            "to DNSWorker (fd %d)", exitconn->_base.s,
+            escaped_safe_str(exitconn->_base.address), dnsconn->s);
 
   tor_free(dnsconn->address);
-  dnsconn->address = tor_strdup(exitconn->address);
+  dnsconn->address = tor_strdup(exitconn->_base.address);
   dnsconn->state = DNSWORKER_STATE_BUSY;
   /* touch the lastwritten timestamp, since that's how we check to
    * see how long it's been since we asked the question, and sometimes
@@ -766,7 +766,7 @@ assign_to_dnsworker(connection_t *exitconn)
 
   return 0;
 err:
-  dns_cancel_pending_resolve(exitconn->address); /* also sends end and frees */
+  dns_cancel_pending_resolve(exitconn->_base.address); /* also sends end and frees */
   return -1;
 }
 
@@ -1172,11 +1172,11 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
 static int
 assign_to_dnsworker(connection_t *exitconn)
 {
-  char *addr = tor_strdup(exitconn->address);
+  char *addr = tor_strdup(exitconn->_base.address);
   int r;
   log_info(LD_EXIT, "Launching eventdns request for %s",
-           escaped_safe_str(exitconn->address));
-  r = eventdns_resolve(exitconn->address, DNS_QUERY_NO_SEARCH,
+           escaped_safe_str(exitconn->_base.address));
+  r = eventdns_resolve(exitconn->_base.address, DNS_QUERY_NO_SEARCH,
                        eventdns_callback, addr);
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
