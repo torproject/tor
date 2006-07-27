@@ -100,7 +100,7 @@ ht_string_hash(const char *s)
 #define HT_PROTOTYPE(name, type, field, hashfn, eqfn)                   \
   int name##_HT_GROW(struct name *ht, unsigned min_capacity);           \
   void name##_HT_CLEAR(struct name *ht);                                \
-  int _##name##_HT_REP_OK(struct name *ht);                             \
+  int _##name##_HT_REP_IS_BAD(struct name *ht);                         \
   /* Helper: returns a pointer to the right location in the table       \
    * 'head' to find or insert the element 'elm'. */                     \
   static INLINE struct type **                                          \
@@ -346,38 +346,41 @@ ht_string_hash(const char *s)
     head->hth_table_length = 0;                                         \
     HT_INIT(head);                                                      \
   }                                                                     \
-  /* Debugging helper: return true iff the representation of 'head' is  \
+  /* Debugging helper: return false iff the representation of 'head' is \
    * internally consistent. */                                          \
   int                                                                   \
-  _##name##_HT_REP_OK(struct name *head)                                \
+  _##name##_HT_REP_IS_BAD(struct name *head)                            \
   {                                                                     \
     unsigned n, i;                                                      \
     struct type *elm;                                                   \
     if (!head->hth_table_length) {                                      \
-      return !head->hth_table && !head->hth_n_entries &&                \
-        !head->hth_load_limit && head->hth_prime_idx == -1;             \
+      if (!head->hth_table && !head->hth_n_entries &&                   \
+          !head->hth_load_limit && head->hth_prime_idx == -1)           \
+        return 0;                                                       \
+      else                                                              \
+        return 1;                                                       \
     }                                                                   \
     if (!head->hth_table || head->hth_prime_idx < 0 ||                  \
         !head->hth_load_limit)                                          \
-      return 0;                                                         \
+      return 2;                                                         \
     if (head->hth_n_entries > head->hth_load_limit)                     \
-      return 0;                                                         \
+      return 3;                                                         \
     if (head->hth_table_length != name##_PRIMES[head->hth_prime_idx])   \
-      return 0;                                                         \
+      return 4;                                                         \
     if (head->hth_load_limit != (unsigned)(load*head->hth_table_length)) \
-      return 0;                                                         \
+      return 5;                                                         \
     for (n = i = 0; i < head->hth_table_length; ++i) {                  \
       for (elm = head->hth_table[i]; elm; elm = elm->field.hte_next) {  \
         if (elm->field.hte_hash != hashfn(elm))                         \
-          return 0;                                                     \
+          return 1000 + i;                                              \
         if ((elm->field.hte_hash % head->hth_table_length) != i)        \
-          return 0;                                                     \
+          return 10000 + i;                                             \
         ++n;                                                            \
       }                                                                 \
     }                                                                   \
     if (n != head->hth_n_entries)                                       \
-      return 0;                                                         \
-    return 1;                                                           \
+      return 6;                                                         \
+    return 0;                                                           \
   }
 
 /*

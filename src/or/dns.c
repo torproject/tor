@@ -1216,7 +1216,11 @@ static void
 assert_cache_ok(void)
 {
   cached_resolve_t **resolve;
-  tor_assert(_cache_map_HT_REP_OK(&cache_root));
+  int bad_rep = _cache_map_HT_REP_IS_BAD(&cache_root);
+  if (bad_rep) {
+    log_err(LD_BUG, "Bad rep type %d on dns cache hash table", bad_rep);
+    tor_assert(!bad_rep);
+  }
 
   HT_FOREACH(resolve, cache_map, &cache_root) {
     assert_resolve_ok(*resolve);
