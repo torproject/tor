@@ -4,20 +4,23 @@
 # Figure out where Tor is installed
 if [ -f /Library/StartupItems/Tor/Tor.loc ]; then
 	TORPATH=`cat /Library/StartupItems/Tor/Tor.loc`
-else if [ -f /System/Library/LaunchDaemons/net.freehaven.tor ]; then
+elif [ -f /System/Library/LaunchDaemons/net.freehaven.tor.plist ]; then
 	TORPATH=/`grep -A1 "<key>Program</key>" /System/Library/LaunchDaemons/net.freehaven.tor.plist | grep string | cut -d"/" -f2,3`
 else
 	TORPATH="/Library/Tor/"
 fi
+echo $TORPATH
 
 # Backup all of Tor, just in case
 if [ -d $TORPATH ]; then
-	tar zcf ~/`date "+%Y-%m-%d"`-Tor.backup.tar.gz $TORPATH
+	tar zcf ~/`date "+%Y-%m-%d"`-Tor.backup.tar.gz $TORPATH/var/lib/tor/ $TORPATH/torrc
+	echo `date "+%Y-%m-%d"`-Tor.backup.tar.gz > ~/TorSavedMe
 fi
 
 # Remove Tor and everything to do with it
 if [ -f $TORPATH/uninstall_tor_bundle.sh ]; then
 	$TORPATH/uninstall_tor_bundle.sh
+	echo "You made it to the uninstaller"
 else
 	$PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh
 fi
