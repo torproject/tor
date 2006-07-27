@@ -224,10 +224,11 @@ static cached_resolve_t *newest_cached_resolve = NULL;
 static void
 purge_expired_resolves(uint32_t now)
 {
-  cached_resolve_t *resolve;
+  cached_resolve_t *resolve, *removed;
   pending_connection_t *pend;
   edge_connection_t *pendconn;
 
+  assert_cache_ok();
   /* this is fast because the linked list
    * oldest_cached_resolve is ordered by when they came in.
    */
@@ -264,10 +265,12 @@ purge_expired_resolves(uint32_t now)
     if (!oldest_cached_resolve) /* if there are no more, */
       newest_cached_resolve = NULL; /* then make sure the list's tail knows
                                      * that too */
-    HT_REMOVE(cache_map, &cache_root, resolve);
+    removed = HT_REMOVE(cache_map, &cache_root, resolve);
+    tor_assert(removed == resolve);
     resolve->magic = 0xF0BBF0BB;
     tor_free(resolve);
   }
+  assert_cache_ok();
 }
 
 /** Send a response to the RESOVLE request of a connection. answer_type must
@@ -595,7 +598,8 @@ dns_purge_resolve(cached_resolve_t *resolve)
   }
 
   /* remove resolve from the map */
-  HT_REMOVE(cache_map, &cache_root, resolve);
+  tmp = HT_REMOVE(cache_map, &cache_root, resolve);
+  tor_assert(tmp == resolve);
   resolve->magic = 0xAAAAAAAA;
   tor_free(resolve);
 }
