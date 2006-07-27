@@ -116,10 +116,9 @@ fi
 
 # If the pre-install script did it's thing, it should have saved the
 # config and server keys; put these back and clean up
-if [ -f ~/TorSavedMe ]; then
-	TARBALL=`cat ~/TorSavedMe`
-	tar zxf $TARBALL -C /
-	rm ~/TorSavedMe ~/$TARBALL
+if [ -f /tmp/TorSavedMe.tar.gz ]; then
+	tar zxf /tmp/TorSavedMe.tar.gz -C /
+	rm /tmp/TorSavedMe.tar.gz
 fi
 
 # Determine how to start by OS Version
@@ -127,8 +126,6 @@ if [ $OS = "tiger" ]; then
   if [ -f $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist ]; then
      cp $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist /System/Library/LaunchDaemons/net.freehaven.tor.plist
      chmod 644 /System/Library/LaunchDaemons/net.freehaven.tor.plist
-     grep -q "#--START" $TARGET/torrc
-  if [ "$?" -ne "0" ]; then
      echo "#--START required settings--" >> $TARGET/torrc
      echo "RunAsDaemon 0" >> $TARGET/torrc
      echo "Log notice file $TARGET/var/log/tor/tor.log" >> $TARGET/torrc

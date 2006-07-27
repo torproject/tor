@@ -13,14 +13,12 @@ echo $TORPATH
 
 # Backup all of Tor, just in case
 if [ -d $TORPATH ]; then
-	tar zcf ~/`date "+%Y-%m-%d"`-Tor.backup.tar.gz $TORPATH/var/lib/tor/ $TORPATH/torrc
-	echo `date "+%Y-%m-%d"`-Tor.backup.tar.gz > ~/TorSavedMe
+	tar zcf /tmp/TorSavedMe.tar.gz $TORPATH/var/lib/tor $TORPATH/torrc
 fi
 
 # Remove Tor and everything to do with it
 if [ -f $TORPATH/uninstall_tor_bundle.sh ]; then
 	$TORPATH/uninstall_tor_bundle.sh
-	echo "You made it to the uninstaller"
 else
 	$PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh
 fi

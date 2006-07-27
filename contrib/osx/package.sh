@@ -83,6 +83,7 @@ cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
 #cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
 chmod 755 contrib/osx/TorPostflight
 cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
+cp contrib/osx/TorPreFlight $BUILD_DIR/tor_resources/preflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cp contrib/osx/Tor_Uninstaller.applescript $BUILD_DIR/tor_resources/Tor_Uninstaller.applescript
 cp contrib/osx/Tor_Uninstaller.app.tar.gz $BUILD_DIR/tor_resources/Tor_Uninstaller.app.tar.gz
@@ -138,11 +139,7 @@ $PACKAGEMAKER -build                      \
     -d contrib/osx/PrivoxyConfDesc.plist
 
 ### Make Startup Script package
-# If Tiger or later, use launchd.  Otherwise, use StartupItems
 
-if [ $OS = "tiger" ]; then
-  cp contrib/osx/net.freehaven.tor.plist $BUILD_DIR/tor_resources/net.freehaven.tor.plist
-else
   mkdir -p $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
   cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
    $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
@@ -153,7 +150,6 @@ else
       -f $BUILD_DIR/torstartup_packageroot \
       -i contrib/osx/TorStartupInfo.plist  \
       -d contrib/osx/TorStartupDesc.plist
-fi
 
 ### Assemble the metapackage.  Packagemaker won't buld metapackages from
 # the command line, so we need to do it by hand.
