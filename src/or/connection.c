@@ -2235,9 +2235,9 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->purpose == EXIT_PURPOSE_CONNECT ||
                  conn->purpose == EXIT_PURPOSE_RESOLVE);
     }
-  }
-  if (conn->type != CONN_TYPE_DIR) {
-    tor_assert(!conn->purpose); /* only used for dir types currently */
+  } else if (conn->type != CONN_TYPE_DIR) {
+    /* Purpose is only used for dir and exit types currently */
+    tor_assert(!conn->purpose);
   }
 
   switch (conn->type)
