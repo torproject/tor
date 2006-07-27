@@ -88,7 +88,6 @@ ht_string_hash(const char *s)
 
 #define _HT_SET_HASH(elm, field, hashfn)        \
   do {                                          \
-    elm->field.hte_next = NULL;                 \
     elm->field.hte_hash = hashfn(elm);          \
   } while (0)
 
