@@ -420,12 +420,12 @@ circuit_free_cpath_node(crypt_path_t *victim)
  * of information about circuit <b>circ</b>.
  */
 static void
-circuit_dump_details(int severity, circuit_t *circ, int poll_index,
+circuit_dump_details(int severity, circuit_t *circ, int conn_array_index,
                      const char *type, int this_circid, int other_circid)
 {
   log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d (other side %d), "
       "state %d (%s), born %d:",
-      poll_index, type, this_circid, other_circid, circ->state,
+      conn_array_index, type, this_circid, other_circid, circ->state,
       circuit_state_to_string(circ->state), (int)circ->timestamp_created);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
     circuit_log_path(severity, LD_CIRC, TO_ORIGIN_CIRCUIT(circ));
@@ -451,26 +451,26 @@ circuit_dump_by_conn(connection_t *conn, int severity)
 
     if (! CIRCUIT_IS_ORIGIN(circ) && TO_OR_CIRCUIT(circ)->p_conn &&
         TO_CONN(TO_OR_CIRCUIT(circ)->p_conn) == conn)
-      circuit_dump_details(severity, circ, conn->poll_index, "App-ward",
+      circuit_dump_details(severity, circ, conn->conn_array_index, "App-ward",
                            p_circ_id, n_circ_id);
     if (CIRCUIT_IS_ORIGIN(circ)) {
       for (tmpconn=TO_ORIGIN_CIRCUIT(circ)->p_streams; tmpconn;
            tmpconn=tmpconn->next_stream) {
         if (TO_CONN(tmpconn) == conn) {
-          circuit_dump_details(severity, circ, conn->poll_index, "App-ward",
-                               p_circ_id, n_circ_id);
+          circuit_dump_details(severity, circ, conn->conn_array_index,
+                               "App-ward", p_circ_id, n_circ_id);
         }
       }
     }
     if (circ->n_conn && TO_CONN(circ->n_conn) == conn)
-      circuit_dump_details(severity, circ, conn->poll_index, "Exit-ward",
+      circuit_dump_details(severity, circ, conn->conn_array_index, "Exit-ward",
                            n_circ_id, p_circ_id);
     if (! CIRCUIT_IS_ORIGIN(circ)) {
       for (tmpconn=TO_OR_CIRCUIT(circ)->n_streams; tmpconn;
            tmpconn=tmpconn->next_stream) {
         if (TO_CONN(tmpconn) == conn) {
-          circuit_dump_details(severity, circ, conn->poll_index, "Exit-ward",
-                               n_circ_id, p_circ_id);
+          circuit_dump_details(severity, circ, conn->conn_array_index,
+                               "Exit-ward", n_circ_id, p_circ_id);
         }
       }
     }
@@ -480,7 +480,7 @@ circuit_dump_by_conn(connection_t *conn, int severity)
         conn->type == CONN_TYPE_OR &&
         !memcmp(TO_OR_CONN(conn)->identity_digest, circ->n_conn_id_digest,
                 DIGEST_LEN)) {
-      circuit_dump_details(severity, circ, conn->poll_index,
+      circuit_dump_details(severity, circ, conn->conn_array_index,
                            (circ->state == CIRCUIT_STATE_OPEN &&
                             !CIRCUIT_IS_ORIGIN(circ)) ?
                              "Endpoint" : "Pending",

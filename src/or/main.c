@@ -50,13 +50,12 @@ static time_t time_to_fetch_directory = 0;
 /** When do we next download a running-routers summary? */
 static time_t time_to_fetch_running_routers = 0;
 
-/** Array of all open connections; each element corresponds to the element of
- * poll_array in the same position.  The first nfds elements are valid. */
+/** Array of all open connections.  The first n_conns elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS+1] =
         { NULL };
 static smartlist_t *closeable_connection_lst = NULL;
 
-static int nfds=0; /**< Number of connections currently active. */
+static int n_conns=0; /**< Number of connections currently active. */
 
 /** We set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working. */
@@ -121,8 +120,7 @@ static char* nt_strerror(uint32_t errnum);
 /****************************************************************************
 *
 * This section contains accessors and other methods on the connection_array
-* and poll_array variables (which are global within this file and unavailable
-* outside it).
+* variables (which are global within this file and unavailable outside it).
 *
 ****************************************************************************/
 
@@ -136,15 +134,15 @@ connection_add(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->s >= 0);
 
-  if (nfds >= get_options()->_ConnLimit-1) {
+  if (n_conns >= get_options()->_ConnLimit-1) {
     log_warn(LD_NET,"Failing because we have %d connections already. Please "
-             "raise your ulimit -n.", nfds);
+             "raise your ulimit -n.", n_conns);
     return -1;
   }
 
-  tor_assert(conn->poll_index == -1); /* can only connection_add once */
-  conn->poll_index = nfds;
-  connection_array[nfds] = conn;
+  tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
+  conn->conn_array_index = n_conns;
+  connection_array[n_conns] = conn;
 
   conn->read_event = tor_malloc_zero(sizeof(struct event));
   conn->write_event = tor_malloc_zero(sizeof(struct event));
@@ -153,10 +151,10 @@ connection_add(connection_t *conn)
   event_set(conn->write_event, conn->s, EV_WRITE|EV_PERSIST,
             conn_write_callback, conn);
 
-  nfds++;
+  n_conns++;
 
-  log_debug(LD_NET,"new conn type %s, socket %d, nfds %d.",
-            conn_type_to_string(conn->type), conn->s, nfds);
+  log_debug(LD_NET,"new conn type %s, socket %d, n_conns %d.",
+            conn_type_to_string(conn->type), conn->s, n_conns);
 
   return 0;
 }
@@ -171,24 +169,24 @@ connection_remove(connection_t *conn)
   int current_index;
 
   tor_assert(conn);
-  tor_assert(nfds>0);
+  tor_assert(n_conns>0);
 
-  log_debug(LD_NET,"removing socket %d (type %s), nfds now %d",
-            conn->s, conn_type_to_string(conn->type), nfds-1);
+  log_debug(LD_NET,"removing socket %d (type %s), n_conns now %d",
+            conn->s, conn_type_to_string(conn->type), n_conns-1);
 
-  tor_assert(conn->poll_index >= 0);
-  current_index = conn->poll_index;
-  if (current_index == nfds-1) { /* this is the end */
-    nfds--;
+  tor_assert(conn->conn_array_index >= 0);
+  current_index = conn->conn_array_index;
+  if (current_index == n_conns-1) { /* this is the end */
+    n_conns--;
     return 0;
   }
 
   connection_unregister(conn);
 
   /* replace this one with the one at the end */
-  nfds--;
-  connection_array[current_index] = connection_array[nfds];
-  connection_array[current_index]->poll_index = current_index;
+  n_conns--;
+  connection_array[current_index] = connection_array[n_conns];
+  connection_array[current_index]->conn_array_index = current_index;
 
   return 0;
 }
@@ -243,7 +241,7 @@ int
 connection_in_array(connection_t *conn)
 {
   int i;
-  for (i=0; i<nfds; ++i) {
+  for (i=0; i<n_conns; ++i) {
     if (conn==connection_array[i])
       return 1;
   }
@@ -258,7 +256,7 @@ void
 get_connection_array(connection_t ***array, int *n)
 {
   *array = connection_array;
-  *n = nfds;
+  *n = n_conns;
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
@@ -382,10 +380,10 @@ close_closeable_connections(void)
   int i;
   for (i = 0; i < smartlist_len(closeable_connection_lst); ) {
     connection_t *conn = smartlist_get(closeable_connection_lst, i);
-    if (conn->poll_index < 0) {
+    if (conn->conn_array_index < 0) {
       connection_unlink(conn, 0); /* blow it away right now */
     } else {
-      if (!conn_close_if_marked(conn->poll_index))
+      if (!conn_close_if_marked(conn->conn_array_index))
         ++i;
     }
   }
@@ -893,11 +891,11 @@ run_scheduled_events(time_t now)
     circuit_build_needed_circs(now);
 
   /** 5. We do housekeeping for each connection... */
-  for (i=0;i<nfds;i++) {
+  for (i=0;i<n_conns;i++) {
     run_connection_housekeeping(i, now);
   }
   if (time_to_shrink_buffers < now) {
-    for (i=0;i<nfds;i++) {
+    for (i=0;i<n_conns;i++) {
       connection_t *conn = connection_array[i];
       if (conn->outbuf)
         buf_shrink(conn->outbuf);
@@ -1306,7 +1304,7 @@ dumpmemusage(int severity)
   log(severity, LD_GENERAL,
       "In buffers: "U64_FORMAT" used/"U64_FORMAT" allocated (%d conns).",
       U64_PRINTF_ARG(buf_total_used), U64_PRINTF_ARG(buf_total_alloc),
-      nfds);
+      n_conns);
   log(severity, LD_GENERAL, "In rephist: "U64_FORMAT" used by %d Tors.",
       U64_PRINTF_ARG(rephist_total_alloc), rephist_total_num);
   dump_routerlist_mem_usage(severity);
@@ -1324,7 +1322,7 @@ dumpstats(int severity)
 
   log(severity, LD_GENERAL, "Dumping stats:");
 
-  for (i=0;i<nfds;i++) {
+  for (i=0;i<n_conns;i++) {
     conn = connection_array[i];
     log(severity, LD_GENERAL,
         "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",

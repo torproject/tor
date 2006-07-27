@@ -145,7 +145,7 @@ conn_state_to_string(int type, int state)
 /** Allocate space for a new connection_t. This function just initializes
  * conn; you must call connection_add() to link it into the main array.
  *
- * Set conn-\>type to <b>type</b>. Set conn-\>s and conn-\>poll_index to
+ * Set conn-\>type to <b>type</b>. Set conn-\>s and conn-\>conn_array_index to
  * -1 to signify they are not yet assigned.
  *
  * If conn is not a listener type, allocate buffers for it. If it's
@@ -191,7 +191,7 @@ connection_new(int type)
   conn = tor_malloc_zero(length);
   conn->magic = magic;
   conn->s = -1; /* give it a default of 'not used' */
-  conn->poll_index = -1; /* also default to 'not used' */
+  conn->conn_array_index = -1; /* also default to 'not used' */
   conn->global_identifier = n_connections_allocated++;
 
   conn->type = type;
@@ -2182,7 +2182,7 @@ assert_connection_ok(connection_t *conn, time_t now)
   if (conn->hold_open_until_flushed)
     tor_assert(conn->marked_for_close);
 
-  /* XXX check: wants_to_read, wants_to_write, s, poll_index,
+  /* XXX check: wants_to_read, wants_to_write, s, conn_array_index,
    * marked_for_close. */
 
   /* buffers */

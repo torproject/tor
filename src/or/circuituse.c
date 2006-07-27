@@ -982,13 +982,13 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (conn->chosen_exit_name) {
         routerinfo_t *r;
-        int opt = conn->chosen_exit_optional;
+        int opt = conn->_base.chosen_exit_optional;
         if (!(r = router_get_by_nickname(conn->chosen_exit_name, 1))) {
           log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                  "Requested exit point '%s' is not known. %s.",
                  conn->chosen_exit_name, opt ? "Trying others" : "Closing");
           if (opt) {
-            conn->chosen_exit_optional = 0;
+            conn->_base.chosen_exit_optional = 0;
             tor_free(conn->chosen_exit_name);
             return 0;
           }
@@ -1173,13 +1173,13 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
 
     if (conn->chosen_exit_name) {
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
-      int opt = conn->chosen_exit_optional;
+      int opt = conn->_base.chosen_exit_optional;
       if (!router) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' is not known. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
-          conn->chosen_exit_optional = 0;
+          conn->_base.chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
           return 0;
         }
@@ -1190,7 +1190,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
-          conn->chosen_exit_optional = 0;
+          conn->_base.chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
           return 0;
         }

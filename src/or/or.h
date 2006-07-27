@@ -600,8 +600,9 @@ typedef struct socks_request_t socks_request_t;
  * conn->outbuf.  Connections differ primarily in the functions called
  * to fill and drain these buffers.
  */
-struct connection_t {
-  uint32_t magic; /**< For memory debugging: must equal CONNECTION_MAGIC. */
+typedef struct connection_t {
+  uint32_t magic; /**< For memory debugging: must equal one of
+                   * *_CONNECTION_MAGIC. */
 
   uint8_t type; /**< What kind of connection is this? */
   uint8_t state; /**< Current state of this connection. */
@@ -622,9 +623,12 @@ struct connection_t {
   unsigned int control_events_are_extended:1;
   /** Used for OR conns that shouldn't get any new circs attached to them. */
   unsigned int or_is_obsolete:1;
+  /** For AP connections only. If 1, and we fail to reach the chosen exit,
+   * stop requiring it. */
+  unsigned int chosen_exit_optional:1;
 
   int s; /**< Our socket; -1 if this connection is closed. */
-  int poll_index; /* XXXX rename. */
+  int conn_array_index; /**< Index into the global connection array. */
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
@@ -657,12 +661,10 @@ struct connection_t {
   /** Quasi-global identifier for this connection; used for control.c */
   /* XXXX NM This can get re-used after 2**32 circuits. */
   uint32_t global_identifier;
+} connection_t;
 
-};
-
-typedef struct connection_t connection_t;
-
-/** DOCDOC */
+/** Subtype of connection_t for an "OR connection" -- that is, one that speaks
+ * cells over TLS. */
 typedef struct or_connection_t {
   connection_t _base;
 
@@ -670,7 +672,7 @@ typedef struct or_connection_t {
                                      * the other side's signing key. */
   char *nickname; /**< Nickname of OR on other side (if any). */
 
-  tor_tls_t *tls; /**< TLS connection state (OR only.) */
+  tor_tls_t *tls; /**< TLS connection state */
 
   /* bandwidth* and receiver_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
@@ -687,21 +689,21 @@ typedef struct or_connection_t {
                                            * identity digest as this one. */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
-                          * range 0..1<<15-1. (OR only.)*/
+                          * range 0..1<<15-1. */
 } or_connection_t;
 
+/** Subtype of connection_t for an "edge connection" -- that is, a socks (ap)
+ * connection, or an exit. */
 typedef struct edge_connection_t {
   connection_t _base;
 
-  uint16_t stream_id;
   struct edge_connection_t *next_stream; /**< Points to the next stream at this
-                                          * edge, if any (Edge only). */
+                                          * edge, if any */
   struct crypt_path_t *cpath_layer; /**< A pointer to which node in the circ
-                                     * this conn exits at. (Edge only.) */
-  int package_window; /**< How many more relay cells can i send into the
-                       * circuit? (Edge only.) */
-  int deliver_window; /**< How many more relay cells can end at me? (Edge
-                       * only.) */
+                                     * this conn exits at. */
+  int package_window; /**< How many more relay cells can I send into the
+                       * circuit? */
+  int deliver_window; /**< How many more relay cells can end at me? */
 
   /** Number of times we've reassigned this application connection to
    * a new circuit. We keep track because the timeout is longer if we've
@@ -710,32 +712,34 @@ typedef struct edge_connection_t {
 
   /** Nickname of planned exit node -- used with .exit support. */
   char *chosen_exit_name;
-  /** If 1, and we fail to reach the chosen exit, stop requiring it. */
-  unsigned int chosen_exit_optional:1;
 
-/* Used only by AP connections */
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
                                    * only.) */
-
   struct circuit_t *on_circuit; /**< The circuit (if any) that this edge
                                  * connection is using. */
 
   uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
                          * connection.  Exit connections only. */
 
-/* Used only by DIR and AP connections: */
+  uint16_t stream_id; /**< The stream ID used for this edge connection on its
+                       * circuit */
+
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
-                                           * querying for? (DIR/AP only) */
+                                           * querying for? (AP only) */
 } edge_connection_t;
 
+/** Subtype of connection_t for an "directory connection" -- that is, an HTTP
+ * connection to retrieve or serve directory material. */
 typedef struct dir_connection_t {
   connection_t _base;
 
-/* Used only by Dir connections */
   char *requested_resource; /**< Which 'resource' did we ask the directory
                              * for? */
   unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
-/* Used only for server sides of some dir connections. */
+
+  /* Used only for server sides of some dir connections, to implement
+   * "spooling" of directory material to the outbuf.  Otherwise, we'd have
+   * to append everything to the outbuf in one enormous chunk. */
   enum {
     DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
     DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS
@@ -745,19 +749,19 @@ typedef struct dir_connection_t {
   off_t cached_dir_offset;
   tor_zlib_state_t *zlib_state;
 
-/* Used only by DIR and AP connections: */
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
-                                           * querying for? (DIR/AP only) */
+                                           * querying for? */
 
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the directory server's signing key. */
 } dir_connection_t;
 
+/** Subtype of connection_t for an connection to a controller. */
 typedef struct control_connection_t {
   connection_t _base;
 
-  /* Used only by control connections */
-  uint32_t event_mask;
+  uint32_t event_mask; /**< Bitfield: which events does this controller
+                        * care about? */
   uint32_t incoming_cmd_len;
   uint32_t incoming_cmd_cur_len;
   char *incoming_cmd;
@@ -765,13 +769,23 @@ typedef struct control_connection_t {
   uint16_t incoming_cmd_type;
 } control_connection_t;
 
+/** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) &(((c)->_base))
+/** Helper macro: Given a pointer to to._base, of type from*, return &to. */
 #define DOWNCAST(from, to, ptr) \
   (to*) (((from*)(ptr)) - STRUCT_OFFSET(to, _base))
 
+/** Convert a connection_t* to an or_connection_t*; assert if the cast is
+ * invalid. */
 or_connection_t *TO_OR_CONN(connection_t *);
+/** Convert a connection_t* to a dir_connection_t*; assert if the cast is
+ * invalid. */
 dir_connection_t *TO_DIR_CONN(connection_t *);
+/** Convert a connection_t* to an edge_connection_t*; assert if the cast is
+ * invalid. */
 edge_connection_t *TO_EDGE_CONN(connection_t *);
+/** Convert a connection_t* to an control_connection_t*; assert if the cast is
+ * invalid. */
 control_connection_t *TO_CONTROL_CONN(connection_t *);
 
 extern INLINE or_connection_t *TO_OR_CONN(connection_t *c)
@@ -1115,13 +1129,14 @@ typedef uint16_t circid_t;
  * OR connections multiplex many circuits at once, and stay standing even
  * when there are no circuits running over them.
  *
- * A circuit_t structure fills two roles.  First, a circuit_t links two
- * connections together: either an edge connection and an OR connection,
- * or two OR connections.  (When joined to an OR connection, a circuit_t
- * affects only cells sent to a particular circID on that connection.  When
- * joined to an edge connection, a circuit_t affects all data.)
+ * A circuit_t structure cann fill one of two roles.  First, a or_circuit_t
+ * links two connections together: either an edge connection and an OR
+ * connection, or two OR connections.  (When joined to an OR connection, a
+ * circuit_t affects only cells sent to a particular circID on that
+ * connection.  When joined to an edge connection, a circuit_t affects all
+ * data.)
 
- * Second, a circuit_t holds the cipher keys and state for sending data
+ * Second, an origin_circuit_t holds the cipher keys and state for sending data
  * along a given circuit.  At the OP, it has a sequence of ciphers, each
  * of which is shared with a single OR along the circuit.  Separate
  * ciphers are used for data going "forward" (away from the OP) and
@@ -1178,6 +1193,8 @@ typedef struct circuit_t {
   struct circuit_t *next; /**< Next circuit in linked list. */
 } circuit_t;
 
+/** An origin_circuit_t holds data necessary to build and use a circuit.
+ */
 typedef struct origin_circuit_t {
   circuit_t _base;
 
@@ -1219,6 +1236,8 @@ typedef struct origin_circuit_t {
 
 } origin_circuit_t;
 
+/** An or_circuit_t holds information needed to implement a circuit at an
+ * OR. */
 typedef struct or_circuit_t {
   circuit_t _base;
 
@@ -1258,23 +1277,30 @@ typedef struct or_circuit_t {
 #endif
 
   /** A hash of location-hidden service's PK if purpose is INTRO_POINT, or a
-   * rendezvous cookie if purpose is REND_POINT_WAITING or
-   * C_ESTABLISH_REND. Filled with zeroes otherwise.
+   * rendezvous cookie if purpose is REND_POINT_WAITING. Filled with zeroes
+   * otherwise.
    */
   char rend_token[REND_TOKEN_LEN];
 
   char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops. */
 } or_circuit_t;
 
+/** Convert a circuit subtype to a circuit_t.*/
 #define TO_CIRCUIT(x)  (&((x)->_base))
-or_circuit_t *TO_OR_CIRCUIT(circuit_t *x);
+
+/** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Asserts
+ * if the cast is impossible. */
+or_circuit_t *TO_OR_CIRCUIT(circuit_t *);
+/** Convert a circuit_t* to a pointer to the enclosing origin_circuit_t.
+ * Asserts if the cast is impossible. */
+origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
+
 extern INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);
   //return (or_circuit_t*) (((char*)x) - STRUCT_OFFSET(or_circuit_t, _base));
   return DOWNCAST(circuit_t, or_circuit_t, x);
 }
-origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x);
 extern INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);

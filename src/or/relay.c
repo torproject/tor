@@ -717,8 +717,9 @@ connection_edge_process_end_not_open(
         /* rewrite it to an IP if we learned one. */
         addressmap_rewrite(conn->socks_request->address,
                            sizeof(conn->socks_request->address));
-        if (conn->chosen_exit_optional) { /* stop wanting a specific exit */
-          conn->chosen_exit_optional = 0;
+        if (conn->_base.chosen_exit_optional) {
+          /* stop wanting a specific exit */
+          conn->_base.chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
         }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
@@ -726,7 +727,7 @@ connection_edge_process_end_not_open(
         /* else, conn will get closed below */
         break;
       case END_STREAM_REASON_CONNECTREFUSED:
-        if (!conn->chosen_exit_optional)
+        if (!conn->_base.chosen_exit_optional)
           break; /* break means it'll close, below */
         /* Else fall through: expire this circuit, clear the
          * chosen_exit_name field, and try again. */
@@ -740,8 +741,9 @@ connection_edge_process_end_not_open(
           tor_assert(circ->_base.timestamp_dirty);
           circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
 
-          if (conn->chosen_exit_optional) { /* stop wanting a specific exit */
-            conn->chosen_exit_optional = 0;
+          if (conn->_base.chosen_exit_optional) {
+            /* stop wanting a specific exit */
+            conn->_base.chosen_exit_optional = 0;
             tor_free(conn->chosen_exit_name);
           }
           if (connection_ap_detach_retriable(conn, circ) >= 0)
@@ -764,8 +766,9 @@ connection_edge_process_end_not_open(
           exitrouter->exit_policy =
             router_parse_addr_policy_from_string("reject *:*", -1);
         }
-        if (conn->chosen_exit_optional) { /* stop wanting a specific exit */
-          conn->chosen_exit_optional = 0;
+        if (conn->_base.chosen_exit_optional) {
+          /* stop wanting a specific exit */
+          conn->_base.chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
         }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
