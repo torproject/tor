@@ -633,9 +633,11 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
     resolve->addr = addr;
     resolve->expire = time(NULL) + dns_get_expiry_ttl(ttl);
     resolve->ttl = ttl;
+    assert_resolve_ok(resolve);
     insert_resolve(resolve);
     return;
   }
+  assert_resolve_ok(resolve);
 
   if (resolve->state != CACHE_STATE_PENDING) {
     /* XXXX Maybe update addr? or check addr for consistency? Or let
@@ -661,11 +663,11 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
 
   while (resolve->pending_connections) {
     pend = resolve->pending_connections;
-    assert_connection_ok(TO_CONN(pend->conn),time(NULL));
-    pend->conn->_base.addr = resolve->addr;
-    pend->conn->address_ttl = resolve->ttl;
     pendconn = pend->conn; /* don't pass complex things to the
                               connection_mark_for_close macro */
+    assert_connection_ok(TO_CONN(pendconn),time(NULL));
+    pendconn->_base.addr = resolve->addr;
+    pendconn->address_ttl = resolve->ttl;
 
     if (resolve->state == CACHE_STATE_FAILED) {
       /* prevent double-remove. */
@@ -711,6 +713,8 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }
+  assert_resolve_ok(resolve);
+  assert_cache_ok();
 
   if (outcome == DNS_RESOLVE_FAILED_TRANSIENT) { /* remove from cache */
     dns_purge_resolve(resolve);
