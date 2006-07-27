@@ -128,15 +128,17 @@ if [ $OS = "tiger" || $OS = "leopard" ]; then
      cp $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist /System/Library/LaunchDaemons/net.freehaven.tor.plist
      chmod 644 /System/Library/LaunchDaemons/net.freehaven.tor.plist
      if [ -f $TARGET/torrc ]; then
-     IFS=,
-     CONFIGVARS="#--START,RunAsDaemon 0,Log notice file $TARGET/var/log/tor/tor.log,DataDirectory $TARGET/var/lib/tor,Group daemon,User _tor,PidFile /var/run/Tor.pid,#--END"
-     for var in ${CONFIGVARS}
-     do
-	RC=`grep ^$var $TARGET/torrc`
-	if [ -z $RC ]; then
-	  echo "$var" >> $TARGET/torrc
-	fi
-     done
+       IFS=,
+       CONFIGVARS="#--START,RunAsDaemon 0,Log notice file $TARGET/var/log/tor/tor.log,DataDirectory $TARGET/var/lib/tor,Group daemon,User _tor,PidFile /var/run/Tor.pid,#--END"
+       for var in ${CONFIGVARS}
+         do
+	 RC=`grep ^$var $TARGET/torrc`
+	 if [ -z $RC ]; then
+	   echo "$var" >> $TARGET/torrc
+	 fi
+       done
+     fi
+  fi
      /bin/launchctl load /System/Library/LaunchDaemons/net.freehaven.tor.plist
      /bin/launchctl start net.freehaven.tor
 else
