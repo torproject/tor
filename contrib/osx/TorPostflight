@@ -124,7 +124,7 @@ fi
 # Determine how to start by OS Version
 if [ $OS = "tiger" ]; then
   if [ -f $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist ]; then
-     rm -f /Library/StartupItems/Tor
+     rm -rf /Library/StartupItems/Tor
      cp $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist /System/Library/LaunchDaemons/net.freehaven.tor.plist
      chmod 644 /System/Library/LaunchDaemons/net.freehaven.tor.plist
      echo "#--START required settings--" >> $TARGET/torrc
