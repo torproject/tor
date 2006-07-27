@@ -273,7 +273,7 @@ purge_expired_resolves(uint32_t now)
   assert_cache_ok();
 }
 
-/** Send a response to the RESOVLE request of a connection. answer_type must
+/** Send a response to the RESOLVE request of a connection. answer_type must
  *  be one of RESOLVED_TYPE_(IPV4|ERROR|ERROR_TRANSIENT) */
 static void
 send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
