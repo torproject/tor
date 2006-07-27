@@ -122,7 +122,7 @@ if [ -f /tmp/TorSavedMe.tar.gz ]; then
 fi
 
 # Determine how to start by OS Version
-if [ $OS = "tiger" || $OS = "leopard" ]; then
+if [ $OS = "tiger" ]; then
   if [ -f $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist ]; then
      rm -rf /Library/StartupItems/Tor
      cp $PACKAGE_PATH/Contents/Resources/net.freehaven.tor.plist /System/Library/LaunchDaemons/net.freehaven.tor.plist
