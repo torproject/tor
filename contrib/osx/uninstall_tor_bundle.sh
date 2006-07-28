@@ -135,9 +135,6 @@ niutil -destroy . /users/$TOR_USER
 echo ". Cleaning up"
 rm -rf $TEMP_BOM_CONTENTS
 rm -rf /Library/Privoxy/ /Library/StartupItems/Privoxy/ /Library/Tor/ /Library/StartupItems/Tor/
-if [ -f /System/Library/LaunchDaemons/net.freehaven.tor.plist ]; then
-   rm /System/Library/LaunchDaemons/net.freehaven.tor.plist
-fi
 
 echo ". Finished"
 

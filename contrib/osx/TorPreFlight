@@ -4,8 +4,6 @@
 # Figure out where Tor is installed
 if [ -f /Library/StartupItems/Tor/Tor.loc ]; then
 	TORPATH=`cat /Library/StartupItems/Tor/Tor.loc`
-elif [ -f /System/Library/LaunchDaemons/net.freehaven.tor.plist ]; then
-	TORPATH=/`grep -A1 "<key>Program</key>" /System/Library/LaunchDaemons/net.freehaven.tor.plist | grep string | cut -d"/" -f2,3`
 else
 	TORPATH="/Library/Tor/"
 fi
