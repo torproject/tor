@@ -606,7 +606,7 @@ typedef struct connection_t {
 
   uint8_t type; /**< What kind of connection is this? */
   uint8_t state; /**< Current state of this connection. */
-  uint8_t purpose; /**< Only used for DIR and EXIT types currently. !!! */
+  uint8_t purpose; /**< Only used for DIR and EXIT types currently. */
   unsigned wants_to_read:1; /**< Boolean: should we start reading again once
                             * the bandwidth throttler allows it? */
   unsigned wants_to_write:1; /**< Boolean: should we start writing again once
@@ -614,40 +614,32 @@ typedef struct connection_t {
   unsigned hold_open_until_flushed:1; /**< Despite this connection's being
                                       * marked for close, do we flush it
                                       * before closing it? */
-
   unsigned edge_has_sent_end:1; /**< For debugging; only used on edge
                          * connections.  Set once we've set the stream end,
                          * and check in circuit_about_to_close_connection(). */
   /** For control connections only. If set, we send extended info with control
-   * events as appropriate. !!!! */
+   * events as appropriate. */
   unsigned int control_events_are_extended:1;
   /** Used for OR conns that shouldn't get any new circs attached to them. !!*/
   unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
-   * stop requiring it. !!! */
+   * stop requiring it. */
   unsigned int chosen_exit_optional:1;
+  int inbuf_reached_eof:1; /**< Boolean: did read() return 0 on this conn? */
 
   int s; /**< Our socket; -1 if this connection is closed. */
   int conn_array_index; /**< Index into the global connection array. */
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
-  int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn?
-                          * (!!!bitfield?)
-                          */
-  time_t timestamp_lastread; /**< When was the last time libevent said we could
-                              * read? */
-
   buf_t *outbuf; /**< Buffer holding data to write over this connection. */
   size_t outbuf_flushlen; /**< How much data should we try to flush from the
                            * outbuf? */
+  time_t timestamp_lastread; /**< When was the last time libevent said we could
+                              * read? */
   time_t timestamp_lastwritten; /**< When was the last time libevent said we
                                  * could write? */
-
   time_t timestamp_created; /**< When was this connection_t created? */
-  time_t timestamp_lastempty; /**< When was the outbuf last completely empty?
-                               * !!!!
-                               */
 
   uint32_t addr; /**< IP of the other side of the connection; used to identify
                   * routers, along with port. */
@@ -674,6 +666,8 @@ typedef struct or_connection_t {
   char *nickname; /**< Nickname of OR on other side (if any). */
 
   tor_tls_t *tls; /**< TLS connection state */
+
+  time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
   /* bandwidth* and receiver_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */

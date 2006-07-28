@@ -1391,9 +1391,11 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     }
 
   } else {
+    int reached_eof = 0;
     CONN_LOG_PROTECT(conn,
-        result = read_to_buf(conn->s, at_most, conn->inbuf,
-                             &conn->inbuf_reached_eof));
+        result = read_to_buf(conn->s, at_most, conn->inbuf, &reached_eof));
+    if (reached_eof)
+      conn->inbuf_reached_eof = 1;
 
 //  log_fn(LOG_DEBUG,"read_to_buf returned %d.",read_result);
 

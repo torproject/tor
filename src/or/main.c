@@ -588,8 +588,8 @@ run_connection_housekeeping(int i, time_t now)
   or_options_t *options = get_options();
   or_connection_t *or_conn;
 
-  if (conn->outbuf && !buf_datalen(conn->outbuf))
-    conn->timestamp_lastempty = now;
+  if (conn->outbuf && !buf_datalen(conn->outbuf) && conn->type == CONN_TYPE_OR)
+    TO_OR_CONN(conn)->timestamp_lastempty = now;
 
   if (conn->marked_for_close) {
     /* nothing to do here */
@@ -684,7 +684,7 @@ run_connection_housekeeping(int i, time_t now)
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (
-         now >= conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
+         now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
          now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
       log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
              "Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to "
