@@ -607,6 +607,10 @@ typedef struct connection_t {
   uint8_t type; /**< What kind of connection is this? */
   uint8_t state; /**< Current state of this connection. */
   uint8_t purpose; /**< Only used for DIR and EXIT types currently. */
+
+  /* The next fields are all one-bit booleans. Some are only applicable
+   * to connection subtypes, but we hold them here anyway, to save space.
+   * (Currently, they all fit into a single byte.) */
   unsigned wants_to_read:1; /**< Boolean: should we start reading again once
                             * the bandwidth throttler allows it? */
   unsigned wants_to_write:1; /**< Boolean: should we start writing again once
@@ -614,18 +618,19 @@ typedef struct connection_t {
   unsigned hold_open_until_flushed:1; /**< Despite this connection's being
                                       * marked for close, do we flush it
                                       * before closing it? */
+  unsigned int inbuf_reached_eof:1; /**< Boolean: did read() return 0 on this
+                                     * conn? */
   unsigned edge_has_sent_end:1; /**< For debugging; only used on edge
                          * connections.  Set once we've set the stream end,
                          * and check in circuit_about_to_close_connection(). */
   /** For control connections only. If set, we send extended info with control
    * events as appropriate. */
   unsigned int control_events_are_extended:1;
-  /** Used for OR conns that shouldn't get any new circs attached to them. !!*/
+  /** Used for OR conns that shouldn't get any new circs attached to them. */
   unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
   unsigned int chosen_exit_optional:1;
-  int inbuf_reached_eof:1; /**< Boolean: did read() return 0 on this conn? */
 
   int s; /**< Our socket; -1 if this connection is closed. */
   int conn_array_index; /**< Index into the global connection array. */
@@ -1281,7 +1286,7 @@ typedef struct or_circuit_t {
    */
   char rend_token[REND_TOKEN_LEN];
 
-  char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops. */
+  char handshake_digest[DIGEST_LEN]; /**< Stores KH for the handshake. */
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t.*/

@@ -58,21 +58,23 @@ N   . Improve memory usage on tight-memory machines.
           o Mmap cached-routers file; when building it, go oldest-to-newest.
           - More unit tests and asserts for cached-routers file: ensure digest
             for the right router.  Verify dl by digest, fp, etc.
-          - Make sure cached-routers values and offsets are correct in the
+          . Make sure cached-routers values and offsets are correct in the
             presence of windows FS insanity.
-          - Save and mmap v1 directories; store them zipped, not uncompressed.
+          - Save and mmap v1 directories; store them zipped, not
+            uncompressed.
           - Store networkstatus docs zipped, not uncompressed.  Maaaybe mmap
             them too.
-        - Be a little more OO to save memory in frequently
+        o Be a little more OO to save memory in frequently
           replicated structs.
           o Split circuit_t into origin circuits and or circuits
-            . Move as many fields as reasonable out of base class.
+            o Move as many fields as reasonable out of base class.
             o Re-pack structs to avoid wasted bytes.
           o Split connection_t based on type field.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
     o Asynchronous DNS
-      - and test it
+      . and test it
+      - Make it work on windows.
       - make it the default on platforms where it works
 
   - Security improvements
