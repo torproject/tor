@@ -606,7 +606,7 @@ typedef struct connection_t {
 
   uint8_t type; /**< What kind of connection is this? */
   uint8_t state; /**< Current state of this connection. */
-  uint8_t purpose; /**< Only used for DIR and EXIT types currently. */
+  uint8_t purpose; /**< Only used for DIR and EXIT types currently. !!! */
   unsigned wants_to_read:1; /**< Boolean: should we start reading again once
                             * the bandwidth throttler allows it? */
   unsigned wants_to_write:1; /**< Boolean: should we start writing again once
@@ -619,12 +619,12 @@ typedef struct connection_t {
                          * connections.  Set once we've set the stream end,
                          * and check in circuit_about_to_close_connection(). */
   /** For control connections only. If set, we send extended info with control
-   * events as appropriate. */
+   * events as appropriate. !!!! */
   unsigned int control_events_are_extended:1;
-  /** Used for OR conns that shouldn't get any new circs attached to them. */
+  /** Used for OR conns that shouldn't get any new circs attached to them. !!*/
   unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
-   * stop requiring it. */
+   * stop requiring it. !!! */
   unsigned int chosen_exit_optional:1;
 
   int s; /**< Our socket; -1 if this connection is closed. */
@@ -632,18 +632,22 @@ typedef struct connection_t {
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
-  int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn? */
-  time_t timestamp_lastread; /**< When was the last time poll() said we could
+  int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn?
+                          * (!!!bitfield?)
+                          */
+  time_t timestamp_lastread; /**< When was the last time libevent said we could
                               * read? */
 
   buf_t *outbuf; /**< Buffer holding data to write over this connection. */
   size_t outbuf_flushlen; /**< How much data should we try to flush from the
                            * outbuf? */
-  time_t timestamp_lastwritten; /**< When was the last time poll() said we
+  time_t timestamp_lastwritten; /**< When was the last time libevent said we
                                  * could write? */
 
   time_t timestamp_created; /**< When was this connection_t created? */
-  time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
+  time_t timestamp_lastempty; /**< When was the outbuf last completely empty?
+                               * !!!!
+                               */
 
   uint32_t addr; /**< IP of the other side of the connection; used to identify
                   * routers, along with port. */
@@ -658,9 +662,6 @@ typedef struct connection_t {
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it. */
 
-  /** Quasi-global identifier for this connection; used for control.c */
-  /* XXXX NM This can get re-used after 2**32 circuits. */
-  uint32_t global_identifier;
 } connection_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
@@ -723,6 +724,10 @@ typedef struct edge_connection_t {
 
   uint16_t stream_id; /**< The stream ID used for this edge connection on its
                        * circuit */
+
+  /** Quasi-global identifier for this connection; used for control.c */
+  /* XXXX NM This can get re-used after 2**32 streams */
+  uint32_t global_identifier;
 
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
                                            * querying for? (AP only) */
@@ -1186,10 +1191,6 @@ typedef struct circuit_t {
   const char *marked_for_close_file; /**< For debugging: in which file was this
                                       * circuit marked for close? */
 
-  /** Quasi-global identifier for this circuit; used for control.c */
-  /* XXXX NM This can get re-used after 2**32 circuits. */
-  uint32_t global_identifier;
-
   struct circuit_t *next; /**< Next circuit in linked list. */
 } circuit_t;
 
@@ -1233,6 +1234,10 @@ typedef struct origin_circuit_t {
   /** The next stream_id that will be tried when we're attempting to
    * construct a new AP stream originating at this circuit. */
   uint16_t next_stream_id;
+
+  /** Quasi-global identifier for this circuit; used for control.c */
+  /* XXXX NM This can get re-used after 2**32 circuits. */
+  uint32_t global_identifier;
 
 } origin_circuit_t;
 
@@ -1694,7 +1699,7 @@ circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id,
 int circuit_id_used_on_conn(uint16_t circ_id, or_connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(edge_connection_t *conn);
 void circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason);
-circuit_t *circuit_get_by_global_id(uint32_t id);
+origin_circuit_t *circuit_get_by_global_id(uint32_t id);
 origin_circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query,
                                                         uint8_t purpose);
 origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
@@ -1830,7 +1835,7 @@ void connection_write_to_buf_zlib(dir_connection_t *conn,
 
 or_connection_t *connection_or_exact_get_by_addr_port(uint32_t addr,
                                                    uint16_t port);
-connection_t *connection_get_by_global_id(uint32_t id);
+edge_connection_t *connection_get_by_global_id(uint32_t id);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_purpose(int type, int purpose);

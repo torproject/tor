@@ -248,14 +248,10 @@ circuit_state_to_string(int state)
 static void
 init_circuit_base(circuit_t *circ)
 {
-  static uint32_t n_circuits_allocated = 1;
-  /* never zero, since a global ID of 0 is treated specially by the
-   * controller */
   circ->timestamp_created = time(NULL);
 
   circ->package_window = CIRCWINDOW_START;
   circ->deliver_window = CIRCWINDOW_START;
-  circ->global_identifier = n_circuits_allocated++;
 
   circuit_add(circ);
 }
@@ -267,11 +263,15 @@ origin_circuit_t *
 origin_circuit_new(void)
 {
   origin_circuit_t *circ;
+  /* never zero, since a global ID of 0 is treated specially by the
+   * controller */
+  static uint32_t n_circuits_allocated = 1;
 
   circ = tor_malloc_zero(sizeof(origin_circuit_t));
   circ->_base.magic = ORIGIN_CIRCUIT_MAGIC;
 
   circ->next_stream_id = crypto_rand_int(1<<16);
+  circ->global_identifier = n_circuits_allocated++;
 
   init_circuit_base(TO_CIRCUIT(circ));
 
@@ -491,16 +491,17 @@ circuit_dump_by_conn(connection_t *conn, int severity)
 
 /** Return the circuit whose global ID is <b>id</b>, or NULL if no
  * such circuit exists. */
-circuit_t *
+origin_circuit_t *
 circuit_get_by_global_id(uint32_t id)
 {
   circuit_t *circ;
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (circ->global_identifier == id) {
+    if (CIRCUIT_IS_ORIGIN(circ) &&
+        TO_ORIGIN_CIRCUIT(circ)->global_identifier == id) {
       if (circ->marked_for_close)
         return NULL;
       else
-        return circ;
+        return TO_ORIGIN_CIRCUIT(circ);
     }
   }
   return NULL;

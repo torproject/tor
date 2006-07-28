@@ -158,7 +158,7 @@ conn_state_to_string(int type, int state)
 connection_t *
 connection_new(int type)
 {
-  static uint32_t n_connections_allocated = 0;
+  static uint32_t n_connections_allocated = 1;
   connection_t *conn;
   time_t now = time(NULL);
   size_t length;
@@ -192,7 +192,6 @@ connection_new(int type)
   conn->magic = magic;
   conn->s = -1; /* give it a default of 'not used' */
   conn->conn_array_index = -1; /* also default to 'not used' */
-  conn->global_identifier = n_connections_allocated++;
 
   conn->type = type;
   if (!connection_is_listener(conn)) { /* listeners never use their buf */
@@ -202,6 +201,9 @@ connection_new(int type)
   if (type == CONN_TYPE_AP) {
     TO_EDGE_CONN(conn)->socks_request =
       tor_malloc_zero(sizeof(socks_request_t));
+  }
+  if (CONN_IS_EDGE(conn)) {
+    TO_EDGE_CONN(conn)->global_identifier = n_connections_allocated++;
   }
   if (type == CONN_TYPE_OR)
     TO_OR_CONN(conn)->next_circ_id = crypto_rand_int(1<<15);
@@ -1756,7 +1758,7 @@ connection_get_by_type_addr_port_purpose(int type,
 /** Return the connection with id <b>id</b> if it is not already marked for
  * close.
  */
-connection_t *
+edge_connection_t *
 connection_get_by_global_id(uint32_t id)
 {
   int i, n;
@@ -1766,9 +1768,9 @@ connection_get_by_global_id(uint32_t id)
   get_connection_array(&carray,&n);
   for (i=0;i<n;i++) {
     conn = carray[i];
-    if (conn->global_identifier == id) {
+    if (CONN_IS_EDGE(conn) && TO_EDGE_CONN(conn)->global_identifier == id) {
       if (!conn->marked_for_close)
-        return conn;
+        return TO_EDGE_CONN(conn);
       else
         return NULL;
     }

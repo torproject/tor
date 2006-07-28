@@ -639,7 +639,7 @@ send_control1_event(uint16_t event, const char *format, ...)
 }
 
 /** Given a text circuit <b>id</b>, return the corresponding circuit. */
-static circuit_t *
+static origin_circuit_t *
 get_circ(const char *id)
 {
   unsigned long n_id;
@@ -651,17 +651,17 @@ get_circ(const char *id)
 }
 
 /** Given a text stream <b>id</b>, return the corresponding AP connection. */
-static connection_t *
+static edge_connection_t *
 get_stream(const char *id)
 {
   unsigned long n_id;
   int ok;
-  connection_t *conn;
+  edge_connection_t *conn;
   n_id = tor_parse_ulong(id, 10, 0, ULONG_MAX, &ok, NULL);
   if (!ok)
     return NULL;
   conn = connection_get_by_global_id(n_id);
-  if (!conn || conn->type != CONN_TYPE_AP)
+  if (!conn || conn->_base.type != CONN_TYPE_AP)
     return NULL;
   return conn;
 }
@@ -1400,7 +1400,7 @@ handle_getinfo_helper(const char *question, char **answer)
       slen = strlen(path)+strlen(state)+20;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%lu %s %s",
-                   (unsigned long)circ->global_identifier,
+                   (unsigned long)TO_ORIGIN_CIRCUIT(circ)->global_identifier,
                    state, path);
       smartlist_add(status, s);
       tor_free(path);
@@ -1420,6 +1420,7 @@ handle_getinfo_helper(const char *question, char **answer)
       char *s;
       size_t slen;
       circuit_t *circ;
+      origin_circuit_t *origin_circ = NULL;
       if (conns[i]->type != CONN_TYPE_AP ||
           conns[i]->marked_for_close ||
           conns[i]->state == AP_CONN_STATE_SOCKS_WAIT)
@@ -1448,12 +1449,15 @@ handle_getinfo_helper(const char *question, char **answer)
           continue;
         }
       circ = circuit_get_by_edge_conn(conn);
+      if (CIRCUIT_IS_ORIGIN(circ))
+        origin_circ = TO_ORIGIN_CIRCUIT(circ);
       write_stream_target_to_buf(conn, buf, sizeof(buf));
       slen = strlen(buf)+strlen(state)+32;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%lu %s %lu %s",
-                   (unsigned long) conn->_base.global_identifier,state,
-                   circ?(unsigned long)circ->global_identifier : 0ul,
+                   (unsigned long) conn->global_identifier,state,
+                   origin_circ?
+                         (unsigned long)origin_circ->global_identifier : 0ul,
                    buf);
       smartlist_add(status, s);
     }
@@ -1688,7 +1692,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 {
   smartlist_t *router_nicknames=NULL, *routers=NULL;
   uint32_t circ_id;
-  circuit_t *circ = NULL;
+  origin_circuit_t *circ = NULL;
   int zero_circ, v0;
   char reply[4];
   uint8_t intended_purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -1749,15 +1753,6 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
     }
   }
 
-  if (circ && ! CIRCUIT_IS_ORIGIN(circ)) {
-    if (v0)
-      send_control0_error(conn, ERR_NO_CIRC,"Circuit does not originate here");
-    else
-      connection_printf_to_buf(conn,
-                               "555 Circuit does not originate here\r\n");
-    goto done;
-  }
-
   routers = smartlist_create();
   SMARTLIST_FOREACH(router_nicknames, const char *, n,
   {
@@ -1781,21 +1776,21 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   if (zero_circ) {
     /* start a new circuit */
-    circ = TO_CIRCUIT( origin_circuit_init(intended_purpose, 0, 0, 0) );
+    circ = origin_circuit_init(intended_purpose, 0, 0, 0);
   }
 
   /* now circ refers to something that is ready to be extended */
   SMARTLIST_FOREACH(routers, routerinfo_t *, r,
   {
     extend_info_t *info = extend_info_from_router(r);
-    circuit_append_new_exit(TO_ORIGIN_CIRCUIT(circ), info);
+    circuit_append_new_exit(circ, info);
     extend_info_free(info);
   });
 
   /* now that we've populated the cpath, start extending */
   if (zero_circ) {
-    if (circuit_handle_first_hop(TO_ORIGIN_CIRCUIT(circ)) < 0) {
-      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+    if (circuit_handle_first_hop(circ) < 0) {
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
       if (v0)
         send_control0_error(conn, ERR_INTERNAL, "couldn't start circuit");
       else
@@ -1803,12 +1798,12 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       goto done;
     }
   } else {
-    if (circ->state == CIRCUIT_STATE_OPEN) {
-      circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
-      if (circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)) < 0) {
+    if (circ->_base.state == CIRCUIT_STATE_OPEN) {
+      circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
+      if (circuit_send_next_onion_skin(circ) < 0) {
         log_info(LD_CONTROL,
                  "send_next_onion_skin failed; circuit marked for closing.");
-        circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+        circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
         if (v0)
           send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
         else
@@ -1840,7 +1835,7 @@ static int
 handle_control_setpurpose(control_connection_t *conn, int for_circuits,
                           uint32_t len, const char *body)
 {
-  circuit_t *circ = NULL;
+  origin_circuit_t *circ = NULL;
   routerinfo_t *ri = NULL;
   uint8_t new_purpose;
   smartlist_t *args = smartlist_create();
@@ -1875,7 +1870,7 @@ handle_control_setpurpose(control_connection_t *conn, int for_circuits,
   }
 
   if (for_circuits)
-    circ->purpose = new_purpose;
+    circ->_base.purpose = new_purpose;
   else
     ri->purpose = new_purpose;
   connection_write_str_to_buf("250 OK\r\n", conn);
@@ -1892,10 +1887,9 @@ static int
 handle_control_attachstream(control_connection_t *conn, uint32_t len,
                             const char *body)
 {
-  connection_t *ap_conn = NULL;
-  circuit_t *circ = NULL;
+  edge_connection_t *ap_conn = NULL;
+  origin_circuit_t *circ = NULL;
   int zero_circ;
-  edge_connection_t *edge_conn;
 
   if (STATE_IS_V0(conn->_base.state)) {
     uint32_t conn_id;
@@ -1946,9 +1940,9 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
       return 0;
   }
 
-  if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT &&
-      ap_conn->state != AP_CONN_STATE_CONNECT_WAIT &&
-      ap_conn->state != AP_CONN_STATE_RESOLVE_WAIT) {
+  if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT &&
+      ap_conn->_base.state != AP_CONN_STATE_CONNECT_WAIT &&
+      ap_conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
     if (STATE_IS_V0(conn->_base.state)) {
       send_control0_error(conn, ERR_NO_STREAM,
                           "Connection is not managed by controller.");
@@ -1960,22 +1954,19 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
     return 0;
   }
 
-  edge_conn = TO_EDGE_CONN(ap_conn);
-
   /* Do we need to detach it first? */
-  if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT) {
-    circuit_t *tmpcirc = circuit_get_by_edge_conn(edge_conn);
-    connection_edge_end(edge_conn, END_STREAM_REASON_TIMEOUT,
-                        edge_conn->cpath_layer);
+  if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT) {
+    circuit_t *tmpcirc = circuit_get_by_edge_conn(ap_conn);
+    connection_edge_end(ap_conn, END_STREAM_REASON_TIMEOUT,
+                        ap_conn->cpath_layer);
     /* Un-mark it as ending, since we're going to reuse it. */
-    ap_conn->edge_has_sent_end = 0;
+    ap_conn->_base.edge_has_sent_end = 0;
     if (tmpcirc)
-      circuit_detach_stream(tmpcirc,edge_conn);
-    ap_conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
+      circuit_detach_stream(tmpcirc,ap_conn);
+    ap_conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
-  if (circ &&
-      (circ->state != CIRCUIT_STATE_OPEN || ! CIRCUIT_IS_ORIGIN(circ))) {
+  if (circ && (circ->_base.state != CIRCUIT_STATE_OPEN)) {
     if (STATE_IS_V0(conn->_base.state))
       send_control0_error(conn, ERR_INTERNAL,
                           "Refuse to attach stream to non-open, origin circ.");
@@ -1985,8 +1976,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
                      conn);
     return 0;
   }
-  if (connection_ap_handshake_rewrite_and_attach(edge_conn,
-                               circ ? TO_ORIGIN_CIRCUIT(circ) : NULL) < 0) {
+  if (connection_ap_handshake_rewrite_and_attach(ap_conn, circ) < 0) {
     if (STATE_IS_V0(conn->_base.state))
       send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");
     else
@@ -2062,7 +2052,7 @@ static int
 handle_control_redirectstream(control_connection_t *conn, uint32_t len,
                               const char *body)
 {
-  connection_t *ap_conn = NULL;
+  edge_connection_t *ap_conn = NULL;
   uint32_t conn_id;
   char *new_addr = NULL;
   uint16_t new_port = 0;
@@ -2075,8 +2065,8 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
     conn_id = ntohl(get_uint32(body));
 
     if (!(ap_conn = connection_get_by_global_id(conn_id))
-        || ap_conn->state != CONN_TYPE_AP
-        || !TO_EDGE_CONN(ap_conn)->socks_request) {
+        || ap_conn->_base.state != CONN_TYPE_AP
+        || ap_conn->socks_request) {
       send_control0_error(conn, ERR_NO_STREAM,
                           "No AP connection found with given ID");
       return 0;
@@ -2091,7 +2081,7 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
       connection_printf_to_buf(conn,
                                "512 Missing argument to REDIRECTSTREAM\r\n");
     else if (!(ap_conn = get_stream(smartlist_get(args, 0)))
-             || !TO_EDGE_CONN(ap_conn)->socks_request) {
+             || !ap_conn->socks_request) {
       connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
                                (char*)smartlist_get(args, 0));
     } else {
@@ -2114,16 +2104,13 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
       return 0;
   }
 
-  {
-    edge_connection_t *ap = TO_EDGE_CONN(ap_conn);
-    strlcpy(ap->socks_request->address, new_addr,
-            sizeof(ap->socks_request->address));
-    if (new_port)
-      ap->socks_request->port = new_port;
-    tor_free(new_addr);
-    send_control_done(conn);
-    return 0;
-  }
+  strlcpy(ap_conn->socks_request->address, new_addr,
+          sizeof(ap_conn->socks_request->address));
+  if (new_port)
+    ap_conn->socks_request->port = new_port;
+  tor_free(new_addr);
+  send_control_done(conn);
+  return 0;
 }
 
 /** Called when we get a CLOSESTREAM command; try to close the named stream
@@ -2132,7 +2119,7 @@ static int
 handle_control_closestream(control_connection_t *conn, uint32_t len,
                            const char *body)
 {
-  connection_t *ap_conn=NULL;
+  edge_connection_t *ap_conn=NULL;
   uint8_t reason=0;
 
   if (STATE_IS_V0(conn->_base.state)) {
@@ -2146,8 +2133,8 @@ handle_control_closestream(control_connection_t *conn, uint32_t len,
     reason = *(uint8_t*)(body+4);
 
     if (!(ap_conn = connection_get_by_global_id(conn_id))
-        || ap_conn->state != CONN_TYPE_AP
-        || !TO_EDGE_CONN(ap_conn)->socks_request) {
+        || ap_conn->_base.state != CONN_TYPE_AP
+        || ap_conn->socks_request) {
       send_control0_error(conn, ERR_NO_STREAM,
                           "No AP connection found with given ID");
       return 0;
@@ -2179,7 +2166,7 @@ handle_control_closestream(control_connection_t *conn, uint32_t len,
       return 0;
   }
 
-  connection_mark_unattached_ap(TO_EDGE_CONN(ap_conn), reason);
+  connection_mark_unattached_ap(ap_conn, reason);
   send_control_done(conn);
   return 0;
 }
@@ -2190,7 +2177,7 @@ static int
 handle_control_closecircuit(control_connection_t *conn, uint32_t len,
                             const char *body)
 {
-  circuit_t *circ = NULL;
+  origin_circuit_t *circ = NULL;
   int safe = 0;
 
   if (STATE_IS_V0(conn->_base.state)) {
@@ -2234,9 +2221,8 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
       return 0;
   }
 
-  if (!safe || !CIRCUIT_IS_ORIGIN(circ) ||
-      !TO_ORIGIN_CIRCUIT(circ)->p_streams) {
-    circuit_mark_for_close(circ, END_CIRC_REASON_NONE);
+  if (!safe || !circ->p_streams) {
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NONE);
   }
 
   send_control_done(conn);
@@ -2635,7 +2621,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
     size_t path_len = strlen(path);
     msg = tor_malloc(1+4+path_len+1); /* event, circid, path, NUL. */
     msg[0] = (uint8_t) tp;
-    set_uint32(msg+1, htonl(circ->_base.global_identifier));
+    set_uint32(msg+1, htonl(circ->global_identifier));
     strlcpy(msg+5,path,path_len+1);
 
     send_control0_event(EVENT_CIRCUIT_STATUS, (uint32_t)(path_len+6), msg);
@@ -2656,7 +2642,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
       }
     send_control1_event(EVENT_CIRCUIT_STATUS,
                         "650 CIRC %lu %s %s\r\n",
-                        (unsigned long)circ->_base.global_identifier,
+                        (unsigned long)circ->global_identifier,
                         status, path);
   }
   tor_free(path);
@@ -2703,7 +2689,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
     len = strlen(buf);
     msg = tor_malloc(5+len+1);
     msg[0] = (uint8_t) tp;
-    set_uint32(msg+1, htonl(conn->_base.global_identifier));
+    set_uint32(msg+1, htonl(conn->global_identifier));
     strlcpy(msg+5, buf, len+1);
 
     send_control0_event(EVENT_STREAM_STATUS, (uint32_t)(5+len+1), msg);
@@ -2712,6 +2698,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
   if (EVENT_IS_INTERESTING1(EVENT_STREAM_STATUS)) {
     const char *status;
     circuit_t *circ;
+    origin_circuit_t *origin_circ = NULL;
     switch (tp)
       {
       case STREAM_EVENT_SENT_CONNECT: status = "SENTCONNECT"; break;
@@ -2727,10 +2714,13 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
         return 0;
       }
     circ = circuit_get_by_edge_conn(conn);
+    if (circ && CIRCUIT_IS_ORIGIN(circ))
+      origin_circ = TO_ORIGIN_CIRCUIT(circ);
     send_control1_event(EVENT_STREAM_STATUS,
                         "650 STREAM %lu %s %lu %s\r\n",
-                        (unsigned long)conn->_base.global_identifier, status,
-                        circ?(unsigned long)circ->global_identifier : 0ul,
+                        (unsigned long)conn->global_identifier, status,
+                        origin_circ?
+                            (unsigned long)origin_circ->global_identifier : 0ul,
                         buf);
     /* XXX need to specify its intended exit, etc? */
   }
