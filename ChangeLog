@@ -1,15 +1,14 @@
-Changes in version 0.1.1.23 - 2006-07-29
+Changes in version 0.1.1.23 - 2006-07-30
   o Major bugfixes:
     - Fast Tor servers, especially exit nodes, were triggering asserts
-      due to a bug in handling the list of pending DNS resolves.
-    -
+      due to a bug in handling the list of pending DNS resolves. Some
+      bugs still remain here; we're hunting them.
+    - Entry guards could crash clients by sending unexpected input.
     - More fixes on reachability testing: if you find yourself reachable,
       then don't ever make any client requests (so you stop predicting
       circuits), then hup or have your clock jump, then later your IP
       changes, you won't think circuits are working, so you won't try to
       test reachability, so you won't publish.
-    - Correctness fix when removing an existing element from a hashtable
-      using a pointer to that element.
 
   o Minor bugfixes:
     - Avoid a crash if the controller does a resetconf firewallports
