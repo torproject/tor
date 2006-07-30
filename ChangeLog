@@ -22,6 +22,29 @@ Changes in version 0.1.2.1-alpha - 2006-06-xx (in progress)
     - Add TestVia config option to the man page.
 
 
+Changes in version 0.1.1.23 - 2006-07-30
+  o Major bugfixes:
+    - Fast Tor servers, especially exit nodes, were triggering asserts
+      due to a bug in handling the list of pending DNS resolves. Some
+      bugs still remain here; we're hunting them.
+    - Entry guards could crash clients by sending unexpected input.
+    - More fixes on reachability testing: if you find yourself reachable,
+      then don't ever make any client requests (so you stop predicting
+      circuits), then hup or have your clock jump, then later your IP
+      changes, you won't think circuits are working, so you won't try to
+      test reachability, so you won't publish.
+
+  o Minor bugfixes:
+    - Avoid a crash if the controller does a resetconf firewallports
+      and then a setconf fascistfirewall=1.
+    - Avoid an integer underflow when the dir authority decides whether
+      a router is stable: we might wrongly label it stable, and compute
+      a slightly wrong median stability, when a descriptor is published
+      later than now.
+    - Fix a place where we might trigger an assert if we can't build our
+      own server descriptor yet.
+
+
 Changes in version 0.1.1.22 - 2006-07-05
   o Major bugfixes:
     - Fix a big bug that was causing servers to not find themselves
