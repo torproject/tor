@@ -266,7 +266,10 @@ purge_expired_resolves(uint32_t now)
       newest_cached_resolve = NULL; /* then make sure the list's tail knows
                                      * that too */
     removed = HT_REMOVE(cache_map, &cache_root, resolve);
-    tor_assert(removed == resolve);
+    if (removed != resolve) {
+      log_notice(LD_EXIT, "Removed is %p, resolve is %p.", removed, resolve);
+      tor_assert(removed == resolve);
+    }
     resolve->magic = 0xF0BBF0BB;
     tor_free(resolve);
   }
