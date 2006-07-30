@@ -1198,7 +1198,8 @@ typedef struct circuit_t {
 typedef struct origin_circuit_t {
   circuit_t _base;
 
-  /** Linked list of AP streams associated with this circuit. */
+  /** Linked list of AP streams (or EXIT streams if hidden service)
+   * associated with this circuit. */
   edge_connection_t *p_streams;
   /** Build state for this circuit. It includes the intended path
    * length, the chosen exit router, rendezvous information, etc.
