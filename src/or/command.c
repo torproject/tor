@@ -173,6 +173,16 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
     return;
   }
 
+  if (!server_mode(get_options())) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Received create cell (type %d) from %s:%d, but we're a client. "
+           "Sending back a destroy.",
+           (int)cell->command, conn->_base.address, conn->_base.port);
+    connection_or_send_destroy(cell->circ_id, conn,
+                               END_CIRC_REASON_TORPROTOCOL);
+    return;
+  }
+
   /* If the high bit of the circuit ID is not as expected, close the
    * circ. */
   id_is_high = cell->circ_id & (1<<15);

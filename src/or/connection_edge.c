@@ -1598,11 +1598,19 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   uint16_t port;
 
   assert_circuit_ok(circ);
-  relay_header_unpack(&rh, cell->payload);
 
   /* XXX currently we don't send an end cell back if we drop the
    * begin because it's malformed.
    */
+
+  if (!server_mode(get_options()) &&
+      circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Relay begin cell at non-server. Dropping.");
+    return 0;
+  }
+
+  relay_header_unpack(&rh, cell->payload);
 
   if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
