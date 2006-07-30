@@ -683,8 +683,13 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   char *id_digest=NULL;
 
   if (circ->n_conn) {
-    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "n_conn already set. Bug/attack. Closing.");
+    return -1;
+  }
+  if (!server_mode(get_options())) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Got an extend cell, but running as a client. Closing.");
     return -1;
   }
 
