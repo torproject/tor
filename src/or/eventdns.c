@@ -1237,29 +1237,6 @@ eventdns_nameserver_ip_add(const char *ip_as_string) {
 	return eventdns_nameserver_add(ina.s_addr);
 }
 
-/* Add multiple nameservers from a space-or-comma-separated list. */
-static int
-eventdns_nameserver_ip_add_line(const char *ips) {
-	const char *addr;
-	char *buf;
-	int r;
-	while (*ips) {
-		while (ISSPACE(*ips) || *ips == ',' || *ips == '\t')
-			++ips;
-		addr = ips;
-		while (ISDIGIT(*ips) || *ips == '.')
-			++ips;
-		buf = malloc(ips-addr+1);
-		if (!buf) return 4;
-		memcpy(buf, addr, ips-addr);
-		buf[ips-addr] = '\0';
-		r = eventdns_nameserver_ip_add(buf);
-		free(buf);
-		if (r) return r;
-	}
-	return 0;
-}
-
 // insert into the tail of the queue
 static void
 eventdns_request_insert(struct request *req, struct request **head) {
@@ -1744,9 +1721,35 @@ out1:
 }
 
 #ifdef MS_WINDOWS
+// Add multiple nameservers from a space-or-comma-separated list.
+static int
+eventdns_nameserver_ip_add_line(const char *ips) {
+	const char *addr;
+	char *buf;
+	int r;
+	while (*ips) {
+		while (ISSPACE(*ips) || *ips == ',' || *ips == '\t')
+			++ips;
+		addr = ips;
+		while (ISDIGIT(*ips) || *ips == '.')
+			++ips;
+		buf = malloc(ips-addr+1);
+		if (!buf) return 4;
+		memcpy(buf, addr, ips-addr);
+		buf[ips-addr] = '\0';
+		r = eventdns_nameserver_ip_add(buf);
+		free(buf);
+		if (r) return r;
+	}
+	return 0;
+}
+
+// Use the windows GetNetworkParams interface in iphlpapi.dll to
+// figure out what our nameservers are.
 static int
 load_nameservers_with_getnetworkparams(void)
 {
+	// Based on MSDN examples and inspection of  c-ares code.
 	FIXED_INFO *fixed;
 	HMODULE handle = 0;
 	ULONG size = sizeof(FIXED_INFO);
@@ -1798,4 +1801,70 @@ load_nameservers_with_getnetworkparams(void)
 	return status;
 }
 
+static int
+config_nameserver_from_reg_key(HKEY key, const char *subkey)
+{
+	char *buf;
+	DWORD bufsz = 0, type = 0;
+	int status = 0;
+
+	if (RegQueryValueEx(key, subkey, 0, &type, NULL, &bufsz)
+	    != ERROR_MORE_DATA)
+		return -1;
+	if (!(buf = malloc(bufsz)))
+		return -1;
+
+	if (RegQueryValueEx(key, subkey, 0, &type, (LPBYTE)buf, &bufsz)
+	    == ERROR_SUCCESS && bufsz > 1) {
+		status = eventdns_nameserver_ip_add_line(buf);
+	}
+
+	free(buf);
+	return status;
+}
+
+static int
+load_nameservers_from_registry(void)
+{
+	int found = 0;
+#define TRY(k, name) \
+	if (!found && config_nameserver_from_reg_key(k,name) == 0) {	\
+		log("Found nameservers in %s/%s",#k,name);		\
+		found = 1;						\
+	}
+
+	if (IS_NT()) {
+		HKEY nt_key = 0, interfaces_key = 0;
+
+		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
+				 KEY_READ, &nt_key) != ERROR_SUCCESS)
+			return -1;
+		RegOpenKeyEx(nt_key, "Interfaces", 0,
+			     KEY_QUERY_VALUE|KEY_ENUMERATE_SUBKEYS,
+			     &interfaces_key);
+		TRY(nt_key, NAMESERVER);
+		TRY(nt_key, DHCPNAMESERVER);
+		TRY(interfaces_key, NAMESERVER);
+		TRY(interfaces_key, DHCPNAMESERVER);
+		RegCloseKey(interfaces_key);
+		RegCloseKey(nt_key);
+	} else {
+		HKEY win_key = 0;
+		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X, 0,
+				 KEY_READ, &win_key) != ERROR_SUCCESS)
+			return -1;
+		TRY(win_key, NAMESERVER);
+		RegCloseKey(win_key);
+	}
+	return found ? 0 : -1;
+#undef TRY
+}
+
+int
+eventdns_config_windows_nameservers(void)
+{
+	if (load_nameservers_with_getnetworkparams() == 0)
+		return 0;
+	return load_nameservers_from_registry();
+}
 #endif
