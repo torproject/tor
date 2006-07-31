@@ -295,9 +295,9 @@ purge_expired_resolves(uint32_t now)
     removed = HT_REMOVE(cache_map, &cache_root, resolve);
     if (removed != resolve) {
       log_err(LD_BUG, "The expired resolve we purged didn't match any in"
-              " the cache. Tried to purge %s; instead got %s.",
-              resolve->address, removed ? removed->address : "NULL");
-
+              " the cache. Tried to purge %s (%p); instead got %s (%p.",
+              resolve->address, resolve,
+              removed ? removed->address : "NULL", remove);
     }
     tor_assert(removed == resolve);
     resolve->magic = 0xF0BBF0BB;
