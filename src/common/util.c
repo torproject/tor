@@ -337,6 +337,19 @@ tor_strisprint(const char *s)
   return 1;
 }
 
+/** Return 1 if no character in <b>s</b> is uppercase, else return 0.
+ */
+int
+tor_strisnonupper(const char *s)
+{
+  while (*s) {
+    if (! TOR_ISUPPER(*s))
+      return 0;
+    s++;
+  }
+  return 1;
+}
+
 /* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
