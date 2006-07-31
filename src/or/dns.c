@@ -782,7 +782,7 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
  * <b>exitconn</b>-\>address; tell that dns worker to begin resolving.
  */
 static int
-lauch_resolve(edge_connection_t *exitconn)
+launch_resolve(edge_connection_t *exitconn)
 {
   connection_t *dnsconn;
   unsigned char len;
