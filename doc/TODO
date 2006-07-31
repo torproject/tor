@@ -73,9 +73,11 @@ N   . Improve memory usage on tight-memory machines.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
     o Asynchronous DNS
-      . and test it
-      - Make it work on windows.
-      - make it the default on platforms where it works
+      . And test it
+      . Make it work on windows.
+        o Implement
+        - Test
+      - Make it the default on platforms where it works
 
   - Security improvements
     - Directory guards

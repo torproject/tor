@@ -73,14 +73,12 @@ typedef struct cached_resolve_t {
 #define CACHE_STATE_PENDING 0
 #define CACHE_STATE_VALID 1
 #define CACHE_STATE_FAILED 2
-  uint32_t expire; /**< Remove items from cache after this time. */
+  time_t expire; /**< Remove items from cache after this time. */
   uint32_t ttl; /**< What TTL did the nameserver tell us? */
   pending_connection_t *pending_connections;
-  struct cached_resolve_t *next;
 } cached_resolve_t;
 
 static void purge_expired_resolves(uint32_t now);
-static void dns_purge_resolve(cached_resolve_t *resolve);
 static void dns_found_answer(const char *address, uint32_t addr, char outcome,
                              uint32_t ttl);
 static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
@@ -202,6 +200,32 @@ _free_cached_resolve(cached_resolve_t *r)
   tor_free(r);
 }
 
+/** DODDOC */
+static int
+_compare_cached_resolves_by_expiry(void *_a, void *_b)
+{
+  cached_resolve_t *a = _a, *b = _b;
+  if (a->expire < b->expire)
+    return -1;
+  else if (a->expire == b->expire)
+    return 0;
+  else
+    return 1;
+}
+
+/** Linked list of resolved addresses, oldest to newest. DOCDOC*/
+static smartlist_t *cached_resolve_pqueue = NULL;
+
+static void
+set_expiry(cached_resolve_t *resolve, time_t expires)
+{
+  tor_assert(resolve && resolve->expire == 0);
+  resolve->expire = expires;
+  smartlist_pqueue_add(cached_resolve_pqueue,
+                       _compare_cached_resolves_by_expiry,
+                       resolve);
+}
+
 /** Free all storage held in the DNS cache */
 void
 dns_free_all(void)
@@ -213,11 +237,11 @@ dns_free_all(void)
     _free_cached_resolve(item);
   }
   HT_CLEAR(cache_map, &cache_root);
+  smartlist_free(cached_resolve_pqueue);
+  cached_resolve_pqueue = NULL;
 }
 
-/** Linked list of resolved addresses, oldest to newest. */
-static cached_resolve_t *oldest_cached_resolve = NULL;
-static cached_resolve_t *newest_cached_resolve = NULL;
+
 
 /** Remove every cached_resolve whose <b>expire</b> time is before <b>now</b>
  * from the cache. */
@@ -229,11 +253,16 @@ purge_expired_resolves(uint32_t now)
   edge_connection_t *pendconn;
 
   assert_cache_ok();
-  /* this is fast because the linked list
-   * oldest_cached_resolve is ordered by when they came in.
-   */
-  while (oldest_cached_resolve && (oldest_cached_resolve->expire < now)) {
-    resolve = oldest_cached_resolve;
+  if (!cached_resolve_pqueue)
+    return;
+
+  while (smartlist_len(cached_resolve_pqueue)) {
+    resolve = smartlist_get(cached_resolve_pqueue, 0);
+    if (resolve->expire > now)
+      break;
+    smartlist_pqueue_pop(cached_resolve_pqueue,
+                         _compare_cached_resolves_by_expiry);
+
     log_debug(LD_EXIT,
               "Forgetting old cached resolve (address %s, expires %lu)",
               escaped_safe_str(resolve->address),
@@ -244,6 +273,7 @@ purge_expired_resolves(uint32_t now)
                 " Forgot to cull it?", escaped_safe_str(resolve->address));
       tor_fragile_assert();
     }
+
     if (resolve->pending_connections) {
       log_debug(LD_EXIT,
                 "Closing pending connections on expiring DNS resolve!");
@@ -261,18 +291,19 @@ purge_expired_resolves(uint32_t now)
         tor_free(pend);
       }
     }
-    oldest_cached_resolve = resolve->next;
-    if (!oldest_cached_resolve) /* if there are no more, */
-      newest_cached_resolve = NULL; /* then make sure the list's tail knows
-                                     * that too */
+
     removed = HT_REMOVE(cache_map, &cache_root, resolve);
     if (removed != resolve) {
-      log_notice(LD_EXIT, "Removed is %p, resolve is %p.", removed, resolve);
-      tor_assert(removed == resolve);
+      log_err(LD_BUG, "The expired resolve we purged didn't match any in"
+              " the cache. Tried to purge %s; instead got %s.",
+              resolve->address, removed ? removed->address : "NULL");
+
     }
+    tor_assert(removed == resolve);
     resolve->magic = 0xF0BBF0BB;
     tor_free(resolve);
   }
+
   assert_cache_ok();
 }
 
@@ -314,22 +345,6 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
   connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
                                RELAY_COMMAND_RESOLVED, buf, buflen,
                                conn->cpath_layer);
-}
-
-/** Link <b>r</b> into the hash table of address-to-result mappings, and add it
- * to the linked list of resolves-by-age. */
-static void
-insert_resolve(cached_resolve_t *r)
-{
-  /* add us to the linked list of resolves */
-  if (!oldest_cached_resolve) {
-    oldest_cached_resolve = r;
-  } else {
-    newest_cached_resolve->next = r;
-  }
-  newest_cached_resolve = r;
-
-  HT_INSERT(cache_map, &cache_root, r);
 }
 
 /** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
@@ -418,7 +433,6 @@ dns_resolve(edge_connection_t *exitconn)
   resolve = tor_malloc_zero(sizeof(cached_resolve_t));
   resolve->magic = CACHED_RESOLVE_MAGIC;
   resolve->state = CACHE_STATE_PENDING;
-  resolve->expire = now + DEFAULT_DNS_TTL; /* this will get replaced. */
   strlcpy(resolve->address, exitconn->_base.address, sizeof(resolve->address));
 
   /* add us to the pending list */
@@ -427,7 +441,10 @@ dns_resolve(edge_connection_t *exitconn)
   resolve->pending_connections = pending_connection;
   exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
 
-  insert_resolve(resolve);
+  /* Add this resolve to the cache. It has no expiry yet, so it doesn't
+   * go into the priority queue. */
+  HT_INSERT(cache_map, &cache_root, resolve);
+
   log_debug(LD_EXIT,"Assigning question %s to dnsworker.",
             escaped_safe_str(exitconn->_base.address));
   assert_cache_ok();
@@ -528,7 +545,7 @@ dns_cancel_pending_resolve(char *address)
 {
   pending_connection_t *pend;
   cached_resolve_t search;
-  cached_resolve_t *resolve;
+  cached_resolve_t *resolve, *tmp;
   edge_connection_t *pendconn;
   circuit_t *circ;
 
@@ -550,6 +567,7 @@ dns_cancel_pending_resolve(char *address)
     return;
   }
   tor_assert(resolve->pending_connections);
+  tor_assert(! resolve->expire);
 
   /* mark all pending connections to fail */
   log_debug(LD_EXIT,
@@ -573,37 +591,9 @@ dns_cancel_pending_resolve(char *address)
     tor_free(pend);
   }
 
-  dns_purge_resolve(resolve);
-}
-
-/** Remove <b>resolve</b> from the cache.
- */
-static void
-dns_purge_resolve(cached_resolve_t *resolve)
-{
-  cached_resolve_t *tmp;
-
-  /* remove resolve from the linked list */
-  if (resolve == oldest_cached_resolve) {
-    oldest_cached_resolve = resolve->next;
-    if (oldest_cached_resolve == NULL)
-      newest_cached_resolve = NULL;
-  } else {
-    /* FFFF make it a doubly linked list if this becomes too slow */
-    for (tmp=oldest_cached_resolve; tmp && tmp->next != resolve; tmp=tmp->next)
-      ;
-    tor_assert(tmp); /* it's got to be in the list, or we screwed up somewhere
-                      * else */
-    tmp->next = resolve->next; /* unlink it */
-
-    if (newest_cached_resolve == resolve)
-      newest_cached_resolve = tmp;
-  }
-
-  /* remove resolve from the map */
   tmp = HT_REMOVE(cache_map, &cache_root, resolve);
   tor_assert(tmp == resolve);
-  resolve->magic = 0xAAAAAAAA;
+  resolve->magic = 0xABABABAB;
   tor_free(resolve);
 }
 
@@ -638,10 +628,10 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
       CACHE_STATE_VALID : CACHE_STATE_FAILED;
     strlcpy(resolve->address, address, sizeof(resolve->address));
     resolve->addr = addr;
-    resolve->expire = time(NULL) + dns_get_expiry_ttl(ttl);
     resolve->ttl = ttl;
     assert_resolve_ok(resolve);
-    insert_resolve(resolve);
+    HT_INSERT(cache_map, &cache_root, resolve);
+    set_expiry(resolve, time(NULL) + dns_get_expiry_ttl(ttl));
     return;
   }
   assert_resolve_ok(resolve);
@@ -661,7 +651,6 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
   /* tor_assert(resolve->state == CACHE_STATE_PENDING); */
 
   resolve->addr = addr;
-  resolve->expire = time(NULL) + dns_get_expiry_ttl(ttl);
   resolve->ttl = ttl;
   if (outcome == DNS_RESOLVE_SUCCEEDED)
     resolve->state = CACHE_STATE_VALID;
@@ -724,7 +713,12 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
   assert_cache_ok();
 
   if (outcome == DNS_RESOLVE_FAILED_TRANSIENT) { /* remove from cache */
-    dns_purge_resolve(resolve);
+    cached_resolve_t *tmp = HT_REMOVE(cache_map, &cache_root, resolve);
+    tor_assert(tmp == resolve);
+    resolve->magic = 0xAAAAAAAA;
+    tor_free(resolve);
+  } else {
+    set_expiry(resolve, time(NULL) + dns_get_expiry_ttl(ttl));
   }
 
   assert_cache_ok();
@@ -1216,7 +1210,6 @@ assert_resolve_ok(cached_resolve_t *resolve)
   tor_assert(resolve);
   tor_assert(resolve->magic == CACHED_RESOLVE_MAGIC);
   tor_assert(strlen(resolve->address) < MAX_ADDRESSLEN);
-  tor_assert(! resolve->next || resolve->next->magic == CACHED_RESOLVE_MAGIC);
 }
 
 static void
