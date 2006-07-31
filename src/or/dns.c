@@ -226,6 +226,8 @@ static void
 set_expiry(cached_resolve_t *resolve, time_t expires)
 {
   tor_assert(resolve && resolve->expire == 0);
+  if (!cached_resolve_pqueue)
+    cached_resolve_pqueue = smartlist_create();
   resolve->expire = expires;
   smartlist_pqueue_add(cached_resolve_pqueue,
                        _compare_cached_resolves_by_expiry,
@@ -1241,8 +1243,14 @@ assert_resolve_ok(cached_resolve_t *resolve)
   tor_assert(resolve);
   tor_assert(resolve->magic == CACHED_RESOLVE_MAGIC);
   tor_assert(strlen(resolve->address) < MAX_ADDRESSLEN);
+  tor_assert(tor_strisnonupper(resolve->address));
   if (resolve->state != CACHE_STATE_PENDING) {
     tor_assert(!resolve->pending_connections);
+  }
+  if (resolve->state == CACHE_STATE_PENDING ||
+      resolve->state == CACHE_STATE_DONE) {
+    tor_assert(!resolve->ttl);
+    tor_assert(!resolve->addr);
   }
 }
 
@@ -1260,5 +1268,10 @@ assert_cache_ok(void)
     assert_resolve_ok(*resolve);
     tor_assert((*resolve)->state != CACHE_STATE_DONE);
   }
+  if (!cached_resolve_pqueue)
+    return;
+
+  smartlist_pqueue_assert_ok(cached_resolve_pqueue,
+                             _compare_cached_resolves_by_expiry);
 }
 
