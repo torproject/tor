@@ -134,7 +134,8 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   prefix##iter_t *prefix##iter_next(maptype *map, prefix##iter_t *iter); \
   prefix##iter_t *prefix##iter_next_rmv(maptype *map, prefix##iter_t *iter); \
   void prefix##iter_get(prefix##iter_t *iter, keytype *keyp, void **valp); \
-  int prefix##iter_done(prefix##iter_t *iter);
+  int prefix##iter_done(prefix##iter_t *iter);                          \
+  void prefix##assert_ok(maptype *map);
 
 /* Map from const char * to void *. Implemented with a hash table. */
 DECLARE_MAP_FNS(strmap_t, const char *, strmap_);

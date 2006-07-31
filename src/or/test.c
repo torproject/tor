@@ -1105,8 +1105,10 @@ test_strmap(void)
   test_eq_ptr(strmap_get(map,"K1"), (void*)100);
   test_eq_ptr(strmap_get(map,"K2"), (void*)101);
   test_eq_ptr(strmap_get(map,"K-not-there"), NULL);
+  strmap_assert_ok(map);
 
   v = strmap_remove(map,"K2");
+  strmap_assert_ok(map);
   test_eq_ptr(v, (void*)101);
   test_eq_ptr(strmap_get(map,"K2"), NULL);
   test_eq_ptr(strmap_remove(map,"K2"), NULL);
@@ -1114,8 +1116,10 @@ test_strmap(void)
   strmap_set(map, "K2", (void*)101);
   strmap_set(map, "K3", (void*)102);
   strmap_set(map, "K4", (void*)103);
+  strmap_assert_ok(map);
   strmap_set(map, "K5", (void*)104);
   strmap_set(map, "K6", (void*)105);
+  strmap_assert_ok(map);
 
 #if 0
   iter = strmap_iter_init(map);
@@ -1142,6 +1146,7 @@ test_strmap(void)
   test_eq_ptr(strmap_get(map, "K5"), (void*)10816);
 #endif
 
+  strmap_assert_ok(map);
   /* Clean up after ourselves. */
   strmap_free(map, NULL);
 
@@ -1149,9 +1154,11 @@ test_strmap(void)
   map = strmap_new();
   strmap_set_lc(map,"Ab.C", (void*)1);
   test_eq_ptr(strmap_get(map,"ab.c"), (void*)1);
+  strmap_assert_ok(map);
   test_eq_ptr(strmap_get_lc(map,"AB.C"), (void*)1);
   test_eq_ptr(strmap_get(map,"AB.C"), NULL);
   test_eq_ptr(strmap_remove_lc(map,"aB.C"), (void*)1);
+  strmap_assert_ok(map);
   test_eq_ptr(strmap_get_lc(map,"AB.C"), NULL);
   strmap_free(map,NULL);
 }

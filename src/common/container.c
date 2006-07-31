@@ -965,6 +965,17 @@ digestmap_free(digestmap_t *map, void (*free_val)(void*))
   tor_free(map);
 }
 
+void
+strmap_assert_ok(strmap_t *map)
+{
+  tor_assert(!_strmap_impl_HT_REP_IS_BAD(&map->head));
+}
+void
+digestmap_assert_ok(digestmap_t *map)
+{
+  tor_assert(!_digestmap_impl_HT_REP_IS_BAD(&map->head));
+}
+
 /** Return true iff <b>map</b> has no entries. */
 int
 strmap_isempty(strmap_t *map)
