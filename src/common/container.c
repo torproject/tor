@@ -461,6 +461,87 @@ smartlist_sort_strings(smartlist_t *sl)
   smartlist_sort(sl, _compare_string_ptrs);
 }
 
+#define LEFT_CHILD(i)  ( ((i)+1)*2 - 1)
+#define RIGHT_CHILD(i) ( ((i)+1)*2 )
+#define PARENT(i)      ( ((i)+1)/2 - 1)
+
+static INLINE void
+smartlist_heapify(smartlist_t *sl,
+                  int (*compare)(const void *a, const void *b),
+                  int idx)
+{
+  while (1) {
+    int left_idx = LEFT_CHILD(idx);
+    int best_idx;
+
+    if (left_idx >= sl->num_used)
+      return;
+    if (compare(sl->list[idx],sl->list[left_idx]) < 0)
+      best_idx = idx;
+    else
+      best_idx = left_idx;
+    if (left_idx+1 < sl->num_used &&
+        compare(sl->list[left_idx+1],sl->list[best_idx]) < 0)
+      best_idx = left_idx + 1;
+
+    if (best_idx == idx) {
+      return;
+    } else {
+      void *tmp = sl->list[idx];
+      sl->list[idx] = sl->list[best_idx];
+      sl->list[best_idx] = tmp;
+
+      idx = best_idx;
+    }
+  }
+}
+
+void
+smartlist_pqueue_add(smartlist_t *sl,
+                     int (*compare)(const void *a, const void *b),
+                     void *item)
+{
+  int idx;
+  smartlist_add(sl,item);
+
+  for (idx = sl->num_used - 1; idx; ) {
+    int parent = PARENT(idx);
+    if (compare(sl->list[idx], sl->list[parent]) < 0) {
+      void *tmp = sl->list[parent];
+      sl->list[parent] = sl->list[idx];
+      sl->list[idx] = tmp;
+      idx = parent;
+    } else {
+      return;
+    }
+  }
+}
+
+void *
+smartlist_pqueue_pop(smartlist_t *sl,
+                     int (*compare)(const void *a, const void *b))
+{
+  void *top;
+  tor_assert(sl->num_used);
+
+  top = sl->list[0];
+  if (--sl->num_used) {
+    sl->list[0] = sl->list[sl->num_used];
+    smartlist_heapify(sl, compare, 0);
+  }
+  return top;
+}
+
+void
+smartlist_pqueue_assert_ok(smartlist_t *sl,
+                           int (*compare)(const void *a, const void *b))
+{
+  int i;
+  for (i = sl->num_used - 1; i > 0; --i) {
+    tor_assert(compare(sl->list[PARENT(i)], sl->list[i]) <= 0);
+  }
+}
+
 /** Helper: compare two DIGEST_LEN digests. */
 static int
 _compare_digests(const void **_a, const void **_b)

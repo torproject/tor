@@ -38,6 +38,7 @@ int smartlist_string_num_isin(const smartlist_t *sl, int num);
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
+
 /* smartlist_choose() is defined in crypto.[ch] */
 #ifdef DEBUG_SMARTLIST
 /** Return the number of items in sl.
@@ -75,6 +76,14 @@ void smartlist_sort_strings(smartlist_t *sl);
 void smartlist_sort_digests(smartlist_t *sl);
 void *smartlist_bsearch(smartlist_t *sl, const void *key,
                         int (*compare)(const void *key, const void **member));
+
+void smartlist_pqueue_add(smartlist_t *sl,
+                          int (*compare)(const void *a, const void *b),
+                          void *item);
+void *smartlist_pqueue_pop(smartlist_t *sl,
+                           int (*compare)(const void *a, const void *b));
+void smartlist_pqueue_assert_ok(smartlist_t *sl,
+                                int (*compare)(const void *a, const void *b));
 
 #define SPLIT_SKIP_SPACE   0x01
 #define SPLIT_IGNORE_BLANK 0x02

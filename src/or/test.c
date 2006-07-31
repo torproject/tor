@@ -921,6 +921,66 @@ test_util(void)
   smartlist_free(sl);
 }
 
+static int
+_compare_strings_for_pqueue(const void *s1, const void *s2)
+{
+  return strcmp((const char*)s1, (const char*)s2);
+}
+
+static void
+test_pqueue(void)
+{
+  smartlist_t *sl;
+  int (*cmp)(const void *, const void*);
+#define OK() smartlist_pqueue_assert_ok(sl, cmp)
+
+  cmp = _compare_strings_for_pqueue;
+
+  sl = smartlist_create();
+  smartlist_pqueue_add(sl, cmp, "cows");
+  smartlist_pqueue_add(sl, cmp, "zebras");
+  smartlist_pqueue_add(sl, cmp, "fish");
+  smartlist_pqueue_add(sl, cmp, "frogs");
+  smartlist_pqueue_add(sl, cmp, "apples");
+  smartlist_pqueue_add(sl, cmp, "squid");//
+  smartlist_pqueue_add(sl, cmp, "daschunds");
+  smartlist_pqueue_add(sl, cmp, "eggplants");
+  smartlist_pqueue_add(sl, cmp, "weissbier");//
+  smartlist_pqueue_add(sl, cmp, "lobsters");
+  smartlist_pqueue_add(sl, cmp, "roquefort");//
+
+  OK();
+
+  test_eq(smartlist_len(sl), 11);
+  test_streq(smartlist_get(sl, 0), "apples");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "apples");
+  test_eq(smartlist_len(sl), 10);
+  OK();
+  test_streq(smartlist_pqueue_pop(sl, cmp), "cows");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "daschunds");
+  smartlist_pqueue_add(sl, cmp, "chinchillas");
+  OK();
+  smartlist_pqueue_add(sl, cmp, "fireflies");
+  OK();
+  test_streq(smartlist_pqueue_pop(sl, cmp), "chinchillas");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "eggplants");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "fireflies");
+  OK();
+  test_streq(smartlist_pqueue_pop(sl, cmp), "fish");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "frogs");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "lobsters");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "roquefort");
+  OK();
+  test_eq(smartlist_len(sl), 3);
+  test_streq(smartlist_pqueue_pop(sl, cmp), "squid");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "weissbier");
+  test_streq(smartlist_pqueue_pop(sl, cmp), "zebras");
+  test_eq(smartlist_len(sl), 0);
+  OK();
+#undef OK
+  smartlist_free(sl);
+}
+
 static void
 test_gzip(void)
 {
@@ -1675,6 +1735,7 @@ main(int c, char**v)
   test_util();
   test_strmap();
   test_control_formats();
+  test_pqueue();
   puts("\n========================= Onion Skins =====================");
   test_onion();
   test_onion_handshake();
