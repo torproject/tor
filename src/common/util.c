@@ -343,7 +343,7 @@ int
 tor_strisnonupper(const char *s)
 {
   while (*s) {
-    if (! TOR_ISUPPER(*s))
+    if (TOR_ISUPPER(*s))
       return 0;
     s++;
   }
