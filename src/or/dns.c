@@ -36,7 +36,8 @@ const char dns_c_id[] =
 /** If more than this many processes are idle, shut down the extras. */
 #define MAX_IDLE_DNSWORKERS 10
 
-/** DOCDCOC */
+/** How long will we wait for an answer from the resolver before we decide
+ * that the resolver is wedged? */
 #define RESOLVE_MAX_TIMEOUT 300
 
 /** Possible outcomes from hostname lookup: permanent failure,
@@ -62,10 +63,23 @@ typedef struct pending_connection_t {
 
 #define CACHED_RESOLVE_MAGIC 0x1234F00D
 
-/* DOCDOC */
+/* Possible states for a cached resolve_t */
+/** We are waiting for the resolver system to tell us an answer here.
+ * When we get one, or when we time out, the state of this cached_resolve_t
+ * will become "DONE" and we'll possibly add a CACHED_VALID or a CACHED_FAILED
+ * entry. This cached_resolve_t will be in the hash table so that we will
+ * know not to launch more requests for this addr, but rather to add more
+ * connections to the pending list for the addr. */
 #define CACHE_STATE_PENDING 0
+/** This used to be a pending cached_resolve_t, and we got an answer for it.
+ * Now we're waiting for this cached_resolve_t to expire.  This should
+ * have no pending connections, and should not appear in the hash table. */
 #define CACHE_STATE_DONE 1
+/** We are caching an answer for this address. This should have no pending
+ * connections, and should appear in the hash table. */
 #define CACHE_STATE_CACHED_VALID 2
+/** We are caching a failure for this address. This should have no pending
+ * connections, and should appear in the hash table */
 #define CACHE_STATE_CACHED_FAILED 3
 
 /** A DNS request: possibly completed, possibly pending; cached_resolve
@@ -88,7 +102,7 @@ static void purge_expired_resolves(uint32_t now);
 static void dns_found_answer(const char *address, uint32_t addr, char outcome,
                              uint32_t ttl);
 static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
-static int assign_to_dnsworker(edge_connection_t *exitconn);
+static int launch_resolve(edge_connection_t *exitconn);
 #ifndef USE_EVENTDNS
 static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
@@ -206,7 +220,9 @@ _free_cached_resolve(cached_resolve_t *r)
   tor_free(r);
 }
 
-/** DODDOC */
+/** Compare two cached_resolve_t pointers by expiry time, and return
+ * less-than-zero, zero, or greater-than-zero as appropriate. Used for
+ * the priority queue implementation. */
 static int
 _compare_cached_resolves_by_expiry(const void *_a, const void *_b)
 {
@@ -219,9 +235,12 @@ _compare_cached_resolves_by_expiry(const void *_a, const void *_b)
     return 1;
 }
 
-/** Linked list of resolved addresses, oldest to newest. DOCDOC*/
+/** Priority queue of cached_resolve_t objects to let us know when they
+ * will expire. */
 static smartlist_t *cached_resolve_pqueue = NULL;
 
+/** Set an expiry time for a cached_resolve_t, and add it to the expiry
+ * priority queue */
 static void
 set_expiry(cached_resolve_t *resolve, time_t expires)
 {
@@ -318,6 +337,7 @@ purge_expired_resolves(uint32_t now)
       resolve->magic = 0xF0BBF0BB;
       tor_free(resolve);
     } else {
+      /* This should be in state DONE. Make sure it's not in the cache. */
       cached_resolve_t *tmp = HT_FIND(cache_map, &cache_root, resolve);
       tor_assert(tmp != resolve);
     }
@@ -467,10 +487,10 @@ dns_resolve(edge_connection_t *exitconn)
   HT_INSERT(cache_map, &cache_root, resolve);
   set_expiry(resolve, now + RESOLVE_MAX_TIMEOUT);
 
-  log_debug(LD_EXIT,"Assigning question %s to dnsworker.",
+  log_debug(LD_EXIT,"Launching %s.",
             escaped_safe_str(exitconn->_base.address));
   assert_cache_ok();
-  return assign_to_dnsworker(exitconn);
+  return launch_resolve(exitconn);
 }
 
 /** Log an error and abort if conn is waiting for a DNS resolve.
@@ -762,7 +782,7 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
  * <b>exitconn</b>-\>address; tell that dns worker to begin resolving.
  */
 static int
-assign_to_dnsworker(edge_connection_t *exitconn)
+lauch_resolve(edge_connection_t *exitconn)
 {
   connection_t *dnsconn;
   unsigned char len;
@@ -1211,7 +1231,7 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
 }
 
 static int
-assign_to_dnsworker(edge_connection_t *exitconn)
+launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
   int r;
