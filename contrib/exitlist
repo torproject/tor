@@ -19,6 +19,10 @@
  If you're using Tor 0.1.1.18-rc or later, you should look at
  the "FetchUselessDescriptors" config option in the man page.
 
+ Note that this script won't give you a perfect list of IP addresses
+ that might connect to you using Tor, since some Tor servers might exit
+ from other addresses than the one they publish.
+
 """
 
 #
