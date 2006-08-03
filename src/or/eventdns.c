@@ -1186,8 +1186,8 @@ eventdns_nameserver_add(unsigned long int address) {
 	if (ns->socket < 0) { err = 1; goto out1; }
 #ifdef MS_WINDOWS
         {
-		int nonblocking = 1;
-		ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
+		u_long nonblocking = 1;
+		ioctlsocket(ns->socket, FIONBIO, &nonblocking);
 	}
 #else
         fcntl(ns->socket, F_SETFL, O_NONBLOCK);
@@ -1223,7 +1223,11 @@ eventdns_nameserver_add(unsigned long int address) {
 	return 0;
 
 out2:
+#ifdef MS_WINDOWS
+	closesocket(ns->socket);
+#else
 	close(ns->socket);
+#endif
 out1:
 	free(ns);
 	return err;
