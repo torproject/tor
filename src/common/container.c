@@ -50,6 +50,7 @@ smartlist_create(void)
 void
 smartlist_free(smartlist_t *sl)
 {
+  tor_assert(sl != NULL);
   tor_free(sl->list);
   tor_free(sl);
 }
