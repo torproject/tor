@@ -91,8 +91,7 @@ typedef struct cached_resolve_t {
   uint32_t magic;
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
   uint32_t addr; /**< IPv4 addr for <b>address</b>. */
-  uint8_t state; /**< 0 is pending; 1 means answer is valid; 2 means resolve
-                  * failed. */
+  uint8_t state; /**< Is this cached entry pending/done/valid/failed? */
   time_t expire; /**< Remove items from cache after this time. */
   uint32_t ttl; /**< What TTL did the nameserver tell us? */
   pending_connection_t *pending_connections;
@@ -264,7 +263,8 @@ dns_free_all(void)
     _free_cached_resolve(item);
   }
   HT_CLEAR(cache_map, &cache_root);
-  smartlist_free(cached_resolve_pqueue);
+  if (cached_resolve_pqueue)
+    smartlist_free(cached_resolve_pqueue);
   cached_resolve_pqueue = NULL;
 }
 
