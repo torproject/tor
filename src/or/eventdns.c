@@ -8,6 +8,8 @@
  *
  * TODO:
  *   - Support IPv6 and PTR records.
+ *   - Replace all externally visible magic numbers with #defined constants.
+ *   - Write doccumentation for APIs of all external functions.
  */
 
 /* Async DNS Library
@@ -158,6 +160,26 @@
  * void eventdns_search_ndots_set(int ndots)
  *   Set the number of dots which, when found in a name, causes
  *   the first query to be without any search domain.
+ *
+ * int eventdns_count_nameservers(void)
+ *   Return the number of configured nameservers (not necessarily the
+ *   number of running nameservers).  This is useful for double-checking
+ *   whether our calls to the various nameserver configuration functions
+ *   have been successful.
+ *
+ * int eventdns_clear_nameservers_and_suspend(void)
+ *   Remove all currently configured nameservers, and suspend all pending
+ *   resolves.  Resolves will not necessarily be re-attempted until
+ *   eventdns_resume() is called.
+ *
+ * int eventdns_resume(void)
+ *   Re-attempt resolves left in limbo after an earlier call to
+ *   eventdns_clear_nameservers_and_suspend().
+ *
+ * int eventdns_config_windows_nameservers(void)
+ *   Attempt to configure a set of nameservers based on platform settings on
+ *   a win32 host.  Preferentially tries to use GetNetworkParams; if that fails,
+ *   looks in the registry.  Returns 0 on success, nonzero on failure.
  *
  * int eventdns_resolv_conf_parse(int flags, const char *filename)
  *   Parse a resolv.conf like file from the given filename.
@@ -488,14 +510,18 @@ static void
 nameserver_probe_failed(struct nameserver *const ns) {
 	const struct timeval * timeout;
 	assert(ns->state == 0);
-	evtimer_del(&ns->timeout_event);
+	(void) evtimer_del(&ns->timeout_event);
 	timeout =
 	  &global_nameserver_timeouts[MIN(ns->failed_times,
 					  global_nameserver_timeouts_length - 1)];
 	ns->failed_times++;
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
-	evtimer_add(&ns->timeout_event, (struct timeval *) timeout);
+	if (evtimer_add(&ns->timeout_event, (struct timeval *) timeout) < 0) {
+          log("Error from libevent when adding timer event for %s",
+              debug_ntoa(ns->address));
+          // ???? Do more?
+        }
 }
 
 // called when a nameserver has been deemed to have failed. For example, too
@@ -518,7 +544,11 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	ns->failed_times = 1;
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
-	evtimer_add(&ns->timeout_event, (struct timeval *) &global_nameserver_timeouts[0]);
+	if (evtimer_add(&ns->timeout_event, (struct timeval *) &global_nameserver_timeouts[0]) < 0) {
+          log("Error from libevent when adding timer event for %s",
+              debug_ntoa(ns->address));
+          // ???? Do more?
+        }
 
 	// walk the list of inflight requests to see if any can be reassigned to
 	// a different server. Requests in the waiting queue don't have a
@@ -914,10 +944,14 @@ nameserver_write_waiting(struct nameserver *ns, char waiting) {
 	if (ns->write_waiting == waiting) return;
 
 	ns->write_waiting = waiting;
-	event_del(&ns->event);
+	(void) event_del(&ns->event);
 	event_set(&ns->event, ns->socket, EV_READ | (waiting ? EV_WRITE : 0) | EV_PERSIST,
 			nameserver_ready_callback, ns);
-	event_add(&ns->event, NULL);
+	if (event_add(&ns->event, NULL) < 0) {
+          log("Error from libevent when adding event for %s",
+              debug_ntoa(ns->address));
+          // ???? Do more?
+        }
 }
 
 // a callback function. Called by libevent when the kernel says that
@@ -1046,7 +1080,7 @@ eventdns_request_timeout_callback(int fd, short events, void *arg) {
 		nameserver_failed(req->ns, "request timed out.");
 	}
 
-	evtimer_del(&req->timeout_event);
+	(void) evtimer_del(&req->timeout_event);
 	if (req->tx_count >= global_max_retransmits) {
 		// this request has failed
 		req->user_callback(DNS_ERR_TIMEOUT, 0, 0, 0, NULL, req->user_pointer);
@@ -1114,7 +1148,11 @@ eventdns_request_transmit(struct request *req) {
 		// all ok
 		log("Setting timeout for request %lx", (unsigned long) req);
 		evtimer_set(&req->timeout_event, eventdns_request_timeout_callback, req);
-		evtimer_add(&req->timeout_event, &global_timeout);
+		if (evtimer_add(&req->timeout_event, &global_timeout) < 0) {
+                  log("Error from libevent when adding timer for request %lx",
+                      (unsigned long) req);
+                  // ???? Do more?
+                }
 		req->tx_count++;
 		req->transmit_me = 0;
 		return retcode;
@@ -1200,8 +1238,8 @@ eventdns_clear_nameservers_and_suspend(void)
 		return 0;
 	while (1) {
 		struct nameserver *next = server->next;
-		event_del(&server->event);
-		evtimer_del(&server->timeout_event);
+		(void) event_del(&server->event);
+		(void) evtimer_del(&server->timeout_event);
 		if (server->socket >= 0)
 			CLOSE_SOCKET(server->socket);
 		free(server);
@@ -1210,23 +1248,31 @@ eventdns_clear_nameservers_and_suspend(void)
 		server = next;
 	}
 	server_head = NULL;
+	global_good_nameservers = 0;
 
 	while (req) {
 		struct request *next = req->next;
-		req->next = req->prev = NULL;
 		req->tx_count = req->reissue_count = 0;
 		req->ns = NULL;
 		// ???? What to do about searches?
-		evtimer_del(&req->timeout_event);
+		(void) evtimer_del(&req->timeout_event);
 		req->trans_id = 0;
 		req->transmit_me = 0;
 
+		global_requests_waiting++;
 		eventdns_request_insert(req, &req_waiting_head);
+		/* We want to insert these suspended elements at the front of
+		 * the waiting queue, since they were pending before any of
+		 * the waiting entries were added.  This is a circular list,
+		 * so we can just shift the start back by one.*/
+		req_waiting_head = req_waiting_head->prev;
+
 		if (next == req_started_at)
 			break;
 		req = next;
 	}
 	req_head = NULL;
+	global_requests_inflight = 0;
 
 	return 0;
 }
@@ -1282,7 +1328,10 @@ eventdns_nameserver_add(unsigned long int address) {
 	ns->address = address;
 	ns->state = 1;
 	event_set(&ns->event, ns->socket, EV_READ | EV_PERSIST, nameserver_ready_callback, ns);
-	event_add(&ns->event, NULL);
+	if (event_add(&ns->event, NULL) < 0) {
+          err = 2;
+          goto out2;
+        }
 
 	log("Added nameserver %s", debug_ntoa(address));
 
