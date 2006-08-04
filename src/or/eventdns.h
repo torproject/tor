@@ -52,6 +52,9 @@ int eventdns_nameserver_add(unsigned long int address);
 int eventdns_nameserver_ip_add(const char *ip_as_string);
 int eventdns_resolve(const char *name, int flags, eventdns_callback_type callback, void *ptr);
 int eventdns_resolv_conf_parse(int flags, const char *);
+#ifdef MS_WINDOWS
+int eventdns_config_windows_nameservers(void);
+#endif
 void eventdns_search_clear(void);
 void eventdns_search_add(const char *domain);
 void eventdns_search_ndots_set(const int ndots);

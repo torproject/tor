@@ -7,17 +7,15 @@ const char dns_c_id[] =
 
 /**
  * \file dns.c
- * \brief Implements a farm of 'DNS worker' threads or processes to
- * perform DNS lookups for onion routers and cache the results.
- * [This needs to be done in the background because of the lack of a
- * good, ubiquitous asynchronous DNS implementation.]
+ * \brief Implements a local cache for DNS results for Tor servers.
+ * We provide two asynchrounous backend implementations:
+ *   1) A farm of 'DNS worker' threads or processes to perform DNS lookups for
+ *      onion routers and cache the results.
+ *   2) A wrapper around Adam Langley's eventdns.c code, to send requests
+ *      to the nameservers asynchronously.
+ * (We can't just use gethostbyname() and friends because we really need to
+ * be nonblocking.)
  **/
-
-/* See
- * http://elvin.dstc.com/ListArchive/elvin-dev/archive/2001/09/msg00027.html
- * for some approaches to asynchronous dns. We will want to switch once one of
- * them becomes more commonly available.
- */
 
 #include "or.h"
 #include "../common/ht.h"
@@ -166,19 +164,23 @@ dns_init(void)
     or_options_t *options = get_options();
     eventdns_set_log_fn(eventdns_log_cb);
     if (options->Nameservers && smartlist_len(options->Nameservers)) {
+      log_info(LD_EXIT, "Configuring nameservers from Tor configuration");
       SMARTLIST_FOREACH(options->Nameservers, const char *, ip,
         {
           struct in_addr in;
-          log_info(LD_EXIT, "Parsing /etc/resolv.conf");
           if (tor_inet_aton(ip, &in)) {
             log_info(LD_EXIT, "Adding nameserver '%s'", ip);
             eventdns_nameserver_add(in.s_addr);
           }
         });
     } else {
+#ifdef MS_WINDOWS
+      eventdns_config_windows_nameservers();
+#else
       log_info(LD_EXIT, "Parsing /etc/resolv.conf");
       eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
                                  "/etc/resolv.conf");
+#endif
     }
   }
 #endif

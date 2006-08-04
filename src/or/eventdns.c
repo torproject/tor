@@ -1,10 +1,14 @@
 /* $Id$ */
 
-// Modified from agl's original; see CVS for more info.
-// Try to keep this re-mergeable by Adam.  Don't make it depend on Tor.
-// TODO:
-//   - Learn about nameservers on win32.
-//   - Support AAAA (?), A6, and PTR records.
+/* The original version of this module was written by Adam Langley; for
+ * a history of modifications, check out the subversion logs.
+ *
+ * When editiing this module, try to keep it re-mergeable by Adam.  Don't
+ * reformat the whitespace, add Tor dependencies, or so on.
+ *
+ * TODO:
+ *   - Support IPv6 and PTR records.
+ */
 
 /* Async DNS Library
  * Adam Langley <agl@imperialviolet.org>
