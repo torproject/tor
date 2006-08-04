@@ -169,18 +169,20 @@ tor_mmap_file(const char *filename, const char **data, size_t *size)
 {
   win_mmap_t *res = tor_malloc_zero(res);
   res->mmap_handle = res->file_handle = INVALID_HANDLE_VALUE;
-  /* What's this about tags? */
 
-  /* Open the file. */
-  res->file_handle = XXXXX;
+  res->file_handle = CreateFileForMapping(filename,
+                                          GENERIC_READ,
+                                          0, NULL,
+                                          OPEN_EXISTING,
+                                          FILE_ATTRIBUTE_NORMAL, 0);
   res->size = GetFileSize(res->file_handle, NULL);
 
   res->mmap_handle = CreateFileMapping(res->file_handle,
                                        NULL,
                                        PAGE_READONLY,
-                                       0,
-                                       size,
-                                       tagname);
+                                       (size >> 32),
+                                       (size & 0xfffffffful),
+                                       NULL);
   if (res->mmap_handle != INVALID_HANDLE_VALUE)
     goto err;
   res->data = (char*) MapViewOfFile(res->mmap_handle,
