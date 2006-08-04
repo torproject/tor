@@ -1354,7 +1354,6 @@ eventdns_nameserver_add(unsigned long int address) {
 
 out2:
 	CLOSE_SOCKET(ns->socket);
-#endif
 out1:
 	free(ns);
 	log("Unable to add nameserver %s: error %d", debug_ntoa(address), err);
