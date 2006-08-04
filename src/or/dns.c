@@ -160,8 +160,10 @@ dns_init(void)
 {
   init_cache_map();
   dnsworkers_rotate();
+#ifdef USE_EVENTDNS
   if (server_mode(get_options()))
     configure_nameservers();
+#endif
 }
 
 uint32_t
