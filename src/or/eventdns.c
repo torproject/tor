@@ -393,9 +393,11 @@ error_is_eagain(int err)
 {
 	return err == EAGAIN || err == WSAEWOULDBLOCK;
 }
+#define CLOSE_SOCKET(x) closesocket(x)
 #else
 #define last_error(sock) (errno)
 #define error_is_eagain(err) ((err) == EAGAIN)
+#define CLOSE_SOCKET(x) close(x)
 #endif
 
 #define ISSPACE(c) isspace((int)(unsigned char)(c))
@@ -1167,6 +1169,72 @@ eventdns_transmit(void) {
 
 // exported function
 int
+eventdns_count_nameservers(void)
+{
+	const struct nameserver *server = server_head;
+	int n = 0;
+	if (!server)
+		return 0;
+	do {
+		++n;
+		server = server->next;
+	} while (server != server_head);
+	return n;
+}
+
+// exported function
+int
+eventdns_clear_nameservers_and_suspend(void)
+{
+	struct nameserver *server = server_head, *started_at = server_head;
+	struct request *req = req_head, *req_started_at = req_head;
+
+	if (!server)
+		return 0;
+	while (1) {
+		struct nameserver *next = server->next;
+		event_del(&server->event);
+		evtimer_del(&server->timeout_event);
+		if (server->socket >= 0)
+			CLOSE_SOCKET(server->socket);
+		free(server);
+		if (next == started_at)
+			break;
+		server = next;
+	}
+	server_head = NULL;
+
+	while (req) {
+		struct request *next = req->next;
+		req->next = req->prev = NULL;
+		req->tx_count = req->reissue_count = 0;
+		req->ns = NULL;
+		// ???? What to do about searches?
+		evtimer_del(&req->timeout_event);
+		req->trans_id = 0;
+		req->transmit_me = 0;
+
+		eventdns_request_insert(req, &req_waiting_head);
+		if (next == req_started_at)
+			break;
+		req = next;
+	}
+	req_head = NULL;
+
+	return 0;
+}
+
+
+// exported function
+int
+eventdns_resume(void)
+{
+	eventdns_requests_pump_waiting_queue();
+	return 0;
+}
+
+// exported function
+int
 eventdns_nameserver_add(unsigned long int address) {
 	// first check to see if we already have this nameserver
 
@@ -1209,6 +1277,8 @@ eventdns_nameserver_add(unsigned long int address) {
 	event_set(&ns->event, ns->socket, EV_READ | EV_PERSIST, nameserver_ready_callback, ns);
 	event_add(&ns->event, NULL);
 
+	log("Added nameserver %s", debug_ntoa(address));
+
 	// insert this nameserver into the list of them
 	if (!server_head) {
 		ns->next = ns->prev = ns;
@@ -1227,13 +1297,11 @@ eventdns_nameserver_add(unsigned long int address) {
 	return 0;
 
 out2:
-#ifdef MS_WINDOWS
-	closesocket(ns->socket);
-#else
-	close(ns->socket);
+	CLOSE_SOCKET(ns->socket);
 #endif
 out1:
 	free(ns);
+	log("Unable to add nameserver %s: error %d", debug_ntoa(address), err);
 	return err;
 }
 

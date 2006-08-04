@@ -563,7 +563,7 @@ connection_dns_remove(edge_connection_t *conn)
  * <b>address</b> from the cache.
  */
 void
-dns_cancel_pending_resolve(char *address) //XXXX NM CHECKME.
+dns_cancel_pending_resolve(char *address)
 {
   pending_connection_t *pend;
   cached_resolve_t search;

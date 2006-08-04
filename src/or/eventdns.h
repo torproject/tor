@@ -49,6 +49,9 @@
 typedef void (*eventdns_callback_type) (int result, char type, int count, int ttl, void *addresses, void *arg);
 
 int eventdns_nameserver_add(unsigned long int address);
+int eventdns_count_nameservers(void);
+int eventdns_clear_nameservers_and_suspend(void);
+int eventdns_resume(void);
 int eventdns_nameserver_ip_add(const char *ip_as_string);
 int eventdns_resolve(const char *name, int flags, eventdns_callback_type callback, void *ptr);
 int eventdns_resolv_conf_parse(int flags, const char *);
