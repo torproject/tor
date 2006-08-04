@@ -426,6 +426,13 @@ eventdns_set_log_fn(eventdns_debug_log_fn_type fn)
   eventdns_log_fn = fn;
 }
 
+#ifdef __GNUC__
+#define EVENTDNS_LOG_CHECK  __attribute__ ((format(printf, 1, 2)))
+#else
+#define EVENTDNS_LOG_CHECK
+#endif
+
+static void _eventdns_log(const char *fmt, ...) EVENTDNS_LOG_CHECK;
 static void
 _eventdns_log(const char *fmt, ...)
 {
