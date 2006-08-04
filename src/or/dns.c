@@ -104,6 +104,8 @@ static int launch_resolve(edge_connection_t *exitconn);
 static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static int spawn_enough_dnsworkers(void);
+#else
+static void configure_nameservers(void);
 #endif
 static void assert_cache_ok(void);
 static void assert_resolve_ok(cached_resolve_t *resolve);
@@ -156,34 +158,10 @@ eventdns_log_cb(const char *msg)
 void
 dns_init(void)
 {
-
   init_cache_map();
   dnsworkers_rotate();
-#ifdef USE_EVENTDNS
-  {
-    or_options_t *options = get_options();
-    eventdns_set_log_fn(eventdns_log_cb);
-    if (options->Nameservers && smartlist_len(options->Nameservers)) {
-      log_info(LD_EXIT, "Configuring nameservers from Tor configuration");
-      SMARTLIST_FOREACH(options->Nameservers, const char *, ip,
-        {
-          struct in_addr in;
-          if (tor_inet_aton(ip, &in)) {
-            log_info(LD_EXIT, "Adding nameserver '%s'", ip);
-            eventdns_nameserver_add(in.s_addr);
-          }
-        });
-    } else {
-#ifdef MS_WINDOWS
-      eventdns_config_windows_nameservers();
-#else
-      log_info(LD_EXIT, "Parsing /etc/resolv.conf");
-      eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
-                                 "/etc/resolv.conf");
-#endif
-    }
-  }
-#endif
+  if (server_mode(get_options()))
+    configure_nameservers();
 }
 
 uint32_t
@@ -1198,6 +1176,36 @@ connection_dns_reached_eof(connection_t *conn)
   tor_assert(0);
   return 0;
 }
+static int nameservers_configured = 0;
+static void
+configure_nameservers(void)
+{
+  or_options_t *options;
+  if (nameservers_configured)
+    return;
+  options = get_options();
+  eventdns_set_log_fn(eventdns_log_cb);
+  if (options->Nameservers && smartlist_len(options->Nameservers)) {
+    log_info(LD_EXIT, "Configuring nameservers from Tor configuration");
+    SMARTLIST_FOREACH(options->Nameservers, const char *, ip,
+      {
+        struct in_addr in;
+        if (tor_inet_aton(ip, &in)) {
+          log_info(LD_EXIT, "Adding nameserver '%s'", ip);
+          eventdns_nameserver_add(in.s_addr);
+        }
+      });
+  } else {
+#ifdef MS_WINDOWS
+    eventdns_config_windows_nameservers();
+#else
+    log_info(LD_EXIT, "Parsing /etc/resolv.conf");
+    eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
+                               "/etc/resolv.conf");
+#endif
+  }
+  nameservers_configured = 1;
+}
 static void
 eventdns_callback(int result, char type, int count, int ttl, void *addresses,
                   void *arg)
@@ -1237,6 +1245,8 @@ launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
   int r;
+  if (!nameservers_configured)
+    configure_nameservers();
   log_info(LD_EXIT, "Launching eventdns request for %s",
            escaped_safe_str(exitconn->_base.address));
   r = eventdns_resolve(exitconn->_base.address, DNS_QUERY_NO_SEARCH,
