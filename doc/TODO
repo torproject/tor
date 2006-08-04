@@ -73,10 +73,14 @@ N   . Improve memory usage on tight-memory machines.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
     o Asynchronous DNS
-      . And test it
+      o And test it
       . Make it work on windows.
         o Implement
+        . Enable
         - Test
+      - Make the Nameservers option documented, and make it work right on
+        reload.
+      - Fail when we have no configured nameservers!
       - Make it the default on platforms where it works
 
   - Security improvements

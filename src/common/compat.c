@@ -24,8 +24,9 @@ const char compat_c_id[] =
 
 #ifdef MS_WINDOWS
 #include <process.h>
-
+#include <windows.h>
 #endif
+
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
 #endif
@@ -107,16 +108,22 @@ const char compat_c_id[] =
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
-#ifdef HAVE_SYS_MMAN
-const char *
-tor_mmap_file(const char *filename, size_t *size)
+#ifdef HAVE_SYS_MMAN_H
+struct tor_mmap_t {
+  char *data;
+  size_t size;
+};
+tor_mmap_t *
+tor_mmap_file(const char *filename, const char **data, size_t *size_out)
 {
   int fd; /* router file */
   char *string;
   int page_size;
+  tor_mmap_t *res;
+  size_t size;
 
   tor_assert(filename);
-  tor_assert(size);
+  tor_assert(size_out);
 
   fd = open(filename, O_RDONLY, 0);
   if (fd<0) {
@@ -124,13 +131,13 @@ tor_mmap_file(const char *filename, size_t *size)
     return NULL;
   }
 
-  *size = lseek(fd, 0, SEEK_END);
+  size = lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
   /* ensure page alignment */
   page_size = getpagesize();
-  *size += (page_size + (page_size-(*size%page_size)));
+  size += (page_size + (page_size-(size%page_size)));
 
-  string = mmap(0, *size, PROT_READ, MAP_PRIVATE, fd, 0);
+  string = mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0);
   if (string == MAP_FAILED) {
     log_warn(LD_FS,"Could not mmap file \"%s\": %s", filename,
              strerror(errno));
@@ -139,30 +146,88 @@ tor_mmap_file(const char *filename, size_t *size)
 
   close(fd);
 
-  return string;
-}
+  res = tor_malloc_zero(sizeof(tor_mmap_t));
+  *data = res->data = string;
+  *size_out = res->size = size;
 
-void
-tor_munmap_file(const char *memory, size_t size)
-{
-  munmap((char*)memory, size);
-}
-#else
-const char *
-tor_mmap_file(const char *filename, size_t *size)
-{
-  char *res = read_file_to_str(filename, 1);
-  if (res)
-    *size = strlen(res) + 1;
   return res;
 }
+void
+tor_munmap_file(tor_mmap_t *handle)
+{
+  munmap(handle->data, handle->size);
+}
+#elif defined(MS_WINDOWS)
+typdef struct tor_mmap_t {
+  char *data;
+  HANDLE file_handle;
+  HANDLE mmap_handle;
+  size_t size;
+} tor_mmap_t;
+tor_mmap_t *
+tor_mmap_file(const char *filename, const char **data, size_t *size)
+{
+  win_mmap_t *res = tor_malloc_zero(res);
+  res->mmap_handle = res->file_handle = INVALID_HANDLE_VALUE;
+  /* What's this about tags? */
+
+  /* Open the file. */
+  res->file_handle = XXXXX;
+  res->size = GetFileSize(res->file_handle, NULL);
+
+  res->mmap_handle = CreateFileMapping(res->file_handle,
+                                       NULL,
+                                       PAGE_READONLY,
+                                       0,
+                                       size,
+                                       tagname);
+  if (res->mmap_handle != INVALID_HANDLE_VALUE)
+    goto err;
+  res->data = (char*) MapViewOfFile(res->mmap_handle,
+                                    access,
+                                    0, 0, 0);
+  if (!res->data)
+    goto err;
+
+  *size = res->size;
+  *data = res->data;
+
+  return res;
+ err:
+  tor_munmap_file(res);
+  return NULL;
+}
+void
+tor_munmap_file(tor_mmap_t *handle)
+{
+  if (handle->data)
+    UnmapViewOfFile(handle->data);
+  if (res->mmap_handle != INVALID_HANDLE_VALUE)
+    CloseHandle(res->mmap_handle);
+  if (res->file_handle != INVALID_HANDLE_VALUE)
+    CloseHandle(self->file_handle);
+  tor_free(res);
+}
+#else
+struct tor_mmap_t {
+  char *data;
+};
+tor_mmap_t *
+tor_mmap_file(const char *filename, const char **data, size_t *size)
+{
+  char *res = read_file_to_str(filename, 1);
+  tor_mmap_t *handle;
+  if (res)
+    *size = strlen(res) + 1;
+  handle = tor_malloc_zero(sizeof(tor_mmap_t));
+  *data = handle->data = res;
+  return handle;
+}
 
 void
-tor_munmap_file(const char *memory, size_t size)
+tor_munmap_file(tor_mmap_t *handle)
 {
-  char *mem = (char*) memory;
-  (void)size;
-  tor_free(mem);
+  tor_free(handle->data);
 }
 #endif
 

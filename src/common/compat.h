@@ -114,8 +114,12 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #define U64_LITERAL(n) (n ## llu)
 #endif
 
-const char *tor_mmap_file(const char *filename, size_t *size);
-void tor_munmap_file(const char *memory, size_t size);
+/** Opaque bookkeeping type used for mmap accounting. */
+typedef struct tor_mmap_t tor_mmap_t;
+
+tor_mmap_t *tor_mmap_file(const char *filename,
+                          const char **data, size_t *size);
+void tor_munmap_file(tor_mmap_t *handle);
 
 int tor_snprintf(char *str, size_t size, const char *format, ...)
      CHECK_PRINTF(3,4);

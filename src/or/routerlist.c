@@ -276,12 +276,12 @@ router_rebuild_store(int force)
     goto done;
   }
   /* Our mmap is now invalid. */
-  if (routerlist->mmap_descriptors) {
-    tor_munmap_file(routerlist->mmap_descriptors,
-                    routerlist->mmap_descriptors_len);
-    routerlist->mmap_descriptors =
-      tor_mmap_file(fname, &routerlist->mmap_descriptors_len);
-    if (! routerlist->mmap_descriptors)
+  if (routerlist->mmap_handle) {
+    tor_munmap_file(routerlist->mmap_handle);
+    routerlist->mmap_handle = tor_mmap_file(fname,
+                                            &routerlist->mmap_descriptors,
+                                            &routerlist->mmap_descriptors_len);
+    if (! routerlist->mmap_handle)
       log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
   }
 
@@ -340,8 +340,9 @@ router_reload_router_list(void)
   router_journal_len = router_store_len = 0;
 
   tor_snprintf(fname, fname_len, "%s/cached-routers", options->DataDirectory);
-  routerlist->mmap_descriptors =
-    tor_mmap_file(fname, &routerlist->mmap_descriptors_len);
+  routerlist->mmap_handle = tor_mmap_file(fname,
+                                          &routerlist->mmap_descriptors,
+                                          &routerlist->mmap_descriptors_len);
   if (routerlist->mmap_descriptors) {
     router_store_len = routerlist->mmap_descriptors_len;
     router_load_routers_from_string(routerlist->mmap_descriptors,

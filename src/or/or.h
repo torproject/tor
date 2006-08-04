@@ -1020,6 +1020,7 @@ typedef struct {
   /** DOCDOC */
   const char *mmap_descriptors;
   size_t mmap_descriptors_len;
+  tor_mmap_t *mmap_handle;
 } routerlist_t;
 
 /** Information on router used when extending a circuit.  (We don't need a
