@@ -120,8 +120,7 @@ typedef struct tor_mmap_t {
   size_t size;
 } tor_mmap_t;
 
-tor_mmap_t *tor_mmap_file(const char *filename,
-                          const char **data, size_t *size);
+tor_mmap_t *tor_mmap_file(const char *filename);
 void tor_munmap_file(tor_mmap_t *handle);
 
 int tor_snprintf(char *str, size_t size, const char *format, ...)
