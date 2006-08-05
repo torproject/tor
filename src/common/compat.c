@@ -109,10 +109,6 @@ const char compat_c_id[] =
 #endif
 
 #ifdef HAVE_SYS_MMAN_H
-struct tor_mmap_t {
-  char *data;
-  size_t size;
-};
 tor_mmap_t *
 tor_mmap_file(const char *filename, const char **data, size_t *size_out)
 {
@@ -155,19 +151,18 @@ tor_mmap_file(const char *filename, const char **data, size_t *size_out)
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  munmap(handle->data, handle->size);
+  munmap((char*)handle->data, handle->size);
 }
 #elif defined(MS_WINDOWS)
-typdef struct tor_mmap_t {
-  char *data;
+typedef struct win_mmap_t {
+  tor_mmap_t base;
   HANDLE file_handle;
   HANDLE mmap_handle;
-  size_t size;
-} tor_mmap_t;
+} tor_mmap_impl_t;
 tor_mmap_t *
 tor_mmap_file(const char *filename, const char **data, size_t *size)
 {
-  win_mmap_t *res = tor_malloc_zero(res);
+  win_mmap_t *res = tor_malloc_zero(sizeof(win_mmap_t));
   res->mmap_handle = res->file_handle = INVALID_HANDLE_VALUE;
 
   res->file_handle = CreateFileForMapping(filename,
@@ -175,7 +170,7 @@ tor_mmap_file(const char *filename, const char **data, size_t *size)
                                           0, NULL,
                                           OPEN_EXISTING,
                                           FILE_ATTRIBUTE_NORMAL, 0);
-  res->size = GetFileSize(res->file_handle, NULL);
+  res->base.size = GetFileSize(res->file_handle, NULL);
 
   res->mmap_handle = CreateFileMapping(res->file_handle,
                                        NULL,
@@ -185,16 +180,16 @@ tor_mmap_file(const char *filename, const char **data, size_t *size)
                                        NULL);
   if (res->mmap_handle != INVALID_HANDLE_VALUE)
     goto err;
-  res->data = (char*) MapViewOfFile(res->mmap_handle,
-                                    access,
-                                    0, 0, 0);
+  res->base.data = (char*) MapViewOfFile(res->mmap_handle,
+                                         access,
+                                         0, 0, 0);
   if (!res->data)
     goto err;
 
   *size = res->size;
   *data = res->data;
 
-  return res;
+  return &(res->base);
  err:
   tor_munmap_file(res);
   return NULL;
@@ -202,6 +197,8 @@ tor_mmap_file(const char *filename, const char **data, size_t *size)
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
+  win_mmap_t *h = (win_mmap_t*)
+    (((char*)handle) - STRUCT_OFFSET(win_mmap_t, base));
   if (handle->data)
     UnmapViewOfFile(handle->data);
   if (res->mmap_handle != INVALID_HANDLE_VALUE)
@@ -211,25 +208,25 @@ tor_munmap_file(tor_mmap_t *handle)
   tor_free(res);
 }
 #else
-struct tor_mmap_t {
-  char *data;
-};
 tor_mmap_t *
 tor_mmap_file(const char *filename, const char **data, size_t *size)
 {
   char *res = read_file_to_str(filename, 1);
   tor_mmap_t *handle;
-  if (res)
-    *size = strlen(res) + 1;
+  if (! res)
+    return NULL;
   handle = tor_malloc_zero(sizeof(tor_mmap_t));
   *data = handle->data = res;
+  *size = handle->size = strlen(res) + 1;
   return handle;
 }
-
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  tor_free(handle->data);
+  char *d = (char*)handle->data;
+  tor_free(d);
+  memset(handle, sizeof(tor_mmap_t), 0);
+  tor_free(handle);
 }
 #endif
 

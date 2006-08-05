@@ -115,7 +115,10 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 
 /** Opaque bookkeeping type used for mmap accounting. */
-typedef struct tor_mmap_t tor_mmap_t;
+typedef struct tor_mmap_t {
+  const char *data;
+  size_t size;
+} tor_mmap_t;
 
 tor_mmap_t *tor_mmap_file(const char *filename,
                           const char **data, size_t *size);
