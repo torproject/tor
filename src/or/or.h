@@ -776,8 +776,8 @@ typedef struct control_connection_t {
 /** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) &(((c)->_base))
 /** Helper macro: Given a pointer to to._base, of type from*, return &to. */
-#define DOWNCAST(from, to, ptr) \
-  (to*) (((from*)(ptr)) - STRUCT_OFFSET(to, _base))
+#define DOWNCAST(to, ptr) \
+  (to*) (((char*)(ptr)) - STRUCT_OFFSET(to, _base))
 
 /** Convert a connection_t* to an or_connection_t*; assert if the cast is
  * invalid. */
@@ -795,22 +795,22 @@ control_connection_t *TO_CONTROL_CONN(connection_t *);
 extern INLINE or_connection_t *TO_OR_CONN(connection_t *c)
 {
   tor_assert(c->magic == OR_CONNECTION_MAGIC);
-  return DOWNCAST(connection_t, or_connection_t, c);
+  return DOWNCAST(or_connection_t, c);
 }
 extern INLINE dir_connection_t *TO_DIR_CONN(connection_t *c)
 {
   tor_assert(c->magic == DIR_CONNECTION_MAGIC);
-  return DOWNCAST(connection_t, dir_connection_t, c);
+  return DOWNCAST(dir_connection_t, c);
 }
 extern INLINE edge_connection_t *TO_EDGE_CONN(connection_t *c)
 {
   tor_assert(c->magic == EDGE_CONNECTION_MAGIC);
-  return DOWNCAST(connection_t, edge_connection_t, c);
+  return DOWNCAST(edge_connection_t, c);
 }
 extern INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {
   tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
-  return DOWNCAST(connection_t, control_connection_t, c);
+  return DOWNCAST(control_connection_t, c);
 }
 
 typedef enum {
@@ -1305,14 +1305,14 @@ extern INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);
   //return (or_circuit_t*) (((char*)x) - STRUCT_OFFSET(or_circuit_t, _base));
-  return DOWNCAST(circuit_t, or_circuit_t, x);
+  return DOWNCAST(or_circuit_t, x);
 }
 extern INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
   //return (origin_circuit_t*)
   //  (((char*)x) - STRUCT_OFFSET(origin_circuit_t, _base));
-  return DOWNCAST(circuit_t, origin_circuit_t, x);
+  return DOWNCAST(origin_circuit_t, x);
 }
 
 #define ALLOW_INVALID_ENTRY        1
