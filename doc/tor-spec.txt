@@ -244,20 +244,27 @@ when do we rotate which keys (tls, link, etc)?
 
 4.1. HELLO cells
 
-   When a Tor connection is established, both sides must send a HELLO
-   cell before sending any other cells.  (Except see 4.2. below)
+   When a Tor connection is established, the client must send a HELLO
+   cell before sending any other cells. When the server receives a HELLO
+   cell, it responds with a HELLO cell of its own. See 4.2. below for
+   details on the protocol negotiation and fallback strategy.
 
          NumVersions            [1 byte]
-         Versions                [NumVersions bytes]
+         Versions               [NumVersions bytes]
+
+[
+    Probably we break the following into a NETINFO cell type:
          Timestamp              [4 bytes]
          This OR's address      [variable]
          Other OR's address     [variable]
+]
 
    "Versions" is a sequence of NumVersions link connection protocol versions,
    each one byte long.  Parties should list all of the versions which they
    are able and willing to support.  Parties can only communicate if they
    have some connection protocol version in common.
 
+[
    Timestamp is the OR's current Unix time (GMT).
 
    Each address contains Type/Length/Value as used in Section 6.4.  The first
@@ -270,26 +277,25 @@ when do we rotate which keys (tls, link, etc)?
    The second address is the one that the party sending the HELLO cell
    believes the other has -- it can be used to learn what your IP address
    is if you have no other hints.
+]
 
-4.2. Protocol negotiation'
+4.2. Protocol negotiation
 
    Version 0.1.2.1-alpha and earlier don't understand HELLO cells, and
    therefore don't support version negotiation.  Thus, waiting until
-   the other side has send a HELLO cell won't work for these servers: if they
+   the other side has sent a HELLO cell won't work for these servers: if they
    send no cells back, it is impossible to tell whether they have sent a
    HELLO cell that has been stalled, or whether they have dropped our own
    HELLO cell as unrecognized.  Thus, immediately after a TLS connection has
-   been established, both parties behave as follows:
+   been established, the client (initiating party) behaves as follows:
 
-      1. Both parties send a CREATE cell with an appropriate circuit id,
+      1. Send a CREATE cell with an appropriate circuit id,
          containing an "onion skin" of [00] bytes.
 
-          [XXXX What happens when a client gets a CREATE?]
+      2. Send a HELLO cell listing all its versions.
 
-      2. Both parties send a HELLO cell listing all their versions.
-
-      3. If a DESTROY cell is received before a HELLO cell, the other
-         party does not support HELLO cells, and therefore we can
+      3. If a DESTROY cell is received before a HELLO cell, the server
+         does not support HELLO cells, and therefore we can
          only use protocol version 0.
 
       4. If a HELLO cell is received, we use the highest numbered version
@@ -297,9 +303,15 @@ when do we rotate which keys (tls, link, etc)?
 
    As an optimization, implementations SHOULD simply use protocol version
    0 when the other side is recognized as a router running version
-   0.1.1.??-alpha or earlier.
-   [XXXX This will not work with clients: we will send them HELLO cells;
-   they'll warn; users will freak out. -NM]
+   0.1.2.??-alpha or earlier.
+
+   If a server finds that it wants to send a cell (for example because a
+   circuit wants to extend to that client, and the TLS connection
+   is already established) yet no cell has arrived yet, we can't
+   distinguish between a version 0 client and a slow network. We can't
+   assume that the other side approves of version 0, so we can't just
+   start using version 0. Perhaps the right answer is to then launch a
+   new TLS connection because you don't have a usable one after all?
 
 5. Circuit management
 
