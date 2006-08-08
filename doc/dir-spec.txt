@@ -1,11 +1,11 @@
 $Id$
 
-                      Tor directory protocol, version 1
+                      Tor directory protocol, version 2
 
 0. Scope and preliminaries
 
    This directory protocol is used by Tor version 0.1.1.x and later.  See
-   dir-spec-v0.txt for information on earlier versions.
+   dir-spec-v1.txt for information on earlier versions.
 
 0.1. Goals and motivation
 
