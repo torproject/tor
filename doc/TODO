@@ -120,7 +120,7 @@ R   - remember the last time we saw one of our entry guards labelled with
       - Then clients can choose a bucket (or set of buckets) to
         download and use.
 
-  - Critical but minor bugs, backport candiates.
+  - Critical but minor bugs, backport candidates.
     - If the client's clock is too far in the past, it will drop (or
       just not try to get) descriptors, so it'll never build circuits.
 R   - Failed rend desc fetches sometimes don't get retried.
@@ -187,6 +187,9 @@ Topics to think about during 0.1.2.x development:
   - Figure out hidden services.
 
 Minor items for 0.1.2.x as time permits.
+  - Tor should bind its ports before dropping privs, so users don't
+    have to do the ipchains dance.
+  - Make --verify-config return a useful error code.
   - Rate limit exit connections to a given destination -- this helps
     us play nice with websites when Tor users want to crawl them; it
     also introduces DoS opportunities.
@@ -256,6 +259,8 @@ Minor items for 0.1.2.x as time permits.
       - Relay this in networkstatus.
 
 Future version:
+  - Tor should have a "DNS port" so we don't need to ship with (and
+    write) a clean portable dns proxy.
   . Update the hidden service stuff for the new dir approach.
     - switch to an ascii format, maybe sexpr?
     - authdirservers publish blobs of them.
@@ -335,5 +340,4 @@ Website:
 R - make a page with the hidden service diagrams.
 
   - ask Jan to be the translation coordinator? add to volunteer page.
-  o track down the patch for cross-compiling.
 
