@@ -7,11 +7,16 @@ if [ -f /Library/StartupItems/Tor/Tor.loc ]; then
 else
 	TORPATH="/Library/Tor/"
 fi
-echo $TORPATH
+
+if [ -f /Library/StartupItems/Privoxy/Privoxy.loc ]; then
+	PRIVOXYPATH=`cat /Library/StartupItems/Privoxy/Privoxy.loc`
+else
+	PRIVOXYPATH="/Library/Prioxy/"
+fi
 
 # Backup all of Tor, just in case
 if [ -d $TORPATH ]; then
-	tar zcf /tmp/TorSavedMe.tar.gz $TORPATH/var/lib/tor $TORPATH/torrc
+	tar zcf /tmp/TorSavedMe.tar.gz $TORPATH/var/lib/tor $TORPATH/torrc $PRIVOXYPATH/config $PRIVOXYPATH/user.action
 fi
 
 # Remove Tor and everything to do with it
