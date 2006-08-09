@@ -322,6 +322,12 @@ when do we rotate which keys (tls, link, etc)?
    hello cells, but only if those clients are nonconformant.  Am I right?
    In any case, this seems way more reliable.  -NM]
 
+   [IOW, the proposal would be: if the other side has a cert without OU=Tor,
+   send a HELLO cell. Otherwise, assume v0 unless they send a HELLO
+   cell.  Way simpler, right?  If we're dealing with something proxylike or
+   old, we might send an unexpected HELLO cell.  If they die, they were badly
+   written. -NM]
+
 5. Circuit management
 
 5.1. CREATE and CREATED cells
