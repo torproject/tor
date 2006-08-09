@@ -17,7 +17,16 @@ This specification is not a design document; most design criteria
 are not examined.  For more information on why Tor acts as it does,
 see tor-design.pdf.
 
-TODO: (very soon)
+TODO for v1 revision:
+      - Fix onionskin  handshake scheme to be more mainstream, less nutty.
+        Can we just do
+            E(HMAC(g^x), g^x) rather than just E(g^x) ?
+        Better ask Ian; probably Stephen too.
+      - Versioned CREATE and friends
+      - Length on CREATE and friends
+      - Versioning on circuits
+
+TODO:
       - REASON_CONNECTFAILED should include an IP.
       - Copy prose from tor-design to make everything more readable.
 when do we rotate which keys (tls, link, etc)?
@@ -56,6 +65,8 @@ when do we rotate which keys (tls, link, etc)?
    DH_SEC_LEN -- the number of bytes used in a Diffie-Hellman private key (x).
 
    HASH_LEN -- the length of the hash function's output, in bytes.
+
+   PAYLOAD_LEN -- The longest allowable cell payload, in bytes. (509)
 
    CELL_LEN -- The length of a Tor cell, in bytes.
 
@@ -135,8 +146,8 @@ when do we rotate which keys (tls, link, etc)?
 
    Version numbers are incremented for backward-incompatible protocol changes
    only.  Backward-compatible changes are generally implemented by adding
-   additional fields to existing structures; implementations are constrained
-   to ignore fields they do not expect.
+   additional fields to existing structures; implementations MUST ignore
+   fields they do not expect.
 
    Parties negotiate OR connection versions as described below in sections
    4.1 and 4.2.
@@ -161,6 +172,11 @@ when do we rotate which keys (tls, link, etc)?
    first certificate is the OR's nickname, and the commonName of the second
    certificate is the OR's nickname, followed by a space and the string
    "<identity>".
+
+   Implementations running 0.1.2.0-alpha and earlier used an organizationName
+   of Tor.  Current implementations (which support the version negotiation
+   protocol in section 4.1) MUST NOT have this value for their
+   organizationName.
 
    All parties receiving certificates must confirm that the identity key is
    as expected.  (When initiating a connection, the expected identity key is
@@ -190,13 +206,23 @@ when do we rotate which keys (tls, link, etc)?
 3. Cell Packet format
 
    The basic unit of communication for onion routers and onion
-   proxies is a fixed-width "cell".  Each cell contains the following
+   proxies is a fixed-width "cell".
+
+   On a version 0 connection, each cell contains the following
    fields:
 
         CircID                                [2 bytes]
         Command                               [1 byte]
-        Payload (padded with 0 bytes)         [CELL_LEN-3 bytes]
-                                         [Total size: CELL_LEN bytes]
+        Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
+                                         [Total size:  bytes]
+
+   On a version 1 connection, each cell contains the following fields:
+
+
+        CircID                                [3 bytes]
+        Command                               [1 byte]
+        Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
+                                         [Total size:  bytes]
 
    The CircID field determines which circuit, if any, the cell is
    associated with.
@@ -209,7 +235,8 @@ when do we rotate which keys (tls, link, etc)?
          4 -- DESTROY     (Stop using a circuit)    (See Sec 5.4)
          5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 5.1)
          6 -- CREATED_FAST (Circuit created, no PK) (See Sec 5.1)
-         7 -- HELLO       (Establish a connection)  (See Sec 4.1)
+         7 -- HELLO       (Negotiate versions)      (See Sec 4.1)
+         8 -- NETINFO     (Time and MITM-prevention) (See Sec 4.2)
 
    The interpretation of 'Payload' depends on the type of the cell.
       PADDING: Payload is unused.
@@ -244,28 +271,49 @@ when do we rotate which keys (tls, link, etc)?
 
 4.1. HELLO cells
 
-   When a Tor connection is established, the client must send a HELLO
-   cell before sending any other cells. When the server receives a HELLO
-   cell, it responds with a HELLO cell of its own. See 4.2. below for
-   details on the protocol negotiation and fallback strategy.
+   When a Tor connection is established, both parties normally send a HELLO
+   cell before sending any other cells.  (But see below.)
 
          NumVersions            [1 byte]
          Versions               [NumVersions bytes]
-
-[
-    Probably we break the following into a NETINFO cell type:
-         Timestamp              [4 bytes]
-         This OR's address      [variable]
-         Other OR's address     [variable]
-]
 
    "Versions" is a sequence of NumVersions link connection protocol versions,
    each one byte long.  Parties should list all of the versions which they
    are able and willing to support.  Parties can only communicate if they
    have some connection protocol version in common.
 
-[
-   Timestamp is the OR's current Unix time (GMT).
+   Version 0.1.2.0-alpha and earlier don't understand HELLO cells, and
+   therefore don't support version negotiation.  Thus, waiting until
+   the other side has sent a HELLO cell won't work for these servers: if they
+   send no cells back, it is impossible to tell whether they have sent a
+   HELLO cell that has been stalled, or whether they have dropped our own
+   HELLO cell as unrecognized.  Thus, immediately after a TLS connection has
+   been established, the parties check whether the other side has an obsolete
+   certificate (organizationName equal to "Tor" or "TOR").  If the other party
+   presented an obsolete certificate, we assume a v0 connection.  Otherwise,
+   both parties send HELLO cells listing all their supported  versions.  Upon
+   receiving the other party's HELLO cell, the implementation begins using
+   the highest-valued version common to both cells.  If the first cell from
+   the other party is _not_ a HELLO cell, we assume a v0 protocol.
+
+   Implementations MUST discard cells that are not the first cells sent on a
+   connection.
+
+4.2. MITM-prevention and time checking
+
+   If we negotiate a v1 connection or higher, the first cell we send SHOULD
+   be a NETINFO cell.  Implementations SHOULD NOT send NETINFO cells at other
+   times.
+
+   A NETINFO cell contains:
+         Timestamp              [4 bytes]
+         This OR's address      [variable]
+         Other OR's address     [variable]
+
+   Timestamp is the OR's current Unix time, in seconds since the epoch.  If
+   an implementation receives time values from many validated ORs that
+   indicate that its clock is skewed, it SHOULD try to warn the
+   administrator.
 
    Each address contains Type/Length/Value as used in Section 6.4.  The first
    address is the address of the interface the party sending the HELLO cell
@@ -277,56 +325,6 @@ when do we rotate which keys (tls, link, etc)?
    The second address is the one that the party sending the HELLO cell
    believes the other has -- it can be used to learn what your IP address
    is if you have no other hints.
-]
-
-4.2. Protocol negotiation
-
-   Version 0.1.2.1-alpha and earlier don't understand HELLO cells, and
-   therefore don't support version negotiation.  Thus, waiting until
-   the other side has sent a HELLO cell won't work for these servers: if they
-   send no cells back, it is impossible to tell whether they have sent a
-   HELLO cell that has been stalled, or whether they have dropped our own
-   HELLO cell as unrecognized.  Thus, immediately after a TLS connection has
-   been established, the client (initiating party) behaves as follows:
-
-      1. Send a CREATE cell with an appropriate circuit id,
-         containing an "onion skin" of [00] bytes.
-
-      2. Send a HELLO cell listing all its versions.
-
-      3. If a DESTROY cell is received before a HELLO cell, the server
-         does not support HELLO cells, and therefore we can
-         only use protocol version 0.
-
-      4. If a HELLO cell is received, we use the highest numbered version
-         listed by both HELLO cells.
-
-   As an optimization, implementations SHOULD simply use protocol version
-   0 when the other side is recognized as a router running version
-   0.1.2.??-alpha or earlier.
-
-   [If a server finds that it wants to send a cell (for example because a
-   circuit wants to extend to that client, and the TLS connection
-   is already established) yet no cell has arrived yet, we can't
-   distinguish between a version 0 client and a slow network. We can't
-   assume that the other side approves of version 0, so we can't just
-   start using version 0. Perhaps the right answer is to then launch a
-   new TLS connection because you don't have a usable one after all? -RD]
-
-   [That would seem to be thrashy.  Let's see if we can do better.  Remember,
-   normal v0 clients always send something after connecting, so if we have
-   had a connection for a while and gotten nothing over it, we could get away
-   with assuming it's bad.  Alternatively, we could identify V0 clients by
-   the OU=Tor field in the certificates: we don't check for it, and we never
-   documented it.  We might break other people's clients by sending them
-   hello cells, but only if those clients are nonconformant.  Am I right?
-   In any case, this seems way more reliable.  -NM]
-
-   [IOW, the proposal would be: if the other side has a cert without OU=Tor,
-   send a HELLO cell. Otherwise, assume v0 unless they send a HELLO
-   cell.  Way simpler, right?  If we're dealing with something proxylike or
-   old, we might send an unexpected HELLO cell.  If they die, they were badly
-   written. -NM]
 
 5. Circuit management
 
@@ -382,8 +380,10 @@ when do we rotate which keys (tls, link, etc)?
 
    As usual with DH, x and y MUST be generated randomly.
 
+[
    To implement backwar-compatible version negotiation, parties MUST
    drop CREATE cells with all-[00] onion-skins.
+]
 
 5.1.1. CREATE_FAST/CREATED_FAST cells
 
