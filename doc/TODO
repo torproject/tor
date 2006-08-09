@@ -106,7 +106,7 @@ R   - remember the last time we saw one of our entry guards labelled with
     - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
 
   - A more efficient dir protocol.
-    - Clients stop dumping old descriptors if the network-statuses
+N   - Clients stop dumping old descriptors if the network-statuses
       claim they're still valid.
       - Later, servers will stop generating new descriptors simply
         because 18 hours have passed.
