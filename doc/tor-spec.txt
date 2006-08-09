@@ -138,8 +138,8 @@ when do we rotate which keys (tls, link, etc)?
    additional fields to existing structures; implementations are constrained
    to ignore fields they do not expect.
 
-   Parties negotiate OR connection versions as described below in section
-   
+   Parties negotiate OR connection versions as described below in sections
+   4.1 and 4.2.
 
 2. Connections
 
@@ -305,13 +305,22 @@ when do we rotate which keys (tls, link, etc)?
    0 when the other side is recognized as a router running version
    0.1.2.??-alpha or earlier.
 
-   If a server finds that it wants to send a cell (for example because a
+   [If a server finds that it wants to send a cell (for example because a
    circuit wants to extend to that client, and the TLS connection
    is already established) yet no cell has arrived yet, we can't
    distinguish between a version 0 client and a slow network. We can't
    assume that the other side approves of version 0, so we can't just
    start using version 0. Perhaps the right answer is to then launch a
-   new TLS connection because you don't have a usable one after all?
+   new TLS connection because you don't have a usable one after all? -RD]
+
+   [That would seem to be thrashy.  Let's see if we can do better.  Remember,
+   normal v0 clients always send something after connecting, so if we have
+   had a connection for a while and gotten nothing over it, we could get away
+   with assuming it's bad.  Alternatively, we could identify V0 clients by
+   the OU=Tor field in the certificates: we don't check for it, and we never
+   documented it.  We might break other people's clients by sending them
+   hello cells, but only if those clients are nonconformant.  Am I right?
+   In any case, this seems way more reliable.  -NM]
 
 5. Circuit management
 
