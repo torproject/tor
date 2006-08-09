@@ -90,6 +90,11 @@ R   - remember the last time we saw one of our entry guards labelled with
       If it's been really too long, remove it from the list.
 
   - Make reverse DNS work.
+    - Specify
+    - Implement with dnsworkers
+    - Implement in eventdns
+    - Connect to resolve cells, server-side.
+    - Add client-side interface
 
   - Performance improvements
     - Better estimates in the directory of whether servers have good uptime
