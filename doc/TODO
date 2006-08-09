@@ -159,11 +159,12 @@ R   - non-v1 authorities should not accept rend descs.
 M   - rewrite how libevent does select() on win32 so it's not so very slow.
       - Add overlapped IO
 
-  - When we connect to a Tor server, it sends back a cell listing
+N - When we connect to a Tor server, it sends back a cell listing
     the IP it believes it is using. Use this to block dvorak's attack.
     Also, this is a fine time to say what time you think it is.
     o Verify that a new cell type is okay with deployed codebase
     . Specify HELLO cells
+    . Figure out v0 compatibility.
     - Implement
 
 N - Exitlist should avoid outputting the same IP address twice.
