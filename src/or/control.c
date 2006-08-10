@@ -2721,7 +2721,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
                         "650 STREAM %lu %s %lu %s\r\n",
                         (unsigned long)conn->global_identifier, status,
                         origin_circ?
-                            (unsigned long)origin_circ->global_identifier : 0ul,
+                           (unsigned long)origin_circ->global_identifier : 0ul,
                         buf);
     /* XXX need to specify its intended exit, etc? */
   }

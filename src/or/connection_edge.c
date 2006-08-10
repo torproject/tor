@@ -1314,7 +1314,7 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   pnl.sport           = htons(conn->_base.port);
   pnl.daddr.v4.s_addr = proxy_addr.sin_addr.s_addr;
   pnl.dport           = proxy_addr.sin_port;
-  
+
   pf = get_pf_socket();
   if (pf<0)
     return -1;

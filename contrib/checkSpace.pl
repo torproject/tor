@@ -91,7 +91,7 @@ for $fn (@ARGV) {
             ## Warn about functions not declared at start of line.
             if ($in_func_head ||
                 ($fn !~ /\.h$/ && /^[a-zA-Z0-9_]/ &&
-                 ! /^(?:static )?(?:typedef|struct|union)[^\(]*$/ &&
+                 ! /^(?:const |static )*(?:typedef|struct|union)[^\(]*$/ &&
                  ! /= *\{$/ && ! /;$/)) {
                 if (/.\{$/){
                     print "fn() {:$fn:$.\n";

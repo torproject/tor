@@ -272,8 +272,8 @@ purge_expired_resolves(uint32_t now)
 
     if (resolve->state == CACHE_STATE_PENDING) {
       log_debug(LD_EXIT,
-                "Expiring a dns resolve %s that's still pending. Forgot to cull"
-                " it? DNS resolve didn't tell us about the timeout?",
+                "Expiring a dns resolve %s that's still pending. Forgot to "
+                "cull it? DNS resolve didn't tell us about the timeout?",
                 escaped_safe_str(resolve->address));
     } else if (resolve->state == CACHE_STATE_CACHED_VALID ||
                resolve->state == CACHE_STATE_CACHED_FAILED) {

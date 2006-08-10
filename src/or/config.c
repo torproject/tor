@@ -3577,7 +3577,8 @@ init_libevent(void)
 #ifdef HAVE_EVENT_GET_VERSION
     ver = event_get_version();
 #endif
-    tor_assert(ver); /* If we're 1.1b or later, we'd better have get_version()*/
+    /* If we're 1.1b or later, we'd better have get_version() */
+    tor_assert(ver);
     log(LOG_NOTICE, LD_GENERAL, "Enabling experimental OS X kqueue support "
         "with libevent %s.  If this turns out to not work, "
         "set the environment variable EVENT_NOKQUEUE, and tell the Tor "
