@@ -2069,23 +2069,31 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("SocksPort must be defined if SocksListenAddress is defined.");
 #endif
 
-  /* XXX TransListenAddress should be checked here as well */
-  if (options->SocksListenAddress) {
-    config_line_t *line = NULL;
-    char *address = NULL;
-    for (line = options->SocksListenAddress; line; line = line->next) {
+  for (i = 0; i < 2; ++i) {
+    int is_socks = i==0;
+    config_line_t *line, *opt, *old;
+    if (is_socks) {
+      opt = options->SocksListenAddress;
+      old = old_options->SocksListenAddress;
+    } else {
+      opt = options->TransListenAddress;
+      old = old_options->TransListenAddress;
+    }
+    const char *tp = is_socks ? "SOCKS proxy" : "transparent proxy";
+
+    for (line = opt; line; line = line->next) {
+      char *address = NULL;
       uint16_t port;
       uint32_t addr;
       if (parse_addr_port(LOG_WARN, line->value, &address, &addr, &port)<0)
         continue; /* We'll warn about this later. */
       if (!is_internal_IP(addr, 1) &&
-          (!old_options || !config_lines_eq(old_options->SocksListenAddress,
-                                            options->SocksListenAddress))) {
+          (!old_options || !config_lines_eq(old, opt))) {
         log_warn(LD_CONFIG,
-             "You specified a public address '%s' for a SOCKS listener. Other "
+             "You specified a public address '%s' for a %s listener. Other "
              "people on the Internet might find your computer and use it as "
-             "an open SOCKS proxy. Please don't allow this unless you have "
-             "a good reason.", address);
+             "an open %s proxy. Please don't allow this unless you have "
+             "a good reason.", address, tp, tp);
       }
       tor_free(address);
     }
