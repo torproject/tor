@@ -1236,6 +1236,33 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   return 0; /* unreached but keeps the compiler happy */
 }
 
+#ifdef TRANS_PF
+static int pf_socket = -1;
+static int
+get_pf_socket(void)
+{
+  int pf;
+  /*  Ideally, this should be opened before dropping privs. */
+  if (pf_socket >= 0)
+    return pf_socket;
+
+#ifdef OPENBSD
+  /* only works on OpenBSD */
+  pf = open("/dev/pf", O_RDONLY);
+#else
+  /* works on NetBSD and FreeBSD */
+  pf = open("/dev/pf", O_RDWR);
+#endif
+
+  if (pf < 0) {
+    log_warn(LD_NET, "open(\"/dev/pf\") failed: %s", strerror(errno));
+    return -1;
+  }
+
+  pf_socket = pf;
+}
+#endif
+
 /** Fetch the original destination address and port from a
  * system-specific interface and put them into a
  * socks_request_t as if they came from a socks request.
@@ -1287,29 +1314,15 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   pnl.sport           = htons(conn->_base.port);
   pnl.daddr.v4.s_addr = proxy_addr.sin_addr.s_addr;
   pnl.dport           = proxy_addr.sin_port;
-
-  /* XXX We should open the /dev/pf device once and close it at cleanup time
-   * instead of reopening it for every connection. Ideally, it should be
-   * opened before dropping privs. */
-#ifdef OPENBSD
-  /* only works on OpenBSD */
-  pf = open("/dev/pf", O_RDONLY);
-#else
-  /* works on NetBSD and FreeBSD */
-  pf = open("/dev/pf", O_RDWR);
-#endif
-
-  if (pf < 0) {
-    log_warn(LD_NET, "open(\"/dev/pf\") failed: %s", strerror(errno));
+  
+  pf = get_pf_socket();
+  if (pf<0)
     return -1;
-  }
 
   if (ioctl(pf, DIOCNATLOOK, &pnl) < 0) {
     log_warn(LD_NET, "ioctl(DIOCNATLOOK) failed: %s", strerror(errno));
-    close(pf);
     return -1;
   }
-  close(pf);
 
   tor_inet_ntoa(&pnl.rdaddr.v4, tmpbuf, sizeof(tmpbuf));
   strlcpy(req->address, tmpbuf, sizeof(req->address));
