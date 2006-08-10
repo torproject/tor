@@ -113,15 +113,6 @@
 #error "Tor requires libevent to build."
 #endif
 
-#ifdef TRANS_NETFILTER
-#include <linux/netfilter_ipv4.h>
-#endif
-
-#ifdef TRANS_PF
-#include <net/if.h>
-#include <net/pfvar.h>
-#endif
-
 #include "../common/crypto.h"
 #include "../common/tortls.h"
 #include "../common/log.h"

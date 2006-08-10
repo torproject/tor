@@ -13,6 +13,17 @@ const char connection_edge_c_id[] =
 
 #include "or.h"
 
+#ifdef HAVE_LINUX_NETFILTER_IPV4_H
+#include <linux/netfilter_ipv4.h>
+#define TRANS_NETFILTER
+#endif
+
+#if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
+#include <net/if.h>
+#include <net/pfvar.h>
+#define TRANS_PF
+#endif
+
 /* List of exit_redirect_t */
 static smartlist_t *redirect_exit_list = NULL;
 
