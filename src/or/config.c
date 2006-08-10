@@ -2072,6 +2072,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   for (i = 0; i < 2; ++i) {
     int is_socks = i==0;
     config_line_t *line, *opt, *old;
+    const char *tp = is_socks ? "SOCKS proxy" : "transparent proxy";
     if (is_socks) {
       opt = options->SocksListenAddress;
       old = old_options->SocksListenAddress;
@@ -2079,7 +2080,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
       opt = options->TransListenAddress;
       old = old_options->TransListenAddress;
     }
-    const char *tp = is_socks ? "SOCKS proxy" : "transparent proxy";
 
     for (line = opt; line; line = line->next) {
       char *address = NULL;

@@ -95,7 +95,7 @@ typedef struct cached_resolve_t {
   pending_connection_t *pending_connections;
 } cached_resolve_t;
 
-static void purge_expired_resolves(uint32_t now);
+static void purge_expired_resolves(time_t now);
 static void dns_found_answer(const char *address, uint32_t addr, char outcome,
                              uint32_t ttl);
 static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
@@ -253,7 +253,7 @@ dns_free_all(void)
 /** Remove every cached_resolve whose <b>expire</b> time is before <b>now</b>
  * from the cache. */
 static void
-purge_expired_resolves(uint32_t now)
+purge_expired_resolves(time_t now)
 {
   cached_resolve_t *resolve, *removed;
   pending_connection_t *pend;
@@ -386,7 +386,7 @@ dns_resolve(edge_connection_t *exitconn)
   pending_connection_t *pending_connection;
   struct in_addr in;
   circuit_t *circ;
-  uint32_t now = time(NULL);
+  time_t now = time(NULL);
   assert_connection_ok(TO_CONN(exitconn), 0);
   tor_assert(exitconn->_base.s == -1);
 

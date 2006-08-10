@@ -1290,9 +1290,9 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   tor_inet_ntoa(&orig_dst.sin_addr, tmpbuf, sizeof(tmpbuf));
   strlcpy(req->address, tmpbuf, sizeof(req->address));
   req->port = ntohs(orig_dst.sin_port);
-#endif
 
-#ifdef TRANS_PF
+  return 0;
+#elif defined(TRANS_PF)
   struct sockaddr_in proxy_addr;
   socklen_t proxy_addr_len = sizeof(proxy_addr);
   char tmpbuf[INET_NTOA_BUF_LEN];
@@ -1327,9 +1327,15 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   tor_inet_ntoa(&pnl.rdaddr.v4, tmpbuf, sizeof(tmpbuf));
   strlcpy(req->address, tmpbuf, sizeof(req->address));
   req->port = ntohs(pnl.rdport);
-#endif
 
   return 0;
+#else
+  (void)conn;
+  (void)req;
+  log_warn(LD_BUG, "Called connection_ap_get_original_destination, but no "
+           "transparent proxy method was configured.");
+  return -1;
+#endif
 }
 
 /** connection_edge_process_inbuf() found a conn in state
