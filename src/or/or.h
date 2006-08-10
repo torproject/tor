@@ -113,6 +113,15 @@
 #error "Tor requires libevent to build."
 #endif
 
+#ifdef TRANS_NETFILTER
+#include <linux/netfilter_ipv4.h>
+#endif
+
+#ifdef TRANS_PF
+#include <net/if.h>
+#include <net/pfvar.h>
+#endif
+
 #include "../common/crypto.h"
 #include "../common/tortls.h"
 #include "../common/log.h"
@@ -215,7 +224,9 @@ typedef enum {
 #define CONN_TYPE_CONTROL_LISTENER 12
 /** Type for connections from user interface process. */
 #define CONN_TYPE_CONTROL 13
-#define _CONN_TYPE_MAX 13
+/** Type for sockets listening for transparent proxy connections. */
+#define CONN_TYPE_AP_TRANS_LISTENER 14
+#define _CONN_TYPE_MAX 14
 
 #define CONN_IS_EDGE(x) \
   ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
@@ -283,7 +294,10 @@ typedef enum {
 #define AP_CONN_STATE_RESOLVE_WAIT 10
 /** State for a SOCKS connection: ready to send and receive. */
 #define AP_CONN_STATE_OPEN 11
-#define _AP_CONN_STATE_MAX 11
+/** State for a transparent proxy connection: waiting for original
+ * destination. */
+#define AP_CONN_STATE_ORIGDST_WAIT 12
+#define _AP_CONN_STATE_MAX 12
 
 #define _DIR_CONN_STATE_MIN 1
 /** State for connection to directory server: waiting for connect(). */
@@ -1386,6 +1400,8 @@ typedef struct {
   config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Addresses to bind for listening for SOCKS connections. */
   config_line_t *SocksListenAddress;
+  /** Addresses to bind for listening for transparent connections. */
+  config_line_t *TransListenAddress;
   /** Addresses to bind for listening for OR connections. */
   config_line_t *ORListenAddress;
   /** Addresses to bind for listening for directory connections. */
@@ -1407,6 +1423,7 @@ typedef struct {
                              * length (alpha in geometric distribution). */
   int ORPort; /**< Port to listen on for OR connections. */
   int SocksPort; /**< Port to listen on for SOCKS connections. */
+  int TransPort; /**< Port to listen on for transparent connections. */
   int ControlPort; /**< Port to listen on for control connections. */
   int DirPort; /**< Port to listen on for directory connections. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */

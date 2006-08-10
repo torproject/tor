@@ -56,6 +56,26 @@ if test x$eventdns = xtrue; then
    AC_DEFINE([USE_EVENTDNS], 1, "Define to 1 if we'll be using eventdns.c")
 fi
 
+AC_ARG_ENABLE(transparent,
+     AC_HELP_STRING(--disable-transparent, disable transparent proxy support),
+     [case "${enableval}" in 
+        yes) transparent=true ;;
+        no)  transparent=false ;;
+        *) AC_MSG_ERROR(bad value for --enable-transparent) ;;
+      esac], [transparent=true])
+if test x$transparent = xtrue; then
+   AC_DEFINE(USE_TRANSPARENT, 1, "Define to enable transparent proxy support")
+   case $host in
+     *-*-linux* )
+       AC_DEFINE(TRANS_NETFILTER, 1, "Define for transparent netfilter") ;;
+     *-*-openbsd*)
+       AC_DEFINE(TRANS_PF, 1, "Define for transparent pf")
+       AC_DEFINE(OPENBSD, 1, "Define to handle pf on OpenBSD properly") ;;
+     *-*-*bsd* )
+       AC_DEFINE(TRANS_PF, 1, "Define for transparent pf") ;;
+   esac
+fi
+
 case $host in
    *-*-solaris* )
      AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])

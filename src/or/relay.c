@@ -845,7 +845,9 @@ connection_edge_process_relay_cell_not_open(
                                 conn->chosen_exit_name, ttl);
     }
     circuit_log_path(LOG_INFO,LD_APP,TO_ORIGIN_CIRCUIT(circ));
-    connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_SUCCEEDED);
+    /* don't send a socks reply to transparent conns */
+    if (!conn->socks_request->has_finished)
+      connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_SUCCEEDED);
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
       /* (We already sent an end cell if possible) */

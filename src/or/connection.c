@@ -16,7 +16,8 @@ const char connection_c_id[] =
 
 static connection_t *connection_create_listener(const char *listenaddress,
                                                 uint16_t listenport, int type);
-static int connection_init_accepted_conn(connection_t *conn);
+static int connection_init_accepted_conn(connection_t *conn,
+                                         uint8_t listener_type);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_receiver_bucket_should_increase(or_connection_t *conn);
 static int connection_finished_flushing(connection_t *conn);
@@ -44,6 +45,7 @@ conn_type_to_string(int type)
     case CONN_TYPE_OR: return "OR";
     case CONN_TYPE_EXIT: return "Exit";
     case CONN_TYPE_AP_LISTENER: return "Socks listener";
+    case CONN_TYPE_AP_TRANS_LISTENER: return "Transparent listener";
     case CONN_TYPE_AP: return "Socks";
     case CONN_TYPE_DIR_LISTENER: return "Directory listener";
     case CONN_TYPE_DIR: return "Directory";
@@ -69,6 +71,7 @@ conn_state_to_string(int type, int state)
   switch (type) {
     case CONN_TYPE_OR_LISTENER:
     case CONN_TYPE_AP_LISTENER:
+    case CONN_TYPE_AP_TRANS_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
     case CONN_TYPE_CONTROL_LISTENER:
       if (state == LISTENER_STATE_READY)
@@ -93,6 +96,7 @@ conn_state_to_string(int type, int state)
       break;
     case CONN_TYPE_AP:
       switch (state) {
+        case AP_CONN_STATE_ORIGDST_WAIT:
         case AP_CONN_STATE_SOCKS_WAIT: return "waiting for dest info";
         case AP_CONN_STATE_RENDDESC_WAIT: return "waiting for rendezvous desc";
         case AP_CONN_STATE_CONTROLLER_WAIT: return "waiting for controller";
@@ -786,7 +790,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     return 0; /* no need to tear down the parent */
   }
 
-  if (connection_init_accepted_conn(newconn) < 0) {
+  if (connection_init_accepted_conn(newconn, conn->type) < 0) {
     connection_mark_for_close(newconn);
     return 0;
   }
@@ -797,7 +801,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
  * If conn is an OR, start the tls handshake.
  */
 static int
-connection_init_accepted_conn(connection_t *conn)
+connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
 {
   connection_start_reading(conn);
 
@@ -806,7 +810,14 @@ connection_init_accepted_conn(connection_t *conn)
       control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW);
       return connection_tls_start_handshake(TO_OR_CONN(conn), 1);
     case CONN_TYPE_AP:
-      conn->state = AP_CONN_STATE_SOCKS_WAIT;
+      switch (listener_type) {
+        case CONN_TYPE_AP_LISTENER:
+          conn->state = AP_CONN_STATE_SOCKS_WAIT;
+          break;
+        case CONN_TYPE_AP_TRANS_LISTENER:
+          conn->state = AP_CONN_STATE_ORIGDST_WAIT;
+          break;
+      }
       break;
     case CONN_TYPE_DIR:
       conn->purpose = DIR_PURPOSE_SERVER;
@@ -1046,6 +1057,10 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
                       options->SocksPort, "127.0.0.1", force,
                       replaced_conns, new_conns, 0)<0)
     return -1;
+  if (retry_listeners(CONN_TYPE_AP_TRANS_LISTENER, options->TransListenAddress,
+                      options->TransPort, "127.0.0.1", force,
+                      replaced_conns, new_conns, 0)<0)
+    return -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1", force,
@@ -1260,6 +1275,7 @@ connection_handle_read(connection_t *conn)
     case CONN_TYPE_OR_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_OR);
     case CONN_TYPE_AP_LISTENER:
+    case CONN_TYPE_AP_TRANS_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_AP);
     case CONN_TYPE_DIR_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_DIR);
@@ -1896,6 +1912,7 @@ connection_is_listener(connection_t *conn)
 {
   if (conn->type == CONN_TYPE_OR_LISTENER ||
       conn->type == CONN_TYPE_AP_LISTENER ||
+      conn->type == CONN_TYPE_AP_TRANS_LISTENER ||
       conn->type == CONN_TYPE_DIR_LISTENER ||
       conn->type == CONN_TYPE_CONTROL_LISTENER)
     return 1;
@@ -2248,6 +2265,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     {
     case CONN_TYPE_OR_LISTENER:
     case CONN_TYPE_AP_LISTENER:
+    case CONN_TYPE_AP_TRANS_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
     case CONN_TYPE_CONTROL_LISTENER:
       tor_assert(conn->state == LISTENER_STATE_READY);

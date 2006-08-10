@@ -235,6 +235,8 @@ static config_var_t _option_vars[] = {
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
   VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
   OBSOLETE("TrafficShaping"),
+  VAR("TransListenAddress",  LINELIST, TransListenAddress,   NULL),
+  VAR("TransPort",           UINT,     TransPort,            "0"),
   VAR("UseEntryGuards",      BOOL,     UseEntryGuards,       "1"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
@@ -2067,6 +2069,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("SocksPort must be defined if SocksListenAddress is defined.");
 #endif
 
+  /* XXX TransListenAddress should be checked here as well */
   if (options->SocksListenAddress) {
     config_line_t *line = NULL;
     char *address = NULL;
@@ -2144,14 +2147,23 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->SocksPort < 0 || options->SocksPort > 65535)
     REJECT("SocksPort option out of bounds.");
 
-  if (options->SocksPort == 0 && options->ORPort == 0)
-    REJECT("SocksPort and ORPort are both undefined? Quitting.");
+  if (options->TransPort < 0 || options->TransPort > 65535)
+    REJECT("TransPort option out of bounds.");
+
+  if (options->SocksPort == 0 && options->TransPort == 0 &&
+      options->ORPort == 0)
+    REJECT("SocksPort, TransPort, and ORPort are all undefined? Quitting.");
 
   if (options->ControlPort < 0 || options->ControlPort > 65535)
     REJECT("ControlPort option out of bounds.");
 
   if (options->DirPort < 0 || options->DirPort > 65535)
     REJECT("DirPort option out of bounds.");
+
+#ifndef USE_TRANSPARENT
+  if (options->TransPort || options->TransListenAddress)
+    REJECT("TransPort and TransListenAddress are disabled in this build.");
+#endif
 
   if (options->StrictExitNodes &&
       (!options->ExitNodes || !strlen(options->ExitNodes)) &&

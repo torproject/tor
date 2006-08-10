@@ -17,6 +17,7 @@ const char connection_edge_c_id[] =
 static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
+static int connection_ap_process_transparent(edge_connection_t *conn);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -80,6 +81,7 @@ connection_edge_reached_eof(edge_connection_t *conn)
 /** Handle new bytes on conn->inbuf based on state:
  *   - If it's waiting for socks info, try to read another step of the
  *     socks handshake out of conn->inbuf.
+ *   - If it's waiting for the original destination, fetch it.
  *   - If it's open, then package more relay cells from the stream.
  *   - Else, leave the bytes on inbuf alone for now.
  *
@@ -94,6 +96,12 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
   switch (conn->_base.state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if (connection_ap_handshake_process_socks(conn) < 0) {
+        /* already marked */
+        return -1;
+      }
+      return 0;
+    case AP_CONN_STATE_ORIGDST_WAIT:
+      if (connection_ap_process_transparent(conn) < 0) {
         /* already marked */
         return -1;
       }
@@ -234,6 +242,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
+    case AP_CONN_STATE_ORIGDST_WAIT:
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
@@ -1216,6 +1225,89 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   return 0; /* unreached but keeps the compiler happy */
 }
 
+/** Fetch the original destination address and port from a
+ * system-specific interface and put them into a
+ * socks_request_t as if they came from a socks request.
+ *
+ * Return -1 if an error prevents fetching the destination,
+ * else return 0.
+ */
+static int
+connection_ap_get_original_destination(edge_connection_t *conn,
+                                       socks_request_t *req)
+{
+#ifdef TRANS_NETFILTER
+  /* Linux 2.4+ */
+  struct sockaddr_in orig_dst;
+  socklen_t orig_dst_len = sizeof(orig_dst);
+  char tmpbuf[INET_NTOA_BUF_LEN];
+
+  if (getsockopt(conn->_base.s, SOL_IP, SO_ORIGINAL_DST,
+                 (struct sockaddr*)&orig_dst, &orig_dst_len) < 0) {
+    int e = tor_socket_errno(conn->_base.s);
+    log_warn(LD_NET, "getsockopt() failed: %s", tor_socket_strerror(e));
+    return -1;
+  }
+
+  tor_inet_ntoa(&orig_dst.sin_addr, tmpbuf, sizeof(tmpbuf));
+  strlcpy(req->address, tmpbuf, sizeof(req->address));
+  req->port = ntohs(orig_dst.sin_port);
+#endif
+
+#ifdef TRANS_PF
+  struct sockaddr_in proxy_addr;
+  socklen_t proxy_addr_len = sizeof(proxy_addr);
+  char tmpbuf[INET_NTOA_BUF_LEN];
+  struct pfioc_natlook pnl;
+  int pf = -1;
+
+  if (getsockname(conn->_base.s, (struct sockaddr*)&proxy_addr,
+                  &proxy_addr_len) < 0) {
+    int e = tor_socket_errno(conn->_base.s);
+    log_warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
+    return -1;
+  }
+
+  memset(&pnl, 0, sizeof(pnl));
+  pnl.af              = AF_INET;
+  pnl.proto           = IPPROTO_TCP;
+  pnl.direction       = PF_OUT;
+  pnl.saddr.v4.s_addr = htonl(conn->_base.addr);
+  pnl.sport           = htons(conn->_base.port);
+  pnl.daddr.v4.s_addr = proxy_addr.sin_addr.s_addr;
+  pnl.dport           = proxy_addr.sin_port;
+
+  /* XXX We should open the /dev/pf device once and close it at cleanup time
+   * instead of reopening it for every connection. Ideally, it should be
+   * opened before dropping privs. */
+#ifdef OPENBSD
+  /* only works on OpenBSD */
+  pf = open("/dev/pf", O_RDONLY);
+#else
+  /* works on NetBSD and FreeBSD */
+  pf = open("/dev/pf", O_RDWR);
+#endif
+
+  if (pf < 0) {
+    log_warn(LD_NET, "open(\"/dev/pf\") failed: %s", strerror(errno));
+    return -1;
+  }
+
+  if (ioctl(pf, DIOCNATLOOK, &pnl) < 0) {
+    log_warn(LD_NET, "ioctl(DIOCNATLOOK) failed: %s", strerror(errno));
+    close(pf);
+    return -1;
+  }
+  close(pf);
+
+  tor_inet_ntoa(&pnl.rdaddr.v4, tmpbuf, sizeof(tmpbuf));
+  strlcpy(req->address, tmpbuf, sizeof(req->address));
+  req->port = ntohs(pnl.rdport);
+#endif
+
+  return 0;
+}
+
 /** connection_edge_process_inbuf() found a conn in state
  * socks_wait. See if conn->inbuf has the right bytes to proceed with
  * the socks handshake.
@@ -1270,6 +1362,48 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
     control_event_stream_status(conn, STREAM_EVENT_NEW);
   else
     control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE);
+
+  if (options->LeaveStreamsUnattached) {
+    conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
+    return 0;
+  }
+  return connection_ap_handshake_rewrite_and_attach(conn, NULL);
+}
+
+/** connection_edge_process_inbuf() found a conn in state
+ * origdst_wait. Get the original destination and
+ * send it to connection_ap_handshake_rewrite_and_attach().
+ *
+ * Return -1 if an unexpected error with conn (and it should be marked
+ * for close), else return 0.
+ */
+static int
+connection_ap_process_transparent(edge_connection_t *conn)
+{
+  socks_request_t *socks;
+  or_options_t *options = get_options();
+
+  tor_assert(conn);
+  tor_assert(conn->_base.type == CONN_TYPE_AP);
+  tor_assert(conn->_base.state == AP_CONN_STATE_ORIGDST_WAIT);
+  tor_assert(conn->socks_request);
+  socks = conn->socks_request;
+
+  /* pretend that a socks handshake completed so we don't try to
+   * send a socks reply down a transparent conn */
+  socks->command = SOCKS_COMMAND_CONNECT;
+  socks->has_finished = 1;
+
+  log_debug(LD_APP,"entered.");
+
+  if (connection_ap_get_original_destination(conn, socks) < 0) {
+    log_warn(LD_APP,"Fetching original destination failed. Closing.");
+    connection_mark_unattached_ap(conn, 0);
+    return -1;
+  }
+  /* we have the original destination */
+
+  control_event_stream_status(conn, STREAM_EVENT_NEW);
 
   if (options->LeaveStreamsUnattached) {
     conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
