@@ -2075,10 +2075,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     const char *tp = is_socks ? "SOCKS proxy" : "transparent proxy";
     if (is_socks) {
       opt = options->SocksListenAddress;
-      old = old_options->SocksListenAddress;
+      old = old_options ? old_options->SocksListenAddress : NULL;
     } else {
       opt = options->TransListenAddress;
-      old = old_options->TransListenAddress;
+      old = old_options ? old_options->TransListenAddress : NULL;
     }
 
     for (line = opt; line; line = line->next) {
