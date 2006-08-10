@@ -3623,6 +3623,10 @@ check_libevent_version(const char *m, int server)
 
   version = decode_libevent_version();
 
+  /* XXX Would it be worthwhile disabling the methods that we know
+   * are buggy, rather than just warning about them and then proceeding
+   * to use them? If so, we should probably not wrap this whole thing
+   * in HAVE_EVENT_GET_VERSION and HAVE_EVENT_GET_METHOD. -RD */
   if (!strcmp(m, "kqueue")) {
     if (version < LE_11B)
       buggy = 1;
