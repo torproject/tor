@@ -392,8 +392,12 @@ static int config_parse_interval(const char *s, int *ok);
 static void print_cvs_version(void);
 static void init_libevent(void);
 static int opt_streq(const char *s1, const char *s2);
+typedef enum {
+  LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_OTHER
+} le_version_t;
+static le_version_t decode_libevent_version(void);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-static void check_libevent_version(const char *m, const char *v, int server);
+static void check_libevent_version(const char *m, int server);
 #endif
 
 /*static*/ or_options_t *options_new(void);
@@ -3546,7 +3550,19 @@ init_libevent(void)
    */
   suppress_libevent_log_msg("Function not implemented");
 #ifdef __APPLE__
-  setenv("EVENT_NOKQUEUE","1",1);
+  if (decode_libevent_version() < LE_11B) {
+    setenv("EVENT_NOKQUEUE","1",1);
+  } else if (!getenv("EVENT_NOKQUEUE")) {
+    const char *ver = NULL;
+#ifdef HAVE_EVENT_GET_VERSION
+    ver = event_get_version();
+#endif
+    tor_assert(ver); /* If we're 1.1b or later, we'd better have get_version()*/
+    log(LOG_NOTICE, LD_GENERAL, "Enabling experimental OS X kqueue support "
+        "with libevent %s.  If this turns out to not work, "
+        "set the environment variable EVENT_NOKQUEUE, and tell the Tor "
+        "developers.", ver);
+  }
 #endif
   event_init();
   suppress_libevent_log_msg(NULL);
@@ -3556,8 +3572,7 @@ init_libevent(void)
   log(LOG_NOTICE, LD_GENERAL,
       "Initialized libevent version %s using method %s. Good.",
       event_get_version(), event_get_method());
-  check_libevent_version(event_get_method(), event_get_version(),
-                         get_options()->ORPort != 0);
+  check_libevent_version(event_get_method(), get_options()->ORPort != 0);
 #else
   log(LOG_NOTICE, LD_GENERAL,
       "Initialized old libevent (version 1.0b or earlier).");
@@ -3568,10 +3583,6 @@ init_libevent(void)
 }
 
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-typedef enum {
-  LE_10C=0, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_OTHER
-} le_version_t;
-
 static const struct {
   const char *name; le_version_t version;
 } le_version_table[] = {
@@ -3585,25 +3596,32 @@ static const struct {
   { NULL, 0 }
 };
 
+static le_version_t
+decode_libevent_version(void)
+{
+  const char *v = event_get_version();
+  int i;
+  for (i=0; le_version_table[i].name; ++i) {
+    if (!strcmp(le_version_table[i].name, v)) {
+      return le_version_table[i].version;
+    }
+  }
+  return LE_OTHER;
+}
+
 /**
  * Compare the given libevent method and version to a list of versions
  * which are known not to work.  Warn the user as appropriate.
  *
  */
 static void
-check_libevent_version(const char *m, const char *v, int server)
+check_libevent_version(const char *m, int server)
 {
   int buggy = 0, iffy = 0, slow = 0;
-  int i;
-  le_version_t version = LE_OTHER;
-  tor_assert(m && v);
+  le_version_t version;
+  const char *v = event_get_version();
 
-  for (i=0; le_version_table[i].name; ++i) {
-    if (!strcmp(le_version_table[i].name, v)) {
-      version = le_version_table[i].version;
-      break;
-    }
-  }
+  version = decode_libevent_version();
 
   if (!strcmp(m, "kqueue")) {
     if (version < LE_11B)
@@ -3639,6 +3657,12 @@ check_libevent_version(const char *m, const char *v, int server)
         v,m);
   }
 
+}
+#else
+static le_version_t
+decode_libevent_version(void)
+{
+  return LE_OLD;
 }
 #endif
 
