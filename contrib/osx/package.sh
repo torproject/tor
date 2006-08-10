@@ -32,11 +32,7 @@ if [ "XX$VERSION" = 'XX' ]; then
   exit 1
 fi
 
-if [ -x /usr/bin/arch ]; then
-  ARCH=`/usr/bin/arch`
-else
-  ARCH="unknown"
-fi
+ARCH="universal"
 
 ## Determine OSX Version
 # map version to name

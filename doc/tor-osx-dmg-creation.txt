@@ -47,3 +47,35 @@ do a configure with these parameters:
 
 3) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.
+
+## Universal Binaries for OSX PPC and X86
+
+1) Install XCode 2.4 updates.
+
+2)  Download the latest libevent from
+http://www.monkey.org/~provos/libevent/
+
+3) The first step of compiling libevent is to configure it as
+follows:
+CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc"
+\ LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
+       ./configure --enable-static --disable-shared \
+       --disable-dependency-tracking
+
+3) Complete the "make" and "make install".  You will need to be root,
+or sudo -s, to complete the "make install".
+
+4) If you have previouslly installed libevent, go rm the old libevent.so*
+
+5) Get your preferred version of the tor source from tor.eff.org.
+
+6) In the top level, this means /path/to/tor/, not tor/contrib/osx,
+do a configure with these parameters:
+CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc"
+\ LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
+configure --prefix=/Library/Tor --bindir=/Library/Tor \
+--sysconfdir=/Library --enable-static --disable-shared \
+--disable-dependency-tracking
+
+7) "make dist-osx"
+
