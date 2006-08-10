@@ -370,7 +370,10 @@ AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h limits.h
 AC_CHECK_HEADERS(net/if.h, [net_if_found=1], [net_if_found=0])
 AC_CHECK_HEADERS(net/pfvar.h, [net_pfvar_found=1], [net_pfvar_found=0])
 AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
-        [linux_netfilter_ipv4=1], [linux_netfilter_ipv4=0])
+        [linux_netfilter_ipv4=1], [linux_netfilter_ipv4=0],
+[#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif])
 
 AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam getpwuid ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem mmap strtok_r)
 
@@ -387,7 +390,7 @@ if test x$transparent = xtrue ; then
    if test x$linux_netfilter_ipv4 = x1 ; then
      transparent_ok=1
    fi
-   if x$transparent_ok = x1 ; then
+   if test x$transparent_ok = x1 ; then
      AC_DEFINE(USE_TRANSPARENT, 1, "Define to enable transparent proxy support")
      case $host in
        *-*-openbsd*)
