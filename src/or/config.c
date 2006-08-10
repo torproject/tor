@@ -3562,12 +3562,29 @@ init_libevent(void)
   log(LOG_NOTICE, LD_GENERAL,
       "Initialized old libevent (version 1.0b or earlier).");
   log(LOG_WARN, LD_GENERAL,
-      "You have a very old version of libevent.  It is likely to be buggy; "
-      "please consider building Tor with a more recent version.");
+      "You have a *VERY* old version of libevent.  It is likely to be buggy; "
+      "please build Tor with a more recent version.");
 #endif
 }
 
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
+typedef enum {
+  LE_10C=0, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_OTHER
+} le_version_t;
+
+static const struct {
+  const char *name; le_version_t version;
+} le_version_table[] = {
+  /* earlier versions don't have get_version. */
+  { "1.0c", LE_10C },
+  { "1.0d", LE_10D },
+  { "1.0e", LE_10E },
+  { "1.1",  LE_11 },
+  { "1.1a", LE_11A },
+  { "1.1b", LE_11B },
+  { NULL, 0 }
+};
+
 /**
  * Compare the given libevent method and version to a list of versions
  * which are known not to work.  Warn the user as appropriate.
@@ -3577,25 +3594,34 @@ static void
 check_libevent_version(const char *m, const char *v, int server)
 {
   int buggy = 0, iffy = 0, slow = 0;
-
+  int i;
+  le_version_t version = LE_OTHER;
   tor_assert(m && v);
 
-  if (!strcmp(m, "kqueue")) {
-    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e") ||
-        !strcmp(v, "1.1")) {
-      buggy = 1;
+  for (i=0; le_version_table[i].name; ++i) {
+    if (!strcmp(le_version_table[i].name, v)) {
+      version = le_version_table[i].version;
+      break;
     }
+  }
+
+  if (!strcmp(m, "kqueue")) {
+    if (version < LE_11B)
+      buggy = 1;
   } else if (!strcmp(m, "epoll")) {
-    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
+    if (version < LE_11)
       iffy = 1;
   } else if (!strcmp(m, "poll")) {
-    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d"))
+    if (version < LE_10E)
       buggy = 1;
-    else if (!strcmp(v, "1.0e"))
+    else if (version < LE_11)
       slow = 1;
   } else if (!strcmp(m, "poll")) {
-    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
+    if (version < LE_11)
       slow = 1;
+  } else if (!strcmp(m, "win32")) {
+    if (version < LE_11B)
+      buggy = 1;
   }
 
   if (buggy) {
