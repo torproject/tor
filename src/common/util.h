@@ -38,12 +38,17 @@
  */
 #error "Sorry; we don't support building with NDEBUG."
 #else
+#ifdef __GNUC__
+#define PREDICT_FALSE(x) PREDICT((x) != ((typeof(x)) 0), 0)
+#else
+#define PREDICT_FALSE(x) !(x)
+#endif
 #define tor_assert(expr) do {                                           \
-    if (!(expr)) {                                                      \
+    if (PREDICT_FALSE(expr)) {                                          \
       log(LOG_ERR, LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.", \
-          _SHORT_FILE_, __LINE__, __func__, #expr);                 \
+          _SHORT_FILE_, __LINE__, __func__, #expr);                     \
       fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",      \
-              _SHORT_FILE_, __LINE__, __func__, #expr);             \
+              _SHORT_FILE_, __LINE__, __func__, #expr);                 \
       abort();                                                          \
     } } while (0)
 #endif
@@ -74,13 +79,14 @@ void *_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
 extern int dmalloc_free(const char *file, const int line, void *pnt,
                         const int func_id);
 #define tor_free(p) do { \
-    if (p) {                                        \
+    if (PREDICT((p)!=NULL, 1) {                     \
       dmalloc_free(_SHORT_FILE_, __LINE__, (p), 0); \
       (p)=NULL;                                     \
     }                                               \
   } while (0)
 #else
-#define tor_free(p) do { if (p) {free(p); (p)=NULL;} } while (0)
+#define tor_free(p) do { if (PREDICT((p)!=NULL,1)) { free(p); (p)=NULL;} } \
+  while (0)
 #endif
 
 #define tor_malloc(size)       _tor_malloc(size DMALLOC_ARGS)
