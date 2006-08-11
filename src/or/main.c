@@ -1290,17 +1290,17 @@ signal_callback(int fd, short events, void *arg)
   }
 }
 
+extern uint64_t buf_total_used;
+extern uint64_t buf_total_alloc;
+extern uint64_t rephist_total_alloc;
+extern uint32_t rephist_total_num;
+
 /**
  * Write current memory usage information to the log.
  */
 static void
 dumpmemusage(int severity)
 {
-  extern uint64_t buf_total_used;
-  extern uint64_t buf_total_alloc;
-  extern uint64_t rephist_total_alloc;
-  extern uint32_t rephist_total_num;
-
   log(severity, LD_GENERAL,
       "In buffers: "U64_FORMAT" used/"U64_FORMAT" allocated (%d conns).",
       U64_PRINTF_ARG(buf_total_used), U64_PRINTF_ARG(buf_total_alloc),
@@ -2143,6 +2143,7 @@ tor_main(int argc, char *argv[])
   case CMD_VERIFY_CONFIG:
     printf("Configuration was valid\n");
     break;
+  case CMD_RUN_UNITTESTS:
   default:
     log_warn(LD_BUG,"Illegal command number %d: internal error.",
              get_options()->command);

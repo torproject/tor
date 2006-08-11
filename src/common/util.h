@@ -62,12 +62,14 @@
 #define tor_fragile_assert()
 
 /* Memory management */
-void *_tor_malloc(size_t size DMALLOC_PARAMS);
-void *_tor_malloc_zero(size_t size DMALLOC_PARAMS);
+void *_tor_malloc(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
+void *_tor_malloc_zero(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
 void *_tor_realloc(void *ptr, size_t size DMALLOC_PARAMS);
-char *_tor_strdup(const char *s DMALLOC_PARAMS);
-char *_tor_strndup(const char *s, size_t n DMALLOC_PARAMS);
-void *_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS);
+char *_tor_strdup(const char *s DMALLOC_PARAMS) ATTR_MALLOC ATTR_NONNULL((1));
+char *_tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
+  ATTR_MALLOC ATTR_NONNULL((1));
+void *_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
+  ATTR_MALLOC ATTR_NONNULL((1));
 #ifdef USE_DMALLOC
 extern int dmalloc_free(const char *file, const int line, void *pnt,
                         const int func_id);
@@ -94,15 +96,17 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
-void tor_strlower(char *s);
-void tor_strupper(char *s);
-int tor_strisprint(const char *s);
-int tor_strisnonupper(const char *s);
-int strcmpstart(const char *s1, const char *s2);
-int strcasecmpstart(const char *s1, const char *s2);
-int strcmpend(const char *s1, const char *s2);
-int strcasecmpend(const char *s1, const char *s2);
-int tor_strstrip(char *s, const char *strip);
+void tor_strlower(char *s) ATTR_NONNULL((1));
+void tor_strupper(char *s) ATTR_NONNULL((1));
+int tor_strisprint(const char *s) ATTR_PURE ATTR_NONNULL((1));
+int tor_strisnonupper(const char *s) ATTR_PURE ATTR_NONNULL((1));
+int strcmpstart(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
+int strcasecmpstart(const char *s1, const char *s2)
+  ATTR_PURE ATTR_NONNULL((1,2));
+int strcmpend(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
+int strcasecmpend(const char *s1, const char *s2)
+  ATTR_PURE ATTR_NONNULL((1,2));
+int tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
 typedef enum {
   ALWAYS_TERMINATE, NEVER_TERMINATE, TERMINATE_IF_EVEN
 } part_finish_rule_t;
@@ -115,13 +119,13 @@ unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
                               unsigned long max, int *ok, char **next);
 uint64_t tor_parse_uint64(const char *s, int base, uint64_t min,
                          uint64_t max, int *ok, char **next);
-const char *hex_str(const char *from, size_t fromlen);
-const char *eat_whitespace(const char *s);
-const char *eat_whitespace_no_nl(const char *s);
-const char *find_whitespace(const char *s);
-int tor_mem_is_zero(const char *mem, size_t len);
-int tor_digest_is_zero(const char *digest);
-char *esc_for_log(const char *string);
+const char *hex_str(const char *from, size_t fromlen) ATTR_NONNULL((1));
+const char *eat_whitespace(const char *s) ATTR_PURE;
+const char *eat_whitespace_no_nl(const char *s) ATTR_PURE;
+const char *find_whitespace(const char *s) ATTR_PURE;
+int tor_mem_is_zero(const char *mem, size_t len) ATTR_PURE;
+int tor_digest_is_zero(const char *digest) ATTR_PURE;
+char *esc_for_log(const char *string) ATTR_MALLOC;
 const char *escaped(const char *string);
 
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
@@ -165,15 +169,15 @@ int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
 int append_bytes_to_file(const char *fname, const char *str, size_t len,
                          int bin);
 
-char *read_file_to_str(const char *filename, int bin);
+char *read_file_to_str(const char *filename, int bin) ATTR_MALLOC;
 char *parse_line_from_str(char *line, char **key_out, char **value_out);
 char *expand_filename(const char *filename);
 struct smartlist_t *tor_listdir(const char *dirname);
-int path_is_relative(const char *filename);
+int path_is_relative(const char *filename) ATTR_PURE;
 
 /* Net helpers */
-int is_internal_IP(uint32_t ip, int for_listening);
-int is_local_IP(uint32_t ip);
+int is_internal_IP(uint32_t ip, int for_listening) ATTR_PURE;
+int is_local_IP(uint32_t ip) ATTR_PURE;
 int parse_addr_port(int severity, const char *addrport, char **address,
                     uint32_t *addr, uint16_t *port_out);
 int parse_port_range(const char *port, uint16_t *port_min_out,
@@ -184,7 +188,7 @@ int parse_addr_and_port_range(const char *s, uint32_t *addr_out,
 int addr_mask_get_bits(uint32_t mask);
 #define INET_NTOA_BUF_LEN 16
 int tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len);
-char *tor_dup_addr(uint32_t addr);
+char *tor_dup_addr(uint32_t addr) ATTR_MALLOC;
 int is_plausible_address(const char *name);
 int get_interface_address(uint32_t *addr);
 

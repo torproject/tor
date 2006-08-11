@@ -2151,6 +2151,8 @@ void accounting_set_bandwidth_usage_from_state(or_state_t *state);
 
 /********************************* main.c ***************************/
 
+extern int has_completed_circuit;
+
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 int connection_in_array(connection_t *conn);

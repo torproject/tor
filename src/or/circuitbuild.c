@@ -334,6 +334,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   return 0;
 }
 
+extern smartlist_t *circuits_pending_or_conns;
+
 /** Find any circuits that are waiting on <b>or_conn</b> to become
  * open and get them to send their create cells forward.
  *
@@ -342,7 +344,6 @@ circuit_handle_first_hop(origin_circuit_t *circ)
 void
 circuit_n_conn_done(or_connection_t *or_conn, int status)
 {
-  extern smartlist_t *circuits_pending_or_conns;
   smartlist_t *changed_circs;
 
   log_debug(LD_CIRC,"or_conn to %s, status=%d",
@@ -477,8 +478,6 @@ should_use_create_fast_for_router(routerinfo_t *router)
   else
     return 1;
 }
-
-extern int has_completed_circuit;
 
 /** This is the backbone function for building circuits.
  *

@@ -455,6 +455,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
     case FP_INVALID:
       ri->is_named = ri->is_valid = 0;
       break;
+    case FP_REJECT:
     default:
       tor_assert(0);
   }
@@ -1977,8 +1978,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
 {
   tor_assert(conn->_base.state == DIR_CONN_STATE_SERVER_WRITING);
 
-  if (conn->dir_spool_src == DIR_SPOOL_NONE
-      || buf_datalen(conn->_base.outbuf) >= DIRSERV_BUFFER_MIN)
+  if (buf_datalen(conn->_base.outbuf) >= DIRSERV_BUFFER_MIN)
     return 0;
 
   switch (conn->dir_spool_src) {
@@ -1989,6 +1989,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
       return connection_dirserv_add_dir_bytes_to_outbuf(conn);
     case DIR_SPOOL_NETWORKSTATUS:
       return connection_dirserv_add_networkstatus_bytes_to_outbuf(conn);
+    case DIR_SPOOL_NONE:
     default:
       return 0;
   }

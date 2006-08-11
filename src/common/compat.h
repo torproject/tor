@@ -89,6 +89,19 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define DBL_TO_U64(x) ((uint64_t) (x))
 #endif
 
+/* GCC has several useful attributes. */
+#ifdef __GNUC__
+#define ATTR_NORETURN __attribute__((noreturn))
+#define ATTR_PURE __attribute__((pure))
+#define ATTR_MALLOC __attribute__((malloc))
+#define ATTR_NONNULL(x) __attribute__((nonnull x))
+#else
+#define ATTR_NORETURN
+#define ATTR_PURE
+#define ATTR_MALLOC
+#define ATTR_NONNULL(x)
+#endif
+
 /* ===== String compatibility */
 #ifdef MS_WINDOWS
 /* Windows names string functions differently from most other platforms. */
@@ -96,10 +109,10 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define strcasecmp stricmp
 #endif
 #ifndef HAVE_STRLCAT
-size_t strlcat(char *dst, const char *src, size_t siz);
+size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
 #ifndef HAVE_STRLCPY
-size_t strlcpy(char *dst, const char *src, size_t siz);
+size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
 
 #ifdef _MSC_VER
@@ -120,15 +133,16 @@ typedef struct tor_mmap_t {
   size_t size;
 } tor_mmap_t;
 
-tor_mmap_t *tor_mmap_file(const char *filename);
-void tor_munmap_file(tor_mmap_t *handle);
+tor_mmap_t *tor_mmap_file(const char *filename) ATTR_NONNULL((1));
+void tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
 
 int tor_snprintf(char *str, size_t size, const char *format, ...)
-     CHECK_PRINTF(3,4);
-int tor_vsnprintf(char *str, size_t size, const char *format, va_list args);
+  CHECK_PRINTF(3,4) ATTR_NONNULL((1,3));
+int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
+  ATTR_NONNULL((1,3));
 
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
-                       size_t nlen);
+                       size_t nlen)  ATTR_PURE ATTR_NONNULL((1,3));
 
 #define TOR_ISALPHA(c)   isalpha((int)(unsigned char)(c))
 #define TOR_ISALNUM(c)   isalnum((int)(unsigned char)(c))
@@ -197,8 +211,8 @@ typedef int socklen_t;
 #endif
 
 struct in_addr;
-int tor_inet_aton(const char *cp, struct in_addr *addr);
-int tor_lookup_hostname(const char *name, uint32_t *addr);
+int tor_inet_aton(const char *cp, struct in_addr *addr) ATTR_NONNULL((1,2));
+int tor_lookup_hostname(const char *name, uint32_t *addr) ATTR_NONNULL((1,2));
 void set_socket_nonblocking(int socket);
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
 int network_init(void);
@@ -243,10 +257,10 @@ const char *tor_socket_strerror(int e);
 /* ===== OS compatibility */
 const char *get_uname(void);
 
-uint16_t get_uint16(const char *cp);
-uint32_t get_uint32(const char *cp);
-void set_uint16(char *cp, uint16_t v);
-void set_uint32(char *cp, uint32_t v);
+uint16_t get_uint16(const char *cp) ATTR_PURE ATTR_NONNULL((1));
+uint32_t get_uint32(const char *cp) ATTR_PURE ATTR_NONNULL((1));
+void set_uint16(char *cp, uint16_t v) ATTR_NONNULL((1));
+void set_uint32(char *cp, uint32_t v) ATTR_NONNULL((1));
 
 int set_max_file_descriptors(unsigned long limit, unsigned long cap);
 int switch_id(char *user, char *group);
@@ -255,7 +269,7 @@ char *get_user_homedir(const char *username);
 #endif
 
 int spawn_func(int (*func)(void *), void *data);
-void spawn_exit(void);
+void spawn_exit(void) ATTR_NORETURN;
 
 #if defined(ENABLE_THREADS) && defined(MS_WINDOWS)
 #define USE_WIN32_THREADS

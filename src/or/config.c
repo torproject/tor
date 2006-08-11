@@ -792,7 +792,6 @@ options_act(or_options_t *old_options)
       log_info(LD_GENERAL,
                "Worker-related options changed. Rotating workers.");
       if (server_mode(options) && !server_mode(old_options)) {
-        extern int has_completed_circuit;
         if (init_keys() < 0) {
           log_err(LD_GENERAL,"Error initializing keys; exiting");
           return -1;
@@ -1285,18 +1284,8 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
   if (!var) {
     log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
     return NULL;
-  } else if (var->type == CONFIG_TYPE_LINELIST_S) {
-    log_warn(LD_CONFIG,
-             "Can't return context-sensitive '%s' on its own", key);
-    return NULL;
   }
   value = STRUCT_VAR_P(options, var->var_offset);
-
-  if (var->type == CONFIG_TYPE_LINELIST ||
-      var->type == CONFIG_TYPE_LINELIST_V) {
-    /* Linelist requires special handling: we just copy and return it. */
-    return config_lines_dup(*(const config_line_t**)value);
-  }
 
   result = tor_malloc_zero(sizeof(config_line_t));
   result->key = tor_strdup(var->name);
@@ -1353,6 +1342,17 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
       tor_free(result->key);
       tor_free(result);
       return NULL;
+    case CONFIG_TYPE_LINELIST_S:
+      log_warn(LD_CONFIG,
+               "Can't return context-sensitive '%s' on its own", key);
+      tor_free(result->key);
+      tor_free(result);
+      return NULL;
+    case CONFIG_TYPE_LINELIST:
+    case CONFIG_TYPE_LINELIST_V:
+      tor_free(result->key);
+      tor_free(result);
+      return config_lines_dup(*(const config_line_t**)value);
     default:
       tor_free(result->key);
       tor_free(result);
@@ -3379,6 +3379,8 @@ write_configuration_file(const char *fname, or_options_t *options)
         break;
       case FN_NOENT:
         break;
+      case FN_ERROR:
+      case FN_DIR:
       default:
         log_warn(LD_CONFIG,
                  "Config file \"%s\" is not a file? Failing.", fname);
@@ -3786,6 +3788,8 @@ or_state_load(void)
       break;
     case FN_NOENT:
       break;
+    case FN_ERROR:
+    case FN_DIR:
     default:
       log_warn(LD_GENERAL,"State file \"%s\" is not a file? Failing.", fname);
       goto done;
@@ -3932,47 +3936,47 @@ config_getinfo_helper(const char *question, char **answer)
 #include "../common/ht.h"
 #include "../common/test.h"
 
+extern const char aes_c_id[];
+extern const char compat_c_id[];
+extern const char container_c_id[];
+extern const char crypto_c_id[];
+extern const char log_c_id[];
+extern const char torgzip_c_id[];
+extern const char tortls_c_id[];
+extern const char util_c_id[];
+
+extern const char buffers_c_id[];
+extern const char circuitbuild_c_id[];
+extern const char circuitlist_c_id[];
+extern const char circuituse_c_id[];
+extern const char command_c_id[];
+//  extern const char config_c_id[];
+extern const char connection_c_id[];
+extern const char connection_edge_c_id[];
+extern const char connection_or_c_id[];
+extern const char control_c_id[];
+extern const char cpuworker_c_id[];
+extern const char directory_c_id[];
+extern const char dirserv_c_id[];
+extern const char dns_c_id[];
+extern const char hibernate_c_id[];
+extern const char main_c_id[];
+extern const char onion_c_id[];
+extern const char policies_c_id[];
+extern const char relay_c_id[];
+extern const char rendclient_c_id[];
+extern const char rendcommon_c_id[];
+extern const char rendmid_c_id[];
+extern const char rendservice_c_id[];
+extern const char rephist_c_id[];
+extern const char router_c_id[];
+extern const char routerlist_c_id[];
+extern const char routerparse_c_id[];
+
 /** Dump the version of every file to the log. */
 static void
 print_cvs_version(void)
 {
-  extern const char aes_c_id[];
-  extern const char compat_c_id[];
-  extern const char container_c_id[];
-  extern const char crypto_c_id[];
-  extern const char log_c_id[];
-  extern const char torgzip_c_id[];
-  extern const char tortls_c_id[];
-  extern const char util_c_id[];
-
-  extern const char buffers_c_id[];
-  extern const char circuitbuild_c_id[];
-  extern const char circuitlist_c_id[];
-  extern const char circuituse_c_id[];
-  extern const char command_c_id[];
-//  extern const char config_c_id[];
-  extern const char connection_c_id[];
-  extern const char connection_edge_c_id[];
-  extern const char connection_or_c_id[];
-  extern const char control_c_id[];
-  extern const char cpuworker_c_id[];
-  extern const char directory_c_id[];
-  extern const char dirserv_c_id[];
-  extern const char dns_c_id[];
-  extern const char hibernate_c_id[];
-  extern const char main_c_id[];
-  extern const char onion_c_id[];
-  extern const char policies_c_id[];
-  extern const char relay_c_id[];
-  extern const char rendclient_c_id[];
-  extern const char rendcommon_c_id[];
-  extern const char rendmid_c_id[];
-  extern const char rendservice_c_id[];
-  extern const char rephist_c_id[];
-  extern const char router_c_id[];
-  extern const char routerlist_c_id[];
-  extern const char routerparse_c_id[];
-
   puts(AES_H_ID);
   puts(COMPAT_H_ID);
   puts(CONTAINER_H_ID);

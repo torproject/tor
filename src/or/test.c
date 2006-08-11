@@ -937,17 +937,17 @@ test_pqueue(void)
   cmp = _compare_strings_for_pqueue;
 
   sl = smartlist_create();
-  smartlist_pqueue_add(sl, cmp, "cows");
-  smartlist_pqueue_add(sl, cmp, "zebras");
-  smartlist_pqueue_add(sl, cmp, "fish");
-  smartlist_pqueue_add(sl, cmp, "frogs");
-  smartlist_pqueue_add(sl, cmp, "apples");
-  smartlist_pqueue_add(sl, cmp, "squid");//
-  smartlist_pqueue_add(sl, cmp, "daschunds");
-  smartlist_pqueue_add(sl, cmp, "eggplants");
-  smartlist_pqueue_add(sl, cmp, "weissbier");//
-  smartlist_pqueue_add(sl, cmp, "lobsters");
-  smartlist_pqueue_add(sl, cmp, "roquefort");//
+  smartlist_pqueue_add(sl, cmp, (char*)"cows");
+  smartlist_pqueue_add(sl, cmp, (char*)"zebras");
+  smartlist_pqueue_add(sl, cmp, (char*)"fish");
+  smartlist_pqueue_add(sl, cmp, (char*)"frogs");
+  smartlist_pqueue_add(sl, cmp, (char*)"apples");
+  smartlist_pqueue_add(sl, cmp, (char*)"squid");
+  smartlist_pqueue_add(sl, cmp, (char*)"daschunds");
+  smartlist_pqueue_add(sl, cmp, (char*)"eggplants");
+  smartlist_pqueue_add(sl, cmp, (char*)"weissbier");
+  smartlist_pqueue_add(sl, cmp, (char*)"lobsters");
+  smartlist_pqueue_add(sl, cmp, (char*)"roquefort");
 
   OK();
 
@@ -958,9 +958,9 @@ test_pqueue(void)
   OK();
   test_streq(smartlist_pqueue_pop(sl, cmp), "cows");
   test_streq(smartlist_pqueue_pop(sl, cmp), "daschunds");
-  smartlist_pqueue_add(sl, cmp, "chinchillas");
+  smartlist_pqueue_add(sl, cmp, (char*)"chinchillas");
   OK();
-  smartlist_pqueue_add(sl, cmp, "fireflies");
+  smartlist_pqueue_add(sl, cmp, (char*)"fireflies");
   OK();
   test_streq(smartlist_pqueue_pop(sl, cmp), "chinchillas");
   test_streq(smartlist_pqueue_pop(sl, cmp), "eggplants");
@@ -1241,6 +1241,8 @@ test_onion_handshake(void)
   crypto_free_pk_env(pk);
 }
 
+extern smartlist_t *fingerprint_list;
+
 static void
 test_dir_format(void)
 {
@@ -1409,7 +1411,6 @@ test_dir_format(void)
 
   /* Okay, now for the directories. */
   {
-    extern smartlist_t *fingerprint_list;
     fingerprint_list = smartlist_create();
     crypto_pk_get_fingerprint(pk2, buf, 1);
     add_fingerprint_to_dir("Magri", buf, fingerprint_list);
