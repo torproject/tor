@@ -39,7 +39,7 @@
 #error "Sorry; we don't support building with NDEBUG."
 #else
 #ifdef __GNUC__
-#define PREDICT_FALSE(x) PREDICT((x) != ((typeof(x)) 0), 0)
+#define PREDICT_FALSE(x) PREDICT((x) == ((typeof(x)) 0), 0)
 #else
 #define PREDICT_FALSE(x) !(x)
 #endif
