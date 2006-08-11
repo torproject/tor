@@ -449,7 +449,7 @@ static or_state_t *global_state = NULL;
 static void *
 config_alloc(config_format_t *fmt)
 {
-  void *opts = opts = tor_malloc_zero(fmt->size);
+  void *opts = tor_malloc_zero(fmt->size);
   *(uint32_t*)STRUCT_VAR_P(opts, fmt->magic_offset) = fmt->magic;
   CHECK(fmt, opts);
   return opts;
