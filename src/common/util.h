@@ -91,8 +91,12 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define tor_memdup(s, n)       _tor_memdup(s, n DMALLOC_ARGS)
 
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
-#define STRUCT_OFFSET(tp, member) \
-  ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
+#ifdef __GNUC__
+#define STRUCT_OFFSET(tp, member) __builtin_offsetof(tp, member)
+#else
+ #define STRUCT_OFFSET(tp, member) \
+   ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
+#endif
 
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
