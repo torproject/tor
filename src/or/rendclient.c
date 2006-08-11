@@ -195,7 +195,6 @@ rend_client_introduction_acked(origin_circuit_t *circ,
   }
 
   tor_assert(circ->build_state->chosen_exit);
-  tor_assert(circ->build_state->chosen_exit->nickname);
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
