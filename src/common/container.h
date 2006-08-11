@@ -33,9 +33,11 @@ void *smartlist_pop_last(smartlist_t *sl);
 void smartlist_reverse(smartlist_t *sl);
 void smartlist_string_remove(smartlist_t *sl, const char *element);
 int smartlist_isin(const smartlist_t *sl, const void *element) ATTR_PURE;
-int smartlist_string_isin(const smartlist_t *sl, const char *element) ATTR_PURE;
+int smartlist_string_isin(const smartlist_t *sl, const char *element)
+  ATTR_PURE;
 int smartlist_string_num_isin(const smartlist_t *sl, int num) ATTR_PURE;
-int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) ATTR_PURE;
+int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2)
+  ATTR_PURE;
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
 
