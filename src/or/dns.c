@@ -8,7 +8,7 @@ const char dns_c_id[] =
 /**
  * \file dns.c
  * \brief Implements a local cache for DNS results for Tor servers.
- * We provide two asynchrounous backend implementations:
+ * We provide two asynchronous backend implementations:
  *   1) A farm of 'DNS worker' threads or processes to perform DNS lookups for
  *      onion routers and cache the results.
  *   2) A wrapper around Adam Langley's eventdns.c code, to send requests

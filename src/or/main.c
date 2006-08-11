@@ -2143,7 +2143,7 @@ tor_main(int argc, char *argv[])
   case CMD_VERIFY_CONFIG:
     printf("Configuration was valid\n");
     break;
-  case CMD_RUN_UNITTESTS:
+  case CMD_RUN_UNITTESTS: /* only set by test.c */
   default:
     log_warn(LD_BUG,"Illegal command number %d: internal error.",
              get_options()->command);
