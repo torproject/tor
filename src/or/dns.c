@@ -312,8 +312,8 @@ purge_expired_resolves(time_t now)
       if (removed != resolve) {
         log_err(LD_BUG, "The expired resolve we purged didn't match any in"
                 " the cache. Tried to purge %s (%p); instead got %s (%p).",
-                resolve->address, resolve,
-                removed ? removed->address : "NULL", remove);
+                resolve->address, (void*)resolve,
+                removed ? removed->address : "NULL", (void*)remove);
       }
       tor_assert(removed == resolve);
       resolve->magic = 0xF0BBF0BB;
@@ -362,6 +362,7 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
       }
     default:
       tor_assert(0);
+      return;
     }
   connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
                                RELAY_COMMAND_RESOLVED, buf, buflen,
@@ -619,8 +620,8 @@ dns_cancel_pending_resolve(char *address)
   if (tmp != resolve) {
     log_err(LD_BUG, "The cancelled resolve we purged didn't match any in"
             " the cache. Tried to purge %s (%p); instead got %s (%p).",
-            resolve->address, resolve,
-            tmp ? tmp->address : "NULL", tmp);
+            resolve->address, (void*)resolve,
+            tmp ? tmp->address : "NULL", (void*)tmp);
   }
   tor_assert(tmp == resolve);
   resolve->magic = 0xABABABAB;
@@ -749,8 +750,8 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
   if (removed != resolve) {
     log_err(LD_BUG, "The pending resolve we found wasn't removable from"
             " the cache. Tried to purge %s (%p); instead got %s (%p).",
-            resolve->address, resolve,
-            removed ? removed->address : "NULL", removed);
+            resolve->address, (void*)resolve,
+            removed ? removed->address : "NULL", (void*)removed);
   }
   assert_resolve_ok(resolve);
   assert_cache_ok();
