@@ -18,6 +18,8 @@ P       - phobos claims
       by default, if it works?"
 
 Items for 0.1.2.x:
+  - enumerate events of important things that occur in tor, so vidalia can
+    react.
   - Bug: We are willing to build circuits using not-up-to-date descriptors,
     when we get a request and we've been idle a long time.
   - We should ship with a list of stable dir mirrors -- they're not
@@ -31,8 +33,17 @@ Items for 0.1.2.x:
       - Write limiting; separate token bucket for write
       o dir answers include a your-ip-address-is header, so we can
         break our dependency on dyndns.
-      - Count TLS bandwidth more accurately
-      - Write-limit directory responses.
+      - Come up with good 'nicknames' automatically, or make no-nickname
+        routers workable.
+      - tolerate clock skew on bridge relays.
+      - a way to export server descriptors to controllers, and/or to
+        non-standard dir authorities.
+      - a way to pick entries based wholly on extend_info equivalent;
+        a way to export extend_info equivalent.
+      - option to dl directory info via tor
+        - is the __AllDirActionsPrivate config option sufficient?
+      D Count TLS bandwidth more accurately
+      - Write-limit directory responses (need to research)
 N   . Improve memory usage on tight-memory machines.
       - Directory-related fixes.
         o Remember offset and location of each descriptor in the cache/journal
@@ -170,8 +181,6 @@ N - When we connect to a Tor server, it sends back a cell listing
 N - Exitlist should avoid outputting the same IP address twice.
 
 N - Write path-spec.txt
-  - Break the dir v1 stuff out of tor-spec.txt into dir-spec-v1.txt,
-    and change the new dir-spec.txt to dir-spec-v2.txt.
 
   - Packaging
     - Tell people about OSX Uninstaller
