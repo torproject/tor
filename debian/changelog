@@ -13,6 +13,15 @@ tor (0.1.2.0-alpha-cvs-1) unstable; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Mon, 24 Jul 2006 05:37:17 +0200
 
+tor (0.1.1.23-XXXXXX) unstable; urgency=low
+
+  * Update debian/copyright:
+    - tree.h has vanished somewhere along the current branch
+    - ht.h is new and credits Christopher Clark
+    - We didn't mention Matej Pfajfar's copyright before.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 13 Aug 2006 01:22:42 +0200
+
 tor (0.1.1.23-1) unstable; urgency=medium
 
   * New upstream version.
