@@ -206,12 +206,37 @@ connectivity, perhaps based on not getting their bridge relays blocked,
 
 \section{Other issues}
 
+\subsection{How many bridge relays should you know about?}
+
+If they're ordinary Tor users on cable modem or DSL, many of them will
+disappear periodically. How many bridge relays should a blockee know
+about before he's likely to have at least one up at any given point?
+
+The related question is: if the bridge relays change IP addresses
+periodically, how often does the blockee need to "check in" in order
+to keep from being cut out of the loop?
+
 \subsection{How do we know if a bridge relay has been blocked?}
 
 We need some mechanism for testing reachability from inside the
 blocked area. The easiest answer is for certain users inside
 the area to sign up as testing relays, and then we can route through
-them and see if it works. But we're back to the earlier question
+them and see if it works.
+
+First problem is that different network areas block different net masks,
+and it will likely be hard to know which users are in which areas. So
+if a bridge relay isn't reachable, is that because of a network block
+somewhere, because of a problem at the bridge relay, or just a temporary
+outage?
+
+Second problem is that if we pick random users to test random relays, the
+adversary should sign up users on the inside, and enumerate the relays
+we test. But it seems dangerous to just let people come forward and
+declare that things are blocked for them, since they could be tricking
+us. (This matters even moreso if our reputation system above relies on
+whether things get blocked to punish or reward.)
+
+
 
 
 \subsection{Tunneling directory lookups through Tor}
