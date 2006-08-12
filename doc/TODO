@@ -17,11 +17,17 @@ P       - phobos claims
     - <arma> "should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?"
 
+Important bugfixes in 0.1.2.x:
+  - When we've been idle a long time, we stop fetching server
+    descriptors. When we then get a socks request, we build circuits
+    immediately using whatever descriptors we have, rather than waiting
+    until we've fetched correct ones.
+  - If the client's clock is too far in the past, it will drop (or
+    just not try to get) descriptors, so it'll never build circuits.
+
 Items for 0.1.2.x:
   - enumerate events of important things that occur in tor, so vidalia can
     react.
-  - Bug: We are willing to build circuits using not-up-to-date descriptors,
-    when we get a request and we've been idle a long time.
   - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
     and diversity for bootstrapping clients.
@@ -137,14 +143,12 @@ N   - Clients stop dumping old descriptors if the network-statuses
         download and use.
 
   - Critical but minor bugs, backport candidates.
-    - If the client's clock is too far in the past, it will drop (or
-      just not try to get) descriptors, so it'll never build circuits.
-R   - Failed rend desc fetches sometimes don't get retried.
+    - Failed rend desc fetches sometimes don't get retried. True/false?
     . If we fail to connect via an exit enclave, (warn and) try again
       without demanding that exit node.
       - And recognize when extending to the enclave node is failing,
         so we can abandon then too.
-R   - non-v1 authorities should not accept rend descs.
+    - non-v1 authorities should not accept rend descs.
     - We need a separate list of "hidserv authorities" if we want to
       retire moria1 from the main list.
     - support dir 503s better
