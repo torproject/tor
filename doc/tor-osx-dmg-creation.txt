@@ -48,11 +48,12 @@ do a configure with these parameters:
 3) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.
 
+
 ## Universal Binaries for OSX PPC and X86
 
-1) Install XCode 2.4 updates.
+1) Install XCode 2.4 updates available from http://developer.apple.com.
 
-2)  Download the latest libevent from
+2)  Download latest libevent from
 http://www.monkey.org/~provos/libevent/
 
 3) The first step of compiling libevent is to configure it as
@@ -65,11 +66,21 @@ CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc"
 3) Complete the "make" and "make install".  You will need to be root,
 or sudo -s, to complete the "make install".
 
-4) If you have previouslly installed libevent, go rm the old libevent.so*
+4) If you have previouslly installed libevent, rm the old libevent.*, located
+by default, in /usr/local/lib/.  
 
-5) Get your preferred version of the tor source from tor.eff.org.
+5) Check for a successful universal binary of libevent.a in, by default,
+/usr/local/lib by using the following command:
+	file /usr/local/lib/libevent.a
 
-6) In the top level, this means /path/to/tor/, not tor/contrib/osx,
+	Your output should be:
+/usr/local/lib/libevent.a: Mach-O fat file with 2 architectures
+/usr/local/lib/libevent.a (for architecture i386):      current ar archive random library
+/usr/local/lib/libevent.a (for architecture ppc):       current ar archive
+
+6) Get your preferred version of the tor source from tor.eff.org.
+
+7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
 CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc"
 \ LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
@@ -77,5 +88,12 @@ configure --prefix=/Library/Tor --bindir=/Library/Tor \
 --sysconfdir=/Library --enable-static --disable-shared \
 --disable-dependency-tracking
 
-7) "make dist-osx"
+8) "make dist-osx"
 
+9) Confirm you have created a universal binary by issuing the follow command:
+file src/or/tor
+src/or/tor: Mach-O fat file with 2 architectures
+src/or/tor (for architecture i386):     Mach-O executable i386
+src/or/tor (for architecture ppc):      Mach-O executable ppc
+
+Congrats.  You have a universal binary.
