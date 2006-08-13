@@ -1836,7 +1836,6 @@ void _connection_controller_force_write(control_connection_t *conn);
 void connection_write_to_buf(const char *string, size_t len,
                              connection_t *conn);
 void connection_write_to_buf_zlib(dir_connection_t *conn,
-                                  tor_zlib_state_t *state,
                                   const char *data, size_t data_len,
                                   int done);
 

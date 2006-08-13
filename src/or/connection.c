@@ -1696,7 +1696,6 @@ connection_write_to_buf(const char *string, size_t len, connection_t *conn)
 
 void
 connection_write_to_buf_zlib(dir_connection_t *dir_conn,
-                             tor_zlib_state_t *state,
                              const char *data, size_t data_len,
                              int done)
 {
@@ -1713,8 +1712,8 @@ connection_write_to_buf_zlib(dir_connection_t *dir_conn,
   old_datalen = buf_datalen(conn->outbuf);
   /* XXXX TOO much duplicate code! XXXX012NM */
   CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(
-                                conn->outbuf, state, data, data_len,
-                                done));
+                                conn->outbuf, dir_conn->zlib_state,
+                                data, data_len, done));
   if (r < 0) {
     log_warn(LD_NET,
              "write_to_buf failed. Closing connection (fd %d).", conn->s);

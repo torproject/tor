@@ -1829,7 +1829,7 @@ static int
 connection_dirserv_finish_spooling(dir_connection_t *conn)
 {
   if (conn->zlib_state) {
-    connection_write_to_buf_zlib(conn, conn->zlib_state, "", 0, 1);
+    connection_write_to_buf_zlib(conn, "", 0, 1);
     tor_zlib_free(conn->zlib_state);
     conn->zlib_state = NULL;
   }
@@ -1865,10 +1865,8 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
       int last = ! smartlist_len(conn->fingerprint_stack);
-      connection_write_to_buf_zlib(
-                        conn, conn->zlib_state,
-                        body, sd->signed_descriptor_len,
-                        last);
+      connection_write_to_buf_zlib(conn, body,
+                                   sd->signed_descriptor_len, last);
       if (last) {
         tor_zlib_free(conn->zlib_state);
         conn->zlib_state = NULL;
@@ -1905,7 +1903,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
     bytes = remaining;
 
   if (conn->zlib_state) {
-    connection_write_to_buf_zlib(conn, conn->zlib_state,
+    connection_write_to_buf_zlib(conn,
                              conn->cached_dir->dir_z + conn->cached_dir_offset,
                              bytes, bytes == remaining);
   } else {
