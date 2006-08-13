@@ -2,7 +2,8 @@ The following steps are the exact steps used to produce the "official"
 OSX builds of tor
 
 Summary:
-1) Compile and install the latest release of libevent
+1) Compile and install a static version of the latest release of
+libevent.
 2) Acquire privoxyosx_setup_3.0.3.zip.  Remember where you put this
 file.
 3) Acquire and install your preferred version of tor via "make
@@ -11,7 +12,7 @@ dist-osx"
 Details:
 ### Compiling libevent
 
-1)  Download the latest libevent from 
+1)  Download the latest libevent from
 http://www.monkey.org/~provos/libevent/
 
 2) The first step of compiling libevent is to configure it as
@@ -21,14 +22,17 @@ follows:
 3) Complete the "make" and "make install".  You will need to be root,
 or sudo -s, to complete the "make install".
 
+4) If you have previouslly installed libevent, go rm the old libevent.so*
+files so the linker doesn't get suckered into using them.
+
 
 ### Acquiring privoxy
 
 1) Download osx privoxy source from
 http://prdownloads.sourceforge.net/ijbswa/privoxyosx_setup_3.0.3.zip?download
 
-2) Edit /path/to/tor/contrib/osx/package.sh and confirm 
-PRIVOXY_PKG_ZIP= is set to the correct path to find the 
+2) Edit /path/to/tor/contrib/osx/package.sh and confirm
+PRIVOXY_PKG_ZIP= is set to the correct path to find the
 file privoxyosx_setup_3.0.3.zip
 
 
@@ -43,3 +47,53 @@ do a configure with these parameters:
 
 3) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.
+
+
+## Universal Binaries for OSX PPC and X86
+
+1) Install XCode 2.4 updates available from http://developer.apple.com.
+
+2)  Download latest libevent from
+http://www.monkey.org/~provos/libevent/
+
+3) The first step of compiling libevent is to configure it as
+follows:
+CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc"
+\ LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
+       ./configure --enable-static --disable-shared \
+       --disable-dependency-tracking
+
+3) Complete the "make" and "make install".  You will need to be root,
+or sudo -s, to complete the "make install".
+
+4) If you have previouslly installed libevent, rm the old libevent.*, located
+by default, in /usr/local/lib/.  
+
+5) Check for a successful universal binary of libevent.a in, by default,
+/usr/local/lib by using the following command:
+	file /usr/local/lib/libevent.a
+
+	Your output should be:
+/usr/local/lib/libevent.a: Mach-O fat file with 2 architectures
+/usr/local/lib/libevent.a (for architecture i386):      current ar archive random library
+/usr/local/lib/libevent.a (for architecture ppc):       current ar archive
+
+6) Get your preferred version of the tor source from tor.eff.org.
+
+7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
+do a configure with these parameters:
+CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc"
+\ LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
+configure --prefix=/Library/Tor --bindir=/Library/Tor \
+--sysconfdir=/Library --enable-static --disable-shared \
+--disable-dependency-tracking
+
+8) "make dist-osx"
+
+9) Confirm you have created a universal binary by issuing the follow command:
+file src/or/tor
+src/or/tor: Mach-O fat file with 2 architectures
+src/or/tor (for architecture i386):     Mach-O executable i386
+src/or/tor (for architecture ppc):      Mach-O executable ppc
+
+Congrats.  You have a universal binary.
