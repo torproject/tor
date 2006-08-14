@@ -173,10 +173,10 @@ when do we rotate which keys (tls, link, etc)?
    certificate is the OR's nickname, followed by a space and the string
    "<identity>".
 
-   Implementations running 0.1.2.0-alpha and earlier used an organizationName
-   of Tor.  Current implementations (which support the version negotiation
-   protocol in section 4.1) MUST NOT have this value for their
-   organizationName.
+   Implementations running 0.1.2.0-alpha and earlier used an
+   organizationName of "Tor" or "TOR".  Current implementations (which
+   support the version negotiation protocol in section 4.1) MUST NOT
+   have either of these values for their organizationName.
 
    All parties receiving certificates must confirm that the identity key is
    as expected.  (When initiating a connection, the expected identity key is
