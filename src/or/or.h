@@ -710,10 +710,6 @@ typedef struct edge_connection_t {
                        * circuit? */
   int deliver_window; /**< How many more relay cells can end at me? */
 
-  /** Number of times we've reassigned this application connection to
-   * a new circuit. We keep track because the timeout is longer if we've
-   * already retried several times. */
-  uint8_t num_socks_retries;
 
   /** Nickname of planned exit node -- used with .exit support. */
   char *chosen_exit_name;
@@ -735,6 +731,12 @@ typedef struct edge_connection_t {
 
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
                                            * querying for? (AP only) */
+
+  /** Number of times we've reassigned this application connection to
+   * a new circuit. We keep track because the timeout is longer if we've
+   * already retried several times. */
+  uint8_t num_socks_retries;
+
 } edge_connection_t;
 
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
