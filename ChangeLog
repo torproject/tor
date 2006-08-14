@@ -1,25 +1,133 @@
-Changes in version 0.1.2.1-alpha - 2006-06-xx (in progress)
+Changes in version 0.1.2.1-alpha - 2006-08-16 (in progress)
   o Major changes:
-    - Add async dns code from Adam Langley, tweaked to build on OSX.
-      Only enabled when you pass the --enable-eventdns argument to
-      configure.
+    - Add async dns code from Adam Langley, tweaked to build on OSX
+      and Windows. Only enabled when you pass the --enable-eventdns
+      argument to configure. Implement a priority queue to track
+      when cached DNS resolves will expire, now that we obey the
+      time-to-live (TTL) values we get back.
     - Stop fetching descriptors if you're not a dir mirror and you
-      haven't tried to establish any circuits lately.
+      haven't tried to establish any circuits lately. This currently
+      causes some dangerous behavior, because when you start up again
+      you'll use your ancient server descriptors.
+    - Split circuit_t into origin_circuit_t and or_circuit_t, and
+      split connection_t into edge, or, dir, control, and base structs.
+      These will save quite a bit of memory on busy servers, and they'll
+      also help us track down bugs and spec mismatches.
+    - Instead of adding server descriptors, v1 directories, or v2
+      networkstatus docs to buffers en masse, directory servers add them
+      on the fly as their outbufs are depleted. This will save memory
+      on busy dirservers.
 
   o Minor changes:
-    - New dirport behavior: if you have your dirport set, you are
-      now a directory mirror, whether or not your orport is set.
+    - New dirport behavior: if you have your dirport set, you download
+      descriptors aggressively like a directory mirror, whether or not
+      your orport is set.
     - Minor changes so Tor builds with mingw on windows.
+    - Start compiling on MSVC6 now. Patch from Frediano Ziglio.
     - Claim a commonname of Tor, rather than TOR, in TLS handshakes.
-      Maybe this will help us win the war of names.
     - Re-enable per-connection rate limiting. Get rid of the "OP
       bandwidth" concept. Lay groundwork for "bandwidth classes" --
       separate global buckets that apply depending on what sort of conn
       it is.
     - Add a man page entry for ProtocolWarnings.
     - Add more asserts to track down an assert error on a windows Tor
-      server with connection_add being called with socket = -1.
+      server with connection_add being called with socket == -1.
     - Add TestVia config option to the man page.
+
+    - Allow Tor to start when RunAsDaemon is set but no logs are set.
+
+    - Export the default exit policy via the control port, so controllers
+      don't need to guess what it is / will be later.
+
+    - Fix configure.in to not produce broken configure files with
+      more recent versions of autoconf. Thanks to Clint for his auto*
+      voodoo.
+
+
+    - mmap cached-routers file too.
+
+    - refuse to write an iso_time which we can't parse, when dumping
+      bandwidth state. this fixes the particular incident in bug 308,
+      but the general issue remains.
+
+    - Drop compatibility with obsolete Tors that permit create cells
+      to have the wrong circ_id_type.
+
+    - Get rid of the router_retry_connections notion. Now routers
+      no longer try to rebuild long-term connections to directory
+      authorities, and directory authorities no longer try to rebuild
+      long-term connections to all servers. We still don't hang up
+      connections in these two cases though -- we need to look at it
+      more carefully to avoid flapping, and we likely need to wait til
+      0.1.1.x is obsolete.
+
+    - Remove even more protocol-related warnings from Tor server logs,
+      such as bad TLS handshakes and malformed begin cells.
+
+    - Add X-Your-Address-Is directory http header so clients can get
+      some hints about their current network location. It parses
+      Forwarded-For and X-Forwarded-For http headers to avoid listing
+      proxy addresses if possible. It's not authenticated, so use
+      with care.
+    - Allow servers with no hostname or IP address to learn their
+      IP address by asking the directory authorities. This code only kicks
+      in when you would normally have exited with a "no address" error.
+
+    - Handle reporting OR_CONN_EVENT_NEW events to the controller.
+
+    - If we are using an exit enclave and we can't connect, e.g. because
+      its webserver is misconfigured to not listen on localhost, then
+      back off and try connecting from somewhere else before we fail.
+
+    - Start publishing one minute or so after we find our ORPort
+      to be reachable. This will help reduce the number of descriptors
+      we have for ourselves floating around, since it's quite likely
+      other things (e.g. DirPort) will change during that minute too.
+
+    - When we find our dirport to be reachable, mark our descriptor
+      dirty so we'll tell the world. (fixes bug 306 reported by pnx)
+
+    - Define a schedule for how long to wait between retrying
+      application connections. Rather than waiting a fixed amount of
+      time between each retry, we wait only 5 seconds for the first,
+      10 seconds for the second, and 15 seconds for each retry after
+      that. Hopefully this will improve the expected user experience.
+
+    - Also, fork the v1 directory protocol into its own spec document,
+      and mark dir-spec.txt as the currently correct (v2) spec.
+
+    - Fix misleading log messages: an entry guard that is "unlisted",
+      as well as not known to be "down" (because we've never heard
+      of it), is not therefore "up".
+
+    - Publish a new descriptor after we hup. this is important if our
+      config has changed such that we'll want to start advertising our
+      dirport now, etc.
+
+    - Remove code to special-case "-cvs" ending, since it has not
+      actually mattered since 0.0.9.
+
+    - Revise and clean up the torrc.sample that we ship with; add
+      a section for BandwidthRate and BandwidthBurst.
+
+    - Recommend libevent 1.1b for kqueue and win32 methods; deprecate
+      libevent 1.0b harder; make libevent recommendation system saner.
+
+    - Experimentally re-enable kqueue on OSX when using libevent 1.1b
+      or later. Log when we are doing this, so we can diagnose it when
+      it fails.
+
+    - Patch from Tup to add support for transparent AP connections:
+      this basically bundles the functionality of trans-proxy-tor
+      into the Tor mainline.  Now hosts with compliant pf/netfilter
+      implementations can redirect TCP connections straight to Tor
+      without diverting through SOCKS.
+
+    - Start being able to build universal binaries on OS X (thanks
+      to Phobos).
+
+
+
 
 
 Changes in version 0.1.1.23 - 2006-07-30
