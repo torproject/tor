@@ -208,12 +208,7 @@ static int
 _compare_cached_resolves_by_expiry(const void *_a, const void *_b)
 {
   const cached_resolve_t *a = _a, *b = _b;
-  if (a->expire < b->expire)
-    return -1;
-  else if (a->expire == b->expire)
-    return 0;
-  else
-    return 1;
+  return a->expire - b->expire;
 }
 
 /** Priority queue of cached_resolve_t objects to let us know when they

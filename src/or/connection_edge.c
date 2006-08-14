@@ -321,7 +321,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
  * application connections. Rather than waiting a fixed amount of
  * time between each retry, we wait only 5 seconds for the first,
  * 10 seconds for the second, and 15 seconds for each retry after
- * that. Hopefully this will improve the expected experience. */
+ * that. Hopefully this will improve the expected user experience. */
 static int
 compute_socks_timeout(edge_connection_t *conn)
 {
