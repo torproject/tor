@@ -107,7 +107,12 @@ static int spawn_enough_dnsworkers(void);
 #else
 static void configure_nameservers(void);
 #endif
-static void assert_cache_ok(void);
+static void _assert_cache_ok(void);
+#ifdef DEBUG_DNS_CACHE
+#define assert_cache_ok() _assert_cache_ok()
+#else
+#define assert_cache_ok() do {} while(0)
+#endif
 static void assert_resolve_ok(cached_resolve_t *resolve);
 
 /** Hash table of cached_resolve objects. */
@@ -1285,7 +1290,7 @@ assert_resolve_ok(cached_resolve_t *resolve)
 }
 
 static void
-assert_cache_ok(void)
+_assert_cache_ok(void)
 {
   cached_resolve_t **resolve;
   int bad_rep = _cache_map_HT_REP_IS_BAD(&cache_root);
