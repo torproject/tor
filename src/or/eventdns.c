@@ -3,7 +3,7 @@
 /* The original version of this module was written by Adam Langley; for
  * a history of modifications, check out the subversion logs.
  *
- * When editiing this module, try to keep it re-mergeable by Adam.  Don't
+ * When editing this module, try to keep it re-mergeable by Adam.  Don't
  * reformat the whitespace, add Tor dependencies, or so on.
  *
  * TODO:
@@ -39,11 +39,9 @@
  * Async DNS lookups are really a whole lot harder than they should be,
  * mostly stemming from the fact that the libc resolver has never been
  * very good at them. Before you use this library you should see if libc
- * can do the job for you with the modern async call getaddrinfo_r
- * (Google for it). Otherwise, please continue.
- *
- *  [I googled for getaddrinfo_r and got only two hits, one of which was this
- *  code. Did you mean something different? -NM]
+ * can do the job for you with the modern async call getaddrinfo_a
+ * (see http://www.imperialviolet.org/page25.html#e498). Otherwise,
+ * please continue.
  *
  * This code is based on libevent and you must call event_init before
  * any of the APIs in this file. You must also seed the OpenSSL random
@@ -783,6 +781,7 @@ reply_parse(u8 *packet, int length) {
 	// packet. The name stops after a pointer like that.
 #define SKIP_NAME \
 	for(;;) { \
+                if (j >= length) return;
 		u8 label_len; \
 		GET8(label_len); \
 		if (!label_len) break; \
@@ -800,6 +799,7 @@ reply_parse(u8 *packet, int length) {
 		//   <label:name><u16:type><u16:class>
 		SKIP_NAME;
 		j += 4;
+                if (j >= length) return;
 	}
 
 	// now we have the answer section which looks like
@@ -1054,9 +1054,13 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 	labels = (u8 *) malloc(name_len + 2);
         if (!labels) return -1;
 	labels_len = dnsname_to_labels(labels, name, name_len);
-	if (labels_len < 0) return labels_len;
+	if (labels_len < 0) {
+          free(labels);
+          return labels_len;
+        }
 	memcpy(buf + j, labels, labels_len);
 	j += labels_len;
+        free(labels);
 
 	APPEND16(type);
 	APPEND16(class);
