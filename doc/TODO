@@ -32,6 +32,8 @@ Items for 0.1.2.x:
   - bug #314: is the fix for this just to check not only
     address_is_in_virtual_range(req->address) but also to check whether
     ent = strmap_get(addressmap, address) and ent->new_address is set?
+  - when we start, remove any entryguards that are listed in excludenodes.
+  - start calling dev releases 0.1.2.1-alpha-dev, not -cvs.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
   - We should ship with a list of stable dir mirrors -- they're not
@@ -221,7 +223,7 @@ Minor items for 0.1.2.x as time permits.
   - The bw_accounting file should get merged into the state file.
   - Streamline how we define a guard node as 'up'.
   - Better installers and build processes.
-    - Commit edmanm's win32 makefile to tor cvs contrib, or write a new one.
+    - Commit edmanm's win32 makefile to tor contrib, or write a new one.
   - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
