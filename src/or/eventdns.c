@@ -9,7 +9,7 @@
  * TODO:
  *   - Support IPv6 and PTR records.
  *   - Replace all externally visible magic numbers with #defined constants.
- *   - Write doccumentation for APIs of all external functions.
+ *   - Write documentation for APIs of all external functions.
  */
 
 /* Async DNS Library
@@ -105,9 +105,9 @@
  *   eventdns_search_add then no searching will occur.
  *
  *   2. If you do call eventdns_resolv_conf_parse then don't pass
- *   DNS_OPTION_SEARCH (or DNS_OPTIONS_ALL, which implies it)
+ *   DNS_OPTION_SEARCH (or DNS_OPTIONS_ALL, which implies it).
  *
- *   3. When calling eventdns_resolve, pass the DNS_QUERY_NO_SEARCH flag
+ *   3. When calling eventdns_resolve, pass the DNS_QUERY_NO_SEARCH flag.
  *
  * The order of searches depends on the number of dots in the name. If the
  * number is greater than the ndots setting then the names is first tried
@@ -215,7 +215,7 @@
  * queue and so bounding its size keeps thing going nicely under huge
  * (many thousands of requests) loads.
  *
- * If a nameserver looses too many requests it is considered down and we
+ * If a nameserver loses too many requests it is considered down and we
  * try not to use it. After a while we send a probe to that nameserver
  * (a lookup for google.com) and, if it replies, we consider it working
  * again. If the nameserver fails a probe we wait longer to try again
@@ -230,7 +230,7 @@
 #ifndef DNS_USE_GETTIMEOFDAY_FOR_ID
 #ifndef DNS_USE_OPENSSL_FOR_ID
 #error Must configure at least one id generation method.
-#error Please see the documentation
+#error Please see the documentation.
 #endif
 #endif
 #endif
