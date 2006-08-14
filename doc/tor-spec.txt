@@ -235,7 +235,7 @@ when do we rotate which keys (tls, link, etc)?
          4 -- DESTROY     (Stop using a circuit)    (See Sec 5.4)
          5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 5.1)
          6 -- CREATED_FAST (Circuit created, no PK) (See Sec 5.1)
-         7 -- HELLO       (Negotiate versions)      (See Sec 4.1)
+         7 -- VERSIONS    (Negotiate versions)      (See Sec 4.1)
          8 -- NETINFO     (Time and MITM-prevention) (See Sec 4.2)
 
    The interpretation of 'Payload' depends on the type of the cell.
@@ -261,7 +261,7 @@ when do we rotate which keys (tls, link, etc)?
    RELAY cells are used to send commands and data along a circuit; see
    section 5 below.
 
-   HELLO cells are used to introduce parameters and characteristics of
+   VERSIONS cells are used to introduce parameters and characteristics of
    Tor clients and servers when connections are established.
 
 4, Connection management
@@ -269,10 +269,10 @@ when do we rotate which keys (tls, link, etc)?
    Upon establishing a TLS connection, both parties immediately begin
    negotiating a connection protocol version and other connection parameters.
 
-4.1. HELLO cells
+4.1. VERSIONS cells
 
-   When a Tor connection is established, both parties normally send a HELLO
-   cell before sending any other cells.  (But see below.)
+   When a Tor connection is established, both parties normally send a
+   VERSIONS cell before sending any other cells.  (But see below.)
 
          NumVersions            [1 byte]
          Versions               [NumVersions bytes]
@@ -282,19 +282,20 @@ when do we rotate which keys (tls, link, etc)?
    are able and willing to support.  Parties can only communicate if they
    have some connection protocol version in common.
 
-   Version 0.1.2.0-alpha and earlier don't understand HELLO cells, and
-   therefore don't support version negotiation.  Thus, waiting until
-   the other side has sent a HELLO cell won't work for these servers: if they
-   send no cells back, it is impossible to tell whether they have sent a
-   HELLO cell that has been stalled, or whether they have dropped our own
-   HELLO cell as unrecognized.  Thus, immediately after a TLS connection has
-   been established, the parties check whether the other side has an obsolete
-   certificate (organizationName equal to "Tor" or "TOR").  If the other party
-   presented an obsolete certificate, we assume a v0 connection.  Otherwise,
-   both parties send HELLO cells listing all their supported  versions.  Upon
-   receiving the other party's HELLO cell, the implementation begins using
-   the highest-valued version common to both cells.  If the first cell from
-   the other party is _not_ a HELLO cell, we assume a v0 protocol.
+   Version 0.1.2.0-alpha and earlier don't understand VERSIONS cells,
+   and therefore don't support version negotiation.  Thus, waiting until
+   the other side has sent a VERSIONS cell won't work for these servers:
+   if they send no cells back, it is impossible to tell whether they
+   have sent a VERSIONS cell that has been stalled, or whether they have
+   dropped our own VERSIONS cell as unrecognized.  Thus, immediately after
+   a TLS connection has been established, the parties check whether the
+   other side has an obsolete certificate (organizationName equal to "Tor"
+   or "TOR").  If the other party presented an obsolete certificate,
+   we assume a v0 connection.  Otherwise, both parties send VERSIONS
+   cells listing all their supported  versions.  Upon receiving the
+   other party's VERSIONS cell, the implementation begins using the
+   highest-valued version common to both cells.  If the first cell from
+   the other party is _not_ a VERSIONS cell, we assume a v0 protocol.
 
    Implementations MUST discard cells that are not the first cells sent on a
    connection.
@@ -316,13 +317,13 @@ when do we rotate which keys (tls, link, etc)?
    administrator.
 
    Each address contains Type/Length/Value as used in Section 6.4.  The first
-   address is the address of the interface the party sending the HELLO cell
+   address is the address of the interface the party sending the VERSIONS cell
    used to connect to or accept connections from the other -- we include it
    to block a man-in-the-middle attack on TLS that lets an attacker bounce
    traffic through his own computers to enable timing and packet-counting
    attacks.
 
-   The second address is the one that the party sending the HELLO cell
+   The second address is the one that the party sending the VERSIONS cell
    believes the other has -- it can be used to learn what your IP address
    is if you have no other hints.
 
