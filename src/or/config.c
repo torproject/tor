@@ -2090,9 +2090,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
       if (!is_internal_IP(addr, 1) &&
           (!old_options || !config_lines_eq(old, opt))) {
         log_warn(LD_CONFIG,
-             "You specified a public address '%s' for a %s listener. Other "
+             "You specified a public address '%s' for a %s. Other "
              "people on the Internet might find your computer and use it as "
-             "an open %s proxy. Please don't allow this unless you have "
+             "an open %s. Please don't allow this unless you have "
              "a good reason.", address, tp, tp);
       }
       tor_free(address);
