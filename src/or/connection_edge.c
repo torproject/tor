@@ -417,7 +417,8 @@ connection_ap_expire_beginning(void)
     circ->timestamp_dirty -= options->MaxCircuitDirtiness;
     /* give our stream another 'cutoff' seconds to try */
     conn->_base.timestamp_lastread += cutoff;
-    conn->num_socks_retries++;
+    if (conn->num_socks_retries < 250) /* avoid overflow */
+      conn->num_socks_retries++;
     /* move it back into 'pending' state, and try to attach. */
     if (connection_ap_detach_retriable(conn, TO_ORIGIN_CIRCUIT(circ))<0) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);

@@ -713,7 +713,7 @@ typedef struct edge_connection_t {
   /** Number of times we've reassigned this application connection to
    * a new circuit. We keep track because the timeout is longer if we've
    * already retried several times. */
-  int num_socks_retries;
+  uint8_t num_socks_retries;
 
   /** Nickname of planned exit node -- used with .exit support. */
   char *chosen_exit_name;
