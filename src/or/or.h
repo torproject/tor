@@ -2123,7 +2123,7 @@ void cached_dir_decref(cached_dir_t *d);
 
 /********************************* dns.c ***************************/
 
-void dns_init(void);
+int dns_init(void);
 void dns_free_all(void);
 uint32_t dns_clip_ttl(uint32_t ttl);
 int connection_dns_finished_flushing(connection_t *conn);

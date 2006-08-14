@@ -105,7 +105,7 @@ static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static int spawn_enough_dnsworkers(void);
 #else
-static void configure_nameservers(void);
+static int configure_nameservers(void);
 #endif
 static void _assert_cache_ok(void);
 #ifdef DEBUG_DNS_CACHE
@@ -160,14 +160,16 @@ eventdns_log_cb(const char *msg)
 #endif
 
 /** Initialize the DNS subsystem; called by the OR process. */
-void
+int
 dns_init(void)
 {
   init_cache_map();
   dnsworkers_rotate();
 #ifdef USE_EVENTDNS
   if (server_mode(get_options()))
-    configure_nameservers();
+    return configure_nameservers();
+  return 0;
+#endif
 #endif
 }
 
@@ -1180,7 +1182,7 @@ connection_dns_reached_eof(connection_t *conn)
   return 0;
 }
 static int nameservers_configured = 0;
-static void
+static int
 configure_nameservers(void)
 {
   or_options_t *options;
@@ -1195,16 +1197,37 @@ configure_nameservers(void)
         struct in_addr in;
         if (tor_inet_aton(ip, &in)) {
           log_info(LD_EXIT, "Adding nameserver '%s'", ip);
-          eventdns_nameserver_add(in.s_addr);
+          if (eventdns_nameserver_add(in.s_addr))
+            log_warn(LD_EXIT, "Unable to add nameserver '%s'", ip);
         }
       });
+    if (eventdns_count_nameservers() == 0) {
+      log_err(LD_EXIT, "Unable to add any configured nameserver.  "
+              "Either remove the Nameservers line from your configuration, or "
+              "put in a namerserver that we can parse.");
+      return -1;
+    }
   } else {
 #ifdef MS_WINDOWS
-    eventdns_config_windows_nameservers();
+    if (eventdns_config_windows_nameservers())
+      return -1;
+    if (eventdns_count_nameservers() == 0) {
+      log_err(LD_EXIT, "Unable to find any platform nameservers in "
+              "your Windows configuration.  Perhaps you should add a "
+              "Nameservers line to your torrc?");
+      return -1;
+    }
 #else
     log_info(LD_EXIT, "Parsing /etc/resolv.conf");
-    eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
-                               "/etc/resolv.conf");
+    if (eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
+                                   "/etc/resolv.conf"))
+      return -1;
+    if (eventdns_count_nameservers() == 0) {
+      log_err(LD_EXIT, "Unable to find any platform nameservers in "
+              "/etc/resolv.conf.  Perhaps you should add a Nameservers line "
+              "to your torrc?");
+      return -1;
+    }
 #endif
   }
   nameservers_configured = 1;
