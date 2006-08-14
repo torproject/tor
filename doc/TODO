@@ -62,7 +62,7 @@ Items for 0.1.2.x:
       D Count TLS bandwidth more accurately
       - Write-limit directory responses (need to research)
 N   . Improve memory usage on tight-memory machines.
-      - Directory-related fixes.
+      . Directory-related fixes.
         o Remember offset and location of each descriptor in the cache/journal
         o When sending a big pile of descs to a client, don't shove them all
           on the buffer at once. Keep a list of the descriptor digests for
@@ -81,23 +81,27 @@ N   . Improve memory usage on tight-memory machines.
             o Verify that this has happened for a long time.
         o Try a similar trick for spooling out v1 directories.  These we
           _uncompress_ on the fly.
-        - Look into pulling serverdescs off buffers as they arrive.
         . Mmap cache files where possible.
           o Mmap cached-routers file; when building it, go oldest-to-newest.
           - More unit tests and asserts for cached-routers file: ensure digest
             for the right router.  Verify dl by digest, fp, etc.
-          . Make sure cached-routers values and offsets are correct in the
+          o Make sure cached-routers values and offsets are correct in the
             presence of windows FS insanity.
-          - Save and mmap v1 directories; store them zipped, not
-            uncompressed.
-          - Store networkstatus docs zipped, not uncompressed.  Maaaybe mmap
-            them too.
+          D Save and mmap v1 directories, and networkstatus docs; store them
+            zipped, not uncompressed.
+            D Switch cached_router_t to use mmap.
+            D What to do about reference counts on windows?
+              (On Unix, this is easy: unlink works fine.  (Right?)  On
+              Windows, I have doubts.  Do we need to keep multiple files?)
+            D What do we do about the fact that people can't read zlib-
+              compressed files manually?
         o Be a little more OO to save memory in frequently
           replicated structs.
           o Split circuit_t into origin circuits and or circuits
             o Move as many fields as reasonable out of base class.
             o Re-pack structs to avoid wasted bytes.
           o Split connection_t based on type field.
+        - Look into pulling serverdescs off buffers as they arrive.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
     o Asynchronous DNS
@@ -108,8 +112,8 @@ N   . Improve memory usage on tight-memory machines.
         - Test
       - Make the Nameservers option documented, and make it work right on
         reload.
-      - Fail when we have no configured nameservers!
-      - Make it the default on platforms where it works
+      o Fail when we have no configured nameservers!
+      - Make it the default on platforms where it works.
 
   - Security improvements
     - Directory guards
