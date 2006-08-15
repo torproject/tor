@@ -781,7 +781,7 @@ reply_parse(u8 *packet, int length) {
 	// packet. The name stops after a pointer like that.
 #define SKIP_NAME \
 	for(;;) { \
-                if (j >= length) return;
+                if (j >= length) return; \
 		u8 label_len; \
 		GET8(label_len); \
 		if (!label_len) break; \
