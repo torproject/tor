@@ -107,8 +107,8 @@ static int spawn_enough_dnsworkers(void);
 #else
 static int configure_nameservers(void);
 #endif
-static void _assert_cache_ok(void);
 #ifdef DEBUG_DNS_CACHE
+static void _assert_cache_ok(void);
 #define assert_cache_ok() _assert_cache_ok()
 #else
 #define assert_cache_ok() do {} while(0)
@@ -1186,7 +1186,7 @@ configure_nameservers(void)
 {
   or_options_t *options;
   if (nameservers_configured)
-    return;
+    return 0;
   options = get_options();
   eventdns_set_log_fn(eventdns_log_cb);
   if (options->Nameservers && smartlist_len(options->Nameservers)) {
@@ -1230,6 +1230,7 @@ configure_nameservers(void)
 #endif
   }
   nameservers_configured = 1;
+  return 0;
 }
 static void
 eventdns_callback(int result, char type, int count, int ttl, void *addresses,
@@ -1311,6 +1312,7 @@ assert_resolve_ok(cached_resolve_t *resolve)
   }
 }
 
+#ifdef DEBUG_DNS_CACHE
 static void
 _assert_cache_ok(void)
 {
@@ -1331,4 +1333,4 @@ _assert_cache_ok(void)
   smartlist_pqueue_assert_ok(cached_resolve_pqueue,
                              _compare_cached_resolves_by_expiry);
 }
-
+#endif
