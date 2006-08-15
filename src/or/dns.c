@@ -170,7 +170,6 @@ dns_init(void)
     return configure_nameservers();
   return 0;
 #endif
-#endif
 }
 
 uint32_t
