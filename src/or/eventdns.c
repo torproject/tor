@@ -7,7 +7,10 @@
  * reformat the whitespace, add Tor dependencies, or so on.
  *
  * TODO:
- *   - Support IPv6 and PTR records.
+ *   - Support AAAA records
+ *   - Have a way to query for AAAA and A records simultaneously.
+ *   - Improve request API.
+ *   - (Can we suppress cnames? Should we?)
  *   - Replace all externally visible magic numbers with #defined constants.
  *   - Write documentation for APIs of all external functions.
  */
@@ -312,8 +315,9 @@ typedef unsigned int uint;
 struct request {
 	u8 *request;  // the dns packet data
 	uint request_len;
-	int reissue_count;
-	int tx_count;  // the number of times that this packet has been sent
+	u8 reissue_count;
+	u8 tx_count;  // the number of times that this packet has been sent
+	u8 request_type; // TYPE_PTR or TYPE_A
 	void *user_pointer;  // the pointer given to us for this request
 	eventdns_callback_type user_callback;
 	struct nameserver *ns;  // the server which we last sent it
@@ -332,6 +336,20 @@ struct request {
 	u16 trans_id;  // the transaction id
 	char request_appended;  // true if the request pointer is data which follows this struct
 	char transmit_me;  // needs to be transmitted
+};
+
+struct reply {
+	u8 type;
+	u8 have_answer;
+	union {
+		struct {
+			u32 addrcount;
+			u32 addresses[MAX_ADDRS];
+		} a;
+		struct {
+			char name[HOST_NAME_MAX];
+		} ptr;
+	} data;
 };
 
 struct nameserver {
@@ -366,8 +384,8 @@ static int global_requests_waiting = 0;
 static int global_max_requests_inflight = 64;
 
 static struct timeval global_timeout = {3, 0};  // 3 seconds
-static int global_max_reissues = 1;  // a reissue occurs when we get some errors from the server
-static int global_max_retransmits = 3;  // number of times we'll retransmit a request which timed out
+static u8 global_max_reissues = 1;  // a reissue occurs when we get some errors from the server
+static u8 global_max_retransmits = 3;  // number of times we'll retransmit a request which timed out
 // number of timeouts in a row before we consider this server to be down
 static int global_max_nameserver_timeout = 3;
 
@@ -386,10 +404,10 @@ static int eventdns_request_transmit(struct request *req);
 static void nameserver_send_probe(struct nameserver *const ns);
 static void search_request_finished(struct request *const);
 static int search_try_next(struct request *const req);
-static int search_request_new(const char *const name, int flags, eventdns_callback_type user_callback, void *user_arg);
+static int search_request_new(int type, const char *const name, int flags, eventdns_callback_type user_callback, void *user_arg);
 static void eventdns_requests_pump_waiting_queue(void);
 static u16 transaction_id_pick(void);
-static struct request *request_new(const char *name, int flags, eventdns_callback_type callback, void *ptr);
+static struct request *request_new(int type, const char *name, int flags, eventdns_callback_type, void *ptr);
 static void request_submit(struct request *req);
 
 #ifdef MS_WINDOWS
@@ -680,16 +698,39 @@ eventdns_requests_pump_waiting_queue(void) {
 	}
 }
 
+static void
+reply_callback(struct request *const req, u32 ttl, u32 err, struct reply *reply) {
+	switch (req->request_type) {
+	case TYPE_A:
+		if (reply)
+			req->user_callback(DNS_ERR_NONE, DNS_IPv4_A,
+					     reply->data.a.addrcount, ttl,
+					     reply->data.a.addresses,
+					     req->user_pointer);
+		else
+			req->user_callback(err, 0, 0, 0, NULL, req->user_pointer);
+		return;
+	case TYPE_PTR:
+		if (reply) {
+                        char *name = reply->data.ptr.name;
+			req->user_callback(DNS_ERR_NONE, DNS_PTR, 1, ttl,
+                                           &name, req->user_pointer);
+                } else
+			req->user_callback(err, 0, 0, 0, NULL,
+					   req->user_pointer);
+		return;
+	}
+	assert(0);
+}
+
 // this processes a parsed reply packet
 static void
-reply_handle(u16 trans_id, u16 flags, u32 ttl, u32 addrcount, u32 *addresses) {
+reply_handle(struct request *const req,
+	     u16 flags, u32 ttl, struct reply *reply) {
 	int error;
 	static const int error_codes[] = {DNS_ERR_FORMAT, DNS_ERR_SERVERFAILED, DNS_ERR_NOTEXIST, DNS_ERR_NOTIMPL, DNS_ERR_REFUSED};
 
-	struct request *const req = request_find_from_trans_id(trans_id);
-	if (!req) return;
-
-	if (flags & 0x020f || !addrcount) {
+	if (flags & 0x020f || !reply || !reply->have_answer) {
 		// there was an error
 		if (flags & 0x0200) {
 			error = DNS_ERR_TRUNCATED;
@@ -720,7 +761,7 @@ reply_handle(u16 trans_id, u16 flags, u32 ttl, u32 addrcount, u32 *addresses) {
 			nameserver_up(req->ns);
 		}
 
-		if (req->search_state) {
+		if (req->search_state && req->request_type != TYPE_PTR) {
 			// if we have a list of domains to search in, try the next one
 			if (!search_try_next(req)) {
 				// a new request was issued so this request is finished and
@@ -732,30 +773,78 @@ reply_handle(u16 trans_id, u16 flags, u32 ttl, u32 addrcount, u32 *addresses) {
 		}
 
 		// all else failed. Pass the failure up
-		req->user_callback(error, 0, 0, 0, NULL, req->user_pointer);
+		reply_callback(req, 0, error, NULL);
 		request_finished(req, &req_head);
 	} else {
 		// all ok, tell the user
-		req->user_callback(DNS_ERR_NONE, DNS_IPv4_A, addrcount, ttl, addresses, req->user_pointer);
+		reply_callback(req, ttl, 0, reply);
 		nameserver_up(req->ns);
 		request_finished(req, &req_head);
 	}
 }
 
+static inline int
+name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len)
+{
+	int name_end = -1;
+	int j = *idx;
+#define GET32(x) do { if (j + 4 > length) return -1; memcpy(&_t32, packet + j, 4); j += 4; x = ntohl(_t32); } while(0);
+#define GET16(x) do { if (j + 2 > length) return -1; memcpy(&_t, packet + j, 2); j += 2; x = ntohs(_t); } while(0);
+#define GET8(x) do { if (j >= length) return -1; x = packet[j++]; } while(0);
+
+	char *cp = name_out;
+	const char *const end = name_out + name_out_len;
+
+	// Normally, names are a series of length prefixed strings terminated
+	// with a length of 0 (the lengths are u8's < 63).
+	// However, the length can start with a pair of 1 bits and that
+	// means that the next 14 bits are a pointer within the current
+	// packet.
+
+	for(;;) {
+		u8 label_len;
+                if (j >= length) return -1;
+		GET8(label_len);
+		if (!label_len) break;
+		if (label_len & 0xc0) {
+			u8 ptr_low;
+			GET8(ptr_low);
+                        if (name_end < 0) name_end = j;
+			j = (((int)label_len & 0x3f) << 8) + ptr_low;
+                        if (j < 0 || j >= length) return -1;
+			continue;
+		}
+		if (label_len > 63) return -1;
+		if (cp != name_out) {
+			if (cp + 1 >= end) return -1;
+			*cp++ = '.';
+		}
+		if (cp + label_len >= end) return -1;
+		memcpy(cp, packet + j, label_len);
+		cp += label_len;
+		j += label_len;
+	}
+	if (cp >= end) return -1;
+	*cp = '\0';
+	if (name_end < 0)
+		*idx = j;
+	else
+		*idx = name_end;
+	return 0;
+}
+
 // parses a raw packet from the wire
-static void
+static int
 reply_parse(u8 *packet, int length) {
 	int j = 0;  // index into packet
 	u16 _t;  // used by the macros
 	u32 _t32;  // used by the macros
+	char tmp_name[256]; // used by the macros
 
-#define GET32(x) do { if (j + 4 > length) return; memcpy(&_t32, packet + j, 4); j += 4; x = ntohl(_t32); } while(0);
-#define GET16(x) do { if (j + 2 > length) return; memcpy(&_t, packet + j, 2); j += 2; x = ntohs(_t); } while(0);
-#define GET8(x) do { if (j >= length) return; x = packet[j++]; } while(0);
 	u16 trans_id, flags, questions, answers, authority, additional, datalength;
 	u32 ttl, ttl_r = 0xffffffff;
-	u32 addresses[MAX_ADDRS];
-	int addresses_done = 0;
+	struct reply reply;
+	struct request *req;
 	uint i;
 
 	GET16(trans_id);
@@ -765,33 +854,29 @@ reply_parse(u8 *packet, int length) {
 	GET16(authority);
 	GET16(additional);
 
-	if (!(flags & 0x8000)) return;  // must be an answer
+	req = request_find_from_trans_id(trans_id);
+	if (!req) return -1;
+	// XXXX should the other return points also call reply_handle? -NM
+        log("reqparse: trans was %d\n", (int)trans_id);
+
+	memset(&reply, 0, sizeof(reply));
+
+	if (!(flags & 0x8000)) return -1;  // must be an answer
 	if (flags & 0x020f) {
 		// there was an error
-		reply_handle(trans_id, flags, 0, 0, NULL);
-		return;
+		reply_handle(req, flags, 0, NULL);
+		return -1;
 	}
 	// if (!answers) return;  // must have an answer of some form
 
-	// This macro skips a name in the DNS reply. Normally the
-	// names are a series of length prefixed strings terminated with
-	// a length of 0 (the lengths are u8's < 63).
-	// However, the length can start with a pair of 1 bits and that
-	// means that the next 14 bits are a pointer within the current
-	// packet. The name stops after a pointer like that.
+	// This macro skips a name in the DNS reply.
 #define SKIP_NAME \
-	for(;;) { \
-                if (j >= length) return; \
-		u8 label_len; \
-		GET8(label_len); \
-		if (!label_len) break; \
-		if (label_len & 0xc0) { \
-			GET8(label_len); \
-			break; \
-		} \
-		if (label_len > 63) return; \
-		j += label_len; \
-	}
+	do { tmp_name[0] = '\0';                                        \
+             if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0) \
+                     return -1;                                         \
+	} while(0);
+
+	reply.type = req->request_type;
 
 	// skip over each question in the reply
 	for (i = 0; i < questions; ++i) {
@@ -799,40 +884,65 @@ reply_parse(u8 *packet, int length) {
 		//   <label:name><u16:type><u16:class>
 		SKIP_NAME;
 		j += 4;
-                if (j >= length) return;
+                if (j >= length) return -1;
 	}
 
 	// now we have the answer section which looks like
 	// <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
-
 	for (i = 0; i < answers; ++i) {
 		u16 type, class;
+                int pre = j;
 
+		// XXX I'd be more comfortable if we actually checked the name
+		// here. -NM
 		SKIP_NAME;
 		GET16(type);
 		GET16(class);
 		GET32(ttl);
 		GET16(datalength);
 
-		if (type == TYPE_A && class == CLASS_INET) {
-			const int addrcount = datalength >> 2;  // each IP address is 4 bytes
-                        // XXXX do something sane with malformed A answers.
-			const int addrtocopy = MIN(MAX_ADDRS - addresses_done, addrcount);
+                // log("@%d, Name %s, type %d, class %d, j=%d", pre, tmp_name, (int)type, (int)class, j);
 
+		if (type == TYPE_A && class == CLASS_INET) {
+			int addrcount, addrtocopy;
+			if (req->request_type != TYPE_A) {
+				j += datalength; continue;
+			}
+                        // XXXX do something sane with malformed A answers.
+			addrcount = datalength >> 2;  // each IP address is 4 bytes
+			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, addrcount);
 			ttl_r = MIN(ttl_r, ttl);
 			// we only bother with the first four addresses.
-			if (j + 4*addrtocopy > length) return;
-			memcpy(&addresses[addresses_done], packet + j, 4*addrtocopy);
+			if (j + 4*addrtocopy > length) return -1;
+			memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
+			       packet + j, 4*addrtocopy);
 			j += 4*addrtocopy;
-			addresses_done += addrtocopy;
-			if (addresses_done == MAX_ADDRS) break;
-		} else {
+			reply.data.a.addrcount += addrtocopy;
+			reply.have_answer = 1;
+			if (reply.data.a.addrcount == MAX_ADDRS) break;
+		} else if (type == TYPE_PTR && class == CLASS_INET) {
+			if (req->request_type != TYPE_PTR) {
+				j += datalength; continue;
+			}
+			if (name_parse(packet, length, &j, reply.data.ptr.name,
+				       sizeof(reply.data.ptr.name))<0)
+				return -1;
+			reply.have_answer = 1;
+			break;
+		} else if (type == TYPE_AAAA && class == CLASS_INET) {
+			if (req->request_type != TYPE_AAAA) {
+				j += datalength; continue;
+			}
+			// XXXX Implement me. -NM
+			j += datalength;
+                } else {
 			// skip over any other type of resource
 			j += datalength;
 		}
 	}
 
-	reply_handle(trans_id, flags, ttl_r, addresses_done, addresses);
+	reply_handle(req, flags, ttl_r, &reply);
+	return 0;
 #undef SKIP_NAME
 #undef GET32
 #undef GET16
@@ -1087,7 +1197,7 @@ eventdns_request_timeout_callback(int fd, short events, void *arg) {
 	(void) evtimer_del(&req->timeout_event);
 	if (req->tx_count >= global_max_retransmits) {
 		// this request has failed
-		req->user_callback(DNS_ERR_TIMEOUT, 0, 0, 0, NULL, req->user_pointer);
+		reply_callback(req, 0, DNS_ERR_TIMEOUT, NULL);
 		request_finished(req, &req_head);
 	} else {
 		// retransmit it
@@ -1184,8 +1294,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 	// in the hope that it is up now.
 
   	log("Sending probe to %s", debug_ntoa(ns->address));
-
-	req = request_new("www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
+	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
         if (!req) return;
 	// we force this into the inflight queue no matter what
 	request_trans_id_set(req, transaction_id_pick());
@@ -1398,7 +1507,7 @@ string_num_dots(const char *s) {
 }
 
 static struct request *
-request_new(const char *name, int flags, eventdns_callback_type callback, void *ptr) {
+request_new(int type, const char *name, int flags, eventdns_callback_type callback, void *user_ptr) {
 	const char issuing_now = (global_requests_inflight < global_max_requests_inflight) ? 1 : 0;
 
 	const int name_len = strlen(name);
@@ -1415,12 +1524,13 @@ request_new(const char *name, int flags, eventdns_callback_type callback, void *
 	// request data lives just after the header
 	req->request = ((u8 *) req) + sizeof(struct request);
 	req->request_appended = 1;  // denotes that the request data shouldn't be free()ed
-	rlen = eventdns_request_data_build(name, name_len, trans_id, TYPE_A, CLASS_INET, req->request);
+	rlen = eventdns_request_data_build(name, name_len, trans_id, type, CLASS_INET, req->request);
 	if (rlen < 0) goto err1;
 	req->request_len = rlen;
 	req->trans_id = trans_id;
 	req->tx_count = 0;
-	req->user_pointer = ptr;
+	req->request_type = type;
+	req->user_pointer = user_ptr;
 	req->user_callback = callback;
 	req->ns = issuing_now ? nameserver_pick() : NULL;
 	req->next = req->prev = NULL;
@@ -1446,16 +1556,34 @@ request_submit(struct request *const req) {
 }
 
 // exported function
-int eventdns_resolve(const char *name, int flags, eventdns_callback_type callback, void *ptr) {
+int eventdns_resolve_ipv4(const char *name, int flags, eventdns_callback_type callback, void *ptr) {
 	log("Resolve requested for %s", name);
 	if (flags & DNS_QUERY_NO_SEARCH) {
-		struct request *const req = request_new(name, flags, callback, ptr);
+		struct request *const req = request_new(TYPE_A, name, flags, callback, ptr);
 		if (!req) return 1;
 		request_submit(req);
 		return 0;
 	} else {
-		return search_request_new(name, flags, callback, ptr);
+		return search_request_new(TYPE_A, name, flags, callback, ptr);
 	}
+}
+
+int eventdns_resolve_reverse(struct in_addr *in, int flags, eventdns_callback_type callback, void *ptr) {
+	char buf[32];
+	struct request *req;
+	u32 a;
+	assert(in);
+	a = ntohl(in->s_addr);
+	sprintf(buf, "%d.%d.%d.%d.in-addr.arpa",
+		(int)(u8)((a    )&0xff),
+		(int)(u8)((a>>8 )&0xff),
+                (int)(u8)((a>>16)&0xff),
+		(int)(u8)((a>>24)&0xff));
+	log("reverse resolve requested for %s", buf);
+	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
+	if (!req) return 1;
+	request_submit(req);
+	return 0;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -1613,20 +1741,21 @@ search_make_new(const struct search_state *const state, int n, const char *const
 }
 
 static int
-search_request_new(const char *const name, int flags, eventdns_callback_type user_callback, void *user_arg) {
+search_request_new(int type, const char *const name, int flags, eventdns_callback_type user_callback, void *user_arg) {
+	assert(type == TYPE_A);
 	if ( ((flags & DNS_QUERY_NO_SEARCH) == 0) &&
 	     global_search_state &&
 		 global_search_state->num_domains) {
 		// we have some domains to search
 		struct request *req;
 		if (string_num_dots(name) >= global_search_state->ndots) {
-			req = request_new(name, flags, user_callback, user_arg);
+			req = request_new(type, name, flags, user_callback, user_arg);
 			if (!req) return 1;
 			req->search_index = -1;
 		} else {
 			char *const new_name = search_make_new(global_search_state, 0, name);
                         if (!new_name) return 1;
-			req = request_new(new_name, flags, user_callback, user_arg);
+			req = request_new(type, new_name, flags, user_callback, user_arg);
 			free(new_name);
 			if (!req) return 1;
 			req->search_index = 0;
@@ -1638,7 +1767,7 @@ search_request_new(const char *const name, int flags, eventdns_callback_type use
 		request_submit(req);
 		return 0;
 	} else {
-		struct request *const req = request_new(name, flags, user_callback, user_arg);
+		struct request *const req = request_new(type, name, flags, user_callback, user_arg);
 		if (!req) return 1;
 		request_submit(req);
 		return 0;
@@ -1662,7 +1791,7 @@ search_try_next(struct request *const req) {
 			// this name without a postfix
 			if (string_num_dots(req->search_origname) < req->search_state->ndots) {
 				// yep, we need to try it raw
-				struct request *const newreq = request_new(req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
+				struct request *const newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
 				log("Search: trying raw query %s", req->search_origname);
 				if (newreq) {
 					request_submit(newreq);
@@ -1675,7 +1804,7 @@ search_try_next(struct request *const req) {
 		new_name = search_make_new(req->search_state, req->search_index, req->search_origname);
                 if (!new_name) return 1;
 		log("Search: now trying %s (%d)", new_name, req->search_index);
-		newreq = request_new(new_name, req->search_flags, req->user_callback, req->user_pointer);
+		newreq = request_new(req->request_type, new_name, req->search_flags, req->user_callback, req->user_pointer);
 		free(new_name);
 		if (!newreq) return 1;
 		newreq->search_origname = req->search_origname;
@@ -1778,8 +1907,9 @@ resolv_conf_parse_line(char *const start, int flags) {
 				log("Setting timeout to %d", timeout);
 				global_timeout.tv_sec = timeout;
 			} else if (!strncmp(option, "attempts:", 9)) {
-				const int retries = strtoint(&option[9]);
+				int retries = strtoint(&option[9]);
 				if (retries == -1) continue;
+				if (retries > 255) retries = 255;
 				if (!(flags & DNS_OPTION_MISC)) continue;
 				log("Setting retries to %d", retries);
 				global_max_retransmits = retries;
@@ -2002,4 +2132,71 @@ eventdns_config_windows_nameservers(void)
 		return 0;
 	return load_nameservers_from_registry();
 }
+#endif
+
+#ifdef EVENTDNS_MAIN
+void main_callback(int result, char type, int count, int ttl,
+		   void *addrs, void *orig)
+{
+	char *n = (char*)orig;
+	int i;
+	for (i = 0; i < count; ++i) {
+                if (type == DNS_IPv4_A) {
+			printf("%s: %s\n", n, debug_ntoa(((u32*)addrs)[i]));
+		} else if (type == DNS_PTR) {
+			printf("%s: %s\n", n, ((char**)addrs)[i]);
+		}
+	}
+        if (!count) {
+                printf("%s: No answer (%d)\n", n, result);
+        }
+        fflush(stdout);
+}
+
+void logfn(const char *msg)
+{
+  fprintf(stderr, "%s\n", msg);
+}
+int main(int c, char **v)
+{
+	int idx;
+	int reverse = 0, verbose = 1;
+	if (c<2) {
+		fprintf(stderr, "syntax: %s [-x] [-v] hostname\n", v[0]);
+		return 1;
+	}
+	idx = 1;
+        while (idx < c && v[idx][0] == '-') {
+                if (!strcmp(v[idx], "-x"))
+                        reverse = 1;
+                else if (!strcmp(v[idx], "-v"))
+                        verbose = 1;
+                else
+                        fprintf(stderr, "Unknown option %s\n", v[idx]);
+                ++idx;
+        }
+	event_init();
+        if (verbose)
+                eventdns_set_log_fn(logfn);
+	eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS, "/etc/resolv.conf");
+	for (; idx < c; ++idx) {
+		if (reverse) {
+			struct in_addr addr;
+			if (!inet_aton(v[idx], &addr)) {
+                                fprintf(stderr, "Skipping non-IP %s\n", v[idx]);
+				continue;
+                        }
+                        fprintf(stderr, "resolving %s...\n",v[idx]);
+			eventdns_resolve_reverse(&addr, 0, main_callback, v[idx]);
+		} else {
+                        fprintf(stderr, "resolving (fwd) %s...\n",v[idx]);
+			eventdns_resolve_ipv4(v[idx], 0, main_callback, v[idx]);
+		}
+	}
+        fflush(stdout);
+	event_dispatch();
+	return 0;
+}
+
+
 #endif

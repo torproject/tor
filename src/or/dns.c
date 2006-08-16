@@ -1275,8 +1275,8 @@ launch_resolve(edge_connection_t *exitconn)
     configure_nameservers();
   log_info(LD_EXIT, "Launching eventdns request for %s",
            escaped_safe_str(exitconn->_base.address));
-  r = eventdns_resolve(exitconn->_base.address, DNS_QUERY_NO_SEARCH,
-                       eventdns_callback, addr);
+  r = eventdns_resolve_ipv4(exitconn->_base.address, DNS_QUERY_NO_SEARCH,
+                            eventdns_callback, addr);
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);

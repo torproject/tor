@@ -38,6 +38,7 @@
 #define DNS_ERR_TIMEOUT 67
 
 #define DNS_IPv4_A 1
+#define DNS_PTR 2 /* XXXX ???? */
 
 #define DNS_QUERY_NO_SEARCH 1
 
@@ -53,7 +54,9 @@ int eventdns_count_nameservers(void);
 int eventdns_clear_nameservers_and_suspend(void);
 int eventdns_resume(void);
 int eventdns_nameserver_ip_add(const char *ip_as_string);
-int eventdns_resolve(const char *name, int flags, eventdns_callback_type callback, void *ptr);
+int eventdns_resolve_ipv4(const char *name, int flags, eventdns_callback_type callback, void *ptr);
+struct in_addr;
+int eventdns_resolve_reverse(struct in_addr *addr, int flags, eventdns_callback_type callback, void *ptr);
 int eventdns_resolv_conf_parse(int flags, const char *);
 #ifdef MS_WINDOWS
 int eventdns_config_windows_nameservers(void);
