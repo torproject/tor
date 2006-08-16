@@ -732,7 +732,7 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    err = getaddrinfo(name, NULL, NULL, &res);
+    err = getaddrinfo(name, NULL, &hints, &res);
     if (!err) {
       for (res_p = res; res_p; res_p = res_p->ai_next) {
         if (res_p->ai_family == AF_INET) {
