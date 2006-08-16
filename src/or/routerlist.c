@@ -596,6 +596,21 @@ router_reset_status_download_failures(void)
   mark_all_trusteddirservers_up();
 }
 
+/** Look through the routerlist and identify routers that
+ * advertise the same /16 network address as <b>router</b>.
+ * Add each of them to <b>sl</b>.
+ */
+static void
+routerlist_add_network_family(smartlist_t *sl, routerinfo_t *router)
+{
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
+  {
+    if (router != r &&
+        (router->addr & 0xffff0000) == (r->addr & 0xffff0000))
+      smartlist_add(sl, r);
+  });
+}
+
 /** Add all the family of <b>router</b> to the smartlist <b>sl</b>.
  * This is used to make sure we don't pick siblings in a single path.
  */
@@ -604,6 +619,10 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
 {
   routerinfo_t *r;
   config_line_t *cl;
+
+  /* First, add any routers with similar network addresses.
+   * XXX It's possible this will be really expensive; we'll see. */
+  routerlist_add_network_family(sl, router);
 
   if (!router->declared_family)
     return;
