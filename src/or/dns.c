@@ -168,8 +168,8 @@ dns_init(void)
 #ifdef USE_EVENTDNS
   if (server_mode(get_options()))
     return configure_nameservers();
-  return 0;
 #endif
+  return 0;
 }
 
 uint32_t
