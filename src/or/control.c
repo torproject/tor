@@ -1152,15 +1152,17 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
     if (sig<0)
       return 0;
   }
-
-  if (control_signal_act(sig) < 0) {
+  
+  if (!control_signal_check(sig)) {
     if (STATE_IS_V0(conn->_base.state))
       send_control0_error(conn, ERR_SYNTAX, "Unrecognized signal number.");
     else
-      connection_write_str_to_buf("551 Internal error acting on signal\r\n",
+      connection_write_str_to_buf("551 Unable to act on signal\r\n",
                                   conn);
   } else {
+    /* Send DONE first, in case the signal makes us shut down. */
     send_control_done(conn);
+    control_signal_act(sig);
   }
   return 0;
 }

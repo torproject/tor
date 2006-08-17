@@ -1196,16 +1196,33 @@ do_main_loop(void)
   }
 }
 
+/* DOCDOC */
+int
+control_signal_check(int the_signal)
+{
+  switch (the_signal)
+    {
+    case 1:
+    case 2:
+    case 10:
+    case 12:
+    case 15:
+    case SIGNEWNYM:
+      return 1;
+    default:
+      return 0;
+    }
+}
+
 /** Used to implement the SIGNAL control command: if we accept
- * <b>the_signal</b> as a remote pseudo-signal, then act on it and
- * return 0.  Else return -1. */
+ * <b>the_signal</b> as a remote pseudo-signal, act on it. */
 /* We don't re-use catch() here because:
  *   1. We handle a different set of signals than those allowed in catch.
  *   2. Platforms without signal() are unlikely to define SIGfoo.
  *   3. The control spec is defined to use fixed numeric signal values
  *      which just happen to match the unix values.
  */
-int
+void
 control_signal_act(int the_signal)
 {
   switch (the_signal)
@@ -1229,9 +1246,9 @@ control_signal_act(int the_signal)
       signal_callback(0,0,(void*)(uintptr_t)SIGNEWNYM);
       break;
     default:
-      return -1;
+      log_warn(LD_BUG, "Unrecognized signal number %d.", the_signal);
+      break;
     }
-  return 0;
 }
 
 /** Libevent callback: invoked when we get a signal.
