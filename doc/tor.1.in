@@ -232,7 +232,7 @@ The following options are useful only for clients (that is, if \fBSocksPort\fP i
 .TP
 \fBAllowInvalidNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
 If some Tor servers are obviously not working right, the directory
-authorities can manually mark them an invalid, meaning that it's not
+authorities can manually mark them as invalid, meaning that it's not
 recommended you use them for entry or exit positions in your circuits. You
 can opt to use them in some circuit positions, though. The default is
 "middle,rendezvous", and other choices are not advised.
