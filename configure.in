@@ -46,11 +46,11 @@ fi
 
 AC_ARG_ENABLE(eventdns,
      AC_HELP_STRING(--enable-eventdns, enable asynchronous dns module),
-     [case "${enableval}" in 
+     [case "${enableval}" in
         yes) eventdns=true ;;
         no)  eventdns=false ;;
         *) AC_MSG_ERROR(bad value for --enable-eventdns) ;;
-      esac], [eventdns=false])
+      esac], [eventdns=true])
 AM_CONDITIONAL(EVENTDNS, test x$eventdns = xtrue)
 if test x$eventdns = xtrue; then
    AC_DEFINE([USE_EVENTDNS], 1, "Define to 1 if we'll be using eventdns.c")
