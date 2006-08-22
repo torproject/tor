@@ -28,7 +28,7 @@ Important bugfixes in 0.1.2.x:
     will then refuse to start even if you fix your clock.
 
 Items for 0.1.2.x:
-  - bug #280: getaddrinfo does not set hints
+  o bug #280: getaddrinfo does not set hints
   - bug #314: is the fix for this just to check not only
     address_is_in_virtual_range(req->address) but also to check whether
     ent = strmap_get(addressmap, address) and ent->new_address is set?
@@ -113,7 +113,14 @@ N   . Improve memory usage on tight-memory machines.
       - Make the Nameservers option documented, and make it work right on
         reload.
       o Fail when we have no configured nameservers!
-      - Make it the default on platforms where it works.
+      o Make it the default on platforms where it works.
+      - Add ipv6 support; make API closer to getaddrinfo().  (i.e., allow a
+        single AAAA/A query, return cname as well)
+      - Teach it to be able to listen for A and PTR requests to be processed.
+        Interface should be set_request_listener(sock, cb); [ cb(request) ]
+        send_reply(request, answer);.
+      - Refactor exit side of resolve: do we need a connection_t?
+      - Refactor entry side of resolve: do we need a connection_t?
 
   - Security improvements
     - Directory guards
@@ -123,8 +130,10 @@ R   - remember the last time we saw one of our entry guards labelled with
 
   - Make reverse DNS work.
     - Specify
-    - Implement with dnsworkers
-    - Implement in eventdns
+    X Implement with dnsworkers
+      (There's no point doing this, since we will throw away dnsworkers once
+      eventdns is confirmed to work everywhere.)
+    o Implement in eventdns
     - Connect to resolve cells, server-side.
     - Add client-side interface
 
