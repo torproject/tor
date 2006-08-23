@@ -1577,7 +1577,7 @@ tor_cleanup(void)
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
-static void
+static int
 do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];
@@ -1585,22 +1585,23 @@ do_list_fingerprint(void)
   const char *nickname = get_options()->Nickname;
   if (!server_mode(get_options())) {
     printf("Clients don't have long-term identity keys. Exiting.\n");
-    return;
+    return -1;
   }
   tor_assert(nickname);
   if (init_keys() < 0) {
     log_err(LD_BUG,"Error initializing keys; exiting");
-    return;
+    return -1;
   }
   if (!(k = get_identity_key())) {
     log_err(LD_GENERAL,"Error: missing identity key.");
-    return;
+    return -1;
   }
   if (crypto_pk_get_fingerprint(k, buf, 1)<0) {
     log_warn(LD_BUG, "Error computing fingerprint");
-    return;
+    return -1;
   }
   printf("%s %s\n", nickname, buf);
+  return 0;
 }
 
 /** Entry point for password hashing: take the desired password from
@@ -2109,10 +2110,11 @@ _tor_dmalloc_free(void *p)
 int
 tor_main(int argc, char *argv[])
 {
+  int result = 0;
 #ifdef USE_DMALLOC
-    int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,
-                                        _tor_dmalloc_free);
-    log_notice(LD_CONFIG, "Set up damalloc; returned %d", r);
+  int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,
+                                      _tor_dmalloc_free);
+  log_notice(LD_CONFIG, "Set up dmalloc; returned %d", r);
 #endif
 #ifdef MS_WINDOWS_SERVICE
   backup_argv = argv;
@@ -2149,23 +2151,26 @@ tor_main(int argc, char *argv[])
 #ifdef MS_WINDOWS_SERVICE
     service_status.dwCurrentState = SERVICE_RUNNING;
 #endif
-    do_main_loop();
+    result = do_main_loop();
     break;
   case CMD_LIST_FINGERPRINT:
-    do_list_fingerprint();
+    result = do_list_fingerprint();
     break;
   case CMD_HASH_PASSWORD:
     do_hash_password();
+    result = 0;
     break;
   case CMD_VERIFY_CONFIG:
     printf("Configuration was valid\n");
+    result = 0;
     break;
   case CMD_RUN_UNITTESTS: /* only set by test.c */
   default:
     log_warn(LD_BUG,"Illegal command number %d: internal error.",
              get_options()->command);
+    result = -1;
   }
   tor_cleanup();
-  return -1;
+  return result;
 }
 
