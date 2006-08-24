@@ -1584,7 +1584,8 @@ do_list_fingerprint(void)
   crypto_pk_env_t *k;
   const char *nickname = get_options()->Nickname;
   if (!server_mode(get_options())) {
-    printf("Clients don't have long-term identity keys. Exiting.\n");
+    log_err(LD_GENERAL,
+            "Clients don't have long-term identity keys. Exiting.\n");
     return -1;
   }
   tor_assert(nickname);
@@ -1597,7 +1598,7 @@ do_list_fingerprint(void)
     return -1;
   }
   if (crypto_pk_get_fingerprint(k, buf, 1)<0) {
-    log_warn(LD_BUG, "Error computing fingerprint");
+    log_err(LD_BUG, "Error computing fingerprint");
     return -1;
   }
   printf("%s %s\n", nickname, buf);
