@@ -953,7 +953,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           req->reply[1] = '\xFF'; /* reject all methods */
           return -1;
         }
-        buf_remove_from_front(buf,2+nummethods); /* remove packet from buf */
+        /* remove packet from buf. also remove any other extraneous
+         * bytes, to support broken socks clients. */
+        buf_clear(buf);
 
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
