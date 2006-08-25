@@ -3776,7 +3776,7 @@ or_state_load(void)
   or_state_t *new_state = NULL;
   char *contents = NULL, *fname;
   char *errmsg = NULL;
-  int r = -1;
+  int r = -1, badstate = 0;
 
   fname = get_or_state_fname();
   switch (file_status(fname)) {
@@ -3806,30 +3806,68 @@ or_state_load(void)
                                   lines, 0, 0, &errmsg);
     config_free_lines(lines);
     if (assign_retval<0)
-      goto done;
+      badstate = 1;
+    if (errmsg) {
+      log_warn(LD_GENERAL, "%s", errmsg);
+      tor_free(errmsg);
+    }
   }
 
-  if (or_state_validate(NULL, new_state, 1, &errmsg) < 0) {
+  if (!badstate && or_state_validate(NULL, new_state, 1, &errmsg) < 0)
+    badstate = 1;
+
+  if (errmsg) {
+    log_warn(LD_GENERAL, "%s", errmsg);
+    tor_free(errmsg);
+  }
+
+  if (badstate && !contents) {
+    log_err(LD_BUG, "Uh oh.  We couldn't even validate our own default state. "
+            "This is a bug in Tor.");
     goto done;
-  }
+  } else if (badstate && contents) {
+    int i;
+    file_status_t status;
+    size_t len = strlen(fname)+16;
+    char *fname2 = tor_malloc(len);
+    for (i = 0; i < 10000; ++i) {
+      tor_snprintf(fname2, len, "%s.%d", fname, i);
+      status = file_status(fname2);
+      if (status == FN_NOENT)
+        break;
+    }
+    if (i == 10000) {
+      log_warn(LD_BUG, "Unable to parse state in \"%s\"; too many saved bad "
+               "state files to move aside. Discarding the old state file.",
+               fname);
+      unlink(fname);
+    } else {
+      log_warn(LD_BUG, "Unable to parse state in \"%s\". Moving it aside "
+               "to \"%s\".  This could be a bug in Tor; please tell "
+               "the developers.", fname, fname2);
+      rename(fname, fname2);
+    }
+    tor_free(fname2);
+    tor_free(contents);
+    config_free(&state_format, new_state);
 
-  if (contents)
+    new_state = tor_malloc_zero(sizeof(or_state_t));
+    new_state->_magic = OR_STATE_MAGIC;
+    config_init(&state_format, new_state);
+  } else if (contents) {
     log_info(LD_GENERAL, "Loaded state from \"%s\"", fname);
-  else
+  } else {
     log_info(LD_GENERAL, "Initialized state");
+  }
   or_state_set(new_state);
   new_state = NULL;
   if (!contents) {
     global_state->dirty = 1;
     or_state_save();
   }
-
   r = 0;
+
  done:
-  if (errmsg) {
-    log_warn(LD_GENERAL, "%s", errmsg);
-    tor_free(errmsg);
-  }
   tor_free(fname);
   tor_free(contents);
   if (new_state)
