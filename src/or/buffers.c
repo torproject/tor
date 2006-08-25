@@ -995,7 +995,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           strlcpy(req->address,tmpbuf,sizeof(req->address));
           req->port = ntohs(*(uint16_t*)(buf->cur+8));
           buf_remove_from_front(buf, 10);
-          if (!address_is_in_virtual_range(req->address) &&
+          if (!addressmap_have_mapping(req->address) &&
               !have_warned_about_unsafe_socks) {
             log_warn(LD_APP,
                 "Your application (using socks5 on port %d) is giving "
@@ -1091,7 +1091,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
       startaddr = NULL;
       if (socks4_prot != socks4a &&
-          !address_is_in_virtual_range(tmpbuf) &&
+          !addressmap_have_mapping(tmpbuf) &&
           !have_warned_about_unsafe_socks) {
         log_warn(LD_APP,
                  "Your application (using socks4 on port %d) is giving Tor "

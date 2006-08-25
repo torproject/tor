@@ -24,12 +24,12 @@ Important bugfixes in 0.1.2.x:
     until we've fetched correct ones.
   - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
-  - bug #308: if Tor writes a bad datestamp to its datadir files, it
+  o bug #308: if Tor writes a bad datestamp to its datadir files, it
     will then refuse to start even if you fix your clock.
 
 Items for 0.1.2.x:
   o bug #280: getaddrinfo does not set hints
-  - bug #314: is the fix for this just to check not only
+  o bug #314: is the fix for this just to check not only
     address_is_in_virtual_range(req->address) but also to check whether
     ent = strmap_get(addressmap, address) and ent->new_address is set?
   - when we start, remove any entryguards that are listed in excludenodes.

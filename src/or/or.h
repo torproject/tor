@@ -1913,7 +1913,7 @@ void addressmap_clear_configured(void);
 void addressmap_clear_transient(void);
 void addressmap_free_all(void);
 void addressmap_rewrite(char *address, size_t maxlen);
-int addressmap_already_mapped(const char *address);
+int addressmap_have_mapping(const char *address);
 void addressmap_register(const char *address, char *new_address,
                          time_t expires);
 int parse_virtual_addr_network(const char *val, int validate_only,

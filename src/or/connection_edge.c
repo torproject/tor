@@ -645,9 +645,9 @@ addressmap_rewrite(char *address, size_t maxlen)
 
 /** Return 1 if <b>address</b> is already registered, else return 0 */
 int
-addressmap_already_mapped(const char *address)
+addressmap_have_mapping(const char *address)
 {
-  return strmap_get(addressmap, address) ? 1 : 0;
+  return strmap_get_lc(addressmap, address) ? 1 : 0;
 }
 
 /** Register a request to map <b>address</b> to <b>new_address</b>,

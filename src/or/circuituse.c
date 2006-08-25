@@ -1069,7 +1069,7 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
   /* Search the addressmap for this conn's destination. */
   /* If he's not in the address map.. */
   if (!options->TrackHostExits ||
-      addressmap_already_mapped(conn->socks_request->address))
+      addressmap_have_mapping(conn->socks_request->address))
     return; /* nothing to track, or already mapped */
 
   SMARTLIST_FOREACH(options->TrackHostExits, const char *, cp, {
