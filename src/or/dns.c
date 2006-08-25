@@ -944,7 +944,7 @@ dnsworkers_rotate(void)
 static int
 dnsworker_main(void *data)
 {
-  char address[MAX_ADDRESSLEN];
+  char address[MAX_ADDRESSLEN+1]; /* Plus a byte for a final '.' */
   unsigned char address_len;
   char *log_address;
   char answer[5];
@@ -989,7 +989,13 @@ dnsworker_main(void *data)
       crypto_thread_cleanup();
       spawn_exit();
     }
-    address[address_len] = 0; /* nul terminate it */
+    /* Add a period to prevent local domain search, and NUL-terminate. */
+    if (address[address_len-1] != '.') {
+      address[address_len] = '.';
+      address[address_len+1] = '\0';
+    } else {
+      address[address_len] = '\0';
+    }
 
     log_address = esc_for_log(safe_str(address));
     result = tor_lookup_hostname(address, &ip);
@@ -999,17 +1005,17 @@ dnsworker_main(void *data)
     switch (result) {
       case 1:
         /* XXX result can never be 1, because we set it to -1 above on error */
-        log_info(LD_NET,"Could not resolve dest addr %s (transient).",
+        log_info(LD_NET,"Could not resolve dest addr %s (transient)",
                  log_address);
         answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
         break;
       case -1:
-        log_info(LD_NET,"Could not resolve dest addr %s (permanent).",
+        log_info(LD_NET,"Could not resolve dest addr %s (permanent)",
                  log_address);
         answer[0] = DNS_RESOLVE_FAILED_PERMANENT;
         break;
       case 0:
-        log_info(LD_NET,"Resolved address %s.", log_address);
+        log_info(LD_NET,"Resolved address %s", log_address);
         answer[0] = DNS_RESOLVE_SUCCEEDED;
         break;
     }
