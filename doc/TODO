@@ -35,7 +35,7 @@ Items for 0.1.2.x:
   - when we start, remove any entryguards that are listed in excludenodes.
   . start calling dev releases 0.1.2.1-alpha-dev, not -cvs. Do we need
     to change the code in any way for this?
-  - find functions like print_cvs_version() and update them to think
+  o find functions like print_cvs_version() and update them to think
     about svn instead.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
@@ -124,7 +124,7 @@ N   . Improve memory usage on tight-memory machines.
 
   - Security improvements
     - Directory guards
-R   - remember the last time we saw one of our entry guards labelled with
+    - remember the last time we saw one of our entry guards labelled with
       the GUARD flag. If it's been too long, it is not suitable for use.
       If it's been really too long, remove it from the list.
     . Figure out avoiding duplicate /24 lines
@@ -165,7 +165,7 @@ N   - Clients stop dumping old descriptors if the network-statuses
         dir authorities know all the other authorities in their "group"?
     - Should we also look into a "delta since last network-status
       checkpoint" scheme, to reduce overhead further?
-    - Extend the "r" line in network-status to give a set of buckets (say,
+    D Extend the "r" line in network-status to give a set of buckets (say,
       comma-separated) for that router.
       - Buckets are deterministic based on IP address.
       - Then clients can choose a bucket (or set of buckets) to
