@@ -1852,7 +1852,7 @@ tor_version_parse(const char *s, tor_version_t *out)
   if (!eos || eos==cp) return -1;
   cp = eos;
 
-  /* Get cvs status and status tag. */
+  /* Get status tag. */
   if (*cp == '-' || *cp == '.')
     ++cp;
   strlcpy(out->status_tag, cp, sizeof(out->status_tag));

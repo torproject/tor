@@ -391,7 +391,7 @@ static int or_state_validate(or_state_t *old_options, or_state_t *options,
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
-static void print_cvs_version(void);
+static void print_svn_version(void);
 static void init_libevent(void);
 static int opt_streq(const char *s1, const char *s2);
 typedef enum {
@@ -2712,7 +2712,7 @@ options_init_from_torrc(int argc, char **argv)
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
     printf("Tor version %s.\n",VERSION);
     if (argc > 2 && (!strcmp(argv[2],"--version"))) {
-      print_cvs_version();
+      print_svn_version();
     }
     exit(0);
   }
@@ -4013,7 +4013,7 @@ extern const char routerparse_c_id[];
 
 /** Dump the version of every file to the log. */
 static void
-print_cvs_version(void)
+print_svn_version(void)
 {
   puts(AES_H_ID);
   puts(COMPAT_H_ID);
