@@ -24,19 +24,11 @@ Important bugfixes in 0.1.2.x:
     until we've fetched correct ones.
   - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
-  o bug #308: if Tor writes a bad datestamp to its datadir files, it
-    will then refuse to start even if you fix your clock.
 
 Items for 0.1.2.x:
-  o bug #280: getaddrinfo does not set hints
-  o bug #314: is the fix for this just to check not only
-    address_is_in_virtual_range(req->address) but also to check whether
-    ent = strmap_get(addressmap, address) and ent->new_address is set?
   - when we start, remove any entryguards that are listed in excludenodes.
   . start calling dev releases 0.1.2.1-alpha-dev, not -cvs. Do we need
     to change the code in any way for this?
-  o find functions like print_cvs_version() and update them to think
-    about svn instead.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
   - We should ship with a list of stable dir mirrors -- they're not
@@ -63,24 +55,6 @@ Items for 0.1.2.x:
       - Write-limit directory responses (need to research)
 N   . Improve memory usage on tight-memory machines.
       . Directory-related fixes.
-        o Remember offset and location of each descriptor in the cache/journal
-        o When sending a big pile of descs to a client, don't shove them all
-          on the buffer at once. Keep a list of the descriptor digests for
-          the descriptors we still want to send.  We might end up truncating
-          some replies by returning fewer descriptors than were requested (if
-          somebody requests a desc that we throw away before we deliver it),
-          but this happens only when somebody wants an obsolete desc, and
-          clients can already handle truncated replies.
-        o But what do we do about compression? That's the part that makes
-          stuff hard.
-          o Implement compress/decompress-on-the-fly support.
-          o Use it for returning lists of descriptors.
-          o Use it for returning lists of network status docs. (This will
-            take a hybrid approach; let's get the other bits working first.)
-          o Make clients handle missing Content-Length tags.  (Oh, they do.)
-            o Verify that this has happened for a long time.
-        o Try a similar trick for spooling out v1 directories.  These we
-          _uncompress_ on the fly.
         . Mmap cache files where possible.
           o Mmap cached-routers file; when building it, go oldest-to-newest.
           - More unit tests and asserts for cached-routers file: ensure digest
@@ -95,12 +69,6 @@ N   . Improve memory usage on tight-memory machines.
               Windows, I have doubts.  Do we need to keep multiple files?)
             D What do we do about the fact that people can't read zlib-
               compressed files manually?
-        o Be a little more OO to save memory in frequently
-          replicated structs.
-          o Split circuit_t into origin circuits and or circuits
-            o Move as many fields as reasonable out of base class.
-            o Re-pack structs to avoid wasted bytes.
-          o Split connection_t based on type field.
         - Look into pulling serverdescs off buffers as they arrive.
 
     - "bandwidth classes", for incoming vs initiated-here conns.
