@@ -127,6 +127,11 @@ N   . Improve memory usage on tight-memory machines.
 R   - remember the last time we saw one of our entry guards labelled with
       the GUARD flag. If it's been too long, it is not suitable for use.
       If it's been really too long, remove it from the list.
+    . Figure out avoiding duplicate /24 lines
+      o automatically add /16 servers to family
+      - do it in an efficient way. keep a list of something somewhere?
+      - make the "16" part configurable, so people who run their own
+        tor network can set it to 32.
 
   - Make reverse DNS work.
     - Specify
@@ -225,7 +230,6 @@ Topics to think about during 0.1.2.x development:
     - (How can we make this tolerant of a bad v0?)
   * Figure out non-clique.
   * Figure out China.
-  - Figure out avoiding duplicate /24 lines
   - Figure out partial network knowledge.
   - Figure out hidden services.
 
