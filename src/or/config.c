@@ -3822,21 +3822,21 @@ or_state_load(void)
   }
 
   if (badstate && !contents) {
-    log_err(LD_BUG, "Uh oh.  We couldn't even validate our own default state. "
-            "This is a bug in Tor.");
+    log_warn(LD_BUG, "Uh oh.  We couldn't even validate our own default state."
+             " This is a bug in Tor.");
     goto done;
   } else if (badstate && contents) {
     int i;
     file_status_t status;
     size_t len = strlen(fname)+16;
     char *fname2 = tor_malloc(len);
-    for (i = 0; i < 10000; ++i) {
+    for (i = 0; i < 100; ++i) {
       tor_snprintf(fname2, len, "%s.%d", fname, i);
       status = file_status(fname2);
       if (status == FN_NOENT)
         break;
     }
-    if (i == 10000) {
+    if (i == 100) {
       log_warn(LD_BUG, "Unable to parse state in \"%s\"; too many saved bad "
                "state files to move aside. Discarding the old state file.",
                fname);
