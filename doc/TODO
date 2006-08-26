@@ -25,10 +25,28 @@ Important bugfixes in 0.1.2.x:
   - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
 
-Items for 0.1.2.x:
+Items for 0.1.2.x, real soon now:
   - when we start, remove any entryguards that are listed in excludenodes.
   . start calling dev releases 0.1.2.1-alpha-dev, not -cvs. Do we need
-    to change the code in any way for this?
+    to change the code in any way for this? Appears to be "no".
+  - Remember the last time we saw one of our entry guards labelled with
+    the GUARD flag. If it's been too long, it is not suitable for use.
+    If it's been really too long, remove it from the list.
+  . Figure out avoiding duplicate /24 lines
+    o automatically add /16 servers to family
+    - do it in an efficient way. keep a list of something somewhere?
+    - make the "16" part configurable, so people who run their own
+      tor network can set it to 32.
+N - Clients stop dumping old descriptors if the network-statuses
+    claim they're still valid.
+  . If we fail to connect via an exit enclave, (warn and) try again
+    without demanding that exit node.
+    - And recognize when extending to the enclave node is failing,
+      so we can abandon then too.
+  - We need a separate list of "hidserv authorities" if we want to
+    retire moria1 from the main list.
+
+Items for 0.1.2.x, later on:
   - enumerate events of important things that occur in tor, so vidalia can
     react.
   - We should ship with a list of stable dir mirrors -- they're not
@@ -90,16 +108,7 @@ N   . Improve memory usage on tight-memory machines.
       - Refactor exit side of resolve: do we need a connection_t?
       - Refactor entry side of resolve: do we need a connection_t?
 
-  - Security improvements
-    - Directory guards
-    - remember the last time we saw one of our entry guards labelled with
-      the GUARD flag. If it's been too long, it is not suitable for use.
-      If it's been really too long, remove it from the list.
-    . Figure out avoiding duplicate /24 lines
-      o automatically add /16 servers to family
-      - do it in an efficient way. keep a list of something somewhere?
-      - make the "16" part configurable, so people who run their own
-        tor network can set it to 32.
+  - Directory guards
 
   - Make reverse DNS work.
     - Specify
@@ -120,10 +129,8 @@ N   . Improve memory usage on tight-memory machines.
     - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
 
   - A more efficient dir protocol.
-N   - Clients stop dumping old descriptors if the network-statuses
-      claim they're still valid.
-      - Later, servers will stop generating new descriptors simply
-        because 18 hours have passed.
+    - Later, servers will stop generating new descriptors simply
+      because 18 hours have passed.
     - Authorities should fetch the network-statuses amongst each
       other, consensus them, and advertise a communal network-status.
       This is not so much for safety/complexity as it is to reduce
@@ -141,13 +148,7 @@ N   - Clients stop dumping old descriptors if the network-statuses
 
   - Critical but minor bugs, backport candidates.
     - Failed rend desc fetches sometimes don't get retried. True/false?
-    . If we fail to connect via an exit enclave, (warn and) try again
-      without demanding that exit node.
-      - And recognize when extending to the enclave node is failing,
-        so we can abandon then too.
     - non-v1 authorities should not accept rend descs.
-    - We need a separate list of "hidserv authorities" if we want to
-      retire moria1 from the main list.
     - support dir 503s better
       o clients don't log as loudly when they receive them
       - they don't count toward the 3-strikes rule
@@ -204,7 +205,7 @@ Topics to think about during 0.1.2.x development:
 Minor items for 0.1.2.x as time permits.
   - Tor should bind its ports before dropping privs, so users don't
     have to do the ipchains dance.
-  - Make --verify-config return a useful error code.
+  o Make --verify-config return a useful error code.
   - Rate limit exit connections to a given destination -- this helps
     us play nice with websites when Tor users want to crawl them; it
     also introduces DoS opportunities.
@@ -225,8 +226,6 @@ Minor items for 0.1.2.x as time permits.
   - If the server is spewing complaints about raising your ulimit -n,
     we should add a note about this to the server descriptor so other
     people can notice too.
-  - rate limit the number of exit connections to a given destination, to
-    help with DoS/crawling issues.
   - cpu fixes:
     - see if we should make use of truncate to retry
     - kill dns workers more slowly
