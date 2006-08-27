@@ -1209,7 +1209,7 @@ configure_nameservers(void)
     if (eventdns_count_nameservers() == 0) {
       log_err(LD_EXIT, "Unable to add any configured nameserver.  "
               "Either remove the Nameservers line from your configuration, or "
-              "put in a namerserver that we can parse.");
+              "put in a nameserver that we can parse.");
       return -1;
     }
   } else {
