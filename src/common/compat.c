@@ -152,6 +152,7 @@ void
 tor_munmap_file(tor_mmap_t *handle)
 {
   munmap((char*)handle->data, handle->size);
+  tor_free(handle);
 }
 #elif defined(MS_WINDOWS)
 typedef struct win_mmap_t {

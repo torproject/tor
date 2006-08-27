@@ -340,6 +340,10 @@ router_reload_router_list(void)
   router_journal_len = router_store_len = 0;
 
   tor_snprintf(fname, fname_len, "%s/cached-routers", options->DataDirectory);
+
+  if (routerlist->mmap_descriptors) /* get rid of it first */
+    tor_munmap_file(routerlist->mmap_descriptors);
+
   routerlist->mmap_descriptors = tor_mmap_file(fname);
   if (routerlist->mmap_descriptors) {
     router_store_len = routerlist->mmap_descriptors->size;
@@ -1262,6 +1266,8 @@ routerlist_free(routerlist_t *rl)
                     signed_descriptor_free(sd));
   smartlist_free(rl->routers);
   smartlist_free(rl->old_routers);
+  if (routerlist->mmap_descriptors)
+    tor_munmap_file(routerlist->mmap_descriptors);
   tor_free(rl);
 }
 
