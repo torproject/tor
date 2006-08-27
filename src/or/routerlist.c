@@ -358,6 +358,7 @@ router_reload_router_list(void)
     stat(fname, &st);
     router_load_routers_from_string(contents,
                                     SAVED_IN_JOURNAL, NULL);
+    tor_free(contents);
   }
 
   tor_free(fname);
