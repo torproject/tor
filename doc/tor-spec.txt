@@ -292,7 +292,7 @@ when do we rotate which keys (tls, link, etc)?
    other side has an obsolete certificate (organizationName equal to "Tor"
    or "TOR").  If the other party presented an obsolete certificate,
    we assume a v0 connection.  Otherwise, both parties send VERSIONS
-   cells listing all their supported  versions.  Upon receiving the
+   cells listing all their supported versions.  Upon receiving the
    other party's VERSIONS cell, the implementation begins using the
    highest-valued version common to both cells.  If the first cell from
    the other party is _not_ a VERSIONS cell, we assume a v0 protocol.
@@ -382,7 +382,7 @@ when do we rotate which keys (tls, link, etc)?
    As usual with DH, x and y MUST be generated randomly.
 
 [
-   To implement backwar-compatible version negotiation, parties MUST
+   To implement backward-compatible version negotiation, parties MUST
    drop CREATE cells with all-[00] onion-skins.
 ]
 
