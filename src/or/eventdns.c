@@ -891,7 +891,7 @@ reply_parse(u8 *packet, int length) {
 	// <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
 	for (i = 0; i < answers; ++i) {
 		u16 type, class;
-                int pre = j;
+                //int pre = j;
 
 		// XXX I'd be more comfortable if we actually checked the name
 		// here. -NM
