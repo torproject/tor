@@ -1105,7 +1105,11 @@ do_main_loop(void)
 {
   int loop_result;
 
-  dns_init(); /* initialize dns resolve map, spawn workers if needed */
+  /* initialize dns resolve map, spawn workers if needed */
+  if (dns_init() < 0) {
+    log_err(LD_GENERAL,"Error initializing dns subsystem; exiting");
+    return -1;
+  }
 
   handle_signals(1);
 

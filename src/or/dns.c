@@ -1187,6 +1187,8 @@ connection_dns_reached_eof(connection_t *conn)
   return 0;
 }
 static int nameservers_configured = 0;
+
+/* DOCDOC */
 static int
 configure_nameservers(void)
 {
@@ -1207,9 +1209,9 @@ configure_nameservers(void)
         }
       });
     if (eventdns_count_nameservers() == 0) {
-      log_err(LD_EXIT, "Unable to add any configured nameserver.  "
-              "Either remove the Nameservers line from your configuration, or "
-              "put in a nameserver that we can parse.");
+      log_warn(LD_EXIT, "Unable to add any configured nameserver. "
+               "Either remove the Nameservers line from your configuration, "
+               "or put in a nameserver that we can parse.");
       return -1;
     }
   } else {
@@ -1217,9 +1219,9 @@ configure_nameservers(void)
     if (eventdns_config_windows_nameservers())
       return -1;
     if (eventdns_count_nameservers() == 0) {
-      log_err(LD_EXIT, "Unable to find any platform nameservers in "
-              "your Windows configuration.  Perhaps you should add a "
-              "Nameservers line to your torrc?");
+      log_warn(LD_EXIT, "Unable to find any platform nameservers in "
+               "your Windows configuration.  Perhaps you should add a "
+               "Nameservers line to your torrc?");
       return -1;
     }
 #else
@@ -1228,9 +1230,9 @@ configure_nameservers(void)
                                    "/etc/resolv.conf"))
       return -1;
     if (eventdns_count_nameservers() == 0) {
-      log_err(LD_EXIT, "Unable to find any platform nameservers in "
-              "/etc/resolv.conf.  Perhaps you should add a Nameservers line "
-              "to your torrc?");
+      log_warn(LD_EXIT, "Unable to find any platform nameservers in "
+               "/etc/resolv.conf.  Perhaps you should add a Nameservers line "
+               "to your torrc?");
       return -1;
     }
 #endif
@@ -1238,6 +1240,8 @@ configure_nameservers(void)
   nameservers_configured = 1;
   return 0;
 }
+
+/* XXX DOCDOC */
 static void
 eventdns_callback(int result, char type, int count, int ttl, void *addresses,
                   void *arg)
@@ -1272,13 +1276,15 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
   tor_free(string_address);
 }
 
+/* XXX DOCDOC */
 static int
 launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
   int r;
   if (!nameservers_configured)
-    configure_nameservers();
+    if (configure_nameservers() < 0)
+      return -1;
   log_info(LD_EXIT, "Launching eventdns request for %s",
            escaped_safe_str(exitconn->_base.address));
   r = eventdns_resolve_ipv4(exitconn->_base.address, DNS_QUERY_NO_SEARCH,
@@ -1294,7 +1300,7 @@ launch_resolve(edge_connection_t *exitconn)
         send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
       }
     }
-    dns_cancel_pending_resolve(addr);/* also sends end and frees */
+    dns_cancel_pending_resolve(addr); /* also sends end and frees */
     tor_free(addr);
   }
   return r ? -1 : 0;
