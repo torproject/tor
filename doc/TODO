@@ -17,15 +17,13 @@ P       - phobos claims
     - <arma> "should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?"
 
-Important bugfixes in 0.1.2.x:
+Items for 0.1.2.x, real soon now:
   - When we've been idle a long time, we stop fetching server
     descriptors. When we then get a socks request, we build circuits
     immediately using whatever descriptors we have, rather than waiting
     until we've fetched correct ones.
   - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
-
-Items for 0.1.2.x, real soon now:
   - when we start, remove any entryguards that are listed in excludenodes.
   . start calling dev releases 0.1.2.1-alpha-dev, not -cvs. Do we need
     to change the code in any way for this? Appears to be "no".
@@ -47,6 +45,8 @@ N - Clients stop dumping old descriptors if the network-statuses
     retire moria1 from the main list.
 
 Items for 0.1.2.x, later on:
+  - re-enable blossom functionality: let tor servers decide if they
+    will use local search when resolving, or not.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
   - We should ship with a list of stable dir mirrors -- they're not
