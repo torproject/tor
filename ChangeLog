@@ -1,8 +1,8 @@
 Changes in version 0.1.2.1-alpha - 2006-08-27
   o Major features:
     - Add "eventdns" async dns library from Adam Langley, tweaked to
-      build on OSX and Windows. It's enabled by default on all platforms
-      but Windows.
+      build on OSX and Windows. Only enabled if you pass the
+      --enable-eventdns argument to configure.
     - Allow servers with no hostname or IP address to learn their
       IP address by asking the directory authorities. This code only
       kicks in when you would normally have exited with a "no address"
