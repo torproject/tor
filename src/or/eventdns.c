@@ -465,14 +465,14 @@ eventdns_set_log_fn(eventdns_debug_log_fn_type fn)
 }
 
 #ifdef __GNUC__
-#define EVENTDNS_LOG_CHECK  __attribute__ ((format(printf, 1, 2)))
+#define EVENTDNS_LOG_CHECK  __attribute__ ((format(printf, 2, 3)))
 #else
 #define EVENTDNS_LOG_CHECK
 #endif
 
-static void _eventdns_log(const char *fmt, ...) EVENTDNS_LOG_CHECK;
+static void _eventdns_log(int warn, const char *fmt, ...) EVENTDNS_LOG_CHECK;
 static void
-_eventdns_log(const char *fmt, ...)
+_eventdns_log(int warn, const char *fmt, ...)
 {
   va_list args;
   static char buf[512];
@@ -485,7 +485,7 @@ _eventdns_log(const char *fmt, ...)
   vsnprintf(buf, sizeof(buf), fmt, args);
 #endif
   buf[sizeof(buf)-1] = '\0';
-  eventdns_log_fn(buf);
+  eventdns_log_fn(warn, buf);
   va_end(args);
 }
 
@@ -534,7 +534,7 @@ nameserver_probe_failed(struct nameserver *const ns) {
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 	if (evtimer_add(&ns->timeout_event, (struct timeval *) timeout) < 0) {
-          log("Error from libevent when adding timer event for %s",
+          log(1,"Error from libevent when adding timer event for %s",
               debug_ntoa(ns->address));
           // ???? Do more?
         }
@@ -549,7 +549,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	// then don't do anything
 	if (!ns->state) return;
 
-	log("Nameserver %s has failed: %s", debug_ntoa(ns->address), msg);
+	log(1,"Nameserver %s has failed: %s", debug_ntoa(ns->address), msg);
 	global_good_nameservers--;
 	assert(global_good_nameservers >= 0);
 	if (global_good_nameservers == 0) {
@@ -591,7 +591,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 static void
 nameserver_up(struct nameserver *const ns) {
 	if (ns->state) return;
-	log("Nameserver %s is back up", debug_ntoa(ns->address));
+	log(1,"Nameserver %s is back up", debug_ntoa(ns->address));
 	evtimer_del(&ns->timeout_event);
 	ns->state = 1;
 	ns->failed_times = 0;
@@ -620,7 +620,7 @@ request_finished(struct request *const req, struct request **head) {
 		}
 	}
 
-	log("Removing timeout for request %lx", (unsigned long) req);
+	log(0,"Removing timeout for request %lx", (unsigned long) req);
 	evtimer_del(&req->timeout_event);
 
 	search_request_finished(req);
@@ -857,7 +857,7 @@ reply_parse(u8 *packet, int length) {
 	req = request_find_from_trans_id(trans_id);
 	if (!req) return -1;
 	// XXXX should the other return points also call reply_handle? -NM
-        log("reqparse: trans was %d\n", (int)trans_id);
+        // log("reqparse: trans was %d\n", (int)trans_id);
 
 	memset(&reply, 0, sizeof(reply));
 
@@ -1058,7 +1058,7 @@ nameserver_write_waiting(struct nameserver *ns, char waiting) {
 	event_set(&ns->event, ns->socket, EV_READ | (waiting ? EV_WRITE : 0) | EV_PERSIST,
 			nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
-          log("Error from libevent when adding event for %s",
+          log(1, "Error from libevent when adding event for %s",
               debug_ntoa(ns->address));
           // ???? Do more?
         }
@@ -1187,7 +1187,7 @@ eventdns_request_timeout_callback(int fd, short events, void *arg) {
         (void) fd;
         (void) events;
 
-	log("Request %lx timed out", (unsigned long) arg);
+	log(0, "Request %lx timed out", (unsigned long) arg);
 
 	req->ns->timedout++;
 	if (req->ns->timedout > global_max_nameserver_timeout) {
@@ -1260,12 +1260,12 @@ eventdns_request_transmit(struct request *req) {
 		// fall through
 	default:
 		// all ok
-		log("Setting timeout for request %lx", (unsigned long) req);
+		log(0, "Setting timeout for request %lx", (unsigned long) req);
 		evtimer_set(&req->timeout_event, eventdns_request_timeout_callback, req);
 		if (evtimer_add(&req->timeout_event, &global_timeout) < 0) {
-                  log("Error from libevent when adding timer for request %lx",
-                      (unsigned long) req);
-                  // ???? Do more?
+			log(1, "Error from libevent when adding timer for "
+			    "request %lx", (unsigned long) req);
+			// ???? Do more?
                 }
 		req->tx_count++;
 		req->transmit_me = 0;
@@ -1293,7 +1293,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 	// here we need to send a probe to a given nameserver
 	// in the hope that it is up now.
 
-  	log("Sending probe to %s", debug_ntoa(ns->address));
+  	log(0, "Sending probe to %s", debug_ntoa(ns->address));
 	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
         if (!req) return;
 	// we force this into the inflight queue no matter what
@@ -1446,7 +1446,7 @@ eventdns_nameserver_add(unsigned long int address) {
           goto out2;
         }
 
-	log("Added nameserver %s", debug_ntoa(address));
+	log(0, "Added nameserver %s", debug_ntoa(address));
 
 	// insert this nameserver into the list of them
 	if (!server_head) {
@@ -1469,7 +1469,8 @@ out2:
 	CLOSE_SOCKET(ns->socket);
 out1:
 	free(ns);
-	log("Unable to add nameserver %s: error %d", debug_ntoa(address), err);
+	log(1, "Unable to add nameserver %s: error %d", debug_ntoa(address),
+	    err);
 	return err;
 }
 
@@ -1557,7 +1558,7 @@ request_submit(struct request *const req) {
 
 // exported function
 int eventdns_resolve_ipv4(const char *name, int flags, eventdns_callback_type callback, void *ptr) {
-	log("Resolve requested for %s", name);
+	log(0, "Resolve requested for %s", name);
 	if (flags & DNS_QUERY_NO_SEARCH) {
 		struct request *const req = request_new(TYPE_A, name, flags, callback, ptr);
 		if (!req) return 1;
@@ -1579,7 +1580,7 @@ int eventdns_resolve_reverse(struct in_addr *in, int flags, eventdns_callback_ty
 		(int)(u8)((a>>8 )&0xff),
                 (int)(u8)((a>>16)&0xff),
 		(int)(u8)((a>>24)&0xff));
-	log("reverse resolve requested for %s", buf);
+	log(0, "reverse resolve requested for %s", buf);
 	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
 	if (!req) return 1;
 	request_submit(req);
@@ -1792,7 +1793,7 @@ search_try_next(struct request *const req) {
 			if (string_num_dots(req->search_origname) < req->search_state->ndots) {
 				// yep, we need to try it raw
 				struct request *const newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
-				log("Search: trying raw query %s", req->search_origname);
+				log(0, "Search: trying raw query %s", req->search_origname);
 				if (newreq) {
 					request_submit(newreq);
 					return 0;
@@ -1803,7 +1804,7 @@ search_try_next(struct request *const req) {
 
 		new_name = search_make_new(req->search_state, req->search_index, req->search_origname);
                 if (!new_name) return 1;
-		log("Search: now trying %s (%d)", new_name, req->search_index);
+		log(0, "Search: now trying %s (%d)", new_name, req->search_index);
 		newreq = request_new(req->request_type, new_name, req->search_flags, req->user_callback, req->user_pointer);
 		free(new_name);
 		if (!newreq) return 1;
@@ -1896,7 +1897,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 				const int ndots = strtoint(&option[6]);
 				if (ndots == -1) continue;
 				if (!(flags & DNS_OPTION_SEARCH)) continue;
-				log("Setting ndots to %d", ndots);
+				log(0,"Setting ndots to %d", ndots);
 				if (!global_search_state) global_search_state = search_state_new();
                                 if (!global_search_state) return;
 				global_search_state->ndots = ndots;
@@ -1904,14 +1905,14 @@ resolv_conf_parse_line(char *const start, int flags) {
 				const int timeout = strtoint(&option[8]);
 				if (timeout == -1) continue;
 				if (!(flags & DNS_OPTION_MISC)) continue;
-				log("Setting timeout to %d", timeout);
+				log(0,"Setting timeout to %d", timeout);
 				global_timeout.tv_sec = timeout;
 			} else if (!strncmp(option, "attempts:", 9)) {
 				int retries = strtoint(&option[9]);
 				if (retries == -1) continue;
 				if (retries > 255) retries = 255;
 				if (!(flags & DNS_OPTION_MISC)) continue;
-				log("Setting retries to %d", retries);
+				log(0,"Setting retries to %d", retries);
 				global_max_retransmits = retries;
 			}
 		}
@@ -1935,7 +1936,7 @@ eventdns_resolv_conf_parse(int flags, const char *const filename) {
 	char *start;
 	int err = 0;
 
-	log("Parsing resolve.conf file %s", filename);
+	log(0,"Parsing resolve.conf file %s", filename);
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
@@ -2094,7 +2095,7 @@ load_nameservers_from_registry(void)
 	int found = 0;
 #define TRY(k, name) \
 	if (!found && config_nameserver_from_reg_key(k,name) == 0) {	\
-		log("Found nameservers in %s/%s",#k,name);		\
+		log(0,"Found nameservers in %s/%s",#k,name);		\
 		found = 1;						\
 	}
 

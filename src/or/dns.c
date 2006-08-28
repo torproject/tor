@@ -148,14 +148,14 @@ init_cache_map(void)
 
 #ifdef USE_EVENTDNS
 static void
-eventdns_log_cb(const char *msg)
+eventdns_log_cb(int warn, const char *msg)
 {
   if (!strcmpstart(msg, "Resolve requested for") &&
       get_options()->SafeLogging) {
     log(LOG_INFO, LD_EXIT, "eventdns: Resolve requested.");
     return;
   }
-  log(LOG_INFO, LD_EXIT, "eventdns: %s", msg);
+  log(warn?LOG_WARN:LOG_INFO, LD_EXIT, "eventdns: %s", msg);
 }
 #endif
 
