@@ -596,7 +596,8 @@ run_connection_housekeeping(int i, time_t now)
     return;
   }
 
-  /* Expire any directory connections that haven't sent anything for 5 min */
+  /* Expire any directory connections that haven't been active (sent
+   * if a server or received if a client) for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
       ((DIR_CONN_IS_SERVER(conn) &&
         conn->timestamp_lastwritten + DIR_CONN_MAX_STALL < now) ||
