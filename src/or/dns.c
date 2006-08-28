@@ -51,6 +51,15 @@ static int num_dnsworkers=0;
 static int num_dnsworkers_busy=0;
 /** When did we last rotate the dnsworkers? */
 static time_t last_rotation_time=0;
+#else
+/** Have we currently configured nameservers with eventdns? */
+static int nameservers_configured = 0;
+/** What was the resolv_conf fname we last used when configuring the
+ * nameservers? Used to check whether we need to reconfigure. */
+static char *resolv_conf_fname = NULL;
+/** What was the mtime on the resolv.conf file we last used when configuring
+ * the nameservers?  Used to check whether we need to reconfigure. */
+static time_t resolv_conf_mtime = 0;
 #endif
 
 /** Linked list of connections waiting for a DNS answer. */
@@ -92,6 +101,7 @@ typedef struct cached_resolve_t {
   uint8_t state; /**< Is this cached entry pending/done/valid/failed? */
   time_t expire; /**< Remove items from cache after this time. */
   uint32_t ttl; /**< What TTL did the nameserver tell us? */
+  /** Connections that want to know when we get an answer for this resolve. */
   pending_connection_t *pending_connections;
 } cached_resolve_t;
 
@@ -116,13 +126,6 @@ static void _assert_cache_ok(void);
 #endif
 static void assert_resolve_ok(cached_resolve_t *resolve);
 
-#ifdef USE_EVENTDNS
-/* DOCDOC */
-static int nameservers_configured = 0;
-static char *resolv_conf_fname = NULL;
-static time_t resolv_conf_mtime = 0;
-#endif
-
 /** Hash table of cached_resolve objects. */
 static HT_HEAD(cache_map, cached_resolve_t) cache_root;
 
@@ -136,6 +139,7 @@ cached_resolves_eq(cached_resolve_t *a, cached_resolve_t *b)
   return !strncmp(a->address, b->address, MAX_ADDRESSLEN);
 }
 
+/** Hash function for cached_resolve objects */
 static INLINE unsigned int
 cached_resolve_hash(cached_resolve_t *a)
 {
@@ -155,12 +159,15 @@ init_cache_map(void)
 }
 
 #ifdef USE_EVENTDNS
+/** Helper: called by eventdns when eventdns wants to log something. */
 static void
 eventdns_log_cb(int warn, const char *msg)
 {
   if (!strcmpstart(msg, "Resolve requested for") &&
       get_options()->SafeLogging) {
     log(LOG_INFO, LD_EXIT, "eventdns: Resolve requested.");
+    return;
+  } else if (!strcmpstart(msg, "Search: ")) {
     return;
   }
   log(warn?LOG_WARN:LOG_INFO, LD_EXIT, "eventdns: %s", msg);
@@ -181,7 +188,7 @@ dns_init(void)
   return 0;
 }
 
-/* DOCDOC */
+/** Called when DNS-related options change (or may have changed) */
 void
 dns_reset(void)
 {
@@ -203,6 +210,8 @@ dns_reset(void)
 #endif
 }
 
+/** Helper: Given a TTL from a DNS response, determine what TTL to give the
+ * OP that asked us to resolve it. */
 uint32_t
 dns_clip_ttl(uint32_t ttl)
 {
@@ -214,6 +223,8 @@ dns_clip_ttl(uint32_t ttl)
     return ttl;
 }
 
+/** Helper: Given a TTL from a DNS response, determine how long to hold it in
+ * our cache. */
 static uint32_t
 dns_get_expiry_ttl(uint32_t ttl)
 {
@@ -266,7 +277,7 @@ set_expiry(cached_resolve_t *resolve, time_t expires)
                        resolve);
 }
 
-/** Free all storage held in the DNS cache */
+/** Free all storage held in the DNS cache and related structures. */
 void
 dns_free_all(void)
 {
@@ -280,6 +291,9 @@ dns_free_all(void)
   if (cached_resolve_pqueue)
     smartlist_free(cached_resolve_pqueue);
   cached_resolve_pqueue = NULL;
+#ifdef USE_EVENTDNS
+  tor_free(resolv_conf_fname);
+#endif
 }
 
 /** Remove every cached_resolve whose <b>expire</b> time is before <b>now</b>
@@ -660,6 +674,9 @@ dns_cancel_pending_resolve(char *address)
   tor_free(resolve);
 }
 
+/** Helper: adds an entry to the DNS cache mapping <b>address</b> to the ipv4
+ * address 'addr'.  'ttl is a cache ttl; 'outcome' is one of
+ * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}. */
 static void
 add_answer_to_cache(const char *address, uint32_t addr, char outcome,
                     uint32_t ttl)
@@ -680,11 +697,11 @@ add_answer_to_cache(const char *address, uint32_t addr, char outcome,
   set_expiry(resolve, time(NULL) + dns_get_expiry_ttl(ttl));
 }
 
-/** Called on the OR side when a DNS worker tells us the outcome of a DNS
- * resolve: tell all pending connections about the result of the lookup, and
- * cache the value.  (<b>address</b> is a NUL-terminated string containing the
- * address to look up; <b>addr</b> is an IPv4 address in host order;
- * <b>outcome</b> is one of
+/** Called on the OR side when a DNS worker or the eventdns library tells us
+ * the outcome of a DNS resolve: tell all pending connections about the result
+ * of the lookup, and cache the value.  (<b>address</b> is a NUL-terminated
+ * string containing the address to look up; <b>addr</b> is an IPv4 address in
+ * host order; <b>outcome</b> is one of
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  */
 static void
@@ -862,6 +879,8 @@ connection_dns_finished_flushing(connection_t *conn)
   return 0;
 }
 
+/** Called when a connection to a dnsworker hits an EOF; this only happens
+ * when a dnsworker dies unexpectedly. */
 int
 connection_dns_reached_eof(connection_t *conn)
 {
@@ -1180,6 +1199,9 @@ spawn_enough_dnsworkers(void)
   return 0;
 }
 #else /* !USE_EVENTDNS */
+
+/** Eventdns helper: return true iff the eventdns result <b>err</b> is
+ * a transient failure. */
 static int
 eventdns_err_is_transient(int err)
 {
@@ -1193,6 +1215,7 @@ eventdns_err_is_transient(int err)
       return 0;
   }
 }
+/* Dummy function; never called with eventdns enabled. */
 int
 connection_dns_finished_flushing(connection_t *conn)
 {
@@ -1200,6 +1223,7 @@ connection_dns_finished_flushing(connection_t *conn)
   tor_assert(0);
   return 0;
 }
+/* Dummy function; never called with eventdns enabled. */
 int
 connection_dns_process_inbuf(connection_t *conn)
 {
@@ -1207,6 +1231,7 @@ connection_dns_process_inbuf(connection_t *conn)
   tor_assert(0);
   return 0;
 }
+/* Dummy function; never called with eventdns enabled. */
 int
 connection_dns_reached_eof(connection_t *conn)
 {
@@ -1215,7 +1240,11 @@ connection_dns_reached_eof(connection_t *conn)
   return 0;
 }
 
-/* DOCDOC */
+/** Configure eventdns nameservers if force is true, or if the configuration
+ * has changed since the last time we called this function.  On Unix, this
+ * reads from options->ResolvConf or /etc/resolv.conf; on Windows, this reads
+ * from options->ResolvConf or the registry.  Return 0 on success or -1 on
+ * failure. */
 static int
 configure_nameservers(int force)
 {
@@ -1283,7 +1312,9 @@ configure_nameservers(int force)
   return 0;
 }
 
-/* XXX DOCDOC */
+/** For eventdns: Called when we get an answer for a request we launched.
+ * See eventdns.h for arguments; 'arg' holds the address we tried to resolve.
+ */
 static void
 eventdns_callback(int result, char type, int count, int ttl, void *addresses,
                   void *arg)
@@ -1318,16 +1349,21 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
   tor_free(string_address);
 }
 
-/* XXX DOCDOC */
+/** For eventdns: start resolving as necessary to find the target for
+ * <b>exitconn</b> */
 static int
 launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
   int r;
   int options = get_options()->SearchDomains ? 0 : DNS_QUERY_NO_SEARCH;
-  if (!nameservers_configured)
+  /* What? Nameservers not configured?  Sounds like a bug. */
+  if (!nameservers_configured) {
+    log_warn(LD_EXIT, "Harmless bug: nameservers not configured, but resolve "
+             "launched.  Configuring.");
     if (configure_nameservers(1) < 0)
       return -1;
+  }
   log_info(LD_EXIT, "Launching eventdns request for %s",
            escaped_safe_str(exitconn->_base.address));
   r = eventdns_resolve_ipv4(exitconn->_base.address, options,
@@ -1350,6 +1386,7 @@ launch_resolve(edge_connection_t *exitconn)
 }
 #endif /* USE_EVENTDNS */
 
+/** Exit with an assertion if <b>resolve</b> is corrupt. */
 static void
 assert_resolve_ok(cached_resolve_t *resolve)
 {
@@ -1368,6 +1405,7 @@ assert_resolve_ok(cached_resolve_t *resolve)
 }
 
 #ifdef DEBUG_DNS_CACHE
+/** Exit with an assertion if the DNS cache is corrupt. */
 static void
 _assert_cache_ok(void)
 {

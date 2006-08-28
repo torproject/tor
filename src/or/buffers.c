@@ -58,11 +58,15 @@ struct buf_t {
   char *cur;      /**< The first byte used for storing data in the buffer. */
   size_t highwater; /**< Largest observed datalen since last buf_shrink */
   size_t len;     /**< Maximum amount of data that <b>mem</b> can hold. */
-  size_t memsize; /**< DOCDOC */
+  size_t memsize; /**< How many bytes did we actually allocate? Can be less
+                   * than 'len' if we shortened 'len' by a few bytes to make
+                   * zlib wrap around more easily. */
   size_t datalen; /**< Number of bytes currently in <b>mem</b>. */
 };
 
+/** How many bytes, total, are used in all buffers? */
 uint64_t buf_total_used = 0;
+/** How many bytes, total, are allocated in all buffers? */
 uint64_t buf_total_alloc = 0;
 
 /** Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
@@ -1292,7 +1296,10 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
   return 1;
 }
 
-/** DOCDOC */
+/** Compress on uncompress the <b>data_len</b> bytes in <b>data</b> using the
+ * zlib state <b>state</b>, appending the result to <b>buf</b>.  If
+ * <b>done</b> is true, flush the data in the state and finish the
+ * compression/uncompression.  Return -1 on failure, 0 on success. */
 int
 write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
                   const char *data, size_t data_len,
