@@ -1282,7 +1282,7 @@ configure_nameservers(int force)
       return -1;
     }
     tor_free(resolv_conf_fname);
-    resolv_conf_fname = tor_strdup(conf_fame);
+    resolv_conf_fname = tor_strdup(conf_fname);
     resolv_conf_mtime = st.st_mtime;
     if (nameservers_configured)
       eventdns_resume();
