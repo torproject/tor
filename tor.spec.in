@@ -122,7 +122,7 @@ Group: System Environment/Daemons
 
 License: BSD-like
 Vendor: R. Dingledine <arma@seul.org>
-Packager: Nick Mathewson <nickm@seul.org>
+Packager: Andrew Lewman <phobos@interloper.org>
 
 %if %{is_suse}
 Requires: openssl >= 0.9.6
