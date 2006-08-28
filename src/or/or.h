@@ -305,6 +305,8 @@ typedef enum {
 #define DIR_CONN_STATE_SERVER_WRITING 6
 #define _DIR_CONN_STATE_MAX 6
 
+#define DIR_CONN_IS_SERVER(conn) ((conn)->purpose == DIR_PURPOSE_SERVER)
+
 #define _CONTROL_CONN_STATE_MIN 1
 #define CONTROL_CONN_STATE_OPEN_V0 1
 #define CONTROL_CONN_STATE_OPEN_V1 2
