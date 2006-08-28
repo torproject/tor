@@ -101,7 +101,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define ATTR_PURE
 #define ATTR_MALLOC
 #define ATTR_NONNULL(x)
-#define PREDICT(exp, val)
+#define PREDICT(exp, val) (exp)
 #endif
 
 /* ===== String compatibility */
