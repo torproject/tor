@@ -96,10 +96,12 @@ N   . Improve memory usage on tight-memory machines.
         o Implement
         . Enable
         - Test
-      - Make the Nameservers option documented, and make it work right on
+      X Make the Nameservers option documented, and make it work right on
         reload.
       o Fail when we have no configured nameservers!
       o Make it the default on platforms where it works.
+      - Make resolv.conf (or local equivalent) get checked on reload,
+        settable while running, etc.
       - Add ipv6 support; make API closer to getaddrinfo().  (i.e., allow a
         single AAAA/A query, return cname as well)
       - Teach it to be able to listen for A and PTR requests to be processed.

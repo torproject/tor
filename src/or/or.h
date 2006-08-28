@@ -1556,8 +1556,12 @@ typedef struct {
 
   char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
                              * MAPADDRESS requests. */
-  smartlist_t *Nameservers; /**< If provided, overrides the platform nameserver
-                             * list. when using eventdns. */
+  int SearchDomains; /**< If provided, we don't force exit addresses to be
+                      * fqdns, but rather search for them in the local
+                      * domains. */
+  char *ResolvConf; /**< If provided, we configure our internal resolver from
+                     * the file here rather than from /etc/resolv.conf (unix)
+                     * or the registry (windows) */
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

@@ -952,6 +952,7 @@ dnsworker_main(void *data)
   int *fdarray = data;
   int fd;
   int result;
+  int search = get_options()->SearchDomains;
 
   /* log_fn(LOG_NOTICE,"After spawn: fdarray @%d has %d:%d", (int)fdarray,
    * fdarray[0],fdarray[1]); */
@@ -990,7 +991,7 @@ dnsworker_main(void *data)
       spawn_exit();
     }
     /* Add a period to prevent local domain search, and NUL-terminate. */
-    if (address[address_len-1] != '.') {
+    if (address[address_len-1] != '.' && !search) {
       address[address_len] = '.';
       address[address_len+1] = '\0';
     } else {
@@ -1193,50 +1194,40 @@ static int
 configure_nameservers(void)
 {
   or_options_t *options;
+  const char *conf_fname;
+  struct stat st;
   if (nameservers_configured)
     return 0;
   options = get_options();
   eventdns_set_log_fn(eventdns_log_cb);
-  if (options->Nameservers && smartlist_len(options->Nameservers)) {
-    log_info(LD_EXIT, "Configuring nameservers from Tor configuration");
-    SMARTLIST_FOREACH(options->Nameservers, const char *, ip,
-      {
-        struct in_addr in;
-        if (tor_inet_aton(ip, &in)) {
-          log_info(LD_EXIT, "Adding nameserver '%s'", ip);
-          if (eventdns_nameserver_add(in.s_addr))
-            log_warn(LD_EXIT, "Unable to add nameserver '%s'", ip);
-        }
-      });
+
+  conf_fname = options->ResolvConf;
+#ifndef MS_WINDOWS
+  if (!conf_fname) conf_fname = "/etc/resolv.conf";
+#endif
+
+  if (conf_fname) {
+    log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
+    if (eventdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))
+      return -1;
     if (eventdns_count_nameservers() == 0) {
-      log_warn(LD_EXIT, "Unable to add any configured nameserver. "
-               "Either remove the Nameservers line from your configuration, "
-               "or put in a nameserver that we can parse.");
+      log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.", conf_fname);
       return -1;
     }
-  } else {
+  }
 #ifdef MS_WINDOWS
+  else {
     if (eventdns_config_windows_nameservers())
       return -1;
     if (eventdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any platform nameservers in "
-               "your Windows configuration.  Perhaps you should add a "
-               "Nameservers line to your torrc?");
+               "your Windows configuration.  Perhaps you should list a "
+               "ResolvConf file in your torrc?");
       return -1;
     }
-#else
-    log_info(LD_EXIT, "Parsing /etc/resolv.conf");
-    if (eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS|DNS_OPTION_MISC,
-                                   "/etc/resolv.conf"))
-      return -1;
-    if (eventdns_count_nameservers() == 0) {
-      log_warn(LD_EXIT, "Unable to find any platform nameservers in "
-               "/etc/resolv.conf.  Perhaps you should add a Nameservers line "
-               "to your torrc?");
-      return -1;
-    }
-#endif
   }
+#endif
+
   nameservers_configured = 1;
   return 0;
 }
@@ -1282,12 +1273,13 @@ launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
   int r;
+  int options = get_options()->SearchDomains ? 0 : DNS_QUERY_NO_SEARCH;
   if (!nameservers_configured)
     if (configure_nameservers() < 0)
       return -1;
   log_info(LD_EXIT, "Launching eventdns request for %s",
            escaped_safe_str(exitconn->_base.address));
-  r = eventdns_resolve_ipv4(exitconn->_base.address, DNS_QUERY_NO_SEARCH,
+  r = eventdns_resolve_ipv4(exitconn->_base.address, options,
                             eventdns_callback, addr);
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",

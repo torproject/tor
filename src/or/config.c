@@ -188,7 +188,6 @@ static config_var_t _option_vars[] = {
   OBSOLETE("MonthlyAccountingStart"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NewCircuitPeriod",    INTERVAL, NewCircuitPeriod,     "30 seconds"),
-  VAR("Nameservers",         CSV,      Nameservers,          ""),
   VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
   VAR("NoPublish",           BOOL,     NoPublish,            "0"),
@@ -216,11 +215,13 @@ static config_var_t _option_vars[] = {
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
   VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "1 hour"),
   VAR("RephistTrackTime",    INTERVAL, RephistTrackTime,     "24 hours"),
+  VAR("ResolvConf",          STRING,   ResolvConf,           NULL),
   OBSOLETE("RouterFile"),
   VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "0"),
   VAR("RunTesting",          BOOL,     RunTesting,           "0"),
   VAR("SafeLogging",         BOOL,     SafeLogging,          "1"),
   VAR("SafeSocks",           BOOL,     SafeSocks,            "0"),
+  VAR("SearchDomains",       BOOL,     SearchDomains,        "0"),
   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),
   VAR("SocksListenAddress",  LINELIST, SocksListenAddress,   NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
@@ -1982,7 +1983,9 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
   return 0;
 }
 
-/* Return 0 if every element of sl is a string holding an IP address, or if sl
+#if 0
+/* XXXX Unused. */
+/** Return 0 if every element of sl is a string holding an IP address, or if sl
  * is NULL.  Otherwise set *msg and return -1. */
 static int
 validate_ips_csv(smartlist_t *sl, const char *name, char **msg)
@@ -2005,6 +2008,7 @@ validate_ips_csv(smartlist_t *sl, const char *name, char **msg)
   });
   return 0;
 }
+#endif
 
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
@@ -2237,9 +2241,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
 
   if (validate_ports_csv(options->LongLivedPorts, "LongLivedPorts", msg) < 0)
-    return -1;
-
-  if (validate_ips_csv(options->Nameservers, "Nameservers", msg) < 0)
     return -1;
 
   if (options->FascistFirewall && !options->ReachableAddresses) {
