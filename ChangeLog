@@ -1,3 +1,15 @@
+Changes in version 0.1.1.24 - 2006-09-xx [ongoing]
+  o Major bugfixes:
+    - Allow really slow clients to not hang up five minutes into their
+      directory downloads (suggested by Adam J. Richter).
+
+  o Minor bugfixes:
+    - Allow Tor to start when RunAsDaemon is set but no logs are set.
+    - Fix configure.in to not produce broken configure files with
+      more recent versions of autoconf. Thanks to Clint for his auto*
+      voodoo.
+
+
 Changes in version 0.1.1.23 - 2006-07-30
   o Major bugfixes:
     - Fast Tor servers, especially exit nodes, were triggering asserts

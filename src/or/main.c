@@ -625,9 +625,13 @@ run_connection_housekeeping(int i, time_t now)
     return;
   }
 
-  /* Expire any directory connections that haven't sent anything for 5 min */
+  /* Expire any directory connections that haven't been active (sent
+   * if a server or received if a client) for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
-      conn->timestamp_lastwritten + DIR_CONN_MAX_STALL < now) {
+      ((DIR_CONN_IS_SERVER(conn) &&
+        conn->timestamp_lastwritten + DIR_CONN_MAX_STALL < now) ||
+       (!DIR_CONN_IS_SERVER(conn) &&
+        conn->timestamp_lastread + DIR_CONN_MAX_STALL < now))) {
     log_info(LD_DIR,"Expiring wedged directory conn (fd %d, purpose %d)",
              conn->s, conn->purpose);
     /* This check is temporary; it's to let us know whether we should consider
