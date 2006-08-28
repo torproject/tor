@@ -553,7 +553,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	global_good_nameservers--;
 	assert(global_good_nameservers >= 0);
 	if (global_good_nameservers == 0) {
-		log("All nameservers have failed");
+		log(1,"All nameservers have failed");
 	}
 
 	ns->state = 0;
@@ -561,8 +561,8 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 	if (evtimer_add(&ns->timeout_event, (struct timeval *) &global_nameserver_timeouts[0]) < 0) {
-          log("Error from libevent when adding timer event for %s",
-              debug_ntoa(ns->address));
+		log(1,"Error from libevent when adding timer event for %s",
+		    debug_ntoa(ns->address));
           // ???? Do more?
         }
 
@@ -910,7 +910,7 @@ reply_parse(u8 *packet, int length) {
 			}
                         // XXXX do something sane with malformed A answers.
 			addrcount = datalength >> 2;  // each IP address is 4 bytes
-			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, addrcount);
+			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, (unsigned)addrcount);
 			ttl_r = MIN(ttl_r, ttl);
 			// we only bother with the first four addresses.
 			if (j + 4*addrtocopy > length) return -1;
@@ -1389,7 +1389,6 @@ eventdns_clear_nameservers_and_suspend(void)
 
 	return 0;
 }
-
 
 // exported function
 int

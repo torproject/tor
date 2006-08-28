@@ -802,8 +802,13 @@ options_act(or_options_t *old_options)
           inform_testing_reachability();
       }
       cpuworkers_rotate();
-      dnsworkers_rotate();
+      dns_reset();
     }
+#ifdef USE_EVENTDNS
+    else {
+      dns_reset();
+    }
+#endif
   }
 
   /* Check if we need to parse and add the EntryNodes config option. */
@@ -2555,6 +2560,7 @@ options_transition_affects_workers(or_options_t *old_options,
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       old_options->NumCpus != new_options->NumCpus ||
       old_options->ORPort != new_options->ORPort ||
+      old_options->SearchDomains != new_options->SearchDomains ||
       old_options->SafeLogging != new_options->SafeLogging ||
       !config_lines_eq(old_options->Logs, new_options->Logs))
     return 1;

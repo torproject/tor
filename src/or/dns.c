@@ -101,19 +101,27 @@ static void dns_found_answer(const char *address, uint32_t addr, char outcome,
 static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
 static int launch_resolve(edge_connection_t *exitconn);
 #ifndef USE_EVENTDNS
+static void dnsworkers_rotate(void);
 static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static int spawn_enough_dnsworkers(void);
 #else
-static int configure_nameservers(void);
+static int configure_nameservers(int force);
 #endif
 #ifdef DEBUG_DNS_CACHE
 static void _assert_cache_ok(void);
 #define assert_cache_ok() _assert_cache_ok()
 #else
-#define assert_cache_ok() do {} while(0)
+#define assert_cache_ok() do {} while (0)
 #endif
 static void assert_resolve_ok(cached_resolve_t *resolve);
+
+#ifdef USE_EVENTDNS
+/* DOCDOC */
+static int nameservers_configured = 0;
+static char *resolv_conf_fname = NULL;
+static time_t resolv_conf_mtime = 0;
+#endif
 
 /** Hash table of cached_resolve objects. */
 static HT_HEAD(cache_map, cached_resolve_t) cache_root;
@@ -164,12 +172,35 @@ int
 dns_init(void)
 {
   init_cache_map();
-  dnsworkers_rotate();
 #ifdef USE_EVENTDNS
   if (server_mode(get_options()))
-    return configure_nameservers();
+    return configure_nameservers(1);
+#else
+  dnsworkers_rotate();
 #endif
   return 0;
+}
+
+/* DOCDOC */
+void
+dns_reset(void)
+{
+#ifdef USE_EVENTDNS
+  or_options_t *options = get_options();
+  if (! server_mode(options)) {
+    eventdns_clear_nameservers_and_suspend();
+    eventdns_search_clear();
+    nameservers_configured = 0;
+    tor_free(resolv_conf_fname);
+    resolv_conf_mtime = 0;
+  } else {
+    if (configure_nameservers(0) < 0)
+      /* XXXX */
+      return;
+  }
+#else
+  dnsworkers_rotate();
+#endif
 }
 
 uint32_t
@@ -910,7 +941,7 @@ connection_dns_process_inbuf(connection_t *conn)
 /** Close and re-open all idle dnsworkers; schedule busy ones to be closed
  * and re-opened once they're no longer busy.
  **/
-void
+static void
 dnsworkers_rotate(void)
 {
   connection_t *dnsconn;
@@ -1162,10 +1193,6 @@ eventdns_err_is_transient(int err)
       return 0;
   }
 }
-void
-dnsworkers_rotate(void)
-{
-}
 int
 connection_dns_finished_flushing(connection_t *conn)
 {
@@ -1187,26 +1214,37 @@ connection_dns_reached_eof(connection_t *conn)
   tor_assert(0);
   return 0;
 }
-static int nameservers_configured = 0;
 
 /* DOCDOC */
 static int
-configure_nameservers(void)
+configure_nameservers(int force)
 {
   or_options_t *options;
   const char *conf_fname;
   struct stat st;
-  if (nameservers_configured)
-    return 0;
   options = get_options();
-  eventdns_set_log_fn(eventdns_log_cb);
-
   conf_fname = options->ResolvConf;
 #ifndef MS_WINDOWS
-  if (!conf_fname) conf_fname = "/etc/resolv.conf";
+  if (!conf_fname)
+    conf_fname = "/etc/resolv.conf";
 #endif
 
+  eventdns_set_log_fn(eventdns_log_cb);
   if (conf_fname) {
+    if (stat(conf_fname, &st)) {
+      log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s'",
+               conf_fname);
+      return -1;
+    }
+    if (!force && resolv_conf_fname && !strcmp(conf_fname,resolv_conf_fname)
+        && st.st_mtime == resolv_conf_mtime) {
+      log_info(LD_EXIT, "No change to '%s'", conf_fname);
+      return 0;
+    }
+    if (nameservers_configured) {
+      eventdns_search_clear();
+      eventdns_clear_nameservers_and_suspend();
+    }
     log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
     if (eventdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))
       return -1;
@@ -1214,9 +1252,18 @@ configure_nameservers(void)
       log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.", conf_fname);
       return -1;
     }
+    tor_free(resolv_conf_fname);
+    resolv_conf_fname = tor_strdup(resolv_conf_fname);
+    resolv_conf_mtime = st.st_mtime;
+    if (nameservers_configured)
+      eventdns_resume();
   }
 #ifdef MS_WINDOWS
   else {
+    if (nameservers_configured) {
+      eventdns_search_clear();
+      eventdns_clear_nameservers_and_suspend();
+    }
     if (eventdns_config_windows_nameservers())
       return -1;
     if (eventdns_count_nameservers() == 0) {
@@ -1225,6 +1272,10 @@ configure_nameservers(void)
                "ResolvConf file in your torrc?");
       return -1;
     }
+    if (nameservers_configured)
+      eventdns_resume();
+    tor_free(resolv_conf_fname);
+    resolv_conf_mtime = 0;
   }
 #endif
 
@@ -1275,7 +1326,7 @@ launch_resolve(edge_connection_t *exitconn)
   int r;
   int options = get_options()->SearchDomains ? 0 : DNS_QUERY_NO_SEARCH;
   if (!nameservers_configured)
-    if (configure_nameservers() < 0)
+    if (configure_nameservers(1) < 0)
       return -1;
   log_info(LD_EXIT, "Launching eventdns request for %s",
            escaped_safe_str(exitconn->_base.address));
@@ -1338,3 +1389,4 @@ _assert_cache_ok(void)
                              _compare_cached_resolves_by_expiry);
 }
 #endif
+

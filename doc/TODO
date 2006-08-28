@@ -100,7 +100,8 @@ N   . Improve memory usage on tight-memory machines.
         reload.
       o Fail when we have no configured nameservers!
       o Make it the default on platforms where it works.
-      - Make resolv.conf (or local equivalent) get checked on reload,
+      - Document SearchDomains, ResolvConf options
+      o Make resolv.conf (or local equivalent) get checked on reload,
         settable while running, etc.
       - Add ipv6 support; make API closer to getaddrinfo().  (i.e., allow a
         single AAAA/A query, return cname as well)

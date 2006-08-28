@@ -1081,7 +1081,7 @@ do_hup(void)
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
-    dnsworkers_rotate();
+    dns_reset();
 #if 0
     /* Write out a fresh descriptor, but leave old one on failure. */
     router_rebuild_descriptor(1);
