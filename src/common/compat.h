@@ -90,7 +90,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #endif
 
 /* GCC has several useful attributes. */
-#ifdef __GNUC__
+#ifdef __GNUC__ && __GNUC_MAJOR__ >= 3
 #define ATTR_NORETURN __attribute__((noreturn))
 #define ATTR_PURE __attribute__((pure))
 #define ATTR_MALLOC __attribute__((malloc))
