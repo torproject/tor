@@ -11,8 +11,9 @@ tor (0.1.2.1-alpha-1) experimental; urgency=low
     (non root, non debian-tor) user? - add 11_tor_as_root_more_helpful
   * Use tor --verify-config before start and reload.  Abort init script
     with exit 1 if config does not verify.
+  * Change Standards-Version to 3.7.2.  No changes required.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 29 Aug 2006 22:34:19 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 29 Aug 2006 22:38:29 +0200
 
 tor (0.1.1.23-XXXXXX) unstable; urgency=low
 
