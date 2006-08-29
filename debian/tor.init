@@ -60,52 +60,59 @@ wait_for_deaddaemon () {
 	return 0
 }
 
+
+if test ! -d $TORPIDDIR; then
+	echo "There is no $TORPIDDIR directory.  Creating one for you."
+	mkdir -m 02700 "$TORPIDDIR"
+	chown debian-tor:debian-tor "$TORPIDDIR"
+fi
+
+if test ! -x $TORPIDDIR; then
+	echo "Cannot access $TORPIDDIR directory, are you root?" >&2
+	exit 1
+fi
+
+
 case "$1" in
   start)
 	if [ "$RUN_DAEMON" != "yes" ]; then
 		echo "Not starting $DESC (Disabled in $DEFAULTSFILE)."
-	else
-		if test ! -d $TORPIDDIR; then
-			echo "There is no $TORPIDDIR directory.  Creating one for you."
-			mkdir -m 02700 "$TORPIDDIR"
-			chown debian-tor:debian-tor "$TORPIDDIR"
-		fi
-		if test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
+		exit 0
+	fi
+
+	if [ -n "$MAX_FILEDESCRIPTORS" ]; then
+		echo -n "Raising maximum number of filedescriptors (ulimit -n) to $MAX_FILEDESCRIPTORS"
+		if ulimit -n "$MAX_FILEDESCRIPTORS" ; then
+			echo "."
 		else
-			if [ -n "$MAX_FILEDESCRIPTORS" ]; then
-				echo -n "Raising maximum number of filedescriptors (ulimit -n) to $MAX_FILEDESCRIPTORS"
-				if ulimit -n "$MAX_FILEDESCRIPTORS" ; then
-					echo "."
-				else
-					echo ": FAILED."
-				fi
-			fi
-			echo "Starting $DESC: $NAME..."
-			if ! su -c "$DAEMON --verify-config" debian-tor > /dev/null; then
-				echo "ABORTED: Tor configuration invalid:" >&2
-				su -c "$DAEMON --verify-config" debian-tor >&2
-				exit 1
-			else
-				start-stop-daemon --start --quiet --oknodo \
-					--chuid debian-tor:debian-tor \
-					--pidfile $TORPID \
-					$NICE \
-					--exec $DAEMON -- $ARGS
-				echo "done."
-			fi
+			echo ": FAILED."
 		fi
 	fi
+
+	echo "Starting $DESC: $NAME..."
+	if ! su -c "$DAEMON --verify-config" debian-tor > /dev/null; then
+		echo "ABORTED: Tor configuration invalid:" >&2
+		su -c "$DAEMON --verify-config" debian-tor >&2
+		exit 1
+	fi
+
+	start-stop-daemon --start --quiet --oknodo \
+		--chuid debian-tor:debian-tor \
+		--pidfile $TORPID \
+		$NICE \
+		--exec $DAEMON -- $ARGS
+	echo "done."
 	;;
   stop)
 	echo -n "Stopping $DESC: "
 	pid=`cat $TORPID 2>/dev/null` || true
-	if   test ! -d $TORPIDDIR; then echo "There is no $TORPIDDIR directory." >&2; exit 1
-	elif test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
-	elif test ! -f $TORPID -o -z "$pid"
-	then
+
+	if test ! -f $TORPID -o -z "$pid"; then
 		echo "not running (there is no $TORPID)."
-	elif start-stop-daemon --stop --signal INT --quiet --pidfile $TORPID --exec $DAEMON
-	then
+		exit 0
+	fi
+
+	if start-stop-daemon --stop --signal INT --quiet --pidfile $TORPID --exec $DAEMON; then
 		wait_for_deaddaemon $pid
 		echo "$NAME."
 	elif kill -0 $pid 2>/dev/null
@@ -118,16 +125,19 @@ case "$1" in
   reload|force-reload)
 	echo -n "Reloading $DESC configuration: "
 	pid=`cat $TORPID 2>/dev/null` || true
-	if   test ! -d $TORPIDDIR; then echo "There is no $TORPIDDIR directory." >&2; exit 1
-	elif test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
-	elif test ! -f $TORPID -o -z "$pid"
-	then
+
+	if test ! -f $TORPID -o -z "$pid"; then
 		echo "not running (there is no $TORPID)."
-	elif ! su -c "$DAEMON --verify-config" debian-tor > /dev/null; then
+		exit 0
+	fi
+
+	if ! su -c "$DAEMON --verify-config" debian-tor > /dev/null; then
 		echo "ABORTED: Tor configuration invalid:" >&2
 		su -c "$DAEMON --verify-config" debian-tor >&2
 		exit 1
-	elif start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --exec $DAEMON
+	fi
+
+	if start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --exec $DAEMON
 	then
 		echo "$NAME."
 	elif kill -0 $pid 2>/dev/null
@@ -138,6 +148,12 @@ case "$1" in
 	fi
 	;;
   restart)
+	if ! su -c "$DAEMON --verify-config" debian-tor > /dev/null; then
+		echo "Restarting Tor ABORTED: Tor configuration invalid:" >&2
+		su -c "$DAEMON --verify-config" debian-tor >&2
+		exit 1
+	fi
+
 	$0 stop
 	sleep 1
 	$0 start
