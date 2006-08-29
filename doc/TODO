@@ -45,7 +45,7 @@ N - Clients stop dumping old descriptors if the network-statuses
     retire moria1 from the main list.
 
 Items for 0.1.2.x, later on:
-  - re-enable blossom functionality: let tor servers decide if they
+  o re-enable blossom functionality: let tor servers decide if they
     will use local search when resolving, or not.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
