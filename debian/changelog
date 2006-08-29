@@ -1,4 +1,4 @@
-tor (0.1.2.1-alpha-1) unstable; urgency=low
+tor (0.1.2.1-alpha-1) experimental; urgency=low
 
   * Forward port 07_log_to_file_by_default.dpatch.
   * Previously our defaults for DataDirectory, PidFile, RunAsDaemon, and
@@ -12,7 +12,7 @@ tor (0.1.2.1-alpha-1) unstable; urgency=low
   * Use tor --verify-config before start and reload.  Abort init script
     with exit 1 if config does not verify.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 29 Aug 2006 22:32:29 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 29 Aug 2006 22:34:19 +0200
 
 tor (0.1.1.23-XXXXXX) unstable; urgency=low
 
