@@ -1,6 +1,5 @@
-tor (0.1.2.0-alpha-cvs-1) unstable; urgency=low
+tor (0.1.2.1-alpha-1) unstable; urgency=low
 
-  * CVS snapshot.
   * Forward port 07_log_to_file_by_default.dpatch.
   * Previously our defaults for DataDirectory, PidFile, RunAsDaemon, and
     Log differed from upstreams.  Now Tor behaves just like before (with
@@ -10,8 +9,10 @@ tor (0.1.2.0-alpha-cvs-1) unstable; urgency=low
   * Tell users about the init script when they try to run Tor as root.
     Should we also do this when they try to run their Tor as any other
     (non root, non debian-tor) user? - add 11_tor_as_root_more_helpful
+  * Use tor --verify-config before start and reload.  Abort init script
+    with exit 1 if config does not verify.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 24 Jul 2006 05:37:17 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 29 Aug 2006 22:32:29 +0200
 
 tor (0.1.1.23-XXXXXX) unstable; urgency=low
 
