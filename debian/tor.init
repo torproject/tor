@@ -81,12 +81,18 @@ case "$1" in
 				fi
 			fi
 			echo "Starting $DESC: $NAME..."
-			start-stop-daemon --start --quiet --oknodo \
-				--chuid debian-tor:debian-tor \
-				--pidfile $TORPID \
-				$NICE \
-				--exec $DAEMON -- $ARGS
-			echo "done."
+			if ! su -c "$DAEMON --verify-config" debian-tor > /dev/null; then
+				echo "ABORTED: Tor configuration invalid:" >&2
+				su -c "$DAEMON --verify-config" debian-tor >&2
+				exit 1
+			else
+				start-stop-daemon --start --quiet --oknodo \
+					--chuid debian-tor:debian-tor \
+					--pidfile $TORPID \
+					$NICE \
+					--exec $DAEMON -- $ARGS
+				echo "done."
+			fi
 		fi
 	fi
 	;;
@@ -117,6 +123,10 @@ case "$1" in
 	elif test ! -f $TORPID -o -z "$pid"
 	then
 		echo "not running (there is no $TORPID)."
+	elif ! su -c "$DAEMON --verify-config" debian-tor > /dev/null; then
+		echo "ABORTED: Tor configuration invalid:" >&2
+		su -c "$DAEMON --verify-config" debian-tor >&2
+		exit 1
 	elif start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --exec $DAEMON
 	then
 		echo "$NAME."
