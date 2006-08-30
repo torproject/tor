@@ -1152,7 +1152,7 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
     if (sig<0)
       return 0;
   }
-  
+
   if (!control_signal_check(sig)) {
     if (STATE_IS_V0(conn->_base.state))
       send_control0_error(conn, ERR_SYNTAX, "Unrecognized signal number.");
