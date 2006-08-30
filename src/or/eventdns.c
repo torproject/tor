@@ -528,8 +528,13 @@ nameserver_prod_callback(int fd, short events, void *arg) {
 static void
 nameserver_probe_failed(struct nameserver *const ns) {
 	const struct timeval * timeout;
-	assert(ns->state == 0);
 	(void) evtimer_del(&ns->timeout_event);
+	if (ns->state == 1) {
+		// This can happen if the nameserver acts in a way which makes us mark
+		// it as bad and then starts sending good replies.
+		return;
+	}
+
 	timeout =
 	  &global_nameserver_timeouts[MIN(ns->failed_times,
 					  global_nameserver_timeouts_length - 1)];
