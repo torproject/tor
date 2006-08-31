@@ -347,7 +347,6 @@ Blue-sky:
 Non-Coding:
   - Mark up spec; note unclear points about servers
   - Mention controller libs someplace.
-P - flesh out the rest of the section 6 of the faq
   . more pictures from ren. he wants to describe the tor handshake
 NR- write a spec appendix for 'being nice with tor'
   - tor-in-the-media page
