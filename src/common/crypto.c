@@ -503,12 +503,7 @@ crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
   }
 
   BIO_get_mem_ptr(b, &buf);
-  BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
-  /* XXX The above line generates a warning on new gcc/openssls:
-   * crypto.c:506: warning: value computed is not used
-   * Perhaps in new openssls this is a more complex macro and
-   * we're no longer calling it quite right? -RD
-   */
+  (void)BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
   BIO_free(b);
 
   tor_assert(buf->length >= 0);

@@ -692,7 +692,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
   BIO_get_mem_ptr(bio, &buf);
   s1 = tor_strndup(buf->data, buf->length);
 
-  BIO_reset(bio);
+  (void)BIO_reset(bio);
   if (!(ASN1_TIME_print(bio, X509_get_notAfter(cert)))) {
     tls_log_errors(LOG_WARN, "printing certificate lifetime");
     goto end;
