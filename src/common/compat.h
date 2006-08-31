@@ -155,6 +155,9 @@ const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
 #define TOR_ISLOWER(c)   islower((int)(unsigned char)(c))
 #define TOR_ISUPPER(c)   isupper((int)(unsigned char)(c))
 
+#define TOR_TOLOWER(c)   ((char)tolower((int)(unsigned char)(c)))
+#define TOR_TOUPPER(c)   ((char)toupper((int)(unsigned char)(c)))
+
 #ifdef MS_WINDOWS
 #define _SHORT_FILE_ (tor_fix_source_file(__FILE__))
 const char *tor_fix_source_file(const char *fname);

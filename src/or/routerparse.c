@@ -1279,7 +1279,7 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
   len = strlen(s);
   cp = tmp = tor_malloc(len+2);
   for (idx = 0; idx < len; ++idx) {
-    tmp[idx] = tolower(s[idx]);
+    tmp[idx] = TOR_TOLOWER(s[idx]);
   }
   tmp[len]='\n';
   tmp[len+1]='\0';

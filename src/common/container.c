@@ -824,7 +824,7 @@ strmap_remove_lc(strmap_t *map, const char *key)
  *       iter = strmap_iter_next_rmv(iter);
  *       free(val);
  *    } else {
- *       for (;*cp;cp++) *cp = toupper(*cp);
+ *       for (;*cp;cp++) *cp = TOR_TOUPPER(*cp);
  *       iter = strmap_iter_next(iter);
  *    }
  * }

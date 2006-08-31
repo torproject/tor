@@ -1737,7 +1737,7 @@ get_default_nickname(void)
       *cp = '\0';
       break;
     }
-    *cp = tolower(*cp);
+    *cp = TOR_TOLOWER(*cp);
   }
 
   /* Strip invalid characters. */
