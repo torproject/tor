@@ -316,7 +316,7 @@ void
 tor_strlower(char *s)
 {
   while (*s) {
-    *s = tolower(*s);
+    *s = TOR_TOLOWER(*s);
     ++s;
   }
 }
@@ -327,7 +327,7 @@ void
 tor_strupper(char *s)
 {
   while (*s) {
-    *s = toupper(*s);
+    *s = TOR_TOUPPER(*s);
     ++s;
   }
 }

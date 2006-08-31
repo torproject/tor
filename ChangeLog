@@ -12,7 +12,9 @@ Changes in version 0.1.1.24 - 2006-09-xx [ongoing]
     - Fix configure.in to not produce broken configure files with
       more recent versions of autoconf. Thanks to Clint for his auto*
       voodoo.
-
+    - Fix NetBSD bug that could allow someone to force uninitialized RAM
+      to be sent to a server's DNS resolver.  This only effects NetBSD and
+      other platforms that that do not bounds-check tolower().
 
 Changes in version 0.1.1.23 - 2006-07-30
   o Major bugfixes:
