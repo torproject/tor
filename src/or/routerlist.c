@@ -591,6 +591,7 @@ mark_all_trusteddirservers_up(void)
     });
   }
   last_networkstatus_download_attempted = 0;
+  router_dir_info_changed();
 }
 
 /** Reset all internal variables used to count failed downloads of network
@@ -1270,6 +1271,8 @@ routerlist_free(routerlist_t *rl)
   if (routerlist->mmap_descriptors)
     tor_munmap_file(routerlist->mmap_descriptors);
   tor_free(rl);
+
+  router_dir_info_changed();
 }
 
 void
@@ -3771,7 +3774,7 @@ router_have_minimum_dir_info(void)
 
 /** DOCDOC
  * Must change when authorities change, networkstatuses change, or list of
- * routerdescs changes.
+ * routerdescs changes, or number of running routers changes.
  */
 static void
 router_dir_info_changed(void)
