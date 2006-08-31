@@ -39,6 +39,8 @@ static routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
 static local_routerstatus_t *router_get_combined_status_by_nickname(
                                                 const char *nickname,
                                                 int warn_if_unnamed);
+static void update_router_have_minimum_dir_info(void);
+static void router_dir_info_changed(void);
 
 /****************************************************************************/
 
@@ -525,6 +527,7 @@ mark_all_trusteddirservers_up(void)
     });
   }
   last_networkstatus_download_attempted = 0;
+  router_dir_info_changed();
 }
 
 /** Reset all internal variables used to count failed downloads of network
@@ -1165,6 +1168,7 @@ routerlist_free(routerlist_t *rl)
   smartlist_free(rl->routers);
   smartlist_free(rl->old_routers);
   tor_free(rl);
+  router_dir_info_changed();
 }
 
 void
@@ -1235,6 +1239,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
                 &(ri->cache_info));
   smartlist_add(rl->routers, ri);
+  router_dir_info_changed();
   // routerlist_assert_ok(rl);
 }
 
@@ -1267,6 +1272,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
     return;
   smartlist_del(rl->routers, idx);
   ri_tmp = digestmap_remove(rl->identity_map, ri->cache_info.identity_digest);
+  router_dir_info_changed();
   tor_assert(ri_tmp == ri);
   if (make_old && get_options()->DirPort) {
     signed_descriptor_t *sd;
@@ -1310,6 +1316,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
 {
   tor_assert(ri_old != ri_new);
   idx = _routerlist_find_elt(rl->routers, ri_old, idx);
+  router_dir_info_changed();
   if (idx >= 0) {
     smartlist_set(rl->routers, idx, ri_new);
   } else {
@@ -1463,6 +1470,7 @@ router_set_status(const char *digest, int up)
   if (status) {
     status->status.is_running = up;
   }
+  router_dir_info_changed();
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
@@ -2176,6 +2184,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
            (source==NS_FROM_DIR?"downloaded from":"generated for"),
            trusted_dir->description, published);
   networkstatus_list_has_changed = 1;
+  router_dir_info_changed();
 
   smartlist_sort(networkstatus_list, _compare_networkstatus_published_on);
 
@@ -2217,6 +2226,7 @@ networkstatus_list_clean(time_t now)
       dirserv_set_cached_networkstatus_v2(NULL, ns->identity_digest, 0);
     }
     networkstatus_free(ns);
+    router_dir_info_changed();
   }
 }
 
@@ -2607,6 +2617,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->fake_status.dir_port = ent->dir_port;
 
   smartlist_add(trusted_dir_servers, ent);
+  router_dir_info_changed();
 }
 
 /** Free storage held in <b>ds</b> */
@@ -2630,6 +2641,7 @@ clear_trusted_dir_servers(void)
   } else {
     trusted_dir_servers = smartlist_create();
   }
+  router_dir_info_changed();
 }
 
 /** Return 1 if any trusted dir server supports v1 directories,
@@ -2733,6 +2745,8 @@ routers_update_all_from_networkstatus(void)
   if (!routerlist || !networkstatus_list ||
       (!networkstatus_list_has_changed && !routerstatus_list_has_changed))
     return;
+
+  router_dir_info_changed();
 
   now = time(NULL);
   if (networkstatus_list_has_changed)
@@ -2890,8 +2904,10 @@ networkstatus_list_update_recent(time_t now)
       }
     }
   }
-  if (changed)
+  if (changed) {
     networkstatus_list_has_changed = 1;
+    router_dir_info_changed();
+  }
 }
 
 /** Helper for routerstatus_list_update_from_networkstatus: remember how many
@@ -2921,6 +2937,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
 
   /* compute which network statuses will have a vote now */
   networkstatus_list_update_recent(now);
+  router_dir_info_changed();
 
   if (!networkstatus_list_has_changed)
     return;
@@ -3212,6 +3229,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       rs->next_attempt_at = 0;
     }
   });
+  router_dir_info_changed();
 }
 
 /** For every router descriptor we are currently downloading by descriptor
@@ -3300,13 +3318,13 @@ initiate_descriptor_downloads(routerstatus_t *source,
  * running, or otherwise not a descriptor that we would make any
  * use of even if we had it. Else return 1. */
 static int
-client_would_use_router(routerstatus_t *rs, time_t now)
+client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
 {
   if (rs->published_on + ROUTER_MAX_AGE < now) {
     /* This one is too old to consider. */
     return 0;
   }
-  if (!rs->is_running && !get_options()->FetchUselessDescriptors) {
+  if (!rs->is_running && !options->FetchUselessDescriptors) {
     /* If we had this router descriptor, we wouldn't even bother using it.
      * But, if we want to have a complete list, fetch it anyway. */
     return 0;
@@ -3330,6 +3348,7 @@ router_list_client_downloadable(void)
   time_t now = time(NULL);
   /* these are just used for logging */
   int n_not_ready = 0, n_in_progress = 0, n_uptodate = 0, n_wouldnt_use = 0;
+  or_options_t *options = get_options();
 
   if (!routerstatus_list)
     return downloadable;
@@ -3341,7 +3360,7 @@ router_list_client_downloadable(void)
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
   {
     routerinfo_t *ri;
-    if (!client_would_use_router(&rs->status, now)) {
+    if (!client_would_use_router(&rs->status, now, options)) {
       /* We wouldn't want this descriptor even if we got it. */
       ++n_wouldnt_use;
     } else if (digestmap_get(downloading, rs->status.descriptor_digest)) {
@@ -3615,10 +3634,14 @@ routerstatus_count_usable_entries(smartlist_t *entries)
 {
   int count = 0;
   time_t now = time(NULL);
+  or_options_t *options = get_options();
   SMARTLIST_FOREACH(entries, routerstatus_t *, rs,
-                    if (client_would_use_router(rs, now)) count++);
+                    if (client_would_use_router(rs, now, options)) count++);
   return count;
 }
+
+static int have_min_dir_info = 0;
+static int need_to_update_have_min_dir_info = 1;
 
 /** Return true iff we have enough networkstatus and router information to
  * start building circuits.  Right now, this means "more than half the
@@ -3627,9 +3650,29 @@ routerstatus_count_usable_entries(smartlist_t *entries)
 int
 router_have_minimum_dir_info(void)
 {
+  if (need_to_update_have_min_dir_info) {
+    update_router_have_minimum_dir_info();
+    need_to_update_have_min_dir_info = 0;
+  }
+  return have_min_dir_info;
+}
+
+/** DOCDOC
+ * Must change when authorities change, networkstatuses change, or list of
+ * routerdescs changes.
+ */
+static void
+router_dir_info_changed(void)
+{
+  need_to_update_have_min_dir_info = 1;
+}
+
+/** DOCDOC */
+static void
+update_router_have_minimum_dir_info(void)
+{
   int tot = 0, num_running = 0;
   int n_ns, n_authorities, res, avg;
-  static int have_enough = 0;
   if (!networkstatus_list || !routerlist) {
     res = 0;
     goto done;
@@ -3655,18 +3698,18 @@ router_have_minimum_dir_info(void)
      });
   res = smartlist_len(routerlist->routers) >= (avg/4) && num_running > 2;
  done:
-  if (res && !have_enough) {
+  if (res && !have_min_dir_info) {
     log(LOG_NOTICE, LD_DIR,
         "We now have enough directory information to build circuits.");
   }
-  if (!res && have_enough) {
+  if (!res && have_min_dir_info) {
     log(LOG_NOTICE, LD_DIR,"Our directory information is no longer up-to-date "
         "enough to build circuits.%s",
         num_running > 2 ? "" : " (Not enough servers seem reachable -- "
         "is your network connection down?)");
   }
-  have_enough = res;
-  return res;
+  need_to_update_have_min_dir_info = 0;
+  have_min_dir_info = res;
 }
 
 /** Return true iff we have downloaded, or attempted to download at least

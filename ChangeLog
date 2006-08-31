@@ -2,6 +2,10 @@ Changes in version 0.1.1.24 - 2006-09-xx [ongoing]
   o Major bugfixes:
     - Allow really slow clients to not hang up five minutes into their
       directory downloads (suggested by Adam J. Richter).
+    - Fix major performance regression from 0.1.0.x: instead of checking
+      whether we have enough directory information every time we want to
+      do something, only check when the directory information has changed.
+      This should improve client CPU usage by 25-50%.
 
   o Minor bugfixes:
     - Allow Tor to start when RunAsDaemon is set but no logs are set.
