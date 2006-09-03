@@ -1,3 +1,9 @@
+tor (0.1.2.1-alpha-XXXX) XXXerimental; urgency=low
+
+  * Minor update of debian/copyright [arma].
+
+ -- Peter Palfrader <weasel@debian.org>  Sun,  3 Sep 2006 19:53:45 +0200
+
 tor (0.1.2.1-alpha-1) experimental; urgency=low
 
   * Forward port 07_log_to_file_by_default.dpatch.
