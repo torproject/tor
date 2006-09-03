@@ -291,10 +291,12 @@
 #undef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
 
+#if 0
 #ifdef __USE_ISOC99B
 // libevent doesn't work without this
 typedef uint8_t u_char;
 typedef unsigned int uint;
+#endif
 #endif
 #include <event.h>
 
@@ -317,7 +319,7 @@ typedef unsigned int uint;
 
 struct request {
 	u8 *request;  // the dns packet data
-	uint request_len;
+	unsigned int request_len;
 	u8 reissue_count;
 	u8 tx_count;  // the number of times that this packet has been sent
 	u8 request_type; // TYPE_PTR or TYPE_A
@@ -858,7 +860,7 @@ reply_parse(u8 *packet, int length) {
 	u32 ttl, ttl_r = 0xffffffff;
 	struct reply reply;
 	struct request *req;
-	uint i;
+	unsigned int i;
 
 	GET16(trans_id);
 	GET16(flags);
@@ -1116,7 +1118,7 @@ dnsname_to_labels(u8 *const buf, const char *name, const int name_len) { \
 		const char *const start = name;
 		name = strchr(name, '.');
 		if (!name) {
-			const uint label_len = end - start;
+			const unsigned int label_len = end - start;
 			if (label_len > 63) return -1;
 			buf[j++] = label_len;
 
@@ -1125,7 +1127,7 @@ dnsname_to_labels(u8 *const buf, const char *name, const int name_len) { \
 			break;
 		} else {
 			// append length of the label.
-			const uint label_len = name - start;
+			const unsigned int label_len = name - start;
 			if (label_len > 63) return -1;
 			buf[j++] = label_len;
 
