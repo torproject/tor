@@ -2073,6 +2073,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->ControlPort == 0 && options->ControlListenAddress != NULL)
     REJECT("ControlPort must be defined if ControlListenAddress is defined.");
 
+  if (options->TransPort == 0 && options->TransListenAddress != NULL)
+    REJECT("TransPort must be defined if TransListenAddress is defined.");
+
 #if 0 /* don't complain, since a standard configuration does this! */
   if (options->SocksPort == 0 && options->SocksListenAddress != NULL)
     REJECT("SocksPort must be defined if SocksListenAddress is defined.");
