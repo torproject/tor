@@ -2125,14 +2125,19 @@ config_nameserver_from_reg_key(HKEY key, const char *subkey)
 	return status;
 }
 
+#define SERVICES_KEY "System\\CurrentControlSet\\Services\\"
+
+#define WIN_NS_9X_KEY  SERVICES_KEY "VxD\\MSTCP"
+#define WIN_NS_NT_KEY  SERVICES_KEY "Tcpip\\Parameters"
+
 static int
 load_nameservers_from_registry(void)
 {
 	int found = 0;
 #define TRY(k, name) \
-	if (!found && config_nameserver_from_reg_key(k,name) == 0) {		\
-		log(EVENTDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);	\
-		found = 1;							\
+	if (!found && config_nameserver_from_reg_key(k,name) == 0) {    \
+          log(EVENTDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);	\
+          found = 1;							\
 	}
 
 	if (((int)GetVersion()) > 0) { /* NT */
@@ -2142,20 +2147,20 @@ load_nameservers_from_registry(void)
 				 KEY_READ, &nt_key) != ERROR_SUCCESS)
 			return -1;
 		RegOpenKeyEx(nt_key, "Interfaces", 0,
-			     KEY_QUERY_VALUE|KEY_ENUMERATE_SUBKEYS,
+			     KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS,
 			     &interfaces_key);
-		TRY(nt_key, NAMESERVER);
-		TRY(nt_key, DHCPNAMESERVER);
-		TRY(interfaces_key, NAMESERVER);
-		TRY(interfaces_key, DHCPNAMESERVER);
+		TRY(nt_key, "NameServer");
+		TRY(nt_key, "DhcpNameServer");
+		TRY(interfaces_key, "NameServer");
+		TRY(interfaces_key, "DhcpNameServer");
 		RegCloseKey(interfaces_key);
 		RegCloseKey(nt_key);
 	} else {
 		HKEY win_key = 0;
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X, 0,
+		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
 				 KEY_READ, &win_key) != ERROR_SUCCESS)
 			return -1;
-		TRY(win_key, NAMESERVER);
+		TRY(win_key, "NameServer");
 		RegCloseKey(win_key);
 	}
 	return found ? 0 : -1;
