@@ -112,7 +112,7 @@ static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
 static int launch_resolve(edge_connection_t *exitconn);
 #ifndef USE_EVENTDNS
 static void dnsworkers_rotate(void);
-static int dnsworker_main(void *data);
+static void dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static int spawn_enough_dnsworkers(void);
 #else
@@ -991,7 +991,7 @@ dnsworkers_rotate(void)
  * The dnsworker runs indefinitely, until its connection is closed or an error
  * occurs.
  */
-static int
+static void
 dnsworker_main(void *data)
 {
   char address[MAX_ADDRESSLEN+1]; /* Plus a byte for a final '.' */
@@ -1079,7 +1079,6 @@ dnsworker_main(void *data)
       spawn_exit();
     }
   }
-  return 0; /* windows wants this function to return an int */
 }
 
 /** Launch a new DNS worker; return 0 on success, -1 on failure.

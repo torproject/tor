@@ -936,14 +936,14 @@ get_uname(void)
  * invoke them in a way pthreads would expect.
  */
 typedef struct tor_pthread_data_t {
-  int (*func)(void *);
+  void (*func)(void *);
   void *data;
 } tor_pthread_data_t;
 static void *
 tor_pthread_helper_fn(void *_data)
 {
   tor_pthread_data_t *data = _data;
-  int (*func)(void*);
+  void (*func)(void*);
   void *arg;
   func = data->func;
   arg = data->data;

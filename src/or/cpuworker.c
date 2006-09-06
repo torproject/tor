@@ -36,7 +36,7 @@ static int num_cpuworkers_busy=0;
  * the last time we got a key rotation event. */
 static time_t last_rotation_time=0;
 
-static int cpuworker_main(void *data);
+static void cpuworker_main(void *data);
 static int spawn_cpuworker(void);
 static void spawn_enough_cpuworkers(void);
 static void process_pending_task(connection_t *cpuworker);
@@ -222,7 +222,7 @@ done_processing:
  *  (Note: this _should_ be by addr/port, since we're concerned with specific
  * connections, not with routers (where we'd use identity).)
  */
-static int
+static void
 cpuworker_main(void *data)
 {
   char question[ONIONSKIN_CHALLENGE_LEN];
@@ -308,7 +308,6 @@ cpuworker_main(void *data)
   tor_close_socket(fd);
   crypto_thread_cleanup();
   spawn_exit();
-  return 0; /* windows wants this function to return an int */
 }
 
 /** Launch a new cpuworker. Return 0 if we're happy, -1 if we failed.
@@ -333,7 +332,7 @@ spawn_cpuworker(void)
   tor_assert(fdarray[1] >= 0);
 
   fd = fdarray[0];
-  spawn_func((void*) cpuworker_main, (void*)fdarray);
+  spawn_func(cpuworker_main, (void*)fdarray);
   log_debug(LD_OR,"just spawned a cpu worker.");
 #ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
