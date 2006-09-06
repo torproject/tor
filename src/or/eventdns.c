@@ -261,21 +261,28 @@
 #include <string.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <sys/socket.h>
 #include <sys/time.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
+
+#ifdef WIN32
+#include <windows.h>
+#include <winsock2.h>
+#include <iphlpapi.h>
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
 
 #define EVENTDNS_LOG_DEBUG 0
 #define EVENTDNS_LOG_WARN 1
@@ -435,6 +442,19 @@ static int
 error_is_eagain(int err)
 {
 	return err == EAGAIN || err == WSAEWOULDBLOCK;
+}
+static int
+inet_aton(const char *c, struct in_addr *addr)
+{
+  uint32_t r;
+  if (strcmp(c, "255.255.255.255") == 0) {
+    addr->s_addr = 0xffffffffu;
+  } else {
+    uint32_t r = inet_addr(c);
+    if (r == INADDR_NONE)
+      return 0;
+    addr->a_addr = r;
+  }
 }
 #define CLOSE_SOCKET(x) closesocket(x)
 #else
@@ -1052,7 +1072,7 @@ nameserver_read(struct nameserver *ns) {
 	for (;;) {
           	const int r = recv(ns->socket, packet, sizeof(packet), 0);
 		if (r < 0) {
-			int err = last_error(ns_socket);
+			int err = last_error(ns->socket);
 			if (error_is_eagain(err)) return;
 			nameserver_failed(ns, strerror(err));
 			return;
@@ -2115,7 +2135,7 @@ load_nameservers_from_registry(void)
 		found = 1;							\
 	}
 
-	if (IS_NT()) {
+	if (((int)GetVersion()) > 0) { /* NT */
 		HKEY nt_key = 0, interfaces_key = 0;
 
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
