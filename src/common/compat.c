@@ -163,47 +163,56 @@ typedef struct win_mmap_t {
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
-  win_mmap_t *res = tor_malloc_zero(sizeof(win_mmap_t));
+  struct win_mmap_t *res = tor_malloc_zero(sizeof(struct win_mmap_t));
   res->mmap_handle = res->file_handle = INVALID_HANDLE_VALUE;
 
-  res->file_handle = CreateFileForMapping(filename,
-                                          GENERIC_READ,
-                                          0, NULL,
-                                          OPEN_EXISTING,
-                                          FILE_ATTRIBUTE_NORMAL, 0);
+  res->file_handle = CreateFile(filename,
+								  GENERIC_READ,
+								  0, NULL,
+								  OPEN_EXISTING,
+								  FILE_ATTRIBUTE_NORMAL,
+								  0);
+
+  if (res->file_handle == INVALID_HANDLE_VALUE)
+  	goto err;
+
   res->base.size = GetFileSize(res->file_handle, NULL);
 
   res->mmap_handle = CreateFileMapping(res->file_handle,
                                        NULL,
                                        PAGE_READONLY,
-                                       (size >> 32),
-                                       (size & 0xfffffffful),
+                                       0,
+                                       res->base.size,
                                        NULL);
   if (res->mmap_handle != INVALID_HANDLE_VALUE)
     goto err;
   res->base.data = (char*) MapViewOfFile(res->mmap_handle,
-                                         access,
+                                         FILE_MAP_READ,
                                          0, 0, 0);
-  if (!res->data)
+  if (!res->base.data)
     goto err;
 
   return &(res->base);
  err:
-  tor_munmap_file(res);
+  tor_munmap_file(&res->base);
   return NULL;
 }
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  win_mmap_t *h = (win_mmap_t*)
-    (((char*)handle) - STRUCT_OFFSET(win_mmap_t, base));
+  struct win_mmap_t *h = (struct win_mmap_t*)
+    (((char*)handle) - STRUCT_OFFSET(struct win_mmap_t, base));
   if (handle->data)
-    UnmapViewOfFile(handle->data);
-  if (res->mmap_handle != INVALID_HANDLE_VALUE)
-    CloseHandle(res->mmap_handle);
-  if (res->file_handle != INVALID_HANDLE_VALUE)
-    CloseHandle(self->file_handle);
-  tor_free(res);
+
+  /*this is an ugly cast, but without it, "data" in struct tor_mmap_t would
+    have to be redefined as const*/
+    UnmapViewOfFile( (LPVOID) handle->data);
+
+  if (h->mmap_handle != INVALID_HANDLE_VALUE)
+    CloseHandle(h->mmap_handle);
+  if (h->file_handle != INVALID_HANDLE_VALUE)
+    CloseHandle(h->file_handle);
+  tor_free(h);
 }
 #else
 tor_mmap_t *
@@ -417,8 +426,8 @@ void
 set_socket_nonblocking(int socket)
 {
 #ifdef MS_WINDOWS
-  int nonblocking = 1;
-  ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
+	unsigned long nonblocking = 1;
+	ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
   fcntl(socket, F_SETFL, O_NONBLOCK);
 #endif
@@ -444,7 +453,8 @@ set_socket_nonblocking(int socket)
 int
 tor_socketpair(int family, int type, int protocol, int fd[2])
 {
-#ifdef HAVE_SOCKETPAIR
+//don't use win32 socketpairs (they are always bad)
+#if defined(HAVE_SOCKETPAIR) && !defined(MS_WINDOWS)
   int r;
   r = socketpair(family, type, protocol, fd);
   return r < 0 ? -errno : r;
@@ -562,7 +572,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
   log_fn(LOG_INFO, LD_NET,
          "This platform is missing getrlimit(). Proceeding.");
   if (limit < cap) {
-    log_info(LD_CONFIG, "ConnLimit must be at most %d. Using that.", cap);
+    log_info(LD_CONFIG, "ConnLimit must be at most %d. Using that.", (int) cap);
     limit = cap;
   }
 #else
@@ -799,6 +809,8 @@ static int uname_result_is_set = 0;
 const char *
 get_uname(void)
 {
+
+
 #ifdef HAVE_UNAME
   struct utsname u;
 #endif
@@ -852,7 +864,7 @@ get_uname(void)
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
         if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
-          int err = GetLastError();
+
           strlcpy(uname_result, "Bizarre version of Windows where GetVersionEx"
                   " doesn't work.", sizeof(uname_result));
           uname_result_is_set = 1;
@@ -954,7 +966,7 @@ tor_pthread_helper_fn(void *_data)
  * running.
  */
 int
-spawn_func(int (*func)(void *), void *data)
+spawn_func(void (*func)(void *), void *data)
 {
 #if defined(USE_WIN32_THREADS)
   int rv;
@@ -992,11 +1004,16 @@ spawn_func(int (*func)(void *), void *data)
 
 /** End the current thread/process.
  */
+
 void
 spawn_exit(void)
 {
 #if defined(USE_WIN32_THREADS)
   _endthread();
+  //we should never get here. my compiler thinks that _endthread returns, this
+  //is an attempt to fool it.
+  tor_assert(0);
+  _exit(0);
 #elif defined(USE_PTHREADS)
   pthread_exit(NULL);
 #else
@@ -1004,6 +1021,7 @@ spawn_exit(void)
    * call _exit, not exit, from child processes. */
   _exit(0);
 #endif
+
 }
 
 /** Set *timeval to the current time of day.  On error, log and terminate.
@@ -1143,7 +1161,7 @@ tor_mutex_acquire(tor_mutex_t *m)
       tor_assert(0);
       break;
     case WAIT_FAILED:
-      log_warn(LD_GENERAL, "Failed to acquire mutex: %d", GetLastError());
+      log_warn(LD_GENERAL, "Failed to acquire mutex: %d", (int) GetLastError());
   }
 }
 void
@@ -1152,7 +1170,7 @@ tor_mutex_release(tor_mutex_t *m)
   BOOL r;
   r = ReleaseMutex(m->handle);
   if (!r) {
-    log_warn(LD_GENERAL, "Failed to release mutex: %d", GetLastError());
+    log_warn(LD_GENERAL, "Failed to release mutex: %d", (int) GetLastError());
   }
 }
 unsigned long

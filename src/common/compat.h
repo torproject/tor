@@ -273,7 +273,7 @@ int switch_id(char *user, char *group);
 char *get_user_homedir(const char *username);
 #endif
 
-int spawn_func(int (*func)(void *), void *data);
+int spawn_func(void (*func)(void *), void *data);
 void spawn_exit(void) ATTR_NORETURN;
 
 #if defined(ENABLE_THREADS) && defined(MS_WINDOWS)
@@ -305,6 +305,23 @@ unsigned long tor_get_thread_id(void);
 #define tor_mutex_free(m) do { tor_free(m); } while (0)
 #define tor_get_thread_id() (1UL)
 #endif
+
+/*for some reason my compiler doesn't have these version flags defined
+  a nice homework assignment for someone one day is to define the rest*/
+//these are the values as given on MSDN
+#ifdef MS_WINDOWS
+
+#ifndef VER_SUITE_EMBEDDEDNT
+#define VER_SUITE_EMBEDDEDNT 0x00000040
+#endif
+
+#ifndef VER_SUITE_SINGLEUSERTS
+#define VER_SUITE_SINGLEUSERTS 0x00000100
+#endif
+
+
+#endif
+
 
 #endif
 

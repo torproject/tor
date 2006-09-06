@@ -2757,11 +2757,11 @@ options_init_from_torrc(int argc, char **argv)
   if (using_default_torrc) {
     /* didn't find one, try CONFDIR */
     const char *dflt = get_default_conf_file();
-    char *fn = NULL;
     if (dflt && file_status(dflt) == FN_FILE) {
       fname = tor_strdup(dflt);
     } else {
 #ifndef MS_WINDOWS
+	  char *fn;
       fn = expand_filename("~/.torrc");
       if (fn && file_status(fn) == FN_FILE) {
         fname = fn;

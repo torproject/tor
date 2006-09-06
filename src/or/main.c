@@ -1778,7 +1778,7 @@ nt_service_main(void)
   if (!StartServiceCtrlDispatcher(table)) {
     result = GetLastError();
     errmsg = nt_strerror(result);
-    printf("Service error %d : %s\n", result, errmsg);
+    printf("Service error %d : %s\n", (int) result, errmsg);
     LocalFree(errmsg);
     if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
       if (tor_init(backup_argc, backup_argv) < 0)
@@ -1902,7 +1902,7 @@ nt_service_stop(SC_HANDLE hService)
     }
     else {
       errmsg = nt_strerror(GetLastError());
-      printf("Service failed to stop : %s\n");
+      printf("Service failed to stop : %s\n",errmsg);
       LocalFree(errmsg);
     }
   }
@@ -2015,7 +2015,6 @@ nt_service_remove(void)
 {
   SC_HANDLE hSCManager = NULL;
   SC_HANDLE hService = NULL;
-  BOOL result = FALSE;
   char *errmsg;
 
   if ((hSCManager = nt_service_open_scm()) == NULL) {

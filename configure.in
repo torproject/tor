@@ -74,6 +74,36 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
+
+# If WIN32 is defined and non-zero, we are building for win32
+AC_MSG_CHECKING([for win32])
+AC_TRY_COMPILE(,
+[
+#ifdef WIN32
+#if WIN32
+//all is well
+#else
+#error
+#endif
+#else
+#error
+#endif
+],
+bwin32=true; AC_MSG_RESULT([yes]),
+bwin32=false; AC_MSG_RESULT([no])
+)
+
+
+if test $bwin32 = true; then
+
+AC_DEFINE(MS_WINDOWS,1, [Define to 1 if we are building for a Windows platform.])
+
+if test $eventdns = true; then
+AC_MSG_ERROR([tor+eventdns not yet supported on Windows.])
+fi
+
+fi
+
 # The big search for OpenSSL
 # copied from openssh's configure.ac
 tryssldir=""
@@ -133,8 +163,13 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
   le_found=no
   for ledir in $trylibeventdir "" $prefix /usr/local ; do
     LDFLAGS="$saved_LDFLAGS"
-    LIBS="$saved_LIBS -levent"
-
+    
+    if test $bwin32 = true; then
+    	LIBS="$saved_LIBS -levent -lws2_32"
+    else
+    	LIBS="$saved_LIBS -levent"
+    fi
+    
     # Skip the directory if it isn't there.
     if test ! -z "$ledir" -a ! -d "$ledir" ; then
        continue;
@@ -173,7 +208,12 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
     AC_MSG_ERROR([Could not find a linkable libevent. You can specify an explicit path using --with-libevent-dir])
   fi
 ])
+
+if test $bwin32 = true; then
+LIBS="$LIBS -levent -lws2_32"
+else
 LIBS="$LIBS -levent"
+fi
 if test $ac_cv_libevent_dir != "(system)"; then
   if test -d "$ac_cv_libevent_dir/lib" ; then
     LDFLAGS="-L$ac_cv_libevent_dir/lib $LDFLAGS"
@@ -233,8 +273,13 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
   ssl_found=no
   for ssldir in $tryssldir "" $prefix /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /usr/pkg /opt /opt/openssl ; do
     LDFLAGS="$saved_LDFLAGS"
-    LIBS="$saved_LIBS -lssl -lcrypto"
-
+ 
+	 if test $bwin32 = true; then
+		LIBS="$LIBS -lssl -lcrypto -lws2_32 -lgdi32"
+	 else
+		LIBS="$LIBS -lssl -lcrypto"
+	 fi
+ 
     # Skip the directory if it isn't there.
     if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
        continue;
@@ -272,7 +317,13 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
     AC_MSG_ERROR([Could not find a linkable OpenSSL. You can specify an explicit path using --with-ssl-dir])
   fi
 ])
+
+if test $bwin32 = true; then
+LIBS="$LIBS -lssl -lcrypto -lws2_32 -lgdi32"
+else
 LIBS="$LIBS -lssl -lcrypto"
+fi
+
 if test "$ac_cv_openssl_dir" != "(system)"; then
   if test -d "$ac_cv_openssl_dir/lib" ; then
     LDFLAGS="-L$ac_cv_openssl_dir/lib $LDFLAGS"
@@ -359,7 +410,18 @@ dnl The warning message here is no longer strictly accurate.
 
 AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h time.h pwd.h grp.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
 
-AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. Tor requires libevent to build.))
+# if the user doesn't have timeval this will generate a nasty warning. if  
+# timeval isn't provided, define one
+AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. Tor requires libevent to build.),
+[#ifdef HAVE_SYS_TIME_H
+ #include <sys/time.h>
+ #else
+ struct timeval {
+ 	long	tv_sec;		
+	long	tv_usec;
+ }
+ #endif]
+)
 
 AC_CHECK_HEADERS(zlib.h, , AC_MSG_ERROR(Zlib header (zlib.h) not found. Tor requires zlib to build. You may need to install a zlib development package.))
 

@@ -1108,7 +1108,7 @@ spawn_dnsworker(void)
 
   fd = fdarray[0]; /* We copy this out here, since dnsworker_main may free
                     * fdarray */
-  spawn_func(dnsworker_main, (void*)fdarray);
+  spawn_func((void*) dnsworker_main, (void*)fdarray);
   log_debug(LD_EXIT,"just spawned a dns worker.");
 #ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
