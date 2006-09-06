@@ -74,7 +74,6 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
-
 # If WIN32 is defined and non-zero, we are building for win32
 AC_MSG_CHECKING([for win32])
 AC_TRY_COMPILE(,
@@ -92,7 +91,6 @@ AC_TRY_COMPILE(,
 bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no])
 )
-
 
 if test $bwin32 = true; then
 
@@ -163,13 +161,13 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
   le_found=no
   for ledir in $trylibeventdir "" $prefix /usr/local ; do
     LDFLAGS="$saved_LDFLAGS"
-    
+
     if test $bwin32 = true; then
-    	LIBS="$saved_LIBS -levent -lws2_32"
+        LIBS="$saved_LIBS -levent -lws2_32"
     else
-    	LIBS="$saved_LIBS -levent"
+        LIBS="$saved_LIBS -levent"
     fi
-    
+
     # Skip the directory if it isn't there.
     if test ! -z "$ledir" -a ! -d "$ledir" ; then
        continue;
@@ -273,13 +271,13 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
   ssl_found=no
   for ssldir in $tryssldir "" $prefix /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /usr/pkg /opt /opt/openssl ; do
     LDFLAGS="$saved_LDFLAGS"
- 
-	 if test $bwin32 = true; then
-		LIBS="$LIBS -lssl -lcrypto -lws2_32 -lgdi32"
-	 else
-		LIBS="$LIBS -lssl -lcrypto"
-	 fi
- 
+
+    if test $bwin32 = true; then
+      LIBS="$saved_LIBS -lssl -lcrypto -lws2_32 -lgdi32"
+    else
+      LIBS="$saved_LIBS -lssl -lcrypto"
+    fi
+
     # Skip the directory if it isn't there.
     if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
        continue;
@@ -410,18 +408,18 @@ dnl The warning message here is no longer strictly accurate.
 
 AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h time.h pwd.h grp.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
 
-# if the user doesn't have timeval this will generate a nasty warning. if  
-# timeval isn't provided, define one
 AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. Tor requires libevent to build.),
-[#ifdef HAVE_SYS_TIME_H
- #include <sys/time.h>
- #else
- struct timeval {
- 	long	tv_sec;		
-	long	tv_usec;
- }
- #endif]
-)
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#else
+  struct timeval {
+    long tv_sec;
+    long tv_usec;
+ };
+#endif])
 
 AC_CHECK_HEADERS(zlib.h, , AC_MSG_ERROR(Zlib header (zlib.h) not found. Tor requires zlib to build. You may need to install a zlib development package.))
 
@@ -671,7 +669,6 @@ if test $ac_cv_have_func_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
 fi
 
-
 if test $ac_cv_have_FUNC_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNC__, 1, [Defined if the compiler supports __FUNC__])
 fi
@@ -680,7 +677,6 @@ if test $ac_cv_have_FUNCTION_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
            [Defined if the compiler supports __FUNCTION__])
 fi
-
 
 # $prefix stores the value of the --prefix command line option, or
 # NONE if the option wasn't set.  In the case that it wasn't set, make
