@@ -638,7 +638,6 @@ dns_cancel_pending_resolve(char *address)
     return;
   }
   tor_assert(resolve->pending_connections);
-  tor_assert(! resolve->expire);
 
   /* mark all pending connections to fail */
   log_debug(LD_EXIT,
@@ -670,8 +669,8 @@ dns_cancel_pending_resolve(char *address)
             tmp ? tmp->address : "NULL", (void*)tmp);
   }
   tor_assert(tmp == resolve);
-  resolve->magic = 0xABABABAB;
-  tor_free(resolve);
+
+  resolve->state = CACHE_STATE_DONE;
 }
 
 /** Helper: adds an entry to the DNS cache mapping <b>address</b> to the ipv4
