@@ -2761,7 +2761,7 @@ options_init_from_torrc(int argc, char **argv)
       fname = tor_strdup(dflt);
     } else {
 #ifndef MS_WINDOWS
-	  char *fn;
+      char *fn;
       fn = expand_filename("~/.torrc");
       if (fn && file_status(fn) == FN_FILE) {
         fname = fn;

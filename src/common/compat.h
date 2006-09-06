@@ -319,9 +319,7 @@ unsigned long tor_get_thread_id(void);
 #define VER_SUITE_SINGLEUSERTS 0x00000100
 #endif
 
-
 #endif
-
 
 #endif
 

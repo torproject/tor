@@ -167,22 +167,22 @@ tor_mmap_file(const char *filename)
   res->mmap_handle = res->file_handle = INVALID_HANDLE_VALUE;
 
   res->file_handle = CreateFile(filename,
-								  GENERIC_READ,
-								  0, NULL,
-								  OPEN_EXISTING,
-								  FILE_ATTRIBUTE_NORMAL,
-								  0);
+                                GENERIC_READ,
+                                0, NULL,
+                                OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL,
+                                0);
 
   if (res->file_handle == INVALID_HANDLE_VALUE)
-  	goto err;
+    goto err;
 
   res->base.size = GetFileSize(res->file_handle, NULL);
 
   res->mmap_handle = CreateFileMapping(res->file_handle,
                                        NULL,
                                        PAGE_READONLY,
-                                       0,
-                                       res->base.size,
+                                       (res->base.size >> 32),
+                                       (res->base.size & 0xfffffffful),
                                        NULL);
   if (res->mmap_handle != INVALID_HANDLE_VALUE)
     goto err;
@@ -426,8 +426,8 @@ void
 set_socket_nonblocking(int socket)
 {
 #ifdef MS_WINDOWS
-	unsigned long nonblocking = 1;
-	ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
+  unsigned long nonblocking = 1;
+  ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
   fcntl(socket, F_SETFL, O_NONBLOCK);
 #endif
@@ -572,7 +572,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
   log_fn(LOG_INFO, LD_NET,
          "This platform is missing getrlimit(). Proceeding.");
   if (limit < cap) {
-    log_info(LD_CONFIG, "ConnLimit must be at most %d. Using that.", (int) cap);
+    log_info(LD_CONFIG, "ConnLimit must be at most %d. Using that.", (int)cap);
     limit = cap;
   }
 #else
@@ -809,8 +809,6 @@ static int uname_result_is_set = 0;
 const char *
 get_uname(void)
 {
-
-
 #ifdef HAVE_UNAME
   struct utsname u;
 #endif
@@ -864,7 +862,6 @@ get_uname(void)
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
         if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
-
           strlcpy(uname_result, "Bizarre version of Windows where GetVersionEx"
                   " doesn't work.", sizeof(uname_result));
           uname_result_is_set = 1;
@@ -1004,7 +1001,6 @@ spawn_func(void (*func)(void *), void *data)
 
 /** End the current thread/process.
  */
-
 void
 spawn_exit(void)
 {
@@ -1161,7 +1157,7 @@ tor_mutex_acquire(tor_mutex_t *m)
       tor_assert(0);
       break;
     case WAIT_FAILED:
-      log_warn(LD_GENERAL, "Failed to acquire mutex: %d", (int) GetLastError());
+      log_warn(LD_GENERAL, "Failed to acquire mutex: %d",(int) GetLastError());
   }
 }
 void
