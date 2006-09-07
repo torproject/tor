@@ -249,6 +249,7 @@ Minor items for 0.1.2.x as time permits.
       - Vet win32 systray helper code
 
   - Improve controller
+      - a NEWSTATUS event similar to NEWDESC.
       - change circuit status events to give more details, like purpose,
         whether they're internal, when they become dirty, when they become
         too dirty for further circuits, etc.
