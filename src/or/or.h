@@ -1559,8 +1559,8 @@ typedef struct {
 
   char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
                              * MAPADDRESS requests. */
-  int SearchDomains; /**< If provided, we don't force exit addresses to be
-                      * fqdns, but rather search for them in the local
+  int SearchDomains; /**< Boolean: If set, we don't force exit addresses to
+                      * be FQDNs, but rather search for them in the local
                       * domains. */
   char *ResolvConf; /**< If provided, we configure our internal resolver from
                      * the file here rather than from /etc/resolv.conf (unix)

@@ -674,7 +674,7 @@ dns_cancel_pending_resolve(char *address)
 }
 
 /** Helper: adds an entry to the DNS cache mapping <b>address</b> to the ipv4
- * address 'addr'.  'ttl is a cache ttl; 'outcome' is one of
+ * address <b>addr</b>.  <b>ttl</b> is a cache ttl; <b>outcome</b> is one of
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}. */
 static void
 add_answer_to_cache(const char *address, uint32_t addr, char outcome,
