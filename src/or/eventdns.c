@@ -2164,7 +2164,7 @@ load_nameservers_from_registry(void)
 			     &interfaces_key);
 
 		if (r != ERROR_SUCCESS ) {
-			log(EVENTDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
+		  log(EVENTDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
 			return -1;
 
 		}
