@@ -1429,6 +1429,8 @@ typedef struct {
   int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
                                    * directory that's willing to recommend
                                    * versions? */
+  int AvoidDiskWrites; /**< Boolean: should we never cache things to disk?
+                        * Not used yet. */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int NoPublish; /**< Boolean: should we never publish a descriptor? */
   int PublishServerDescriptor; /**< Do we publish our descriptor as normal? */

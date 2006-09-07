@@ -131,6 +131,7 @@ static config_var_t _option_vars[] = {
   VAR("AuthDirReject",       LINELIST, AuthDirReject,        NULL),
   VAR("AuthDirRejectUnlisted",BOOL,    AuthDirRejectUnlisted,"0"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
+  VAR("AvoidDiskWrites",     BOOL,     AvoidDiskWrites,      "0"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "6 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "3 MB"),
   VAR("CircuitBuildTimeout", INTERVAL, CircuitBuildTimeout,  "1 minute"),
