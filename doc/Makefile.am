@@ -7,17 +7,17 @@ SUBDIRS = design-paper
 
 DIST_SUBDIRS = design-paper
 
-website: ../../../cvs/website/docs/
+website: ../../website/docs/
 	rm -rf website
 	mkdir website
-	if test -d $(srcdir)/../../../cvs/website ; then \
-		cd $(srcdir)/../../../cvs/website && $(MAKE); \
+	if test -d $(srcdir)/../../website ; then \
+		cd $(srcdir)/../../website && $(MAKE); \
 	fi
-	if test -d $(srcdir)/../../../cvs/website ; then \
-		cp $(srcdir)/../../../cvs/website/docs/tor-*.html.* \
-			$(srcdir)/../../../cvs/website/stylesheet.css website; \
+	if test -d $(srcdir)/../../website ; then \
+		cp $(srcdir)/../../website/docs/tor-*.html.* \
+			$(srcdir)/../../website/stylesheet.css website; \
 	fi
-img: ../../../cvs/website/img/
+img: ../../website/img/
 	rm -rf img
 	mkdir img
 #	if test -d $(srcdir)/../../website/img; then \
