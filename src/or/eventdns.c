@@ -1507,7 +1507,7 @@ out2:
 	CLOSE_SOCKET(ns->socket);
 out1:
 	free(ns);
-	log(EVENTDNS_LOG_WARN, "Unable to add nameserver %s: error %d", 
+	log(EVENTDNS_LOG_WARN, "Unable to add nameserver %s: error %d",
             debug_ntoa(address), err);
 	return err;
 }
@@ -2062,10 +2062,10 @@ load_nameservers_with_getnetworkparams(void)
 	IP_ADDR_STRING *ns;
 	DWORD (WINAPI *fn)(FIXED_INFO*, DWORD*);
 
-	if (!(handle = LoadLibrary("iphlpapi.dll"))) 
+	if (!(handle = LoadLibrary("iphlpapi.dll")))
 		goto done;
-	
-	if (!(fn = 
+
+	if (!(fn =
 		(DWORD (WINAPI*)(FIXED_INFO*,DWORD*))
 		GetProcAddress(handle, "GetNetworkParams"))) {
 		goto done;
@@ -2154,19 +2154,18 @@ load_nameservers_from_registry(void)
 		HKEY nt_key = 0, interfaces_key = 0;
 
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
-				 KEY_READ, &nt_key) != ERROR_SUCCESS){ 
+				 KEY_READ, &nt_key) != ERROR_SUCCESS){
 			log(EVENTDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
 			return -1;
+		}
 
-			}
 		r = RegOpenKeyEx(nt_key, "Interfaces", 0,
 			     KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS,
 			     &interfaces_key);
 
 		if (r != ERROR_SUCCESS ) {
-		  log(EVENTDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
+			log(EVENTDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
 			return -1;
-
 		}
 
 		TRY(nt_key, "NameServer");
