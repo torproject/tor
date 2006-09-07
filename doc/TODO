@@ -25,7 +25,7 @@ Items for 0.1.2.x, real soon now:
   - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
   - when we start, remove any entryguards that are listed in excludenodes.
-  . start calling dev releases 0.1.2.1-alpha-dev, not -cvs. Do we need
+  o start calling dev releases 0.1.2.1-alpha-dev, not -cvs. Do we need
     to change the code in any way for this? Appears to be "no".
   - Remember the last time we saw one of our entry guards labelled with
     the GUARD flag. If it's been too long, it is not suitable for use.
@@ -278,6 +278,13 @@ Minor items for 0.1.2.x as time permits.
       ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
       - Parse this.
       - Relay this in networkstatus.
+  - Have a mode that doesn't write to disk much, so we can run Tor on
+    flash memory (e.g. Linksys routers or USB keys).
+    o Add AvoidDiskWrites config option.
+    - only write state file when it's "changed"
+    - stop writing identity key / fingerprint / etc every restart
+    - stop caching directory stuff -- and disable mmap?
+    - more?
 
 Future version:
   - Tor should have a "DNS port" so we don't need to ship with (and
@@ -322,8 +329,6 @@ Future version:
     that it is able to rotate through. (maybe)
   - let each hidden service (or other thing) specify its own
     OutboundBindAddress?
-  - Have a mode that doesn't write to disk much, so we can run Tor on
-    flash memory (e.g. Linksys routers).
 
 Blue-sky:
   - Patch privoxy and socks protocol to pass strings to the browser.
