@@ -300,7 +300,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const char *request,
                                    request+REND_COOKIE_LEN,
                                    request_len-REND_COOKIE_LEN, NULL)) {
     log_warn(LD_GENERAL,
-             "Unable to send RENDEZVOUS2 cell to OP on circuit %d.",
+             "Unable to send RENDEZVOUS2 cell to client on circuit %d.",
              rend_circ->p_circ_id);
     goto err;
   }

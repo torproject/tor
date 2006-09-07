@@ -264,7 +264,7 @@ init_keys(void)
     if (tor_tls_context_new(get_identity_key(),
                             options->Nickname ? options->Nickname : "client",
                             MAX_SSL_KEY_LIFETIME) < 0) {
-      log_err(LD_GENERAL,"Error creating TLS context for OP.");
+      log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
       return -1;
     }
     return 0;

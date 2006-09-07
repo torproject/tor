@@ -266,7 +266,7 @@ command_process_created_cell(cell_t *cell, or_connection_t *conn)
 
   if (circ->n_circ_id != cell->circ_id) {
     log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
-           "got created cell from OPward? Closing.");
+           "got created cell from Tor client? Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
     return;
   }

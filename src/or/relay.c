@@ -286,14 +286,14 @@ relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
 
         thishop = thishop->next;
       } while (thishop != cpath && thishop->state == CPATH_STATE_OPEN);
-      log_warn(LD_OR,"in-cell at OP not recognized. Closing.");
+      log_warn(LD_OR,"in-cell at client not recognized. Closing.");
       return -1;
     } else { /* we're in the middle. Just one crypt. */
       if (relay_crypt_one_payload(TO_OR_CIRCUIT(circ)->p_crypto,
                                   cell->payload, 1) < 0)
         return -1;
 //      log_fn(LOG_DEBUG,"Skipping recognized check, because we're not "
-//             "the OP.");
+//             "the client.");
     }
   } else /* cell_direction == CELL_DIRECTION_OUT */ {
     /* we're in the middle. Just one crypt. */
@@ -639,8 +639,8 @@ errno_to_end_reason(int e)
     E_CASE(EMFILE):
       return END_STREAM_REASON_RESOURCELIMIT;
     default:
-      log_info(LD_EXIT, "Didn't recognize errno %d (%s); telling the OP that "
-               "we are ending a stream for 'misc' reason.",
+      log_info(LD_EXIT, "Didn't recognize errno %d (%s); telling the client "
+               "that we are ending a stream for 'misc' reason.",
                e, tor_socket_strerror(e));
       return END_STREAM_REASON_MISC;
   }
