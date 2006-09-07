@@ -502,6 +502,8 @@ AC_CHECK_SIZEOF(__int64)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(time_t)
 
+AC_CHECK_TYPES([uint, u_char])
+
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
 AC_TRY_RUN([
