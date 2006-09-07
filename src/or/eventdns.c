@@ -2062,17 +2062,27 @@ load_nameservers_with_getnetworkparams(void)
 	IP_ADDR_STRING *ns;
 	DWORD (WINAPI *fn)(FIXED_INFO*, DWORD*);
 
-	if (!(handle = LoadLibrary("iphlpapi.dll")))
-		goto done;
+	if (!(handle = LoadLibrary("iphlpapi.dll"))) {
+	  log(EVENTDNS_LOG_WARN,"Could not open iphlpapi.dll");
+	  //right now status = 0, doesn't that mean "good" - mikec
+	  status = -1;
+	  goto done;
+	}
 
 	if (!(fn =
 		(DWORD (WINAPI*)(FIXED_INFO*,DWORD*))
 		GetProcAddress(handle, "GetNetworkParams"))) {
-		goto done;
+	  log(EVENTDNS_LOG_WARN,"Could not get address of function.");
+	  //same as above
+	  status = -1;
+	  goto done;
 	}
 
 	buf = malloc(size);
-	if (!buf) { status = 4; goto done; }
+	if (!buf) {
+	  status = 4;
+	  goto done;
+	}
 	fixed = buf;
 	r = fn(fixed, &size);
 	if (r != ERROR_SUCCESS && r != ERROR_BUFFER_OVERFLOW) {
@@ -2085,21 +2095,36 @@ load_nameservers_with_getnetworkparams(void)
 		if (!buf) { status = 4; goto done; }
 		fixed = buf;
 		r = fn(fixed, &size);
-		if (r != ERROR_SUCCESS) { status = -1; goto done; }
+		if (r != ERROR_SUCCESS) {
+		  log(EVENTDNS_LOG_DEBUG,"fn() failed.");
+		  status = -1;
+		  goto done;
+		}
 	}
 
 	assert(fixed);
 	added_any = 0;
 	ns = &(fixed->DnsServerList);
 	while (ns) {
-		r = eventdns_nameserver_ip_add_line(ns->IpAddress.String);
-		if (r) { status = r; goto done; }
-		added_any = 0;
-		ns = ns->Next;
+  	  r = eventdns_nameserver_ip_add_line(ns->IpAddress.String);
+	  if (r) {
+	    log(EVENTDNS_LOG_DEBUG,"Could not add nameserver %s to list,error: %d",
+	      (ns->IpAddress.String),(int)GetLastError());
+	    status = r;
+	    goto done;
+	  } else {
+        log(EVENTDNS_LOG_DEBUG,"Succesfully added %s as nameserver",ns->IpAddress.String);
+	  }
+
+      added_any++;
+      ns = ns->Next;
 	}
 
-	if (!added_any)
-		status = -1;
+	if (!added_any) {
+	  //should we ever get here? - mikec
+	  log(EVENTDNS_LOG_DEBUG,"No name servers added.");
+	  status = -1;
+	}
 
  done:
 	if (buf)
@@ -2198,8 +2223,10 @@ load_nameservers_from_registry(void)
 int
 eventdns_config_windows_nameservers(void)
 {
-	if (load_nameservers_with_getnetworkparams() == 0)
+	if (load_nameservers_with_getnetworkparams() == 0) {
 		return 0;
+	}
+
 	return load_nameservers_from_registry();
 }
 #endif
