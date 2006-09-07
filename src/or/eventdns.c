@@ -455,7 +455,7 @@ inet_aton(const char *c, struct in_addr *addr)
       return 0;
     addr->s_addr = r;
   }
-	return 1;
+  return 1;
 }
 #define CLOSE_SOCKET(x) closesocket(x)
 #else
