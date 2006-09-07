@@ -5,7 +5,7 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-Note: This document aims to specify Tor as implemented in 0.1.2.1-alpha-cvs
+Note: This document aims to specify Tor as implemented in 0.1.2.1-alpha-dev
 and later.  Future versions of Tor will implement improved protocols, and
 compatibility is not guaranteed.
 
@@ -18,9 +18,11 @@ are not examined.  For more information on why Tor acts as it does,
 see tor-design.pdf.
 
 TODO for v1 revision:
-      - Fix onionskin  handshake scheme to be more mainstream, less nutty.
+      - Fix onionskin handshake scheme to be more mainstream, less nutty.
         Can we just do
             E(HMAC(g^x), g^x) rather than just E(g^x) ?
+        No, that has the same flaws as before. We should send
+            E(g^x, C) with random C and expect g^y, HMAC_C(K=g^xy).
         Better ask Ian; probably Stephen too.
       - Versioned CREATE and friends
       - Length on CREATE and friends
@@ -29,7 +31,7 @@ TODO for v1 revision:
 TODO:
       - REASON_CONNECTFAILED should include an IP.
       - Copy prose from tor-design to make everything more readable.
-when do we rotate which keys (tls, link, etc)?
+      - Spec when we should rotate which keys (tls, link, etc)?
 
 0. Preliminaries
 
@@ -154,11 +156,6 @@ when do we rotate which keys (tls, link, etc)?
 
 2. Connections
 
-   There are two ways to connect to an onion router (OR). The first is
-   as an onion proxy (OP), which allows the OP to authenticate the OR
-   without authenticating itself.  The second is as another OR, which
-   allows mutual authentication.
-
    Tor uses TLS for link encryption.  All implementations MUST support
    the TLS ciphersuite "TLS_EDH_RSA_WITH_DES_192_CBC3_SHA", and SHOULD
    support "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" if it is available.
@@ -166,14 +163,21 @@ when do we rotate which keys (tls, link, etc)?
    support any suite without ephemeral keys, symmetric keys of at
    least KEY_LEN bits, and digests of at least HASH_LEN bits.
 
-   An OP or OR always sends a two-certificate chain, consisting of a
+   Even though the connection protocol is identical, we think of the
+   initiator as either an onion router (OR) if it is willing to relay
+   traffic for other Tor users, or an onion proxy (OP) if it only handles
+   local requests. Onion proxies SHOULD NOT provide long-term-trackable
+   identifiers in their handshakes.
+
+   The connection initiator always sends a two-certificate chain,
+   consisting of a
    certificate using a short-term connection key and a second, self-
    signed certificate containing the OR's identity key. The commonName of the
    first certificate is the OR's nickname, and the commonName of the second
    certificate is the OR's nickname, followed by a space and the string
    "<identity>".
 
-   Implementations running 0.1.2.0-alpha and earlier used an
+   Implementations running 0.2.1.0-alpha-dev and earlier used an
    organizationName of "Tor" or "TOR".  Current implementations (which
    support the version negotiation protocol in section 4.1) MUST NOT
    have either of these values for their organizationName.
@@ -195,10 +199,9 @@ when do we rotate which keys (tls, link, etc)?
    of TLS records MUST NOT leak information about the type or contents
    of the cells.
 
-   TLS connections are not permanent. An OP or an OR may close a
-   connection to an OR if there are no circuits running over the
-   connection, and an amount of time (KeepalivePeriod, defaults to 5
-   minutes) has passed.
+   TLS connections are not permanent. Either side may close a connection
+   if there are no circuits running over it and an amount of time
+   (KeepalivePeriod, defaults to 5 minutes) has passed.
 
    (As an exception, directory servers may try to stay connected to all of
    the ORs -- though this will be phased out for the Tor 0.1.2.x release.)
@@ -214,21 +217,18 @@ when do we rotate which keys (tls, link, etc)?
         CircID                                [2 bytes]
         Command                               [1 byte]
         Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
-                                         [Total size:  bytes]
 
    On a version 1 connection, each cell contains the following fields:
-
 
         CircID                                [3 bytes]
         Command                               [1 byte]
         Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
-                                         [Total size:  bytes]
 
    The CircID field determines which circuit, if any, the cell is
    associated with.
 
    The 'Command' field holds one of the following values:
-         0 -- PADDING     (Padding)                 (See Sec XXX)
+         0 -- PADDING     (Padding)                 (See Sec 7.2) 
          1 -- CREATE      (Create a circuit)        (See Sec 5.1)
          2 -- CREATED     (Acknowledge create)      (See Sec 5.1)
          3 -- RELAY       (End-to-end data)         (See Sec 5.5 and 6)
@@ -814,6 +814,10 @@ when do we rotate which keys (tls, link, etc)?
    stop reading.
 
 7.2. Link padding
+
+   Link padding can be created by sending PADDING cells along the
+   connection; relay cells of type "DROP" can be used for long-range
+   padding.
 
    Currently nodes are not required to do any sort of link padding or
    dummy traffic. Because strong attacks exist even with link padding,
