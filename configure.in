@@ -96,9 +96,6 @@ if test $bwin32 = true; then
 
 AC_DEFINE(MS_WINDOWS,1, [Define to 1 if we are building for a Windows platform.])
 
-if test $eventdns = true; then
-AC_MSG_ERROR([tor+eventdns not yet supported on Windows.])
-fi
 
 fi
 

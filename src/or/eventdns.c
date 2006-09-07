@@ -450,11 +450,12 @@ inet_aton(const char *c, struct in_addr *addr)
   if (strcmp(c, "255.255.255.255") == 0) {
     addr->s_addr = 0xffffffffu;
   } else {
-    uint32_t r = inet_addr(c);
+    r = inet_addr(c);
     if (r == INADDR_NONE)
       return 0;
-    addr->a_addr = r;
+    addr->s_addr = r;
   }
+	return 1;
 }
 #define CLOSE_SOCKET(x) closesocket(x)
 #else
@@ -2062,7 +2063,9 @@ load_nameservers_with_getnetworkparams(void)
 
 	if (!(handle = LoadLibrary("iphlpapi.dll")))
 		goto done;
-	if (!(fn = GetProcAddress(handle, "GetNetworkParams")))
+	if (!(fn = 
+		(DWORD (WINAPI*)(FIXED_INFO*,DWORD*))
+		GetProcAddress(handle, "GetNetworkParams")))
 		goto done;
 
 	buf = malloc(size);
@@ -2084,12 +2087,12 @@ load_nameservers_with_getnetworkparams(void)
 
 	assert(fixed);
 	added_any = 0;
-	ns = fixed->DnsServerList;
+	ns = &(fixed->DnsServerList);
 	while (ns) {
 		r = eventdns_nameserver_ip_add_line(ns->IpAddress.String);
 		if (r) { status = r; goto done; }
 		added_any = 0;
-		ns = ns->next;
+		ns = ns->Next;
 	}
 
 	if (!added_any)
