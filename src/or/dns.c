@@ -1291,8 +1291,10 @@ configure_nameservers(int force)
       eventdns_search_clear();
       eventdns_clear_nameservers_and_suspend();
     }
-    if (eventdns_config_windows_nameservers())
+    if (eventdns_config_windows_nameservers())  {
+			log_warn(LD_EXIT,"Could not config nameservers.");
       return -1;
+		}
     if (eventdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any platform nameservers in "
                "your Windows configuration.  Perhaps you should list a "

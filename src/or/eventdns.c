@@ -298,6 +298,7 @@
 #undef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
 
+
 #if 0
 #ifdef __USE_ISOC99B
 // libevent doesn't work without this
@@ -2061,12 +2062,14 @@ load_nameservers_with_getnetworkparams(void)
 	IP_ADDR_STRING *ns;
 	DWORD (WINAPI *fn)(FIXED_INFO*, DWORD*);
 
-	if (!(handle = LoadLibrary("iphlpapi.dll")))
+	if (!(handle = LoadLibrary("iphlpapi.dll"))) 
 		goto done;
+	
 	if (!(fn = 
 		(DWORD (WINAPI*)(FIXED_INFO*,DWORD*))
-		GetProcAddress(handle, "GetNetworkParams")))
+		GetProcAddress(handle, "GetNetworkParams"))) {
 		goto done;
+	}
 
 	buf = malloc(size);
 	if (!buf) { status = 4; goto done; }
@@ -2137,21 +2140,35 @@ static int
 load_nameservers_from_registry(void)
 {
 	int found = 0;
+	int r;
 #define TRY(k, name) \
 	if (!found && config_nameserver_from_reg_key(k,name) == 0) {    \
           log(EVENTDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);	\
           found = 1;							\
+	} else {\
+		if (!found)\
+			log(EVENTDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",#k,#name);\
 	}
 
 	if (((int)GetVersion()) > 0) { /* NT */
 		HKEY nt_key = 0, interfaces_key = 0;
 
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
-				 KEY_READ, &nt_key) != ERROR_SUCCESS)
+				 KEY_READ, &nt_key) != ERROR_SUCCESS){ 
+			log(EVENTDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
 			return -1;
-		RegOpenKeyEx(nt_key, "Interfaces", 0,
+
+			}
+		r = RegOpenKeyEx(nt_key, "Interfaces", 0,
 			     KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS,
 			     &interfaces_key);
+
+		if (r != ERROR_SUCCESS ) {
+			log(EVENTDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
+			return -1;
+
+		}
+
 		TRY(nt_key, "NameServer");
 		TRY(nt_key, "DhcpNameServer");
 		TRY(interfaces_key, "NameServer");
@@ -2161,11 +2178,20 @@ load_nameservers_from_registry(void)
 	} else {
 		HKEY win_key = 0;
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
-				 KEY_READ, &win_key) != ERROR_SUCCESS)
+				 KEY_READ, &win_key) != ERROR_SUCCESS) {
+			log(EVENTDNS_LOG_DEBUG,"Couldn't open registry key, %d",(int)GetLastError());
 			return -1;
+
+		}
 		TRY(win_key, "NameServer");
 		RegCloseKey(win_key);
 	}
+
+	if (found == 0) {
+		log(EVENTDNS_LOG_WARN,"Didn't find any nameservers.");
+	}
+
+
 	return found ? 0 : -1;
 #undef TRY
 }
