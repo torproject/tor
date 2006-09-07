@@ -1287,13 +1287,10 @@ configure_nameservers(int force)
   }
 #ifdef MS_WINDOWS
   else {
-
-
     if (nameservers_configured) {
       eventdns_search_clear();
       eventdns_clear_nameservers_and_suspend();
     }
-
     if (eventdns_config_windows_nameservers())  {
       log_warn(LD_EXIT,"Could not config nameservers.");
       return -1;
