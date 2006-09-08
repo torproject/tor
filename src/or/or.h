@@ -80,7 +80,13 @@
 
 /** Upper bound on maximum simultaneous connections; can be lowered by
  * config file. */
+#ifdef CYGWIN
+/* http://archives.seul.org/or/talk/Aug-2006/msg00210.html */
+#define MAXCONNECTIONS 3200
+#else
+/* very high by default. "nobody should need more than this..." */
 #define MAXCONNECTIONS 15000
+#endif
 
 #ifdef MS_WINDOWS
 /* No, we don't need to redefine FD_SETSIZE before including winsock:
