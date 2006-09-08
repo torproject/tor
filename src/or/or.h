@@ -789,33 +789,33 @@ typedef struct control_connection_t {
 
 /** Convert a connection_t* to an or_connection_t*; assert if the cast is
  * invalid. */
-or_connection_t *TO_OR_CONN(connection_t *);
+static or_connection_t *TO_OR_CONN(connection_t *);
 /** Convert a connection_t* to a dir_connection_t*; assert if the cast is
  * invalid. */
-dir_connection_t *TO_DIR_CONN(connection_t *);
+static dir_connection_t *TO_DIR_CONN(connection_t *);
 /** Convert a connection_t* to an edge_connection_t*; assert if the cast is
  * invalid. */
-edge_connection_t *TO_EDGE_CONN(connection_t *);
+static edge_connection_t *TO_EDGE_CONN(connection_t *);
 /** Convert a connection_t* to an control_connection_t*; assert if the cast is
  * invalid. */
-control_connection_t *TO_CONTROL_CONN(connection_t *);
+static control_connection_t *TO_CONTROL_CONN(connection_t *);
 
-extern INLINE or_connection_t *TO_OR_CONN(connection_t *c)
+static INLINE or_connection_t *TO_OR_CONN(connection_t *c)
 {
   tor_assert(c->magic == OR_CONNECTION_MAGIC);
   return DOWNCAST(or_connection_t, c);
 }
-extern INLINE dir_connection_t *TO_DIR_CONN(connection_t *c)
+static INLINE dir_connection_t *TO_DIR_CONN(connection_t *c)
 {
   tor_assert(c->magic == DIR_CONNECTION_MAGIC);
   return DOWNCAST(dir_connection_t, c);
 }
-extern INLINE edge_connection_t *TO_EDGE_CONN(connection_t *c)
+static INLINE edge_connection_t *TO_EDGE_CONN(connection_t *c)
 {
   tor_assert(c->magic == EDGE_CONNECTION_MAGIC);
   return DOWNCAST(edge_connection_t, c);
 }
-extern INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
+static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {
   tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
   return DOWNCAST(control_connection_t, c);
@@ -1302,18 +1302,18 @@ typedef struct or_circuit_t {
 
 /** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Asserts
  * if the cast is impossible. */
-or_circuit_t *TO_OR_CIRCUIT(circuit_t *);
+static or_circuit_t *TO_OR_CIRCUIT(circuit_t *);
 /** Convert a circuit_t* to a pointer to the enclosing origin_circuit_t.
  * Asserts if the cast is impossible. */
-origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
+static origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
 
-extern INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
+static INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);
   //return (or_circuit_t*) (((char*)x) - STRUCT_OFFSET(or_circuit_t, _base));
   return DOWNCAST(or_circuit_t, x);
 }
-extern INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
+static INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
   //return (origin_circuit_t*)
