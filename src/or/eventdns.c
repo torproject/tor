@@ -2038,7 +2038,7 @@ eventdns_nameserver_ip_add_line(const char *ips) {
 	return 0;
 }
 
-typedef DWORD(*GetNetworkParams_fn_t)(FIXED_INFO *, DWORD*);
+typedef DWORD(WINAPI *GetNetworkParams_fn_t)(FIXED_INFO *, DWORD*);
 
 // Use the windows GetNetworkParams interface in iphlpapi.dll to
 // figure out what our nameservers are.
