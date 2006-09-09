@@ -25,8 +25,6 @@ Items for 0.1.2.x, real soon now:
   - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
   - when we start, remove any entryguards that are listed in excludenodes.
-  o start calling dev releases 0.1.2.1-alpha-dev, not -cvs. Do we need
-    to change the code in any way for this? Appears to be "no".
   - Remember the last time we saw one of our entry guards labelled with
     the GUARD flag. If it's been too long, it is not suitable for use.
     If it's been really too long, remove it from the list.
@@ -44,9 +42,10 @@ N - Clients stop dumping old descriptors if the network-statuses
   - We need a separate list of "hidserv authorities" if we want to
     retire moria1 from the main list.
 
-Items for 0.1.2.x, later on:
+Items for 0.1.2.x:
   o re-enable blossom functionality: let tor servers decide if they
     will use local search when resolving, or not.
+    - Document it.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
   - We should ship with a list of stable dir mirrors -- they're not
@@ -55,11 +54,6 @@ Items for 0.1.2.x, later on:
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
     - Reduce resource load
-      - look into "uncounting" bytes spent on local connections. so
-        we can bandwidthrate but still have fast downloads.
-      - Write limiting; separate token bucket for write
-      o dir answers include a your-ip-address-is header, so we can
-        break our dependency on dyndns.
       - Come up with good 'nicknames' automatically, or make no-nickname
         routers workable.
       - tolerate clock skew on bridge relays.
@@ -70,46 +64,19 @@ Items for 0.1.2.x, later on:
       - option to dl directory info via tor
         - is the __AllDirActionsPrivate config option sufficient?
       D Count TLS bandwidth more accurately
-      - Write-limit directory responses (need to research)
-N   . Improve memory usage on tight-memory machines.
-      . Directory-related fixes.
-        . Mmap cache files where possible.
-          o Mmap cached-routers file; when building it, go oldest-to-newest.
-          - More unit tests and asserts for cached-routers file: ensure digest
-            for the right router.  Verify dl by digest, fp, etc.
-          o Make sure cached-routers values and offsets are correct in the
-            presence of windows FS insanity.
-          D Save and mmap v1 directories, and networkstatus docs; store them
-            zipped, not uncompressed.
-            D Switch cached_router_t to use mmap.
-            D What to do about reference counts on windows?
-              (On Unix, this is easy: unlink works fine.  (Right?)  On
-              Windows, I have doubts.  Do we need to keep multiple files?)
-            D What do we do about the fact that people can't read zlib-
-              compressed files manually?
-        - Look into pulling serverdescs off buffers as they arrive.
+    - Improvements to bandwidth counting
+      - look into "uncounting" bytes spent on local connections, so
+        we can bandwidthrate but still have fast downloads.
+      - "bandwidth classes", for incoming vs initiated-here conns.
+      - Write limiting; separate token bucket for write
+        - Write-limit directory responses (need to research)
 
-    - "bandwidth classes", for incoming vs initiated-here conns.
-    o Asynchronous DNS
-      o And test it
-      . Make it work on windows.
-        o Implement
-        . Enable
-        - Test
-      X Make the Nameservers option documented, and make it work right on
-        reload.
-      o Fail when we have no configured nameservers!
-      o Make it the default on platforms where it works.
+    . Asynchronous DNS
       - Document SearchDomains, ResolvConf options
-      o Make resolv.conf (or local equivalent) get checked on reload,
-        settable while running, etc.
-      - Add ipv6 support; make API closer to getaddrinfo().  (i.e., allow a
-        single AAAA/A query, return cname as well)
+      - Make API closer to getaddrinfo()
       - Teach it to be able to listen for A and PTR requests to be processed.
         Interface should be set_request_listener(sock, cb); [ cb(request) ]
         send_reply(request, answer);.
-      - Refactor exit side of resolve: do we need a connection_t?
-      - Refactor entry side of resolve: do we need a connection_t?
 
   - Directory guards
 
@@ -133,21 +100,7 @@ N   . Improve memory usage on tight-memory machines.
 
   - A more efficient dir protocol.
     - Later, servers will stop generating new descriptors simply
-      because 18 hours have passed.
-    - Authorities should fetch the network-statuses amongst each
-      other, consensus them, and advertise a communal network-status.
-      This is not so much for safety/complexity as it is to reduce
-      bandwidth requirements for Alice.
-      - How does this interact with our goal of being able to choose
-        your own dir authorities? I guess we're now assuming that all
-        dir authorities know all the other authorities in their "group"?
-    - Should we also look into a "delta since last network-status
-      checkpoint" scheme, to reduce overhead further?
-    D Extend the "r" line in network-status to give a set of buckets (say,
-      comma-separated) for that router.
-      - Buckets are deterministic based on IP address.
-      - Then clients can choose a bucket (or set of buckets) to
-        download and use.
+      because 18 hours have passed: we must start tolerating this now.
 
   - Critical but minor bugs, backport candidates.
     - Failed rend desc fetches sometimes don't get retried. True/false?
@@ -175,14 +128,6 @@ N   . Improve memory usage on tight-memory machines.
 M   - rewrite how libevent does select() on win32 so it's not so very slow.
       - Add overlapped IO
 
-N - When we connect to a Tor server, it sends back a cell listing
-    the IP it believes it is using. Use this to block dvorak's attack.
-    Also, this is a fine time to say what time you think it is.
-    o Verify that a new cell type is okay with deployed codebase
-    . Specify HELLO cells
-    . Figure out v0 compatibility.
-    - Implement
-
 N - Exitlist should avoid outputting the same IP address twice.
 
 N - Write path-spec.txt
@@ -190,6 +135,7 @@ N - Write path-spec.txt
   - Packaging
     - Tell people about OSX Uninstaller
     - Quietly document NT Service options
+    - Switch canonical win32 compiler to mingw.
 
   - Docs
     - More prominently, we should have a recommended apps list.
@@ -204,15 +150,59 @@ Topics to think about during 0.1.2.x development:
   * Figure out China.
   - Figure out partial network knowledge.
   - Figure out hidden services.
+  - Design next-version protocol for directories
+  - Design next-version protocol for connections
 
-Minor items for 0.1.2.x as time permits.
+Deferred from 0.1.2.x:
+  - Memory use improvements:
+    - Look into pulling serverdescs off buffers as they arrive.
+    - Save and mmap v1 directories, and networkstatus docs; store them
+      zipped, not uncompressed.
+      - Switch cached_router_t to use mmap.
+      - What to do about reference counts on windows?  (On Unix, this is
+        easy: unlink works fine.  (Right?)  On Windows, I have doubts.  Do we
+        need to keep multiple files?)
+      - What do we do about the fact that people can't read zlib-
+        compressed files manually?
+
+  - Add IPv6 support to eventdns.c
+
+  - Refactor DNS resolve implementation
+    - Refactor exit side of resolve: do we need a connection_t?
+    - Refactor entry side of resolve: do we need a connection_t?
+
+  - A more efficient dir protocol.
+    - Authorities should fetch the network-statuses amongst each
+      other, consensus them, and advertise a communal network-status.
+      This is not so much for safety/complexity as it is to reduce
+      bandwidth requirements for Alice.
+      - How does this interact with our goal of being able to choose
+        your own dir authorities? I guess we're now assuming that all
+        dir authorities know all the other authorities in their "group"?
+    - Should we also look into a "delta since last network-status
+      checkpoint" scheme, to reduce overhead further?
+    - Extend the "r" line in network-status to give a set of buckets (say,
+      comma-separated) for that router.
+      - Buckets are deterministic based on IP address.
+      - Then clients can choose a bucket (or set of buckets) to
+        download and use.
+
+  - Improvements to versioning.
+    - When we connect to a Tor server, it sends back a cell listing
+      the IP it believes it is using. Use this to block dvorak's attack.
+      Also, this is a fine time to say what time you think it is.
+      o Verify that a new cell type is okay with deployed codebase
+      . Specify HELLO cells
+      . Figure out v0 compatibility.
+      - Implement
+
+Minor items for 0.1.2.x as time permits:
   - If we try to publish as a nickname that's already claimed, should
     we append a number (or increment the number) and try again? This
     way people who read their logs can fix it as before, but people
     who don't read their logs will still offer Tor servers.
   - Tor should bind its ports before dropping privs, so users don't
     have to do the ipchains dance.
-  o Make --verify-config return a useful error code.
   - Rate limit exit connections to a given destination -- this helps
     us play nice with websites when Tor users want to crawl them; it
     also introduces DoS opportunities.
@@ -235,7 +225,7 @@ Minor items for 0.1.2.x as time permits.
     people can notice too.
   - cpu fixes:
     - see if we should make use of truncate to retry
-    - kill dns workers more slowly
+    X kill dns workers more slowly
   . Directory changes
     . Some back-out mechanism for auto-approval
       - a way of rolling back approvals to before a timestamp
