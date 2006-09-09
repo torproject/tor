@@ -822,6 +822,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   int skewed=0;
   int allow_partial = conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC;
   int was_compressed=0;
+  char *guess;
 
   switch (fetch_from_buf_http(conn->_base.inbuf,
                               &headers, MAX_HEADERS_SIZE,
@@ -855,12 +856,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             escaped(reason));
 
   /* now check if it's got any hints for us about our IP address. */
-  if (server_mode(get_options())) {
-    char *guess = http_get_header(headers, X_ADDRESS_HEADER);
-    if (guess) {
-      router_new_address_suggestion(guess);
-      tor_free(guess);
-    }
+  guess = http_get_header(headers, X_ADDRESS_HEADER);
+  if (guess) {
+    router_new_address_suggestion(guess);
+    tor_free(guess);
   }
 
   if (date_header > 0) {
