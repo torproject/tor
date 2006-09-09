@@ -729,6 +729,24 @@ static smartlist_t *warned_nonexistent_family = NULL;
 
 static int router_guess_address_from_dir_headers(uint32_t *guess);
 
+/** Return our current best guess at our address, either because
+ * it's configured in torrc, or because we've learned it from
+ * dirserver headers. */
+int
+router_pick_published_address(or_options_t *options, uint32_t *addr)
+{
+  if (resolve_my_address(LOG_INFO, options, addr, NULL) < 0) {
+    log_info(LD_CONFIG, "Could not determine our address locally. "
+             "Checking if directory headers provide any hints.");
+    if (router_guess_address_from_dir_headers(addr) < 0) {
+      log_info(LD_CONFIG, "No hints from directory headers either. "
+               "Will try again later.");
+      return -1;
+    }
+  }
+  return 0;
+}
+
 /** If <b>force</b> is true, or our descriptor is out-of-date, rebuild
  * a fresh routerinfo and signed server descriptor for this OR.
  * Return 0 on success, -1 on temporary error.
@@ -745,18 +763,12 @@ router_rebuild_descriptor(int force)
   if (desc_clean_since && !force)
     return 0;
 
-  if (resolve_my_address(LOG_INFO, options, &addr, NULL) < 0) {
-    log_info(LD_CONFIG, "Could not determine our address locally. "
-             "Checking if directory headers provide any hints.");
-    if (router_guess_address_from_dir_headers(&addr) < 0) {
-      log_info(LD_CONFIG, "No hints from directory headers either. "
-               "Will try again later.");
-      /* Stop trying to rebuild our descriptor every second. We'll
-       * learn that it's time to try again when server_has_changed_ip()
-       * marks it dirty. */
-      desc_clean_since = time(NULL);
-      return -1;
-    }
+  if (router_pick_published_address(options, &addr) < 0) {
+    /* Stop trying to rebuild our descriptor every second. We'll
+     * learn that it's time to try again when server_has_changed_ip()
+     * marks it dirty. */
+    desc_clean_since = time(NULL);
+    return -1;
   }
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));

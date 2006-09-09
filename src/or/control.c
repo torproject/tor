@@ -1307,6 +1307,7 @@ list_getinfo_options(void)
     "addr-mappings/cache Addresses remapped by DNS cache.\n"
     "addr-mappings/configl Addresses remapped from configuration options.\n"
     "addr-mappings/control Addresses remapped by a controller.\n"
+    "address The best guess at our external IP address.\n"
     "circuit-status Status of each current circuit.\n"
     "config-file Current location of the \"torrc\" file.\n"
     "config/names List of configuration options, types, and documentation.\n"
@@ -1325,7 +1326,7 @@ list_getinfo_options(void)
 
 /** Lookup the 'getinfo' entry <b>question</b>, and return
  * the answer in <b>*answer</b> (or NULL if key not recognized).
- * Return 0 if success, or -1 if internal error. */
+ * Return 0 if success, or -1 if recognized but internal error. */
 static int
 handle_getinfo_helper(const char *question, char **answer)
 {
@@ -1520,6 +1521,11 @@ handle_getinfo_helper(const char *question, char **answer)
     *answer = smartlist_join_strings(mappings, "\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
+  } else if (!strcmp(question, "address")) {
+    uint32_t addr;
+    if (router_pick_published_address(get_options(), &addr) < 0)
+      return -1;
+    *answer = tor_dup_addr(addr);
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmpstart(question, "dir/server/")) {

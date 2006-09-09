@@ -344,6 +344,9 @@ $Id$
       via the control interface; the 'all' target returns the mappings
       set through any mechanism.
 
+    "address" -- the best guess at our external IP address. If we
+      have no guess, return a 551 error.
+
     "circuit-status"
       A series of lines as for a circuit status event. Each line is of
       the form:

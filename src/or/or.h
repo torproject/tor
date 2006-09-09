@@ -2464,6 +2464,7 @@ const char *router_get_my_descriptor(void);
 int router_digest_is_me(const char *digest);
 int router_is_me(routerinfo_t *router);
 int router_fingerprint_is_me(const char *fp);
+int router_pick_published_address(or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
