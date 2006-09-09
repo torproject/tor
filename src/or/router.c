@@ -978,6 +978,8 @@ router_new_address_suggestion(const char *suggestion)
   }
   addr = ntohl(in.s_addr);
 
+  log_debug(LD_DIR, "Got X-Your-Address-Is: %s.", suggestion);
+
   if (resolve_my_address(LOG_INFO, get_options(), &cur, NULL) >= 0) {
     /* We're all set -- we already know our address. Great. */
     last_guessed_ip = cur; /* store it in case we need it later */

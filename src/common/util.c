@@ -1796,7 +1796,7 @@ get_interface_address(uint32_t *addr)
 
   if (connect(sock,(struct sockaddr *)&target_addr,sizeof(target_addr))<0) {
     int e = tor_socket_errno(sock);
-    log_warn(LD_NET, "connnect() failed: %s", tor_socket_strerror(e));
+    log_warn(LD_NET, "connect() failed: %s", tor_socket_strerror(e));
     goto err;
   }
 
