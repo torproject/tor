@@ -1770,7 +1770,7 @@ is_plausible_address(const char *name)
  * failure.
  */
 int
-get_interface_address(uint32_t *addr)
+get_interface_address(int severity, uint32_t *addr)
 {
   int sock=-1, r=-1;
   struct sockaddr_in target_addr, my_addr;
@@ -1782,7 +1782,8 @@ get_interface_address(uint32_t *addr)
   sock = socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
   if (sock < 0) {
     int e = tor_socket_errno(-1);
-    log_warn(LD_NET, "unable to create socket: %s", tor_socket_strerror(e));
+    log_fn(severity, LD_NET, "unable to create socket: %s",
+           tor_socket_strerror(e));
     goto err;
   }
 
@@ -1796,14 +1797,15 @@ get_interface_address(uint32_t *addr)
 
   if (connect(sock,(struct sockaddr *)&target_addr,sizeof(target_addr))<0) {
     int e = tor_socket_errno(sock);
-    log_warn(LD_NET, "connect() failed: %s", tor_socket_strerror(e));
+    log_fn(severity, LD_NET, "connect() failed: %s", tor_socket_strerror(e));
     goto err;
   }
 
   /* XXXX Can this be right on IPv6 clients? */
   if (getsockname(sock, (struct sockaddr*)&my_addr, &my_addr_len)) {
     int e = tor_socket_errno(sock);
-    log_warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
+    log_fn(severity, LD_NET, "getsockname() failed: %s",
+           tor_socket_strerror(e));
     goto err;
   }
 

@@ -1638,7 +1638,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
       log_fn(notice_severity, LD_CONFIG,
              "Could not resolve guessed local hostname '%s'. "
              "Trying something else.", hostname);
-      if (get_interface_address(&interface_ip)) {
+      if (get_interface_address(warn_severity, &interface_ip)) {
         log_fn(warn_severity, LD_CONFIG,
                "Could not get local interface IP address. Failing.");
         return -1;
@@ -1661,7 +1661,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
                "resolves to a private IP address (%s).  Trying something "
                "else.", hostname, tmpbuf);
 
-        if (get_interface_address(&interface_ip)) {
+        if (get_interface_address(warn_severity, &interface_ip)) {
           log_fn(warn_severity, LD_CONFIG,
                  "Could not get local interface IP address. Too bad.");
         } else if (is_internal_IP(interface_ip, 0)) {

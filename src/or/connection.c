@@ -1999,7 +1999,7 @@ client_check_address_changed(int sock)
   uint32_t *ip;
 
   if (!last_interface_ip)
-    get_interface_address(&last_interface_ip);
+    get_interface_address(LOG_INFO, &last_interface_ip);
   if (!outgoing_addrs)
     outgoing_addrs = smartlist_create();
 
@@ -2017,7 +2017,7 @@ client_check_address_changed(int sock)
 
   /* Uh-oh.  We haven't connected from this address before. Has the interface
    * address changed? */
-  if (get_interface_address(&iface_ip)<0)
+  if (get_interface_address(LOG_INFO, &iface_ip)<0)
     return;
   ip = tor_malloc(sizeof(uint32_t));
   *ip = ip_out;

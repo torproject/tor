@@ -200,7 +200,7 @@ int addr_mask_get_bits(uint32_t mask);
 int tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len);
 char *tor_dup_addr(uint32_t addr) ATTR_MALLOC;
 int is_plausible_address(const char *name);
-int get_interface_address(uint32_t *addr);
+int get_interface_address(int severity, uint32_t *addr);
 
 /* Process helpers */
 void start_daemon(void);
