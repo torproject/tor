@@ -1,0 +1,88 @@
+Instructions for building Tor with MinGW (http://www.mingw.org/)
+
+Stage One:  Download and Install MinGW.
+---------------------------------------
+
+Download mingw:
+http://prdownloads.sf.net/mingw/MSYS-1.0.10.exe?download
+
+Download the mingw developer tool kit:
+http://prdownloads.sf.net/mingw/msysDTK-1.0.1.exe?download
+
+Install mingw and mingw-dtk.
+
+Stage Two: Download, extract, and patch libevent-1.1b.
+------------------------------------------------------
+
+Download libevent-1.1b:
+http://www.monkey.org/~provos/libevent/
+
+Start up MSYS:
+Start -> Programs -> MinGW -> MSYS -> msys
+
+Create a directory to work within, for example, /c/tor-mingw.
+
+Copy libevent and tor tarballs into this working dir:
+cp /path/to/libevent-1.1b.tar.gz /c/tor-mingw/
+cp /patch/to/tor-alpha.tar.gz /c/tor-mingw/
+cd /c/tor-mingw/
+
+Extract libevent: tar zxf libevent-1.1b.tar.gz
+Extract tor: tar zxf tor-alpha.tar.gz
+
+Copy the libevent-1.1b diff into libevent-1.1b:
+cp /c/tor-mingw/tor/Win32Build/mingw/libevent-1.1b-mingw-custom.diff /c/tor-mingw/libevent-1.1b/
+patch -i libevent-1.1b-mingw-custom.diff
+
+Your output of the "patch" command should be similar to:
+"patch -i libevent-1.1b-mingw-custom.diff 
+patching file `Makefile.am'
+can't find file to patch at input line 49
+Perhaps you should have used the -p or --strip option?
+The text leading up to this was:
+--------------------------
+|Only in libevent-1.1b: Makefile.in
+|diff -uwr libevent-1.1b-old/WIN32-Code/misc.c libevent-1.1b/WIN32-Code/misc.c
+|--- libevent-1.1b-old/WIN32-Code/misc.c        Wed Aug  9 21:01:14 2006
+|+++ libevent-1.1b/WIN32-Code/misc.c    Fri Sep  1 22:21:31 2006
+--------------------------
+File to patch: WIN32-Code/misc.c
+patching file `WIN32-Code/misc.c'
+can't find file to patch at input line 65
+Perhaps you should have used the -p or --strip option?
+The text leading up to this was:
+--------------------------
+|diff -uwr libevent-1.1b-old/WIN32-Code/misc.h libevent-1.1b/WIN32-Code/misc.h
+|--- libevent-1.1b-old/WIN32-Code/misc.h        Wed Aug  9 21:01:14 2006
+|+++ libevent-1.1b/WIN32-Code/misc.h    Fri Sep  1 18:47:09 2006
+--------------------------
+File to patch: WIN32-Code/misc.h
+patching file `WIN32-Code/misc.h'
+can't find file to patch at input line 78
+Perhaps you should have used the -p or --strip option?
+The text leading up to this was:
+--------------------------
+|diff -uwr libevent-1.1b-old/WIN32-Code/win32.c
+libevent-1.1b/WIN32-Code/win32.c
+|--- libevent-1.1b-old/WIN32-Code/win32.c       Wed Aug  9 21:25:48 2006
+|+++ libevent-1.1b/WIN32-Code/win32.c   Sat Sep  2 00:45:55 2006
+--------------------------
+File to patch: WIN32-Code/win32.c
+patching file `WIN32-Code/win32.c'
+patching file `buffer.c'
+patching file `config.h.in'
+patching file `configure.in'
+patching file `evbuffer.c'
+patching file `event.c'
+patching file `log.c' "
+
+Stage 3:  Build libevent-1.1b DLL
+---------------------------------
+
+Run "aclocal && autoheader && automake && autoconf".
+There may be WARNING messages.  There will be no output if all runs successfuly.
+
+Run "./configure"
+Run "make"
+
+(magic happens here and a complete tor-alpha.exe is created)
