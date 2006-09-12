@@ -14,16 +14,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define die(s) do { fprintf(stderr, "%s\n", s); return 1; } while (0)
+#define die(s) do { fprintf(stderr, "%s\n", s); goto err; } while (0)
 
 int
 main(int argc, char **argv)
 {
-  BIO *b;
-  RSA *key;
-  unsigned char *buf, *bufp;
+  BIO *b = NULL;
+  RSA *key = NULL;
+  unsigned char *buf = NULL, *bufp;
   int len, i;
   unsigned char digest[20];
+  int status = 1;
 
   if (argc != 2)
     die("I want a filename");
@@ -34,7 +35,11 @@ main(int argc, char **argv)
     die("couldn't parse key");
 
   len = i2d_RSAPublicKey(key, NULL);
+  if (len < 0)
+    die("Bizarre key");
   bufp = buf = malloc(len+1);
+  if (!buf)
+    die("Out of memory");
   len = i2d_RSAPublicKey(key, &bufp);
   if (len < 0)
     die("Bizarre key");
@@ -45,6 +50,15 @@ main(int argc, char **argv)
   }
   printf("\n");
 
-  return 0;
+  status = 0;
+
+err:
+  if (buf)
+    free(buf);
+  if (key)
+    RSA_free(key);
+  if (b)
+    BIO_free(b);
+  return status;
 }
 
