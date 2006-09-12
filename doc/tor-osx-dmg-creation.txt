@@ -1,3 +1,6 @@
+## Instructions for building the official dmgs for OSX.
+##
+
 The following steps are the exact steps used to produce the "official"
 OSX builds of tor
 

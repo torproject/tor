@@ -1,3 +1,5 @@
+## Instructions for building the official rpms.
+## 
 These are instructions for building Tor binaries in the rpm format on
 various cpu architectures and operating systems.  Each rpm will require
 glibc on the target system.  It is believed that any rpm-based linux

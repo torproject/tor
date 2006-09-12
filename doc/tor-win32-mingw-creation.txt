@@ -1,17 +1,71 @@
-Instructions for building Tor with MinGW (http://www.mingw.org/)
+## Instructions for building Tor with MinGW (http://www.mingw.org/)
+##
 
 Stage One:  Download and Install MinGW.
 ---------------------------------------
 
 Download mingw:
+http://prdownloads.sf.net/mingw/MinGW-5.0.3.exe?download
+
+
+Download msys:
 http://prdownloads.sf.net/mingw/MSYS-1.0.10.exe?download
 
 Download the mingw developer tool kit:
 http://prdownloads.sf.net/mingw/msysDTK-1.0.1.exe?download
 
-Install mingw and mingw-dtk.
+Download the mingw win32api:
+http://prdownloads.sf.net/mingw/w32api-3.6.tar.gz?download
 
-Stage Two: Download, extract, and patch libevent-1.1b.
+Install mingw, msys and mingw-dtk.
+
+Stage Two:  Download, extract, compile openssl
+----------------------------------------------
+
+Download openssl:
+http://www.openssl.org/source/openssl-0.9.8c.tar.gz
+
+Extract openssl:
+cp openssl-0.9.8c.tar.gz tor-mingw/
+cd tor-mingw/
+tar zxf openssl-0.9.8c.tar.gz
+
+Make openssl.dll:
+cd tor-mingw/openssl-0.9.8c/
+./Configure mingw
+cp crypto/*.h ./include/openssl/
+cp e_os2.h ./include/openssl/
+cp ssl/*.h ./include/openssl/
+make
+
+Note: this fails in test due to: 
+make[1]: *** No rule to make target `sha256t.o', needed by `sha256t.exe'.  Stop.
+--need to research this - phobos
+
+Alternatively:
+Download the pre-compiled openssl for win32.
+Install and proceed.
+
+
+Stage Three:  Download, extract, compile zlib
+---------------------------------------------
+
+Download zlib source:
+http://www.zlib.net/zlib-1.2.3.tar.gz
+
+Extract zlib:
+cp zlib-1.2.3.tar.gz tor-mingw/
+cd tor-mingw/
+tar zxf zlib-1.2.3.tar.gz
+
+Make zlib1.dll:
+cd tor-mingw/zlib-1.2.3/
+make -f win32/Makefile.gcc
+
+Done.
+
+
+Stage Four: Download, extract, and patch libevent-1.1b.
 ------------------------------------------------------
 
 Download libevent-1.1b:
@@ -76,13 +130,29 @@ patching file `evbuffer.c'
 patching file `event.c'
 patching file `log.c' "
 
-Stage 3:  Build libevent-1.1b DLL
----------------------------------
+--This is a complete hack right now:
+remove from event.c and log.c:
+#ifdef __GNUC__
+#include "WIN32-Code/misc.h"
+#else
+#include "misc.h"
+#endif
 
 Run "aclocal && autoheader && automake && autoconf".
 There may be WARNING messages.  There will be no output if all runs successfuly.
 
 Run "./configure"
 Run "make"
+Run "make install"
 
-(magic happens here and a complete tor-alpha.exe is created)
+Stage Five:  Build Tor
+----------------------
+
+Extract the latest tor from svn in tor-mingw dir:
+tar zxf latest-tor-alpha.tar.gz
+
+cd tor-alpha
+./autogen.sh
+./configure 
+
+(less magic happens here and a complete tor-alpha.exe is created)
