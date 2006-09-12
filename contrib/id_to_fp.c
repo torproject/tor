@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define die(s) do { fprintf(stderr, s "\n"); return 1; } while (0)
+#define die(s) do { fprintf(stderr, "%s\n", s); return 1; } while (0)
 
 int
 main(int argc, char **argv)
