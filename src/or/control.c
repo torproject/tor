@@ -1453,7 +1453,7 @@ handle_getinfo_helper(const char *question, char **answer)
           continue;
         }
       circ = circuit_get_by_edge_conn(conn);
-      if (CIRCUIT_IS_ORIGIN(circ))
+      if (circ && CIRCUIT_IS_ORIGIN(circ))
         origin_circ = TO_ORIGIN_CIRCUIT(circ);
       write_stream_target_to_buf(conn, buf, sizeof(buf));
       slen = strlen(buf)+strlen(state)+32;
