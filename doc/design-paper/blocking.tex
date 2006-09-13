@@ -29,7 +29,16 @@
 
 \begin{abstract}
 
-...
+Websites around the world are increasingly being blocked by
+government-level firewalls. Many people use anonymizing networks like
+Tor to contact sites without letting an attacker trace their activities,
+and as an added benefit they are no longer affected by local censorship.
+But if the attacker simply denies access to the Tor network itself,
+blocked users can no longer benefit from the security Tor offers.
+
+Here we describe a design that uses the current Tor network as a
+building block to provide an anonymizing network that resists blocking
+by government-level attackers.
 
 \end{abstract}
 
@@ -61,7 +70,7 @@ location too.
 \section{Adversary assumptions}
 \label{sec:adversary}
 
-Three main network attacks currently:
+Three main network attacks by censors currently:
 
 \begin{tightlist}
 \item Block destination by string matches in TCP packets.
@@ -71,10 +80,17 @@ Three main network attacks currently:
 \item Intercept DNS requests.
 \end{tightlist}
 
-Assume the network firewall has very limited CPU [clayton06] %~\cite{clayton06}.
+Assume the network firewall has very limited CPU~\cite{clayton06}.
 
 Assume that readers of blocked content will not be punished much
 (relative to writers).
+
+Assume that while various different adversaries can coordinate and share
+notes, there will be a significant time lag between one attacker learning
+how to overcome a facet of our design and other attackers picking it up.
+
+
+
 
 \section{Related schemes}
 
@@ -93,6 +109,16 @@ Easier to deploy; might not require client-side software.
 \section{Useful building blocks}
 
 \subsection{Tor}
+
+Anonymizing networks such as
+Tor~\cite{tor-design}
+aim to hide not only what is being said, but also who is
+communicating with whom, which users are using which websites, and so on.
+These systems have a broad range of users, including ordinary citizens
+who want to avoid being profiled for targeted advertisements, corporations
+who don't want to reveal information to their competitors, and law
+enforcement and government intelligence agencies who need
+to do operations on the Internet without being noticed.
 
 Tor provides three security properties:
 \begin{tightlist}
@@ -121,19 +147,19 @@ whichever paths work.
 
 \subsection{Tor circuits}
 
-can build arbitrary overlay paths given a set of descriptors [blossom] %~\cite{blossom}
+can build arbitrary overlay paths given a set of descriptors~\cite{blossom}
 
 \subsection{Tor directory servers}
 
 \subsection{Tor user base}
 
-\section{The Design}
+\section{The Design, version one}
 
 \subsection{Bridge relays}
 
-Some Tor users on the free side of the network will opt to become bridge
-relays. They will relay a bit of traffic and don't allow exits. They
-sign up on the bridge directory authorities, below.
+Some Tor users on the free side of the network will opt to become
+bridge relays. They will relay a bit of traffic and won't need to allow
+exits. They sign up on the bridge directory authorities, below.
 
 ...need to outline instructions for a Tor config that will publish
 to an alternate directory authority, and for controller commands
@@ -147,39 +173,53 @@ answer all queries as usual, except they don't publish network statuses.
 So once you know a bridge relay's key, you can get the most recent
 server descriptor for it.
 
-XXX need to figure out how to fetch some statuses from the BDA without
-fetching all statuses. A new URL to fetch I presume?
+XXX need to figure out how to fetch some server statuses from the BDA
+without fetching all statuses. A new URL to fetch I presume?
 
 \subsection{Blocked users}
 
-If a blocked user knows about a working bridge relay, then he can make
-secure connections to the BDA to update his knowledge about bridge
+If a blocked user has a server descriptor for one working bridge relay,
+then he can make secure connections to the BDA to update his knowledge
+about other bridge
 relays, and he can make secure connections to the main Tor network
 and directory servers to build circuits and connect to the rest of
 the Internet.
 
 So now we've reduced the problem from how to circumvent the firewall
-for all transactions (and how to know that the pages you get are the
-real ones) to how to learn about a working bridge relay. They can
-be distributed in three ways:
-\begin{tightlist}
-\item IP:dirport, so the user can connect directly to the bridge
-relay, learn the associated
-server descriptor, and start building circuits. This is great, but what if
-the firewall creates signatures for plaintext http requests for server
-descriptors, to block them? One option is a workaround that changes the
-appearance of the plaintext at each step (I can imagine a simple scheme
-where we send a 16 byte key, and then encrypt the rest of the stream with
-that key -- it doesn't provide actual confidentiality, but it's hard to
-recognize that it's a Tor connection); another option is to conclude that
-it will be better to tunnel through a Tor circuit when fetching them.
-\item Key fingerprint, which lets you lookup the most recent server
-descriptor at the BDA (assuming you can reach it).
-\item A blinded token, which can be exchanged at the BDA (assuming you
-can reach it) for a new IP:dirport or server descriptor.
-\end{tightlist}
+for all transactions (and how to know that the pages you get have not
+been modified by the local attacker) to how to learn about a working
+bridge relay.
 
-See the following section for ways to bootstrap knowledge of your first
+The simplest format for communicating information about a bridge relay
+is as an IP address and port for its directory cache. From there, the
+user can ask the directory cache for an up-to-date copy of that bridge
+relay's server descriptor, including its current circuit keys, the port
+it uses for Tor connections, and so on.
+
+However, connecting directly to the directory cache involves a plaintext
+http request, so the censor could create a firewall signature for the
+request and/or its response, thus preventing these connections. If that
+happens, the first fix is to use SSL -- not for authentication, but
+just for encryption so requests look different every time.
+
+There's another possible attack here: since we only learn an IP address
+and port, a local attacker could intercept our directory request and
+give us some other server descriptor. But notice that we don't need
+strong authentication for the bridge relay. Since the Tor client will
+ship with trusted keys for the bridge directory authority and the Tor
+network directory authorities, the user can decide if the bridge relays
+are lying to him or not.
+
+Once the Tor client has fetched the server descriptor at least once,
+it should remember the identity key fingerprint for that bridge relay.
+If the bridge relay moves to a new IP address, the client can then
+use the bridge directory authority to look up a fresh server descriptor
+using this fingerprint.
+
+another option is to conclude
+that it will be better to tunnel through a Tor circuit when fetching them.
+
+The following section describes ways to bootstrap knowledge of your first
 bridge relay, and ways to maintain connectivity once you know a few
 bridge relays.
 
@@ -196,6 +236,13 @@ Thus they can reach the BDA. From here we either assume a social
 network or other mechanism for learning IP:dirport or key fingerprints
 as above, or we assume an account server that allows us to limit the
 number of new bridge relays an external attacker can discover.
+
+
+
+\section{The Design, version two}
+
+\item A blinded token, which can be exchanged at the BDA (assuming you
+can reach it) for a new IP:dirport or server descriptor.
 
 \subsection{The account server}
 
@@ -270,6 +317,17 @@ provides improved anonymity against some attacks too:
 \begin{verbatim}
 http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerAnonymity
 \end{verbatim}
+
+\subsection{Cablemodem users don't provide important websites}
+
+...so our adversary could just block all DSL and cablemodem networks,
+and for the most part only our bridge relays would be affected.
+
+The first answer is to aim to get volunteers both from traditionally
+``consumer'' networks and also from traditionally ``producer'' networks.
+
+The second answer (not so good) would be to encourage more use of consumer
+networks for popular and useful websites.
 
 \section{Future designs}
 
