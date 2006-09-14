@@ -1404,9 +1404,9 @@ generate_v2_networkstatus(void)
                naming ? " Names" : "",
                versioning ? " Versions" : "",
                versioning ? "client-versions " : "",
-               client_versions,
+               versioning ? client_versions : "",
                versioning ? "\nserver-versions " : "",
-               server_versions,
+               versioning ? server_versions : "",
                versioning ? "\n" : "",
                identity_pkey);
   outp = status + strlen(status);
