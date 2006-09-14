@@ -142,6 +142,7 @@ N - Write path-spec.txt
       - recommend gaim.
       - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
+    - we should add a preamble to tor-design saying it's out of date.
 
 Topics to think about during 0.1.2.x development:
   * Figure out incentives.
