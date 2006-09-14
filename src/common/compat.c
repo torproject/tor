@@ -130,7 +130,7 @@ tor_mmap_file(const char *filename)
   lseek(fd, 0, SEEK_SET);
   /* ensure page alignment */
   page_size = getpagesize();
-  size += (page_size + (page_size-(size%page_size)));
+  size += (size%page_size) ? page_size-(size%page_size) : 0;
 
   string = mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0);
   if (string == MAP_FAILED) {
