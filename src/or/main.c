@@ -1083,6 +1083,8 @@ do_hup(void)
     cpuworkers_rotate();
     dns_reset();
 #if 0
+    const char *descriptor;
+    char keydir[512];
     /* Write out a fresh descriptor, but leave old one on failure. */
     router_rebuild_descriptor(1);
     descriptor = router_get_my_descriptor();
