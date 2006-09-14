@@ -353,9 +353,7 @@ init_keys(void)
   if (!authdir_mode(options))
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
-  tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
-  log_info(LD_DIRSERV,"Loading approved fingerprints from \"%s\"...",keydir);
-  if (dirserv_parse_fingerprint_file(keydir) < 0) {
+  if (dirserv_load_fingerprint_file() < 0) {
     log_err(LD_GENERAL,"Error loading fingerprints");
     return -1;
   }

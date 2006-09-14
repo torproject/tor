@@ -2095,7 +2095,7 @@ char *directory_dump_request_log(void);
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
-int dirserv_parse_fingerprint_file(const char *fname);
+int dirserv_load_fingerprint_file();
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char *desc, const char **msg);

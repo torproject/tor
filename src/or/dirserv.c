@@ -122,24 +122,31 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
   return 0;
 }
 
-/** Parse the nickname-\>fingerprint mappings stored in the file named
- * <b>fname</b>.  The file format is line-based, with each non-blank
- * holding one nickname, some space, and a fingerprint for that
- * nickname.  On success, replace the current fingerprint list with
- * the contents of <b>fname</b> and return 0.  On failure, leave the
- * current fingerprint list untouched, and return -1. */
+/** Load the nickname-\>fingerprint mappings stored in the approved-routers
+ * file.  The file format is line-based, with each non-blank holding one
+ * nickname, some space, and a fingerprint for that nickname.  On success,
+ * replace the current fingerprint list with the new list and return 0.  On
+ * failure, leave the current fingerprint list untouched, and
+ * return -1. */
 int
-dirserv_parse_fingerprint_file(const char *fname)
+dirserv_load_fingerprint_file()
 {
+  char fname[512];
   char *cf;
   char *nickname, *fingerprint;
   smartlist_t *fingerprint_list_new;
   int result;
   config_line_t *front=NULL, *list;
+  or_options_t *options = get_options();
+
+  tor_snprintf(fname, sizeof(fname),
+               "%s/approved-routers", options->DataDirectory);
+  log_info(LD_GENERAL,
+           "Reloading approved fingerprints from \"%s\"...", fname);
 
   cf = read_file_to_str(fname, 0);
   if (!cf) {
-    if (get_options()->NamingAuthoritativeDir) {
+    if (options->NamingAuthoritativeDir) {
       log_warn(LD_FS, "Cannot open fingerprint file '%s'. Failing.", fname);
       return -1;
     } else {

@@ -1036,7 +1036,6 @@ got_libevent_error(void)
 static int
 do_hup(void)
 {
-  char keydir[512];
   or_options_t *options = get_options();
 
   log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
@@ -1056,11 +1055,8 @@ do_hup(void)
   options = get_options(); /* they have changed now */
   if (authdir_mode(options)) {
     /* reload the approved-routers file */
-    tor_snprintf(keydir, sizeof(keydir),
-                 "%s/approved-routers", options->DataDirectory);
-    log_info(LD_GENERAL,
-             "Reloading approved fingerprints from \"%s\"...", keydir);
-    if (dirserv_parse_fingerprint_file(keydir) < 0) {
+    if (dirserv_load_fingerprint_file() < 0) {
+      /* warnings are logged from dirserv_load_fingerprint_file() directly */
       log_info(LD_GENERAL, "Error reloading fingerprints. "
                "Continuing with old list.");
     }
