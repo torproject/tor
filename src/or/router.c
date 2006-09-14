@@ -842,6 +842,7 @@ router_rebuild_descriptor(int force)
        tor_free(name);
      });
 
+    /* remove duplicates from the list */
     smartlist_sort_strings(ri->declared_family);
     for (i = 1; i < smartlist_len(ri->declared_family); ++i) {
       const char *a, *b;
