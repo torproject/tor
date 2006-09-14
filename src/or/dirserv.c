@@ -129,7 +129,7 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
  * failure, leave the current fingerprint list untouched, and
  * return -1. */
 int
-dirserv_load_fingerprint_file()
+dirserv_load_fingerprint_file(void)
 {
   char fname[512];
   char *cf;
