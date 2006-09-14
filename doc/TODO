@@ -283,6 +283,10 @@ Minor items for 0.1.2.x as time permits:
     - stop writing identity key / fingerprint / etc every restart
     - stop caching directory stuff -- and disable mmap?
     - more?
+  - smartlist_uniq(): We have at least 3 places that check a smartlist for
+    duplicates and then removes them: networkstatus_parse_from_string(),
+    sort_version_list(), and router_rebuild_descriptor().  This should probably
+    get its own function that takes a comparator and a delete function.
 
 Future version:
   - Tor should have a "DNS port" so we don't need to ship with (and
