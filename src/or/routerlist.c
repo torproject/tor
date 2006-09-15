@@ -2134,7 +2134,7 @@ add_networkstatus_to_cache(const char *s,
  * store it, and put it into our cache as necessary.
  *
  * If <b>source</b> is NS_FROM_DIR or NS_FROM_CACHE, do not replace our
- * own networkstatus_t (if we're a directory server).
+ * own networkstatus_t (if we're an authoritative directory server).
  *
  * If <b>source</b> is NS_FROM_CACHE, do not write our networkstatus_t to the
  * cache.
