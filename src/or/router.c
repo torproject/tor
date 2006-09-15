@@ -490,7 +490,7 @@ server_has_changed_ip(void)
   stats_n_seconds_working = 0;
   can_reach_or_port = 0;
   can_reach_dir_port = 0;
-  reset_bandwidth_test();
+//  reset_bandwidth_test();
   mark_my_descriptor_dirty();
 }
 
