@@ -2199,7 +2199,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   if (!networkstatus_list)
     networkstatus_list = smartlist_create();
 
-  if (source == NS_FROM_DIR && router_digest_is_me(ns->identity_digest)) {
+  if ( (source == NS_FROM_DIR_BY_FP || source == NS_FROM_DIR_ALL) &&
+       router_digest_is_me(ns->identity_digest)) {
     /* Don't replace our own networkstatus when we get it from somebody else.*/
     networkstatus_free(ns);
     return 0;
@@ -2211,12 +2212,14 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     } else {
       char *requested =
         smartlist_join_strings(requested_fingerprints," ",0,NULL);
-      log_warn(LD_DIR,
+      if (source != NS_FROM_DIR_ALL) {
+        log_warn(LD_DIR,
                "We received a network status with a fingerprint (%s) that we "
                "never requested. (We asked for: %s.) Dropping.",
                fp, requested);
-      tor_free(requested);
-      return 0;
+        tor_free(requested);
+        return 0;
+      }
     }
   }
 
@@ -2225,6 +2228,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
       /* We got a non-trusted networkstatus, and we're a directory cache.
        * This means that we asked an authority, and it told us about another
        * authority we didn't recognize. */
+      log_info(LD_DIR,
+               "We do not recognize authority (%s) but we are willing "
+               "to cache it", fp);
       add_networkstatus_to_cache(s, source, ns);
       networkstatus_free(ns);
     }
@@ -2287,7 +2293,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   log_info(LD_DIR, "Setting networkstatus %s %s (published %s)",
            source == NS_FROM_CACHE?"cached from":
-           (source==NS_FROM_DIR?"downloaded from":"generated for"),
+           ((source == NS_FROM_DIR_BY_FP || source == NS_FROM_DIR_ALL) ?
+             "downloaded from":"generated for"),
            trusted_dir->description, published);
   networkstatus_list_has_changed = 1;
   router_dir_info_changed();
