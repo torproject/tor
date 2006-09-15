@@ -672,7 +672,10 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
       continue;
     if (circ->purpose != purpose)
       continue;
-    if (!memcmp(TO_ORIGIN_CIRCUIT(circ)->rend_pk_digest, digest, DIGEST_LEN))
+    if (!digest)
+      return TO_ORIGIN_CIRCUIT(circ);
+    else if (!memcmp(TO_ORIGIN_CIRCUIT(circ)->rend_pk_digest,
+                     digest, DIGEST_LEN))
       return TO_ORIGIN_CIRCUIT(circ);
   }
   return NULL;

@@ -574,7 +574,7 @@ directory_info_has_arrived(time_t now, int from_cache)
 
   if (server_mode(options) && !we_are_hibernating() && !from_cache &&
       (has_completed_circuit || !any_predicted_circuits(now)))
-    consider_testing_reachability();
+    consider_testing_reachability(1, 1);
 }
 
 /** Perform regular maintenance tasks for a single connection.  This
@@ -847,7 +847,7 @@ run_scheduled_events(time_t now)
         (has_completed_circuit || !any_predicted_circuits(now)) &&
         stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
         !we_are_hibernating())
-      consider_testing_reachability();
+      consider_testing_reachability(1, 1);
 
     /* If any networkstatus documents are no longer recent, we need to
      * update all the descriptors' running status. */

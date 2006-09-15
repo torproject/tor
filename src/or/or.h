@@ -2443,7 +2443,7 @@ int init_keys(void);
 
 int check_whether_orport_reachable(void);
 int check_whether_dirport_reachable(void);
-void consider_testing_reachability(void);
+void consider_testing_reachability(int test_or, int test_dir);
 void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);
 void server_has_changed_ip(void);

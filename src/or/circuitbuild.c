@@ -557,7 +557,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
             "Looks like client functionality is working.");
         if (server_mode(options) && !check_whether_orport_reachable()) {
           inform_testing_reachability();
-          consider_testing_reachability();
+          consider_testing_reachability(1, 1);
         }
       }
       circuit_rep_hist_note_result(circ);

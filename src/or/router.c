@@ -436,21 +436,21 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
  * Success is noticed in connection_dir_client_reached_eof().
  */
 void
-consider_testing_reachability(void)
+consider_testing_reachability(int test_or, int test_dir)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  int orport_reachable = !check_whether_orport_reachable();
+  int orport_reachable = check_whether_orport_reachable();
   if (!me)
     return;
 
-  if (!orport_reachable || !circuit_enough_testing_circs()) {
+  if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   }
 
-  if (!check_whether_dirport_reachable()) {
+  if (test_dir && !check_whether_dirport_reachable()) {
     /* ask myself, via tor, for my server descriptor. */
     directory_initiate_command_router(me, DIR_PURPOSE_FETCH_SERVERDESC,
                                       1, "authority", NULL, 0);
@@ -505,6 +505,7 @@ router_perform_bandwidth_test(int num_circs, time_t now)
   int cells_per_circuit = max_cells / num_circs;
   origin_circuit_t *circ = NULL;
 
+  log_notice(LD_OR,"Performing bandwidth self-test.");
   while ((circ = circuit_get_next_by_pk_and_purpose(circ, NULL,
                                               CIRCUIT_PURPOSE_TESTING))) {
     /* dump cells_per_circuit drop cells onto this circ */

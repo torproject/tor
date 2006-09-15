@@ -645,7 +645,8 @@ circuit_testing_opened(origin_circuit_t *circ)
   } else if (circuit_enough_testing_circs()) {
     router_perform_bandwidth_test(NUM_PARALLEL_TESTING_CIRCS, time(NULL));
     have_performed_bandwidth_test = 1;
-  }
+  } else
+    consider_testing_reachability(1, 0);
 }
 
 /** A testing circuit has failed to build. Take whatever stats we want. */
