@@ -483,14 +483,17 @@ router_dirport_found_reachable(void)
   }
 }
 
+#define UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST (6*60*60)
+
 /** Our router has just moved to a new IP. Reset stats. */
 void
 server_has_changed_ip(void)
 {
+  if (stats_n_seconds_working > UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST)
+    reset_bandwidth_test();
   stats_n_seconds_working = 0;
   can_reach_or_port = 0;
   can_reach_dir_port = 0;
-//  reset_bandwidth_test();
   mark_my_descriptor_dirty();
 }
 
