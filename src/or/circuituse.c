@@ -583,8 +583,6 @@ circuit_expire_old_circuits(time_t now)
       log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, purp %d)",
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
-      /* (only general and purpose_c circs can get dirty) */
-      tor_assert(circ->purpose <= CIRCUIT_PURPOSE_C_REND_JOINED);
       circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
     } else if (!circ->timestamp_dirty &&
                circ->state == CIRCUIT_STATE_OPEN &&
@@ -599,14 +597,55 @@ circuit_expire_old_circuits(time_t now)
   }
 }
 
-/** A testing circuit has completed. Take whatever stats we want. */
+#define NUM_PARALLEL_TESTING_CIRCS 4
+
+static int have_performed_bandwidth_test = 0;
+
+/** Reset have_performed_bandwidth_test, so we'll start building
+ * testing circuits again so we can exercise our bandwidth. */
+void
+reset_bandwidth_test(void)
+{
+  have_performed_bandwidth_test = 0;
+}
+
+/** Return 1 if we've already exercised our bandwidth, or if we
+ * have fewer than NUM_PARALLEL_TESTING_CIRCS testing circuits
+ * established or on the way. Else return 0.
+ */
+int
+circuit_enough_testing_circs(void)
+{
+  circuit_t *circ;
+  int num = 0;
+
+  if (have_performed_bandwidth_test)
+    return 1;
+
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (!circ->marked_for_close && CIRCUIT_IS_ORIGIN(circ) &&
+        circ->purpose == CIRCUIT_PURPOSE_TESTING &&
+        circ->state == CIRCUIT_STATE_OPEN)
+      num++;
+  }
+  return num >= NUM_PARALLEL_TESTING_CIRCS;
+}
+
+/** A testing circuit has completed. Take whatever stats we want.
+ * Noticing reachability is taken care of in onionskin_answer(),
+ * so there's no need to record anything here. But if we still want
+ * to do the bandwidth test, and we now have enough testing circuits
+ * open, do it.
+ */
 static void
 circuit_testing_opened(origin_circuit_t *circ)
 {
-  /* For now, we only use testing circuits to see if our ORPort is
-     reachable. But we remember reachability in onionskin_answer(),
-     so there's no need to record anything here. Just close the circ. */
-  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+  if (have_performed_bandwidth_test) {
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+  } else if (circuit_enough_testing_circs()) {
+    router_perform_bandwidth_test(NUM_PARALLEL_TESTING_CIRCS, time(NULL));
+    have_performed_bandwidth_test = 1;
+  }
 }
 
 /** A testing circuit has failed to build. Take whatever stats we want. */

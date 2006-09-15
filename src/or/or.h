@@ -1753,6 +1753,10 @@ int circuit_stream_is_being_handled(edge_connection_t *conn, uint16_t port,
 void circuit_build_needed_circs(time_t now);
 void circuit_detach_stream(circuit_t *circ, edge_connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
+
+void reset_bandwidth_test(void);
+int circuit_enough_testing_circs(void);
+
 void circuit_has_opened(origin_circuit_t *circ);
 void circuit_build_failed(origin_circuit_t *circ);
 origin_circuit_t *circuit_launch_by_nickname(uint8_t purpose,
@@ -2443,13 +2447,14 @@ void consider_testing_reachability(void);
 void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);
 void server_has_changed_ip(void);
-void consider_publishable_server(int force);
+void router_perform_bandwidth_test(int num_circs, time_t now);
 
 int authdir_mode(or_options_t *options);
 int clique_mode(or_options_t *options);
 int server_mode(or_options_t *options);
 int advertised_server_mode(void);
 int proxy_mode(or_options_t *options);
+void consider_publishable_server(int force);
 
 int router_is_clique_mode(routerinfo_t *router);
 void router_upload_dir_desc_to_dirservers(int force);

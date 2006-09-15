@@ -439,11 +439,13 @@ void
 consider_testing_reachability(void)
 {
   routerinfo_t *me = router_get_my_routerinfo();
+  int orport_reachable = !check_whether_orport_reachable();
   if (!me)
     return;
 
-  if (!check_whether_orport_reachable()) {
-    log_info(LD_CIRC, "Testing reachability of my ORPort: %s:%d.",
+  if (!orport_reachable || !circuit_enough_testing_circs()) {
+    log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
+             !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   }
@@ -488,7 +490,36 @@ server_has_changed_ip(void)
   stats_n_seconds_working = 0;
   can_reach_or_port = 0;
   can_reach_dir_port = 0;
+  reset_bandwidth_test();
   mark_my_descriptor_dirty();
+}
+
+/** We have enough testing circuit open. Send a bunch of "drop"
+ * cells down each of them, to exercise our bandwidth. */
+void
+router_perform_bandwidth_test(int num_circs, time_t now)
+{
+  int num_cells = get_options()->BandwidthRate * 10 / CELL_NETWORK_SIZE;
+  int max_cells = num_cells < CIRCWINDOW_START ?
+                    num_cells : CIRCWINDOW_START;
+  int cells_per_circuit = max_cells / num_circs;
+  origin_circuit_t *circ = NULL;
+
+  while ((circ = circuit_get_next_by_pk_and_purpose(circ, NULL,
+                                              CIRCUIT_PURPOSE_TESTING))) {
+    /* dump cells_per_circuit drop cells onto this circ */
+    int i = cells_per_circuit;
+    if (circ->_base.state != CIRCUIT_STATE_OPEN)
+      continue;
+    circ->_base.timestamp_dirty = now;
+    while (i-- > 0) {
+      if (connection_edge_send_command(NULL, TO_CIRCUIT(circ),
+                                       RELAY_COMMAND_DROP,
+                                       NULL, 0, circ->cpath->prev)<0) {
+        return; /* stop if error */
+      }
+    }
+  }
 }
 
 /** Return true iff we believe ourselves to be an authoritative

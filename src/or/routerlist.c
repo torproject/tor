@@ -2129,6 +2129,7 @@ add_networkstatus_to_cache(const char *s,
 /** How far in the future do we allow a network-status to get before removing
  * it? (seconds) */
 #define NETWORKSTATUS_ALLOW_SKEW (24*60*60)
+
 /** Given a string <b>s</b> containing a network status that we received at
  * <b>arrived_at</b> from <b>source</b>, try to parse it, see if we want to
  * store it, and put it into our cache as necessary.

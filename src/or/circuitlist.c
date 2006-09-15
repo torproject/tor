@@ -220,7 +220,7 @@ circuit_close_all_marked(void)
   }
 }
 
-/** Return the head of the global linked list of circuits. **/
+/** Return the head of the global linked list of circuits. */
 circuit_t *
 _circuit_get_global_list(void)
 {
@@ -650,8 +650,9 @@ circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
 }
 
 /** Return the first circuit in global_circuitlist after <b>start</b>
- * whose rend_pk_digest field is <b>digest</b> and whose purpose is
- * <b>purpose</b>. Returns NULL if no circuit is found.
+ * whose purpose is <b>purpose</b> is purpose, and (if set) whose
+ * <b>digest</b> matches the rend_pk_digest field. Return NULL if no
+ * circuit is found.
  * If <b>start</b> is NULL, begin at the start of the list.
  * DOCDOC origin.
  */
