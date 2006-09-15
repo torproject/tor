@@ -18,6 +18,7 @@ P       - phobos claims
       by default, if it works?"
 
 Items for 0.1.2.x, real soon now:
+R - avoid thrashing the bandwidth exercise when we change IPs a lot
   - When we've been idle a long time, we stop fetching server
     descriptors. When we then get a socks request, we build circuits
     immediately using whatever descriptors we have, rather than waiting

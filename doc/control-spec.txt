@@ -188,6 +188,8 @@ $Id$
   or none.
   NOTE: "EXTENDED" is only supported in Tor 0.1.1.9-alpha or later.
 
+  XXX Need to describe what each event does and is for -RD
+
 3.5. AUTHENTICATE
 
   Sent from the client to the server.  The syntax is:
