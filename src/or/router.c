@@ -804,7 +804,6 @@ router_rebuild_descriptor(int force)
   if (authdir_mode(options))
     ri->is_valid = ri->is_named = 1; /* believe in yourself */
   if (options->MyFamily) {
-    int i;
     smartlist_t *family;
     if (!warned_nonexistent_family)
       warned_nonexistent_family = smartlist_create();
@@ -844,15 +843,7 @@ router_rebuild_descriptor(int force)
 
     /* remove duplicates from the list */
     smartlist_sort_strings(ri->declared_family);
-    for (i = 1; i < smartlist_len(ri->declared_family); ++i) {
-      const char *a, *b;
-      a = smartlist_get(ri->declared_family, i-1);
-      b = smartlist_get(ri->declared_family, i);
-      if (!strcmp(a,b)) {
-        tor_free(smartlist_get(ri->declared_family, i));
-        smartlist_del_keeporder(ri->declared_family, i--);
-      }
-    }
+    smartlist_uniq_strings(ri->declared_family);
 
     smartlist_free(family);
   }

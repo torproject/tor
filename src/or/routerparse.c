@@ -1075,6 +1075,15 @@ _compare_routerstatus_entries(const void **_a, const void **_b)
   return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
 }
 
+static void
+_free_duplicate_routerstatus_entry(void *e)
+{
+  log_warn(LD_DIR,
+           "Network-status has two entries for the same router. "
+           "Dropping one.");
+  routerstatus_free(e);
+}
+
 /** Given a versioned (v2 or later) network-status object in <b>s</b>, try to
  * parse it and return the result.  Return NULL on failure.  Check the
  * signature of the network status, but do not (yet) check the signing key for
@@ -1217,20 +1226,8 @@ networkstatus_parse_from_string(const char *s)
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, _compare_routerstatus_entries);
-
-  /* Kill duplicate entries. */
-  for (i=0; i < smartlist_len(ns->entries)-1; ++i) {
-    routerstatus_t *rs1 = smartlist_get(ns->entries, i);
-    routerstatus_t *rs2 = smartlist_get(ns->entries, i+1);
-    if (!memcmp(rs1->identity_digest,
-                rs2->identity_digest, DIGEST_LEN)) {
-      log_warn(LD_DIR,
-               "Network-status has two entries for the same router. "
-               "Dropping one.");
-      smartlist_del_keeporder(ns->entries, i--);
-      routerstatus_free(rs1);
-    }
-  }
+  smartlist_uniq(ns->entries, _compare_routerstatus_entries,
+                 _free_duplicate_routerstatus_entry);
 
   if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
     log_warn(LD_DIR, "Error tokenizing network-status footer.");
@@ -1922,22 +1919,9 @@ _compare_tor_version_str_ptr(const void **_a, const void **_b)
 void
 sort_version_list(smartlist_t *versions, int remove_duplicates)
 {
-  int i;
-
   smartlist_sort(versions, _compare_tor_version_str_ptr);
-  if (!remove_duplicates)
-    return;
 
-  for (i = 1; i < smartlist_len(versions); ++i) {
-    const void *a, *b;
-    a = smartlist_get(versions, i-1);
-    b = smartlist_get(versions, i);
-    /* use version_cmp so we catch multiple representations of the same
-     * version */
-    if (_compare_tor_version_str_ptr(&a,&b) == 0) {
-      tor_free(smartlist_get(versions, i));
-      smartlist_del_keeporder(versions, i--);
-    }
-  }
+  if (remove_duplicates)
+    smartlist_uniq(versions, _compare_tor_version_str_ptr, NULL);
 }
 

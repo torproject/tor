@@ -429,6 +429,29 @@ smartlist_sort(smartlist_t *sl, int (*compare)(const void **a, const void **b))
         (int (*)(const void *,const void*))compare);
 }
 
+/** Given a sorted smartlist <b>sl</b> and the comparison function used to
+ * sort it, remove all duplicate members.  If free_fn is provided, calls
+ * free_fn on each duplicate.  Otherwise, frees them with tor_free(), which
+ * may not be what you want..  Preserves order.
+ */
+void
+smartlist_uniq(smartlist_t *sl,
+               int (*compare)(const void **a, const void **b),
+               void (*free_fn)(void *a))
+{
+  int i;
+  for (i=1; i < sl->num_used; ++i) {
+    if (compare((const void **)&(sl->list[i-1]),
+                (const void **)&(sl->list[i])) == 0) {
+      if (free_fn)
+        free_fn(sl->list[i]);
+      else
+        tor_free(sl->list[i]);
+      smartlist_del_keeporder(sl, i--);
+    }
+  }
+}
+
 /** Assuming the members of <b>sl</b> are in order, return a pointer to the
  * member which matches <b>key</b>.  Ordering and matching are defined by a
  * <b>compare</b> function, which returns 0 on a match; less than 0 if key is
@@ -460,6 +483,14 @@ void
 smartlist_sort_strings(smartlist_t *sl)
 {
   smartlist_sort(sl, _compare_string_ptrs);
+}
+
+/** Remove duplicate strings from a sorted list, and free them with tor_free().
+ */
+void
+smartlist_uniq_strings(smartlist_t *sl)
+{
+  smartlist_uniq(sl, _compare_string_ptrs, NULL);
 }
 
 #define LEFT_CHILD(i)  ( ((i)+1)*2 - 1)
@@ -555,6 +586,14 @@ void
 smartlist_sort_digests(smartlist_t *sl)
 {
   smartlist_sort(sl, _compare_digests);
+}
+
+/** Remove duplicate digests from a sorted list, and free them with tor_free().
+ */
+void
+smartlist_uniq_digests(smartlist_t *sl)
+{
+  smartlist_uniq(sl, _compare_digests, NULL);
 }
 
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
