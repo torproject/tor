@@ -32,10 +32,14 @@ tar zxf openssl-0.9.8c.tar.gz
 
 Make openssl.dll:
 cd tor-mingw/openssl-0.9.8c/
+cd crypto/
+find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
+find ./crypto/ -type f -name "*.c" -exec cp {} test/ \
+cd ../ssl/
+find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
+cp *.h ./include/openssl/
+cp ssl/ssltest.c test/
 ./Configure mingw
-cp crypto/*.h ./include/openssl/
-cp e_os2.h ./include/openssl/
-cp ssl/*.h ./include/openssl/
 make
 
 Note: this fails in test due to: 
