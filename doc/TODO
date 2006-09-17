@@ -18,8 +18,6 @@ P       - phobos claims
       by default, if it works?"
 
 Items for 0.1.2.x, real soon now:
-R o avoid thrashing the bandwidth exercise when we change IPs a lot
-    (we avoid simply by not doing any new tests when we change IPs.)
   - When we've been idle a long time, we stop fetching server
     descriptors. When we then get a socks request, we build circuits
     immediately using whatever descriptors we have, rather than waiting
@@ -33,8 +31,7 @@ R o avoid thrashing the bandwidth exercise when we change IPs a lot
   . Figure out avoiding duplicate /24 lines
     o automatically add /16 servers to family
     - do it in an efficient way. keep a list of something somewhere?
-    - make the "16" part configurable, so people who run their own
-      tor network can set it to 32.
+    - make it configurable, so people can turn it on or off.
 N - Clients stop dumping old descriptors if the network-statuses
     claim they're still valid.
   . If we fail to connect via an exit enclave, (warn and) try again
@@ -79,8 +76,6 @@ Items for 0.1.2.x:
       - Teach it to be able to listen for A and PTR requests to be processed.
         Interface should be set_request_listener(sock, cb); [ cb(request) ]
         send_reply(request, answer);.
-
-  - Directory guards
 
   - Make reverse DNS work.
     - Specify
@@ -164,6 +159,7 @@ For blocking-resistance scheme:
     without fetching all statuses. A new URL to fetch I presume?
 
 Deferred from 0.1.2.x:
+  - Directory guards
   - Memory use improvements:
     - Look into pulling serverdescs off buffers as they arrive.
     - Save and mmap v1 directories, and networkstatus docs; store them
