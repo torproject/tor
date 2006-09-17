@@ -1672,6 +1672,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
    */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     routerinfo_t *old_router = smartlist_get(routerlist->routers, i);
+    /* XXXX This might be a slow point; can't we just look up in one of the
+     * digestmaps? -NM */
     if (!crypto_pk_cmp_keys(router->identity_pkey,old_router->identity_pkey)) {
       if (router->cache_info.published_on <=
           old_router->cache_info.published_on) {
@@ -3434,16 +3436,16 @@ initiate_descriptor_downloads(routerstatus_t *source,
 /** Return 0 if this routerstatus is obsolete, too new, isn't
  * running, or otherwise not a descriptor that we would make any
  * use of even if we had it. Else return 1. */
-static int
+static INLINE int
 client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
 {
-  if (rs->published_on + ROUTER_MAX_AGE < now) {
-    /* This one is too old to consider. */
-    return 0;
-  }
   if (!rs->is_running && !options->FetchUselessDescriptors) {
     /* If we had this router descriptor, we wouldn't even bother using it.
      * But, if we want to have a complete list, fetch it anyway. */
+    return 0;
+  }
+  if (rs->published_on + ROUTER_MAX_AGE < now) {
+    /* This one is too old to consider. */
     return 0;
   }
   if (rs->published_on + ESTIMATED_PROPAGATION_TIME > now) {
@@ -3477,15 +3479,15 @@ router_list_client_downloadable(void)
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
   {
     routerinfo_t *ri;
-    if (!client_would_use_router(&rs->status, now, options)) {
+    if (router_get_by_descriptor_digest(rs->status.descriptor_digest)) {
+      /* We have the 'best' descriptor for this router. */
+      ++n_uptodate;
+    } else if (!client_would_use_router(&rs->status, now, options)) {
       /* We wouldn't want this descriptor even if we got it. */
       ++n_wouldnt_use;
     } else if (digestmap_get(downloading, rs->status.descriptor_digest)) {
       /* We're downloading this one now. */
       ++n_in_progress;
-    } else if (router_get_by_descriptor_digest(rs->status.descriptor_digest)) {
-      /* We have the 'best' descriptor for this router. */
-      ++n_uptodate;
     } else if ((ri = router_get_by_digest(rs->status.identity_digest)) &&
                ri->cache_info.published_on > rs->status.published_on) {
       /* Oddly, we have a descriptor more recent than the 'best' one, but it
