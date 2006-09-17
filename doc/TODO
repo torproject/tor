@@ -18,100 +18,131 @@ P       - phobos claims
       by default, if it works?"
 
 Items for 0.1.2.x, real soon now:
-  - When we've been idle a long time, we stop fetching server
+x - When we've been idle a long time, we stop fetching server
     descriptors. When we then get a socks request, we build circuits
     immediately using whatever descriptors we have, rather than waiting
     until we've fetched correct ones.
-  - If the client's clock is too far in the past, it will drop (or
+x - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
-  - when we start, remove any entryguards that are listed in excludenodes.
-  - Remember the last time we saw one of our entry guards labelled with
+N - when we start, remove any entryguards that are listed in excludenodes.
+N - Remember the last time we saw one of our entry guards labelled with
     the GUARD flag. If it's been too long, it is not suitable for use.
     If it's been really too long, remove it from the list.
   . Figure out avoiding duplicate /24 lines
     o automatically add /16 servers to family
-    - do it in an efficient way. keep a list of something somewhere?
-    - make it configurable, so people can turn it on or off.
+    D do it in an efficient way. keep a list of something somewhere?
+      - The right thing here is to revamp our node selection implementation.
+N   - make it configurable, so people can turn it on or off.
 N - Clients stop dumping old descriptors if the network-statuses
     claim they're still valid.
-  . If we fail to connect via an exit enclave, (warn and) try again
+R . If we fail to connect via an exit enclave, (warn and) try again
     without demanding that exit node.
     - And recognize when extending to the enclave node is failing,
       so we can abandon then too.
-  - We need a separate list of "hidserv authorities" if we want to
+N - We need a separate list of "hidserv authorities" if we want to
     retire moria1 from the main list.
 
 Items for 0.1.2.x:
   o re-enable blossom functionality: let tor servers decide if they
     will use local search when resolving, or not.
-    - Document it.
+N   - Document it.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
-  - We should ship with a list of stable dir mirrors -- they're not
+N   - Backend implementation
+R   - Actually list all the events (notice and warn log messages are a good
+      place to look.)  Divide messages into categories, perhaps.
+N   - Specify general event system
+R   - Specify actual events.
+
+x - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
     and diversity for bootstrapping clients.
+
+N - Simplify authority operation
+    - Follow weasel's proposal, crossed with mixminion dir config format
+
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
     - Reduce resource load
-      - Come up with good 'nicknames' automatically, or make no-nickname
-        routers workable.
-      - tolerate clock skew on bridge relays.
-      - a way to export server descriptors to controllers, and/or to
-        non-standard dir authorities.
-      - a way to pick entries based wholly on extend_info equivalent;
+N     - Come up with good 'nicknames' automatically, or make no-nickname
+        routers workable. [Make a magic nickname "Unnamed" that can't be
+        registered and can't be looked up by nickname.]
+d     - Tolerate clock skew on bridge relays.
+d     - A way to examine and twiddle router flags from controller.
+      - A way to export server descriptors to controllers
+N         - Event / getinfo for "when did routerdesc last change".
+d     - a way to pick entries based wholly on extend_info equivalent;
         a way to export extend_info equivalent.
-      - option to dl directory info via tor
-        - is the __AllDirActionsPrivate config option sufficient?
+R     - option to dl directory info via tor
+        - Make an option like __AllDirActionsPrivate that falls back to
+          non-Tor DL when not enough info present.
       D Count TLS bandwidth more accurately
+
     - Improvements to bandwidth counting
-      - look into "uncounting" bytes spent on local connections, so
+R     - look into "uncounting" bytes spent on local connections, so
         we can bandwidthrate but still have fast downloads.
-      - "bandwidth classes", for incoming vs initiated-here conns.
-      - Write limiting; separate token bucket for write
+R     - "bandwidth classes", for incoming vs initiated-here conns.
+d     - Write limiting; separate token bucket for write
         - Write-limit directory responses (need to research)
 
+N - DNS improvements
+    - Option to deal with broken DNS of the "ggoogle.com? Ah, you meant
+      ads.me.com!" variety.
+d     - Autodetect whether DNS is broken in this way.
+    - Don't ask reject *:* nodes for DNS unless client wants you to.
     . Asynchronous DNS
       - Document SearchDomains, ResolvConf options
-      - Make API closer to getaddrinfo()
+      D Make API closer to getaddrinfo()
       - Teach it to be able to listen for A and PTR requests to be processed.
         Interface should be set_request_listener(sock, cb); [ cb(request) ]
-        send_reply(request, answer);.
-
-  - Make reverse DNS work.
-    - Specify
-    X Implement with dnsworkers
-      (There's no point doing this, since we will throw away dnsworkers once
-      eventdns is confirmed to work everywhere.)
-    o Implement in eventdns
-    - Connect to resolve cells, server-side.
-    - Add client-side interface
+        send_reply(request, answer);
+d     - Add option to use /etc/hosts?
+d     - Special-case localhost?
+      - Verify that it works on windows
+N   - Make reverse DNS work.
+      - Specify
+      X Implement with dnsworkers
+        (There's no point doing this, since we will throw away dnsworkers once
+        eventdns is confirmed to work everywhere.)
+      o Implement in eventdns
+      - Connect to resolve cells, server-side.
+      - Add client-side interface
 
   - Performance improvements
-    - Better estimates in the directory of whether servers have good uptime
+
+x   - Better estimates in the directory of whether servers have good uptime
       (high expected time to failure) or good guard qualities (high
       fractional uptime).
-      - AKA Track uptime as %-of-time-up, as well as time-since-last-down.
+      - AKA Track uptime as %-of-time-up, as well as time-since-last-down
+
     - Clients should prefer to avoid exit nodes for non-exit path positions.
       (bug 200)
+R     - spec
+x     - implement
+
     - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
+x     - spec
+d     - implement
 
   - A more efficient dir protocol.
-    - Later, servers will stop generating new descriptors simply
+N   - Later, servers will stop generating new descriptors simply
       because 18 hours have passed: we must start tolerating this now.
 
   - Critical but minor bugs, backport candidates.
-    - Failed rend desc fetches sometimes don't get retried. True/false?
-    - non-v1 authorities should not accept rend descs.
-    - support dir 503s better
+d   - Failed rend desc fetches sometimes don't get retried. True/false?
+R   - non-v1 authorities should not accept rend descs.
+R   - support dir 503s better
       o clients don't log as loudly when they receive them
       - they don't count toward the 3-strikes rule
         - should there be some threshold of 503's after which we give up?
-      - think about how to split "router is down" from "dirport shouldn't
-        be tried for a while"?
+        - Delay when we get a lot of 503s.
+N     - split "router is down" from "dirport shouldn't be tried for a while"?
+        Just a separate bit.
       - authorities should *never* 503 a cache, but *should* 503 clients
         when they feel like it.
       - update dir-spec with what we decided for each of these
-    - provide no-cache no-index headers from the dirport?
+
+N   - provide no-cache no-index headers from the dirport?
 
   - Windows server usability
     - Solve the ENOBUFS problem.
@@ -127,7 +158,7 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
 
 N - Exitlist should avoid outputting the same IP address twice.
 
-N - Write path-spec.txt
+NR- Write path-spec.txt
 
   - Packaging
     - Tell people about OSX Uninstaller
@@ -152,14 +183,20 @@ Topics to think about during 0.1.2.x development:
   - Design next-version protocol for connections
 
 For blocking-resistance scheme:
-  - allow ordinary-looking ssl for dir connections. need a new dirport
+  X allow ordinary-looking ssl for dir connections. need a new dirport
     for this, or can we handle both ssl and non-ssl, or should we
     entirely switch to ssl in certain cases?
-  - need to figure out how to fetch status of a few servers from the BDA
+Rd- Official way to do authenticated dir conns: connect to OR port,
+    and exit to 'localhost:dir-port'.
+    - Make everybody with a dir-port implicitly accept exit to
+      localhost:dir-port.
+    - Check whether this works with one-hop circ case.
+d - need to figure out how to fetch status of a few servers from the BDA
     without fetching all statuses. A new URL to fetch I presume?
 
 Deferred from 0.1.2.x:
   - Directory guards
+  - RAM use in directory authorities.
   - Memory use improvements:
     - Look into pulling serverdescs off buffers as they arrive.
     - Save and mmap v1 directories, and networkstatus docs; store them
@@ -290,6 +327,8 @@ Minor items for 0.1.2.x as time permits:
 Future version:
   - Tor should have a "DNS port" so we don't need to ship with (and
     write) a clean portable dns proxy.
+  - Configuration format really wants sections.
+  - Good RBL substitute.
   . Update the hidden service stuff for the new dir approach.
     - switch to an ascii format, maybe sexpr?
     - authdirservers publish blobs of them.
