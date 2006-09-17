@@ -60,6 +60,7 @@ x - We should ship with a list of stable dir mirrors -- they're not
 
 N - Simplify authority operation
     - Follow weasel's proposal, crossed with mixminion dir config format
+    - Reject/invalidate by IP.
 
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
@@ -158,6 +159,14 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
 
 N - Exitlist should avoid outputting the same IP address twice.
 
+Nd- Have a mode that doesn't write to disk much, so we can run Tor on
+    flash memory (e.g. Linksys routers or USB keys).
+    o Add AvoidDiskWrites config option.
+    - only write state file when it's "changed"
+    - stop writing identity key / fingerprint / etc every restart
+    - stop caching directory stuff -- and disable mmap?
+    - more?
+
 NR- Write path-spec.txt
 
   - Packaging
@@ -240,18 +249,19 @@ Deferred from 0.1.2.x:
       - Implement
 
 Minor items for 0.1.2.x as time permits:
-  - If we try to publish as a nickname that's already claimed, should
+  X If we try to publish as a nickname that's already claimed, should
     we append a number (or increment the number) and try again? This
     way people who read their logs can fix it as before, but people
     who don't read their logs will still offer Tor servers.
-  - Tor should bind its ports before dropping privs, so users don't
+    - Fall back to unnamed; warn user; sent controller event.
+! - Tor should bind its ports before dropping privs, so users don't
     have to do the ipchains dance.
   - Rate limit exit connections to a given destination -- this helps
     us play nice with websites when Tor users want to crawl them; it
     also introduces DoS opportunities.
-  - The bw_accounting file should get merged into the state file.
-  - Streamline how we define a guard node as 'up'.
-  - Better installers and build processes.
+! - The bw_accounting file should get merged into the state file.
+R - Streamline how we pick entry nodes.
+! - Better installers and build processes.
     - Commit edmanm's win32 makefile to tor contrib, or write a new one.
   - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
@@ -312,13 +322,6 @@ Minor items for 0.1.2.x as time permits:
       ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
       - Parse this.
       - Relay this in networkstatus.
-  - Have a mode that doesn't write to disk much, so we can run Tor on
-    flash memory (e.g. Linksys routers or USB keys).
-    o Add AvoidDiskWrites config option.
-    - only write state file when it's "changed"
-    - stop writing identity key / fingerprint / etc every restart
-    - stop caching directory stuff -- and disable mmap?
-    - more?
   o smartlist_uniq(): We have at least 3 places that check a smartlist for
     duplicates and then removes them: networkstatus_parse_from_string(),
     sort_version_list(), and router_rebuild_descriptor().  This should probably
