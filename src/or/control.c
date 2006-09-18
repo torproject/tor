@@ -1671,20 +1671,23 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** If <b>string</b> contains a recognized purpose (for
+/** If *<b>string</b> contains a recognized purpose (for
  * circuits if <b>for_circuits</b> is 1, else for routers),
  * possibly prefaced with the string "purpose=", then assign it
- * and return 0. Otherwise return -1. */
+ * and return 0. Otherwise return -1.
+ *
+ * If it's prefaced with "purpose=", then set *<b>string</b> to
+ * the remainder of the string. */
 static int
-get_purpose(char *string, int for_circuits, uint8_t *purpose)
+get_purpose(char **string, int for_circuits, uint8_t *purpose)
 {
-  if (!strcmpstart(string, "purpose="))
-    string += strlen("purpose=");
+  if (!strcmpstart(*string, "purpose="))
+    *string += strlen("purpose=");
 
-  if (!strcmp(string, "general"))
+  if (!strcmp(*string, "general"))
     *purpose = for_circuits ? CIRCUIT_PURPOSE_C_GENERAL :
                               ROUTER_PURPOSE_GENERAL;
-  else if (!strcmp(string, "controller"))
+  else if (!strcmp(*string, "controller"))
     *purpose = for_circuits ? CIRCUIT_PURPOSE_CONTROLLER :
                               ROUTER_PURPOSE_GENERAL;
   else { /* not a recognized purpose */
@@ -1748,17 +1751,19 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
     }
     smartlist_split_string(router_nicknames, smartlist_get(args,1), ",", 0, 0);
 
+    if (zero_circ && smartlist_len(args)>2) {
+      char *purp = smartlist_get(args,2);
+      if (get_purpose(&purp, 1, &intended_purpose) < 0) {
+        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
+        SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+        smartlist_free(args);
+        goto done;
+      }
+    }
     SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
     smartlist_free(args);
     if (!zero_circ && !circ) {
       goto done;
-    }
-    if (zero_circ && smartlist_len(args)>2) {
-      if (get_purpose(smartlist_get(args,2), 1, &intended_purpose) < 0) {
-        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
-                                 (char *)smartlist_get(args,2));
-        goto done;
-      }
     }
   }
 
@@ -1872,10 +1877,12 @@ handle_control_setpurpose(control_connection_t *conn, int for_circuits,
     }
   }
 
-  if (get_purpose(smartlist_get(args,1), for_circuits, &new_purpose) < 0) {
-    connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
-                             (char *)smartlist_get(args,1));
-    goto done;
+  {
+    char *purp = smartlist_get(args,1);
+    if (get_purpose(&purp, for_circuits, &new_purpose) < 0) {
+      connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
+      goto done;
+    }
   }
 
   if (for_circuits)
@@ -2017,9 +2024,10 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args)) {
-      if (get_purpose(smartlist_get(args,0), 0, &purpose) < 0) {
+      char *purp = smartlist_get(args,0);
+      if (get_purpose(&purp, 0, &purpose) < 0) {
         connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
-                                 (char *)smartlist_get(args,0));
+                                 purp);
         SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
         smartlist_free(args);
         return 0;
