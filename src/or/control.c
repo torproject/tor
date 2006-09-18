@@ -1703,17 +1703,19 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     }
     smartlist_split_string(router_nicknames, smartlist_get(args,1), ",", 0, 0);
 
-    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-    smartlist_free(args);
-    if (!zero_circ && !circ) {
-      goto done;
-    }
     if (zero_circ && smartlist_len(args)>2) {
       if (get_purpose(smartlist_get(args,2), 1, &intended_purpose) < 0) {
         connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
                                  (char *)smartlist_get(args,2));
+        SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+        smartlist_free(args);
         goto done;
       }
+    }
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+    if (!zero_circ && !circ) {
+      goto done;
     }
   }
 
