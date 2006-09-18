@@ -653,12 +653,12 @@ circuit_testing_opened(origin_circuit_t *circ)
 static void
 circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 {
+  if (server_mode(get_options()) && check_whether_orport_reachable())
+    return;
+
   log_info(LD_GENERAL,
            "Our testing circuit (to see if your ORPort is reachable) "
-           "has failed. Considering launching another one.");
-
-  if (!circuit_enough_testing_circs())
-    consider_testing_reachability(1, 0);
+           "has failed. I'll try again later.");
 
   /* These aren't used yet. */
   (void)circ;
