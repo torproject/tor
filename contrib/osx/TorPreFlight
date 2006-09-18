@@ -11,7 +11,7 @@ fi
 if [ -f /Library/StartupItems/Privoxy/Privoxy.loc ]; then
 	PRIVOXYPATH=`cat /Library/StartupItems/Privoxy/Privoxy.loc`
 else
-	PRIVOXYPATH="/Library/Prioxy/"
+	PRIVOXYPATH="/Library/Privoxy/"
 fi
 
 # Backup all of Tor, just in case
