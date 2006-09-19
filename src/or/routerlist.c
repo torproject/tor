@@ -1343,6 +1343,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
                 &(ri->cache_info));
   smartlist_add(rl->routers, ri);
+  ri->routerlist_index = smartlist_len(rl->routers) - 1;
   router_dir_info_changed();
   // routerlist_assert_ok(rl);
 }
@@ -1356,6 +1357,7 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
     smartlist_add(rl->old_routers, sd);
+    ri->routerlist_index = -1;
   } else {
     routerinfo_free(ri);
   }
@@ -1374,7 +1376,13 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   idx = _routerlist_find_elt(rl->routers, ri, idx);
   if (idx < 0)
     return;
+  ri->routerlist_index = -1;
   smartlist_del(rl->routers, idx);
+  if (idx < smartlist_len(rl->routers)) {
+    routerinfo_t *r = smartlist_get(rl->routers, idx);
+    r->routerlist_index = idx;
+  }
+
   ri_tmp = digestmap_remove(rl->identity_map, ri->cache_info.identity_digest);
   router_dir_info_changed();
   tor_assert(ri_tmp == ri);
@@ -1423,6 +1431,8 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   router_dir_info_changed();
   if (idx >= 0) {
     smartlist_set(rl->routers, idx, ri_new);
+    ri_old->routerlist_index = -1;
+    ri_new->routerlist_index = idx;
   } else {
     log_warn(LD_BUG, "Appending entry from routerlist_replace.");
     routerlist_insert(rl, ri_new);
@@ -1606,10 +1616,10 @@ int
 router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          int from_cache, int from_fetch)
 {
-  int i;
   const char *id_digest;
   int authdir = get_options()->AuthoritativeDir;
   int authdir_believes_valid = 0;
+  routerinfo_t *old_router;
 
   tor_assert(msg);
 
@@ -1665,71 +1675,91 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       rs->need_to_mirror = 0;
   });
 
-  /* If we have a router with this name, and the identity key is the same,
-   * choose the newer one. If the identity key has changed, and one of the
+  /* If we have a router with the same identity key, choose the newer one. */
+  old_router = digestmap_get(routerlist->identity_map,
+                             router->cache_info.identity_digest);
+  if (old_router) {
+    int pos = old_router->routerlist_index;
+    tor_assert(smartlist_get(routerlist->routers, pos) == old_router);
+
+    if (router->cache_info.published_on <=
+        old_router->cache_info.published_on) {
+      /* Same key, but old */
+      log_debug(LD_DIR, "Skipping not-new descriptor for router '%s'",
+                router->nickname);
+      /* Only journal this desc if we'll be serving it. */
+      if (!from_cache && get_options()->DirPort)
+        router_append_to_journal(&router->cache_info);
+      routerlist_insert_old(routerlist, router);
+      *msg = "Router descriptor was not new.";
+      return -1;
+    } else {
+      /* Same key, new. */
+      int unreachable = 0;
+      log_debug(LD_DIR, "Replacing entry for router '%s/%s' [%s]",
+                router->nickname, old_router->nickname,
+                hex_str(id_digest,DIGEST_LEN));
+      if (router->addr == old_router->addr &&
+          router->or_port == old_router->or_port) {
+        /* these carry over when the address and orport are unchanged.*/
+        router->last_reachable = old_router->last_reachable;
+        router->testing_since = old_router->testing_since;
+        router->num_unreachable_notifications =
+          old_router->num_unreachable_notifications;
+      }
+      if (authdir && !from_cache && !from_fetch &&
+          router_have_minimum_dir_info() &&
+          dirserv_thinks_router_is_blatantly_unreachable(router,
+                                                         time(NULL))) {
+        if (router->num_unreachable_notifications >= 3) {
+          unreachable = 1;
+          log_notice(LD_DIR, "Notifying server '%s' that it's unreachable. "
+                     "(ContactInfo '%s', platform '%s').",
+                     router->nickname,
+                     router->contact_info ? router->contact_info : "",
+                     router->platform ? router->platform : "");
+        } else {
+          log_info(LD_DIR,"'%s' may be unreachable -- the %d previous "
+                   "descriptors were thought to be unreachable.",
+                   router->nickname, router->num_unreachable_notifications);
+          router->num_unreachable_notifications++;
+        }
+      }
+      routerlist_replace(routerlist, old_router, router, pos, 1);
+      if (!from_cache) {
+        router_append_to_journal(&router->cache_info);
+      }
+      directory_set_dirty();
+      *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
+        authdir_believes_valid ? "Valid server updated" :
+        ("Invalid server updated. (This dirserver is marking your "
+         "server as unapproved.)");
+      return unreachable ? 1 : 0;
+    }
+  }
+
+#if 1
+  /* XXXX This block is slow, and could be smarter.  All it does is ensure
+   * that if we have a named server called "Foo", we will never have another
+   * server called "Foo."  router_get_by_nickname() already knows to prefer
+   * named routers, so the problem only arises when there is a named router
+   * called 'foo', but we don't have it.  If, instead, we kept a
+   * name-to-identity-key mapping for each named router in the networkstatus
+   * list, we could eliminate this block.
+   *
+   * Hm. perhaps we should; I don't see how this code is non-broken wrt named
+   * routers. -NM
+   */
+
+  /* If the identity key has changed, and one of the
    * routers is named, drop the unnamed ones. (If more than one are named,
    * drop the old ones.)
    */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     routerinfo_t *old_router = smartlist_get(routerlist->routers, i);
-    /* XXXX This might be a slow point; can't we just look up in one of the
-     * digestmaps? -NM */
     if (!memcmp(router->cache_info.identity_digest,
                 old_router->cache_info.identity_digest, DIGEST_LEN)) {
-      if (router->cache_info.published_on <=
-          old_router->cache_info.published_on) {
-        /* Same key, but old */
-        log_debug(LD_DIR, "Skipping not-new descriptor for router '%s'",
-                  router->nickname);
-        /* Only journal this desc if we'll be serving it. */
-        if (!from_cache && get_options()->DirPort)
-          router_append_to_journal(&router->cache_info);
-        routerlist_insert_old(routerlist, router);
-        *msg = "Router descriptor was not new.";
-        return -1;
-      } else {
-        /* Same key, new. */
-        int unreachable = 0;
-        log_debug(LD_DIR, "Replacing entry for router '%s/%s' [%s]",
-                  router->nickname, old_router->nickname,
-                  hex_str(id_digest,DIGEST_LEN));
-        if (router->addr == old_router->addr &&
-            router->or_port == old_router->or_port) {
-          /* these carry over when the address and orport are unchanged.*/
-          router->last_reachable = old_router->last_reachable;
-          router->testing_since = old_router->testing_since;
-          router->num_unreachable_notifications =
-             old_router->num_unreachable_notifications;
-        }
-        if (authdir && !from_cache && !from_fetch &&
-            router_have_minimum_dir_info() &&
-            dirserv_thinks_router_is_blatantly_unreachable(router,
-                                                           time(NULL))) {
-          if (router->num_unreachable_notifications >= 3) {
-            unreachable = 1;
-            log_notice(LD_DIR, "Notifying server '%s' that it's unreachable. "
-                       "(ContactInfo '%s', platform '%s').",
-                       router->nickname,
-                       router->contact_info ? router->contact_info : "",
-                       router->platform ? router->platform : "");
-          } else {
-            log_info(LD_DIR,"'%s' may be unreachable -- the %d previous "
-                     "descriptors were thought to be unreachable.",
-                     router->nickname, router->num_unreachable_notifications);
-            router->num_unreachable_notifications++;
-          }
-        }
-        routerlist_replace(routerlist, old_router, router, i, 1);
-        if (!from_cache) {
-          router_append_to_journal(&router->cache_info);
-        }
-        directory_set_dirty();
-        *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
-               authdir_believes_valid ? "Valid server updated" :
-                ("Invalid server updated. (This dirserver is marking your "
-                 "server as unapproved.)");
-        return unreachable ? 1 : 0;
-      }
+
     } else if (!strcasecmp(router->nickname, old_router->nickname)) {
       /* nicknames match, keys don't. */
       if (router->is_named) {
@@ -1760,6 +1790,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       }
     }
   }
+#endif
+
   /* We haven't seen a router with this name before.  Add it to the end of
    * the list. */
   routerlist_insert(routerlist, router);
@@ -3970,6 +4002,7 @@ routerlist_assert_ok(routerlist_t *rl)
     sd2 = digestmap_get(rl->desc_digest_map,
                         r->cache_info.signed_descriptor_digest);
     tor_assert(&(r->cache_info) == sd2);
+    tor_assert(r->routerlist_index == r_sl_idx);
   });
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
   {

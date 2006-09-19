@@ -1,8 +1,9 @@
 Changes in version 0.1.2.2-alpha - 2006-??-??
 
   o Minor Bugfixes
-    - Small performance improvements on parsing and inserting
-      descriptors.
+    - Small performance improvements on parsing descriptors.
+    - Major performance descriptor on inserting descriptors; change
+      algorithm from O(n^2) to O(n). [Mostly.]
     - Make the common memory allocation path faster on machines where
       malloc(0) returns a pointer.
 

@@ -805,6 +805,7 @@ router_rebuild_descriptor(int force)
   }
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
+  ri->routerlist_index = -1;
   ri->address = tor_dup_addr(addr);
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;

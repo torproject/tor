@@ -928,6 +928,10 @@ typedef struct {
   /** How many times has a descriptor been posted and we believed
    * this router to be unreachable? We only actually warn on the third. */
   int num_unreachable_notifications;
+
+  /** What position is this descriptor within routerlist->routers? -1 for
+   * none. */
+  int routerlist_index;
 } routerinfo_t;
 
 /** Contents of a single router entry in a network status object.
