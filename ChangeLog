@@ -6,7 +6,7 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       one.
 
   o Minor Bugfixes
-    - Small performance improvements on parsing descriptors.
+    - Small performance improvements on parsing descriptors (x2).
     - Major performance descriptor on inserting descriptors; change
       algorithm from O(n^2) to O(n).
     - Make the common memory allocation path faster on machines where

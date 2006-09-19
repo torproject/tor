@@ -413,17 +413,23 @@ eat_whitespace(const char *s)
 {
   tor_assert(s);
 
-  while (TOR_ISSPACE(*s) || *s == '#') {
-    while (TOR_ISSPACE(*s))
-      s++;
-    if (*s == '#') { /* read to a \n or \0 */
+  while (1) {
+    switch (*s) {
+    case '\0':
+    default:
+      return s;
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r':
+      ++s;
+      break;
+    case '#':
+      ++s;
       while (*s && *s != '\n')
-        s++;
-      if (!*s)
-        return s;
+        ++s;
     }
   }
-  return s;
 }
 
 /** Return a pointer to the first char of s that is not a space or a tab,
