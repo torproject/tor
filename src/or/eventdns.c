@@ -1566,7 +1566,7 @@ request_new(int type, const char *name, int flags, eventdns_callback_type callba
 
 	return req;
  err1:
-	free(req->request);
+	free(req);
 	return NULL;
 }
 
