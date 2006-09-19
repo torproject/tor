@@ -55,8 +55,12 @@ static routerlist_t *routerlist = NULL;
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
 
-/** Global list of local_routerstatus_t for each router, known or unknown. */
+/** Global list of local_routerstatus_t for each router, known or unknown.
+ * Kept sorted by digest. */
 static smartlist_t *routerstatus_list = NULL;
+
+/** Map from lowercase nickname to digest of named server, if any. */
+static strmap_t *named_server_map = NULL;
 
 /** True iff any member of networkstatus_list has changed since the last time
  * we called routerstatus_list_update_from_networkstatus(). */
@@ -1014,6 +1018,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
   char digest[DIGEST_LEN];
   routerinfo_t *best_match=NULL;
   int n_matches = 0;
+  char *named_digest = NULL;
 
   tor_assert(nickname);
   if (!routerlist)
@@ -1027,16 +1032,17 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
   maybedigest = (strlen(nickname) == HEX_DIGEST_LEN) &&
     (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
 
+  if (named_server_map &&
+      (named_digest = strmap_get_lc(named_server_map, nickname))) {
+    return digestmap_get(routerlist->identity_map, named_digest);
+  }
+
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
   {
     if (!strcasecmp(router->nickname, nickname)) {
-      if (router->is_named)
-        return router;
-      else {
-        ++n_matches;
-        if (n_matches <= 1 || router->is_running)
-          best_match = router;
-      }
+      ++n_matches;
+      if (n_matches <= 1 || router->is_running)
+        best_match = router;
     } else if (maybedigest &&
                !memcmp(digest, router->cache_info.identity_digest, DIGEST_LEN)
                ) {
@@ -1738,7 +1744,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
-#if 1
+#if 0
   /* XXXX This block is slow, and could be smarter.  All it does is ensure
    * that if we have a named server called "Foo", we will never have another
    * server called "Foo."  router_get_by_nickname() already knows to prefer
@@ -3132,6 +3138,10 @@ routerstatus_list_update_from_networkstatus(time_t now)
    * is a conflict on that nickname, map the lc nickname to conflict.
    */
   name_map = strmap_new();
+  /* Clear the global map... */
+  if (named_server_map)
+    strmap_free(named_server_map, _tor_free);
+  named_server_map = strmap_new();
   memset(conflict, 0xff, sizeof(conflict));
   for (i = 0; i < n_statuses; ++i) {
     if (!networkstatus[i]->binds_names)
@@ -3145,11 +3155,14 @@ routerstatus_list_update_from_networkstatus(time_t now)
       warned = smartlist_string_isin(warned_conflicts, rs->nickname);
       if (!other_digest) {
         strmap_set_lc(name_map, rs->nickname, rs->identity_digest);
+        strmap_set_lc(named_server_map, rs->nickname,
+                      tor_memdup(rs->identity_digest, DIGEST_LEN));
         if (warned)
           smartlist_string_remove(warned_conflicts, rs->nickname);
       } else if (memcmp(other_digest, rs->identity_digest, DIGEST_LEN) &&
                  other_digest != conflict) {
         if (!warned) {
+          char *d;
           int should_warn = options->DirPort && options->AuthoritativeDir;
           char fp1[HEX_DIGEST_LEN+1];
           char fp2[HEX_DIGEST_LEN+1];
@@ -3160,6 +3173,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
                  "($%s vs $%s)",
                  rs->nickname, fp1, fp2);
           strmap_set_lc(name_map, rs->nickname, conflict);
+          d = strmap_remove_lc(named_server_map, rs->nickname);
+          tor_free(d);
           smartlist_add(warned_conflicts, tor_strdup(rs->nickname));
         }
       } else {
@@ -3322,6 +3337,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
   }
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
                     local_routerstatus_free(rs));
+
   smartlist_free(routerstatus_list);
   routerstatus_list = result;
 

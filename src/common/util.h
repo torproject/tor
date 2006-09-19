@@ -75,6 +75,7 @@ char *_tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
   ATTR_MALLOC ATTR_NONNULL((1));
 void *_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
   ATTR_MALLOC ATTR_NONNULL((1));
+void _tor_free(void *mem);
 #ifdef USE_DMALLOC
 extern int dmalloc_free(const char *file, const int line, void *pnt,
                         const int func_id);
