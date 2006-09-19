@@ -558,6 +558,33 @@ if test $tor_cv_null_is_zero = yes; then
             [Define to 1 iff memset(0) sets pointers to NULL])
 fi
 
+# And what happens when we malloc zero?
+
+if test -z "$CROSS_COMPILE"; then
+AC_CACHE_CHECK([whether we can malloc(0) safely.], tor_cv_malloc_zero_works,
+[AC_RUN_IFELSE([AC_LANG_SOURCE(
+[[#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#ifdef HAVE_STDDEF_H
+#include <stddef.h>
+#endif
+int main () { return malloc(0)?0:1; }]])],
+       [tor_cv_malloc_zero_works=yes],
+       [tor_cv_malloc_zero_works=no],
+       [tor_cv_malloc_zero_works=cross])])
+
+else
+  # Cross-compiling; let's hope that the target isn't raving mad.
+  AC_MSG_NOTICE([Cross-compiling: we'll assume that we need to check malloc() arguments for 0.])
+  tor_cv_malloc_zero_works=no
+fi
+
+if test $tor_cv_malloc_zero_works = yes; then
+  AC_DEFINE([MALLOC_ZERO_WORKS], 1,
+            [Define to 1 iff malloc(0) returns a pointer])
+fi
+
 # Whether we should use the dmalloc memory allocation debugging library.
 AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
 AC_ARG_WITH(dmalloc,

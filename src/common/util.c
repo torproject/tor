@@ -106,13 +106,15 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
 {
   void *result;
 
+#ifndef MALLOC_ZERO_WORKS
   /* Some libcs don't do the right thing on size==0. Override them. */
   if (size==0) {
     size=1;
   }
+#endif
   result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
 
-  if (!result) {
+  if (PREDICT(result == NULL, 0)) {
     log_err(LD_MM,"Out of memory. Dying.");
     /* If these functions die within a worker process, they won't call
      * spawn_exit, but that's ok, since the parent will run out of memory soon
@@ -144,7 +146,7 @@ _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
   void *result;
 
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
-  if (!result) {
+  if (PREDICT(result == NULL, 0)) {
     log_err(LD_MM,"Out of memory. Dying.");
     exit(1);
   }
@@ -162,7 +164,7 @@ _tor_strdup(const char *s DMALLOC_PARAMS)
   tor_assert(s);
 
   dup = dmalloc_strdup(file, line, s, 0);
-  if (!dup) {
+  if (PREDICT(dup == NULL, 0)) {
     log_err(LD_MM,"Out of memory. Dying.");
     exit(1);
   }

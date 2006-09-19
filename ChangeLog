@@ -3,6 +3,8 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
   o Minor Bugfixes
     - Small performance improvements on parsing and inserting
       descriptors.
+    - Make the common memory allocation path faster on machines where
+      malloc(0) returns a pointer.
 
 Changes in version 0.1.2.1-alpha - 2006-08-27
   o Major features:
