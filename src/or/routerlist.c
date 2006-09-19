@@ -1674,7 +1674,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     routerinfo_t *old_router = smartlist_get(routerlist->routers, i);
     /* XXXX This might be a slow point; can't we just look up in one of the
      * digestmaps? -NM */
-    if (!crypto_pk_cmp_keys(router->identity_pkey,old_router->identity_pkey)) {
+    if (!memcmp(router->cache_info.identity_digest,
+                old_router->cache_info.identity_digest, DIGEST_LEN)) {
       if (router->cache_info.published_on <=
           old_router->cache_info.published_on) {
         /* Same key, but old */

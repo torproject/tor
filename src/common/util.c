@@ -434,11 +434,20 @@ const char *
 find_whitespace(const char *s)
 {
   /* tor_assert(s); */
-
-  while (*s && !TOR_ISSPACE(*s) && *s != '#')
-    s++;
-
-  return s;
+  while (1) {
+    switch (*s)
+    {
+    case '\0':
+    case '#':
+    case ' ':
+    case '\r':
+    case '\n':
+    case '\t':
+      return s;
+    default:
+      ++s;
+    }
+  }
 }
 
 /** Return true iff the 'len' bytes at 'mem' are all zero. */
