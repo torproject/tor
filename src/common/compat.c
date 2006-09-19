@@ -92,6 +92,10 @@ const char compat_c_id[] =
 #include <sys/mman.h>
 #endif
 
+#ifdef USE_BSOCKETS
+#include <bsocket.h>
+#endif
+
 #include "log.h"
 #include "util.h"
 
@@ -425,7 +429,7 @@ touch_file(const char *fname)
 void
 set_socket_nonblocking(int socket)
 {
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
   unsigned long nonblocking = 1;
   ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
@@ -458,6 +462,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
   int r;
   r = socketpair(family, type, protocol, fd);
   return r < 0 ? -errno : r;
+#elif defined(USE_BSOCKETS)
+  return bsockepair(family, type, protocol, fd);
 #else
     /* This socketpair does not work when localhost is down. So
      * it's really not the same thing at all. But it's close enough
@@ -1233,7 +1239,7 @@ struct tor_mutex_t {
  * should call tor_socket_errno <em>at most once</em> on the failing
  * socket to get the error.
  */
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
 int
 tor_socket_errno(int sock)
 {
@@ -1249,7 +1255,7 @@ tor_socket_errno(int sock)
 }
 #endif
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
 #define E(code, s) { code, (s " [" #code " ]") }
 struct { int code; const char *msg; } windows_socket_errors[] = {
   E(WSAEINTR, "Interrupted function call"),

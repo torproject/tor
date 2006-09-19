@@ -199,7 +199,9 @@ int touch_file(const char *fname);
 #endif
 
 /* ===== Net compatibility */
-#ifdef MS_WINDOWS
+#ifdef USE_BSOCKETS
+#define tor_close_socket(s) bclose(s)
+#elif defined(MS_WINDOWS)
 /** On Windows, you have to call close() on fds returned by open(),
  * and closesocket() on fds returned by socket().  On Unix, everything
  * gets close()'d.  We abstract this difference by always using
@@ -209,6 +211,14 @@ int touch_file(const char *fname);
 #define tor_close_socket(s) closesocket(s)
 #else
 #define tor_close_socket(s) close(s)
+#endif
+
+#ifdef USE_BSOCKETS
+#define tor_socket_send(s, buf, len, flags) bsend(s, buf, len, flags)
+#define tor_socket_recv(s, buf, len, flags) brecv(s, buf, len, flags)
+#else
+#define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
+#define tor_socket_recv(s, buf, len, flags) recv(s, buf, len, flags)
 #endif
 
 #if (SIZEOF_SOCKLEN_T == 0)
@@ -227,7 +237,7 @@ int network_init(void);
  * errnos against expected values, and use tor_socket_errno to find
  * the actual errno after a socket operation fails.
  */
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
 /** Return true if e is EAGAIN or the local equivalent. */
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
 /** Return true if e is EINPROGRESS or the local equivalent. */

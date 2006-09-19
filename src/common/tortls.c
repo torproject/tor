@@ -414,7 +414,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
 tor_tls_t *
 tor_tls_new(int sock, int isServer)
 {
+  BIO *bio = NULL;
   tor_tls_t *result = tor_malloc(sizeof(tor_tls_t));
+
   tor_assert(global_tls_context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(global_tls_context->ctx))) {
     tls_log_errors(LOG_WARN, "generating TLS context");
@@ -422,7 +424,17 @@ tor_tls_new(int sock, int isServer)
     return NULL;
   }
   result->socket = sock;
-  SSL_set_fd(result->ssl, sock);
+#ifdef USE_BSOCKETS
+  bio = BIO_new_bsocket(sock, BIO_NOCLOSE);
+#else
+  bio = BIO_new_socket(sock, BIO_NOCLOSE);
+#endif
+  if (! bio) {
+    tls_log_errors(LOG_WARN, "opening BIO");
+    tor_free(result);
+    return NULL;
+  }
+  SSL_set_bio(result->ssl, bio, bio);
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;

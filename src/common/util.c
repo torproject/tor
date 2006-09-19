@@ -936,7 +936,7 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
 
   while (written != count) {
     if (isSocket)
-      result = send(fd, buf+written, count-written, 0);
+      result = tor_socket_send(fd, buf+written, count-written, 0);
     else
       result = write(fd, buf+written, count-written);
     if (result<0)
@@ -962,7 +962,7 @@ read_all(int fd, char *buf, size_t count, int isSocket)
 
   while (numread != count) {
     if (isSocket)
-      result = recv(fd, buf+numread, count-numread, 0);
+      result = tor_socket_recv(fd, buf+numread, count-numread, 0);
     else
       result = read(fd, buf+numread, count-numread);
     if (result<0)

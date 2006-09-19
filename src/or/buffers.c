@@ -408,7 +408,7 @@ read_to_buf_impl(int s, size_t at_most, buf_t *buf,
   int read_result;
 
 //  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
-  read_result = recv(s, pos, at_most, 0);
+  read_result = tor_socket_recv(s, pos, at_most, 0);
   if (read_result < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
@@ -582,7 +582,7 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   int write_result;
 
-  write_result = send(s, buf->cur, sz, 0);
+  write_result = tor_socket_send(s, buf->cur, sz, 0);
   if (write_result < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
