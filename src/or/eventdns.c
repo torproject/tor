@@ -17,8 +17,7 @@
 
 /* Async DNS Library
  * Adam Langley <agl@imperialviolet.org>
- * http://www.imperialviolet.org/eventdns.html
- * Public Domain codenext
+ * Public Domain code
  *
  * This software is Public Domain. To view a copy of the public domain dedication,
  * visit http://creativecommons.org/licenses/publicdomain/ or send a letter to
