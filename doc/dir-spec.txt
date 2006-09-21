@@ -254,7 +254,22 @@ $Id$
         [We didn't start parsing these lines until Tor 0.1.0.6-rc; they should
          be marked with "opt" until earlier versions of Tor are obsolete.]
 
-2.1. Nonterminals in routerdescriptors 
+    "eventdns" bool NL
+
+        Declare whether this version of Tor is using the newer enhanced
+        dns logic.  Versions of Tor without eventdns SHOULD not be used for
+        reverse hostname lookups.
+
+        [All versions of Tor before 0.1.2.2-alpha should be assumed to have
+         this option set to 0 if it is not present.  All Tor versions at
+         0.1.2.2-alpha or later should be assumed to have this option set to
+         1 if it is not present.  Until 0.1.2.1-alpha-dev, this option was
+         not generated, even when eventdns was in use.  Versions of Tor
+         before 0.1.2.1-alpha-dev did not parse this option, so it should be
+         marked "opt".  With some future version, the old 'dnsworker' logic
+         will be removed, rendering this option of historical interest only.]
+
+2.1. Nonterminals in router descriptors
 
    nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
 
@@ -269,6 +284,8 @@ $Id$
    ip6spec ::= ip6 | ip6 "/" num_ip6_bits
    ip6 ::= an IPv6 address, surrounded by square brackets.
    num_ip6_bits ::= an integer between 0 and 128
+
+   bool ::= "0" | "1"
 
    Ports are required; if they are not included in the router
    line, they must appear in the "ports" lines.

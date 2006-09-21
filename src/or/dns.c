@@ -97,8 +97,12 @@ typedef struct cached_resolve_t {
   HT_ENTRY(cached_resolve_t) node;
   uint32_t magic;
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
-  uint32_t addr; /**< IPv4 addr for <b>address</b>. */
+  union {
+    uint32_t addr;  /**< IPv4 addr for <b>address</b>. */
+    char *hostname; /**< Hostname for <b>address</b> (if a reverse lookup) */
+  } result;
   uint8_t state; /**< Is this cached entry pending/done/valid/failed? */
+  uint8_t is_reverse; /**< Is this a reverse (addr-to-hostname) lookup? */
   time_t expire; /**< Remove items from cache after this time. */
   uint32_t ttl; /**< What TTL did the nameserver tell us? */
   /** Connections that want to know when we get an answer for this resolve. */
@@ -106,7 +110,8 @@ typedef struct cached_resolve_t {
 } cached_resolve_t;
 
 static void purge_expired_resolves(time_t now);
-static void dns_found_answer(const char *address, uint32_t addr, char outcome,
+static void dns_found_answer(const char *address, int is_reverse,
+                             uint32_t addr, const char *hostname, char outcome,
                              uint32_t ttl);
 static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
 static int launch_resolve(edge_connection_t *exitconn);
@@ -245,6 +250,8 @@ _free_cached_resolve(cached_resolve_t *r)
     r->pending_connections = victim->next;
     tor_free(victim);
   }
+  if (r->is_reverse)
+    tor_free(r->result.hostname);
   r->magic = 0xFF00FF00;
   tor_free(r);
 }
@@ -362,6 +369,8 @@ purge_expired_resolves(time_t now)
                 removed ? removed->address : "NULL", (void*)remove);
       }
       tor_assert(removed == resolve);
+      if (resolve->is_reverse)
+        tor_free(resolve->result.hostname);
       resolve->magic = 0xF0BBF0BB;
       tor_free(resolve);
     } else {
@@ -415,6 +424,74 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
                                conn->cpath_layer);
 }
 
+/** Send a response to the RESOLVE request of a connection for an in-addr.arpa
+ * address on connection <b>conn</b> which yielded the result <b>hostname</b>.
+ * The answer type will be RESOLVED_HOSTNAME.
+ */
+static void
+send_resolved_hostname_cell(edge_connection_t *conn, const char *hostname)
+{
+  char buf[RELAY_PAYLOAD_SIZE];
+  size_t buflen;
+  uint32_t ttl;
+  size_t namelen = strlen(hostname);
+
+  tor_assert(namelen < 256);
+  ttl = dns_clip_ttl(conn->address_ttl);
+
+  buf[0] = RESOLVED_TYPE_HOSTNAME;
+  buf[1] = (uint8_t)namelen;
+  memcpy(buf+2, hostname, namelen);
+  set_uint32(buf+2+namelen, htonl(ttl));
+  buflen = 2+namelen+4;
+
+  connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
+                               RELAY_COMMAND_RESOLVED, buf, buflen,
+                               conn->cpath_layer);
+}
+
+/** Given a lower-case <b>address</b>, check to see whether it's a
+ * 1.2.3.4.in-addr.arpa address used for reverse lookups.  If so,
+ * parse it and place the address in <b>in</b> if present. Return 1 on success;
+ * 0 if the address is not in in-addr.arpa format, and -1 if the address is
+ * malformed. */
+static int
+parse_inaddr_arpa_address(const char *address, struct in_addr *in)
+{
+  char buf[INET_NTOA_BUF_LEN];
+  char *cp;
+  size_t len;
+  struct in_addr inaddr;
+
+  cp = strstr(address, ".in-addr.arpa");
+  if (!cp || *(cp+strlen(".in-addr.arpa")))
+    return 0; /* not an .in-addr.arpa address  */
+
+  len = cp - address;
+
+  if (len >= INET_NTOA_BUF_LEN)
+    return -1; /* Too long. */
+
+  memcpy(buf, cp, len);
+  buf[len] = '\0';
+  if (tor_inet_aton(buf, &inaddr) == 0)
+    return -1; /* malformed. */
+
+  if (in) {
+    uint32_t a;
+    /* reverse the bytes */
+    a = (  ((inaddr.s_addr & 0x000000fful) << 24)
+          |((inaddr.s_addr & 0x0000ff00ul) << 8)
+          |((inaddr.s_addr & 0x00ff0000ul) >> 8)
+          |((inaddr.s_addr & 0xff000000ul) >> 24));
+    inaddr.s_addr = a;
+
+    memcpy(in, &inaddr, sizeof(inaddr));
+  }
+
+  return 1;
+}
+
 /** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
  * If resolve failed, unlink exitconn if needed, free it, and return -1.
@@ -431,20 +508,23 @@ dns_resolve(edge_connection_t *exitconn)
   cached_resolve_t *resolve;
   cached_resolve_t search;
   pending_connection_t *pending_connection;
-  struct in_addr in;
   circuit_t *circ;
+  struct in_addr in;
   time_t now = time(NULL);
+  int is_reverse = 0, is_resolve, r;
   assert_connection_ok(TO_CONN(exitconn), 0);
   tor_assert(exitconn->_base.s == -1);
 
   assert_cache_ok();
+
+  is_resolve = exitconn->_base.purpose = EXIT_PURPOSE_RESOLVE;
 
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
   if (tor_inet_aton(exitconn->_base.address, &in) != 0) {
     exitconn->_base.addr = ntohl(in.s_addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
-    if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
+    if (is_resolve)
       send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
     return 1;
   }
@@ -455,6 +535,42 @@ dns_resolve(edge_connection_t *exitconn)
 
   /* lower-case exitconn->_base.address, so it's in canonical form */
   tor_strlower(exitconn->_base.address);
+
+  /* Check whether this is a reverse lookup.  If it's malformed, or it's a
+   * .in-addr.arpa address but this isn't a resolve request, kill the
+   * connecction.
+   */
+  if ((r = parse_inaddr_arpa_address(exitconn->_base.address, NULL)) != 0) {
+    if (r == 1)
+      is_reverse = 1;
+
+#ifdef USE_EVENTDNS
+    if (!is_reverse || !is_resolve) {
+      if (!is_reverse)
+        log_info(LD_EXIT, "Bad .in-addr.arpa address \"%s\"; sending error.",
+                 escaped_safe_str(exitconn->_base.address));
+      else if (!is_resolve)
+        log_info(LD_EXIT,
+                 "Attempt to connect to a .in-addr.arpa address \"%s\"; "
+                 "sending error.",
+                 escaped_safe_str(exitconn->_base.address));
+#else
+    if (1) {
+      log_info(LD_PROTOCOL, "Dnsworker code does not support in-addr.arpa "
+               "domain, but received a request for \"%s\"; sending error.",
+               escaped_safe_str(exitconn->_base.address));
+#endif
+
+      if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
+        send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
+      circ = circuit_get_by_edge_conn(exitconn);
+      if (circ)
+        circuit_detach_stream(circ, exitconn);
+      if (!exitconn->_base.marked_for_close)
+        connection_free(TO_CONN(exitconn));
+      return -1;
+    }
+  }
 
   /* now check the hash table to see if 'address' is already there. */
   strlcpy(search.address, exitconn->_base.address, sizeof(search.address));
@@ -474,19 +590,24 @@ dns_resolve(edge_connection_t *exitconn)
         exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
         return 0;
       case CACHE_STATE_CACHED_VALID:
-        exitconn->_base.addr = resolve->addr;
-        exitconn->address_ttl = resolve->ttl;
         log_debug(LD_EXIT,"Connection (fd %d) found cached answer for %s",
                   exitconn->_base.s,
-                  escaped_safe_str(exitconn->_base.address));
-        if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
-          send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
+                  escaped_safe_str(resolve->address));
+        exitconn->address_ttl = resolve->ttl;
+        if (resolve->is_reverse) {
+          tor_assert(is_resolve);
+          send_resolved_hostname_cell(exitconn, resolve->result.hostname);
+        } else {
+          exitconn->_base.addr = resolve->result.addr;
+          if (is_resolve)
+            send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
+        }
         return 1;
       case CACHE_STATE_CACHED_FAILED:
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
                   exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
-        if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
+        if (is_resolve)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
         if (circ)
@@ -504,6 +625,7 @@ dns_resolve(edge_connection_t *exitconn)
   resolve = tor_malloc_zero(sizeof(cached_resolve_t));
   resolve->magic = CACHED_RESOLVE_MAGIC;
   resolve->state = CACHE_STATE_PENDING;
+  resolve->is_reverse = is_reverse;
   strlcpy(resolve->address, exitconn->_base.address, sizeof(resolve->address));
 
   /* add this connection to the pending list */
@@ -612,7 +734,7 @@ connection_dns_remove(edge_connection_t *conn)
  * <b>address</b> from the cache.
  */
 void
-dns_cancel_pending_resolve(char *address)
+dns_cancel_pending_resolve(const char *address)
 {
   pending_connection_t *pend;
   cached_resolve_t search;
@@ -675,10 +797,13 @@ dns_cancel_pending_resolve(char *address)
 
 /** Helper: adds an entry to the DNS cache mapping <b>address</b> to the ipv4
  * address <b>addr</b>.  <b>ttl</b> is a cache ttl; <b>outcome</b> is one of
- * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}. */
+ * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
+ *
+ * DOCDOC args
+ **/
 static void
-add_answer_to_cache(const char *address, uint32_t addr, char outcome,
-                    uint32_t ttl)
+add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
+                    const char *hostname, char outcome, uint32_t ttl)
 {
   cached_resolve_t *resolve;
   if (outcome == DNS_RESOLVE_FAILED_TRANSIENT)
@@ -689,7 +814,13 @@ add_answer_to_cache(const char *address, uint32_t addr, char outcome,
   resolve->state = (outcome == DNS_RESOLVE_SUCCEEDED) ?
     CACHE_STATE_CACHED_VALID : CACHE_STATE_CACHED_FAILED;
   strlcpy(resolve->address, address, sizeof(resolve->address));
-  resolve->addr = addr;
+  if (is_reverse) {
+    tor_assert(hostname);
+    resolve->result.hostname = tor_strdup(hostname);
+  } else {
+    tor_assert(!hostname);
+    resolve->result.addr = addr;
+  }
   resolve->ttl = ttl;
   assert_resolve_ok(resolve);
   HT_INSERT(cache_map, &cache_root, resolve);
@@ -704,8 +835,8 @@ add_answer_to_cache(const char *address, uint32_t addr, char outcome,
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  */
 static void
-dns_found_answer(const char *address, uint32_t addr, char outcome,
-                 uint32_t ttl)
+dns_found_answer(const char *address, int is_reverse, uint32_t addr,
+                 const char *hostname, char outcome, uint32_t ttl)
 {
   pending_connection_t *pend;
   cached_resolve_t search;
@@ -721,7 +852,7 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
   if (!resolve) {
     log_info(LD_EXIT,"Resolved unasked address %s; caching anyway.",
              escaped_safe_str(address));
-    add_answer_to_cache(address, addr, outcome, ttl);
+    add_answer_to_cache(address, is_reverse, addr, hostname, outcome, ttl);
     return;
   }
   assert_resolve_ok(resolve);
@@ -764,6 +895,7 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
       connection_free(TO_CONN(pendconn));
     } else {
       if (pendconn->_base.purpose == EXIT_PURPOSE_CONNECT) {
+        tor_assert(!is_reverse);
         /* prevent double-remove. */
         pend->conn->_base.state = EXIT_CONN_STATE_CONNECTING;
 
@@ -782,7 +914,10 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
         /* prevent double-remove.  This isn't really an accurate state,
          * but it does the right thing. */
         pendconn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
-        send_resolved_cell(pendconn, RESOLVED_TYPE_IPV4);
+        if (is_reverse)
+          send_resolved_hostname_cell(pendconn, hostname);
+        else
+          send_resolved_cell(pendconn, RESOLVED_TYPE_IPV4);
         circ = circuit_get_by_edge_conn(pendconn);
         tor_assert(circ);
         circuit_detach_stream(circ, pendconn);
@@ -804,7 +939,7 @@ dns_found_answer(const char *address, uint32_t addr, char outcome,
   assert_resolve_ok(resolve);
   assert_cache_ok();
 
-  add_answer_to_cache(address, addr, outcome, ttl);
+  add_answer_to_cache(address, is_reverse, addr, hostname, outcome, ttl);
   assert_cache_ok();
 }
 
@@ -942,7 +1077,7 @@ connection_dns_process_inbuf(connection_t *conn)
   tor_assert(success <= DNS_RESOLVE_SUCCEEDED);
 
   ttl = (success == DNS_RESOLVE_FAILED_TRANSIENT) ? 0 : MAX_DNS_ENTRY_AGE;
-  dns_found_answer(conn->address, ntohl(addr), success, ttl);
+  dns_found_answer(conn->address, 0, ntohl(addr), NULL, success, ttl);
 
   tor_free(conn->address);
   conn->address = tor_strdup("<idle>");
@@ -1320,8 +1455,11 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
                   void *arg)
 {
   char *string_address = arg;
+  int is_reverse = 0;
   int status = DNS_RESOLVE_FAILED_PERMANENT;
   uint32_t addr = 0;
+  const char *hostname = NULL;
+
   if (result == DNS_ERR_NONE) {
     if (type == DNS_IPv4_A && count) {
       char answer_buf[INET_NTOA_BUF_LEN+1];
@@ -1333,7 +1471,13 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
       tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
       log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
                 escaped_safe_str(string_address),
-                escaped_safe_str(answer_buf));
+                escaped_safe_str(answer_buf)); // XXXX not ok.
+    } else if (type == DNS_PTR && count) {
+      is_reverse = 1;
+      hostname = ((char**)addresses)[0];
+      log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
+                escaped_safe_str(string_address),
+                escaped_safe_str(hostname)); // XXXX not ok.
     } else if (count) {
       log_warn(LD_EXIT, "eventdns returned only non-IPv4 answers for %s.",
                escaped_safe_str(string_address));
@@ -1345,7 +1489,7 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
     if (eventdns_err_is_transient(result))
       status = DNS_RESOLVE_FAILED_TRANSIENT;
   }
-  dns_found_answer(string_address, addr, status, ttl);
+  dns_found_answer(string_address, is_reverse, addr, hostname, status, ttl);
   tor_free(string_address);
 }
 
@@ -1355,6 +1499,7 @@ static int
 launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
+  struct in_addr in;
   int r;
   int options = get_options()->SearchDomains ? 0 : DNS_QUERY_NO_SEARCH;
   /* What? Nameservers not configured?  Sounds like a bug. */
@@ -1364,10 +1509,22 @@ launch_resolve(edge_connection_t *exitconn)
     if (configure_nameservers(1) < 0)
       return -1;
   }
-  log_info(LD_EXIT, "Launching eventdns request for %s",
-           escaped_safe_str(exitconn->_base.address));
-  r = eventdns_resolve_ipv4(exitconn->_base.address, options,
-                            eventdns_callback, addr);
+
+  r = parse_inaddr_arpa_address(exitconn->_base.address, &in);
+  if (r == 0) {
+    log_info(LD_EXIT, "Launching eventdns request for %s",
+             escaped_safe_str(exitconn->_base.address));
+    r = eventdns_resolve_ipv4(exitconn->_base.address, options,
+                              eventdns_callback, addr);
+  } else if (r == 1) {
+    log_info(LD_EXIT, "Launching eventdns reverse request for %s",
+             escaped_safe_str(exitconn->_base.address));
+    r = eventdns_resolve_reverse(&in, DNS_QUERY_NO_SEARCH,
+                                 eventdns_callback, addr);
+  } else if (r == -1) {
+    log_warn(LD_BUG, "Somehow a malformed in-addr.arpa address reached here.");
+  }
+
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);
@@ -1400,7 +1557,10 @@ assert_resolve_ok(cached_resolve_t *resolve)
   if (resolve->state == CACHE_STATE_PENDING ||
       resolve->state == CACHE_STATE_DONE) {
     tor_assert(!resolve->ttl);
-    tor_assert(!resolve->addr);
+    if (resolve->is_reverse)
+      tor_assert(!resolve->result.hostname);
+    else
+      tor_assert(!resolve->result.addr);
   }
 }
 

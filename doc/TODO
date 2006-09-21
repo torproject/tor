@@ -100,13 +100,15 @@ d     - Autodetect whether DNS is broken in this way.
 d     - Add option to use /etc/hosts?
 d     - Special-case localhost?
       - Verify that it works on windows
-N   - Make reverse DNS work.
-      - Specify
+    . Make reverse DNS work.
+      o Specify
       X Implement with dnsworkers
         (There's no point doing this, since we will throw away dnsworkers once
         eventdns is confirmed to work everywhere.)
       o Implement in eventdns
-      - Connect to resolve cells, server-side.
+      o Connect to resolve cells, server-side.
+      o Add element to routerinfo to note routers that aren't using eventdns,
+        so we can avoid sending them reverse DNS etc.
       - Add client-side interface
 
   - Performance improvements

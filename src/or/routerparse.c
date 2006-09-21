@@ -54,6 +54,7 @@ typedef enum {
   K_SERVER_VERSIONS,
   K_R,
   K_S,
+  K_EVENTDNS,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -145,6 +146,7 @@ static struct {
   { "dir-options",         K_DIR_OPTIONS,         ARGS,    NO_OBJ, NETSTATUS },
   { "client-versions",     K_CLIENT_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
   { "server-versions",     K_SERVER_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
+  { "eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ, RTR },
   { NULL, -1, NO_ARGS, NO_OBJ, ANY }
 };
 
@@ -874,6 +876,13 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   if ((tok = find_first_by_keyword(tokens, K_CONTACT))) {
     router->contact_info = tor_strdup(tok->args[0]);
+  }
+
+  if ((tok = find_first_by_keyword(tokens, K_EVENTDNS))) {
+    router->has_old_dnsworkers = tok->n_args && !strcmp(tok->args[0], "0");
+  } else if (router->platform) {
+    if (! tor_version_as_new_as(router->platform, "0.1.2.2-alpha"))
+      router->has_old_dnsworkers = 1;
   }
 
   exit_policy_tokens = find_all_exitpolicy(tokens);

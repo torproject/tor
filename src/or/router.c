@@ -1149,7 +1149,13 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
-                    "signing-key\n%s%s%s%s",
+                    "signing-key\n"
+#ifdef USE_EVENTDNS
+                    "opt eventdns 1\n"
+#else
+                    "opt eventdns 0\n"
+#endif
+                    "%s%s%s%s",
     router->nickname,
     router->address,
     router->or_port,
@@ -1228,6 +1234,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       written += result;
     }
   } /* end for */
+
   if (written+256 > maxlen) /* Not enough room for signature. */
     return -1;
 

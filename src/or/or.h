@@ -900,6 +900,8 @@ typedef struct {
   char *contact_info; /**< Declared contact info for this router. */
   unsigned int is_hibernating:1; /**< Whether the router claims to be
                                   * hibernating */
+  unsigned int has_old_dnsworkers:1; /**< Whether the router is using
+                                      * dnsworker code. */
 
   /* local info */
   unsigned int is_running:1; /**< As far as we know, is this OR currently
@@ -2154,7 +2156,7 @@ void dns_reset(void);
 void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);
-void dns_cancel_pending_resolve(char *question);
+void dns_cancel_pending_resolve(const char *question);
 int dns_resolve(edge_connection_t *exitconn);
 
 /********************************* hibernate.c **********************/
