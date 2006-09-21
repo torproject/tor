@@ -929,9 +929,9 @@ circuit_reset_failure_count(int timeout)
   n_circuit_failures = 0;
 }
 
-/** Find an open circ that we're happy with: return 1. If there isn't
- * one, and there isn't one on the way, launch one and return 0. If it
- * will never work, return -1.
+/** Find an open circ that we're happy to use for <b>conn</b> and return 1. If
+ * there isn't one, and there isn't one on the way, launch one and return
+ * 0. If it will never work, return -1.
  *
  * Write the found or in-progress or launched circ into *circp.
  */

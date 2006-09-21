@@ -90,7 +90,7 @@ N - DNS improvements
     o Option to deal with broken DNS of the "ggoogle.com? Ah, you meant
       ads.me.com!" variety.
       o Autodetect whether DNS is broken in this way.
-    - Don't ask reject *:* nodes for DNS unless client wants you to.
+    o Don't ask reject *:* nodes for DNS unless client wants you to.
     . Asynchronous DNS
       o Document and rename SearchDomains, ResolvConf options
       D Make API closer to getaddrinfo()

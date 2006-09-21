@@ -629,6 +629,22 @@ exit_policy_is_general_exit(addr_policy_t *policy)
   return n_allowed >= 2;
 }
 
+/** Return false if <b>policy</b> might permit access to some addr:port;
+ * otherwise if we are certain it rejects everything, return true. */
+int
+policy_is_reject_star(addr_policy_t *p)
+{
+  for ( ; p; p = p->next) {
+    if (p->policy_type == ADDR_POLICY_ACCEPT)
+      return 0;
+    else if (p->policy_type == ADDR_POLICY_REJECT &&
+             p->prt_min <= 1 && p->prt_max == 65535 &&
+             p->msk == 0)
+      return 1;
+  }
+  return 1;
+}
+
 int
 policies_getinfo_helper(const char *question, char **answer)
 {
