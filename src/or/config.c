@@ -222,6 +222,7 @@ static config_var_t _option_vars[] = {
   VAR("RunTesting",          BOOL,     RunTesting,           "0"),
   VAR("SafeLogging",         BOOL,     SafeLogging,          "1"),
   VAR("SafeSocks",           BOOL,     SafeSocks,            "0"),
+  VAR("ServerDNSDetectHijacking",BOOL,   ServerDNSDetectHijacking,"1"),
   VAR("ServerDNSResolvConfFile", STRING, ServerDNSResolvConfFile, NULL),
   VAR("ServerDNSSearchDomains",  BOOL,   ServerDNSSearchDomains,  "0"),
   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),

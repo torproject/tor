@@ -122,6 +122,7 @@ static int spawn_dnsworker(void);
 static int spawn_enough_dnsworkers(void);
 #else
 static int configure_nameservers(int force);
+static int answer_is_wildcarded(const char *ip);
 #endif
 #ifdef DEBUG_DNS_CACHE
 static void _assert_cache_ok(void);
@@ -1330,6 +1331,11 @@ spawn_enough_dnsworkers(void)
 
   return 0;
 }
+
+void
+dns_launch_wildcard_checks(void)
+{
+}
 #else /* !USE_EVENTDNS */
 
 /** Eventdns helper: return true iff the eventdns result <b>err</b> is
@@ -1470,9 +1476,19 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
       status = DNS_RESOLVE_SUCCEEDED;
       tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
       escaped_address = esc_for_log(string_address);
-      log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
-                safe_str(escaped_address),
-                escaped_safe_str(answer_buf));
+
+      if (answer_is_wildcarded(answer_buf)) {
+        log_debug(LD_EXIT, "eventdns said that %s resolves to ISP-hijacked "
+                  "address %s; treating as a failure.",
+                  safe_str(escaped_address),
+                  escaped_safe_str(answer_buf));
+        addr = 0;
+        status = DNS_RESOLVE_FAILED_PERMANENT;
+      } else {
+        log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
+                  safe_str(escaped_address),
+                  escaped_safe_str(answer_buf));
+      }
       tor_free(escaped_address);
     } else if (type == DNS_PTR && count) {
       char *escaped_address;
@@ -1545,6 +1561,94 @@ launch_resolve(edge_connection_t *exitconn)
     tor_free(addr);
   }
   return r ? -1 : 0;
+}
+
+/** If present, a list of dotted-quad IP addresses that our nameserver
+ * apparently wants to return in response to requests for nonexistent domains.
+ */
+static smartlist_t *dns_wildcard_list = NULL;
+
+/** Callback function when we get an answer (possibly failing) for a request
+ * for a (hopefully) nonexistent domain. */
+static void
+eventdns_wildcard_check_callback(int result, char type, int count, int ttl,
+                                 void *addresses, void *arg)
+{
+  static int notice_given = 0;
+  if (result == DNS_ERR_NONE && type == DNS_IPv4_A && count) {
+    uint32_t *addrs = addresses;
+    int i;
+    char *string_address = arg;
+    if (!dns_wildcard_list) dns_wildcard_list = smartlist_create();
+    for (i = 0; i < count; ++i) {
+      char answer_buf[INET_NTOA_BUF_LEN+1];
+      struct in_addr in;
+      in.s_addr = addrs[i];
+      tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
+      if (!smartlist_string_isin(dns_wildcard_list, answer_buf))
+        smartlist_add(dns_wildcard_list, tor_strdup(answer_buf));
+    }
+    log(notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
+        "Your DNS provider gave an answer for \"%s\", which "
+        "is not supposed to exist.  Apparently they are hijacking "
+        "DNS failures. Trying to correct for this.  We've noticed %d bad "
+        "addresses so far.", string_address, smartlist_len(dns_wildcard_list));
+    notice_given = 1;
+  }
+  tor_free(arg);
+}
+
+/** Launch a single request for a nonexistent hostname consisting of
+ * <b>len</b> random (plausible) characters followed by <b>suffix</b> */
+static void
+launch_wildcard_check(int len, const char *suffix)
+{
+  char random_bytes[16], name[64], *addr;
+  size_t n = (len+1)/2;
+  int r;
+
+  tor_assert(n <= sizeof(random_bytes));
+
+  if (crypto_rand(random_bytes, n) < 0)
+    return;
+  base32_encode(name, sizeof(name), random_bytes, n);
+  name[len] = '\0';
+  strlcat(name, suffix, sizeof(name));
+
+  addr = tor_strdup(name);
+  r = eventdns_resolve_ipv4(name, DNS_QUERY_NO_SEARCH,
+                            eventdns_wildcard_check_callback, addr);
+  if (r)
+    tor_free(addr);
+}
+
+#define N_WILDCARD_CHECKS 2
+
+/** Launch DNS requests for a few nonexistent hostnames, and see if we can
+ * catch our nameserver trying to hijack them and map them to a stupid "I
+ * couldn't find ggoogle.com but maybe you'd like to buy these lovely
+ * encyclopedias" page. */
+void
+dns_launch_wildcard_checks(void)
+{
+  int i;
+  if (!get_options()->ServerDNSDetectHijacking)
+    return;
+  log_info(LD_EXIT, "Launching checks to see whether our nameservers like "
+           "to hijack DNS failures.");
+  for (i = 0; i < N_WILDCARD_CHECKS; ++i) {
+    /* RFC2606 reserves these */
+    launch_wildcard_check(8, ".invalid");
+    launch_wildcard_check(8, ".test");
+  }
+}
+
+/** Return true iff we have noticed that the dotted-quad <b>ip</b> has been
+ * returned in response to a request for a nonexistent hostname. */
+static int
+answer_is_wildcarded(const char *ip)
+{
+  return dns_wildcard_list && smartlist_string_isin(dns_wildcard_list, ip);
 }
 #endif /* USE_EVENTDNS */
 

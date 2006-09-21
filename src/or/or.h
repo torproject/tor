@@ -1574,6 +1574,8 @@ typedef struct {
   int ServerDNSSearchDomains; /**< Boolean: If set, we don't force exit
                       * addresses to be FQDNs, but rather search for them in
                       * the local domains. */
+  int ServerDNSDetectHijacking; /**< Boolean: If true, check for DNS failure
+                                 * hijacking */
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
                      * resolver from the file here rather than from
                      * /etc/resolv.conf (unix) or the registry (windows) */
@@ -2158,6 +2160,7 @@ void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);
 void dns_cancel_pending_resolve(const char *question);
 int dns_resolve(edge_connection_t *exitconn);
+void dns_launch_wildcard_checks(void);
 
 /********************************* hibernate.c **********************/
 

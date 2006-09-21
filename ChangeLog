@@ -1,12 +1,16 @@
 Changes in version 0.1.2.2-alpha - 2006-??-??
   o Major features:
-
     - Add server-side support for "reverse" DNS lookups (using PTR
       records so clients can determine the canonical hostname for a given
       IPv4 address).  This has been specified for a long time, but was
       previously never implemented.  This is only supported by eventdns;
       servers now announce in their descriptors whether they support
       eventdns.
+
+  o Minor features:
+    - Check for name servers (like Earthlink's) that hijack failing DNS
+      requests and replace the 'no such server' answer with a "helpful"
+      redirect to an advertising-driven search portal.  [Resolves bug 330.]
 
   o Security Fixes, minor
     - If a client asked for a server by name, and we didn't have a

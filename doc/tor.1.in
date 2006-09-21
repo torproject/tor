@@ -647,6 +647,15 @@ domain.  For example, if this system is configured to believe it is in
 connected to "www.example.com".
 This option only effects name lookup for addresses requested by clients.
 (Defaults to "0".)
+.LP
+.TP
+\fBServerDNSDetectHijacking \fR\fB0\fR|\fB1\fR\fP
+When this option is set to 1, we will test periodically to determine whether
+our local nameservers have been configured to hijack failing DNS requests
+(usually to an advertising site).  If they are, we will attempt to correct
+this.  This option only effects name lookup for addresses requested by
+clients; and only takes effect if Tor was built with eventdns support.
+(Defaults to "1".)
 
 .SH DIRECTORY SERVER OPTIONS
 .PP

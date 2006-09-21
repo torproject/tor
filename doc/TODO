@@ -87,9 +87,9 @@ d     - Write limiting; separate token bucket for write
         - Write-limit directory responses (need to research)
 
 N - DNS improvements
-    - Option to deal with broken DNS of the "ggoogle.com? Ah, you meant
+    o Option to deal with broken DNS of the "ggoogle.com? Ah, you meant
       ads.me.com!" variety.
-d     - Autodetect whether DNS is broken in this way.
+      o Autodetect whether DNS is broken in this way.
     - Don't ask reject *:* nodes for DNS unless client wants you to.
     . Asynchronous DNS
       o Document and rename SearchDomains, ResolvConf options
