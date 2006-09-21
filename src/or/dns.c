@@ -1464,20 +1464,26 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
     if (type == DNS_IPv4_A && count) {
       char answer_buf[INET_NTOA_BUF_LEN+1];
       struct in_addr in;
+      char *escaped_address;
       uint32_t *addrs = addresses;
       in.s_addr = addrs[0];
       addr = ntohl(addrs[0]);
       status = DNS_RESOLVE_SUCCEEDED;
       tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
+      escaped_address = esc_for_log(string_address);
       log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
-                escaped_safe_str(string_address),
-                escaped_safe_str(answer_buf)); // XXXX not ok.
+                safe_str(escaped_address),
+                escaped_safe_str(answer_buf));
+      tor_free(escaped_address);
     } else if (type == DNS_PTR && count) {
+      char *escaped_address;
       is_reverse = 1;
       hostname = ((char**)addresses)[0];
+      escaped_address = esc_for_log(string_address);
       log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
-                escaped_safe_str(string_address),
-                escaped_safe_str(hostname)); // XXXX not ok.
+                safe_str(escaped_address),
+                escaped_safe_str(hostname));
+      tor_free(escaped_address);
     } else if (count) {
       log_warn(LD_EXIT, "eventdns returned only non-IPv4 answers for %s.",
                escaped_safe_str(string_address));

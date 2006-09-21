@@ -520,7 +520,9 @@ safe_str(const char *address)
     return address;
 }
 
-/** Equivalent to escaped(safe_str(address)) */
+/** Equivalent to escaped(safe_str(address)).  See reentrancy node on
+ * escaped(): don't use this outside the main thread, or twice in the same
+ * log statement. */
 const char *
 escaped_safe_str(const char *address)
 {

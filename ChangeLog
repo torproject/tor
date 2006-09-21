@@ -19,6 +19,8 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       algorithm from O(n^2) to O(n).
     - Make the common memory allocation path faster on machines where
       malloc(0) returns a pointer.
+    - Fix a debug log message in eventdns to say "X resolved to Y"
+      instead of "X resolved to X".
 
 Changes in version 0.1.2.1-alpha - 2006-08-27
   o Major features:
