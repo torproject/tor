@@ -1149,13 +1149,13 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
-                    "signing-key\n"
+                    "signing-key\n%s"
 #ifdef USE_EVENTDNS
                     "opt eventdns 1\n"
 #else
                     "opt eventdns 0\n"
 #endif
-                    "%s%s%s%s",
+                    "%s%s%s",
     router->nickname,
     router->address,
     router->or_port,
