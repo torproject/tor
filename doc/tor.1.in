@@ -630,6 +630,23 @@ as day 1 and Sunday as day 7.  If \fBday\fR is given, each accounting
 period runs from the time \fIHH:MM\fR each day to the same time on the
 next day.  All times are local, and given in 24-hour time.  (Defaults to
 "month 1 0:00".)
+.LP
+.TP
+\fBServerDNSResolvConfFile \fR\fIfilename\fP
+Overrides the default DNS configuration with the configuration in
+\fIfilename\fP.  The file format is the same as the standard Unix
+"\fBresolv.conf\fP" file (7).  This option only effects name lookup for
+addresses requested by clients; and only takes effect if Tor was built with
+eventdns support.  (Defaults to use the system DNS configuration.)
+.LP
+.TP
+\fBServerDNSSearchDomains \fR\fB0\fR|\fB1\fR\fP
+If set to \fB1\fP, then we will search for addresses in the local search
+domain.  For example, if this system is configured to believe it is in
+"example.com", and a client tries to connect to "www", the client will be
+connected to "www.example.com".
+This option only effects name lookup for addresses requested by clients.
+(Defaults to "0".)
 
 .SH DIRECTORY SERVER OPTIONS
 .PP

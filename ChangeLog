@@ -22,6 +22,10 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
     - Fix a debug log message in eventdns to say "X resolved to Y"
       instead of "X resolved to X".
 
+  o Documentation
+    - Documented (and renamed) ServerDNSSearchDomains and
+      ServerDNSResolvConfFile options.
+
 Changes in version 0.1.2.1-alpha - 2006-08-27
   o Major features:
     - Add "eventdns" async dns library from Adam Langley, tweaked to

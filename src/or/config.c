@@ -58,7 +58,6 @@ static config_abbrev_t _option_abbrevs[] = {
   PLURAL(LongLivedPort),
   PLURAL(HiddenServiceNode),
   PLURAL(HiddenServiceExcludeNode),
-  PLURAL(Nameserver),
   PLURAL(NumCpu),
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
@@ -77,6 +76,8 @@ static config_abbrev_t _option_abbrevs[] = {
   { "NumHelperNodes", "NumEntryGuards", 0, 0},
   { "UseEntryNodes", "UseEntryGuards", 0, 0},
   { "NumEntryNodes", "NumEntryGuards", 0, 0},
+  { "ResolvConf", "ServerDNSResolvConfFile", 0, 1},
+  { "SearchDomains", "ServerDNSSearchDomains", 0, 1},
   { NULL, NULL, 0, 0},
 };
 /* A list of state-file abbreviations, for compatibility. */
@@ -216,13 +217,13 @@ static config_var_t _option_vars[] = {
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
   VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "1 hour"),
   VAR("RephistTrackTime",    INTERVAL, RephistTrackTime,     "24 hours"),
-  VAR("ResolvConf",          STRING,   ResolvConf,           NULL),
   OBSOLETE("RouterFile"),
   VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "0"),
   VAR("RunTesting",          BOOL,     RunTesting,           "0"),
   VAR("SafeLogging",         BOOL,     SafeLogging,          "1"),
   VAR("SafeSocks",           BOOL,     SafeSocks,            "0"),
-  VAR("SearchDomains",       BOOL,     SearchDomains,        "0"),
+  VAR("ServerDNSResolvConfFile", STRING, ServerDNSResolvConfFile, NULL),
+  VAR("ServerDNSSearchDomains",  BOOL,   ServerDNSSearchDomains,  "0"),
   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),
   VAR("SocksListenAddress",  LINELIST, SocksListenAddress,   NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
@@ -2443,6 +2444,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseEntryGuards && ! options->NumEntryGuards)
     REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
 
+#ifndef USE_EVENTDNS
+  if (options->ServerDNSResolvConfFile)
+    log(LOG_WARN, LD_CONFIG,
+        "ServerDNSResolvConfFile only works when eventdns support is enabled.");
+#endif
+
   if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))
     return -1;
   if (check_nickname_list(options->EntryNodes, "EntryNodes", msg))
@@ -2566,7 +2573,8 @@ options_transition_affects_workers(or_options_t *old_options,
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       old_options->NumCpus != new_options->NumCpus ||
       old_options->ORPort != new_options->ORPort ||
-      old_options->SearchDomains != new_options->SearchDomains ||
+      old_options->ServerDNSSearchDomains !=
+                                       new_options->ServerDNSSearchDomains ||
       old_options->SafeLogging != new_options->SafeLogging ||
       !config_lines_eq(old_options->Logs, new_options->Logs))
     return 1;

@@ -796,10 +796,9 @@ dns_cancel_pending_resolve(const char *address)
 }
 
 /** Helper: adds an entry to the DNS cache mapping <b>address</b> to the ipv4
- * address <b>addr</b>.  <b>ttl</b> is a cache ttl; <b>outcome</b> is one of
+ * address <b>addr</b> (if is_reverse is 0) or the hostname <b>hostname</b> if
+ * (is_reverse is 1).  <b>ttl</b> is a cache ttl; <b>outcome</b> is one of
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
- *
- * DOCDOC args
  **/
 static void
 add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
@@ -1136,7 +1135,7 @@ dnsworker_main(void *data)
   int *fdarray = data;
   int fd;
   int result;
-  int search = get_options()->SearchDomains;
+  int search = get_options()->ServerDNSSearchDomains;
 
   /* log_fn(LOG_NOTICE,"After spawn: fdarray @%d has %d:%d", (int)fdarray,
    * fdarray[0],fdarray[1]); */
@@ -1375,9 +1374,9 @@ connection_dns_reached_eof(connection_t *conn)
 
 /** Configure eventdns nameservers if force is true, or if the configuration
  * has changed since the last time we called this function.  On Unix, this
- * reads from options->ResolvConf or /etc/resolv.conf; on Windows, this reads
- * from options->ResolvConf or the registry.  Return 0 on success or -1 on
- * failure. */
+ * reads from options->ServerDNSResolvConfFile or /etc/resolv.conf; on
+ * Windows, this reads from options->ServerDNSResolvConfFile or the registry.
+ * Return 0 on success or -1 on failure. */
 static int
 configure_nameservers(int force)
 {
@@ -1385,7 +1384,7 @@ configure_nameservers(int force)
   const char *conf_fname;
   struct stat st;
   options = get_options();
-  conf_fname = options->ResolvConf;
+  conf_fname = options->ServerDNSResolvConfFile;
 #ifndef MS_WINDOWS
   if (!conf_fname)
     conf_fname = "/etc/resolv.conf";
@@ -1433,7 +1432,7 @@ configure_nameservers(int force)
     if (eventdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any platform nameservers in "
                "your Windows configuration.  Perhaps you should list a "
-               "ResolvConf file in your torrc?");
+               "ServerDNSResolvConfFile file in your torrc?");
       return -1;
     }
     if (nameservers_configured)
@@ -1507,7 +1506,7 @@ launch_resolve(edge_connection_t *exitconn)
   char *addr = tor_strdup(exitconn->_base.address);
   struct in_addr in;
   int r;
-  int options = get_options()->SearchDomains ? 0 : DNS_QUERY_NO_SEARCH;
+  int options = get_options()->ServerDNSSearchDomains ? 0 : DNS_QUERY_NO_SEARCH;
   /* What? Nameservers not configured?  Sounds like a bug. */
   if (!nameservers_configured) {
     log_warn(LD_EXIT, "Harmless bug: nameservers not configured, but resolve "

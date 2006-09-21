@@ -92,7 +92,7 @@ N - DNS improvements
 d     - Autodetect whether DNS is broken in this way.
     - Don't ask reject *:* nodes for DNS unless client wants you to.
     . Asynchronous DNS
-      - Document SearchDomains, ResolvConf options
+      o Document and rename SearchDomains, ResolvConf options
       D Make API closer to getaddrinfo()
       - Teach it to be able to listen for A and PTR requests to be processed.
         Interface should be set_request_listener(sock, cb); [ cb(request) ]
