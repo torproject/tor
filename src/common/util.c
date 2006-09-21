@@ -207,7 +207,8 @@ _tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
 /** Helper for places that need to take a function pointer to the right
  * spelling of "free()". */
 void
-_tor_free(void *mem) {
+_tor_free(void *mem)
+{
   tor_free(mem);
 }
 

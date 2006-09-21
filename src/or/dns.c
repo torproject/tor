@@ -1522,7 +1522,8 @@ launch_resolve(edge_connection_t *exitconn)
   char *addr = tor_strdup(exitconn->_base.address);
   struct in_addr in;
   int r;
-  int options = get_options()->ServerDNSSearchDomains ? 0 : DNS_QUERY_NO_SEARCH;
+  int options = get_options()->ServerDNSSearchDomains ? 0
+    : DNS_QUERY_NO_SEARCH;
   /* What? Nameservers not configured?  Sounds like a bug. */
   if (!nameservers_configured) {
     log_warn(LD_EXIT, "Harmless bug: nameservers not configured, but resolve "

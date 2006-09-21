@@ -2448,7 +2448,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 #ifndef USE_EVENTDNS
   if (options->ServerDNSResolvConfFile)
     log(LOG_WARN, LD_CONFIG,
-        "ServerDNSResolvConfFile only works when eventdns support is enabled.");
+       "ServerDNSResolvConfFile only works when eventdns support is enabled.");
 #endif
 
   if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))

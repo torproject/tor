@@ -936,8 +936,6 @@ run_scheduled_events(time_t now)
         crypto_rand_int(12*3600);
     }
   }
-
-
 }
 
 static struct event *timeout_event = NULL;
