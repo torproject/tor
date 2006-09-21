@@ -1576,6 +1576,7 @@ eventdns_wildcard_check_callback(int result, char type, int count, int ttl,
                                  void *addresses, void *arg)
 {
   static int notice_given = 0;
+  (void)ttl;
   if (result == DNS_ERR_NONE && type == DNS_IPv4_A && count) {
     uint32_t *addrs = addresses;
     int i;
