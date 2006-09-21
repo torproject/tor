@@ -1606,7 +1606,7 @@ static void
 launch_wildcard_check(int len, const char *suffix)
 {
   char random_bytes[16], name[64], *addr;
-  size_t n = (len+1)/2;
+  size_t n = (len*5+7)/8;
   int r;
 
   tor_assert(n <= sizeof(random_bytes));
