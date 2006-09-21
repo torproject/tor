@@ -518,7 +518,7 @@ dns_resolve(edge_connection_t *exitconn)
 
   assert_cache_ok();
 
-  is_resolve = exitconn->_base.purpose = EXIT_PURPOSE_RESOLVE;
+  is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
 
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
