@@ -128,7 +128,7 @@ parse_reachable_addresses(void)
 int
 firewall_is_fascist_or(void)
 {
-  return !!reachable_or_addr_policy;
+  return reachable_or_addr_policy != NULL;
 }
 
 /** Return true iff <b>policy</b> (possibly NULL) will allow a
