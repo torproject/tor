@@ -814,6 +814,11 @@ add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
   if (outcome == DNS_RESOLVE_FAILED_TRANSIENT)
     return;
 
+  /* XXX This is dumb, but it seems to workaround a bug I can't find.  We
+   * should nail this so we can cache reverse DNS answers. -NM */
+  if (is_reverse)
+    return;
+
   //log_notice(LD_EXIT, "Adding to cache: %s -> %s (%lx, %s), %d",
   //           address, is_reverse?"(reverse)":"", (unsigned long)addr,
   //           hostname?hostname:"NULL",(int)outcome);
