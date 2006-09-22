@@ -974,8 +974,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         return 0; /* not yet */
       req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
-          req->command != SOCKS_COMMAND_RESOLVE) {
-        /* not a connect or resolve? we don't support it. */
+          req->command != SOCKS_COMMAND_RESOLVE &&
+          req->command != SOCKS_COMMAND_RESOLVE_PTR) {
+        /* not a connect or resolve or a resolve_ptr? we don't support it. */
         log_warn(LD_APP,"socks5: command %d not recognized. Rejecting.",
                  req->command);
         return -1;
@@ -999,7 +1000,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           strlcpy(req->address,tmpbuf,sizeof(req->address));
           req->port = ntohs(*(uint16_t*)(buf->cur+8));
           buf_remove_from_front(buf, 10);
-          if (!addressmap_have_mapping(req->address) &&
+          if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
+              !addressmap_have_mapping(req->address) &&
               !have_warned_about_unsafe_socks) {
             log_warn(LD_APP,
                 "Your application (using socks5 on port %d) is giving "
@@ -1023,6 +1025,11 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
             log_warn(LD_APP,
                      "socks5 hostname is %d bytes, which doesn't fit in "
                      "%d. Rejecting.", len+1,MAX_SOCKS_ADDR_LEN);
+            return -1;
+          }
+          if (req->command == SOCKS_COMMAND_RESOLVE_PTR) {
+            log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
+                     "hostname type. Rejecting.");
             return -1;
           }
           memcpy(req->address,buf->cur+5,len);
@@ -1059,7 +1066,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE) {
-        /* not a connect or resolve? we don't support it. */
+        /* not a connect or resolve? we don't support it. (No resolve_ptr with
+         * socks4.) */
         log_warn(LD_APP,"socks4: command %d not recognized. Rejecting.",
                  req->command);
         return -1;

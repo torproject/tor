@@ -1120,7 +1120,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       return -1;
     }
 
-    if (socks->command == SOCKS_COMMAND_RESOLVE) {
+    if (socks->command == SOCKS_COMMAND_RESOLVE) { // resolve_ptr XXXX NM
       uint32_t answer;
       struct in_addr in;
       /* Reply to resolves immediately if we can. */
@@ -1181,7 +1181,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     rend_cache_entry_t *entry;
     int r;
 
-    if (socks->command == SOCKS_COMMAND_RESOLVE) {
+    if (socks->command != SOCKS_COMMAND_CONNECT) {
       /* if it's a resolve request, fail it right now, rather than
        * building all the circuits and then realizing it won't work. */
       log_warn(LD_APP,
@@ -1524,13 +1524,17 @@ int
 connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
                                      origin_circuit_t *circ)
 {
-  int payload_len;
+  int payload_len, command;
   const char *string_addr;
+  char inaddr_buf[32];
+
+  command = ap_conn->socks_request->command;
 
   tor_assert(ap_conn->_base.type == CONN_TYPE_AP);
   tor_assert(ap_conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(ap_conn->socks_request);
-  tor_assert(ap_conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
+  tor_assert(command == SOCKS_COMMAND_RESOLVE ||
+             command == SOCKS_COMMAND_RESOLVE_PTR);
   tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL);
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
@@ -1540,9 +1544,27 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
     return -1;
   }
 
-  string_addr = ap_conn->socks_request->address;
-  payload_len = strlen(string_addr)+1;
-  tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
+  if (command == SOCKS_COMMAND_RESOLVE) {
+    string_addr = ap_conn->socks_request->address;
+    payload_len = strlen(string_addr)+1;
+    tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
+  } else {
+    struct in_addr in;
+    uint32_t a;
+    if (tor_inet_aton(ap_conn->socks_request->address, &in) == 0) {
+      connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
+      return -1;
+    }
+    a = ntohl(in.s_addr);
+    tor_snprintf(inaddr_buf, sizeof(inaddr_buf), "%d.%d.%d.%d.in-addr.arpa",
+                 (int)(uint8_t)((a    )&0xff),
+                 (int)(uint8_t)((a>>8 )&0xff),
+                 (int)(uint8_t)((a>>16)&0xff),
+                 (int)(uint8_t)((a>>24)&0xff));
+    string_addr = inaddr_buf;
+    payload_len = strlen(inaddr_buf)+1;
+    tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
+  }
 
   log_debug(LD_APP,
             "Sending relay cell to begin stream %d.", ap_conn->stream_id);
@@ -1625,7 +1647,7 @@ connection_ap_make_bridge(char *address, uint16_t port)
 }
 
 /** Send an answer to an AP connection that has requested a DNS lookup
- * via SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6) or
+ * via SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6|HOSTNAME) or
  * -1 for unreachable; the answer should be in the format specified
  * in the socks extensions document.
  **/
@@ -1636,7 +1658,7 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                        const char *answer,
                                        int ttl)
 {
-  char buf[256];
+  char buf[384];
   size_t replylen;
 
   if (answer_type == RESOLVED_TYPE_IPV4) {
@@ -1675,6 +1697,14 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
       memcpy(buf+4, answer, 16); /* address */
       set_uint16(buf+20, 0); /* port == 0. */
       replylen = 22;
+    } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len < 256) {
+      buf[1] = SOCKS5_SUCCEEDED;
+      buf[2] = 0; /* reserved */
+      buf[3] = 0x03; /* Domainname address type */
+      memcpy(buf+4, answer, answer_len); /* address */
+      buf[4+answer_len] = '\0';
+      set_uint16(buf+4+answer_len+1, 0); /* port == 0. */
+      replylen = 4+answer_len+1+2;
     } else {
       buf[1] = SOCKS5_HOST_UNREACHABLE;
       memset(buf+2, 0, 8);
@@ -1699,7 +1729,8 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
 void
 connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
                                     size_t replylen,
-                                    socks5_reply_status_t status) {
+                                    socks5_reply_status_t status)
+{
   char buf[256];
   tor_assert(conn->socks_request); /* make sure it's an AP stream */
 
@@ -2072,7 +2103,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
     }
   }
 
-  if (conn->socks_request->command != SOCKS_COMMAND_RESOLVE) {
+  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
     struct in_addr in;
     uint32_t addr = 0;
     addr_policy_result_t r;
@@ -2082,7 +2113,13 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
                                     exit->exit_policy);
     if (r == ADDR_POLICY_REJECTED || r == ADDR_POLICY_PROBABLY_REJECTED)
       return 0;
-  } else {
+  } else { /* Some kind of a resolve. */
+
+    /* Can't support reverse lookups without eventdns. */
+    if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR &&
+        exit->has_old_dnsworkers)
+      return 0;
+
     /* Don't send DNS requests to non-exit servers by default. */
     if (policy_is_reject_star(exit->exit_policy))
       return 0;

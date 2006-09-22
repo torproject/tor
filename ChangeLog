@@ -6,6 +6,8 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       previously never implemented.  This is only supported by eventdns;
       servers now announce in their descriptors whether they support
       eventdns.
+    - Specify and implement client-side SOCKS5 interface for reverse DNS
+      lookups; see doc/socks-extensions.txt for full information.
 
   o Minor features:
     - Check for name servers (like Earthlink's) that hijack failing DNS
