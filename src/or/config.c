@@ -182,7 +182,7 @@ static config_var_t _option_vars[] = {
   VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
   VAR("LongLivedPorts",      CSV,      LongLivedPorts,
-                         "21,22,706,1863,5050,5190,5222,5223,6667,8300,8888"),
+                         "21,22,706,1863,5050,5190,5222,5223,6667,8300"),
   VAR("MapAddress",          LINELIST, AddressMap,           NULL),
   VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"128 TB"),
   VAR("MaxCircuitDirtiness", INTERVAL, MaxCircuitDirtiness,  "10 minutes"),
