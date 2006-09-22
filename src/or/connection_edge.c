@@ -2066,8 +2066,8 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
   if (conn->chosen_exit_name) {
     if (router_get_by_nickname(conn->chosen_exit_name, 1) != exit) {
       /* doesn't match */
-      log_debug(LD_APP,"Requested node '%s', considering node '%s'. No.",
-                conn->chosen_exit_name, exit->nickname);
+//      log_debug(LD_APP,"Requested node '%s', considering node '%s'. No.",
+//                conn->chosen_exit_name, exit->nickname);
       return 0;
     }
   }

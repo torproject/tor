@@ -940,7 +940,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
   switch (rh.command) {
     case RELAY_COMMAND_DROP:
-      log_info(domain,"Got a relay-level padding cell. Dropping.");
+//      log_info(domain,"Got a relay-level padding cell. Dropping.");
       return 0;
     case RELAY_COMMAND_BEGIN:
       if (layer_hint &&
