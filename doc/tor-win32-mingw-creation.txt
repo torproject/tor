@@ -33,10 +33,11 @@ Make openssl.dll:
 cd tor-mingw/openssl-0.9.8c/
 cd crypto/
 find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
-find ./crypto/ -type f -name "*.c" -exec cp {} test/ \
+find ./ -type f -name "*.c" -exec cp {} ../test/ \;
 cd ../ssl/
 find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
-cp *.h ./include/openssl/
+cd ..
+cp *.h include/openssl/
 cp ssl/ssltest.c test/
 ./Configure mingw
 make
@@ -88,16 +89,7 @@ Extract libevent: tar zxf libevent-1.1b.tar.gz
 Extract tor: tar zxf tor-alpha.tar.gz
 
 Copy the libevent-1.1b diff into libevent-1.1b:
-cp /c/tor-mingw/tor/Win32Build/mingw/libevent-1.1b-mingw-custom.diff /c/tor-mingw/libevent-1.1b/
-patch -i libevent-1.1b-mingw-custom.diff
-
---This is a complete hack right now:
-remove from event.c and log.c:
-#ifdef __GNUC__
-#include "WIN32-Code/misc.h"
-#else
-#include "misc.h"
-#endif
+patch -p0 < ../tor-alpha/Win32Build/mingw/libevent-1.1b-mingw.diff
 
 Run "aclocal && autoheader && automake && autoconf".
 There may be WARNING messages.  There will be no output if all runs successfuly.
@@ -115,5 +107,6 @@ tar zxf latest-tor-alpha.tar.gz
 cd tor-alpha
 ./autogen.sh
 ./configure 
+make
 
-(less magic happens here and a complete tor-alpha.exe is created)
+You now have a tor.exe in src/or/.  This is Tor.
