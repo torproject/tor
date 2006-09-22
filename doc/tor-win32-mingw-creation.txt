@@ -39,6 +39,8 @@ find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
 cd ..
 cp *.h include/openssl/
 cp ssl/ssltest.c test/
+Edit Makefile and remove the "test" and "tests" sections.
+rm -rf ./test
 ./Configure mingw
 make
 
