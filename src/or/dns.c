@@ -420,6 +420,7 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
       tor_assert(0);
       return;
     }
+  // log_notice(LD_EXIT, "Sending a regular RESOLVED reply: ");
   connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
                                RELAY_COMMAND_RESOLVED, buf, buflen,
                                conn->cpath_layer);
@@ -446,9 +447,11 @@ send_resolved_hostname_cell(edge_connection_t *conn, const char *hostname)
   set_uint32(buf+2+namelen, htonl(ttl));
   buflen = 2+namelen+4;
 
+  // log_notice(LD_EXIT, "Sending a reply RESOLVED reply: %s", hostname);
   connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
                                RELAY_COMMAND_RESOLVED, buf, buflen,
                                conn->cpath_layer);
+  // log_notice(LD_EXIT, "Sent");
 }
 
 /** Given a lower-case <b>address</b>, check to see whether it's a
@@ -473,7 +476,7 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
   if (len >= INET_NTOA_BUF_LEN)
     return -1; /* Too long. */
 
-  memcpy(buf, cp, len);
+  memcpy(buf, address, len);
   buf[len] = '\0';
   if (tor_inet_aton(buf, &inaddr) == 0)
     return -1; /* malformed. */
@@ -571,6 +574,8 @@ dns_resolve(edge_connection_t *exitconn)
         connection_free(TO_CONN(exitconn));
       return -1;
     }
+    //log_notice(LD_EXIT, "Looks like an address %s",
+//	exitconn->_base.address);
   }
 
   /* now check the hash table to see if 'address' is already there. */
@@ -809,11 +814,16 @@ add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
   if (outcome == DNS_RESOLVE_FAILED_TRANSIENT)
     return;
 
+  //log_notice(LD_EXIT, "Adding to cache: %s -> %s (%lx, %s), %d",
+  //           address, is_reverse?"(reverse)":"", (unsigned long)addr,
+  //           hostname?hostname:"NULL",(int)outcome);
+
   resolve = tor_malloc_zero(sizeof(cached_resolve_t));
   resolve->magic = CACHED_RESOLVE_MAGIC;
   resolve->state = (outcome == DNS_RESOLVE_SUCCEEDED) ?
     CACHE_STATE_CACHED_VALID : CACHE_STATE_CACHED_FAILED;
   strlcpy(resolve->address, address, sizeof(resolve->address));
+  resolve->is_reverse = is_reverse;
   if (is_reverse) {
     tor_assert(hostname);
     resolve->result.hostname = tor_strdup(hostname);
@@ -1494,6 +1504,7 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
       char *escaped_address;
       is_reverse = 1;
       hostname = ((char**)addresses)[0];
+      status = DNS_RESOLVE_SUCCEEDED;
       escaped_address = esc_for_log(string_address);
       log_debug(LD_EXIT, "eventdns said that %s resolves to %s",
                 safe_str(escaped_address),
