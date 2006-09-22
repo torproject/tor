@@ -575,7 +575,7 @@ dns_resolve(edge_connection_t *exitconn)
       return -1;
     }
     //log_notice(LD_EXIT, "Looks like an address %s",
-//	exitconn->_base.address);
+    //	exitconn->_base.address);
   }
 
   /* now check the hash table to see if 'address' is already there. */
@@ -1580,10 +1580,49 @@ launch_resolve(edge_connection_t *exitconn)
   return r ? -1 : 0;
 }
 
-/** If present, a list of dotted-quad IP addresses that our nameserver
- * apparently wants to return in response to requests for nonexistent domains.
+/** How many requests for bogus addresses have we launched so far? */
+static int n_wildcard_requests = 0;
+
+/** Map from dotted-quad IP address in response to an int holding how many
+ * times we've seen it for a randomly generated (hopefully bogus) address.  It
+ * would be easier to use definitely-invalid addresses (as specified by
+ * RFC2606), but see comment in dns_launch_wildcard_checks(). */
+static strmap_t *dns_wildcard_response_count = NULL;
+
+/** If present, a list of dotted-quad IP addresses that we are pretty sure our
+ * nameserver wants to return in response to requests for nonexistent domains.
  */
 static smartlist_t *dns_wildcard_list = NULL;
+
+/** Called when we see <b>id</b> (a dotted quad) in response to a request for
+ * a hopefully bogus address. */
+static void
+wildcard_increment_answer(const char *id)
+{
+  int *ip;
+  static int notice_given = 0;
+  if (!dns_wildcard_response_count)
+    dns_wildcard_response_count = strmap_new();
+
+  ip = strmap_get(dns_wildcard_response_count, id); // may be null (0)
+  if (!ip) {
+    ip = tor_malloc_zero(sizeof(int));
+    strmap_set(dns_wildcard_response_count, id, ip);
+  }
+  ++*ip;
+
+  if (*ip > 5 && n_wildcard_requests > 10) {
+    if (!dns_wildcard_list) dns_wildcard_list = smartlist_create();
+    if (!smartlist_string_isin(dns_wildcard_list, id)) {
+    log(notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
+        "Your DNS provider has given \"%s\" as an answer for %d different "
+        "invalid addresses. Apparently they are hijacking DNS failures. "
+        "I'll trying to correct for this by treating future occurrences of "
+        "\"%s\" as 'not found'.", id, *ip, id);
+      smartlist_add(dns_wildcard_list, tor_strdup(id));
+    }
+  }
+}
 
 /** Callback function when we get an answer (possibly failing) for a request
  * for a (hopefully) nonexistent domain. */
@@ -1593,43 +1632,43 @@ eventdns_wildcard_check_callback(int result, char type, int count, int ttl,
 {
   static int notice_given = 0;
   (void)ttl;
+  ++n_wildcard_requests;
   if (result == DNS_ERR_NONE && type == DNS_IPv4_A && count) {
     uint32_t *addrs = addresses;
     int i;
     char *string_address = arg;
-    if (!dns_wildcard_list) dns_wildcard_list = smartlist_create();
     for (i = 0; i < count; ++i) {
       char answer_buf[INET_NTOA_BUF_LEN+1];
       struct in_addr in;
       in.s_addr = addrs[i];
       tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
-      if (!smartlist_string_isin(dns_wildcard_list, answer_buf))
-        smartlist_add(dns_wildcard_list, tor_strdup(answer_buf));
+      wildcard_increment_answer(answer_buf);
     }
     log(notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider gave an answer for \"%s\", which "
         "is not supposed to exist.  Apparently they are hijacking "
-        "DNS failures. Trying to correct for this.  We've noticed %d bad "
-        "addresses so far.", string_address, smartlist_len(dns_wildcard_list));
+        "DNS failures. Trying to correct for this.  We've noticed %d possibly "
+        "bad addresses so far.",
+        string_address, strmap_size(dns_wildcard_response_count));
     notice_given = 1;
   }
   tor_free(arg);
 }
 
-/** Launch a single request for a nonexistent hostname consisting of
- * <b>len</b> random (plausible) characters followed by <b>suffix</b> */
+/** Launch a single request for a nonexistent hostname consisting of between
+ * <b>min_len</b> and <b>max_len</b> random (plausible) characters followed by
+ * <b>suffix</b> */
 static void
-launch_wildcard_check(int len, const char *suffix)
+launch_wildcard_check(int min_len, int max_len, const char *suffix)
 {
-  char random_bytes[16], name[64], *addr;
-  size_t n = (len*5+7)/8;
+  char random_bytes[20], name[64], *addr;
+  size_t len;
   int r;
 
-  tor_assert(n <= sizeof(random_bytes));
-
-  if (crypto_rand(random_bytes, n) < 0)
+  len = min_len + crypto_rand_int(max_len-min_len+1);
+  if (crypto_rand(random_bytes, sizeof(random_bytes)) < 0)
     return;
-  base32_encode(name, sizeof(name), random_bytes, n);
+  base32_encode(name, sizeof(name), random_bytes, sizeof(random_bytes));
   name[len] = '\0';
   strlcat(name, suffix, sizeof(name));
 
@@ -1655,14 +1694,28 @@ dns_launch_wildcard_checks(void)
   log_info(LD_EXIT, "Launching checks to see whether our nameservers like "
            "to hijack DNS failures.");
   for (i = 0; i < N_WILDCARD_CHECKS; ++i) {
-    /* RFC2606 reserves these */
-    launch_wildcard_check(8, ".invalid");
-    launch_wildcard_check(8, ".test");
+    /* RFC2606 reserves these.  Sadly, some DNS hijackers, in a silly attempt
+     * to 'comply' with rfc2606, refrain from giving A records for these.
+     * This is the standards-complaince equivalent of making sure that your
+     * crackhouse's elevator inspection certificate is up to date.
+     */
+    launch_wildcard_check(2, 16, "%s.invalid");
+    launch_wildcard_check(2, 16, "%s.test");
+
+    /* Thy somese will break specs if there are ever any number of
+     * 8+-character top-level domains. */
+    launch_wildcard_check(8, 16,"");
+
+    /* Try some random .com/org/net domains. This will work fine so long as
+     * not too many resolve to the same place. */
+    launch_wildcard_check(8, 16, "%s.com");
+    launch_wildcard_check(8, 16, "%s.org");
+    launch_wildcard_check(8, 16, "%s.net");
   }
 }
 
 /** Return true iff we have noticed that the dotted-quad <b>ip</b> has been
- * returned in response to a request for a nonexistent hostname. */
+ * returned in response to requests for nonexistent hostnames. */
 static int
 answer_is_wildcarded(const char *ip)
 {

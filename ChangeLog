@@ -12,7 +12,9 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
   o Minor features:
     - Check for name servers (like Earthlink's) that hijack failing DNS
       requests and replace the 'no such server' answer with a "helpful"
-      redirect to an advertising-driven search portal.  [Resolves bug 330.]
+      redirect to an advertising-driven search portal.  We're a little clever
+      about this, in order to work around DNS hijackers who "helpfully"
+      decline to hijack known-invalid RFC2606 addresses.  [Resolves bug 330.]
     - When asked to resolve a hostname, don't use non-exit servers unless
       requested to do so.  This allows servers with broken DNS be useful to
       the network.
