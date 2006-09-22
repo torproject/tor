@@ -165,7 +165,7 @@ N   - provide no-cache no-index headers from the dirport?
 M   - rewrite how libevent does select() on win32 so it's not so very slow.
       - Add overlapped IO
 
-N - Exitlist should avoid outputting the same IP address twice.
+  o Exitlist should avoid outputting the same IP address twice.
 
 Nd- Have a mode that doesn't write to disk much, so we can run Tor on
     flash memory (e.g. Linksys routers or USB keys).

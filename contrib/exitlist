@@ -200,6 +200,13 @@ class Server:
         self.ip = ip
         self.policy = policy
 
+def uniq_sort(lst):
+    d = {}
+    for item in lst: d[item] = 1
+    lst = d.keys()
+    lst.sort()
+    return lst
+
 def run():
     servers = []
     policy = []
@@ -237,12 +244,13 @@ def run():
     else:
         printlist = accepters
 
+    ents = []
     if VERBOSE:
-        for s in printlist:
-            print "%s\t%s"%(s.ip,s.name)
+        ents = uniq_sort([ "%s\t%s"%(s.ip,s.name) for s in printlist ])
     else:
-        for s in printlist:
-            print s.ip
+        ents = uniq_sort([ s.ip for s in printlist ])
+    for e in ents:
+        print e
 
 def _test():
     import doctest, exitparse
