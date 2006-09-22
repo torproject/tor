@@ -1435,7 +1435,8 @@ handle_getinfo_helper(const char *question, char **answer)
         case AP_CONN_STATE_CONTROLLER_WAIT:
         case AP_CONN_STATE_CIRCUIT_WAIT:
           if (conn->socks_request &&
-              conn->socks_request->command == SOCKS_COMMAND_RESOLVE)
+              (conn->socks_request->command == SOCKS_COMMAND_RESOLVE ||
+               conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR))
             state = "NEWRESOLVE";
           else
             state = "NEW";

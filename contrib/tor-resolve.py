@@ -36,7 +36,9 @@ def socks5ResolveRequest(hostname, atype=0x03, command=0xF0):
     version = 5
     rsv = 0
     port = 0
-    reqheader = struct.pack("!BBBBB",version, command, rsv, atype, len(hostname))
+    reqheader = struct.pack("!BBBB",version, command, rsv, atype)
+    if atype == 0x03:
+        reqheader += struct.pack("!B", len(hostname))
     portstr = struct.pack("!H",port)
     return "%s%s%s"%(reqheader,hostname,portstr)
 
@@ -62,8 +64,11 @@ def socks5ParseResponse(r):
             # not really the right way to format IPv6
             return "IPv6: %s"%(":".join([hex(ord(c)) for c in addr]))
     else:
-        nul = r.index('\0',4)
-        return r[4:nul]
+        hlen, = struct.unpack("!B", r[4])
+        expected_len = 5 + hlen + 2
+        if len(r) < expected_len:
+            return None
+        return r[5:-2]
 
 def socks5ResolvePTRRequest(hostname):
     return socks5ResolveRequest(socket.inet_aton(hostname),
@@ -105,7 +110,6 @@ def resolve(hostname, sockshost, socksport, socksver=4, reverse=0):
     if socksver == 5:
         s.send(socks5Hello())
         socks5ParseHello(s.recv(2))
-    print len(fmt(hostname)), len(hostname)
     s.send(fmt(hostname))
     answer = s.recv(6)
     result = parse(answer)
@@ -127,7 +131,7 @@ if __name__ == '__main__':
         sys.exit(0)
     socksver = 4
     reverse = 0
-    while sys.argv[1] == '-':
+    while sys.argv[1][0] == '-':
         if sys.argv[1] in ("-4", "-5"):
             socksver = int(sys.argv[1][1])
             del sys.argv[1]
@@ -138,7 +142,7 @@ if __name__ == '__main__':
             break
 
     if len(sys.argv) >= 4:
-        print "Syntax: resolve.py [-4|-5] hostname [sockshost:socksport]"
+        print "Syntax: resolve.py [-x] [-4|-5] hostname [sockshost:socksport]"
         sys.exit(0)
     if len(sys.argv) == 3:
         sh,sp = parseHostAndPort(sys.argv[2])

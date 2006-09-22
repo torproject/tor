@@ -1120,7 +1120,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       return -1;
     }
 
-    if (socks->command == SOCKS_COMMAND_RESOLVE) { // resolve_ptr XXXX NM
+    if (socks->command == SOCKS_COMMAND_RESOLVE) {
       uint32_t answer;
       struct in_addr in;
       /* Reply to resolves immediately if we can. */
@@ -1141,7 +1141,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         return 0;
       }
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
-    } else { /* socks->command == SOCKS_COMMAND_CONNECT */
+    } else if (socks->command == SOCKS_COMMAND_CONNECT) {
       if (socks->port == 0) {
         log_notice(LD_APP,"Application asked to connect to port 0. Refusing.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
@@ -1166,6 +1166,12 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
       /* help predict this next time */
       rep_hist_note_used_port(socks->port, time(NULL));
+    } else if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
+      // XXXX NM Do anything here?
+
+      rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
+    } else {
+      tor_fragile_assert();
     }
     conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
     if ((circ &&
@@ -1701,10 +1707,10 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
       buf[1] = SOCKS5_SUCCEEDED;
       buf[2] = 0; /* reserved */
       buf[3] = 0x03; /* Domainname address type */
-      memcpy(buf+4, answer, answer_len); /* address */
-      buf[4+answer_len] = '\0';
-      set_uint16(buf+4+answer_len+1, 0); /* port == 0. */
-      replylen = 4+answer_len+1+2;
+      buf[4] = (char)answer_len;
+      memcpy(buf+5, answer, answer_len); /* address */
+      set_uint16(buf+5+answer_len, 0); /* port == 0. */
+      replylen = 5+answer_len+2;
     } else {
       buf[1] = SOCKS5_HOST_UNREACHABLE;
       memset(buf+2, 0, 8);

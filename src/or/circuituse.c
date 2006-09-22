@@ -947,7 +947,8 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   tor_assert(conn);
   tor_assert(circp);
   tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
-  is_resolve = conn->socks_request->command == SOCKS_COMMAND_RESOLVE;
+  is_resolve = (conn->socks_request->command == SOCKS_COMMAND_RESOLVE ||
+                conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR);
 
   need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
                                           conn->socks_request->port);

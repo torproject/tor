@@ -865,7 +865,8 @@ connection_edge_process_relay_cell_not_open(
                "Dropping.");
       return 0;
     }
-    tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
+    tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE ||
+               conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR);
     answer_len = cell->payload[RELAY_HEADER_SIZE+1];
     if (rh->length < 2 || answer_len+2>rh->length) {
       log_warn(LD_PROTOCOL, "Dropping malformed 'resolved' cell");
