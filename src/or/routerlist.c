@@ -3965,6 +3965,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
       (r1->contact_info && r2->contact_info &&
        strcasecmp(r1->contact_info, r2->contact_info)) ||
       r1->is_hibernating != r2->is_hibernating ||
+      r1->has_old_dnsworkers != r2->has_old_dnsworkers ||
       cmp_addr_policies(r1->exit_policy, r2->exit_policy))
     return 0;
   if ((r1->declared_family == NULL) != (r2->declared_family == NULL))
