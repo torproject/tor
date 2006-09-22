@@ -59,18 +59,36 @@
  /****************************************************************************
   *
   * Function: gettimeofday(struct timeval *, struct timezone *)
+@@ -17,6 +23,7 @@
+  *
+  ****************************************************************************/
+ 
++#ifndef HAVE_GETTIMEOFDAY
+ int gettimeofday(struct timeval *tv, struct timezone *tz) {
+   struct _timeb tb;
+ 
+@@ -28,6 +35,7 @@
+ 	tv->tv_usec = ((int) tb.millitm) * 1000;
+ 	return 0;
+ }
++#endif
+ 
+ int
+ win_read(int fd, void *buf, unsigned int length)
 === WIN32-Code/misc.h
 ==================================================================
 --- WIN32-Code/misc.h	(revision 8794)
 +++ WIN32-Code/misc.h	(local)
-@@ -1,6 +1,9 @@
+@@ -1,6 +1,11 @@
  #ifndef MISC_H
  #define MISC_H
  
 +struct timezone;
 +struct timeval;
 +
++#ifndef HAVE_GETTIMEOFDAY
  int gettimeofday(struct timeval *,struct timezone *);
++#endif
  
  #endif
 === WIN32-Code/win32.c
@@ -153,7 +171,7 @@
 ==================================================================
 --- configure.in	(revision 8794)
 +++ configure.in	(local)
-@@ -111,6 +111,22 @@
+@@ -111,6 +111,21 @@
  )
  fi
  
@@ -172,7 +190,6 @@
 +
 +AM_CONDITIONAL(BUILD_WIN32, test x$bwin32 = xtrue)
 +
-+
  dnl Checks for typedefs, structures, and compiler characteristics.
  AC_C_CONST
  AC_C_INLINE
@@ -180,7 +197,7 @@
 ==================================================================
 --- evbuffer.c	(revision 8794)
 +++ evbuffer.c	(local)
-@@ -154,12 +153,20 @@
+@@ -154,12 +154,20 @@
  	if (EVBUFFER_LENGTH(bufev->output)) {
  	    res = evbuffer_write(bufev->output, fd);
  	    if (res == -1) {
