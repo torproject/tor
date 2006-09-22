@@ -336,8 +336,6 @@ R - Streamline how we pick entry nodes.
     get its own function that takes a comparator and a delete function.
 
 Future version:
-  - Tor should have a "DNS port" so we don't need to ship with (and
-    write) a clean portable dns proxy.
   - Configuration format really wants sections.
   - Good RBL substitute.
   . Update the hidden service stuff for the new dir approach.
@@ -378,6 +376,7 @@ Future version:
     * figure out what breaks for this, and do it.
   - tor should be able to have a pool of outgoing IP addresses
     that it is able to rotate through. (maybe)
+    - Specify; implement.
   - let each hidden service (or other thing) specify its own
     OutboundBindAddress?
 
