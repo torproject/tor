@@ -13,9 +13,9 @@ streams to circuits.  Other implementations MAY take other approaches, but
 implementors should be aware of the anonymity and load-balancing implications
 of their choices.
 
-THIS SPEC ISN'T DONE OR CORRECT.  I'm just copying in relevant info so
-far.  The starred points are things we should cover, but not an exhaustive
-list.  -NM
+                      THIS SPEC ISN'T DONE OR CORRECT.
+I'm just copying in relevant info so far.  The starred points are things we
+should cover, but not an exhaustive list.  -NM
 
 1. General operation
 
@@ -32,107 +32,224 @@ list.  -NM
    if no current circuit can handle the request.  We rotate circuits over
    time to avoid some profiling attacks.
 
+   To build a circuit, we choose all the nodes we want to use, and then
+   construct the circuit.  Sometimes, when we want a circuit that ends at a
+   given hop, and we have an appropriate unused circuit, we "cannibalize" the
+   existing circuit and extend it to the new terminus.
+
    These processes are described in more detail below.
+
+   This document describes Tor's automatic path selection logic only; path
+   selection can be overridden by a controller (with the EXTENDCIRCUIT and
+   ATTACHSTREAM commands).  Paths constructed through these means will
+   violate some constraints given below.
 
 1b. Types of circuits.
 
 * Stable / Ordinary
 * Internal / Exit
 
+   XXXX
+
 1c. Terminology
 
    A "path" is an ordered sequence of nodes, not yet built as a circuit.
 
-   A "clean" circuit is one that has not yet been used for any stream or
-   rendezvous traffic.
+   A "clean" circuit is one that has not yet been used for any traffic.
 
    A "stable" node is one that we believe to have the 'Stable' flag set on
    the basis of our current directory information.  A "stable" circuit is one
    that consists entirely of "stable" nodes.
 
-   A "persistent" stream is one that we predict will require a long uptime.
-   Currently, Tor does this by examining the stream's target port, and
-   comparing it to a list of "long-lived" ports. (Default: 21, 22, 706, 1863,
-   5050, 5190, 5222, 5223, 6667, 8300, 8888.)
+   A "fast" or "stable" node is one that we believe to have the 'Fast' or
+   'Stable' flag set on the basis of our current directory information.  A
+   "fast" or "stable" circuit is one consisting only of "fast" or "stable"
+   nodes.
 
-   An exit node "supports" a stream if the stream's target IP is known, and
-   the stream's IP and target Port are allowed by the exit node's declared
-   exit policy.  A path "supports" a stream if:
-      * The last node in the path "supports" the stream, and
-      * If the stream is "persistent," all the nodes in the path are
-        "stable".
+   A "request" is a client-side connection or DNS resolve that needs to be
+   served by a circuit.
 
-   An exit node "might support" a stream if the stream's target IP is unknown
-   (because we haven't resolved it yet), and the exit node's declared exit
-   policy allows some IPs to exit at that port.  ???
+   A "pending" circuit is one that we have started to build, but which has
+   not yet completed.
+
+   A circuit or path "supports" a request if it is okay to use the
+   circuit/path to fulfill the request, according to the rules given below.
+   A circuit or path "might support" a request if some aspect of the request
+   is unknown (usually its target IP), but we believe the path probably
+   supports the request according to the rules given below.
 
 2. Building circuits
 
 2.1. When we build.
 
+2.1.1. When clients build circuits
+
    When running as a client, Tor tries to maintain at least 3 clean circuits,
    so that new streams can be handled quickly.  To increase the likelihood of
    success, Tor tries to predict what exit nodes will be useful by choosing
    from among nodes that support the ports we have used in the recent past.
+   (see 2.4).  [XXXX describe in detail how predicted ports work.]
 
-   If Tor needs to attach a stream that no current exit circuit can support,
-   it looks for an existing clean circuit to cannibalize.  If we find one,
-   we try to extend it another hop to an exit node that might support the
-   stream.  [Must be internal???]
+   Additionally, when a client request exists that no circuit (built or
+   pending) might support, we cannibalize an existing circuit (2.1.4) or
+   create a new circuit to support the request.  We do so by picking a
+   request at random, building or cannibalizing a circuit to support it, and
+   repeating until every unattached request might be supported by a pending
+   or built circuit.
+
+   XXXX when long idle, we build nothing.
+
+2.1.2. When servers build circuits
+
+   XXXX
+
+2.1.3. When authorities build circuits
+
+   XXXX
+
+2.1.4. Hidden-service circuits
+
+   See section 4 below.
+
+2.1.4. Cannibalizing circuits
+
+   When Tor has a request (either an unattached stream or unattached resolve
+   request) that no current circuit can support, it looks for an existing
+   clean circuit to cannibalize.  If it finds one, it tries to extend it
+   another hop to an exit node that might support the stream.  [Must be
+   internal???]
 
    If no circuit exists, or is currently being built, along a path that
    might support a stream, we begin building a new circuit that might support
    the stream.
 
-   
+   [XXXX always? really?]
 
-2.2. Path selection
+2.2. Path selection and constraints
 
    We choose the path for each new circuit before we build it.  We choose the
-   exit node first, followed by the other nodes in the circuit.  We do not
-   choose the same router twice for the same circuit.  We do not choose any
-   router in the same family as another in the same circuit.  We don't choose
-   any non-running or non-valid router unless we have been configured to do
-   so.  When choosing among multiple candidates for a path element, we choose
+   exit node first, followed by the other nodes in the circuit.  All paths
+   we generate obey the following constraints:
+     - We do not choose the same router twice for the same path.
+     - We do not choose any router in the same family as another in the same
+       circuit.
+     - We do not choose any router in the same /16 subnet as another in the
+       same circuit.
+     - We don't choose any non-running or non-valid router unless we have
+       been configured to do so.
+     - If we're using Guard nodes, the first node must be a Guard (see 5
+       below)
+     - XXXX Choosing the length
+
+   When choosing among multiple candidates for a path element, we choose
    a given router with probability proportional to its advertised bandwidth
    [the smaller of the 'rate' and 'observed' arguments to the "bandwidth"
    element in its descriptor].  If a router's advertised bandwidth is greater
    than MAX_BELIEVEABLE_BANDWIDTH (1.5 MB/sec), we clip to that value.
 
-   Additional restrictions:
-     XXX When to use Fast
-     XXX When to use Stable
-     XXX When to use Named
+   (XXXX We should do something to shift traffic away from exit nodes.)
 
-   If we're building a circuit preemtively, we choose an exit node that might
-   support streams to one of our predicted ports; otherwise, we pick an exit
-   node that will support a pending stream (if the stream's target is known)
-   or that might support a pending stream.
+   Additionally, we may be building circuits with one or more requests in
+   mind.  Each kind of request puts certain constraints on paths:
 
-   We pick an entry node from one of our guards; see section 5 below.
+     - All service-side introduction circuits and all rendezvous paths
+       should be Stable.
+     - All connection requests for connections that we think will need to
+       stay open a long time require Stable circuits.  Currently, Tor decides
+       this by examining the request's target port, and comparing it to a
+       list of "long-lived" ports. (Default: 21, 22, 706, 1863, 5050, 5190,
+       5222, 5223, 6667, 8300, 8888.)
+     - DNS resolves require an exit node whose exit policy is not equivalent
+       to "reject *:*".
+     - Reverse DNS resolves require a version of Tor with advertised eventdns
+       support, running 0.1.2.1-alpha-dev or later.
+     - All connection requests require an exit node whose exit policy
+       supports their target address and port (if known), or which "might
+       support it" (if the address isn't known).  See 2.2.1.
+     - Rules for Fast? XXXXX
+
+2.2.1. Choosing an exit
+
+   If we know what IP we want to resolve, we can trivially tell whether a
+   given router will support it by simulating its declared exit policy.
+
+   Because we often connect to addresses of the form hostname:port, we do not
+   always know the target IP address when we select an exit node.  In these
+   cases, we need to pick an exit node that "might support" connections to a
+   given address port with an unknown address.  An exit node "might support"
+   such a connection if any clause that accepts any connections to that port
+   precedes all clauses (if any) that reject all connections to that port.
+
+2.2.2. User configuration
+
+   Users can alter the default behavior for path selection with configuration
+   options.
+
+   - If "ExitNodes" is provided, then every request requires an exit node on
+     the ExitNodes list.  (If a request is supported by no nodes on that list,
+     and StrictExitNodes is false, then Tor treats that request as if
+     ExitNodes were not provided.)
+
+   - "EntryNodes" and "StrictEntryNodes" behave analagously.
+
+   - If a user tries to connect to or resolve a hostname of the form
+     <target>.<servername>.exit, the request is rewritten to a request for
+     <target>, and the request is only supported by the exit whose nickname
+     or fingerprint is <servername>.
 
 2.3. Handling failure
 
+   If an attempt to extend a circuit fails (either because the first create
+   failed or a subsequent extend failed) then the circuit is torn down and is
+   no longer pending.  (XXXX really?)  Requests that might have been
+   supported by the pending circuit thus become unsupported, and a new
+   circuit needs to be constructed.
+
+   If we fail to being a circuit with an EXITPOLICY error, we decide that the
+   exit node's exit policy is not correctly advertised, so we treat the exit
+   node as if it were a non-exit until we retrieve a fresh descriptor for it.
+
+   XXXX
+
 2.4. Tracking "predicted" ports
 
-* Choosing the path first, building second.
-* Choosing the length of the circuit.
-* Choosing entries, midpoints, exits.
-  * the .exit notation
-* exitnodes, entrynodes, strictexitnodes, strictentrynodes.
-* What to do when an extend fails
-* Keeping track of 'expected' ports
-  * And expected hidden service use (client-side and hidserv-side)
-  * Backing off from circuit building when a long time has passed
+   A Tor client tracks how much time has passed since it last received a
+   request for a connection on each port.  (For the purposes of this section,
+   requests for hostname resolves are considered requests to a separate
+   port).  Tor forgets about ports that haven't been used for an hour
+   [PREDICTED_CIRCS_RELEVANCE_TIME].
+
+   The ports that have been used in the last hour are considered "predicted",
+   and Tor will try to maintain a clean circuits to them as described in 2.1.
+
+   For bootstrapping purposes, port 80 is treated as used at startup time.
+
+   Tor clients SHOULD NOT store predicted ports to a persistent medium.
 
 3. Attaching streams to circuits
-  * Including via the controller.
-  * Timeouts and when Tor autoretries.
+
+   When a circuit that might support a request is built, Tor tries to attach
+   the request's stream to the circuit and sends a BEGIN or RESOLVE relay
+   cell as appropriate.  If the request completes unsuccessfully, Tor
+   considers the reason given in the CLOSE relay cell. [XXX yes, and?]
+
+
+   After a request has remained unattached for [XXXX retries? interval?], Tor
+   abandons the attempt and signals an error to the client as appropriate
+   (e.g., by closing the SOCKS connection).
+
+   XXX Timeouts and when Tor auto-retries.
     * What stream-end-reasons are appropriate for retrying.
 
-4. Rendezvous circuits
+   XXX What if no reply to BEGIN/RESOLVE?
+
+4. Hidden-service related circuits
+
+  XXX Tracking expected hidden service use (client-side and hidserv-side)
 
 5. Guard nodes
+
+  XXX writeme
 
 6. Testing circuits
 
